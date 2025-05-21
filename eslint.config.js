@@ -25,6 +25,15 @@ export default tseslint.config(
 
             'simple-import-sort/imports': 'warn',
             'simple-import-sort/exports': 'warn',
+
+            'no-multiple-empty-lines': [
+                'warn',
+                {
+                    max: 1,
+                    maxEOF: 0,
+                    maxBOF: 0,
+                },
+            ],
         },
     },
 );

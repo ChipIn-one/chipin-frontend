@@ -6,7 +6,7 @@ import HomePage from './HomePage';
 export const AppRouter = () => (
     <BrowserRouter>
         <Routes>
-            <Route path="/" element={<HomePage />} />
+            <Route path={ROUTES.HOME} element={<HomePage />} />
             {/* 404 fallback */}
             <Route path="*" element={<Navigate to={ROUTES.HOME} />} />
         </Routes>

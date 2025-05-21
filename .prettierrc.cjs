@@ -1,7 +1,4 @@
 module.exports = {
-    plugins: ['prettier-plugin-organize-imports'],
-    organizeImportsSkipDestructiveCodeActions: true,
-    importOrderSortSpecifiers: true,
     arrowParens: 'avoid',
     bracketSpacing: true,
     endOfLine: 'lf',
