@@ -29,7 +29,9 @@
             "assets/*": ["assets/*"],
             "pages/*": ["pages/*"],
             "constants/*": ["constants/*"]
-        }
+        },
+
+        "types": ["vite-plugin-pwa/client"]
     },
     "include": ["src"]
 }
