@@ -1,6 +1,7 @@
 import './App.css';
 
 import reactLogo from 'assets/react.svg';
+import PWABadge from 'PWABadge';
 import { useState } from 'react';
 
 import viteLogo from '/vite.svg';
@@ -26,6 +27,7 @@ const HomePage = () => {
                 </p>
             </div>
             <p className="read-the-docs">Click on the Vite and React logos to learn more</p>
+            <PWABadge />
         </>
     );
 };
