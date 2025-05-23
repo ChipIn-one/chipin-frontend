@@ -1,5 +1,3 @@
-import './App.css';
-
 import reactLogo from 'assets/react.svg';
 import PWABadge from 'PWABadge';
 import { useState } from 'react';
