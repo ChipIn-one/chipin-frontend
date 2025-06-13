@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { ROUTES } from 'constants/routes';
-import reactLogo from 'assets/react.svg';
+
 import PWABadge from 'basics/PWABadge';
+
+import reactLogo from 'assets/react.svg';
 
 import viteLogo from '/vite.svg';
 

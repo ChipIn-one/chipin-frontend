@@ -1,5 +1,5 @@
 export const ROUTES = {
     HOME: '/',
     LOG_IN: '/login',
-    NOT_FOUND: '/not-found',
+    NOT_FOUND_404: '/not-found',
 };
