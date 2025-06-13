@@ -26,9 +26,18 @@
         "baseUrl": "src",
         "paths": {
             "api/*": ["api/*"],
+            "constants/*": ["constants/*"],
+            "helpers/*": ["helpers/*"],
+            "hooks/*": ["hooks/*"],
+            "store/*": ["store/*"],
+
             "assets/*": ["assets/*"],
+            "basics/*": ["basics/*"],
+            "components/*": ["components/*"],
+            "features/*": ["features/*"],
             "pages/*": ["pages/*"],
-            "constants/*": ["constants/*"]
+
+            "styles/*": ["styles/*"]
         },
 
         "types": ["vite-plugin-pwa/client"]

@@ -1,10 +1,13 @@
-import '@radix-ui/themes/styles.css';
+import { StrictMode } from 'react';
+import { ThemeProvider } from 'next-themes';
+import { createRoot } from 'react-dom/client';
 
 import { Theme } from '@radix-ui/themes';
-import { ThemeProvider } from 'next-themes';
+
 import { AppRouter } from 'pages/AppRouter';
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
+
+import '@radix-ui/themes/styles.css';
+import 'styles/radixStylesOverwrite.css';
 
 createRoot(document.getElementById('root')!).render(
     <StrictMode>

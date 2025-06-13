@@ -23,8 +23,41 @@ export default tseslint.config(
             ...reactHooks.configs.recommended.rules,
             'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
 
-            'simple-import-sort/imports': 'warn',
             'simple-import-sort/exports': 'warn',
+            'simple-import-sort/imports': [
+                'warn',
+                {
+                    groups: [
+                        // Node.js builtins
+                        ['^node:'],
+                        // External packages (npm)
+                        ['^react$', '^react-dom$', '^\\w'],
+                        // Aliases (e.g. @mui/material, @custom/*)
+                        ['^@\\w'],
+                        // Absolute imports from project (like 'basics/', 'components/', 'src/')
+                        [
+                            '^api/',
+                            '^constants/',
+                            '^helpers/',
+                            '^hooks/',
+                            '^store/',
+                            '^assets/',
+                            '^basics/',
+                            '^components/',
+                            '^features/',
+                            '^pages/',
+                            '^styles/',
+                            '^src/',
+                        ],
+                        // Relative imports up
+                        ['^\\.\\.(?!/?$)', '^\\.\\./?$'],
+                        // Relative imports current folder
+                        ['^\\./(?=.*/)(?!/?$)', '^\\.(?!/?$)', '^\\./?$'],
+                        // Style imports
+                        ['^.+\\.s?css$'],
+                    ],
+                },
+            ],
 
             'no-multiple-empty-lines': [
                 'warn',
