@@ -1,6 +1,9 @@
+import { Link } from 'react-router-dom';
+
 import { Box, Button, Card, Container, Flex, Grid, Heading, Text } from '@radix-ui/themes';
 
 import { PROJECT_NAME } from 'constants/chipin';
+import { ROUTES } from 'constants/routes';
 
 import PWABadge from 'basics/PWABadge';
 
@@ -13,7 +16,9 @@ const HomePage = () => {
                         {PROJECT_NAME}
                     </Text>
                     <Flex gap="4" align="center">
-                        <Button variant="ghost">Log in</Button>
+                        <Button variant="ghost" asChild>
+                            <Link to={ROUTES.LOG_IN}>Log in</Link>
+                        </Button>
                         <Button variant="solid">Sign up</Button>
                     </Flex>
                 </Flex>
