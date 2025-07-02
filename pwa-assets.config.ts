@@ -5,5 +5,5 @@ export default defineConfig({
         preset: '2023',
     },
     preset,
-    images: ['src/assets/favicon.png'],
+    images: ['public/favicon.png'],
 });

@@ -5,7 +5,7 @@ import { Avatar, Box, Flex, Text } from '@radix-ui/themes';
 import { PROJECT_NAME } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
 
-import favicon from 'assets/favicon.png';
+import favicon from '../../public/favicon.png';
 
 import AuthModal from './AuthModal';
 
