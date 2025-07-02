@@ -1,28 +1,11 @@
-import { Link } from 'react-router-dom';
+import { Box, Card, Container, Flex, Grid, Heading, Text } from '@radix-ui/themes';
 
-import { Box, Button, Card, Container, Flex, Grid, Heading, Text } from '@radix-ui/themes';
-
-import { PROJECT_NAME } from 'constants/chipin';
-import { ROUTES } from 'constants/routes';
-
-import PWABadge from 'basics/PWABadge';
+import Header from 'components/Header';
 
 const HomePage = () => {
     return (
         <>
-            <Box position="sticky" top="0" width="100%">
-                <Flex justify="between" align="center" p="4">
-                    <Text size="4" weight="bold">
-                        {PROJECT_NAME}
-                    </Text>
-                    <Flex gap="4" align="center">
-                        <Button variant="ghost" asChild>
-                            <Link to={ROUTES.LOG_IN}>Log in</Link>
-                        </Button>
-                        <Button variant="solid">Sign up</Button>
-                    </Flex>
-                </Flex>
-            </Box>
+            <Header />
             <Box py="8">
                 <Container size="3">
                     <Flex direction="column" align="center" gap="4">
@@ -34,7 +17,6 @@ const HomePage = () => {
                         <Text align="center" size="4" color="gray">
                             Keep track of your shared expenses with housemates, friends and more.
                         </Text>
-                        <Button size="4">Sign up</Button>
                     </Flex>
                 </Container>
             </Box>
@@ -49,7 +31,6 @@ const HomePage = () => {
                         <Text align="center" size="4" color="gray">
                             Keep track of your shared expenses with housemates, friends and more.
                         </Text>
-                        <Button size="4">Sign up</Button>
                     </Flex>
                 </Container>
             </Box>
@@ -64,7 +45,6 @@ const HomePage = () => {
                         <Text align="center" size="4" color="gray">
                             Keep track of your shared expenses with housemates, friends and more.
                         </Text>
-                        <Button size="4">Sign up</Button>
                     </Flex>
                 </Container>
             </Box>
@@ -85,7 +65,6 @@ const HomePage = () => {
                     </Card>
                 </Grid>
             </Box>
-            <PWABadge />
         </>
     );
 };

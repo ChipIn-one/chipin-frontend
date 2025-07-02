@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
-import './PWABadge.css';
+import { Button, Card, Flex, Text } from '@radix-ui/themes';
 
-function PWABadge() {
+const PWABadge = () => {
+    const [visible, setVisible] = useState(true);
+
     // check for updates every hour
     const period = 60 * 60 * 1000;
 
@@ -12,7 +15,9 @@ function PWABadge() {
         updateServiceWorker,
     } = useRegisterSW({
         onRegisteredSW(swUrl, r) {
-            if (period <= 0) return;
+            if (period <= 0) {
+                return;
+            }
             if (r?.active?.state === 'activated') {
                 registerPeriodicSync(period, swUrl, r);
             } else if (r?.installing) {
@@ -24,49 +29,77 @@ function PWABadge() {
         },
     });
 
-    function close() {
-        setOfflineReady(false);
-        setNeedRefresh(false);
+    if (!visible) {
+        return null;
     }
 
+    const closeAlert = () => {
+        setOfflineReady(false);
+        setNeedRefresh(false);
+        setVisible(false);
+    };
+
     return (
-        <div className="PWABadge" role="alert" aria-labelledby="toast-message">
-            {(offlineReady || needRefresh) && (
-                <div className="PWABadge-toast">
-                    <div className="PWABadge-message">
-                        {offlineReady ? (
-                            <span id="toast-message">App ready to work offline</span>
-                        ) : (
-                            <span id="toast-message">
-                                New content available, click on reload button to update.
-                            </span>
-                        )}
-                    </div>
-                    <div className="PWABadge-buttons">
-                        {needRefresh && (
-                            <button
-                                className="PWABadge-toast-button"
-                                onClick={() => updateServiceWorker(true)}
+        (offlineReady || needRefresh) && (
+            <div
+                role="alert"
+                aria-labelledby="toast-message"
+                style={{
+                    position: 'fixed',
+                    bottom: '1rem',
+                    right: '1rem',
+                    zIndex: 9999,
+                }}
+            >
+                <Card
+                    variant="classic"
+                    style={{
+                        maxWidth: '320px',
+                        padding: '1rem',
+                    }}
+                >
+                    <Flex direction="column" gap="3">
+                        <Text size="2" id="toast-message">
+                            {offlineReady
+                                ? 'App ready to work offline'
+                                : 'New content available, click reload to update.'}
+                        </Text>
+
+                        <Flex justify="end" gap="2">
+                            {!needRefresh && (
+                                <Button
+                                    size="1"
+                                    variant="solid"
+                                    onClick={() => {
+                                        updateServiceWorker(true);
+                                    }}
+                                >
+                                    Reload
+                                </Button>
+                            )}
+                            <Button
+                                size="1"
+                                variant="soft"
+                                onClick={() => {
+                                    closeAlert?.();
+                                }}
                             >
-                                Reload
-                            </button>
-                        )}
-                        <button className="PWABadge-toast-button" onClick={() => close()}>
-                            Close
-                        </button>
-                    </div>
-                </div>
-            )}
-        </div>
+                                Close
+                            </Button>
+                        </Flex>
+                    </Flex>
+                </Card>
+            </div>
+        )
     );
-}
+};
 
 export default PWABadge;
 
 /**
  * This function will register a periodic sync check every hour, you can modify the interval as needed.
  */
-function registerPeriodicSync(period: number, swUrl: string, r: ServiceWorkerRegistration) {
+const registerPeriodicSync = (period: number, swUrl: string, r: ServiceWorkerRegistration) => {
     if (period <= 0) return;
 
     setInterval(async () => {
@@ -80,6 +113,8 @@ function registerPeriodicSync(period: number, swUrl: string, r: ServiceWorkerReg
             },
         });
 
-        if (resp?.status === 200) await r.update();
+        if (resp?.status === 200) {
+            await r.update();
+        }
     }, period);
-}
+};
