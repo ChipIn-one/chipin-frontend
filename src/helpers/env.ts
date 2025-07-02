@@ -8,7 +8,8 @@ export const getEnv = (): Environment => {
     const env = getUrlParam(URL_PARAMS.env);
 
     if (!env) {
-        return ENV_PRODUCTION;
+        //TODO: Remove this in production
+        return ENV_DEV;
     }
 
     if (env === ENV_DEV || env === ENV_PRODUCTION) {
