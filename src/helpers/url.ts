@@ -11,5 +11,5 @@ export const getUrlParam = (name: UrlParams) => {
 export const getSocialAuthUrl = (provider: AuthService) => {
     const apiUrl = getChipInApiUrl();
 
-    return `${apiUrl}oauth2/authorization/${provider}`;
+    return `${apiUrl}auth/login/${provider}?redirect_to=${window.location.origin}`;
 };
