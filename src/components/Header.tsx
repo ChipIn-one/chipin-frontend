@@ -5,9 +5,9 @@ import { Avatar, Box, Flex, Text } from '@radix-ui/themes';
 import { PROJECT_NAME } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
 
-import favicon from '../../public/favicon.png';
+import favicon from 'assets/favicon.png';
 
-import AuthModal from './AuthModal';
+import AuthModal from './Modal/components/AuthModal';
 
 const Header = () => {
     return (
