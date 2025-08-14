@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { ThemeProvider } from 'next-themes';
 import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
 
 import { Theme } from '@radix-ui/themes';
@@ -15,9 +16,11 @@ createRoot(document.getElementById('root')!).render(
     <StrictMode>
         <ThemeProvider attribute="class">
             <Theme accentColor="grass" grayColor="gray" radius="large">
-                <AppRouter />
+                <BrowserRouter>
+                    <AppRouter />
+                </BrowserRouter>
                 <PWABadge />
-                <Toaster />
+                <Toaster richColors closeButton />
             </Theme>
         </ThemeProvider>
     </StrictMode>,

@@ -1,4 +1,4 @@
-import AuthModal from './components/AuthModal';
-import BaseModal from './BaseModal';
+import AuthModal from './AuthModal';
+import BaseModal from './Modal';
 
 export { AuthModal, BaseModal };

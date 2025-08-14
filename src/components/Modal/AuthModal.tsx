@@ -4,7 +4,7 @@ import { Button, Flex } from '@radix-ui/themes';
 
 import { getSocialAuthUrl } from 'helpers/url';
 
-import BaseModal from '../BaseModal';
+import BaseModal from './Modal';
 
 const AuthModal = () => {
     return (

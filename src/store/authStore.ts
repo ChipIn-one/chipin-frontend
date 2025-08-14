@@ -1,22 +1,20 @@
 import { create } from 'zustand';
 
 interface AuthStore {
-    test: number;
-    setTest: (test: number) => void;
+    isLoggedIn: boolean;
+    setIsLoggedIn: (isLoggedIn: boolean) => void;
 }
 
 const initialAuthStore = {
-    test: 0,
+    isLoggedIn: false,
 };
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
     ...initialAuthStore,
 
-    setTest: (test: number) => {
-        const { test: currentTest } = get();
-
-        set({
-            test: currentTest + test,
-        });
+    setIsLoggedIn: (isLogged: boolean) => {
+        const { isLoggedIn } = get();
+        console.log('Setting isLoggedIn:', isLoggedIn, '->', isLoggedIn);
+        set({ isLoggedIn: isLogged });
     },
 }));
