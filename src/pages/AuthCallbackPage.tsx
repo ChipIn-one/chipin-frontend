@@ -18,13 +18,12 @@ const AuthCallbackPage = () => {
             console.log('OAuth token received:', authToken);
             saveAuthTokenDB(authToken);
             setIsLoggedIn(true);
-
             navigate(ROUTES.BALANCES);
         } else {
             console.error('OAuth error:', error);
             navigate(ROUTES.HOME);
         }
-    }, [searchParams, navigate]);
+    }, [searchParams]);
 
     return null;
 };

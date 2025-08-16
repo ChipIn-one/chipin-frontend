@@ -7,7 +7,8 @@ import { Toaster } from 'sonner';
 import { Theme } from '@radix-ui/themes';
 
 import PWABadge from 'basics/PWABadge';
-import { AppRouter } from 'pages/AppRouter';
+import AppRouter from 'features/AppRouter';
+import GlobalHooks from 'pages/GlobalHooks';
 
 import '@radix-ui/themes/styles.css';
 import 'styles/radixStylesOverwrite.css';
@@ -17,10 +18,11 @@ createRoot(document.getElementById('root')!).render(
         <ThemeProvider attribute="class">
             <Theme accentColor="grass" grayColor="gray" radius="large">
                 <BrowserRouter>
+                    <GlobalHooks />
                     <AppRouter />
+                    <PWABadge />
+                    <Toaster richColors closeButton />
                 </BrowserRouter>
-                <PWABadge />
-                <Toaster richColors closeButton />
             </Theme>
         </ThemeProvider>
     </StrictMode>,

@@ -35,7 +35,6 @@ export const checkAndRemoveExpiredToken = async (): Promise<boolean> => {
             return false;
         }
 
-        toast.success('Successful session resume, welcome back!');
         return true;
     } catch (err) {
         console.error('Invalid JWT format:', err);
