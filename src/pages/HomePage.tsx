@@ -1,12 +1,13 @@
 // HomePage.tsx
 import styled from 'styled-components';
 
-import { Box, Button, Card, Container, Flex, Grid, Heading, Text } from '@radix-ui/themes';
+import { Box, Card, Container, Flex, Grid, Heading, Text } from '@radix-ui/themes';
 
 import { PROJECT_NAME } from 'constants/chipin';
 
 import Footer from 'components/Footer';
 import Header from 'components/Header';
+import { AuthModal } from 'components/Modal';
 
 const Placeholder = styled.div`
     width: 100%;
@@ -27,7 +28,7 @@ const HomePage = () => {
 
             {/* Hero */}
             <Box py="8" px="4">
-                <Container size="3">
+                <Container size="4">
                     <Flex direction="column" align="center" gap="5">
                         <Heading size="9" align="center">
                             {PROJECT_NAME} — share expenses without stress
@@ -36,9 +37,7 @@ const HomePage = () => {
                             Create groups, add expenses, and see who owes whom — fast and fair.
                             Perfect for trips, roommates and friends.
                         </Text>
-                        <Button size="3" radius="full">
-                            Get started
-                        </Button>
+                        <AuthModal buttonText="Get started" />
                         <Placeholder aria-label="App preview placeholder">App preview</Placeholder>
                     </Flex>
                 </Container>
@@ -118,7 +117,7 @@ const HomePage = () => {
                         </Placeholder>
                         <Flex direction="column" gap="3">
                             <Heading size="7">Fast expense entry</Heading>
-                            <Text size="4" color="gray">
+                            <Text size="4">
                                 Attach expenses to people and groups, split evenly or by custom
                                 shares. Edit anytime.
                             </Text>

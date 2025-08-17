@@ -6,12 +6,16 @@ import { getSocialAuthUrl } from 'helpers/url';
 
 import BaseModal from './Modal';
 
-const AuthModal = () => {
+interface Props {
+    buttonText?: string;
+}
+
+const AuthModal = ({ buttonText = 'Sign in' }: Props) => {
     return (
         <BaseModal
             triggerElement={
-                <Button variant="outline" size="3">
-                    Sign in
+                <Button size="3" radius="large">
+                    {buttonText}
                 </Button>
             }
             content={
