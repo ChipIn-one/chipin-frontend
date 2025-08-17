@@ -16,12 +16,17 @@ import 'styles/radixStylesOverwrite.css';
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
         <ThemeProvider attribute="class">
-            <Theme accentColor="grass" grayColor="gray" radius="large">
+            <Theme
+                accentColor="grass"
+                grayColor="gray"
+                radius="large"
+                panelBackground="translucent"
+            >
                 <BrowserRouter>
                     <GlobalHooks />
                     <AppRouter />
                     <PWABadge />
-                    <Toaster richColors closeButton />
+                    <Toaster theme="system" richColors closeButton />
                 </BrowserRouter>
             </Theme>
         </ThemeProvider>

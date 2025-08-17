@@ -9,3 +9,7 @@
     --cursor-slider-thumb-active: grabbing;
     --cursor-switch: pointer;
 }
+
+body {
+    margin: 0;
+}

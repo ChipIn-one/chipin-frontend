@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import styled from 'styled-components';
 
 import { Avatar, Box, Card, Flex, Text } from '@radix-ui/themes';
 
@@ -10,11 +11,18 @@ import favicon from 'assets/favicon.png';
 
 import AuthModal from './Modal/AuthModal';
 
+const StickyBox = styled(Box)`
+    background-color: var(--accent-2);
+    position: sticky;
+    top: 0;
+    width: 100%;
+`;
+
 const Header = () => {
     const { isLoggedIn } = useAuthStore();
 
     return (
-        <Box position="sticky" top="0" width="100%">
+        <StickyBox>
             <Flex justify="between" align="center" p="4">
                 <Flex gap="4" align="center">
                     <Link to={ROUTES.HOME}>
@@ -48,7 +56,7 @@ const Header = () => {
                     )}
                 </Flex>
             </Flex>
-        </Box>
+        </StickyBox>
     );
 };
 
