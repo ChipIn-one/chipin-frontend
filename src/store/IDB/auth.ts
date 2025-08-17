@@ -1,6 +1,6 @@
 import { toast } from 'sonner';
 
-import { ERROR_MESSAGES } from 'constants/errors';
+import { MESSAGES } from 'constants/messages';
 
 import { db } from './db';
 
@@ -30,7 +30,7 @@ export const checkAndRemoveExpiredToken = async (): Promise<boolean> => {
 
         if (payload.exp && Date.now() / 1000 >= payload.exp) {
             console.warn('JWT expired, removing from DB');
-            toast.warning(ERROR_MESSAGES.AUTH_SESSION_EXPIRED);
+            toast.warning(MESSAGES.error.auth.SESSION_EXPIRED);
             await db.auth.clear();
             return false;
         }
@@ -38,7 +38,7 @@ export const checkAndRemoveExpiredToken = async (): Promise<boolean> => {
         return true;
     } catch (err) {
         console.error('Invalid JWT format:', err);
-        toast.error(ERROR_MESSAGES.AUTH_INVALID_JWT);
+        toast.error(MESSAGES.error.auth.INVALID_JWT);
         await db.auth.clear();
         return false;
     }

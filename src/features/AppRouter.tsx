@@ -2,6 +2,7 @@ import { lazy } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { MESSAGES } from 'constants/messages';
 import { ROUTES } from 'constants/routes';
 import { useAuthStore } from 'store/authStore';
 
@@ -22,7 +23,7 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     const { isLoggedIn } = useAuthStore();
 
     if (!isLoggedIn) {
-        toast.warning('You must be logged in to access this page');
+        toast.warning(MESSAGES.warning.auth.MUST_BE_LOGGED_IN);
         return <Navigate to={ROUTES.HOME} replace />;
     }
     return <>{children}</>;
