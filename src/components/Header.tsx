@@ -25,7 +25,7 @@ const Header = () => {
         <StickyBox>
             <Flex justify="between" align="center" p="4">
                 <Flex gap="4" align="center">
-                    <Link to={ROUTES.HOME}>
+                    <Link to={isLoggedIn ? ROUTES.BALANCES : ROUTES.HOME}>
                         <Avatar src={favicon} fallback="C" radius="full" />
                     </Link>
                     <Text size="6" weight="bold">

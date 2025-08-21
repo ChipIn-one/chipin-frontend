@@ -3,4 +3,7 @@ export const ROUTES = {
     NOT_FOUND_404: '/not-found',
     AUTH_CALLBACK: '/auth/callback',
     BALANCES: '/balances',
+    GROUPS: '/groups',
+    ACTIVITY: '/activity',
+    SETTINGS: '/settings',
 };

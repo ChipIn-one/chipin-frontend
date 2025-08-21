@@ -3,17 +3,17 @@ import { useAuthStore } from 'store/authStore';
 import BottomNavMobile from 'components/BottomNavMobile';
 import Header from 'components/Header';
 
-const BalancesPage = () => {
+const ActivityPage = () => {
     const { isLoggedIn } = useAuthStore();
 
     return (
         <>
             <Header />
-            {isLoggedIn ? 'balances page' : 'Please log in to view your balances.'}
+            {isLoggedIn ? 'activity page' : 'Please log in to view your activity.'}
 
             <BottomNavMobile />
         </>
     );
 };
 
-export default BalancesPage;
+export default ActivityPage;

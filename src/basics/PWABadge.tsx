@@ -1,37 +1,40 @@
-import { useState } from 'react';
-import { useRegisterSW } from 'virtual:pwa-register/react';
+import { useEffect, useRef, useState } from 'react';
+import { registerSW } from 'virtual:pwa-register';
 
-import { Button, Card, Flex, Text } from '@radix-ui/themes';
+import { Box, Button, Card, Flex, Text } from '@radix-ui/themes';
+
+import { HOUR } from 'constants/time';
 
 const PWABadge = () => {
     const [visible, setVisible] = useState(true);
+    const [offlineReady, setOfflineReady] = useState(false);
+    const [needRefresh, setNeedRefresh] = useState(false);
 
-    // check for updates every hour
-    const period = 60 * 60 * 1000;
+    // registerSW возвращает функцию обновления — кладём в ref
+    const updateSWRef = useRef<(reloadPage?: boolean) => void>(() => {});
 
-    const {
-        offlineReady: [offlineReady, setOfflineReady],
-        needRefresh: [needRefresh, setNeedRefresh],
-        updateServiceWorker,
-    } = useRegisterSW({
-        onRegisteredSW(swUrl, r) {
-            if (period <= 0) {
-                return;
-            }
-            if (r?.active?.state === 'activated') {
-                registerPeriodicSync(period, swUrl, r);
-            } else if (r?.installing) {
-                r.installing.addEventListener('statechange', e => {
-                    const sw = e.target as ServiceWorker;
-                    if (sw.state === 'activated') {
-                        registerPeriodicSync(period, swUrl, r);
-                    }
-                });
-            }
-        },
-    });
+    useEffect(() => {
+        const updateSW = registerSW({
+            onOfflineReady() {
+                setOfflineReady(true);
+                setVisible(true);
+            },
+            onNeedRefresh() {
+                setNeedRefresh(true);
+                setVisible(true);
+            },
+            // оставим периодическую проверку как было
+            onRegisteredSW(swUrl, r) {
+                if (HOUR > 0 && r) {
+                    registerPeriodicSync(HOUR, swUrl, r);
+                }
+            },
+        });
 
-    if (!visible) {
+        updateSWRef.current = updateSW;
+    }, []);
+
+    if (!visible || (!offlineReady && !needRefresh)) {
         return null;
     }
 
@@ -42,66 +45,41 @@ const PWABadge = () => {
     };
 
     return (
-        (offlineReady || needRefresh) && (
-            <div
-                role="alert"
-                aria-labelledby="toast-message"
-                style={{
-                    position: 'fixed',
-                    bottom: '1rem',
-                    right: '1rem',
-                    zIndex: 9999,
-                }}
-            >
-                <Card
-                    variant="classic"
-                    style={{
-                        maxWidth: '320px',
-                        padding: '1rem',
-                    }}
-                >
-                    <Flex direction="column" gap="3">
-                        <Text size="2" id="toast-message">
-                            {offlineReady
-                                ? 'App ready to work offline'
-                                : 'New content available, click reload to update.'}
-                        </Text>
+        <Box position="fixed" bottom="4" right="4" role="alert" aria-labelledby="toast-message">
+            <Card variant="classic" size="2">
+                <Flex direction="column" gap="3">
+                    <Text size="2" id="toast-message">
+                        {offlineReady
+                            ? 'App ready to work offline'
+                            : 'New content available, click reload to update.'}
+                    </Text>
 
-                        <Flex justify="end" gap="2">
-                            {!needRefresh && (
-                                <Button
-                                    size="1"
-                                    variant="solid"
-                                    onClick={() => {
-                                        updateServiceWorker(true);
-                                    }}
-                                >
-                                    Reload
-                                </Button>
-                            )}
+                    <Flex justify="end" gap="2">
+                        {needRefresh && (
                             <Button
                                 size="1"
-                                variant="soft"
-                                onClick={() => {
-                                    closeAlert?.();
-                                }}
+                                variant="solid"
+                                onClick={() => updateSWRef.current?.(true)} // перезагрузка страницы после обновления SW
                             >
-                                Close
+                                Reload
                             </Button>
-                        </Flex>
+                        )}
+                        <Button size="1" variant="soft" onClick={closeAlert}>
+                            Close
+                        </Button>
                     </Flex>
-                </Card>
-            </div>
-        )
+                </Flex>
+            </Card>
+        </Box>
     );
 };
 
 export default PWABadge;
 
 /**
- * This function will register a periodic sync check every hour, you can modify the interval as needed.
+ * Периодическая проверка обновлений SW.
  */
-const registerPeriodicSync = (period: number, swUrl: string, r: ServiceWorkerRegistration) => {
+function registerPeriodicSync(period: number, swUrl: string, r: ServiceWorkerRegistration) {
     if (period <= 0) {
         return;
     }
@@ -113,14 +91,11 @@ const registerPeriodicSync = (period: number, swUrl: string, r: ServiceWorkerReg
 
         const resp = await fetch(swUrl, {
             cache: 'no-store',
-            headers: {
-                cache: 'no-store',
-                'cache-control': 'no-cache',
-            },
+            headers: { 'cache-control': 'no-cache' },
         });
 
         if (resp?.status === 200) {
             await r.update();
         }
     }, period);
-};
+}

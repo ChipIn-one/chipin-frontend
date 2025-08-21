@@ -13,6 +13,13 @@ const BalancesPage = lazy(
     () => import(/* webpackChunkName: "BalancesPage" */ 'pages/BalancesPage'),
 );
 const HomePage = lazy(() => import(/* webpackChunkName: "HomePage" */ 'pages/HomePage'));
+const GroupsPage = lazy(() => import(/* webpackChunkName: "GroupsPage" */ 'pages/GroupsPage'));
+const ActivityPage = lazy(
+    () => import(/* webpackChunkName: "ActivityPage" */ 'pages/ActivityPage'),
+);
+const SettingsPage = lazy(
+    () => import(/* webpackChunkName: "SettingsPage" */ 'pages/SettingsPage'),
+);
 const Page404 = lazy(() => import(/* webpackChunkName: "Page404" */ 'pages/Page404'));
 
 interface ProtectedRouteProps {
@@ -38,6 +45,30 @@ const AppRouter = () => {
                 element={
                     <ProtectedRoute>
                         <BalancesPage />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path={ROUTES.GROUPS}
+                element={
+                    <ProtectedRoute>
+                        <GroupsPage />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path={ROUTES.ACTIVITY}
+                element={
+                    <ProtectedRoute>
+                        <ActivityPage />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path={ROUTES.SETTINGS}
+                element={
+                    <ProtectedRoute>
+                        <SettingsPage />
                     </ProtectedRoute>
                 }
             />

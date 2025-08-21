@@ -7,6 +7,9 @@
         "module": "ESNext",
         "skipLibCheck": true,
 
+        // Types add
+        "typeRoots": ["./@types", "./node_modules/@types"],
+
         /* Bundler mode */
         "moduleResolution": "bundler",
         "allowImportingTsExtensions": true,
@@ -38,9 +41,7 @@
             "pages/*": ["pages/*"],
 
             "styles/*": ["styles/*"]
-        },
-
-        "types": ["vite-plugin-pwa/client"]
+        }
     },
     "include": ["src"]
 }
