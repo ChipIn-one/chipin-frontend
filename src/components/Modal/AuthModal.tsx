@@ -1,4 +1,3 @@
-import { LucideLogIn } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { Button, Flex } from '@radix-ui/themes';
@@ -8,18 +7,13 @@ import { getSocialAuthUrl } from 'helpers/url';
 import BaseModal from './Modal';
 
 interface Props {
-    buttonText?: string;
+    triggerElement: React.ReactNode;
 }
 
-const AuthModal = ({ buttonText = 'Sign in' }: Props) => {
+const AuthModal = ({ triggerElement }: Props) => {
     return (
         <BaseModal
-            triggerElement={
-                <Button size="3" variant="soft" color="cyan">
-                    {buttonText}
-                    <LucideLogIn />
-                </Button>
-            }
+            triggerElement={triggerElement}
             content={
                 <Flex direction="column" gap="4">
                     <Button size="3" variant="soft" color="lime" asChild>

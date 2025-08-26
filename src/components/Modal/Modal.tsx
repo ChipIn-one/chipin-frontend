@@ -1,6 +1,6 @@
 import { LucideX } from 'lucide-react';
 
-import { Box, Dialog, Flex, IconButton } from '@radix-ui/themes';
+import { Box, Dialog, Flex, IconButton, Text } from '@radix-ui/themes';
 
 interface Props {
     triggerElement: React.ReactNode;
@@ -26,7 +26,9 @@ const BaseModal = ({ triggerElement, maxWidth = '360px', content }: Props) => {
                 </Dialog.Title>
 
                 <Flex direction="column" gap="6">
-                    <Dialog.Description size="4">Choose a provider to continue</Dialog.Description>
+                    <Dialog.Description size="4">
+                        <Text>Choose a provider to continue</Text>
+                    </Dialog.Description>
                     {content}
                 </Flex>
             </Dialog.Content>

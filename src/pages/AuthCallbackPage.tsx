@@ -15,10 +15,10 @@ const AuthCallbackPage = () => {
         const error = searchParams.get('error');
 
         if (authToken) {
-            console.log('OAuth token received:', authToken);
-            saveAuthTokenDB(authToken);
-            setIsLoggedIn(true);
-            navigate(ROUTES.BALANCES);
+            saveAuthTokenDB(authToken).then(() => {
+                setIsLoggedIn(true);
+                navigate(ROUTES.BALANCES);
+            });
         } else {
             console.error('OAuth error:', error);
             navigate(ROUTES.HOME);

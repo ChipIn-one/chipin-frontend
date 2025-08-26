@@ -1,13 +1,25 @@
 // HomePage.tsx
+import { LucideLogIn, LucideStar } from 'lucide-react';
 import styled from 'styled-components';
 
-import { Box, Card, Container, Flex, Grid, Heading, Text } from '@radix-ui/themes';
-
-import { PROJECT_NAME } from 'constants/chipin';
+import {
+    Badge,
+    Box,
+    Button,
+    Card,
+    Container,
+    Flex,
+    Grid,
+    Heading,
+    Section,
+    Text,
+} from '@radix-ui/themes';
 
 import Footer from 'components/Footer';
 import Header from 'components/Header';
 import { AuthModal } from 'components/Modal';
+
+// import Background from 'assets/home-page/background-polygons.svg';
 
 const Placeholder = styled.div`
     width: 100%;
@@ -25,23 +37,86 @@ const HomePage = () => {
     return (
         <>
             <Header />
+            <Box px="4">
+                <Section>
+                    <Container size="4">
+                        <Flex direction="column" align="center" gap="5">
+                            <Badge size="3" color="green" variant="solid">
+                                Share expenses without stress
+                            </Badge>
+                            <Heading size="9">Split bills with</Heading>
+                            <Heading size="9" color="green">
+                                friends & family
+                            </Heading>
+                        </Flex>
+                    </Container>
+
+                    <Container size="2" align="center" py="8">
+                        <Flex direction="column" align="center" gap="6">
+                            <Text align="center" size="6">
+                                Create groups, add expenses, and see who owes whom — fast and fair.
+                                Perfect for trips, roommates, and group activities.
+                            </Text>
+
+                            <AuthModal
+                                triggerElement={
+                                    <Button size="3" variant="soft">
+                                        Get started
+                                        <LucideLogIn />
+                                    </Button>
+                                }
+                            />
+                        </Flex>
+                    </Container>
+
+                    <Container size="2" px="6" py="2">
+                        <Flex wrap="wrap" gap="6" justify="between" align="center">
+                            <Flex direction="column" align="center">
+                                <Text size="6" weight="bold" color="green">
+                                    50K+
+                                </Text>
+                                <Text size="3" color="gray">
+                                    Active Users
+                                </Text>
+                            </Flex>
+
+                            <Flex direction="column" align="center">
+                                <Text size="6" weight="bold" color="green">
+                                    $2M+
+                                </Text>
+                                <Text size="3" color="gray">
+                                    Expenses Tracked
+                                </Text>
+                            </Flex>
+
+                            <Flex direction="column" align="center">
+                                <Text size="6" weight="bold" color="green">
+                                    15K+
+                                </Text>
+                                <Text size="3" color="gray">
+                                    Groups Created
+                                </Text>
+                            </Flex>
+
+                            <Flex direction="column" align="center">
+                                <Text size="6" weight="bold" color="green">
+                                    <Flex align="center">
+                                        4.9
+                                        <LucideStar />
+                                    </Flex>
+                                </Text>
+
+                                <Text size="3" color="gray">
+                                    User Rating
+                                </Text>
+                            </Flex>
+                        </Flex>
+                    </Container>
+                </Section>
+            </Box>
 
             {/* Hero */}
-            <Box py="8" px="4">
-                <Container size="4">
-                    <Flex direction="column" align="center" gap="5">
-                        <Heading size="9" align="center">
-                            {PROJECT_NAME} — share expenses without stress
-                        </Heading>
-                        <Text align="center" size="5" color="gray">
-                            Create groups, add expenses, and see who owes whom — fast and fair.
-                            Perfect for trips, roommates and friends.
-                        </Text>
-                        <AuthModal buttonText="Get started" />
-                        <Placeholder aria-label="App preview placeholder">App preview</Placeholder>
-                    </Flex>
-                </Container>
-            </Box>
+            {/* <Background /> */}
 
             {/* Features overview */}
             <Box py="8" px="4">

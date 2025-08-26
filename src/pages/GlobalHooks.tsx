@@ -16,6 +16,7 @@ const GlobalHooks = () => {
                     navigate(ROUTES.HOME);
                     setIsLoggedIn(false);
                 } else {
+                    navigate(ROUTES.BALANCES);
                     setIsLoggedIn(true);
                 }
             })

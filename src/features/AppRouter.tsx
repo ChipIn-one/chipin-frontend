@@ -13,7 +13,6 @@ const BalancesPage = lazy(
     () => import(/* webpackChunkName: "BalancesPage" */ 'pages/BalancesPage'),
 );
 const HomePage = lazy(() => import(/* webpackChunkName: "HomePage" */ 'pages/HomePage'));
-const GroupsPage = lazy(() => import(/* webpackChunkName: "GroupsPage" */ 'pages/GroupsPage'));
 const ActivityPage = lazy(
     () => import(/* webpackChunkName: "ActivityPage" */ 'pages/ActivityPage'),
 );
@@ -45,14 +44,6 @@ const AppRouter = () => {
                 element={
                     <ProtectedRoute>
                         <BalancesPage />
-                    </ProtectedRoute>
-                }
-            />
-            <Route
-                path={ROUTES.GROUPS}
-                element={
-                    <ProtectedRoute>
-                        <GroupsPage />
                     </ProtectedRoute>
                 }
             />

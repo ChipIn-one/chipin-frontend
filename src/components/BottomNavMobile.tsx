@@ -20,10 +20,10 @@ const BottomNavMobile = () => {
             display={{ initial: 'block', sm: 'none' }}
         >
             <TabNav.Root justify="center">
-                <TabNav.Link asChild active={isActive(ROUTES.GROUPS)}>
-                    <Link to={ROUTES.GROUPS}>
+                <TabNav.Link asChild active={isActive(ROUTES.BALANCES)}>
+                    <Link to={ROUTES.BALANCES}>
                         <Button variant="ghost" radius="none">
-                            <LucideUsers size={24} /> Groups
+                            <LucideUsers size={24} /> Balances
                         </Button>
                     </Link>
                 </TabNav.Link>
