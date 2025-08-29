@@ -26,7 +26,7 @@ export default defineConfig({
                 name: 'ChipIn',
                 short_name: 'ChipIn',
                 description: 'Share expenses without stress',
-                theme_color: '#ffffff',
+                theme_color: '#3e9b4f',
                 display: 'standalone',
             },
 

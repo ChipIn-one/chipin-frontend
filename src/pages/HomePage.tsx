@@ -1,5 +1,6 @@
 // HomePage.tsx
-import { LucideLogIn, LucideStar } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { LucideDownload, LucideLogIn, LucideStar } from 'lucide-react';
 import styled from 'styled-components';
 
 import {
@@ -34,6 +35,48 @@ const Placeholder = styled.div`
 `;
 
 const HomePage = () => {
+    const [deferredPrompt, setDeferredPrompt] = useState<Event | null>(null);
+    const [isInstalled, setIsInstalled] = useState(false);
+
+    useEffect(() => {
+        const checkInstalled = () => {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+            const isIOSStandalone = (window.navigator as any).standalone === true;
+            setIsInstalled(isStandalone || isIOSStandalone);
+        };
+
+        checkInstalled();
+
+        // Событие "beforeinstallprompt" перехватываем
+        const handleBeforeInstallPrompt = (e: Event) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+        };
+
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        window.addEventListener('appinstalled', checkInstalled);
+
+        return () => {
+            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+            window.removeEventListener('appinstalled', checkInstalled);
+        };
+    }, []);
+
+    const handleInstallClick = async () => {
+        if (!deferredPrompt) {
+            return;
+        }
+
+        // Приводим event к правильному типу
+        const promptEvent = deferredPrompt as any;
+        promptEvent.prompt();
+
+        const { outcome } = await promptEvent.userChoice;
+        console.log(`User response: ${outcome}`);
+
+        setDeferredPrompt(null);
+    };
+
     return (
         <>
             <Header />
@@ -58,14 +101,23 @@ const HomePage = () => {
                                 Perfect for trips, roommates, and group activities.
                             </Text>
 
-                            <AuthModal
-                                triggerElement={
-                                    <Button size="3" variant="soft">
-                                        Get started
-                                        <LucideLogIn />
+                            <Flex gap="4">
+                                <AuthModal
+                                    triggerElement={
+                                        <Button size="3" variant="soft">
+                                            Get started
+                                            <LucideLogIn />
+                                        </Button>
+                                    }
+                                />
+
+                                {!isInstalled && (
+                                    <Button size="3" variant="outline" onClick={handleInstallClick}>
+                                        Install app
+                                        <LucideDownload />
                                     </Button>
-                                }
-                            />
+                                )}
+                            </Flex>
                         </Flex>
                     </Container>
 

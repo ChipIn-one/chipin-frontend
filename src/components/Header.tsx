@@ -22,8 +22,8 @@ const StickyBox = styled(Box)`
 `;
 
 const StyledLogotype = styled(Logotype)`
-    width: 60px;
-    height: 60px;
+    width: 40px;
+    height: 40px;
 `;
 
 const Header = () => {
@@ -61,7 +61,7 @@ const Header = () => {
                         <AuthModal
                             triggerElement={
                                 <Button size="3" variant="outline">
-                                    Get started
+                                    Sign in
                                     <LucideLogIn />
                                 </Button>
                             }
