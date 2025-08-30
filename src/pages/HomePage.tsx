@@ -1,6 +1,12 @@
 // HomePage.tsx
-import { useEffect, useState } from 'react';
-import { LucideDownload, LucideLogIn, LucideStar } from 'lucide-react';
+import {
+    LucideDownload,
+    LucideLogIn,
+    LucideReceipt,
+    LucideStar,
+    LucideUserCheck,
+    LucideUsers2,
+} from 'lucide-react';
 import styled from 'styled-components';
 
 import {
@@ -16,11 +22,11 @@ import {
     Text,
 } from '@radix-ui/themes';
 
+import { usePwaStore } from 'store/pwaStore';
+
 import Footer from 'components/Footer';
 import Header from 'components/Header';
 import { AuthModal } from 'components/Modal';
-
-// import Background from 'assets/home-page/background-polygons.svg';
 
 const Placeholder = styled.div`
     width: 100%;
@@ -34,145 +40,173 @@ const Placeholder = styled.div`
     font-size: 14px;
 `;
 
+const HeroSection = styled(Section)`
+    background: radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.15), transparent 40%),
+        radial-gradient(circle at 80% 30%, rgba(16, 185, 129, 0.15), transparent 40%),
+        radial-gradient(circle at 40% 80%, rgba(244, 63, 94, 0.15), transparent 40%), #0f172a;
+
+    /* background: radial-gradient(ellipse at top, rgba(99, 102, 241, 0.2), transparent),
+        radial-gradient(ellipse at bottom, rgba(16, 185, 129, 0.2), transparent), #0f172a; */
+
+    /* background: repeating-linear-gradient(
+            45deg,
+            rgba(139, 92, 246, 0.1) 0 2px,
+            transparent 2px 40px
+        ),
+        linear-gradient(to bottom, #0f172a, #1e293b); */
+
+    /* background: repeating-linear-gradient(
+            -45deg,
+            rgba(16, 185, 129, 0.1) 0 4px,
+            transparent 4px 40px
+        ),
+        linear-gradient(to top, #0f172a, #1e293b); */
+
+    /* background: radial-gradient(circle at 10% 20%, rgba(244, 63, 94, 0.12), transparent 30%),
+        radial-gradient(circle at 80% 70%, rgba(16, 185, 129, 0.12), transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.1), transparent 45%), #0f172a; */
+
+    /* background: radial-gradient(circle at 20% 30%, rgba(139, 92, 246, 0.2), transparent 50%),
+        radial-gradient(circle at 70% 80%, rgba(16, 185, 129, 0.15), transparent 50%),
+        linear-gradient(to bottom, #0f172a, #111827); */
+`;
+
 const HomePage = () => {
-    const [deferredPrompt, setDeferredPrompt] = useState<Event | null>(null);
-    const [isInstalled, setIsInstalled] = useState(false);
+    const { isPwaCanBeInstalled, callPWAInstall } = usePwaStore();
 
-    useEffect(() => {
-        const checkInstalled = () => {
-            const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-            const isIOSStandalone = (window.navigator as any).standalone === true;
-            setIsInstalled(isStandalone || isIOSStandalone);
-        };
-
-        checkInstalled();
-
-        // Событие "beforeinstallprompt" перехватываем
-        const handleBeforeInstallPrompt = (e: Event) => {
-            e.preventDefault();
-            setDeferredPrompt(e);
-        };
-
-        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-        window.addEventListener('appinstalled', checkInstalled);
-
-        return () => {
-            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-            window.removeEventListener('appinstalled', checkInstalled);
-        };
-    }, []);
-
-    const handleInstallClick = async () => {
-        if (!deferredPrompt) {
-            return;
-        }
-
-        // Приводим event к правильному типу
-        const promptEvent = deferredPrompt as any;
-        promptEvent.prompt();
-
-        const { outcome } = await promptEvent.userChoice;
-        console.log(`User response: ${outcome}`);
-
-        setDeferredPrompt(null);
-    };
+    const benefits = [
+        {
+            title: '50K+',
+            description: 'Active users',
+            icon: <LucideUserCheck />,
+        },
+        {
+            title: '2M+',
+            description: 'Expenses tracked',
+            icon: <LucideReceipt />,
+        },
+        {
+            title: '15K+',
+            description: 'Groups created',
+            icon: <LucideUsers2 />,
+        },
+        {
+            title: '4.9',
+            description: 'User rating',
+            icon: <LucideStar />,
+        },
+    ];
 
     return (
         <>
             <Header />
-            <Box px="4">
-                <Section>
-                    <Container size="4">
-                        <Flex direction="column" align="center" gap="5">
-                            <Badge size="3" color="green" variant="solid">
-                                Share expenses without stress
-                            </Badge>
-                            <Heading size="9">Split bills with</Heading>
-                            <Heading size="9" color="green">
-                                friends & family
-                            </Heading>
-                        </Flex>
-                    </Container>
+            <HeroSection px="4">
+                <Container size="4">
+                    <Flex direction="column" align="center" gap="5">
+                        <Badge
+                            size={{
+                                initial: '1',
+                                sm: '2',
+                                md: '3',
+                            }}
+                            color="green"
+                            variant="solid"
+                        >
+                            Share expenses without stress
+                        </Badge>
+                        <Heading
+                            size={{
+                                initial: '8',
+                                md: '9',
+                            }}
+                        >
+                            Split bills with
+                        </Heading>
+                        <Heading
+                            size={{
+                                initial: '8',
+                                md: '9',
+                            }}
+                            color="green"
+                        >
+                            friends & family
+                        </Heading>
+                    </Flex>
+                </Container>
 
-                    <Container size="2" align="center" py="8">
-                        <Flex direction="column" align="center" gap="6">
-                            <Text align="center" size="6">
-                                Create groups, add expenses, and see who owes whom — fast and fair.
-                                Perfect for trips, roommates, and group activities.
-                            </Text>
+                <Container size="2" align="center" py="8">
+                    <Flex direction="column" align="center" gap="6">
+                        <Text
+                            align="center"
+                            size={{
+                                initial: '3',
+                                sm: '4',
+                                md: '6',
+                            }}
+                        >
+                            Create groups, add expenses, and see who owes whom — fast and fair.
+                            Perfect for trips, roommates, and group activities.
+                        </Text>
 
-                            <Flex gap="4">
-                                <AuthModal
-                                    triggerElement={
-                                        <Button size="3" variant="soft">
-                                            Get started
-                                            <LucideLogIn />
-                                        </Button>
-                                    }
-                                />
-
-                                {!isInstalled && (
-                                    <Button size="3" variant="outline" onClick={handleInstallClick}>
-                                        Install app
-                                        <LucideDownload />
+                        <Flex gap="4">
+                            <AuthModal
+                                triggerElement={
+                                    <Button
+                                        size={{
+                                            initial: '2',
+                                            sm: '3',
+                                        }}
+                                        variant="soft"
+                                    >
+                                        Get started
+                                        <LucideLogIn />
                                     </Button>
-                                )}
-                            </Flex>
+                                }
+                            />
+
+                            {!isPwaCanBeInstalled && (
+                                <Button
+                                    size={{
+                                        initial: '2',
+                                        sm: '3',
+                                    }}
+                                    variant="outline"
+                                    onClick={callPWAInstall}
+                                >
+                                    Install app
+                                    <LucideDownload />
+                                </Button>
+                            )}
                         </Flex>
-                    </Container>
+                    </Flex>
+                </Container>
 
-                    <Container size="2" px="6" py="2">
-                        <Flex wrap="wrap" gap="6" justify="between" align="center">
-                            <Flex direction="column" align="center">
+                <Container size="3" px="6" py="2">
+                    <Flex wrap="wrap" gap="6" justify="between" align="center">
+                        {benefits.map(({ title, description, icon }, index) => (
+                            <Flex key={index} direction="column" align="center" flexGrow="1">
                                 <Text size="6" weight="bold" color="green">
-                                    50K+
-                                </Text>
-                                <Text size="3" color="gray">
-                                    Active Users
-                                </Text>
-                            </Flex>
-
-                            <Flex direction="column" align="center">
-                                <Text size="6" weight="bold" color="green">
-                                    $2M+
-                                </Text>
-                                <Text size="3" color="gray">
-                                    Expenses Tracked
-                                </Text>
-                            </Flex>
-
-                            <Flex direction="column" align="center">
-                                <Text size="6" weight="bold" color="green">
-                                    15K+
-                                </Text>
-                                <Text size="3" color="gray">
-                                    Groups Created
-                                </Text>
-                            </Flex>
-
-                            <Flex direction="column" align="center">
-                                <Text size="6" weight="bold" color="green">
-                                    <Flex align="center">
-                                        4.9
-                                        <LucideStar />
+                                    <Flex align="center" gap="1">
+                                        {icon}
+                                        {title}
                                     </Flex>
                                 </Text>
-
                                 <Text size="3" color="gray">
-                                    User Rating
+                                    {description}
                                 </Text>
                             </Flex>
-                        </Flex>
-                    </Container>
-                </Section>
-            </Box>
+                        ))}{' '}
+                    </Flex>
+                </Container>
+            </HeroSection>
 
             {/* Hero */}
             {/* <Background /> */}
 
             {/* Features overview */}
+
             <Box py="8" px="4">
-                <Container size="3">
+                <Container size="4">
                     <Heading size="7" align="center" mb="6">
                         Core features
                     </Heading>
@@ -219,7 +253,7 @@ const HomePage = () => {
 
             {/* Groups section */}
             <Box py="8" px="4">
-                <Container size="3">
+                <Container size="4">
                     <Grid columns={{ initial: '1', md: '2' }} gap="6" align="center">
                         <Flex direction="column" gap="3">
                             <Heading size="7">Manage groups with links</Heading>
@@ -237,7 +271,7 @@ const HomePage = () => {
 
             {/* Expenses section */}
             <Box py="8" px="4">
-                <Container size="3">
+                <Container size="4">
                     <Grid columns={{ initial: '1', md: '2' }} gap="6" align="center">
                         <Placeholder aria-label="Expenses screenshot placeholder">
                             Expenses screenshot
@@ -254,8 +288,8 @@ const HomePage = () => {
             </Box>
 
             {/* Balances section */}
-            <Box py="8" px="4">
-                <Container size="3">
+            <Section py="8" px="4">
+                <Container size="4">
                     <Grid columns={{ initial: '1', md: '2' }} gap="6" align="center">
                         <Flex direction="column" gap="3">
                             <Heading size="7">Clear & settle balances</Heading>
@@ -269,7 +303,7 @@ const HomePage = () => {
                         </Placeholder>
                     </Grid>
                 </Container>
-            </Box>
+            </Section>
 
             <Footer />
         </>

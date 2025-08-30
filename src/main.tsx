@@ -1,5 +1,4 @@
-import { ThemeProvider } from 'next-themes';
-import { createRoot } from 'react-dom/client';
+import { useTheme } from 'next-themes';
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
 
@@ -9,14 +8,16 @@ import PWABadge from 'basics/PWABadge';
 import AppRouter from 'features/AppRouter';
 import GlobalHooks from 'pages/GlobalHooks';
 
-import '@radix-ui/themes/styles.css';
-import 'styles/radixStylesOverwrite.css';
+const Main = () => {
+    const { resolvedTheme } = useTheme();
 
-createRoot(document.getElementById('root')!).render(
-    <ThemeProvider attribute="class">
+    const themeName = (resolvedTheme as 'light' | 'dark') || 'system';
+
+    return (
         <Theme
+            appearance={themeName}
             accentColor="grass"
-            grayColor="gray"
+            grayColor="olive"
             radius="large"
             panelBackground="translucent"
             hasBackground
@@ -25,8 +26,10 @@ createRoot(document.getElementById('root')!).render(
                 <GlobalHooks />
                 <AppRouter />
                 <PWABadge />
-                <Toaster theme="system" richColors closeButton />
+                <Toaster theme={themeName} richColors closeButton />
             </BrowserRouter>
         </Theme>
-    </ThemeProvider>,
-);
+    );
+};
+
+export default Main;
