@@ -13,7 +13,7 @@ export default defineConfig({
         react(),
         tsconfigPaths(),
         VitePWA({
-            registerType: 'prompt', // вместо 'autoUpdate'
+            registerType: 'prompt', // or autoUpdate
             injectRegister: false,
 
             manifest: {
