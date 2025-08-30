@@ -1,16 +1,19 @@
 // HomePage.tsx
 import {
+    LucideCalculator,
     LucideDownload,
     LucideLogIn,
     LucideReceipt,
     LucideStar,
     LucideUserCheck,
+    LucideUsers,
     LucideUsers2,
 } from 'lucide-react';
 import styled from 'styled-components';
 
 import { blueDark, greenDark, violetDark } from '@radix-ui/colors';
 import {
+    Avatar,
     Badge,
     Box,
     Button,
@@ -45,11 +48,11 @@ const Placeholder = styled.div`
 const StyledBox = styled(Box)`
     background-image: radial-gradient(
             circle at 20% 20%,
-            ${hexToRgba(blueDark.blue9, 0.18)},
+            ${hexToRgba(blueDark.blue9, 0.2)},
             transparent 40%
         ),
-        radial-gradient(circle at 80% 30%, ${hexToRgba(greenDark.green9, 0.18)}, transparent 40%),
-        radial-gradient(circle at 40% 80%, ${hexToRgba(violetDark.violet9, 0.14)}, transparent 40%);
+        radial-gradient(circle at 80% 30%, ${hexToRgba(greenDark.green9, 0.2)}, transparent 40%),
+        radial-gradient(circle at 40% 80%, ${hexToRgba(violetDark.violet9, 0.25)}, transparent 40%);
 `;
 
 // const HeroSection = styled(Section)`
@@ -82,7 +85,7 @@ const StyledBox = styled(Box)`
 const HomePage = () => {
     const { isPwaCanBeInstalled, callPWAInstall } = usePwaStore();
 
-    const benefits = [
+    const stats = [
         {
             title: '50K+',
             description: 'Active users',
@@ -102,6 +105,27 @@ const HomePage = () => {
             title: '4.9',
             description: 'User rating',
             icon: <LucideStar />,
+        },
+    ];
+
+    const coreFeatures = [
+        {
+            title: 'Smart Groups',
+            description:
+                'Create groups for any occasion. Invite members via shareable links and keep everyone in sync with real-time balance updates.',
+            icon: <LucideUsers />,
+        },
+        {
+            title: 'Quick Expense Entry',
+            description:
+                'Add expenses in seconds. Split equally or by custom amounts. Attach receipts and categorize for better tracking.',
+            icon: <LucideReceipt />,
+        },
+        {
+            title: 'Auto Calculations',
+            description:
+                'See who owes whom instantly. Our smart algorithm minimizes the number of transactions needed to settle up.',
+            icon: <LucideCalculator />,
         },
     ];
 
@@ -161,8 +185,7 @@ const HomePage = () => {
                                 triggerElement={
                                     <Button
                                         size={{
-                                            initial: '2',
-                                            sm: '3',
+                                            initial: '3',
                                         }}
                                         variant="soft"
                                     >
@@ -175,8 +198,7 @@ const HomePage = () => {
                             {!isPwaCanBeInstalled && (
                                 <Button
                                     size={{
-                                        initial: '2',
-                                        sm: '3',
+                                        initial: '3',
                                     }}
                                     variant="outline"
                                     onClick={callPWAInstall}
@@ -189,10 +211,18 @@ const HomePage = () => {
                     </Flex>
                 </Container>
 
-                <Container size="3" px="6" py="2">
-                    <Flex wrap="wrap" gap="6" justify="between" align="center">
-                        {benefits.map(({ title, description, icon }, index) => (
-                            <Flex key={index} direction="column" align="center" flexGrow="1">
+                <Container size="3" py="2">
+                    <Flex wrap="wrap" gap="4" justify="between" align="center">
+                        {stats.map(({ title, description, icon }, index) => (
+                            <Flex
+                                minWidth="140px"
+                                key={index}
+                                direction="column"
+                                align="center"
+                                flexGrow="1"
+                                flexShrink="1"
+                                flexBasis="0"
+                            >
                                 <Text size="6" weight="bold" color="green">
                                     <Flex align="center" gap="1">
                                         {icon}
@@ -203,7 +233,7 @@ const HomePage = () => {
                                     {description}
                                 </Text>
                             </Flex>
-                        ))}{' '}
+                        ))}
                     </Flex>
                 </Container>
             </Section>
@@ -213,51 +243,56 @@ const HomePage = () => {
 
             {/* Features overview */}
 
-            <Box py="8" px="4">
+            <Section py="8" px="4">
                 <Container size="4">
-                    <Heading size="7" align="center" mb="6">
-                        Core features
-                    </Heading>
+                    <Flex direction="column" align="center" gap="4" mb="6">
+                        <Heading
+                            align="center"
+                            size={{
+                                initial: '7',
+                            }}
+                        >
+                            Everything you need to manage shared expenses
+                        </Heading>
+
+                        <Text
+                            align="center"
+                            size={{
+                                initial: '3',
+                                sm: '4',
+                                md: '5',
+                            }}
+                        >
+                            Powerful features designed to make splitting expenses effortless and
+                            transparent
+                        </Text>
+                    </Flex>
 
                     <Grid columns={{ initial: '1', md: '3' }} gap="6">
-                        <Card>
-                            <Flex direction="column" gap="3">
-                                <Text size="5" weight="bold">
-                                    Groups
-                                </Text>
-                                <Text color="gray">
-                                    Create / edit / delete groups. Invite members via link. Shared
-                                    group page with balances.
-                                </Text>
-                            </Flex>
-                        </Card>
+                        {coreFeatures.map(({ title, description, icon }, index) => (
+                            <Card key={index} size="3">
+                                <Flex direction="column" gap="4">
+                                    <Flex align="center" gap="4">
+                                        <Avatar
+                                            size="4"
+                                            color="cyan"
+                                            variant="soft"
+                                            fallback={icon}
+                                        />
 
-                        <Card>
-                            <Flex direction="column" gap="3">
-                                <Text size="5" weight="bold">
-                                    Expenses
-                                </Text>
-                                <Text color="gray">
-                                    Add / edit / delete expenses. Attach to group & users. Split
-                                    equally or by fixed shares.
-                                </Text>
-                            </Flex>
-                        </Card>
-
-                        <Card>
-                            <Flex direction="column" gap="3">
-                                <Text size="5" weight="bold">
-                                    Balances & Settlements
-                                </Text>
-                                <Text color="gray">
-                                    Auto-calculate who owes whom. Summary page of totals. One-tap
-                                    debt “cleanup”.
-                                </Text>
-                            </Flex>
-                        </Card>
+                                        <Text size="6" weight="bold">
+                                            {title}
+                                        </Text>
+                                    </Flex>
+                                    <Text size="4" color="gray">
+                                        {description}
+                                    </Text>
+                                </Flex>
+                            </Card>
+                        ))}
                     </Grid>
                 </Container>
-            </Box>
+            </Section>
 
             {/* Groups section */}
             <Box py="8" px="4">

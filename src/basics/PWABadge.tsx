@@ -1,29 +1,40 @@
 import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { registerSW } from 'virtual:pwa-register';
-
-import { Box, Button, Card, Flex, Text } from '@radix-ui/themes';
 
 import { HOUR } from 'constants/time';
 
-const PWABadge = () => {
-    const [visible, setVisible] = useState(true);
-    const [offlineReady, setOfflineReady] = useState(false);
-    const [needRefresh, setNeedRefresh] = useState(false);
+const UPDATE_TOAST_ID = 'pwa-update-available';
 
-    // registerSW возвращает функцию обновления — кладём в ref
-    const updateSWRef = useRef<(reloadPage?: boolean) => void>(() => {});
+const PWABadge = () => {
+    const updateSWRef = useRef<((reloadPage?: boolean) => void) | null>(null);
+    const [shown, setShown] = useState(false);
 
     useEffect(() => {
         const updateSW = registerSW({
+            // Show a short toast when offline cache is ready (optional UX)
             onOfflineReady() {
-                setOfflineReady(true);
-                setVisible(true);
+                // toast.success('App is ready to work offline', { duration: 3000 });
             },
+
+            // When a new version is available — show a persistent Sonner toast with an update button
             onNeedRefresh() {
-                setNeedRefresh(true);
-                setVisible(true);
+                if (shown) {
+                    return;
+                }
+                setShown(true);
+
+                toast.info('A new version is available', {
+                    id: UPDATE_TOAST_ID,
+                    duration: Infinity, // persist until user clicks
+                    action: {
+                        label: 'Update',
+                        onClick: () => updateSWRef.current?.(true), // update SW and reload the page
+                    },
+                });
             },
-            // оставим периодическую проверку как было
+
+            // Keep periodic SW update checks as before
             onRegisteredSW(swUrl, r) {
                 if (HOUR > 0 && r) {
                     registerPeriodicSync(HOUR, swUrl, r);
@@ -32,54 +43,18 @@ const PWABadge = () => {
         });
 
         updateSWRef.current = updateSW;
-    }, []);
+    }, [shown]);
 
-    if (!visible || (!offlineReady && !needRefresh)) {
-        return null;
-    }
-
-    const closeAlert = () => {
-        setOfflineReady(false);
-        setNeedRefresh(false);
-        setVisible(false);
-    };
-
-    return (
-        <Box position="fixed" bottom="4" right="4" role="alert" aria-labelledby="toast-message">
-            <Card variant="classic" size="2">
-                <Flex direction="column" gap="3">
-                    <Text size="2" id="toast-message">
-                        {offlineReady
-                            ? 'App ready to work offline'
-                            : 'New content available, click reload to update.'}
-                    </Text>
-
-                    <Flex justify="end" gap="2">
-                        {needRefresh && (
-                            <Button
-                                size="1"
-                                variant="solid"
-                                onClick={() => updateSWRef.current?.(true)} // перезагрузка страницы после обновления SW
-                            >
-                                Reload
-                            </Button>
-                        )}
-                        <Button size="1" variant="soft" onClick={closeAlert}>
-                            Close
-                        </Button>
-                    </Flex>
-                </Flex>
-            </Card>
-        </Box>
-    );
+    // Nothing to render — Sonner handles the UI
+    return null;
 };
 
 export default PWABadge;
 
 /**
- * Периодическая проверка обновлений SW.
+ * Periodically checks for SW updates.
  */
-function registerPeriodicSync(period: number, swUrl: string, r: ServiceWorkerRegistration) {
+const registerPeriodicSync = (period: number, swUrl: string, r: ServiceWorkerRegistration) => {
     if (period <= 0) {
         return;
     }
@@ -98,4 +73,4 @@ function registerPeriodicSync(period: number, swUrl: string, r: ServiceWorkerReg
             await r.update();
         }
     }, period);
-}
+};
