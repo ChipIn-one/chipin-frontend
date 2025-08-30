@@ -13,14 +13,8 @@ export default defineConfig({
         react(),
         tsconfigPaths(),
         VitePWA({
-            //TODO: ADD DEV/PROD ENV
-            registerType: 'autoUpdate',
+            registerType: 'prompt', // вместо 'autoUpdate'
             injectRegister: false,
-
-            pwaAssets: {
-                disabled: false,
-                config: true,
-            },
 
             manifest: {
                 name: 'ChipIn',
@@ -34,7 +28,7 @@ export default defineConfig({
                 globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
                 cleanupOutdatedCaches: true,
                 clientsClaim: true,
-                skipWaiting: true,
+                skipWaiting: false,
             },
 
             devOptions: {
