@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import styled from 'styled-components';
 
+import { blueDark, greenDark, violetDark } from '@radix-ui/colors';
 import {
     Badge,
     Box,
@@ -22,6 +23,7 @@ import {
     Text,
 } from '@radix-ui/themes';
 
+import { hexToRgba } from 'helpers/colors';
 import { usePwaStore } from 'store/pwaStore';
 
 import Footer from 'components/Footer';
@@ -40,36 +42,42 @@ const Placeholder = styled.div`
     font-size: 14px;
 `;
 
-const HeroSection = styled(Section)`
-    background: radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.15), transparent 40%),
-        radial-gradient(circle at 80% 30%, rgba(16, 185, 129, 0.15), transparent 40%),
-        radial-gradient(circle at 40% 80%, rgba(244, 63, 94, 0.15), transparent 40%), #0f172a;
-
-    /* background: radial-gradient(ellipse at top, rgba(99, 102, 241, 0.2), transparent),
-        radial-gradient(ellipse at bottom, rgba(16, 185, 129, 0.2), transparent), #0f172a; */
-
-    /* background: repeating-linear-gradient(
-            45deg,
-            rgba(139, 92, 246, 0.1) 0 2px,
-            transparent 2px 40px
+const StyledBox = styled(Box)`
+    background-image: radial-gradient(
+            circle at 20% 20%,
+            ${hexToRgba(blueDark.blue9, 0.18)},
+            transparent 40%
         ),
-        linear-gradient(to bottom, #0f172a, #1e293b); */
-
-    /* background: repeating-linear-gradient(
-            -45deg,
-            rgba(16, 185, 129, 0.1) 0 4px,
-            transparent 4px 40px
-        ),
-        linear-gradient(to top, #0f172a, #1e293b); */
-
-    /* background: radial-gradient(circle at 10% 20%, rgba(244, 63, 94, 0.12), transparent 30%),
-        radial-gradient(circle at 80% 70%, rgba(16, 185, 129, 0.12), transparent 40%),
-        radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.1), transparent 45%), #0f172a; */
-
-    /* background: radial-gradient(circle at 20% 30%, rgba(139, 92, 246, 0.2), transparent 50%),
-        radial-gradient(circle at 70% 80%, rgba(16, 185, 129, 0.15), transparent 50%),
-        linear-gradient(to bottom, #0f172a, #111827); */
+        radial-gradient(circle at 80% 30%, ${hexToRgba(greenDark.green9, 0.18)}, transparent 40%),
+        radial-gradient(circle at 40% 80%, ${hexToRgba(violetDark.violet9, 0.14)}, transparent 40%);
 `;
+
+// const HeroSection = styled(Section)`
+//     background: radial-gradient(ellipse at top, rgba(99, 102, 241, 0.2), transparent),
+//         radial-gradient(ellipse at bottom, rgba(16, 185, 129, 0.2), transparent), #0f172a;
+
+//     background: repeating-linear-gradient(
+//             45deg,
+//             rgba(139, 92, 246, 0.1) 0 2px,
+//             transparent 2px 40px
+//         ),
+//         linear-gradient(to bottom, #0f172a, #1e293b);
+
+//     background: repeating-linear-gradient(
+//             -45deg,
+//             rgba(16, 185, 129, 0.1) 0 4px,
+//             transparent 4px 40px
+//         ),
+//         linear-gradient(to top, #0f172a, #1e293b);
+
+//     background: radial-gradient(circle at 10% 20%, rgba(244, 63, 94, 0.12), transparent 30%),
+//         radial-gradient(circle at 80% 70%, rgba(16, 185, 129, 0.12), transparent 40%),
+//         radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.1), transparent 45%), #0f172a;
+
+//     background: radial-gradient(circle at 20% 30%, rgba(139, 92, 246, 0.2), transparent 50%),
+//         radial-gradient(circle at 70% 80%, rgba(16, 185, 129, 0.15), transparent 50%),
+//         linear-gradient(to bottom, #0f172a, #111827);
+// `;
 
 const HomePage = () => {
     const { isPwaCanBeInstalled, callPWAInstall } = usePwaStore();
@@ -98,9 +106,9 @@ const HomePage = () => {
     ];
 
     return (
-        <>
+        <StyledBox>
             <Header />
-            <HeroSection px="4">
+            <Section px="4">
                 <Container size="4">
                     <Flex direction="column" align="center" gap="5">
                         <Badge
@@ -198,7 +206,7 @@ const HomePage = () => {
                         ))}{' '}
                     </Flex>
                 </Container>
-            </HeroSection>
+            </Section>
 
             {/* Hero */}
             {/* <Background /> */}
@@ -306,7 +314,7 @@ const HomePage = () => {
             </Section>
 
             <Footer />
-        </>
+        </StyledBox>
     );
 };
 
