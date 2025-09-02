@@ -5,9 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run create-pwa-icons && tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "create-pwa-icons": "pwa-assets-generator"
   },
   "dependencies": {
     "@radix-ui/themes": "^3.2.1",

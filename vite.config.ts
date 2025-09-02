@@ -22,7 +22,46 @@ export default defineConfig({
                 description: 'Share expenses without stress',
                 theme_color: '#3e9b4f',
                 display: 'standalone',
+                icons: [
+                    {
+                        src: '/assets/pwa-64x64.png',
+                        sizes: '64x64',
+                        type: 'image/png',
+                    },
+                    {
+                        src: '/assets/apple-touch-icon-180x180.png',
+                        sizes: '180x180',
+                        type: 'image/png',
+                    },
+                    {
+                        src: '/assets/pwa-192x192.png',
+                        sizes: '192x192',
+                        type: 'image/png',
+                    },
+                    {
+                        src: '/assets/pwa-512x512.png',
+                        sizes: '512x512',
+                        type: 'image/png',
+                    },
+                    {
+                        src: '/assets/maskable-icon-512x512.png',
+                        sizes: '512x512',
+                        type: 'image/png',
+                        purpose: 'maskable',
+                    },
+                    {
+                        src: '/assets/favicon.ico',
+                        sizes: '48x48',
+                        type: 'image/x-icon',
+                    },
+                    {
+                        src: '/assets/favicon.svg',
+                        sizes: 'any',
+                        type: 'image/svg+xml',
+                    },
+                ],
             },
+            includeManifestIcons: true,
 
             workbox: {
                 globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
