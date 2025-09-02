@@ -1,4 +1,4 @@
-import { lazy } from 'react';
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -6,9 +6,9 @@ import { MESSAGES } from 'constants/messages';
 import { ROUTES } from 'constants/routes';
 import { useAuthStore } from 'store/authStore';
 
-const AuthCallbackPage = lazy(
-    () => import(/* webpackChunkName: "LegalPage" */ 'pages/AuthCallbackPage'),
-);
+import PageLoader from 'basics/PageLoader';
+import AuthCallbackPage from 'pages/AuthCallbackPage';
+
 const BalancesPage = lazy(
     () => import(/* webpackChunkName: "BalancesPage" */ 'pages/BalancesPage'),
 );
@@ -37,37 +37,39 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
 const AppRouter = () => {
     return (
-        <Routes>
-            <Route path={ROUTES.HOME} element={<HomePage />} />
-            <Route
-                path={ROUTES.BALANCES}
-                element={
-                    <ProtectedRoute>
-                        <BalancesPage />
-                    </ProtectedRoute>
-                }
-            />
-            <Route
-                path={ROUTES.ACTIVITY}
-                element={
-                    <ProtectedRoute>
-                        <ActivityPage />
-                    </ProtectedRoute>
-                }
-            />
-            <Route
-                path={ROUTES.SETTINGS}
-                element={
-                    <ProtectedRoute>
-                        <SettingsPage />
-                    </ProtectedRoute>
-                }
-            />
-            <Route path={ROUTES.AUTH_CALLBACK} element={<AuthCallbackPage />} />
-            <Route path={ROUTES.NOT_FOUND_404} element={<Page404 />} />
-            {/* 404 fallback */}
-            <Route path="*" element={<Navigate to={ROUTES.NOT_FOUND_404} />} />
-        </Routes>
+        <Suspense fallback={<PageLoader />}>
+            <Routes>
+                <Route path={ROUTES.HOME} element={<HomePage />} />
+                <Route
+                    path={ROUTES.BALANCES}
+                    element={
+                        <ProtectedRoute>
+                            <BalancesPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path={ROUTES.ACTIVITY}
+                    element={
+                        <ProtectedRoute>
+                            <ActivityPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path={ROUTES.SETTINGS}
+                    element={
+                        <ProtectedRoute>
+                            <SettingsPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route path={ROUTES.AUTH_CALLBACK} element={<AuthCallbackPage />} />
+                <Route path={ROUTES.NOT_FOUND_404} element={<Page404 />} />
+                {/* 404 fallback */}
+                <Route path="*" element={<Navigate to={ROUTES.NOT_FOUND_404} />} />
+            </Routes>
+        </Suspense>
     );
 };
 

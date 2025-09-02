@@ -10,38 +10,39 @@ const PWABadge = () => {
     const updateSWRef = useRef<((reloadPage?: boolean) => void) | null>(null);
     const [shown, setShown] = useState(false);
 
+    console.log('new test preview');
+    const updateSW = registerSW({
+        // Show a short toast when offline cache is ready (optional UX)
+        onOfflineReady() {
+            toast.success('App is ready to work offline', { duration: 3000 });
+        },
+
+        // When a new version is available — show a persistent Sonner toast with an update button
+        onNeedRefresh() {
+            if (shown) {
+                return;
+            }
+            setShown(true);
+
+            toast.info('A new version is available', {
+                id: UPDATE_TOAST_ID,
+                duration: Infinity, // persist until user clicks
+                action: {
+                    label: 'Update',
+                    onClick: () => updateSWRef.current?.(true), // update SW and reload the page
+                },
+            });
+        },
+
+        // Keep periodic SW update checks as before
+        onRegisteredSW(swUrl, r) {
+            if (HOUR > 0 && r) {
+                registerPeriodicSync(HOUR, swUrl, r);
+            }
+        },
+    });
+
     useEffect(() => {
-        const updateSW = registerSW({
-            // Show a short toast when offline cache is ready (optional UX)
-            onOfflineReady() {
-                // toast.success('App is ready to work offline', { duration: 3000 });
-            },
-
-            // When a new version is available — show a persistent Sonner toast with an update button
-            onNeedRefresh() {
-                if (shown) {
-                    return;
-                }
-                setShown(true);
-
-                toast.info('A new version is available', {
-                    id: UPDATE_TOAST_ID,
-                    duration: Infinity, // persist until user clicks
-                    action: {
-                        label: 'Update',
-                        onClick: () => updateSWRef.current?.(true), // update SW and reload the page
-                    },
-                });
-            },
-
-            // Keep periodic SW update checks as before
-            onRegisteredSW(swUrl, r) {
-                if (HOUR > 0 && r) {
-                    registerPeriodicSync(HOUR, swUrl, r);
-                }
-            },
-        });
-
         updateSWRef.current = updateSW;
     }, [shown]);
 

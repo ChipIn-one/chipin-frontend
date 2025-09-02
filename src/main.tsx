@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 
 import { Theme } from '@radix-ui/themes';
 
+import BackgroundBox from 'basics/BackgroundBox';
 import PWABadge from 'basics/PWABadge';
 import AppRouter from 'features/AppRouter';
 import GlobalHooks from 'pages/GlobalHooks';
@@ -23,10 +24,12 @@ const Main = () => {
             hasBackground
         >
             <BrowserRouter>
-                <GlobalHooks />
-                <AppRouter />
-                <PWABadge />
-                <Toaster theme={themeName} richColors closeButton />
+                <BackgroundBox>
+                    <GlobalHooks />
+                    <AppRouter />
+                    <PWABadge />
+                    <Toaster theme={themeName} richColors closeButton />
+                </BackgroundBox>
             </BrowserRouter>
         </Theme>
     );
