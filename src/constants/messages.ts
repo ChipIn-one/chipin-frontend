@@ -10,4 +10,9 @@ export const MESSAGES = {
             MUST_BE_LOGGED_IN: 'You must be logged in to access this page',
         },
     },
+    success: {
+        pwa: {
+            INSTALLING: 'Installing application on your home screen...',
+        },
+    },
 };
