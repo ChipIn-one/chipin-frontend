@@ -10,11 +10,10 @@ const PWABadge = () => {
     const updateSWRef = useRef<((reloadPage?: boolean) => void) | null>(null);
     const [shown, setShown] = useState(false);
 
-    console.log('new test preview');
     const updateSW = registerSW({
         // Show a short toast when offline cache is ready (optional UX)
         onOfflineReady() {
-            toast.success('App is ready to work offline', { duration: 3000 });
+            // toast.success('App is ready to work offline', { duration: 3000 });
         },
 
         // When a new version is available — show a persistent Sonner toast with an update button
@@ -44,7 +43,7 @@ const PWABadge = () => {
 
     useEffect(() => {
         updateSWRef.current = updateSW;
-    }, [shown]);
+    }, [shown, updateSW]);
 
     // Nothing to render — Sonner handles the UI
     return null;

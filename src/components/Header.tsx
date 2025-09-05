@@ -19,7 +19,7 @@ const StickyBox = styled(Box)`
     width: 100%;
     z-index: 1;
 
-    border-bottom: 1px solid var(--accent-6);
+    border-bottom: 1px solid ${({ theme }) => theme.colors.green8};
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
 `;

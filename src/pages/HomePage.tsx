@@ -35,11 +35,11 @@ const Placeholder = styled.div`
     width: 100%;
     min-height: 280px;
     border-radius: 16px;
-    background: var(--gray-3);
-    border: 1px solid var(--gray-6);
+    background: ${({ theme }) => theme.colors.indigo2};
+    border: 1px solid ${({ theme }) => theme.colors.gray6};
     display: grid;
     place-items: center;
-    color: var(--gray-11);
+    color: ${({ theme }) => theme.colors.gray11};
     font-size: 14px;
 `;
 
