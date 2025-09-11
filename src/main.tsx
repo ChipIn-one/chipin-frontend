@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useTheme } from 'next-themes';
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
@@ -15,17 +14,13 @@ import GlobalHooks from 'pages/GlobalHooks';
 
 const Main = () => {
     const { resolvedTheme } = useTheme();
-    const [them, setTheme] = useState(resolvedTheme as 'light' | 'dark');
-    // const themeName = (resolvedTheme as 'light' | 'dark') || 'system';
-    const styledThemeParams = them === 'dark' ? darkThemeStyled : lightThemeStyled;
+    const themeName = (resolvedTheme as 'light' | 'dark') || 'system';
+    const styledThemeParams = themeName === 'dark' ? darkThemeStyled : lightThemeStyled;
 
     return (
         <ThemeProvider theme={styledThemeParams}>
-            <button onClick={() => setTheme(them === 'light' ? 'dark' : 'light')}>
-                Toggle Theme
-            </button>
             <Theme
-                appearance={them}
+                appearance={themeName}
                 accentColor="grass"
                 grayColor="olive"
                 radius="large"
@@ -37,7 +32,7 @@ const Main = () => {
                         <GlobalHooks />
                         <AppRouter />
                         <PWABadge />
-                        <Toaster theme={them} richColors closeButton />
+                        <Toaster theme={themeName} richColors closeButton />
                     </BackgroundBox>
                 </BrowserRouter>
             </Theme>

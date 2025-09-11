@@ -12,6 +12,7 @@ import { EmptyRouteLink } from 'basics/EmptyRouteLink';
 import Logotype from 'assets/logo.svg?react';
 
 import AuthModal from './Modal/AuthModal';
+import ThemeSwitcherDev from './ThemeSwitcherDev';
 
 const StickyBox = styled(Box)`
     position: sticky;
@@ -21,7 +22,6 @@ const StickyBox = styled(Box)`
 
     border-bottom: 1px solid ${({ theme }) => theme.colors.green8};
     backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
 `;
 
 const StyledLogotype = styled(Logotype)`
@@ -64,20 +64,23 @@ const Header = () => {
                                 </Box>
                             </Flex>
                         ) : (
-                            <AuthModal
-                                triggerElement={
-                                    <Button
-                                        size={{
-                                            initial: '2',
-                                            sm: '3',
-                                        }}
-                                        variant="outline"
-                                    >
-                                        Sign in
-                                        <LucideLogIn />
-                                    </Button>
-                                }
-                            />
+                            <>
+                                <ThemeSwitcherDev />
+                                <AuthModal
+                                    triggerElement={
+                                        <Button
+                                            size={{
+                                                initial: '2',
+                                                sm: '3',
+                                            }}
+                                            variant="outline"
+                                        >
+                                            Sign in
+                                            <LucideLogIn />
+                                        </Button>
+                                    }
+                                />
+                            </>
                         )}
                     </Flex>
                 </Flex>

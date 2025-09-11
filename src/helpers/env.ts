@@ -1,26 +1,18 @@
-import { API_URLS, ENV_DEV, ENV_PRODUCTION } from 'constants/env';
+import { API_URLS, ENV_DEV, ENV_PROD } from 'constants/env';
 import type { Environment } from 'constants/env.types';
-import { URL_PARAMS } from 'constants/url';
 
-import { getUrlParam } from './url';
-
-export const getEnv = (): Environment => {
-    const env = getUrlParam(URL_PARAMS.env);
-
-    if (!env) {
-        //TODO: Remove this in production
-        return ENV_DEV;
+export const getIsDevEnv = (): boolean => {
+    if (typeof window === 'undefined') {
+        return false;
     }
 
-    if (env === ENV_DEV || env === ENV_PRODUCTION) {
-        return env;
-    }
+    const hostname = window.location.hostname;
 
-    return ENV_PRODUCTION;
+    return hostname === 'localhost' || hostname.endsWith('dev.chipin.one');
 };
 
-export const getIsProductionEnv = () => {
-    return getEnv() === ENV_PRODUCTION;
-};
+export const getIsProdEnv = (): boolean => !getIsDevEnv();
+
+export const getEnv = (): Environment => (getIsDevEnv() ? ENV_DEV : ENV_PROD);
 
 export const getChipInApiUrl = () => API_URLS[getEnv()].baseUrl;
