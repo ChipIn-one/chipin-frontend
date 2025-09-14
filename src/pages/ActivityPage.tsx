@@ -9,7 +9,7 @@ const ActivityPage = () => {
     const { signOut } = useAuthStore();
 
     return (
-        <Box p="4">
+        <Box py="4">
             <Container size="4">
                 <Breadcrumbs />
                 <Button onClick={signOut}>Sign Out</Button>

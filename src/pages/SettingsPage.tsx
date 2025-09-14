@@ -6,14 +6,6 @@ import { Avatar, Box, Card, Container, Flex, Separator, Switch, Text } from '@ra
 import BottomNavMobile from 'components/BottomNavMobile';
 import Breadcrumbs from 'components/Breadcrumbs';
 
-const SectionCard = styled(Card)`
-    background-color: var(--color-panel);
-    border: 1px solid var(--gray-6);
-    border-radius: var(--radius-3);
-    padding: var(--space-4);
-    margin-bottom: var(--space-4);
-`;
-
 const HeaderFlex = styled(Flex)`
     align-items: center;
     gap: var(--space-3);
