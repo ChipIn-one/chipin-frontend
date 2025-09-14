@@ -1,7 +1,7 @@
 import { LucideBell, LucideShield, LucideUser } from 'lucide-react';
 import { styled } from 'styled-components';
 
-import { Box, Card, Container, Flex, Separator, Switch, Text } from '@radix-ui/themes';
+import { Avatar, Box, Card, Container, Flex, Separator, Switch, Text } from '@radix-ui/themes';
 
 import BottomNavMobile from 'components/BottomNavMobile';
 import Breadcrumbs from 'components/Breadcrumbs';
@@ -28,80 +28,100 @@ const RowFlex = styled(Flex)`
 
 const SettingsPage = () => {
     return (
-        <Box p="4">
+        <Box py="4">
             <Container size="4">
                 <Breadcrumbs />
-                {/* Account */}
-                <SectionCard>
-                    <HeaderFlex>
-                        <LucideUser size={20} />
-                        <Box>
-                            <Text weight="medium">Account</Text>
-                            <Text size="2" color="gray" as="p">
-                                Personal information and profile settings
-                            </Text>
-                        </Box>
-                    </HeaderFlex>
-                    <Separator />
-                    <Box mt="3">
-                        <Text size="2" color="gray">
-                            Account settings content...
-                        </Text>
-                    </Box>
-                </SectionCard>
 
-                {/* Privacy */}
-                <SectionCard>
-                    <HeaderFlex>
-                        <LucideShield size={20} />
-                        <Box>
-                            <Text weight="medium">Privacy & Security</Text>
-                            <Text size="2" color="gray" as="p">
-                                Control your privacy and security settings
-                            </Text>
-                        </Box>
-                    </HeaderFlex>
-                    <Separator />
-                    <Box mt="3">
-                        <Text size="2" color="gray">
-                            Privacy settings content...
-                        </Text>
-                    </Box>
-                </SectionCard>
-
-                {/* Notifications */}
-                <SectionCard>
-                    <HeaderFlex>
-                        <LucideBell size={20} />
-                        <Box>
-                            <Text weight="medium">Notifications</Text>
-                            <Text size="2" color="gray" as="p">
-                                Manage how you receive notifications
-                            </Text>
-                        </Box>
-                    </HeaderFlex>
-                    <Separator />
-                    <Box mt="3">
-                        <RowFlex>
+                <Flex direction="column" gap="4">
+                    {/* Account */}
+                    <Card>
+                        <Flex direction="row" align="center" gap="3">
+                            <Avatar
+                                variant="soft"
+                                size="3"
+                                color="mint"
+                                fallback={<LucideUser size={20} />}
+                            />
                             <Box>
-                                <Text weight="medium">Push Notifications</Text>
+                                <Text weight="medium">Account</Text>
                                 <Text size="2" color="gray" as="p">
-                                    Receive notifications on your device
+                                    Personal information and profile settings
                                 </Text>
                             </Box>
-                            <Switch />
-                        </RowFlex>
-                        <RowFlex>
+                        </Flex>
+                        <Separator orientation="horizontal" size="4" decorative my="4" />
+                        <Box mt="3">
+                            <Text size="2" color="gray">
+                                Account settings content...
+                            </Text>
+                        </Box>
+                    </Card>
+
+                    {/* Privacy */}
+                    <Card>
+                        <HeaderFlex>
+                            <Avatar
+                                variant="soft"
+                                size="3"
+                                color="mint"
+                                fallback={<LucideShield size={20} />}
+                            />
+
                             <Box>
-                                <Text weight="medium">Email Updates</Text>
+                                <Text weight="medium">Privacy & Security</Text>
                                 <Text size="2" color="gray" as="p">
-                                    Get updates and news via email
+                                    Control your privacy and security settings
                                 </Text>
                             </Box>
-                            <Switch />
-                        </RowFlex>
-                    </Box>
-                </SectionCard>
+                        </HeaderFlex>
+                        <Separator orientation="horizontal" size="4" decorative my="4" />
+                        <Box mt="3">
+                            <Text size="2" color="gray">
+                                Privacy settings content...
+                            </Text>
+                        </Box>
+                    </Card>
+
+                    {/* Notifications */}
+                    <Card>
+                        <HeaderFlex>
+                            <Avatar
+                                variant="soft"
+                                size="3"
+                                color="mint"
+                                fallback={<LucideBell size={20} />}
+                            />
+
+                            <Box>
+                                <Text weight="medium">Notifications</Text>
+                                <Text size="2" color="gray" as="p">
+                                    Manage how you receive notifications
+                                </Text>
+                            </Box>
+                        </HeaderFlex>
+                        <Separator orientation="horizontal" size="4" decorative my="4" />
+                        <Box mt="3">
+                            <RowFlex>
+                                <Box>
+                                    <Text weight="medium">Push Notifications</Text>
+                                    <Text size="2" color="gray" as="p">
+                                        Receive notifications on your device
+                                    </Text>
+                                </Box>
+                                <Switch />
+                            </RowFlex>
+                            <RowFlex>
+                                <Box>
+                                    <Text weight="medium">Email Updates</Text>
+                                    <Text size="2" color="gray" as="p">
+                                        Get updates and news via email
+                                    </Text>
+                                </Box>
+                                <Switch />
+                            </RowFlex>
+                        </Box>
+                    </Card>
+                </Flex>
                 <BottomNavMobile />
             </Container>
         </Box>

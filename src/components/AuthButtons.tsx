@@ -6,7 +6,7 @@ import { getSocialAuthUrl } from 'helpers/url';
 
 const AuthButtons = () => {
     return (
-        <Flex direction="column" gap="4">
+        <Flex direction="column" gap="6">
             <Button size="4" variant="classic" color="blue" radius="full" asChild>
                 {/* <FcGoogle style={{ marginRight: 8 }} /> */}
                 <Link to={getSocialAuthUrl('google')}>Sign in with Google</Link>
