@@ -26,7 +26,11 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-    const { isLoggedIn } = useAuthStore();
+    const { isLoggedIn, isAuthChecked } = useAuthStore();
+
+    if (!isAuthChecked) {
+        return <PageLoader />;
+    }
 
     if (!isLoggedIn) {
         toast.warning(MESSAGES.warning.auth.MUST_BE_LOGGED_IN);

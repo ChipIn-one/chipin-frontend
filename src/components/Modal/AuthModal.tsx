@@ -21,9 +21,10 @@ const AuthModal = ({ triggerElement }: Props) => {
                         <Link to={getSocialAuthUrl('google')}>Sign in with Google</Link>
                     </Button>
 
-                    <Button size="3" variant="classic" asChild disabled>
+                    <Button size="3" variant="classic" disabled>
                         {/* <FcGoogle style={{ marginRight: 8 }} /> */}
-                        <Link to={getSocialAuthUrl('apple')}> Sign in with Apple</Link>
+                        {/* <Link to={getSocialAuthUrl('apple')}> Sign in with Apple</Link> */}
+                        Sign in with Apple
                     </Button>
                 </Flex>
             }

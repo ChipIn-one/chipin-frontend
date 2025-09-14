@@ -9,7 +9,7 @@ import { usePwaStore } from 'store/pwaStore';
 export const useCheckPwaAndSignIn = () => {
     const navigate = useNavigate();
 
-    const { setIsLoggedIn } = useAuthStore();
+    const { setIsAuthChecked } = useAuthStore();
     const { setIsPwaCanBeInstalled, setPwaInstallPrompt } = usePwaStore();
 
     const setPwaInstalledToState = () => {
@@ -25,14 +25,14 @@ export const useCheckPwaAndSignIn = () => {
             .then(isValid => {
                 if (!isValid) {
                     navigate(ROUTES.HOME);
-                    setIsLoggedIn(false);
+                    setIsAuthChecked(false);
                 } else {
-                    setIsLoggedIn(true);
+                    setIsAuthChecked(true);
                 }
             })
             .catch(() => {
                 navigate(ROUTES.HOME);
-                setIsLoggedIn(false);
+                setIsAuthChecked(false);
             });
 
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);

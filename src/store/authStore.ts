@@ -4,12 +4,15 @@ import { deleteAuthTokenDB } from './IDB/auth';
 
 interface AuthStore {
     isLoggedIn: boolean;
+    isAuthChecked?: boolean; // used for protecting routes until we check auth status
     setIsLoggedIn: (isLoggedIn: boolean) => void;
+    setIsAuthChecked: (isLoggedIn: boolean) => void;
     signOut: () => Promise<void>;
 }
 
 const initialAuthStore = {
     isLoggedIn: false,
+    isAuthChecked: false,
 };
 
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -19,6 +22,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         const { isLoggedIn } = get();
         console.log('Setting isLoggedIn:', isLoggedIn, '->', isLoggedIn);
         set({ isLoggedIn: isLogged });
+    },
+
+    setIsAuthChecked: (isLoggedIn: boolean) => {
+        set({ isAuthChecked: true, isLoggedIn });
     },
 
     signOut: async () => {

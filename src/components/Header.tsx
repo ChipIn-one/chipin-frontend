@@ -47,6 +47,7 @@ const Header = () => {
                     </EmptyRouteLink>
 
                     <Flex gap="4" align="center">
+                        <ThemeSwitcherDev />
                         {isLoggedIn ? (
                             <Flex gap="4" align="center">
                                 <Box display={{ initial: 'block', md: 'none' }}>
@@ -65,7 +66,6 @@ const Header = () => {
                             </Flex>
                         ) : (
                             <>
-                                <ThemeSwitcherDev />
                                 <AuthModal
                                     triggerElement={
                                         <Button
