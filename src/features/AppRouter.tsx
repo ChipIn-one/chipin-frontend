@@ -8,6 +8,7 @@ import { useAuthStore } from 'store/authStore';
 
 import PageLoader from 'basics/PageLoader';
 import AuthCallbackPage from 'pages/AuthCallbackPage';
+import SignInPage from 'pages/SignInPage';
 
 const BalancesPage = lazy(
     () => import(/* webpackChunkName: "BalancesPage" */ 'pages/BalancesPage'),
@@ -33,9 +34,11 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     }
 
     if (!isLoggedIn) {
+        console.log('User not logged in, redirecting to sign-in page');
         toast.warning(MESSAGES.warning.auth.MUST_BE_LOGGED_IN);
-        return <Navigate to={ROUTES.HOME} replace />;
+        return <Navigate to={ROUTES.SIGN_IN} />;
     }
+
     return <>{children}</>;
 };
 
@@ -44,6 +47,7 @@ const AppRouter = () => {
         <Suspense fallback={<PageLoader />}>
             <Routes>
                 <Route path={ROUTES.HOME} element={<HomePage />} />
+                <Route path={ROUTES.SIGN_IN} element={<SignInPage />} />
                 <Route
                     path={ROUTES.BALANCES}
                     element={

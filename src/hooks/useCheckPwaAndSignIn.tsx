@@ -1,14 +1,10 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 
-import { ROUTES } from 'constants/routes';
 import { useAuthStore } from 'store/authStore';
 import { checkAndRemoveExpiredToken } from 'store/IDB/auth';
 import { usePwaStore } from 'store/pwaStore';
 
 export const useCheckPwaAndSignIn = () => {
-    const navigate = useNavigate();
-
     const { setIsAuthChecked } = useAuthStore();
     const { setIsPwaCanBeInstalled, setPwaInstallPrompt } = usePwaStore();
 
@@ -21,17 +17,16 @@ export const useCheckPwaAndSignIn = () => {
     };
 
     useEffect(() => {
+        //TODO: add redirect to dexie, save user default page and redireact after login
         checkAndRemoveExpiredToken()
             .then(isValid => {
                 if (!isValid) {
-                    navigate(ROUTES.HOME);
                     setIsAuthChecked(false);
                 } else {
                     setIsAuthChecked(true);
                 }
             })
             .catch(() => {
-                navigate(ROUTES.HOME);
                 setIsAuthChecked(false);
             });
 

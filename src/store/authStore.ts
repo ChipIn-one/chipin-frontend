@@ -30,6 +30,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     signOut: async () => {
         await deleteAuthTokenDB();
-        set({ isLoggedIn: false });
+        set({ isLoggedIn: initialAuthStore.isLoggedIn });
     },
 }));

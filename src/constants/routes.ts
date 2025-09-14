@@ -1,6 +1,7 @@
 export const ROUTES = {
     HOME: '/',
     NOT_FOUND_404: '/not-found',
+    SIGN_IN: '/sign-in',
     AUTH_CALLBACK: '/auth/callback',
     BALANCES: '/balances',
     GROUPS: '/groups',
@@ -12,6 +13,10 @@ export const HEAD_META: Record<string, { title: string; description?: string }> 
     [ROUTES.HOME]: {
         title: 'ChipIn — Home',
         description: 'Home page of the ChipIn app',
+    },
+    [ROUTES.SIGN_IN]: {
+        title: 'ChipIn — Sign In',
+        description: 'Sign in to your ChipIn account',
     },
     [ROUTES.BALANCES]: {
         title: 'ChipIn — Balances',
