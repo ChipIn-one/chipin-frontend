@@ -1,20 +1,21 @@
-import { Button } from '@radix-ui/themes';
+import { Box, Button, Container } from '@radix-ui/themes';
 
 import { useAuthStore } from 'store/authStore';
 
 import BottomNavMobile from 'components/BottomNavMobile';
-import Header from 'components/Header';
+import Breadcrumbs from 'components/Breadcrumbs';
 
 const BalancesPage = () => {
-    const { isLoggedIn, signOut } = useAuthStore();
+    const { signOut } = useAuthStore();
 
     return (
-        <>
-            <Header />
-            {isLoggedIn ? 'balances page' : 'Please log in to view your balances.'}
-            <Button onClick={signOut}>Sign Out</Button>
-            <BottomNavMobile />
-        </>
+        <Box p="4">
+            <Container size="4">
+                <Breadcrumbs />
+                <Button onClick={signOut}>Sign Out</Button>
+                <BottomNavMobile />
+            </Container>
+        </Box>
     );
 };
 

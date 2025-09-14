@@ -1,157 +1,110 @@
-import { useAuthStore } from 'store/authStore';
+import { LucideBell, LucideShield, LucideUser } from 'lucide-react';
+import { styled } from 'styled-components';
+
+import { Box, Card, Container, Flex, Separator, Switch, Text } from '@radix-ui/themes';
 
 import BottomNavMobile from 'components/BottomNavMobile';
-import Header from 'components/Header';
+import Breadcrumbs from 'components/Breadcrumbs';
 
-// const kek = (
-//     <Section>
-//         <Container size="4">
-//             <Flex direction="column" gap="1" mb="5">
-//                 <Heading
-//                     size={{
-//                         initial: '8',
-//                         md: '9',
-//                     }}
-//                 >
-//                     Settings
-//                 </Heading>
-//                 <Text color="gray" size={{ initial: '3', md: '4' }}>
-//                     Manage your account preferences and settings
-//                 </Text>
-//             </Flex>
+const SectionCard = styled(Card)`
+    background-color: var(--color-panel);
+    border: 1px solid var(--gray-6);
+    border-radius: var(--radius-3);
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
+`;
 
-//             <Card>
-//                 <Accordion.Root type="single" collapsible defaultValue="account">
-//                     <Accordion.Item value="account">
-//                         <Accordion.Header asChild>
-//                             <Flex align="center" justify="between" px="3" py="3">
-//                                 <Flex align="center" gap="3">
-//                                     <Box
-//                                         width="40px"
-//                                         height="40px"
-//                                         style={{
-//                                             borderRadius: 10,
-//                                             background: 'var(--gray-4)',
-//                                             display: 'grid',
-//                                             placeItems: 'center',
-//                                         }}
-//                                     >
-//                                         {/* <User size={20} /> */}
-//                                     </Box>
-//                                     <Box>
-//                                         <Text size="5" weight="bold">
-//                                             Account
-//                                         </Text>
-//                                         <Text size="2" color="gray">
-//                                             Personal information and profile settings
-//                                         </Text>
-//                                     </Box>
-//                                 </Flex>
+const HeaderFlex = styled(Flex)`
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-2);
+`;
 
-//                                 <Accordion.Trigger asChild>
-//                                     <Button
-//                                         variant="ghost"
-//                                         size="1"
-//                                         radius="full"
-//                                         aria-label="Toggle section"
-//                                     >
-//                                         <ChevronDown />
-//                                     </Button>
-//                                 </Accordion.Trigger>
-//                             </Flex>
-//                         </Accordion.Header>
-
-//                         <Accordion.Content asChild>
-//                             <Box px="3" pb="4">
-//                                 <form onSubmit={e => e.preventDefault()}>
-//                                     <Flex direction="column" gap="4">
-//                                         <Grid columns={{ initial: '1', md: '2' }} gap="4">
-//                                             <Box>
-//                                                 <Text
-//                                                     as="label"
-//                                                     htmlFor="firstName"
-//                                                     size="2"
-//                                                     color="gray"
-//                                                 >
-//                                                     First Name
-//                                                 </Text>
-//                                                 <TextField.Root
-//                                                     id="firstName"
-//                                                     placeholder="John"
-//                                                     defaultValue="John"
-//                                                     size="3"
-//                                                 />
-//                                             </Box>
-
-//                                             <Box>
-//                                                 <Text
-//                                                     as="label"
-//                                                     htmlFor="lastName"
-//                                                     size="2"
-//                                                     color="gray"
-//                                                 >
-//                                                     Last Name
-//                                                 </Text>
-//                                                 <TextField.Root
-//                                                     id="lastName"
-//                                                     placeholder="Doe"
-//                                                     defaultValue="Doe"
-//                                                     size="3"
-//                                                 />
-//                                             </Box>
-//                                         </Grid>
-
-//                                         <Box>
-//                                             <Text as="label" htmlFor="email" size="2" color="gray">
-//                                                 Email Address
-//                                             </Text>
-//                                             <TextField.Root
-//                                                 id="email"
-//                                                 type="email"
-//                                                 placeholder="john.doe@example.com"
-//                                                 defaultValue="john.doe@example.com"
-//                                                 size="3"
-//                                             />
-//                                         </Box>
-
-//                                         <Box>
-//                                             <Text as="label" htmlFor="bio" size="2" color="gray">
-//                                                 Bio
-//                                             </Text>
-//                                             <TextArea
-//                                                 id="bio"
-//                                                 rows={6}
-//                                                 placeholder="Tell us about yourself..."
-//                                                 size="3"
-//                                             />
-//                                         </Box>
-
-//                                         <Flex>
-//                                             <Button type="submit" variant="soft">
-//                                                 Save Changes
-//                                             </Button>
-//                                         </Flex>
-//                                     </Flex>
-//                                 </form>
-//                             </Box>
-//                         </Accordion.Content>
-//                     </Accordion.Item>
-//                 </Accordion.Root>
-//             </Card>
-//         </Container>
-//     </Section>
-// );
+const RowFlex = styled(Flex)`
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--space-3);
+`;
 
 const SettingsPage = () => {
-    const { isLoggedIn } = useAuthStore();
-
     return (
-        <>
-            <Header />
-            {isLoggedIn ? 'settings page' : 'Please log in to view your settings.'}
+        <Box p="4">
+            <Container size="4">
+                <Breadcrumbs />
+                {/* Account */}
+                <SectionCard>
+                    <HeaderFlex>
+                        <LucideUser size={20} />
+                        <Box>
+                            <Text weight="medium">Account</Text>
+                            <Text size="2" color="gray" as="p">
+                                Personal information and profile settings
+                            </Text>
+                        </Box>
+                    </HeaderFlex>
+                    <Separator />
+                    <Box mt="3">
+                        <Text size="2" color="gray">
+                            Account settings content...
+                        </Text>
+                    </Box>
+                </SectionCard>
 
-            <BottomNavMobile />
-        </>
+                {/* Privacy */}
+                <SectionCard>
+                    <HeaderFlex>
+                        <LucideShield size={20} />
+                        <Box>
+                            <Text weight="medium">Privacy & Security</Text>
+                            <Text size="2" color="gray" as="p">
+                                Control your privacy and security settings
+                            </Text>
+                        </Box>
+                    </HeaderFlex>
+                    <Separator />
+                    <Box mt="3">
+                        <Text size="2" color="gray">
+                            Privacy settings content...
+                        </Text>
+                    </Box>
+                </SectionCard>
+
+                {/* Notifications */}
+                <SectionCard>
+                    <HeaderFlex>
+                        <LucideBell size={20} />
+                        <Box>
+                            <Text weight="medium">Notifications</Text>
+                            <Text size="2" color="gray" as="p">
+                                Manage how you receive notifications
+                            </Text>
+                        </Box>
+                    </HeaderFlex>
+                    <Separator />
+                    <Box mt="3">
+                        <RowFlex>
+                            <Box>
+                                <Text weight="medium">Push Notifications</Text>
+                                <Text size="2" color="gray" as="p">
+                                    Receive notifications on your device
+                                </Text>
+                            </Box>
+                            <Switch />
+                        </RowFlex>
+                        <RowFlex>
+                            <Box>
+                                <Text weight="medium">Email Updates</Text>
+                                <Text size="2" color="gray" as="p">
+                                    Get updates and news via email
+                                </Text>
+                            </Box>
+                            <Switch />
+                        </RowFlex>
+                    </Box>
+                </SectionCard>
+                <BottomNavMobile />
+            </Container>
+        </Box>
     );
 };
 

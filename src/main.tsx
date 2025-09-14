@@ -3,12 +3,13 @@ import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from 'styled-components';
 
-import { Theme } from '@radix-ui/themes';
+import { Box, Theme } from '@radix-ui/themes';
 
 import { darkThemeStyled, lightThemeStyled } from 'constants/styled-themes';
 
 import BackgroundBox from 'basics/BackgroundBox';
 import PWABadge from 'basics/PWABadge';
+import Header from 'components/Header';
 import AppRouter from 'features/AppRouter';
 import GlobalHooks from 'pages/GlobalHooks';
 
@@ -29,8 +30,11 @@ const Main = () => {
             >
                 <BrowserRouter>
                     <BackgroundBox>
+                        <Header />
                         <GlobalHooks />
-                        <AppRouter />
+                        <Box px="4">
+                            <AppRouter />
+                        </Box>
                         <PWABadge />
                         <Toaster theme={themeName} richColors closeButton />
                     </BackgroundBox>

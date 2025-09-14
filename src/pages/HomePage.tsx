@@ -28,7 +28,6 @@ import {
 import { usePwaStore } from 'store/pwaStore';
 
 import Footer from 'components/Footer';
-import Header from 'components/Header';
 import { AuthModal } from 'components/Modal';
 
 const Placeholder = styled.div`
@@ -92,8 +91,7 @@ const HomePage = () => {
 
     return (
         <>
-            <Header />
-            <Section px="4">
+            <Section>
                 <Container size="4">
                     <Flex direction="column" align="center" gap="5">
                         <Badge
@@ -204,7 +202,7 @@ const HomePage = () => {
 
             {/* Features overview */}
 
-            <Section py="8" px="4">
+            <Section py="8">
                 <Container size="4">
                     <Flex direction="column" align="center" gap="4" mb="6">
                         <Heading
@@ -256,7 +254,7 @@ const HomePage = () => {
             </Section>
 
             {/* Groups section */}
-            <Box py="8" px="4">
+            <Box py="8">
                 <Container size="4">
                     <Grid columns={{ initial: '1', md: '2' }} gap="6" align="center">
                         <Flex direction="column" gap="3">
@@ -274,7 +272,7 @@ const HomePage = () => {
             </Box>
 
             {/* Expenses section */}
-            <Box py="8" px="4">
+            <Box py="8">
                 <Container size="4">
                     <Grid columns={{ initial: '1', md: '2' }} gap="6" align="center">
                         <Placeholder aria-label="Expenses screenshot placeholder">
@@ -292,7 +290,7 @@ const HomePage = () => {
             </Box>
 
             {/* Balances section */}
-            <Section py="8" px="4">
+            <Section py="8">
                 <Container size="4">
                     <Grid columns={{ initial: '1', md: '2' }} gap="6" align="center">
                         <Flex direction="column" gap="3">

@@ -1,4 +1,4 @@
-import { LucideActivity, LucideUser, LucideUsers } from 'lucide-react';
+import { LucideActivity, LucideSettings, LucideUsers } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 import { Box, Button, TabNav } from '@radix-ui/themes';
@@ -17,7 +17,8 @@ const BottomNavMobile = () => {
             bottom="0"
             left="0"
             right="0"
-            display={{ initial: 'block', sm: 'none' }}
+            // display={{ initial: 'block', sm: 'none' }}
+            display={{ initial: 'block' }}
         >
             <TabNav.Root justify="center">
                 <TabNav.Link asChild active={isActive(ROUTES.BALANCES)}>
@@ -39,7 +40,7 @@ const BottomNavMobile = () => {
                 <TabNav.Link asChild active={isActive(ROUTES.SETTINGS)}>
                     <Link to={ROUTES.SETTINGS}>
                         <Button variant="ghost" radius="none">
-                            <LucideUser size={24} /> Account
+                            <LucideSettings size={24} /> Settings
                         </Button>
                     </Link>
                 </TabNav.Link>

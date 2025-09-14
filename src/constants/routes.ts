@@ -39,3 +39,22 @@ export const HEAD_META: Record<string, { title: string; description?: string }> 
         description: 'The page you are looking for does not exist',
     },
 };
+
+export const BREADCRUMBS = {
+    [ROUTES.BALANCES]: {
+        title: 'Balances',
+        description: 'Overview of your balances',
+    },
+    [ROUTES.GROUPS]: {
+        title: 'Groups',
+        description: 'Manage your groups',
+    },
+    [ROUTES.ACTIVITY]: {
+        title: 'Activity',
+        description: 'Your recent activity',
+    },
+    [ROUTES.SETTINGS]: {
+        title: 'Settings',
+        description: 'Manage your account preferences and settings',
+    },
+};

@@ -1,18 +1,21 @@
+import { Box, Button, Container } from '@radix-ui/themes';
+
 import { useAuthStore } from 'store/authStore';
 
 import BottomNavMobile from 'components/BottomNavMobile';
-import Header from 'components/Header';
+import Breadcrumbs from 'components/Breadcrumbs';
 
 const ActivityPage = () => {
-    const { isLoggedIn } = useAuthStore();
+    const { signOut } = useAuthStore();
 
     return (
-        <>
-            <Header />
-            {isLoggedIn ? 'activity page' : 'Please log in to view your activity.'}
-
-            <BottomNavMobile />
-        </>
+        <Box p="4">
+            <Container size="4">
+                <Breadcrumbs />
+                <Button onClick={signOut}>Sign Out</Button>
+                <BottomNavMobile />
+            </Container>
+        </Box>
     );
 };
 
