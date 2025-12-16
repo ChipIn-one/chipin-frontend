@@ -10,6 +10,7 @@ import { useGroupStore } from 'store/groupStore';
 import { Amount } from 'basics/numbers';
 import BottomNavMobile from 'components/BottomNavMobile';
 import Breadcrumbs from 'components/Breadcrumbs';
+import UsersRow from 'components/UsersRow';
 
 const MOCK_EXPENSES = [
     {
@@ -88,22 +89,17 @@ const BalancesPage = () => {
                                                     alt={group.name}
                                                     fallback={group.emoji || <LucideUsers />}
                                                 />
-                                                <Flex direction="column" gap="1">
-                                                    <Text size="4" weight="bold" as="p">
-                                                        {group.name}
-                                                    </Text>
+                                                <Flex direction="column" gap="1" width="100%">
+                                                    <Flex justify="between">
+                                                        <Text size="4" weight="bold" as="p">
+                                                            {group.name}
+                                                        </Text>
+                                                        <UsersRow members={group.members} max={2} />
+                                                    </Flex>
                                                     <Text size="3" color="gray" as="p">
-                                                        {group.members.length} members |{' '}
-                                                        {group.members.map(user => (
-                                                            <Avatar
-                                                                size="1"
-                                                                radius="full"
-                                                                src={user.picture || ''}
-                                                                alt={user.displayName}
-                                                                fallback={<LucideUsers />}
-                                                            />
-                                                        ))}
+                                                        {group.members.length} members
                                                     </Text>
+
                                                     <Text size="2" color="grass" as="p">
                                                         You are owed{' '}
                                                         <Amount value={15} customPrefix="$" /> in
