@@ -1,7 +1,7 @@
 export const MESSAGES = {
     error: {
         group: {
-            INVITE_SUCCESS: 'Failed to join the group. Please check the invite link and try again.',
+            INVITE_JOIN: 'Failed to join the group. Please check the invite link and try again.',
         },
         auth: {
             INVALID_JWT: 'Failed to validate session. Please log in again.',
@@ -9,14 +9,25 @@ export const MESSAGES = {
         },
     },
     success: {
+        common: {
+            reconnected: 'Your connection has been restored.',
+        },
         group: {
-            INVITE_SUCCESS: 'You successfully joined the group!',
+            INVITE_JOIN: 'You successfully joined the group!',
         },
         pwa: {
             INSTALLING: 'Installing application on your home screen...',
         },
     },
     warning: {
+        common: {
+            disconnect: 'You have been disconnected.',
+            disconnectDescription:
+                "Don't worry, your changes will be saved. Attempting to reconnect...",
+        },
+        group: {
+            INVITE_JOIN: 'Please sign in before joining the group.',
+        },
         auth: {
             MUST_BE_LOGGED_IN: 'You must be logged in to access this page',
         },

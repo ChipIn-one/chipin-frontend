@@ -3,8 +3,7 @@ import { toast } from 'sonner';
 import { registerSW } from 'virtual:pwa-register';
 
 import { HOUR } from 'constants/time';
-
-const UPDATE_TOAST_ID = 'pwa-update-available';
+import { TOASTS_IDS } from 'constants/toasts';
 
 const PWABadge = () => {
     const updateSWRef = useRef<((reloadPage?: boolean) => void) | null>(null);
@@ -24,7 +23,7 @@ const PWABadge = () => {
             setShown(true);
 
             toast.info('A new version is available', {
-                id: UPDATE_TOAST_ID,
+                id: TOASTS_IDS.pwaUpdateAvailable,
                 duration: Infinity, // persist until user clicks
                 action: {
                     label: 'Update',

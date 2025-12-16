@@ -23,7 +23,7 @@ const AuthCallbackPage = () => {
             console.error('OAuth error:', error);
             navigate(ROUTES.HOME);
         }
-    }, [searchParams]);
+    }, [searchParams, setIsLoggedIn, navigate]);
 
     return null;
 };

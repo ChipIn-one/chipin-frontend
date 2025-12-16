@@ -43,7 +43,7 @@ const BalancesPage = () => {
 
     useEffect(() => {
         fetchSetUserGroups();
-    }, []);
+    }, [fetchSetUserGroups]);
 
     console.log(selectedGroup);
     return (

@@ -4,6 +4,8 @@ import { toast } from 'sonner';
 
 import { MESSAGES } from 'constants/messages';
 import { ROUTES } from 'constants/routes';
+import { useCheckOnlineStatus } from 'hooks/useCheckOnlineStatus';
+import { useJoinInviteLink } from 'hooks/useJoinInviteLink';
 import { useAuthStore } from 'store/authStore';
 
 import PageLoader from 'basics/PageLoader';
@@ -44,6 +46,9 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 };
 
 const AppRouter = () => {
+    useJoinInviteLink();
+    useCheckOnlineStatus();
+
     return (
         <Suspense fallback={<PageLoader />}>
             <Routes>

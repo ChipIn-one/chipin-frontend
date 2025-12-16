@@ -1,5 +1,4 @@
-import { useEffect } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
 import { Box, Container, Text, TextArea } from '@radix-ui/themes';
 
@@ -9,29 +8,17 @@ import { useGroupStore } from 'store/groupStore';
 import BottomNavMobile from 'components/BottomNavMobile';
 import Breadcrumbs from 'components/Breadcrumbs';
 
-const BalancesPage = () => {
-    const { selectedGroup, inviteToGroup } = useGroupStore();
+const GroupPage = () => {
+    const { selectedGroup } = useGroupStore();
 
-    // const navigate = useNavigate();
     const { groupId } = useParams<{ groupId: string }>();
-    const [searchParams] = useSearchParams();
 
-    const inviteToken = searchParams.get('inviteToken');
-
-    useEffect(() => {
-        if (!groupId) {
-            return;
-        }
-
-        if (inviteToken) {
-            inviteToGroup({ inviteToken });
-            // navigate(`/groups/${groupId}`, { replace: true });
-        }
-    }, [groupId, inviteToken]);
+    if (!selectedGroup) {
+        return <div>No selected group</div>;
+    }
 
     const inviteLink = buildGroupInviteLink({
-        groupId: selectedGroup?.id || '',
-        inviteToken: selectedGroup?.inviteToken || '',
+        inviteToken: selectedGroup.inviteToken,
     });
 
     return (
@@ -39,7 +26,9 @@ const BalancesPage = () => {
             <Container size="4">
                 <Breadcrumbs />
                 Group: {groupId}
-                <Text size="4">Invite link:</Text>
+                <Text size="4" as="p">
+                    Invite link:
+                </Text>
                 <TextArea readOnly value={inviteLink} />
                 <BottomNavMobile />
             </Container>
@@ -47,4 +36,4 @@ const BalancesPage = () => {
     );
 };
 
-export default BalancesPage;
+export default GroupPage;

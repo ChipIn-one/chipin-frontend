@@ -5,6 +5,8 @@ import { create } from 'zustand';
 import { createApiGroup, fetchApiUserGroups, inviteApiUserToGroup } from 'api/chipin';
 import { MESSAGES } from 'constants/messages';
 
+import { useAuthStore } from './authStore';
+
 interface GroupStore {
     selectedGroup: ApiGroup | null;
     groups: ApiGroup[];
@@ -40,14 +42,20 @@ export const useGroupStore = create<GroupStore>(set => ({
     },
 
     inviteToGroup: ({ inviteToken }) => {
+        const { isLoggedIn } = useAuthStore.getState();
+
         inviteApiUserToGroup({ inviteToken })
             .then(data => {
                 console.log(data);
-                toast.success(MESSAGES.success.group.INVITE_SUCCESS);
+                toast.success(MESSAGES.success.group.INVITE_JOIN);
             })
             .catch(error => {
                 console.error('Error fetching user groups:', error);
-                toast.error(MESSAGES.error.group.INVITE_SUCCESS);
+                if (isLoggedIn) {
+                    toast.error(MESSAGES.error.group.INVITE_JOIN);
+                } else {
+                    toast.warning(MESSAGES.warning.group.INVITE_JOIN);
+                }
             });
     },
 }));

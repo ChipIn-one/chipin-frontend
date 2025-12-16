@@ -1,7 +1,6 @@
 import { ApiGroup } from 'types/api';
 
 import type { AuthService } from 'constants/auth.types';
-import { ROUTES } from 'constants/routes';
 import type { UrlParams } from 'constants/url.types';
 
 import { getChipInApiUrl, getChipInAppUrl } from './env';
@@ -18,16 +17,14 @@ export const getSocialAuthUrl = (provider: AuthService) => {
 };
 
 export const buildGroupInviteLink = ({
-    groupId,
     inviteToken,
 }: {
-    groupId: ApiGroup['id'];
     inviteToken: ApiGroup['inviteToken'];
 }): string => {
     const baseUrl = getChipInAppUrl();
 
-    const url = new URL(`${ROUTES.GROUP}/${groupId}`, baseUrl);
-    url.searchParams.set('inviteToken', inviteToken);
+    const inviteUrl = new URL(baseUrl);
+    inviteUrl.searchParams.set('inviteToken', inviteToken);
 
-    return url.toString();
+    return inviteUrl.toString();
 };
