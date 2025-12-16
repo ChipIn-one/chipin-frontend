@@ -4,7 +4,7 @@ export const ROUTES = {
     SIGN_IN: '/sign-in',
     AUTH_CALLBACK: '/auth/callback',
     BALANCES: '/balances',
-    GROUPS: '/groups',
+    GROUP: '/group',
     ACTIVITY: '/activity',
     SETTINGS: '/settings',
 };
@@ -22,9 +22,9 @@ export const HEAD_META: Record<string, { title: string; description?: string }> 
         title: 'ChipIn — Balances',
         description: 'View and manage your balances',
     },
-    [ROUTES.GROUPS]: {
-        title: 'ChipIn — Groups',
-        description: 'View and manage your groups',
+    [ROUTES.GROUP]: {
+        title: 'ChipIn — Group',
+        description: 'View and manage your group',
     },
     [ROUTES.ACTIVITY]: {
         title: 'ChipIn — Activity',
@@ -45,9 +45,9 @@ export const BREADCRUMBS = {
         title: 'Balances',
         description: 'Overview of your balances',
     },
-    [ROUTES.GROUPS]: {
-        title: 'Groups',
-        description: 'Manage your groups',
+    [ROUTES.GROUP]: {
+        title: 'Group',
+        description: 'Manage your group',
     },
     [ROUTES.ACTIVITY]: {
         title: 'Activity',

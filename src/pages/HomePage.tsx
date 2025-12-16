@@ -27,6 +27,7 @@ import {
 
 import { usePwaStore } from 'store/pwaStore';
 
+import { Amount } from 'basics/numbers';
 import Footer from 'components/Footer';
 import { AuthModal } from 'components/Modal';
 
@@ -47,22 +48,22 @@ const HomePage = () => {
 
     const stats = [
         {
-            title: '50K+',
+            title: <Amount value={50000} tokenCode="+" />,
             description: 'Active users',
             icon: <LucideUserCheck />,
         },
         {
-            title: '2M+',
+            title: <Amount type="summary" value={25300000} />,
             description: 'Expenses tracked',
             icon: <LucideReceipt />,
         },
         {
-            title: '15K+',
+            title: <Amount value={15000} tokenCode="+" />,
             description: 'Groups created',
             icon: <LucideUsers2 />,
         },
         {
-            title: '4.9',
+            title: <Amount value={4.9} />,
             description: 'User rating',
             icon: <LucideStar />,
         },

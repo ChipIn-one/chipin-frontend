@@ -1,7 +1,21 @@
 import { LucideBell, LucideShield, LucideUser } from 'lucide-react';
 import { styled } from 'styled-components';
 
-import { Avatar, Box, Card, Container, Flex, Separator, Switch, Text } from '@radix-ui/themes';
+import {
+    Avatar,
+    Box,
+    Button,
+    Card,
+    Container,
+    Flex,
+    Grid,
+    Separator,
+    Switch,
+    Text,
+    TextField,
+} from '@radix-ui/themes';
+
+import { useAuthStore } from 'store/authStore';
 
 import BottomNavMobile from 'components/BottomNavMobile';
 import Breadcrumbs from 'components/Breadcrumbs';
@@ -19,12 +33,14 @@ const RowFlex = styled(Flex)`
 `;
 
 const SettingsPage = () => {
+    const { signOut } = useAuthStore();
+
     return (
         <Box py="4">
             <Container size="4">
                 <Breadcrumbs />
 
-                <Flex direction="column" gap="4">
+                <Grid columns={{ initial: '1', md: '2' }} gap="6">
                     {/* Account */}
                     <Card>
                         <Flex direction="row" align="center" gap="3">
@@ -43,9 +59,8 @@ const SettingsPage = () => {
                         </Flex>
                         <Separator orientation="horizontal" size="4" decorative my="4" />
                         <Box mt="3">
-                            <Text size="2" color="gray">
-                                Account settings content...
-                            </Text>
+                            <Text size="3">Your name</Text>
+                            <TextField.Root size="3" placeholder="Your name or nickname" />
                         </Box>
                     </Card>
 
@@ -113,7 +128,8 @@ const SettingsPage = () => {
                             </RowFlex>
                         </Box>
                     </Card>
-                </Flex>
+                    <Button onClick={signOut}>Sign Out</Button>
+                </Grid>
                 <BottomNavMobile />
             </Container>
         </Box>

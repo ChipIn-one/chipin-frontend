@@ -10,10 +10,11 @@ import PageLoader from 'basics/PageLoader';
 import AuthCallbackPage from 'pages/AuthCallbackPage';
 import SignInPage from 'pages/SignInPage';
 
+const HomePage = lazy(() => import(/* webpackChunkName: "HomePage" */ 'pages/HomePage'));
 const BalancesPage = lazy(
     () => import(/* webpackChunkName: "BalancesPage" */ 'pages/BalancesPage'),
 );
-const HomePage = lazy(() => import(/* webpackChunkName: "HomePage" */ 'pages/HomePage'));
+const GroupPage = lazy(() => import(/* webpackChunkName: "GroupPage" */ 'pages/GroupPage'));
 const ActivityPage = lazy(
     () => import(/* webpackChunkName: "ActivityPage" */ 'pages/ActivityPage'),
 );
@@ -53,6 +54,14 @@ const AppRouter = () => {
                     element={
                         <ProtectedRoute>
                             <BalancesPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path={`${ROUTES.GROUP}/:groupId`}
+                    element={
+                        <ProtectedRoute>
+                            <GroupPage />
                         </ProtectedRoute>
                     }
                 />
