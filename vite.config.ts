@@ -22,6 +22,11 @@ export default defineConfig({
                 description: 'Share expenses without stress',
                 theme_color: '#3e9b4f',
                 display: 'standalone',
+                // DEEP LINKING PARAMS
+                start_url: '/',
+                scope: '/',
+                id: '/',
+
                 icons: [
                     {
                         src: '/pwa-64x64.png',

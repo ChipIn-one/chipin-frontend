@@ -74,42 +74,59 @@ const BalancesPage = () => {
                         </Card>
 
                         <Box>
-                            <Flex gap="2" m="4">
-                                <LucideUsers /> <Text weight="medium">Your groups</Text>
+                            <Flex gap="2" mb="6" mt="6">
+                                <Flex justify="between" width="100%" pl="2" pr="2">
+                                    <Flex align="center" gap="2">
+                                        <LucideUsers /> <Text weight="medium">Your groups</Text>
+                                    </Flex>
+                                    <Flex>Filter?</Flex>
+                                </Flex>
                             </Flex>
 
-                            <Flex gap="4" direction="column">
-                                {groups.map(group => (
-                                    <Card size="2" key={group.id} asChild>
-                                        <button onClick={() => setSelectedGroup(group)}>
-                                            <Flex gap="4" align="center" mb="2">
-                                                <Avatar
-                                                    size="4"
-                                                    src={group.groupImg}
-                                                    alt={group.name}
-                                                    fallback={group.emoji || <LucideUsers />}
-                                                />
-                                                <Flex direction="column" gap="1" width="100%">
-                                                    <Flex justify="between">
-                                                        <Text size="4" weight="bold" as="p">
-                                                            {group.name}
-                                                        </Text>
-                                                        <UsersRow members={group.members} max={2} />
-                                                    </Flex>
-                                                    <Text size="3" color="gray" as="p">
-                                                        {group.members.length} members
-                                                    </Text>
+                            <Flex gap="5" direction="column">
+                                {groups.map(group => {
+                                    const isSelected = selectedGroup?.id === group.id;
 
-                                                    <Text size="2" color="grass" as="p">
-                                                        You are owed{' '}
-                                                        <Amount value={15} customPrefix="$" /> in
-                                                        this group
-                                                    </Text>
+                                    return (
+                                        <Card
+                                            size={isSelected ? '2' : '1'}
+                                            variant={isSelected ? 'classic' : 'ghost'}
+                                            key={group.id}
+                                            asChild
+                                        >
+                                            <button onClick={() => setSelectedGroup(group)}>
+                                                <Flex gap="4" align="center" mb="2">
+                                                    <Avatar
+                                                        size="4"
+                                                        src={group.groupImg}
+                                                        alt={group.name}
+                                                        fallback={group.emoji || <LucideUsers />}
+                                                    />
+                                                    <Flex direction="column" gap="1" width="100%">
+                                                        <Flex justify="between">
+                                                            <Text size="5" weight="bold" as="p">
+                                                                {group.name}
+                                                            </Text>
+                                                            <UsersRow
+                                                                members={group.members}
+                                                                max={2}
+                                                            />
+                                                        </Flex>
+                                                        <Text size="3" color="gray" as="p">
+                                                            {group.members.length} members
+                                                        </Text>
+
+                                                        <Text size="2" color="grass" as="p">
+                                                            You are owed{' '}
+                                                            <Amount value={15} customPrefix="$" />{' '}
+                                                            in this group
+                                                        </Text>
+                                                    </Flex>
                                                 </Flex>
-                                            </Flex>
-                                        </button>
-                                    </Card>
-                                ))}
+                                            </button>
+                                        </Card>
+                                    );
+                                })}
                             </Flex>
                         </Box>
                     </Box>
