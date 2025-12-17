@@ -13,8 +13,8 @@ import AuthCallbackPage from 'pages/AuthCallbackPage';
 import SignInPage from 'pages/SignInPage';
 
 const HomePage = lazy(() => import(/* webpackChunkName: "HomePage" */ 'pages/HomePage'));
-const BalancesPage = lazy(
-    () => import(/* webpackChunkName: "BalancesPage" */ 'pages/BalancesPage'),
+const DashboardPage = lazy(
+    () => import(/* webpackChunkName: "DashboardPage" */ 'pages/DashboardPage'),
 );
 const GroupPage = lazy(() => import(/* webpackChunkName: "GroupPage" */ 'pages/GroupPage'));
 const ActivityPage = lazy(
@@ -55,10 +55,10 @@ const AppRouter = () => {
                 <Route path={ROUTES.HOME} element={<HomePage />} />
                 <Route path={ROUTES.SIGN_IN} element={<SignInPage />} />
                 <Route
-                    path={ROUTES.BALANCES}
+                    path={ROUTES.DASHBOARD}
                     element={
                         <ProtectedRoute>
-                            <BalancesPage />
+                            <DashboardPage />
                         </ProtectedRoute>
                     }
                 />

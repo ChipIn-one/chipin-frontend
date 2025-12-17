@@ -17,9 +17,6 @@ import {
 
 import { useAuthStore } from 'store/authStore';
 
-import BottomNavMobile from 'components/BottomNavMobile';
-import Breadcrumbs from 'components/Breadcrumbs';
-
 const HeaderFlex = styled(Flex)`
     align-items: center;
     gap: var(--space-3);
@@ -36,10 +33,8 @@ const SettingsPage = () => {
     const { signOut } = useAuthStore();
 
     return (
-        <Box py="4">
+        <Box py="6">
             <Container size="4">
-                <Breadcrumbs />
-
                 <Grid columns={{ initial: '1', md: '2' }} gap="6">
                     {/* Account */}
                     <Card>
@@ -130,7 +125,6 @@ const SettingsPage = () => {
                     </Card>
                     <Button onClick={signOut}>Sign Out</Button>
                 </Grid>
-                <BottomNavMobile />
             </Container>
         </Box>
     );

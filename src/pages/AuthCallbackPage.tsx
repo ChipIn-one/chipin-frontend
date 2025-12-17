@@ -17,7 +17,7 @@ const AuthCallbackPage = () => {
         if (authToken) {
             saveAuthTokenDB(authToken).then(() => {
                 setIsLoggedIn(true);
-                navigate(ROUTES.BALANCES);
+                navigate(ROUTES.DASHBOARD);
             });
         } else {
             console.error('OAuth error:', error);

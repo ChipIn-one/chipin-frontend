@@ -5,6 +5,8 @@ import { createRoot } from 'react-dom/client';
 import '@radix-ui/themes/styles.css';
 import 'styles/radixStylesOverwrite.css';
 
+import 'constants/globals';
+
 createRoot(document.getElementById('root')!).render(
     <ThemeProvider attribute="class" enableSystem>
         <Main />

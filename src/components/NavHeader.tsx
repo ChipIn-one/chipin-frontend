@@ -5,7 +5,7 @@ import { Box, Button, TabNav } from '@radix-ui/themes';
 
 import { ROUTES } from 'constants/routes';
 
-const BottomNavMobile = () => {
+const NavHeader = () => {
     const location = useLocation();
 
     const isActive = (path: string) =>
@@ -17,14 +17,13 @@ const BottomNavMobile = () => {
             bottom="0"
             left="0"
             right="0"
-            // display={{ initial: 'block', sm: 'none' }}
-            display={{ initial: 'block' }}
+            display={{ initial: 'none', sm: 'block' }}
         >
             <TabNav.Root justify="center">
-                <TabNav.Link asChild active={isActive(ROUTES.BALANCES)}>
-                    <Link to={ROUTES.BALANCES}>
+                <TabNav.Link asChild active={isActive(ROUTES.DASHBOARD)}>
+                    <Link to={ROUTES.DASHBOARD}>
                         <Button variant="ghost" radius="none">
-                            <LucideUsers size={24} /> Balances
+                            <LucideUsers size={24} /> Dashboard
                         </Button>
                     </Link>
                 </TabNav.Link>
@@ -49,4 +48,4 @@ const BottomNavMobile = () => {
     );
 };
 
-export default BottomNavMobile;
+export default NavHeader;

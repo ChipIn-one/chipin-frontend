@@ -31,7 +31,7 @@ const Main = () => {
                 <BrowserRouter>
                     <BackgroundBox>
                         <Header />
-                        <GlobalHooks />
+                        <GlobalHooks />{' '}
                         <Box px="4">
                             <AppRouter />
                         </Box>

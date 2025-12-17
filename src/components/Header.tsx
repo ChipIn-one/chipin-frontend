@@ -12,6 +12,7 @@ import { EmptyRouteLink } from 'basics/EmptyRouteLink';
 import Logotype from 'assets/logo.svg?react';
 
 import AuthModal from './Modal/AuthModal';
+import NavHeader from './NavHeader';
 import ThemeSwitcherDev from './ThemeSwitcherDev';
 
 const StickyBox = styled(Box)`
@@ -36,7 +37,7 @@ const Header = () => {
         <StickyBox>
             <Container size="4" p="4">
                 <Flex justify="between" align="center">
-                    <EmptyRouteLink to={isLoggedIn ? ROUTES.BALANCES : ROUTES.HOME}>
+                    <EmptyRouteLink to={isLoggedIn ? ROUTES.DASHBOARD : ROUTES.HOME}>
                         <Flex gap="4" align="center" justify="center">
                             <StyledLogotype />
 
@@ -45,6 +46,8 @@ const Header = () => {
                             </Text>
                         </Flex>
                     </EmptyRouteLink>
+
+                    <NavHeader />
 
                     <Flex gap="4" align="center">
                         <ThemeSwitcherDev />

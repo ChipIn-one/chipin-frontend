@@ -54,7 +54,7 @@ const HomePage = () => {
 
     useEffect(() => {
         if (isLoggedIn) {
-            navigate(ROUTES.BALANCES, { replace: true });
+            navigate(ROUTES.DASHBOARD, { replace: true });
         }
     }, [isLoggedIn, navigate]);
 
@@ -302,7 +302,7 @@ const HomePage = () => {
                 </Container>
             </Box>
 
-            {/* Balances section */}
+            {/* Dashboard section */}
             <Section py="8">
                 <Container size="4">
                     <Grid columns={{ initial: '1', md: '2' }} gap="6" align="center">
