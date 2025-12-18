@@ -11,7 +11,7 @@ const GroupAvatar = ({ group }: Props) => {
     return (
         <Avatar
             size="4"
-            src={group.groupImg}
+            src={group.coverUrl || ''}
             alt={group.name}
             fallback={group.emoji || <LucideUsers />}
         />

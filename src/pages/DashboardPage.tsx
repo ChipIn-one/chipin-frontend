@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { LucideArrowRight, LucideBanana, LucideUsers } from 'lucide-react';
+import { LucideArrowRight, LucideBanana, LucideChartBar, LucideUsers } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { Avatar, Box, Button, Card, Container, Flex, Grid, Text } from '@radix-ui/themes';
@@ -7,11 +7,14 @@ import { Avatar, Box, Button, Card, Container, Flex, Grid, Text } from '@radix-u
 import { ROUTES } from 'constants/routes';
 import { DAY, HOUR, MINUTE, SECOND } from 'constants/time';
 import { formatRelativeTime } from 'helpers/time';
-import { useGroupStore } from 'store/groupStore';
+import { useDashboardStore } from 'store/dashboardStore';
+import { useGroupsStore } from 'store/groupsStore';
 
 import { Amount } from 'basics/numbers';
 import GroupAvatar from 'components/GroupAvatar';
+import MobileNavigationBar from 'components/MobileNavigationBar';
 import UsersRow from 'components/UsersRow';
+
 const now = Date.now();
 
 const MOCK_EXPENSES = [
@@ -63,14 +66,15 @@ const MOCK_EXPENSES = [
 ];
 
 const DashboardPage = () => {
-    const { selectedGroup, setSelectedGroup, groups, fetchSetUserGroups } = useGroupStore();
+    const { dashboardGroups, fetchSetDashboardData } = useDashboardStore();
+    const { setSelectedGroup } = useGroupsStore();
 
     //TODO: Make only initial loading now on dashboard load
     useEffect(() => {
-        fetchSetUserGroups();
-    }, [fetchSetUserGroups]);
+        fetchSetDashboardData();
+    }, [fetchSetDashboardData]);
 
-    console.log(selectedGroup);
+    console.log(dashboardGroups);
     return (
         <Box py="6">
             <Container size="4">
@@ -107,17 +111,13 @@ const DashboardPage = () => {
                             </Flex>
 
                             <Flex gap="5" direction="column">
-                                {groups.map(group => {
-                                    const isSelected = selectedGroup?.id === group.id;
-
+                                {dashboardGroups.map(group => {
                                     return (
-                                        <Card
-                                            m={isSelected ? '0' : '3'}
-                                            variant={isSelected ? 'classic' : 'ghost'}
-                                            key={group.id}
-                                            asChild
-                                        >
-                                            <button onClick={() => setSelectedGroup(group)}>
+                                        <Card variant={'classic'} key={group.id} asChild>
+                                            <Link
+                                                to={`${ROUTES.GROUP}/${group.id}`}
+                                                onClick={() => setSelectedGroup(group)}
+                                            >
                                                 <Flex gap="4" align="center" mb="2">
                                                     <GroupAvatar group={group} />
                                                     <Flex direction="column" gap="1" width="100%">
@@ -138,7 +138,7 @@ const DashboardPage = () => {
                                                         </Text>
                                                     </Flex>
                                                 </Flex>
-                                            </button>
+                                            </Link>
                                         </Card>
                                     );
                                 })}
@@ -153,29 +153,33 @@ const DashboardPage = () => {
                         }}
                     >
                         <Box mb="6">
-                            {selectedGroup && (
-                                <Flex justify="between" align="center">
-                                    <Flex align="center" gap="4">
-                                        <GroupAvatar group={selectedGroup} />
-                                        <Flex direction="column">
-                                            <Text size="4" weight="medium" as="p" mb="2">
-                                                Group expenses
-                                            </Text>
-                                            <Text size="2" as="p">
-                                                {selectedGroup?.name}
-                                            </Text>
-                                        </Flex>
-                                    </Flex>
+                            <Flex justify="between" align="center">
+                                <Flex align="center" gap="4">
+                                    <Avatar
+                                        size="5"
+                                        color="cyan"
+                                        fallback={<LucideChartBar size={32} />}
+                                    />
 
-                                    <Link to={`${ROUTES.GROUP}/${selectedGroup.id}`}>
-                                        <Button variant="ghost" size="3">
-                                            View all expenses
-                                            <LucideArrowRight />
-                                        </Button>
-                                    </Link>
+                                    <Flex direction="column">
+                                        <Text size="4" weight="medium" as="p" mb="2">
+                                            Your last activity
+                                        </Text>
+                                        <Text size="2" as="p">
+                                            From your groups and friends
+                                        </Text>
+                                    </Flex>
                                 </Flex>
-                            )}
+
+                                <Link to={ROUTES.ACTIVITY}>
+                                    <Button variant="ghost" size="3">
+                                        View all activities
+                                        <LucideArrowRight />
+                                    </Button>
+                                </Link>
+                            </Flex>
                         </Box>
+
                         {MOCK_EXPENSES.map(expense => (
                             <Card key={expense.id} asChild size="2" mb="4">
                                 <button style={{ width: '100%' }}>
@@ -209,6 +213,7 @@ const DashboardPage = () => {
                         ))}
                     </Box>
                 </Grid>
+                <MobileNavigationBar />
             </Container>
         </Box>
     );

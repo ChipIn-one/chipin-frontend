@@ -2,10 +2,10 @@ import { useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import { URL_PARAMS } from 'constants/url';
-import { useGroupStore } from 'store/groupStore';
+import { useGroupsStore } from 'store/groupsStore';
 
 export const useJoinInviteLink = () => {
-    const { inviteToGroup } = useGroupStore();
+    const { inviteToGroup } = useGroupsStore();
 
     // const navigate = useNavigate();
     const [searchParams] = useSearchParams();

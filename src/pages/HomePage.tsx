@@ -39,7 +39,7 @@ const Placeholder = styled.div`
     width: 100%;
     min-height: 280px;
     border-radius: 16px;
-    background: ${({ theme }) => theme.colors.indigo2};
+    background-color: ${({ theme }) => theme.colors.indigo2};
     border: 1px solid ${({ theme }) => theme.colors.gray6};
     display: grid;
     place-items: center;

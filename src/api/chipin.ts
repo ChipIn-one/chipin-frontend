@@ -1,6 +1,6 @@
-import axios, { CanceledError } from 'axios';
+import axios from 'axios';
 import { toast } from 'sonner';
-import { ApiGroup } from 'types/api';
+import { ApiGroup, DashboardApiResponse } from 'types/api';
 
 import { getChipInApiUrl } from 'helpers/env';
 import { getAuthTokenDB } from 'store/IDB/auth';
@@ -30,10 +30,6 @@ apiInstance.interceptors.request.use(async config => {
 apiInstance.interceptors.response.use(
     response => response,
     (error: unknown) => {
-        if (error instanceof CanceledError) {
-            return Promise.reject(error);
-        }
-
         let title = 'Something went wrong';
         let description: string | undefined;
 
@@ -76,31 +72,30 @@ apiInstance.interceptors.response.use(
     },
 );
 
-// TODO: ADD abortSignal
 export const fetchApiUserGroups = (): Promise<ApiGroup[]> => {
     return apiInstance.get(`/groups`).then(result => result.data);
 };
 
-export const createApiGroup = async (
-    { groupName, groupDescription = '' }: CreateGroupParams,
-    abortSignal?: AbortSignal,
-): Promise<ApiGroup> => {
-    const response = await apiInstance.post(
-        '/groups',
-        { name: groupName, description: groupDescription },
-        { signal: abortSignal },
-    );
+export const fetchApiDashboard = (): Promise<DashboardApiResponse> => {
+    return apiInstance.get(`/dashboard`).then(result => result.data);
+};
+
+export const createApiGroup = async ({
+    groupName,
+    groupDescription = '',
+}: CreateGroupParams): Promise<unknown> => {
+    const response = await apiInstance.post('/groups', {
+        name: groupName,
+        description: groupDescription,
+    });
 
     return response.data;
 };
 
-export const inviteApiUserToGroup = async (
-    { inviteToken }: InviteToGroupParams,
-    abortSignal?: AbortSignal,
-): Promise<ApiGroup> => {
-    const response = await apiInstance.post(`/groups/invite/${inviteToken}`, undefined, {
-        signal: abortSignal,
-    });
+export const inviteApiUserToGroup = async ({
+    inviteToken,
+}: InviteToGroupParams): Promise<unknown> => {
+    const response = await apiInstance.post(`/groups/invite/${inviteToken}`);
 
     return response.data;
 };

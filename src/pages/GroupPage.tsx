@@ -3,10 +3,12 @@ import { useParams } from 'react-router-dom';
 import { Box, Container, Text, TextArea } from '@radix-ui/themes';
 
 import { buildGroupInviteLink } from 'helpers/url';
-import { useGroupStore } from 'store/groupStore';
+import { useGroupsStore } from 'store/groupsStore';
+
+import MobileNavigationBar from 'components/MobileNavigationBar';
 
 const GroupPage = () => {
-    const { selectedGroup } = useGroupStore();
+    const { selectedGroup } = useGroupsStore();
 
     const { groupId } = useParams<{ groupId: string }>();
 
@@ -15,7 +17,7 @@ const GroupPage = () => {
     }
 
     const inviteLink = buildGroupInviteLink({
-        inviteToken: selectedGroup.inviteToken,
+        inviteToken: selectedGroup?.inviteToken || '',
     });
 
     return (
@@ -26,6 +28,7 @@ const GroupPage = () => {
                     Invite link:
                 </Text>
                 <TextArea readOnly value={inviteLink} />
+                <MobileNavigationBar />
             </Container>
         </Box>
     );

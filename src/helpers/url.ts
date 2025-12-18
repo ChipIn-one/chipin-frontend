@@ -1,5 +1,3 @@
-import { ApiGroup } from 'types/api';
-
 import type { AuthService } from 'constants/auth.types';
 import type { UrlParams } from 'constants/url.types';
 
@@ -16,11 +14,7 @@ export const getSocialAuthUrl = (provider: AuthService) => {
     return `${apiUrl}auth/login/${provider}?redirect_to=${window.location.origin}`;
 };
 
-export const buildGroupInviteLink = ({
-    inviteToken,
-}: {
-    inviteToken: ApiGroup['inviteToken'];
-}): string => {
+export const buildGroupInviteLink = ({ inviteToken }: { inviteToken: string }): string => {
     const baseUrl = getChipInAppUrl();
 
     const inviteUrl = new URL(baseUrl);

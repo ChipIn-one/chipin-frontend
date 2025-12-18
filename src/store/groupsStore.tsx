@@ -7,7 +7,7 @@ import { MESSAGES } from 'constants/messages';
 
 import { useAuthStore } from './authStore';
 
-interface GroupStore {
+interface GroupsStore {
     isLoadingGroups: boolean;
 
     selectedGroup: ApiGroup | null;
@@ -16,17 +16,17 @@ interface GroupStore {
     setSelectedGroup: (group: ApiGroup) => void;
     fetchSetUserGroups: () => void;
     createGroup: (params: { groupName: string; groupDescription?: string }) => void;
-    inviteToGroup: (params: { inviteToken: ApiGroup['inviteToken'] }) => void;
+    inviteToGroup: (params: { inviteToken: string }) => void;
 }
 
-const initialAuthStore = {
+const initialGroupsStore = {
     isLoadingGroups: false,
     selectedGroup: null,
     groups: [],
 };
 
-export const useGroupStore = create<GroupStore>((set, get) => ({
-    ...initialAuthStore,
+export const useGroupsStore = create<GroupsStore>((set, get) => ({
+    ...initialGroupsStore,
 
     setSelectedGroup: group => {
         set({ selectedGroup: group });

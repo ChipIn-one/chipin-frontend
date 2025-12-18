@@ -1,3 +1,17 @@
+export interface ApiGroup {
+    id: string;
+    name: string;
+    description: string | null;
+    emoji: string | null;
+    coverUrl: string | null;
+    createdAt: number;
+    updatedAt: number;
+    // TODO TO BASE API USER
+    inviteToken?: string;
+    creator?: ApiUser;
+    members: ApiUser[];
+}
+
 export interface ApiUser {
     id: string;
     email: string;
@@ -9,15 +23,6 @@ export interface ApiUser {
     updatedAt: number;
 }
 
-export interface ApiGroup {
-    id: string;
-    name: string;
-    inviteToken: string;
-    description: string | null;
-    creator: ApiUser;
-    members: ApiUser[];
-    createdAt: number;
-    updatedAt: number;
-    emoji: string | null;
-    groupImg: string;
+export interface DashboardApiResponse {
+    groups: ApiGroup[];
 }

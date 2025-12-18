@@ -17,6 +17,8 @@ import {
 
 import { useAuthStore } from 'store/authStore';
 
+import MobileNavigationBar from 'components/MobileNavigationBar';
+
 const HeaderFlex = styled(Flex)`
     align-items: center;
     gap: var(--space-3);
@@ -125,6 +127,7 @@ const SettingsPage = () => {
                     </Card>
                     <Button onClick={signOut}>Sign Out</Button>
                 </Grid>
+                <MobileNavigationBar />
             </Container>
         </Box>
     );
