@@ -1,10 +1,9 @@
-// SignInPage.tsx
-
 import { Container, Flex, Heading, Section } from '@radix-ui/themes';
 
 import AuthButtons from 'components/AuthButtons';
 import Footer from 'components/Footer';
 
+// TODO: Make sign in content importable to other pages, ensure for not changing routes after sign in
 const SignInPage = () => {
     return (
         <>

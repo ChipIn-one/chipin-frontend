@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { Box, Container, Text, TextArea } from '@radix-ui/themes';
@@ -8,9 +9,15 @@ import { useGroupsStore } from 'store/groupsStore';
 import MobileNavigationBar from 'components/MobileNavigationBar';
 
 const GroupPage = () => {
-    const { selectedGroup } = useGroupsStore();
+    const { groups, selectedGroup, fetchSetUserGroupById } = useGroupsStore();
 
     const { groupId } = useParams<{ groupId: string }>();
+    console.log(groups);
+    console.log(groupId);
+
+    useEffect(() => {
+        fetchSetUserGroupById(groupId);
+    }, [groupId, fetchSetUserGroupById]);
 
     if (!selectedGroup) {
         return <div>No selected group</div>;

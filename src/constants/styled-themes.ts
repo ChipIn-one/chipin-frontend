@@ -98,6 +98,7 @@ export const lightThemeStyled = {
         ...yellow,
     },
 };
+//TODO: ADD TYPIZATION GLOBAL FOR STYLED.COMPS seeing
 //TODO: ADD SHADOWS, WHITE / BLACk
 export const darkThemeStyled = {
     colors: {

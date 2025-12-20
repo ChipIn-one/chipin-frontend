@@ -4,12 +4,11 @@ import { toast } from 'sonner';
 
 import { MESSAGES } from 'constants/messages';
 import { ROUTES } from 'constants/routes';
-import { useCheckOnlineStatus } from 'hooks/useCheckOnlineStatus';
-import { useJoinInviteLink } from 'hooks/useJoinInviteLink';
 import { useAuthStore } from 'store/authStore';
 
 import PageLoader from 'basics/PageLoader';
 import AuthCallbackPage from 'pages/AuthCallbackPage';
+import GroupJoinPage from 'pages/GroupJoinPage';
 import SignInPage from 'pages/SignInPage';
 
 const HomePage = lazy(() => import(/* webpackChunkName: "HomePage" */ 'pages/HomePage'));
@@ -30,11 +29,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-    const { isLoggedIn, isAuthChecked } = useAuthStore();
-
-    if (!isAuthChecked) {
-        return <PageLoader />;
-    }
+    const { isLoggedIn } = useAuthStore();
 
     if (!isLoggedIn) {
         console.log('User not logged in, redirecting to sign-in page');
@@ -46,8 +41,11 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 };
 
 const AppRouter = () => {
-    useJoinInviteLink();
-    useCheckOnlineStatus();
+    const { isAuthChecked } = useAuthStore();
+
+    if (!isAuthChecked) {
+        return <PageLoader />;
+    }
 
     return (
         <Suspense fallback={<PageLoader />}>
@@ -70,6 +68,7 @@ const AppRouter = () => {
                         </ProtectedRoute>
                     }
                 />
+                <Route path={`${ROUTES.GROUP_JOIN}/:inviteToken`} element={<GroupJoinPage />} />
                 <Route
                     path={ROUTES.ACTIVITY}
                     element={

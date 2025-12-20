@@ -1,4 +1,5 @@
 import type { AuthService } from 'constants/auth.types';
+import { ROUTES } from 'constants/routes';
 import type { UrlParams } from 'constants/url.types';
 
 import { getChipInApiUrl, getChipInAppUrl } from './env';
@@ -14,11 +15,5 @@ export const getSocialAuthUrl = (provider: AuthService) => {
     return `${apiUrl}auth/login/${provider}?redirect_to=${window.location.origin}`;
 };
 
-export const buildGroupInviteLink = ({ inviteToken }: { inviteToken: string }): string => {
-    const baseUrl = getChipInAppUrl();
-
-    const inviteUrl = new URL(baseUrl);
-    inviteUrl.searchParams.set('inviteToken', inviteToken);
-
-    return inviteUrl.toString();
-};
+export const buildGroupInviteLink = ({ inviteToken }: { inviteToken: string }) =>
+    `${getChipInAppUrl()}${ROUTES.GROUP_JOIN}/${inviteToken}`;

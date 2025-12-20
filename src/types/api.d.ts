@@ -26,3 +26,7 @@ export interface ApiUser {
 export interface DashboardApiResponse {
     groups: ApiGroup[];
 }
+
+export interface JoinGroupResponse {
+    groupId: ApiGroup['id'];
+}

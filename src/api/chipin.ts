@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { toast } from 'sonner';
-import { ApiGroup, DashboardApiResponse } from 'types/api';
+import { ApiGroup, DashboardApiResponse, JoinGroupResponse } from 'types/api';
 
 import { getChipInApiUrl } from 'helpers/env';
 import { getAuthTokenDB } from 'store/IDB/auth';
@@ -76,6 +76,10 @@ export const fetchApiUserGroups = (): Promise<ApiGroup[]> => {
     return apiInstance.get(`/groups`).then(result => result.data);
 };
 
+export const fetchApiUserGroupById = (groupId: string): Promise<ApiGroup> => {
+    return apiInstance.get(`/groups/${groupId}`).then(result => result.data);
+};
+
 export const fetchApiDashboard = (): Promise<DashboardApiResponse> => {
     return apiInstance.get(`/dashboard`).then(result => result.data);
 };
@@ -94,7 +98,7 @@ export const createApiGroup = async ({
 
 export const inviteApiUserToGroup = async ({
     inviteToken,
-}: InviteToGroupParams): Promise<unknown> => {
+}: InviteToGroupParams): Promise<JoinGroupResponse> => {
     const response = await apiInstance.post(`/groups/invite/${inviteToken}`);
 
     return response.data;

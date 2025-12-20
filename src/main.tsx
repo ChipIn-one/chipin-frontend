@@ -31,11 +31,12 @@ const Main = () => {
                 <BrowserRouter>
                     <BackgroundBox>
                         <Header />
-                        <GlobalHooks />{' '}
+                        <GlobalHooks />
                         <Box px="4">
                             <AppRouter />
                         </Box>
                         <PWABadge />
+                        {/* TODO: TOAST POSOTION CHANGE BASED ON MEDIA SIZE */}
                         <Toaster theme={themeName} richColors closeButton />
                     </BackgroundBox>
                 </BrowserRouter>

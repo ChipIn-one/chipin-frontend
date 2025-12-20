@@ -7,6 +7,7 @@ export const useRoutesMeta = () => {
     const location = useLocation();
 
     useEffect(() => {
+        //TODO: improve, because not working with params like :groupID
         const meta = HEAD_META[location.pathname];
 
         if (meta) {

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { LucideArrowRight, LucideBanana, LucideChartBar, LucideUsers } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import { Avatar, Box, Button, Card, Container, Flex, Grid, Text } from '@radix-ui/themes';
+import { Avatar, Box, Button, Card, Container, Flex, Grid, Skeleton, Text } from '@radix-ui/themes';
 
 import { ROUTES } from 'constants/routes';
 import { DAY, HOUR, MINUTE, SECOND } from 'constants/time';
@@ -66,15 +66,14 @@ const MOCK_EXPENSES = [
 ];
 
 const DashboardPage = () => {
-    const { dashboardGroups, fetchSetDashboardData } = useDashboardStore();
-    const { setSelectedGroup } = useGroupsStore();
+    const { isLoadingDashboard, fetchSetDashboardData } = useDashboardStore();
+    const { groups, setSelectedGroup } = useGroupsStore();
 
     //TODO: Make only initial loading now on dashboard load
     useEffect(() => {
         fetchSetDashboardData();
     }, [fetchSetDashboardData]);
 
-    console.log(dashboardGroups);
     return (
         <Box py="6">
             <Container size="4">
@@ -88,15 +87,21 @@ const DashboardPage = () => {
                     >
                         <Card size="4">
                             <Flex direction="column" gap="3">
-                                <Text size="4" weight="medium" as="p">
-                                    Total balance
-                                </Text>
-                                <Text size="6" color="grass" weight="bold" as="p">
-                                    <Amount value={145.67} customPrefix="$" />
-                                </Text>
-                                <Text size="2" color="gray" as="p">
-                                    You are owed $37 across all groups
-                                </Text>
+                                <Skeleton loading={isLoadingDashboard} width="140px">
+                                    <Text size="4" weight="medium" as="p">
+                                        Total balance
+                                    </Text>
+                                </Skeleton>
+                                <Skeleton loading={isLoadingDashboard} width="100px">
+                                    <Text size="6" color="grass" weight="bold">
+                                        <Amount value={145.67} customPrefix="$" />
+                                    </Text>
+                                </Skeleton>
+                                <Skeleton loading={isLoadingDashboard}>
+                                    <Text size="4" color="gray">
+                                        You are owed $37 across all groups
+                                    </Text>
+                                </Skeleton>
                             </Flex>
                         </Card>
 
@@ -111,7 +116,7 @@ const DashboardPage = () => {
                             </Flex>
 
                             <Flex gap="5" direction="column">
-                                {dashboardGroups.map(group => {
+                                {groups.map(group => {
                                     return (
                                         <Card variant={'classic'} key={group.id} asChild>
                                             <Link
@@ -120,6 +125,7 @@ const DashboardPage = () => {
                                             >
                                                 <Flex gap="4" align="center" mb="2">
                                                     <GroupAvatar group={group} />
+
                                                     <Flex direction="column" gap="1" width="100%">
                                                         <Flex justify="between">
                                                             <Text size="5" weight="bold" as="p">
@@ -155,28 +161,35 @@ const DashboardPage = () => {
                         <Box mb="6">
                             <Flex justify="between" align="center">
                                 <Flex align="center" gap="4">
-                                    <Avatar
-                                        size="5"
-                                        color="cyan"
-                                        fallback={<LucideChartBar size={32} />}
-                                    />
-
+                                    <Skeleton loading={isLoadingDashboard}>
+                                        <Avatar
+                                            size="5"
+                                            color="cyan"
+                                            fallback={<LucideChartBar size={32} />}
+                                        />
+                                    </Skeleton>
                                     <Flex direction="column">
-                                        <Text size="4" weight="medium" as="p" mb="2">
-                                            Your last activity
-                                        </Text>
-                                        <Text size="2" as="p">
-                                            From your groups and friends
-                                        </Text>
+                                        <Skeleton loading={isLoadingDashboard}>
+                                            <Text size="4" weight="medium" as="p" mb="2">
+                                                Your last activity
+                                            </Text>
+                                        </Skeleton>
+                                        <Skeleton loading={isLoadingDashboard}>
+                                            <Text size="2" as="p">
+                                                From your groups and friends
+                                            </Text>
+                                        </Skeleton>
                                     </Flex>
                                 </Flex>
 
-                                <Link to={ROUTES.ACTIVITY}>
-                                    <Button variant="ghost" size="3">
-                                        View all activities
-                                        <LucideArrowRight />
-                                    </Button>
-                                </Link>
+                                <Skeleton loading={isLoadingDashboard}>
+                                    <Link to={ROUTES.ACTIVITY}>
+                                        <Button variant="ghost" size="4">
+                                            View all activities
+                                            <LucideArrowRight />
+                                        </Button>
+                                    </Link>
+                                </Skeleton>
                             </Flex>
                         </Box>
 
@@ -185,27 +198,43 @@ const DashboardPage = () => {
                                 <button style={{ width: '100%' }}>
                                     <Flex justify="between" align="center">
                                         <Flex gap="4" align="center">
-                                            <Avatar
-                                                size="3"
-                                                color="cyan"
-                                                fallback={<LucideBanana />}
-                                            />
+                                            <Skeleton loading={isLoadingDashboard}>
+                                                <Avatar
+                                                    size="3"
+                                                    color="cyan"
+                                                    fallback={<LucideBanana />}
+                                                />
+                                            </Skeleton>
                                             <Box>
-                                                <Text size="4" weight="medium" as="p">
-                                                    {expense.description}
-                                                </Text>
-                                                <Text size="2" color="gray" as="p">
-                                                    Paid by {expense.paidBy}. You owed something
-                                                </Text>
+                                                <Flex direction="column" gap="1">
+                                                    <Skeleton loading={isLoadingDashboard}>
+                                                        <Text size="4" weight="medium" as="p">
+                                                            {expense.description}
+                                                        </Text>
+                                                    </Skeleton>
+                                                    <Skeleton loading={isLoadingDashboard}>
+                                                        <Text size="2" color="gray" as="p">
+                                                            Paid by {expense.paidBy}. You owed
+                                                            something
+                                                        </Text>
+                                                    </Skeleton>
+                                                </Flex>
                                             </Box>
                                         </Flex>
                                         <Flex direction="column" align="end" gap="1">
-                                            <Text size="4" weight="bold" as="p">
-                                                <Amount value={expense.amount} customPrefix="$" />
-                                            </Text>
-                                            <Text size="2" color="gray" as="p">
-                                                {formatRelativeTime(expense.date)}
-                                            </Text>
+                                            <Skeleton loading={isLoadingDashboard}>
+                                                <Text size="4" weight="bold" as="p">
+                                                    <Amount
+                                                        value={expense.amount}
+                                                        customPrefix="$"
+                                                    />
+                                                </Text>
+                                            </Skeleton>
+                                            <Skeleton loading={isLoadingDashboard}>
+                                                <Text size="2" color="gray" as="p">
+                                                    {formatRelativeTime(expense.date)}
+                                                </Text>
+                                            </Skeleton>
                                         </Flex>
                                     </Flex>
                                 </button>

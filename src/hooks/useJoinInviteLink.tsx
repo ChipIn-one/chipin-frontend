@@ -1,21 +1,31 @@
-import { useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 
-import { URL_PARAMS } from 'constants/url';
-import { useGroupsStore } from 'store/groupsStore';
+import { inviteApiUserToGroup } from 'api/chipin';
+import { MESSAGES } from 'constants/messages';
+import { ROUTES } from 'constants/routes';
+import { useAuthStore } from 'store/authStore';
 
 export const useJoinInviteLink = () => {
-    const { inviteToGroup } = useGroupsStore();
+    const navigate = useNavigate();
 
-    // const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
-    const inviteToken = searchParams.get(URL_PARAMS.inviteToken);
+    const { isLoggedIn } = useAuthStore.getState();
 
-    useEffect(() => {
-        if (inviteToken) {
-            inviteToGroup({ inviteToken });
-            // navigate(`/groups/${groupId}`, { replace: true });
-        }
-        //TODO: Add redirect to joinded group page
-    }, [inviteToken, inviteToGroup]);
+    const { inviteToken } = useParams<{ inviteToken: string }>();
+
+    if (inviteToken && isLoggedIn) {
+        inviteApiUserToGroup({ inviteToken })
+            .then(({ groupId }) => {
+                console.log(groupId);
+                navigate(`${ROUTES.GROUP}/${groupId}`, { replace: true });
+                // TODO: ADD GROUP NAME TO TOAST (NEED BACK)
+                toast.success(MESSAGES.success.group.INVITE_JOIN);
+            })
+            .catch(e => {
+                console.error(e);
+                toast.error(MESSAGES.error.group.INVITE_JOIN);
+            });
+    } else if (inviteToken && !isLoggedIn) {
+        toast.warning(MESSAGES.warning.group.INVITE_JOIN);
+    }
 };

@@ -2,25 +2,23 @@ import { toast } from 'sonner';
 import { ApiGroup } from 'types/api';
 import { create } from 'zustand';
 
-import { createApiGroup, fetchApiUserGroups, inviteApiUserToGroup } from 'api/chipin';
-import { MESSAGES } from 'constants/messages';
-
-import { useAuthStore } from './authStore';
+import { createApiGroup, fetchApiUserGroupById } from 'api/chipin';
 
 interface GroupsStore {
-    isLoadingGroups: boolean;
+    isLoadingGroup: boolean;
 
     selectedGroup: ApiGroup | null;
     groups: ApiGroup[];
 
+    setGroups: (groups: ApiGroup[]) => void;
     setSelectedGroup: (group: ApiGroup) => void;
-    fetchSetUserGroups: () => void;
+    // fetchSetUserGroups: () => void;
+    fetchSetUserGroupById: (groupId: string | undefined) => void;
     createGroup: (params: { groupName: string; groupDescription?: string }) => void;
-    inviteToGroup: (params: { inviteToken: string }) => void;
 }
 
 const initialGroupsStore = {
-    isLoadingGroups: false,
+    isLoadingGroup: false,
     selectedGroup: null,
     groups: [],
 };
@@ -28,46 +26,58 @@ const initialGroupsStore = {
 export const useGroupsStore = create<GroupsStore>((set, get) => ({
     ...initialGroupsStore,
 
+    setGroups: groups => {
+        set({ groups });
+    },
     setSelectedGroup: group => {
         set({ selectedGroup: group });
     },
-    fetchSetUserGroups: () => {
-        const { selectedGroup } = get();
+    // fetchSetUserGroups: () => {
+    //     const { selectedGroup } = get();
 
-        set({ isLoadingGroups: true });
-        fetchApiUserGroups()
-            .then(data => {
-                set({
-                    groups: data,
-                    selectedGroup: selectedGroup || data[0],
-                });
+    //     set({ isLoadingGroups: true });
+    //     fetchApiUserGroups()
+    //         .then(data => {
+    //             set({
+    //                 groups: data,
+    //                 selectedGroup: selectedGroup || data[0],
+    //             });
+    //         })
+    //         .catch(error => {
+    //             console.error('Error fetching user groups:', error);
+    //         })
+    //         .finally(() => {
+    //             set({ isLoadingGroups: false });
+    //         });
+    // },
+    fetchSetUserGroupById: groupId => {
+        const { groups } = get();
+
+        if (!groupId) {
+            toast.error('Invalid group ID for fetching group');
+            return;
+        }
+        set({ isLoadingGroup: true });
+
+        fetchApiUserGroupById(groupId)
+            .then(groupFromApi => {
+                if (groups.find(group => group.id === groupId)) {
+                    const updatedGroups = groups.map(group =>
+                        group.id === groupId ? groupFromApi : group,
+                    );
+                    set({ groups: updatedGroups });
+                }
+                set({ selectedGroup: groupFromApi });
             })
             .catch(error => {
                 console.error('Error fetching user groups:', error);
             })
             .finally(() => {
-                set({ isLoadingGroups: false });
+                set({ isLoadingGroup: false });
             });
     },
+
     createGroup: ({ groupName, groupDescription }) => {
         createApiGroup({ groupName, groupDescription });
-    },
-
-    inviteToGroup: ({ inviteToken }) => {
-        const { isLoggedIn } = useAuthStore.getState();
-
-        inviteApiUserToGroup({ inviteToken })
-            .then(data => {
-                console.log(data);
-                toast.success(MESSAGES.success.group.INVITE_JOIN);
-            })
-            .catch(error => {
-                console.error('Error fetching user groups:', error);
-                if (isLoggedIn) {
-                    toast.error(MESSAGES.error.group.INVITE_JOIN);
-                } else {
-                    toast.warning(MESSAGES.warning.group.INVITE_JOIN);
-                }
-            });
     },
 }));

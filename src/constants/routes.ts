@@ -5,6 +5,7 @@ export const ROUTES = {
     AUTH_CALLBACK: '/auth/callback',
     DASHBOARD: '/dashboard',
     GROUP: '/group',
+    GROUP_JOIN: '/group/join',
     ACTIVITY: '/activity',
     SETTINGS: '/settings',
 };
@@ -25,6 +26,10 @@ export const HEAD_META: Record<string, { title: string; description?: string }> 
     [ROUTES.GROUP]: {
         title: 'ChipIn — Group',
         description: 'View and manage your group',
+    },
+    [ROUTES.GROUP_JOIN]: {
+        title: 'Joining group...',
+        description: 'Trying to join group',
     },
     [ROUTES.ACTIVITY]: {
         title: 'ChipIn — Activity',
