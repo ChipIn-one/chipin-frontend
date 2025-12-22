@@ -2,7 +2,7 @@ import { Box, Container, Heading } from '@radix-ui/themes';
 
 import { useJoinInviteLink } from 'hooks/useJoinInviteLink';
 
-import MobileNavigationBar from 'components/MobileNavigationBar';
+import MobileNavBar from 'components/Navs/MobileNavBar';
 
 const GroupJoinPage = () => {
     useJoinInviteLink();
@@ -12,7 +12,7 @@ const GroupJoinPage = () => {
             <Container size="4">
                 <Heading>Hey, we noticed you was invited to join group</Heading>
 
-                <MobileNavigationBar />
+                <MobileNavBar />
             </Container>
         </Box>
     );

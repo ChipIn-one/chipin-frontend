@@ -12,7 +12,7 @@ import { EmptyRouteLink } from 'basics/EmptyRouteLink';
 import Logotype from 'assets/logo.svg?react';
 
 import AuthModal from './Modal/AuthModal';
-import NavHeader from './NavHeader';
+import HeaderNav from './Navs/HeaderNav';
 import ThemeSwitcherDev from './ThemeSwitcherDev';
 
 const StickyBox = styled(Box)`
@@ -41,24 +41,26 @@ const Header = () => {
                         <Flex gap="4" align="center" justify="center">
                             <StyledLogotype />
 
-                            <Text size="6" weight="bold">
-                                {PROJECT_NAME}
-                            </Text>
+                            <Box display={{ initial: 'none', sm: 'block' }}>
+                                <Text size="6" weight="bold">
+                                    {PROJECT_NAME}
+                                </Text>
+                            </Box>
                         </Flex>
                     </EmptyRouteLink>
 
-                    <NavHeader />
+                    <HeaderNav />
 
                     <Flex gap="4" align="center">
                         <ThemeSwitcherDev />
                         {isLoggedIn ? (
                             <Flex gap="4" align="center">
-                                <Box display={{ initial: 'block', md: 'none' }}>
+                                <Box display={{ initial: 'block', sm: 'none' }}>
                                     <IconButton variant="ghost">
                                         <LucideUserRoundPlus />
                                     </IconButton>
                                 </Box>
-                                <Box display={{ initial: 'none', md: 'block' }}>
+                                <Box display={{ initial: 'none', sm: 'block' }}>
                                     <Avatar
                                         size="3"
                                         src="https://images.unsplash.com/photo-1607346256330-dee7af15f7c5?&w=64&h=64&dpr=2&q=70&crop=focalpoint&fp-x=0.67&fp-y=0.5&fp-z=1.4&fit=crop"

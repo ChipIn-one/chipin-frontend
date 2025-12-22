@@ -6,7 +6,8 @@ import { Box, Container, Text, TextArea } from '@radix-ui/themes';
 import { buildGroupInviteLink } from 'helpers/url';
 import { useGroupsStore } from 'store/groupsStore';
 
-import MobileNavigationBar from 'components/MobileNavigationBar';
+import MobileNavBar from 'components/Navs/MobileNavBar';
+import QRCode from 'components/QRCode';
 
 const GroupPage = () => {
     const { groups, selectedGroup, fetchSetUserGroupById } = useGroupsStore();
@@ -35,7 +36,8 @@ const GroupPage = () => {
                     Invite link:
                 </Text>
                 <TextArea readOnly value={inviteLink} />
-                <MobileNavigationBar />
+                <QRCode url={inviteLink} />
+                <MobileNavBar />
             </Container>
         </Box>
     );

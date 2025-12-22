@@ -2,6 +2,8 @@ import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import { Box } from '@radix-ui/themes';
+
 import { MESSAGES } from 'constants/messages';
 import { ROUTES } from 'constants/routes';
 import { useAuthStore } from 'store/authStore';
@@ -37,7 +39,11 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         return <Navigate to={ROUTES.SIGN_IN} />;
     }
 
-    return <>{children}</>;
+    return (
+        <Box pt="8" pb="8">
+            {children}
+        </Box>
+    );
 };
 
 const AppRouter = () => {

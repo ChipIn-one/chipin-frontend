@@ -12,7 +12,7 @@ import { useGroupsStore } from 'store/groupsStore';
 
 import { Amount } from 'basics/numbers';
 import GroupAvatar from 'components/GroupAvatar';
-import MobileNavigationBar from 'components/MobileNavigationBar';
+import MobileNavBar from 'components/Navs/MobileNavBar';
 import UsersRow from 'components/UsersRow';
 
 const now = Date.now();
@@ -75,176 +75,170 @@ const DashboardPage = () => {
     }, [fetchSetDashboardData]);
 
     return (
-        <Box py="6">
-            <Container size="4">
-                <Grid columns="3" gap="6">
-                    <Box
-                        gridColumn={{
-                            initial: 'span 3',
-                            sm: 'span 1',
-                        }}
-                        mb="6"
-                    >
-                        <Card size="4">
-                            <Flex direction="column" gap="3">
-                                <Skeleton loading={isLoadingDashboard} width="140px">
-                                    <Text size="4" weight="medium" as="p">
-                                        Total balance
-                                    </Text>
-                                </Skeleton>
-                                <Skeleton loading={isLoadingDashboard} width="100px">
-                                    <Text size="6" color="grass" weight="bold">
-                                        <Amount value={145.67} customPrefix="$" />
-                                    </Text>
-                                </Skeleton>
-                                <Skeleton loading={isLoadingDashboard}>
-                                    <Text size="4" color="gray">
-                                        You are owed $37 across all groups
-                                    </Text>
-                                </Skeleton>
-                            </Flex>
-                        </Card>
+        <Container size="4">
+            <Grid columns="3" gap="6">
+                <Box
+                    gridColumn={{
+                        initial: 'span 3',
+                        sm: 'span 1',
+                    }}
+                    mb="6"
+                >
+                    <Card size="4">
+                        <Flex direction="column" gap="3">
+                            <Skeleton loading={isLoadingDashboard} width="140px">
+                                <Text size="4" weight="medium" as="p">
+                                    Total balance
+                                </Text>
+                            </Skeleton>
+                            <Skeleton loading={isLoadingDashboard} width="100px">
+                                <Text size="6" color="grass" weight="bold">
+                                    <Amount value={145.67} customPrefix="$" />
+                                </Text>
+                            </Skeleton>
+                            <Skeleton loading={isLoadingDashboard}>
+                                <Text size="4" color="gray">
+                                    You are owed $37 across all groups
+                                </Text>
+                            </Skeleton>
+                        </Flex>
+                    </Card>
 
-                        <Box>
-                            <Flex gap="2" mb="6" mt="6">
-                                <Flex justify="between" width="100%" pl="2" pr="2">
-                                    <Flex align="center" gap="2">
-                                        <LucideUsers /> <Text weight="medium">Your groups</Text>
-                                    </Flex>
-                                    <Flex>Filter?</Flex>
+                    <Box>
+                        <Flex gap="2" mb="6" mt="6">
+                            <Flex justify="between" width="100%" pl="2" pr="2">
+                                <Flex align="center" gap="2">
+                                    <LucideUsers /> <Text weight="medium">Your groups</Text>
                                 </Flex>
+                                <Flex>Filter?</Flex>
                             </Flex>
+                        </Flex>
 
-                            <Flex gap="5" direction="column">
-                                {groups.map(group => {
-                                    return (
-                                        <Card variant={'classic'} key={group.id} asChild>
-                                            <Link
-                                                to={`${ROUTES.GROUP}/${group.id}`}
-                                                onClick={() => setSelectedGroup(group)}
-                                            >
-                                                <Flex gap="4" align="center" mb="2">
-                                                    <GroupAvatar group={group} />
+                        <Flex gap="5" direction="column">
+                            {groups.map(group => {
+                                return (
+                                    <Card variant={'classic'} key={group.id} asChild>
+                                        <Link
+                                            to={`${ROUTES.GROUP}/${group.id}`}
+                                            onClick={() => setSelectedGroup(group)}
+                                        >
+                                            <Flex gap="4" align="center" mb="2">
+                                                <GroupAvatar group={group} />
 
-                                                    <Flex direction="column" gap="1" width="100%">
-                                                        <Flex justify="between">
-                                                            <Text size="5" weight="bold" as="p">
-                                                                {group.name}
-                                                            </Text>
-                                                            <UsersRow members={group.members} />
-                                                        </Flex>
-                                                        <Text size="3" color="gray" as="p">
-                                                            {group.members.length} members
+                                                <Flex direction="column" gap="1" width="100%">
+                                                    <Flex justify="between">
+                                                        <Text size="5" weight="bold" as="p">
+                                                            {group.name}
                                                         </Text>
-
-                                                        <Text size="2" color="grass" as="p">
-                                                            You are owed{' '}
-                                                            <Amount value={15} customPrefix="$" />{' '}
-                                                            in this group
-                                                        </Text>
+                                                        <UsersRow members={group.members} />
                                                     </Flex>
+                                                    <Text size="3" color="gray" as="p">
+                                                        {group.members.length} members
+                                                    </Text>
+
+                                                    <Text size="2" color="grass" as="p">
+                                                        You are owed{' '}
+                                                        <Amount value={15} customPrefix="$" /> in
+                                                        this group
+                                                    </Text>
                                                 </Flex>
-                                            </Link>
-                                        </Card>
-                                    );
-                                })}
+                                            </Flex>
+                                        </Link>
+                                    </Card>
+                                );
+                            })}
+                        </Flex>
+                    </Box>
+                </Box>
+
+                <Box
+                    gridColumn={{
+                        initial: 'span 3',
+                        sm: 'span 2',
+                    }}
+                >
+                    <Box mb="6">
+                        <Flex justify="between" align="center">
+                            <Flex align="center" gap="4">
+                                <Skeleton loading={isLoadingDashboard}>
+                                    <Avatar
+                                        size="5"
+                                        color="cyan"
+                                        fallback={<LucideChartBar size={32} />}
+                                    />
+                                </Skeleton>
+                                <Flex direction="column">
+                                    <Skeleton loading={isLoadingDashboard}>
+                                        <Text size="4" weight="medium" as="p" mb="2">
+                                            Your last activity
+                                        </Text>
+                                    </Skeleton>
+                                    <Skeleton loading={isLoadingDashboard}>
+                                        <Text size="2" as="p">
+                                            From your groups and friends
+                                        </Text>
+                                    </Skeleton>
+                                </Flex>
                             </Flex>
-                        </Box>
+
+                            <Skeleton loading={isLoadingDashboard}>
+                                <Link to={ROUTES.ACTIVITY}>
+                                    <Button variant="ghost" size="4">
+                                        View all activities
+                                        <LucideArrowRight />
+                                    </Button>
+                                </Link>
+                            </Skeleton>
+                        </Flex>
                     </Box>
 
-                    <Box
-                        gridColumn={{
-                            initial: 'span 3',
-                            sm: 'span 2',
-                        }}
-                    >
-                        <Box mb="6">
-                            <Flex justify="between" align="center">
-                                <Flex align="center" gap="4">
-                                    <Skeleton loading={isLoadingDashboard}>
-                                        <Avatar
-                                            size="5"
-                                            color="cyan"
-                                            fallback={<LucideChartBar size={32} />}
-                                        />
-                                    </Skeleton>
-                                    <Flex direction="column">
+                    {MOCK_EXPENSES.map(expense => (
+                        <Card key={expense.id} asChild size="2" mb="4">
+                            <button style={{ width: '100%' }}>
+                                <Flex justify="between" align="center">
+                                    <Flex gap="4" align="center">
                                         <Skeleton loading={isLoadingDashboard}>
-                                            <Text size="4" weight="medium" as="p" mb="2">
-                                                Your last activity
+                                            <Avatar
+                                                size="3"
+                                                color="cyan"
+                                                fallback={<LucideBanana />}
+                                            />
+                                        </Skeleton>
+                                        <Box>
+                                            <Flex direction="column" gap="1">
+                                                <Skeleton loading={isLoadingDashboard}>
+                                                    <Text size="4" weight="medium" as="p">
+                                                        {expense.description}
+                                                    </Text>
+                                                </Skeleton>
+                                                <Skeleton loading={isLoadingDashboard}>
+                                                    <Text size="2" color="gray" as="p">
+                                                        Paid by {expense.paidBy}. You owed something
+                                                    </Text>
+                                                </Skeleton>
+                                            </Flex>
+                                        </Box>
+                                    </Flex>
+                                    <Flex direction="column" align="end" gap="1">
+                                        <Skeleton loading={isLoadingDashboard}>
+                                            <Text size="4" weight="bold" as="p">
+                                                <Amount value={expense.amount} customPrefix="$" />
                                             </Text>
                                         </Skeleton>
                                         <Skeleton loading={isLoadingDashboard}>
-                                            <Text size="2" as="p">
-                                                From your groups and friends
+                                            <Text size="2" color="gray" as="p">
+                                                {formatRelativeTime(expense.date)}
                                             </Text>
                                         </Skeleton>
                                     </Flex>
                                 </Flex>
-
-                                <Skeleton loading={isLoadingDashboard}>
-                                    <Link to={ROUTES.ACTIVITY}>
-                                        <Button variant="ghost" size="4">
-                                            View all activities
-                                            <LucideArrowRight />
-                                        </Button>
-                                    </Link>
-                                </Skeleton>
-                            </Flex>
-                        </Box>
-
-                        {MOCK_EXPENSES.map(expense => (
-                            <Card key={expense.id} asChild size="2" mb="4">
-                                <button style={{ width: '100%' }}>
-                                    <Flex justify="between" align="center">
-                                        <Flex gap="4" align="center">
-                                            <Skeleton loading={isLoadingDashboard}>
-                                                <Avatar
-                                                    size="3"
-                                                    color="cyan"
-                                                    fallback={<LucideBanana />}
-                                                />
-                                            </Skeleton>
-                                            <Box>
-                                                <Flex direction="column" gap="1">
-                                                    <Skeleton loading={isLoadingDashboard}>
-                                                        <Text size="4" weight="medium" as="p">
-                                                            {expense.description}
-                                                        </Text>
-                                                    </Skeleton>
-                                                    <Skeleton loading={isLoadingDashboard}>
-                                                        <Text size="2" color="gray" as="p">
-                                                            Paid by {expense.paidBy}. You owed
-                                                            something
-                                                        </Text>
-                                                    </Skeleton>
-                                                </Flex>
-                                            </Box>
-                                        </Flex>
-                                        <Flex direction="column" align="end" gap="1">
-                                            <Skeleton loading={isLoadingDashboard}>
-                                                <Text size="4" weight="bold" as="p">
-                                                    <Amount
-                                                        value={expense.amount}
-                                                        customPrefix="$"
-                                                    />
-                                                </Text>
-                                            </Skeleton>
-                                            <Skeleton loading={isLoadingDashboard}>
-                                                <Text size="2" color="gray" as="p">
-                                                    {formatRelativeTime(expense.date)}
-                                                </Text>
-                                            </Skeleton>
-                                        </Flex>
-                                    </Flex>
-                                </button>
-                            </Card>
-                        ))}
-                    </Box>
-                </Grid>
-                <MobileNavigationBar />
-            </Container>
-        </Box>
+                            </button>
+                        </Card>
+                    ))}
+                </Box>
+            </Grid>
+            <MobileNavBar />
+        </Container>
     );
 };
 
