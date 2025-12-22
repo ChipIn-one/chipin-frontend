@@ -5,7 +5,7 @@ import { ApiGroup, DashboardApiResponse, JoinGroupResponse } from 'types/api';
 import { getChipInApiUrl } from 'helpers/env';
 import { getAuthTokenDB } from 'store/IDB/auth';
 
-import { CreateGroupParams, InviteToGroupParams } from './chipin.types';
+import { CreateGroupParams, InviteToGroupParams, RemoveGroupParams } from './chipin.types';
 
 const apiInstance = axios.create({
     baseURL: getChipInApiUrl(),
@@ -80,10 +80,6 @@ export const fetchApiUserGroupById = (groupId: string): Promise<ApiGroup> => {
     return apiInstance.get(`/groups/${groupId}`).then(result => result.data);
 };
 
-export const fetchApiDashboard = (): Promise<DashboardApiResponse> => {
-    return apiInstance.get(`/dashboard`).then(result => result.data);
-};
-
 export const createApiGroup = async ({
     groupName,
     groupDescription = '',
@@ -96,10 +92,20 @@ export const createApiGroup = async ({
     return response.data;
 };
 
+export const removeApiGroup = async ({ groupId }: RemoveGroupParams): Promise<unknown> => {
+    const response = await apiInstance.delete(`/groups/${groupId}`);
+
+    return response.data;
+};
+
 export const inviteApiUserToGroup = async ({
     inviteToken,
 }: InviteToGroupParams): Promise<JoinGroupResponse> => {
     const response = await apiInstance.post(`/groups/invite/${inviteToken}`);
 
     return response.data;
+};
+
+export const fetchApiDashboard = (): Promise<DashboardApiResponse> => {
+    return apiInstance.get(`/dashboard`).then(result => result.data);
 };

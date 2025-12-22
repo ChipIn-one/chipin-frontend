@@ -3,6 +3,10 @@ export interface CreateGroupParams {
     groupDescription?: string;
 }
 
+export interface RemoveGroupParams {
+    groupId: string;
+}
+
 export interface InviteToGroupParams {
     inviteToken: string;
 }

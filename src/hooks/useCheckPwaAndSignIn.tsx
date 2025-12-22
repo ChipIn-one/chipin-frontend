@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
 
 import { useAuthStore } from 'store/authStore';
+import { useDashboardStore } from 'store/dashboardStore';
 import { checkAndRemoveExpiredToken } from 'store/IDB/auth';
 import { usePwaStore } from 'store/pwaStore';
 
 export const useCheckPwaAndSignIn = () => {
+    const { fetchSetDashboardData } = useDashboardStore();
     const { setIsAuthChecked } = useAuthStore();
     const { setIsPwaCanBeInstalled, setPwaInstallPrompt } = usePwaStore();
 
@@ -24,6 +26,7 @@ export const useCheckPwaAndSignIn = () => {
                     setIsAuthChecked(false);
                 } else {
                     setIsAuthChecked(true);
+                    fetchSetDashboardData();
                 }
             })
             .catch(() => {

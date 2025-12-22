@@ -13,7 +13,7 @@ interface Props {
     max?: number;
 }
 
-const UsersRow = ({ members, max = 3 }: Props) => {
+const UsersRow = ({ members, max = 5 }: Props) => {
     const visibleUsers = members.slice(0, max);
     const hiddenCount = members.length - max;
 

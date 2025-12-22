@@ -13,7 +13,7 @@ export const MESSAGES = {
             reconnected: 'Your connection has been restored.',
         },
         group: {
-            INVITE_JOIN: 'You successfully joined the group!',
+            INVITE_JOIN: (groupName: string) => `You successfully joined the group ${groupName}!`,
         },
         pwa: {
             INSTALLING: 'Installing application on your home screen...',

@@ -1,16 +1,16 @@
 import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 
-import { Box, Container, Text, TextArea } from '@radix-ui/themes';
+import { Box, Button, Container, Text, TextArea } from '@radix-ui/themes';
 
 import { buildGroupInviteLink } from 'helpers/url';
 import { useGroupsStore } from 'store/groupsStore';
 
 import MobileNavBar from 'components/Navs/MobileNavBar';
-import QRCode from 'components/QRCode';
+import OfflineQRCode from 'components/QRCode';
 
 const GroupPage = () => {
-    const { groups, selectedGroup, fetchSetUserGroupById } = useGroupsStore();
+    const { groups, selectedGroup, fetchSetUserGroupById, removeGroup } = useGroupsStore();
 
     const { groupId } = useParams<{ groupId: string }>();
     console.log(groups);
@@ -20,8 +20,8 @@ const GroupPage = () => {
         fetchSetUserGroupById(groupId);
     }, [groupId, fetchSetUserGroupById]);
 
-    if (!selectedGroup) {
-        return <div>No selected group</div>;
+    if (!groupId) {
+        return <div>No group id</div>;
     }
 
     const inviteLink = buildGroupInviteLink({
@@ -36,8 +36,11 @@ const GroupPage = () => {
                     Invite link:
                 </Text>
                 <TextArea readOnly value={inviteLink} />
-                <QRCode url={inviteLink} />
+                <OfflineQRCode url={inviteLink} />
                 <MobileNavBar />
+                <Button variant="classic" size="4" onClick={() => removeGroup(groupId)}>
+                    Remove group
+                </Button>
             </Container>
         </Box>
     );

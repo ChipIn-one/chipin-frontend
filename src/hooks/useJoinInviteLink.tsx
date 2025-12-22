@@ -15,11 +15,11 @@ export const useJoinInviteLink = () => {
 
     if (inviteToken && isLoggedIn) {
         inviteApiUserToGroup({ inviteToken })
-            .then(({ groupId }) => {
+            .then(({ groupId, groupName }) => {
                 console.log(groupId);
                 navigate(`${ROUTES.GROUP}/${groupId}`, { replace: true });
                 // TODO: ADD GROUP NAME TO TOAST (NEED BACK)
-                toast.success(MESSAGES.success.group.INVITE_JOIN);
+                toast.success(MESSAGES.success.group.INVITE_JOIN(groupName));
             })
             .catch(e => {
                 console.error(e);

@@ -19,8 +19,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     ...initialAuthStore,
 
     setIsLoggedIn: (isLogged: boolean) => {
-        const { isLoggedIn } = get();
-        console.log('Setting isLoggedIn:', isLoggedIn, '->', isLoggedIn);
         set({ isLoggedIn: isLogged });
     },
 

@@ -2,7 +2,7 @@ import { toast } from 'sonner';
 import { ApiGroup } from 'types/api';
 import { create } from 'zustand';
 
-import { createApiGroup, fetchApiUserGroupById } from 'api/chipin';
+import { createApiGroup, fetchApiUserGroupById, removeApiGroup } from 'api/chipin';
 
 interface GroupsStore {
     isLoadingGroup: boolean;
@@ -15,6 +15,7 @@ interface GroupsStore {
     // fetchSetUserGroups: () => void;
     fetchSetUserGroupById: (groupId: string | undefined) => void;
     createGroup: (params: { groupName: string; groupDescription?: string }) => void;
+    removeGroup: (groupId: string) => void;
 }
 
 const initialGroupsStore = {
@@ -79,5 +80,8 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
 
     createGroup: ({ groupName, groupDescription }) => {
         createApiGroup({ groupName, groupDescription });
+    },
+    removeGroup: groupId => {
+        removeApiGroup({ groupId });
     },
 }));
