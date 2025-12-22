@@ -15,7 +15,7 @@ const initialAuthStore = {
     isAuthChecked: false,
 };
 
-export const useAuthStore = create<AuthStore>((set, get) => ({
+export const useAuthStore = create<AuthStore>(set => ({
     ...initialAuthStore,
 
     setIsLoggedIn: (isLogged: boolean) => {
