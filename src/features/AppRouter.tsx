@@ -30,7 +30,6 @@ const AppRouter = () => {
                     }
                 />
                 <Route path={ROUTES.SIGN_IN} element={<SignInPage />} />
-
                 <Route
                     path={ROUTES.DASHBOARD}
                     element={
@@ -39,7 +38,7 @@ const AppRouter = () => {
                         </ProtectedRoute>
                     }
                 />
-
+                {/* TODO MAYBE MERGE GROUP AND JOIN GROUP PAGES (LINK TO PARAM?) */}
                 <Route
                     path={`${ROUTES.GROUP}/:groupId`}
                     element={
@@ -48,7 +47,6 @@ const AppRouter = () => {
                         </ProtectedRoute>
                     }
                 />
-
                 <Route
                     path={`${ROUTES.GROUP_JOIN}/:inviteToken`}
                     element={
@@ -57,7 +55,6 @@ const AppRouter = () => {
                         </ProtectedRoute>
                     }
                 />
-
                 <Route
                     path={ROUTES.ACTIVITY}
                     element={
@@ -66,7 +63,6 @@ const AppRouter = () => {
                         </ProtectedRoute>
                     }
                 />
-
                 <Route
                     path={ROUTES.SETTINGS}
                     element={
@@ -75,7 +71,6 @@ const AppRouter = () => {
                         </ProtectedRoute>
                     }
                 />
-
                 <Route path={ROUTES.NOT_FOUND_404} element={<Page404 />} />
                 <Route path="*" element={<Navigate to={ROUTES.NOT_FOUND_404} />} />
             </Routes>

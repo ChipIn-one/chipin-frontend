@@ -1,11 +1,17 @@
 import { toast } from 'sonner';
 import { create } from 'zustand';
 
-import { createApiGroup, fetchApiUserGroupById, removeApiGroup } from 'api/chipin';
-import { ApiGroup } from 'api/chipin.types';
+import {
+    createApiGroup,
+    fetchApiUserGroupById,
+    inviteApiUserToGroup,
+    removeApiGroup,
+} from 'api/chipin';
+import { ApiGroup, JoinGroupResponse } from 'api/chipin.types';
 
 interface GroupsStore {
     isLoadingGroup: boolean;
+    isJoiningGroup: boolean;
 
     selectedGroup: ApiGroup | null;
     groups: ApiGroup[];
@@ -16,10 +22,12 @@ interface GroupsStore {
     fetchSetUserGroupById: (groupId: string | undefined) => void;
     createGroup: (params: { groupName: string; groupDescription?: string }) => void;
     removeGroup: (groupId: string) => void;
+    joinGroup: ({ inviteToken }: { inviteToken: string }) => Promise<JoinGroupResponse>;
 }
 
 const initialGroupsStore = {
     isLoadingGroup: false,
+    isJoiningGroup: false,
     selectedGroup: null,
     groups: [],
 };
@@ -83,5 +91,17 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
     },
     removeGroup: groupId => {
         removeApiGroup({ groupId });
+    },
+    joinGroup: ({ inviteToken }) => {
+        set({ isJoiningGroup: true });
+
+        return inviteApiUserToGroup({ inviteToken })
+            .catch(e => {
+                console.error(e);
+                throw e;
+            })
+            .finally(() => {
+                set({ isJoiningGroup: false });
+            });
     },
 }));
