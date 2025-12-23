@@ -19,12 +19,12 @@ const AuthCallbackPage = () => {
         if (authToken) {
             saveAuthTokenDB(authToken).then(() => {
                 setIsLoggedIn(true);
-                navigate(ROUTES.DASHBOARD);
+                navigate(ROUTES.DASHBOARD, { replace: true });
                 fetchSetDashboardData();
             });
         } else {
             console.error('OAuth error:', error);
-            navigate(ROUTES.HOME);
+            navigate(ROUTES.HOME, { replace: true });
         }
     }, [searchParams, setIsLoggedIn, navigate, fetchSetDashboardData]);
 

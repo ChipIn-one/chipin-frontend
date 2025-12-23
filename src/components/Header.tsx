@@ -49,7 +49,7 @@ const Header = () => {
                         </Flex>
                     </EmptyRouteLink>
 
-                    <HeaderNav />
+                    {isLoggedIn && <HeaderNav />}
 
                     <Flex gap="4" align="center">
                         <ThemeSwitcherDev />
