@@ -12,7 +12,14 @@ export const getUrlParam = (name: UrlParams) => {
 export const getSocialAuthUrl = (provider: AuthService) => {
     const apiUrl = getChipInApiUrl();
 
-    return `${apiUrl}auth/login/${provider}?redirect_to=${window.location.origin}`;
+    const { origin, pathname, search } = window.location;
+
+    // If user is on home page, redirect to dashboard after auth, otherwise stay on the same page
+    const redirectPath = pathname === ROUTES.HOME ? ROUTES.DASHBOARD : `${pathname}${search}`;
+
+    const redirectTo = encodeURIComponent(`${origin}${redirectPath}`);
+
+    return `${apiUrl}auth/login/${provider}?redirect_to=${redirectTo}`;
 };
 
 export const buildGroupInviteLink = ({ inviteToken }: { inviteToken: string }) =>

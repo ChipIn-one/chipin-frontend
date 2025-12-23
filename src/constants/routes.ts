@@ -2,7 +2,6 @@ export const ROUTES = {
     HOME: '/',
     NOT_FOUND_404: '/not-found',
     SIGN_IN: '/sign-in',
-    AUTH_CALLBACK: '/auth/callback',
     DASHBOARD: '/dashboard',
     GROUP: '/group',
     GROUP_JOIN: '/group/join',

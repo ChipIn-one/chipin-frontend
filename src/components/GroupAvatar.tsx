@@ -1,7 +1,8 @@
 import { LucideUsers } from 'lucide-react';
-import { ApiGroup } from 'types/api';
 
 import { Avatar } from '@radix-ui/themes';
+
+import { ApiGroup } from 'api/chipin.types';
 
 interface Props {
     group: ApiGroup;

@@ -1,7 +1,8 @@
 import styled from 'styled-components';
-import { ApiUser } from 'types/api';
 
 import { Avatar, Flex, Text } from '@radix-ui/themes';
+
+import { ApiUser } from 'api/chipin.types';
 
 export const AvatarWrapper = styled.div<{ index: number }>`
     position: relative;

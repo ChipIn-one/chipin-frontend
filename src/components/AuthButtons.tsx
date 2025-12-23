@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { Button, Flex } from '@radix-ui/themes';
@@ -5,17 +6,19 @@ import { Button, Flex } from '@radix-ui/themes';
 import { getSocialAuthUrl } from 'helpers/url';
 
 const AuthButtons = () => {
+    const { t } = useTranslation();
+
     return (
         <Flex direction="column" gap="6">
             <Button size="4" variant="classic" color="blue" radius="full" asChild>
                 {/* <FcGoogle style={{ marginRight: 8 }} /> */}
-                <Link to={getSocialAuthUrl('google')}>Sign in with Google</Link>
+                <Link to={getSocialAuthUrl('google')}>{t('auth.button.google')}</Link>
             </Button>
 
             <Button size="4" variant="classic" color="gray" radius="full" disabled>
                 {/* <FcGoogle style={{ marginRight: 8 }} /> */}
                 {/* <Link to={getSocialAuthUrl('apple')}> Sign in with Apple</Link> */}
-                Sign in with Apple
+                {t('auth.button.apple')}
             </Button>
         </Flex>
     );

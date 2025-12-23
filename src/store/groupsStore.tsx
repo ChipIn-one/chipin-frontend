@@ -1,8 +1,8 @@
 import { toast } from 'sonner';
-import { ApiGroup } from 'types/api';
 import { create } from 'zustand';
 
 import { createApiGroup, fetchApiUserGroupById, removeApiGroup } from 'api/chipin';
+import { ApiGroup } from 'api/chipin.types';
 
 interface GroupsStore {
     isLoadingGroup: boolean;

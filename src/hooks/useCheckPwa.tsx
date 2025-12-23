@@ -1,13 +1,8 @@
 import { useEffect } from 'react';
 
-import { useAuthStore } from 'store/authStore';
-import { useDashboardStore } from 'store/dashboardStore';
-import { checkAndRemoveExpiredToken } from 'store/IDB/auth';
 import { usePwaStore } from 'store/pwaStore';
 
-export const useCheckPwaAndSignIn = () => {
-    const { fetchSetDashboardData } = useDashboardStore();
-    const { setIsAuthChecked } = useAuthStore();
+export const useCheckPwa = () => {
     const { setIsPwaCanBeInstalled, setPwaInstallPrompt } = usePwaStore();
 
     const setPwaInstalledToState = () => {
@@ -19,20 +14,6 @@ export const useCheckPwaAndSignIn = () => {
     };
 
     useEffect(() => {
-        //TODO: add redirect to dexie, save user default page and redireact after login
-        checkAndRemoveExpiredToken()
-            .then(isValid => {
-                if (!isValid) {
-                    setIsAuthChecked(false);
-                } else {
-                    setIsAuthChecked(true);
-                    fetchSetDashboardData();
-                }
-            })
-            .catch(() => {
-                setIsAuthChecked(false);
-            });
-
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
         window.addEventListener('appinstalled', setPwaInstalledToState);
 

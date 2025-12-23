@@ -1,11 +1,18 @@
+import { useAuthToasts } from 'hooks/useAuthToasts';
 import { useCheckOnlineStatus } from 'hooks/useCheckOnlineStatus';
-import { useCheckPwaAndSignIn } from 'hooks/useCheckPwaAndSignIn';
+import { useCheckPwa } from 'hooks/useCheckPwa';
+import { useCheckSignIn } from 'hooks/useCheckSignIn';
 import { useRoutesMeta } from 'hooks/useRoutesMeta';
 
 const GlobalHooks = () => {
+    // Permanent hooks
     useRoutesMeta();
-    useCheckPwaAndSignIn();
     useCheckOnlineStatus();
+    useCheckPwa();
+
+    // Only mount hooks
+    useCheckSignIn();
+    useAuthToasts();
 
     return null;
 };

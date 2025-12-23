@@ -1,11 +1,7 @@
-import { toast } from 'sonner';
-
-import { MESSAGES } from 'constants/messages';
-
 import { db } from './db';
 
 export const saveAuthTokenDB = async (token: string) => {
-    await db.auth.put({ id: 1, authToken: token }); // put = insert or update
+    await db.auth.put({ id: 1, authToken: token });
 };
 
 export const getAuthTokenDB = async (): Promise<string | null> => {
@@ -17,29 +13,36 @@ export const deleteAuthTokenDB = async () => {
     await db.auth.delete(1);
 };
 
-export const checkAndRemoveExpiredToken = async (): Promise<boolean> => {
-    const auth = await db.auth.toCollection().first();
-    if (!auth || !auth.authToken) {
-        return false;
+export type TokenCheckResult =
+    | { valid: true }
+    | { valid: false; reason: 'missing' | 'expired' | 'invalid' | 'error' };
+
+export const checkTokenValidity = async (): Promise<TokenCheckResult> => {
+    const auth = await db.auth.get(1);
+
+    if (!auth?.authToken) {
+        return { valid: false, reason: 'missing' };
     }
 
     try {
-        const [, payloadBase64] = auth.authToken.split('.');
-        const payloadJson = atob(payloadBase64);
-        const payload = JSON.parse(payloadJson);
-
-        if (payload.exp && Date.now() / 1000 >= payload.exp) {
-            console.warn('JWT expired, removing from DB');
-            toast.warning(MESSAGES.error.auth.SESSION_EXPIRED);
-            await db.auth.clear();
-            return false;
+        const parts = auth.authToken.split('.');
+        if (parts.length < 2) {
+            await deleteAuthTokenDB();
+            return { valid: false, reason: 'invalid' };
         }
 
-        return true;
-    } catch (err) {
-        console.error('Invalid JWT format:', err);
-        toast.error(MESSAGES.error.auth.INVALID_JWT);
-        await db.auth.clear();
-        return false;
+        const payloadBase64 = parts[1];
+        const payloadJson = atob(payloadBase64);
+        const payload = JSON.parse(payloadJson) as { exp?: number };
+
+        if (payload.exp && Date.now() / 1000 >= payload.exp) {
+            await deleteAuthTokenDB();
+            return { valid: false, reason: 'expired' };
+        }
+
+        return { valid: true };
+    } catch {
+        await deleteAuthTokenDB();
+        return { valid: false, reason: 'invalid' };
     }
 };

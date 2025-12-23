@@ -5,6 +5,7 @@ import { Avatar, Box, Button, Container, Flex, IconButton, Text } from '@radix-u
 
 import { PROJECT_NAME } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
+import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 
 import { EmptyRouteLink } from 'basics/EmptyRouteLink';
@@ -31,7 +32,7 @@ const StyledLogotype = styled(Logotype)`
 `;
 
 const Header = () => {
-    const { isLoggedIn } = useAuthStore();
+    const isLoggedIn = useAuthStore(selectIsLoggedIn);
 
     return (
         <StickyBox>

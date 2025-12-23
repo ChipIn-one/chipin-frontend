@@ -2,32 +2,32 @@ import { create } from 'zustand';
 
 import { deleteAuthTokenDB } from './IDB/auth';
 
-interface AuthStore {
-    isLoggedIn: boolean;
-    isAuthChecked?: boolean; // used for protecting routes until we check auth status
-    setIsLoggedIn: (isLoggedIn: boolean) => void;
-    setIsAuthChecked: (isLoggedIn: boolean) => void;
+export type AuthStatus = 'unknown' | 'authenticated' | 'unauthenticated';
+export type UnauthReason = 'missing' | 'expired' | 'invalid' | 'signed_out' | 'error';
+
+export interface AuthStore {
+    status: AuthStatus;
+    unauthReason?: UnauthReason;
+
+    setAuthenticated: () => void;
+    setUnauthenticated: (reason: UnauthReason) => void;
     signOut: () => Promise<void>;
 }
 
-const initialAuthStore = {
-    isLoggedIn: false,
-    isAuthChecked: false,
-};
-
 export const useAuthStore = create<AuthStore>(set => ({
-    ...initialAuthStore,
+    status: 'unknown',
+    unauthReason: undefined,
 
-    setIsLoggedIn: (isLogged: boolean) => {
-        set({ isLoggedIn: isLogged });
+    setAuthenticated: () => {
+        set({ status: 'authenticated', unauthReason: undefined });
     },
 
-    setIsAuthChecked: (isLoggedIn: boolean) => {
-        set({ isAuthChecked: true, isLoggedIn });
+    setUnauthenticated: reason => {
+        set({ status: 'unauthenticated', unauthReason: reason });
     },
 
     signOut: async () => {
         await deleteAuthTokenDB();
-        set({ isLoggedIn: initialAuthStore.isLoggedIn });
+        set({ status: 'unauthenticated', unauthReason: 'signed_out' });
     },
 }));

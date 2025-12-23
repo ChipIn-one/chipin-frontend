@@ -1,5 +1,4 @@
 // HomePage.tsx
-import { useEffect } from 'react';
 import {
     LucideCalculator,
     LucideDownload,
@@ -10,7 +9,6 @@ import {
     LucideUsers,
     LucideUsers2,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 
 import {
@@ -27,8 +25,6 @@ import {
     Text,
 } from '@radix-ui/themes';
 
-import { ROUTES } from 'constants/routes';
-import { useAuthStore } from 'store/authStore';
 import { usePwaStore } from 'store/pwaStore';
 
 import { Amount } from 'basics/numbers';
@@ -48,15 +44,7 @@ const Placeholder = styled.div`
 `;
 
 const HomePage = () => {
-    const navigate = useNavigate();
     const { isPwaCanBeInstalled, callPWAInstall } = usePwaStore();
-    const { isLoggedIn } = useAuthStore();
-
-    useEffect(() => {
-        if (isLoggedIn) {
-            navigate(ROUTES.DASHBOARD, { replace: true });
-        }
-    }, [isLoggedIn, navigate]);
 
     const stats = [
         {

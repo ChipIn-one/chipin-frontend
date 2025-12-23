@@ -36,8 +36,13 @@ const Main = () => {
                             <AppRouter />
                         </Box>
                         <PWABadge />
-                        {/* TODO: TOAST POSOTION CHANGE BASED ON MEDIA SIZE */}
-                        <Toaster theme={themeName} richColors closeButton />
+
+                        <Toaster
+                            theme={themeName}
+                            richColors
+                            closeButton
+                            mobileOffset={{ bottom: '64px' }}
+                        />
                     </BackgroundBox>
                 </BrowserRouter>
             </Theme>

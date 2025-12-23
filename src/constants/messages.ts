@@ -28,8 +28,5 @@ export const MESSAGES = {
         group: {
             INVITE_JOIN: 'Please sign in before joining the group.',
         },
-        auth: {
-            MUST_BE_LOGGED_IN: 'You must be logged in to access this page',
-        },
     },
 };
