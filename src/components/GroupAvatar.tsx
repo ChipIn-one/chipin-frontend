@@ -1,6 +1,6 @@
 import { LucideUsers } from 'lucide-react';
 
-import { Avatar } from '@radix-ui/themes';
+import { Avatar, Text } from '@radix-ui/themes';
 
 import { ApiGroup } from 'api/chipin.types';
 
@@ -14,7 +14,7 @@ const GroupAvatar = ({ group }: Props) => {
             size="4"
             src={group.coverUrl || ''}
             alt={group.name}
-            fallback={group.emoji || <LucideUsers />}
+            fallback={group.emoji ? <Text size="7">{group.emoji}</Text> : <LucideUsers />}
         />
     );
 };
