@@ -5,18 +5,30 @@ import { Box, Dialog, Flex, IconButton, Text } from '@radix-ui/themes';
 interface Props {
     triggerElement: React.ReactNode;
     content: React.ReactNode;
+    title: string;
+    description?: string;
     maxWidth?: string;
+    isOpened?: boolean;
+    setIsOpened?: (isOpen: boolean) => void;
 }
 
-const BaseModal = ({ triggerElement, maxWidth = '360px', content }: Props) => {
+const BaseModal = ({
+    triggerElement,
+    title,
+    description,
+    maxWidth = '360px',
+    content,
+    isOpened,
+    setIsOpened,
+}: Props) => {
     return (
-        <Dialog.Root>
+        <Dialog.Root open={isOpened} onOpenChange={setIsOpened}>
             <Dialog.Trigger>{triggerElement}</Dialog.Trigger>
 
             <Dialog.Content maxWidth={maxWidth} size="4">
-                <Dialog.Title size="8">
+                <Dialog.Title size="6">
                     <Flex justify="between" align="center">
-                        <Box>Sign in</Box>
+                        <Box>{title}</Box>
                         <Dialog.Close>
                             <IconButton variant="ghost" color="jade">
                                 <LucideX width={24} />
@@ -27,8 +39,9 @@ const BaseModal = ({ triggerElement, maxWidth = '360px', content }: Props) => {
 
                 <Flex direction="column" gap="6">
                     <Dialog.Description size="4">
-                        <Text>Choose a provider to continue</Text>
+                        <Text>{description}</Text>
                     </Dialog.Description>
+
                     {content}
                 </Flex>
             </Dialog.Content>

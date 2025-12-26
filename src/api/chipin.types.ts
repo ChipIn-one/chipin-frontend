@@ -26,7 +26,7 @@ export interface ApiUser {
 export interface CreateGroupParams {
     groupName: string;
     groupDescription?: string;
-    emoji?: string;
+    groupEmoji?: string;
 }
 
 export interface RemoveGroupParams {

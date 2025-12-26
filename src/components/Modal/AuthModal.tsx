@@ -1,13 +1,13 @@
 import AuthButtons from 'components/AuthButtons';
 
-import BaseModal from './Modal';
+import BaseModal from './BaseModal';
 
 interface Props {
-    triggerElement: React.ReactNode;
+    children: React.ReactNode;
 }
 
-const AuthModal = ({ triggerElement }: Props) => {
-    return <BaseModal triggerElement={triggerElement} content={<AuthButtons />} />;
+const AuthModal = ({ children }: Props) => {
+    return <BaseModal title="Sign in" triggerElement={children} content={<AuthButtons />} />;
 };
 
 export default AuthModal;

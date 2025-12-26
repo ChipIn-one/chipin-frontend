@@ -70,11 +70,11 @@ export const fetchApiUserGroupById = (groupId: string): Promise<ApiGroup> => {
 export const createApiGroup = async ({
     groupName,
     groupDescription,
-    emoji,
-}: CreateGroupParams): Promise<unknown> => {
+    groupEmoji,
+}: CreateGroupParams): Promise<ApiGroup> => {
     const response = await apiInstance.post('/groups', {
         name: groupName,
-        ...(emoji && { emoji }),
+        ...(groupEmoji && { emoji: groupEmoji }),
         ...(groupDescription && { description: groupDescription }),
     });
 

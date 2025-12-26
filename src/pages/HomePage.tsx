@@ -141,19 +141,17 @@ const HomePage = () => {
                         </Text>
 
                         <Flex gap="4">
-                            <AuthModal
-                                triggerElement={
-                                    <Button
-                                        size={{
-                                            initial: '3',
-                                        }}
-                                        variant="soft"
-                                    >
-                                        Get started
-                                        <LucideLogIn />
-                                    </Button>
-                                }
-                            />
+                            <AuthModal>
+                                <Button
+                                    size={{
+                                        initial: '3',
+                                    }}
+                                    variant="soft"
+                                >
+                                    Get started
+                                    <LucideLogIn />
+                                </Button>
+                            </AuthModal>
 
                             {!isPwaCanBeInstalled && (
                                 <Button

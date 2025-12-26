@@ -13,6 +13,7 @@ import { EmptyRouteLink } from 'basics/EmptyRouteLink';
 import Logotype from 'assets/logo.svg?react';
 
 import AuthModal from './Modal/AuthModal';
+import CreateGroupModal from './Modal/CreateGroupModal';
 import HeaderNav from './Navs/HeaderNav';
 import ThemeSwitcherDev from './ThemeSwitcherDev';
 
@@ -56,11 +57,20 @@ const Header = () => {
                         <ThemeSwitcherDev />
                         {isLoggedIn ? (
                             <Flex gap="4" align="center">
-                                <Box display={{ initial: 'block', sm: 'none' }}>
-                                    <IconButton variant="ghost">
-                                        <LucideUserRoundPlus />
-                                    </IconButton>
-                                </Box>
+                                <CreateGroupModal>
+                                    <Box display={{ initial: 'block', sm: 'none' }}>
+                                        <IconButton
+                                            variant="ghost"
+                                            size={{
+                                                initial: '2',
+                                                sm: '3',
+                                            }}
+                                        >
+                                            <LucideUserRoundPlus />
+                                        </IconButton>
+                                    </Box>
+                                </CreateGroupModal>
+
                                 <Box display={{ initial: 'none', sm: 'block' }}>
                                     <Avatar
                                         size="3"
@@ -72,20 +82,18 @@ const Header = () => {
                             </Flex>
                         ) : (
                             <>
-                                <AuthModal
-                                    triggerElement={
-                                        <Button
-                                            size={{
-                                                initial: '2',
-                                                sm: '3',
-                                            }}
-                                            variant="outline"
-                                        >
-                                            Sign in
-                                            <LucideLogIn />
-                                        </Button>
-                                    }
-                                />
+                                <AuthModal>
+                                    <Button
+                                        size={{
+                                            initial: '2',
+                                            sm: '3',
+                                        }}
+                                        variant="outline"
+                                    >
+                                        Sign in
+                                        <LucideLogIn />
+                                    </Button>
+                                </AuthModal>
                             </>
                         )}
                     </Flex>

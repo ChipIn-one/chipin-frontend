@@ -1,4 +1,4 @@
 import AuthModal from './AuthModal';
-import BaseModal from './Modal';
+import BaseModal from './BaseModal';
 
 export { AuthModal, BaseModal };

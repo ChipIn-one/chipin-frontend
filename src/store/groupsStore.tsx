@@ -12,6 +12,7 @@ import { ApiGroup, JoinGroupResponse } from 'api/chipin.types';
 interface GroupsStore {
     isLoadingGroup: boolean;
     isJoiningGroup: boolean;
+    isCreatingGroup: boolean;
 
     selectedGroup: ApiGroup | null;
     groups: ApiGroup[];
@@ -20,12 +21,17 @@ interface GroupsStore {
     setSelectedGroup: (group: ApiGroup) => void;
     // fetchSetUserGroups: () => void;
     fetchSetUserGroupById: (groupId: string | undefined) => void;
-    createGroup: (params: { groupName: string; groupDescription?: string }) => void;
+    createGroup: (params: {
+        groupName: string;
+        groupDescription?: string;
+        groupEmoji?: string;
+    }) => Promise<ApiGroup>;
     removeGroup: (groupId: string) => void;
     joinGroup: ({ inviteToken }: { inviteToken: string }) => Promise<JoinGroupResponse>;
 }
 
 const initialGroupsStore = {
+    isCreatingGroup: false,
     isLoadingGroup: false,
     isJoiningGroup: false,
     selectedGroup: null,
@@ -86,8 +92,18 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             });
     },
 
-    createGroup: ({ groupName, groupDescription }) => {
-        createApiGroup({ groupName, groupDescription });
+    createGroup: ({ groupName, groupDescription, groupEmoji }) => {
+        set({ isCreatingGroup: true });
+
+        return createApiGroup({ groupName, groupDescription, groupEmoji })
+            .then(newGroup => {
+                const { groups } = get();
+                set({ groups: [...groups, newGroup], selectedGroup: newGroup });
+                return newGroup;
+            })
+            .finally(() => {
+                set({ isCreatingGroup: false });
+            });
     },
     removeGroup: groupId => {
         removeApiGroup({ groupId });
