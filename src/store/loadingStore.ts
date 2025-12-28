@@ -3,6 +3,7 @@ import { create } from 'zustand';
 interface LoadingStore {
     group: {
         add: boolean;
+        update: boolean;
         remove: boolean;
         join: boolean;
     };
@@ -20,6 +21,7 @@ interface LoadingStore {
 const initialLoadingStore = {
     group: {
         add: false,
+        update: false,
         remove: false,
         join: false,
     },

@@ -13,7 +13,7 @@ import { EmptyRouteLink } from 'basics/EmptyRouteLink';
 import Logotype from 'assets/logo.svg?react';
 
 import AuthModal from './Modal/AuthModal';
-import CreateGroupModal from './Modal/CreateGroupModal';
+import CreateUpdateGroupModal from './Modal/CreateUpdateGroupModal';
 import HeaderNav from './Navs/HeaderNav';
 import ThemeSwitcherDev from './ThemeSwitcherDev';
 
@@ -57,7 +57,7 @@ const Header = () => {
                         <ThemeSwitcherDev />
                         {isLoggedIn ? (
                             <Flex gap="4" align="center">
-                                <CreateGroupModal>
+                                <CreateUpdateGroupModal type="create">
                                     <Box display={{ initial: 'block', sm: 'none' }}>
                                         <IconButton
                                             variant="ghost"
@@ -69,7 +69,7 @@ const Header = () => {
                                             <LucideUserRoundPlus />
                                         </IconButton>
                                     </Box>
-                                </CreateGroupModal>
+                                </CreateUpdateGroupModal>
 
                                 <Box display={{ initial: 'none', sm: 'block' }}>
                                     <Avatar

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { LucideUserRoundX } from 'lucide-react';
+import { LucideUserRoundPen, LucideUserRoundX } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 
 import { Box, Button, Container, Text, TextArea } from '@radix-ui/themes';
@@ -7,6 +7,7 @@ import { Box, Button, Container, Text, TextArea } from '@radix-ui/themes';
 import { buildGroupInviteLink } from 'helpers/url';
 import { useGroupsStore } from 'store/groupsStore';
 
+import CreateUpdateGroupModal from 'components/Modal/CreateUpdateGroupModal';
 import RemoveGroupModal from 'components/Modal/RemoveGroupModal';
 import MobileNavBar from 'components/Navs/MobileNavBar';
 import OfflineQRCode from 'components/QRCode';
@@ -45,6 +46,11 @@ const GroupPage = () => {
                         <LucideUserRoundX /> Remove group
                     </Button>
                 </RemoveGroupModal>
+                <CreateUpdateGroupModal type="update">
+                    <Button variant="solid" size="4">
+                        <LucideUserRoundPen /> Update group
+                    </Button>
+                </CreateUpdateGroupModal>
             </Container>
         </Box>
     );

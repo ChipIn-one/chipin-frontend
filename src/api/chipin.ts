@@ -12,6 +12,7 @@ import {
     InviteToGroupParams,
     RemoveGroupParams,
     RemoveGroupResponse,
+    UpdateGroupParams,
 } from './chipin.types';
 
 const apiInstance = axios.create({
@@ -73,6 +74,21 @@ export const createApiGroup = async ({
     groupEmoji,
 }: CreateGroupParams): Promise<ApiGroup> => {
     const response = await apiInstance.post('/groups', {
+        name: groupName,
+        ...(groupEmoji && { emoji: groupEmoji }),
+        ...(groupDescription && { description: groupDescription }),
+    });
+
+    return response.data;
+};
+
+export const updateApiGroup = async ({
+    groupId,
+    groupName,
+    groupDescription,
+    groupEmoji,
+}: UpdateGroupParams): Promise<ApiGroup> => {
+    const response = await apiInstance.patch(`/groups/${groupId}`, {
         name: groupName,
         ...(groupEmoji && { emoji: groupEmoji }),
         ...(groupDescription && { description: groupDescription }),

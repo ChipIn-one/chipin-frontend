@@ -7,8 +7,8 @@ export interface ApiGroup {
     createdAt: number;
     updatedAt: number;
     // TODO TO BASE API USER
-    inviteToken?: string;
-    creator?: ApiUser;
+    inviteToken: string;
+    creator: ApiUser;
     members: ApiUser[];
 }
 
@@ -29,16 +29,23 @@ export interface CreateGroupParams {
     groupEmoji?: string;
 }
 
+export interface UpdateGroupParams {
+    groupId: string;
+    groupName: string;
+    groupDescription?: string;
+    groupEmoji?: string;
+}
+
 export interface RemoveGroupResponse {
-    id: ApiGroup['id'];
+    id: string;
 }
 
 export interface RemoveGroupParams {
-    groupId: ApiGroup['id'];
+    groupId: string;
 }
 
 export interface InviteToGroupParams {
-    inviteToken: ApiGroup['inviteToken'];
+    inviteToken: string;
 }
 
 export interface DashboardApiResponse {

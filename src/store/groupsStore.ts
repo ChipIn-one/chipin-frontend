@@ -6,6 +6,7 @@ import {
     fetchApiUserGroupById,
     inviteApiUserToGroup,
     removeApiGroup,
+    updateApiGroup,
 } from 'api/chipin';
 import { ApiGroup } from 'api/chipin.types';
 
@@ -21,6 +22,11 @@ interface GroupsStore {
     setSelectedGroup: (group: ApiGroup) => void;
     fetchSetGroupById: (groupId: string | undefined) => void;
     createGroup: (params: {
+        groupName: string;
+        groupDescription?: string;
+        groupEmoji?: string;
+    }) => Promise<ApiGroup>;
+    updateGroup: (params: {
         groupName: string;
         groupDescription?: string;
         groupEmoji?: string;
@@ -90,6 +96,37 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             })
             .finally(() => {
                 setLoading('group', 'add', false);
+            });
+    },
+    updateGroup: ({ groupName, groupDescription, groupEmoji }) => {
+        const { setLoading } = useLoadingStore.getState();
+        const { selectedGroup } = get();
+
+        setLoading('group', 'update', true);
+
+        if (!selectedGroup) {
+            return Promise.reject(new Error('No selected group'));
+        }
+
+        return updateApiGroup({
+            groupId: selectedGroup.id,
+            groupName,
+            groupDescription,
+            groupEmoji,
+        })
+            .then(updatedGroup => {
+                const { groups } = get();
+
+                set({
+                    groups: groups.map(group =>
+                        group.id === updatedGroup.id ? updatedGroup : group,
+                    ),
+                    selectedGroup: updatedGroup,
+                });
+                return updatedGroup;
+            })
+            .finally(() => {
+                setLoading('group', 'update', false);
             });
     },
     removeGroup: () => {

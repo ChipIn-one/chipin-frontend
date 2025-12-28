@@ -11,6 +11,7 @@ import BaseModal from './BaseModal';
 
 interface Props {
     children: React.ReactNode;
+    type: 'create' | 'update';
 }
 
 const GROUP_ICONS = [
@@ -60,16 +61,22 @@ const GROUP_ICONS = [
     '🧭',
 ];
 
-const CreateGroupModal = ({ children }: Props) => {
-    const { createGroup } = useGroupsStore();
+const CreateUpdateGroupModal = ({ children, type }: Props) => {
+    const { createGroup, updateGroup, selectedGroup } = useGroupsStore();
     const isCreatingGroup = useLoadingStore(state => state.group.add);
+    const isUpdatingGroup = useLoadingStore(state => state.group.update);
+    const isCreateMode = type === 'create';
 
     const [isModalOpened, setIsModalOpened] = useState(false);
-    const [inputGroupName, setInputGroupName] = useState('');
-    const [inputGroupDescription, setInputGroupDescription] = useState<string | undefined>(
-        undefined,
+    const [inputGroupName, setInputGroupName] = useState(
+        isCreateMode ? '' : selectedGroup?.name || '',
     );
-    const [selectedEmoji, setSelectedEmoji] = useState<string | undefined>(undefined);
+    const [inputGroupDescription, setInputGroupDescription] = useState<string | undefined>(
+        isCreateMode ? '' : selectedGroup?.description || '',
+    );
+    const [selectedEmoji, setSelectedEmoji] = useState<string | undefined>(
+        isCreateMode ? undefined : selectedGroup?.emoji || undefined,
+    );
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
 
     const onChangeGroupName = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,23 +92,39 @@ const CreateGroupModal = ({ children }: Props) => {
         return GROUP_ICONS[randomIndex];
     }, []);
 
-    const onCreateGroup = () => {
-        createGroup({
-            groupName: inputGroupName,
-            groupDescription: inputGroupDescription,
-            groupEmoji: selectedEmoji,
-        })
-            .then(group => {
-                setIsModalOpened(false);
-                setInputGroupName('');
-                setInputGroupDescription('');
-                setSelectedEmoji(undefined);
-                toast.success(`Group "${group.name}" created successfully!`);
+    const onClickSave = () => {
+        if (isCreateMode) {
+            createGroup({
+                groupName: inputGroupName,
+                groupDescription: inputGroupDescription,
+                groupEmoji: selectedEmoji,
             })
-            .catch(error => {
-                toast.error(`Something went wrong while creating the group.`);
-                console.error('Error creating group:', error);
-            });
+                .then(group => {
+                    setIsModalOpened(false);
+                    setInputGroupName('');
+                    setInputGroupDescription('');
+                    setSelectedEmoji(undefined);
+                    toast.success(`Group "${group.name}" created successfully!`);
+                })
+                .catch(error => {
+                    toast.error(`Something went wrong while creating the group.`);
+                    console.error('Error creating group:', error);
+                });
+        } else {
+            updateGroup({
+                groupName: inputGroupName,
+                groupDescription: inputGroupDescription,
+                groupEmoji: selectedEmoji,
+            })
+                .then(updatedGroup => {
+                    setIsModalOpened(false);
+                    toast.success(`Group "${updatedGroup.name}" updated successfully!`);
+                })
+                .catch(error => {
+                    toast.error(`Something went wrong while updating the group.`);
+                    console.error('Error updating group:', error);
+                });
+        }
     };
 
     return (
@@ -109,7 +132,7 @@ const CreateGroupModal = ({ children }: Props) => {
             isOpened={isModalOpened}
             setIsOpened={setIsModalOpened}
             triggerElement={children}
-            title="Delete group"
+            title={isCreateMode ? 'Create new group' : 'Edit group'}
             maxWidth="480px"
             content={
                 <Flex direction="column" gap="6">
@@ -187,15 +210,15 @@ const CreateGroupModal = ({ children }: Props) => {
                                 {t('buttons.cancel')}
                             </Button>
                         </Dialog.Close>
-                        {/* TODO ADD TOOLTIP HERE IF DISABLED */}
+
                         <Button
                             size="3"
                             variant="solid"
-                            disabled={!inputGroupName || isCreatingGroup}
-                            onClick={onCreateGroup}
-                            loading={isCreatingGroup}
+                            disabled={!inputGroupName || isCreatingGroup || isUpdatingGroup}
+                            loading={isCreatingGroup || isUpdatingGroup}
+                            onClick={onClickSave}
                         >
-                            Create group
+                            {isCreateMode ? 'Create group' : 'Save group'}
                         </Button>
                     </Flex>
                 </Flex>
@@ -204,4 +227,4 @@ const CreateGroupModal = ({ children }: Props) => {
     );
 };
 
-export default CreateGroupModal;
+export default CreateUpdateGroupModal;
