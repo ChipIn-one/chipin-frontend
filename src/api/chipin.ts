@@ -10,8 +10,8 @@ import {
     CreateGroupParams,
     DashboardApiResponse,
     InviteToGroupParams,
-    JoinGroupResponse,
     RemoveGroupParams,
+    RemoveGroupResponse,
 } from './chipin.types';
 
 const apiInstance = axios.create({
@@ -81,7 +81,9 @@ export const createApiGroup = async ({
     return response.data;
 };
 
-export const removeApiGroup = async ({ groupId }: RemoveGroupParams): Promise<unknown> => {
+export const removeApiGroup = async ({
+    groupId,
+}: RemoveGroupParams): Promise<RemoveGroupResponse> => {
     const response = await apiInstance.delete(`/groups/${groupId}`);
 
     return response.data;
@@ -89,7 +91,7 @@ export const removeApiGroup = async ({ groupId }: RemoveGroupParams): Promise<un
 
 export const inviteApiUserToGroup = async ({
     inviteToken,
-}: InviteToGroupParams): Promise<JoinGroupResponse> => {
+}: InviteToGroupParams): Promise<ApiGroup> => {
     const response = await apiInstance.post(`/groups/invite/${inviteToken}`);
 
     return response.data;

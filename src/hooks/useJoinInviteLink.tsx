@@ -25,9 +25,9 @@ export const useJoinInviteLink = () => {
         }
 
         joinGroup({ inviteToken })
-            .then(({ groupId, groupName }) => {
-                navigate(`${ROUTES.GROUP}/${groupId}`, { replace: true });
-                toast.success(MESSAGES.success.group.INVITE_JOIN(groupName));
+            .then(({ id, name }) => {
+                navigate(`${ROUTES.GROUP}/${id}`, { replace: true });
+                toast.success(MESSAGES.success.group.INVITE_JOIN(name));
             })
             .catch(() => {
                 toast.error(MESSAGES.error.group.INVITE_JOIN);

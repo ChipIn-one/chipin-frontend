@@ -7,33 +7,30 @@ import {
     inviteApiUserToGroup,
     removeApiGroup,
 } from 'api/chipin';
-import { ApiGroup, JoinGroupResponse } from 'api/chipin.types';
+import { ApiGroup } from 'api/chipin.types';
+
+import { useLoadingStore } from './loadingStore';
 
 interface GroupsStore {
     isLoadingGroup: boolean;
-    isJoiningGroup: boolean;
-    isCreatingGroup: boolean;
 
     selectedGroup: ApiGroup | null;
     groups: ApiGroup[];
 
     setGroups: (groups: ApiGroup[]) => void;
     setSelectedGroup: (group: ApiGroup) => void;
-    // fetchSetUserGroups: () => void;
-    fetchSetUserGroupById: (groupId: string | undefined) => void;
+    fetchSetGroupById: (groupId: string | undefined) => void;
     createGroup: (params: {
         groupName: string;
         groupDescription?: string;
         groupEmoji?: string;
     }) => Promise<ApiGroup>;
-    removeGroup: (groupId: string) => void;
-    joinGroup: ({ inviteToken }: { inviteToken: string }) => Promise<JoinGroupResponse>;
+    removeGroup: () => Promise<ApiGroup['name']>;
+    joinGroup: ({ inviteToken }: { inviteToken: string }) => Promise<ApiGroup>;
 }
 
 const initialGroupsStore = {
-    isCreatingGroup: false,
     isLoadingGroup: false,
-    isJoiningGroup: false,
     selectedGroup: null,
     groups: [],
 };
@@ -47,26 +44,15 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
     setSelectedGroup: group => {
         set({ selectedGroup: group });
     },
-    // fetchSetUserGroups: () => {
-    //     const { selectedGroup } = get();
-
-    //     set({ isLoadingGroups: true });
-    //     fetchApiUserGroups()
-    //         .then(data => {
-    //             set({
-    //                 groups: data,
-    //                 selectedGroup: selectedGroup || data[0],
-    //             });
-    //         })
-    //         .catch(error => {
-    //             console.error('Error fetching user groups:', error);
-    //         })
-    //         .finally(() => {
-    //             set({ isLoadingGroups: false });
-    //         });
-    // },
-    fetchSetUserGroupById: groupId => {
+    fetchSetGroupById: groupId => {
         const { groups } = get();
+
+        // Fallback to join if user group is already in the store
+        if (groups.find(group => group.id === groupId)) {
+            const selectedGroup = groups.find(group => group.id === groupId) || null;
+            set({ selectedGroup });
+            return;
+        }
 
         if (!groupId) {
             toast.error('Invalid group ID for fetching group');
@@ -93,7 +79,8 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
     },
 
     createGroup: ({ groupName, groupDescription, groupEmoji }) => {
-        set({ isCreatingGroup: true });
+        const { setLoading } = useLoadingStore.getState();
+        setLoading('group', 'add', true);
 
         return createApiGroup({ groupName, groupDescription, groupEmoji })
             .then(newGroup => {
@@ -102,22 +89,51 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 return newGroup;
             })
             .finally(() => {
-                set({ isCreatingGroup: false });
+                setLoading('group', 'add', false);
             });
     },
-    removeGroup: groupId => {
-        removeApiGroup({ groupId });
+    removeGroup: () => {
+        const selectedGroup = get().selectedGroup;
+
+        if (!selectedGroup) {
+            return Promise.reject(new Error('No selected group'));
+        }
+
+        const { setLoading } = useLoadingStore.getState();
+        setLoading('group', 'remove', true);
+
+        return removeApiGroup({ groupId: selectedGroup.id })
+            .then(() => {
+                const { groups } = get();
+                const updatedGroups = groups.filter(group => group.id !== selectedGroup.id);
+
+                set({
+                    groups: updatedGroups,
+                    selectedGroup: null,
+                });
+
+                return selectedGroup.name;
+            })
+            .finally(() => {
+                setLoading('group', 'remove', false);
+            });
     },
     joinGroup: ({ inviteToken }) => {
-        set({ isJoiningGroup: true });
+        const { setLoading } = useLoadingStore.getState();
+        setLoading('group', 'join', true);
 
         return inviteApiUserToGroup({ inviteToken })
+            .then(joinedGroup => {
+                const { groups } = get();
+                set({ groups: [...groups, joinedGroup], selectedGroup: joinedGroup });
+                return joinedGroup;
+            })
             .catch(e => {
                 console.error(e);
                 throw e;
             })
             .finally(() => {
-                set({ isJoiningGroup: false });
+                setLoading('group', 'join', false);
             });
     },
 }));

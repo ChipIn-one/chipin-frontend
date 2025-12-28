@@ -4,5 +4,9 @@
             "google": "Sign in with Google",
             "apple": "Sign in with Apple"
         }
+    },
+    "buttons": {
+        "cancel": "Cancel",
+        "delete": "Delete"
     }
 }

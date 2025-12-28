@@ -29,19 +29,18 @@ export interface CreateGroupParams {
     groupEmoji?: string;
 }
 
+export interface RemoveGroupResponse {
+    id: ApiGroup['id'];
+}
+
 export interface RemoveGroupParams {
-    groupId: string;
+    groupId: ApiGroup['id'];
 }
 
 export interface InviteToGroupParams {
-    inviteToken: string;
+    inviteToken: ApiGroup['inviteToken'];
 }
 
 export interface DashboardApiResponse {
     groups: ApiGroup[];
-}
-
-export interface JoinGroupResponse {
-    groupId: ApiGroup['id'];
-    groupName: ApiGroup['name'];
 }

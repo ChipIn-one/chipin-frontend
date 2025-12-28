@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
+import { t } from 'i18next';
 import { toast } from 'sonner';
 
 import { Button, Dialog, Flex, IconButton, Text, TextArea, TextField } from '@radix-ui/themes';
 
 import { useGroupsStore } from 'store/groupsStore';
+import { useLoadingStore } from 'store/loadingStore';
 
 import BaseModal from './BaseModal';
 
@@ -59,7 +61,8 @@ const GROUP_ICONS = [
 ];
 
 const CreateGroupModal = ({ children }: Props) => {
-    const { createGroup, isCreatingGroup } = useGroupsStore();
+    const { createGroup } = useGroupsStore();
+    const isCreatingGroup = useLoadingStore(state => state.group.add);
 
     const [isModalOpened, setIsModalOpened] = useState(false);
     const [inputGroupName, setInputGroupName] = useState('');
@@ -106,7 +109,7 @@ const CreateGroupModal = ({ children }: Props) => {
             isOpened={isModalOpened}
             setIsOpened={setIsModalOpened}
             triggerElement={children}
-            title="Create group"
+            title="Delete group"
             maxWidth="480px"
             content={
                 <Flex direction="column" gap="6">
@@ -181,7 +184,7 @@ const CreateGroupModal = ({ children }: Props) => {
                     <Flex justify="end" gap="4">
                         <Dialog.Close>
                             <Button size="3" variant="soft" color="gray">
-                                Close
+                                {t('buttons.cancel')}
                             </Button>
                         </Dialog.Close>
                         {/* TODO ADD TOOLTIP HERE IF DISABLED */}
