@@ -1,15 +1,13 @@
-import { Button, Container } from '@radix-ui/themes';
+import { Container } from '@radix-ui/themes';
 
-import { useAuthStore } from 'store/authStore';
-
+import ActivityTemplate from 'components/ActivityTemplate';
 import MobileNavBar from 'components/Navs/MobileNavBar';
 
 const ActivityPage = () => {
-    const { signOut } = useAuthStore();
-
     return (
-        <Container size="4">
-            <Button onClick={signOut}>Sign Out</Button>
+        <Container size="2" pb={{ initial: '9', sm: '6' }}>
+            <ActivityTemplate />
+
             <MobileNavBar />
         </Container>
     );
