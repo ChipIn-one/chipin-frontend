@@ -1,33 +1,312 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+// HomePage.tsx
+import {
+    LucideCalculator,
+    LucideDownload,
+    LucideLogIn,
+    LucideReceipt,
+    LucideStar,
+    LucideUserCheck,
+    LucideUsers,
+    LucideUsers2,
+} from 'lucide-react';
+import styled from 'styled-components';
 
-import { ROUTES } from 'constants/routes';
+import {
+    Avatar,
+    Badge,
+    Box,
+    Button,
+    Card,
+    Container,
+    Flex,
+    Grid,
+    Heading,
+    Section,
+    Text,
+} from '@radix-ui/themes';
 
-import PWABadge from 'basics/PWABadge';
+import { usePwaStore } from 'store/pwaStore';
 
-import reactLogo from 'assets/react.svg';
+import { Amount } from 'basics/numbers';
+import Footer from 'components/Footer';
+import { AuthModal } from 'components/Modal';
 
-import viteLogo from '/vite.svg';
+const Placeholder = styled.div`
+    width: 100%;
+    min-height: 280px;
+    border-radius: 16px;
+    background-color: ${({ theme }) => theme.colors.indigo2};
+    border: 1px solid ${({ theme }) => theme.colors.gray6};
+    display: grid;
+    place-items: center;
+    color: ${({ theme }) => theme.colors.gray11};
+    font-size: 14px;
+`;
 
 const HomePage = () => {
-    const [count, setCount] = useState(0);
-    //test build
+    const { isPwaCanBeInstalled, callPWAInstall } = usePwaStore();
+
+    const stats = [
+        {
+            title: <Amount value={50000} tokenCode="+" />,
+            description: 'Active users',
+            icon: <LucideUserCheck />,
+        },
+        {
+            title: <Amount type="summary" value={25300000} />,
+            description: 'Expenses tracked',
+            icon: <LucideReceipt />,
+        },
+        {
+            title: <Amount value={15000} tokenCode="+" />,
+            description: 'Groups created',
+            icon: <LucideUsers2 />,
+        },
+        {
+            title: <Amount value={4.9} />,
+            description: 'User rating',
+            icon: <LucideStar />,
+        },
+    ];
+
+    const coreFeatures = [
+        {
+            title: 'Smart Groups',
+            description:
+                'Create groups for any occasion. Invite members via shareable links and keep everyone in sync with real-time balance updates.',
+            icon: <LucideUsers />,
+        },
+        {
+            title: 'Quick Expense Entry',
+            description:
+                'Add expenses in seconds. Split equally or by custom amounts. Attach receipts and categorize for better tracking.',
+            icon: <LucideReceipt />,
+        },
+        {
+            title: 'Auto Calculations',
+            description:
+                'See who owes whom instantly. Our smart algorithm minimizes the number of transactions needed to settle up.',
+            icon: <LucideCalculator />,
+        },
+    ];
+
     return (
         <>
-            <div>
-                <a href="https://vite.dev" target="_blank">
-                    <img src={viteLogo} className="logo" alt="Vite logo" />
-                </a>
-                <a href="https://react.dev" target="_blank">
-                    <img src={reactLogo} className="logo react" alt="React logo" />
-                </a>
-            </div>
-            <h1>Vite + React</h1>
-            <div className="card">
-                <button onClick={() => setCount(count => count + 1)}>count is {count}</button>
-                <Link to={ROUTES.LOG_IN}>Login page</Link>
-            </div>
-            <PWABadge />
+            <Section>
+                <Container size="4">
+                    <Flex direction="column" align="center" gap="5">
+                        <Badge
+                            size={{
+                                initial: '1',
+                                sm: '2',
+                                md: '3',
+                            }}
+                            color="green"
+                            variant="solid"
+                        >
+                            Share expenses without stress
+                        </Badge>
+                        <Heading
+                            size={{
+                                initial: '8',
+                                md: '9',
+                            }}
+                        >
+                            Split bills with
+                        </Heading>
+                        <Heading
+                            size={{
+                                initial: '8',
+                                md: '9',
+                            }}
+                            color="green"
+                        >
+                            friends & family
+                        </Heading>
+                    </Flex>
+                </Container>
+
+                <Container size="2" align="center" py="8">
+                    <Flex direction="column" align="center" gap="6">
+                        <Text
+                            align="center"
+                            size={{
+                                initial: '3',
+                                sm: '4',
+                                md: '6',
+                            }}
+                        >
+                            Create groups, add expenses, and see who owes whom — fast and fair.
+                            Perfect for trips, roommates, and group activities.
+                        </Text>
+
+                        <Flex gap="4">
+                            <AuthModal>
+                                <Button
+                                    size={{
+                                        initial: '3',
+                                    }}
+                                    variant="soft"
+                                >
+                                    Get started
+                                    <LucideLogIn />
+                                </Button>
+                            </AuthModal>
+
+                            {!isPwaCanBeInstalled && (
+                                <Button
+                                    size={{
+                                        initial: '3',
+                                    }}
+                                    variant="outline"
+                                    onClick={callPWAInstall}
+                                >
+                                    Install app
+                                    <LucideDownload />
+                                </Button>
+                            )}
+                        </Flex>
+                    </Flex>
+                </Container>
+
+                <Container size="3" py="2">
+                    <Flex wrap="wrap" gap="4" justify="between" align="center">
+                        {stats.map(({ title, description, icon }, index) => (
+                            <Flex
+                                minWidth="140px"
+                                key={index}
+                                direction="column"
+                                align="center"
+                                flexGrow="1"
+                                flexShrink="1"
+                                flexBasis="0"
+                            >
+                                <Text size="6" weight="bold" color="green">
+                                    <Flex align="center" gap="1">
+                                        {icon}
+                                        {title}
+                                    </Flex>
+                                </Text>
+                                <Text size="3" color="gray">
+                                    {description}
+                                </Text>
+                            </Flex>
+                        ))}
+                    </Flex>
+                </Container>
+            </Section>
+
+            {/* Hero */}
+            {/* <Background /> */}
+
+            {/* Features overview */}
+
+            <Section py="8">
+                <Container size="4">
+                    <Flex direction="column" align="center" gap="4" mb="6">
+                        <Heading
+                            align="center"
+                            size={{
+                                initial: '7',
+                            }}
+                        >
+                            Everything you need to manage shared expenses
+                        </Heading>
+
+                        <Text
+                            align="center"
+                            size={{
+                                initial: '3',
+                                sm: '4',
+                                md: '5',
+                            }}
+                        >
+                            Powerful features designed to make splitting expenses effortless and
+                            transparent
+                        </Text>
+                    </Flex>
+
+                    <Grid columns={{ initial: '1', md: '3' }} gap="6">
+                        {coreFeatures.map(({ title, description, icon }, index) => (
+                            <Card key={index} size="3">
+                                <Flex direction="column" gap="4">
+                                    <Flex align="center" gap="4">
+                                        <Avatar
+                                            size="4"
+                                            color="cyan"
+                                            variant="soft"
+                                            fallback={icon}
+                                        />
+
+                                        <Text size="6" weight="bold">
+                                            {title}
+                                        </Text>
+                                    </Flex>
+                                    <Text size="4" color="gray">
+                                        {description}
+                                    </Text>
+                                </Flex>
+                            </Card>
+                        ))}
+                    </Grid>
+                </Container>
+            </Section>
+
+            {/* Groups section */}
+            <Box py="8">
+                <Container size="4">
+                    <Grid columns={{ initial: '1', md: '2' }} gap="6" align="center">
+                        <Flex direction="column" gap="3">
+                            <Heading size="7">Manage groups with links</Heading>
+                            <Text size="4" color="gray">
+                                Organize trips, households, or events. Share an invite link, and
+                                keep balances visible to everyone.
+                            </Text>
+                        </Flex>
+                        <Placeholder aria-label="Groups screenshot placeholder">
+                            Groups screenshot
+                        </Placeholder>
+                    </Grid>
+                </Container>
+            </Box>
+
+            {/* Expenses section */}
+            <Box py="8">
+                <Container size="4">
+                    <Grid columns={{ initial: '1', md: '2' }} gap="6" align="center">
+                        <Placeholder aria-label="Expenses screenshot placeholder">
+                            Expenses screenshot
+                        </Placeholder>
+                        <Flex direction="column" gap="3">
+                            <Heading size="7">Fast expense entry</Heading>
+                            <Text size="4">
+                                Attach expenses to people and groups, split evenly or by custom
+                                shares. Edit anytime.
+                            </Text>
+                        </Flex>
+                    </Grid>
+                </Container>
+            </Box>
+
+            {/* Dashboard section */}
+            <Section py="8">
+                <Container size="4">
+                    <Grid columns={{ initial: '1', md: '2' }} gap="6" align="center">
+                        <Flex direction="column" gap="3">
+                            <Heading size="7">Clear & settle balances</Heading>
+                            <Text size="4" color="gray">
+                                See who owes whom across all expenses, then settle up and keep the
+                                slate clean. Multi-currency support included.
+                            </Text>
+                        </Flex>
+                        <Placeholder aria-label="Balances screenshot placeholder">
+                            Balances screenshot
+                        </Placeholder>
+                    </Grid>
+                </Container>
+            </Section>
+
+            <Footer />
         </>
     );
 };

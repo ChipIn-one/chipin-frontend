@@ -1,3 +1,4 @@
+import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
@@ -17,6 +18,7 @@ export default tseslint.config(
             globals: globals.browser,
         },
         plugins: {
+            react,
             'react-hooks': reactHooks,
             'react-refresh': reactRefresh,
             'simple-import-sort': simpleImportSort,
@@ -25,6 +27,7 @@ export default tseslint.config(
         rules: {
             ...reactHooks.configs.recommended.rules,
             'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+            curly: ['error', 'all'], // always use {}
 
             // For remove ununsed imports
             'no-unused-vars': 'off', // or "@typescript-eslint/no-unused-vars": "off",
@@ -73,6 +76,35 @@ export default tseslint.config(
                     maxBOF: 0,
                 },
             ],
+
+            /* ===============================
+               i18n / UI TEXT RULES
+               =============================== */
+
+            // Disallow string literals in JSX (force i18n)
+            'react/jsx-no-literals': [
+                'error',
+                {
+                    noStrings: true,
+                    ignoreProps: true,
+                    allowedStrings: [' ', '-', '+'],
+                },
+            ],
+        },
+    },
+
+    /* ===============================
+       TECHNICAL FILES
+       =============================== */
+    {
+        files: [
+            '**/api/**/*.{ts,js}',
+            '**/constants/**/*.{ts,js}',
+            '**/helpers/**/*.{ts,js}',
+            '**/*.config.{ts,js}',
+        ],
+        rules: {
+            'no-restricted-syntax': 'off',
         },
     },
 );

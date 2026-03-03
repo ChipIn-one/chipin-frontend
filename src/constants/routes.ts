@@ -1,5 +1,50 @@
 export const ROUTES = {
     HOME: '/',
-    LOG_IN: '/login',
     NOT_FOUND_404: '/not-found',
+    SIGN_IN: '/sign-in',
+    DASHBOARD: '/dashboard',
+    GROUP: '/group',
+    GROUP_JOIN: '/group/join',
+    ACTIVITY: '/activity',
+    FRIENDS: '/friends',
+    SETTINGS: '/settings',
+};
+
+export const HEAD_META: Record<string, { title: string; description?: string }> = {
+    [ROUTES.HOME]: {
+        title: 'ChipIn — Home',
+        description: 'Home page of the ChipIn app',
+    },
+    [ROUTES.SIGN_IN]: {
+        title: 'ChipIn — Sign In',
+        description: 'Sign in to your ChipIn account',
+    },
+    [ROUTES.DASHBOARD]: {
+        title: 'ChipIn — Dashboard',
+        description: 'View and manage your balances',
+    },
+    [ROUTES.GROUP]: {
+        title: 'ChipIn — Group',
+        description: 'View and manage your group',
+    },
+    [ROUTES.GROUP_JOIN]: {
+        title: 'Joining group...',
+        description: 'Trying to join group',
+    },
+    [ROUTES.ACTIVITY]: {
+        title: 'ChipIn — Activity',
+        description: 'View your recent activity',
+    },
+    [ROUTES.FRIENDS]: {
+        title: 'ChipIn — Friends',
+        description: 'View your friends list',
+    },
+    [ROUTES.SETTINGS]: {
+        title: 'ChipIn — Settings',
+        description: 'Manage your settings',
+    },
+    [ROUTES.NOT_FOUND_404]: {
+        title: 'ChipIn — Page Not Found',
+        description: 'The page you are looking for does not exist',
+    },
 };

@@ -1,0 +1,13 @@
+{
+    "api": {
+        "unknown": "An unknown error occurred",
+        "unauthorized": "You are not authorized to perform this action",
+        "forbidden": "You do not have permission to access this resource",
+        "not_found": "The requested resource was not found",
+        "validation_failed": "Validation failed for the request",
+        "rate_limited": "Too many requests. Please try again later"
+    },
+    "network": {
+        "offline": "No internet connection"
+    }
+}
