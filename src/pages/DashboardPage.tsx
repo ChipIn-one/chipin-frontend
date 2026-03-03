@@ -7,7 +7,7 @@ import { useGroupsStore } from 'store/groupsStore';
 
 import ActivityTemplate from 'components/ActivityTemplate';
 import AddExpenseButton from 'components/AddExpenseButton';
-import DashboardBalanceSummary from 'components/DashboardBalanceSummary';
+import DashBoardSummary from 'components/DashboardSummary';
 import { GroupsCard } from 'components/GroupsCard';
 import MobileNavBar from 'components/Navs/MobileNavBar';
 
@@ -26,7 +26,7 @@ const DashboardPage = () => {
                         }}
                         mb="6"
                     >
-                        <DashboardBalanceSummary isLoading={isLoadingDashboard} />
+                        <DashBoardSummary isLoading={isLoadingDashboard} />
 
                         <Box>
                             <Flex gap="2" mb="6" mt="6">

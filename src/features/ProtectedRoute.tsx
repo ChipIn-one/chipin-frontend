@@ -23,7 +23,7 @@ export const ProtectedRoute = ({ children }: Props) => {
     }
 
     return (
-        <Box pt="8" pb="8">
+        <Box pt={{ initial: '4', sm: '6' }} pb={{ initial: '4', sm: '6' }}>
             {children}
         </Box>
     );
