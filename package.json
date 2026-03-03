@@ -11,7 +11,7 @@
     "create-pwa-icons": "pwa-assets-generator"
   },
   "dependencies": {
-    "@radix-ui/themes": "^3.2.1",
+    "@radix-ui/themes": "^3.3.0",
     "@uidotdev/usehooks": "^2.4.1",
     "@vercel/analytics": "^1.6.1",
     "@vercel/speed-insights": "^1.3.1",
