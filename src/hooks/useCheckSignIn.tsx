@@ -4,9 +4,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from 'store/authStore';
 import { useDashboardStore } from 'store/dashboardStore';
 import { checkTokenValidity, saveAuthTokenDB } from 'store/IDB/auth';
+import { useUsersStore } from 'store/usersStore';
 
 export const useCheckSignIn = () => {
     const { fetchSetDashboardData } = useDashboardStore();
+    const { fetchSetUser } = useUsersStore();
     const { setAuthenticated, setUnauthenticated } = useAuthStore();
 
     const navigate = useNavigate();
@@ -22,6 +24,7 @@ export const useCheckSignIn = () => {
                 await saveAuthTokenDB(authToken);
                 setAuthenticated();
                 fetchSetDashboardData();
+                fetchSetUser();
 
                 // Remove query params, stay on same path (important for join links)
                 navigate(window.location.pathname, { replace: true });
@@ -39,6 +42,7 @@ export const useCheckSignIn = () => {
             if (result.valid) {
                 setAuthenticated();
                 fetchSetDashboardData();
+                fetchSetUser();
             } else {
                 setUnauthenticated(result.reason);
             }

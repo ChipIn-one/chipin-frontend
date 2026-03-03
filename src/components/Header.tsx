@@ -7,6 +7,7 @@ import { PROJECT_NAME } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
+import { useUsersStore } from 'store/usersStore';
 
 import { EmptyRouteLink } from 'basics/EmptyRouteLink';
 
@@ -34,6 +35,7 @@ const StyledLogotype = styled(Logotype)`
 
 const Header = () => {
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
+    const { user } = useUsersStore();
 
     return (
         <StickyBox>
@@ -74,9 +76,9 @@ const Header = () => {
                                 <Box display={{ initial: 'none', sm: 'block' }}>
                                     <Avatar
                                         size="3"
-                                        src="https://images.unsplash.com/photo-1607346256330-dee7af15f7c5?&w=64&h=64&dpr=2&q=70&crop=focalpoint&fp-x=0.67&fp-y=0.5&fp-z=1.4&fit=crop"
+                                        src={user?.picture || ''}
                                         radius="full"
-                                        fallback="A"
+                                        fallback={user?.displayName.charAt(0) || '?'}
                                     />
                                 </Box>
                             </Flex>

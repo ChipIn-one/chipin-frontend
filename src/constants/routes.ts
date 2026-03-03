@@ -6,6 +6,7 @@ export const ROUTES = {
     GROUP: '/group',
     GROUP_JOIN: '/group/join',
     ACTIVITY: '/activity',
+    FRIENDS: '/friends',
     SETTINGS: '/settings',
 };
 
@@ -33,6 +34,10 @@ export const HEAD_META: Record<string, { title: string; description?: string }> 
     [ROUTES.ACTIVITY]: {
         title: 'ChipIn — Activity',
         description: 'View your recent activity',
+    },
+    [ROUTES.FRIENDS]: {
+        title: 'ChipIn — Friends',
+        description: 'View your friends list',
     },
     [ROUTES.SETTINGS]: {
         title: 'ChipIn — Settings',

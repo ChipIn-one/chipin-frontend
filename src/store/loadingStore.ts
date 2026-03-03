@@ -10,6 +10,10 @@ interface LoadingStore {
     dashboard: {
         data: boolean;
     };
+    users: {
+        self: boolean;
+        friends: boolean;
+    };
 
     setLoading: <S extends keyof LoadingStore, F extends keyof LoadingStore[S]>(
         section: S,
@@ -19,14 +23,18 @@ interface LoadingStore {
 }
 
 const initialLoadingStore = {
-    group: {
-        add: false,
-        update: false,
-        remove: false,
-        join: false,
-    },
     dashboard: {
         data: false,
+    },
+    group: {
+        add: false,
+        join: false,
+        remove: false,
+        update: false,
+    },
+    users: {
+        friends: false,
+        self: false,
     },
 };
 

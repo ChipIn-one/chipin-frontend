@@ -12,9 +12,10 @@ export const AvatarWrapper = styled.div<{ index: number }>`
 interface Props {
     members: ApiUser[];
     max?: number;
+    size?: React.ComponentProps<typeof Avatar>['size'];
 }
 
-const UsersRow = ({ members, max = 5 }: Props) => {
+const UsersRow = ({ members, size = '1', max = 5 }: Props) => {
     const visibleUsers = members.slice(0, max);
     const hiddenCount = members.length - max;
 
@@ -24,7 +25,7 @@ const UsersRow = ({ members, max = 5 }: Props) => {
                 <AvatarWrapper key={user.id} index={index}>
                     <Avatar
                         mr="-1"
-                        size="1"
+                        size={size}
                         radius="full"
                         src={user.picture || ''}
                         alt={user.displayName}
@@ -39,6 +40,7 @@ const UsersRow = ({ members, max = 5 }: Props) => {
                     size="1"
                     color="cyan"
                     radius="full"
+                    // eslint-disable-next-line react/jsx-no-literals
                     fallback={<Text size="1" weight="bold" as="span">{`+${hiddenCount}`}</Text>}
                 />
             )}

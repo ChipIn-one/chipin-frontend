@@ -7,6 +7,7 @@ import { getAuthTokenDB } from 'store/IDB/auth';
 
 import {
     ApiGroup,
+    ApiUser,
     CreateGroupParams,
     DashboardApiResponse,
     InviteToGroupParams,
@@ -115,4 +116,12 @@ export const inviteApiUserToGroup = async ({
 
 export const fetchApiDashboard = (): Promise<DashboardApiResponse> => {
     return apiInstance.get(`/dashboard`).then(result => result.data);
+};
+
+export const fetchApiUser = (): Promise<ApiUser> => {
+    return apiInstance.get(`/users/self`).then(result => result.data);
+};
+
+export const fetchApiKnownUsers = (): Promise<ApiUser[]> => {
+    return apiInstance.get(`/users/known-users`).then(result => result.data);
 };

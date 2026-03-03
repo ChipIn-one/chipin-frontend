@@ -6,10 +6,11 @@ import { ApiGroup } from 'api/chipin.types';
 
 interface Props {
     group: ApiGroup;
+    variant?: React.ComponentProps<typeof Avatar>['variant'];
     size?: React.ComponentProps<typeof Avatar>['size'];
 }
 
-const GroupAvatar = ({ group, size = '4' }: Props) => {
+const GroupAvatar = ({ group, variant = 'soft', size = '4' }: Props) => {
     const emojiSize =
         Number(size) + 3 > 9
             ? '9'
@@ -17,6 +18,7 @@ const GroupAvatar = ({ group, size = '4' }: Props) => {
 
     return (
         <Avatar
+            variant={variant}
             size={size}
             src={group.coverUrl || ''}
             alt={group.name}
