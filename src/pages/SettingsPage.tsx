@@ -16,6 +16,7 @@ import {
 } from '@radix-ui/themes';
 
 import { useAuthStore } from 'store/authStore';
+import { useUsersStore } from 'store/usersStore';
 
 import MobileNavBar from 'components/Navs/MobileNavBar';
 
@@ -33,6 +34,7 @@ const RowFlex = styled(Flex)`
 
 const SettingsPage = () => {
     const { signOut } = useAuthStore();
+    const { user } = useUsersStore();
 
     return (
         <Container size="4">
@@ -55,8 +57,11 @@ const SettingsPage = () => {
                     </Flex>
                     <Separator orientation="horizontal" size="4" decorative my="4" />
                     <Box mt="3">
-                        <Text size="3">Your name</Text>
-                        <TextField.Root size="3" placeholder="Your name or nickname" />
+                        <Text size="3">Your name for display</Text>
+                        <TextField.Root
+                            size="3"
+                            placeholder={user?.displayName || 'Your name or nickname'}
+                        />
                     </Box>
                 </Card>
 
