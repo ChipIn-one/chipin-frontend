@@ -8,7 +8,7 @@ import { useGroupsStore } from 'store/groupsStore';
 import ActivityTemplate from 'components/ActivityTemplate';
 import AddExpenseButton from 'components/AddExpenseButton';
 import DashBoardSummary from 'components/DashboardSummary';
-import { GroupsCard } from 'components/GroupsCard';
+import GroupsCards from 'components/GroupsCards';
 import MobileNavBar from 'components/Navs/MobileNavBar';
 
 const DashboardPage = () => {
@@ -39,7 +39,7 @@ const DashboardPage = () => {
                             </Flex>
 
                             <Flex gap="5" direction="column">
-                                <GroupsCard groups={groups} />
+                                <GroupsCards groups={groups} />
                             </Flex>
                         </Box>
                     </Box>

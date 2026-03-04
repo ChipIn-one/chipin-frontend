@@ -1,4 +1,5 @@
 import { LucideLogIn, LucideUserRoundPlus } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 
 import { Avatar, Box, Button, Container, Flex, IconButton, Text } from '@radix-ui/themes';
@@ -74,12 +75,14 @@ const Header = () => {
                                 </CreateUpdateGroupModal>
 
                                 <Box display={{ initial: 'none', sm: 'block' }}>
-                                    <Avatar
-                                        size="3"
-                                        src={user?.picture || ''}
-                                        radius="full"
-                                        fallback={user?.displayName.charAt(0) || '?'}
-                                    />
+                                    <Link to={ROUTES.SETTINGS}>
+                                        <Avatar
+                                            size="3"
+                                            src={user?.picture || ''}
+                                            radius="full"
+                                            fallback={user?.displayName.charAt(0) || '?'}
+                                        />
+                                    </Link>
                                 </Box>
                             </Flex>
                         ) : (

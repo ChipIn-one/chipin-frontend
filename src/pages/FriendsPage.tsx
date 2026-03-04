@@ -1,20 +1,41 @@
 import { useEffect } from 'react';
 import { LucideUserPlus, LucideUsers } from 'lucide-react';
 
-import { Avatar, Box, Button, Card, Container, Flex, Heading, Text } from '@radix-ui/themes';
+import {
+    Avatar,
+    Box,
+    Button,
+    Card,
+    Container,
+    Flex,
+    Heading,
+    Skeleton,
+    Text,
+} from '@radix-ui/themes';
 
+import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/usersStore';
 
 import MobileNavBar from 'components/Navs/MobileNavBar';
 
+const FRIENDS_SKELETON_ITEMS = Array.from({ length: 5 }, (_, index) => ({
+    id: `friend-skeleton-${index}`,
+    picture: '',
+    displayName: 'Display Name John',
+}));
+
 const FriendsPage = () => {
     const { friends, fetchSetFriends } = useUsersStore();
+    const isLoadingFriends = useLoadingStore(state => state.users.friends);
 
     useEffect(() => {
-        fetchSetFriends();
-    }, [fetchSetFriends]);
+        if (!friends.length) {
+            fetchSetFriends();
+        }
+    }, [friends, fetchSetFriends]);
 
-    // const isLoadingFriends = useLoadingStore(state => state.users.friends);
+    const isSkeletonShown = isLoadingFriends && !friends.length;
+    const visibleFriends = isSkeletonShown ? FRIENDS_SKELETON_ITEMS : friends;
 
     return (
         <Container size="2" pb={{ initial: '9', sm: '6' }}>
@@ -25,7 +46,7 @@ const FriendsPage = () => {
                         <Box>
                             <Heading size="6">Friends</Heading>
                             <Text size="2" color="gray">
-                                Example layout for friends list
+                                Your contacts and connections
                             </Text>
                         </Box>
                     </Flex>
@@ -37,28 +58,36 @@ const FriendsPage = () => {
 
                 <Card>
                     <Flex align="center" gap="2" mb="3">
-                        <LucideUsers size={18} />
-                        <Text weight="medium">Your connections</Text>
+                        <Skeleton loading={isSkeletonShown}>
+                            <LucideUsers size={18} />
+                            <Text weight="medium">Your connections</Text>
+                        </Skeleton>
                     </Flex>
 
                     <Flex direction="column" gap="3">
-                        {friends.map(({ id, picture, displayName }) => (
+                        {visibleFriends.map(({ id, picture, displayName }) => (
                             <Flex key={id} justify="between" align="center">
                                 <Flex align="center" gap="3">
-                                    <Avatar
-                                        src={picture || ''}
-                                        fallback={displayName.charAt(0)}
-                                        size="2"
-                                        radius="full"
-                                    />
-                                    <Box>
-                                        <Text as="p" weight="medium">
-                                            {displayName}
-                                        </Text>
-                                        <Text as="p" size="2">
-                                            owed you $35.00
-                                        </Text>
-                                    </Box>
+                                    <Skeleton loading={isSkeletonShown}>
+                                        <Avatar
+                                            src={picture || ''}
+                                            fallback={displayName.charAt(0)}
+                                            size="2"
+                                            radius="full"
+                                        />
+                                    </Skeleton>
+                                    <Flex direction="column" gap="1">
+                                        <Skeleton loading={isSkeletonShown}>
+                                            <Text as="span" weight="medium">
+                                                {displayName}
+                                            </Text>
+                                        </Skeleton>
+                                        <Skeleton loading={isSkeletonShown}>
+                                            <Text as="span" size="2">
+                                                owed you $35.00
+                                            </Text>
+                                        </Skeleton>
+                                    </Flex>
                                 </Flex>
                             </Flex>
                         ))}

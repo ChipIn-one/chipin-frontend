@@ -8,5 +8,12 @@
     "buttons": {
         "cancel": "Cancel",
         "delete": "Delete"
+    },
+    "dashboard": {
+        "groupsCard": {
+            "statusOwed": "You are owed",
+            "members_one": "{{count}} member",
+            "members_other": "{{count}} members"
+        }
     }
 }

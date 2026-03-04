@@ -1,1 +1,11 @@
-{}
+{
+    "dashboard": {
+        "groupsCard": {
+            "statusOwed": "Тебе должны",
+            "members_one": "{{count}} участник",
+            "members_few": "{{count}} участника",
+            "members_many": "{{count}} участников",
+            "members_other": "{{count}} участника"
+        }
+    }
+}
