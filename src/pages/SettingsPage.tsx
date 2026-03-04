@@ -172,7 +172,7 @@ const SettingsPage = () => {
                                         onValueChange={setTimezone}
                                         disabled={isTimezoneAuto}
                                     >
-                                        <Select.Trigger mt="2" size="3" />
+                                        <Select.Trigger />
                                         <Select.Content>
                                             {timezoneOptions.map(option => (
                                                 <Select.Item key={option} value={option}>
@@ -188,7 +188,7 @@ const SettingsPage = () => {
                                         {t('settings.regional.currencyLabel')}
                                     </Text>
                                     <Select.Root value={currency} onValueChange={setCurrency}>
-                                        <Select.Trigger mt="2" size="3" />
+                                        <Select.Trigger />
                                         <Select.Content>
                                             {currencyOptions.map(option => (
                                                 <Select.Item key={option} value={option}>
@@ -229,7 +229,7 @@ const SettingsPage = () => {
                                     value={selectedLanguage}
                                     onValueChange={onLanguageChange}
                                 >
-                                    <Select.Trigger mt="2" size="3" />
+                                    <Select.Trigger />
                                     <Select.Content>
                                         {languageOptions.map(option => (
                                             <Select.Item key={option} value={option}>
