@@ -15,5 +15,54 @@
             "members_one": "{{count}} member",
             "members_other": "{{count}} members"
         }
+    },
+    "settings": {
+        "title": "Settings",
+        "subtitle": "Manage your account, regional preferences, and notifications.",
+        "signOut": "Sign Out",
+        "account": {
+            "title": "Account",
+            "description": "Personal information and profile settings.",
+            "displayNameLabel": "Display name",
+            "displayNamePlaceholder": "Your name or nickname",
+            "emailLabel": "Email"
+        },
+        "regional": {
+            "title": "Regional Preferences",
+            "description": "Timezone, language, and currency for your workspace.",
+            "autoTimezone": "Detect timezone automatically",
+            "autoTimezoneHint": "Current timezone: {{timezone}}",
+            "timezoneLabel": "Timezone",
+            "currencyLabel": "Default currency",
+            "currencies": {
+                "USD": "USD - US Dollar",
+                "EUR": "EUR - Euro",
+                "RUB": "RUB - Russian Ruble",
+                "KZT": "KZT - Kazakhstani Tenge",
+                "GBP": "GBP - British Pound"
+            }
+        },
+        "language": {
+            "title": "Language",
+            "description": "Choose your preferred app language.",
+            "selectorLabel": "Interface language",
+            "options": {
+                "en": "English",
+                "ru": "Russian"
+            }
+        },
+        "notifications": {
+            "title": "Notifications",
+            "description": "Manage how you receive updates.",
+            "pushTitle": "Push notifications",
+            "pushDescription": "Receive notifications on your device.",
+            "emailTitle": "Email updates",
+            "emailDescription": "Get updates and product news by email."
+        },
+        "security": {
+            "title": "Privacy & Security",
+            "description": "Control your security and account protection settings.",
+            "placeholder": "More security controls will appear here soon."
+        }
     }
 }

@@ -1,5 +1,13 @@
-import { LucideBell, LucideShield, LucideUser } from 'lucide-react';
-import { styled } from 'styled-components';
+import { useState } from 'react';
+import {
+    LucideBell,
+    LucideGlobe,
+    LucideLanguages,
+    LucideLogOut,
+    LucideShield,
+    LucideUser,
+} from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import {
     Avatar,
@@ -9,6 +17,8 @@ import {
     Container,
     Flex,
     Grid,
+    Heading,
+    Select,
     Separator,
     Switch,
     Text,
@@ -20,117 +30,296 @@ import { useUsersStore } from 'store/usersStore';
 
 import MobileNavBar from 'components/Navs/MobileNavBar';
 
-const HeaderFlex = styled(Flex)`
-    align-items: center;
-    gap: var(--space-3);
-    margin-bottom: var(--space-2);
-`;
+const timezoneOptions = [
+    'UTC',
+    'Europe/London',
+    'Europe/Berlin',
+    'Europe/Moscow',
+    'Asia/Almaty',
+    'Asia/Dubai',
+    'Asia/Tokyo',
+    'America/New_York',
+    'America/Los_Angeles',
+];
 
-const RowFlex = styled(Flex)`
-    justify-content: space-between;
-    align-items: center;
-    margin-top: var(--space-3);
-`;
+const currencyOptions = ['USD', 'EUR', 'RUB', 'KZT', 'GBP'];
+const languageOptions = ['en', 'ru'] as const;
 
 const SettingsPage = () => {
+    const { t, i18n } = useTranslation();
+
     const { signOut } = useAuthStore();
     const { user } = useUsersStore();
 
+    const currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    const [isTimezoneAuto, setIsTimezoneAuto] = useState(true);
+    const [timezone, setTimezone] = useState(currentTimezone);
+    const [currency, setCurrency] = useState('USD');
+
+    const normalizedLanguage = i18n.language.split('-')[0];
+    const selectedLanguage = languageOptions.includes(
+        normalizedLanguage as (typeof languageOptions)[number],
+    )
+        ? normalizedLanguage
+        : 'en';
+
+    const onLanguageChange = (value: string) => {
+        void i18n.changeLanguage(value);
+    };
+
     return (
-        <Container size="4">
-            <Grid columns={{ initial: '1', md: '2' }} gap="6">
-                {/* Account */}
-                <Card>
-                    <Flex direction="row" align="center" gap="3">
-                        <Avatar
-                            variant="soft"
-                            size="3"
-                            color="mint"
-                            fallback={<LucideUser size={20} />}
-                        />
-                        <Box>
-                            <Text weight="medium">Account</Text>
-                            <Text size="2" color="gray" as="p">
-                                Personal information and profile settings
-                            </Text>
-                        </Box>
-                    </Flex>
-                    <Separator orientation="horizontal" size="4" decorative my="4" />
-                    <Box mt="3">
-                        <Text size="3">Your name for display</Text>
-                        <TextField.Root
-                            size="3"
-                            placeholder={user?.displayName || 'Your name or nickname'}
-                        />
-                    </Box>
-                </Card>
+        <Container size="4" pb={{ initial: '9', sm: '4' }}>
+            <Flex direction="column" gap="6">
+                <Box>
+                    <Heading size="7">{t('settings.title')}</Heading>
+                    <Text color="gray" as="p" mt="2">
+                        {t('settings.subtitle')}
+                    </Text>
+                </Box>
 
-                {/* Privacy */}
-                <Card>
-                    <HeaderFlex>
-                        <Avatar
-                            variant="soft"
-                            size="3"
-                            color="mint"
-                            fallback={<LucideShield size={20} />}
-                        />
+                <Grid columns={{ initial: '1', md: '2' }} gap="5">
+                    <Card size="3">
+                        <Flex direction="column" gap="4">
+                            <Flex align="center" gap="3">
+                                <Avatar
+                                    variant="soft"
+                                    size="3"
+                                    color="mint"
+                                    fallback={<LucideUser size={20} />}
+                                />
+                                <Box>
+                                    <Text weight="medium">{t('settings.account.title')}</Text>
+                                    <Text size="2" color="gray" as="p">
+                                        {t('settings.account.description')}
+                                    </Text>
+                                </Box>
+                            </Flex>
 
-                        <Box>
-                            <Text weight="medium">Privacy & Security</Text>
-                            <Text size="2" color="gray" as="p">
-                                Control your privacy and security settings
-                            </Text>
-                        </Box>
-                    </HeaderFlex>
-                    <Separator orientation="horizontal" size="4" decorative my="4" />
-                    <Box mt="3">
-                        <Text size="2" color="gray">
-                            Privacy settings content...
-                        </Text>
-                    </Box>
-                </Card>
+                            <Separator size="4" />
 
-                {/* Notifications */}
-                <Card>
-                    <HeaderFlex>
-                        <Avatar
-                            variant="soft"
-                            size="3"
-                            color="mint"
-                            fallback={<LucideBell size={20} />}
-                        />
+                            <Flex direction="column" gap="3">
+                                <Box>
+                                    <Text size="2" color="gray">
+                                        {t('settings.account.displayNameLabel')}
+                                    </Text>
+                                    <TextField.Root
+                                        mt="2"
+                                        size="3"
+                                        value={user?.displayName || ''}
+                                        placeholder={t('settings.account.displayNamePlaceholder')}
+                                        readOnly
+                                    />
+                                </Box>
+                                <Box>
+                                    <Text size="2" color="gray">
+                                        {t('settings.account.emailLabel')}
+                                    </Text>
+                                    <TextField.Root
+                                        mt="2"
+                                        size="3"
+                                        value={user?.email || ''}
+                                        readOnly
+                                    />
+                                </Box>
+                            </Flex>
+                        </Flex>
+                    </Card>
 
-                        <Box>
-                            <Text weight="medium">Notifications</Text>
-                            <Text size="2" color="gray" as="p">
-                                Manage how you receive notifications
-                            </Text>
-                        </Box>
-                    </HeaderFlex>
-                    <Separator orientation="horizontal" size="4" decorative my="4" />
-                    <Box mt="3">
-                        <RowFlex>
+                    <Card size="3">
+                        <Flex direction="column" gap="4">
+                            <Flex align="center" gap="3">
+                                <Avatar
+                                    variant="soft"
+                                    size="3"
+                                    color="mint"
+                                    fallback={<LucideGlobe size={20} />}
+                                />
+                                <Box>
+                                    <Text weight="medium">{t('settings.regional.title')}</Text>
+                                    <Text size="2" color="gray" as="p">
+                                        {t('settings.regional.description')}
+                                    </Text>
+                                </Box>
+                            </Flex>
+
+                            <Separator size="4" />
+
+                            <Flex direction="column" gap="4">
+                                <Flex justify="between" align="center" gap="3">
+                                    <Box>
+                                        <Text weight="medium">
+                                            {t('settings.regional.autoTimezone')}
+                                        </Text>
+                                        <Text size="2" color="gray" as="p">
+                                            {t('settings.regional.autoTimezoneHint', {
+                                                timezone: currentTimezone,
+                                            })}
+                                        </Text>
+                                    </Box>
+                                    <Switch
+                                        checked={isTimezoneAuto}
+                                        onCheckedChange={setIsTimezoneAuto}
+                                        aria-label={t('settings.regional.autoTimezone')}
+                                    />
+                                </Flex>
+
+                                <Box>
+                                    <Text size="2" color="gray">
+                                        {t('settings.regional.timezoneLabel')}
+                                    </Text>
+                                    <Select.Root
+                                        value={timezone}
+                                        onValueChange={setTimezone}
+                                        disabled={isTimezoneAuto}
+                                    >
+                                        <Select.Trigger mt="2" size="3" />
+                                        <Select.Content>
+                                            {timezoneOptions.map(option => (
+                                                <Select.Item key={option} value={option}>
+                                                    {option}
+                                                </Select.Item>
+                                            ))}
+                                        </Select.Content>
+                                    </Select.Root>
+                                </Box>
+
+                                <Box>
+                                    <Text size="2" color="gray">
+                                        {t('settings.regional.currencyLabel')}
+                                    </Text>
+                                    <Select.Root value={currency} onValueChange={setCurrency}>
+                                        <Select.Trigger mt="2" size="3" />
+                                        <Select.Content>
+                                            {currencyOptions.map(option => (
+                                                <Select.Item key={option} value={option}>
+                                                    {t(`settings.regional.currencies.${option}`)}
+                                                </Select.Item>
+                                            ))}
+                                        </Select.Content>
+                                    </Select.Root>
+                                </Box>
+                            </Flex>
+                        </Flex>
+                    </Card>
+
+                    <Card size="3">
+                        <Flex direction="column" gap="4">
+                            <Flex align="center" gap="3">
+                                <Avatar
+                                    variant="soft"
+                                    size="3"
+                                    color="mint"
+                                    fallback={<LucideLanguages size={20} />}
+                                />
+                                <Box>
+                                    <Text weight="medium">{t('settings.language.title')}</Text>
+                                    <Text size="2" color="gray" as="p">
+                                        {t('settings.language.description')}
+                                    </Text>
+                                </Box>
+                            </Flex>
+
+                            <Separator size="4" />
+
                             <Box>
-                                <Text weight="medium">Push Notifications</Text>
-                                <Text size="2" color="gray" as="p">
-                                    Receive notifications on your device
+                                <Text size="2" color="gray">
+                                    {t('settings.language.selectorLabel')}
                                 </Text>
+                                <Select.Root
+                                    value={selectedLanguage}
+                                    onValueChange={onLanguageChange}
+                                >
+                                    <Select.Trigger mt="2" size="3" />
+                                    <Select.Content>
+                                        {languageOptions.map(option => (
+                                            <Select.Item key={option} value={option}>
+                                                {t(`settings.language.options.${option}`)}
+                                            </Select.Item>
+                                        ))}
+                                    </Select.Content>
+                                </Select.Root>
                             </Box>
-                            <Switch />
-                        </RowFlex>
-                        <RowFlex>
-                            <Box>
-                                <Text weight="medium">Email Updates</Text>
-                                <Text size="2" color="gray" as="p">
-                                    Get updates and news via email
-                                </Text>
-                            </Box>
-                            <Switch />
-                        </RowFlex>
-                    </Box>
-                </Card>
-                <Button onClick={signOut}>Sign Out</Button>
-            </Grid>
+                        </Flex>
+                    </Card>
+
+                    <Card size="3">
+                        <Flex direction="column" gap="4">
+                            <Flex align="center" gap="3">
+                                <Avatar
+                                    variant="soft"
+                                    size="3"
+                                    color="mint"
+                                    fallback={<LucideBell size={20} />}
+                                />
+                                <Box>
+                                    <Text weight="medium">{t('settings.notifications.title')}</Text>
+                                    <Text size="2" color="gray" as="p">
+                                        {t('settings.notifications.description')}
+                                    </Text>
+                                </Box>
+                            </Flex>
+
+                            <Separator size="4" />
+
+                            <Flex justify="between" align="center" gap="3">
+                                <Box>
+                                    <Text weight="medium">
+                                        {t('settings.notifications.pushTitle')}
+                                    </Text>
+                                    <Text size="2" color="gray" as="p">
+                                        {t('settings.notifications.pushDescription')}
+                                    </Text>
+                                </Box>
+                                <Switch aria-label={t('settings.notifications.pushTitle')} />
+                            </Flex>
+
+                            <Flex justify="between" align="center" gap="3">
+                                <Box>
+                                    <Text weight="medium">
+                                        {t('settings.notifications.emailTitle')}
+                                    </Text>
+                                    <Text size="2" color="gray" as="p">
+                                        {t('settings.notifications.emailDescription')}
+                                    </Text>
+                                </Box>
+                                <Switch aria-label={t('settings.notifications.emailTitle')} />
+                            </Flex>
+                        </Flex>
+                    </Card>
+
+                    <Card size="3">
+                        <Flex direction="column" gap="4">
+                            <Flex align="center" gap="3">
+                                <Avatar
+                                    variant="soft"
+                                    size="3"
+                                    color="mint"
+                                    fallback={<LucideShield size={20} />}
+                                />
+                                <Box>
+                                    <Text weight="medium">{t('settings.security.title')}</Text>
+                                    <Text size="2" color="gray" as="p">
+                                        {t('settings.security.description')}
+                                    </Text>
+                                </Box>
+                            </Flex>
+
+                            <Separator size="4" />
+
+                            <Text size="2" color="gray">
+                                {t('settings.security.placeholder')}
+                            </Text>
+                        </Flex>
+                    </Card>
+                </Grid>
+
+                <Flex justify="end">
+                    <Button onClick={signOut} color="red">
+                        <LucideLogOut size={16} />
+                        {t('settings.signOut')}
+                    </Button>
+                </Flex>
+            </Flex>
             <MobileNavBar />
         </Container>
     );
