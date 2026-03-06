@@ -2,12 +2,14 @@ import { useState } from 'react';
 import {
     LucideBell,
     LucideGlobe,
-    LucideLanguages,
     LucideLogOut,
+    LucideSettings2,
     LucideShield,
-    LucideUser,
 } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { useShallow } from 'zustand/react/shallow';
 
 import {
     Avatar,
@@ -18,6 +20,7 @@ import {
     Flex,
     Grid,
     Heading,
+    SegmentedControl,
     Select,
     Separator,
     Switch,
@@ -26,9 +29,12 @@ import {
 } from '@radix-ui/themes';
 
 import { useAuthStore } from 'store/authStore';
+import { selectAvailableCurrencies } from 'store/dashboardSelectors';
+import { useDashboardStore } from 'store/dashboardStore';
 import { useUsersStore } from 'store/usersStore';
 
 import MobileNavBar from 'components/Navs/MobileNavBar';
+import UserAvatar from 'components/UserAvatar';
 
 const timezoneOptions = [
     'UTC',
@@ -42,19 +48,21 @@ const timezoneOptions = [
     'America/Los_Angeles',
 ];
 
-const currencyOptions = ['USD', 'EUR', 'RUB', 'KZT', 'GBP'];
 const languageOptions = ['en', 'ru'] as const;
 
 const SettingsPage = () => {
     const { t, i18n } = useTranslation();
+    const { theme, setTheme } = useTheme();
 
     const { signOut } = useAuthStore();
+    const availableCurrencies = useDashboardStore(useShallow(selectAvailableCurrencies));
     const { user } = useUsersStore();
 
     const currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
     const [isTimezoneAuto, setIsTimezoneAuto] = useState(true);
     const [timezone, setTimezone] = useState(currentTimezone);
     const [currency, setCurrency] = useState('USD');
+    const [isSimplifyDebtsEnabled, setIsSimplifyDebtsEnabled] = useState(true);
 
     const normalizedLanguage = i18n.language.split('-')[0];
     const selectedLanguage = languageOptions.includes(
@@ -65,6 +73,19 @@ const SettingsPage = () => {
 
     const onLanguageChange = (value: string) => {
         void i18n.changeLanguage(value);
+    };
+
+    const selectedTheme = (theme as 'light' | 'dark' | 'system' | undefined) || 'system';
+    const onLogoutAllDevices = () => {
+        toast.info(t('settings.security.logoutAllDevicesSoon'));
+    };
+    const onDeleteAccount = () => {
+        toast.info(t('settings.security.deleteAccountSoon'));
+    };
+    const onThemeChange = (value: string) => {
+        if (value === 'light' || value === 'dark' || value === 'system') {
+            setTheme(value);
+        }
     };
 
     return (
@@ -81,12 +102,7 @@ const SettingsPage = () => {
                     <Card size="3">
                         <Flex direction="column" gap="4">
                             <Flex align="center" gap="3">
-                                <Avatar
-                                    variant="soft"
-                                    size="3"
-                                    color="mint"
-                                    fallback={<LucideUser size={20} />}
-                                />
+                                <UserAvatar size="3" />
                                 <Box>
                                     <Text weight="medium">{t('settings.account.title')}</Text>
                                     <Text size="2" color="gray" as="p">
@@ -190,7 +206,7 @@ const SettingsPage = () => {
                                     <Select.Root value={currency} onValueChange={setCurrency}>
                                         <Select.Trigger />
                                         <Select.Content>
-                                            {currencyOptions.map(option => (
+                                            {availableCurrencies.map(option => (
                                                 <Select.Item key={option} value={option}>
                                                     {t(`settings.regional.currencies.${option}`)}
                                                 </Select.Item>
@@ -198,47 +214,28 @@ const SettingsPage = () => {
                                         </Select.Content>
                                     </Select.Root>
                                 </Box>
-                            </Flex>
-                        </Flex>
-                    </Card>
-
-                    <Card size="3">
-                        <Flex direction="column" gap="4">
-                            <Flex align="center" gap="3">
-                                <Avatar
-                                    variant="soft"
-                                    size="3"
-                                    color="mint"
-                                    fallback={<LucideLanguages size={20} />}
-                                />
                                 <Box>
-                                    <Text weight="medium">{t('settings.language.title')}</Text>
+                                    <Text size="2" color="gray">
+                                        {t('settings.regional.languageLabel')}
+                                    </Text>
+                                    <Select.Root
+                                        value={selectedLanguage}
+                                        onValueChange={onLanguageChange}
+                                    >
+                                        <Select.Trigger />
+                                        <Select.Content>
+                                            {languageOptions.map(option => (
+                                                <Select.Item key={option} value={option}>
+                                                    {t(`settings.language.options.${option}`)}
+                                                </Select.Item>
+                                            ))}
+                                        </Select.Content>
+                                    </Select.Root>
                                     <Text size="2" color="gray" as="p">
-                                        {t('settings.language.description')}
+                                        {t('settings.regional.languageHint')}
                                     </Text>
                                 </Box>
                             </Flex>
-
-                            <Separator size="4" />
-
-                            <Box>
-                                <Text size="2" color="gray">
-                                    {t('settings.language.selectorLabel')}
-                                </Text>
-                                <Select.Root
-                                    value={selectedLanguage}
-                                    onValueChange={onLanguageChange}
-                                >
-                                    <Select.Trigger />
-                                    <Select.Content>
-                                        {languageOptions.map(option => (
-                                            <Select.Item key={option} value={option}>
-                                                {t(`settings.language.options.${option}`)}
-                                            </Select.Item>
-                                        ))}
-                                    </Select.Content>
-                                </Select.Root>
-                            </Box>
                         </Flex>
                     </Card>
 
@@ -294,6 +291,64 @@ const SettingsPage = () => {
                                     variant="soft"
                                     size="3"
                                     color="mint"
+                                    fallback={<LucideSettings2 size={20} />}
+                                />
+                                <Box>
+                                    <Text weight="medium">{t('settings.app.title')}</Text>
+                                    <Text size="2" color="gray" as="p">
+                                        {t('settings.app.description')}
+                                    </Text>
+                                </Box>
+                            </Flex>
+
+                            <Separator size="4" />
+
+                            <Flex direction="column" gap="4">
+                                <Box>
+                                    <Text weight="medium">{t('settings.app.themeTitle')}</Text>
+                                    <Text size="2" color="gray" as="p">
+                                        {t('settings.app.themeDescription')}
+                                    </Text>
+                                </Box>
+
+                                <SegmentedControl.Root value={selectedTheme} onValueChange={onThemeChange}>
+                                    <SegmentedControl.Item value="dark">
+                                        {t('settings.app.themeOptions.dark')}
+                                    </SegmentedControl.Item>
+                                    <SegmentedControl.Item value="light">
+                                        {t('settings.app.themeOptions.light')}
+                                    </SegmentedControl.Item>
+                                    <SegmentedControl.Item value="system">
+                                        {t('settings.app.themeOptions.system')}
+                                    </SegmentedControl.Item>
+                                </SegmentedControl.Root>
+
+                                <Flex justify="between" align="center" gap="3">
+                                    <Box>
+                                        <Text weight="medium">
+                                            {t('settings.app.simplifyDebtsTitle')}
+                                        </Text>
+                                        <Text size="2" color="gray" as="p">
+                                            {t('settings.app.simplifyDebtsDescription')}
+                                        </Text>
+                                    </Box>
+                                    <Switch
+                                        checked={isSimplifyDebtsEnabled}
+                                        onCheckedChange={setIsSimplifyDebtsEnabled}
+                                        aria-label={t('settings.app.simplifyDebtsTitle')}
+                                    />
+                                </Flex>
+                            </Flex>
+                        </Flex>
+                    </Card>
+
+                    <Card size="3">
+                        <Flex direction="column" gap="4">
+                            <Flex align="center" gap="3">
+                                <Avatar
+                                    variant="soft"
+                                    size="3"
+                                    color="mint"
                                     fallback={<LucideShield size={20} />}
                                 />
                                 <Box>
@@ -306,19 +361,51 @@ const SettingsPage = () => {
 
                             <Separator size="4" />
 
-                            <Text size="2" color="gray">
-                                {t('settings.security.placeholder')}
-                            </Text>
+                            <Flex direction="column" gap="3">
+                                <Flex justify="between" align="center" gap="3">
+                                    <Box>
+                                        <Text weight="medium">
+                                            {t('settings.security.logoutAllDevicesTitle')}
+                                        </Text>
+                                        <Text size="2" color="gray" as="p">
+                                            {t('settings.security.logoutAllDevicesDescription')}
+                                        </Text>
+                                    </Box>
+                                    <Button variant="soft" color="amber" onClick={onLogoutAllDevices}>
+                                        {t('settings.security.logoutAllDevicesButton')}
+                                    </Button>
+                                </Flex>
+
+                                <Flex justify="between" align="center" gap="3">
+                                    <Box>
+                                        <Text weight="medium">
+                                            {t('settings.security.deleteAccountTitle')}
+                                        </Text>
+                                        <Text size="2" color="gray" as="p">
+                                            {t('settings.security.deleteAccountDescription')}
+                                        </Text>
+                                    </Box>
+                                    <Button variant="soft" color="red" onClick={onDeleteAccount}>
+                                        {t('settings.security.deleteAccountButton')}
+                                    </Button>
+                                </Flex>
+
+                                <Flex justify="between" align="center" gap="3">
+                                    <Box>
+                                        <Text weight="medium">{t('settings.signOut')}</Text>
+                                        <Text size="2" color="gray" as="p">
+                                            {t('settings.security.signOutDescription')}
+                                        </Text>
+                                    </Box>
+                                    <Button onClick={signOut} color="red">
+                                        <LucideLogOut size={16} />
+                                        {t('settings.signOut')}
+                                    </Button>
+                                </Flex>
+                            </Flex>
                         </Flex>
                     </Card>
                 </Grid>
-
-                <Flex justify="end">
-                    <Button onClick={signOut} color="red">
-                        <LucideLogOut size={16} />
-                        {t('settings.signOut')}
-                    </Button>
-                </Flex>
             </Flex>
             <MobileNavBar />
         </Container>

@@ -2,15 +2,15 @@ import { LucideLogIn, LucideUserRoundPlus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 
-import { Avatar, Box, Button, Container, Flex, IconButton, Text } from '@radix-ui/themes';
+import { Box, Button, Container, Flex, IconButton, Text } from '@radix-ui/themes';
 
 import { PROJECT_NAME } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
-import { useUsersStore } from 'store/usersStore';
 
 import { EmptyRouteLink } from 'basics/EmptyRouteLink';
+import UserAvatar from 'components/UserAvatar';
 
 import Logotype from 'assets/logo.svg?react';
 
@@ -36,7 +36,6 @@ const StyledLogotype = styled(Logotype)`
 
 const Header = () => {
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
-    const { user } = useUsersStore();
 
     return (
         <StickyBox>
@@ -76,12 +75,7 @@ const Header = () => {
 
                                 <Box display={{ initial: 'none', sm: 'block' }}>
                                     <Link to={ROUTES.SETTINGS}>
-                                        <Avatar
-                                            size="3"
-                                            src={user?.picture || ''}
-                                            radius="full"
-                                            fallback={user?.displayName.charAt(0) || '?'}
-                                        />
+                                        <UserAvatar size="3" />
                                     </Link>
                                 </Box>
                             </Flex>
