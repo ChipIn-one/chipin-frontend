@@ -26,7 +26,7 @@
     "qrcode-generator": "^2.0.4",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-i18next": "^16.5.5",
+    "react-i18next": "^16.5.8",
     "react-router-dom": "^7.6.0",
     "sonner": "^2.0.5",
     "styled-components": "^6.3.11",
