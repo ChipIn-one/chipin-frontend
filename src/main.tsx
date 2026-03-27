@@ -9,6 +9,7 @@ import { darkThemeStyled, lightThemeStyled } from 'constants/styled-themes';
 
 import BackgroundBox from 'basics/BackgroundBox';
 import PWABadge from 'basics/PWABadge';
+import AddExpenseButton from 'components/AddExpenseButton';
 import Header from 'components/Header';
 import AppRouter from 'features/AppRouter';
 import GlobalHooks from 'pages/GlobalHooks';
@@ -35,6 +36,7 @@ const Main = () => {
                         <Box px="4">
                             <AppRouter />
                         </Box>
+                        <AddExpenseButton />
                         <PWABadge />
 
                         <Toaster

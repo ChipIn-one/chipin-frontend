@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { toast } from 'sonner';
 
+import { SECOND } from 'constants/time';
 import { getChipInApiUrl } from 'helpers/env';
 import { resolveApiErrorMessage } from 'helpers/errors';
 import { getAuthTokenDB } from 'store/IDB/auth';
@@ -9,6 +10,7 @@ import {
     ApiGroup,
     ApiUser,
     CreateGroupParams,
+    CreateLedgerEntryParams,
     DashboardApiResponse,
     InviteToGroupParams,
     RemoveGroupParams,
@@ -60,6 +62,8 @@ apiInstance.interceptors.response.use(
         return Promise.reject(error);
     },
 );
+
+// =============== GROUPS AND USERS ===============
 
 export const fetchApiUserGroups = (): Promise<ApiGroup[]> => {
     return apiInstance.get(`/groups`).then(result => result.data);
@@ -124,4 +128,34 @@ export const fetchApiUser = (): Promise<ApiUser> => {
 
 export const fetchApiKnownUsers = (): Promise<ApiUser[]> => {
     return apiInstance.get(`/users/known-users`).then(result => result.data);
+};
+
+// =============== EXPENSES ===============
+
+export const createApiLedgerEntry = async ({
+    groupId,
+    description,
+    amount,
+    unixTimestamp,
+    payerId,
+    participantIds,
+    currency,
+}: CreateLedgerEntryParams) => {
+    const response = await apiInstance.post('/ledger/entries', {
+        type: 'EXPENSE',
+        groupId,
+        expense: {
+            description,
+            amount: String(amount),
+            unixTimestamp,
+            payerId,
+            participantIds,
+            currency,
+            sharingMode: {
+                type: 'AUTO',
+            },
+        },
+    });
+
+    return response.data;
 };

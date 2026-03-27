@@ -1,3 +1,12 @@
+import type { DefaultTheme } from 'styled-components';
+
+type ThemeColorToken = keyof DefaultTheme['colors'];
+
+export const themeColor =
+    (token: ThemeColorToken) =>
+    ({ theme }: { theme: DefaultTheme }) =>
+        theme.colors[token];
+
 export const hexToRgba = (hex: string, alpha: number) => {
     const h = hex.replace('#', '');
     const v =

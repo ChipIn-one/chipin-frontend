@@ -51,3 +51,13 @@ export interface InviteToGroupParams {
 export interface DashboardApiResponse {
     groups: ApiGroup[];
 }
+
+export interface CreateLedgerEntryParams {
+    groupId: string;
+    description: string;
+    amount: string | number;
+    unixTimestamp: number;
+    payerId: string;
+    participantIds: string[];
+    currency: string;
+}

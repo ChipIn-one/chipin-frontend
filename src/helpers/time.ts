@@ -1,3 +1,5 @@
+import { DAY, HOUR, MINUTE, SECOND } from 'constants/time';
+
 type TimeUnit = Intl.RelativeTimeFormatUnit;
 
 const MAX_RELATIVE_DAYS = 7; // Relative time limit in days
@@ -42,3 +44,6 @@ export const formatRelativeTime = (date: Date | number): string => {
 
     return 'just now';
 };
+
+export const getUnixTimestampInSec = (date?: Date): number =>
+    Math.floor((date ? date.getTime() : Date.now()) / 1000);

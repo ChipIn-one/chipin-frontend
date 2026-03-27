@@ -10,6 +10,10 @@
         "delete": "Delete"
     },
     "dashboard": {
+        "groups": {
+            "title": "Your groups",
+            "addNew": "Add new group"
+        },
         "groupsCard": {
             "statusOwed": "You are owed",
             "members_one": "{{count}} member",
@@ -18,6 +22,43 @@
         "summary": {
             "totalBalance": "Total balance",
             "totalAcrossGroupsAndFriends": "Across groups and friends"
+        }
+    },
+    "expenses": {
+        "modal": {
+            "title": "Add an expense",
+            "description": "Split a new expense with your group members.",
+            "fields": {
+                "group": "Group",
+                "description": "Description",
+                "descriptionPlaceholder": "e.g. Hotel booking, dinner...",
+                "amountAndCurrency": "Amount & currency",
+                "amountPlaceholder": "0.00",
+                "category": "Category",
+                "paidBy": "Paid by"
+            },
+            "categories": {
+                "food": "Food & Dining",
+                "transport": "Transport",
+                "housing": "Housing & Utilities",
+                "shopping": "Shopping",
+                "health": "Health",
+                "lifestyle": "Lifestyle",
+                "subscriptions": "Subscriptions",
+                "travel": "Travel",
+                "education": "Education",
+                "finance": "Finance",
+                "government": "Government",
+                "family": "Family",
+                "pets": "Pets",
+                "transfers": "Transfers",
+                "charity": "Charity",
+                "other": "Other"
+            },
+            "currentUser": "You",
+            "splitHint": "Split equally among the group.",
+            "noMembers": "No group members available yet.",
+            "submit": "Add expense"
         }
     },
     "settings": {

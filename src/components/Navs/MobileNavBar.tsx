@@ -3,10 +3,12 @@ import styled from 'styled-components';
 
 import { Box, Button, Flex, Text } from '@radix-ui/themes';
 
+import { themeColor } from 'helpers/colors';
+
 import { NAV_ELEMENTS } from './constants';
 
 const BoxWrapper = styled(Box)`
-    background-color: ${({ theme }) => theme.colors.grass3};
+    background-color: ${themeColor('grass3')};
 `;
 
 const NavButton = styled(Button)`

@@ -3,9 +3,9 @@ import { create } from 'zustand';
 import { fetchApiDashboard } from 'api/chipin';
 
 import { useGroupsStore } from './groupsStore';
+import { useLoadingStore } from './loadingStore';
 
 export interface DashboardStore {
-    isLoadingDashboard: boolean;
     fetchSetDashboardData: () => void;
     currencies: {
         disclaimer: string;
@@ -17,7 +17,6 @@ export interface DashboardStore {
 }
 
 const initialDashboardStore = {
-    isLoadingDashboard: false,
     currencies: {
         disclaimer: 'Usage subject to terms: https://openexchangerates.org/terms',
         license: 'https://openexchangerates.org/license',
@@ -200,12 +199,14 @@ const initialDashboardStore = {
     },
 };
 
-export const useDashboardStore = create<DashboardStore>(set => ({
+export const useDashboardStore = create<DashboardStore>(() => ({
     ...initialDashboardStore,
 
     fetchSetDashboardData: () => {
         const { setGroups } = useGroupsStore.getState();
-        set({ isLoadingDashboard: true });
+        const { setLoading } = useLoadingStore.getState();
+
+        setLoading('dashboard', 'data', true);
 
         fetchApiDashboard()
             .then(data => {
@@ -215,7 +216,7 @@ export const useDashboardStore = create<DashboardStore>(set => ({
                 console.error('Error fetching dashboard data:', error);
             })
             .finally(() => {
-                set({ isLoadingDashboard: false });
+                setLoading('dashboard', 'data', false);
             });
     },
 }));

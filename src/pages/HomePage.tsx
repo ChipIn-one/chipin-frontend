@@ -25,6 +25,7 @@ import {
     Text,
 } from '@radix-ui/themes';
 
+import { themeColor } from 'helpers/colors';
 import { usePwaStore } from 'store/pwaStore';
 
 import { Amount } from 'basics/numbers';
@@ -35,11 +36,11 @@ const Placeholder = styled.div`
     width: 100%;
     min-height: 280px;
     border-radius: 16px;
-    background-color: ${({ theme }) => theme.colors.indigo2};
-    border: 1px solid ${({ theme }) => theme.colors.gray6};
+    background-color: ${themeColor('indigo2')};
+    border: 1px solid ${themeColor('gray6')};
     display: grid;
     place-items: center;
-    color: ${({ theme }) => theme.colors.gray11};
+    color: ${themeColor('gray11')};
     font-size: 14px;
 `;
 

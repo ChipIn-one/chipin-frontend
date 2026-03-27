@@ -238,7 +238,48 @@
             "signOutDescription": "Выйти только на этом устройстве."
         }
     },
+    "expenses": {
+        "modal": {
+            "title": "Добавить расход",
+            "description": "Разделите новый расход между участниками группы.",
+            "fields": {
+                "group": "Группа",
+                "description": "Описание",
+                "descriptionPlaceholder": "Например, отель, ужин, билеты...",
+                "amountAndCurrency": "Сумма и валюта",
+                "amountPlaceholder": "0.00",
+                "category": "Категория",
+                "paidBy": "Оплатил"
+            },
+            "categories": {
+                "food": "Еда и рестораны",
+                "transport": "Транспорт",
+                "housing": "Жильё и коммунальные",
+                "shopping": "Покупки",
+                "health": "Здоровье",
+                "lifestyle": "Образ жизни",
+                "subscriptions": "Подписки",
+                "travel": "Путешествия",
+                "education": "Образование",
+                "finance": "Финансы",
+                "government": "Государственные расходы",
+                "family": "Семья",
+                "pets": "Питомцы",
+                "transfers": "Переводы",
+                "charity": "Благотворительность",
+                "other": "Другое"
+            },
+            "currentUser": "Вы",
+            "splitHint": "Пока расход делится поровну между участниками группы.",
+            "noMembers": "В группе пока нет участников.",
+            "submit": "Добавить расход"
+        }
+    },
     "dashboard": {
+        "groups": {
+            "title": "Твои группы",
+            "addNew": "Добавить новую группу"
+        },
         "groupsCard": {
             "statusOwed": "Тебе должны",
             "members_one": "{{count}} участник",

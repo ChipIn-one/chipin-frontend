@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { registerSW } from 'virtual:pwa-register';
 
+import { HOUR } from 'constants/time';
 import { TOASTS_IDS } from 'constants/toasts';
 
 const PWABadge = () => {

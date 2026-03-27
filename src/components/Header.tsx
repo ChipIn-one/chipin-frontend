@@ -6,6 +6,7 @@ import { Box, Button, Container, Flex, IconButton, Text } from '@radix-ui/themes
 
 import { PROJECT_NAME } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
+import { themeColor } from 'helpers/colors';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 
@@ -24,8 +25,7 @@ const StickyBox = styled(Box)`
     top: 0;
     width: 100%;
     z-index: 1;
-
-    border-bottom: 1px solid ${({ theme }) => theme.colors.green8};
+    border-bottom: 1px solid ${themeColor('green8')};
     backdrop-filter: blur(10px);
 `;
 
