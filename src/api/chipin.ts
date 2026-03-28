@@ -147,7 +147,7 @@ export const createApiLedgerEntry = async ({
         expense: {
             description,
             amount: String(amount),
-            unixTimestamp,
+            date: unixTimestamp,
             payerId,
             participantIds,
             currency,
