@@ -1,3 +1,4 @@
+import i18n from 'i18next';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { registerSW } from 'virtual:pwa-register';
@@ -12,7 +13,7 @@ const PWABadge = () => {
     const updateSW = registerSW({
         // Show a short toast when offline cache is ready (optional UX)
         onOfflineReady() {
-            // toast.success('App is ready to work offline', { duration: 3000 });
+            // toast.success(i18n.t('toasts:pwa.offlineReady'), { duration: 3000 });
         },
 
         // When a new version is available — show a persistent Sonner toast with an update button
@@ -22,11 +23,11 @@ const PWABadge = () => {
             }
             setShown(true);
 
-            toast.info('A new version is available', {
+            toast.info(i18n.t('toasts:pwa.updateAvailable'), {
                 id: TOASTS_IDS.pwaUpdateAvailable,
                 duration: Infinity, // persist until user clicks
                 action: {
-                    label: 'Update',
+                    label: i18n.t('toasts:pwa.updateAction'),
                     onClick: () => updateSWRef.current?.(true), // update SW and reload the page
                 },
             });

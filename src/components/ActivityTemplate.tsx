@@ -80,7 +80,7 @@ const ActivityTemplate = ({ isLoading = false }: Props) => {
                             </Skeleton>
                             <Skeleton loading={isLoading}>
                                 <Text size="2" as="p">
-                                    From your groups and friends
+                                    From all of your groups and friends
                                 </Text>
                             </Skeleton>
                         </Flex>

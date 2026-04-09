@@ -1,0 +1,36 @@
+{
+  "auth": {
+    "sessionExpired": "Session expired, please log in again.",
+    "invalidJwt": "Failed to validate session. Please log in again."
+  },
+  "common": {
+    "disconnect": "You have been disconnected.",
+    "disconnectDescription": "Don't worry, your changes will be saved. Attempting to reconnect...",
+    "reconnected": "Your connection has been restored."
+  },
+  "group": {
+    "inviteJoinWarning": "Please sign in before joining the group.",
+    "inviteJoinSuccess": "You successfully joined the group {{name}}!",
+    "inviteJoinError": "Failed to join the group. Please check the invite link and try again.",
+    "invalidGroupId": "Invalid group ID for fetching group",
+    "created": "Group \"{{name}}\" created successfully!",
+    "updated": "Group \"{{name}}\" updated successfully!",
+    "createError": "Something went wrong while creating the group.",
+    "updateError": "Something went wrong while updating the group.",
+    "removed": "Group \"{{name}}\" was successfully removed!",
+    "removeError": "Something went wrong while removing the group.",
+    "inviteLinkNotReady": "Invite link is not ready yet",
+    "inviteLinkCopied": "Group invite link copied",
+    "inviteLinkCopyError": "Failed to copy link"
+  },
+  "pwa": {
+    "installing": "Installing application on your home screen...",
+    "offlineReady": "App is ready to work offline",
+    "updateAvailable": "A new version is available",
+    "updateAction": "Update"
+  },
+  "settings": {
+    "logoutAllDevicesSoon": "Logout on all devices will be available soon.",
+    "deleteAccountSoon": "Account deletion will be available soon."
+  }
+}

@@ -1,3 +1,4 @@
+import i18n from 'i18next';
 import { toast } from 'sonner';
 import { create } from 'zustand';
 
@@ -36,6 +37,7 @@ interface GroupsStore {
 }
 
 const initialGroupsStore = {
+    //TODO: move to loaders state
     isLoadingGroup: false,
     selectedGroup: null,
     groups: [],
@@ -61,7 +63,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         }
 
         if (!groupId) {
-            toast.error('Invalid group ID for fetching group');
+            toast.error(i18n.t('toasts:group.invalidGroupId'));
             return;
         }
         set({ isLoadingGroup: true });

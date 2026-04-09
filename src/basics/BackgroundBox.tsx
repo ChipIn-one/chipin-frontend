@@ -6,11 +6,8 @@ import { Box } from '@radix-ui/themes';
 import { hexToRgba } from 'helpers/colors';
 
 const ColoredBox = styled(Box)`
-    background-image: radial-gradient(
-            circle at 20% 20%,
-            ${hexToRgba(blueDark.blue9, 0.2)},
-            transparent 40%
-        ),
+    background-image:
+        radial-gradient(circle at 20% 20%, ${hexToRgba(blueDark.blue9, 0.2)}, transparent 40%),
         radial-gradient(circle at 80% 30%, ${hexToRgba(greenDark.green9, 0.2)}, transparent 40%),
         radial-gradient(circle at 40% 80%, ${hexToRgba(violetDark.violet9, 0.25)}, transparent 40%);
 `;

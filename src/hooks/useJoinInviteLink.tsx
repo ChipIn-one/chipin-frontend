@@ -1,8 +1,8 @@
+import i18n from 'i18next';
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import { MESSAGES } from 'constants/messages';
 import { ROUTES } from 'constants/routes';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
@@ -20,17 +20,17 @@ export const useJoinInviteLink = () => {
         }
 
         if (!isLoggedIn) {
-            toast.warning(MESSAGES.warning.group.INVITE_JOIN);
+            toast.warning(i18n.t('toasts:group.inviteJoinWarning'));
             return;
         }
 
         joinGroup({ inviteToken })
             .then(({ id, name }) => {
                 navigate(`${ROUTES.GROUP}/${id}`, { replace: true });
-                toast.success(MESSAGES.success.group.INVITE_JOIN(name));
+                toast.success(i18n.t('toasts:group.inviteJoinSuccess', { name }));
             })
             .catch(() => {
-                toast.error(MESSAGES.error.group.INVITE_JOIN);
+                toast.error(i18n.t('toasts:group.inviteJoinError'));
             });
     }, [inviteToken, isLoggedIn, joinGroup, navigate]);
 };

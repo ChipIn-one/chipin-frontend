@@ -1,3 +1,4 @@
+import { t } from 'i18next';
 import { useEffect } from 'react';
 import {
     LucideArrowLeftRight,
@@ -94,16 +95,16 @@ const GroupPage = () => {
 
     const onCopyGroupLink = async () => {
         if (!inviteLink) {
-            toast.error('Invite link is not ready yet');
+            toast.error(t('toasts:group.inviteLinkNotReady'));
             return;
         }
 
         try {
             await navigator.clipboard.writeText(inviteLink);
-            toast.success('Group invite link copied');
+            toast.success(t('toasts:group.inviteLinkCopied'));
         } catch (error) {
             console.error('Failed to copy invite link', error);
-            toast.error('Failed to copy link');
+            toast.error(t('toasts:group.inviteLinkCopyError'));
         }
     };
 

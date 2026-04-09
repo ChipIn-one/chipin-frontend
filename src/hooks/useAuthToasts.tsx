@@ -1,7 +1,7 @@
+import i18n from 'i18next';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 
-import { MESSAGES } from 'constants/messages';
 import { useAuthStore } from 'store/authStore';
 
 export const useAuthToasts = () => {
@@ -13,11 +13,11 @@ export const useAuthToasts = () => {
         }
 
         if (reason === 'expired') {
-            toast.warning(MESSAGES.error.auth.SESSION_EXPIRED);
+            toast.warning(i18n.t('toasts:auth.sessionExpired'));
         }
 
         if (reason === 'invalid') {
-            toast.error(MESSAGES.error.auth.INVALID_JWT);
+            toast.error(i18n.t('toasts:auth.invalidJwt'));
         }
     }, [status, reason]);
 };

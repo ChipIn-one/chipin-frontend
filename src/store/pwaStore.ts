@@ -1,7 +1,7 @@
+import i18n from 'i18next';
 import { toast } from 'sonner';
 import { create } from 'zustand';
 
-import { MESSAGES } from 'constants/messages';
 import { checkCanPwaBeInstalled } from 'helpers/pwa';
 
 interface PwaStore {
@@ -41,7 +41,7 @@ export const usePwaStore = create<PwaStore>((set, get) => ({
 
         if (outcome === 'accepted') {
             set({ isPwaCanBeInstalled: false, pwaInstallPrompt: null });
-            toast.success(MESSAGES.success.pwa.INSTALLING);
+            toast.success(i18n.t('toasts:pwa.installing'));
         }
     },
 }));
