@@ -1,4 +1,6 @@
-import { LucideLogIn, LucideUserRoundPlus } from 'lucide-react';
+import { useState } from 'react';
+import { LucideBug, LucideLogIn } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 
@@ -16,7 +18,6 @@ import UserAvatar from 'components/UserAvatar';
 import Logotype from 'assets/logo.svg?react';
 
 import AuthModal from './Modal/AuthModal';
-import CreateUpdateGroupModal from './Modal/CreateUpdateGroupModal';
 import HeaderNav from './Navs/HeaderNav';
 import ThemeSwitcherDev from './ThemeSwitcherDev';
 
@@ -34,8 +35,38 @@ const StyledLogotype = styled(Logotype)`
     height: 40px;
 `;
 
+const CrashTestButton = () => {
+    const [shouldCrash, setShouldCrash] = useState(false);
+    const { t } = useTranslation();
+
+    if (!import.meta.env.DEV) {
+        return null;
+    }
+
+    if (shouldCrash) {
+        throw new Error('Manual test error triggered from the header crash button.');
+    }
+
+    return (
+        <IconButton
+            size={{
+                initial: '2',
+                sm: '3',
+            }}
+            variant="soft"
+            color="amber"
+            aria-label={t('header.testError')}
+            title={t('header.testError')}
+            onClick={() => setShouldCrash(true)}
+        >
+            <LucideBug />
+        </IconButton>
+    );
+};
+
 const Header = () => {
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
+    const { t } = useTranslation();
 
     return (
         <StickyBox>
@@ -56,23 +87,10 @@ const Header = () => {
                     {isLoggedIn && <HeaderNav />}
 
                     <Flex gap="4" align="center">
+                        <CrashTestButton />
                         <ThemeSwitcherDev />
                         {isLoggedIn ? (
                             <Flex gap="4" align="center">
-                                <CreateUpdateGroupModal type="create">
-                                    <Box display={{ initial: 'block', sm: 'none' }}>
-                                        <IconButton
-                                            variant="ghost"
-                                            size={{
-                                                initial: '2',
-                                                sm: '3',
-                                            }}
-                                        >
-                                            <LucideUserRoundPlus />
-                                        </IconButton>
-                                    </Box>
-                                </CreateUpdateGroupModal>
-
                                 <Box display={{ initial: 'none', sm: 'block' }}>
                                     <Link to={ROUTES.SETTINGS}>
                                         <UserAvatar size="3" />
@@ -89,7 +107,7 @@ const Header = () => {
                                         }}
                                         variant="outline"
                                     >
-                                        Sign in
+                                        {t('header.signIn')}
                                         <LucideLogIn />
                                     </Button>
                                 </AuthModal>
