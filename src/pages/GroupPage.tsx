@@ -1,5 +1,5 @@
-import { t } from 'i18next';
 import { useEffect } from 'react';
+import { t } from 'i18next';
 import {
     LucideArrowLeftRight,
     LucideCopy,
@@ -40,6 +40,7 @@ import Image from 'basics/Image';
 import ActivityTemplate from 'components/ActivityTemplate';
 import GroupAvatar from 'components/GroupAvatar';
 import GroupsCards from 'components/GroupsCards';
+import GroupsSectionHeader from 'components/GroupsSectionHeader';
 import AddExpenseModal from 'components/Modal/AddExpenseModal';
 import CreateUpdateGroupModal from 'components/Modal/CreateUpdateGroupModal';
 import GroupQRModal from 'components/Modal/GroupQRModal';
@@ -209,11 +210,8 @@ const GroupPage = () => {
                         negativeBalances={3}
                     />
 
-                    <Separator size="4" mt="4" mb="4" />
-                    <Text size="4" weight="medium">
-                        <LucideUsers size={20} />
-                        Other groups
-                    </Text>
+                    <Separator size="4" mt="4" />
+                    <GroupsSectionHeader mt="4" mb="4" label={t('dashboard.groups.otherTitle')} />
                     <GroupsCards groups={groups.filter(group => group.id !== selectedGroup?.id)} />
                     <Card size="4">
                         <Flex direction="column" gap="3">

@@ -40,7 +40,7 @@ const CenterAction = styled(Box)`
     z-index: 2;
 `;
 
-const ActionButton = styled(Button)`
+const AddExpenseButton = styled(Button)`
     width: var(--space-9);
     height: var(--space-9);
     padding: 0;
@@ -107,14 +107,14 @@ const MobileNavBar = () => {
 
                 <CenterAction>
                     <AddExpenseModal>
-                        <ActionButton
+                        <AddExpenseButton
                             size="4"
                             radius="full"
                             color="jade"
                             aria-label={t('expenses.modal.submit')}
                         >
                             <LucidePlus size={28} />
-                        </ActionButton>
+                        </AddExpenseButton>
                     </AddExpenseModal>
                 </CenterAction>
             </NavContent>

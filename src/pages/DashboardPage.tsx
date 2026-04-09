@@ -1,7 +1,7 @@
-import { LucidePlus, LucideUsers } from 'lucide-react';
+import { LucideUsers } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Box, Button, Container, Flex, Grid, Text } from '@radix-ui/themes';
+import { Box, Card, Container, Flex, Grid, Text } from '@radix-ui/themes';
 
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
@@ -9,7 +9,7 @@ import { useLoadingStore } from 'store/loadingStore';
 import ActivityTemplate from 'components/ActivityTemplate';
 import DashBoardSummary from 'components/DashboardSummary';
 import GroupsCards from 'components/GroupsCards';
-import CreateUpdateGroupModal from 'components/Modal/CreateUpdateGroupModal';
+import GroupsSectionHeader from 'components/GroupsSectionHeader';
 import MobileNavBar from 'components/Navs/MobileNavBar';
 
 const DashboardPage = () => {
@@ -17,6 +17,7 @@ const DashboardPage = () => {
     const isLoadingDashboard = useLoadingStore(state => state.dashboard.data);
 
     const { groups } = useGroupsStore();
+    const hasGroups = groups.length > 0;
 
     return (
         <>
@@ -32,26 +33,37 @@ const DashboardPage = () => {
                         <DashBoardSummary isLoading={isLoadingDashboard} />
 
                         <Box>
-                            <Flex gap="2" mb="6" mt="6">
-                                <Flex width="100%" pl="2" pr="2">
-                                    <Flex align="center" gap="2">
-                                        <LucideUsers />
-                                        <Text weight="medium">{t('dashboard.groups.title')}</Text>
-                                    </Flex>
-                                </Flex>
-                            </Flex>
+                            <GroupsSectionHeader
+                                mt="5"
+                                mb="5"
+                                label={t('dashboard.groups.title')}
+                                buttonVariant={hasGroups ? 'soft' : 'solid'}
+                            />
 
-                            <Flex gap="5" direction="column">
-                                <GroupsCards groups={groups} />
+                            <Flex gap="4" direction="column">
+                                {hasGroups ? (
+                                    <GroupsCards groups={groups} />
+                                ) : (
+                                    <Card size="2">
+                                        <Flex
+                                            direction="column"
+                                            align="center"
+                                            gap="2"
+                                            px={{ initial: '2', sm: '4' }}
+                                            py={{ initial: '3', sm: '4' }}
+                                        >
+                                            <LucideUsers size={20} />
 
-                                <Box display={{ initial: 'none', sm: 'block' }}>
-                                    <CreateUpdateGroupModal type="create">
-                                        <Button size="3" variant="soft">
-                                            {t('dashboard.groups.addNew')}
-                                            <LucidePlus />
-                                        </Button>
-                                    </CreateUpdateGroupModal>
-                                </Box>
+                                            <Text size="4" weight="medium" align="center">
+                                                {t('dashboard.groups.emptyTitle')}
+                                            </Text>
+
+                                            <Text size="2" color="gray" align="center">
+                                                {t('dashboard.groups.emptyDescription')}
+                                            </Text>
+                                        </Flex>
+                                    </Card>
+                                )}
                             </Flex>
                         </Box>
                     </Box>
