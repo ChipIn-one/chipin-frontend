@@ -11,14 +11,28 @@ import { Amount } from 'basics/numbers';
 import { ROUTES } from '../constants/routes';
 
 import GroupAvatar from './GroupAvatar';
+// import { useLoadingStore } from 'store/loadingStore';
 
 interface Props {
     groups: ApiGroup[];
 }
 
+// const GROUPS_SKELETON_ITEMS = Array.from({ length: 3 }, (_, index) => ({
+//     id: `group-skeleton-${index}`,
+//     picture: '',
+//     name: 'Group name',
+// }));
+
 const GroupsCards: React.FC<Props> = ({ groups }) => {
+    // const isLoadingDashboard = useLoadingStore(state => state.dashboard.data);
+
     const { setSelectedGroup } = useGroupsStore();
     const { t } = useTranslation();
+
+    // TODO: ADD IS LOADING GROUP ALSO
+
+    // const isSkeletonShown = isLoadingDashboard && !groups.length;
+    // const visibleGroups = isSkeletonShown ? GROUPS_SKELETON_ITEMS : groups;
 
     return (
         <Flex direction="column" gap="4">
@@ -43,7 +57,7 @@ const GroupsCards: React.FC<Props> = ({ groups }) => {
 
                                 <Text size="1" color="gray" as="p">
                                     {t('dashboard.groupsCard.members', {
-                                        count: group.members.length,
+                                        count: group?.members?.length,
                                     })}
                                 </Text>
                             </Flex>
