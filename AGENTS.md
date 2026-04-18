@@ -27,17 +27,20 @@
 
 ## UI System Rules
 
-- Prefer `@radix-ui/themes` components for new UI by default.
+- Prefer `@radix-ui/themes` components for all layout and UI composition by default.
 - If a layout, spacing, color, size, alignment, or variant can be expressed via native Radix props, always use the Radix API first.
+- For spacing and layout parameters such as `gap`, `p`, `px`, `py`, `pt`, `pb`, `pl`, `pr`, `m`, `mx`, `my`, `mt`, `mb`, `align`, `justify`, `width`, `height`, and similar props, use the native Radix API on `Box`, `Flex`, `Grid`, `Container`, `Text`, and related primitives whenever possible.
+- Do **not** introduce routine CSS classes such as `.this_block`, `.header_row`, `.content_wrapper`, etc. for standard component layout.
 - `styled-components` is allowed only in exceptional cases:
-    - when a Radix component cannot be configured with existing props/tokens;
+    - when the requested UI cannot be implemented cleanly with Radix primitives and props alone;
     - when a narrowly scoped override is required by a hard UI/product requirement.
 - Do **not** override Radix styles or introduce custom CSS/styled wrappers unless there is a strict necessity that cannot be solved by Radix composition/props.
 - Do **not** create routine wrappers such as `styled(Flex)`, `styled(Box)`, `styled(Grid)`, `styled(Text)`, etc. for standard layout or spacing; use the Radix primitives directly in JSX.
+- When `styled-components` are necessary, use clear, semantic component naming and keep the styling narrowly scoped.
 - Text content that needs truncation should be rendered with the Radix `Text` component using the `truncate` prop instead of custom CSS truncation wrappers.
 - Do not introduce custom styled wrappers if the same result is possible with Radix props/composition.
 - Do not use inline styles (`style={...}`) on React components.
-- Prefer Radix props, theme tokens, CSS classes, or scoped styled overrides instead of inline styles.
+- Prefer Radix props, theme tokens, and narrowly scoped styled overrides instead of inline styles.
 
 ## Layering and z-index Rules
 
@@ -48,6 +51,8 @@
 
 ## styled-components Color and Spacing Rules
 
+> These rules apply only when `styled-components` usage has already been justified as an exception.
+
 - **Colors** must use theme tokens and a single selector helper: `themeColor('indigo2')`.
     - Never use raw hex colors (`#...`) inside `styled-components` templates.
     - Never access Radix color tokens via CSS variables (`var(--indigo-2)`) inside styled-components templates.
@@ -57,7 +62,7 @@
     - In components, reference palette token names directly (`green8`, `gray11`, etc.); light/dark switching is handled by `lightThemeStyled`/`darkThemeStyled` automatically.
 - **Spacing props** (`padding`, `margin` and their directional variants): prefer native Radix props (`p`, `px`, `py`, `pt`, `pb`, `pl`, `pr`, `m`, `mx`, `my`, etc.) passed directly in JSX.
     - Do **not** hardcode `padding: var(--space-4)` in the CSS template when a `p="4"` JSX prop achieves the same result.
-    - `var(--space-*)` is only acceptable for CSS-only properties that have no Radix prop equivalent — such as `top`, `right`, `bottom`, `left`, `gap` inside a raw CSS rule, etc.
+    - `var(--space-*)` is only acceptable for CSS-only properties that have no Radix prop equivalent — such as `top`, `right`, `bottom`, `left`, `inset`, and similar positional rules.
 - **Radix primitives**: do not wrap `Box`, `Flex`, `Grid`, `Text`, and similar primitives in `styled(...)` for routine presentation.
     - Compose them directly and pass Radix props in JSX.
     - Only introduce a styled wrapper when Radix props/composition cannot express the required UI.
@@ -83,6 +88,7 @@
     // ✅ positional CSS with no Radix prop equivalent — var() is acceptable
     top: var(--space-3);
     bottom: var(--space-6);
+    inset-inline: var(--space-4);
 
     // ❌ never mix — don't use hex or var() for colors in styled templates
     color: #0d1511;

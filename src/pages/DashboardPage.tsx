@@ -73,7 +73,7 @@ const DashboardPage = () => {
                         sm: 'span 2',
                     }}
                 >
-                    <ActivityTemplate isLoading={isLoadingDashboard} />
+                    <ActivityTemplate />
                 </Box>
             </Grid>
 

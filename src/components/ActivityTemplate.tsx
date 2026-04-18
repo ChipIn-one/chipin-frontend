@@ -1,69 +1,98 @@
-import { LucideArrowRight, LucideBanana, LucideChartBar } from 'lucide-react';
+import { LucideArrowRight, LucideChartBar } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 import { Avatar, Box, Button, Card, Flex, Skeleton, Text } from '@radix-ui/themes';
 
+import { AppEvent } from 'api/activity.types';
 import { ROUTES } from 'constants/routes';
-import { DAY, HOUR, MINUTE, SECOND } from 'constants/time';
 import { formatRelativeTime } from 'helpers/time';
+import { useActivityStore } from 'store/activityStore';
+import { useLoadingStore } from 'store/loadingStore';
 
 import { Amount } from 'basics/numbers';
 
-const now = Date.now();
+import UserAvatar from './UserAvatar';
 
-const MOCK_EXPENSES = [
-    {
-        id: '1',
-        description: 'Lunch at Italian Restaurant',
-        amount: 45.67,
-        // 30 seconds ago
-        date: now - 30 * SECOND,
-        paidBy: 'Alice',
-        involved: ['Alice', 'Bob', 'Charlie'],
-    },
-    {
-        id: '2',
-        description: 'Morning Coffee',
-        amount: 4.5,
-        // 10 minutes ago
-        date: now - 10 * MINUTE,
-        paidBy: 'Bob',
-        involved: ['Bob'],
-    },
-    {
-        id: '3',
-        description: 'Grocery Shopping',
-        amount: 78.9,
-        // 3 hours ago
-        date: now - 3 * HOUR,
-        paidBy: 'Bob',
-        involved: ['Alice', 'Bob'],
-    },
-    {
-        id: '4',
-        description: 'Movie Night',
-        amount: 30.0,
-        // Yesterday
-        date: now - 3 * DAY,
-        paidBy: 'Charlie',
-        involved: ['Alice', 'Charlie'],
-    },
-    {
-        id: '5',
-        description: 'Weekend Trip',
-        amount: 210.0,
-        // 13 days ago
-        date: now - 13 * DAY,
-        paidBy: 'Alice',
-        involved: ['Alice', 'Bob'],
-    },
-];
-
-interface Props {
-    isLoading?: boolean;
+interface ActivityListItem {
+    id: string;
+    title: string;
+    description: string;
+    createdAt: number;
+    amount?: number;
+    currency?: string;
+    avatarSrc?: string;
+    avatarFallback: string;
 }
 
-const ActivityTemplate = ({ isLoading = false }: Props) => {
+const getActivityItem = (
+    event: AppEvent,
+    t: (key: string, options?: Record<string, string>) => string,
+): ActivityListItem => {
+    const avatarFallback = event.actorSnapshot.displayName.charAt(0) || '?';
+
+    switch (event.action) {
+        case 'EXPENSE_CREATED': {
+            const amount = Number(event.metadata.amount);
+
+            return {
+                id: event.id,
+                title: event.metadata.description,
+                description: t('activity.event.expenseCreatedDescription', {
+                    payer: event.metadata.payerDisplayName,
+                    group: event.metadata.groupName,
+                }),
+                createdAt: event.createdAt,
+                amount: Number.isFinite(amount) ? amount : undefined,
+                currency: event.metadata.currency,
+                avatarSrc: event.actorSnapshot.picture,
+                avatarFallback,
+            };
+        }
+        case 'GROUP_CREATED':
+            return {
+                id: event.id,
+                title: event.metadata.groupName,
+                description: t('activity.event.groupCreatedDescription', {
+                    actor: event.actorSnapshot.displayName,
+                }),
+                createdAt: event.createdAt,
+                avatarSrc: event.actorSnapshot.picture,
+                avatarFallback,
+            };
+        case 'GROUP_UPDATED':
+            return {
+                id: event.id,
+                title: event.metadata.groupName,
+                description: t('activity.event.groupUpdatedDescription', {
+                    actor: event.actorSnapshot.displayName,
+                }),
+                createdAt: event.createdAt,
+                avatarSrc: event.actorSnapshot.picture,
+                avatarFallback,
+            };
+        case 'GROUP_DELETED':
+            return {
+                id: event.id,
+                title: event.metadata.groupName,
+                description: t('activity.event.groupDeletedDescription', {
+                    actor: event.actorSnapshot.displayName,
+                }),
+                createdAt: event.createdAt,
+                avatarSrc: event.actorSnapshot.picture,
+                avatarFallback,
+            };
+    }
+};
+
+const ActivityTemplate = () => {
+    const { t } = useTranslation();
+    const activity = useActivityStore(state => state.items);
+    const isLoading = useLoadingStore(state => state.dashboard.data);
+    console.log(activity);
+
+    const activityItems = activity.map(event => getActivityItem(event, t));
+
     return (
         <>
             <Box mb="6">
@@ -75,12 +104,12 @@ const ActivityTemplate = ({ isLoading = false }: Props) => {
                         <Flex direction="column">
                             <Skeleton loading={isLoading}>
                                 <Text size="4" weight="medium" as="p" mb="2">
-                                    Your last activity
+                                    {t('activity.title')}
                                 </Text>
                             </Skeleton>
                             <Skeleton loading={isLoading}>
                                 <Text size="2" as="p">
-                                    From all of your groups and friends
+                                    {t('activity.subtitle')}
                                 </Text>
                             </Skeleton>
                         </Flex>
@@ -89,7 +118,7 @@ const ActivityTemplate = ({ isLoading = false }: Props) => {
                     <Skeleton loading={isLoading}>
                         <Link to={ROUTES.ACTIVITY}>
                             <Button variant="ghost" size="4">
-                                View all activities
+                                {t('activity.viewAll')}
                                 <LucideArrowRight />
                             </Button>
                         </Link>
@@ -97,45 +126,63 @@ const ActivityTemplate = ({ isLoading = false }: Props) => {
                 </Flex>
             </Box>
 
-            {MOCK_EXPENSES.map(expense => (
-                <Card key={expense.id} asChild size="2" mb="4">
-                    <button style={{ width: '100%' }}>
-                        <Flex justify="between" align="center">
+            {!isLoading && activityItems.length === 0 ? (
+                <Card size="2">
+                    <Flex direction="column" gap="1">
+                        <Text size="4" weight="medium" as="p">
+                            {t('activity.emptyTitle')}
+                        </Text>
+                        <Text size="2" color="gray" as="p">
+                            {t('activity.emptyDescription')}
+                        </Text>
+                    </Flex>
+                </Card>
+            ) : (
+                activityItems.map(item => (
+                    <Card key={item.id} size="2" mb="4">
+                        <Flex justify="between" align="center" gap="3">
                             <Flex gap="4" align="center">
                                 <Skeleton loading={isLoading}>
-                                    <Avatar size="3" color="cyan" fallback={<LucideBanana />} />
+                                    <UserAvatar
+                                        size="3"
+                                        src={item.avatarSrc}
+                                        fallback={item.avatarFallback}
+                                    />
                                 </Skeleton>
                                 <Box>
                                     <Flex direction="column" gap="1">
                                         <Skeleton loading={isLoading}>
                                             <Text size="4" weight="medium" as="p">
-                                                {expense.description}
+                                                {item.title}
                                             </Text>
                                         </Skeleton>
                                         <Skeleton loading={isLoading}>
                                             <Text size="2" color="gray" as="p">
-                                                Paid by {expense.paidBy}. You owed something
+                                                {item.description}
                                             </Text>
                                         </Skeleton>
                                     </Flex>
                                 </Box>
                             </Flex>
                             <Flex direction="column" align="end" gap="1">
-                                <Skeleton loading={isLoading}>
-                                    <Text size="4" weight="bold" as="p">
-                                        <Amount value={expense.amount} customPrefix="$" />
-                                    </Text>
-                                </Skeleton>
+                                {item.amount !== undefined ? (
+                                    <Skeleton loading={isLoading}>
+                                        <Text size="4" weight="bold" as="p">
+                                            <Amount value={item.amount} tokenCode={item.currency} />
+                                        </Text>
+                                    </Skeleton>
+                                ) : null}
                                 <Skeleton loading={isLoading}>
                                     <Text size="2" color="gray" as="p">
-                                        {formatRelativeTime(expense.date)}
+                                        {/* TODO FORMATTER FOR SECONDS */}
+                                        {formatRelativeTime(new Date(item.createdAt * 1000))}
                                     </Text>
                                 </Skeleton>
                             </Flex>
                         </Flex>
-                    </button>
-                </Card>
-            ))}
+                    </Card>
+                ))
+            )}
         </>
     );
 };

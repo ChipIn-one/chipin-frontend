@@ -267,7 +267,7 @@ const GroupPage = () => {
                         sm: 'span 2',
                     }}
                 >
-                    <ActivityTemplate isLoading={false} />
+                    <ActivityTemplate />
                 </Box>
             </Grid>
 

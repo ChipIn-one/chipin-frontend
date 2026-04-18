@@ -1,6 +1,6 @@
 import { LucideX } from 'lucide-react';
 
-import { Box, Dialog, Flex, IconButton, Text } from '@radix-ui/themes';
+import { Box, Dialog, Flex, IconButton, Separator, Text } from '@radix-ui/themes';
 
 interface Props {
     triggerElement: React.ReactNode;
@@ -29,6 +29,7 @@ const BaseModal = ({
                 <Dialog.Title size="6">
                     <Flex justify="between" align="center">
                         <Box>{title}</Box>
+
                         <Dialog.Close>
                             <IconButton variant="ghost" color="jade">
                                 <LucideX width={24} />
@@ -36,6 +37,7 @@ const BaseModal = ({
                         </Dialog.Close>
                     </Flex>
                 </Dialog.Title>
+                <Separator orientation="horizontal" size="4" />
 
                 <Flex direction="column" gap="6">
                     <Dialog.Description size="4">

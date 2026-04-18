@@ -1,3 +1,5 @@
+import { AppEvent } from './activity.types';
+
 export interface ApiGroup {
     id: string;
     name: string;
@@ -50,6 +52,7 @@ export interface InviteToGroupParams {
 
 export interface DashboardApiResponse {
     groups: ApiGroup[];
+    activity: ApiActivityResponse;
 }
 
 export interface CreateLedgerEntryParams {
@@ -60,4 +63,9 @@ export interface CreateLedgerEntryParams {
     payerId: string;
     participantIds: string[];
     currency: string;
+}
+
+export interface ApiActivityResponse {
+    items: AppEvent[];
+    nextCursor: string | null;
 }

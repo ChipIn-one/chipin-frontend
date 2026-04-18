@@ -1,8 +1,14 @@
 import { create } from 'zustand';
 
+import { AppEvent } from 'api/activity.types';
 import { createApiLedgerEntry } from 'api/chipin';
+import { ApiActivityResponse } from 'api/chipin.types';
 
-export interface DashboardStore {
+export interface ActivityStore {
+    items: AppEvent[];
+    nextCursor: string | null;
+
+    setActivity: (activity: ApiActivityResponse) => void;
     createExpense: ({
         groupId,
         description,
@@ -22,11 +28,17 @@ export interface DashboardStore {
     }) => void;
 }
 
-const initialActivityStore = {};
+const initialActivityStore = {
+    items: [],
+    nextCursor: null,
+};
 
-export const useActivityStore = create<DashboardStore>(() => ({
+export const useActivityStore = create<ActivityStore>(set => ({
     ...initialActivityStore,
 
+    setActivity: (activity: ApiActivityResponse) => {
+        set({ ...activity });
+    },
     createExpense: params => {
         // set({ isLoadingDashboard: true });
 

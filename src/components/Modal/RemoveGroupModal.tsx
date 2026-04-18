@@ -26,11 +26,11 @@ const RemoveGroupModal = ({ children }: Props) => {
         removeGroup()
             .then(groupName => {
                 setIsModalOpened(false);
-                toast.success(`Group "${groupName}" was successfully removed!`);
+                toast.success(t('toasts:group.removed', { name: groupName }));
                 navigate(ROUTES.DASHBOARD, { replace: true });
             })
             .catch(() => {
-                toast.error(`Something went wrong while removing the group.`);
+                toast.error(t('toasts:group.removeError'));
             });
     };
 
