@@ -1,9 +1,21 @@
-import { useMemo, useState } from 'react';
-import { t } from 'i18next';
+import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import styled from 'styled-components';
 
-import { Button, Dialog, Flex, IconButton, Text, TextArea, TextField } from '@radix-ui/themes';
+import {
+    Box,
+    Button,
+    Dialog,
+    Flex,
+    IconButton,
+    ScrollArea,
+    Text,
+    TextArea,
+    TextField,
+} from '@radix-ui/themes';
 
+import { themeColor } from 'helpers/colors';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
 
@@ -14,114 +26,197 @@ interface Props {
     type: 'create' | 'update';
 }
 
-const GROUP_ICONS = [
-    '👥',
-    '🤝',
-    '📌',
-    '🧩',
-    '🗂️',
-    '🔗',
+const GROUP_DESCRIPTION_MAX_LENGTH = 160;
 
-    '💸',
-    '💰',
-    '⚖️',
-    '🏦',
-    '🪙',
+type GroupIconCategoryKey = 'travel' | 'food' | 'home' | 'fun' | 'work';
 
-    '🍕',
-    '🍻',
-    '☕',
-    '🏠',
-    '🚗',
-    '✈️',
-    '🛒',
-    '🎉',
-    '🎂',
-    '🎮',
-    '🎬',
-    '🏕️',
-
-    '🐸',
-    '🦥',
-    '🐷',
-    '🤡',
-    '🔥',
-    '💀',
-    '🙃',
-    '😵‍💫',
-    '🤯',
-    '😬',
-    '😂',
-    '👀',
-    '🫠',
-    '🧠',
-
-    '🌀',
-    '🪐',
-    '🧭',
+const GROUP_ICON_CATEGORIES: ReadonlyArray<{
+    key: GroupIconCategoryKey;
+    labelKey: string;
+    icons: readonly string[];
+}> = [
+    {
+        key: 'travel',
+        labelKey: 'modal.categories.travel',
+        icons: ['✈️', '🧳', '🏖️', '⛰️', '🗺️', '🌍', '🏕️', '🛳️', '🚂', '🏨', '🚢', '🚁'],
+    },
+    {
+        key: 'food',
+        labelKey: 'modal.categories.food',
+        icons: ['🍽️', '🍕', '🍺', '☕', '🥂', '🛒', '🍣', '🍜', '🎂', '🥗', '🍷', '🍔'],
+    },
+    {
+        key: 'home',
+        labelKey: 'modal.categories.home',
+        icons: ['🏠', '🏡', '⚡', '🌿', '📦', '💡', '🔧', '🛏️', '📱', '🖥️', '🐶', '🌱'],
+    },
+    {
+        key: 'fun',
+        labelKey: 'modal.categories.fun',
+        icons: ['🎮', '🎬', '🎵', '⚽', '🎯', '🎪', '🎭', '🎡', '🏋️', '🎨', '🎤', '🎉'],
+    },
+    {
+        key: 'work',
+        labelKey: 'modal.categories.work',
+        icons: ['💼', '📊', '💰', '⚖️', '🏦', '🔗', '🧩', '🚀', '🪙', '📋', '💸', '🎓'],
+    },
 ];
 
+const DEFAULT_CATEGORY_KEY: GroupIconCategoryKey = 'travel';
+const ALL_GROUP_ICONS = GROUP_ICON_CATEGORIES.flatMap(category => category.icons);
+
+const FieldLabel = styled(Text)`
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: ${themeColor('gray11')};
+`;
+
+const CategoriesRow = styled(Flex)`
+    width: max-content;
+    min-width: 100%;
+`;
+
+const CategoryButton = styled(Button)`
+    flex-shrink: 0;
+`;
+
+const IconPanel = styled(Box)`
+    border: 1px solid ${themeColor('gray6')};
+    border-radius: var(--radius-5);
+    background-color: ${themeColor('gray2')};
+`;
+
+const IconsGrid = styled.div`
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    width: 100%;
+`;
+
+const EmojiChoiceButton = styled(IconButton)<{ $selected: boolean }>`
+    flex: 0 0 calc((100% - (var(--space-2) * 5)) / 6);
+    min-width: calc((100% - (var(--space-2) * 5)) / 6);
+    max-width: calc((100% - (var(--space-2) * 5)) / 6);
+    height: var(--space-9);
+    padding: 0;
+    box-sizing: border-box;
+    border: 1px solid ${({ $selected, theme }) => ($selected ? theme.colors.jade8 : 'transparent')};
+    background-color: ${({ $selected, theme }) => ($selected ? theme.colors.jade3 : 'transparent')};
+`;
+
+const PreviewIconBox = styled(Flex)`
+    flex-shrink: 0;
+    width: var(--space-9);
+    height: var(--space-9);
+    border: 1px solid ${themeColor('jade7')};
+    border-radius: var(--radius-5);
+    background-color: ${themeColor('jade3')};
+`;
+
+const GroupNameField = styled(TextField.Root)`
+    width: 100%;
+    min-height: var(--space-9);
+`;
+
+const resolveCategoryFromEmoji = (emoji?: string): GroupIconCategoryKey => {
+    if (!emoji) {
+        return DEFAULT_CATEGORY_KEY;
+    }
+
+    return (
+        GROUP_ICON_CATEGORIES.find(category => category.icons.includes(emoji))?.key ??
+        DEFAULT_CATEGORY_KEY
+    );
+};
+
 const CreateUpdateGroupModal = ({ children, type }: Props) => {
+    const { t } = useTranslation('group');
     const { createGroup, updateGroup, selectedGroup } = useGroupsStore();
     const isCreatingGroup = useLoadingStore(state => state.group.add);
     const isUpdatingGroup = useLoadingStore(state => state.group.update);
     const isCreateMode = type === 'create';
 
-    const [isModalOpened, setIsModalOpened] = useState(false);
-    const [inputGroupName, setInputGroupName] = useState(
-        isCreateMode ? '' : selectedGroup?.name || '',
-    );
-    const [inputGroupDescription, setInputGroupDescription] = useState<string | undefined>(
-        isCreateMode ? '' : selectedGroup?.description || '',
-    );
-    const [selectedEmoji, setSelectedEmoji] = useState<string | undefined>(
-        isCreateMode ? undefined : selectedGroup?.emoji || undefined,
-    );
-    const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
-
-    const onChangeGroupName = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setInputGroupName(event.target.value);
-    };
-
-    const onChangeGroupDescription = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setInputGroupDescription(event.target.value);
-    };
-
     const randomIcon = useMemo(() => {
-        const randomIndex = Math.floor(Math.random() * GROUP_ICONS.length);
-        return GROUP_ICONS[randomIndex];
+        const randomIndex = Math.floor(Math.random() * ALL_GROUP_ICONS.length);
+        return ALL_GROUP_ICONS[randomIndex] ?? '👥';
     }, []);
 
+    const [isModalOpened, setIsModalOpened] = useState(false);
+    const [inputGroupName, setInputGroupName] = useState('');
+    const [inputGroupDescription, setInputGroupDescription] = useState('');
+    const [selectedEmoji, setSelectedEmoji] = useState(randomIcon);
+    const [selectedCategory, setSelectedCategory] =
+        useState<GroupIconCategoryKey>(DEFAULT_CATEGORY_KEY);
+
+    useEffect(() => {
+        const nextName = isCreateMode ? '' : (selectedGroup?.name ?? '');
+        const nextDescription = isCreateMode ? '' : (selectedGroup?.description ?? '');
+        const nextEmoji = isCreateMode ? randomIcon : (selectedGroup?.emoji ?? randomIcon);
+
+        setInputGroupName(nextName);
+        setInputGroupDescription(nextDescription);
+        setSelectedEmoji(nextEmoji);
+        setSelectedCategory(resolveCategoryFromEmoji(nextEmoji));
+    }, [
+        isCreateMode,
+        isModalOpened,
+        randomIcon,
+        selectedGroup?.description,
+        selectedGroup?.emoji,
+        selectedGroup?.name,
+    ]);
+
+    const selectedCategoryIcons = useMemo(
+        () =>
+            GROUP_ICON_CATEGORIES.find(category => category.key === selectedCategory)?.icons ??
+            ALL_GROUP_ICONS,
+        [selectedCategory],
+    );
+
+    const onSelectCategory = (categoryKey: GroupIconCategoryKey) => {
+        setSelectedCategory(categoryKey);
+
+        const nextCategory = GROUP_ICON_CATEGORIES.find(category => category.key === categoryKey);
+
+        if (nextCategory && !nextCategory.icons.includes(selectedEmoji)) {
+            setSelectedEmoji(nextCategory.icons[0]);
+        }
+    };
+
     const onClickSave = () => {
+        const normalizedGroupName = inputGroupName.trim();
+        const normalizedDescription = inputGroupDescription.trim();
+
+        if (!normalizedGroupName) {
+            return;
+        }
+
         if (isCreateMode) {
             createGroup({
-                groupName: inputGroupName,
-                groupDescription: inputGroupDescription,
+                groupName: normalizedGroupName,
+                groupDescription: normalizedDescription || undefined,
                 groupEmoji: selectedEmoji,
             })
                 .then(group => {
                     setIsModalOpened(false);
-                    setInputGroupName('');
-                    setInputGroupDescription('');
-                    setSelectedEmoji(undefined);
-                    toast.success(`Group "${group.name}" created successfully!`);
+                    toast.success(t('toasts:group.created', { name: group.name }));
                 })
                 .catch(error => {
-                    toast.error(`Something went wrong while creating the group.`);
+                    toast.error(t('toasts:group.createError'));
                     console.error('Error creating group:', error);
                 });
         } else {
             updateGroup({
-                groupName: inputGroupName,
-                groupDescription: inputGroupDescription,
+                groupName: normalizedGroupName,
+                groupDescription: normalizedDescription || undefined,
                 groupEmoji: selectedEmoji,
             })
                 .then(updatedGroup => {
                     setIsModalOpened(false);
-                    toast.success(`Group "${updatedGroup.name}" updated successfully!`);
+                    toast.success(t('toasts:group.updated', { name: updatedGroup.name }));
                 })
                 .catch(error => {
-                    toast.error(`Something went wrong while updating the group.`);
+                    toast.error(t('toasts:group.updateError'));
                     console.error('Error updating group:', error);
                 });
         }
@@ -132,93 +227,128 @@ const CreateUpdateGroupModal = ({ children, type }: Props) => {
             isOpened={isModalOpened}
             setIsOpened={setIsModalOpened}
             triggerElement={children}
-            title={isCreateMode ? 'Create new group' : 'Edit group'}
+            title={isCreateMode ? t('modal.titleCreate') : t('modal.titleEdit')}
             maxWidth="480px"
             content={
-                <Flex direction="column" gap="6">
-                    <label>
-                        <Text as="div" size="3" mb="2">
-                            Group name
-                        </Text>
+                <Flex direction="column" gap="5">
+                    <Flex direction="column" gap="2">
+                        <FieldLabel as="div" size="2" weight="medium">
+                            {t('modal.fields.nameLabel')}
+                        </FieldLabel>
 
-                        <TextField.Root
-                            required
-                            size="3"
-                            variant="surface"
-                            placeholder="Enter group name"
-                            type="text"
-                            autoFocus
-                            value={inputGroupName}
-                            onChange={onChangeGroupName}
-                        />
-                    </label>
-                    <label>
-                        <Text as="div" size="3" mb="2">
-                            Group description (optional)
-                        </Text>
+                        <Flex align="stretch" gap="3" width="100%">
+                            <PreviewIconBox align="center" justify="center">
+                                <Text size="7">{selectedEmoji}</Text>
+                            </PreviewIconBox>
 
-                        <TextArea
-                            size="3"
-                            placeholder="Add a description to your group"
-                            value={inputGroupDescription}
-                            onChange={onChangeGroupDescription}
-                        />
-                    </label>
+                            <Box width="100%">
+                                <GroupNameField
+                                    required
+                                    autoFocus
+                                    size="3"
+                                    radius="large"
+                                    variant="surface"
+                                    placeholder={t('modal.fields.namePlaceholder')}
+                                    type="text"
+                                    value={inputGroupName}
+                                    onChange={e => setInputGroupName(e.target.value)}
+                                />
+                            </Box>
+                        </Flex>
+                    </Flex>
 
-                    <Flex direction="column">
-                        <Flex align="center" gap="4">
-                            <IconButton
-                                size="4"
-                                variant={selectedEmoji ? 'surface' : 'outline'}
-                                color={selectedEmoji ? 'blue' : 'gray'}
-                                radius="large"
-                                onClick={() => setIsEmojiPickerOpen(!isEmojiPickerOpen)}
-                            >
-                                <Text size="7">{selectedEmoji || randomIcon}</Text>
-                            </IconButton>
+                    <Flex direction="column" gap="2">
+                        <Flex align="center" justify="between" gap="3">
+                            <Flex align="center" gap="2">
+                                <FieldLabel as="div" size="2" weight="medium">
+                                    {t('modal.fields.descriptionLabel')}
+                                </FieldLabel>
+                                <Text size="2" color="gray">
+                                    {t('modal.fields.descriptionOptional')}
+                                </Text>
+                            </Flex>
+
                             <Text size="2" color="gray">
-                                {selectedEmoji
-                                    ? 'Nice choice!'
-                                    : 'Select an emoji icon for your group'}
+                                {inputGroupDescription.length}/{GROUP_DESCRIPTION_MAX_LENGTH}
                             </Text>
                         </Flex>
 
-                        {isEmojiPickerOpen && (
-                            <Flex gap="2" mt="4" wrap="wrap" align="center" justify="center">
-                                {GROUP_ICONS.map(icon => (
-                                    <IconButton
-                                        key={icon}
-                                        size="2"
-                                        variant={selectedEmoji === icon ? 'classic' : 'outline'}
-                                        color={selectedEmoji === icon ? 'blue' : 'gray'}
-                                        radius="large"
-                                        onClick={() => {
-                                            setSelectedEmoji(icon);
-                                            setIsEmojiPickerOpen(false);
-                                        }}
-                                    >
-                                        <Text size="6">{icon}</Text>
-                                    </IconButton>
-                                ))}
-                            </Flex>
-                        )}
+                        <TextArea
+                            size="3"
+                            radius="large"
+                            maxLength={GROUP_DESCRIPTION_MAX_LENGTH}
+                            placeholder={t('modal.fields.descriptionPlaceholder')}
+                            value={inputGroupDescription}
+                            onChange={e => setInputGroupDescription(e.target.value)}
+                        />
                     </Flex>
 
-                    <Flex justify="end" gap="4">
+                    <Flex direction="column" gap="3">
+                        <Flex align="center" justify="between" gap="3">
+                            <FieldLabel as="div" size="2" weight="medium">
+                                {t('modal.fields.iconLabel')}
+                            </FieldLabel>
+
+                            <Text size="3" color="gray">
+                                {t('modal.fields.selectedIcon', { icon: selectedEmoji })}
+                            </Text>
+                        </Flex>
+
+                        <ScrollArea scrollbars="horizontal">
+                            <CategoriesRow gap="2" pr="1">
+                                {GROUP_ICON_CATEGORIES.map(category => (
+                                    <CategoryButton
+                                        key={category.key}
+                                        type="button"
+                                        size="2"
+                                        radius="full"
+                                        variant={
+                                            selectedCategory === category.key ? 'solid' : 'surface'
+                                        }
+                                        color={selectedCategory === category.key ? 'jade' : 'gray'}
+                                        onClick={() => onSelectCategory(category.key)}
+                                    >
+                                        {t(category.labelKey)}
+                                    </CategoryButton>
+                                ))}
+                            </CategoriesRow>
+                        </ScrollArea>
+
+                        <IconPanel p="2">
+                            <IconsGrid>
+                                {selectedCategoryIcons.map(icon => (
+                                    <EmojiChoiceButton
+                                        key={`${selectedCategory}-${icon}`}
+                                        type="button"
+                                        size="4"
+                                        radius="large"
+                                        variant={selectedEmoji === icon ? 'surface' : 'ghost'}
+                                        color={selectedEmoji === icon ? 'jade' : 'gray'}
+                                        $selected={selectedEmoji === icon}
+                                        onClick={() => setSelectedEmoji(icon)}
+                                    >
+                                        <Text size="6">{icon}</Text>
+                                    </EmojiChoiceButton>
+                                ))}
+                            </IconsGrid>
+                        </IconPanel>
+                    </Flex>
+
+                    <Flex justify="end" gap="3">
                         <Dialog.Close>
                             <Button size="3" variant="soft" color="gray">
-                                {t('buttons.cancel')}
+                                {t('common:buttons.cancel')}
                             </Button>
                         </Dialog.Close>
 
                         <Button
                             size="3"
                             variant="solid"
-                            disabled={!inputGroupName || isCreatingGroup || isUpdatingGroup}
+                            disabled={!inputGroupName.trim() || isCreatingGroup || isUpdatingGroup}
                             loading={isCreatingGroup || isUpdatingGroup}
                             onClick={onClickSave}
                         >
-                            {isCreateMode ? 'Create group' : 'Save group'}
+                            {isCreateMode ? t('modal.actions.create') : t('modal.actions.save')}
                         </Button>
                     </Flex>
                 </Flex>

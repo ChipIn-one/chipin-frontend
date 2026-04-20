@@ -13,7 +13,7 @@ import GroupsSectionHeader from 'components/GroupsSectionHeader';
 import MobileNavBar from 'components/Navs/MobileNavBar';
 
 const DashboardPage = () => {
-    const { t } = useTranslation();
+    const { t } = useTranslation('dashboard');
     const isLoadingDashboard = useLoadingStore(state => state.dashboard.data);
 
     const { groups } = useGroupsStore();
@@ -35,7 +35,7 @@ const DashboardPage = () => {
                         <GroupsSectionHeader
                             mt="5"
                             mb="5"
-                            label={t('dashboard.groups.title')}
+                            label={t('groups.title')}
                             buttonVariant={hasGroups ? 'soft' : 'solid'}
                         />
 
@@ -54,11 +54,11 @@ const DashboardPage = () => {
                                         <LucideUsers size={20} />
 
                                         <Text size="4" weight="medium" align="center">
-                                            {t('dashboard.groups.emptyTitle')}
+                                            {t('groups.emptyTitle')}
                                         </Text>
 
                                         <Text size="2" color="gray" align="center">
-                                            {t('dashboard.groups.emptyDescription')}
+                                            {t('groups.emptyDescription')}
                                         </Text>
                                     </Flex>
                                 </Card>

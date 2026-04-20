@@ -1,0 +1,21 @@
+{
+    "groups": {
+        "title": "Твои группы",
+        "otherTitle": "Другие группы",
+        "subtitle": "Держи общие балансы, поездки и компании в одном месте.",
+        "create": "Создать",
+        "emptyTitle": "Пока нет групп",
+        "emptyDescription": "Создай первую группу, чтобы начать делить расходы с друзьями, соседями или в поездках."
+    },
+    "groupsCard": {
+        "statusOwed": "Тебе должны",
+        "members_one": "{{count}} участник",
+        "members_few": "{{count}} участника",
+        "members_many": "{{count}} участников",
+        "members_other": "{{count}} участника"
+    },
+    "summary": {
+        "totalBalance": "Общий баланс",
+        "totalAcrossGroupsAndFriends": "По группам и друзьям"
+    }
+}

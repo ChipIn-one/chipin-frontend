@@ -11,7 +11,7 @@ interface Props {
 }
 
 const DashBoardSummary: React.FC<Props> = ({ isLoading = false }) => {
-    const { t } = useTranslation();
+    const { t } = useTranslation('dashboard');
     const totalBalance = 285.8;
     const owedToYou = 337.2;
     const youOwe = 51.4;
@@ -24,7 +24,7 @@ const DashBoardSummary: React.FC<Props> = ({ isLoading = false }) => {
                 <Flex direction="column" gap="1">
                     <Skeleton loading={isLoading} width="140px">
                         <Text size="3" weight="medium" color="gray" as="p">
-                            {t('dashboard.summary.totalBalance')}
+                            {t('summary.totalBalance')}
                         </Text>
                     </Skeleton>
 
@@ -36,7 +36,7 @@ const DashBoardSummary: React.FC<Props> = ({ isLoading = false }) => {
 
                     <Skeleton loading={isLoading} width="170px">
                         <Text size="2" color="gray" as="p">
-                            {t('dashboard.summary.totalAcrossGroupsAndFriends')}
+                            {t('summary.totalAcrossGroupsAndFriends')}
                         </Text>
                     </Skeleton>
                 </Flex>

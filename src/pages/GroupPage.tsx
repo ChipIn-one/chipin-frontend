@@ -211,7 +211,7 @@ const GroupPage = () => {
                     />
 
                     <Separator size="4" mt="4" />
-                    <GroupsSectionHeader mt="4" mb="4" label={t('dashboard.groups.otherTitle')} />
+                    <GroupsSectionHeader mt="4" mb="4" label={t('dashboard:groups.otherTitle')} />
                     <GroupsCards groups={groups.filter(group => group.id !== selectedGroup?.id)} />
                     <Card size="4">
                         <Flex direction="column" gap="3">
@@ -224,7 +224,7 @@ const GroupPage = () => {
                                 direction={{ initial: 'column', sm: 'row', md: 'column' }}
                                 gap="3"
                             >
-                                <GroupQRModal qrLink={inviteLink} />
+                                <GroupQRModal qrLink={inviteLink} groupName={selectedGroup?.name} />
 
                                 <Button
                                     variant="solid"

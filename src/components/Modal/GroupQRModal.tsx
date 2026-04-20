@@ -1,6 +1,7 @@
 import { LucideQrCode } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
-import { Button } from '@radix-ui/themes';
+import { Box, Button } from '@radix-ui/themes';
 
 import OfflineQRCode from 'components/OfflineQRCode';
 
@@ -8,18 +9,23 @@ import BaseModal from './BaseModal';
 
 interface Props {
     qrLink: string;
+    groupName: string;
 }
 
 const GroupQRModal = ({ qrLink }: Props) => {
+    const { t } = useTranslation('group');
+
     return (
         <BaseModal
-            title="Group QR code"
-            description="Scan this QR to open the invite link"
+            title={t('qr.title')}
+            description=""
             triggerElement={
-                <Button variant="soft" size="3" style={{ width: '100%' }}>
-                    <LucideQrCode />
-                    Show QR
-                </Button>
+                <Box width="100%" asChild>
+                    <Button variant="soft" size="3">
+                        <LucideQrCode />
+                        {t('qr.showButton')}
+                    </Button>
+                </Box>
             }
             content={<OfflineQRCode url={qrLink} size="large" />}
         />

@@ -1,0 +1,15 @@
+{
+    "title": "Your last activity",
+    "subtitle": "From all of your groups and friends",
+    "viewAll": "View all activities",
+    "emptyTitle": "No activity yet",
+    "emptyDescription": "Recent expenses and group updates will appear here.",
+    "event": {
+        "expenseCreatedDescription": "Paid by {{payer}} in {{group}}",
+        "groupCreatedDescription": "{{actor}} created the group",
+        "groupUpdatedDescription": "{{actor}} updated the group",
+        "groupDeletedDescription": "{{actor}} deleted the group",
+        "unknownTitle": "Activity update",
+        "unknownDescription": "A recent update is available."
+    }
+}

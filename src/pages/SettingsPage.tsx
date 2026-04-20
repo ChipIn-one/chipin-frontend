@@ -1,21 +1,15 @@
 import { useState } from 'react';
-import {
-    LucideBell,
-    LucideGlobe,
-    LucideLogOut,
-    LucideSettings2,
-    LucideShield,
-} from 'lucide-react';
+import { LucideBell, LucideGlobe, LucideLogOut, LucideSettings2, LucideShield } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { useShallow } from 'zustand/react/shallow';
 
 import {
     Avatar,
     Box,
     Button,
     Card,
+    Code,
     Container,
     Flex,
     Grid,
@@ -27,12 +21,13 @@ import {
     Text,
     TextField,
 } from '@radix-ui/themes';
+import { usePreferredLanguage } from '@uidotdev/usehooks';
 
+import { APP_VERSION } from 'constants/version';
 import { useAuthStore } from 'store/authStore';
-import { selectAvailableCurrencies } from 'store/dashboardSelectors';
-import { useDashboardStore } from 'store/dashboardStore';
 import { useUsersStore } from 'store/usersStore';
 
+import CurrencySelect from 'components/CurrencySelect';
 import MobileNavBar from 'components/Navs/MobileNavBar';
 import UserAvatar from 'components/UserAvatar';
 
@@ -51,24 +46,23 @@ const timezoneOptions = [
 const languageOptions = ['en', 'ru'] as const;
 
 const SettingsPage = () => {
-    const { t, i18n } = useTranslation();
+    const { t, i18n } = useTranslation('settings');
     const { theme, setTheme } = useTheme();
 
     const { signOut } = useAuthStore();
-    const availableCurrencies = useDashboardStore(useShallow(selectAvailableCurrencies));
     const { user } = useUsersStore();
 
     const currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
     const [isTimezoneAuto, setIsTimezoneAuto] = useState(true);
     const [timezone, setTimezone] = useState(currentTimezone);
-    const [currency, setCurrency] = useState('USD');
     const [isSimplifyDebtsEnabled, setIsSimplifyDebtsEnabled] = useState(true);
 
-    const normalizedLanguage = i18n.language.split('-')[0];
+    // TODO: Set default language of user, handle first type, hangle localstorage, and user settings
+    const defaultLanguage = usePreferredLanguage();
     const selectedLanguage = languageOptions.includes(
-        normalizedLanguage as (typeof languageOptions)[number],
+        defaultLanguage as (typeof languageOptions)[number],
     )
-        ? normalizedLanguage
+        ? defaultLanguage
         : 'en';
 
     const onLanguageChange = (value: string) => {
@@ -77,10 +71,10 @@ const SettingsPage = () => {
 
     const selectedTheme = (theme as 'light' | 'dark' | 'system' | undefined) || 'system';
     const onLogoutAllDevices = () => {
-        toast.info(t('settings.security.logoutAllDevicesSoon'));
+        toast.info(t('toasts:settings.logoutAllDevicesSoon'));
     };
     const onDeleteAccount = () => {
-        toast.info(t('settings.security.deleteAccountSoon'));
+        toast.info(t('toasts:settings.deleteAccountSoon'));
     };
     const onThemeChange = (value: string) => {
         if (value === 'light' || value === 'dark' || value === 'system') {
@@ -92,9 +86,9 @@ const SettingsPage = () => {
         <Container size="4" pb={{ initial: '9', sm: '4' }}>
             <Flex direction="column" gap="6">
                 <Box>
-                    <Heading size="7">{t('settings.title')}</Heading>
+                    <Heading size="7">{t('title')}</Heading>
                     <Text color="gray" as="p" mt="2">
-                        {t('settings.subtitle')}
+                        {t('subtitle')}
                     </Text>
                 </Box>
 
@@ -104,9 +98,9 @@ const SettingsPage = () => {
                             <Flex align="center" gap="3">
                                 <UserAvatar size="3" />
                                 <Box>
-                                    <Text weight="medium">{t('settings.account.title')}</Text>
+                                    <Text weight="medium">{t('account.title')}</Text>
                                     <Text size="2" color="gray" as="p">
-                                        {t('settings.account.description')}
+                                        {t('account.description')}
                                     </Text>
                                 </Box>
                             </Flex>
@@ -116,19 +110,19 @@ const SettingsPage = () => {
                             <Flex direction="column" gap="3">
                                 <Box>
                                     <Text size="2" color="gray">
-                                        {t('settings.account.displayNameLabel')}
+                                        {t('account.displayNameLabel')}
                                     </Text>
                                     <TextField.Root
                                         mt="2"
                                         size="3"
                                         value={user?.displayName || ''}
-                                        placeholder={t('settings.account.displayNamePlaceholder')}
+                                        placeholder={t('account.displayNamePlaceholder')}
                                         readOnly
                                     />
                                 </Box>
                                 <Box>
                                     <Text size="2" color="gray">
-                                        {t('settings.account.emailLabel')}
+                                        {t('account.emailLabel')}
                                     </Text>
                                     <TextField.Root
                                         mt="2"
@@ -151,9 +145,9 @@ const SettingsPage = () => {
                                     fallback={<LucideGlobe size={20} />}
                                 />
                                 <Box>
-                                    <Text weight="medium">{t('settings.regional.title')}</Text>
+                                    <Text weight="medium">{t('regional.title')}</Text>
                                     <Text size="2" color="gray" as="p">
-                                        {t('settings.regional.description')}
+                                        {t('regional.description')}
                                     </Text>
                                 </Box>
                             </Flex>
@@ -163,11 +157,9 @@ const SettingsPage = () => {
                             <Flex direction="column" gap="4">
                                 <Flex justify="between" align="center" gap="3">
                                     <Box>
-                                        <Text weight="medium">
-                                            {t('settings.regional.autoTimezone')}
-                                        </Text>
+                                        <Text weight="medium">{t('regional.autoTimezone')}</Text>
                                         <Text size="2" color="gray" as="p">
-                                            {t('settings.regional.autoTimezoneHint', {
+                                            {t('regional.autoTimezoneHint', {
                                                 timezone: currentTimezone,
                                             })}
                                         </Text>
@@ -175,13 +167,13 @@ const SettingsPage = () => {
                                     <Switch
                                         checked={isTimezoneAuto}
                                         onCheckedChange={setIsTimezoneAuto}
-                                        aria-label={t('settings.regional.autoTimezone')}
+                                        aria-label={t('regional.autoTimezone')}
                                     />
                                 </Flex>
 
                                 <Box>
                                     <Text size="2" color="gray">
-                                        {t('settings.regional.timezoneLabel')}
+                                        {t('regional.timezoneLabel')}
                                     </Text>
                                     <Select.Root
                                         value={timezone}
@@ -199,24 +191,14 @@ const SettingsPage = () => {
                                     </Select.Root>
                                 </Box>
 
+                                <Text size="2" color="gray">
+                                    {t('regional.currencyLabel')}
+                                </Text>
+                                <CurrencySelect />
+
                                 <Box>
                                     <Text size="2" color="gray">
-                                        {t('settings.regional.currencyLabel')}
-                                    </Text>
-                                    <Select.Root value={currency} onValueChange={setCurrency}>
-                                        <Select.Trigger />
-                                        <Select.Content>
-                                            {availableCurrencies.map(option => (
-                                                <Select.Item key={option} value={option}>
-                                                    {t(`settings.regional.currencies.${option}`)}
-                                                </Select.Item>
-                                            ))}
-                                        </Select.Content>
-                                    </Select.Root>
-                                </Box>
-                                <Box>
-                                    <Text size="2" color="gray">
-                                        {t('settings.regional.languageLabel')}
+                                        {t('regional.languageLabel')}
                                     </Text>
                                     <Select.Root
                                         value={selectedLanguage}
@@ -226,13 +208,13 @@ const SettingsPage = () => {
                                         <Select.Content>
                                             {languageOptions.map(option => (
                                                 <Select.Item key={option} value={option}>
-                                                    {t(`settings.language.options.${option}`)}
+                                                    {t(`language.options.${option}`)}
                                                 </Select.Item>
                                             ))}
                                         </Select.Content>
                                     </Select.Root>
                                     <Text size="2" color="gray" as="p">
-                                        {t('settings.regional.languageHint')}
+                                        {t('regional.languageHint')}
                                     </Text>
                                 </Box>
                             </Flex>
@@ -249,9 +231,9 @@ const SettingsPage = () => {
                                     fallback={<LucideBell size={20} />}
                                 />
                                 <Box>
-                                    <Text weight="medium">{t('settings.notifications.title')}</Text>
+                                    <Text weight="medium">{t('notifications.title')}</Text>
                                     <Text size="2" color="gray" as="p">
-                                        {t('settings.notifications.description')}
+                                        {t('notifications.description')}
                                     </Text>
                                 </Box>
                             </Flex>
@@ -260,26 +242,22 @@ const SettingsPage = () => {
 
                             <Flex justify="between" align="center" gap="3">
                                 <Box>
-                                    <Text weight="medium">
-                                        {t('settings.notifications.pushTitle')}
-                                    </Text>
+                                    <Text weight="medium">{t('notifications.pushTitle')}</Text>
                                     <Text size="2" color="gray" as="p">
-                                        {t('settings.notifications.pushDescription')}
+                                        {t('notifications.pushDescription')}
                                     </Text>
                                 </Box>
-                                <Switch aria-label={t('settings.notifications.pushTitle')} />
+                                <Switch aria-label={t('notifications.pushTitle')} />
                             </Flex>
 
                             <Flex justify="between" align="center" gap="3">
                                 <Box>
-                                    <Text weight="medium">
-                                        {t('settings.notifications.emailTitle')}
-                                    </Text>
+                                    <Text weight="medium">{t('notifications.emailTitle')}</Text>
                                     <Text size="2" color="gray" as="p">
-                                        {t('settings.notifications.emailDescription')}
+                                        {t('notifications.emailDescription')}
                                     </Text>
                                 </Box>
-                                <Switch aria-label={t('settings.notifications.emailTitle')} />
+                                <Switch aria-label={t('notifications.emailTitle')} />
                             </Flex>
                         </Flex>
                     </Card>
@@ -294,9 +272,9 @@ const SettingsPage = () => {
                                     fallback={<LucideSettings2 size={20} />}
                                 />
                                 <Box>
-                                    <Text weight="medium">{t('settings.app.title')}</Text>
+                                    <Text weight="medium">{t('app.title')}</Text>
                                     <Text size="2" color="gray" as="p">
-                                        {t('settings.app.description')}
+                                        {t('app.description')}
                                     </Text>
                                 </Box>
                             </Flex>
@@ -305,39 +283,50 @@ const SettingsPage = () => {
 
                             <Flex direction="column" gap="4">
                                 <Box>
-                                    <Text weight="medium">{t('settings.app.themeTitle')}</Text>
+                                    <Text weight="medium">{t('app.themeTitle')}</Text>
                                     <Text size="2" color="gray" as="p">
-                                        {t('settings.app.themeDescription')}
+                                        {t('app.themeDescription')}
                                     </Text>
                                 </Box>
 
-                                <SegmentedControl.Root value={selectedTheme} onValueChange={onThemeChange}>
+                                <SegmentedControl.Root
+                                    value={selectedTheme}
+                                    onValueChange={onThemeChange}
+                                >
                                     <SegmentedControl.Item value="dark">
-                                        {t('settings.app.themeOptions.dark')}
+                                        {t('app.themeOptions.dark')}
                                     </SegmentedControl.Item>
                                     <SegmentedControl.Item value="light">
-                                        {t('settings.app.themeOptions.light')}
+                                        {t('app.themeOptions.light')}
                                     </SegmentedControl.Item>
                                     <SegmentedControl.Item value="system">
-                                        {t('settings.app.themeOptions.system')}
+                                        {t('app.themeOptions.system')}
                                     </SegmentedControl.Item>
                                 </SegmentedControl.Root>
 
                                 <Flex justify="between" align="center" gap="3">
                                     <Box>
-                                        <Text weight="medium">
-                                            {t('settings.app.simplifyDebtsTitle')}
-                                        </Text>
+                                        <Text weight="medium">{t('app.simplifyDebtsTitle')}</Text>
                                         <Text size="2" color="gray" as="p">
-                                            {t('settings.app.simplifyDebtsDescription')}
+                                            {t('app.simplifyDebtsDescription')}
                                         </Text>
                                     </Box>
                                     <Switch
                                         checked={isSimplifyDebtsEnabled}
                                         onCheckedChange={setIsSimplifyDebtsEnabled}
-                                        aria-label={t('settings.app.simplifyDebtsTitle')}
+                                        aria-label={t('app.simplifyDebtsTitle')}
                                     />
                                 </Flex>
+
+                                <Box>
+                                    <Text weight="medium">{t('app.versionTitle')}</Text>
+                                    <Text size="2" color="gray" as="p">
+                                        {t('app.versionDescription')}
+                                    </Text>
+                                    <Box mt="2">
+                                        <Code>{APP_VERSION}</Code>
+                                    </Box>
+                                </Box>
                             </Flex>
                         </Flex>
                     </Card>
@@ -352,9 +341,9 @@ const SettingsPage = () => {
                                     fallback={<LucideShield size={20} />}
                                 />
                                 <Box>
-                                    <Text weight="medium">{t('settings.security.title')}</Text>
+                                    <Text weight="medium">{t('security.title')}</Text>
                                     <Text size="2" color="gray" as="p">
-                                        {t('settings.security.description')}
+                                        {t('security.description')}
                                     </Text>
                                 </Box>
                             </Flex>
@@ -365,41 +354,45 @@ const SettingsPage = () => {
                                 <Flex justify="between" align="center" gap="3">
                                     <Box>
                                         <Text weight="medium">
-                                            {t('settings.security.logoutAllDevicesTitle')}
+                                            {t('security.logoutAllDevicesTitle')}
                                         </Text>
                                         <Text size="2" color="gray" as="p">
-                                            {t('settings.security.logoutAllDevicesDescription')}
+                                            {t('security.logoutAllDevicesDescription')}
                                         </Text>
                                     </Box>
-                                    <Button variant="soft" color="amber" onClick={onLogoutAllDevices}>
-                                        {t('settings.security.logoutAllDevicesButton')}
+                                    <Button
+                                        variant="soft"
+                                        color="amber"
+                                        onClick={onLogoutAllDevices}
+                                    >
+                                        {t('security.logoutAllDevicesButton')}
                                     </Button>
                                 </Flex>
 
                                 <Flex justify="between" align="center" gap="3">
                                     <Box>
                                         <Text weight="medium">
-                                            {t('settings.security.deleteAccountTitle')}
+                                            {t('security.deleteAccountTitle')}
                                         </Text>
                                         <Text size="2" color="gray" as="p">
-                                            {t('settings.security.deleteAccountDescription')}
+                                            {t('security.deleteAccountDescription')}
                                         </Text>
                                     </Box>
                                     <Button variant="soft" color="red" onClick={onDeleteAccount}>
-                                        {t('settings.security.deleteAccountButton')}
+                                        {t('security.deleteAccountButton')}
                                     </Button>
                                 </Flex>
 
                                 <Flex justify="between" align="center" gap="3">
                                     <Box>
-                                        <Text weight="medium">{t('settings.signOut')}</Text>
+                                        <Text weight="medium">{t('signOut')}</Text>
                                         <Text size="2" color="gray" as="p">
-                                            {t('settings.security.signOutDescription')}
+                                            {t('security.signOutDescription')}
                                         </Text>
                                     </Box>
                                     <Button onClick={signOut} color="red">
                                         <LucideLogOut size={16} />
-                                        {t('settings.signOut')}
+                                        {t('signOut')}
                                     </Button>
                                 </Flex>
                             </Flex>

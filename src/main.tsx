@@ -10,6 +10,7 @@ import { darkThemeStyled, lightThemeStyled } from 'constants/styled-themes';
 import BackgroundBox from 'basics/BackgroundBox';
 import PWABadge from 'basics/PWABadge';
 import AddExpenseButton from 'components/AddExpenseButton';
+import GlobalErrorBoundary from 'components/GlobalErrorBoundary';
 import Header from 'components/Header';
 import AppRouter from 'features/AppRouter';
 import GlobalHooks from 'pages/GlobalHooks';
@@ -29,24 +30,27 @@ const Main = () => {
                 panelBackground="translucent"
                 hasBackground
             >
-                <BrowserRouter>
-                    <BackgroundBox>
-                        <Header />
-                        <GlobalHooks />
-                        <Box px="4">
-                            <AppRouter />
-                        </Box>
-                        <AddExpenseButton />
-                        <PWABadge />
+                <GlobalErrorBoundary>
+                    <BrowserRouter>
+                        <BackgroundBox>
+                            <Header />
+                            <GlobalHooks />
+                            <Box px="4">
+                                <AppRouter />
+                            </Box>
+                            <AddExpenseButton />
+                            <PWABadge />
 
-                        <Toaster
-                            theme={themeName}
-                            richColors
-                            closeButton
-                            mobileOffset={{ bottom: '64px' }}
-                        />
-                    </BackgroundBox>
-                </BrowserRouter>
+                            <Toaster
+                                theme={themeName}
+                                richColors
+                                closeButton
+                                position="bottom-left"
+                                mobileOffset={{ bottom: '64px' }}
+                            />
+                        </BackgroundBox>
+                    </BrowserRouter>
+                </GlobalErrorBoundary>
             </Theme>
         </ThemeProvider>
     );

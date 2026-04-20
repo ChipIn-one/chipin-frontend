@@ -1,0 +1,15 @@
+{
+    "title": "Последняя активность",
+    "subtitle": "Из всех ваших групп и друзей",
+    "viewAll": "Смотреть всю активность",
+    "emptyTitle": "Активности пока нет",
+    "emptyDescription": "Здесь появятся последние траты и обновления групп.",
+    "event": {
+        "expenseCreatedDescription": "Оплатил(а) {{payer}} в группе {{group}}",
+        "groupCreatedDescription": "{{actor}} создал(а) группу",
+        "groupUpdatedDescription": "{{actor}} обновил(а) группу",
+        "groupDeletedDescription": "{{actor}} удалил(а) группу",
+        "unknownTitle": "Обновление активности",
+        "unknownDescription": "Появилось новое событие."
+    }
+}

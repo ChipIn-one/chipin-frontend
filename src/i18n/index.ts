@@ -8,7 +8,17 @@ i18n.use(initReactI18next).init({
     lng: 'en',
     fallbackLng: 'en',
 
-    ns: ['common', 'apiErrors', 'toasts'],
+    ns: [
+        'common',
+        'apiErrors',
+        'toasts',
+        'landing',
+        'activity',
+        'group',
+        'dashboard',
+        'settings',
+        'friends',
+    ],
     defaultNS: 'common',
 
     interpolation: {

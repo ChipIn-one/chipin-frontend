@@ -12,7 +12,7 @@ type Props = Omit<ComponentProps<typeof Flex>, 'children'> & {
 };
 
 const GroupsSectionHeader = ({ label, buttonVariant = 'soft', ...flexProps }: Props) => {
-    const { t } = useTranslation();
+    const { t } = useTranslation('dashboard');
 
     return (
         <Flex align="center" justify="between" gap="3" wrap="wrap" {...flexProps}>
@@ -26,7 +26,7 @@ const GroupsSectionHeader = ({ label, buttonVariant = 'soft', ...flexProps }: Pr
             <CreateUpdateGroupModal type="create">
                 <Button size="2" variant={buttonVariant}>
                     <LucidePlus size={16} />
-                    {t('dashboard.groups.create')}
+                    {t('groups.create')}
                 </Button>
             </CreateUpdateGroupModal>
         </Flex>

@@ -12,6 +12,7 @@ import { useGroupsStore } from 'store/groupsStore';
 import { useUsersStore } from 'store/usersStore';
 
 import BaseModal from './BaseModal';
+import CurrencySelect from 'components/CurrencySelect';
 
 const EXPENSE_CURRENCIES = [
     { value: 'USD', flag: '🇺🇸' },
@@ -29,7 +30,7 @@ interface Props {
 }
 
 const AddExpenseModal = ({ children }: Props) => {
-    const { t } = useTranslation();
+    const { t } = useTranslation('group');
     const { user } = useUsersStore();
     const { groups, selectedGroup } = useGroupsStore();
     const { createExpense } = useActivityStore();
@@ -205,20 +206,8 @@ const AddExpenseModal = ({ children }: Props) => {
                         </Text>
 
                         <Grid columns={{ initial: '1', xs: '2' }} gap="3">
-                            <Select.Root value={currency} onValueChange={setCurrency}>
-                                <Select.Trigger />
-
-                                <Select.Content>
-                                    {EXPENSE_CURRENCIES.map(option => (
-                                        <Select.Item key={option.value} value={option.value}>
-                                            <Flex align="center" gap="2">
-                                                <Text as="span">{option.flag}</Text>
-                                                <Text as="span">{option.value}</Text>
-                                            </Flex>
-                                        </Select.Item>
-                                    ))}
-                                </Select.Content>
-                            </Select.Root>
+                            {/* //TODO USE HERE DeFAULT GROUP CURRENCY */}
+                            <CurrencySelect onChange={setCurrency} currency={currency} />
 
                             <TextField.Root
                                 size="3"
@@ -298,7 +287,7 @@ const AddExpenseModal = ({ children }: Props) => {
                             color="gray"
                             onClick={() => onOpenChange(false)}
                         >
-                            {t('buttons.cancel')}
+                            {t('common:buttons.cancel')}
                         </Button>
 
                         <Button

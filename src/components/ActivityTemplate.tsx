@@ -38,7 +38,7 @@ const getActivityItem = (
             return {
                 id: event.id,
                 title: event.metadata.description,
-                description: t('activity.event.expenseCreatedDescription', {
+                description: t('event.expenseCreatedDescription', {
                     payer: event.metadata.payerDisplayName,
                     group: event.metadata.groupName,
                 }),
@@ -53,7 +53,7 @@ const getActivityItem = (
             return {
                 id: event.id,
                 title: event.metadata.groupName,
-                description: t('activity.event.groupCreatedDescription', {
+                description: t('event.groupCreatedDescription', {
                     actor: event.actorSnapshot.displayName,
                 }),
                 createdAt: event.createdAt,
@@ -64,7 +64,7 @@ const getActivityItem = (
             return {
                 id: event.id,
                 title: event.metadata.groupName,
-                description: t('activity.event.groupUpdatedDescription', {
+                description: t('event.groupUpdatedDescription', {
                     actor: event.actorSnapshot.displayName,
                 }),
                 createdAt: event.createdAt,
@@ -75,7 +75,7 @@ const getActivityItem = (
             return {
                 id: event.id,
                 title: event.metadata.groupName,
-                description: t('activity.event.groupDeletedDescription', {
+                description: t('event.groupDeletedDescription', {
                     actor: event.actorSnapshot.displayName,
                 }),
                 createdAt: event.createdAt,
@@ -86,7 +86,7 @@ const getActivityItem = (
 };
 
 const ActivityTemplate = () => {
-    const { t } = useTranslation();
+    const { t } = useTranslation('activity');
     const activity = useActivityStore(state => state.items);
     const isLoading = useLoadingStore(state => state.dashboard.data);
     console.log(activity);
@@ -104,12 +104,12 @@ const ActivityTemplate = () => {
                         <Flex direction="column">
                             <Skeleton loading={isLoading}>
                                 <Text size="4" weight="medium" as="p" mb="2">
-                                    {t('activity.title')}
+                                    {t('title')}
                                 </Text>
                             </Skeleton>
                             <Skeleton loading={isLoading}>
                                 <Text size="2" as="p">
-                                    {t('activity.subtitle')}
+                                    {t('subtitle')}
                                 </Text>
                             </Skeleton>
                         </Flex>
@@ -118,7 +118,7 @@ const ActivityTemplate = () => {
                     <Skeleton loading={isLoading}>
                         <Link to={ROUTES.ACTIVITY}>
                             <Button variant="ghost" size="4">
-                                {t('activity.viewAll')}
+                                {t('viewAll')}
                                 <LucideArrowRight />
                             </Button>
                         </Link>
@@ -130,10 +130,10 @@ const ActivityTemplate = () => {
                 <Card size="2">
                     <Flex direction="column" gap="1">
                         <Text size="4" weight="medium" as="p">
-                            {t('activity.emptyTitle')}
+                            {t('emptyTitle')}
                         </Text>
                         <Text size="2" color="gray" as="p">
-                            {t('activity.emptyDescription')}
+                            {t('emptyDescription')}
                         </Text>
                     </Flex>
                 </Card>

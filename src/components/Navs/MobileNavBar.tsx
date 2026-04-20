@@ -64,7 +64,7 @@ const NavButton = styled(Button)`
 `;
 
 const MobileNavBar = () => {
-    const { t } = useTranslation();
+    const { t } = useTranslation('group');
     const location = useLocation();
 
     const renderNavItem = ({ label, href, Icon }: (typeof NAV_ELEMENTS)[number]) => {

@@ -1,0 +1,19 @@
+{
+    "groups": {
+        "title": "Your groups",
+        "otherTitle": "Other groups",
+        "subtitle": "Keep shared balances and trips organized in one place.",
+        "create": "Create",
+        "emptyTitle": "No groups yet",
+        "emptyDescription": "Create your first group to start splitting expenses with friends, roommates, or travel buddies."
+    },
+    "groupsCard": {
+        "statusOwed": "You are owed",
+        "members_one": "{{count}} member",
+        "members_other": "{{count}} members"
+    },
+    "summary": {
+        "totalBalance": "Total balance",
+        "totalAcrossGroupsAndFriends": "Across groups and friends"
+    }
+}

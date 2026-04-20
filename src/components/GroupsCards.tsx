@@ -27,7 +27,7 @@ const GroupsCards: React.FC<Props> = ({ groups }) => {
     // const isLoadingDashboard = useLoadingStore(state => state.dashboard.data);
 
     const { setSelectedGroup } = useGroupsStore();
-    const { t } = useTranslation();
+    const { t } = useTranslation('dashboard');
 
     // TODO: ADD IS LOADING GROUP ALSO
 
@@ -51,12 +51,12 @@ const GroupsCards: React.FC<Props> = ({ groups }) => {
                                 </Text>
 
                                 <Text size="2" color="grass" weight="medium" as="p">
-                                    {t('dashboard.groupsCard.statusOwed')}{' '}
+                                    {t('groupsCard.statusOwed')}{' '}
                                     <Amount value={15} customPrefix="$" />
                                 </Text>
 
                                 <Text size="1" color="gray" as="p">
-                                    {t('dashboard.groupsCard.members', {
+                                    {t('groupsCard.members', {
                                         count: group?.members?.length,
                                     })}
                                 </Text>

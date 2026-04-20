@@ -17,7 +17,7 @@ const FloatingBox = styled(Box)`
 `;
 
 const AddExpenseButton = () => {
-    const { t } = useTranslation();
+    const { t } = useTranslation('group');
     const location = useLocation();
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
 

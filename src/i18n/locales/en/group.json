@@ -1,0 +1,85 @@
+{
+    "modal": {
+        "titleCreate": "Create new group",
+        "titleEdit": "Edit group",
+        "fields": {
+            "nameLabel": "Group name",
+            "namePlaceholder": "e.g. Barcelona Trip, Apartment...",
+            "descriptionLabel": "Description",
+            "descriptionOptional": "(optional)",
+            "descriptionPlaceholder": "Add a note about this group...",
+            "iconLabel": "Icon",
+            "selectedIcon": "Selected: {{icon}}"
+        },
+        "categories": {
+            "travel": "Travel",
+            "food": "Food & Drinks",
+            "home": "Home & Life",
+            "fun": "Fun & Sports",
+            "work": "Work & Money"
+        },
+        "actions": {
+            "create": "Create group",
+            "save": "Save group"
+        }
+    },
+    "qr": {
+        "title": "Scan to join",
+        "description": "Share this QR code to invite people to the group.",
+        "showButton": "Show QR code",
+        "shareText": "Share this code to invite people to {{groupName}}"
+    },
+    "expenses": {
+        "modal": {
+            "title": "Add an expense",
+            "description": "Split a new expense with your group members.",
+            "fields": {
+                "group": "Group",
+                "description": "Description",
+                "descriptionPlaceholder": "e.g. Hotel booking, dinner...",
+                "amountAndCurrency": "Amount & currency",
+                "amountPlaceholder": "0.00",
+                "category": "Category",
+                "paidBy": "Paid by"
+            },
+            "categories": {
+                "food": "Food & Dining",
+                "transport": "Transport",
+                "housing": "Housing & Utilities",
+                "shopping": "Shopping",
+                "health": "Health",
+                "lifestyle": "Lifestyle",
+                "subscriptions": "Subscriptions",
+                "travel": "Travel",
+                "education": "Education",
+                "finance": "Finance",
+                "government": "Government",
+                "family": "Family",
+                "pets": "Pets",
+                "transfers": "Transfers",
+                "charity": "Charity",
+                "other": "Other"
+            },
+            "currentUser": "You",
+            "splitHint": "Split equally among the group.",
+            "noMembers": "No group members available yet.",
+            "submit": "Add expense"
+        }
+    },
+    "page": {
+        "members": "members",
+        "loadingGroup": "Loading group...",
+        "addExpense": "Add expense",
+        "settleUp": "Settle up",
+        "noDescription": "No description yet. Add one in group settings.",
+        "groupActions": "Group actions",
+        "copyGroupLink": "Copy group link",
+        "updateGroup": "Update group",
+        "removeGroup": "Remove group",
+        "shareWarning": "Share invite link with trusted people only.",
+        "notFound": "No group id or group not found",
+        "deleteTitle": "Delete group",
+        "deleteConfirm": "Are you sure you want to delete this group?",
+        "deleteWarning": "This action cannot be undone. All group data will be permanently deleted."
+    }
+}

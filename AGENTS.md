@@ -145,6 +145,7 @@
 - For every new page/section, add locale keys immediately in both `src/i18n/locales/en/*` and `src/i18n/locales/ru/*` within the same task.
 - Do not leave raw user-facing string literals in JSX; use `t('...')` keys instead.
 - Existing hardcoded strings exist; do not add new hardcoded user-facing strings in JSX.
+- If a translation text is used in more than one namespace file, move it to `common.json` and reference via `common:` prefix. Do not duplicate the same translation across multiple locale files.
 
 ## Global Constants Pattern
 
