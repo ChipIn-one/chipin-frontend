@@ -8,8 +8,7 @@
             "descriptionLabel": "Описание",
             "descriptionOptional": "(необязательно)",
             "descriptionPlaceholder": "Добавь заметку об этой группе...",
-            "iconLabel": "Иконка",
-            "selectedIcon": "Выбрано: {{icon}}"
+            "iconLabel": "Иконка"
         },
         "categories": {
             "travel": "Путешествия",

@@ -8,8 +8,7 @@
             "descriptionLabel": "Description",
             "descriptionOptional": "(optional)",
             "descriptionPlaceholder": "Add a note about this group...",
-            "iconLabel": "Icon",
-            "selectedIcon": "Selected: {{icon}}"
+            "iconLabel": "Icon"
         },
         "categories": {
             "travel": "Travel",

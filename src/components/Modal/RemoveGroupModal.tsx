@@ -15,7 +15,7 @@ import BaseModal from './BaseModal';
 interface Props {
     children: React.ReactNode;
 }
-
+// TODO: Refactor to alert dialog
 const RemoveGroupModal = ({ children }: Props) => {
     const navigate = useNavigate();
     const { removeGroup } = useGroupsStore();

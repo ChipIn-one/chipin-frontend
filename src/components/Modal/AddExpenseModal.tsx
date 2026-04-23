@@ -11,8 +11,9 @@ import { useActivityStore } from 'store/activityStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useUsersStore } from 'store/usersStore';
 
-import BaseModal from './BaseModal';
 import CurrencySelect from 'components/CurrencySelect';
+
+import BaseModal from './BaseModal';
 
 const EXPENSE_CURRENCIES = [
     { value: 'USD', flag: '🇺🇸' },

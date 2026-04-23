@@ -6,7 +6,6 @@ set -e
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 # common parts
-COUNT=$(git rev-list --count HEAD)
 HASH=$(git rev-parse --short HEAD)
 
 if [ "$BRANCH" = "main" ]; then
@@ -14,11 +13,11 @@ if [ "$BRANCH" = "main" ]; then
   if git describe --tags --abbrev=0 >/dev/null 2>&1; then
     VERSION=$(git describe --tags --always)
   else
-    VERSION="${COUNT}-${HASH}"
+    VERSION="${HASH}"
   fi
 else
   # dev branch (and everything else)
-  VERSION="dev-${COUNT}-${HASH}"
+  VERSION="dev-${HASH}"
 fi
 
 # write to file
