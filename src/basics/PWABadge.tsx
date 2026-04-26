@@ -8,7 +8,7 @@ import { TOASTS_IDS } from 'constants/toasts';
 import { APP_VERSION } from 'constants/version';
 
 const PWA_UPDATED_KEY = 'pwa-just-updated';
-
+// Test: new build autoupdate
 const PWABadge = () => {
     // After auto-reload: show "updated to vX" toast if flag was set
     useEffect(() => {
