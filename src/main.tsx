@@ -6,6 +6,7 @@ import { ThemeProvider } from 'styled-components';
 import { Box, Theme } from '@radix-ui/themes';
 
 import { darkThemeStyled, lightThemeStyled } from 'constants/styled-themes';
+import { useIsMobile } from 'hooks/common';
 
 import BackgroundBox from 'basics/BackgroundBox';
 import PWABadge from 'basics/PWABadge';
@@ -19,6 +20,7 @@ const Main = () => {
     const { resolvedTheme } = useTheme();
     const themeName = (resolvedTheme as 'light' | 'dark') || 'system';
     const styledThemeParams = themeName === 'dark' ? darkThemeStyled : lightThemeStyled;
+    const isMobile = useIsMobile();
 
     return (
         <ThemeProvider theme={styledThemeParams}>
@@ -45,8 +47,9 @@ const Main = () => {
                                 theme={themeName}
                                 richColors
                                 closeButton
-                                position="bottom-left"
-                                mobileOffset={{ bottom: '64px' }}
+                                position={isMobile ? 'top-center' : 'bottom-left'}
+                                offset={isMobile ? 12 : 16}
+                                mobileOffset={isMobile ? 12 : 16}
                             />
                         </BackgroundBox>
                     </BrowserRouter>

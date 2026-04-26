@@ -11,12 +11,7 @@ type Props = Omit<ComponentProps<typeof Flex>, 'children'> & {
     isLoading?: boolean;
 };
 
-const GroupsSectionHeader = ({
-    label,
-
-    isLoading = false,
-    ...flexProps
-}: Props) => {
+const GroupsSectionHeader = ({ label, isLoading = false, ...flexProps }: Props) => {
     const { t } = useTranslation('dashboard');
 
     return (

@@ -1,6 +1,5 @@
+import { useCheckOnlineStatus, useCheckPwa } from 'hooks/pwaHooks';
 import { useAuthToasts } from 'hooks/useAuthToasts';
-import { useCheckOnlineStatus } from 'hooks/useCheckOnlineStatus';
-import { useCheckPwa } from 'hooks/useCheckPwa';
 import { useCheckSignIn } from 'hooks/useCheckSignIn';
 import { useRoutesMeta } from 'hooks/useRoutesMeta';
 

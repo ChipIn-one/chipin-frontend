@@ -189,6 +189,11 @@ Radix Themes uses compound component patterns. Always use the correct compositio
 - Import from `basics/numbers` (public entry), not from deep internal paths, unless extending the number system itself.
 - Keep formatting logic inside `basics/numbers` and `helpers/numbers`; UI layers should only pass value/format props.
 
+## Custom Hooks
+
+- Before writing a custom hook, check if `@uidotdev/usehooks` already provides it — prefer the library over reinventing the wheel.
+- Custom hooks in `src/hooks/*` should only exist for app-specific logic that has no equivalent in `@uidotdev/usehooks`.
+
 ## Dependency Rules (Current Architecture)
 
 - Pages/components/hooks/features can read from stores.
