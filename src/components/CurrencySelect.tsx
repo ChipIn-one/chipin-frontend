@@ -1,9 +1,10 @@
-import { Box, Button, Flex, Popover, ScrollArea, Text, TextField } from '@radix-ui/themes';
-import { LucideCheck, LucideChevronDown, LucideSearch } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { LucideCheck, LucideChevronDown, LucideSearch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { useShallow } from 'zustand/react/shallow';
+
+import { Box, Button, Flex, Popover, ScrollArea, Text, TextField } from '@radix-ui/themes';
 
 import { selectAvailableCurrencies, selectDefaultCurrency } from 'store/dashboardSelectors';
 import { useDashboardStore } from 'store/dashboardStore';

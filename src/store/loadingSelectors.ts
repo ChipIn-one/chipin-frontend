@@ -10,3 +10,4 @@ export const selectGroupAdding = (s: LoadingStore) => s.group.add === 'loading';
 export const selectGroupUpdating = (s: LoadingStore) => s.group.update === 'loading';
 export const selectGroupRemoving = (s: LoadingStore) => s.group.remove === 'loading';
 export const selectGroupJoining = (s: LoadingStore) => s.group.join === 'loading';
+export const selectGroupLeaving = (s: LoadingStore) => s.group.leave === 'loading';

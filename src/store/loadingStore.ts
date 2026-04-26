@@ -9,6 +9,7 @@ export interface LoadingStore {
         update: LoadingState;
         remove: LoadingState;
         join: LoadingState;
+        leave: LoadingState;
     };
     dashboard: {
         data: LoadingState;
@@ -35,6 +36,7 @@ const initialLoadingStore: LoadingSlices = {
         join: 'initial',
         remove: 'initial',
         update: 'initial',
+        leave: 'initial',
     },
     users: { self: 'initial', friends: 'initial' },
 };

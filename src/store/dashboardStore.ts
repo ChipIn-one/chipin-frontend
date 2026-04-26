@@ -215,11 +215,10 @@ export const useDashboardStore = create<DashboardStore>(() => ({
             .then(data => {
                 setGroups(data.groups);
                 setActivity(data.activity);
+                setLoading('dashboard', 'data', 'fetched');
             })
             .catch(error => {
                 console.error('Error fetching dashboard data:', error);
-            })
-            .finally(() => {
                 setLoading('dashboard', 'data', 'fetched');
             });
     },

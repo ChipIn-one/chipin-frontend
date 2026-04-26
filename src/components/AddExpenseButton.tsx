@@ -1,4 +1,4 @@
-import { LucideCirclePlus } from 'lucide-react';
+import { LucideCirclePlus, LucidePlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import styled from 'styled-components';
@@ -6,6 +6,7 @@ import styled from 'styled-components';
 import { Box, Button } from '@radix-ui/themes';
 
 import { ROUTES } from 'constants/routes';
+import { themeColor } from 'helpers/colors';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 
@@ -16,21 +17,39 @@ const FloatingBox = styled(Box)`
     right: var(--space-4);
 `;
 
-const AddExpenseButton = () => {
+const ButtonMobile = styled(Button)`
+    width: var(--space-9);
+    height: var(--space-9);
+    padding: 0;
+    border: 6px solid ${themeColor('grass7')};
+`;
+
+interface Props {
+    type?: 'mobile' | 'desktop';
+}
+
+const AddExpenseButton = ({ type = 'desktop' }: Props) => {
     const { t } = useTranslation('group');
     const location = useLocation();
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
 
-    const isGroupJoinRoute = location.pathname.startsWith(`${ROUTES.GROUP_JOIN}/`);
-    const isGroupRoute = location.pathname.startsWith(`${ROUTES.GROUP}/`) && !isGroupJoinRoute;
-    const isVisibleRoute =
-        location.pathname === ROUTES.DASHBOARD ||
-        location.pathname === ROUTES.ACTIVITY ||
-        location.pathname === ROUTES.FRIENDS ||
-        isGroupRoute;
+    const isVisibleRoute = location.pathname !== ROUTES.SETTINGS;
 
     if (!isLoggedIn || !isVisibleRoute) {
         return null;
+    }
+
+    if (type === 'mobile') {
+        return (
+            <ButtonMobile
+                size="4"
+                radius="full"
+                color="jade"
+                aria-label={t('expenses.modal.submit')}
+            >
+                <LucidePlus size={28} />
+            </ButtonMobile>
+        );
     }
 
     return (

@@ -1,12 +1,11 @@
-import { LucidePlus } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 
 import { Box, Button, Flex, Text } from '@radix-ui/themes';
 
-import { themeColor } from 'helpers/colors';
+import { ROUTES } from 'constants/routes';
 
+import AddExpenseButton from 'components/AddExpenseButton';
 import AddExpenseModal from 'components/Modal/AddExpenseModal';
 
 import { NAV_ELEMENTS } from './constants';
@@ -16,14 +15,13 @@ const BoxWrapper = styled(Box)`
     overflow: visible;
 `;
 
-const NavSurface = styled(Box)`
+const NavSurface = styled(Box)<{ $showNotch?: boolean }>`
     position: absolute;
     inset: 0;
-    background: radial-gradient(
-        circle var(--space-7) at 50% 0,
-        transparent var(--space-7),
-        ${themeColor('grass3')} calc(var(--space-7))
-    );
+    background: ${({ $showNotch, theme }) =>
+        $showNotch
+            ? `radial-gradient(circle var(--space-7) at 50% 0, transparent var(--space-7), ${theme.colors['grass3']} calc(var(--space-7)))`
+            : theme.colors['grass3']};
 `;
 
 const NavContent = styled(Flex)`
@@ -38,13 +36,6 @@ const CenterAction = styled(Box)`
     left: 50%;
     transform: translate(-50%, -50%);
     z-index: 2;
-`;
-
-const AddExpenseButton = styled(Button)`
-    width: var(--space-9);
-    height: var(--space-9);
-    padding: 0;
-    border: 6px solid ${themeColor('grass3')};
 `;
 
 const NavLink = styled(Link)`
@@ -64,8 +55,9 @@ const NavButton = styled(Button)`
 `;
 
 const MobileNavBar = () => {
-    const { t } = useTranslation('group');
     const location = useLocation();
+
+    const isVisibleExpenseButton = location.pathname !== ROUTES.SETTINGS;
 
     const renderNavItem = ({ label, href, Icon }: (typeof NAV_ELEMENTS)[number]) => {
         const isActive = location.pathname === href || location.pathname.startsWith(`${href}/`);
@@ -74,8 +66,9 @@ const MobileNavBar = () => {
             <Box key={href} flexGrow="1">
                 <NavLink to={href}>
                     <NavButton
+                        color="green"
                         radius="none"
-                        variant={isActive ? 'soft' : 'surface'}
+                        variant={isActive ? 'solid' : 'surface'}
                         {...(!isActive && { color: 'gray' })}
                     >
                         <Flex direction="column" align="center" justify="center" gap="1" py="1">
@@ -98,7 +91,7 @@ const MobileNavBar = () => {
             left="0"
             right="0"
         >
-            <NavSurface />
+            <NavSurface $showNotch={isVisibleExpenseButton} />
 
             <NavContent align="stretch">
                 <NavItems justify="between" align="stretch">
@@ -107,14 +100,7 @@ const MobileNavBar = () => {
 
                 <CenterAction>
                     <AddExpenseModal>
-                        <AddExpenseButton
-                            size="4"
-                            radius="full"
-                            color="jade"
-                            aria-label={t('expenses.modal.submit')}
-                        >
-                            <LucidePlus size={28} />
-                        </AddExpenseButton>
+                        <AddExpenseButton type="mobile" />
                     </AddExpenseModal>
                 </CenterAction>
             </NavContent>

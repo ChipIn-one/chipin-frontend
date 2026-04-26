@@ -83,6 +83,15 @@ const getActivityItem = (
                 avatarSrc: event.actorSnapshot.picture,
                 avatarFallback,
             };
+        default:
+            return {
+                id: new Date().getTime().toString(),
+                title: t('event.unknownEvent'),
+                description: '',
+                createdAt: new Date().getTime() / 1000,
+                avatarSrc: '',
+                avatarFallback,
+            };
     }
 };
 
@@ -91,6 +100,7 @@ const ActivityTemplate = () => {
     const activity = useActivityStore(state => state.items);
     const isLoading = useLoadingStore(selectDashboardLoading);
     console.log(activity);
+    console.log(isLoading);
 
     const activityItems = activity.map(event => getActivityItem(event, t));
 

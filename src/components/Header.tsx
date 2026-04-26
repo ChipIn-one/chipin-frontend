@@ -27,7 +27,7 @@ const StickyBox = styled(Box)`
     top: 0;
     width: 100%;
     z-index: 1;
-    border-bottom: 1px solid ${themeColor('green8')};
+    border-bottom: 1px solid ${themeColor('green6')};
     backdrop-filter: blur(10px);
 `;
 

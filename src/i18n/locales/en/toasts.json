@@ -19,6 +19,8 @@
     "updateError": "Something went wrong while updating the group.",
     "removed": "Group \"{{name}}\" was successfully removed!",
     "removeError": "Something went wrong while removing the group.",
+    "left": "You left the group \"{{name}}\".",
+    "leaveError": "Something went wrong while leaving the group.",
     "inviteLinkNotReady": "Invite link is not ready yet",
     "inviteLinkCopied": "Group invite link copied",
     "inviteLinkCopyError": "Failed to copy link"

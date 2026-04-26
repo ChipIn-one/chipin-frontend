@@ -35,7 +35,7 @@ const ErrorBackground = styled(Box)`
 
 // opacity has no Radix prop equivalent; position and inset are passed via JSX props
 const Overlay = styled(Box)`
-    background-color: ${themeColor('gray1')};
+    background-color: ${themeColor('gray9')};
     opacity: 0.4;
 `;
 

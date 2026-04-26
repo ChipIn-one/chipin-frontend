@@ -79,6 +79,14 @@
         "notFound": "No group id or group not found",
         "deleteTitle": "Delete group",
         "deleteConfirm": "Are you sure you want to delete this group?",
-        "deleteWarning": "This action cannot be undone. All group data will be permanently deleted."
+        "deleteWarning": "This action cannot be undone. All group data will be permanently deleted.",
+        "leaveGroup": "Leave group"
+    },
+    "leaveModal": {
+        "title": "Leave group",
+        "confirm": "Are you sure you want to leave this group?",
+        "ownerWarning": "You are the owner. Please transfer ownership before leaving.",
+        "newOwnerPlaceholder": "Select new owner",
+        "confirmButton": "Leave group"
     }
 }

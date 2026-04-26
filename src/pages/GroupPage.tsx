@@ -4,6 +4,7 @@ import {
     LucideArrowLeftRight,
     LucideCopy,
     LucideInfo,
+    LucideLogOut,
     LucidePlus,
     LucideSettings,
     LucideSlidersHorizontal,
@@ -44,7 +45,7 @@ import DashBoardSummary from 'components/DashboardSummary';
 import GroupAvatar from 'components/GroupAvatar';
 import GroupsCards from 'components/GroupsCards';
 import GroupsSectionHeader from 'components/GroupsSectionHeader';
-import { AddExpenseModal, CreateUpdateGroupModal } from 'components/Modal';
+import { AddExpenseModal, CreateUpdateGroupModal, LeaveGroupModal } from 'components/Modal';
 import GroupQRModal from 'components/Modal/GroupQRModal';
 import RemoveGroupModal from 'components/Modal/RemoveGroupModal';
 import MobileNavBar from 'components/Navs/MobileNavBar';
@@ -181,6 +182,13 @@ const GroupPage = () => {
                                         Remove group
                                     </Button>
                                 </RemoveGroupModal>
+
+                                <LeaveGroupModal>
+                                    <Button variant="solid" color="orange" size="3">
+                                        <LucideLogOut />
+                                        Leave group
+                                    </Button>
+                                </LeaveGroupModal>
                             </Flex>
 
                             <Flex align="start" gap="2">

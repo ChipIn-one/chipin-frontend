@@ -55,6 +55,40 @@
 - If elements must stack above each other, render them through portals instead of trying to force order with `z-index`.
 - A non-default `z-index` is allowed only as a documented exception when portal composition cannot solve the issue; keep it narrowly scoped and explain the reason in code.
 
+## Radix Color Scale Semantics
+
+Radix Colors uses a 12-step scale per hue. Each step has a defined semantic purpose — always pick the step that matches the use case, not just the shade you like visually.
+
+| Step | Use case |
+|------|----------|
+| 1 | App background |
+| 2 | Subtle background (cards, code blocks, sidebars, canvas) |
+| 3 | UI element background — normal state |
+| 4 | UI element background — hover state |
+| 5 | UI element background — active/selected state |
+| 6 | Subtle border on **non-interactive** components (headers, cards, separators, sidebars, alerts) |
+| 7 | Border on **interactive** components (inputs, buttons) — normal state |
+| 8 | Border on **interactive** components — hover state; focus rings |
+| 9 | Solid background — normal state (highest chroma; also used for overlays, accent borders, coloured shadows) |
+| 10 | Solid background — hover state |
+| 11 | Low-contrast text |
+| 12 | High-contrast text |
+
+**Rules derived from the scale:**
+- Never use a **background step (1–5)** for a border CSS property. Borders must use steps 6–8.
+- Never use a **border step (6–8)** for a background or text CSS property.
+- Never use a **text step (11–12)** for a background or border CSS property.
+- Static non-interactive containers (headers, sidebars, cards) → border step **6**.
+- Interactive components (inputs, buttons) → border step **7** (normal) / **8** (hover/focus).
+- Solid-fill backgrounds for components, overlays, badges → steps **9–10**.
+- Most step 9 colors use white foreground text; `Sky`, `Mint`, `Lime`, `Yellow`, `Amber` need **dark** foreground text on steps 9–10.
+
+**Semantic scale pairings (Western conventions):**
+- Error: `red`, `ruby`, `tomato`, `crimson`
+- Success: `green`, `teal`, `jade`, `grass`, `mint`
+- Warning: `yellow`, `amber`, `orange`
+- Info: `blue`, `indigo`, `sky`, `cyan`
+
 ## styled-components Color and Spacing Rules
 
 > These rules apply only when `styled-components` usage has already been justified as an exception.
@@ -66,6 +100,7 @@
     - Use `themeColor('token')` from `src/helpers/colors.ts` in styled templates for consistency and readability.
     - If a needed color token does not exist yet, extend the theme mapping/helper instead of hardcoding a hex fallback.
     - In components, reference palette token names directly (`green8`, `gray11`, etc.); light/dark switching is handled by `lightThemeStyled`/`darkThemeStyled` automatically.
+    - Always choose the token step that matches its semantic role per the **Radix Color Scale Semantics** table above (e.g. `gray6` for a subtle non-interactive border, `gray7` for an interactive input border, `gray11` for low-contrast text).
 - **Spacing props** (`padding`, `margin` and their directional variants): prefer native Radix props (`p`, `px`, `py`, `pt`, `pb`, `pl`, `pr`, `m`, `mx`, `my`, etc.) passed directly in JSX.
     - Do **not** hardcode `padding: var(--space-4)` in the CSS template when a `p="4"` JSX prop achieves the same result.
     - `var(--space-*)` is only acceptable for CSS-only properties that have no Radix prop equivalent — such as `top`, `right`, `bottom`, `left`, `inset`, and similar positional rules.

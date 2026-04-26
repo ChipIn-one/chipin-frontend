@@ -42,11 +42,6 @@ const FieldLabel = styled(Text)`
     text-transform: uppercase;
 `;
 
-const CategoriesRow = styled(Flex)`
-    width: max-content;
-    min-width: 100%;
-`;
-
 const CategoryButton = styled(Button)`
     flex-shrink: 0;
 `;
@@ -249,7 +244,7 @@ const GroupForm = ({ type, onClose }: FormProps) => {
                 </Flex>
 
                 <ScrollArea scrollbars="horizontal" type="always">
-                    <CategoriesRow gap="2" mb="3">
+                    <Flex gap="2" mb="3">
                         {GROUP_ICON_CATEGORIES.map(category => (
                             <CategoryButton
                                 key={category.key}
@@ -263,7 +258,7 @@ const GroupForm = ({ type, onClose }: FormProps) => {
                                 {t(category.labelKey)}
                             </CategoryButton>
                         ))}
-                    </CategoriesRow>
+                    </Flex>
                 </ScrollArea>
 
                 <IconPanel p="2">

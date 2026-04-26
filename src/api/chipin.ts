@@ -13,6 +13,7 @@ import {
     CreateLedgerEntryParams,
     DashboardApiResponse,
     InviteToGroupParams,
+    LeaveGroupParams,
     RemoveGroupParams,
     RemoveGroupResponse,
     UpdateGroupParams,
@@ -108,6 +109,12 @@ export const removeApiGroup = async ({
     const response = await apiInstance.delete(`/groups/${groupId}`);
 
     return response.data;
+};
+
+export const leaveApiGroup = async ({ groupId, newOwnerId }: LeaveGroupParams): Promise<void> => {
+    await apiInstance.post(`/groups/${groupId}/leave`, {
+        ...(newOwnerId && { newOwnerId }),
+    });
 };
 
 export const inviteApiUserToGroup = async ({

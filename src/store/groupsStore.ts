@@ -6,6 +6,7 @@ import {
     createApiGroup,
     fetchApiUserGroupById,
     inviteApiUserToGroup,
+    leaveApiGroup,
     removeApiGroup,
     updateApiGroup,
 } from 'api/chipin';
@@ -31,6 +32,7 @@ interface GroupsStore {
         groupEmoji?: string;
     }) => Promise<ApiGroup>;
     removeGroup: () => Promise<ApiGroup['name']>;
+    leaveGroup: (params?: { newOwnerId?: string }) => Promise<ApiGroup['name']>;
     joinGroup: ({ inviteToken }: { inviteToken: string }) => Promise<ApiGroup>;
 }
 
@@ -153,10 +155,35 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 setLoading('group', 'remove', 'fetched');
             });
     },
+    leaveGroup: params => {
+        const selectedGroup = get().selectedGroup;
+
+        if (!selectedGroup) {
+            return Promise.reject(new Error('No selected group'));
+        }
+
+        const { setLoading } = useLoadingStore.getState();
+        setLoading('group', 'leave', 'loading');
+
+        return leaveApiGroup({ groupId: selectedGroup.id, newOwnerId: params?.newOwnerId })
+            .then(() => {
+                const { groups } = get();
+                const updatedGroups = groups.filter(group => group.id !== selectedGroup.id);
+
+                set({
+                    groups: updatedGroups,
+                    selectedGroup: null,
+                });
+
+                return selectedGroup.name;
+            })
+            .finally(() => {
+                setLoading('group', 'leave', 'fetched');
+            });
+    },
     joinGroup: ({ inviteToken }) => {
         const { setLoading } = useLoadingStore.getState();
         setLoading('group', 'join', 'loading');
-
         return inviteApiUserToGroup({ inviteToken })
             .then(joinedGroup => {
                 const { groups } = get();

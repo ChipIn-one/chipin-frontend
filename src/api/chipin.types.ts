@@ -46,6 +46,11 @@ export interface RemoveGroupParams {
     groupId: string;
 }
 
+export interface LeaveGroupParams {
+    groupId: string;
+    newOwnerId?: string;
+}
+
 export interface InviteToGroupParams {
     inviteToken: string;
 }
