@@ -8,7 +8,7 @@ import { TOASTS_IDS } from 'constants/toasts';
 import { APP_VERSION } from 'constants/version';
 
 const PWA_LAST_VERSION_KEY = 'pwa-last-version';
-
+// Test version toast
 const PWABadge = () => {
     // Show toast when APP_VERSION differs from the last stored version
     useEffect(() => {
