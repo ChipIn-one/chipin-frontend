@@ -1,29 +1,11 @@
 import { useEffect } from 'react';
-import i18n from 'i18next';
+import i18n from 'i18n';
 import { toast } from 'sonner';
 import { registerSW } from 'virtual:pwa-register';
 
 import { HOUR } from 'constants/time';
-import { TOASTS_IDS } from 'constants/toasts';
-import { APP_VERSION } from 'constants/version';
 
-const PWA_LAST_VERSION_KEY = 'pwa-last-version';
-// Test version toast
 const PWABadge = () => {
-    // Show toast when APP_VERSION differs from the last stored version
-    useEffect(() => {
-        const lastVersion = localStorage.getItem(PWA_LAST_VERSION_KEY);
-
-        if (lastVersion && lastVersion !== APP_VERSION) {
-            toast.success(i18n.t('toasts:pwa.updated', { version: APP_VERSION }), {
-                id: TOASTS_IDS.pwaUpdated,
-                duration: 5000,
-            });
-        }
-
-        localStorage.setItem(PWA_LAST_VERSION_KEY, APP_VERSION);
-    }, []);
-
     // Register SW once — auto-update silently on new version
     useEffect(() => {
         const ref: { update?: (reloadPage?: boolean) => void } = {};
