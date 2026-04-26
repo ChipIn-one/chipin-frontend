@@ -24,9 +24,9 @@ const PWABadge = () => {
 
     // Register SW once — auto-update silently on new version
     useEffect(() => {
-        let updateSWFn: ((reloadPage?: boolean) => void) | undefined;
+        const ref: { update?: (reloadPage?: boolean) => void } = {};
 
-        updateSWFn = registerSW({
+        ref.update = registerSW({
             onOfflineReady() {
                 toast.success(i18n.t('toasts:pwa.offlineReady'), { duration: 3000 });
             },
@@ -34,18 +34,18 @@ const PWABadge = () => {
             onNeedRefresh() {
                 // Flag the version before reload so the toast shows after
                 localStorage.setItem(PWA_UPDATED_KEY, APP_VERSION);
-                updateSWFn?.(true);
+                ref.update?.(true);
             },
 
-            onRegisteredSW(swUrl, r) {
-                if (HOUR > 0 && r) {
-                    registerPeriodicSync(HOUR, swUrl, r);
+            onRegisteredSW(swUrl, registration) {
+                if (HOUR > 0 && registration) {
+                    registerPeriodicSync(HOUR, swUrl, registration);
                 }
 
                 // Also check for updates whenever the user returns to the tab
                 document.addEventListener('visibilitychange', () => {
                     if (document.visibilityState === 'visible' && navigator.onLine) {
-                        r.update();
+                        registration?.update();
                     }
                 });
             },
