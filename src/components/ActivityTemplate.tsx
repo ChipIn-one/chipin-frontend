@@ -8,6 +8,7 @@ import { AppEvent } from 'api/activity.types';
 import { ROUTES } from 'constants/routes';
 import { formatRelativeTime } from 'helpers/time';
 import { useActivityStore } from 'store/activityStore';
+import { selectDashboardLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
 import { Amount } from 'basics/numbers';
@@ -88,7 +89,7 @@ const getActivityItem = (
 const ActivityTemplate = () => {
     const { t } = useTranslation('activity');
     const activity = useActivityStore(state => state.items);
-    const isLoading = useLoadingStore(state => state.dashboard.data);
+    const isLoading = useLoadingStore(selectDashboardLoading);
     console.log(activity);
 
     const activityItems = activity.map(event => getActivityItem(event, t));

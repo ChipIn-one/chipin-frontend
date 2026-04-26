@@ -17,6 +17,7 @@
     },
     "errorBoundary": {
         "title": "Something went wrong",
-        "description": "An unexpected error occurred and the application couldn't recover. Your session data is intact — try reloading or go back to the home page."
+        "summary": "An unexpected error occurred",
+        "description": "The application couldn't recover. Your session data is intact - try reloading or go back to the home page."
     }
 }

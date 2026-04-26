@@ -9,6 +9,7 @@ import { Box, Button, Container, Flex, IconButton, Text } from '@radix-ui/themes
 import { PROJECT_NAME } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
 import { themeColor } from 'helpers/colors';
+import { getIsDevEnv } from 'helpers/env';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 
@@ -38,10 +39,6 @@ const StyledLogotype = styled(Logotype)`
 const CrashTestButton = () => {
     const [shouldCrash, setShouldCrash] = useState(false);
     const { t } = useTranslation();
-
-    if (!import.meta.env.DEV) {
-        return null;
-    }
 
     if (shouldCrash) {
         throw new Error('Manual test error triggered from the header crash button.');
@@ -87,8 +84,8 @@ const Header = () => {
                     {isLoggedIn && <HeaderNav />}
 
                     <Flex gap="4" align="center">
-                        <CrashTestButton />
-                        <ThemeSwitcherDev />
+                        {getIsDevEnv() && <CrashTestButton />}
+                        {getIsDevEnv() && <ThemeSwitcherDev />}
                         {isLoggedIn ? (
                             <Flex gap="4" align="center">
                                 <Box display={{ initial: 'none', sm: 'block' }}>

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Box, Card, Container, Flex, Grid, Text } from '@radix-ui/themes';
 
 import { useGroupsStore } from 'store/groupsStore';
+import { selectDashboardFetched, selectDashboardLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
 import ActivityTemplate from 'components/ActivityTemplate';
@@ -14,7 +15,8 @@ import MobileNavBar from 'components/Navs/MobileNavBar';
 
 const DashboardPage = () => {
     const { t } = useTranslation('dashboard');
-    const isLoadingDashboard = useLoadingStore(state => state.dashboard.data);
+    const isDashboardLoading = useLoadingStore(selectDashboardLoading);
+    const isDashboardFetched = useLoadingStore(selectDashboardFetched);
 
     const { groups } = useGroupsStore();
     const hasGroups = groups.length > 0;
@@ -29,18 +31,18 @@ const DashboardPage = () => {
                     }}
                     mb="6"
                 >
-                    <DashBoardSummary isLoading={isLoadingDashboard} />
+                    <DashBoardSummary isLoading={isDashboardLoading} />
 
                     <Box>
                         <GroupsSectionHeader
-                            mt="5"
-                            mb="5"
+                            mt="4"
+                            mb="4"
                             label={t('groups.title')}
-                            buttonVariant={hasGroups ? 'soft' : 'solid'}
+                            isLoading={isDashboardLoading}
                         />
 
                         <Flex gap="4" direction="column">
-                            {hasGroups ? (
+                            {!isDashboardFetched || hasGroups ? (
                                 <GroupsCards groups={groups} />
                             ) : (
                                 <Card size="2">

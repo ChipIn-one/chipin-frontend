@@ -1,41 +1,42 @@
 import { create } from 'zustand';
 
-interface LoadingStore {
+export type LoadingState = 'initial' | 'loading' | 'fetched';
+
+export interface LoadingStore {
     group: {
-        add: boolean;
-        update: boolean;
-        remove: boolean;
-        join: boolean;
+        data: LoadingState;
+        add: LoadingState;
+        update: LoadingState;
+        remove: LoadingState;
+        join: LoadingState;
     };
     dashboard: {
-        data: boolean;
+        data: LoadingState;
     };
     users: {
-        self: boolean;
-        friends: boolean;
+        self: LoadingState;
+        friends: LoadingState;
     };
 
     setLoading: <S extends keyof LoadingStore, F extends keyof LoadingStore[S]>(
         section: S,
         field: F,
-        value: boolean,
+        value: LoadingState,
     ) => void;
 }
 
-const initialLoadingStore = {
-    dashboard: {
-        data: false,
-    },
+type LoadingSlices = Omit<LoadingStore, 'setLoading'>;
+
+const initialLoadingStore: LoadingSlices = {
+    dashboard: { data: 'initial' },
     group: {
-        add: false,
-        join: false,
-        remove: false,
-        update: false,
+        data: 'initial',
+        add: 'initial',
+        join: 'initial',
+        remove: 'initial',
+        update: 'initial',
     },
-    users: {
-        friends: false,
-        self: false,
-    },
+    users: { self: 'initial', friends: 'initial' },
 };
 
 export const useLoadingStore = create<LoadingStore>((set, get) => ({

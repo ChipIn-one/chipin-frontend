@@ -8,6 +8,7 @@ import { Button, Callout, Dialog, Flex, Text } from '@radix-ui/themes';
 
 import { ROUTES } from 'constants/routes';
 import { useGroupsStore } from 'store/groupsStore';
+import { selectGroupRemoving } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
 import BaseModal from './BaseModal';
@@ -19,7 +20,7 @@ interface Props {
 const RemoveGroupModal = ({ children }: Props) => {
     const navigate = useNavigate();
     const { removeGroup } = useGroupsStore();
-    const isRemovingGroup = useLoadingStore(state => state.group.remove);
+    const isRemovingGroup = useLoadingStore(selectGroupRemoving);
     const [isModalOpened, setIsModalOpened] = useState(false);
 
     const onRemoveGroup = () => {

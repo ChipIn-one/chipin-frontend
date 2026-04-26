@@ -35,18 +35,19 @@ import {
 
 import { buildGroupInviteLink } from 'helpers/url';
 import { useGroupsStore } from 'store/groupsStore';
+import { selectGroupDataFetched, selectGroupDataLoading } from 'store/loadingSelectors';
+import { useLoadingStore } from 'store/loadingStore';
 
 import Image from 'basics/Image';
 import ActivityTemplate from 'components/ActivityTemplate';
+import DashBoardSummary from 'components/DashboardSummary';
 import GroupAvatar from 'components/GroupAvatar';
 import GroupsCards from 'components/GroupsCards';
 import GroupsSectionHeader from 'components/GroupsSectionHeader';
-import { CreateUpdateGroupModal } from 'components/Modal';
-import AddExpenseModal from 'components/Modal/AddExpenseModal';
+import { AddExpenseModal, CreateUpdateGroupModal } from 'components/Modal';
 import GroupQRModal from 'components/Modal/GroupQRModal';
 import RemoveGroupModal from 'components/Modal/RemoveGroupModal';
 import MobileNavBar from 'components/Navs/MobileNavBar';
-import SummaryDebtCards from 'components/SummaryDebtCards';
 import UsersRow from 'components/UsersRow';
 
 const CoverWrapper = styled(Box)`
@@ -75,14 +76,30 @@ const CoverTopActions = styled(Box)`
 `;
 
 const GroupPage = () => {
-    const { groups, selectedGroup, isLoadingGroup, fetchSetGroupById } = useGroupsStore();
+    const { groups, selectedGroup, fetchSetGroupById } = useGroupsStore();
+    const isGroupDataLoading = useLoadingStore(selectGroupDataLoading);
+    const isGroupDataFetched = useLoadingStore(selectGroupDataFetched);
     const { groupId } = useParams<{ groupId: string }>();
 
     useEffect(() => {
         fetchSetGroupById(groupId);
     }, [groupId, fetchSetGroupById]);
 
-    if (!groupId || !selectedGroup || (!selectedGroup && !isLoadingGroup)) {
+    if (!groupId) {
+        return (
+            <Container size="4" py="6">
+                <Card>
+                    <Text color="red">No group id or group not found</Text>
+                </Card>
+            </Container>
+        );
+    }
+
+    if (!selectedGroup) {
+        if (!isGroupDataFetched) {
+            return null;
+        }
+
         return (
             <Container size="4" py="6">
                 <Card>
@@ -111,91 +128,6 @@ const GroupPage = () => {
 
     return (
         <Container size="4" pb={{ initial: '9', sm: '4' }}>
-            <Card size="4" mb="6">
-                <Inset clip="border-box" side="top" pb="current">
-                    <CoverWrapper>
-                        <AspectRatio ratio={16 / 4}>
-                            <Image
-                                src={
-                                    selectedGroup?.coverUrl ||
-                                    'https://www.virginaustralia.com/content/dam/vaa/images/destinations/bali/best-islands-near-bali/vaa-1440x620-best-islands-near-bali.jpg/jcr:content/renditions/vaacore.web.1920.0.jpg'
-                                }
-                                alt={`${selectedGroup?.name} cover`}
-                                width="100%"
-                            />
-                        </AspectRatio>
-                        <CoverGradient />
-                        <CoverTopActions>
-                            <CreateUpdateGroupModal type="update">
-                                <IconButton variant="ghost" color="gray" size="2">
-                                    <LucideSlidersHorizontal size={18} />
-                                </IconButton>
-                            </CreateUpdateGroupModal>
-                        </CoverTopActions>
-
-                        <CoverInfo p="4">
-                            <Flex gap="2" align="center">
-                                <Skeleton loading={isLoadingGroup}>
-                                    {selectedGroup ? (
-                                        <GroupAvatar group={selectedGroup} size="5" />
-                                    ) : (
-                                        <Avatar size="5" fallback={<LucideUsers />} />
-                                    )}
-                                </Skeleton>
-                                <Flex gap="1" direction="column">
-                                    <Box>
-                                        <Skeleton loading={isLoadingGroup}>
-                                            <Badge size="2" color="cyan" variant="surface">
-                                                {selectedGroup?.members.length ?? 0} members
-                                            </Badge>
-                                        </Skeleton>
-                                    </Box>
-                                    <Box>
-                                        <Skeleton loading={isLoadingGroup}>
-                                            <Heading size="6">
-                                                {selectedGroup?.name || 'Loading group...'}
-                                            </Heading>
-                                        </Skeleton>
-                                    </Box>
-                                </Flex>
-                            </Flex>
-                        </CoverInfo>
-                    </CoverWrapper>
-                </Inset>
-                <Flex direction="column" gap="4">
-                    {selectedGroup && (
-                        <Flex align="center" justify="between" gap="2" wrap="wrap">
-                            <UsersRow members={selectedGroup.members} max={10} size="2" />
-                            <Flex gap="2" align="center">
-                                <AddExpenseModal>
-                                    <Button variant="outline" size="2">
-                                        <LucidePlus size={15} />
-                                        Add expense
-                                    </Button>
-                                </AddExpenseModal>
-                                <Button size="2" color="green">
-                                    <LucideArrowLeftRight size={15} />
-                                    Settle up
-                                </Button>
-                            </Flex>
-                        </Flex>
-                    )}
-                    {selectedGroup?.description && (
-                        <>
-                            <Separator size="4" />
-                            <Flex direction="column" gap="2">
-                                <Skeleton loading={isLoadingGroup}>
-                                    <Text>
-                                        {selectedGroup?.description ||
-                                            'No description yet. Add one in group settings.'}
-                                    </Text>
-                                </Skeleton>
-                            </Flex>
-                        </>
-                    )}
-                </Flex>
-            </Card>
-
             <Grid columns="3" gap="6">
                 <Box
                     gridColumn={{
@@ -204,14 +136,14 @@ const GroupPage = () => {
                     }}
                     mb="6"
                 >
-                    <SummaryDebtCards
-                        isLoading={isLoadingGroup}
-                        positiveBalances={5}
-                        negativeBalances={3}
-                    />
+                    <DashBoardSummary />
 
-                    <Separator size="4" mt="4" />
-                    <GroupsSectionHeader mt="4" mb="4" label={t('dashboard:groups.otherTitle')} />
+                    <GroupsSectionHeader
+                        mt="4"
+                        mb="4"
+                        label={t('dashboard:groups.otherTitle')}
+                        isLoading={isGroupDataLoading}
+                    />
                     <GroupsCards groups={groups.filter(group => group.id !== selectedGroup?.id)} />
                     <Card size="4">
                         <Flex direction="column" gap="3">
@@ -267,6 +199,91 @@ const GroupPage = () => {
                         sm: 'span 2',
                     }}
                 >
+                    <Card size="4" mb="6">
+                        <Inset clip="border-box" side="top" pb="current">
+                            <CoverWrapper>
+                                <AspectRatio ratio={16 / 4}>
+                                    <Image
+                                        src={
+                                            selectedGroup?.coverUrl ||
+                                            'https://www.virginaustralia.com/content/dam/vaa/images/destinations/bali/best-islands-near-bali/vaa-1440x620-best-islands-near-bali.jpg/jcr:content/renditions/vaacore.web.1920.0.jpg'
+                                        }
+                                        alt={`${selectedGroup?.name} cover`}
+                                        width="100%"
+                                    />
+                                </AspectRatio>
+                                <CoverGradient />
+                                <CoverTopActions>
+                                    <CreateUpdateGroupModal type="update">
+                                        <IconButton variant="ghost" color="gray" size="2">
+                                            <LucideSlidersHorizontal size={18} />
+                                        </IconButton>
+                                    </CreateUpdateGroupModal>
+                                </CoverTopActions>
+
+                                <CoverInfo p="4">
+                                    <Flex gap="2" align="center">
+                                        <Skeleton loading={isGroupDataLoading}>
+                                            {selectedGroup ? (
+                                                <GroupAvatar group={selectedGroup} size="5" />
+                                            ) : (
+                                                <Avatar size="5" fallback={<LucideUsers />} />
+                                            )}
+                                        </Skeleton>
+                                        <Flex gap="1" direction="column">
+                                            <Box>
+                                                <Skeleton loading={isGroupDataLoading}>
+                                                    <Badge size="2" color="cyan" variant="surface">
+                                                        {selectedGroup?.members.length ?? 0} members
+                                                    </Badge>
+                                                </Skeleton>
+                                            </Box>
+                                            <Box>
+                                                <Skeleton loading={isGroupDataLoading}>
+                                                    <Heading size="6">
+                                                        {selectedGroup?.name || 'Loading group...'}
+                                                    </Heading>
+                                                </Skeleton>
+                                            </Box>
+                                        </Flex>
+                                    </Flex>
+                                </CoverInfo>
+                            </CoverWrapper>
+                        </Inset>
+                        <Flex direction="column" gap="4">
+                            {selectedGroup && (
+                                <Flex align="center" justify="between" gap="2" wrap="wrap">
+                                    <UsersRow members={selectedGroup.members} max={10} size="2" />
+                                    <Flex gap="2" align="center">
+                                        <AddExpenseModal>
+                                            <Button variant="outline" size="2">
+                                                <LucidePlus size={15} />
+                                                Add expense
+                                            </Button>
+                                        </AddExpenseModal>
+                                        <Button size="2" color="green">
+                                            <LucideArrowLeftRight size={15} />
+                                            Settle up
+                                        </Button>
+                                    </Flex>
+                                </Flex>
+                            )}
+                            {selectedGroup?.description && (
+                                <>
+                                    <Separator size="4" />
+                                    <Flex direction="column" gap="2">
+                                        <Skeleton loading={isGroupDataLoading}>
+                                            <Text>
+                                                {selectedGroup?.description ||
+                                                    'No description yet. Add one in group settings.'}
+                                            </Text>
+                                        </Skeleton>
+                                    </Flex>
+                                </>
+                            )}
+                        </Flex>
+                    </Card>
+
                     <ActivityTemplate />
                 </Box>
             </Grid>

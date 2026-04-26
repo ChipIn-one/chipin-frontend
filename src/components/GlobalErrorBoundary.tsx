@@ -4,12 +4,14 @@ import type { ErrorInfo, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
-import { Badge, Box, Button, Flex, Heading, Text } from '@radix-ui/themes';
+import { Badge, Box, Button, Card, Container, Flex, Grid, Text } from '@radix-ui/themes';
 
 import { ROUTES } from 'constants/routes';
 import { themeColor } from 'helpers/colors';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
+
+import errorBackgroundImage from 'assets/error-background.jpg';
 
 interface GlobalErrorBoundaryProps {
     children: ReactNode;
@@ -25,23 +27,20 @@ interface ErrorFallbackProps {
 
 // background-image has no Radix prop equivalent
 const ErrorBackground = styled(Box)`
-    background-image: url('/error-background.png');
+    background-image: url(${errorBackgroundImage});
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
 `;
 
-// absolute overlay requires inset + opacity not available via Radix props
+// opacity has no Radix prop equivalent; position and inset are passed via JSX props
 const Overlay = styled(Box)`
-    position: absolute;
-    inset: 0;
     background-color: ${themeColor('gray1')};
-    opacity: 0.5;
+    opacity: 0.4;
 `;
 
-// max-height, overflow, pre formatting not expressible via Radix props
+// overflow, nested pre styles not expressible via Radix props; max-height via JSX prop
 const StackTraceBox = styled(Box)`
-    max-height: 300px;
     overflow: auto;
     border-radius: var(--radius-2);
     background-color: ${themeColor('gray3')};
@@ -61,10 +60,11 @@ const ErrorFallback = ({ error }: ErrorFallbackProps) => {
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
     const homeRoute = isLoggedIn ? ROUTES.DASHBOARD : ROUTES.HOME;
     const errorTitle = `${error.name}: ${error.message}`;
+    const summaryText = `${t('errorBoundary.title')}. ${t('errorBoundary.summary')}`;
 
     return (
         <ErrorBackground minHeight="100vh" position="relative">
-            <Overlay />
+            <Overlay position="absolute" inset="0" />
 
             <Flex
                 position="relative"
@@ -72,62 +72,63 @@ const ErrorFallback = ({ error }: ErrorFallbackProps) => {
                 align="center"
                 justify="center"
                 p={{ initial: '4', sm: '6' }}
+                width="100%"
             >
-                <Flex
-                    direction={{ initial: 'column', md: 'row' }}
-                    gap="6"
-                    align={{ initial: 'center', md: 'start' }}
-                    maxWidth="900px"
-                    width="100%"
-                >
-                    <Flex
-                        direction="column"
-                        gap="4"
-                        align={{ initial: 'center', md: 'start' }}
-                        flexGrow="1"
-                        flexBasis="0"
-                    >
+                <Container size="3" width="100%">
+                    <Flex direction="column" gap="4" width="100%">
                         <Badge size="3" color="red" variant="surface">
-                            {t('errorBoundary.title')}
+                            {summaryText}
                         </Badge>
 
-                        <Text size="3" color="gray">
-                            {t('errorBoundary.description')}
-                        </Text>
+                        <Grid
+                            columns={{ initial: '1', md: '5fr 7fr' }}
+                            gap="5"
+                            width="100%"
+                            align="start"
+                        >
+                            <Card variant="surface">
+                                <Flex direction="column" gap="4">
+                                    <Text size="3" weight="bold">
+                                        {t('errorBoundary.description')}
+                                    </Text>
 
-                        <Flex gap="3" wrap="wrap">
-                            <Button
-                                size="3"
-                                color="grass"
-                                onClick={() => window.location.assign(homeRoute)}
-                            >
-                                <LucideHouse size={16} />
-                                {t('buttons.goHome')}
-                            </Button>
+                                    <Flex gap="3" wrap="wrap">
+                                        <Button
+                                            size="3"
+                                            color="grass"
+                                            onClick={() => window.location.assign(homeRoute)}
+                                        >
+                                            <LucideHouse size={16} />
+                                            {t('buttons.goHome')}
+                                        </Button>
 
-                            <Button
-                                size="3"
-                                variant="soft"
-                                onClick={() => window.location.reload()}
-                            >
-                                <LucideRotateCcw size={16} />
-                                {t('buttons.reload')}
-                            </Button>
-                        </Flex>
+                                        <Button
+                                            size="3"
+                                            variant="surface"
+                                            color="cyan"
+                                            onClick={() => window.location.reload()}
+                                        >
+                                            <LucideRotateCcw size={16} />
+                                            {t('buttons.reload')}
+                                        </Button>
+                                    </Flex>
+                                </Flex>
+                            </Card>
+
+                            <Flex direction="column" gap="3" width="100%">
+                                <Badge size="2" color="red" variant="surface">
+                                    {errorTitle}
+                                </Badge>
+
+                                {error.stack && (
+                                    <StackTraceBox p="3" maxHeight="480px">
+                                        <pre>{error.stack}</pre>
+                                    </StackTraceBox>
+                                )}
+                            </Flex>
+                        </Grid>
                     </Flex>
-
-                    <Flex direction="column" gap="3" flexGrow="1" flexBasis="0" width="100%">
-                        <Heading size="3" color="red">
-                            {errorTitle}
-                        </Heading>
-
-                        {error.stack && (
-                            <StackTraceBox p="3">
-                                <pre>{error.stack}</pre>
-                            </StackTraceBox>
-                        )}
-                    </Flex>
-                </Flex>
+                </Container>
             </Flex>
         </ErrorBackground>
     );

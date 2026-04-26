@@ -209,7 +209,7 @@ export const useDashboardStore = create<DashboardStore>(() => ({
         const { setActivity } = useActivityStore.getState();
         const { setLoading } = useLoadingStore.getState();
 
-        setLoading('dashboard', 'data', true);
+        setLoading('dashboard', 'data', 'loading');
 
         fetchApiDashboard()
             .then(data => {
@@ -220,7 +220,7 @@ export const useDashboardStore = create<DashboardStore>(() => ({
                 console.error('Error fetching dashboard data:', error);
             })
             .finally(() => {
-                setLoading('dashboard', 'data', false);
+                setLoading('dashboard', 'data', 'fetched');
             });
     },
 }));

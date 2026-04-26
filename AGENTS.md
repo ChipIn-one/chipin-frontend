@@ -30,6 +30,7 @@
 - Prefer `@radix-ui/themes` components for all layout and UI composition by default.
 - If a layout, spacing, color, size, alignment, or variant can be expressed via native Radix props, always use the Radix API first.
 - For spacing and layout parameters such as `gap`, `p`, `px`, `py`, `pt`, `pb`, `pl`, `pr`, `m`, `mx`, `my`, `mt`, `mb`, `align`, `justify`, `width`, `height`, and similar props, use the native Radix API on `Box`, `Flex`, `Grid`, `Container`, `Text`, and related primitives whenever possible.
+- For page/content width constraints, prefer Radix `Container` with appropriate size props over hardcoded fixed dimensions like `maxWidth="900px"` on layout primitives (for example on `Flex`).
 - Do **not** introduce routine CSS classes such as `.this_block`, `.header_row`, `.content_wrapper`, etc. for standard component layout.
 - `styled-components` is allowed only in exceptional cases:
     - when the requested UI cannot be implemented cleanly with Radix primitives and props alone;
@@ -39,8 +40,13 @@
 - When `styled-components` are necessary, use clear, semantic component naming and keep the styling narrowly scoped.
 - Text content that needs truncation should be rendered with the Radix `Text` component using the `truncate` prop instead of custom CSS truncation wrappers.
 - Do not introduce custom styled wrappers if the same result is possible with Radix props/composition.
-- Do not use inline styles (`style={...}`) on React components.
+- Do **not** use inline styles (`style={...}`) on any React component — no exceptions. If no Radix prop covers the required CSS property, create a narrowly scoped `styled-component` instead.
 - Prefer Radix props, theme tokens, and narrowly scoped styled overrides instead of inline styles.
+- `flexShrink`, `flexGrow`, `flexBasis` are available as direct Radix props on all layout components (`Box`, `Flex`, `Grid`); use them in JSX instead of CSS.
+- Width/height string values such as `"100%"`, `"max-content"`, `"var(--space-8)"` are accepted directly by `width`, `minWidth`, `maxWidth`, `height` props on `Box`, `Flex`, `Grid`; prefer them over styled wrappers.
+- For interactive components that lack a `width` prop (e.g. `Button`, `IconButton`), wrap them in `<Box width="...">` rather than creating `styled(Button)` solely for width.
+- Use `asChild` when a Radix component needs to render as a different HTML element while keeping Radix styles and behavior (e.g. `<Flex asChild><label>`). Do not add a wrapper element; merge via `asChild` instead.
+- When building typed wrapper components around Radix components, use `ComponentProps<typeof RadixComponent>['propName']` to extract prop types instead of re-declaring them manually.
 
 ## Layering and z-index Rules
 
@@ -66,6 +72,8 @@
 - **Radix primitives**: do not wrap `Box`, `Flex`, `Grid`, `Text`, and similar primitives in `styled(...)` for routine presentation.
     - Compose them directly and pass Radix props in JSX.
     - Only introduce a styled wrapper when Radix props/composition cannot express the required UI.
+- **Compound component parts**: do not use `styled(Compound.Part)` such as `styled(TextField.Root)`, `styled(IconButton)`, `styled(Select.Trigger)`. This breaks TypeScript types. Instead, wrap the compound component in a `styled.div` or `<Box>` and apply layout there.
+- **Specificity hacks**: never use `&&` selector blocks (`&& { ... }`) inside `styled-components` templates to override Radix styles. `&&` indicates a CSS specificity war — refactor to avoid the conflict entirely.
 - **Size values** (`width`, `height`, `min-width`, `min-height`, `max-width`, `max-height`): do not hardcode `rem` values in `styled-components` for routine layout sizing.
     - Prefer Radix size/spacing tokens and `var(--space-*)` values for component dimensions when possible.
     - If a size does not map cleanly to the spacing scale, justify the exception in code or keep it tightly scoped.
@@ -99,7 +107,80 @@
 
     // ❌ don't use var() for padding/margin when Radix prop works
     padding: var(--space-4);
+
+    // ❌ never use inline styles — use styled-component for CSS without a Radix prop
+    style={{ height: '240px' }}
+
+    // ❌ never use && to override Radix styles
+    && { background: red; }
+
+    // ❌ never wrap compound parts in styled()
+    const Field = styled(TextField.Root)`width: 100%;`;
     ```
+
+## Radix Compound Component API Rules
+
+Radix Themes uses compound component patterns. Always use the correct composition; incorrect nesting causes broken accessibility and visual bugs.
+
+### Dialog
+
+- Structure: `Dialog.Root > Dialog.Trigger > Dialog.Content > [Dialog.Title, Dialog.Description?, Dialog.Close]`.
+- `Dialog.Title` is based on `Heading` — do **not** nest a `<Heading>` inside it.
+- `Dialog.Description` is based on `Text` — do **not** nest a `<Text>` inside it; pass content directly as children.
+- `modal` prop is **unavailable** — Dialog is always modal.
+- `Dialog.Close` must live inside `Dialog.Content`.
+- Control width of the dialog via `maxWidth` on `Dialog.Content`, not via wrappers.
+
+### Select
+
+- `size` prop belongs on `Select.Root`, not on Trigger or Content.
+- `variant`, `color`, `radius` belong on `Select.Trigger`.
+- `Select.Content` accepts `variant` (`"solid"` | `"soft"`), `color`, `highContrast`.
+- For grouping items use `Select.Group` + `Select.Label` together.
+- For custom trigger display (icon + text) pass children to `Select.Trigger` directly.
+
+### TextField
+
+- Structure: `TextField.Root > TextField.Slot? > (input is implicit)`.
+- `TextField.Slot` requires `side="left"` or `side="right"` — there is no default position.
+- Do **not** use `size="1"` with interactive elements inside a Slot (no room).
+- `TextField.Root` is a `div` and accepts margin props (`mt`, `mb`, etc.) directly.
+
+### Popover
+
+- Structure: `Popover.Root > Popover.Trigger > Popover.Content > Popover.Close?`.
+- `Popover.Content` inherits Radix primitive props: `sideOffset`, `align`, `side`.
+- To match trigger width: `width="var(--radix-popover-trigger-width)"` on `Popover.Content`.
+
+### Callout
+
+- Structure: `Callout.Root > Callout.Icon > Callout.Text`.
+- Always include `Callout.Icon` — it is required for correct layout and accessibility.
+
+### Skeleton
+
+- `loading` prop controls display; default is `true`.
+- `Skeleton` renders as `<span>`. Do **not** wrap multiple block-level siblings in one Skeleton.
+- For text: wrap the text node itself — `<Text><Skeleton>content</Skeleton></Text>`.
+- For components: `<Skeleton loading={bool}><Component /></Skeleton>` — one Skeleton per logical element.
+
+### Avatar
+
+- `fallback` is **required** — always provide it (initials string or ReactNode icon).
+- `size` range is `"1"` – `"8"`.
+- `variant`: `"solid"` | `"soft"` (default `"soft"`).
+
+### Responsive Props
+
+- Most size and layout props accept a responsive object: `size={{ initial: '1', sm: '2', md: '3' }}`.
+- Breakpoints (min-width): `initial` = 0px, `xs` = 520px, `sm` = 768px, `md` = 1024px, `lg` = 1280px, `xl` = 1640px.
+- Always start from `initial` when overriding — it is the mobile-first baseline.
+
+### Dark Mode Integration
+
+- `src/main.tsx` intentionally passes `appearance={resolvedTheme}` to `<Theme>` to keep Radix appearance in sync with the `styled-components` ThemeProvider. Do **not** remove this — it is a deliberate project decision.
+- The official Radix recommendation (rely solely on class switching from `next-themes`) would not sync the `styled-components` palette. This dual approach is the accepted trade-off.
+- Do **not** add a second `<Theme>` wrapper to change appearance elsewhere in the tree; use `accentColor`/`radius` overrides on a nested `<Theme>` if a subtree needs a different accent.
 
 ## Numbers and Amount Formatting
 

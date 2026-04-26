@@ -14,8 +14,6 @@ import { ApiGroup } from 'api/chipin.types';
 import { useLoadingStore } from './loadingStore';
 
 interface GroupsStore {
-    isLoadingGroup: boolean;
-
     selectedGroup: ApiGroup | null;
     groups: ApiGroup[];
 
@@ -37,8 +35,6 @@ interface GroupsStore {
 }
 
 const initialGroupsStore = {
-    //TODO: move to loaders state
-    isLoadingGroup: false,
     selectedGroup: null,
     groups: [],
 };
@@ -66,7 +62,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             toast.error(i18n.t('toasts:group.invalidGroupId'));
             return;
         }
-        set({ isLoadingGroup: true });
+        useLoadingStore.getState().setLoading('group', 'data', 'loading');
 
         fetchApiUserGroupById(groupId)
             .then(groupFromApi => {
@@ -82,13 +78,13 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 console.error('Error fetching user groups:', error);
             })
             .finally(() => {
-                set({ isLoadingGroup: false });
+                useLoadingStore.getState().setLoading('group', 'data', 'fetched');
             });
     },
 
     createGroup: ({ groupName, groupDescription, groupEmoji }) => {
         const { setLoading } = useLoadingStore.getState();
-        setLoading('group', 'add', true);
+        setLoading('group', 'add', 'loading');
 
         return createApiGroup({ groupName, groupDescription, groupEmoji })
             .then(newGroup => {
@@ -97,14 +93,14 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 return newGroup;
             })
             .finally(() => {
-                setLoading('group', 'add', false);
+                setLoading('group', 'add', 'fetched');
             });
     },
     updateGroup: ({ groupName, groupDescription, groupEmoji }) => {
         const { setLoading } = useLoadingStore.getState();
         const { selectedGroup } = get();
 
-        setLoading('group', 'update', true);
+        setLoading('group', 'update', 'loading');
 
         if (!selectedGroup) {
             return Promise.reject(new Error('No selected group'));
@@ -128,7 +124,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 return updatedGroup;
             })
             .finally(() => {
-                setLoading('group', 'update', false);
+                setLoading('group', 'update', 'fetched');
             });
     },
     removeGroup: () => {
@@ -139,7 +135,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         }
 
         const { setLoading } = useLoadingStore.getState();
-        setLoading('group', 'remove', true);
+        setLoading('group', 'remove', 'loading');
 
         return removeApiGroup({ groupId: selectedGroup.id })
             .then(() => {
@@ -154,12 +150,12 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 return selectedGroup.name;
             })
             .finally(() => {
-                setLoading('group', 'remove', false);
+                setLoading('group', 'remove', 'fetched');
             });
     },
     joinGroup: ({ inviteToken }) => {
         const { setLoading } = useLoadingStore.getState();
-        setLoading('group', 'join', true);
+        setLoading('group', 'join', 'loading');
 
         return inviteApiUserToGroup({ inviteToken })
             .then(joinedGroup => {
@@ -172,7 +168,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 throw e;
             })
             .finally(() => {
-                setLoading('group', 'join', false);
+                setLoading('group', 'join', 'fetched');
             });
     },
 }));

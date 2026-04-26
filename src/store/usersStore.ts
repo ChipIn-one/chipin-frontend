@@ -6,8 +6,6 @@ import { ApiUser } from 'api/chipin.types';
 import { useLoadingStore } from './loadingStore';
 
 interface UsersStore {
-    isLoadingUsers: boolean;
-
     user: ApiUser | null;
     friends: ApiUser[];
 
@@ -16,7 +14,6 @@ interface UsersStore {
 }
 
 const initialUsersStore = {
-    isLoadingUsers: false,
     user: null,
     friends: [],
 };
@@ -26,7 +23,7 @@ export const useUsersStore = create<UsersStore>(set => ({
 
     fetchSetUser: () => {
         const { setLoading } = useLoadingStore.getState();
-        setLoading('users', 'self', true);
+        setLoading('users', 'self', 'loading');
 
         fetchApiUser()
             .then(user => {
@@ -36,12 +33,12 @@ export const useUsersStore = create<UsersStore>(set => ({
                 console.error('Error fetching user:', error);
             })
             .finally(() => {
-                setLoading('users', 'self', false);
+                setLoading('users', 'self', 'fetched');
             });
     },
     fetchSetFriends: () => {
         const { setLoading } = useLoadingStore.getState();
-        setLoading('users', 'friends', true);
+        setLoading('users', 'friends', 'loading');
 
         fetchApiKnownUsers()
             .then(friends => {
@@ -51,7 +48,7 @@ export const useUsersStore = create<UsersStore>(set => ({
                 console.error('Error fetching known users:', error);
             })
             .finally(() => {
-                setLoading('users', 'friends', false);
+                setLoading('users', 'friends', 'fetched');
             });
     },
 }));

@@ -18,6 +18,7 @@ import {
 import { themeColor } from 'helpers/colors';
 import { isInputCloseToLimit } from 'helpers/text';
 import { useGroupsStore } from 'store/groupsStore';
+import { selectGroupAdding, selectGroupUpdating } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
 import BaseModal from '../BaseModal';
@@ -106,8 +107,8 @@ interface FormProps {
 const GroupForm = ({ type, onClose }: FormProps) => {
     const { t } = useTranslation('group');
     const { createGroup, updateGroup, selectedGroup } = useGroupsStore();
-    const isCreatingGroup = useLoadingStore(state => state.group.add);
-    const isUpdatingGroup = useLoadingStore(state => state.group.update);
+    const isCreatingGroup = useLoadingStore(selectGroupAdding);
+    const isUpdatingGroup = useLoadingStore(selectGroupUpdating);
     const isCreateMode = type === 'create';
 
     const initialEmoji = isCreateMode ? DEFAULT_ICON : (selectedGroup?.emoji ?? DEFAULT_ICON);

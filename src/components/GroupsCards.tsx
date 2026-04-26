@@ -1,38 +1,59 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
-import { Card, Flex, Text } from '@radix-ui/themes';
+import { Avatar, Card, Flex, Skeleton, Text } from '@radix-ui/themes';
 
 import { ApiGroup } from 'api/chipin.types';
 import { useGroupsStore } from 'store/groupsStore';
+import { selectDashboardFetched } from 'store/loadingSelectors';
+import { useLoadingStore } from 'store/loadingStore';
 
 import { Amount } from 'basics/numbers';
 
 import { ROUTES } from '../constants/routes';
 
 import GroupAvatar from './GroupAvatar';
-// import { useLoadingStore } from 'store/loadingStore';
 
 interface Props {
     groups: ApiGroup[];
 }
 
-// const GROUPS_SKELETON_ITEMS = Array.from({ length: 3 }, (_, index) => ({
-//     id: `group-skeleton-${index}`,
-//     picture: '',
-//     name: 'Group name',
-// }));
+const SKELETON_COUNT = 5;
 
 const GroupsCards: React.FC<Props> = ({ groups }) => {
-    // const isLoadingDashboard = useLoadingStore(state => state.dashboard.data);
-
+    const isDashboardFetched = useLoadingStore(selectDashboardFetched);
     const { setSelectedGroup } = useGroupsStore();
     const { t } = useTranslation('dashboard');
 
-    // TODO: ADD IS LOADING GROUP ALSO
+    if (!isDashboardFetched) {
+        return (
+            <Flex direction="column" gap="4">
+                {Array.from({ length: SKELETON_COUNT }, (_, i) => (
+                    <Card key={i} size="1">
+                        <Flex gap="3" align="center">
+                            <Skeleton>
+                                <Avatar size="5" fallback="•" />
+                            </Skeleton>
 
-    // const isSkeletonShown = isLoadingDashboard && !groups.length;
-    // const visibleGroups = isSkeletonShown ? GROUPS_SKELETON_ITEMS : groups;
+                            <Flex direction="column">
+                                <Text size="4" weight="bold" as="p">
+                                    <Skeleton>Group name</Skeleton>
+                                </Text>
+
+                                <Text size="2" color="grass" weight="medium" as="p">
+                                    <Skeleton>You are owed $15.00</Skeleton>
+                                </Text>
+
+                                <Text size="1" color="gray" as="p">
+                                    <Skeleton>3 members</Skeleton>
+                                </Text>
+                            </Flex>
+                        </Flex>
+                    </Card>
+                ))}
+            </Flex>
+        );
+    }
 
     return (
         <Flex direction="column" gap="4">
