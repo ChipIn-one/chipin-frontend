@@ -9,6 +9,7 @@ import { useActivityStore } from 'store/activityStore';
 import { selectActivityLoading, selectActivityNextPageLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
+import ActivityFeedSkeleton from './ActivityFeedSkeleton';
 import ActivityHeader, { ActivityHeaderContext } from './ActivityHeader';
 import { EventRenderer } from './components';
 
@@ -48,7 +49,9 @@ const Activity = ({ context = 'dashboard' }: Props) => {
         <>
             {shouldShowHeader ? <ActivityHeader isLoading={isLoading} context={context} /> : null}
 
-            {!isLoading && items.length === 0 ? (
+            {isLoading ? (
+                <ActivityFeedSkeleton />
+            ) : items.length === 0 ? (
                 <Card size="2">
                     <Flex direction="column" gap="1">
                         <Text size="4" weight="medium" as="p">
@@ -60,7 +63,7 @@ const Activity = ({ context = 'dashboard' }: Props) => {
                     </Flex>
                 </Card>
             ) : (
-                <Flex direction="column" gap="3">
+                <Flex direction="column" gap="2">
                     {items.map(event => (
                         <EventRenderer key={event.id} event={event} />
                     ))}

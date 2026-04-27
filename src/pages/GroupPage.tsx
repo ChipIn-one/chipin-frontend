@@ -49,7 +49,7 @@ import GroupQRModal from 'components/Modal/GroupQRModal';
 import RemoveGroupModal from 'components/Modal/RemoveGroupModal';
 import MobileNavBar from 'components/Navs/MobileNavBar';
 import UsersRow from 'components/UsersRow';
-import { ActivityHeader } from 'features/activity';
+import { ActivityFeedSkeleton } from 'features/activity';
 
 const CoverWrapper = styled(Box)`
     position: relative;
@@ -292,7 +292,7 @@ const GroupPage = () => {
                         </Flex>
                     </Card>
 
-                    <ActivityHeader isLoading={isGroupDataLoading} context="group" />
+                    <ActivityFeedSkeleton isExpensesOnly />
                 </Box>
             </Grid>
 

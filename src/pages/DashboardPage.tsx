@@ -11,7 +11,7 @@ import DashBoardSummary from 'components/DashboardSummary';
 import GroupsCards from 'components/GroupsCards';
 import GroupsSectionHeader from 'components/GroupsSectionHeader';
 import MobileNavBar from 'components/Navs/MobileNavBar';
-import { ActivityHeader } from 'features/activity';
+import { ActivityFeedSkeleton } from 'features/activity';
 
 const DashboardPage = () => {
     const { t } = useTranslation('dashboard');
@@ -74,7 +74,7 @@ const DashboardPage = () => {
                         sm: 'span 2',
                     }}
                 >
-                    <ActivityHeader isLoading={isDashboardLoading} context="dashboard" />
+                    <ActivityFeedSkeleton isExpensesOnly />
                 </Box>
             </Grid>
 
