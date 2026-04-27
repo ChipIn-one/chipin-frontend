@@ -11,6 +11,10 @@
         "reload": "Reload page",
         "goHome": "Go home"
     },
+    "balances": {
+        "youOwed": "you owed",
+        "youOwe": "you owe"
+    },
     "header": {
         "signIn": "Sign in",
         "testError": "Trigger test error"

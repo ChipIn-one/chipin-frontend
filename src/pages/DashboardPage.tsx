@@ -7,11 +7,11 @@ import { useGroupsStore } from 'store/groupsStore';
 import { selectDashboardFetched, selectDashboardLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
-import ActivityTemplate from 'components/ActivityTemplate';
 import DashBoardSummary from 'components/DashboardSummary';
 import GroupsCards from 'components/GroupsCards';
 import GroupsSectionHeader from 'components/GroupsSectionHeader';
 import MobileNavBar from 'components/Navs/MobileNavBar';
+import Activity from 'features/activity';
 
 const DashboardPage = () => {
     const { t } = useTranslation('dashboard');
@@ -29,7 +29,6 @@ const DashboardPage = () => {
                         initial: 'span 3',
                         sm: 'span 1',
                     }}
-                    mb="6"
                 >
                     <DashBoardSummary isLoading={isDashboardLoading} />
 
@@ -75,7 +74,7 @@ const DashboardPage = () => {
                         sm: 'span 2',
                     }}
                 >
-                    <ActivityTemplate />
+                    <Activity context="dashboard" />
                 </Box>
             </Grid>
 

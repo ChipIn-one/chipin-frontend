@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { UserAvatar } from 'basics';
 import { LucideBell, LucideGlobe, LucideLogOut, LucideSettings2, LucideShield } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
@@ -29,7 +30,6 @@ import { useUsersStore } from 'store/usersStore';
 
 import CurrencySelect from 'components/CurrencySelect';
 import MobileNavBar from 'components/Navs/MobileNavBar';
-import UserAvatar from 'components/UserAvatar';
 
 const timezoneOptions = [
     'UTC',

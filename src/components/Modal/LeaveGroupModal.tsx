@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { UserAvatar } from 'basics';
 import { t } from 'i18next';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -10,8 +11,6 @@ import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupLeaving } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/usersStore';
-
-import UserAvatar from 'components/UserAvatar';
 
 import BaseModal from './BaseModal';
 

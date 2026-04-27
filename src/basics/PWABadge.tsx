@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { registerSW } from 'virtual:pwa-register';
 
 import { HOUR } from 'constants/time';
-
+// TODO: move it out of basics and rename to something like ServiceWorkerManager or similar, as it also handles SW updates and not only registration
 const PWABadge = () => {
     // Register SW once — auto-update silently on new version
     useEffect(() => {

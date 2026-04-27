@@ -59,22 +59,23 @@
 
 Radix Colors uses a 12-step scale per hue. Each step has a defined semantic purpose — always pick the step that matches the use case, not just the shade you like visually.
 
-| Step | Use case |
-|------|----------|
-| 1 | App background |
-| 2 | Subtle background (cards, code blocks, sidebars, canvas) |
-| 3 | UI element background — normal state |
-| 4 | UI element background — hover state |
-| 5 | UI element background — active/selected state |
-| 6 | Subtle border on **non-interactive** components (headers, cards, separators, sidebars, alerts) |
-| 7 | Border on **interactive** components (inputs, buttons) — normal state |
-| 8 | Border on **interactive** components — hover state; focus rings |
-| 9 | Solid background — normal state (highest chroma; also used for overlays, accent borders, coloured shadows) |
-| 10 | Solid background — hover state |
-| 11 | Low-contrast text |
-| 12 | High-contrast text |
+| Step | Use case                                                                                                   |
+| ---- | ---------------------------------------------------------------------------------------------------------- |
+| 1    | App background                                                                                             |
+| 2    | Subtle background (cards, code blocks, sidebars, canvas)                                                   |
+| 3    | UI element background — normal state                                                                       |
+| 4    | UI element background — hover state                                                                        |
+| 5    | UI element background — active/selected state                                                              |
+| 6    | Subtle border on **non-interactive** components (headers, cards, separators, sidebars, alerts)             |
+| 7    | Border on **interactive** components (inputs, buttons) — normal state                                      |
+| 8    | Border on **interactive** components — hover state; focus rings                                            |
+| 9    | Solid background — normal state (highest chroma; also used for overlays, accent borders, coloured shadows) |
+| 10   | Solid background — hover state                                                                             |
+| 11   | Low-contrast text                                                                                          |
+| 12   | High-contrast text                                                                                         |
 
 **Rules derived from the scale:**
+
 - Never use a **background step (1–5)** for a border CSS property. Borders must use steps 6–8.
 - Never use a **border step (6–8)** for a background or text CSS property.
 - Never use a **text step (11–12)** for a background or border CSS property.
@@ -84,6 +85,7 @@ Radix Colors uses a 12-step scale per hue. Each step has a defined semantic purp
 - Most step 9 colors use white foreground text; `Sky`, `Mint`, `Lime`, `Yellow`, `Amber` need **dark** foreground text on steps 9–10.
 
 **Semantic scale pairings (Western conventions):**
+
 - Error: `red`, `ruby`, `tomato`, `crimson`
 - Success: `green`, `teal`, `jade`, `grass`, `mint`
 - Warning: `yellow`, `amber`, `orange`
@@ -229,6 +231,62 @@ Radix Themes uses compound component patterns. Always use the correct compositio
 - Before writing a custom hook, check if `@uidotdev/usehooks` already provides it — prefer the library over reinventing the wheel.
 - Custom hooks in `src/hooks/*` should only exist for app-specific logic that has no equivalent in `@uidotdev/usehooks`.
 
+## React Memoization & Performance Guidelines
+
+**Core principle:** memoization is opt-in, not default. Apply only when there is a measurable or likely performance issue. Profile first with React DevTools Profiler.
+
+**`React.memo`** — wrap a component only when it:
+
+- re-renders frequently with identical props, or
+- is expensive to render.
+
+Uses shallow comparison — inline objects/arrays/functions as props break it silently.
+
+```tsx
+// ✅ stable props — memo is effective
+const UserCard = React.memo(({ userId, name }: Props) => <.../>);
+
+// ❌ breaks memo — new object reference on every parent render
+<UserCard style={{ color: 'red' }} />
+```
+
+**`useMemo`** — use only for:
+
+- computationally expensive derivations, or
+- stabilizing object/array references passed to memoized children or hook deps.
+
+```tsx
+// ✅ stabilize reference for memoized child
+const filters = useMemo(() => ({ status, page }), [status, page]);
+
+// ❌ unnecessary — cheap computation, no reference stability needed
+const label = useMemo(() => `Hello ${name}`, [name]);
+```
+
+**`useCallback`** — use only when:
+
+- the function is passed to a `React.memo` child, or
+- the function appears in a `useEffect`/`useMemo` dependency array.
+
+```tsx
+// ✅ passed to memoized child
+const handleRemove = useCallback((id: string) => removeItem(id), [removeItem]);
+```
+
+**Anti-patterns:**
+
+- Blanket `React.memo` / `useMemo` / `useCallback` on everything.
+- Inline `{}` or `[]` props on memoized components.
+- `JSON.stringify(value)` in dependency arrays.
+- Optimizing without profiling first.
+
+**Practical order:**
+
+1. Write simple, readable code first.
+2. Profile if sluggishness appears.
+3. Apply `React.memo` at component boundaries before reaching for `useMemo`/`useCallback`.
+4. Keep memoization surgical and documented with a comment explaining why.
+
 ## Dependency Rules (Current Architecture)
 
 - Pages/components/hooks/features can read from stores.
@@ -281,6 +339,98 @@ Radix Themes uses compound component patterns. Always use the correct compositio
 - Keep strict TS compatibility (`strict: true`).
 - Use `export default` for most React components (pages, features, reusable components).
 - Exception: modal components can use named `const` exports to support grouped/barrel imports from the modal directory.
+
+## Boolean Naming Convention
+
+- Boolean variables, state, and props must be prefixed with `is` or `has`.
+- Use `is` as the default prefix: `isLoading`, `isOpen`, `isVisible`, `isButtonShown`, `isWorking`.
+- Use `has` only when `is` reads unnaturally and `has` better describes possession or presence: `hasError`, `hasPermission`, `hasChildren`.
+- Never name booleans without a prefix (e.g. `loading`, `open`, `visible`, `shown` are not allowed as standalone boolean names).
+- This applies to: local variables, state hooks, store fields, component props, and function return values that represent a boolean flag.
+
+## Variable Naming Convention
+
+**Event handlers** — prefix `handle`:
+
+- `handleSubmit`, `handleAvatarClick`, `handleMenuClose`.
+- Never name handlers without a prefix (`submit`, `avatarClick` are not allowed).
+
+**Callback props** — prefix `on`:
+
+- `onSubmit`, `onChange`, `onClose`, `onAvatarClick`.
+- Never pass callbacks as props without the `on` prefix.
+
+**Async data-fetching functions** — prefix `fetch`:
+
+- `fetchGroups()`, `fetchDashboard()`, `fetchUserById(id)`.
+- Use `fetch` for all store actions and helpers that call the API and return data.
+
+**Arrays and collections** — always use plural names:
+
+- `users`, `groupIds`, `expenseItems`.
+- Never name an array with a singular noun (`user = []`, `groupId = []` are not allowed).
+
+**Array iteration variables** — use short readable names, never single letters:
+
+- `users.map((user) => ...)`, `groups.forEach((group) => ...)`, `items.map((item, index) => ...)`.
+- Never use single-letter iteration variables (`i`, `r`, `o`, `x`, `e` are not allowed).
+- Use the singular form of the array name as the item name: `users` → `user`, `groups` → `group`, `expenseItems` → `expenseItem`.
+- For index, always use the full word `index`, never `i` or `idx`.
+
+**Module-level constants** — `SCREAMING_SNAKE_CASE`:
+
+- `MAX_RETRY_COUNT`, `DEFAULT_CURRENCY`, `BASE_URL`.
+- Applies to exported constants in `src/constants/*` and top-level module constants elsewhere.
+
+**Types and interfaces** — PascalCase, no `I`-prefix:
+
+- `type GroupMember = {}`, `interface AuthState {}`.
+- Never use `IAuthState`, `TGroupMember`, or lowercase type names.
+
+**Component props type/interface names** — use `Props`:
+
+- In React component files, name component props type/interface as `Props`.
+- Prefer `interface Props { ... }` or `type Props = { ... }` instead of `EventUnknownProps` / `ComponentNameProps`.
+
+**Custom hooks** — prefix `use`:
+
+- `useAuth`, `useGroups`, `useModalState`.
+- Never name hooks without the `use` prefix (`authHook`, `getGroups` are not allowed).
+
+**React components** — PascalCase:
+
+- `GroupCard`, `ExpenseItem`, `UserAvatar`.
+- Never use camelCase or lowercase for component names (`groupCard`, `expenseitem` are not allowed).
+
+**Ref variables** — suffix `Ref`:
+
+- `buttonRef`, `containerRef`, `inputRef`.
+- Always use `useRef` results with the `Ref` suffix.
+
+**Zustand stores** — suffix `Store`:
+
+- `useAuthStore`, `useDashboardStore`, `useGroupsStore`.
+- All zustand store hooks must end with `Store`.
+
+**Utility functions** — camelCase verb-first:
+
+- `formatDate()`, `parseUrl()`, `resolveError()`, `buildQueryString()`.
+- Name utilities as concise verb phrases; never use noun-based names (`dateFormatter`, `urlParser` are not allowed).
+
+**File naming**:
+
+- React components: `PascalCase.tsx` — `GroupCard.tsx`, `ExpenseItem.tsx`.
+- Custom hooks: `camelCase.ts` — `useAuth.ts`, `useGroups.ts`.
+- Utilities and helpers: `camelCase.ts` — `numbers.ts`, `url.ts`.
+- Constants: `camelCase.ts` — `routes.ts`, `time.ts`.
+
+## Component Grouping
+
+- When two or more components share closely related logic, domain, or visual purpose, group them into a dedicated subdirectory (e.g. `components/Modal/`, `components/Navs/`).
+- Every such directory must have an `index.ts` barrel file that re-exports all public components using named exports.
+- The barrel file must only contain `import` / `export` statements — no logic, no JSX.
+- Consumers must import from the directory barrel (`components/Modal`) rather than from deep internal paths (`components/Modal/AddExpenseModal`).
+- A single standalone component does not need its own folder; only group when there are two or more related components.
 
 ## Practical Do/Don't
 

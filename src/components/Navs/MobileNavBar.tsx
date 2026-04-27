@@ -6,7 +6,6 @@ import { Box, Button, Flex, Text } from '@radix-ui/themes';
 import { ROUTES } from 'constants/routes';
 
 import AddExpenseButton from 'components/AddExpenseButton';
-import AddExpenseModal from 'components/Modal/AddExpenseModal';
 
 import { NAV_ELEMENTS } from './constants';
 
@@ -99,9 +98,7 @@ const MobileNavBar = () => {
                 </NavItems>
 
                 <CenterAction>
-                    <AddExpenseModal>
-                        <AddExpenseButton type="mobile" />
-                    </AddExpenseModal>
+                    <AddExpenseButton type="mobile" />
                 </CenterAction>
             </NavContent>
         </BoxWrapper>

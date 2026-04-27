@@ -28,8 +28,8 @@ const GroupsCards: React.FC<Props> = ({ groups }) => {
     if (!isDashboardFetched) {
         return (
             <Flex direction="column" gap="4">
-                {Array.from({ length: SKELETON_COUNT }, (_, i) => (
-                    <Card key={i} size="1">
+                {Array.from({ length: SKELETON_COUNT }, (_, index) => (
+                    <Card key={index} size="1">
                         <Flex gap="3" align="center">
                             <Skeleton>
                                 <Avatar size="5" fallback="•" />

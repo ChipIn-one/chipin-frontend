@@ -1,15 +1,24 @@
 {
     "title": "Your last activity",
-    "subtitle": "From all of your groups and friends",
+    "subtitleDashboard": "From all of your groups and friends",
+    "subtitleGroup": "From this group",
+    "subtitleFull": "Full activity: all events from your groups and friends",
     "viewAll": "View all activities",
+    "viewAllShort": "All activity",
     "emptyTitle": "No activity yet",
     "emptyDescription": "Recent expenses and group updates will appear here.",
     "event": {
         "expenseCreatedDescription": "Paid by {{payer}} in {{group}}",
         "groupCreatedDescription": "{{actor}} created the group",
+        "groupCreatedMiddleText": "created the group",
         "groupUpdatedDescription": "{{actor}} updated the group",
+        "groupUpdatedMiddleText": "updated the group",
         "groupDeletedDescription": "{{actor}} deleted the group",
-        "unknownTitle": "Activity update",
-        "unknownDescription": "A recent update is available."
+        "groupDeletedMiddleText": "deleted the group",
+        "memberJoinedDescription": "{{target}} joined the group {{group}}",
+        "memberJoinedMiddleText": "joined the group",
+        "memberLeftMiddleText": "left the group",
+        "unknownTitle": "Activity event",
+        "unknownDescription": "Unhandled event type"
     }
 }

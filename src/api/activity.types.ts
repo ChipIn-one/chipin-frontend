@@ -46,6 +46,7 @@ type GroupMetadata = {
     type: 'group';
     groupId: UUID;
     groupName: string;
+    groupEmoji?: string | null;
     targetUserDisplayName: string | null;
 };
 
@@ -70,10 +71,26 @@ type GroupDeletedEvent = BaseEvent & {
     metadata: GroupMetadata;
 };
 
+type MemberJoinedEvent = BaseEvent & {
+    domain: 'GROUP';
+    action: 'MEMBER_JOINED';
+    subjectType: 'group';
+    metadata: GroupMetadata;
+};
+
+type MemberLeftEvent = BaseEvent & {
+    domain: 'GROUP';
+    action: 'MEMBER_LEFT';
+    subjectType: 'group';
+    metadata: GroupMetadata;
+};
+
 /** --- Union --- */
 
 export type AppEvent =
     | ExpenseCreatedEvent
     | GroupCreatedEvent
     | GroupUpdatedEvent
-    | GroupDeletedEvent;
+    | GroupDeletedEvent
+    | MemberJoinedEvent
+    | MemberLeftEvent;

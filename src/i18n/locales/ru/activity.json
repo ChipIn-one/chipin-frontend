@@ -1,15 +1,24 @@
 {
     "title": "Последняя активность",
-    "subtitle": "Из всех ваших групп и друзей",
+    "subtitleDashboard": "Из всех ваших групп и друзей",
+    "subtitleGroup": "Из этой группы",
+    "subtitleFull": "Полная активность: все события из групп и друзей",
     "viewAll": "Смотреть всю активность",
+    "viewAllShort": "Вся активность",
     "emptyTitle": "Активности пока нет",
     "emptyDescription": "Здесь появятся последние траты и обновления групп.",
     "event": {
         "expenseCreatedDescription": "Оплатил(а) {{payer}} в группе {{group}}",
         "groupCreatedDescription": "{{actor}} создал(а) группу",
+        "groupCreatedMiddleText": "создал(а) группу",
         "groupUpdatedDescription": "{{actor}} обновил(а) группу",
+        "groupUpdatedMiddleText": "обновил(а) группу",
         "groupDeletedDescription": "{{actor}} удалил(а) группу",
-        "unknownTitle": "Обновление активности",
-        "unknownDescription": "Появилось новое событие."
+        "groupDeletedMiddleText": "удалил(а) группу",
+        "memberJoinedDescription": "{{target}} присоединился(лась) к группе {{group}}",
+        "memberJoinedMiddleText": "присоединился(лась) к группе",
+        "memberLeftMiddleText": "покинул(а) группу",
+        "unknownTitle": "Событие активности",
+        "unknownDescription": "Необработанный тип события"
     }
 }

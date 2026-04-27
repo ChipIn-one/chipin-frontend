@@ -13,7 +13,7 @@ import PWABadge from 'basics/PWABadge';
 import AddExpenseButton from 'components/AddExpenseButton';
 import GlobalErrorBoundary from 'components/GlobalErrorBoundary';
 import Header from 'components/Header';
-import AppRouter from 'features/AppRouter';
+import AppRouter from 'features/routing';
 import GlobalHooks from 'pages/GlobalHooks';
 
 const Main = () => {

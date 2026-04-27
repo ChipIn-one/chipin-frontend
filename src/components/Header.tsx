@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { UserAvatar } from 'basics';
 import { LucideBug, LucideLogIn } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -14,7 +15,6 @@ import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 
 import { EmptyRouteLink } from 'basics/EmptyRouteLink';
-import UserAvatar from 'components/UserAvatar';
 
 import Logotype from 'assets/logo.svg?react';
 

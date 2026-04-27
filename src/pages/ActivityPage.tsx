@@ -1,12 +1,12 @@
 import { Container } from '@radix-ui/themes';
 
-import ActivityTemplate from 'components/ActivityTemplate';
 import MobileNavBar from 'components/Navs/MobileNavBar';
+import Activity from 'features/activity';
 
 const ActivityPage = () => {
     return (
         <Container size="2" pb={{ initial: '9', sm: '6' }}>
-            <ActivityTemplate />
+            <Activity context="full" />
 
             <MobileNavBar />
         </Container>

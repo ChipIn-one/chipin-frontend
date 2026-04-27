@@ -9,6 +9,8 @@ import { ROUTES } from 'constants/routes';
 import { themeColor } from 'helpers/colors';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
+import { selectDashboardLoading } from 'store/loadingSelectors';
+import { useLoadingStore } from 'store/loadingStore';
 
 import AddExpenseModal from 'components/Modal/AddExpenseModal';
 
@@ -32,7 +34,7 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
     const { t } = useTranslation('group');
     const location = useLocation();
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
-
+    const isDashboardLoading = useLoadingStore(selectDashboardLoading);
     const isVisibleRoute = location.pathname !== ROUTES.SETTINGS;
 
     if (!isLoggedIn || !isVisibleRoute) {
@@ -41,14 +43,17 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
 
     if (type === 'mobile') {
         return (
-            <ButtonMobile
-                size="4"
-                radius="full"
-                color="jade"
-                aria-label={t('expenses.modal.submit')}
-            >
-                <LucidePlus size={28} />
-            </ButtonMobile>
+            <AddExpenseModal>
+                <ButtonMobile
+                    size="4"
+                    radius="full"
+                    color="jade"
+                    aria-label={t('expenses.modal.submit')}
+                    loading={isDashboardLoading}
+                >
+                    <LucidePlus size={28} />
+                </ButtonMobile>
+            </AddExpenseModal>
         );
     }
 
@@ -56,7 +61,7 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
         <Box display={{ initial: 'none', sm: 'block' }}>
             <AddExpenseModal>
                 <FloatingBox position="fixed" right="6">
-                    <Button size="3" radius="full" color="jade">
+                    <Button size="3" radius="full" color="jade" loading={isDashboardLoading}>
                         <LucideCirclePlus />
                         {t('expenses.modal.submit')}
                     </Button>

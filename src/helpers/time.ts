@@ -26,12 +26,13 @@ const dateFormatter = new Intl.DateTimeFormat('en', {
 });
 
 export const formatRelativeTime = (date: Date | number): string => {
-    const target = typeof date === 'number' ? date : date.getTime();
-    const diff = target - Date.now();
+    const timestamp = typeof date === 'number' ? date * 1000 : date.getTime();
+
+    const diff = timestamp - Date.now();
 
     // Switch to absolute date if difference exceeds relative threshold
     if (Math.abs(diff) > MAX_RELATIVE_DAYS * DAY) {
-        return dateFormatter.format(new Date(target));
+        return dateFormatter.format(new Date(timestamp));
     }
 
     for (const [unit, ms] of UNITS) {
