@@ -1,57 +1,77 @@
 import { create } from 'zustand';
 
 import { AppEvent } from 'api/activity.types';
-import { createApiLedgerEntry } from 'api/chipin';
-import { ApiActivityResponse } from 'api/chipin.types';
+import { createApiExpense, fetchApiUserActivities } from 'api/chipin';
+import { CreateLedgerEntryParams as CreateExpenseParams } from 'api/chipin.types';
+
+import { useLoadingStore } from './loadingStore';
+
+const ACTIVITY_PAGE_LIMIT = 15;
 
 export interface ActivityStore {
     items: AppEvent[];
     nextCursor: string | null;
+    hasMore: boolean;
 
-    setActivity: (activity: ApiActivityResponse) => void;
-    createExpense: ({
-        groupId,
-        description,
-        amount,
-        unixTimestamp,
-        payerId,
-        participantIds,
-        currency,
-    }: {
-        groupId: string;
-        description: string;
-        amount: string | number;
-        unixTimestamp: number;
-        payerId: string;
-        participantIds: string[];
-        currency: string; // TODO: currencyCode
-    }) => void;
+    fetchSetActivity: () => void;
+    fetchMoreActivity: () => void;
+    createExpense: (params: CreateExpenseParams) => void;
 }
 
 const initialActivityStore = {
     items: [],
     nextCursor: null,
+    hasMore: true,
 };
 
-export const useActivityStore = create<ActivityStore>(set => ({
+export const useActivityStore = create<ActivityStore>((set, get) => ({
     ...initialActivityStore,
 
-    setActivity: (activity: ApiActivityResponse) => {
-        set({ ...activity });
-    },
-    createExpense: params => {
-        // set({ isLoadingDashboard: true });
+    fetchSetActivity: () => {
+        const { setLoading } = useLoadingStore.getState();
+        setLoading('activity', 'data', 'loading');
 
-        // add handling of offline mode
-        createApiLedgerEntry(params)
+        fetchApiUserActivities({ limit: ACTIVITY_PAGE_LIMIT })
             .then(data => {
-                console.log(data);
+                set({
+                    items: data.items,
+                    nextCursor: data.nextCursor,
+                    hasMore: data.nextCursor !== null,
+                });
+                setLoading('activity', 'data', 'fetched');
             })
-            .catch(error => {
-                console.error('Error creating expense', error);
-            })
-            .finally(() => {
-                // set({ isLoadingDashboard: false });
+            .catch(() => {
+                setLoading('activity', 'data', 'fetched');
             });
+    },
+
+    fetchMoreActivity: () => {
+        const { nextCursor, items } = get();
+
+        if (!nextCursor) {
+            return;
+        }
+
+        const { setLoading } = useLoadingStore.getState();
+        setLoading('activity', 'nextPage', 'loading');
+
+        fetchApiUserActivities({ limit: ACTIVITY_PAGE_LIMIT, cursor: nextCursor })
+            .then(data => {
+                set({
+                    items: [...items, ...data.items],
+                    nextCursor: data.nextCursor,
+                    hasMore: data.nextCursor !== null,
+                });
+                setLoading('activity', 'nextPage', 'fetched');
+            })
+            .catch(() => {
+                setLoading('activity', 'nextPage', 'fetched');
+            });
+    },
+
+    createExpense: params => {
+        createApiExpense(params).catch(error => {
+            console.error('Error creating expense', error);
+        });
     },
 }));

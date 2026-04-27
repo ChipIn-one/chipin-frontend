@@ -10,7 +10,6 @@
   },
   "group": {
     "inviteJoinWarning": "Please sign in before joining the group.",
-    "inviteJoinSuccess": "You successfully joined the group {{name}}!",
     "inviteJoinError": "Failed to join the group. Please check the invite link and try again.",
     "invalidGroupId": "Invalid group ID for fetching group",
     "created": "Group \"{{name}}\" created successfully!",

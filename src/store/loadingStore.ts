@@ -14,6 +14,10 @@ export interface LoadingStore {
     dashboard: {
         data: LoadingState;
     };
+    activity: {
+        data: LoadingState;
+        nextPage: LoadingState;
+    };
     users: {
         self: LoadingState;
         friends: LoadingState;
@@ -30,6 +34,7 @@ type LoadingSlices = Omit<LoadingStore, 'setLoading'>;
 
 const initialLoadingStore: LoadingSlices = {
     dashboard: { data: 'initial' },
+    activity: { data: 'initial', nextPage: 'initial' },
     group: {
         data: 'initial',
         add: 'initial',

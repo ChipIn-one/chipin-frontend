@@ -86,5 +86,23 @@ export default defineConfig({
 
     build: {
         sourcemap: true,
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+                    'vendor-radix': ['@radix-ui/themes'],
+                    'vendor-sentry': ['@sentry/react'],
+                    'vendor-styled': ['styled-components'],
+                    'vendor-i18n': ['i18next', 'react-i18next'],
+                    'vendor-misc': [
+                        'axios',
+                        'dexie',
+                        'dexie-react-hooks',
+                        'zustand',
+                        'bignumber.js',
+                    ],
+                },
+            },
+        },
     },
 });

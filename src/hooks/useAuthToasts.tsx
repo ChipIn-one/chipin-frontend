@@ -1,5 +1,5 @@
-import i18n from 'i18next';
 import { useEffect } from 'react';
+import i18n from 'i18next';
 import { toast } from 'sonner';
 
 import { useAuthStore } from 'store/authStore';

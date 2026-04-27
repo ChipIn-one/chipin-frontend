@@ -226,6 +226,41 @@ Radix Themes uses compound component patterns. Always use the correct compositio
 - Import from `basics/numbers` (public entry), not from deep internal paths, unless extending the number system itself.
 - Keep formatting logic inside `basics/numbers` and `helpers/numbers`; UI layers should only pass value/format props.
 
+## bignumber.js Rules
+
+All financial arithmetic must go through `bignumber.js` (`Big`). Native JS numbers are IEEE 754 float64 and accumulate rounding errors in sums, splits, and currency conversions.
+
+**Arithmetic — always `Big()`:**
+
+- Never use `+`, `-`, `*`, `/` on financial values. Use `.plus()`, `.minus()`, `.multipliedBy()`, `.dividedBy()`.
+- Exception: threshold/guard comparisons like `value >= 1000` that do not affect stored or transmitted amounts are acceptable with native numbers.
+
+**Parsing API values — always `tryToBig()`:**
+
+- Use `tryToBig()` from `helpers/numbers` to convert any value coming from the API or external input.
+- Never use `Number()`, `parseFloat()`, or unary `+` on financial strings from the backend — they silently lose precision.
+- `Amount` (via `constructNumberComponent`) already calls `tryToBig()` internally, so pass the raw API string or a `Big` instance directly; wrapping in `Number()` beforehand is redundant and unsafe.
+
+**Comparison — always Big methods:**
+
+- Use `.eq()`, `.lt()`, `.gt()`, `.lte()`, `.gte()` to compare `Big` instances.
+- Never use `===`, `>`, `<`, `>=`, `<=` directly on `Big` objects.
+
+**Sending to API — always a string:**
+
+- Serialize with `.toFixed(precision)` before sending. JSON numbers are float64 and lose precision silently.
+- Never call `.toNumber()` before putting a value into a request payload.
+
+**Rounding — always `Big.ROUND_HALF_UP`:**
+
+- Use `.decimalPlaces(n, Big.ROUND_HALF_UP)` for any rounding.
+- Never use `Math.round()`, `Math.floor()`, `Math.ceil()`, or native `.toFixed()` on financial values.
+
+**`.toNumber()` usage:**
+
+- Allowed only as the final step for non-financial consumption: DOM props, percentage-bar widths, chart libraries, or legacy component props that require `number` (e.g. `OwedStatusText.amount`).
+- Never feed a `.toNumber()` result back into arithmetic or back to the API.
+
 ## Custom Hooks
 
 - Before writing a custom hook, check if `@uidotdev/usehooks` already provides it — prefer the library over reinventing the wheel.
@@ -339,6 +374,21 @@ const handleRemove = useCallback((id: string) => removeItem(id), [removeItem]);
 - Keep strict TS compatibility (`strict: true`).
 - Use `export default` for most React components (pages, features, reusable components).
 - Exception: modal components can use named `const` exports to support grouped/barrel imports from the modal directory.
+- When a boolean expression has **3 or more operands** (`&&` / `||`), extract it into a named `const` before the JSX return (or before the statement that uses it). The name must describe the _intent_, not repeat the conditions:
+
+    ```tsx
+    // ✅ three conditions → named const
+    const isEndOfFeed = !isNextPageLoading && !hasMore && items.length > 0;
+    // ...
+    {
+        isEndOfFeed && <Text>{t('endOfFeed')}</Text>;
+    }
+
+    // ❌ inline expression with 3+ parts
+    {
+        !isNextPageLoading && !hasMore && items.length > 0 && <Text>{t('endOfFeed')}</Text>;
+    }
+    ```
 
 ## Boolean Naming Convention
 

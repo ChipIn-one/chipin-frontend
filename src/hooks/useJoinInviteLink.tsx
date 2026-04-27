@@ -1,5 +1,5 @@
-import i18n from 'i18next';
 import { useEffect } from 'react';
+import i18n from 'i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -25,9 +25,8 @@ export const useJoinInviteLink = () => {
         }
 
         joinGroup({ inviteToken })
-            .then(({ id, name }) => {
+            .then(({ id }) => {
                 navigate(`${ROUTES.GROUP}/${id}`, { replace: true });
-                toast.success(i18n.t('toasts:group.inviteJoinSuccess', { name }));
             })
             .catch(() => {
                 toast.error(i18n.t('toasts:group.inviteJoinError'));

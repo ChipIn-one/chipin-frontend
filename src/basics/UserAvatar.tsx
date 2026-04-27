@@ -11,7 +11,7 @@ type AvatarFallback = ComponentProps<typeof Avatar>['fallback'];
 
 interface Props {
     size?: AvatarSize;
-    src?: AvatarSrc;
+    src?: AvatarSrc | null;
     fallback?: AvatarFallback;
 }
 

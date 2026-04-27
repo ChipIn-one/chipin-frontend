@@ -7,6 +7,10 @@
         "emptyTitle": "No groups yet",
         "emptyDescription": "Create your first group to start splitting expenses with friends, roommates, or travel buddies."
     },
+    "activityStub": {
+        "title": "Activity feed",
+        "description": "Go to the Activity page to see your full event history."
+    },
     "groupsCard": {
         "statusOwed": "You are owed",
         "members_one": "{{count}} member",

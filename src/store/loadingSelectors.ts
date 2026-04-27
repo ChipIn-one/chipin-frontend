@@ -3,6 +3,11 @@ import { LoadingStore } from './loadingStore';
 export const selectDashboardLoading = (s: LoadingStore) => s.dashboard.data === 'loading';
 export const selectDashboardFetched = (s: LoadingStore) => s.dashboard.data === 'fetched';
 
+export const selectActivityLoading = (s: LoadingStore) => s.activity.data === 'loading';
+export const selectActivityFetched = (s: LoadingStore) => s.activity.data === 'fetched';
+export const selectActivityNextPageLoading = (s: LoadingStore) =>
+    s.activity.nextPage === 'loading';
+
 export const selectGroupDataLoading = (s: LoadingStore) => s.group.data === 'loading';
 export const selectGroupDataFetched = (s: LoadingStore) => s.group.data === 'fetched';
 

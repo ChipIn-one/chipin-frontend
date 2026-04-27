@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 
 import { AppEvent } from 'api/activity.types';
+import { tryToBig } from 'helpers/numbers';
 import { useUsersStore } from 'store/usersStore';
 
 interface Props {
@@ -14,7 +15,7 @@ interface Props {
 const EventExpenseCreated = ({ event }: Props) => {
     const { t } = useTranslation('activity');
     const user = useUsersStore(state => state.user);
-    const amount = Number(event.metadata.amount);
+    const amountBig = tryToBig(event.metadata.amount);
     const isCurrentUserPayer = event.metadata.payerDisplayName === user?.displayName;
 
     return (
@@ -47,14 +48,14 @@ const EventExpenseCreated = ({ event }: Props) => {
                 </Flex>
 
                 <Flex direction="column" align="end">
-                    {Number.isFinite(amount) ? (
+                    {amountBig ? (
                         <Text size="3" weight="bold" as="p">
-                            <Amount value={amount} tokenCode={event.metadata.currency} />
+                            <Amount value={amountBig} tokenCode={event.metadata.currency} />
                         </Text>
                     ) : null}
-                    {Number.isFinite(amount) ? (
+                    {amountBig ? (
                         <OwedStatusText
-                            amount={amount}
+                            amount={amountBig.toNumber()}
                             currencyCode={event.metadata.currency}
                             size="2"
                         />

@@ -7,11 +7,13 @@ import { resolveApiErrorMessage } from 'helpers/errors';
 import { getAuthTokenDB } from 'store/IDB/auth';
 
 import {
+    ApiActivityResponse,
     ApiGroup,
     ApiUser,
     CreateGroupParams,
     CreateLedgerEntryParams,
     DashboardApiResponse,
+    FetchActivityParams,
     InviteToGroupParams,
     LeaveGroupParams,
     RemoveGroupParams,
@@ -137,9 +139,23 @@ export const fetchApiKnownUsers = (): Promise<ApiUser[]> => {
     return apiInstance.get(`/users/known-users`).then(result => result.data);
 };
 
+export const fetchApiUserActivities = ({
+    limit,
+    cursor,
+}: FetchActivityParams = {}): Promise<ApiActivityResponse> => {
+    return apiInstance
+        .get(`/users/self/activities`, {
+            params: {
+                ...(limit !== undefined && { limit }),
+                ...(cursor !== undefined && { cursor }),
+            },
+        })
+        .then(result => result.data);
+};
+
 // =============== EXPENSES ===============
 
-export const createApiLedgerEntry = async ({
+export const createApiExpense = async ({
     groupId,
     description,
     amount,
@@ -166,3 +182,4 @@ export const createApiLedgerEntry = async ({
 
     return response.data;
 };
+// TODO: tobig all of amount fields from api immediately on receive, so we don't have to do it in every component where it's used

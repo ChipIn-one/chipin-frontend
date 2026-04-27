@@ -57,7 +57,6 @@ export interface InviteToGroupParams {
 
 export interface DashboardApiResponse {
     groups: ApiGroup[];
-    activity: ApiActivityResponse;
 }
 
 export interface CreateLedgerEntryParams {
@@ -73,4 +72,9 @@ export interface CreateLedgerEntryParams {
 export interface ApiActivityResponse {
     items: AppEvent[];
     nextCursor: string | null;
+}
+
+export interface FetchActivityParams {
+    limit?: number;
+    cursor?: string;
 }

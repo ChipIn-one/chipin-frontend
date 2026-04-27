@@ -2,7 +2,6 @@ import { create } from 'zustand';
 
 import { fetchApiDashboard } from 'api/chipin';
 
-import { useActivityStore } from './activityStore';
 import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
 
@@ -206,7 +205,6 @@ export const useDashboardStore = create<DashboardStore>(() => ({
 
     fetchSetDashboardData: () => {
         const { setGroups } = useGroupsStore.getState();
-        const { setActivity } = useActivityStore.getState();
         const { setLoading } = useLoadingStore.getState();
 
         setLoading('dashboard', 'data', 'loading');
@@ -214,7 +212,6 @@ export const useDashboardStore = create<DashboardStore>(() => ({
         fetchApiDashboard()
             .then(data => {
                 setGroups(data.groups);
-                setActivity(data.activity);
                 setLoading('dashboard', 'data', 'fetched');
             })
             .catch(error => {

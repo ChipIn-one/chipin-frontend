@@ -4,8 +4,7 @@ import EventGroupDeleted from './EventGroupDeleted';
 import EventGroupUpdated from './EventGroupUpdated';
 import EventMemberJoin from './EventMemberJoin';
 import EventMemberLeft from './EventMemberLeft';
-import EventUnknown from './EventUnknown';
-import renderSpecialEvent from './renderSpecialEvent';
+import EventRenderer from './EventRenderer';
 
 export {
     EventExpenseCreated,
@@ -14,6 +13,5 @@ export {
     EventGroupUpdated,
     EventMemberJoin,
     EventMemberLeft,
-    EventUnknown,
-    renderSpecialEvent,
+    EventRenderer,
 };

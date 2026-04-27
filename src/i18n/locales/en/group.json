@@ -80,7 +80,9 @@
         "deleteTitle": "Delete group",
         "deleteConfirm": "Are you sure you want to delete this group?",
         "deleteWarning": "This action cannot be undone. All group data will be permanently deleted.",
-        "leaveGroup": "Leave group"
+        "leaveGroup": "Leave group",
+        "activityStubTitle": "Group activity",
+        "activityStubDescription": "Full activity history is available on the Activity page."
     },
     "leaveModal": {
         "title": "Leave group",

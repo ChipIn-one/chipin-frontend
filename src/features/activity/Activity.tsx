@@ -1,30 +1,54 @@
+import { useEffect } from 'react';
+import { LucideChevronsDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Card, Flex, Text } from '@radix-ui/themes';
+import { Card, Flex, Spinner, Text } from '@radix-ui/themes';
+import { useIntersectionObserver } from '@uidotdev/usehooks';
 
 import { useActivityStore } from 'store/activityStore';
-import { selectDashboardLoading } from 'store/loadingSelectors';
+import { selectActivityLoading, selectActivityNextPageLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
 import ActivityHeader, { ActivityHeaderContext } from './ActivityHeader';
-import { EventUnknown, renderSpecialEvent } from './components';
+import { EventRenderer } from './components';
 
-interface ActivityProps {
+interface Props {
     context?: ActivityHeaderContext;
 }
 
-const Activity = ({ context = 'dashboard' }: ActivityProps) => {
+const Activity = ({ context = 'dashboard' }: Props) => {
     const { t } = useTranslation('activity');
-    const activity = useActivityStore(state => state.items);
-    const isLoading = useLoadingStore(selectDashboardLoading);
+    const { items, hasMore, fetchMoreActivity: fetchAppendActivity } = useActivityStore();
+    const isLoading = useLoadingStore(selectActivityLoading);
+    const isNextPageLoading = useLoadingStore(selectActivityNextPageLoading);
 
     const shouldShowHeader = context !== 'group';
+    const isFullContext = context === 'full';
+    const isEndOfFeed = !isNextPageLoading && !hasMore && items.length > 0;
+
+    const [sentinelRef, sentinelEntry] = useIntersectionObserver({ threshold: 0 });
+
+    useEffect(() => {
+        if (!isFullContext) {
+            return;
+        }
+
+        if (sentinelEntry?.isIntersecting && hasMore && !isNextPageLoading) {
+            fetchAppendActivity();
+        }
+    }, [
+        isFullContext,
+        sentinelEntry?.isIntersecting,
+        hasMore,
+        isNextPageLoading,
+        fetchAppendActivity,
+    ]);
 
     return (
         <>
             {shouldShowHeader ? <ActivityHeader isLoading={isLoading} context={context} /> : null}
 
-            {!isLoading && activity.length === 0 ? (
+            {!isLoading && items.length === 0 ? (
                 <Card size="2">
                     <Flex direction="column" gap="1">
                         <Text size="4" weight="medium" as="p">
@@ -36,15 +60,32 @@ const Activity = ({ context = 'dashboard' }: ActivityProps) => {
                     </Flex>
                 </Card>
             ) : (
-                activity.map(event => {
-                    const specialEvent = renderSpecialEvent(event);
+                <Flex direction="column" gap="3">
+                    {items.map(event => (
+                        <EventRenderer key={event.id} event={event} />
+                    ))}
 
-                    if (specialEvent) {
-                        return specialEvent;
-                    }
+                    {isFullContext && (
+                        <>
+                            {isNextPageLoading && (
+                                <Flex justify="center" py="4">
+                                    <Spinner size="3" />
+                                </Flex>
+                            )}
 
-                    return <EventUnknown key={event.id} event={event} />;
-                })
+                            {isEndOfFeed && (
+                                <Flex justify="center" align="center" gap="2" py="4">
+                                    <LucideChevronsDown size={14} color="var(--gray-8)" />
+                                    <Text size="1" color="gray">
+                                        {t('endOfFeed')}
+                                    </Text>
+                                </Flex>
+                            )}
+
+                            <div ref={sentinelRef} />
+                        </>
+                    )}
+                </Flex>
             )}
         </>
     );

@@ -5,7 +5,7 @@ type Timestamp = number;
 
 type ActorSnapshot = {
     displayName: string;
-    picture: string;
+    picture: string | null;
 };
 
 type BaseEvent = {
@@ -33,11 +33,29 @@ type ExpenseMetadata = {
     payerDisplayName: string;
 };
 
+type SettlementMetadata = {
+    type: 'settlement';
+    entryId: UUID;
+    groupId: UUID;
+    groupName: string;
+    amount: string;
+    currency: string;
+    fromDisplayName: string;
+    toDisplayName: string;
+};
+
 type ExpenseCreatedEvent = BaseEvent & {
     domain: 'LEDGER';
     action: 'EXPENSE_CREATED';
     subjectType: 'expense';
     metadata: ExpenseMetadata;
+};
+
+type SettlementCreatedEvent = BaseEvent & {
+    domain: 'LEDGER';
+    action: 'SETTLEMENT_CREATED';
+    subjectType: 'ledger_entry';
+    metadata: SettlementMetadata;
 };
 
 /** --- GROUP --- */
@@ -89,6 +107,7 @@ type MemberLeftEvent = BaseEvent & {
 
 export type AppEvent =
     | ExpenseCreatedEvent
+    | SettlementCreatedEvent
     | GroupCreatedEvent
     | GroupUpdatedEvent
     | GroupDeletedEvent

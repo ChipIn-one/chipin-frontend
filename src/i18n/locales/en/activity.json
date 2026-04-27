@@ -7,6 +7,7 @@
     "viewAllShort": "All activity",
     "emptyTitle": "No activity yet",
     "emptyDescription": "Recent expenses and group updates will appear here.",
+    "endOfFeed": "That's everything for now",
     "event": {
         "expenseCreatedDescription": "Paid by {{payer}} in {{group}}",
         "groupCreatedDescription": "{{actor}} created the group",
