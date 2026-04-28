@@ -53,18 +53,23 @@ const IconPanel = styled(Box)`
 
 const IconsGrid = styled.div`
     display: grid;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--space-2);
     width: 100%;
+
+    @media (min-width: 520px) {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
 `;
 
 const EmojiChoiceButton = styled(IconButton)<{ $selected: boolean }>`
     && {
         width: 100%;
         min-width: 100%;
-        height: var(--space-9);
-        min-height: var(--space-9);
-        max-height: var(--space-9);
+        height: auto;
+        min-height: unset;
+        max-height: unset;
+        aspect-ratio: 1 / 1;
         padding: 0;
         margin: 0;
         box-sizing: border-box;
@@ -178,7 +183,7 @@ const GroupForm = ({ type, onClose }: FormProps) => {
             <Flex direction="column" gap="2">
                 <Flex align="center" justify="between" gap="3">
                     <FieldLabel size="3" weight="bold">
-                        {t('modal.fields.nameLabel')}
+                        {t('common:fields.groupName')}
                     </FieldLabel>
                     <Box display={isInputNameCloseToLimit ? 'block' : 'none'}>
                         <Text size="2" color="gray">
@@ -211,7 +216,7 @@ const GroupForm = ({ type, onClose }: FormProps) => {
                 <Flex align="center" justify="between" gap="3">
                     <Flex align="center" gap="2">
                         <FieldLabel size="2" weight="bold">
-                            {t('modal.fields.descriptionLabel')}
+                            {t('common:fields.description')}
                         </FieldLabel>
                         <Text size="2" color="gray">
                             {t('modal.fields.descriptionOptional')}
@@ -239,7 +244,7 @@ const GroupForm = ({ type, onClose }: FormProps) => {
             <Flex direction="column" gap="3">
                 <Flex align="center" justify="between" gap="3">
                     <FieldLabel size="2" weight="bold">
-                        {t('modal.fields.iconLabel')}
+                        {t('common:fields.icon')}
                     </FieldLabel>
                 </Flex>
 
@@ -270,7 +275,6 @@ const GroupForm = ({ type, onClose }: FormProps) => {
                                 <EmojiChoiceButton
                                     key={`${selectedCategory}-${icon}`}
                                     type="button"
-                                    size="4"
                                     radius="large"
                                     variant={isSelected ? 'outline' : 'ghost'}
                                     color="jade"
@@ -299,7 +303,7 @@ const GroupForm = ({ type, onClose }: FormProps) => {
                     loading={isCreatingGroup || isUpdatingGroup}
                     onClick={onClickSave}
                 >
-                    {isCreateMode ? t('modal.actions.create') : t('modal.actions.save')}
+                    {isCreateMode ? t('common:buttons.createGroup') : t('common:buttons.saveGroup')}
                 </Button>
             </Flex>
         </Flex>
@@ -325,7 +329,7 @@ const CreateUpdateGroupModal = ({ children, type }: Props) => {
             setIsOpened={setIsModalOpened}
             triggerElement={children}
             title={isCreateMode ? t('modal.titleCreate') : t('modal.titleEdit')}
-            maxWidth="480px"
+            maxWidth="400px"
             content={
                 <GroupForm
                     key={String(formKey)}

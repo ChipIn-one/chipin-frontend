@@ -1,24 +1,18 @@
 {
     "title": "Настройки",
     "subtitle": "Управляйте аккаунтом, приватностью, параметрами приложения и уведомлениями.",
-    "signOut": "Выйти",
     "account": {
         "title": "Аккаунт",
         "description": "Личная информация и настройки профиля.",
-        "displayNameLabel": "Отображаемое имя",
-        "displayNamePlaceholder": "Ваше имя или ник",
-        "emailLabel": "Эл. почта"
+        "displayNamePlaceholder": "Ваше имя или ник"
     },
     "regional": {
         "title": "Региональные параметры",
         "description": "Часовой пояс, язык и валюта рабочего пространства.",
         "autoTimezone": "Определять часовой пояс автоматически",
         "autoTimezoneHint": "Текущий часовой пояс: {{timezone}}",
-        "timezoneLabel": "Часовой пояс",
-        "currencyLabel": "Валюта по умолчанию",
         "currencySearchPlaceholder": "Найти валюту",
         "currencySearchEmpty": "Валюты не найдены.",
-        "languageLabel": "Язык интерфейса",
         "languageHint": "Выберите предпочтительный язык приложения.",
         "currencies": {
             "USD": "USD - Доллар США",

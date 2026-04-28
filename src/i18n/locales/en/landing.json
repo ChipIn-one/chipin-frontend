@@ -1,10 +1,13 @@
 {
+    "nav": {
+        "features": "Features",
+        "howItWorks": "How it works",
+        "pricing": "Pricing"
+    },
     "badge": "Share expenses without stress",
     "heroTitle": "Split bills with",
     "heroTitleHighlight": "friends & family",
     "heroDescription": "Create groups, add expenses, and see who owes whom — fast and fair. Perfect for trips, roommates, and group activities.",
-    "getStarted": "Get started",
-    "installApp": "Install app",
     "stats": {
         "activeUsers": "Active users",
         "expensesTracked": "Expenses tracked",
@@ -42,6 +45,19 @@
             "title": "Clear & settle balances",
             "description": "See who owes whom across all expenses, then settle up and keep the slate clean. Multi-currency support included.",
             "placeholder": "Balances screenshot"
+        }
+    },
+    "cta": {
+        "badge": "Free forever \u00b7 No credit card required",
+        "title": "Ready to stop stressing about money?",
+        "subtitle": "Join 50,000+ users who already use Chipin to split bills and track budgets — completely free.",
+        "getStartedFree": "Get started for free",
+        "openApp": "Open the app",
+        "bullets": {
+            "noCard": "No credit card",
+            "unlimitedGroups": "Unlimited groups",
+            "freePermanently": "Free forever",
+            "allDevices": "Works on all devices"
         }
     }
 }

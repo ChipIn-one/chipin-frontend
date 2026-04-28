@@ -55,7 +55,7 @@ const LeaveGroupModal = ({ children }: Props) => {
             isOpened={isModalOpened}
             setIsOpened={onOpenChange}
             triggerElement={children}
-            title={t('group:leaveModal.title')}
+            title={t('common:buttons.leaveGroup')}
             maxWidth="480px"
             content={
                 <Flex direction="column" gap="6">
@@ -104,7 +104,7 @@ const LeaveGroupModal = ({ children }: Props) => {
                             loading={isLeavingGroup}
                             disabled={!canConfirm}
                         >
-                            {t('group:leaveModal.confirmButton')}
+                            {t('common:buttons.leaveGroup')}
                         </Button>
                     </Flex>
                 </Flex>

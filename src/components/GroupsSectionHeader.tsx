@@ -30,7 +30,7 @@ const GroupsSectionHeader = ({ label, isLoading = false, ...flexProps }: Props) 
             <CreateUpdateGroupModal type="create">
                 <Button size="2" variant="soft" loading={isLoading}>
                     <LucidePlus size={16} />
-                    {t('groups.create')}
+                    {t('common:buttons.create')}
                 </Button>
             </CreateUpdateGroupModal>
         </Flex>

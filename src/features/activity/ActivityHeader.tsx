@@ -49,7 +49,7 @@ const ActivityHeader = ({ isLoading, context }: ActivityHeaderProps) => {
                 {showViewAllButton ? (
                     <Link to={ROUTES.ACTIVITY}>
                         <Button variant="soft" size="3" loading={isLoading}>
-                            {t('viewAllShort')}
+                            {t('common:buttons.viewAllActivity')}
                             <LucideArrowRight size={20} />
                         </Button>
                     </Link>

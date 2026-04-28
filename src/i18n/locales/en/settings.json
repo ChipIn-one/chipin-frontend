@@ -1,24 +1,18 @@
 {
     "title": "Settings",
     "subtitle": "Manage your account, privacy, app preferences, and notifications.",
-    "signOut": "Sign Out",
     "account": {
         "title": "Account",
         "description": "Personal information and profile settings.",
-        "displayNameLabel": "Display name",
-        "displayNamePlaceholder": "Your name or nickname",
-        "emailLabel": "Email"
+        "displayNamePlaceholder": "Your name or nickname"
     },
     "regional": {
         "title": "Regional Preferences",
         "description": "Timezone, language, and currency for your workspace.",
         "autoTimezone": "Detect timezone automatically",
         "autoTimezoneHint": "Current timezone: {{timezone}}",
-        "timezoneLabel": "Timezone",
-        "currencyLabel": "Default currency",
         "currencySearchPlaceholder": "Search currency",
         "currencySearchEmpty": "No currencies found.",
-        "languageLabel": "Interface language",
         "languageHint": "Choose your preferred app language.",
         "currencies": {
             "USD": "USD - US Dollar",

@@ -23,7 +23,7 @@ const GroupQRModal = ({ qrLink }: Props) => {
                 <Box width="100%" asChild>
                     <Button variant="soft" size="3">
                         <LucideQrCode />
-                        {t('qr.showButton')}
+                        {t('common:buttons.showQRCode')}
                     </Button>
                 </Box>
             }

@@ -9,7 +9,37 @@
         "cancel": "Cancel",
         "delete": "Delete",
         "reload": "Reload page",
-        "goHome": "Go home"
+        "goHome": "Go home",
+        "create": "Create",
+        "createGroup": "Create group",
+        "saveGroup": "Save group",
+        "addExpense": "Add expense",
+        "settleUp": "Settle up",
+        "groupActions": "Group actions",
+        "copyGroupLink": "Copy group link",
+        "updateGroup": "Update group",
+        "removeGroup": "Remove group",
+        "deleteGroup": "Delete group",
+        "leaveGroup": "Leave group",
+        "showQRCode": "Show QR code",
+        "addFriend": "Add friend",
+        "signOut": "Sign Out",
+        "installApp": "Install app",
+        "getStarted": "Get started",
+        "viewAllActivity": "All activity"
+    },
+    "fields": {
+        "description": "Description",
+        "group": "Group",
+        "category": "Category",
+        "paidBy": "Paid by",
+        "groupName": "Group name",
+        "icon": "Icon",
+        "email": "Email",
+        "displayName": "Display name",
+        "timezone": "Timezone",
+        "defaultCurrency": "Default currency",
+        "interfaceLanguage": "Interface language"
     },
     "balances": {
         "youOwed": "you owed",
@@ -18,6 +48,12 @@
     "header": {
         "signIn": "Sign in",
         "testError": "Trigger test error"
+    },
+    "footer": {
+        "copyright": "© {{name}} {{year}}. All rights reserved.",
+        "privacy": "Privacy",
+        "terms": "Terms",
+        "contact": "Contact"
     },
     "errorBoundary": {
         "title": "Something went wrong",

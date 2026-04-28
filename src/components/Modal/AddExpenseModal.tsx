@@ -136,7 +136,7 @@ const AddExpenseModal = ({ children }: Props) => {
                     {groups.length > 1 && (
                         <Flex direction="column" gap="2">
                             <Text as="div" size="3" weight="medium">
-                                {t('expenses.modal.fields.group')}
+                                {t('common:fields.group')}
                             </Text>
 
                             <Select.Root value={groupId} onValueChange={onChangeGroup}>
@@ -155,13 +155,13 @@ const AddExpenseModal = ({ children }: Props) => {
 
                     <Flex direction="column" gap="2">
                         <Text as="div" size="3" weight="medium">
-                            {t('expenses.modal.fields.category')}
+                            {t('common:fields.category')}
                         </Text>
 
                         <Grid columns={{ initial: '1', xs: '2' }} gap="3">
                             <Flex direction="column" gap="2">
                                 <Text as="div" size="2" color="gray">
-                                    {t('expenses.modal.fields.category')}
+                                    {t('common:fields.category')}
                                 </Text>
 
                                 <Select.Root value={category} onValueChange={onChangeCategory}>
@@ -186,7 +186,7 @@ const AddExpenseModal = ({ children }: Props) => {
 
                             <Flex direction="column" gap="2">
                                 <Text as="div" size="2" color="gray">
-                                    {t('expenses.modal.fields.description')}
+                                    {t('common:fields.description')}
                                 </Text>
 
                                 <TextField.Root
@@ -228,7 +228,7 @@ const AddExpenseModal = ({ children }: Props) => {
 
                     <Flex direction="column" gap="3">
                         <Text as="div" size="3" weight="medium">
-                            {t('expenses.modal.fields.paidBy')}
+                            {t('common:fields.paidBy')}
                         </Text>
 
                         {orderedMembers.length > 0 ? (
@@ -297,7 +297,7 @@ const AddExpenseModal = ({ children }: Props) => {
                             disabled={isSubmitDisabled}
                             onClick={onAddExpense}
                         >
-                            {t('expenses.modal.submit')}
+                            {t('common:buttons.addExpense')}
                         </Button>
                     </Flex>
                 </Flex>

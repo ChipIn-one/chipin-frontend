@@ -31,7 +31,7 @@ interface Props {
 }
 
 const AddExpenseButton = ({ type = 'desktop' }: Props) => {
-    const { t } = useTranslation('group');
+    const { t } = useTranslation('common');
     const location = useLocation();
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
     const isDashboardLoading = useLoadingStore(selectDashboardLoading);
@@ -48,7 +48,7 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
                     size="4"
                     radius="full"
                     color="jade"
-                    aria-label={t('expenses.modal.submit')}
+                    aria-label={t('buttons.addExpense')}
                     loading={isDashboardLoading}
                 >
                     <LucidePlus size={28} />
@@ -63,7 +63,7 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
                 <FloatingBox position="fixed" right="6">
                     <Button size="3" radius="full" color="jade" loading={isDashboardLoading}>
                         <LucideCirclePlus />
-                        {t('expenses.modal.submit')}
+                        {t('buttons.addExpense')}
                     </Button>
                 </FloatingBox>
             </AddExpenseModal>

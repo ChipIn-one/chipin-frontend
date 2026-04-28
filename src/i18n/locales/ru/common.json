@@ -9,7 +9,37 @@
         "cancel": "Отмена",
         "delete": "Удалить",
         "reload": "Перезагрузить страницу",
-        "goHome": "На главную"
+        "goHome": "На главную",
+        "create": "Создать",
+        "createGroup": "Создать группу",
+        "saveGroup": "Сохранить группу",
+        "addExpense": "Добавить расход",
+        "settleUp": "Рассчитаться",
+        "groupActions": "Действия с группой",
+        "copyGroupLink": "Скопировать ссылку",
+        "updateGroup": "Обновить группу",
+        "removeGroup": "Удалить группу",
+        "deleteGroup": "Удалить группу",
+        "leaveGroup": "Покинуть группу",
+        "showQRCode": "Показать QR-код",
+        "addFriend": "Добавить друга",
+        "signOut": "Выйти",
+        "installApp": "Установить",
+        "getStarted": "Начать",
+        "viewAllActivity": "Вся активность"
+    },
+    "fields": {
+        "description": "Описание",
+        "group": "Группа",
+        "category": "Категория",
+        "paidBy": "Оплатил",
+        "groupName": "Название группы",
+        "icon": "Иконка",
+        "email": "Эл. почта",
+        "displayName": "Отображаемое имя",
+        "timezone": "Часовой пояс",
+        "defaultCurrency": "Валюта по умолчанию",
+        "interfaceLanguage": "Язык интерфейса"
     },
     "balances": {
         "youOwed": "вам должны",
@@ -18,6 +48,12 @@
     "header": {
         "signIn": "Войти",
         "testError": "Вызвать тестовую ошибку"
+    },
+    "footer": {
+        "copyright": "© {{name}} {{year}}. Все права защищены.",
+        "privacy": "Конфиденциальность",
+        "terms": "Условия",
+        "contact": "Контакты"
     },
     "errorBoundary": {
         "title": "Что-то пошло не так",

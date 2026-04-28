@@ -15,15 +15,16 @@
 
 - `src/root.tsx`: app bootstrap (Sentry, ThemeProvider, analytics, global CSS).
 - `src/main.tsx`: app shell composition (router, layout, toaster, global hooks).
-- `src/features/*`: routing and access guards (`AppRouter`, `ProtectedRoute`, `HomeRouteGuard`).
-- `src/pages/*`: route-level screens/containers.
-- `src/components/*`: reusable UI blocks used by pages.
-- `src/basics/*`: low-level primitives/shared visual helpers.
+- `src/basics/*`: **atomic primitives** — single-responsibility, no store access, no API calls; reusable across any domain.
+- `src/components/*`: **composite UI blocks** — may read from stores or combine multiple `basics`; domain-adjacent but not tied to one feature.
+- `src/features/*`: **self-contained domain modules** — routing guards, domain-specific sub-components, and feature-scoped hooks; not reusable outside their domain.
+- `src/pages/*`: **route-level screens** — assemble components and features; contain minimal logic; delegate to stores and hooks.
 - `src/hooks/*`: cross-page side effects and app lifecycle hooks.
 - `src/store/*`: global client state + async actions.
 - `src/api/*`: HTTP transport and backend contracts.
 - `src/helpers/*`: pure utilities (env/url/errors/time/...).
 - `src/constants/*`: app constants, route map, messages, env config.
+- `src/types/*`: global TypeScript ambient declarations and module augmentations (`global.d.ts`, `styled.d.ts`, etc.).
 
 ## UI System Rules
 
@@ -46,6 +47,7 @@
 - Width/height string values such as `"100%"`, `"max-content"`, `"var(--space-8)"` are accepted directly by `width`, `minWidth`, `maxWidth`, `height` props on `Box`, `Flex`, `Grid`; prefer them over styled wrappers.
 - For interactive components that lack a `width` prop (e.g. `Button`, `IconButton`), wrap them in `<Box width="...">` rather than creating `styled(Button)` solely for width.
 - Use `asChild` when a Radix component needs to render as a different HTML element while keeping Radix styles and behavior (e.g. `<Flex asChild><label>`). Do not add a wrapper element; merge via `asChild` instead.
+- For hyperlinks, always use the Radix `Link` component instead of a bare `<a>` tag or a custom `styled.a` wrapper. Use its `color`, `size`, `weight`, `underline`, and `highContrast` props to control appearance. Only fall back to a custom styled wrapper when Radix `Link` props cannot express the required style.
 - When building typed wrapper components around Radix components, use `ComponentProps<typeof RadixComponent>['propName']` to extract prop types instead of re-declaring them manually.
 
 ## Layering and z-index Rules
@@ -325,6 +327,7 @@ const handleRemove = useCallback((id: string) => removeItem(id), [removeItem]);
 ## Dependency Rules (Current Architecture)
 
 - Pages/components/hooks/features can read from stores.
+- `basics/` must **not** access stores or call the API — pure rendering and logic only.
 - Stores are the main place for async data fetching and call `src/api/*`.
 - Components/pages should not call API directly.
 - `src/api/chipin.ts` is the single HTTP gateway (axios instance + interceptors).
@@ -360,6 +363,7 @@ const handleRemove = useCallback((id: string) => removeItem(id), [removeItem]);
 - Do not leave raw user-facing string literals in JSX; use `t('...')` keys instead.
 - Existing hardcoded strings exist; do not add new hardcoded user-facing strings in JSX.
 - If a translation text is used in more than one namespace file, move it to `common.json` and reference via `common:` prefix. Do not duplicate the same translation across multiple locale files.
+- Phrases of **3 words or fewer** (e.g. "Save", "Cancel", "Add expense") must always live in `common.json` and be referenced via the `common:` prefix — never declared in a feature-specific namespace file.
 
 ## Global Constants Pattern
 
@@ -373,7 +377,7 @@ const handleRemove = useCallback((id: string) => removeItem(id), [removeItem]);
 - Follow import sorting and unused-import rules from `eslint.config.js`.
 - Keep strict TS compatibility (`strict: true`).
 - Use `export default` for most React components (pages, features, reusable components).
-- Exception: modal components can use named `const` exports to support grouped/barrel imports from the modal directory.
+- Exception: components that live inside a barrel-exported group directory (e.g. `Modal/`, `Navs/`) should use named `const` exports to support clean re-export from the barrel `index.ts`.
 - When a boolean expression has **3 or more operands** (`&&` / `||`), extract it into a named `const` before the JSX return (or before the statement that uses it). The name must describe the _intent_, not repeat the conditions:
 
     ```tsx
@@ -474,13 +478,45 @@ const handleRemove = useCallback((id: string) => removeItem(id), [removeItem]);
 - Utilities and helpers: `camelCase.ts` — `numbers.ts`, `url.ts`.
 - Constants: `camelCase.ts` — `routes.ts`, `time.ts`.
 
+**Folder naming**:
+
+- All directories use `kebab-case` — `base-modal/`, `user-friends/`, `self-settings/`.
+- Never use `PascalCase` or `camelCase` for directory names.
+
+## Component Layer Placement
+
+Choose the layer by complexity and reusability:
+
+| Layer             | Lives in      | Criteria                                                                                                                                                                           |
+| ----------------- | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Primitive**     | `basics/`     | Single-responsibility; no store access; no API calls; reusable across any domain. Examples: `UserAvatar`, `RelativeTime`, `ChipInLoader`, `Amount`.                                |
+| **Composite**     | `components/` | Combines multiple primitives or reads from a store selector; domain-adjacent but not tied to one feature. Examples: `Header`, `GroupsCards`, `SummaryDebtCards`, modal components. |
+| **Domain module** | `features/`   | Self-contained domain slice — includes routing guards, feature-scoped hooks, and composed sub-components. Not reusable outside its domain. Examples: `activity/`, `routing/`.      |
+| **Screen**        | `pages/`      | Route-level container. Assembles features and components; contains minimal logic — delegates to stores and hooks.                                                                  |
+
+**Promotion rules:**
+
+- Promote from `basics/` to `components/` when the component imports from a store, combines 3+ other primitives, or carries domain-specific display logic.
+- Promote from `components/` to `features/` when the component introduces its own routing, access guards, or encapsulates a complete product domain.
+- Never import from `pages/*` in `basics/`, `components/`, `features/`, or `store/` — pages are leaf nodes in the import tree.
+- Allowed import direction: `pages` → `features` → `components` → `basics`. No reverse imports.
+
 ## Component Grouping
 
-- When two or more components share closely related logic, domain, or visual purpose, group them into a dedicated subdirectory (e.g. `components/Modal/`, `components/Navs/`).
+- When two or more components share closely related logic, domain, or visual purpose within the same layer, group them into a dedicated subdirectory using `kebab-case` (e.g. `components/modal/`, `components/navs/`).
 - Every such directory must have an `index.ts` barrel file that re-exports all public components using named exports.
 - The barrel file must only contain `import` / `export` statements — no logic, no JSX.
-- Consumers must import from the directory barrel (`components/Modal`) rather than from deep internal paths (`components/Modal/AddExpenseModal`).
+- Consumers must import from the directory barrel (`components/modal`) rather than from deep internal paths (`components/modal/AddExpenseModal`).
 - A single standalone component does not need its own folder; only group when there are two or more related components.
+- Do not mix components from different layers in the same subdirectory — a `basics/` subdirectory must only contain primitives, a `components/` subdirectory only composites, and so on.
+- **Legacy note:** existing directories `components/Modal/` and `components/Navs/` use PascalCase and should be migrated to `kebab-case` as part of a dedicated refactoring task; new directories must follow `kebab-case` from creation.
+
+**Co-location of private sub-components:**
+
+- Sub-components that belong exclusively to one parent component and are not reused anywhere else must live in a `components/` subdirectory next to their parent, not in the shared layer directory.
+- Do **not** create a barrel `index.ts` for a co-located `components/` folder — import the files directly from their paths within the same feature/component scope.
+- Example: `features/activity/components/EventJoinGroup.tsx`, `features/activity/components/EventUnknown.tsx` — private to `activity/`, never exported outside it.
+- If a sub-component is later needed by a second feature or page, move it up to the appropriate shared layer (`components/` or `basics/`) at that point.
 
 ## Practical Do/Don't
 

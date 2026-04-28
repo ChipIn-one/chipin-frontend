@@ -1,11 +1,20 @@
 import { useState } from 'react';
 import { UserAvatar } from 'basics';
-import { LucideBug, LucideLogIn } from 'lucide-react';
+import { LucideArrowRight, LucideBug, LucideLogIn, LucideMenu } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link as RouterLink, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 
-import { Box, Button, Container, Flex, IconButton, Text } from '@radix-ui/themes';
+import {
+    Box,
+    Button,
+    Container,
+    DropdownMenu,
+    Flex,
+    IconButton,
+    Link,
+    Text,
+} from '@radix-ui/themes';
 
 import { PROJECT_NAME } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
@@ -36,6 +45,53 @@ const StyledLogotype = styled(Logotype)`
     height: 40px;
 `;
 
+const LANDING_NAV_LINKS = [
+    { labelKey: 'nav.features', href: '#features' },
+    { labelKey: 'nav.howItWorks', href: '#how-it-works' },
+    { labelKey: 'nav.pricing', href: '#pricing' },
+] as const;
+
+const LandingNav = () => {
+    const { t } = useTranslation('landing');
+
+    return (
+        <Box display={{ initial: 'none', md: 'block' }}>
+            <Flex align="center" gap="6">
+                {LANDING_NAV_LINKS.map(({ labelKey, href }) => (
+                    <Button key={href} variant="ghost" color="gray" size="3" asChild>
+                        <Link href={href} color="gray" underline="none">
+                            {t(labelKey)}
+                        </Link>
+                    </Button>
+                ))}
+            </Flex>
+        </Box>
+    );
+};
+
+const LandingMobileMenu = () => {
+    const { t } = useTranslation('landing');
+
+    return (
+        <DropdownMenu.Root>
+            <DropdownMenu.Trigger>
+                <IconButton variant="ghost" color="gray" size="2">
+                    <LucideMenu />
+                </IconButton>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Content>
+                {LANDING_NAV_LINKS.map(({ labelKey, href }) => (
+                    <DropdownMenu.Item key={href} asChild>
+                        <Link href={href} color="gray" underline="none">
+                            {t(labelKey)}
+                        </Link>
+                    </DropdownMenu.Item>
+                ))}
+            </DropdownMenu.Content>
+        </DropdownMenu.Root>
+    );
+};
+
 const CrashTestButton = () => {
     const [shouldCrash, setShouldCrash] = useState(false);
     const { t } = useTranslation();
@@ -63,7 +119,10 @@ const CrashTestButton = () => {
 
 const Header = () => {
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
+    const location = useLocation();
     const { t } = useTranslation();
+
+    const isLandingPage = !isLoggedIn && location.pathname === ROUTES.HOME;
 
     return (
         <StickyBox>
@@ -82,6 +141,7 @@ const Header = () => {
                     </EmptyRouteLink>
 
                     {isLoggedIn && <HeaderNav />}
+                    {isLandingPage && <LandingNav />}
 
                     <Flex gap="4" align="center">
                         {getIsDevEnv() && <CrashTestButton />}
@@ -89,26 +149,36 @@ const Header = () => {
                         {isLoggedIn ? (
                             <Flex gap="4" align="center">
                                 <Box display={{ initial: 'none', sm: 'block' }}>
-                                    <Link to={ROUTES.SETTINGS}>
+                                    <RouterLink to={ROUTES.SETTINGS}>
                                         <UserAvatar size="3" />
-                                    </Link>
+                                    </RouterLink>
+                                </Box>
+                            </Flex>
+                        ) : isLandingPage ? (
+                            <Flex align="center" gap="2">
+                                <AuthModal>
+                                    <Button size="2" variant="soft" color="green" radius="full">
+                                        {t('header.signIn')}
+                                        <LucideArrowRight size={16} />
+                                    </Button>
+                                </AuthModal>
+                                <Box display={{ initial: 'block', md: 'none' }}>
+                                    <LandingMobileMenu />
                                 </Box>
                             </Flex>
                         ) : (
-                            <>
-                                <AuthModal>
-                                    <Button
-                                        size={{
-                                            initial: '2',
-                                            sm: '3',
-                                        }}
-                                        variant="outline"
-                                    >
-                                        {t('header.signIn')}
-                                        <LucideLogIn />
-                                    </Button>
-                                </AuthModal>
-                            </>
+                            <AuthModal>
+                                <Button
+                                    size={{
+                                        initial: '2',
+                                        sm: '3',
+                                    }}
+                                    variant="outline"
+                                >
+                                    {t('header.signIn')}
+                                    <LucideLogIn />
+                                </Button>
+                            </AuthModal>
                         )}
                     </Flex>
                 </Flex>

@@ -110,7 +110,7 @@ const SettingsPage = () => {
                             <Flex direction="column" gap="3">
                                 <Box>
                                     <Text size="2" color="gray">
-                                        {t('account.displayNameLabel')}
+                                        {t('common:fields.displayName')}
                                     </Text>
                                     <TextField.Root
                                         mt="2"
@@ -122,7 +122,7 @@ const SettingsPage = () => {
                                 </Box>
                                 <Box>
                                     <Text size="2" color="gray">
-                                        {t('account.emailLabel')}
+                                        {t('common:fields.email')}
                                     </Text>
                                     <TextField.Root
                                         mt="2"
@@ -173,7 +173,7 @@ const SettingsPage = () => {
 
                                 <Box>
                                     <Text size="2" color="gray">
-                                        {t('regional.timezoneLabel')}
+                                        {t('common:fields.timezone')}
                                     </Text>
                                     <Select.Root
                                         value={timezone}
@@ -192,13 +192,13 @@ const SettingsPage = () => {
                                 </Box>
 
                                 <Text size="2" color="gray">
-                                    {t('regional.currencyLabel')}
+                                    {t('common:fields.defaultCurrency')}
                                 </Text>
                                 <CurrencySelect />
 
                                 <Box>
                                     <Text size="2" color="gray">
-                                        {t('regional.languageLabel')}
+                                        {t('common:fields.interfaceLanguage')}
                                     </Text>
                                     <Select.Root
                                         value={selectedLanguage}
@@ -385,14 +385,14 @@ const SettingsPage = () => {
 
                                 <Flex justify="between" align="center" gap="3">
                                     <Box>
-                                        <Text weight="medium">{t('signOut')}</Text>
+                                        <Text weight="medium">{t('common:buttons.signOut')}</Text>
                                         <Text size="2" color="gray" as="p">
                                             {t('security.signOutDescription')}
                                         </Text>
                                     </Box>
                                     <Button onClick={signOut} color="red">
                                         <LucideLogOut size={16} />
-                                        {t('signOut')}
+                                        {t('common:buttons.signOut')}
                                     </Button>
                                 </Flex>
                             </Flex>

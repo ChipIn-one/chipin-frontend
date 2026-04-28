@@ -3,12 +3,9 @@
         "titleCreate": "Create new group",
         "titleEdit": "Edit group",
         "fields": {
-            "nameLabel": "Group name",
             "namePlaceholder": "e.g. Barcelona Trip, Apartment...",
-            "descriptionLabel": "Description",
             "descriptionOptional": "(optional)",
-            "descriptionPlaceholder": "Add a note about this group...",
-            "iconLabel": "Icon"
+            "descriptionPlaceholder": "Add a note about this group..."
         },
         "categories": {
             "travel": "Travel",
@@ -16,16 +13,11 @@
             "home": "Home & Life",
             "fun": "Fun & Sports",
             "work": "Work & Money"
-        },
-        "actions": {
-            "create": "Create group",
-            "save": "Save group"
         }
     },
     "qr": {
         "title": "Scan to join",
         "description": "Share this QR code to invite people to the group.",
-        "showButton": "Show QR code",
         "shareText": "Share this code to invite people to {{groupName}}"
     },
     "expenses": {
@@ -33,13 +25,9 @@
             "title": "Add an expense",
             "description": "Split a new expense with your group members.",
             "fields": {
-                "group": "Group",
-                "description": "Description",
                 "descriptionPlaceholder": "e.g. Hotel booking, dinner...",
                 "amountAndCurrency": "Amount & currency",
-                "amountPlaceholder": "0.00",
-                "category": "Category",
-                "paidBy": "Paid by"
+                "amountPlaceholder": "0.00"
             },
             "categories": {
                 "food": "Food & Dining",
@@ -61,34 +49,23 @@
             },
             "currentUser": "You",
             "splitHint": "Split equally among the group.",
-            "noMembers": "No group members available yet.",
-            "submit": "Add expense"
+            "noMembers": "No group members available yet."
         }
     },
     "page": {
         "members": "members",
         "loadingGroup": "Loading group...",
-        "addExpense": "Add expense",
-        "settleUp": "Settle up",
         "noDescription": "No description yet. Add one in group settings.",
-        "groupActions": "Group actions",
-        "copyGroupLink": "Copy group link",
-        "updateGroup": "Update group",
-        "removeGroup": "Remove group",
         "shareWarning": "Share invite link with trusted people only.",
         "notFound": "No group id or group not found",
-        "deleteTitle": "Delete group",
         "deleteConfirm": "Are you sure you want to delete this group?",
         "deleteWarning": "This action cannot be undone. All group data will be permanently deleted.",
-        "leaveGroup": "Leave group",
         "activityStubTitle": "Group activity",
         "activityStubDescription": "Full activity history is available on the Activity page."
     },
     "leaveModal": {
-        "title": "Leave group",
         "confirm": "Are you sure you want to leave this group?",
         "ownerWarning": "You are the owner. Please transfer ownership before leaving.",
-        "newOwnerPlaceholder": "Select new owner",
-        "confirmButton": "Leave group"
+        "newOwnerPlaceholder": "Select new owner"
     }
 }
