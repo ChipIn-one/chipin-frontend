@@ -27,8 +27,8 @@ import { EmptyRouteLink } from 'basics/EmptyRouteLink';
 
 import Logotype from 'assets/logo.svg?react';
 
-import AuthModal from './Modal/AuthModal';
-import HeaderNav from './Navs/HeaderNav';
+import AuthModal from './modals/AuthModal';
+import HeaderNav from './navs/HeaderNav';
 import ThemeSwitcherDev from './ThemeSwitcherDev';
 
 const StickyBox = styled(Box)`

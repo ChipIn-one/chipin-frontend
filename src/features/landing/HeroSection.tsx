@@ -13,7 +13,7 @@ import { Badge, Box, Button, Container, Flex, Heading, Section, Text } from '@ra
 import { usePwaStore } from 'store/pwaStore';
 
 import { Amount } from 'basics/numbers';
-import { AuthModal } from 'components/Modal';
+import { AuthModal } from 'components/modals';
 
 const HeroSection = () => {
     const { isPwaCanBeInstalled, callPWAInstall } = usePwaStore();

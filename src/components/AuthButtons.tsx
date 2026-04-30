@@ -12,7 +12,7 @@ const AuthButtons = () => {
     const { t } = useTranslation();
 
     return (
-        <Flex direction="column" gap="3">
+        <Flex direction="column" gap="4">
             <Button size="4" variant="classic" color="blue" radius="full" asChild>
                 <Link to={getSocialAuthUrl('google')}>
                     <GoogleIconSvg width={18} height={18} />

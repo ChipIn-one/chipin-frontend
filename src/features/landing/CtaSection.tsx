@@ -17,7 +17,7 @@ import {
 import { themeColor } from 'helpers/colors';
 import { usePwaStore } from 'store/pwaStore';
 
-import { AuthModal } from 'components/Modal';
+import { AuthModal } from 'components/modals';
 
 const CtaCard = styled(Card)`
     background: radial-gradient(

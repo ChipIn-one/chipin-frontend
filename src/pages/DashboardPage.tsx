@@ -10,7 +10,7 @@ import { useLoadingStore } from 'store/loadingStore';
 import DashBoardSummary from 'components/DashboardSummary';
 import GroupsCards from 'components/GroupsCards';
 import GroupsSectionHeader from 'components/GroupsSectionHeader';
-import MobileNavBar from 'components/Navs/MobileNavBar';
+import MobileNavBar from 'components/navs/MobileNavBar';
 import { ActivityFeedSkeleton } from 'features/activity';
 
 const DashboardPage = () => {

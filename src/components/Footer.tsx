@@ -27,20 +27,19 @@ const Footer = () => {
                     gap="4"
                 >
                     {/* Left — logo + name */}
-                    <Flex align="center" gap="2">
-                        <StyledLogotype />
-                        <Text size="3" weight="bold">
-                            {PROJECT_NAME}
+                    <Flex gap="2" direction="column">
+                        <Flex align="center" gap="2">
+                            <StyledLogotype />
+                            <Text size="3" weight="bold" as="span">
+                                {PROJECT_NAME}
+                            </Text>
+                        </Flex>
+                        <Text size="1" color="gray" as="span">
+                            {t('footer.copyright', {
+                                year: new Date().getFullYear(),
+                            })}
                         </Text>
                     </Flex>
-
-                    {/* Center — copyright */}
-                    <Text size="2" color="gray" align="center">
-                        {t('footer.copyright', {
-                            name: PROJECT_NAME,
-                            year: new Date().getFullYear(),
-                        })}
-                    </Text>
 
                     {/* Right — links */}
                     <Flex gap="5">

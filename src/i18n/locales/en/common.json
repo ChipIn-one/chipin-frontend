@@ -56,7 +56,7 @@
         "testError": "Trigger test error"
     },
     "footer": {
-        "copyright": "© {{name}} {{year}}. All rights reserved.",
+        "copyright": "{{year}}. All rights reserved ©",
         "privacy": "Privacy",
         "terms": "Terms",
         "contact": "Contact"
@@ -71,5 +71,17 @@
         "version": "Version",
         "stackTrace": "Stack trace",
         "userAgent": "User agent"
+    },
+    "signIn": {
+        "title": "Welcome back",
+        "subtitle": "Sign in to continue where you left off.",
+        "features": {
+            "groups": "Groups",
+            "groupsDesc": "Track shared expenses",
+            "balances": "Balances",
+            "balancesDesc": "See who owes what",
+            "settleUp": "Settle up",
+            "settleUpDesc": "Clear debts in one tap"
+        }
     }
 }

@@ -44,10 +44,10 @@ import DashBoardSummary from 'components/DashboardSummary';
 import GroupAvatar from 'components/GroupAvatar';
 import GroupsCards from 'components/GroupsCards';
 import GroupsSectionHeader from 'components/GroupsSectionHeader';
-import { AddExpenseModal, CreateUpdateGroupModal, LeaveGroupModal } from 'components/Modal';
-import GroupQRModal from 'components/Modal/GroupQRModal';
-import RemoveGroupModal from 'components/Modal/RemoveGroupModal';
-import MobileNavBar from 'components/Navs/MobileNavBar';
+import { AddExpenseModal, CreateUpdateGroupModal, LeaveGroupModal } from 'components/modals';
+import GroupQRModal from 'components/modals/GroupQRModal';
+import RemoveGroupModal from 'components/modals/RemoveGroupModal';
+import MobileNavBar from 'components/navs/MobileNavBar';
 import UsersRow from 'components/UsersRow';
 import { ActivityFeedSkeleton } from 'features/activity';
 

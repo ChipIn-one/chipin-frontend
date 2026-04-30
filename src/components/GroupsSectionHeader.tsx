@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Avatar, Button, Flex, Skeleton, Text } from '@radix-ui/themes';
 
-import { CreateUpdateGroupModal } from './Modal';
+import { CreateUpdateGroupModal } from './modals';
 
 type Props = Omit<ComponentProps<typeof Flex>, 'children'> & {
     label: string;

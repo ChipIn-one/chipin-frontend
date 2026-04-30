@@ -43,8 +43,11 @@
 - Do not introduce custom styled wrappers if the same result is possible with Radix props/composition.
 - Do **not** use inline styles (`style={...}`) on any React component — no exceptions. If no Radix prop covers the required CSS property, create a narrowly scoped `styled-component` instead.
 - Prefer Radix props, theme tokens, and narrowly scoped styled overrides instead of inline styles.
-- `flexShrink`, `flexGrow`, `flexBasis` are available as direct Radix props on all layout components (`Box`, `Flex`, `Grid`); use them in JSX instead of CSS.
-- Width/height string values such as `"100%"`, `"max-content"`, `"var(--space-8)"` are accepted directly by `width`, `minWidth`, `maxWidth`, `height` props on `Box`, `Flex`, `Grid`; prefer them over styled wrappers.
+- `flexShrink`, `flexGrow`, `flexBasis` are available as direct Radix props on all layout components (`Box`, `Flex`, `Grid`, `Container`, `Section`); use them in JSX instead of CSS.
+- `overflow`, `overflowX`, `overflowY` are Radix props on all layout components; use them as JSX props instead of CSS overflow rules.
+- `position`, `top`, `right`, `bottom`, `left`, `inset` are Radix props on all layout components; use them as JSX props instead of CSS.
+- Grid child placement props (`gridArea`, `gridColumn`, `gridColumnStart`, `gridColumnEnd`, `gridRow`, `gridRowStart`, `gridRowEnd`) are Radix props available on all layout components when placed inside a `Grid`.
+- Width/height string values such as `"100%"`, `"max-content"`, `"var(--space-8)"` are accepted directly by `width`, `minWidth`, `maxWidth`, `height`, `minHeight`, `maxHeight` props on `Box`, `Flex`, `Grid`, `Container`, `Section`; prefer them over styled wrappers.
 - For interactive components that lack a `width` prop (e.g. `Button`, `IconButton`), wrap them in `<Box width="...">` rather than creating `styled(Button)` solely for width.
 - Use `asChild` when a Radix component needs to render as a different HTML element while keeping Radix styles and behavior (e.g. `<Flex asChild><label>`). Do not add a wrapper element; merge via `asChild` instead.
 - For hyperlinks, always use the Radix `Link` component instead of a bare `<a>` tag or a custom `styled.a` wrapper. Use its `color`, `size`, `weight`, `underline`, and `highContrast` props to control appearance. Only fall back to a custom styled wrapper when Radix `Link` props cannot express the required style.
@@ -107,7 +110,8 @@ Radix Colors uses a 12-step scale per hue. Each step has a defined semantic purp
     - Always choose the token step that matches its semantic role per the **Radix Color Scale Semantics** table above (e.g. `gray6` for a subtle non-interactive border, `gray7` for an interactive input border, `gray11` for low-contrast text).
 - **Spacing props** (`padding`, `margin` and their directional variants): prefer native Radix props (`p`, `px`, `py`, `pt`, `pb`, `pl`, `pr`, `m`, `mx`, `my`, etc.) passed directly in JSX.
     - Do **not** hardcode `padding: var(--space-4)` in the CSS template when a `p="4"` JSX prop achieves the same result.
-    - `var(--space-*)` is only acceptable for CSS-only properties that have no Radix prop equivalent — such as `top`, `right`, `bottom`, `left`, `inset`, and similar positional rules.
+    - `var(--space-*)` is only acceptable for CSS properties that have **no** Radix prop equivalent — such as `inset-inline`, `inset-block`, `transform`, `translate`, `clip-path`, `gap` on non-layout elements, and similar CSS properties without a direct Radix layout prop.
+    - Note: `position`, `top`, `right`, `bottom`, `left`, `inset`, `overflow`, `overflowX`, `overflowY` **are** Radix props on all layout components (`Box`, `Flex`, `Grid`, `Container`, `Section`); always use them as JSX props instead of CSS rules in styled templates.
 - **Radix primitives**: do not wrap `Box`, `Flex`, `Grid`, `Text`, and similar primitives in `styled(...)` for routine presentation.
     - Compose them directly and pass Radix props in JSX.
     - Only introduce a styled wrapper when Radix props/composition cannot express the required UI.
@@ -132,10 +136,14 @@ Radix Colors uses a 12-step scale per hue. Each step has a defined semantic purp
     // ✅ truncate text with Radix instead of custom CSS wrappers
     // <Text truncate>Very long content...</Text>
 
-    // ✅ positional CSS with no Radix prop equivalent — var() is acceptable
-    top: var(--space-3);
-    bottom: var(--space-6);
+    // ✅ CSS properties with no Radix prop equivalent — var() is acceptable
     inset-inline: var(--space-4);
+    transform: translateY(var(--space-1));
+
+    // ❌ don't use var() in CSS for props that have Radix JSX equivalents
+    top: var(--space-3);    // → use <Box top="3"> instead
+    bottom: var(--space-6); // → use <Box bottom="6"> instead
+    inset: var(--space-4);  // → use <Box inset="4"> instead
 
     // ❌ never mix — don't use hex or var() for colors in styled templates
     color: #0d1511;
@@ -157,9 +165,108 @@ Radix Colors uses a 12-step scale per hue. Each step has a defined semantic purp
     const Field = styled(TextField.Root)`width: 100%;`;
     ```
 
+## Radix Token Reference
+
+### Space Scale
+
+Spacing props (`p`, `px`, `m`, `gap`, etc.) accept numeric steps `"1"`–`"9"`. The `scaling` prop on `<Theme>` multiplies all values uniformly.
+
+| Step | Value | CSS variable     |
+| ---- | ----- | ---------------- |
+| 1    | 4px   | `var(--space-1)` |
+| 2    | 8px   | `var(--space-2)` |
+| 3    | 12px  | `var(--space-3)` |
+| 4    | 16px  | `var(--space-4)` |
+| 5    | 24px  | `var(--space-5)` |
+| 6    | 32px  | `var(--space-6)` |
+| 7    | 40px  | `var(--space-7)` |
+| 8    | 48px  | `var(--space-8)` |
+| 9    | 64px  | `var(--space-9)` |
+
+Use `var(--space-N)` in `styled-components` only for CSS properties that have no Radix JSX prop equivalent (see **styled-components Color and Spacing Rules**).
+
+### Typography Scale
+
+`Text` and `Heading` `size` prop maps to the following values. Font size, letter spacing, and line height are always set together — never override them individually with custom CSS.
+
+| Size | Font size | Line height |
+| ---- | --------- | ----------- |
+| 1    | 12px      | 16px        |
+| 2    | 14px      | 20px        |
+| 3    | 16px      | 24px        |
+| 4    | 18px      | 26px        |
+| 5    | 20px      | 28px        |
+| 6    | 24px      | 30px        |
+| 7    | 28px      | 36px        |
+| 8    | 35px      | 40px        |
+| 9    | 60px      | 60px        |
+
+Font weight values: `light` = 300 · `regular` = 400 · `medium` = 500 · `bold` = 700.
+
+### Breakpoints
+
+All responsive props accept an object keyed by breakpoint name. Values are `min-width` based.
+
+| Key       | Min-width | Typical target      |
+| --------- | --------- | ------------------- |
+| `initial` | 0px       | Phones (portrait)   |
+| `xs`      | 520px     | Phones (landscape)  |
+| `sm`      | 768px     | Tablets (portrait)  |
+| `md`      | 1024px    | Tablets (landscape) |
+| `lg`      | 1280px    | Laptops             |
+| `xl`      | 1640px    | Desktops            |
+
+Always start from `initial` (mobile-first). Example: `size={{ initial: '3', md: '5', xl: '7' }}`.
+
 ## Radix Compound Component API Rules
 
 Radix Themes uses compound component patterns. Always use the correct composition; incorrect nesting causes broken accessibility and visual bugs.
+
+### Layout Primitives (Box · Flex · Grid · Container · Section)
+
+All five layout components share a common set of props — see the table below. Every prop accepts a responsive object (`p={{ initial: '3', sm: '5' }}`).
+
+| Group       | Props                                                                                                 |
+| ----------- | ----------------------------------------------------------------------------------------------------- |
+| Padding     | `p`, `px`, `py`, `pt`, `pr`, `pb`, `pl`                                                               |
+| Width       | `width`, `minWidth`, `maxWidth`                                                                       |
+| Height      | `height`, `minHeight`, `maxHeight`                                                                    |
+| Positioning | `position`, `inset`, `top`, `right`, `bottom`, `left`                                                 |
+| Overflow    | `overflow`, `overflowX`, `overflowY`                                                                  |
+| Flex child  | `flexBasis`, `flexShrink`, `flexGrow`                                                                 |
+| Grid child  | `gridArea`, `gridColumn`, `gridColumnStart`, `gridColumnEnd`, `gridRow`, `gridRowStart`, `gridRowEnd` |
+
+Margin props (`m`, `mx`, `my`, `mt`, `mr`, `mb`, `ml`) are available on most Radix components, not just layout ones.
+
+**Box** — fundamental layout building block; based on `div`.
+
+- `as` prop: `"div"` (default) | `"span"`.
+- `display` unique values: `"none" | "inline" | "inline-block" | "block" | "flex" | "inline-flex" | "grid" | "inline-grid"`.
+- Use `display={{ initial: 'none', sm: 'block' }}` to show/hide content at breakpoints.
+
+**Flex** — extends Box with flex-specific props.
+
+- Additional props: `direction`, `align`, `justify`, `wrap`, `gap`, `gapX`, `gapY`.
+- `as` prop: `"div"` (default) | `"span"`.
+- Use `gapX`/`gapY` when column and row gaps differ.
+
+**Grid** — extends Box with grid-specific props.
+
+- Additional props: `columns`, `rows`, `areas`, `flow`, `align`, `justify`, `gap`, `gapX`, `gapY`.
+- `columns` and `rows` accept enum steps or any valid CSS grid template string (e.g. `"repeat(2, 64px)"`).
+- Place child `gridArea`, `gridColumn`, etc. props on child layout components for grid placement.
+
+**Container** — constrains content to a consistent `max-width`; based on `div`.
+
+- `size` prop: `"1"` → 448px · `"2"` → 688px · `"3"` → 880px · `"4"` → 1136px (default).
+- `align` prop (`"left"` | `"center"` | `"right"`) sets horizontal alignment within the viewport.
+- Always prefer `Container size="N"` over hardcoded `maxWidth` on `Flex` or `Box`.
+
+**Section** — semantic `<section>` element providing consistent vertical padding between page-level blocks.
+
+- `size` prop: `"1"` – `"4"` (default `"3"`); each step maps to a preset `py` value.
+- Use `Section` instead of a bare `Box` when wrapping a full-width page content block that needs vertical breathing room.
+- Do not set manual `py` on a `Section` unless you need to override the size-based default.
 
 ### Text
 
@@ -168,15 +275,22 @@ Radix Themes uses compound component patterns. Always use the correct compositio
 - `size` controls font size, line height, and letter spacing together. Range `"1"`–`"9"`:
     - Sizes **1–3**: designed for UI labels and compact interface text.
     - Sizes **2–4**: designed for long-form body copy.
-- Use `weight` (`"light"` | `"regular"` | `"medium"` | `"bold"`) instead of custom CSS `font-weight`.
+- Use `weight` (`"light"` | `"regular"` | `"medium"` | `"bold"`) instead of custom CSS `font-weight`. Numerical values: 300 / 400 / 500 / 700.
 - Use `align` (`"left"` | `"center"` | `"right"`) instead of CSS `text-align`.
 - Use `trim` (`"start"` | `"end"` | `"both"`) to remove leading whitespace from the text box edge — useful for precise vertical spacing inside cards and boxes. Do **not** use custom negative-margin CSS for leading trimming.
 - Use `truncate` to clip overflowing text with an ellipsis — do **not** apply custom CSS `text-overflow: ellipsis` on text nodes.
 - Use `wrap` (`"wrap"` | `"nowrap"` | `"pretty"` | `"balance"`) instead of CSS `text-wrap`. Prefer `"balance"` for headings and short decorative text; `"pretty"` is a progressive enhancement (not universally supported).
 - Use `color` for semantic text color (Radix color name); Radix text colors guarantee at least Lc 60 APCA contrast over common backgrounds.
 - Use `highContrast` to increase color contrast with the background — especially useful combined with `color="gray"`.
-- Compose inline formatting components (`Link`, `Em`, `Strong`, `Code`, `Kbd`) directly inside `Text` children rather than wrapping in custom styled spans.
+- Compose inline formatting components (`Link`, `Em`, `Strong`, `Code`, `Kbd`, `Quote`) directly inside `Text` children rather than wrapping in custom styled spans.
 - To label a form control, use `<Text as="label">` wrapping the control — Radix automatically aligns the control baseline with the first line of text, even for multi-line labels.
+
+### Heading
+
+- Use `Heading` for page titles and section headings — shares `size` (`"1"`–`"9"`) and `weight` props with `Text`, mapping to the same type scale.
+- Use the `as` prop (`"h1"` – `"h6"`) to match the document outline; default is `"h2"`.
+- Do **not** nest a `<Heading>` inside `Dialog.Title` — `Dialog.Title` is already based on `Heading`; pass text children directly.
+- Never use a raw `<h1>`–`<h6>` HTML tag where `<Heading>` would suffice; use `Heading` with the correct `as` value instead.
 
 ### Dialog
 
@@ -229,7 +343,7 @@ Radix Themes uses compound component patterns. Always use the correct compositio
 ### Responsive Props
 
 - Most size and layout props accept a responsive object: `size={{ initial: '1', sm: '2', md: '3' }}`.
-- Breakpoints (min-width): `initial` = 0px, `xs` = 520px, `sm` = 768px, `md` = 1024px, `lg` = 1280px, `xl` = 1640px.
+- Breakpoint names and min-widths are defined in **Radix Token Reference → Breakpoints** above.
 - Always start from `initial` when overriding — it is the mobile-first baseline.
 
 ### Dark Mode Integration
@@ -394,7 +508,7 @@ const handleRemove = useCallback((id: string) => removeItem(id), [removeItem]);
 - Follow import sorting and unused-import rules from `eslint.config.js`.
 - Keep strict TS compatibility (`strict: true`).
 - Use `export default` for most React components (pages, features, reusable components).
-- Exception: components that live inside a barrel-exported group directory (e.g. `Modal/`, `Navs/`) should use named `const` exports to support clean re-export from the barrel `index.ts`.
+- Exception: components that live inside a barrel-exported group directory (e.g. `modals/`, `navs/`) should use named `const` exports to support clean re-export from the barrel `index.ts`.
 - When a boolean expression has **3 or more operands** (`&&` / `||`), extract it into a named `const` before the JSX return (or before the statement that uses it). The name must describe the _intent_, not repeat the conditions:
 
     ```tsx
@@ -520,13 +634,12 @@ Choose the layer by complexity and reusability:
 
 ## Component Grouping
 
-- When two or more components share closely related logic, domain, or visual purpose within the same layer, group them into a dedicated subdirectory using `kebab-case` (e.g. `components/modal/`, `components/navs/`).
+- When two or more components share closely related logic, domain, or visual purpose within the same layer, group them into a dedicated subdirectory using `kebab-case` (e.g. `components/modals/`, `components/navs/`).
 - Every such directory must have an `index.ts` barrel file that re-exports all public components using named exports.
 - The barrel file must only contain `import` / `export` statements — no logic, no JSX.
-- Consumers must import from the directory barrel (`components/modal`) rather than from deep internal paths (`components/modal/AddExpenseModal`).
+- Consumers must import from the directory barrel (`components/modals`) rather than from deep internal paths (`components/modal/AddExpenseModal`).
 - A single standalone component does not need its own folder; only group when there are two or more related components.
 - Do not mix components from different layers in the same subdirectory — a `basics/` subdirectory must only contain primitives, a `components/` subdirectory only composites, and so on.
-- **Legacy note:** existing directories `components/Modal/` and `components/Navs/` use PascalCase and should be migrated to `kebab-case` as part of a dedicated refactoring task; new directories must follow `kebab-case` from creation.
 
 **Co-location of private sub-components:**
 

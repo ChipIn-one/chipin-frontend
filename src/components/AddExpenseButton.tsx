@@ -12,7 +12,7 @@ import { useAuthStore } from 'store/authStore';
 import { selectDashboardLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
-import AddExpenseModal from 'components/Modal/AddExpenseModal';
+import AddExpenseModal from 'components/modals/AddExpenseModal';
 
 const FloatingBox = styled(Box)`
     bottom: var(--space-6);

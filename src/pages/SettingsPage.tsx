@@ -29,7 +29,7 @@ import { useAuthStore } from 'store/authStore';
 import { useUsersStore } from 'store/usersStore';
 
 import CurrencySelect from 'components/CurrencySelect';
-import MobileNavBar from 'components/Navs/MobileNavBar';
+import MobileNavBar from 'components/navs/MobileNavBar';
 
 const timezoneOptions = [
     'UTC',

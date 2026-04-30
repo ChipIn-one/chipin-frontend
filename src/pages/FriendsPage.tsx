@@ -16,7 +16,7 @@ import {
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/usersStore';
 
-import MobileNavBar from 'components/Navs/MobileNavBar';
+import MobileNavBar from 'components/navs/MobileNavBar';
 
 const FRIENDS_SKELETON_ITEMS = Array.from({ length: 5 }, (_, index) => ({
     id: `friend-skeleton-${index}`,
