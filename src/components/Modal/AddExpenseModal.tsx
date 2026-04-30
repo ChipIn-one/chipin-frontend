@@ -15,15 +15,9 @@ import CurrencySelect from 'components/CurrencySelect';
 
 import BaseModal from './BaseModal';
 
-const EXPENSE_CURRENCIES = [
-    { value: 'USD', flag: '🇺🇸' },
-    { value: 'EUR', flag: '🇪🇺' },
-    { value: 'RUB', flag: '🇷🇺' },
-] as const;
-
 const EXPENSE_CATEGORY_KEYS = Object.keys(EXPENSE_CATEGORIES) as ExpenseCategory[];
 
-const DEFAULT_CURRENCY = EXPENSE_CURRENCIES[0].value;
+const DEFAULT_CURRENCY = 'USD';
 const DEFAULT_CATEGORY = EXPENSE_CATEGORY_KEYS[0];
 
 interface Props {

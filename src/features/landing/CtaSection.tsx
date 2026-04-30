@@ -43,7 +43,7 @@ const CtaSection = () => {
     return (
         <Section py="8">
             <Container size="2">
-                <CtaCard variant="ghost">
+                <CtaCard size="4">
                     <Flex direction="column" align="center" gap="5">
                         <Badge color="green" variant="surface" radius="full">
                             {t('cta.badge')}
@@ -71,7 +71,7 @@ const CtaSection = () => {
                                     <LucideArrowRight />
                                 </Button>
                             </AuthModal>
-
+                            {/* TODO: Install app/open app based on pwa or nothing  */}
                             {!isPwaCanBeInstalled ? (
                                 <Button
                                     size="4"

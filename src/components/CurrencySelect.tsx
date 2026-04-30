@@ -129,7 +129,7 @@ const CurrencySelect: React.FC<Props> = ({ onChange, currency }) => {
                         </TextField.Slot>
                     </TextField.Root>
 
-                    <OptionsScrollArea type="auto" scrollbars="vertical">
+                    <OptionsScrollArea type="always" scrollbars="vertical">
                         <Flex direction="column" gap="2" pr="4">
                             {filteredCurrencies.length > 0 ? (
                                 filteredCurrencies.map(option => {
@@ -144,19 +144,11 @@ const CurrencySelect: React.FC<Props> = ({ onChange, currency }) => {
                                             color={isSelected ? 'indigo' : 'gray'}
                                             onClick={() => onValueChange(option)}
                                         >
-                                            <Flex
-                                                align="center"
-                                                justify="between"
-                                                gap="2"
-                                                width="100%"
-                                                minWidth="0"
-                                            >
+                                            <Flex align="center" gap="2" width="100%">
+                                                {isSelected ? <LucideCheck size={16} /> : null}
                                                 <Text as="span" size="2" truncate>
                                                     {t(`regional.currencies.${option}`)}
                                                 </Text>
-                                                <Box width="16px" height="16px" flexShrink="0">
-                                                    {isSelected ? <LucideCheck size={16} /> : null}
-                                                </Box>
                                             </Flex>
                                         </FullWidthButton>
                                     );

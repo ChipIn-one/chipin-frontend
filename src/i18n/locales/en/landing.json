@@ -14,12 +14,36 @@
         "groupsCreated": "Groups created",
         "userRating": "User rating"
     },
+    "howItWorks": {
+        "eyebrow": "Simple by design",
+        "title": "How it works",
+        "subtitle": "Up and running in under two minutes.",
+        "step1": {
+            "title": "Create a group or go solo",
+            "description": "Start a group for a trip, shared apartment, or event — or just use Chipin solo to track your own spending."
+        },
+        "step2": {
+            "title": "Add expenses as they happen",
+            "description": "Log any expense in seconds, choose who paid and how it’s split. Chipin does the math for everyone."
+        },
+        "step3": {
+            "title": "See balances instantly",
+            "description": "Chipin shows a clear summary of who owes what. No spreadsheets, no awkward conversations."
+        },
+        "step4": {
+            "title": "Settle up with one tap",
+            "description": "When it’s time to pay back, record the settlement and Chipin marks the debt as cleared."
+        }
+    },
     "features": {
-        "title": "Everything you need to manage shared expenses",
-        "subtitle": "Powerful features designed to make splitting expenses effortless and transparent",
+        "eyebrow": "Everything you need",
+        "titlePart1": "Manage shared",
+        "titleHighlight": "and",
+        "titlePart2": "personal expenses",
+        "subtitle": "Powerful features designed to make splitting expenses effortless — whether you're in a group or flying solo.",
         "smartGroups": {
             "title": "Smart Groups",
-            "description": "Create groups for any occasion. Invite members via shareable links and keep everyone in sync with real-time balance updates."
+            "description": "Create groups for trips, households, or events. Invite members via shareable links and keep everyone in sync with real-time balance updates."
         },
         "quickExpense": {
             "title": "Quick Expense Entry",
@@ -27,28 +51,53 @@
         },
         "autoCalc": {
             "title": "Auto Calculations",
-            "description": "See who owes whom instantly. Our smart algorithm minimizes the number of transactions needed to settle up."
+            "description": "See who owes whom instantly. Our smart algorithm minimises the number of transactions needed to settle up."
+        },
+        "soloBudget": {
+            "title": "Solo Budget Mode",
+            "description": "Track personal expenses without a group. Set budgets, monitor spending by category, and stay on top of your finances."
+        },
+        "multiCurrency": {
+            "title": "Multi-currency",
+            "description": "Travelling abroad? Add expenses in any currency. Chipin handles conversion automatically so everyone pays the right amount."
+        },
+        "settleUp": {
+            "title": "Settle Up",
+            "description": "Record settlements in one tap. Chipin marks debts as cleared and keeps a clean history of all payments."
         }
     },
     "sections": {
         "groups": {
-            "title": "Manage groups with links",
-            "description": "Organize trips, households, or events. Share an invite link, and keep balances visible to everyone.",
+            "badge": "Group expenses",
+            "titlePart1": "Manage groups",
+            "titleHighlight": "without the chaos",
+            "description": "Organise trips, households, or events. Share an invite link, and keep everyone’s balances visible in one place. No more chasing people for money.",
+            "bullets": {
+                "shareableLink": "Invite via shareable link — no signup required for members",
+                "realTimeBalances": "See real-time balances for every person",
+                "debtSimplification": "Smart debt simplification reduces the number of payments",
+                "multiCurrency": "Multi-currency support for international groups"
+            },
+            "cta": "Create a group",
             "placeholder": "Groups screenshot"
         },
         "expenses": {
-            "title": "Fast expense entry",
-            "description": "Attach expenses to people and groups, split evenly or by custom shares. Edit anytime.",
-            "placeholder": "Expenses screenshot"
-        },
-        "balances": {
-            "title": "Clear & settle balances",
-            "description": "See who owes whom across all expenses, then settle up and keep the slate clean. Multi-currency support included.",
-            "placeholder": "Balances screenshot"
+            "badge": "Solo mode",
+            "titlePart1": "Track your own budget",
+            "titleHighlight": "your way",
+            "description": "You don’t need a group to benefit from Chipin. Use solo mode to track personal expenses, set category budgets, and get a clear picture of where your money goes.",
+            "bullets": {
+                "logExpenses": "Log personal expenses in seconds",
+                "setBudgets": "Set budgets per category and monitor progress",
+                "monthlySummaries": "Monthly summaries and spending trends",
+                "worksAlongside": "Works alongside your group expenses seamlessly"
+            },
+            "cta": "Start tracking",
+            "placeholder": "Budget screenshot"
         }
     },
     "cta": {
-        "badge": "Free forever \u00b7 No credit card required",
+        "badge": "Free forever · No credit card required",
         "title": "Ready to stop stressing about money?",
         "subtitle": "Join 50,000+ users who already use Chipin to split bills and track budgets — completely free.",
         "getStartedFree": "Get started for free",

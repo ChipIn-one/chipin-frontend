@@ -4,177 +4,165 @@ export const PROJECT_NAME = 'Chipin';
 export const EXPENSE_CATEGORIES = {
     food: {
         emoji: '🍽️',
+        icon: 'Utensils',
         subcategories: [
-            { key: 'groceries', emoji: '🛒' },
-            { key: 'restaurants', emoji: '🍝' },
-            { key: 'fast_food', emoji: '🍔' },
-            { key: 'coffee', emoji: '☕' },
-            { key: 'food_delivery', emoji: '🛵' },
+            { key: 'groceries', emoji: '🛒', icon: 'ShoppingCart' },
+            { key: 'restaurants', emoji: '🍝', icon: 'UtensilsCrossed' },
+            { key: 'fast_food', emoji: '🍔', icon: 'Sandwich' },
+            { key: 'coffee', emoji: '☕', icon: 'Coffee' },
+            { key: 'food_delivery', emoji: '🛵', icon: 'Bike' },
         ],
     },
 
     transport: {
         emoji: '🚕',
+        icon: 'Car',
         subcategories: [
-            { key: 'taxi', emoji: '🚕' },
-            { key: 'public_transport', emoji: '🚌' },
-            { key: 'fuel', emoji: '⛽' },
-            { key: 'vehicle_rent', emoji: '🚗' },
-            { key: 'parking', emoji: '🅿️' },
-            { key: 'vehicle_repair', emoji: '🔧' },
-            { key: 'vehicle_insurance', emoji: '📄' },
+            { key: 'public_transport', emoji: '🚌', icon: 'Bus' },
+            { key: 'taxi', emoji: '🚕', icon: 'CarTaxiFront' },
+            { key: 'fuel', emoji: '⛽', icon: 'Fuel' },
+            { key: 'vehicle_rent', emoji: '🚗', icon: 'CarFront' },
+            { key: 'parking', emoji: '🅿️', icon: 'ParkingSquare' },
+            { key: 'vehicle_repair', emoji: '🔧', icon: 'Wrench' },
+            { key: 'vehicle_insurance', emoji: '📄', icon: 'Shield' },
+            { key: 'tolls', emoji: '🛣️', icon: 'Route' },
         ],
     },
 
     housing: {
         emoji: '🏠',
+        icon: 'Home',
         subcategories: [
-            { key: 'rent', emoji: '🏘️' },
-            { key: 'mortgage', emoji: '🏦' },
-            { key: 'electricity', emoji: '⚡' },
-            { key: 'water', emoji: '💧' },
-            { key: 'gas', emoji: '🔥' },
-            { key: 'internet', emoji: '🌐' },
-            { key: 'mobile', emoji: '📱' },
-            { key: 'furniture', emoji: '🛋️' },
-            { key: 'home_repair', emoji: '🛠️' },
-            { key: 'cleaning_services', emoji: '🧹' },
+            { key: 'rent', emoji: '🏘️', icon: 'Home' },
+            { key: 'mortgage', emoji: '🏦', icon: 'Building2' },
+            { key: 'utilities', emoji: '⚡', icon: 'Zap' },
+            { key: 'home_maintenance', emoji: '🛠️', icon: 'Hammer' },
+            { key: 'furnishing', emoji: '🛋️', icon: 'Sofa' },
+        ],
+    },
+
+    digital: {
+        emoji: '📱',
+        icon: 'Wifi',
+        subcategories: [
+            { key: 'internet', emoji: '🌐', icon: 'Globe' },
+            { key: 'mobile', emoji: '📱', icon: 'Smartphone' },
+            { key: 'subscriptions', emoji: '📺', icon: 'Tv' },
+            { key: 'software', emoji: '🧑‍💻', icon: 'Code' },
         ],
     },
 
     shopping: {
         emoji: '🛍️',
+        icon: 'ShoppingBag',
         subcategories: [
-            { key: 'clothes', emoji: '👕' },
-            { key: 'shoes', emoji: '👟' },
-            { key: 'electronics', emoji: '💻' },
-            { key: 'household_items', emoji: '🧴' },
-            { key: 'online_orders', emoji: '📦' },
-            { key: 'gifts', emoji: '🎁' },
-        ],
-    },
-
-    health: {
-        emoji: '🩺',
-        subcategories: [
-            { key: 'pharmacy', emoji: '💊' },
-            { key: 'doctor', emoji: '🩺' },
-            { key: 'medical_tests', emoji: '🧪' },
-            { key: 'dental', emoji: '🦷' },
-            { key: 'health_insurance', emoji: '🛡️' },
+            { key: 'clothing', emoji: '👕', icon: 'Shirt' },
+            { key: 'electronics', emoji: '💻', icon: 'Laptop' },
+            { key: 'home_goods', emoji: '🧴', icon: 'Package' },
+            { key: 'personal_items', emoji: '🎒', icon: 'Backpack' },
+            { key: 'gifts', emoji: '🎁', icon: 'Gift' },
         ],
     },
 
     lifestyle: {
         emoji: '🎉',
+        icon: 'PartyPopper',
         subcategories: [
-            { key: 'bars', emoji: '🍸' },
-            { key: 'cinema', emoji: '🎬' },
-            { key: 'clubs', emoji: '🎧' },
-            { key: 'concerts', emoji: '🎤' },
-            { key: 'games', emoji: '🎮' },
-            { key: 'gym', emoji: '🏋️' },
-            { key: 'fitness', emoji: '🤸' },
-            { key: 'sports_equipment', emoji: '🥊' },
-            { key: 'haircut', emoji: '✂️' },
-            { key: 'spa', emoji: '♨️' },
-            { key: 'massage', emoji: '💆' },
-            { key: 'cosmetics', emoji: '💄' },
+            { key: 'cinema', emoji: '🎬', icon: 'Film' },
+            { key: 'events', emoji: '🎉', icon: 'CalendarDays' },
+            { key: 'concerts', emoji: '🎤', icon: 'Music' },
+            { key: 'games', emoji: '🎮', icon: 'Gamepad2' },
+            { key: 'nightlife', emoji: '🍸', icon: 'Wine' },
         ],
     },
 
-    subscriptions: {
-        emoji: '📺',
+    personal_care: {
+        emoji: '💆',
+        icon: 'Sparkles',
         subcategories: [
-            { key: 'streaming', emoji: '📺' },
-            { key: 'software', emoji: '🧑‍💻' },
-            { key: 'cloud_services', emoji: '☁️' },
-            { key: 'vpn', emoji: '🔐' },
+            { key: 'haircut', emoji: '✂️', icon: 'Scissors' },
+            { key: 'spa', emoji: '♨️', icon: 'Flower' },
+            { key: 'massage', emoji: '💆', icon: 'HandHeart' },
+            { key: 'beauty_services', emoji: '💅', icon: 'Sparkles' },
+            { key: 'hygiene', emoji: '🧼', icon: 'Droplets' },
+            { key: 'skincare', emoji: '🧴', icon: 'FlaskConical' },
+            { key: 'cosmetics', emoji: '💄', icon: 'Paintbrush' },
+        ],
+    },
+
+    sports: {
+        emoji: '🏋️',
+        icon: 'Dumbbell',
+        subcategories: [
+            { key: 'subscription', emoji: '🏋️', icon: 'Dumbbell' },
+            { key: 'coach', emoji: '👨‍🏫', icon: 'PersonStanding' },
+            { key: 'equipment', emoji: '🥊', icon: 'ShoppingBag' },
+        ],
+    },
+
+    health: {
+        emoji: '🩺',
+        icon: 'HeartPulse',
+        subcategories: [
+            { key: 'medical', emoji: '🩺', icon: 'Stethoscope' },
+            { key: 'pharmacy', emoji: '💊', icon: 'Pill' },
+            { key: 'dental', emoji: '🦷', icon: 'SmilePlus' },
+            { key: 'health_insurance', emoji: '🛡️', icon: 'ShieldPlus' },
         ],
     },
 
     travel: {
         emoji: '✈️',
+        icon: 'Plane',
         subcategories: [
-            { key: 'flights', emoji: '✈️' },
-            { key: 'accommodation', emoji: '🏨' },
-            { key: 'visa', emoji: '🛂' },
-            { key: 'travel_insurance', emoji: '🧳' },
-            { key: 'tours', emoji: '🗺️' },
+            { key: 'flights', emoji: '✈️', icon: 'Plane' },
+            { key: 'accommodation', emoji: '🏨', icon: 'Hotel' },
+            { key: 'activities', emoji: '🗺️', icon: 'MapPin' },
+            { key: 'visa', emoji: '🛂', icon: 'FileText' },
+            { key: 'insurance', emoji: '🧳', icon: 'ShieldCheck' },
         ],
     },
 
     education: {
         emoji: '📚',
+        icon: 'GraduationCap',
         subcategories: [
-            { key: 'courses', emoji: '🧑‍🏫' },
-            { key: 'books', emoji: '📚' },
-            { key: 'online_learning', emoji: '💻' },
+            { key: 'online_courses', emoji: '💻', icon: 'GraduationCap' },
+            { key: 'books', emoji: '📚', icon: 'BookOpen' },
+            { key: 'tutoring', emoji: '👨‍🏫', icon: 'Users' },
+            { key: 'certification', emoji: '📜', icon: 'Award' },
         ],
     },
 
     finance: {
         emoji: '💳',
+        icon: 'CreditCard',
         subcategories: [
-            { key: 'bank_fees', emoji: '🏦' },
-            { key: 'taxes', emoji: '🧾' },
-            { key: 'loan_interest', emoji: '📉' },
-            { key: 'investments', emoji: '📈' },
-            { key: 'crypto', emoji: '🪙' },
-        ],
-    },
-
-    government: {
-        emoji: '🏛️',
-        subcategories: [
-            { key: 'fines', emoji: '🚨' },
-            { key: 'documents', emoji: '📄' },
-            { key: 'legal_fees', emoji: '⚖️' },
-        ],
-    },
-
-    family: {
-        emoji: '👨‍👩‍👧',
-        subcategories: [
-            { key: 'kids_products', emoji: '🧸' },
-            { key: 'school', emoji: '🏫' },
-            { key: 'babysitter', emoji: '👶' },
+            { key: 'fees', emoji: '🏦', icon: 'Landmark' },
+            { key: 'taxes', emoji: '🧾', icon: 'Receipt' },
+            { key: 'loans', emoji: '📉', icon: 'TrendingDown' },
+            { key: 'investments', emoji: '📈', icon: 'TrendingUp' },
+            { key: 'crypto', emoji: '🪙', icon: 'Bitcoin' },
+            { key: 'currency_exchange', emoji: '💱', icon: 'ArrowLeftRight' },
+            { key: 'cash_withdrawal', emoji: '💵', icon: 'Banknote' },
+            { key: 'transfers', emoji: '🔁', icon: 'RefreshCw' },
         ],
     },
 
     pets: {
         emoji: '🐾',
+        icon: 'PawPrint',
         subcategories: [
-            { key: 'pet_food', emoji: '🦴' },
-            { key: 'veterinary', emoji: '🏥' },
-            { key: 'pet_toys', emoji: '🎾' },
-            { key: 'grooming', emoji: '🛁' },
-        ],
-    },
-
-    transfers: {
-        emoji: '💸',
-        subcategories: [
-            { key: 'cash_withdrawal', emoji: '💵' },
-            { key: 'account_transfer', emoji: '🔁' },
-            { key: 'currency_exchange', emoji: '💱' },
-        ],
-    },
-
-    charity: {
-        emoji: '❤️',
-        subcategories: [
-            { key: 'donations', emoji: '🤲' },
-            { key: 'family_support', emoji: '💞' },
+            { key: 'pet_food', emoji: '🦴', icon: 'PawPrint' },
+            { key: 'vet', emoji: '🏥', icon: 'HeartPulse' },
+            { key: 'pet_items', emoji: '🎾', icon: 'ShoppingBag' },
         ],
     },
 
     other: {
         emoji: '🧾',
-        subcategories: [
-            { key: 'unexpected', emoji: '⚠️' },
-            { key: 'misc', emoji: '📌' },
-        ],
+        icon: 'MoreHorizontal',
+        subcategories: [],
     },
 } as const;
 
