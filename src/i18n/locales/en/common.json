@@ -30,7 +30,9 @@
         "signOut": "Sign Out",
         "installApp": "Install app",
         "getStarted": "Get started",
-        "viewAllActivity": "All activity"
+        "viewAllActivity": "All activity",
+        "goToDashboard": "Go to dashboard",
+        "copyReport": "Copy report"
     },
     "fields": {
         "description": "Description",
@@ -60,8 +62,14 @@
         "contact": "Contact"
     },
     "errorBoundary": {
-        "title": "Something went wrong",
-        "summary": "An unexpected error occurred",
-        "description": "The application couldn't recover. Your session data is intact - try reloading or go back to the home page."
+        "title": "The app ran into a problem",
+        "subtitle": "An unexpected error occurred and the application couldn't recover. Your session data is intact — try reloading or go back to the dashboard.",
+        "runtimeError": "Runtime error",
+        "errorMessage": "Error message",
+        "timestamp": "Timestamp",
+        "route": "Route",
+        "version": "Version",
+        "stackTrace": "Stack trace",
+        "userAgent": "User agent"
     }
 }

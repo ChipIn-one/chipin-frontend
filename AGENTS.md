@@ -161,6 +161,23 @@ Radix Colors uses a 12-step scale per hue. Each step has a defined semantic purp
 
 Radix Themes uses compound component patterns. Always use the correct composition; incorrect nesting causes broken accessibility and visual bugs.
 
+### Text
+
+- Renders as `<span>` by default. Use the `as` prop to render as `"p"`, `"label"`, `"div"`, or `"span"` — this is purely semantic and does **not** alter visual appearance.
+- Use `as` to pick the correct HTML element instead of wrapping `Text` in a bare HTML tag (`<p>`, `<label>`, `<div>`).
+- `size` controls font size, line height, and letter spacing together. Range `"1"`–`"9"`:
+    - Sizes **1–3**: designed for UI labels and compact interface text.
+    - Sizes **2–4**: designed for long-form body copy.
+- Use `weight` (`"light"` | `"regular"` | `"medium"` | `"bold"`) instead of custom CSS `font-weight`.
+- Use `align` (`"left"` | `"center"` | `"right"`) instead of CSS `text-align`.
+- Use `trim` (`"start"` | `"end"` | `"both"`) to remove leading whitespace from the text box edge — useful for precise vertical spacing inside cards and boxes. Do **not** use custom negative-margin CSS for leading trimming.
+- Use `truncate` to clip overflowing text with an ellipsis — do **not** apply custom CSS `text-overflow: ellipsis` on text nodes.
+- Use `wrap` (`"wrap"` | `"nowrap"` | `"pretty"` | `"balance"`) instead of CSS `text-wrap`. Prefer `"balance"` for headings and short decorative text; `"pretty"` is a progressive enhancement (not universally supported).
+- Use `color` for semantic text color (Radix color name); Radix text colors guarantee at least Lc 60 APCA contrast over common backgrounds.
+- Use `highContrast` to increase color contrast with the background — especially useful combined with `color="gray"`.
+- Compose inline formatting components (`Link`, `Em`, `Strong`, `Code`, `Kbd`) directly inside `Text` children rather than wrapping in custom styled spans.
+- To label a form control, use `<Text as="label">` wrapping the control — Radix automatically aligns the control baseline with the first line of text, even for multi-line labels.
+
 ### Dialog
 
 - Structure: `Dialog.Root > Dialog.Trigger > Dialog.Content > [Dialog.Title, Dialog.Description?, Dialog.Close]`.
