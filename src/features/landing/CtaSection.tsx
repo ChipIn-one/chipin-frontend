@@ -41,7 +41,7 @@ const CtaSection = () => {
     ];
 
     return (
-        <Section py="8">
+        <Section id="pricing" py="8">
             <Container size="2">
                 <CtaCard size="4">
                     <Flex direction="column" align="center" gap="5">
