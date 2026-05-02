@@ -34,7 +34,9 @@ const GroupActionsCard = () => {
                 </Flex>
 
                 <Flex direction={{ initial: 'column', sm: 'row', md: 'column' }} gap="3">
-                    <GroupQRModal qrLink={inviteLink} groupName={selectedGroup?.name} />
+                    {inviteLink && selectedGroup?.name && (
+                        <GroupQRModal qrLink={inviteLink} groupName={selectedGroup.name} />
+                    )}
 
                     <CopyButton value={inviteLink} what={t('common:copyTargets.inviteLink')}>
                         {t('common:buttons.copyGroupLink')}
