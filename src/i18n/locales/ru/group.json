@@ -61,7 +61,39 @@
         "deleteConfirm": "Вы уверены, что хотите удалить эту группу?",
         "deleteWarning": "Это действие нельзя отменить. Все данные группы будут удалены безвозвратно.",
         "activityStubTitle": "Активность группы",
-        "activityStubDescription": "Полная история событий доступна на странице Активности."
+        "activityStubDescription": "Полная история событий доступна на странице Активности.",
+        "expenses": {
+            "emptyTitle": "Расходов пока нет",
+            "emptyDescription": "Добавьте первый расход, чтобы начать учёт трат в группе."
+        },
+        "tabs": {
+            "expenses": "Расходы",
+            "balances": "Балансы",
+            "members": "Участники",
+            "settings": "Настройки"
+        },
+        "settings": {
+            "inviteSection": "ПРИГЛАШЕНИЕ",
+            "membersSection": "УЧАСТНИКИ",
+            "settingsSection": "НАСТРОЙКИ",
+            "copyLinkTitle": "Скопировать ссылку",
+            "showQRTitle": "Показать QR-код",
+            "showQRSubtitle": "Сканируйте, чтобы войти в группу",
+            "addPeopleTitle": "Добавить людей",
+            "addPeopleSubtitle": "Приглашение по имени или email",
+            "simplifyDebtsTitle": "Упростить долги группы",
+            "simplifyDebtsSubtitle": "Минимизировать количество транзакций"
+        },
+        "balances": {
+            "owesYou": "Должен вам",
+            "youOwe": "Вы должны",
+            "settled": "Расчёт выполнен",
+            "empty": "Балансов пока нет."
+        },
+        "membersTab": {
+            "you": "Вы",
+            "invitePeople": "Пригласить людей"
+        }
     },
     "leaveModal": {
         "confirm": "Вы уверены, что хотите покинуть эту группу?",

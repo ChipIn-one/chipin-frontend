@@ -11,8 +11,6 @@ import 'i18n';
 import '@radix-ui/themes/styles.css';
 import 'styles/radixStylesOverwrite.css';
 
-import 'i18n';
-
 Sentry.init({
     dsn: 'https://9c23eacd86e99a489e72c35877a1f6e6@o4510982101794816.ingest.de.sentry.io/4510982104154192',
     environment: import.meta.env.VITE_VERCEL_ENV, // preview / production

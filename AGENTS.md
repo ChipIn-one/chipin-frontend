@@ -509,6 +509,24 @@ const handleRemove = useCallback((id: string) => removeItem(id), [removeItem]);
 - Keep strict TS compatibility (`strict: true`).
 - Use `export default` for most React components (pages, features, reusable components).
 - Exception: components that live inside a barrel-exported group directory (e.g. `modals/`, `navs/`) should use named `const` exports to support clean re-export from the barrel `index.ts`.
+- **Never write single-line `return` statements without braces.** Always use a block body `{ return ...; }` or an early-return guard with a full block:
+
+    ```ts
+    // ✅ block body
+    if (!value) {
+        return;
+    }
+
+    // ✅ block body with value
+    if (isLoading) {
+        return <Spinner />;
+    }
+
+    // ❌ single-line return — never do this
+    if (!value) return;
+    if (isLoading) return <Spinner />;
+    ```
+
 - When a boolean expression has **3 or more operands** (`&&` / `||`), extract it into a named `const` before the JSX return (or before the statement that uses it). The name must describe the _intent_, not repeat the conditions:
 
     ```tsx

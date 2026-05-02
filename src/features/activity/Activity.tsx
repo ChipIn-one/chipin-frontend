@@ -2,12 +2,15 @@ import { useEffect } from 'react';
 import { LucideChevronsDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Card, Flex, Spinner, Text } from '@radix-ui/themes';
+import { Button, Flex, Spinner, Text } from '@radix-ui/themes';
 import { useIntersectionObserver } from '@uidotdev/usehooks';
 
 import { useActivityStore } from 'store/activityStore';
 import { selectActivityLoading, selectActivityNextPageLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
+
+import { NoActivityEmptyState, NoGroupExpensesEmptyState } from 'basics/empty-states';
+import { AddExpenseModal } from 'components/modals';
 
 import ActivityFeedSkeleton from './ActivityFeedSkeleton';
 import ActivityHeader, { ActivityHeaderContext } from './ActivityHeader';
@@ -52,16 +55,19 @@ const Activity = ({ context = 'dashboard' }: Props) => {
             {isLoading ? (
                 <ActivityFeedSkeleton />
             ) : items.length === 0 ? (
-                <Card size="2">
-                    <Flex direction="column" gap="1">
-                        <Text size="4" weight="medium" as="p">
-                            {t('emptyTitle')}
-                        </Text>
-                        <Text size="2" color="gray" as="p">
-                            {t('emptyDescription')}
-                        </Text>
-                    </Flex>
-                </Card>
+                context === 'group' ? (
+                    <NoGroupExpensesEmptyState
+                        action={
+                            <AddExpenseModal>
+                                <Button size="2" variant="soft" color="amber">
+                                    {t('common:buttons.addExpense')}
+                                </Button>
+                            </AddExpenseModal>
+                        }
+                    />
+                ) : (
+                    <NoActivityEmptyState />
+                )
             ) : (
                 <Flex direction="column" gap="2">
                     {items.map(event => (

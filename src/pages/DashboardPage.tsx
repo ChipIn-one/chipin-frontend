@@ -1,15 +1,17 @@
-import { LucideUsers } from 'lucide-react';
+import { LucidePlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Box, Card, Container, Flex, Grid, Text } from '@radix-ui/themes';
+import { Box, Button, Container, Flex, Grid } from '@radix-ui/themes';
 
 import { useGroupsStore } from 'store/groupsStore';
 import { selectDashboardFetched, selectDashboardLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
+import { NoGroupsEmptyState } from 'basics/empty-states';
 import DashBoardSummary from 'components/DashboardSummary';
 import GroupsCards from 'components/GroupsCards';
 import GroupsSectionHeader from 'components/GroupsSectionHeader';
+import { CreateUpdateGroupModal } from 'components/modals';
 import MobileNavBar from 'components/nav-bars/MobileNavBar';
 import { ActivityFeedSkeleton } from 'features/activity';
 
@@ -44,25 +46,16 @@ const DashboardPage = () => {
                             {!isDashboardFetched || hasGroups ? (
                                 <GroupsCards groups={groups} />
                             ) : (
-                                <Card size="2">
-                                    <Flex
-                                        direction="column"
-                                        align="center"
-                                        gap="2"
-                                        px={{ initial: '2', sm: '4' }}
-                                        py={{ initial: '3', sm: '4' }}
-                                    >
-                                        <LucideUsers size={20} />
-
-                                        <Text size="4" weight="medium" align="center">
-                                            {t('groups.emptyTitle')}
-                                        </Text>
-
-                                        <Text size="2" color="gray" align="center">
-                                            {t('groups.emptyDescription')}
-                                        </Text>
-                                    </Flex>
-                                </Card>
+                                <NoGroupsEmptyState
+                                    action={
+                                        <CreateUpdateGroupModal type="create">
+                                            <Button size="2" variant="soft">
+                                                <LucidePlus size={14} />
+                                                {t('common:buttons.createGroup')}
+                                            </Button>
+                                        </CreateUpdateGroupModal>
+                                    }
+                                />
                             )}
                         </Flex>
                     </Box>

@@ -9,15 +9,16 @@ interface Props {
     amount: number;
     currencyCode: string;
     size: ComponentProps<typeof Text>['size'];
+    align?: ComponentProps<typeof Text>['align'];
 }
 
-const OwedStatusText = ({ amount, currencyCode, size }: Props) => {
+const OwedStatusText = ({ amount, currencyCode, size, align = 'right' }: Props) => {
     const { t } = useTranslation('activity');
     const isAmountPositive = amount >= 0;
     const absoluteAmount = Math.abs(amount);
 
     return (
-        <Text size={size} color={isAmountPositive ? 'green' : 'red'} as="span" align="right">
+        <Text size={size} color={isAmountPositive ? 'green' : 'red'} as="span" align={align}>
             {isAmountPositive ? t('common:balances.youOwed') : t('common:balances.youOwe')}{' '}
             <Amount value={absoluteAmount} tokenCode={currencyCode} />
         </Text>

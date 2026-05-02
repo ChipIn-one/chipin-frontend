@@ -25,6 +25,7 @@
         "removeGroup": "Remove group",
         "deleteGroup": "Delete group",
         "leaveGroup": "Leave group",
+        "kickMember": "Kick",
         "showQRCode": "Show QR code",
         "addFriend": "Add friend",
         "signOut": "Sign Out",
@@ -71,6 +72,16 @@
         "version": "Version",
         "stackTrace": "Stack trace",
         "userAgent": "User agent"
+    },
+    "copy": {
+        "copy": "Copy {{what}}",
+        "copied": "Copied!"
+    },
+    "copyTargets": {
+        "inviteLink": "invite link"
+    },
+    "roles": {
+        "owner": "Owner"
     },
     "signIn": {
         "title": "Welcome back",

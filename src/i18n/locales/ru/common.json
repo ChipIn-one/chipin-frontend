@@ -25,6 +25,7 @@
         "removeGroup": "Удалить группу",
         "deleteGroup": "Удалить группу",
         "leaveGroup": "Покинуть группу",
+        "kickMember": "Исключить",
         "showQRCode": "Показать QR-код",
         "addFriend": "Добавить друга",
         "signOut": "Выйти",
@@ -71,6 +72,16 @@
         "version": "Версия",
         "stackTrace": "Стек вызовов",
         "userAgent": "Браузер"
+    },
+    "copy": {
+        "copy": "Скопировать {{what}}",
+        "copied": "Скопировано!"
+    },
+    "copyTargets": {
+        "inviteLink": "ссылку-приглашение"
+    },
+    "roles": {
+        "owner": "Владелец"
     },
     "signIn": {
         "title": "С возвращением",

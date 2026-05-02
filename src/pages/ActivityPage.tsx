@@ -22,7 +22,6 @@ const ActivityPage = () => {
     return (
         <Container size="2" pb={{ initial: '9', sm: '6' }}>
             <Activity context="full" />
-
             <MobileNavBar />
         </Container>
     );

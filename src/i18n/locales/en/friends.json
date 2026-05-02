@@ -1,5 +1,7 @@
 {
     "title": "Friends",
     "subtitle": "Your contacts and connections",
-    "yourConnections": "Your connections"
+    "yourConnections": "Your connections",
+    "emptyTitle": "No friends yet",
+    "emptyDescription": "Add friends to track shared expenses and settle up easily."
 }

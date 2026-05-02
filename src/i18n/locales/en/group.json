@@ -61,7 +61,39 @@
         "deleteConfirm": "Are you sure you want to delete this group?",
         "deleteWarning": "This action cannot be undone. All group data will be permanently deleted.",
         "activityStubTitle": "Group activity",
-        "activityStubDescription": "Full activity history is available on the Activity page."
+        "activityStubDescription": "Full activity history is available on the Activity page.",
+        "expenses": {
+            "emptyTitle": "No expenses yet",
+            "emptyDescription": "Add the first expense to start tracking spending in this group."
+        },
+        "tabs": {
+            "expenses": "Expenses",
+            "balances": "Balances",
+            "members": "Members",
+            "settings": "Settings"
+        },
+        "settings": {
+            "inviteSection": "INVITE",
+            "membersSection": "MEMBERS",
+            "settingsSection": "SETTINGS",
+            "copyLinkTitle": "Copy invite link",
+            "showQRTitle": "Show QR code",
+            "showQRSubtitle": "Scan to join the group",
+            "addPeopleTitle": "Add people",
+            "addPeopleSubtitle": "Invite by name or email",
+            "simplifyDebtsTitle": "Simplify group debts",
+            "simplifyDebtsSubtitle": "Minimize the number of transactions"
+        },
+        "balances": {
+            "owesYou": "Owes you",
+            "youOwe": "You owe",
+            "settled": "Settled up",
+            "empty": "No balances to show yet."
+        },
+        "membersTab": {
+            "you": "You",
+            "invitePeople": "Invite people"
+        }
     },
     "leaveModal": {
         "confirm": "Are you sure you want to leave this group?",

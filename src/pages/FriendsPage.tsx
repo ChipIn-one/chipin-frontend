@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { LucideUserPlus, LucideUsers } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import {
     Avatar,
@@ -16,6 +17,7 @@ import {
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/usersStore';
 
+import { NoFriendsEmptyState } from 'basics/empty-states';
 import MobileNavBar from 'components/nav-bars/MobileNavBar';
 
 const FRIENDS_SKELETON_ITEMS = Array.from({ length: 5 }, (_, index) => ({
@@ -25,6 +27,7 @@ const FRIENDS_SKELETON_ITEMS = Array.from({ length: 5 }, (_, index) => ({
 }));
 
 const FriendsPage = () => {
+    const { t } = useTranslation('common');
     const { friends, fetchSetFriends } = useUsersStore();
     const isLoadingFriends = useLoadingStore(state => state.users.friends);
 
@@ -35,6 +38,7 @@ const FriendsPage = () => {
     }, [friends, fetchSetFriends]);
 
     const isSkeletonShown = isLoadingFriends && !friends.length;
+    const isEmptyFriends = !isLoadingFriends && friends.length === 0;
     const visibleFriends = isSkeletonShown ? FRIENDS_SKELETON_ITEMS : friends;
 
     return (
@@ -65,32 +69,43 @@ const FriendsPage = () => {
                     </Flex>
 
                     <Flex direction="column" gap="3">
-                        {visibleFriends.map(({ id, picture, displayName }) => (
-                            <Flex key={id} justify="between" align="center">
-                                <Flex align="center" gap="3">
-                                    <Skeleton loading={isSkeletonShown}>
-                                        <Avatar
-                                            src={picture || ''}
-                                            fallback={displayName.charAt(0)}
-                                            size="2"
-                                            radius="full"
-                                        />
-                                    </Skeleton>
-                                    <Flex direction="column" gap="1">
+                        {isEmptyFriends ? (
+                            <NoFriendsEmptyState
+                                action={
+                                    <Button size="2" variant="soft">
+                                        <LucideUserPlus size={14} />
+                                        {t('buttons.addFriend')}
+                                    </Button>
+                                }
+                            />
+                        ) : (
+                            visibleFriends.map(({ id, picture, displayName }) => (
+                                <Flex key={id} justify="between" align="center">
+                                    <Flex align="center" gap="3">
                                         <Skeleton loading={isSkeletonShown}>
-                                            <Text as="span" weight="medium">
-                                                {displayName}
-                                            </Text>
+                                            <Avatar
+                                                src={picture || ''}
+                                                fallback={displayName.charAt(0)}
+                                                size="2"
+                                                radius="full"
+                                            />
                                         </Skeleton>
-                                        <Skeleton loading={isSkeletonShown}>
-                                            <Text as="span" size="2">
-                                                owed you $35.00
-                                            </Text>
-                                        </Skeleton>
+                                        <Flex direction="column" gap="1">
+                                            <Skeleton loading={isSkeletonShown}>
+                                                <Text as="span" weight="medium">
+                                                    {displayName}
+                                                </Text>
+                                            </Skeleton>
+                                            <Skeleton loading={isSkeletonShown}>
+                                                <Text as="span" size="2">
+                                                    owed you $35.00
+                                                </Text>
+                                            </Skeleton>
+                                        </Flex>
                                     </Flex>
                                 </Flex>
-                            </Flex>
-                        ))}
+                            ))
+                        )}
                     </Flex>
                 </Card>
             </Flex>
