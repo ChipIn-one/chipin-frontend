@@ -11,6 +11,7 @@ import { useDashboardStore } from 'store/dashboardStore';
 
 interface Props {
     currency?: string;
+    isLoading?: boolean;
     onChange?: (value: string) => void;
 }
 
@@ -28,7 +29,7 @@ const OptionsScrollArea = styled(ScrollArea)`
     overflow-x: hidden;
 `;
 
-const CurrencySelect: React.FC<Props> = ({ onChange, currency }) => {
+const CurrencySelect: React.FC<Props> = ({ onChange, isLoading = false, currency }) => {
     const availableCurrencies = useDashboardStore(useShallow(selectAvailableCurrencies));
     const defaultCurrency = useDashboardStore(useShallow(selectDefaultCurrency));
 
@@ -100,6 +101,7 @@ const CurrencySelect: React.FC<Props> = ({ onChange, currency }) => {
                     color="gray"
                     size="2"
                     radius="large"
+                    loading={isLoading}
                 >
                     <Flex align="center" justify="between" gap="2" width="100%" minWidth="0">
                         <Text as="span" size="2" weight="medium" truncate>

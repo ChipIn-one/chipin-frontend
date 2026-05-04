@@ -11,6 +11,11 @@
         "description": "Часовой пояс, язык и валюта рабочего пространства.",
         "autoTimezone": "Определять часовой пояс автоматически",
         "autoTimezoneHint": "Текущий часовой пояс: {{timezone}}",
+        "timeFormatTitle": "Формат времени",
+        "timeFormatDescription": "Выберите, как отображается время в приложении.",
+        "timeFormatPreview": "Пример:",
+        "timeFormat12h": "12ч AM/PM",
+        "timeFormat24h": "24ч",
         "currencySearchPlaceholder": "Найти валюту",
         "currencySearchEmpty": "Валюты не найдены.",
         "languageHint": "Выберите предпочтительный язык приложения.",
@@ -204,32 +209,44 @@
         "pushTitle": "Push-уведомления",
         "pushDescription": "Получать уведомления на устройстве.",
         "emailTitle": "Обновления по почте",
-        "emailDescription": "Получать обновления и новости продукта на почту."
+        "emailDescription": "Получать обновления и новости продукта на почту.",
+        "expenseRemindersTitle": "Напоминания о расходах",
+        "expenseRemindersDescription": "Получать напоминания о неоплаченных балансах.",
+        "weeklySummaryTitle": "Еженедельная сводка",
+        "weeklySummaryDescription": "Еженедельный дайджест ваших расходов."
     },
     "app": {
         "title": "Настройки приложения",
-        "description": "Управляйте внешним видом и логикой расчета долгов.",
+        "description": "Внешний вид и логика расчёта расходов.",
         "themeTitle": "Тема",
         "themeDescription": "Выберите, как выглядит ChipIn на вашем устройстве.",
         "themeOptions": {
-            "dark": "Темная",
+            "dark": "Тёмная",
             "light": "Светлая",
             "system": "Системная"
         },
         "simplifyDebtsTitle": "Упрощать долги в группе",
         "simplifyDebtsDescription": "Автоматически уменьшать количество переводов между участниками.",
+        "autoSplitTitle": "Авто-разделение поровну",
+        "autoSplitDescription": "По умолчанию делить расходы поровну при добавлении.",
+        "showCentsTitle": "Показывать копейки",
+        "showCentsDescription": "Отображать суммы с дробной частью.",
         "versionTitle": "Версия приложения",
         "versionDescription": "Текущая сборка, установленная на этом устройстве."
     },
     "security": {
         "title": "Приватность и безопасность",
-        "description": "Управляйте безопасностью и защитой аккаунта.",
+        "description": "Управляйте безопасностью аккаунта и данными.",
         "logoutAllDevicesTitle": "Выйти на всех устройствах",
         "logoutAllDevicesDescription": "Завершить все активные сессии и потребовать повторный вход.",
         "logoutAllDevicesButton": "Выйти везде",
+        "exportDataTitle": "Экспорт данных",
+        "exportDataDescription": "Скачать все ваши расходы.",
+        "exportDataButton": "Экспорт",
         "deleteAccountTitle": "Удаление аккаунта",
-        "deleteAccountDescription": "Безвозвратно удалить аккаунт и все связанные данные.",
+        "deleteAccountDescription": "Безвозвратно удалить ваши данные.",
         "deleteAccountButton": "Удалить аккаунт",
-        "signOutDescription": "Выйти только на этом устройстве."
+        "signOutTitle": "Выйти",
+        "signOutDescription": "Выйти со всех устройств."
     }
 }

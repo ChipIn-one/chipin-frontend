@@ -33,7 +33,8 @@
         "getStarted": "Get started",
         "viewAllActivity": "All activity",
         "goToDashboard": "Go to dashboard",
-        "copyReport": "Copy report"
+        "copyReport": "Copy report",
+        "changePhoto": "Change photo"
     },
     "fields": {
         "description": "Description",

@@ -33,7 +33,8 @@
         "getStarted": "Начать",
         "viewAllActivity": "Вся активность",
         "goToDashboard": "На дашборд",
-        "copyReport": "Скопировать отчёт"
+        "copyReport": "Скопировать отчёт",
+        "changePhoto": "Изменить фото"
     },
     "fields": {
         "description": "Описание",

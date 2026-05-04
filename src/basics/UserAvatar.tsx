@@ -1,7 +1,7 @@
 import { ComponentProps } from 'react';
 import { LucideUser } from 'lucide-react';
 
-import { Avatar } from '@radix-ui/themes';
+import { Avatar, Skeleton } from '@radix-ui/themes';
 
 import { useUsersStore } from 'store/usersStore';
 
@@ -13,12 +13,13 @@ interface Props {
     size?: AvatarSize;
     src?: AvatarSrc | null;
     fallback?: AvatarFallback;
+    isLoading?: boolean;
 }
 
-const UserAvatar = ({ size = '3', src, fallback }: Props) => {
+const UserAvatar = ({ size = '3', src, fallback, isLoading }: Props & { isLoading?: boolean }) => {
     const { user } = useUsersStore();
 
-    return (
+    const AvatarNode = (
         <Avatar
             variant="soft"
             size={size}
@@ -28,6 +29,8 @@ const UserAvatar = ({ size = '3', src, fallback }: Props) => {
             fallback={fallback || user?.displayName.charAt(0) || <LucideUser size={20} />}
         />
     );
+
+    return isLoading ? <Skeleton loading={isLoading}>{AvatarNode}</Skeleton> : AvatarNode;
 };
 
 export default UserAvatar;

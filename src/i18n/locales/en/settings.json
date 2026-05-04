@@ -11,6 +11,11 @@
         "description": "Timezone, language, and currency for your workspace.",
         "autoTimezone": "Detect timezone automatically",
         "autoTimezoneHint": "Current timezone: {{timezone}}",
+        "timeFormatTitle": "Time format",
+        "timeFormatDescription": "Choose how times are displayed across the app.",
+        "timeFormatPreview": "Preview:",
+        "timeFormat12h": "12h AM/PM",
+        "timeFormat24h": "24h",
         "currencySearchPlaceholder": "Search currency",
         "currencySearchEmpty": "No currencies found.",
         "languageHint": "Choose your preferred app language.",
@@ -204,11 +209,15 @@
         "pushTitle": "Push notifications",
         "pushDescription": "Receive notifications on your device.",
         "emailTitle": "Email updates",
-        "emailDescription": "Get updates and product news by email."
+        "emailDescription": "Get updates and product news by email.",
+        "expenseRemindersTitle": "Expense reminders",
+        "expenseRemindersDescription": "Get reminded about unpaid balances.",
+        "weeklySummaryTitle": "Weekly summary",
+        "weeklySummaryDescription": "Weekly digest of your spending."
     },
     "app": {
         "title": "App Settings",
-        "description": "Control appearance and debt calculation behavior.",
+        "description": "Appearance and expense calculation behavior.",
         "themeTitle": "Theme",
         "themeDescription": "Choose how ChipIn looks on your device.",
         "themeOptions": {
@@ -218,18 +227,26 @@
         },
         "simplifyDebtsTitle": "Simplify group debts",
         "simplifyDebtsDescription": "Automatically reduce the number of payments needed in groups.",
+        "autoSplitTitle": "Auto-split equally",
+        "autoSplitDescription": "Default to equal split when adding expenses.",
+        "showCentsTitle": "Show cents",
+        "showCentsDescription": "Display amounts with decimal places.",
         "versionTitle": "App version",
         "versionDescription": "Current build installed on this device."
     },
     "security": {
         "title": "Privacy & Security",
-        "description": "Control your security and account protection settings.",
+        "description": "Manage your account security and data.",
         "logoutAllDevicesTitle": "Logout on all devices",
         "logoutAllDevicesDescription": "End all active sessions and require sign in again.",
         "logoutAllDevicesButton": "Logout all",
+        "exportDataTitle": "Export data",
+        "exportDataDescription": "Download all your expenses.",
+        "exportDataButton": "Export",
         "deleteAccountTitle": "Delete account",
-        "deleteAccountDescription": "Permanently remove your account and all related data.",
+        "deleteAccountDescription": "Permanently remove your data.",
         "deleteAccountButton": "Delete account",
-        "signOutDescription": "Sign out from this device only."
+        "signOutTitle": "Sign out",
+        "signOutDescription": "Sign out from all devices."
     }
 }
