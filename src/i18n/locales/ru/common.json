@@ -34,7 +34,11 @@
         "viewAllActivity": "Вся активность",
         "goToDashboard": "На дашборд",
         "copyReport": "Скопировать отчёт",
-        "changePhoto": "Изменить фото"
+        "changePhoto": "Изменить фото",
+        "invitePeople": "Пригласить людей",
+        "share": "Поделиться",
+        "copyLink": "Скопировать",
+        "copyInviteLink": "Скопировать ссылку"
     },
     "fields": {
         "description": "Описание",
@@ -79,7 +83,8 @@
     },
     "copy": {
         "copy": "Скопировать {{what}}",
-        "copied": "Скопировано!"
+        "copied": "Скопировано!",
+        "shared": "Отправлено!"
     },
     "copyTargets": {
         "inviteLink": "ссылку-приглашение"

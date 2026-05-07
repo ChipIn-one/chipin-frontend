@@ -1,9 +1,9 @@
-import { useState } from 'react';
 import {
     LucideCheck,
     LucideLink2,
     LucideLogOut,
     LucideQrCode,
+    LucideShare2,
     LucideTrash2,
     LucideUserMinus,
     LucideUserPlus,
@@ -12,19 +12,10 @@ import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
 import { Avatar, Badge, Box, Button, Card, Flex, Separator, Switch, Text } from '@radix-ui/themes';
-import { useCopyToClipboard } from '@uidotdev/usehooks';
 
 import { ApiGroup } from 'api/chipin.types';
-import { SECOND } from 'constants/time';
-import { buildGroupInviteLink } from 'helpers/url';
+import { useGroupInvite } from 'hooks/pwaHooks';
 import { useUsersStore } from 'store/usersStore';
-
-import GroupRoleBadge from 'basics/GroupRoleBadge';
-import { BaseModal, KickGroupMemberModal, LeaveGroupModal } from 'components/modals';
-import RemoveGroupModal from 'components/modals/RemoveGroupModal';
-import OfflineQRCode from 'components/OfflineQRCode';
-
-const COPY_RESET_DELAY_MS = 2 * SECOND;
 
 /**
  * A plain button reset used as the interactive wrapper for settings-list rows.
@@ -43,6 +34,11 @@ const SettingsRowButton = styled.button`
     text-align: left;
 `;
 
+import GroupRoleBadge from 'basics/GroupRoleBadge';
+import { BaseModal, KickGroupMemberModal, LeaveGroupModal } from 'components/modals';
+import RemoveGroupModal from 'components/modals/RemoveGroupModal';
+import OfflineQRCode from 'components/OfflineQRCode';
+
 interface Props {
     group: ApiGroup;
 }
@@ -50,18 +46,18 @@ interface Props {
 const GroupSettingsTab = ({ group }: Props) => {
     const { t } = useTranslation(['group', 'common']);
     const { user } = useUsersStore();
-    const [, copyFn] = useCopyToClipboard();
-    const [isCopied, setIsCopied] = useState(false);
+    const {
+        inviteLink,
+        isNativeShareSupported,
+        isShareDone,
+        isCopied,
+        handleShare,
+        handleCopyLink,
+    } = useGroupInvite(group);
+
+    const shareTitle = t('group:qr.shareText', { groupName: group.name });
 
     const isUserOwner = user?.id === group.creator.id;
-
-    const inviteLink = buildGroupInviteLink({ inviteToken: group.inviteToken });
-
-    const handleCopyLink = async () => {
-        await copyFn(inviteLink);
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), COPY_RESET_DELAY_MS);
-    };
 
     return (
         <Flex direction="column" gap="5">
@@ -71,9 +67,13 @@ const GroupSettingsTab = ({ group }: Props) => {
                     {t('group:page.settings.inviteSection')}
                 </Text>
 
-                {/* Copy invite link row */}
+                {/* Primary invite action row — share on mobile, copy on desktop */}
                 <Card asChild size="2">
-                    <SettingsRowButton onClick={handleCopyLink}>
+                    <SettingsRowButton
+                        onClick={() =>
+                            isNativeShareSupported ? handleShare(shareTitle) : handleCopyLink()
+                        }
+                    >
                         <Flex align="center" gap="3" p="4">
                             <Avatar
                                 size="3"
@@ -81,22 +81,62 @@ const GroupSettingsTab = ({ group }: Props) => {
                                 variant="soft"
                                 color="indigo"
                                 fallback={
-                                    isCopied ? <LucideCheck size={16} /> : <LucideLink2 size={16} />
+                                    (isNativeShareSupported ? isShareDone : isCopied) ? (
+                                        <LucideCheck size={16} />
+                                    ) : isNativeShareSupported ? (
+                                        <LucideShare2 size={16} />
+                                    ) : (
+                                        <LucideLink2 size={16} />
+                                    )
                                 }
                             />
-                            <Flex direction="column" gap="1" flexGrow="1" overflow="hidden">
+                            <Flex direction="column" gap="1">
                                 <Text size="2" weight="medium">
-                                    {isCopied
-                                        ? t('common:copy.copied')
-                                        : t('group:page.settings.copyLinkTitle')}
+                                    {isNativeShareSupported
+                                        ? isShareDone
+                                            ? t('common:copy.shared')
+                                            : t('common:buttons.invitePeople')
+                                        : isCopied
+                                          ? t('common:copy.copied')
+                                          : t('group:page.settings.copyLinkTitle')}
                                 </Text>
-                                <Text size="1" color="gray" truncate>
-                                    {inviteLink}
+                                <Text size="1" color="gray">
+                                    {t('group:page.shareWarning')}
                                 </Text>
                             </Flex>
                         </Flex>
                     </SettingsRowButton>
                 </Card>
+
+                {/* Copy link row — secondary action on mobile */}
+                {isNativeShareSupported && (
+                    <Card asChild size="2">
+                        <SettingsRowButton onClick={handleCopyLink}>
+                            <Flex align="center" gap="3" p="4">
+                                <Avatar
+                                    size="3"
+                                    radius="medium"
+                                    variant="soft"
+                                    color="indigo"
+                                    fallback={
+                                        isCopied ? (
+                                            <LucideCheck size={16} />
+                                        ) : (
+                                            <LucideLink2 size={16} />
+                                        )
+                                    }
+                                />
+                                <Flex direction="column" gap="1">
+                                    <Text size="2" weight="medium">
+                                        {isCopied
+                                            ? t('common:copy.copied')
+                                            : t('group:page.settings.copyLinkTitle')}
+                                    </Text>
+                                </Flex>
+                            </Flex>
+                        </SettingsRowButton>
+                    </Card>
+                )}
 
                 {/* Show QR code row */}
                 <BaseModal

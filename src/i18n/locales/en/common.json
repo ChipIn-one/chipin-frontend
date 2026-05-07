@@ -34,7 +34,11 @@
         "viewAllActivity": "All activity",
         "goToDashboard": "Go to dashboard",
         "copyReport": "Copy report",
-        "changePhoto": "Change photo"
+        "changePhoto": "Change photo",
+        "invitePeople": "Invite people",
+        "share": "Share",
+        "copyLink": "Copy link",
+        "copyInviteLink": "Copy invite link"
     },
     "fields": {
         "description": "Description",
@@ -79,7 +83,8 @@
     },
     "copy": {
         "copy": "Copy {{what}}",
-        "copied": "Copied!"
+        "copied": "Copied!",
+        "shared": "Shared!"
     },
     "copyTargets": {
         "inviteLink": "invite link"

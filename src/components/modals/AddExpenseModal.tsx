@@ -243,6 +243,7 @@ const AddExpenseModal = ({ children, context }: Props) => {
                                 onChange={setAmount}
                                 color="gray"
                                 size="3"
+                                autoFocus
                             />
 
                             <CurrencySelect
