@@ -1,6 +1,5 @@
 import Activity from './Activity';
-import ActivityFeedSkeleton from './ActivityFeedSkeleton';
 import ActivityHeader from './ActivityHeader';
 
-export { ActivityFeedSkeleton, ActivityHeader };
+export { ActivityHeader };
 export default Activity;

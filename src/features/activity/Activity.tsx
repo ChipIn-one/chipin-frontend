@@ -11,8 +11,8 @@ import { useLoadingStore } from 'store/loadingStore';
 
 import { NoActivityEmptyState, NoGroupExpensesEmptyState } from 'basics/empty-states';
 import { AddExpenseModal } from 'components/modals';
+import { ActivityFeedSkeleton } from 'components/skeletons';
 
-import ActivityFeedSkeleton from './ActivityFeedSkeleton';
 import ActivityHeader, { ActivityHeaderContext } from './ActivityHeader';
 import { EventRenderer } from './components';
 

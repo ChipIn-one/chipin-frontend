@@ -62,7 +62,7 @@ interface Props {
     isExpensesOnly?: boolean;
 }
 
-const ActivityFeedSkeleton = ({ isExpensesOnly = false }: Props) => (
+export const ActivityFeedSkeleton = ({ isExpensesOnly = false }: Props) => (
     <Flex direction="column" gap="2">
         {isExpensesOnly
             ? Array.from({ length: EXPENSE_COUNT }, (_, index) => (
@@ -77,5 +77,3 @@ const ActivityFeedSkeleton = ({ isExpensesOnly = false }: Props) => (
               )}
     </Flex>
 );
-
-export default ActivityFeedSkeleton;

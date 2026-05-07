@@ -263,13 +263,6 @@ const AddExpenseModal = ({ children, context }: Props) => {
 
                     <Card>
                         <Grid columns="auto 1fr" gap="4" align="center">
-                            {/* Category */}
-                            <Text as="label" size="2" weight="medium" color="gray">
-                                {t('common:fields.category')}
-                            </Text>
-
-                            <CategorySearchSelect value={category} onChange={setCategory} />
-
                             {/* Description */}
                             <Text as="label" size="2" weight="medium" color="gray">
                                 {t('common:fields.description')}
@@ -283,6 +276,13 @@ const AddExpenseModal = ({ children, context }: Props) => {
                                 value={description}
                                 onChange={event => setDescription(event.target.value)}
                             />
+
+                            {/* Category */}
+                            <Text as="label" size="2" weight="medium" color="gray">
+                                {t('common:fields.category')}
+                            </Text>
+
+                            <CategorySearchSelect value={category} onChange={setCategory} />
                         </Grid>
                     </Card>
 

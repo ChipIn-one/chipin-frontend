@@ -13,7 +13,7 @@ import GroupsCards from 'components/GroupsCards';
 import GroupsSectionHeader from 'components/GroupsSectionHeader';
 import { CreateUpdateGroupModal } from 'components/modals';
 import MobileNavBar from 'components/nav-bars/MobileNavBar';
-import { ActivityFeedSkeleton } from 'features/activity';
+import { ActivityFeedSkeleton } from 'components/skeletons';
 
 const DashboardPage = () => {
     const { t } = useTranslation('dashboard');

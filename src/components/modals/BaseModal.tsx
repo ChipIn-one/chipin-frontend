@@ -1,6 +1,9 @@
 import { LucideX } from 'lucide-react';
 
-import { Box, Dialog, Flex, IconButton, Separator } from '@radix-ui/themes';
+import { Dialog, Flex, IconButton, Separator, Text } from '@radix-ui/themes';
+
+// Mobile fullscreen styles live in src/styles/radixStylesOverwrite.css
+// (the project-wide designated file for Radix style overrides).
 
 interface Props {
     triggerElement: React.ReactNode;
@@ -25,10 +28,14 @@ const BaseModal = ({
         <Dialog.Root open={isOpened} onOpenChange={setIsOpened}>
             <Dialog.Trigger>{triggerElement}</Dialog.Trigger>
 
-            <Dialog.Content maxWidth={maxWidth} size="4">
+            <Dialog.Content
+                maxWidth={maxWidth}
+                size={{ initial: '2', sm: '4' }}
+                className="base-modal-content"
+            >
                 <Dialog.Title size="6">
                     <Flex justify="between" align="center">
-                        <Box>{title}</Box>
+                        <Text color="gray">{title}</Text>
 
                         <Dialog.Close>
                             <IconButton variant="ghost" color="jade">

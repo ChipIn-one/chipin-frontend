@@ -13,3 +13,41 @@
 body {
     margin: 0;
 }
+
+/*
+ * Mobile fullscreen override for BaseModal (.base-modal-content).
+ *
+ * Radix Dialog renders: rt-DialogScroll > rt-DialogScrollPadding > [role="dialog"]
+ * The scroll-padding wrapper adds padding/margin that must be zeroed out.
+ * This is the same targeting pattern used for ScrollArea internals in this project.
+ *
+ * Breakpoint: Radix sm = 768px.
+ */
+@media (max-width: 767px) {
+    /*
+     * Target the direct parent of our dialog content without depending on
+     * Radix internal class names (rt-DialogScrollPadding etc.).
+     * role="dialog" is an HTML standard attribute — stable regardless of library version.
+     */
+    :has(> [role='dialog'].base-modal-content) {
+        padding: 0;
+        margin: 0;
+        flex-grow: unset;
+    }
+
+    .base-modal-content {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        transform: none !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        overflow-y: auto;
+    }
+}
