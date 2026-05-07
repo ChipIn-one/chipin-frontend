@@ -38,6 +38,9 @@
     },
     "fields": {
         "description": "Описание",
+        "descriptionOptional": "Описание (необязательно)",
+        "groupOptional": "Группа (необязательно)",
+        "amount": "Сумма",
         "group": "Группа",
         "category": "Категория",
         "paidBy": "Оплатил",

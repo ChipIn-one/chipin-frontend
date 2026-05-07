@@ -8,7 +8,6 @@ import {
     Card,
     Flex,
     SegmentedControl,
-    Select,
     Separator,
     Skeleton,
     Switch,
@@ -16,6 +15,7 @@ import {
 } from '@radix-ui/themes';
 
 import CurrencySelect from 'components/CurrencySelect';
+import Select, { SelectItem } from 'components/Select';
 
 const TIMEZONE_OPTIONS = [
     'UTC',
@@ -128,20 +128,17 @@ const RegionalSection = ({ isLoading }: Props) => {
                             </Skeleton>
                             <Box mt="2">
                                 <Skeleton loading={isLoading}>
-                                    <Select.Root
+                                    <Select
+                                        items={TIMEZONE_OPTIONS.map(option => {
+                                            return {
+                                                value: option,
+                                                label: option,
+                                            } satisfies SelectItem;
+                                        })}
                                         size="2"
                                         value={timezone}
-                                        onValueChange={setTimezone}
-                                    >
-                                        <Select.Trigger />
-                                        <Select.Content>
-                                            {TIMEZONE_OPTIONS.map(option => (
-                                                <Select.Item key={option} value={option}>
-                                                    {option}
-                                                </Select.Item>
-                                            ))}
-                                        </Select.Content>
-                                    </Select.Root>
+                                        onChange={setTimezone}
+                                    />
                                 </Skeleton>
                             </Box>
                         </Box>
@@ -206,24 +203,20 @@ const RegionalSection = ({ isLoading }: Props) => {
                             <Text weight="medium">{t('common:fields.interfaceLanguage')}</Text>
                         </Skeleton>
                         <Box mt="2">
-                            <Select.Root
+                            <Select
+                                items={LANGUAGE_OPTIONS.map(option => {
+                                    return {
+                                        value: option,
+                                        label: t(`language.options.${option}`),
+                                    } satisfies SelectItem;
+                                })}
                                 size="2"
                                 value={selectedLanguage}
-                                onValueChange={handleLanguageChange}
-                            >
-                                <Skeleton loading={isLoading}>
-                                    <Select.Trigger>
-                                        {t(`language.options.${selectedLanguage}`)}
-                                    </Select.Trigger>
-                                </Skeleton>
-                                <Select.Content>
-                                    {LANGUAGE_OPTIONS.map(option => (
-                                        <Select.Item key={option} value={option}>
-                                            {t(`language.options.${option}`)}
-                                        </Select.Item>
-                                    ))}
-                                </Select.Content>
-                            </Select.Root>
+                                onChange={handleLanguageChange}
+                                renderValue={item => {
+                                    return item?.label;
+                                }}
+                            />
                         </Box>
                         <Skeleton loading={isLoading}>
                             <Text size="2" color="gray" as="p" mt="1">

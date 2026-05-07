@@ -15,6 +15,7 @@ import {
     DashboardApiResponse,
     FetchActivityParams,
     InviteToGroupParams,
+    KickGroupMemberParams,
     LeaveGroupParams,
     RemoveGroupParams,
     RemoveGroupResponse,
@@ -47,7 +48,7 @@ apiInstance.interceptors.response.use(
         if (axios.isAxiosError(error)) {
             // 1. Network / offline
             if (!error.response) {
-                message = resolveApiErrorMessage(undefined, 'apiErrors:network.offline');
+                message = resolveApiErrorMessage(undefined, 'network.offline');
             }
 
             // 2. Backend-defined error id
@@ -119,6 +120,13 @@ export const leaveApiGroup = async ({ groupId, newOwnerId }: LeaveGroupParams): 
     });
 };
 
+export const kickApiGroupMember = async ({
+    groupId,
+    userId,
+}: KickGroupMemberParams): Promise<void> => {
+    await apiInstance.post(`/groups/${groupId}/members/${userId}/kick`);
+};
+
 export const inviteApiUserToGroup = async ({
     inviteToken,
 }: InviteToGroupParams): Promise<ApiGroup> => {
@@ -163,6 +171,7 @@ export const createApiExpense = async ({
     payerId,
     participantIds,
     currency,
+    category,
 }: CreateLedgerEntryParams) => {
     const response = await apiInstance.post('/ledger/entries', {
         type: 'EXPENSE',
@@ -174,6 +183,7 @@ export const createApiExpense = async ({
             payerId,
             participantIds,
             currency,
+            category: category ?? null,
             sharingMode: {
                 type: 'AUTO',
             },

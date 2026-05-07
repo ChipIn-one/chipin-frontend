@@ -168,16 +168,15 @@ const ErrorFallback = ({ error, timestamp }: ErrorFallbackProps) => {
     return (
         <ErrorBackground minHeight="100vh" position="relative">
             <Overlay position="absolute" inset="0" />
-
-            <Flex
-                position="relative"
-                minHeight="100vh"
-                align="center"
-                justify="center"
-                p={{ initial: '4', sm: '6' }}
-                width="100%"
-            >
-                <Container size="2">
+            <Container size="2">
+                <Flex
+                    position="relative"
+                    minHeight="100vh"
+                    align="center"
+                    justify="center"
+                    p={{ initial: '4', sm: '6' }}
+                    width="100%"
+                >
                     <Flex direction="column" align="center" gap="5">
                         {/* Pulsing icon */}
                         <IconWrapper>
@@ -336,8 +335,8 @@ const ErrorFallback = ({ error, timestamp }: ErrorFallbackProps) => {
                             </Button>
                         </Flex>
                     </Flex>
-                </Container>
-            </Flex>
+                </Flex>
+            </Container>
         </ErrorBackground>
     );
 };

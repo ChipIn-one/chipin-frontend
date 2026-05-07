@@ -1,13 +1,23 @@
-import { LucideUsers } from 'lucide-react';
+import { LucideSettings, LucideUsers } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
-import { AspectRatio, Avatar, Badge, Box, Flex, Heading, Skeleton } from '@radix-ui/themes';
+import {
+    AspectRatio,
+    Avatar,
+    Badge,
+    Box,
+    Flex,
+    Heading,
+    IconButton,
+    Skeleton,
+} from '@radix-ui/themes';
 
 import { ApiGroup } from 'api/chipin.types';
 
 import Image from 'basics/Image';
 import GroupAvatar from 'components/GroupAvatar';
+import { CreateUpdateGroupModal } from 'components/modals';
 
 const CoverWrapper = styled(Box)`
     position: relative;
@@ -50,6 +60,19 @@ const GroupCoverSection = ({ group, isLoading, ratio = 16 / 5 }: Props) => {
                 />
             </AspectRatio>
             <CoverGradient />
+
+            <Box position="absolute" top="3" right="3">
+                <CreateUpdateGroupModal type="update">
+                    <IconButton
+                        variant="solid"
+                        color="blue"
+                        size="2"
+                        aria-label={t('modal.titleEdit')}
+                    >
+                        <LucideSettings size={16} />
+                    </IconButton>
+                </CreateUpdateGroupModal>
+            </Box>
 
             <CoverInfo p="3">
                 <Flex gap="2" align="center">

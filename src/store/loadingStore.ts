@@ -10,6 +10,7 @@ export interface LoadingStore {
         remove: LoadingState;
         join: LoadingState;
         leave: LoadingState;
+        kick: LoadingState;
     };
     dashboard: {
         data: LoadingState;
@@ -17,6 +18,9 @@ export interface LoadingStore {
     activity: {
         data: LoadingState;
         nextPage: LoadingState;
+    };
+    expense: {
+        add: LoadingState;
     };
     users: {
         self: LoadingState;
@@ -35,6 +39,7 @@ type LoadingSlices = Omit<LoadingStore, 'setLoading'>;
 const initialLoadingStore: LoadingSlices = {
     dashboard: { data: 'initial' },
     activity: { data: 'initial', nextPage: 'initial' },
+    expense: { add: 'initial' },
     group: {
         data: 'initial',
         add: 'initial',
@@ -42,6 +47,7 @@ const initialLoadingStore: LoadingSlices = {
         remove: 'initial',
         update: 'initial',
         leave: 'initial',
+        kick: 'initial',
     },
     users: { self: 'initial', friends: 'initial' },
 };

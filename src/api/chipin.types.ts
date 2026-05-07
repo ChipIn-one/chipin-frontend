@@ -51,6 +51,11 @@ export interface LeaveGroupParams {
     newOwnerId?: string;
 }
 
+export interface KickGroupMemberParams {
+    groupId: string;
+    userId: string;
+}
+
 export interface InviteToGroupParams {
     inviteToken: string;
 }
@@ -67,6 +72,7 @@ export interface CreateLedgerEntryParams {
     payerId: string;
     participantIds: string[];
     currency: string;
+    category?: string | null;
 }
 
 export interface ApiActivityResponse {

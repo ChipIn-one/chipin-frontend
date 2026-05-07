@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { LucideUserPlus, LucideUsers } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -21,14 +20,8 @@ const FRIENDS_SKELETON_ITEMS = Array.from({ length: 5 }, (_, index) => ({
 
 const FriendsPage = () => {
     const { t } = useTranslation(['common', 'friends']);
-    const { friends, fetchSetFriends } = useUsersStore();
+    const { friends } = useUsersStore();
     const isLoadingFriends = useLoadingStore(state => state.users.friends);
-
-    useEffect(() => {
-        if (!friends.length) {
-            fetchSetFriends();
-        }
-    }, [friends, fetchSetFriends]);
 
     const isSkeletonShown = isLoadingFriends && !friends.length;
     const isEmptyFriends = !isLoadingFriends && friends.length === 0;

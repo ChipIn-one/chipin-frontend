@@ -20,6 +20,8 @@
     "removeError": "Something went wrong while removing the group.",
     "left": "You left the group \"{{name}}\".",
     "leaveError": "Something went wrong while leaving the group.",
+    "kicked": "Member \"{{name}}\" was removed from the group.",
+    "kickError": "Something went wrong while kicking this member.",
     "inviteLinkNotReady": "Invite link is not ready yet",
     "inviteLinkCopied": "Group invite link copied",
     "inviteLinkCopyError": "Failed to copy link"
@@ -31,5 +33,9 @@
   "settings": {
     "logoutAllDevicesSoon": "Logout on all devices will be available soon.",
     "deleteAccountSoon": "Account deletion will be available soon."
+  },
+  "expense": {
+    "created": "Expense added successfully!",
+    "createError": "Something went wrong while adding the expense."
   }
 }

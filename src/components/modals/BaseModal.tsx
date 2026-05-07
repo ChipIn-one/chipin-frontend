@@ -1,6 +1,6 @@
 import { LucideX } from 'lucide-react';
 
-import { Box, Dialog, Flex, IconButton, Separator, Text } from '@radix-ui/themes';
+import { Box, Dialog, Flex, IconButton, Separator } from '@radix-ui/themes';
 
 interface Props {
     triggerElement: React.ReactNode;
@@ -39,10 +39,8 @@ const BaseModal = ({
                 </Dialog.Title>
                 <Separator orientation="horizontal" size="4" />
 
-                <Flex direction="column" gap="6">
-                    <Dialog.Description size="4">
-                        <Text>{description}</Text>
-                    </Dialog.Description>
+                <Flex direction="column" mt="6">
+                    {description && <Dialog.Description size="4">{description}</Dialog.Description>}
 
                     {content}
                 </Flex>

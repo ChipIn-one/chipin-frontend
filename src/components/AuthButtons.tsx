@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
 
 import { Button, Flex } from '@radix-ui/themes';
 
@@ -13,14 +12,14 @@ const AuthButtons = () => {
 
     return (
         <Flex direction="column" gap="4">
-            <Button size="4" variant="classic" color="blue" radius="full" asChild>
-                <Link to={getSocialAuthUrl('google')}>
+            <Button size="4" variant="soft" color="blue" radius="full" asChild>
+                <a href={getSocialAuthUrl('google')}>
                     <GoogleIconSvg width={18} height={18} />
                     {t('auth.button.google')}
-                </Link>
+                </a>
             </Button>
 
-            <Button size="4" variant="classic" color="gray" radius="full" disabled>
+            <Button size="4" variant="soft" color="gray" radius="full" disabled>
                 <AppleIconSvg width={18} height={18} />
                 {t('auth.button.apple')}
             </Button>

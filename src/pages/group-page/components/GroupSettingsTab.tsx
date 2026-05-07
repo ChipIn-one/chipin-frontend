@@ -3,7 +3,6 @@ import {
     LucideCheck,
     LucideLink2,
     LucideLogOut,
-    LucidePencil,
     LucideQrCode,
     LucideTrash2,
     LucideUserMinus,
@@ -12,18 +11,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
-import {
-    Avatar,
-    Badge,
-    Box,
-    Button,
-    Card,
-    Flex,
-    IconButton,
-    Separator,
-    Switch,
-    Text,
-} from '@radix-ui/themes';
+import { Avatar, Badge, Box, Button, Card, Flex, Separator, Switch, Text } from '@radix-ui/themes';
 import { useCopyToClipboard } from '@uidotdev/usehooks';
 
 import { ApiGroup } from 'api/chipin.types';
@@ -32,8 +20,7 @@ import { buildGroupInviteLink } from 'helpers/url';
 import { useUsersStore } from 'store/usersStore';
 
 import GroupRoleBadge from 'basics/GroupRoleBadge';
-import GroupAvatar from 'components/GroupAvatar';
-import { BaseModal, CreateUpdateGroupModal, LeaveGroupModal } from 'components/modals';
+import { BaseModal, KickGroupMemberModal, LeaveGroupModal } from 'components/modals';
 import RemoveGroupModal from 'components/modals/RemoveGroupModal';
 import OfflineQRCode from 'components/OfflineQRCode';
 
@@ -78,30 +65,6 @@ const GroupSettingsTab = ({ group }: Props) => {
 
     return (
         <Flex direction="column" gap="5">
-            {/* ── Group info header ── */}
-            <Card size="2">
-                <Flex align="center" gap="3">
-                    <GroupAvatar group={group} size="4" variant="solid" />
-                    <Flex direction="column" gap="1" flexGrow="1" overflow="hidden">
-                        <Flex align="center" justify="between" gap="2">
-                            <Text weight="bold" size="3" truncate>
-                                {group.name}
-                            </Text>
-                            <CreateUpdateGroupModal type="update">
-                                <IconButton variant="ghost" color="gray" size="2">
-                                    <LucidePencil size={16} />
-                                </IconButton>
-                            </CreateUpdateGroupModal>
-                        </Flex>
-                        {group.description && (
-                            <Text size="2" color="gray" wrap="wrap">
-                                {group.description}
-                            </Text>
-                        )}
-                    </Flex>
-                </Flex>
-            </Card>
-
             {/* ── INVITE section ── */}
             <Flex direction="column" gap="2">
                 <Text size="1" color="gray" weight="medium">
@@ -226,10 +189,12 @@ const GroupSettingsTab = ({ group }: Props) => {
                                     </Flex>
                                 </Flex>
                                 {isUserOwner && !isCurrentUser && (
-                                    <Button variant="soft" color="orange" size="1">
-                                        <LucideUserMinus size={13} />
-                                        {t('common:buttons.kickMember')}
-                                    </Button>
+                                    <KickGroupMemberModal member={member}>
+                                        <Button variant="soft" color="orange" size="1">
+                                            <LucideUserMinus size={13} />
+                                            {t('common:buttons.kickMember')}
+                                        </Button>
+                                    </KickGroupMemberModal>
                                 )}
                             </Flex>
                         </Card>

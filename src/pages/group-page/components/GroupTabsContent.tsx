@@ -17,27 +17,29 @@ const GroupTabsContent = ({ group }: Props) => {
     const { t } = useTranslation('group');
 
     return (
-        <Tabs.Root defaultValue="expenses">
-            <Tabs.List size="2" mb="4">
-                <Tabs.Trigger value="expenses">{t('page.tabs.expenses')}</Tabs.Trigger>
-                <Tabs.Trigger value="balances">{t('page.tabs.balances')}</Tabs.Trigger>
-                <Tabs.Trigger value="settings">{t('page.tabs.settings')}</Tabs.Trigger>
-            </Tabs.List>
+        <Box mt="4">
+            <Tabs.Root defaultValue="expenses">
+                <Tabs.List size="2" mb="4">
+                    <Tabs.Trigger value="expenses">{t('page.tabs.expenses')}</Tabs.Trigger>
+                    <Tabs.Trigger value="balances">{t('page.tabs.balances')}</Tabs.Trigger>
+                    <Tabs.Trigger value="settings">{t('page.tabs.settings')}</Tabs.Trigger>
+                </Tabs.List>
 
-            <Box>
-                <Tabs.Content value="expenses">
-                    <ActivityFeedSkeleton isExpensesOnly />
-                </Tabs.Content>
+                <Box>
+                    <Tabs.Content value="expenses">
+                        <ActivityFeedSkeleton isExpensesOnly />
+                    </Tabs.Content>
 
-                <Tabs.Content value="balances">
-                    <GroupBalancesTab group={group} />
-                </Tabs.Content>
+                    <Tabs.Content value="balances">
+                        <GroupBalancesTab group={group} />
+                    </Tabs.Content>
 
-                <Tabs.Content value="settings">
-                    <GroupSettingsTab group={group} />
-                </Tabs.Content>
-            </Box>
-        </Tabs.Root>
+                    <Tabs.Content value="settings">
+                        <GroupSettingsTab group={group} />
+                    </Tabs.Content>
+                </Box>
+            </Tabs.Root>
+        </Box>
     );
 };
 

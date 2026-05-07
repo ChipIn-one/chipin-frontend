@@ -6,6 +6,7 @@ import {
     createApiGroup,
     fetchApiUserGroupById,
     inviteApiUserToGroup,
+    kickApiGroupMember,
     leaveApiGroup,
     removeApiGroup,
     updateApiGroup,
@@ -33,6 +34,7 @@ interface GroupsStore {
     }) => Promise<ApiGroup>;
     removeGroup: () => Promise<ApiGroup['name']>;
     leaveGroup: (params?: { newOwnerId?: string }) => Promise<ApiGroup['name']>;
+    kickGroupMember: ({ userId }: { userId: string }) => Promise<string>;
     joinGroup: ({ inviteToken }: { inviteToken: string }) => Promise<ApiGroup>;
 }
 
@@ -179,6 +181,43 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             })
             .finally(() => {
                 setLoading('group', 'leave', 'fetched');
+            });
+    },
+    kickGroupMember: ({ userId }) => {
+        const selectedGroup = get().selectedGroup;
+
+        if (!selectedGroup) {
+            return Promise.reject(new Error('No selected group'));
+        }
+
+        const kickedMember = selectedGroup.members.find(member => member.id === userId);
+
+        if (!kickedMember) {
+            return Promise.reject(new Error('No member found to kick'));
+        }
+
+        const { setLoading } = useLoadingStore.getState();
+        setLoading('group', 'kick', 'loading');
+
+        return kickApiGroupMember({ groupId: selectedGroup.id, userId })
+            .then(() => {
+                const { groups } = get();
+                const updatedSelectedGroup: ApiGroup = {
+                    ...selectedGroup,
+                    members: selectedGroup.members.filter(member => member.id !== userId),
+                };
+
+                set({
+                    groups: groups.map(group =>
+                        group.id === selectedGroup.id ? updatedSelectedGroup : group,
+                    ),
+                    selectedGroup: updatedSelectedGroup,
+                });
+
+                return kickedMember.displayName;
+            })
+            .finally(() => {
+                setLoading('group', 'kick', 'fetched');
             });
     },
     joinGroup: ({ inviteToken }) => {

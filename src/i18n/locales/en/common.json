@@ -38,6 +38,9 @@
     },
     "fields": {
         "description": "Description",
+        "descriptionOptional": "Description (optional)",
+        "groupOptional": "Group (optional)",
+        "amount": "Amount",
         "group": "Group",
         "category": "Category",
         "paidBy": "Paid by",

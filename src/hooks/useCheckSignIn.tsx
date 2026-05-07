@@ -8,7 +8,7 @@ import { useUsersStore } from 'store/usersStore';
 
 export const useCheckSignIn = () => {
     const { fetchSetDashboardData } = useDashboardStore();
-    const { fetchSetUser } = useUsersStore();
+    const { fetchSetUser, fetchSetFriends } = useUsersStore();
     const { setAuthenticated, setUnauthenticated } = useAuthStore();
 
     const navigate = useNavigate();
@@ -25,6 +25,7 @@ export const useCheckSignIn = () => {
                 setAuthenticated();
                 fetchSetDashboardData();
                 fetchSetUser();
+                fetchSetFriends();
 
                 // Remove query params, stay on same path (important for join links)
                 navigate(window.location.pathname, { replace: true });
@@ -43,6 +44,7 @@ export const useCheckSignIn = () => {
                 setAuthenticated();
                 fetchSetDashboardData();
                 fetchSetUser();
+                fetchSetFriends();
             } else {
                 setUnauthenticated(result.reason);
             }

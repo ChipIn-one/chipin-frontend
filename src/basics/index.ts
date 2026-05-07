@@ -1,3 +1,4 @@
+import AmountInput from './AmountInput';
 import BackgroundBox from './BackgroundBox';
 import ChipInLoader from './ChipInLoader';
 import CopyButton from './CopyButton';
@@ -19,6 +20,7 @@ import UserAvatar from './UserAvatar';
 
 export {
     Amount,
+    AmountInput,
     BackgroundBox,
     ChipInLoader,
     CopyButton,

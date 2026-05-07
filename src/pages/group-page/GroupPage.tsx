@@ -4,18 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import styled from 'styled-components';
 
-import {
-    Box,
-    Button,
-    Card,
-    Container,
-    Flex,
-    Grid,
-    Inset,
-    Separator,
-    Skeleton,
-    Text,
-} from '@radix-ui/themes';
+import { Box, Button, Card, Container, Flex, Grid, Inset, Skeleton, Text } from '@radix-ui/themes';
 
 import { ApiGroup } from 'api/chipin.types';
 import { useGroupsStore } from 'store/groupsStore';
@@ -163,14 +152,11 @@ const GroupCardBody = ({ group, isLoading }: GroupCardBodyProps) => {
             </Flex>
 
             {group.description && (
-                <>
-                    <Separator size="4" />
-                    <Skeleton loading={isLoading}>
-                        <Text size="2" color="gray">
-                            {group.description}
-                        </Text>
-                    </Skeleton>
-                </>
+                <Skeleton loading={isLoading}>
+                    <Text size="2" color="gray">
+                        {group.description}
+                    </Text>
+                </Skeleton>
             )}
         </Flex>
     );

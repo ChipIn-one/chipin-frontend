@@ -308,6 +308,13 @@ Margin props (`m`, `mx`, `my`, `mt`, `mr`, `mb`, `ml`) are available on most Rad
 - `Select.Content` accepts `variant` (`"solid"` | `"soft"`), `color`, `highContrast`.
 - For grouping items use `Select.Group` + `Select.Label` together.
 - For custom trigger display (icon + text) pass children to `Select.Trigger` directly.
+- Reuse the shared app wrapper in `src/components/Select.tsx` for standard dropdown selects instead of composing Radix `Select.Root/Trigger/Content/Item` inline in feature code.
+
+### RadioGroup
+
+- Use `RadioGroup.Root` + `RadioGroup.Item` when the UI is choosing a single visible option from a short list, instead of building that interaction as a dropdown select.
+- For the "paid by" / payer chooser in expense flows, use Radix `RadioGroup` with `color="jade"`.
+- When composing richer row content around `RadioGroup.Item`, wrap the row in a semantic `<label>` and place the radio control inside that label.
 
 ### TextField
 
@@ -321,6 +328,26 @@ Margin props (`m`, `mx`, `my`, `mt`, `mr`, `mb`, `ml`) are available on most Rad
 - Structure: `Popover.Root > Popover.Trigger > Popover.Content > Popover.Close?`.
 - `Popover.Content` inherits Radix primitive props: `sideOffset`, `align`, `side`.
 - To match trigger width: `width="var(--radix-popover-trigger-width)"` on `Popover.Content`.
+
+### ScrollArea
+
+- Use `ScrollArea` for any container where content may overflow vertically (long lists, message feeds, dropdowns with many items).
+- Always set a concrete `height` on `ScrollArea` (e.g. via `styled(ScrollArea)` or `style`), **not** `max-height`. Radix uses the height to size its internal viewport; `max-height` does not propagate correctly.
+- Use `scrollbars="vertical"` for lists; use `scrollbars="horizontal"` for wide content; use `scrollbars="both"` only when both axes are needed.
+- Add `pr` on the direct content child to leave space for the scrollbar (e.g. `pr="4"`).
+- **Width constraint caveat**: Radix `ScrollArea`'s internal viewport wraps children in a `display: table; min-width: 100%` div. This means `width: 100%` on child elements resolves to the *table's* auto width (min-content), not the viewport width — causing items to overflow horizontally. To fix this, target the inner div via a CSS attribute selector in `styled(ScrollArea)`:
+  ```ts
+  const ListScrollArea = styled(ScrollArea)`
+      height: 240px;
+
+      & [data-radix-scroll-area-viewport] > div {
+          min-width: 0;
+          width: 100%;
+      }
+  `;
+  ```
+  This is a known Radix limitation, not a specificity hack — the selector is the only way to constrain the internal table div.
+- `styled(ScrollArea)` is acceptable (it is not a compound part); do not use `styled(ScrollArea.Viewport)` etc.
 
 ### Callout
 

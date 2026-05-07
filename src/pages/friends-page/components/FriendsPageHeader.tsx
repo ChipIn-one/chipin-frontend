@@ -27,12 +27,10 @@ const FriendsPageHeader = ({ isLoading }: Props) => {
                     </Skeleton>
                 </Box>
             </Flex>
-            <Skeleton loading={isLoading}>
-                <Button variant="soft">
-                    <LucideUserPlus size={16} />
-                    {t('common:buttons.addFriend')}
-                </Button>
-            </Skeleton>
+            <Button variant="soft" loading={isLoading}>
+                <LucideUserPlus size={16} />
+                {t('common:buttons.addFriend')}
+            </Button>
         </Flex>
     );
 };

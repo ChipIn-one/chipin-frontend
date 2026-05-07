@@ -200,3 +200,23 @@ export const getNumberData = (
         isValueTooSmall,
     };
 };
+
+// Matches an empty string, integers, and decimals with up to 2 fractional digits.
+// Accepts both '.' and ',' as the decimal separator.
+const AMOUNT_INPUT_REGEX = /^\d*[.,]?\d{0,2}$/;
+
+/**
+ * Normalises a raw amount input string:
+ * - Replaces ',' with '.' as the decimal separator.
+ * - Rejects strings that exceed 2 decimal places or are otherwise invalid.
+ * Returns the normalised string on success, or null when the input should be rejected.
+ */
+export const parseAmountInput = (raw: string): string | null => {
+    const normalised = raw.replace(',', '.');
+
+    if (!AMOUNT_INPUT_REGEX.test(normalised)) {
+        return null;
+    }
+
+    return normalised;
+};

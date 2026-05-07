@@ -7,17 +7,14 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 # common parts
 HASH=$(git rev-parse --short HEAD)
+BASE_VERSION=$(node -p "JSON.parse(require('fs').readFileSync('package.json','utf8')).version")
 
 if [ "$BRANCH" = "main" ]; then
-  # try to get tag-based version
-  if git describe --tags --abbrev=0 >/dev/null 2>&1; then
-    VERSION=$(git describe --tags --always)
-  else
-    VERSION="${HASH}"
-  fi
+  # production build: pure release version from package.json
+  VERSION="${BASE_VERSION}"
 else
-  # dev branch (and everything else)
-  VERSION="dev-${HASH}"
+  # non-main build: release version + build metadata
+  VERSION="${BASE_VERSION}-dev-${HASH}"
 fi
 
 # write to file

@@ -29,9 +29,13 @@ const EmptyState = ({ icon, iconColor = 'gray', title, description, action }: Pr
                                 </Text>
                             )}
                         </Flex>
-                        {action && <Box flexShrink="0">{action}</Box>}
                     </Flex>
                 </Flex>
+                {action && (
+                    <Box flexShrink="0" ml="8">
+                        {action}
+                    </Box>
+                )}
             </Flex>
         </Card>
     );

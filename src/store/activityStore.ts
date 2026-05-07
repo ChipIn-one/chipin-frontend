@@ -15,7 +15,7 @@ export interface ActivityStore {
 
     fetchSetActivity: () => void;
     fetchMoreActivity: () => void;
-    createExpense: (params: CreateExpenseParams) => void;
+    createExpense: (params: CreateExpenseParams) => Promise<void>;
 }
 
 const initialActivityStore = {
@@ -70,8 +70,13 @@ export const useActivityStore = create<ActivityStore>((set, get) => ({
     },
 
     createExpense: params => {
-        createApiExpense(params).catch(error => {
-            console.error('Error creating expense', error);
-        });
+        const { setLoading } = useLoadingStore.getState();
+        setLoading('expense', 'add', 'loading');
+
+        return createApiExpense(params)
+            .then(() => undefined)
+            .finally(() => {
+                setLoading('expense', 'add', 'fetched');
+            });
     },
 }));

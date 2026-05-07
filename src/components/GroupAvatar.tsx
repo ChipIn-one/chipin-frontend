@@ -8,9 +8,10 @@ interface Props {
     group: ApiGroup;
     variant?: React.ComponentProps<typeof Avatar>['variant'];
     size?: React.ComponentProps<typeof Avatar>['size'];
+    color?: React.ComponentProps<typeof Avatar>['color'];
 }
 
-const GroupAvatar = ({ group, variant = 'soft', size = '4' }: Props) => {
+const GroupAvatar = ({ group, variant = 'soft', size = '4', color = 'green' }: Props) => {
     const emojiSize =
         Number(size) + 3 > 9
             ? '9'
@@ -22,6 +23,7 @@ const GroupAvatar = ({ group, variant = 'soft', size = '4' }: Props) => {
             size={size}
             src={group.coverUrl || ''}
             alt={group.name}
+            color={color}
             fallback={group.emoji ? <Text size={emojiSize}>{group.emoji}</Text> : <LucideUsers />}
         />
     );
