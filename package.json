@@ -46,7 +46,7 @@
     "eslint-plugin-react-refresh": "^0.4.19",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-unused-imports": "^4.1.4",
-    "globals": "^17.4.0",
+    "globals": "^17.6.0",
     "sharp": "^0.34.2",
     "sharp-ico": "^0.1.5",
     "typescript": "~5.9.3",
