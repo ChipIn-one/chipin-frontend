@@ -121,6 +121,18 @@
             "tabs": {
                 "group": "Group",
                 "friends": "Friends"
+            },
+            "split": {
+                "title": "How to split",
+                "equal": "Equal",
+                "percent": "Percent",
+                "amounts": "Amounts",
+                "splitEquallyBetween": "Split equally between {{count}} participants",
+                "eachPays": "Each pays",
+                "yourShare": "Your share",
+                "total": "Total:",
+                "totalAssigned": "Total assigned",
+                "difference": "Difference"
             }
         }
     },

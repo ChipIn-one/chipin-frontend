@@ -13,7 +13,7 @@ interface Props extends ComponentProps<typeof RadixSegmentedControl.Root> {
 
 const SegmentedControl = ({ items, ...rootProps }: Props) => {
     return (
-        <RadixSegmentedControl.Root {...rootProps}>
+        <RadixSegmentedControl.Root {...rootProps} size={{ initial: '2', sm: '3' }}>
             {items.map(item => (
                 <RadixSegmentedControl.Item key={item.value} value={item.value}>
                     {item.label}

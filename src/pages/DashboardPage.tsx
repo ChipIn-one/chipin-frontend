@@ -8,6 +8,7 @@ import { selectDashboardFetched, selectDashboardLoading } from 'store/loadingSel
 import { useLoadingStore } from 'store/loadingStore';
 
 import { NoGroupsEmptyState } from 'basics/empty-states';
+import DashboardHeader from 'components/DashboardHeader';
 import DashBoardSummary from 'components/DashboardSummary';
 import GroupsCards from 'components/GroupsCards';
 import GroupsSectionHeader from 'components/GroupsSectionHeader';
@@ -32,6 +33,7 @@ const DashboardPage = () => {
                         sm: 'span 1',
                     }}
                 >
+                    <DashboardHeader />
                     <DashBoardSummary isLoading={isDashboardLoading} />
 
                     <Box>

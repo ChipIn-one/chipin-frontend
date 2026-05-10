@@ -17,6 +17,12 @@
     },
     "summary": {
         "totalBalance": "Total balance",
-        "totalAcrossGroupsAndFriends": "Across groups and friends"
+        "totalAcrossGroupsAndFriends": "Across groups and friends",
+        "owedToYou": "Owed to you",
+        "youOwe": "You owe"
+    },
+    "header": {
+        "greeting": "Hi, {{name}}",
+        "overview": "Here's your financial overview"
     }
 }

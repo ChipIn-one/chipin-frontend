@@ -22,6 +22,7 @@ import { themeColor } from 'helpers/colors';
 import { getIsDevEnv } from 'helpers/env';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
+import { useUsersStore } from 'store/usersStore';
 
 import { EmptyRouteLink } from 'basics/EmptyRouteLink';
 
@@ -119,6 +120,7 @@ const CrashTestButton = () => {
 
 const Header = () => {
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
+    const { user } = useUsersStore();
     const location = useLocation();
     const { t } = useTranslation();
 
@@ -150,7 +152,7 @@ const Header = () => {
                             <Flex gap="4" align="center">
                                 <Box display={{ initial: 'none', sm: 'block' }}>
                                     <RouterLink to={ROUTES.SETTINGS}>
-                                        <UserAvatar size="3" />
+                                        <UserAvatar size="3" user={user ?? undefined} />
                                     </RouterLink>
                                 </Box>
                             </Flex>

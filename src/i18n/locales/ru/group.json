@@ -121,6 +121,18 @@
             "tabs": {
                 "group": "Группа",
                 "friends": "Друзья"
+            },
+            "split": {
+                "title": "Как делить",
+                "equal": "Поровну",
+                "percent": "Процент",
+                "amounts": "Суммы",
+                "splitEquallyBetween": "Делим поровну между {{count}} участниками",
+                "eachPays": "Каждый платит",
+                "yourShare": "Ваша доля",
+                "total": "Итого:",
+                "totalAssigned": "Распределено",
+                "difference": "Разница"
             }
         }
     },

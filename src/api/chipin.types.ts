@@ -1,3 +1,5 @@
+import { BalancesMap } from 'helpers/currencies';
+
 import { AppEvent } from './activity.types';
 
 export interface ApiGroup {
@@ -60,8 +62,28 @@ export interface InviteToGroupParams {
     inviteToken: string;
 }
 
+export interface ApiBalanceEntry {
+    currency: string;
+    totalOwed: string;
+    totalOwing: string;
+    netBalance: string;
+}
+
 export interface DashboardApiResponse {
     groups: ApiGroup[];
+    balances?: Record<string, ApiBalanceEntry>;
+}
+
+export type ParsedDashboardResponse = Omit<DashboardApiResponse, 'balances'> & {
+    balances: BalancesMap;
+};
+
+export type SharingModeType = 'AUTO' | 'EXACT' | 'PERCENTAGE';
+
+export interface SharingMode {
+    type: SharingModeType;
+    customShares?: Record<string, string>;
+    percentageShares?: Record<string, string>;
 }
 
 export interface CreateLedgerEntryParams {
@@ -73,6 +95,7 @@ export interface CreateLedgerEntryParams {
     participantIds: string[];
     currency: string;
     category?: string | null;
+    sharingMode?: SharingMode;
 }
 
 export interface ApiActivityResponse {

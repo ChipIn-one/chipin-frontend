@@ -51,7 +51,7 @@ const AccountSection = ({ isLoading }: Props) => {
                 <Separator size="4" />
 
                 <Flex align="center" gap="3">
-                    <UserAvatar size="4" isLoading={isLoading} />
+                    <UserAvatar size="4" user={user ?? undefined} isLoading={isLoading} />
 
                     <Flex direction="column" gap="1">
                         <Skeleton loading={isLoading}>

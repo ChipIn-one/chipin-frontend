@@ -220,3 +220,69 @@ export const parseAmountInput = (raw: string): string | null => {
 
     return normalised;
 };
+
+const isTrulyObject = (value: unknown): value is Record<string, unknown> =>
+    !!value && typeof value === 'object' && !Array.isArray(value);
+
+const convertLeaf = (value: unknown): Big | null => tryToBig(value as Big | number | string | null);
+
+const applyAtPath = (node: unknown, path: readonly string[]): unknown => {
+    const [segment, ...remainingPath] = path;
+
+    if (!segment) {
+        return node;
+    }
+
+    // Arrays: descend into each element keeping the full path (segment not consumed)
+    if (Array.isArray(node)) {
+        return node.map(item => applyAtPath(item, path));
+    }
+
+    if (!isTrulyObject(node)) {
+        return node;
+    }
+
+    const isLeaf = remainingPath.length === 0;
+
+    if (segment === '*') {
+        const updated = Object.fromEntries(
+            Object.entries(node).map(([key, value]) => [
+                key,
+                isLeaf ? convertLeaf(value) : applyAtPath(value, remainingPath),
+            ]),
+        );
+        return { ...node, ...updated };
+    }
+
+    if (!(segment in node)) {
+        return node;
+    }
+
+    const next = isLeaf ? convertLeaf(node[segment]) : applyAtPath(node[segment], remainingPath);
+
+    return { ...node, [segment]: next };
+};
+
+/**
+ * Converts the specified field paths in an API response object to Big | null.
+ * Paths use dot notation; '*' matches every key of an object or every element of an array.
+ *
+ * @example
+ * parseBigFields<ApiDashboard, ParsedDashboard>(raw, [
+ *   'balances.*.netBalance',
+ *   'balances.*.totalOwed',
+ *   'items.*.amount',
+ * ])
+ */
+export const parseBigFields = <TRaw, TParsed = TRaw>(
+    data: TRaw,
+    paths: readonly string[],
+): TParsed => {
+    let result: unknown = data;
+
+    for (const path of paths) {
+        result = applyAtPath(result, path.split('.'));
+    }
+
+    return result as TParsed;
+};

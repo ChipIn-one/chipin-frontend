@@ -1,5 +1,6 @@
 import AmountInput from './AmountInput';
 import BackgroundBox from './BackgroundBox';
+import BalanceBadges from './BalanceBadges';
 import ChipInLoader from './ChipInLoader';
 import CopyButton from './CopyButton';
 import {
@@ -22,6 +23,7 @@ export {
     Amount,
     AmountInput,
     BackgroundBox,
+    BalanceBadges,
     ChipInLoader,
     CopyButton,
     EmptyState,

@@ -93,11 +93,7 @@ const LeaveGroupModal = ({ children }: Props) => {
 
                                 return (
                                     <Flex align="center" gap="2">
-                                        <UserAvatar
-                                            size="1"
-                                            src={member.picture ?? undefined}
-                                            fallback={member.displayName.charAt(0) || '?'}
-                                        />
+                                        <UserAvatar size="1" user={member} />
                                         {member.displayName}
                                     </Flex>
                                 );
@@ -113,11 +109,7 @@ const LeaveGroupModal = ({ children }: Props) => {
 
                                 return (
                                     <Flex align="center" gap="2">
-                                        <UserAvatar
-                                            size="1"
-                                            src={member.picture ?? undefined}
-                                            fallback={member.displayName.charAt(0) || '?'}
-                                        />
+                                        <UserAvatar size="1" user={member} />
                                         {member.displayName}
                                     </Flex>
                                 );

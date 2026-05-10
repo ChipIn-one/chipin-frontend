@@ -103,5 +103,9 @@
             "settleUp": "Settle up",
             "settleUpDesc": "Clear debts in one tap"
         }
+    },
+    "modes": {
+        "groupMode": "Group mode",
+        "soloMode": "Solo mode"
     }
 }

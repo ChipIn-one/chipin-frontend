@@ -2,6 +2,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 
 import { SECOND } from 'constants/time';
+import { parseBalancesMap } from 'helpers/currencies';
 import { getChipInApiUrl } from 'helpers/env';
 import { resolveApiErrorMessage } from 'helpers/errors';
 import { getAuthTokenDB } from 'store/IDB/auth';
@@ -17,8 +18,10 @@ import {
     InviteToGroupParams,
     KickGroupMemberParams,
     LeaveGroupParams,
+    ParsedDashboardResponse,
     RemoveGroupParams,
     RemoveGroupResponse,
+    SharingMode,
     UpdateGroupParams,
 } from './chipin.types';
 
@@ -135,8 +138,15 @@ export const inviteApiUserToGroup = async ({
     return response.data;
 };
 
-export const fetchApiDashboard = (): Promise<DashboardApiResponse> => {
-    return apiInstance.get(`/dashboard`).then(result => result.data);
+export const fetchApiDashboard = (): Promise<ParsedDashboardResponse> => {
+    return apiInstance.get(`/dashboard`).then(result => {
+        const raw: DashboardApiResponse = result.data;
+
+        return {
+            ...raw,
+            balances: parseBalancesMap(raw.balances ?? {}),
+        };
+    });
 };
 
 export const fetchApiUser = (): Promise<ApiUser> => {
@@ -172,7 +182,10 @@ export const createApiExpense = async ({
     participantIds,
     currency,
     category,
+    sharingMode,
 }: CreateLedgerEntryParams) => {
+    const resolvedSharingMode: SharingMode = sharingMode ?? { type: 'AUTO' };
+
     const response = await apiInstance.post('/ledger/entries', {
         type: 'EXPENSE',
         groupId,
@@ -184,9 +197,7 @@ export const createApiExpense = async ({
             participantIds,
             currency,
             category: category ?? null,
-            sharingMode: {
-                type: 'AUTO',
-            },
+            sharingMode: resolvedSharingMode,
         },
     });
 

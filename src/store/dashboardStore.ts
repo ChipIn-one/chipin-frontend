@@ -1,12 +1,15 @@
 import { create } from 'zustand';
 
 import { fetchApiDashboard } from 'api/chipin';
+import { BalancesMap } from 'helpers/currencies';
 
 import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
 
 export interface DashboardStore {
     fetchSetDashboardData: () => void;
+
+    balances: BalancesMap;
 
     currencies: {
         disclaimer: string;
@@ -18,6 +21,7 @@ export interface DashboardStore {
 }
 
 const initialDashboardStore = {
+    balances: {} as BalancesMap,
     currencies: {
         disclaimer: 'Usage subject to terms: https://openexchangerates.org/terms',
         license: 'https://openexchangerates.org/license',
@@ -200,7 +204,7 @@ const initialDashboardStore = {
     },
 };
 
-export const useDashboardStore = create<DashboardStore>(() => ({
+export const useDashboardStore = create<DashboardStore>(set => ({
     ...initialDashboardStore,
 
     fetchSetDashboardData: () => {
@@ -212,6 +216,7 @@ export const useDashboardStore = create<DashboardStore>(() => ({
         fetchApiDashboard()
             .then(data => {
                 setGroups(data.groups);
+                set({ balances: data.balances });
                 setLoading('dashboard', 'data', 'fetched');
             })
             .catch(error => {

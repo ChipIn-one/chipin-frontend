@@ -19,6 +19,12 @@
     },
     "summary": {
         "totalBalance": "Общий баланс",
-        "totalAcrossGroupsAndFriends": "По группам и друзьям"
+        "totalAcrossGroupsAndFriends": "По группам и друзьям",
+        "owedToYou": "Тебе должны",
+        "youOwe": "Ты должен"
+    },
+    "header": {
+        "greeting": "Привет, {{name}}",
+        "overview": "Вот твой финансовый обзор"
     }
 }

@@ -1,17 +1,19 @@
 import { useRef, useState } from 'react';
-import { AmountInput } from 'basics';
+import { AmountInput, UserAvatar } from 'basics';
+import Big from 'bignumber.js';
 import { LucideChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import styled from 'styled-components';
 
-import { Avatar, Button, Card, Flex, Grid, Text, TextField } from '@radix-ui/themes';
+import { Button, Card, Flex, Grid, Text, TextField } from '@radix-ui/themes';
 
-import { ApiUser } from 'api/chipin.types';
+import { ApiUser, SharingMode } from 'api/chipin.types';
 import { EXPENSE_CATEGORIES, ExpenseCategory } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
 import { themeColor } from 'helpers/colors';
+import { tryToBig } from 'helpers/numbers';
 import { getUnixTimestampInSec } from 'helpers/time';
 import { useActivityStore } from 'store/activityStore';
 import { useGroupsStore } from 'store/groupsStore';
@@ -21,8 +23,12 @@ import { useUsersStore } from 'store/usersStore';
 
 import CurrencySelect from 'components/CurrencySelect';
 import { CategorySearchSelect } from 'components/search-select';
+import SegmentedControl from 'components/SegmentedControl';
 import Select, { SelectItem } from 'components/Select';
 
+import SplitAmountsSection from './components/SplitAmountsSection';
+import SplitEqualSection from './components/SplitEqualSection';
+import SplitPercentSection from './components/SplitPercentSection';
 import BaseModal from './BaseModal';
 
 const EXPENSE_CATEGORY_KEYS = Object.keys(EXPENSE_CATEGORIES) as ExpenseCategory[];
@@ -31,6 +37,8 @@ const DEFAULT_CURRENCY = 'USD';
 const DEFAULT_CATEGORY = EXPENSE_CATEGORY_KEYS[0];
 
 type ExpenseTab = 'group' | 'friends';
+
+type SplitMode = 'equal' | 'percent' | 'amounts';
 
 // font-size-8 (35 px, bold) has no equivalent TextField size prop — narrow exception.
 const LargeAmountInput = styled(AmountInput)`
@@ -104,6 +112,9 @@ const AddExpenseModal = ({ children, context }: Props) => {
     const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
     const [category, setCategory] = useState<string>(DEFAULT_CATEGORY);
     const [paidById, setPaidById] = useState('');
+    const [splitMode, setSplitMode] = useState<SplitMode>('equal');
+    const [percentShares, setPercentShares] = useState<Record<string, string>>({});
+    const [amountShares, setAmountShares] = useState<Record<string, string>>({});
 
     const selectedExpenseGroup = groups.find(group => group.id === groupId) || defaultGroup;
     const friendsMembers = user
@@ -117,6 +128,40 @@ const AddExpenseModal = ({ children, context }: Props) => {
     const paidByMember = orderedMembers.find(member => member.id === paidById);
 
     const isShowGroupSelect = !isGroupContext && !isFriendsContext && activeTab === 'group';
+
+    const buildEqualPercentShares = (members: ApiUser[]): Record<string, string> => {
+        const count = members.length;
+        if (count === 0) {
+            return {};
+        }
+        const base = Math.floor(100 / count);
+        const remainder = 100 - base * count;
+        return Object.fromEntries(
+            members.map((member, index) => [
+                member.id,
+                String(index === 0 ? base + remainder : base),
+            ]),
+        );
+    };
+
+    const buildEqualAmountShares = (
+        members: ApiUser[],
+        totalAmount: string,
+    ): Record<string, string> => {
+        const count = members.length;
+        if (count === 0) {
+            return {};
+        }
+        const totalBig = tryToBig(totalAmount);
+        if (!totalBig) {
+            return Object.fromEntries(members.map(member => [member.id, '0']));
+        }
+        const perPerson = totalBig.dividedBy(count).decimalPlaces(2, Big.ROUND_HALF_UP);
+        return Object.fromEntries(members.map(member => [member.id, perPerson.toFixed(2)]));
+    };
+
+    // Step is rounded to the nearest unit based on total amount magnitude.
+    const amountStep = Math.max(1, Math.round(Number(amount) / 100));
 
     const groupItems: SelectItem[] = groups.map(group => {
         return {
@@ -155,6 +200,7 @@ const AddExpenseModal = ({ children, context }: Props) => {
         const defaultTab = isFriendsContext ? 'friends' : 'group';
         const defaultGroupId = defaultGroup?.id || '';
         const defaultMembers = getMembersByTab(defaultTab, defaultGroupId);
+        const orderedDefaultMembers = getOrderedMembers(defaultMembers);
 
         setActiveTab(defaultTab);
         setGroupId(defaultGroupId);
@@ -163,6 +209,9 @@ const AddExpenseModal = ({ children, context }: Props) => {
         setCurrency(DEFAULT_CURRENCY);
         setCategory(DEFAULT_CATEGORY);
         setPaidById(getDefaultPayerId(defaultMembers));
+        setSplitMode('equal');
+        setPercentShares(buildEqualPercentShares(orderedDefaultMembers));
+        setAmountShares({});
     };
 
     const onOpenChange = (isOpen: boolean) => {
@@ -172,10 +221,14 @@ const AddExpenseModal = ({ children, context }: Props) => {
             const defaultTab = isFriendsContext ? 'friends' : 'group';
             const defaultGroupId = defaultGroup?.id || '';
             const defaultMembers = getMembersByTab(defaultTab, defaultGroupId);
+            const orderedDefaultMembers = getOrderedMembers(defaultMembers);
 
             setActiveTab(defaultTab);
             setGroupId(defaultGroupId);
             setPaidById(getDefaultPayerId(defaultMembers));
+            setSplitMode('equal');
+            setPercentShares(buildEqualPercentShares(orderedDefaultMembers));
+            setAmountShares(buildEqualAmountShares(orderedDefaultMembers, amount));
             return;
         }
 
@@ -184,16 +237,59 @@ const AddExpenseModal = ({ children, context }: Props) => {
 
     const onChangeGroup = (nextGroupId: string) => {
         const nextMembers = groups.find(group => group.id === nextGroupId)?.members || [];
+        const nextOrdered = getOrderedMembers(nextMembers);
 
         setGroupId(nextGroupId);
         setPaidById(getDefaultPayerId(nextMembers));
+        setPercentShares(buildEqualPercentShares(nextOrdered));
+        setAmountShares(buildEqualAmountShares(nextOrdered, amount));
     };
 
     const onChangeTab = (nextTab: ExpenseTab) => {
         const nextMembers = getMembersByTab(nextTab, groupId);
+        const nextOrdered = getOrderedMembers(nextMembers);
 
         setActiveTab(nextTab);
         setPaidById(getDefaultPayerId(nextMembers));
+        setPercentShares(buildEqualPercentShares(nextOrdered));
+        setAmountShares(buildEqualAmountShares(nextOrdered, amount));
+    };
+
+    const handlePercentChange = (userId: string, delta: number) => {
+        setPercentShares(prev => {
+            const current = Number(prev[userId]) || 0;
+            const next = Math.max(0, current + delta);
+            return { ...prev, [userId]: String(next) };
+        });
+    };
+
+    const handleAmountChange = (userId: string, delta: number) => {
+        setAmountShares(prev => {
+            const currentBig = tryToBig(prev[userId]) ?? Big(0);
+            const nextBig = currentBig.plus(delta).decimalPlaces(2, Big.ROUND_HALF_UP);
+            const safeBig = nextBig.lt(0) ? Big(0) : nextBig;
+            return { ...prev, [userId]: safeBig.toFixed(2) };
+        });
+    };
+
+    const buildSharingMode = (): SharingMode => {
+        if (splitMode === 'percent') {
+            return {
+                type: 'PERCENTAGE',
+                percentageShares: Object.fromEntries(
+                    orderedMembers.map(member => [member.id, percentShares[member.id] ?? '0']),
+                ),
+            };
+        }
+        if (splitMode === 'amounts') {
+            return {
+                type: 'EXACT',
+                customShares: Object.fromEntries(
+                    orderedMembers.map(member => [member.id, amountShares[member.id] ?? '0']),
+                ),
+            };
+        }
+        return { type: 'AUTO' };
     };
 
     const onAddExpense = () => {
@@ -206,6 +302,7 @@ const AddExpenseModal = ({ children, context }: Props) => {
             participantIds: orderedMembers.map(member => member.id),
             currency: currency,
             category: category,
+            sharingMode: buildSharingMode(),
         };
         createExpense(params)
             .then(() => {
@@ -219,12 +316,28 @@ const AddExpenseModal = ({ children, context }: Props) => {
     };
 
     const isAmountValid = Number(amount) > 0;
+
+    const totalPercentShares = orderedMembers.reduce(
+        (acc, member) => acc + (Number(percentShares[member.id]) || 0),
+        0,
+    );
+    const isPercentSplitValid = splitMode !== 'percent' || totalPercentShares === 100;
+
+    const totalAmountSharesBig = orderedMembers.reduce((acc, member) => {
+        return acc.plus(tryToBig(amountShares[member.id]) ?? Big(0));
+    }, Big(0));
+    const totalBigForValidation = tryToBig(amount) ?? Big(0);
+    const isAmountSplitValid =
+        splitMode !== 'amounts' || totalAmountSharesBig.eq(totalBigForValidation);
+
     const isSubmitDisabled =
         !description.trim() ||
         !isAmountValid ||
         !paidById ||
         (groups.length > 0 && !groupId) ||
-        !resolvedMembers.length;
+        !resolvedMembers.length ||
+        !isPercentSplitValid ||
+        !isAmountSplitValid;
 
     return (
         <BaseModal
@@ -237,27 +350,82 @@ const AddExpenseModal = ({ children, context }: Props) => {
                 <Flex direction="column" gap="4">
                     {/* Amount + Currency */}
                     <Card ref={currencyWidthContainerRef}>
-                        <Flex justify="between" align="center" gap="4">
-                            <LargeAmountInput
-                                value={amount}
-                                onChange={setAmount}
-                                color="gray"
-                                size="3"
-                                autoFocus
-                            />
+                        <Flex direction="column" gap="4">
+                            <Flex justify="between" align="center" gap="4">
+                                <LargeAmountInput
+                                    value={amount}
+                                    onChange={setAmount}
+                                    color="gray"
+                                    size="3"
+                                    autoFocus
+                                />
 
-                            <CurrencySelect
-                                onChange={setCurrency}
-                                currency={currency}
-                                contentWidthMode="parent"
-                                triggerElement={
-                                    <Button variant="outline" color="teal" size="2">
-                                        {currency}
-                                        <LucideChevronDown size={16} />
-                                    </Button>
-                                }
-                                widthContainerRef={currencyWidthContainerRef}
-                            />
+                                <CurrencySelect
+                                    onChange={setCurrency}
+                                    currency={currency}
+                                    contentWidthMode="parent"
+                                    triggerElement={
+                                        <Button variant="outline" color="teal" size="2">
+                                            {currency}
+                                            <LucideChevronDown size={16} />
+                                        </Button>
+                                    }
+                                    widthContainerRef={currencyWidthContainerRef}
+                                />
+                            </Flex>
+
+                            {/* Paid by */}
+                            <Flex gap="4" align="center" justify="between">
+                                <Text as="label" size="2" weight="bold" color="gray">
+                                    {t('common:fields.paidBy')}
+                                </Text>
+
+                                {orderedMembers.length > 0 ? (
+                                    <Select
+                                        items={paidByItems}
+                                        value={paidById}
+                                        onChange={setPaidById}
+                                        size="3"
+                                        triggerVariant="surface"
+                                        renderValue={item => {
+                                            if (!item || !paidByMember) {
+                                                return undefined;
+                                            }
+
+                                            return (
+                                                <Flex align="center" gap="2">
+                                                    <UserAvatar size="1" user={paidByMember} />
+                                                    <Text>
+                                                        {paidByMember.id === user?.id
+                                                            ? t('expenses.modal.currentUser')
+                                                            : paidByMember.displayName}
+                                                    </Text>
+                                                </Flex>
+                                            );
+                                        }}
+                                        renderItem={item => {
+                                            const member = orderedMembers.find(
+                                                orderedMember => orderedMember.id === item.value,
+                                            );
+
+                                            if (!member) {
+                                                return item.label;
+                                            }
+
+                                            return (
+                                                <Flex align="center" gap="2" minWidth="0">
+                                                    <UserAvatar size="1" user={member} />
+                                                    <Text truncate>{item.label}</Text>
+                                                </Flex>
+                                            );
+                                        }}
+                                    />
+                                ) : (
+                                    <Text size="2" color="gray">
+                                        {t('expenses.modal.noMembers')}
+                                    </Text>
+                                )}
+                            </Flex>
                         </Flex>
                     </Card>
 
@@ -322,70 +490,59 @@ const AddExpenseModal = ({ children, context }: Props) => {
                     )}
 
                     <Card>
-                        {/* Paid by */}
-                        <Flex gap="4" align="center" justify="between">
-                            <Text as="label" size="2" weight="bold" color="gray">
-                                {t('common:fields.paidBy')}
-                            </Text>
-
-                            {orderedMembers.length > 0 ? (
-                                <Select
-                                    items={paidByItems}
-                                    value={paidById}
-                                    onChange={setPaidById}
-                                    size="3"
-                                    triggerVariant="surface"
-                                    renderValue={item => {
-                                        if (!item || !paidByMember) {
-                                            return undefined;
-                                        }
-
-                                        return (
-                                            <Flex align="center" gap="2">
-                                                <Avatar
-                                                    size="1"
-                                                    radius="full"
-                                                    src={paidByMember.picture || ''}
-                                                    fallback={paidByMember.displayName
-                                                        .charAt(0)
-                                                        .toUpperCase()}
-                                                />
-                                                <Text>
-                                                    {paidByMember.id === user?.id
-                                                        ? t('expenses.modal.currentUser')
-                                                        : paidByMember.displayName}
-                                                </Text>
-                                            </Flex>
-                                        );
-                                    }}
-                                    renderItem={item => {
-                                        const member = orderedMembers.find(
-                                            orderedMember => orderedMember.id === item.value,
-                                        );
-
-                                        if (!member) {
-                                            return item.label;
-                                        }
-
-                                        return (
-                                            <Flex align="center" gap="2" minWidth="0">
-                                                <Avatar
-                                                    size="1"
-                                                    radius="full"
-                                                    src={member.picture || ''}
-                                                    fallback={member.displayName
-                                                        .charAt(0)
-                                                        .toUpperCase()}
-                                                />
-                                                <Text truncate>{item.label}</Text>
-                                            </Flex>
-                                        );
-                                    }}
-                                />
-                            ) : (
-                                <Text size="2" color="gray">
-                                    {t('expenses.modal.noMembers')}
+                        <Flex direction="column" gap="4">
+                            <Flex justify="between" align="center">
+                                <Text size="2" weight="bold" color="gray">
+                                    {t('expenses.modal.split.title')}
                                 </Text>
+                                <SegmentedControl
+                                    value={splitMode}
+                                    onValueChange={value => setSplitMode(value as SplitMode)}
+                                    items={[
+                                        {
+                                            value: 'equal',
+                                            label: t('expenses.modal.split.equal'),
+                                        },
+                                        {
+                                            value: 'percent',
+                                            label: t('expenses.modal.split.percent'),
+                                        },
+                                        {
+                                            value: 'amounts',
+                                            label: t('expenses.modal.split.amounts'),
+                                        },
+                                    ]}
+                                />
+                            </Flex>
+
+                            {splitMode === 'equal' && (
+                                <SplitEqualSection
+                                    members={orderedMembers}
+                                    totalAmount={amount}
+                                    currency={currency}
+                                />
+                            )}
+
+                            {splitMode === 'percent' && (
+                                <SplitPercentSection
+                                    members={orderedMembers}
+                                    percentShares={percentShares}
+                                    onChangePercent={handlePercentChange}
+                                    totalAmount={amount}
+                                    currency={currency}
+                                    currentUserId={user?.id}
+                                />
+                            )}
+
+                            {splitMode === 'amounts' && (
+                                <SplitAmountsSection
+                                    members={orderedMembers}
+                                    amountShares={amountShares}
+                                    onChangeAmount={handleAmountChange}
+                                    totalAmount={amount}
+                                    currency={currency}
+                                    step={amountStep}
+                                />
                             )}
                         </Flex>
                     </Card>

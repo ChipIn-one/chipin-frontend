@@ -1,9 +1,18 @@
-import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 
-import { Card, Flex, Skeleton, Text } from '@radix-ui/themes';
+import { Flex } from '@radix-ui/themes';
 
-import { Amount } from 'basics/numbers';
+import { getCurrencySummary } from 'helpers/currencies';
+import {
+    selectBalances,
+    selectCurrencyRates,
+    selectDefaultCurrency,
+    selectOwedEntries,
+    selectOweEntries,
+} from 'store/dashboardSelectors';
+import { useDashboardStore } from 'store/dashboardStore';
 
+import TotalBalanceCard from './dashboard-summary/TotalBalanceCard';
 import SummaryDebtCards from './SummaryDebtCards';
 
 interface Props {
@@ -11,41 +20,29 @@ interface Props {
 }
 
 const DashBoardSummary: React.FC<Props> = ({ isLoading = false }) => {
-    const { t } = useTranslation('dashboard');
-    const totalBalance = 285.8;
-    const owedToYou = 337.2;
-    const youOwe = 51.4;
-    const currencyPrefix = '$';
-    const balanceColor = totalBalance >= 0 ? 'grass' : 'tomato';
+    const balances = useDashboardStore(selectBalances);
+    const rates = useDashboardStore(selectCurrencyRates);
+    const mainCurrency = useDashboardStore(selectDefaultCurrency);
+    const owedEntries = useDashboardStore(useShallow(selectOwedEntries));
+    const oweEntries = useDashboardStore(useShallow(selectOweEntries));
+
+    const { netTotal, owedTotal, owingTotal } = getCurrencySummary(balances, rates, mainCurrency);
 
     return (
         <Flex direction="column" gap="4">
-            <Card size="2">
-                <Flex direction="column" gap="1">
-                    <Skeleton loading={isLoading} width="140px">
-                        <Text size="3" weight="medium" color="gray" as="p">
-                            {t('summary.totalBalance')}
-                        </Text>
-                    </Skeleton>
-
-                    <Skeleton loading={isLoading} width="170px">
-                        <Text size="8" color={balanceColor} weight="bold" as="p">
-                            <Amount value={totalBalance} customPrefix={currencyPrefix} />
-                        </Text>
-                    </Skeleton>
-
-                    <Skeleton loading={isLoading} width="170px">
-                        <Text size="2" color="gray" as="p">
-                            {t('summary.totalAcrossGroupsAndFriends')}
-                        </Text>
-                    </Skeleton>
-                </Flex>
-            </Card>
+            <TotalBalanceCard
+                isLoading={isLoading}
+                netTotal={netTotal}
+                mainCurrency={mainCurrency}
+            />
 
             <SummaryDebtCards
                 isLoading={isLoading}
-                positiveBalances={owedToYou}
-                negativeBalances={youOwe}
+                owedToYouTotal={owedTotal}
+                youOweTotal={owingTotal}
+                owedEntries={owedEntries}
+                oweEntries={oweEntries}
+                mainCurrency={mainCurrency}
             />
         </Flex>
     );

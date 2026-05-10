@@ -56,7 +56,6 @@ const ActivityHeader = ({ isLoading, activeFilter, onFilterChange }: Props) => {
                         items={filterItems}
                         value={activeFilter}
                         onValueChange={value => onFilterChange(value as ActivityFilter)}
-                        size="3"
                     />
                 </Skeleton>
             </Box>

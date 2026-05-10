@@ -49,3 +49,23 @@ export const formatRelativeTime = (date: Date | number): string => {
 
 export const getUnixTimestampInSec = (date?: Date): number =>
     Math.floor((date ? date.getTime() : Date.now()) / 1000);
+
+export type GreetingPeriod = 'morning' | 'day' | 'evening' | 'night';
+
+export const getGreetingPeriod = (): GreetingPeriod => {
+    const hour = new Date().getHours();
+
+    if (hour >= 5 && hour < 12) {
+        return 'morning';
+    }
+
+    if (hour >= 12 && hour < 17) {
+        return 'day';
+    }
+
+    if (hour >= 17 && hour < 22) {
+        return 'evening';
+    }
+
+    return 'night';
+};

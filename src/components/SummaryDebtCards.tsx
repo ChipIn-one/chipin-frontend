@@ -1,82 +1,45 @@
-import { LucideTrendingDown, LucideTrendingUp } from 'lucide-react';
+import Big from 'bignumber.js';
 
-import { Avatar, Card, Flex, Grid, Skeleton, Text } from '@radix-ui/themes';
+import { Flex } from '@radix-ui/themes';
 
-import { Amount } from 'basics/numbers';
+import { BalanceEntry } from 'helpers/currencies';
+
+import OwedToYouCard from './summary-debt-cards/OwedToYouCard';
+import YouOweCard from './summary-debt-cards/YouOweCard';
 
 interface Props {
     isLoading?: boolean;
-    positiveBalances: number;
-    negativeBalances: number;
+    owedToYouTotal: Big;
+    youOweTotal: Big;
+    owedEntries: BalanceEntry[];
+    oweEntries: BalanceEntry[];
+    mainCurrency: string;
 }
 
 const SummaryDebtCards: React.FC<Props> = ({
     isLoading = false,
-    positiveBalances,
-    negativeBalances,
+    owedToYouTotal,
+    youOweTotal,
+    owedEntries,
+    oweEntries,
+    mainCurrency,
 }) => {
-    const currencyPrefix = '$';
-
     return (
-        <Grid columns="2" gap="4">
-            <Card>
-                <Flex direction="column" gap="2">
-                    <Flex direction="row" align="center" gap="2">
-                        <Skeleton loading={isLoading}>
-                            <Avatar
-                                size="1"
-                                color="grass"
-                                fallback={<LucideTrendingUp size={16} />}
-                            />
-                        </Skeleton>
-                        <Skeleton loading={isLoading}>
-                            <Text color="grass" size="3" weight="medium">
-                                Owed to you
-                            </Text>
-                        </Skeleton>
-                    </Flex>
+        <Flex direction="column" gap="4">
+            <OwedToYouCard
+                isLoading={isLoading}
+                total={owedToYouTotal}
+                mainCurrency={mainCurrency}
+                entries={owedEntries}
+            />
 
-                    <Skeleton loading={isLoading}>
-                        <Text size="6" color="grass" weight="bold" as="p">
-                            <Amount
-                                value={positiveBalances}
-                                customPrefix={currencyPrefix}
-                                precision={2}
-                            />
-                        </Text>
-                    </Skeleton>
-                </Flex>
-            </Card>
-
-            <Card>
-                <Flex direction="column" gap="2">
-                    <Flex direction="row" align="center" gap="2">
-                        <Skeleton loading={isLoading}>
-                            <Avatar
-                                size="1"
-                                color="tomato"
-                                fallback={<LucideTrendingDown size={16} />}
-                            />
-                        </Skeleton>
-                        <Skeleton loading={isLoading}>
-                            <Text color="tomato" size="3" weight="medium">
-                                You owe
-                            </Text>
-                        </Skeleton>
-                    </Flex>
-
-                    <Skeleton loading={isLoading}>
-                        <Text size="6" color="tomato" weight="bold" as="p">
-                            <Amount
-                                value={negativeBalances}
-                                customPrefix={currencyPrefix}
-                                precision={2}
-                            />
-                        </Text>
-                    </Skeleton>
-                </Flex>
-            </Card>
-        </Grid>
+            <YouOweCard
+                isLoading={isLoading}
+                total={youOweTotal}
+                mainCurrency={mainCurrency}
+                entries={oweEntries}
+            />
+        </Flex>
     );
 };
 

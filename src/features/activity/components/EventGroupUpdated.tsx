@@ -25,11 +25,7 @@ const EventGroupUpdated = ({ event }: Props) => {
                         fallback={<LucideUserPen size={20} />}
                     />
                     <Flex gap="2" align="center" minWidth="0">
-                        <UserAvatar
-                            size="1"
-                            src={event.actorSnapshot.picture}
-                            fallback={event.actorSnapshot.displayName.charAt(0)}
-                        />
+                        <UserAvatar size="1" user={event.actorSnapshot} />
 
                         <Text size="3" as="p">
                             <Text size="3" as="span" weight="medium">
