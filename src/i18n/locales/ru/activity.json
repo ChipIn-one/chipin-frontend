@@ -4,22 +4,16 @@
     "filterAll": "Все",
     "filterExpenses": "Расходы",
     "filterSettlements": "Расчёты",
-    "viewAll": "Смотреть всю активность",
     "emptyTitle": "Активности пока нет",
     "emptyDescription": "Здесь появятся последние траты и расчёты.",
     "endOfFeed": "На этом пока всё",
     "event": {
         "expenseCreatedDescription": "Оплатил(а) {{payer}} в группе {{group}}",
-        "groupCreatedDescription": "{{actor}} создал(а) группу",
         "groupCreatedMiddleText": "создал(а) группу",
-        "groupUpdatedDescription": "{{actor}} обновил(а) группу",
         "groupUpdatedMiddleText": "обновил(а) группу",
-        "groupDeletedDescription": "{{actor}} удалил(а) группу",
         "groupDeletedMiddleText": "удалил(а) группу",
-        "memberJoinedDescription": "{{target}} присоединился(лась) к группе {{group}}",
         "memberJoinedMiddleText": "присоединился(лась) к группе",
         "memberLeftMiddleText": "покинул(а) группу",
-        "unknownTitle": "Событие активности",
         "unknownDescription": "Необработанный тип события"
     }
 }

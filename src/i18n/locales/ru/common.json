@@ -1,14 +1,4 @@
 {
-    "auth": {
-        "modal": {
-            "title": "Добро пожаловать в ChipIn",
-            "subtitle": "Войдите, чтобы отслеживать и делить расходы с друзьями"
-        },
-        "button": {
-            "google": "Войти через Google",
-            "apple": "Войти через Apple"
-        }
-    },
     "buttons": {
         "cancel": "Отмена",
         "delete": "Удалить",
@@ -19,11 +9,7 @@
         "saveGroup": "Сохранить группу",
         "addExpense": "Добавить расход",
         "settleUp": "Рассчитаться",
-        "groupActions": "Действия с группой",
-        "copyGroupLink": "Скопировать ссылку",
-        "updateGroup": "Обновить группу",
         "removeGroup": "Удалить группу",
-        "deleteGroup": "Удалить группу",
         "leaveGroup": "Покинуть группу",
         "kickMember": "Исключить",
         "showQRCode": "Показать QR-код",
@@ -31,14 +17,10 @@
         "signOut": "Выйти",
         "installApp": "Установить",
         "getStarted": "Начать",
-        "viewAllActivity": "Вся активность",
         "goToDashboard": "На дашборд",
         "copyReport": "Скопировать отчёт",
         "changePhoto": "Изменить фото",
-        "invitePeople": "Пригласить людей",
-        "share": "Поделиться",
-        "copyLink": "Скопировать",
-        "copyInviteLink": "Скопировать ссылку"
+        "invitePeople": "Пригласить людей"
     },
     "fields": {
         "description": "Описание",
@@ -92,20 +74,14 @@
     "roles": {
         "owner": "Владелец"
     },
-    "signIn": {
-        "title": "С возвращением",
-        "subtitle": "Войдите, чтобы продолжить с того места, где остановились.",
-        "features": {
-            "groups": "Группы",
-            "groupsDesc": "Совместные расходы",
-            "balances": "Балансы",
-            "balancesDesc": "Кто кому должен",
-            "settleUp": "Расчёты",
-            "settleUpDesc": "Закрывайте долги в один тап"
-        }
-    },
     "modes": {
         "groupMode": "Групповой режим",
         "soloMode": "Сольный режим"
+    },
+    "nav": {
+        "dashboard": "Главная",
+        "activity": "Активность",
+        "friends": "Друзья",
+        "settings": "Настройки"
     }
 }

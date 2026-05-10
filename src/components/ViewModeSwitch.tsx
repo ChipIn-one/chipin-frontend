@@ -5,14 +5,20 @@ import { Flex, Switch, Text } from '@radix-ui/themes';
 
 const ViewModeSwitch: React.FC = () => {
     const { t } = useTranslation('common');
-    const [isChecked, setIsChecked] = useState(true);
+    const [isGroupMode, setIsGroupMode] = useState(true);
 
     return (
         <Flex gap="2" direction="column" align="end">
-            <Switch size="2" disabled checked={isChecked} onCheckedChange={setIsChecked} />
+            <Switch size="3" disabled checked={isGroupMode} onCheckedChange={setIsGroupMode} />
 
-            <Text as="span" size="2" color="gray" weight="medium" align="right">
-                {isChecked ? t('modes.groupMode') : t('modes.soloMode')}
+            <Text
+                as="span"
+                size="2"
+                weight="medium"
+                align="right"
+                color={isGroupMode ? 'grass' : 'violet'}
+            >
+                {isGroupMode ? t('modes.groupMode') : t('modes.soloMode')}
             </Text>
         </Flex>
     );

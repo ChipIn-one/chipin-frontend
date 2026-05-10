@@ -10,7 +10,9 @@ i18n.use(initReactI18next).init({
 
     ns: [
         'common',
-        'apiErrors',
+        'auth',
+        'errors',
+        'currencies',
         'toasts',
         'landing',
         'activity',

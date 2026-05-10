@@ -4,22 +4,16 @@
     "filterAll": "All",
     "filterExpenses": "Expenses",
     "filterSettlements": "Settlements",
-    "viewAll": "View all activities",
     "emptyTitle": "No activity yet",
     "emptyDescription": "Recent expenses and settlements will appear here.",
     "endOfFeed": "That's everything for now",
     "event": {
         "expenseCreatedDescription": "Paid by {{payer}} in {{group}}",
-        "groupCreatedDescription": "{{actor}} created the group",
         "groupCreatedMiddleText": "created the group",
-        "groupUpdatedDescription": "{{actor}} updated the group",
         "groupUpdatedMiddleText": "updated the group",
-        "groupDeletedDescription": "{{actor}} deleted the group",
         "groupDeletedMiddleText": "deleted the group",
-        "memberJoinedDescription": "{{target}} joined the group {{group}}",
         "memberJoinedMiddleText": "joined the group",
         "memberLeftMiddleText": "left the group",
-        "unknownTitle": "Activity event",
         "unknownDescription": "Unhandled event type"
     }
 }

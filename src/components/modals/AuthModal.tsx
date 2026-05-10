@@ -12,7 +12,7 @@ interface Props {
 }
 
 const AuthModal = ({ children }: Props) => {
-    const { t } = useTranslation();
+    const { t } = useTranslation('auth');
 
     const modalTitle = (
         <Flex align="center" gap="3">
@@ -23,7 +23,7 @@ const AuthModal = ({ children }: Props) => {
                 fallback={<LucideReceiptText size={20} />}
             />
             <Text size="2" color="gray">
-                {t('auth.modal.subtitle')}
+                {t('modal.subtitle')}
             </Text>
         </Flex>
     );
@@ -35,7 +35,7 @@ const AuthModal = ({ children }: Props) => {
         </Flex>
     );
 
-    return <BaseModal triggerElement={children} title={t('auth.modal.title')} content={content} />;
+    return <BaseModal triggerElement={children} title={t('modal.title')} content={content} />;
 };
 
 export default AuthModal;

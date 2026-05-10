@@ -150,9 +150,8 @@ Allowed exceptions (not user-facing):
 
 - Prefer explicit namespaces: `common:save`.
 - Use semantic key naming: `feature.section.element` — e.g. `groups.create.title`.
-- Phrases of **3 words or fewer** (e.g. "Save", "Cancel", "Add expense") → `common.json`, referenced via `common:` prefix — never declared in a feature namespace.
-- Feature-specific text → feature namespace.
-- If a translation text is used in more than one namespace file, move it to `common.json` — do not duplicate across namespaces.
+- Feature-specific text → feature namespace; text that is not domain-specific → `common.json`.
+- If the same string (or meaning) exists in more than one namespace, move it to `common.json` and remove the duplicates — never declare identical strings in two namespace files.
 - Add locale keys in both `src/i18n/locales/en/*` and `src/i18n/locales/ru/*` within the same task.
 
 ---

@@ -139,11 +139,8 @@
     "page": {
         "members": "members",
         "loadingGroup": "Loading group...",
-        "noDescription": "No description yet. Add one in group settings.",
         "shareWarning": "Share invite link with trusted people only.",
         "notFound": "No group id or group not found",
-        "deleteConfirm": "Are you sure you want to delete this group?",
-        "deleteWarning": "This action cannot be undone. All group data will be permanently deleted.",
         "activityStubTitle": "Group activity",
         "activityStubDescription": "Full activity history is available on the Activity page.",
         "expenses": {
@@ -169,8 +166,6 @@
             "simplifyDebtsSubtitle": "Minimize the number of transactions"
         },
         "balances": {
-            "owesYou": "Owes you",
-            "youOwe": "You owe",
             "settled": "Settled up",
             "empty": "No balances to show yet."
         },

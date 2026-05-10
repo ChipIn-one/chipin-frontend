@@ -1,14 +1,4 @@
 {
-    "auth": {
-        "modal": {
-            "title": "Welcome to ChipIn",
-            "subtitle": "Sign in to track and split expenses with your friends"
-        },
-        "button": {
-            "google": "Sign in with Google",
-            "apple": "Sign in with Apple"
-        }
-    },
     "buttons": {
         "cancel": "Cancel",
         "delete": "Delete",
@@ -19,11 +9,7 @@
         "saveGroup": "Save group",
         "addExpense": "Add expense",
         "settleUp": "Settle up",
-        "groupActions": "Group actions",
-        "copyGroupLink": "Copy group link",
-        "updateGroup": "Update group",
         "removeGroup": "Remove group",
-        "deleteGroup": "Delete group",
         "leaveGroup": "Leave group",
         "kickMember": "Kick",
         "showQRCode": "Show QR code",
@@ -31,14 +17,10 @@
         "signOut": "Sign Out",
         "installApp": "Install app",
         "getStarted": "Get started",
-        "viewAllActivity": "All activity",
         "goToDashboard": "Go to dashboard",
         "copyReport": "Copy report",
         "changePhoto": "Change photo",
-        "invitePeople": "Invite people",
-        "share": "Share",
-        "copyLink": "Copy link",
-        "copyInviteLink": "Copy invite link"
+        "invitePeople": "Invite people"
     },
     "fields": {
         "description": "Description",
@@ -92,20 +74,14 @@
     "roles": {
         "owner": "Owner"
     },
-    "signIn": {
-        "title": "Welcome back",
-        "subtitle": "Sign in to continue where you left off.",
-        "features": {
-            "groups": "Groups",
-            "groupsDesc": "Track shared expenses",
-            "balances": "Balances",
-            "balancesDesc": "See who owes what",
-            "settleUp": "Settle up",
-            "settleUpDesc": "Clear debts in one tap"
-        }
-    },
     "modes": {
         "groupMode": "Group mode",
         "soloMode": "Solo mode"
+    },
+    "nav": {
+        "dashboard": "Dashboard",
+        "activity": "Activity",
+        "friends": "Friends",
+        "settings": "Settings"
     }
 }

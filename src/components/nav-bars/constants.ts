@@ -4,22 +4,22 @@ import { ROUTES } from 'constants/routes';
 
 export const NAV_ELEMENTS = [
     {
-        label: 'Dashboard',
+        labelKey: 'nav.dashboard',
         href: ROUTES.DASHBOARD,
         Icon: LucideChartPie,
     },
     {
-        label: 'Activity',
+        labelKey: 'nav.activity',
         href: ROUTES.ACTIVITY,
         Icon: LucideChartBar,
     },
     {
-        label: 'Friends',
+        labelKey: 'nav.friends',
         href: ROUTES.FRIENDS,
         Icon: LucideUsers,
     },
     {
-        label: 'Settings',
+        labelKey: 'nav.settings',
         href: ROUTES.SETTINGS,
         Icon: LucideSettings,
     },

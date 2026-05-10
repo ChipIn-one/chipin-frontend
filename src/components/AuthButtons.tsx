@@ -8,20 +8,20 @@ import AppleIconSvg from 'assets/apple-icon.svg?react';
 import GoogleIconSvg from 'assets/google-icon.svg?react';
 
 const AuthButtons = () => {
-    const { t } = useTranslation();
+    const { t } = useTranslation('auth');
 
     return (
         <Flex direction="column" gap="4">
             <Button size="4" variant="soft" color="blue" radius="full" asChild>
                 <a href={getSocialAuthUrl('google')}>
                     <GoogleIconSvg width={18} height={18} />
-                    {t('auth.button.google')}
+                    {t('button.google')}
                 </a>
             </Button>
 
             <Button size="4" variant="soft" color="gray" radius="full" disabled>
                 <AppleIconSvg width={18} height={18} />
-                {t('auth.button.apple')}
+                {t('button.apple')}
             </Button>
         </Flex>
     );

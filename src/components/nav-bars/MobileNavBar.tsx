@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Link, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 
@@ -55,10 +56,11 @@ const NavButton = styled(Button)`
 
 const MobileNavBar = () => {
     const location = useLocation();
+    const { t } = useTranslation('common');
 
     const isVisibleExpenseButton = location.pathname !== ROUTES.SETTINGS;
 
-    const renderNavItem = ({ label, href, Icon }: (typeof NAV_ELEMENTS)[number]) => {
+    const renderNavItem = ({ labelKey, href, Icon }: (typeof NAV_ELEMENTS)[number]) => {
         const isActive = location.pathname === href || location.pathname.startsWith(`${href}/`);
 
         return (
@@ -73,7 +75,7 @@ const MobileNavBar = () => {
                         <Flex direction="column" align="center" justify="center" gap="1" py="1">
                             <Icon size={20} />
                             <Text size="1" {...(!isActive && { color: 'gray' })}>
-                                {label}
+                                {t(labelKey)}
                             </Text>
                         </Flex>
                     </NavButton>

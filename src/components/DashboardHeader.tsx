@@ -15,16 +15,16 @@ const DashboardHeader: React.FC = () => {
     const user = useUsersStore(s => s.user);
 
     return (
-        <Flex justify="between" align="end" mb="5" pt="5">
+        <Flex justify="between" align="center" mb="4">
             <Box>
-                <Skeleton loading={isUserLoading} width="180px" height="var(--space-6)">
-                    <Heading size={{ initial: '5', sm: '6' }}>
+                <Skeleton loading={isUserLoading} width="180px" height="var(--space-5)">
+                    <Heading size={{ initial: '4', sm: '5' }}>
                         {t('header.greeting', {
                             name: user?.firstName ?? user?.displayName ?? '',
                         })}
                     </Heading>
                 </Skeleton>
-                <Skeleton loading={isUserLoading} width="220px" height="var(--space-5)">
+                <Skeleton loading={isUserLoading} width="220px" height="var(--space-4)">
                     <Text size={{ initial: '2', sm: '3' }} color="gray" as="p" mt="1">
                         {t('header.overview')}
                     </Text>

@@ -1,3 +1,4 @@
+import { LucideChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
@@ -24,20 +25,23 @@ const GroupCard: React.FC<Props> = ({ group }) => {
                 <Flex gap="3" align="center">
                     <GroupAvatar group={group} size="5" />
 
-                    <Flex direction="column">
-                        <Text size="4" weight="bold" as="p">
-                            {group.name}
-                        </Text>
+                    <Flex align="center" justify="between" gap="2" width="100%">
+                        <Flex direction="column">
+                            <Text size="4" weight="bold" as="p">
+                                {group.name}
+                            </Text>
 
-                        <Text size="2" color="grass" weight="medium" as="p">
-                            {t('groupsCard.statusOwed')} <Amount value={15} customPrefix="$" />
-                        </Text>
+                            <Text size="2" color="grass" weight="medium" as="p">
+                                {t('groupsCard.statusOwed')} <Amount value={15} customPrefix="$" />
+                            </Text>
 
-                        <Text size="1" color="gray" as="p">
-                            {t('groupsCard.members', {
-                                count: group?.members?.length,
-                            })}
-                        </Text>
+                            <Text size="1" color="gray" as="p">
+                                {t('groupsCard.members', {
+                                    count: group?.members?.length,
+                                })}
+                            </Text>
+                        </Flex>
+                        <LucideChevronRight size={20} />
                     </Flex>
                 </Flex>
             </Link>

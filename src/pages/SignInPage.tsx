@@ -8,7 +8,7 @@ import Footer from 'components/Footer';
 
 // TODO: Make sign in content importable to other pages, ensure for not changing routes after sign in
 const SignInPage = () => {
-    const { t } = useTranslation();
+    const { t } = useTranslation('auth');
 
     return (
         <>

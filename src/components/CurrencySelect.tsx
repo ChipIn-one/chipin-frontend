@@ -32,7 +32,7 @@ const CurrencySelect: React.FC<Props> = ({
     const availableCurrencies = useDashboardStore(useShallow(selectAvailableCurrencies));
     const defaultCurrency = useDashboardStore(useShallow(selectDefaultCurrency));
 
-    const { t } = useTranslation('settings');
+    const { t } = useTranslation('currencies');
     const [internalCurrency, setInternalCurrency] = useState(currency ?? defaultCurrency ?? '');
 
     const selectedCurrency =
@@ -42,15 +42,13 @@ const CurrencySelect: React.FC<Props> = ({
         () =>
             availableCurrencies.map(code => ({
                 value: code,
-                label: `${t(`regional.currencies.${code}`)}`,
-                searchFields: [code, t(`regional.currencies.${code}`)],
+                label: `${t(code)}`,
+                searchFields: [code, t(code)],
             })),
         [availableCurrencies, t],
     );
 
-    const selectedCurrencyLabel = selectedCurrency
-        ? `${t(`regional.currencies.${selectedCurrency}`)}`
-        : t('regional.currencyLabel');
+    const selectedCurrencyLabel = selectedCurrency ? `${t(selectedCurrency)}` : selectedCurrency;
 
     const defaultTriggerElement = (
         <Button

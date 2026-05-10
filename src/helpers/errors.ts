@@ -12,7 +12,7 @@ export const resolveApiErrorMessage = (payload?: ApiErrorPayload, fallbackKey = 
     const params = payload?.error?.params;
 
     if (errorId) {
-        const key = `apiErrors:${errorId}`;
+        const key = `errors:${errorId}`;
         const translated = i18n.t(key, params);
 
         if (translated !== key) {
@@ -20,5 +20,5 @@ export const resolveApiErrorMessage = (payload?: ApiErrorPayload, fallbackKey = 
         }
     }
 
-    return i18n.t(`apiErrors:${fallbackKey}`);
+    return i18n.t(`errors:${fallbackKey}`);
 };
