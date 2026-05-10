@@ -19,24 +19,19 @@ const TotalBalanceCard: React.FC<Props> = ({ isLoading, netTotal, mainCurrency }
         <Card size="1">
             <Flex direction="column" gap="1">
                 <Skeleton loading={isLoading} width="140px">
-                    <Text size="3" weight="medium" color="gray" as="span">
+                    <Text size="4" weight="medium" color="gray" as="span">
                         {t('summary.totalBalance')}
                     </Text>
                 </Skeleton>
 
                 <Skeleton loading={isLoading} width="170px">
-                    <Text
-                        size={{ initial: '5', sm: '7' }}
-                        color={balanceColor}
-                        weight="bold"
-                        as="span"
-                    >
+                    <Text size="7" color={balanceColor} weight="bold" as="span">
                         <Amount value={netTotal} tokenCode={mainCurrency} />
                     </Text>
                 </Skeleton>
 
                 <Skeleton loading={isLoading} width="150px" height="var(--space-4)">
-                    <Text size={{ initial: '1', sm: '2' }} color="gray" as="span">
+                    <Text size="2" color="gray" as="span">
                         {t('summary.totalAcrossGroupsAndFriends')}
                     </Text>
                 </Skeleton>

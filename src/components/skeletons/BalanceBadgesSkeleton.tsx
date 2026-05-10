@@ -7,7 +7,7 @@ export const BalanceBadgesSkeleton = () => (
     <Flex gap="2" wrap="wrap">
         {Array.from({ length: SKELETON_COUNT }, (_, index) => (
             <Skeleton key={index}>
-                <Badge variant="soft" size={{ initial: '2', sm: '3' }}>
+                <Badge variant="soft" size="3">
                     300 USD
                 </Badge>
             </Skeleton>

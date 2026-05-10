@@ -32,21 +32,21 @@ const OwedToYouCard: React.FC<Props> = ({ isLoading, total, mainCurrency, entrie
                     <Flex align="center" gap="2">
                         <Skeleton loading={isLoading}>
                             <Avatar
-                                size="1"
+                                size="2"
                                 color="grass"
                                 fallback={<LucideTrendingUp size={16} />}
                             />
                         </Skeleton>
 
                         <Skeleton loading={isLoading}>
-                            <Text color="grass" weight="medium">
+                            <Text color="grass" weight="medium" size="4">
                                 {t('summary.owedToYou')}
                             </Text>
                         </Skeleton>
                     </Flex>
 
                     <Skeleton loading={isLoading} width="80px">
-                        <Text size={{ initial: '3', sm: '4' }} color="grass" weight="bold">
+                        <Text size="4" color="grass" weight="bold">
                             <Amount value={total} tokenCode={mainCurrency} precision={0} />
                         </Text>
                     </Skeleton>
