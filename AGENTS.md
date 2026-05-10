@@ -310,6 +310,16 @@ Margin props (`m`, `mx`, `my`, `mt`, `mr`, `mb`, `ml`) are available on most Rad
 - For custom trigger display (icon + text) pass children to `Select.Trigger` directly.
 - Reuse the shared app wrapper in `src/components/Select.tsx` for standard dropdown selects instead of composing Radix `Select.Root/Trigger/Content/Item` inline in feature code.
 
+### SegmentedControl
+
+- Use `SegmentedControl` for switching between a small set of mutually exclusive views or filters (e.g. All / Expenses / Settlements, 12h / 24h, Dark / Light / System).
+- API: `SegmentedControl.Root` wraps one or more `SegmentedControl.Item` elements.
+- `SegmentedControl.Root` props: `size` (`"1"` | `"2"` | `"3"`, default `"2"`), `variant` (`"surface"` | `"classic"`, default `"surface"`), `radius` (`"none"` | `"small"` | `"medium"` | `"large"` | `"full"`), `disabled`.
+- Use `value` + `onValueChange` for controlled mode; use `defaultValue` for uncontrolled.
+- `Item` children accept `ReactNode` — include icons by wrapping in `<Flex align="center" gap="1">`.
+- **Always** use the shared wrapper in `src/components/SegmentedControl.tsx` instead of composing `SegmentedControl.Root/Item` inline. Pass items as `items: { value: string; label: ReactNode }[]` and spread any additional Radix root props.
+- Do **not** use raw `SegmentedControl.Root/Item` directly in feature/page code.
+
 ### RadioGroup
 
 - Use `RadioGroup.Root` + `RadioGroup.Item` when the UI is choosing a single visible option from a short list, instead of building that interaction as a dropdown select.

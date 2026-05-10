@@ -8,7 +8,7 @@ interface Props {
 
 const RelativeTime = ({ createdAt }: Props) => {
     return (
-        <Text size="2" color="gray" as="span" align="right">
+        <Text size="2" color="gray" as="span" align="right" wrap="nowrap">
             {formatRelativeTime(createdAt)}
         </Text>
     );

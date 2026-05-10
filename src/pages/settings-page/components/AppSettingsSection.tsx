@@ -3,20 +3,11 @@ import { LucideMonitor, LucideMoon, LucideSettings2, LucideSun } from 'lucide-re
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
 
-import {
-    Avatar,
-    Box,
-    Card,
-    Code,
-    Flex,
-    SegmentedControl,
-    Separator,
-    Skeleton,
-    Switch,
-    Text,
-} from '@radix-ui/themes';
+import { Avatar, Box, Card, Code, Flex, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
 
 import { APP_VERSION } from 'constants/version';
+
+import SegmentedControl from 'components/SegmentedControl';
 
 interface Props {
     isLoading: boolean;
@@ -77,29 +68,39 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                     </Box>
 
                     <Skeleton loading={isLoading}>
-                        <SegmentedControl.Root
+                        <SegmentedControl
                             value={selectedTheme}
                             onValueChange={handleThemeChange}
-                        >
-                            <SegmentedControl.Item value="dark">
-                                <Flex align="center" gap="1">
-                                    <LucideMoon size={14} />
-                                    {t('app.themeOptions.dark')}
-                                </Flex>
-                            </SegmentedControl.Item>
-                            <SegmentedControl.Item value="light">
-                                <Flex align="center" gap="1">
-                                    <LucideSun size={14} />
-                                    {t('app.themeOptions.light')}
-                                </Flex>
-                            </SegmentedControl.Item>
-                            <SegmentedControl.Item value="system">
-                                <Flex align="center" gap="1">
-                                    <LucideMonitor size={14} />
-                                    {t('app.themeOptions.system')}
-                                </Flex>
-                            </SegmentedControl.Item>
-                        </SegmentedControl.Root>
+                            items={[
+                                {
+                                    value: 'dark',
+                                    label: (
+                                        <Flex align="center" gap="1">
+                                            <LucideMoon size={14} />
+                                            {t('app.themeOptions.dark')}
+                                        </Flex>
+                                    ),
+                                },
+                                {
+                                    value: 'light',
+                                    label: (
+                                        <Flex align="center" gap="1">
+                                            <LucideSun size={14} />
+                                            {t('app.themeOptions.light')}
+                                        </Flex>
+                                    ),
+                                },
+                                {
+                                    value: 'system',
+                                    label: (
+                                        <Flex align="center" gap="1">
+                                            <LucideMonitor size={14} />
+                                            {t('app.themeOptions.system')}
+                                        </Flex>
+                                    ),
+                                },
+                            ]}
+                        />
                     </Skeleton>
 
                     <Separator size="4" />

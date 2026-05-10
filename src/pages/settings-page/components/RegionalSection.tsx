@@ -7,7 +7,6 @@ import {
     Box,
     Card,
     Flex,
-    SegmentedControl,
     Separator,
     Skeleton,
     Switch,
@@ -15,6 +14,7 @@ import {
 } from '@radix-ui/themes';
 
 import CurrencySelect from 'components/CurrencySelect';
+import SegmentedControl from 'components/SegmentedControl';
 import Select, { SelectItem } from 'components/Select';
 
 const TIMEZONE_OPTIONS = [
@@ -169,17 +169,14 @@ const RegionalSection = ({ isLoading }: Props) => {
                             </Skeleton>
                         </Box>
                         <Skeleton loading={isLoading}>
-                            <SegmentedControl.Root
+                            <SegmentedControl
                                 value={isTimeFormat24h ? '24h' : '12h'}
                                 onValueChange={handleTimeFormatChange}
-                            >
-                                <SegmentedControl.Item value="12h">
-                                    {t('regional.timeFormat12h')}
-                                </SegmentedControl.Item>
-                                <SegmentedControl.Item value="24h">
-                                    {t('regional.timeFormat24h')}
-                                </SegmentedControl.Item>
-                            </SegmentedControl.Root>
+                                items={[
+                                    { value: '12h', label: t('regional.timeFormat12h') },
+                                    { value: '24h', label: t('regional.timeFormat24h') },
+                                ]}
+                            />
                         </Skeleton>
                     </Flex>
 

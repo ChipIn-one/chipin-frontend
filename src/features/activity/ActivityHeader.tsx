@@ -1,27 +1,26 @@
-import { LucideArrowRight, LucideChartBar } from 'lucide-react';
+import { LucideChartBar, LucideSlidersHorizontal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
 
-import { Avatar, Box, Button, Flex, Skeleton, Text } from '@radix-ui/themes';
+import { Avatar, Box, Flex, IconButton, Skeleton, Text } from '@radix-ui/themes';
 
-import { ROUTES } from 'constants/routes';
+import SegmentedControl from 'components/SegmentedControl';
 
-export type ActivityHeaderContext = 'dashboard' | 'group' | 'full';
+export type ActivityFilter = 'all' | 'expenses' | 'settlements';
 
-interface ActivityHeaderProps {
+interface Props {
     isLoading: boolean;
-    context: ActivityHeaderContext;
+    activeFilter: ActivityFilter;
+    onFilterChange: (filter: ActivityFilter) => void;
 }
 
-const subtitleKeyByContext: Record<ActivityHeaderContext, string> = {
-    dashboard: 'subtitleDashboard',
-    group: 'subtitleGroup',
-    full: 'subtitleFull',
-};
-
-const ActivityHeader = ({ isLoading, context }: ActivityHeaderProps) => {
-    const showViewAllButton = context !== 'full';
+const ActivityHeader = ({ isLoading, activeFilter, onFilterChange }: Props) => {
     const { t } = useTranslation('activity');
+
+    const filterItems = [
+        { value: 'all', label: t('filterAll') },
+        { value: 'expenses', label: t('filterExpenses') },
+        { value: 'settlements', label: t('filterSettlements') },
+    ];
 
     return (
         <Box mb="4">
@@ -40,21 +39,27 @@ const ActivityHeader = ({ isLoading, context }: ActivityHeaderProps) => {
 
                         <Skeleton loading={isLoading}>
                             <Text size="2" as="p" color="gray">
-                                {t(subtitleKeyByContext[context])}
+                                {t('subtitle')}
                             </Text>
                         </Skeleton>
                     </Flex>
                 </Flex>
 
-                {showViewAllButton ? (
-                    <Link to={ROUTES.ACTIVITY}>
-                        <Button variant="soft" size="3" loading={isLoading}>
-                            {t('common:buttons.viewAllActivity')}
-                            <LucideArrowRight size={20} />
-                        </Button>
-                    </Link>
-                ) : null}
+                <IconButton variant="ghost" disabled>
+                    <LucideSlidersHorizontal size={20} />
+                </IconButton>
             </Flex>
+
+            <Box mt="3">
+                <Skeleton loading={isLoading}>
+                    <SegmentedControl
+                        items={filterItems}
+                        value={activeFilter}
+                        onValueChange={value => onFilterChange(value as ActivityFilter)}
+                        size="3"
+                    />
+                </Skeleton>
+            </Box>
         </Box>
     );
 };

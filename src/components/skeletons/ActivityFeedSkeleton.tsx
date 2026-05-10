@@ -9,10 +9,10 @@ const ExpenseEventSkeleton = () => (
                 </Skeleton>
                 <Flex direction="column" gap="1">
                     <Skeleton>
-                        <Box width="140px" height="var(--space-4)" />
+                        <Box width="120px" height="var(--space-4)" />
                     </Skeleton>
                     <Skeleton>
-                        <Box width="200px" height="var(--space-3)" />
+                        <Box width="170px" height="var(--space-3)" />
                     </Skeleton>
                 </Flex>
             </Flex>

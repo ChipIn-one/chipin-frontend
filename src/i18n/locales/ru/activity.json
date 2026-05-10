@@ -1,11 +1,12 @@
 {
-    "title": "Последняя активность",
-    "subtitleDashboard": "Из всех ваших групп и друзей",
-    "subtitleGroup": "Из этой группы",
-    "subtitleFull": "Полная активность: все события из групп и друзей",
+    "title": "Ваша активность",
+    "subtitle": "Все события из ваших групп и друзей",
+    "filterAll": "Все",
+    "filterExpenses": "Расходы",
+    "filterSettlements": "Расчёты",
     "viewAll": "Смотреть всю активность",
     "emptyTitle": "Активности пока нет",
-    "emptyDescription": "Здесь появятся последние траты и обновления групп.",
+    "emptyDescription": "Здесь появятся последние траты и расчёты.",
     "endOfFeed": "На этом пока всё",
     "event": {
         "expenseCreatedDescription": "Оплатил(а) {{payer}} в группе {{group}}",

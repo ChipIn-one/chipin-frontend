@@ -1,11 +1,12 @@
 {
-    "title": "Your last activity",
-    "subtitleDashboard": "From all of your groups and friends",
-    "subtitleGroup": "From this group",
-    "subtitleFull": "Full activity: all events from your groups and friends",
+    "title": "Your activity",
+    "subtitle": "All events from your groups and friends",
+    "filterAll": "All",
+    "filterExpenses": "Expenses",
+    "filterSettlements": "Settlements",
     "viewAll": "View all activities",
     "emptyTitle": "No activity yet",
-    "emptyDescription": "Recent expenses and group updates will appear here.",
+    "emptyDescription": "Recent expenses and settlements will appear here.",
     "endOfFeed": "That's everything for now",
     "event": {
         "expenseCreatedDescription": "Paid by {{payer}} in {{group}}",

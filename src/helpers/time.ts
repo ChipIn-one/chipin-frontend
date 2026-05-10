@@ -4,6 +4,7 @@ type TimeUnit = Intl.RelativeTimeFormatUnit;
 
 const MAX_RELATIVE_DAYS = 7; // Relative time limit in days
 
+// TODO: Use user language.
 const UNITS: Array<[TimeUnit, number]> = [
     ['day', DAY],
     ['hour', HOUR],
