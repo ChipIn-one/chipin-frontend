@@ -106,7 +106,8 @@ interface FormProps {
 
 const GroupForm = ({ type, onClose }: FormProps) => {
     const { t } = useTranslation('group');
-    const { createGroup, updateGroup, selectedGroup } = useGroupsStore();
+    const selectedGroup = useGroupsStore(s => s.selectedGroup);
+    const { createGroup, updateGroup } = useGroupsStore();
     const isCreatingGroup = useLoadingStore(selectGroupAdding);
     const isUpdatingGroup = useLoadingStore(selectGroupUpdating);
     const isCreateMode = type === 'create';
@@ -312,7 +313,7 @@ const GroupForm = ({ type, onClose }: FormProps) => {
 
 const CreateUpdateGroupModal = ({ children, type }: Props) => {
     const { t } = useTranslation('group');
-    const { selectedGroup } = useGroupsStore();
+    const selectedGroup = useGroupsStore(s => s.selectedGroup);
     const isCreateMode = type === 'create';
 
     const [isModalOpened, setIsModalOpened] = useState(false);

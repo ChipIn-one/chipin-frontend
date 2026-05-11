@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import styled from 'styled-components';
+import { useShallow } from 'zustand/react/shallow';
 
 import { Button, Card, Flex, Grid, Text, TextField } from '@radix-ui/themes';
 
@@ -82,8 +83,12 @@ interface Props {
 const AddExpenseModal = ({ children, context }: Props) => {
     const { t } = useTranslation('group');
     const location = useLocation();
-    const { user, friends } = useUsersStore();
-    const { groups, selectedGroup } = useGroupsStore();
+    const { user, friends } = useUsersStore(
+        useShallow(s => ({ user: s.user, friends: s.friends })),
+    );
+    const { groups, selectedGroup } = useGroupsStore(
+        useShallow(s => ({ groups: s.groups, selectedGroup: s.selectedGroup })),
+    );
     const { createExpense } = useActivityStore();
     const isSubmitting = useLoadingStore(selectExpenseAdding);
 

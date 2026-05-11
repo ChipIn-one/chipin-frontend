@@ -15,7 +15,7 @@ interface Props {
 
 const GroupMembersTab = ({ group }: Props) => {
     const { t } = useTranslation('group');
-    const { user } = useUsersStore();
+    const user = useUsersStore(s => s.user);
     const inviteLink = buildGroupInviteLink({ inviteToken: group.inviteToken });
 
     return (

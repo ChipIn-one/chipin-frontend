@@ -3,6 +3,7 @@ import { LucideArrowLeftRight, LucidePlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import styled from 'styled-components';
+import { useShallow } from 'zustand/react/shallow';
 
 import { Box, Button, Card, Container, Flex, Grid, Inset, Skeleton, Text } from '@radix-ui/themes';
 
@@ -33,7 +34,10 @@ const MobileCoverBox = styled(Box)`
 
 const GroupPage = () => {
     const { t } = useTranslation(['group', 'common', 'dashboard']);
-    const { groups, selectedGroup, fetchSetGroupById } = useGroupsStore();
+    const { groups, selectedGroup } = useGroupsStore(
+        useShallow(s => ({ groups: s.groups, selectedGroup: s.selectedGroup })),
+    );
+    const { fetchSetGroupById } = useGroupsStore();
     const isGroupDataLoading = useLoadingStore(selectGroupDataLoading);
     const isGroupDataFetched = useLoadingStore(selectGroupDataFetched);
     const { groupId } = useParams<{ groupId: string }>();

@@ -21,7 +21,7 @@ const DashboardPage = () => {
     const isDashboardLoading = useLoadingStore(selectDashboardLoading);
     const isDashboardFetched = useLoadingStore(selectDashboardFetched);
 
-    const { groups } = useGroupsStore();
+    const groups = useGroupsStore(s => s.groups);
     const hasGroups = groups.length > 0;
 
     return (

@@ -20,7 +20,7 @@ const FRIENDS_SKELETON_ITEMS = Array.from({ length: 5 }, (_, index) => ({
 
 const FriendsPage = () => {
     const { t } = useTranslation(['common', 'friends']);
-    const { friends } = useUsersStore();
+    const friends = useUsersStore(s => s.friends);
     const isLoadingFriends = useLoadingStore(state => state.users.friends);
 
     const isSkeletonShown = isLoadingFriends && !friends.length;

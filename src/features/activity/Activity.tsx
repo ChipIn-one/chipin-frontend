@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { LucideChevronsDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 
 import { Flex, Spinner, Text } from '@radix-ui/themes';
 import { useIntersectionObserver } from '@uidotdev/usehooks';
@@ -17,7 +18,10 @@ import { EventRenderer } from './components';
 
 const Activity = () => {
     const { t } = useTranslation('activity');
-    const { items, hasMore, fetchMoreActivity: fetchAppendActivity } = useActivityStore();
+    const { items, hasMore } = useActivityStore(
+        useShallow(s => ({ items: s.items, hasMore: s.hasMore })),
+    );
+    const { fetchMoreActivity: fetchAppendActivity } = useActivityStore();
     const isLoading = useLoadingStore(selectActivityLoading);
     const isNextPageLoading = useLoadingStore(selectActivityNextPageLoading);
 

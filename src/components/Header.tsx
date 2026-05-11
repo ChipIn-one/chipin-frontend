@@ -120,7 +120,7 @@ const CrashTestButton = () => {
 
 const Header = () => {
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
-    const { user } = useUsersStore();
+    const user = useUsersStore(s => s.user);
     const location = useLocation();
     const { t } = useTranslation();
 

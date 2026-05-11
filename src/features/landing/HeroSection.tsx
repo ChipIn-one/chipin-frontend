@@ -16,7 +16,8 @@ import { Amount } from 'basics/numbers';
 import { AuthModal } from 'components/modals';
 
 const HeroSection = () => {
-    const { isPwaCanBeInstalled, callPWAInstall } = usePwaStore();
+    const isPwaCanBeInstalled = usePwaStore(s => s.isPwaCanBeInstalled);
+    const { callPWAInstall } = usePwaStore();
     const { t } = useTranslation('landing');
 
     const stats = [

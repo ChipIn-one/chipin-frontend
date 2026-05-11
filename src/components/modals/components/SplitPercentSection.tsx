@@ -1,3 +1,4 @@
+import { Amount, UserAvatar } from 'basics';
 import Big from 'bignumber.js';
 import { LucideMinus, LucidePlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -6,7 +7,6 @@ import styled from 'styled-components';
 import { Flex, IconButton, Text } from '@radix-ui/themes';
 
 import { ApiUser } from 'api/chipin.types';
-import { Amount, UserAvatar } from 'basics';
 import { themeColor } from 'helpers/colors';
 import { tryToBig } from 'helpers/numbers';
 

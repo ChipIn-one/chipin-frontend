@@ -45,7 +45,7 @@ interface Props {
 
 const GroupSettingsTab = ({ group }: Props) => {
     const { t } = useTranslation(['group', 'common']);
-    const { user } = useUsersStore();
+    const user = useUsersStore(s => s.user);
     const {
         inviteLink,
         isNativeShareSupported,

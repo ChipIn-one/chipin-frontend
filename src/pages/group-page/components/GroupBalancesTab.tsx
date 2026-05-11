@@ -21,7 +21,7 @@ interface Props {
  */
 const GroupBalancesTab = ({ group }: Props) => {
     const { t } = useTranslation('group');
-    const { user } = useUsersStore();
+    const user = useUsersStore(s => s.user);
 
     const otherMembers = group.members.filter(member => member.id !== user?.id);
     const inviteLink = buildGroupInviteLink({ inviteToken: group.inviteToken });

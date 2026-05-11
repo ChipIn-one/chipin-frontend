@@ -22,8 +22,9 @@ interface Props {
 
 const LeaveGroupModal = ({ children }: Props) => {
     const navigate = useNavigate();
-    const { leaveGroup, selectedGroup } = useGroupsStore();
-    const { user } = useUsersStore();
+    const selectedGroup = useGroupsStore(s => s.selectedGroup);
+    const { leaveGroup } = useGroupsStore();
+    const user = useUsersStore(s => s.user);
     const isLeavingGroup = useLoadingStore(selectGroupLeaving);
     const [isModalOpened, setIsModalOpened] = useState(false);
     const [newOwnerId, setNewOwnerId] = useState<string>('');

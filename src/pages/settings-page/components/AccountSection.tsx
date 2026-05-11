@@ -22,7 +22,7 @@ interface Props {
 
 const AccountSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
-    const { user } = useUsersStore();
+    const user = useUsersStore(s => s.user);
 
     return (
         <Card size="3">

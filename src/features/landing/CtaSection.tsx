@@ -31,7 +31,8 @@ const CtaCard = styled(Card)`
 
 const CtaSection = () => {
     const { t } = useTranslation('landing');
-    const { isPwaCanBeInstalled, callPWAInstall } = usePwaStore();
+    const isPwaCanBeInstalled = usePwaStore(s => s.isPwaCanBeInstalled);
+    const { callPWAInstall } = usePwaStore();
 
     const bullets = [
         t('cta.bullets.noCard'),
