@@ -9,7 +9,7 @@ import { ROUTES } from 'constants/routes';
 import { selectGroupNonZeroBalances } from 'store/groupsSelectors';
 import { useGroupsStore } from 'store/groupsStore';
 
-import OwedStatusText from 'basics/OwedStatusText';
+import BalanceSummaryText from 'basics/BalanceSummaryText';
 import GroupAvatar from 'components/GroupAvatar';
 
 interface Props {
@@ -34,15 +34,7 @@ const GroupCard: React.FC<Props> = ({ group }) => {
                                 {group.name}
                             </Text>
 
-                            {balances.map(entry => (
-                                <OwedStatusText
-                                    key={entry.currency}
-                                    value={entry.netBalance}
-                                    currencyCode={entry.currency}
-                                    size="2"
-                                    align="left"
-                                />
-                            ))}
+                            <BalanceSummaryText entries={balances} size="2" align="left" />
 
                             <Text size="1" color="gray" as="p">
                                 {t('groupsCard.members', {

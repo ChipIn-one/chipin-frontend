@@ -40,7 +40,8 @@
     },
     "balances": {
         "youOwed": "you owed",
-        "youOwe": "you owe"
+        "youOwe": "you owe",
+        "settledUp": "Settled up"
     },
     "header": {
         "signIn": "Sign in",

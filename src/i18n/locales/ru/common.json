@@ -40,7 +40,8 @@
     },
     "balances": {
         "youOwed": "вам должны",
-        "youOwe": "вы должны"
+        "youOwe": "вы должны",
+        "settledUp": "Расчёт выполнен"
     },
     "header": {
         "signIn": "Войти",
