@@ -55,7 +55,7 @@ const EventExpenseCreated = ({ event }: Props) => {
                     ) : null}
                     {amountBig ? (
                         <OwedStatusText
-                            amount={amountBig.toNumber()}
+                            value={amountBig}
                             currencyCode={event.metadata.currency}
                             size="2"
                         />

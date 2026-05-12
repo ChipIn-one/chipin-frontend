@@ -62,7 +62,7 @@ const GroupBalancesTab = ({ group }: Props) => {
                                     <GroupRoleBadge isOwner={member.id === group.creator.id} />
                                 </Flex>
                                 <OwedStatusText
-                                    amount={0}
+                                    value={0}
                                     currencyCode="USD"
                                     size="1"
                                     align="left"
