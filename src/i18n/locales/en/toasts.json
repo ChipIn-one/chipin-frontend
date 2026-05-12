@@ -28,7 +28,10 @@
   },
   "pwa": {
     "installing": "Installing application on your home screen...",
-    "offlineReady": "App is ready to work offline"
+    "offlineReady": "App is ready to work offline",
+    "updateAvailable": "New version available",
+    "updateAction": "Update",
+    "laterAction": "Later"
   },
   "settings": {
     "logoutAllDevicesSoon": "Logout on all devices will be available soon.",

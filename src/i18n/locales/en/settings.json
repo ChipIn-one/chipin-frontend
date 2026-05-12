@@ -55,7 +55,8 @@
         "showCentsTitle": "Show cents",
         "showCentsDescription": "Display amounts with decimal places.",
         "versionTitle": "App version",
-        "versionDescription": "Current build installed on this device."
+        "versionDescription": "Current build installed on this device.",
+        "updateButton": "Update app"
     },
     "security": {
         "title": "Privacy & Security",

@@ -1,9 +1,10 @@
+import { LucideCircleCheck, LucideCircleX, LucideInfo, LucideTriangleAlert } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from 'styled-components';
 
-import { Box, Theme } from '@radix-ui/themes';
+import { Box, Spinner, Theme } from '@radix-ui/themes';
 
 import { darkThemeStyled, lightThemeStyled } from 'constants/styled-themes';
 import { useIsMobile } from 'hooks/common';
@@ -15,6 +16,12 @@ import GlobalErrorBoundary from 'components/GlobalErrorBoundary';
 import Header from 'components/Header';
 import AppRouter from 'features/routing';
 import GlobalHooks from 'pages/GlobalHooks';
+
+const ToastSuccessIcon = () => <LucideCircleCheck size={20} />;
+const ToastInfoIcon = () => <LucideInfo size={20} />;
+const ToastWarningIcon = () => <LucideTriangleAlert size={20} />;
+const ToastErrorIcon = () => <LucideCircleX size={20} />;
+const ToastLoadingIcon = () => <Spinner size="2" />;
 
 const Main = () => {
     const { resolvedTheme } = useTheme();
@@ -50,6 +57,13 @@ const Main = () => {
                                 position={isMobile ? 'top-center' : 'bottom-left'}
                                 offset={isMobile ? 12 : 16}
                                 mobileOffset={isMobile ? 12 : 16}
+                                icons={{
+                                    success: <ToastSuccessIcon />,
+                                    info: <ToastInfoIcon />,
+                                    warning: <ToastWarningIcon />,
+                                    error: <ToastErrorIcon />,
+                                    loading: <ToastLoadingIcon />,
+                                }}
                             />
                         </BackgroundBox>
                     </BrowserRouter>

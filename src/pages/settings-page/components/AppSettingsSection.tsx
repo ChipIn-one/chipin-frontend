@@ -1,11 +1,30 @@
 import { useState } from 'react';
-import { LucideMonitor, LucideMoon, LucideSettings2, LucideSun } from 'lucide-react';
+import {
+    LucideMonitor,
+    LucideMoon,
+    LucideRefreshCw,
+    LucideSettings2,
+    LucideSun,
+} from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
 
-import { Avatar, Box, Card, Code, Flex, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
+import {
+    Avatar,
+    Box,
+    Button,
+    Card,
+    Code,
+    Flex,
+    Separator,
+    Skeleton,
+    Switch,
+    Text,
+} from '@radix-ui/themes';
 
 import { APP_VERSION } from 'constants/version';
+import { applySwUpdate } from 'helpers/swUpdates';
+import { usePwaStore } from 'store/pwaStore';
 
 import SegmentedControl from 'components/SegmentedControl';
 
@@ -16,6 +35,7 @@ interface Props {
 const AppSettingsSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
     const { theme, setTheme } = useTheme();
+    const isSwUpdateAvailable = usePwaStore(s => s.isSwUpdateAvailable);
 
     const [isSimplifyDebtsEnabled, setIsSimplifyDebtsEnabled] = useState(true);
     const [isAutoSplitEnabled, setIsAutoSplitEnabled] = useState(false);
@@ -180,11 +200,22 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                                 {t('app.versionDescription')}
                             </Text>
                         </Skeleton>
-                        <Box mt="2">
+                        <Flex align="center" gap="3" mt="2">
                             <Skeleton loading={isLoading}>
                                 <Code>{APP_VERSION}</Code>
                             </Skeleton>
-                        </Box>
+                            {isSwUpdateAvailable && (
+                                <Button
+                                    variant="soft"
+                                    color="jade"
+                                    size="1"
+                                    onClick={applySwUpdate}
+                                >
+                                    <LucideRefreshCw size={12} />
+                                    {t('app.updateButton')}
+                                </Button>
+                            )}
+                        </Flex>
                     </Box>
                 </Flex>
             </Flex>

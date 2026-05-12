@@ -7,14 +7,17 @@ import { checkCanPwaBeInstalled } from 'helpers/pwa';
 interface PwaStore {
     isPwaCanBeInstalled: boolean;
     pwaInstallPrompt: BeforeInstallPromptEvent | null;
+    isSwUpdateAvailable: boolean;
     setIsPwaCanBeInstalled: (isPwaCanBeInstalled: boolean) => void;
     setPwaInstallPrompt: (pwaInstallPrompt: BeforeInstallPromptEvent | null) => void;
+    setIsSwUpdateAvailable: (isSwUpdateAvailable: boolean) => void;
     callPWAInstall: () => Promise<void>;
 }
 
 const initialPWAStore = {
     isPwaCanBeInstalled: checkCanPwaBeInstalled(),
     pwaInstallPrompt: null,
+    isSwUpdateAvailable: false,
 };
 
 export const usePwaStore = create<PwaStore>((set, get) => ({
@@ -26,6 +29,10 @@ export const usePwaStore = create<PwaStore>((set, get) => ({
 
     setPwaInstallPrompt: (pwaInstallPrompt: BeforeInstallPromptEvent | null) => {
         set({ pwaInstallPrompt });
+    },
+
+    setIsSwUpdateAvailable: (isSwUpdateAvailable: boolean) => {
+        set({ isSwUpdateAvailable });
     },
 
     callPWAInstall: async () => {
