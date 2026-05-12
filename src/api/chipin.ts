@@ -2,25 +2,26 @@ import axios from 'axios';
 import { toast } from 'sonner';
 
 import { SECOND } from 'constants/time';
-import { parseBalancesMap } from 'helpers/currencies';
+import { parseApiGroup, parseBalancesMap } from 'helpers/currencies';
 import { getChipInApiUrl } from 'helpers/env';
 import { resolveApiErrorMessage } from 'helpers/errors';
 import { getAuthTokenDB } from 'store/IDB/auth';
 
-import {
-    ApiActivityResponse,
-    ApiGroup,
-    ApiUser,
+import type { ApiGroupResponse } from './chipin.raw.types';
+import { ApiDashboardResponse } from './chipin.raw.types';
+import type {
+    ApiActivityItemsResponse,
+    ApiRemoveGroupResponse,
+    ApiUserResponse,
     CreateGroupParams,
     CreateLedgerEntryParams,
-    DashboardApiResponse,
+    Dashboard,
     FetchActivityParams,
+    Group,
     InviteToGroupParams,
     KickGroupMemberParams,
     LeaveGroupParams,
-    ParsedDashboardResponse,
     RemoveGroupParams,
-    RemoveGroupResponse,
     SharingMode,
     UpdateGroupParams,
 } from './chipin.types';
@@ -72,26 +73,28 @@ apiInstance.interceptors.response.use(
 
 // =============== GROUPS AND USERS ===============
 
-export const fetchApiUserGroups = (): Promise<ApiGroup[]> => {
-    return apiInstance.get(`/groups`).then(result => result.data);
+export const fetchApiUserGroups = (): Promise<Group[]> => {
+    return apiInstance
+        .get(`/groups`)
+        .then(result => (result.data as ApiGroupResponse[]).map(parseApiGroup));
 };
 
-export const fetchApiUserGroupById = (groupId: string): Promise<ApiGroup> => {
-    return apiInstance.get(`/groups/${groupId}`).then(result => result.data);
+export const fetchApiUserGroupById = (groupId: string): Promise<Group> => {
+    return apiInstance.get(`/groups/${groupId}`).then(result => parseApiGroup(result.data));
 };
 
 export const createApiGroup = async ({
     groupName,
     groupDescription,
     groupEmoji,
-}: CreateGroupParams): Promise<ApiGroup> => {
+}: CreateGroupParams): Promise<Group> => {
     const response = await apiInstance.post('/groups', {
         name: groupName,
         ...(groupEmoji && { emoji: groupEmoji }),
         ...(groupDescription && { description: groupDescription }),
     });
 
-    return response.data;
+    return parseApiGroup(response.data);
 };
 
 export const updateApiGroup = async ({
@@ -99,19 +102,19 @@ export const updateApiGroup = async ({
     groupName,
     groupDescription,
     groupEmoji,
-}: UpdateGroupParams): Promise<ApiGroup> => {
+}: UpdateGroupParams): Promise<Group> => {
     const response = await apiInstance.patch(`/groups/${groupId}`, {
         name: groupName,
         ...(groupEmoji && { emoji: groupEmoji }),
         ...(groupDescription && { description: groupDescription }),
     });
 
-    return response.data;
+    return parseApiGroup(response.data);
 };
 
 export const removeApiGroup = async ({
     groupId,
-}: RemoveGroupParams): Promise<RemoveGroupResponse> => {
+}: RemoveGroupParams): Promise<ApiRemoveGroupResponse> => {
     const response = await apiInstance.delete(`/groups/${groupId}`);
 
     return response.data;
@@ -132,35 +135,37 @@ export const kickApiGroupMember = async ({
 
 export const inviteApiUserToGroup = async ({
     inviteToken,
-}: InviteToGroupParams): Promise<ApiGroup> => {
+}: InviteToGroupParams): Promise<Group> => {
     const response = await apiInstance.post(`/groups/invite/${inviteToken}`);
 
-    return response.data;
+    return parseApiGroup(response.data);
 };
 
-export const fetchApiDashboard = (): Promise<ParsedDashboardResponse> => {
+export const fetchApiDashboard = (): Promise<Dashboard> => {
     return apiInstance.get(`/dashboard`).then(result => {
-        const raw: DashboardApiResponse = result.data;
+        const raw: ApiDashboardResponse = result.data;
+
+        const groups: Group[] = raw.groups.map(parseApiGroup);
 
         return {
-            ...raw,
+            groups,
             balances: parseBalancesMap(raw.balances ?? {}),
         };
     });
 };
 
-export const fetchApiUser = (): Promise<ApiUser> => {
+export const fetchApiUser = (): Promise<ApiUserResponse> => {
     return apiInstance.get(`/users/self`).then(result => result.data);
 };
 
-export const fetchApiKnownUsers = (): Promise<ApiUser[]> => {
+export const fetchApiKnownUsers = (): Promise<ApiUserResponse[]> => {
     return apiInstance.get(`/users/known-users`).then(result => result.data);
 };
 
 export const fetchApiUserActivities = ({
     limit,
     cursor,
-}: FetchActivityParams = {}): Promise<ApiActivityResponse> => {
+}: FetchActivityParams = {}): Promise<ApiActivityItemsResponse> => {
     return apiInstance
         .get(`/users/self/activities`, {
             params: {

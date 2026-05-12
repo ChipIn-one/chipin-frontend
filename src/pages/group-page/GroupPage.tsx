@@ -7,7 +7,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { Box, Button, Card, Container, Flex, Grid, Inset, Skeleton, Text } from '@radix-ui/themes';
 
-import { ApiGroup } from 'api/chipin.types';
+import { Group } from 'api/chipin.types';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupDataFetched, selectGroupDataLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
@@ -130,7 +130,7 @@ const GroupPage = () => {
 };
 
 interface GroupCardBodyProps {
-    group: ApiGroup;
+    group: Group;
     isLoading: boolean;
 }
 

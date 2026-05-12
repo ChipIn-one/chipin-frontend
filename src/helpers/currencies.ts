@@ -1,6 +1,7 @@
 import Big from 'bignumber.js';
 
-import type { ApiBalanceEntry } from 'api/chipin.types';
+import type { ApiBalanceEntryResponse, ApiGroupResponse } from 'api/chipin.raw.types';
+import type { Group } from 'api/chipin.types';
 
 import { parseBigFields } from './numbers';
 
@@ -15,8 +16,13 @@ export type BalancesMap = Record<string, BalanceEntry>;
 
 const BALANCE_ENTRY_PATHS = ['*.netBalance', '*.totalOwed', '*.totalOwing'] as const;
 
-export const parseBalancesMap = (raw: Record<string, ApiBalanceEntry>): BalancesMap =>
-    parseBigFields<Record<string, ApiBalanceEntry>, BalancesMap>(raw, BALANCE_ENTRY_PATHS);
+export const parseBalancesMap = (raw: Record<string, ApiBalanceEntryResponse>): BalancesMap =>
+    parseBigFields<Record<string, ApiBalanceEntryResponse>, BalancesMap>(raw, BALANCE_ENTRY_PATHS);
+
+export const parseApiGroup = (group: ApiGroupResponse): Group => ({
+    ...group,
+    balances: parseBalancesMap(group.balances ?? {}),
+});
 
 export const getCurrencySummary = (
     balances: BalancesMap,

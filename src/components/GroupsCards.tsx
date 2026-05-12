@@ -1,6 +1,6 @@
 import { Flex } from '@radix-ui/themes';
 
-import { ApiGroup } from 'api/chipin.types';
+import { Group } from 'api/chipin.types';
 import { selectDashboardFetched } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
@@ -9,7 +9,7 @@ import { GroupsCardsSkeleton } from 'components/skeletons';
 import GroupCard from './GroupCard';
 
 interface Props {
-    groups: ApiGroup[];
+    groups: Group[];
 }
 
 const GroupsCards: React.FC<Props> = ({ groups }) => {

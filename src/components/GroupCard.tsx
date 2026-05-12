@@ -4,20 +4,23 @@ import { Link } from 'react-router-dom';
 
 import { Card, Flex, Text } from '@radix-ui/themes';
 
-import { ApiGroup } from 'api/chipin.types';
+import { Group } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
+import { selectGroupNonZeroBalances } from 'store/groupsSelectors';
 import { useGroupsStore } from 'store/groupsStore';
 
-import { Amount } from 'basics/numbers';
+import OwedStatusText from 'basics/OwedStatusText';
 import GroupAvatar from 'components/GroupAvatar';
 
 interface Props {
-    group: ApiGroup;
+    group: Group;
 }
 
 const GroupCard: React.FC<Props> = ({ group }) => {
     const { setSelectedGroup } = useGroupsStore();
     const { t } = useTranslation('dashboard');
+
+    const balances = selectGroupNonZeroBalances(group);
 
     return (
         <Card asChild size="1">
@@ -31,9 +34,15 @@ const GroupCard: React.FC<Props> = ({ group }) => {
                                 {group.name}
                             </Text>
 
-                            <Text size="2" color="grass" weight="medium" as="p">
-                                {t('groupsCard.statusOwed')} <Amount value={15} customPrefix="$" />
-                            </Text>
+                            {balances.map(entry => (
+                                <OwedStatusText
+                                    key={entry.currency}
+                                    value={entry.netBalance}
+                                    currencyCode={entry.currency}
+                                    size="2"
+                                    align="left"
+                                />
+                            ))}
 
                             <Text size="1" color="gray" as="p">
                                 {t('groupsCard.members', {

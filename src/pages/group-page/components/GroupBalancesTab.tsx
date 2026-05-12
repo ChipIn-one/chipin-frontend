@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Avatar, Button, Card, Flex, Text } from '@radix-ui/themes';
 
-import { ApiGroup } from 'api/chipin.types';
+import { Group } from 'api/chipin.types';
 import { buildGroupInviteLink } from 'helpers/url';
 import { useUsersStore } from 'store/usersStore';
 
@@ -12,7 +12,7 @@ import GroupRoleBadge from 'basics/GroupRoleBadge';
 import OwedStatusText from 'basics/OwedStatusText';
 
 interface Props {
-    group: ApiGroup;
+    group: Group;
 }
 
 /**

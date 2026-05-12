@@ -1,13 +1,13 @@
 import { create } from 'zustand';
 
 import { fetchApiKnownUsers, fetchApiUser } from 'api/chipin';
-import { ApiUser } from 'api/chipin.types';
+import { User } from 'api/chipin.types';
 
 import { useLoadingStore } from './loadingStore';
 
 interface UsersStore {
-    user: ApiUser | null;
-    friends: ApiUser[];
+    user: User | null;
+    friends: User[];
 
     fetchSetFriends: () => void;
     fetchSetUser: () => void;

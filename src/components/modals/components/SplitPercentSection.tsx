@@ -6,7 +6,7 @@ import styled from 'styled-components';
 
 import { Flex, IconButton, Text } from '@radix-ui/themes';
 
-import { ApiUser } from 'api/chipin.types';
+import { User } from 'api/chipin.types';
 import { themeColor } from 'helpers/colors';
 import { tryToBig } from 'helpers/numbers';
 
@@ -28,7 +28,7 @@ const ProgressFill = styled.div<{ $percent: number; $isValid: boolean }>`
 `;
 
 interface Props {
-    members: ApiUser[];
+    members: User[];
     percentShares: Record<string, string>;
     onChangePercent: (userId: string, delta: number) => void;
     totalAmount: string;

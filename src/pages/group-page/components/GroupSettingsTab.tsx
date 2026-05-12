@@ -13,7 +13,7 @@ import styled from 'styled-components';
 
 import { Avatar, Badge, Box, Button, Card, Flex, Separator, Switch, Text } from '@radix-ui/themes';
 
-import { ApiGroup } from 'api/chipin.types';
+import { Group } from 'api/chipin.types';
 import { useGroupInvite } from 'hooks/pwaHooks';
 import { useUsersStore } from 'store/usersStore';
 
@@ -40,7 +40,7 @@ import RemoveGroupModal from 'components/modals/RemoveGroupModal';
 import OfflineQRCode from 'components/OfflineQRCode';
 
 interface Props {
-    group: ApiGroup;
+    group: Group;
 }
 
 const GroupSettingsTab = ({ group }: Props) => {

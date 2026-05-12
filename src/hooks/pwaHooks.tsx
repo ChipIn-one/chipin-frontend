@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Spinner } from '@radix-ui/themes';
 import { useCopyToClipboard, useNetworkState } from '@uidotdev/usehooks';
 
-import { ApiGroup } from 'api/chipin.types';
+import { Group } from 'api/chipin.types';
 import { SECOND } from 'constants/time';
 import { TOASTS_IDS } from 'constants/toasts';
 import { detectNativeShare, shareGroupInvite } from 'helpers/share';
@@ -65,7 +65,7 @@ interface UseGroupInviteResult {
     handleCopyLink: () => Promise<void>;
 }
 
-export const useGroupInvite = (group: ApiGroup): UseGroupInviteResult => {
+export const useGroupInvite = (group: Group): UseGroupInviteResult => {
     const [isShareDone, setIsShareDone] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
     const [, copyFn] = useCopyToClipboard();

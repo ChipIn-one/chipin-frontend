@@ -13,7 +13,7 @@ import {
     Skeleton,
 } from '@radix-ui/themes';
 
-import { ApiGroup } from 'api/chipin.types';
+import { Group } from 'api/chipin.types';
 
 import Image from 'basics/Image';
 import GroupAvatar from 'components/GroupAvatar';
@@ -39,7 +39,7 @@ const CoverInfo = styled(Box)`
 `;
 
 interface Props {
-    group: ApiGroup | null;
+    group: Group | null;
     isLoading: boolean;
     ratio?: number;
 }

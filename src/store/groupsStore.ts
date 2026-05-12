@@ -11,31 +11,31 @@ import {
     removeApiGroup,
     updateApiGroup,
 } from 'api/chipin';
-import { ApiGroup } from 'api/chipin.types';
+import { Group } from 'api/chipin.types';
 
 import { useLoadingStore } from './loadingStore';
 
-interface GroupsStore {
-    selectedGroup: ApiGroup | null;
-    groups: ApiGroup[];
+export interface GroupsStore {
+    selectedGroup: Group | null;
+    groups: Group[];
 
-    setGroups: (groups: ApiGroup[]) => void;
-    setSelectedGroup: (group: ApiGroup) => void;
+    setGroups: (groups: Group[]) => void;
+    setSelectedGroup: (group: Group) => void;
     fetchSetGroupById: (groupId: string | undefined) => void;
     createGroup: (params: {
         groupName: string;
         groupDescription?: string;
         groupEmoji?: string;
-    }) => Promise<ApiGroup>;
+    }) => Promise<Group>;
     updateGroup: (params: {
         groupName: string;
         groupDescription?: string;
         groupEmoji?: string;
-    }) => Promise<ApiGroup>;
-    removeGroup: () => Promise<ApiGroup['name']>;
-    leaveGroup: (params?: { newOwnerId?: string }) => Promise<ApiGroup['name']>;
+    }) => Promise<Group>;
+    removeGroup: () => Promise<Group['name']>;
+    leaveGroup: (params?: { newOwnerId?: string }) => Promise<Group['name']>;
     kickGroupMember: ({ userId }: { userId: string }) => Promise<string>;
-    joinGroup: ({ inviteToken }: { inviteToken: string }) => Promise<ApiGroup>;
+    joinGroup: ({ inviteToken }: { inviteToken: string }) => Promise<Group>;
 }
 
 const initialGroupsStore = {
@@ -202,7 +202,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         return kickApiGroupMember({ groupId: selectedGroup.id, userId })
             .then(() => {
                 const { groups } = get();
-                const updatedSelectedGroup: ApiGroup = {
+                const updatedSelectedGroup: Group = {
                     ...selectedGroup,
                     members: selectedGroup.members.filter(member => member.id !== userId),
                 };

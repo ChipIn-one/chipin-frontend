@@ -4,14 +4,14 @@ import { useTranslation } from 'react-i18next';
 
 import { Flex, IconButton, Text } from '@radix-ui/themes';
 
-import { ApiUser } from 'api/chipin.types';
+import { User } from 'api/chipin.types';
 import { Amount, UserAvatar } from 'basics';
 import { tryToBig } from 'helpers/numbers';
 
 type AssignedState = 'exact' | 'under' | 'over';
 
 interface Props {
-    members: ApiUser[];
+    members: User[];
     amountShares: Record<string, string>;
     onChangeAmount: (userId: string, delta: number) => void;
     totalAmount: string;

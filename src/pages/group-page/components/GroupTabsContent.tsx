@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Box, Tabs } from '@radix-ui/themes';
 
-import { ApiGroup } from 'api/chipin.types';
+import { Group } from 'api/chipin.types';
 
 import { ActivityFeedSkeleton } from 'components/skeletons';
 
@@ -10,7 +10,7 @@ import GroupBalancesTab from './GroupBalancesTab';
 import GroupSettingsTab from './GroupSettingsTab';
 
 interface Props {
-    group: ApiGroup;
+    group: Group;
 }
 
 const GroupTabsContent = ({ group }: Props) => {

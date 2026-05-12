@@ -5,11 +5,11 @@ import { useTranslation } from 'react-i18next';
 
 import { Flex, Text } from '@radix-ui/themes';
 
-import { ApiUser } from 'api/chipin.types';
+import { User } from 'api/chipin.types';
 import { tryToBig } from 'helpers/numbers';
 
 interface Props {
-    members: ApiUser[];
+    members: User[];
     totalAmount: string;
     currency: string;
 }

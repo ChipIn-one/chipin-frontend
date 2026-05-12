@@ -10,7 +10,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { Button, Card, Flex, Grid, Text, TextField } from '@radix-ui/themes';
 
-import { ApiUser, SharingMode } from 'api/chipin.types';
+import { User, SharingMode } from 'api/chipin.types';
 import { EXPENSE_CATEGORIES, ExpenseCategory } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
 import { themeColor } from 'helpers/colors';
@@ -101,7 +101,7 @@ const AddExpenseModal = ({ children, context }: Props) => {
 
     const defaultGroup = selectedGroup || groups[0];
 
-    const getOrderedMembers = (groupMembers: ApiUser[]) => {
+    const getOrderedMembers = (groupMembers: User[]) => {
         const currentUserMember = groupMembers.find(member => member.id === user?.id);
         const otherMembers = groupMembers.filter(member => member.id !== user?.id);
 
@@ -134,7 +134,7 @@ const AddExpenseModal = ({ children, context }: Props) => {
 
     const isShowGroupSelect = !isGroupContext && !isFriendsContext && activeTab === 'group';
 
-    const buildEqualPercentShares = (members: ApiUser[]): Record<string, string> => {
+    const buildEqualPercentShares = (members: User[]): Record<string, string> => {
         const count = members.length;
         if (count === 0) {
             return {};
@@ -150,7 +150,7 @@ const AddExpenseModal = ({ children, context }: Props) => {
     };
 
     const buildEqualAmountShares = (
-        members: ApiUser[],
+        members: User[],
         totalAmount: string,
     ): Record<string, string> => {
         const count = members.length;
@@ -188,7 +188,7 @@ const AddExpenseModal = ({ children, context }: Props) => {
         };
     });
 
-    const getDefaultPayerId = (groupMembers: ApiUser[] = resolvedMembers) =>
+    const getDefaultPayerId = (groupMembers: User[] = resolvedMembers) =>
         getOrderedMembers(groupMembers)[0]?.id || '';
 
     const getMembersByTab = (tab: ExpenseTab, nextGroupId: string) => {

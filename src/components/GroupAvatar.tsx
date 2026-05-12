@@ -2,10 +2,10 @@ import { LucideUsers } from 'lucide-react';
 
 import { Avatar, Text } from '@radix-ui/themes';
 
-import { ApiGroup } from 'api/chipin.types';
+import { Group } from 'api/chipin.types';
 
 interface Props {
-    group: ApiGroup;
+    group: Group;
     variant?: React.ComponentProps<typeof Avatar>['variant'];
     size?: React.ComponentProps<typeof Avatar>['size'];
     color?: React.ComponentProps<typeof Avatar>['color'];
