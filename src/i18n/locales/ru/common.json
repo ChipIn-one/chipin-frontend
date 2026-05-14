@@ -20,7 +20,8 @@
         "goToDashboard": "На дашборд",
         "copyReport": "Скопировать отчёт",
         "changePhoto": "Изменить фото",
-        "invitePeople": "Пригласить людей"
+        "invitePeople": "Пригласить людей",
+        "hide": "Скрыть"
     },
     "fields": {
         "description": "Описание",
@@ -41,6 +42,7 @@
     "balances": {
         "youOwed": "вам должны",
         "youOwe": "вы должны",
+        "youAreOwed": "Вам должны",
         "settledUp": "Расчёт выполнен"
     },
     "header": {

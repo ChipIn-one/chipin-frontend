@@ -183,7 +183,7 @@ export const getNumberData = (
     const [left = '', right = ''] = kmbValue.split('.');
 
     // Split big numbers with, or leave it as is
-    const leftPart = postfix ? left : left.replace(/(.)(?=(\d{3})+$)/g, '$1,');
+    const leftPart = postfix ? left : left.replace(/(\d)(?=(\d{3})+$)/g, '$1,');
     const rightPart = postfix ? right : right.slice(0, precisionToUse);
 
     const numberFormatted = leftPart && rightPart ? `${leftPart}.${rightPart}${postfix}` : leftPart;

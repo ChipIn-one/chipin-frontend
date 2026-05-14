@@ -12,24 +12,30 @@ const FriendsPageHeader = ({ isLoading }: Props) => {
 
     return (
         <Flex justify="between" align="center">
-            <Flex align="center" gap="4">
+            <Flex align="center" gap={{ initial: '3', sm: '4' }}>
                 <Skeleton loading={isLoading}>
-                    <Avatar size="5" color="cyan" fallback={<LucideUsers size={32} />} />
+                    <Avatar
+                        size={{ initial: '4', sm: '5' }}
+                        color="cyan"
+                        fallback={<LucideUsers size={28} />}
+                    />
                 </Skeleton>
                 <Box>
                     <Skeleton loading={isLoading}>
-                        <Heading size="6">{t('friends:title')}</Heading>
+                        <Heading size={{ initial: '5', sm: '6' }}>{t('friends:title')}</Heading>
                     </Skeleton>
                     <Skeleton loading={isLoading}>
                         <Text size="2" color="gray">
-                            {t('friends:subtitle')}
+                            {t('friends:yourConnections')}
                         </Text>
                     </Skeleton>
                 </Box>
             </Flex>
             <Button variant="soft" loading={isLoading}>
                 <LucideUserPlus size={16} />
-                {t('common:buttons.addFriend')}
+                <Box display={{ initial: 'none', sm: 'inline' }}>
+                    <Text as="span">{t('common:buttons.addFriend')}</Text>
+                </Box>
             </Button>
         </Flex>
     );

@@ -1,7 +1,8 @@
-import { ComponentProps } from 'react';
+import { ComponentProps, useState } from 'react';
 import Big from 'bignumber.js';
+import { useTranslation } from 'react-i18next';
 
-import { Badge, Flex } from '@radix-ui/themes';
+import { Badge, Button, Flex } from '@radix-ui/themes';
 
 import { BalanceBadgesSkeleton } from 'components/skeletons';
 
@@ -28,6 +29,9 @@ const BalanceBadges: React.FC<Props> = ({
     maxVisible = DEFAULT_MAX_VISIBLE,
     overflowColor = 'gray',
 }) => {
+    const { t } = useTranslation('common');
+    const [isExpanded, setIsExpanded] = useState(false);
+
     if (!isLoading && items.length <= 1) {
         return null;
     }
@@ -36,21 +40,37 @@ const BalanceBadges: React.FC<Props> = ({
         return <BalanceBadgesSkeleton />;
     }
 
-    const visibleItems = items.slice(0, maxVisible);
+    const visibleItems = isExpanded ? items : items.slice(0, maxVisible);
     const hiddenCount = items.length - visibleItems.length;
 
     return (
-        <Flex gap="2" wrap="wrap">
+        <Flex gap="2" wrap="wrap" align="center">
             {visibleItems.map(item => (
                 <Badge key={item.tokenCode} color={item.color} variant="soft" size="3">
                     <Amount value={item.value} tokenCode={item.tokenCode} precision={0} />
                 </Badge>
             ))}
 
-            {hiddenCount > 0 && (
-                <Badge color={overflowColor} variant="soft" size="3">
+            {!isExpanded && hiddenCount > 0 && (
+                <Button
+                    color={overflowColor}
+                    variant="soft"
+                    size="1"
+                    onClick={() => setIsExpanded(true)}
+                >
                     +{hiddenCount}
-                </Badge>
+                </Button>
+            )}
+
+            {isExpanded && (
+                <Button
+                    color={overflowColor}
+                    variant="soft"
+                    size="1"
+                    onClick={() => setIsExpanded(false)}
+                >
+                    {t('buttons.hide')}
+                </Button>
             )}
         </Flex>
     );

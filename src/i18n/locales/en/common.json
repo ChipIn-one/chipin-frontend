@@ -20,7 +20,8 @@
         "goToDashboard": "Go to dashboard",
         "copyReport": "Copy report",
         "changePhoto": "Change photo",
-        "invitePeople": "Invite people"
+        "invitePeople": "Invite people",
+        "hide": "Hide"
     },
     "fields": {
         "description": "Description",
@@ -41,6 +42,7 @@
     "balances": {
         "youOwed": "you owed",
         "youOwe": "you owe",
+        "youAreOwed": "You are owed",
         "settledUp": "Settled up"
     },
     "header": {

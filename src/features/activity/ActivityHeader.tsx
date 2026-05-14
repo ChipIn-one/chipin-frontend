@@ -27,7 +27,11 @@ const ActivityHeader = ({ isLoading, activeFilter, onFilterChange }: Props) => {
             <Flex justify="between" align="center">
                 <Flex align="center" gap="4">
                     <Skeleton loading={isLoading}>
-                        <Avatar size="5" color="cyan" fallback={<LucideChartBar size={32} />} />
+                        <Avatar
+                            size={{ initial: '4', sm: '5' }}
+                            color="cyan"
+                            fallback={<LucideChartBar size={32} />}
+                        />
                     </Skeleton>
 
                     <Flex direction="column">
