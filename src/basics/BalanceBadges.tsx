@@ -1,4 +1,5 @@
 import { ComponentProps, useState } from 'react';
+import Big from 'bignumber.js';
 import { LucideChevronLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -10,7 +11,7 @@ import { Amount } from './numbers';
 
 export interface BadgeItem {
     tokenCode: string;
-    value: string | null;
+    value: Big | null;
     color: ComponentProps<typeof Badge>['color'];
 }
 
