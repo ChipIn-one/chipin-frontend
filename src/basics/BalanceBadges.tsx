@@ -1,5 +1,5 @@
 import { ComponentProps, useState } from 'react';
-import Big from 'bignumber.js';
+import { LucideChevronLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge, Button, Flex } from '@radix-ui/themes';
@@ -10,7 +10,7 @@ import { Amount } from './numbers';
 
 export interface BadgeItem {
     tokenCode: string;
-    value: Big | null;
+    value: string | null;
     color: ComponentProps<typeof Badge>['color'];
 }
 
@@ -69,6 +69,7 @@ const BalanceBadges: React.FC<Props> = ({
                     size="1"
                     onClick={() => setIsExpanded(false)}
                 >
+                    <LucideChevronLeft size={16} />
                     {t('buttons.hide')}
                 </Button>
             )}

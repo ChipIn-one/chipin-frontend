@@ -1,20 +1,20 @@
 import { useState } from 'react';
 import { UserAvatar } from 'basics';
-import { LucideArrowRight, LucideBug, LucideLogIn, LucideMenu } from 'lucide-react';
+import {
+    LucideArrowRight,
+    LucideBug,
+    LucideFlaskConical,
+    LucideLogIn,
+    LucideMenu,
+    LucideMoon,
+    LucideSun,
+} from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 
-import {
-    Box,
-    Button,
-    Container,
-    DropdownMenu,
-    Flex,
-    IconButton,
-    Link,
-    Text,
-} from '@radix-ui/themes';
+import { Box, Button, Container, Flex, IconButton, Link, Text } from '@radix-ui/themes';
 
 import { PROJECT_NAME } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
@@ -30,7 +30,8 @@ import Logotype from 'assets/logo.svg?react';
 
 import AuthModal from './modals/AuthModal';
 import HeaderNav from './nav-bars/HeaderNav';
-import ThemeSwitcherDev from './ThemeSwitcherDev';
+import DashboardGreeting from './DashboardGreeting';
+import Dropdown from './DropdownMenu';
 
 const StickyBox = styled(Box)`
     position: sticky;
@@ -73,48 +74,71 @@ const LandingNav = () => {
 const LandingMobileMenu = () => {
     const { t } = useTranslation('landing');
 
+    const items = LANDING_NAV_LINKS.map(({ labelKey, href }) => ({
+        value: href,
+        label: t(labelKey),
+        onSelect: () => {
+            window.location.href = href;
+        },
+    }));
+
     return (
-        <DropdownMenu.Root>
-            <DropdownMenu.Trigger>
+        <Dropdown
+            items={items}
+            trigger={
                 <IconButton variant="ghost" color="gray" size="2">
                     <LucideMenu />
                 </IconButton>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Content>
-                {LANDING_NAV_LINKS.map(({ labelKey, href }) => (
-                    <DropdownMenu.Item key={href} asChild>
-                        <Link href={href} color="gray" underline="none">
-                            {t(labelKey)}
-                        </Link>
-                    </DropdownMenu.Item>
-                ))}
-            </DropdownMenu.Content>
-        </DropdownMenu.Root>
+            }
+            align="end"
+        />
     );
 };
 
-const CrashTestButton = () => {
+const DevMenu = () => {
     const [shouldCrash, setShouldCrash] = useState(false);
+    const { theme, setTheme } = useTheme();
     const { t } = useTranslation();
 
     if (shouldCrash) {
         throw new Error('Manual test error triggered from the header crash button.');
     }
 
+    const isDark = theme === 'dark';
+
+    const items = [
+        {
+            value: 'switchTheme',
+            label: t('header.switchTheme'),
+            icon: isDark ? <LucideSun size={16} /> : <LucideMoon size={16} />,
+            onSelect: () => setTheme(isDark ? 'light' : 'dark'),
+        },
+        {
+            value: 'testError',
+            label: t('header.testError'),
+            icon: <LucideBug size={16} />,
+            onSelect: () => setShouldCrash(true),
+        },
+    ];
+
     return (
-        <IconButton
-            size={{
-                initial: '2',
-                sm: '3',
-            }}
-            variant="soft"
-            color="amber"
-            aria-label={t('header.testError')}
-            title={t('header.testError')}
-            onClick={() => setShouldCrash(true)}
-        >
-            <LucideBug />
-        </IconButton>
+        <Dropdown
+            items={items}
+            trigger={
+                <IconButton
+                    size={{
+                        initial: '2',
+                        sm: '3',
+                    }}
+                    variant="soft"
+                    color="gray"
+                    aria-label={t('header.devMenu')}
+                >
+                    <LucideFlaskConical />
+                </IconButton>
+            }
+            align="end"
+        />
     );
 };
 
@@ -130,24 +154,29 @@ const Header = () => {
         <StickyBox>
             <Container size="4" p="4">
                 <Flex justify="between" align="center">
-                    <EmptyRouteLink to={isLoggedIn ? ROUTES.DASHBOARD : ROUTES.HOME}>
-                        <Flex gap="4" align="center" justify="center">
-                            <StyledLogotype />
+                    <Box display={{ initial: 'block', sm: 'none' }} width="100%">
+                        <DashboardGreeting />
+                    </Box>
 
-                            <Box display={{ initial: 'none', sm: 'block' }}>
-                                <Text size="6" weight="bold">
-                                    {PROJECT_NAME}
-                                </Text>
-                            </Box>
-                        </Flex>
-                    </EmptyRouteLink>
+                    <Box display={{ initial: 'none', sm: 'block' }}>
+                        <EmptyRouteLink to={isLoggedIn ? ROUTES.DASHBOARD : ROUTES.HOME}>
+                            <Flex gap="4" align="center" justify="center">
+                                <StyledLogotype />
+
+                                <Box display={{ initial: 'none', sm: 'block' }}>
+                                    <Text size="6" weight="bold">
+                                        {PROJECT_NAME}
+                                    </Text>
+                                </Box>
+                            </Flex>
+                        </EmptyRouteLink>
+                    </Box>
 
                     {isLoggedIn && <HeaderNav />}
                     {isLandingPage && <LandingNav />}
 
                     <Flex gap="4" align="center">
-                        {getIsDevEnv() && <CrashTestButton />}
-                        {getIsDevEnv() && <ThemeSwitcherDev />}
+                        {getIsDevEnv() && <DevMenu />}
                         {isLoggedIn ? (
                             <Flex gap="4" align="center">
                                 <Box display={{ initial: 'none', sm: 'block' }}>

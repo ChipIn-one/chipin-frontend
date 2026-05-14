@@ -15,7 +15,12 @@ const ViewModeSwitch: React.FC = () => {
     return (
         <Flex gap="2" direction="column" align="end">
             <Skeleton loading={isUserLoading}>
-                <Switch size="3" disabled checked={isGroupMode} onCheckedChange={setIsGroupMode} />
+                <Switch
+                    size={{ initial: '2', sm: '3' }}
+                    disabled
+                    checked={isGroupMode}
+                    onCheckedChange={setIsGroupMode}
+                />
             </Skeleton>
             <Skeleton loading={isUserLoading} width="80px">
                 <Text

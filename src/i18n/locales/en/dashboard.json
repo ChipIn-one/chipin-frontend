@@ -23,6 +23,6 @@
     },
     "header": {
         "greeting": "Hi, {{name}}",
-        "overview": "Here's your financial overview"
+        "overview": "Here's your summary"
     }
 }

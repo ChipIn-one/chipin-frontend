@@ -47,7 +47,9 @@
     },
     "header": {
         "signIn": "Sign in",
-        "testError": "Trigger test error"
+        "testError": "Trigger test error",
+        "switchTheme": "Switch theme",
+        "devMenu": "Developer menu"
     },
     "footer": {
         "copyright": "{{year}}. All rights reserved ©",

@@ -151,9 +151,11 @@ UI → store → API
 
 # 10. FINANCIAL RULES
 
-- use Big (bignumber.js)
-- no native arithmetic for money
-- API receives strings only
+- use JavaScript Number for money values on frontend
+- backend is the source of truth for all financial calculations
+- frontend may display rounded values (e.g. toFixed(2))
+- frontend sends raw Number values to backend
+- no BigNumber or integer/cents model on frontend
 
 ---
 
