@@ -1,5 +1,14 @@
 import { AppEvent } from './activity.types';
 
+export interface BalanceEntry {
+    currency: string;
+    netBalance: number;
+}
+
+export type BalancesMap = Record<string, BalanceEntry>;
+
+export type CurrenciesRates = Record<string, number>;
+
 export interface ApiUserResponse {
     id: string;
     email: string;
@@ -9,13 +18,6 @@ export interface ApiUserResponse {
     picture: string | null;
     createdAt: number;
     updatedAt: number;
-}
-
-export interface ApiBalanceEntryResponse {
-    currency: string;
-    totalOwed: string;
-    totalOwing: string;
-    netBalance: string;
 }
 
 export interface ApiGroupResponse {
@@ -32,7 +34,7 @@ export interface ApiGroupResponse {
     members: ApiUserResponse[];
     role: 'OWNER' | 'MEMBER';
     status: 'ACTIVE' | 'ARCHIVED';
-    balances?: Record<string, ApiBalanceEntryResponse>;
+    balances: BalancesMap;
 }
 
 export interface ApiRemoveGroupResponse {
@@ -41,10 +43,20 @@ export interface ApiRemoveGroupResponse {
 
 export interface ApiDashboardResponse {
     groups: ApiGroupResponse[];
-    balances?: Record<string, ApiBalanceEntryResponse>;
+    balances: BalancesMap;
 }
 
 export interface ApiActivityItemsResponse {
     items: AppEvent[];
-    nextCursor: string | null;
+    nextCursor: number | null;
+}
+
+export interface ApiKnownUserBalanceEntry {
+    currency: string;
+    amount: number;
+}
+
+export interface ApiFriendResponse {
+    user: ApiUserResponse;
+    balances: BalancesMap;
 }

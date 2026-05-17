@@ -12,14 +12,12 @@ import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupDataFetched, selectGroupDataLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
-import DashBoardSummary from 'components/DashboardSummary';
-import GroupsCards from 'components/GroupsCards';
-import GroupsSectionHeader from 'components/GroupsSectionHeader';
 import { AddExpenseModal } from 'components/modals';
 import MobileNavBar from 'components/nav-bars/MobileNavBar';
 import UsersRow from 'components/UsersRow';
 
 import GroupCoverSection from './components/GroupCoverSection';
+import GroupSummary from './components/GroupSummary';
 import GroupTabsContent from './components/GroupTabsContent';
 
 /**
@@ -35,8 +33,12 @@ const MobileCoverBox = styled(Box)`
 const GroupPage = () => {
     const { t } = useTranslation(['group', 'common', 'dashboard']);
     const { groups, selectedGroup } = useGroupsStore(
-        useShallow(s => ({ groups: s.groups, selectedGroup: s.selectedGroup })),
+        useShallow(s => ({
+            groups: s.groups,
+            selectedGroup: s.selectedGroup,
+        })),
     );
+
     const { fetchSetGroupById } = useGroupsStore();
     const isGroupDataLoading = useLoadingStore(selectGroupDataLoading);
     const isGroupDataFetched = useLoadingStore(selectGroupDataFetched);
@@ -74,20 +76,11 @@ const GroupPage = () => {
         <Container size="4" pb={{ initial: '9', sm: '4' }}>
             <Grid columns="3" gap="6">
                 {/* ── Left sidebar (desktop) ── */}
-                <Box
-                    gridColumn={{ initial: 'span 3', sm: 'span 1' }}
-                    mb="6"
-                    display={{ initial: 'none', sm: 'block' }}
-                >
-                    <DashBoardSummary />
-                    <GroupsSectionHeader
-                        mt="4"
-                        mb="4"
-                        label={t('dashboard:groups.otherTitle')}
-                        isLoading={isGroupDataLoading}
-                    />
-                    <GroupsCards groups={groups.filter(group => group.id !== selectedGroup.id)} />
-                </Box>
+                <GroupSummary
+                    groups={groups}
+                    selectedGroup={selectedGroup}
+                    isLoading={isGroupDataLoading}
+                />
 
                 {/* ── Main content column ── */}
                 <Box gridColumn={{ initial: 'span 3', sm: 'span 2' }}>

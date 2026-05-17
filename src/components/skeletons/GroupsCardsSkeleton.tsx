@@ -31,13 +31,13 @@ export const GroupsCardsSkeleton = () => {
                         </Skeleton>
 
                         <Flex direction="column">
-                            <Text size="4" weight="bold" as="p">
+                            <Text size="4" weight="bold" as="span">
                                 <Skeleton>
                                     <Box width="120px" height="var(--space-4)" />
                                 </Skeleton>
                             </Text>
 
-                            <Text size="2" color="grass" weight="medium" as="p">
+                            <Text size="2" color="grass" weight="medium" as="span">
                                 <Skeleton>
                                     <Box width="140px" height="var(--space-3)" />
                                 </Skeleton>

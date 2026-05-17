@@ -8,8 +8,8 @@ import { selectDashboardFetched, selectDashboardLoading } from 'store/loadingSel
 import { useLoadingStore } from 'store/loadingStore';
 
 import { NoGroupsEmptyState } from 'basics/empty-states';
-import DashboardGreeting from 'components/DashboardGreeting';
-import DashBoardSummary from 'components/DashboardSummary';
+import DashboardGreeting from 'components/dashboard-summary/DashboardHeader';
+import DashBoardSummary from 'components/dashboard-summary/DashboardSummary';
 import GroupsCards from 'components/GroupsCards';
 import GroupsSectionHeader from 'components/GroupsSectionHeader';
 import { CreateUpdateGroupModal } from 'components/modals';
@@ -33,14 +33,12 @@ const DashboardPage = () => {
                         sm: 'span 1',
                     }}
                 >
-                    <Box mb="4" display={{ initial: 'none', sm: 'block' }}>
-                        <DashboardGreeting />
-                    </Box>
+                    <DashboardGreeting />
+
                     <DashBoardSummary isLoading={isDashboardLoading} />
 
                     <Box>
                         <GroupsSectionHeader
-                            mt="4"
                             mb="4"
                             label={t('groups.title')}
                             isLoading={isDashboardLoading}

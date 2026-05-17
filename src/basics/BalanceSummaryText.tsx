@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Flex, Text } from '@radix-ui/themes';
 
-import { BalanceEntry } from 'api/chipin.types';
+import { BalanceEntry } from 'api/chipin.raw.types';
 
 import { Amount } from './numbers';
 
@@ -16,8 +16,8 @@ interface Props {
 const BalanceSummaryText = ({ entries, size, align = 'left' }: Props) => {
     const { t } = useTranslation('common');
 
-    const owedEntries = entries.filter(e => e.netBalance !== null && e.netBalance.gt(0));
-    const oweEntries = entries.filter(e => e.netBalance !== null && e.netBalance.lt(0));
+    const owedEntries = entries.filter(e => e.netBalance > 0);
+    const oweEntries = entries.filter(e => e.netBalance < 0);
 
     if (owedEntries.length === 0 && oweEntries.length === 0) {
         return (
@@ -30,13 +30,13 @@ const BalanceSummaryText = ({ entries, size, align = 'left' }: Props) => {
     return (
         <Flex direction="column">
             {owedEntries.length > 0 && (
-                <Text size={size} color="green" as="span" align={align}>
+                <Text size={size} color="green" as="span" weight="medium" align={align}>
                     {t('balances.youOwed')}{' '}
                     {owedEntries.map((entry, i) => (
                         <Fragment key={entry.currency}>
                             {i > 0 && ', '}
                             <Amount
-                                value={entry.netBalance!.abs()}
+                                value={Math.abs(entry.netBalance!)}
                                 tokenCode={entry.currency}
                                 precision={0}
                             />
@@ -45,13 +45,13 @@ const BalanceSummaryText = ({ entries, size, align = 'left' }: Props) => {
                 </Text>
             )}
             {oweEntries.length > 0 && (
-                <Text size={size} color="red" as="span" align={align}>
+                <Text size={size} color="red" as="span" weight="medium" align={align}>
                     {t('balances.youOwe')}{' '}
                     {oweEntries.map((entry, i) => (
                         <Fragment key={entry.currency}>
                             {i > 0 && ', '}
                             <Amount
-                                value={entry.netBalance!.abs()}
+                                value={Math.abs(entry.netBalance!)}
                                 tokenCode={entry.currency}
                                 precision={0}
                             />

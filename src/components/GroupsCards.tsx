@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { LucideFilterX } from 'lucide-react';
+import { LucideEye, LucideEyeOff, LucideFilterX } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Flex } from '@radix-ui/themes';
 
 import { Group } from 'api/chipin.types';
+import { selectGroupBalances } from 'store/groupsSelectors';
 import { selectDashboardFetched } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
@@ -20,22 +21,22 @@ interface Props {
 }
 
 const filterGroups = (groups: Group[], filter: GroupFilter): Group[] => {
-    if (filter === 'all') {
-        return groups;
-    }
-
     return groups.filter(group => {
-        const balances = Object.values(group.balances);
+        const balances = selectGroupBalances(group);
+
+        if (filter === 'all') {
+            return balances.some(entry => entry.netBalance !== 0);
+        }
+
+        if (filter === 'settled') {
+            return balances.every(entry => entry.netBalance === 0);
+        }
 
         if (filter === 'owed') {
-            return balances.some(entry => entry.netBalance !== null && entry.netBalance.gt(0));
+            return balances.some(entry => entry.netBalance > 0 && entry.netBalance !== 0);
         }
 
-        if (filter === 'owes') {
-            return balances.some(entry => entry.netBalance !== null && entry.netBalance.lt(0));
-        }
-
-        return balances.every(entry => entry.netBalance === null || entry.netBalance.eq(0));
+        return balances.some(entry => entry.netBalance < 0 && entry.netBalance !== 0);
     });
 };
 
@@ -49,12 +50,12 @@ const GroupsCards: React.FC<Props> = ({ groups }) => {
     }
 
     const filteredGroups = filterGroups(groups, activeFilter);
+    const isSettledFilter = activeFilter === 'settled';
 
     const filterItems: { value: GroupFilter; label: string }[] = [
         { value: 'all', label: t('groups.filterAll') },
         { value: 'owed', label: t('summary.owedToYou') },
         { value: 'owes', label: t('summary.youOwe') },
-        { value: 'settled', label: t('groups.filterSettled') },
     ];
 
     return (
@@ -71,16 +72,27 @@ const GroupsCards: React.FC<Props> = ({ groups }) => {
                         {item.label}
                     </Button>
                 ))}
+                <Button
+                    size="2"
+                    variant="soft"
+                    color={isSettledFilter ? 'grass' : 'gray'}
+                    onClick={() => setActiveFilter('settled')}
+                >
+                    {isSettledFilter ? <LucideEye size={14} /> : <LucideEyeOff size={14} />}
+                    {t('groups.filterSettled')}
+                </Button>
             </Flex>
-            {filteredGroups.length === 0 ? (
+            {filteredGroups.length === 0 && (
                 <EmptyState
                     icon={<LucideFilterX size={16} />}
                     title={t('groups.filterEmptyTitle')}
                     description={t('groups.filterEmptyDescription')}
                 />
-            ) : (
-                filteredGroups.map(group => <GroupCard key={group.id} group={group} />)
             )}
+
+            {filteredGroups.map(group => (
+                <GroupCard key={group.id} group={group} />
+            ))}
         </Flex>
     );
 };

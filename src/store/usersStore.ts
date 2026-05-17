@@ -1,13 +1,16 @@
 import { create } from 'zustand';
 
 import { fetchApiKnownUsers, fetchApiUser } from 'api/chipin';
-import { User } from 'api/chipin.types';
+import { Friend, User } from 'api/chipin.types';
 
 import { useLoadingStore } from './loadingStore';
 
-interface UsersStore {
+export interface UsersStore {
     user: User | null;
-    friends: User[];
+    settings: {
+        defaultCurrency: string;
+    };
+    friends: Friend[];
 
     fetchSetFriends: () => void;
     fetchSetUser: () => void;
@@ -15,6 +18,9 @@ interface UsersStore {
 
 const initialUsersStore = {
     user: null,
+    settings: {
+        defaultCurrency: 'USD',
+    },
     friends: [],
 };
 

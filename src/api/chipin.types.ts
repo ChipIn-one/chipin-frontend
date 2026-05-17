@@ -1,12 +1,15 @@
-import type { BalancesMap } from 'helpers/currencies';
-
-import type { ApiGroupResponse } from './chipin.raw.types';
+import type {
+    ApiFriendResponse,
+    ApiGroupResponse,
+    ApiUserResponse,
+    BalancesMap,
+} from './chipin.raw.types';
 
 // ─── Re-exports: raw response types (for api layer & helpers) ──────────────
 export type {
     ApiActivityItemsResponse,
-    ApiBalanceEntryResponse,
     ApiDashboardResponse,
+    ApiFriendResponse,
     ApiGroupResponse,
     ApiRemoveGroupResponse,
     ApiUserResponse,
@@ -29,15 +32,13 @@ export type {
 // ─── Frontend types (used in components, store, hooks) ────────────────────
 
 /** User as used on the frontend (no parsing needed — all fields are plain). */
-export type { ApiUserResponse as User } from './chipin.raw.types';
+export type User = ApiUserResponse;
 
-/** Balance entry with Big.js fields, as parsed from raw API. */
-export type { BalanceEntry, BalancesMap } from 'helpers/currencies';
+/** Known user — raw API shape. */
+export type Friend = ApiFriendResponse;
 
-/** Group with parsed Big.js balances — the shape used throughout the UI. */
-export interface Group extends Omit<ApiGroupResponse, 'balances'> {
-    balances: BalancesMap;
-}
+/** Group — same shape as the API response. */
+export type Group = ApiGroupResponse;
 
 /** Dashboard response with parsed groups and balances. */
 export type Dashboard = {

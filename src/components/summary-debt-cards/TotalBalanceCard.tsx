@@ -1,19 +1,17 @@
-import Big from 'bignumber.js';
 import { useTranslation } from 'react-i18next';
 
 import { Card, Flex, Skeleton, Text } from '@radix-ui/themes';
 
-import { Amount } from 'basics/numbers';
+import DebtAmount from 'basics/DebtAmount';
 
 interface Props {
     isLoading: boolean;
-    netTotal: Big;
-    mainCurrency: string;
+    netTotalInBase: number | null;
+    defaultCurrency: string;
 }
 
-const TotalBalanceCard: React.FC<Props> = ({ isLoading, netTotal, mainCurrency }) => {
+const TotalBalanceCard: React.FC<Props> = ({ isLoading, netTotalInBase, defaultCurrency }) => {
     const { t } = useTranslation('dashboard');
-    const balanceColor = netTotal.gte(0) ? 'grass' : 'tomato';
 
     return (
         <Card size="1">
@@ -24,11 +22,13 @@ const TotalBalanceCard: React.FC<Props> = ({ isLoading, netTotal, mainCurrency }
                     </Text>
                 </Skeleton>
 
-                <Skeleton loading={isLoading} width="170px">
-                    <Text size="7" color={balanceColor} weight="bold" as="span">
-                        <Amount value={netTotal} tokenCode={mainCurrency} />
-                    </Text>
-                </Skeleton>
+                <DebtAmount
+                    isLoading={isLoading}
+                    amount={netTotalInBase || 0}
+                    currency={defaultCurrency}
+                    size="7"
+                    weight="bold"
+                />
 
                 <Skeleton loading={isLoading} width="150px" height="var(--space-4)">
                     <Text size="2" color="gray" as="span">

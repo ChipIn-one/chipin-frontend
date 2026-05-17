@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 
 import { fetchApiDashboard } from 'api/chipin';
-import { BalancesMap } from 'helpers/currencies';
+import { BalanceEntry, BalancesMap, CurrenciesRates } from 'api/chipin.raw.types';
 
+import { calcBalancesSummary } from './commonSelectors';
 import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
 
@@ -10,18 +11,29 @@ export interface DashboardStore {
     fetchSetDashboardData: () => void;
 
     balances: BalancesMap;
+    owedEntries: BalanceEntry[];
+    oweEntries: BalanceEntry[];
+    netTotalInBase: number | null;
+    owedTotalInBase: number | null;
+    owingTotalInBase: number | null;
 
     currencies: {
         disclaimer: string;
         license: string;
         timestamp: number;
         base: string;
-        rates: Record<string, number>;
+        rates: CurrenciesRates;
     };
 }
 
 const initialDashboardStore = {
-    balances: {} as BalancesMap,
+    balances: {},
+    owedEntries: [],
+    oweEntries: [],
+    netTotalInBase: null,
+    owedTotalInBase: null,
+    owingTotalInBase: null,
+
     currencies: {
         disclaimer: 'Usage subject to terms: https://openexchangerates.org/terms',
         license: 'https://openexchangerates.org/license',
@@ -204,7 +216,7 @@ const initialDashboardStore = {
     },
 };
 
-export const useDashboardStore = create<DashboardStore>(set => ({
+export const useDashboardStore = create<DashboardStore>((set, get) => ({
     ...initialDashboardStore,
 
     fetchSetDashboardData: () => {
@@ -216,7 +228,26 @@ export const useDashboardStore = create<DashboardStore>(set => ({
         fetchApiDashboard()
             .then(data => {
                 setGroups(data.groups);
-                set({ balances: data.balances });
+                const entries = Object.values(data.balances);
+                set({
+                    balances: data.balances,
+                    owedEntries: entries.filter(entry => entry.netBalance > 0),
+                    oweEntries: entries.filter(entry => entry.netBalance < 0),
+                });
+
+                const { rates, base } = get().currencies;
+                const { netTotalInBase, owedTotalInBase, owingTotalInBase } = calcBalancesSummary(
+                    base,
+                    rates,
+                    {
+                        balances: data.balances,
+                    },
+                );
+                set({
+                    netTotalInBase,
+                    owedTotalInBase,
+                    owingTotalInBase,
+                });
                 setLoading('dashboard', 'data', 'fetched');
             })
             .catch(error => {

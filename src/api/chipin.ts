@@ -2,13 +2,10 @@ import axios from 'axios';
 import { toast } from 'sonner';
 
 import { SECOND } from 'constants/time';
-import { parseApiGroup, parseBalancesMap } from 'helpers/currencies';
 import { getChipInApiUrl } from 'helpers/env';
 import { resolveApiErrorMessage } from 'helpers/errors';
 import { getAuthTokenDB } from 'store/IDB/auth';
 
-import type { ApiGroupResponse } from './chipin.raw.types';
-import { ApiDashboardResponse } from './chipin.raw.types';
 import type {
     ApiActivityItemsResponse,
     ApiRemoveGroupResponse,
@@ -17,6 +14,7 @@ import type {
     CreateLedgerEntryParams,
     Dashboard,
     FetchActivityParams,
+    Friend,
     Group,
     InviteToGroupParams,
     KickGroupMemberParams,
@@ -74,13 +72,11 @@ apiInstance.interceptors.response.use(
 // =============== GROUPS AND USERS ===============
 
 export const fetchApiUserGroups = (): Promise<Group[]> => {
-    return apiInstance
-        .get(`/groups`)
-        .then(result => (result.data as ApiGroupResponse[]).map(parseApiGroup));
+    return apiInstance.get(`/groups`).then(result => result.data);
 };
 
 export const fetchApiUserGroupById = (groupId: string): Promise<Group> => {
-    return apiInstance.get(`/groups/${groupId}`).then(result => parseApiGroup(result.data));
+    return apiInstance.get(`/groups/${groupId}`).then(result => result.data);
 };
 
 export const createApiGroup = async ({
@@ -94,7 +90,7 @@ export const createApiGroup = async ({
         ...(groupDescription && { description: groupDescription }),
     });
 
-    return parseApiGroup(response.data);
+    return response.data;
 };
 
 export const updateApiGroup = async ({
@@ -109,7 +105,7 @@ export const updateApiGroup = async ({
         ...(groupDescription && { description: groupDescription }),
     });
 
-    return parseApiGroup(response.data);
+    return response.data;
 };
 
 export const removeApiGroup = async ({
@@ -138,27 +134,18 @@ export const inviteApiUserToGroup = async ({
 }: InviteToGroupParams): Promise<Group> => {
     const response = await apiInstance.post(`/groups/invite/${inviteToken}`);
 
-    return parseApiGroup(response.data);
+    return response.data;
 };
 
 export const fetchApiDashboard = (): Promise<Dashboard> => {
-    return apiInstance.get(`/dashboard`).then(result => {
-        const raw: ApiDashboardResponse = result.data;
-
-        const groups: Group[] = raw.groups.map(parseApiGroup);
-
-        return {
-            groups,
-            balances: parseBalancesMap(raw.balances ?? {}),
-        };
-    });
+    return apiInstance.get(`/dashboard`).then(result => result.data);
 };
 
 export const fetchApiUser = (): Promise<ApiUserResponse> => {
     return apiInstance.get(`/users/self`).then(result => result.data);
 };
 
-export const fetchApiKnownUsers = (): Promise<ApiUserResponse[]> => {
+export const fetchApiKnownUsers = (): Promise<Friend[]> => {
     return apiInstance.get(`/users/known-users`).then(result => result.data);
 };
 
@@ -169,8 +156,8 @@ export const fetchApiUserActivities = ({
     return apiInstance
         .get(`/users/self/activities`, {
             params: {
-                ...(limit !== undefined && { limit }),
-                ...(cursor !== undefined && { cursor }),
+                ...(limit && { limit }),
+                ...(cursor && { cursor }),
             },
         })
         .then(result => result.data);
@@ -208,4 +195,3 @@ export const createApiExpense = async ({
 
     return response.data;
 };
-// TODO: tobig all of amount fields from api immediately on receive, so we don't have to do it in every component where it's used

@@ -3,12 +3,10 @@ import { useTranslation } from 'react-i18next';
 
 import { Text } from '@radix-ui/themes';
 
-import { tryToBig } from 'helpers/numbers';
-
 import { Amount } from './numbers';
 
 interface Props {
-    value: NumericValue;
+    value: number;
     currencyCode: string;
     size: ComponentProps<typeof Text>['size'];
     align?: ComponentProps<typeof Text>['align'];
@@ -16,18 +14,17 @@ interface Props {
 
 const OwedStatusText = ({ value, currencyCode, size, align = 'right' }: Props) => {
     const { t } = useTranslation('activity');
-    const big = tryToBig(value);
 
-    if (!big) {
+    if (!value) {
         return null;
     }
 
-    const isPositive = big.gte(0);
+    const isPositive = value >= 0;
 
     return (
         <Text size={size} color={isPositive ? 'green' : 'red'} as="span" align={align}>
             {isPositive ? t('common:balances.youOwed') : t('common:balances.youOwe')}{' '}
-            <Amount value={big.abs()} tokenCode={currencyCode} precision={0} />
+            <Amount value={value} tokenCode={currencyCode} precision={0} />
         </Text>
     );
 };

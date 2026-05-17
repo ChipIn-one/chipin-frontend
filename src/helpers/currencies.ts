@@ -1,59 +1,40 @@
-import Big from 'bignumber.js';
-
-import type { ApiBalanceEntryResponse, ApiGroupResponse } from 'api/chipin.raw.types';
-import type { Group } from 'api/chipin.types';
-
-import { parseBigFields } from './numbers';
-
-export interface BalanceEntry {
-    currency: string;
-    totalOwed: Big | null;
-    totalOwing: Big | null;
-    netBalance: Big | null;
-}
-
-export type BalancesMap = Record<string, BalanceEntry>;
-
-const BALANCE_ENTRY_PATHS = ['*.netBalance', '*.totalOwed', '*.totalOwing'] as const;
-
-export const parseBalancesMap = (raw: Record<string, ApiBalanceEntryResponse>): BalancesMap =>
-    parseBigFields<Record<string, ApiBalanceEntryResponse>, BalancesMap>(raw, BALANCE_ENTRY_PATHS);
-
-export const parseApiGroup = (group: ApiGroupResponse): Group => ({
-    ...group,
-    balances: parseBalancesMap(group.balances ?? {}),
-});
+import { BalancesMap, CurrenciesRates } from 'api/chipin.raw.types';
 
 export const getCurrencySummary = (
     balances: BalancesMap,
-    rates: Record<string, number>,
-    mainCurrency: string,
-): { netTotal: Big; owedTotal: Big; owingTotal: Big } => {
+    rates: CurrenciesRates,
+    defaultCurrency: string,
+): { netTotalInBase: number; owedTotalInBase: number; owingTotalInBase: number } => {
     const entries = Object.values(balances);
-    const currencyRate = rates[mainCurrency] ?? 1;
+    const currencyRate = rates[defaultCurrency] ?? 1;
 
-    const sumField = (
-        field: keyof Pick<BalanceEntry, 'netBalance' | 'totalOwed' | 'totalOwing'>,
-    ): Big =>
-        entries.reduce((acc, entry) => {
-            const amount = entry[field];
+    let netTotalInBase = 0;
+    let owedTotalInBase = 0;
+    let owingTotalInBase = 0;
 
-            if (!amount || amount.eq(0)) {
-                return acc;
-            }
+    for (const entry of entries) {
+        const amount = entry.netBalance;
 
-            const rate = rates[entry.currency];
+        if (amount === null || amount === 0) {
+            continue;
+        }
 
-            if (!rate) {
-                return acc;
-            }
+        const rate = rates[entry.currency];
 
-            return acc.plus(amount.dividedBy(rate).multipliedBy(currencyRate));
-        }, Big(0));
+        if (!rate) {
+            continue;
+        }
 
-    return {
-        netTotal: sumField('netBalance'),
-        owedTotal: sumField('totalOwed'),
-        owingTotal: sumField('totalOwing'),
-    };
+        const converted = (amount / rate) * currencyRate;
+
+        netTotalInBase += converted;
+
+        if (amount > 0) {
+            owedTotalInBase += converted;
+        } else {
+            owingTotalInBase += Math.abs(converted);
+        }
+    }
+
+    return { netTotalInBase, owedTotalInBase, owingTotalInBase };
 };

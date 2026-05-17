@@ -30,7 +30,6 @@ import Logotype from 'assets/logo.svg?react';
 
 import AuthModal from './modals/AuthModal';
 import HeaderNav from './nav-bars/HeaderNav';
-import DashboardGreeting from './DashboardGreeting';
 import Dropdown from './DropdownMenu';
 
 const StickyBox = styled(Box)`
@@ -154,23 +153,17 @@ const Header = () => {
         <StickyBox>
             <Container size="4" p="4">
                 <Flex justify="between" align="center">
-                    <Box display={{ initial: 'block', sm: 'none' }} width="100%">
-                        <DashboardGreeting />
-                    </Box>
+                    <EmptyRouteLink to={isLoggedIn ? ROUTES.DASHBOARD : ROUTES.HOME}>
+                        <Flex gap="4" align="center" justify="center">
+                            <StyledLogotype />
 
-                    <Box display={{ initial: 'none', sm: 'block' }}>
-                        <EmptyRouteLink to={isLoggedIn ? ROUTES.DASHBOARD : ROUTES.HOME}>
-                            <Flex gap="4" align="center" justify="center">
-                                <StyledLogotype />
-
-                                <Box display={{ initial: 'none', sm: 'block' }}>
-                                    <Text size="6" weight="bold">
-                                        {PROJECT_NAME}
-                                    </Text>
-                                </Box>
-                            </Flex>
-                        </EmptyRouteLink>
-                    </Box>
+                            <Box display={{ initial: 'none', sm: 'block' }}>
+                                <Text size="6" weight="bold">
+                                    {PROJECT_NAME}
+                                </Text>
+                            </Box>
+                        </Flex>
+                    </EmptyRouteLink>
 
                     {isLoggedIn && <HeaderNav />}
                     {isLandingPage && <LandingNav />}

@@ -2,6 +2,7 @@
     "title": "Friends",
     "subtitle": "Your contacts and connections",
     "yourConnections": "Your connections",
+    "searchPlaceholder": "Search friends",
     "emptyTitle": "No friends yet",
     "emptyDescription": "Add friends to track shared expenses and settle up easily."
 }

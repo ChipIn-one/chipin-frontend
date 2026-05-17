@@ -11,13 +11,21 @@ import {
     removeApiGroup,
     updateApiGroup,
 } from 'api/chipin';
+import { BalanceEntry } from 'api/chipin.raw.types';
 import { Group } from 'api/chipin.types';
 
+import { useDashboardStore } from './dashboardStore';
+import { calcGroupSummary } from './groupsSelectors';
 import { useLoadingStore } from './loadingStore';
 
 export interface GroupsStore {
     selectedGroup: Group | null;
     groups: Group[];
+    oweEntries: BalanceEntry[];
+    owedEntries: BalanceEntry[];
+    netTotalInBase: number | null;
+    owedTotalInBase: number | null;
+    owingTotalInBase: number | null;
 
     setGroups: (groups: Group[]) => void;
     setSelectedGroup: (group: Group) => void;
@@ -41,6 +49,19 @@ export interface GroupsStore {
 const initialGroupsStore = {
     selectedGroup: null,
     groups: [],
+    oweEntries: [],
+    owedEntries: [],
+    netTotalInBase: null,
+    owedTotalInBase: null,
+    owingTotalInBase: null,
+};
+
+const GROUP_SUMMARY_RESET = {
+    owedEntries: [] as BalanceEntry[],
+    oweEntries: [] as BalanceEntry[],
+    netTotalInBase: null as number | null,
+    owedTotalInBase: null as number | null,
+    owingTotalInBase: null as number | null,
 };
 
 export const useGroupsStore = create<GroupsStore>((set, get) => ({
@@ -50,15 +71,20 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         set({ groups });
     },
     setSelectedGroup: group => {
-        set({ selectedGroup: group });
+        const { base, rates } = useDashboardStore.getState().currencies;
+        set({ selectedGroup: group, ...calcGroupSummary(group.balances, base, rates) });
     },
     fetchSetGroupById: groupId => {
         const { groups } = get();
 
         // Fallback to join if user group is already in the store
-        if (groups.find(group => group.id === groupId)) {
-            const selectedGroup = groups.find(group => group.id === groupId) || null;
-            set({ selectedGroup });
+        const existingGroup = groups.find(group => group.id === groupId);
+        if (existingGroup) {
+            const { base, rates } = useDashboardStore.getState().currencies;
+            set({
+                selectedGroup: existingGroup,
+                ...calcGroupSummary(existingGroup.balances, base, rates),
+            });
             return;
         }
 
@@ -76,7 +102,12 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     );
                     set({ groups: updatedGroups });
                 }
-                set({ selectedGroup: groupFromApi });
+                const { base, rates } = useDashboardStore.getState().currencies;
+
+                set({
+                    selectedGroup: groupFromApi,
+                    ...calcGroupSummary(groupFromApi.balances, base, rates),
+                });
             })
             .catch(error => {
                 console.error('Error fetching user groups:', error);
@@ -93,7 +124,12 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         return createApiGroup({ groupName, groupDescription, groupEmoji })
             .then(newGroup => {
                 const { groups } = get();
-                set({ groups: [...groups, newGroup], selectedGroup: newGroup });
+                const { base, rates } = useDashboardStore.getState().currencies;
+                set({
+                    groups: [...groups, newGroup],
+                    selectedGroup: newGroup,
+                    ...calcGroupSummary(newGroup.balances, base, rates),
+                });
                 return newGroup;
             })
             .finally(() => {
@@ -149,6 +185,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 set({
                     groups: updatedGroups,
                     selectedGroup: null,
+                    ...GROUP_SUMMARY_RESET,
                 });
 
                 return selectedGroup.name;
@@ -175,6 +212,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 set({
                     groups: updatedGroups,
                     selectedGroup: null,
+                    ...GROUP_SUMMARY_RESET,
                 });
 
                 return selectedGroup.name;
@@ -207,11 +245,13 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     members: selectedGroup.members.filter(member => member.id !== userId),
                 };
 
+                const { base, rates } = useDashboardStore.getState().currencies;
                 set({
                     groups: groups.map(group =>
                         group.id === selectedGroup.id ? updatedSelectedGroup : group,
                     ),
                     selectedGroup: updatedSelectedGroup,
+                    ...computeGroupSummary(updatedSelectedGroup.balances, base, rates),
                 });
 
                 return kickedMember.displayName;
@@ -226,7 +266,12 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         return inviteApiUserToGroup({ inviteToken })
             .then(joinedGroup => {
                 const { groups } = get();
-                set({ groups: [...groups, joinedGroup], selectedGroup: joinedGroup });
+                const { base, rates } = useDashboardStore.getState().currencies;
+                set({
+                    groups: [...groups, joinedGroup],
+                    selectedGroup: joinedGroup,
+                    ...computeGroupSummary(joinedGroup.balances, base, rates),
+                });
                 return joinedGroup;
             })
             .catch(e => {

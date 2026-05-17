@@ -10,7 +10,7 @@ const ACTIVITY_PAGE_LIMIT = 15;
 
 export interface ActivityStore {
     items: AppEvent[];
-    nextCursor: string | null;
+    nextCursor: number | null;
     hasMore: boolean;
 
     fetchSetActivity: () => void;

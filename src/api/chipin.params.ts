@@ -51,5 +51,5 @@ export interface CreateLedgerEntryParams {
 
 export interface FetchActivityParams {
     limit?: number;
-    cursor?: string;
+    cursor?: number;
 }

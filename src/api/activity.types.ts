@@ -28,7 +28,7 @@ type ExpenseMetadata = {
     groupId: UUID;
     groupName: string;
     description: string;
-    amount: string;
+    amount: number;
     currency: string;
     payerDisplayName: string;
 };
@@ -38,7 +38,7 @@ type SettlementMetadata = {
     entryId: UUID;
     groupId: UUID;
     groupName: string;
-    amount: string;
+    amount: number;
     currency: string;
     fromDisplayName: string;
     toDisplayName: string;

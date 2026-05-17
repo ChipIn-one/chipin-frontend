@@ -1,19 +1,17 @@
-import Big from 'bignumber.js';
-
 import { Flex } from '@radix-ui/themes';
 
-import { BalanceEntry } from 'helpers/currencies';
+import { BalanceEntry } from 'api/chipin.raw.types';
 
-import OwedToYouCard from './summary-debt-cards/OwedToYouCard';
-import YouOweCard from './summary-debt-cards/YouOweCard';
+import OwedToYouCard from './OwedToYouCard';
+import YouOweCard from './YouOweCard';
 
 interface Props {
     isLoading?: boolean;
-    owedToYouTotal: Big;
-    youOweTotal: Big;
+    owedToYouTotal: number | null;
+    youOweTotal: number | null;
     owedEntries: BalanceEntry[];
     oweEntries: BalanceEntry[];
-    mainCurrency: string;
+    defaultCurrency: string;
 }
 
 const SummaryDebtCards: React.FC<Props> = ({
@@ -22,21 +20,21 @@ const SummaryDebtCards: React.FC<Props> = ({
     youOweTotal,
     owedEntries,
     oweEntries,
-    mainCurrency,
+    defaultCurrency,
 }) => {
     return (
-        <Flex direction="column" gap="4">
+        <Flex direction="column" gap="4" mb="4">
             <OwedToYouCard
                 isLoading={isLoading}
                 total={owedToYouTotal}
-                mainCurrency={mainCurrency}
+                defaultCurrency={defaultCurrency}
                 entries={owedEntries}
             />
 
             <YouOweCard
                 isLoading={isLoading}
                 total={youOweTotal}
-                mainCurrency={mainCurrency}
+                defaultCurrency={defaultCurrency}
                 entries={oweEntries}
             />
         </Flex>
