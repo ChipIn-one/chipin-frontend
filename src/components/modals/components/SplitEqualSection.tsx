@@ -1,12 +1,10 @@
 import { Amount, UserAvatar } from 'basics';
-import Big from 'bignumber.js';
 import { LucideUsers } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Flex, Text } from '@radix-ui/themes';
 
 import { User } from 'api/chipin.types';
-import { tryToBig } from 'helpers/numbers';
 
 interface Props {
     members: User[];
@@ -17,10 +15,9 @@ interface Props {
 const SplitEqualSection = ({ members, totalAmount, currency }: Props) => {
     const { t } = useTranslation('group');
 
-    const totalBig = tryToBig(totalAmount) ?? Big(0);
+    const total = Number(totalAmount) || 0;
     const count = members.length;
-    const perPerson =
-        count > 0 ? totalBig.dividedBy(count).decimalPlaces(2, Big.ROUND_HALF_UP) : Big(0);
+    const perPerson = count > 0 ? Math.round((total / count) * 100) / 100 : 0;
 
     return (
         <Flex direction="column" gap="3">

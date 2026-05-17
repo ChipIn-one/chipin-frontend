@@ -1,4 +1,3 @@
-import Big from 'bignumber.js';
 import { LucideMinus, LucidePlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -6,7 +5,6 @@ import { Flex, IconButton, Text } from '@radix-ui/themes';
 
 import { User } from 'api/chipin.types';
 import { Amount, UserAvatar } from 'basics';
-import { tryToBig } from 'helpers/numbers';
 
 type AssignedState = 'exact' | 'under' | 'over';
 
@@ -29,20 +27,16 @@ const SplitAmountsSection = ({
 }: Props) => {
     const { t } = useTranslation('group');
 
-    const totalBig = tryToBig(totalAmount) ?? Big(0);
+    const total = Number(totalAmount) || 0;
 
-    const assignedBig = members.reduce((acc, member) => {
-        const share = tryToBig(amountShares[member.id]) ?? Big(0);
-        return acc.plus(share);
-    }, Big(0));
+    const assigned = members.reduce((acc, member) => {
+        return acc + (Number(amountShares[member.id]) || 0);
+    }, 0);
 
-    const differenceBig = totalBig.minus(assignedBig).abs();
+    const difference = Math.abs(total - assigned);
 
-    const assignedState: AssignedState = assignedBig.eq(totalBig)
-        ? 'exact'
-        : assignedBig.lt(totalBig)
-          ? 'under'
-          : 'over';
+    const assignedState: AssignedState =
+        assigned === total ? 'exact' : assigned < total ? 'under' : 'over';
 
     const assignedColor =
         assignedState === 'exact' ? 'jade' : assignedState === 'under' ? 'red' : 'amber';
@@ -57,20 +51,20 @@ const SplitAmountsSection = ({
                 </Text>
                 <Flex align="center" gap="1">
                     <Text size="2" weight="bold" color={assignedColor}>
-                        <Amount value={assignedBig} tokenCode={currency} />
+                        <Amount value={assigned} tokenCode={currency} />
                     </Text>
                     <Text size="2" color="gray">
                         /
                     </Text>
                     <Text size="2" weight="bold" color={assignedColor}>
-                        <Amount value={totalBig} tokenCode={currency} />
+                        <Amount value={total} tokenCode={currency} />
                     </Text>
                 </Flex>
             </Flex>
 
             {members.map(member => {
-                const shareBig = tryToBig(amountShares[member.id]) ?? Big(0);
-                const isDecrementDisabled = shareBig.lte(0);
+                const share = Number(amountShares[member.id]) || 0;
+                const isDecrementDisabled = share <= 0;
 
                 return (
                     <Flex key={member.id} justify="between" align="center">
@@ -95,7 +89,7 @@ const SplitAmountsSection = ({
                             <Flex justify="center" minWidth="48px">
                                 {/* toFixed(2) is used here for interactive stepper display only — not for API submission */}
                                 <Text size="2" weight="medium">
-                                    {shareBig.toFixed(2)}
+                                    {share.toFixed(2)}
                                 </Text>
                             </Flex>
                             <IconButton
@@ -121,7 +115,7 @@ const SplitAmountsSection = ({
                     weight="bold"
                     color={assignedState === 'exact' ? 'jade' : assignedColor}
                 >
-                    <Amount value={differenceBig} tokenCode={currency} />
+                    <Amount value={difference} tokenCode={currency} />
                 </Text>
             </Flex>
         </Flex>

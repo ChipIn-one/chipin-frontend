@@ -1,3 +1,4 @@
+import { LucideEye } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar, Box, Button, Card, Flex, Skeleton, Text } from '@radix-ui/themes';
@@ -20,7 +21,10 @@ export const GroupsCardsSkeleton = () => {
                     <Button>{t('summary.youOwe')}</Button>
                 </Skeleton>
                 <Skeleton>
-                    <Button>{t('groups.filterSettled')}</Button>
+                    <Button>
+                        <LucideEye size={14} />
+                        {t('groups.filterSettled')}
+                    </Button>
                 </Skeleton>
             </Flex>
             {Array.from({ length: SKELETON_COUNT }, (_, index) => (

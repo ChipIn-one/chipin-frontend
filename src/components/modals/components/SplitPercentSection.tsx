@@ -1,5 +1,4 @@
 import { Amount, UserAvatar } from 'basics';
-import Big from 'bignumber.js';
 import { LucideMinus, LucidePlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
@@ -8,7 +7,6 @@ import { Flex, IconButton, Text } from '@radix-ui/themes';
 
 import { User } from 'api/chipin.types';
 import { themeColor } from 'helpers/colors';
-import { tryToBig } from 'helpers/numbers';
 
 const ProgressBar = styled.div`
     height: 4px;
@@ -52,12 +50,9 @@ const SplitPercentSection = ({
 
     const isValidTotal = totalPercent === 100;
 
-    const totalBig = tryToBig(totalAmount) ?? Big(0);
+    const totalBig = Number(totalAmount) || 0;
     const currentUserPercent = currentUserId ? Number(percentShares[currentUserId]) || 0 : 0;
-    const yourShareBig = totalBig
-        .multipliedBy(currentUserPercent)
-        .dividedBy(100)
-        .decimalPlaces(2, Big.ROUND_HALF_UP);
+    const yourShare = Math.round(((totalBig * currentUserPercent) / 100) * 100) / 100;
 
     const totalColor = isValidTotal ? 'jade' : 'red';
 
@@ -133,7 +128,7 @@ const SplitPercentSection = ({
                         {t('expenses.modal.split.yourShare')}
                     </Text>
                     <Text size="2" weight="bold" color="jade">
-                        <Amount value={yourShareBig} tokenCode={currency} />
+                        <Amount value={yourShare} tokenCode={currency} />
                     </Text>
                 </Flex>
             )}
