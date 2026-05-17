@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
-import { Link as RouterLink, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 
 import { Box, Button, Container, Flex, IconButton, Link, Text } from '@radix-ui/themes';
@@ -24,7 +24,7 @@ import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { useUsersStore } from 'store/usersStore';
 
-import { EmptyRouteLink } from 'basics/EmptyRouteLink';
+import { NavButton } from 'basics/buttons';
 
 import Logotype from 'assets/logo.svg?react';
 
@@ -153,7 +153,7 @@ const Header = () => {
         <StickyBox>
             <Container size="4" p="4">
                 <Flex justify="between" align="center">
-                    <EmptyRouteLink to={isLoggedIn ? ROUTES.DASHBOARD : ROUTES.HOME}>
+                    <NavButton to={isLoggedIn ? ROUTES.DASHBOARD : ROUTES.HOME} unsetStyles>
                         <Flex gap="4" align="center" justify="center">
                             <StyledLogotype />
 
@@ -163,7 +163,7 @@ const Header = () => {
                                 </Text>
                             </Box>
                         </Flex>
-                    </EmptyRouteLink>
+                    </NavButton>
 
                     {isLoggedIn && <HeaderNav />}
                     {isLandingPage && <LandingNav />}
@@ -173,9 +173,9 @@ const Header = () => {
                         {isLoggedIn ? (
                             <Flex gap="4" align="center">
                                 <Box display={{ initial: 'none', sm: 'block' }}>
-                                    <RouterLink to={ROUTES.SETTINGS}>
+                                    <NavButton to={ROUTES.SETTINGS} variant="ghost" radius="full">
                                         <UserAvatar size="3" user={user ?? undefined} />
-                                    </RouterLink>
+                                    </NavButton>
                                 </Box>
                             </Flex>
                         ) : isLandingPage ? (

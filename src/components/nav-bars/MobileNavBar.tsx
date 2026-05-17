@@ -1,11 +1,12 @@
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 
-import { Box, Button, Flex, Text } from '@radix-ui/themes';
+import { Box, Flex, Text } from '@radix-ui/themes';
 
 import { ROUTES } from 'constants/routes';
 
+import { NavButton } from 'basics/buttons';
 import AddExpenseButton from 'components/AddExpenseButton';
 
 import { NAV_ELEMENTS } from './constants';
@@ -38,17 +39,12 @@ const CenterAction = styled(Box)`
     z-index: 2;
 `;
 
-const NavLink = styled(Link)`
-    display: block;
-    height: 100%;
-`;
-
 const NavItems = styled(Flex)`
     width: 100%;
     align-items: end;
 `;
 
-const NavButton = styled(Button)`
+const MobileNavItemButton = styled(NavButton)`
     width: 100%;
     min-height: var(--space-9);
     box-shadow: none;
@@ -65,21 +61,20 @@ const MobileNavBar = () => {
 
         return (
             <Box key={href} flexGrow="1">
-                <NavLink to={href}>
-                    <NavButton
-                        color="green"
-                        radius="none"
-                        variant={isActive ? 'solid' : 'surface'}
-                        {...(!isActive && { color: 'gray' })}
-                    >
-                        <Flex direction="column" align="center" justify="center" gap="1" py="1">
-                            <Icon size={20} />
-                            <Text size="1" {...(!isActive && { color: 'gray' })}>
-                                {t(labelKey)}
-                            </Text>
-                        </Flex>
-                    </NavButton>
-                </NavLink>
+                <MobileNavItemButton
+                    to={href}
+                    color="green"
+                    radius="none"
+                    variant={isActive ? 'solid' : 'surface'}
+                    {...(!isActive && { color: 'gray' })}
+                >
+                    <Flex direction="column" align="center" justify="center" gap="1" py="1">
+                        <Icon size={20} />
+                        <Text size="1" {...(!isActive && { color: 'gray' })}>
+                            {t(labelKey)}
+                        </Text>
+                    </Flex>
+                </MobileNavItemButton>
             </Box>
         );
     };

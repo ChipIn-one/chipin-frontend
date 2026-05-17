@@ -1,6 +1,6 @@
 import { LucideChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import styled from 'styled-components';
 
 import { Card, Flex, Text } from '@radix-ui/themes';
 
@@ -10,7 +10,13 @@ import { selectGroupNonZeroBalances } from 'store/groupsSelectors';
 import { useGroupsStore } from 'store/groupsStore';
 
 import BalanceSummaryText from 'basics/BalanceSummaryText';
+import { NavButton } from 'basics/buttons';
 import GroupAvatar from 'components/GroupAvatar';
+
+const GroupNavButton = styled(NavButton)`
+    display: block;
+    width: 100%;
+`;
 
 interface Props {
     group: Group;
@@ -23,8 +29,12 @@ const GroupCard: React.FC<Props> = ({ group }) => {
     const balances = selectGroupNonZeroBalances(group);
 
     return (
-        <Card asChild size="1">
-            <Link to={`${ROUTES.GROUP}/${group.id}`} onClick={() => setSelectedGroup(group)}>
+        <GroupNavButton
+            to={`${ROUTES.GROUP}/${group.id}`}
+            unsetStyles
+            onClick={() => setSelectedGroup(group)}
+        >
+            <Card size="1">
                 <Flex gap="3" align="center">
                     <GroupAvatar group={group} size="5" />
 
@@ -45,8 +55,8 @@ const GroupCard: React.FC<Props> = ({ group }) => {
                         <LucideChevronRight size={20} />
                     </Flex>
                 </Flex>
-            </Link>
-        </Card>
+            </Card>
+        </GroupNavButton>
     );
 };
 

@@ -3,7 +3,6 @@ import BackgroundBox from './BackgroundBox';
 import BalanceBadges from './BalanceBadges';
 import BalanceSummaryText from './BalanceSummaryText';
 import ChipInLoader from './ChipInLoader';
-import CopyButton from './CopyButton';
 import {
     EmptyState,
     NoActivityEmptyState,
@@ -27,7 +26,6 @@ export {
     BalanceBadges,
     BalanceSummaryText,
     ChipInLoader,
-    CopyButton,
     EmptyState,
     GroupRoleBadge,
     Image,

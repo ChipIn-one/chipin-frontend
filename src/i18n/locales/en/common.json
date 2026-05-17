@@ -88,5 +88,10 @@
         "activity": "Activity",
         "friends": "Friends",
         "settings": "Settings"
+    },
+    "page404": {
+        "title": "Oops!",
+        "subtitle": "Looks like you're lost",
+        "goHome": "Back to Home"
     }
 }

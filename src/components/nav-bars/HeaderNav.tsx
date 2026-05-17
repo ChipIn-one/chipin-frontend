@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
-import { Box, Button, Flex, Text } from '@radix-ui/themes';
+import { Box, Flex, Text } from '@radix-ui/themes';
+
+import { NavButton } from 'basics/buttons';
 
 import { NAV_ELEMENTS } from './constants';
 
@@ -17,14 +19,18 @@ const HeaderNav = () => {
                         location.pathname === href || location.pathname.startsWith(`${href}/`);
 
                     return (
-                        <Link key={href} to={href}>
-                            <Button variant="ghost" size="3" {...(!isActive && { color: 'gray' })}>
-                                <Icon size={24} />
-                                <Text size="2" weight="bold">
-                                    {t(labelKey)}
-                                </Text>
-                            </Button>
-                        </Link>
+                        <NavButton
+                            key={href}
+                            to={href}
+                            variant="ghost"
+                            size="3"
+                            {...(!isActive && { color: 'gray' })}
+                        >
+                            <Icon size={24} />
+                            <Text size="2" weight="bold">
+                                {t(labelKey)}
+                            </Text>
+                        </NavButton>
                     );
                 })}
             </Flex>
