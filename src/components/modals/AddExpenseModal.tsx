@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
 import { AmountInput, UserAvatar } from 'basics';
-import Big from 'bignumber.js';
 import { LucideChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
@@ -10,11 +9,10 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { Button, Card, Flex, Grid, Text, TextField } from '@radix-ui/themes';
 
-import { User, SharingMode } from 'api/chipin.types';
+import { SharingMode, User } from 'api/chipin.types';
 import { EXPENSE_CATEGORIES, ExpenseCategory } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
 import { themeColor } from 'helpers/colors';
-import { tryToBig } from 'helpers/numbers';
 import { getUnixTimestampInSec } from 'helpers/time';
 import { useActivityStore } from 'store/activityStore';
 import { useGroupsStore } from 'store/groupsStore';
@@ -122,12 +120,9 @@ const AddExpenseModal = ({ children, context }: Props) => {
     const [amountShares, setAmountShares] = useState<Record<string, string>>({});
 
     const selectedExpenseGroup = groups.find(group => group.id === groupId) || defaultGroup;
-    const friendsMembers = user
-        ? [user, ...friends.filter(friend => friend.id !== user.id)]
-        : friends;
     const isFriendsTab = activeTab === 'friends';
     const groupMembers = selectedExpenseGroup?.members || [];
-    const resolvedMembers = isFriendsTab ? friendsMembers : groupMembers;
+    const resolvedMembers = isFriendsTab ? friends.map(f => f.user) : groupMembers;
     const orderedMembers = getOrderedMembers(resolvedMembers);
 
     const paidByMember = orderedMembers.find(member => member.id === paidById);
@@ -157,11 +152,11 @@ const AddExpenseModal = ({ children, context }: Props) => {
         if (count === 0) {
             return {};
         }
-        const totalBig = tryToBig(totalAmount);
-        if (!totalBig) {
+        const total = Number(totalAmount);
+        if (!total || isNaN(total)) {
             return Object.fromEntries(members.map(member => [member.id, '0']));
         }
-        const perPerson = totalBig.dividedBy(count).decimalPlaces(2, Big.ROUND_HALF_UP);
+        const perPerson = Math.round((total / count) * 100) / 100;
         return Object.fromEntries(members.map(member => [member.id, perPerson.toFixed(2)]));
     };
 
@@ -193,7 +188,7 @@ const AddExpenseModal = ({ children, context }: Props) => {
 
     const getMembersByTab = (tab: ExpenseTab, nextGroupId: string) => {
         if (tab === 'friends') {
-            return friendsMembers;
+            return friends.map(f => f.user);
         }
 
         const nextGroup = groups.find(group => group.id === nextGroupId) || defaultGroup;
@@ -270,10 +265,9 @@ const AddExpenseModal = ({ children, context }: Props) => {
 
     const handleAmountChange = (userId: string, delta: number) => {
         setAmountShares(prev => {
-            const currentBig = tryToBig(prev[userId]) ?? Big(0);
-            const nextBig = currentBig.plus(delta).decimalPlaces(2, Big.ROUND_HALF_UP);
-            const safeBig = nextBig.lt(0) ? Big(0) : nextBig;
-            return { ...prev, [userId]: safeBig.toFixed(2) };
+            const current = Number(prev[userId]) || 0;
+            const next = Math.round(Math.max(0, current + delta) * 100) / 100;
+            return { ...prev, [userId]: next.toFixed(2) };
         });
     };
 
@@ -328,12 +322,11 @@ const AddExpenseModal = ({ children, context }: Props) => {
     );
     const isPercentSplitValid = splitMode !== 'percent' || totalPercentShares === 100;
 
-    const totalAmountSharesBig = orderedMembers.reduce((acc, member) => {
-        return acc.plus(tryToBig(amountShares[member.id]) ?? Big(0));
-    }, Big(0));
-    const totalBigForValidation = tryToBig(amount) ?? Big(0);
+    const totalAmountShares = orderedMembers.reduce((acc, member) => {
+        return acc + (Number(amountShares[member.id]) || 0);
+    }, 0);
     const isAmountSplitValid =
-        splitMode !== 'amounts' || totalAmountSharesBig.eq(totalBigForValidation);
+        splitMode !== 'amounts' || Math.abs(totalAmountShares - Number(amount)) < 0.001;
 
     const isSubmitDisabled =
         !description.trim() ||

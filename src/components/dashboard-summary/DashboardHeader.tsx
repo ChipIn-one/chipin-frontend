@@ -15,7 +15,7 @@ const DashboardHeader: React.FC = () => {
     const user = useUsersStore(s => s.user);
 
     return (
-        <Box mb="4" display={{ initial: 'none', sm: 'block' }}>
+        <Box mb="4">
             <Flex justify="between" align="center" mb={{ initial: '0', sm: '4' }} gap="2">
                 <Box>
                     <Skeleton loading={isUserLoading} width="180px" height="var(--space-5)">

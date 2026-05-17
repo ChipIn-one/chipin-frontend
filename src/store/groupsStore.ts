@@ -251,7 +251,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                         group.id === selectedGroup.id ? updatedSelectedGroup : group,
                     ),
                     selectedGroup: updatedSelectedGroup,
-                    ...computeGroupSummary(updatedSelectedGroup.balances, base, rates),
+                    ...calcGroupSummary(updatedSelectedGroup.balances, base, rates),
                 });
 
                 return kickedMember.displayName;
@@ -270,7 +270,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 set({
                     groups: [...groups, joinedGroup],
                     selectedGroup: joinedGroup,
-                    ...computeGroupSummary(joinedGroup.balances, base, rates),
+                    ...calcGroupSummary(joinedGroup.balances, base, rates),
                 });
                 return joinedGroup;
             })
