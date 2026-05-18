@@ -7,7 +7,7 @@ import { Box, Button, Card, Flex, Text } from '@radix-ui/themes';
 import { STORAGE_SW_UPDATE_DISMISSED_AT_KEY } from 'constants/localstorage';
 import { HOUR } from 'constants/time';
 import { TOASTS_IDS } from 'constants/toasts';
-import { storage } from 'helpers/localStorage';
+import { LocalStorage } from 'helpers/localStorage';
 import { usePwaStore } from 'store/pwaStore';
 const UPDATE_DISMISS_TTL_MS = 4 * HOUR;
 
@@ -34,12 +34,12 @@ let currentWaitingWorker: ServiceWorker | null = null;
 // ─── TTL helpers ─────────────────────────────────────────────────────────────
 
 const isUpdateTTLExpired = (): boolean => {
-    const dismissedAt = storage.get(STORAGE_SW_UPDATE_DISMISSED_AT_KEY, 0);
+    const dismissedAt = LocalStorage.get(STORAGE_SW_UPDATE_DISMISSED_AT_KEY, 0);
     return dismissedAt === 0 || Date.now() - dismissedAt >= UPDATE_DISMISS_TTL_MS;
 };
 
 const recordDismissTime = (): void => {
-    storage.set(STORAGE_SW_UPDATE_DISMISSED_AT_KEY, Date.now());
+    LocalStorage.set(STORAGE_SW_UPDATE_DISMISSED_AT_KEY, Date.now());
 };
 
 // ─── SW activation ───────────────────────────────────────────────────────────

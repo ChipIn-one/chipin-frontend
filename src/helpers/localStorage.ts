@@ -6,7 +6,7 @@ type StorageSchema = {
 
 type StorageKey = keyof StorageSchema;
 
-const storage = {
+const LocalStorage = {
     get<K extends StorageKey>(key: K, fallback: StorageSchema[K]): StorageSchema[K] {
         try {
             const raw = localStorage.getItem(key);
@@ -42,7 +42,15 @@ const storage = {
             // ignore
         }
     },
+
+    getRaw(key: StorageKey): string | null {
+        try {
+            return localStorage.getItem(key);
+        } catch {
+            return null;
+        }
+    },
 };
 
-export { storage };
+export { LocalStorage };
 export type { StorageKey, StorageSchema };

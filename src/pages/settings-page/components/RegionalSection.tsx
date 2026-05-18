@@ -4,8 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Avatar, Box, Card, Flex, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
 
-import { STORAGE_LOCALE_KEY } from 'constants/localstorage';
-import { storage, StorageSchema } from 'helpers/localStorage';
+import { onChangeLocale, SUPPORTED_LOCALES, SupportedLocale } from 'helpers/locale';
 
 import CurrencySelect from 'components/CurrencySelect';
 import SegmentedControl from 'components/SegmentedControl';
@@ -22,9 +21,6 @@ const TIMEZONE_OPTIONS = [
     'America/New_York',
     'America/Los_Angeles',
 ];
-
-const LANGUAGE_OPTIONS = ['en', 'ru', 'es', 'pt-BR', 'pt-PT'] as const;
-type LanguageOption = (typeof LANGUAGE_OPTIONS)[number];
 
 interface Props {
     isLoading: boolean;
@@ -47,10 +43,10 @@ const RegionalSection = ({ isLoading }: Props) => {
         timeZone: effectiveTimezone,
     });
 
-    const selectedLanguage: LanguageOption = LANGUAGE_OPTIONS.includes(
-        i18n.language as LanguageOption,
+    const selectedLanguage: SupportedLocale = SUPPORTED_LOCALES.includes(
+        i18n.language as SupportedLocale,
     )
-        ? (i18n.language as LanguageOption)
+        ? (i18n.language as SupportedLocale)
         : 'en';
 
     const handleTimezoneAutoChange = (checked: boolean) => {
@@ -65,8 +61,7 @@ const RegionalSection = ({ isLoading }: Props) => {
     };
 
     const handleLanguageChange = (value: string) => {
-        void i18n.changeLanguage(value);
-        storage.set(STORAGE_LOCALE_KEY, value as StorageSchema['locale']);
+        onChangeLocale(value as SupportedLocale);
     };
 
     return (
@@ -198,7 +193,7 @@ const RegionalSection = ({ isLoading }: Props) => {
                         </Skeleton>
                         <Box mt="2">
                             <Select
-                                items={LANGUAGE_OPTIONS.map(option => {
+                                items={SUPPORTED_LOCALES.map(option => {
                                     return {
                                         value: option,
                                         label: t(`language.options.${option}`),
