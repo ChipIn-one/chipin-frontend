@@ -59,15 +59,22 @@ Responsibilities:
 - ask clarifying questions
 - produce execution plan
 
+MANDATORY (HARD):
+
+- ALWAYS ask clarifying questions before producing the execution plan, even if requirements seem clear
+- No execution plan may be produced in the same response as initial request interpretation
+- Clarifying questions MUST be answered by the user before proceeding to plan
+
 FORBIDDEN:
 
 - writing code
 - implementing features
 - skipping unclear requirements
+- producing an execution plan without first receiving answers to clarifying questions
 
 OUTPUT:
 
-## QUESTIONS (if needed)
+## QUESTIONS (required — always present)
 
 ...
 

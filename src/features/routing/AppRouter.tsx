@@ -16,7 +16,7 @@ const GroupPage = lazy(() => import('pages/group-page/GroupPage'));
 const ActivityPage = lazy(() => import('pages/ActivityPage'));
 const FriendsPage = lazy(() => import('pages/friends-page/'));
 const SettingsPage = lazy(() => import('pages/settings-page/'));
-const Page404 = lazy(() => import('pages/Page404'));
+const Page404 = lazy(() => import('pages/404-page'));
 
 const AppRouter = () => {
     return (
