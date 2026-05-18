@@ -88,5 +88,10 @@
         "activity": "Atividade",
         "friends": "Amigos",
         "settings": "Definições"
+    },
+    "noDebtsTitle": "Tudo acertado",
+    "noDebtsDescription": "Não deve nada a ninguém e ninguém lhe deve.",
+    "amount": {
+        "notInteger": "O valor não é inteiro!"
     }
 }

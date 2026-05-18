@@ -3,7 +3,7 @@ import i18n from 'i18n';
 import { toast } from 'sonner';
 import { registerSW } from 'virtual:pwa-register';
 
-import { initServiceWorkerUpdates } from 'helpers/swUpdates';
+import { cleanupServiceWorkerUpdates, initServiceWorkerUpdates } from 'helpers/swUpdates';
 
 // TODO: move it out of basics and rename to something like ServiceWorkerManager or similar, as it also handles SW updates and not only registration
 const PWABadge = () => {
@@ -22,6 +22,10 @@ const PWABadge = () => {
         // waiting-worker check, updatefound listener, visibilitychange
         // re-notification, and hourly periodic poll.
         initServiceWorkerUpdates();
+
+        return () => {
+            cleanupServiceWorkerUpdates();
+        };
     }, []);
 
     return null;

@@ -8,12 +8,14 @@ import { selectDashboardFetched, selectDashboardLoading } from 'store/loadingSel
 import { useLoadingStore } from 'store/loadingStore';
 
 import { NoGroupsEmptyState } from 'basics/empty-states';
-import DashboardGreeting from 'components/dashboard-summary/DashboardHeader';
-import DashBoardSummary from 'components/dashboard-summary/DashboardSummary';
+import {
+    DashboardHeader as DashboardGreeting,
+    DashboardSummary as DashBoardSummary,
+} from 'components/dashboard-summary';
 import GroupsCards from 'components/GroupsCards';
 import GroupsSectionHeader from 'components/GroupsSectionHeader';
 import { CreateUpdateGroupModal } from 'components/modals';
-import MobileNavBar from 'components/nav-bars/MobileNavBar';
+import { MobileNavBar } from 'components/nav-bars';
 import { ActivityFeedSkeleton } from 'components/skeletons';
 
 const DashboardPage = () => {

@@ -15,7 +15,7 @@ const Img = styled.img<{ width: string; height: string }>`
     object-fit: contain;
 `;
 
-const Emptyimg = styled.div<{ width: string; height: string }>`
+const EmptyImg = styled.div<{ width: string; height: string }>`
     display: flex;
     justify-content: center;
     align-items: center;
@@ -35,9 +35,9 @@ const Image: FC<Props> = ({
 
     if (isError || !src) {
         return (
-            <Emptyimg width={width} height={height} className={className} {...props}>
+            <EmptyImg width={width} height={height} className={className} {...props}>
                 No image
-            </Emptyimg>
+            </EmptyImg>
         );
     }
 

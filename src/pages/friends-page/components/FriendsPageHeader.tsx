@@ -17,7 +17,7 @@ const FriendsPageHeader = ({ isLoading }: Props) => {
                     <Avatar
                         size={{ initial: '4', sm: '5' }}
                         color="cyan"
-                        fallback={<LucideUsers size={28} />}
+                        fallback={<LucideUsers size={32} />}
                     />
                 </Skeleton>
                 <Box>

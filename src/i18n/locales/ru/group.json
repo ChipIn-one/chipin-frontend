@@ -166,7 +166,7 @@
             "simplifyDebtsSubtitle": "Минимизировать количество транзакций"
         },
         "balances": {
-            "settled": "Расчёт выполнен",
+            "settled": "Долгов нет",
             "empty": "Балансов пока нет."
         },
         "membersTab": {

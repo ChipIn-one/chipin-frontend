@@ -51,12 +51,51 @@ export interface ApiActivityItemsResponse {
     nextCursor: number | null;
 }
 
-export interface ApiKnownUserBalanceEntry {
-    currency: string;
-    amount: number;
-}
-
 export interface ApiFriendResponse {
     user: ApiUserResponse;
     balances: BalancesMap;
+}
+
+export interface ApiParticipantShare {
+    userId: string;
+    shareAmount: number;
+    currency: string;
+}
+
+export interface ApiExpenseDetails {
+    id: string;
+    description: string;
+    amount: number;
+    currency: string;
+    date: number;
+    payer: ApiUserResponse;
+    groupId: string;
+    participants: ApiUserResponse[];
+    participantShares: ApiParticipantShare[];
+    category: string;
+    creator: ApiUserResponse;
+    createdAt: number;
+    updatedAt: number;
+}
+
+export interface ApiSettlementDetails {
+    id: string;
+    fromUser: ApiUserResponse;
+    toUser: ApiUserResponse;
+    amount: number;
+    currency: string;
+    settledAt: number;
+    scope: string;
+    groupId: string;
+}
+
+export interface ApiLedgerEntryResponse {
+    id: string;
+    type: 'EXPENSE' | 'SETTLEMENT';
+    scope: string;
+    groupId: string;
+    expense: ApiExpenseDetails | null;
+    settlement: ApiSettlementDetails | null;
+    createdAt: number;
+    updatedAt: number;
 }

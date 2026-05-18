@@ -6,14 +6,11 @@
         "emptyTitle": "Пока нет групп",
         "emptyDescription": "Создай первую группу, чтобы начать делить расходы с друзьями, соседями или в поездках.",
         "filterAll": "Все",
-        "filterSettled": "Погашены",
-        "showSettled": "Показать погашенные группы ({{count}})",
-        "hideSettled": "Снова скрыть погашенные",
+        "filterSettled": "Рассчитано",
         "filterEmptyTitle": "Группы не найдены",
         "filterEmptyDescription": "Нет групп, соответствующих выбранному фильтру."
     },
     "groupsCard": {
-        "statusOwed": "Тебе должны",
         "members_one": "{{count}} участник",
         "members_few": "{{count}} участника",
         "members_many": "{{count}} участников",
@@ -22,8 +19,8 @@
     "summary": {
         "totalBalance": "Общий баланс",
         "totalAcrossGroupsAndFriends": "По группам и друзьям",
-        "owedToYou": "Тебе должны",
-        "youOwe": "Ты должен"
+        "owedToYou": "Вам должны",
+        "youOwe": "Вы должны"
     },
     "header": {
         "greeting": "Привет, {{name}}",

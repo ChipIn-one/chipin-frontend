@@ -8,6 +8,7 @@ import { getAuthTokenDB } from 'store/IDB/auth';
 
 import type {
     ApiActivityItemsResponse,
+    ApiLedgerEntryResponse,
     ApiRemoveGroupResponse,
     ApiUserResponse,
     CreateGroupParams,
@@ -169,22 +170,22 @@ export const createApiExpense = async ({
     groupId,
     description,
     amount,
-    unixTimestamp,
+    date,
     payerId,
     participantIds,
     currency,
     category,
     sharingMode,
-}: CreateLedgerEntryParams) => {
+}: CreateLedgerEntryParams): Promise<ApiLedgerEntryResponse> => {
     const resolvedSharingMode: SharingMode = sharingMode ?? { type: 'AUTO' };
 
     const response = await apiInstance.post('/ledger/entries', {
         type: 'EXPENSE',
-        groupId,
+        ...(groupId && { groupId }),
         expense: {
             description,
-            amount: String(amount),
-            date: unixTimestamp,
+            amount,
+            date,
             payerId,
             participantIds,
             currency,

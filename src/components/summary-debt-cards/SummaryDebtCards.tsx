@@ -2,6 +2,8 @@ import { Flex } from '@radix-ui/themes';
 
 import { BalanceEntry } from 'api/chipin.raw.types';
 
+import { NoDebtsEmptyState } from 'basics/empty-states';
+
 import OwedToYouCard from './OwedToYouCard';
 import YouOweCard from './YouOweCard';
 
@@ -24,6 +26,7 @@ const SummaryDebtCards: React.FC<Props> = ({
 }) => {
     return (
         <Flex direction="column" gap="4" mb="4">
+            {!owedEntries.length && !oweEntries.length && !isLoading && <NoDebtsEmptyState />}
             <OwedToYouCard
                 isLoading={isLoading}
                 total={owedToYouTotal}

@@ -209,6 +209,12 @@ const observeInstalling = (
     });
 };
 
+/** Bound visibilitychange handler — stored so it can be removed on cleanup. */
+let visibilityHandler: (() => Promise<void>) | null = null;
+
+/** Periodic poll interval id — stored so it can be cleared on cleanup. */
+let periodicPollId: ReturnType<typeof setInterval> | null = null;
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -259,7 +265,7 @@ export const initServiceWorkerUpdates = async (): Promise<void> => {
     });
 
     // Phase 3 — re-check on tab focus after a potential cooldown expiry.
-    document.addEventListener('visibilitychange', async () => {
+    visibilityHandler = async () => {
         if (document.visibilityState !== 'visible') {
             return;
         }
@@ -273,10 +279,12 @@ export const initServiceWorkerUpdates = async (): Promise<void> => {
         }
 
         checkShowUpdateToast(registration);
-    });
+    };
+
+    document.addEventListener('visibilitychange', visibilityHandler);
 
     // Phase 4 — hourly poll for apps left open across background sessions.
-    setInterval(async () => {
+    periodicPollId = setInterval(async () => {
         if (!navigator.onLine) {
             return;
         }
@@ -287,4 +295,18 @@ export const initServiceWorkerUpdates = async (): Promise<void> => {
             // Ignore network errors during periodic checks.
         }
     }, HOUR);
+};
+
+export const cleanupServiceWorkerUpdates = (): void => {
+    if (visibilityHandler) {
+        document.removeEventListener('visibilitychange', visibilityHandler);
+        visibilityHandler = null;
+    }
+
+    if (periodicPollId !== null) {
+        clearInterval(periodicPollId);
+        periodicPollId = null;
+    }
+
+    isInitialized = false;
 };

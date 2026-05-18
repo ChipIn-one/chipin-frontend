@@ -1,10 +1,12 @@
 // HomePage.tsx
 import Footer from 'components/Footer';
-import CtaSection from 'features/landing/CtaSection';
-import FeaturesSection from 'features/landing/FeaturesSection';
-import HeroSection from 'features/landing/HeroSection';
-import HowItWorksSection from 'features/landing/HowItWorksSection';
-import ShowcaseSections from 'features/landing/ShowcaseSections';
+import {
+    CtaSection,
+    FeaturesSection,
+    HeroSection,
+    HowItWorksSection,
+    ShowcaseSections,
+} from 'features/landing';
 
 const HomePage = () => {
     return (

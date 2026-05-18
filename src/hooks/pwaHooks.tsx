@@ -18,15 +18,14 @@ export const useCheckOnlineStatus = () => {
     const { online } = useNetworkState();
 
     useEffect(() => {
-        // Fired when connection is lost
-        if (!online) {
+        if (online === false) {
             toast.warning(i18n.t('toasts:common.disconnect'), {
                 id: TOASTS_IDS.connectionStatus,
                 icon: <Spinner size="1" />,
                 description: i18n.t('toasts:common.disconnectDescription'),
                 duration: Infinity,
             });
-        } else {
+        } else if (online === true) {
             toast.dismiss(TOASTS_IDS.connectionStatus);
             toast.success(i18n.t('toasts:common.reconnected'));
         }
@@ -34,23 +33,27 @@ export const useCheckOnlineStatus = () => {
 };
 
 export const useCheckPwa = () => {
-    const { setIsPwaCanBeInstalled, setPwaInstallPrompt } = usePwaStore();
+    const { setIsPwaInstallable, setIsPwaInstalled, setPwaInstallPrompt } = usePwaStore();
 
-    const setPwaInstalledToState = () => {
-        setIsPwaCanBeInstalled(true);
+    const handleAppInstalled = () => {
+        setIsPwaInstalled(true);
+        setIsPwaInstallable(false);
+        setPwaInstallPrompt(null);
     };
 
     const handleBeforeInstallPrompt = (e: BeforeInstallPromptEvent) => {
+        e.preventDefault();
         setPwaInstallPrompt(e);
+        setIsPwaInstallable(true);
     };
 
     useEffect(() => {
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-        window.addEventListener('appinstalled', setPwaInstalledToState);
+        window.addEventListener('appinstalled', handleAppInstalled);
 
         return () => {
             window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-            window.removeEventListener('appinstalled', setPwaInstalledToState);
+            window.removeEventListener('appinstalled', handleAppInstalled);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);

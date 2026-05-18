@@ -276,7 +276,10 @@ const AddExpenseModal = ({ children, context }: Props) => {
             return {
                 type: 'PERCENTAGE',
                 percentageShares: Object.fromEntries(
-                    orderedMembers.map(member => [member.id, percentShares[member.id] ?? '0']),
+                    orderedMembers.map(member => [
+                        member.id,
+                        Number(percentShares[member.id] ?? 0),
+                    ]),
                 ),
             };
         }
@@ -284,7 +287,7 @@ const AddExpenseModal = ({ children, context }: Props) => {
             return {
                 type: 'EXACT',
                 customShares: Object.fromEntries(
-                    orderedMembers.map(member => [member.id, amountShares[member.id] ?? '0']),
+                    orderedMembers.map(member => [member.id, Number(amountShares[member.id] ?? 0)]),
                 ),
             };
         }
@@ -294,10 +297,10 @@ const AddExpenseModal = ({ children, context }: Props) => {
     const onAddExpense = () => {
         const params = {
             payerId: paidById,
-            groupId: groupId,
+            ...(isFriendsTab ? {} : { groupId }),
             description: description,
-            amount: amount,
-            unixTimestamp: getUnixTimestampInSec(),
+            amount: Number(amount),
+            date: getUnixTimestampInSec(),
             participantIds: orderedMembers.map(member => member.id),
             currency: currency,
             category: category,

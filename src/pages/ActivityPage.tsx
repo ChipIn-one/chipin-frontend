@@ -6,7 +6,7 @@ import { useActivityStore } from 'store/activityStore';
 import { selectActivityFetched } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
-import MobileNavBar from 'components/nav-bars/MobileNavBar';
+import { MobileNavBar } from 'components/nav-bars';
 import Activity from 'features/activity';
 
 const ActivityPage = () => {

@@ -10,7 +10,7 @@ export const GroupsCardsSkeleton = () => {
 
     return (
         <Flex direction="column" gap="4">
-            <Flex gap="2">
+            <Flex gap="2" wrap="wrap">
                 <Skeleton>
                     <Button>{t('groups.filterAll')}</Button>
                 </Skeleton>

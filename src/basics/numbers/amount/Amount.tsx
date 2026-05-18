@@ -1,4 +1,5 @@
 import { FC, ReactNode, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
 import { BaseProps } from '../duck/types';
@@ -31,6 +32,7 @@ const Amount: FC<Props> = ({
     className,
     onClick,
 }) => {
+    const { t } = useTranslation('common');
     const { isInteger } = getAmountTypesBool(type);
 
     const { amountPart, amountString, bigAmount, postfix, prefixLess, prefixSymbol, zerosPart } =
@@ -48,7 +50,7 @@ const Amount: FC<Props> = ({
         );
 
     if (isInteger && !Number.isInteger(value.toNumber())) {
-        return 'Value is not integer!';
+        return t('amount.notInteger');
     }
 
     return (

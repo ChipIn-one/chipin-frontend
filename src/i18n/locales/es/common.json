@@ -88,5 +88,10 @@
         "activity": "Actividad",
         "friends": "Amigos",
         "settings": "Configuración"
+    },
+    "noDebtsTitle": "Todo saldado",
+    "noDebtsDescription": "No le debes nada a nadie y nadie te debe a ti.",
+    "amount": {
+        "notInteger": "¡El valor no es entero!"
     }
 }

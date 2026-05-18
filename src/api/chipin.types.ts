@@ -9,9 +9,13 @@ import type {
 export type {
     ApiActivityItemsResponse,
     ApiDashboardResponse,
+    ApiExpenseDetails,
     ApiFriendResponse,
     ApiGroupResponse,
+    ApiLedgerEntryResponse,
+    ApiParticipantShare,
     ApiRemoveGroupResponse,
+    ApiSettlementDetails,
     ApiUserResponse,
 } from './chipin.raw.types';
 

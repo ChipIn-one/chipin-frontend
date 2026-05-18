@@ -1,4 +1,4 @@
-import { LucideArrowRight, LucideCheckCircle } from 'lucide-react';
+import { LucideArrowRight, LucideCheckCircle, LucideDownload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
@@ -15,6 +15,7 @@ import {
 } from '@radix-ui/themes';
 
 import { themeColor } from 'helpers/colors';
+import { useAppNavigate } from 'hooks/useAppNavigate';
 import { usePwaStore } from 'store/pwaStore';
 
 import { AuthModal } from 'components/modals';
@@ -31,7 +32,9 @@ const CtaCard = styled(Card)`
 
 const CtaSection = () => {
     const { t } = useTranslation('landing');
-    const isPwaCanBeInstalled = usePwaStore(s => s.isPwaCanBeInstalled);
+    const navigate = useAppNavigate();
+    const isPwaInstalled = usePwaStore(s => s.isPwaInstalled);
+    const pwaInstallPrompt = usePwaStore(s => s.pwaInstallPrompt);
     const { callPWAInstall } = usePwaStore();
 
     const bullets = [
@@ -72,22 +75,33 @@ const CtaSection = () => {
                                     <LucideArrowRight />
                                 </Button>
                             </AuthModal>
-                            {/* TODO: Install app/open app based on pwa or nothing  */}
-                            {!isPwaCanBeInstalled ? (
+                            {isPwaInstalled ? (
+                                <Button
+                                    size="4"
+                                    variant="soft"
+                                    color="gray"
+                                    onClick={() => navigate('/dashboard')}
+                                >
+                                    {t('cta.openApp')}
+                                </Button>
+                            ) : pwaInstallPrompt !== null ? (
                                 <Button
                                     size="4"
                                     variant="soft"
                                     color="gray"
                                     onClick={callPWAInstall}
                                 >
-                                    {t('cta.openApp')}
+                                    {t('common:buttons.installApp')}
+                                    <LucideDownload />
                                 </Button>
                             ) : (
-                                <AuthModal>
-                                    <Button size="4" variant="soft" color="gray">
-                                        {t('cta.openApp')}
-                                    </Button>
-                                </AuthModal>
+                                !isPwaInstalled && (
+                                    <AuthModal>
+                                        <Button size="4" variant="soft" color="gray">
+                                            {t('cta.openApp')}
+                                        </Button>
+                                    </AuthModal>
+                                )
                             )}
                         </Flex>
 

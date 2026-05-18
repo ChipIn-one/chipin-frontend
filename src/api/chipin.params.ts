@@ -33,15 +33,15 @@ export type SharingModeType = 'AUTO' | 'EXACT' | 'PERCENTAGE';
 
 export interface SharingMode {
     type: SharingModeType;
-    customShares?: Record<string, string>;
-    percentageShares?: Record<string, string>;
+    customShares?: Record<string, number>;
+    percentageShares?: Record<string, number>;
 }
 
 export interface CreateLedgerEntryParams {
-    groupId: string;
+    groupId?: string;
     description: string;
-    amount: string | number;
-    unixTimestamp: number;
+    amount: number;
+    date: number;
     payerId: string;
     participantIds: string[];
     currency: string;

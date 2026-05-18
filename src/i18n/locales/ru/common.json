@@ -43,7 +43,7 @@
         "youOwed": "вам должны",
         "youOwe": "вы должны",
         "youAreOwed": "Вам должны",
-        "settledUp": "Расчёт выполнен"
+        "settledUp": "Долгов нет"
     },
     "header": {
         "signIn": "Войти",
@@ -88,5 +88,10 @@
         "activity": "Активность",
         "friends": "Друзья",
         "settings": "Настройки"
+    },
+    "noDebtsTitle": "Всё рассчитано",
+    "noDebtsDescription": "Вы никому не должны, и вам никто не должен.",
+    "amount": {
+        "notInteger": "Значение не является целым числом!"
     }
 }

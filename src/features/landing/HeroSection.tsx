@@ -16,7 +16,8 @@ import { Amount } from 'basics/numbers';
 import { AuthModal } from 'components/modals';
 
 const HeroSection = () => {
-    const isPwaCanBeInstalled = usePwaStore(s => s.isPwaCanBeInstalled);
+    const isPwaInstalled = usePwaStore(s => s.isPwaInstalled);
+    const isPwaInstallable = usePwaStore(s => s.isPwaInstallable);
     const { callPWAInstall } = usePwaStore();
     const { t } = useTranslation('landing');
 
@@ -87,7 +88,7 @@ const HeroSection = () => {
                             </Button>
                         </AuthModal>
 
-                        {!isPwaCanBeInstalled && (
+                        {!isPwaInstalled && isPwaInstallable && (
                             <Button
                                 size={{ initial: '3', sm: '4' }}
                                 variant="soft"

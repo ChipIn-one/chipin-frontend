@@ -146,6 +146,13 @@ UI → store → API
 - styled-components only for fallback
 - no hex colors in CSS
 
+# 8a. BARREL EXPORTS (HARD)
+
+- every subdirectory with 1+ components MUST have an `index.ts` that re-exports all public symbols
+- imports from a subdirectory MUST use the barrel: `import { X } from './components'`
+- direct deep imports are forbidden: `import X from './components/X'` ❌
+- barrel format: named imports then named re-exports (no `export { default as X }` for new files)
+
 ---
 
 # 9. TYPE SAFETY

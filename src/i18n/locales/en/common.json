@@ -88,5 +88,10 @@
         "activity": "Activity",
         "friends": "Friends",
         "settings": "Settings"
+    },
+    "noDebtsTitle": "All settled",
+    "noDebtsDescription": "You don't owe anyone and no one owes you.",
+    "amount": {
+        "notInteger": "Value is not integer!"
     }
 }

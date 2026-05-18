@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Card, Flex, Separator, Text } from '@radix-ui/themes';
 
+import { BalanceEntry } from 'api/chipin.raw.types';
 import type { ApiUserResponse } from 'api/chipin.types';
 
 import { Amount } from 'basics/numbers';
@@ -10,6 +11,7 @@ import FriendListItem from './FriendListItem';
 
 export interface CurrencyGroupItem {
     user: ApiUserResponse;
+    balances: BalanceEntry[];
     netAmount: number;
 }
 

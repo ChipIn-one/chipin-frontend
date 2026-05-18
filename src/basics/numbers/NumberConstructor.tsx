@@ -21,6 +21,7 @@ export function constructNumberComponent<P extends BaseProps>(
         }
 
         if (!bigValue) {
+            // eslint-disable-next-line
             return <span className={className}>—</span>;
         }
 

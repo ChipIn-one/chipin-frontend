@@ -9,7 +9,7 @@ import { useUsersStore } from 'store/usersStore';
 
 import GroupsCards from 'components/GroupsCards';
 import GroupsSectionHeader from 'components/GroupsSectionHeader';
-import SummaryDebtCards from 'components/summary-debt-cards/SummaryDebtCards';
+import { SummaryDebtCards } from 'components/summary-debt-cards';
 
 interface Props {
     groups: Group[];

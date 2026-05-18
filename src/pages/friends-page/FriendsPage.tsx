@@ -19,11 +19,10 @@ import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/usersStore';
 
 import { NoFriendsEmptyState } from 'basics/empty-states';
-import MobileNavBar from 'components/nav-bars/MobileNavBar';
+import { MobileNavBar } from 'components/nav-bars';
 
-import type { CurrencyGroupItem } from './components/CurrencyGroupCard';
-import CurrencyGroupCard from './components/CurrencyGroupCard';
-import FriendsPageHeader from './components/FriendsPageHeader';
+import type { CurrencyGroupItem } from './components';
+import { CurrencyGroupCard, FriendsPageHeader } from './components';
 
 interface CurrencyGroup {
     currency: string;
@@ -36,13 +35,13 @@ const buildCurrencyGroups = (friends: Friend[]): CurrencyGroup[] => {
 
     for (const friend of friends) {
         for (const [currency, balance] of Object.entries(friend.balances)) {
-            // @ts-expect-error Runtime API includes amount, but current type definition misses it.
-            const netAmount = balance.amount;
+            // @ts-expect-error Runtime API includes netAmount, but current type definition misses it.
+            const netAmount = balance.netAmount;
 
             if (!map.has(currency)) {
                 map.set(currency, []);
             }
-
+            // @ts-expect-error Runtime API includes netAmount, but current type definition misses it.
             map.get(currency)!.push({ user: friend.user, netAmount });
         }
     }

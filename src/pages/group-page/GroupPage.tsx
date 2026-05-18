@@ -13,12 +13,10 @@ import { selectGroupDataFetched, selectGroupDataLoading } from 'store/loadingSel
 import { useLoadingStore } from 'store/loadingStore';
 
 import { AddExpenseModal } from 'components/modals';
-import MobileNavBar from 'components/nav-bars/MobileNavBar';
+import { MobileNavBar } from 'components/nav-bars';
 import UsersRow from 'components/UsersRow';
 
-import GroupCoverSection from './components/GroupCoverSection';
-import GroupSummary from './components/GroupSummary';
-import GroupTabsContent from './components/GroupTabsContent';
+import { GroupCoverSection, GroupSummary, GroupTabsContent } from './components';
 
 /**
  * On mobile the cover is rendered full-bleed at the top of the page

@@ -12,7 +12,7 @@ import { ProtectedRoute } from './ProtectedRoute';
 
 const HomePage = lazy(() => import('pages/HomePage'));
 const DashboardPage = lazy(() => import('pages/DashboardPage'));
-const GroupPage = lazy(() => import('pages/group-page/GroupPage'));
+const GroupPage = lazy(() => import('pages/group-page'));
 const ActivityPage = lazy(() => import('pages/ActivityPage'));
 const FriendsPage = lazy(() => import('pages/friends-page/'));
 const SettingsPage = lazy(() => import('pages/settings-page/'));
