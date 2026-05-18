@@ -1,11 +1,14 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
+import { STORAGE_LOCALE_KEY } from 'constants/localstorage';
+import { storage } from 'helpers/localStorage';
+
 import { resources } from './resources';
 
 i18n.use(initReactI18next).init({
     resources,
-    lng: 'en',
+    lng: storage.get(STORAGE_LOCALE_KEY, 'en'),
     fallbackLng: 'en',
 
     ns: [

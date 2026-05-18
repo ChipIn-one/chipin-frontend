@@ -1,0 +1,92 @@
+{
+    "buttons": {
+        "cancel": "Cancelar",
+        "delete": "Excluir",
+        "reload": "Recarregar página",
+        "goHome": "Ir para o início",
+        "create": "Criar",
+        "createGroup": "Criar grupo",
+        "saveGroup": "Salvar grupo",
+        "addExpense": "Adicionar despesa",
+        "settleUp": "Acertar",
+        "removeGroup": "Excluir grupo",
+        "leaveGroup": "Sair do grupo",
+        "kickMember": "Remover",
+        "showQRCode": "Mostrar QR code",
+        "addFriend": "Adicionar amigo",
+        "signOut": "Sair",
+        "installApp": "Instalar app",
+        "getStarted": "Começar",
+        "goToDashboard": "Ir para o painel",
+        "copyReport": "Copiar relatório",
+        "changePhoto": "Alterar foto",
+        "invitePeople": "Convidar pessoas",
+        "hide": "Ocultar"
+    },
+    "fields": {
+        "description": "Descrição",
+        "descriptionOptional": "Descrição (opcional)",
+        "groupOptional": "Grupo (opcional)",
+        "amount": "Valor",
+        "group": "Grupo",
+        "category": "Categoria",
+        "paidBy": "Pago por",
+        "groupName": "Nome do grupo",
+        "icon": "Ícone",
+        "email": "E-mail",
+        "displayName": "Nome de exibição",
+        "timezone": "Fuso horário",
+        "defaultCurrency": "Moeda padrão",
+        "interfaceLanguage": "Idioma da interface"
+    },
+    "balances": {
+        "youOwed": "te devem",
+        "youOwe": "você deve",
+        "youAreOwed": "Te devem",
+        "settledUp": "Acertado"
+    },
+    "header": {
+        "signIn": "Entrar",
+        "testError": "Disparar erro de teste",
+        "switchTheme": "Alternar tema",
+        "devMenu": "Menu do desenvolvedor"
+    },
+    "footer": {
+        "copyright": "{{year}}. Todos os direitos reservados ©",
+        "privacy": "Privacidade",
+        "terms": "Termos",
+        "contact": "Contato"
+    },
+    "errorBoundary": {
+        "title": "O app encontrou um problema",
+        "subtitle": "Ocorreu um erro inesperado e o aplicativo não conseguiu se recuperar. Os dados da sua sessão estão intactos — tente recarregar ou volte para o painel.",
+        "runtimeError": "Erro de execução",
+        "errorMessage": "Mensagem de erro",
+        "timestamp": "Data e hora",
+        "route": "Rota",
+        "version": "Versão",
+        "stackTrace": "Stack trace",
+        "userAgent": "Agente de usuário"
+    },
+    "copy": {
+        "copy": "Copiar {{what}}",
+        "copied": "Copiado!",
+        "shared": "Compartilhado!"
+    },
+    "copyTargets": {
+        "inviteLink": "link de convite"
+    },
+    "roles": {
+        "owner": "Dono"
+    },
+    "modes": {
+        "groupMode": "Modo grupo",
+        "soloMode": "Modo solo"
+    },
+    "nav": {
+        "dashboard": "Painel",
+        "activity": "Atividade",
+        "friends": "Amigos",
+        "settings": "Configurações"
+    }
+}

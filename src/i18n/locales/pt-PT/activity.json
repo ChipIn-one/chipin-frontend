@@ -1,0 +1,19 @@
+{
+    "title": "A sua atividade",
+    "subtitle": "Todos os eventos de grupos e amigos",
+    "filterAll": "Tudo",
+    "filterExpenses": "Despesas",
+    "filterSettlements": "Acertos",
+    "emptyTitle": "Ainda sem atividade",
+    "emptyDescription": "As despesas e acertos recentes vão aparecer aqui.",
+    "endOfFeed": "É isso por enquanto",
+    "event": {
+        "expenseCreatedDescription": "Pago por {{payer}} em {{group}}",
+        "groupCreatedMiddleText": "criou o grupo",
+        "groupUpdatedMiddleText": "atualizou o grupo",
+        "groupDeletedMiddleText": "eliminou o grupo",
+        "memberJoinedMiddleText": "entrou no grupo",
+        "memberLeftMiddleText": "saiu do grupo",
+        "unknownDescription": "Tipo de evento desconhecido"
+    }
+}

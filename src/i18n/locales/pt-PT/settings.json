@@ -1,0 +1,79 @@
+{
+    "title": "Definições",
+    "subtitle": "Gira a sua conta, privacidade, preferências da aplicação e notificações.",
+    "account": {
+        "title": "Conta",
+        "description": "Informações pessoais e definições do perfil.",
+        "displayNamePlaceholder": "O seu nome ou alcunha"
+    },
+    "regional": {
+        "title": "Preferências regionais",
+        "description": "Fuso horário, idioma e moeda do seu espaço de trabalho.",
+        "autoTimezone": "Detetar fuso horário automaticamente",
+        "autoTimezoneHint": "Fuso horário atual: {{timezone}}",
+        "timeFormatTitle": "Formato de hora",
+        "timeFormatDescription": "Escolha como os horários são apresentados na aplicação.",
+        "timeFormatPreview": "Pré-visualização:",
+        "timeFormat12h": "12h AM/PM",
+        "timeFormat24h": "24h",
+        "currencySearchPlaceholder": "Pesquisar moeda",
+        "currencySearchEmpty": "Nenhuma moeda encontrada.",
+        "languageHint": "Escolha o idioma preferido da aplicação."
+    },
+    "language": {
+        "options": {
+            "en": "Inglês",
+            "ru": "Russo",
+            "es": "Espanhol",
+            "pt-BR": "Português (Brasil)",
+            "pt-PT": "Português (Portugal)"
+        }
+    },
+    "notifications": {
+        "title": "Notificações",
+        "description": "Gira como recebe atualizações.",
+        "pushTitle": "Notificações push",
+        "pushDescription": "Receba notificações no seu dispositivo.",
+        "emailTitle": "Atualizações por e-mail",
+        "emailDescription": "Receba atualizações e novidades do produto por e-mail.",
+        "expenseRemindersTitle": "Lembretes de despesas",
+        "expenseRemindersDescription": "Receba lembretes sobre saldos pendentes.",
+        "weeklySummaryTitle": "Resumo semanal",
+        "weeklySummaryDescription": "Digest semanal dos seus gastos."
+    },
+    "app": {
+        "title": "Definições da aplicação",
+        "description": "Aparência e comportamento do cálculo de despesas.",
+        "themeTitle": "Tema",
+        "themeDescription": "Escolha como o ChipIn aparece no seu dispositivo.",
+        "themeOptions": {
+            "dark": "Escuro",
+            "light": "Claro",
+            "system": "Sistema"
+        },
+        "simplifyDebtsTitle": "Simplificar dívidas do grupo",
+        "simplifyDebtsDescription": "Reduz automaticamente o número de pagamentos necessários nos grupos.",
+        "autoSplitTitle": "Divisão automática igualitária",
+        "autoSplitDescription": "Dividir igualmente por predefinição ao adicionar despesas.",
+        "showCentsTitle": "Mostrar cêntimos",
+        "showCentsDescription": "Apresentar valores com casas decimais.",
+        "versionTitle": "Versão da aplicação",
+        "versionDescription": "Build atual instalada neste dispositivo.",
+        "updateButton": "Atualizar aplicação"
+    },
+    "security": {
+        "title": "Privacidade e segurança",
+        "description": "Gira a segurança da sua conta e os seus dados.",
+        "logoutAllDevicesTitle": "Sair em todos os dispositivos",
+        "logoutAllDevicesDescription": "Termine todas as sessões ativas e exija início de sessão novamente.",
+        "logoutAllDevicesButton": "Sair de todos",
+        "exportDataTitle": "Exportar dados",
+        "exportDataDescription": "Transfira todas as suas despesas.",
+        "exportDataButton": "Exportar",
+        "deleteAccountTitle": "Eliminar conta",
+        "deleteAccountDescription": "Remova os seus dados permanentemente.",
+        "deleteAccountButton": "Eliminar conta",
+        "signOutTitle": "Sair",
+        "signOutDescription": "Sair em todos os dispositivos."
+    }
+}

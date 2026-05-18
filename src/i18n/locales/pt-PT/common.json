@@ -1,0 +1,92 @@
+{
+    "buttons": {
+        "cancel": "Cancelar",
+        "delete": "Eliminar",
+        "reload": "Recarregar página",
+        "goHome": "Ir para o início",
+        "create": "Criar",
+        "createGroup": "Criar grupo",
+        "saveGroup": "Guardar grupo",
+        "addExpense": "Adicionar despesa",
+        "settleUp": "Acertar",
+        "removeGroup": "Eliminar grupo",
+        "leaveGroup": "Sair do grupo",
+        "kickMember": "Remover",
+        "showQRCode": "Mostrar código QR",
+        "addFriend": "Adicionar amigo",
+        "signOut": "Sair",
+        "installApp": "Instalar aplicação",
+        "getStarted": "Começar",
+        "goToDashboard": "Ir para o painel",
+        "copyReport": "Copiar relatório",
+        "changePhoto": "Alterar foto",
+        "invitePeople": "Convidar pessoas",
+        "hide": "Ocultar"
+    },
+    "fields": {
+        "description": "Descrição",
+        "descriptionOptional": "Descrição (opcional)",
+        "groupOptional": "Grupo (opcional)",
+        "amount": "Valor",
+        "group": "Grupo",
+        "category": "Categoria",
+        "paidBy": "Pago por",
+        "groupName": "Nome do grupo",
+        "icon": "Ícone",
+        "email": "E-mail",
+        "displayName": "Nome a apresentar",
+        "timezone": "Fuso horário",
+        "defaultCurrency": "Moeda predefinida",
+        "interfaceLanguage": "Idioma da interface"
+    },
+    "balances": {
+        "youOwed": "deve-lhe",
+        "youOwe": "deve",
+        "youAreOwed": "Deve-lhe",
+        "settledUp": "Acertado"
+    },
+    "header": {
+        "signIn": "Iniciar sessão",
+        "testError": "Disparar erro de teste",
+        "switchTheme": "Alternar tema",
+        "devMenu": "Menu do programador"
+    },
+    "footer": {
+        "copyright": "{{year}}. Todos os direitos reservados ©",
+        "privacy": "Privacidade",
+        "terms": "Termos",
+        "contact": "Contacto"
+    },
+    "errorBoundary": {
+        "title": "A aplicação encontrou um problema",
+        "subtitle": "Ocorreu um erro inesperado e a aplicação não conseguiu recuperar. Os dados da sua sessão estão intactos — tente recarregar ou volte para o painel.",
+        "runtimeError": "Erro de execução",
+        "errorMessage": "Mensagem de erro",
+        "timestamp": "Data e hora",
+        "route": "Rota",
+        "version": "Versão",
+        "stackTrace": "Stack trace",
+        "userAgent": "Agente de utilizador"
+    },
+    "copy": {
+        "copy": "Copiar {{what}}",
+        "copied": "Copiado!",
+        "shared": "Partilhado!"
+    },
+    "copyTargets": {
+        "inviteLink": "link de convite"
+    },
+    "roles": {
+        "owner": "Proprietário"
+    },
+    "modes": {
+        "groupMode": "Modo grupo",
+        "soloMode": "Modo solo"
+    },
+    "nav": {
+        "dashboard": "Painel",
+        "activity": "Atividade",
+        "friends": "Amigos",
+        "settings": "Definições"
+    }
+}

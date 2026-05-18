@@ -1,0 +1,44 @@
+{
+    "auth": {
+        "sessionExpired": "Sessão expirada, faça login novamente.",
+        "invalidJwt": "Não foi possível validar a sessão. Faça login novamente."
+    },
+    "common": {
+        "disconnect": "Você foi desconectado.",
+        "disconnectDescription": "Não se preocupe, suas alterações serão salvas. Tentando reconectar...",
+        "reconnected": "Sua conexão foi restaurada."
+    },
+    "group": {
+        "inviteJoinWarning": "Faça login antes de entrar no grupo.",
+        "inviteJoinError": "Não foi possível entrar no grupo. Verifique o link de convite e tente novamente.",
+        "invalidGroupId": "ID de grupo inválido",
+        "created": "Grupo \"{{name}}\" criado com sucesso!",
+        "updated": "Grupo \"{{name}}\" atualizado com sucesso!",
+        "createError": "Algo deu errado ao criar o grupo.",
+        "updateError": "Algo deu errado ao atualizar o grupo.",
+        "removed": "Grupo \"{{name}}\" removido com sucesso!",
+        "removeError": "Algo deu errado ao remover o grupo.",
+        "left": "Você saiu do grupo \"{{name}}\".",
+        "leaveError": "Algo deu errado ao sair do grupo.",
+        "kicked": "Membro \"{{name}}\" foi removido do grupo.",
+        "kickError": "Algo deu errado ao remover este membro.",
+        "inviteLinkNotReady": "O link de convite ainda não está pronto",
+        "inviteLinkCopied": "Link de convite do grupo copiado",
+        "inviteLinkCopyError": "Não foi possível copiar o link"
+    },
+    "pwa": {
+        "installing": "Instalando o aplicativo na sua tela inicial...",
+        "offlineReady": "O app está pronto para funcionar offline",
+        "updateAvailable": "Nova versão disponível",
+        "updateAction": "Atualizar",
+        "laterAction": "Depois"
+    },
+    "settings": {
+        "logoutAllDevicesSoon": "Sair em todos os dispositivos estará disponível em breve.",
+        "deleteAccountSoon": "A exclusão de conta estará disponível em breve."
+    },
+    "expense": {
+        "created": "Despesa adicionada com sucesso!",
+        "createError": "Algo deu errado ao adicionar a despesa."
+    }
+}

@@ -2,16 +2,10 @@ import { useState } from 'react';
 import { LucideGlobe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import {
-    Avatar,
-    Box,
-    Card,
-    Flex,
-    Separator,
-    Skeleton,
-    Switch,
-    Text,
-} from '@radix-ui/themes';
+import { Avatar, Box, Card, Flex, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
+
+import { STORAGE_LOCALE_KEY } from 'constants/localstorage';
+import { storage, StorageSchema } from 'helpers/localStorage';
 
 import CurrencySelect from 'components/CurrencySelect';
 import SegmentedControl from 'components/SegmentedControl';
@@ -29,7 +23,8 @@ const TIMEZONE_OPTIONS = [
     'America/Los_Angeles',
 ];
 
-const LANGUAGE_OPTIONS = ['en', 'ru'] as const;
+const LANGUAGE_OPTIONS = ['en', 'ru', 'es', 'pt-BR', 'pt-PT'] as const;
+type LanguageOption = (typeof LANGUAGE_OPTIONS)[number];
 
 interface Props {
     isLoading: boolean;
@@ -52,9 +47,10 @@ const RegionalSection = ({ isLoading }: Props) => {
         timeZone: effectiveTimezone,
     });
 
-    const normalizedLanguage = i18n.language.split('-')[0] as (typeof LANGUAGE_OPTIONS)[number];
-    const selectedLanguage = LANGUAGE_OPTIONS.includes(normalizedLanguage)
-        ? normalizedLanguage
+    const selectedLanguage: LanguageOption = LANGUAGE_OPTIONS.includes(
+        i18n.language as LanguageOption,
+    )
+        ? (i18n.language as LanguageOption)
         : 'en';
 
     const handleTimezoneAutoChange = (checked: boolean) => {
@@ -70,6 +66,7 @@ const RegionalSection = ({ isLoading }: Props) => {
 
     const handleLanguageChange = (value: string) => {
         void i18n.changeLanguage(value);
+        storage.set(STORAGE_LOCALE_KEY, value as StorageSchema['locale']);
     };
 
     return (

@@ -12,7 +12,7 @@ import { NavButton } from 'basics/buttons';
 import { HintCard, Icon404 } from './components';
 
 const Page404 = () => {
-    const { t } = useTranslation('common');
+    const { t } = useTranslation('errors');
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
 
     const buttonRoute = isLoggedIn ? ROUTES.DASHBOARD : ROUTES.HOME;

@@ -1,0 +1,79 @@
+{
+    "title": "Configuración",
+    "subtitle": "Gestiona tu cuenta, privacidad, preferencias de la app y notificaciones.",
+    "account": {
+        "title": "Cuenta",
+        "description": "Información personal y configuración del perfil.",
+        "displayNamePlaceholder": "Tu nombre o apodo"
+    },
+    "regional": {
+        "title": "Preferencias regionales",
+        "description": "Zona horaria, idioma y moneda para tu espacio de trabajo.",
+        "autoTimezone": "Detectar zona horaria automáticamente",
+        "autoTimezoneHint": "Zona horaria actual: {{timezone}}",
+        "timeFormatTitle": "Formato de hora",
+        "timeFormatDescription": "Elige cómo se muestra la hora en la app.",
+        "timeFormatPreview": "Vista previa:",
+        "timeFormat12h": "12h AM/PM",
+        "timeFormat24h": "24h",
+        "currencySearchPlaceholder": "Buscar moneda",
+        "currencySearchEmpty": "No se encontraron monedas.",
+        "languageHint": "Elige el idioma preferido de la app."
+    },
+    "language": {
+        "options": {
+            "en": "Inglés",
+            "ru": "Ruso",
+            "es": "Español",
+            "pt-BR": "Portugués (Brasil)",
+            "pt-PT": "Portugués (Portugal)"
+        }
+    },
+    "notifications": {
+        "title": "Notificaciones",
+        "description": "Gestiona cómo recibes las actualizaciones.",
+        "pushTitle": "Notificaciones push",
+        "pushDescription": "Recibe notificaciones en tu dispositivo.",
+        "emailTitle": "Actualizaciones por correo",
+        "emailDescription": "Recibe actualizaciones y novedades del producto por correo.",
+        "expenseRemindersTitle": "Recordatorios de gastos",
+        "expenseRemindersDescription": "Recibe recordatorios sobre balances pendientes.",
+        "weeklySummaryTitle": "Resumen semanal",
+        "weeklySummaryDescription": "Digest semanal de tus gastos."
+    },
+    "app": {
+        "title": "Configuración de la app",
+        "description": "Apariencia y comportamiento del cálculo de gastos.",
+        "themeTitle": "Tema",
+        "themeDescription": "Elige cómo se ve ChipIn en tu dispositivo.",
+        "themeOptions": {
+            "dark": "Oscuro",
+            "light": "Claro",
+            "system": "Sistema"
+        },
+        "simplifyDebtsTitle": "Simplificar deudas del grupo",
+        "simplifyDebtsDescription": "Reduce automáticamente el número de pagos necesarios en los grupos.",
+        "autoSplitTitle": "División automática equitativa",
+        "autoSplitDescription": "Dividir equitativamente por defecto al agregar gastos.",
+        "showCentsTitle": "Mostrar centavos",
+        "showCentsDescription": "Mostrar montos con decimales.",
+        "versionTitle": "Versión de la app",
+        "versionDescription": "La compilación actual instalada en este dispositivo.",
+        "updateButton": "Actualizar app"
+    },
+    "security": {
+        "title": "Privacidad y seguridad",
+        "description": "Gestiona la seguridad de tu cuenta y tus datos.",
+        "logoutAllDevicesTitle": "Cerrar sesión en todos los dispositivos",
+        "logoutAllDevicesDescription": "Termina todas las sesiones activas y requiere iniciar sesión nuevamente.",
+        "logoutAllDevicesButton": "Cerrar todas las sesiones",
+        "exportDataTitle": "Exportar datos",
+        "exportDataDescription": "Descarga todos tus gastos.",
+        "exportDataButton": "Exportar",
+        "deleteAccountTitle": "Eliminar cuenta",
+        "deleteAccountDescription": "Elimina permanentemente tus datos.",
+        "deleteAccountButton": "Eliminar cuenta",
+        "signOutTitle": "Cerrar sesión",
+        "signOutDescription": "Cerrar sesión en todos los dispositivos."
+    }
+}

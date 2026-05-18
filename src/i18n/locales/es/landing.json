@@ -1,0 +1,112 @@
+{
+    "nav": {
+        "features": "Funciones",
+        "howItWorks": "Cómo funciona",
+        "pricing": "Precios"
+    },
+    "badge": "Divide gastos sin estrés",
+    "heroTitle": "Divide cuentas con",
+    "heroTitleHighlight": "amigos y familia",
+    "heroDescription": "Crea grupos, agrega gastos y mira quién debe qué — rápido y justo. Perfecto para viajes, compañeros de cuarto y actividades grupales.",
+    "stats": {
+        "activeUsers": "Usuarios activos",
+        "expensesTracked": "Gastos rastreados",
+        "groupsCreated": "Grupos creados",
+        "userRating": "Calificación"
+    },
+    "howItWorks": {
+        "eyebrow": "Simple por diseño",
+        "title": "Cómo funciona",
+        "subtitle": "Listo en menos de dos minutos.",
+        "step1": {
+            "title": "Crea un grupo o úsalo solo",
+            "description": "Inicia un grupo para un viaje, apartamento compartido o evento — o usa Chipin solo para rastrear tus propios gastos."
+        },
+        "step2": {
+            "title": "Agrega gastos en el momento",
+            "description": "Registra cualquier gasto en segundos, elige quién pagó y cómo se divide. Chipin hace los cálculos por todos."
+        },
+        "step3": {
+            "title": "Ve los balances al instante",
+            "description": "Chipin muestra un resumen claro de quién debe qué. Sin hojas de cálculo ni conversaciones incómodas."
+        },
+        "step4": {
+            "title": "Liquida con un toque",
+            "description": "Cuando llegue el momento de pagar, registra el arreglo y Chipin marca la deuda como liquidada."
+        }
+    },
+    "features": {
+        "eyebrow": "Todo lo que necesitas",
+        "titlePart1": "Gestiona gastos",
+        "titleHighlight": "compartidos y",
+        "titlePart2": "personales",
+        "subtitle": "Funciones potentes diseñadas para dividir gastos sin esfuerzo — ya sea en grupo o por tu cuenta.",
+        "smartGroups": {
+            "title": "Grupos inteligentes",
+            "description": "Crea grupos para viajes, hogares compartidos o eventos. Invita miembros con enlaces y mantén a todos sincronizados con actualizaciones de balance en tiempo real."
+        },
+        "quickExpense": {
+            "title": "Registro rápido de gastos",
+            "description": "Agrega gastos en segundos. Divide en partes iguales o por montos personalizados. Adjunta recibos y categoriza para un mejor seguimiento."
+        },
+        "autoCalc": {
+            "title": "Cálculos automáticos",
+            "description": "Mira quién le debe a quién al instante. Nuestro algoritmo minimiza el número de transacciones para liquidar."
+        },
+        "soloBudget": {
+            "title": "Modo presupuesto personal",
+            "description": "Rastrea gastos personales sin un grupo. Establece presupuestos, monitorea gastos por categoría y controla tus finanzas."
+        },
+        "multiCurrency": {
+            "title": "Múltiples monedas",
+            "description": "¿Viajando al extranjero? Agrega gastos en cualquier moneda. Chipin maneja la conversión automáticamente para que todos paguen lo correcto."
+        },
+        "settleUp": {
+            "title": "Liquidar",
+            "description": "Registra liquidaciones con un toque. Chipin marca las deudas como saldadas y mantiene un historial limpio de todos los pagos."
+        }
+    },
+    "sections": {
+        "groups": {
+            "badge": "Gastos grupales",
+            "titlePart1": "Gestiona grupos",
+            "titleHighlight": "sin el caos",
+            "description": "Organiza viajes, hogares compartidos o eventos. Comparte un enlace de invitación y mantén los balances de todos visibles en un solo lugar. Sin más perseguir a la gente por dinero.",
+            "bullets": {
+                "shareableLink": "Invita por enlace compartible — sin registro requerido para miembros",
+                "realTimeBalances": "Ve los balances en tiempo real de cada persona",
+                "debtSimplification": "La simplificación inteligente de deudas reduce el número de pagos",
+                "multiCurrency": "Soporte multi-moneda para grupos internacionales"
+            },
+            "cta": "Crear un grupo",
+            "placeholder": "Captura de grupos"
+        },
+        "expenses": {
+            "badge": "Modo individual",
+            "titlePart1": "Rastrea tu presupuesto",
+            "titleHighlight": "a tu manera",
+            "description": "No necesitas un grupo para aprovechar Chipin. Usa el modo individual para rastrear gastos personales, establecer presupuestos por categoría y tener una imagen clara de a dónde va tu dinero.",
+            "bullets": {
+                "logExpenses": "Registra gastos personales en segundos",
+                "setBudgets": "Establece presupuestos por categoría y monitorea el progreso",
+                "monthlySummaries": "Resúmenes mensuales y tendencias de gastos",
+                "worksAlongside": "Funciona junto a tus gastos grupales sin interrupciones"
+            },
+            "cta": "Empezar a rastrear",
+            "placeholder": "Captura de presupuesto"
+        }
+    },
+    "cta": {
+        "badge": "Gratis para siempre · Sin tarjeta de crédito",
+        "title": "¿Listo para dejar de estresarte por el dinero?",
+        "subtitle": "Únete a más de 50,000 usuarios que ya usan Chipin para dividir cuentas y rastrear presupuestos — completamente gratis.",
+        "getStartedFree": "Comenzar gratis",
+        "openApp": "Abrir la app",
+        "bullets": {
+            "noCard": "Sin tarjeta de crédito",
+            "unlimitedGroups": "Grupos ilimitados",
+            "freePermanently": "Gratis para siempre",
+            "allDevices": "Funciona en todos los dispositivos"
+        }
+    }
+}

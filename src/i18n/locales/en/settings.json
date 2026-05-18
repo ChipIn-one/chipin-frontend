@@ -23,7 +23,10 @@
     "language": {
         "options": {
             "en": "English",
-            "ru": "Russian"
+            "ru": "Russian",
+            "es": "Spanish",
+            "pt-BR": "Portuguese (Brazil)",
+            "pt-PT": "Portuguese (Portugal)"
         }
     },
     "notifications": {

@@ -4,11 +4,12 @@ import { toast } from 'sonner';
 
 import { Box, Button, Card, Flex, Text } from '@radix-ui/themes';
 
+import { STORAGE_SW_UPDATE_DISMISSED_AT_KEY } from 'constants/localstorage';
 import { HOUR } from 'constants/time';
 import { TOASTS_IDS } from 'constants/toasts';
+import { storage } from 'helpers/localStorage';
 import { usePwaStore } from 'store/pwaStore';
 const UPDATE_DISMISS_TTL_MS = 4 * HOUR;
-const DISMISS_TIMESTAMP_KEY = 'sw-update-dismissed-at';
 
 // ─── Module-level state ──────────────────────────────────────────────────────
 
@@ -33,19 +34,12 @@ let currentWaitingWorker: ServiceWorker | null = null;
 // ─── TTL helpers ─────────────────────────────────────────────────────────────
 
 const isUpdateTTLExpired = (): boolean => {
-    const raw = localStorage.getItem(DISMISS_TIMESTAMP_KEY);
-
-    if (!raw) {
-        return true;
-    }
-
-    const dismissedAt = parseInt(raw, 10);
-
-    return Number.isNaN(dismissedAt) || Date.now() - dismissedAt >= UPDATE_DISMISS_TTL_MS;
+    const dismissedAt = storage.get(STORAGE_SW_UPDATE_DISMISSED_AT_KEY, 0);
+    return dismissedAt === 0 || Date.now() - dismissedAt >= UPDATE_DISMISS_TTL_MS;
 };
 
 const recordDismissTime = (): void => {
-    localStorage.setItem(DISMISS_TIMESTAMP_KEY, String(Date.now()));
+    storage.set(STORAGE_SW_UPDATE_DISMISSED_AT_KEY, Date.now());
 };
 
 // ─── SW activation ───────────────────────────────────────────────────────────

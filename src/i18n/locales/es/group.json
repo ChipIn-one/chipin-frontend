@@ -1,0 +1,187 @@
+{
+    "modal": {
+        "titleCreate": "Crear nuevo grupo",
+        "titleEdit": "Editar grupo",
+        "fields": {
+            "namePlaceholder": "ej. Viaje a Barcelona, Apartamento...",
+            "descriptionOptional": "(opcional)",
+            "descriptionPlaceholder": "Agrega una nota sobre este grupo..."
+        },
+        "categories": {
+            "travel": "Viajes",
+            "food": "Comida y bebidas",
+            "home": "Hogar y vida",
+            "fun": "Diversión y deportes",
+            "work": "Trabajo y dinero"
+        }
+    },
+    "qr": {
+        "title": "Escanea para unirte",
+        "description": "Comparte este código QR para invitar personas al grupo.",
+        "shareText": "Comparte este código para invitar personas a {{groupName}}"
+    },
+    "expenses": {
+        "modal": {
+            "title": "Agregar gasto",
+            "description": "Divide un nuevo gasto entre los miembros del grupo.",
+            "fields": {
+                "descriptionPlaceholder": "ej. Reserva de hotel, cena...",
+                "amountAndCurrency": "Monto y moneda",
+                "amountPlaceholder": "Ingresa el monto..."
+            },
+            "categorySearchPlaceholder": "Buscar categoría",
+            "categorySearchEmpty": "No se encontraron categorías",
+            "categories": {
+                "food": "Comida y restaurantes",
+                "transport": "Transporte",
+                "housing": "Vivienda y servicios",
+                "digital": "Digital y tecnología",
+                "shopping": "Compras",
+                "lifestyle": "Estilo de vida",
+                "personal_care": "Cuidado personal",
+                "sports": "Deportes y fitness",
+                "health": "Salud",
+                "travel": "Viajes",
+                "education": "Educación",
+                "finance": "Finanzas",
+                "pets": "Mascotas",
+                "other": "Otro"
+            },
+            "subcategories": {
+                "groceries": "Supermercado",
+                "restaurants": "Restaurantes",
+                "fast_food": "Comida rápida",
+                "coffee": "Café y cafeterías",
+                "food_delivery": "Comida a domicilio",
+                "public_transport": "Transporte público",
+                "taxi": "Taxi y rideshare",
+                "fuel": "Combustible",
+                "vehicle_rent": "Alquiler de vehículo",
+                "parking": "Estacionamiento",
+                "vehicle_repair": "Reparación de vehículo",
+                "vehicle_insurance": "Seguro de vehículo",
+                "tolls": "Peajes",
+                "rent": "Alquiler",
+                "mortgage": "Hipoteca",
+                "utilities": "Servicios básicos",
+                "home_maintenance": "Mantenimiento del hogar",
+                "furnishing": "Muebles y decoración",
+                "internet": "Internet",
+                "mobile": "Celular",
+                "subscriptions": "Suscripciones",
+                "software": "Software",
+                "clothing": "Ropa",
+                "electronics": "Electrónica",
+                "home_goods": "Artículos del hogar",
+                "personal_items": "Artículos personales",
+                "gifts": "Regalos",
+                "cinema": "Cine",
+                "events": "Eventos",
+                "concerts": "Conciertos",
+                "games": "Juegos",
+                "nightlife": "Vida nocturna",
+                "haircut": "Corte de cabello",
+                "spa": "Spa",
+                "massage": "Masaje",
+                "beauty_services": "Servicios de belleza",
+                "hygiene": "Higiene",
+                "skincare": "Cuidado de la piel",
+                "cosmetics": "Cosméticos",
+                "subscription": "Membresía de gimnasio",
+                "coach": "Entrenador",
+                "equipment": "Equipamiento",
+                "medical": "Medicina",
+                "pharmacy": "Farmacia",
+                "dental": "Dental",
+                "health_insurance": "Seguro médico",
+                "flights": "Vuelos",
+                "accommodation": "Alojamiento",
+                "activities": "Actividades",
+                "visa": "Visa",
+                "insurance": "Seguro",
+                "online_courses": "Cursos en línea",
+                "books": "Libros",
+                "tutoring": "Tutoría",
+                "certification": "Certificación",
+                "fees": "Comisiones bancarias",
+                "taxes": "Impuestos",
+                "loans": "Préstamos",
+                "investments": "Inversiones",
+                "crypto": "Cripto",
+                "currency_exchange": "Cambio de moneda",
+                "cash_withdrawal": "Retiro de efectivo",
+                "transfers": "Transferencias",
+                "pet_food": "Comida para mascotas",
+                "vet": "Veterinario",
+                "pet_items": "Artículos para mascotas"
+            },
+            "currentUser": "Tú",
+            "splitHint": "Dividido equitativamente entre los miembros del grupo.",
+            "noMembers": "Aún no hay miembros en el grupo.",
+            "tabs": {
+                "group": "Grupo",
+                "friends": "Amigos"
+            },
+            "split": {
+                "title": "Cómo dividir",
+                "equal": "Equitativo",
+                "percent": "Porcentaje",
+                "amounts": "Montos",
+                "splitEquallyBetween": "Dividido equitativamente entre {{count}} participantes",
+                "eachPays": "Cada uno paga",
+                "yourShare": "Tu parte",
+                "total": "Total:",
+                "totalAssigned": "Total asignado",
+                "difference": "Diferencia"
+            }
+        }
+    },
+    "page": {
+        "members": "miembros",
+        "loadingGroup": "Cargando grupo...",
+        "shareWarning": "Comparte el enlace de invitación solo con personas de confianza.",
+        "notFound": "ID de grupo no válido o grupo no encontrado",
+        "activityStubTitle": "Actividad del grupo",
+        "activityStubDescription": "El historial completo de actividad está disponible en la página de Actividad.",
+        "expenses": {
+            "emptyTitle": "Aún no hay gastos",
+            "emptyDescription": "Agrega el primer gasto para empezar a rastrear los gastos del grupo."
+        },
+        "tabs": {
+            "expenses": "Gastos",
+            "balances": "Balances",
+            "members": "Miembros",
+            "settings": "Configuración"
+        },
+        "settings": {
+            "inviteSection": "INVITAR",
+            "membersSection": "MIEMBROS",
+            "settingsSection": "CONFIGURACIÓN",
+            "copyLinkTitle": "Copiar enlace de invitación",
+            "showQRTitle": "Mostrar código QR",
+            "showQRSubtitle": "Escanea para unirte al grupo",
+            "addPeopleTitle": "Agregar personas",
+            "addPeopleSubtitle": "Invitar por nombre o correo",
+            "simplifyDebtsTitle": "Simplificar deudas del grupo",
+            "simplifyDebtsSubtitle": "Minimizar el número de transacciones"
+        },
+        "balances": {
+            "settled": "Liquidado",
+            "empty": "Aún no hay balances."
+        },
+        "membersTab": {
+            "you": "Tú",
+            "invitePeople": "Invitar personas"
+        }
+    },
+    "leaveModal": {
+        "confirm": "¿Estás seguro de que quieres salir de este grupo?",
+        "ownerWarning": "Eres el propietario. Por favor transfiere la propiedad antes de salir.",
+        "newOwnerPlaceholder": "Selecciona nuevo propietario"
+    },
+    "kickModal": {
+        "title": "Expulsar miembro",
+        "confirm": "¿Estás seguro de que quieres expulsar a {{name}} del grupo?",
+        "transferExpensesWarning": "Si este usuario tiene gastos no liquidados, serán transferidos a gastos de amigos."
+    }
+}

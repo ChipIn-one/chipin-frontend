@@ -182,6 +182,6 @@
     "kickModal": {
         "title": "Исключить участника",
         "confirm": "Вы уверены, что хотите исключить {{name}} из этой группы?",
-        "transferExpensesWarning": "Если у этого юзера есть unsettled expenses, они будут переведены в friends expenses."
+        "transferExpensesWarning": "Если у этого участника есть неурегулированные расходы, они будут перенесены в расходы с друзьями."
     }
 }

@@ -1,0 +1,30 @@
+{
+    "groups": {
+        "title": "Tus grupos",
+        "otherTitle": "Otros grupos",
+        "subtitle": "Mantén balances compartidos y viajes organizados en un solo lugar.",
+        "emptyTitle": "Aún no hay grupos",
+        "emptyDescription": "Crea tu primer grupo para empezar a dividir gastos con amigos, compañeros de cuarto o de viaje.",
+        "filterAll": "Todos",
+        "filterSettled": "Liquidados",
+        "showSettled": "Mostrar {{count}} grupos liquidados",
+        "hideSettled": "Volver a ocultar liquidados",
+        "filterEmptyTitle": "No se encontraron grupos",
+        "filterEmptyDescription": "Ningún grupo coincide con el filtro seleccionado."
+    },
+    "groupsCard": {
+        "statusOwed": "Te deben",
+        "members_one": "{{count}} miembro",
+        "members_other": "{{count}} miembros"
+    },
+    "summary": {
+        "totalBalance": "Balance total",
+        "totalAcrossGroupsAndFriends": "Entre grupos y amigos",
+        "owedToYou": "Te deben",
+        "youOwe": "Debes"
+    },
+    "header": {
+        "greeting": "Hola, {{name}}",
+        "overview": "Aquí está tu resumen"
+    }
+}

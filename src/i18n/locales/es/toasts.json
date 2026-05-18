@@ -1,0 +1,44 @@
+{
+    "auth": {
+        "sessionExpired": "Sesión expirada, por favor inicia sesión nuevamente.",
+        "invalidJwt": "No se pudo validar la sesión. Por favor inicia sesión nuevamente."
+    },
+    "common": {
+        "disconnect": "Se perdió la conexión.",
+        "disconnectDescription": "No te preocupes, tus cambios se guardarán. Intentando reconectar...",
+        "reconnected": "La conexión ha sido restablecida."
+    },
+    "group": {
+        "inviteJoinWarning": "Por favor inicia sesión antes de unirte al grupo.",
+        "inviteJoinError": "No se pudo unir al grupo. Verifica el enlace de invitación e intenta de nuevo.",
+        "invalidGroupId": "ID de grupo no válido",
+        "created": "¡Grupo \"{{name}}\" creado exitosamente!",
+        "updated": "¡Grupo \"{{name}}\" actualizado exitosamente!",
+        "createError": "Algo salió mal al crear el grupo.",
+        "updateError": "Algo salió mal al actualizar el grupo.",
+        "removed": "¡El grupo \"{{name}}\" fue eliminado exitosamente!",
+        "removeError": "Algo salió mal al eliminar el grupo.",
+        "left": "Saliste del grupo \"{{name}}\".",
+        "leaveError": "Algo salió mal al salir del grupo.",
+        "kicked": "El miembro \"{{name}}\" fue removido del grupo.",
+        "kickError": "Algo salió mal al expulsar a este miembro.",
+        "inviteLinkNotReady": "El enlace de invitación aún no está listo",
+        "inviteLinkCopied": "Enlace de invitación del grupo copiado",
+        "inviteLinkCopyError": "No se pudo copiar el enlace"
+    },
+    "pwa": {
+        "installing": "Instalando la aplicación en tu pantalla de inicio...",
+        "offlineReady": "La app está lista para funcionar sin conexión",
+        "updateAvailable": "Nueva versión disponible",
+        "updateAction": "Actualizar",
+        "laterAction": "Después"
+    },
+    "settings": {
+        "logoutAllDevicesSoon": "Cerrar sesión en todos los dispositivos estará disponible pronto.",
+        "deleteAccountSoon": "La eliminación de cuenta estará disponible pronto."
+    },
+    "expense": {
+        "created": "¡Gasto agregado exitosamente!",
+        "createError": "Algo salió mal al agregar el gasto."
+    }
+}

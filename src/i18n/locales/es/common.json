@@ -1,0 +1,92 @@
+{
+    "buttons": {
+        "cancel": "Cancelar",
+        "delete": "Eliminar",
+        "reload": "Recargar página",
+        "goHome": "Ir al inicio",
+        "create": "Crear",
+        "createGroup": "Crear grupo",
+        "saveGroup": "Guardar grupo",
+        "addExpense": "Agregar gasto",
+        "settleUp": "Liquidar",
+        "removeGroup": "Eliminar grupo",
+        "leaveGroup": "Salir del grupo",
+        "kickMember": "Expulsar",
+        "showQRCode": "Mostrar código QR",
+        "addFriend": "Agregar amigo",
+        "signOut": "Cerrar sesión",
+        "installApp": "Instalar app",
+        "getStarted": "Comenzar",
+        "goToDashboard": "Ir al panel",
+        "copyReport": "Copiar reporte",
+        "changePhoto": "Cambiar foto",
+        "invitePeople": "Invitar personas",
+        "hide": "Ocultar"
+    },
+    "fields": {
+        "description": "Descripción",
+        "descriptionOptional": "Descripción (opcional)",
+        "groupOptional": "Grupo (opcional)",
+        "amount": "Monto",
+        "group": "Grupo",
+        "category": "Categoría",
+        "paidBy": "Pagado por",
+        "groupName": "Nombre del grupo",
+        "icon": "Ícono",
+        "email": "Correo electrónico",
+        "displayName": "Nombre de pantalla",
+        "timezone": "Zona horaria",
+        "defaultCurrency": "Moneda predeterminada",
+        "interfaceLanguage": "Idioma de la interfaz"
+    },
+    "balances": {
+        "youOwed": "te deben",
+        "youOwe": "debes",
+        "youAreOwed": "Te deben",
+        "settledUp": "Liquidado"
+    },
+    "header": {
+        "signIn": "Iniciar sesión",
+        "testError": "Disparar error de prueba",
+        "switchTheme": "Cambiar tema",
+        "devMenu": "Menú de desarrollador"
+    },
+    "footer": {
+        "copyright": "{{year}}. Todos los derechos reservados ©",
+        "privacy": "Privacidad",
+        "terms": "Términos",
+        "contact": "Contacto"
+    },
+    "errorBoundary": {
+        "title": "La app encontró un problema",
+        "subtitle": "Ocurrió un error inesperado y la aplicación no pudo recuperarse. Los datos de tu sesión están intactos — intenta recargar o vuelve al panel.",
+        "runtimeError": "Error de ejecución",
+        "errorMessage": "Mensaje de error",
+        "timestamp": "Marca de tiempo",
+        "route": "Ruta",
+        "version": "Versión",
+        "stackTrace": "Traza de pila",
+        "userAgent": "Agente de usuario"
+    },
+    "copy": {
+        "copy": "Copiar {{what}}",
+        "copied": "¡Copiado!",
+        "shared": "¡Compartido!"
+    },
+    "copyTargets": {
+        "inviteLink": "enlace de invitación"
+    },
+    "roles": {
+        "owner": "Propietario"
+    },
+    "modes": {
+        "groupMode": "Modo grupal",
+        "soloMode": "Modo individual"
+    },
+    "nav": {
+        "dashboard": "Panel",
+        "activity": "Actividad",
+        "friends": "Amigos",
+        "settings": "Configuración"
+    }
+}

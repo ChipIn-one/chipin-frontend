@@ -1,0 +1,33 @@
+{
+    "api": {
+        "unknown": "Ocorreu um erro desconhecido",
+        "unauthorized": "Não tem autorização para realizar esta ação",
+        "forbidden": "Não tem permissão para aceder a este recurso",
+        "not_found": "O recurso solicitado não foi encontrado",
+        "validation_failed": "A validação do pedido falhou",
+        "rate_limited": "Demasiados pedidos. Tente novamente mais tarde"
+    },
+    "network": {
+        "offline": "Sem ligação à internet"
+    },
+    "page404": {
+        "code": "404",
+        "title": "— Página não encontrada",
+        "subtitle": "A página que procura não existe\nou foi movida para outro local.",
+        "whatYouCanDo": "O que pode fazer:",
+        "checkUrl": {
+            "title": "Verifique o URL",
+            "description": "Certifique-se de que o endereço web está correto."
+        },
+        "goDashboard": {
+            "title": "Ir para o painel",
+            "description": "Volte para a página inicial e comece de novo."
+        },
+        "explore": {
+            "title": "Explorar",
+            "description": "Navegue por outras secções no menu acima."
+        },
+        "goHome": "Voltar para o início",
+        "backToDashboard": "Voltar para o painel"
+    }
+}
