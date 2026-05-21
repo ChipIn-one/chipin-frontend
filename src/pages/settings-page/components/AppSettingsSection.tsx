@@ -39,7 +39,6 @@ const AppSettingsSection = ({ isLoading }: Props) => {
 
     const [isSimplifyDebtsEnabled, setIsSimplifyDebtsEnabled] = useState(true);
     const [isAutoSplitEnabled, setIsAutoSplitEnabled] = useState(false);
-    const [isShowCentsEnabled, setIsShowCentsEnabled] = useState(true);
 
     const selectedTheme = (theme as 'light' | 'dark' | 'system' | undefined) || 'system';
 
@@ -163,28 +162,6 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                                 checked={isAutoSplitEnabled}
                                 onCheckedChange={setIsAutoSplitEnabled}
                                 aria-label={t('app.autoSplitTitle')}
-                            />
-                        </Skeleton>
-                    </Flex>
-
-                    <Separator size="4" />
-
-                    <Flex justify="between" align="center" gap="3">
-                        <Box>
-                            <Skeleton loading={isLoading}>
-                                <Text weight="medium">{t('app.showCentsTitle')}</Text>
-                            </Skeleton>
-                            <Skeleton loading={isLoading}>
-                                <Text size="2" color="gray" as="p">
-                                    {t('app.showCentsDescription')}
-                                </Text>
-                            </Skeleton>
-                        </Box>
-                        <Skeleton loading={isLoading}>
-                            <Switch
-                                checked={isShowCentsEnabled}
-                                onCheckedChange={setIsShowCentsEnabled}
-                                aria-label={t('app.showCentsTitle')}
                             />
                         </Skeleton>
                     </Flex>

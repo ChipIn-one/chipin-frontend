@@ -2,25 +2,14 @@ import { useState } from 'react';
 import { LucideGlobe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Avatar, Box, Card, Flex, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
+import { Avatar, Box, Card, Flex, Separator, Skeleton, Text } from '@radix-ui/themes';
 
 import { onChangeLocale, SUPPORTED_LOCALES, SupportedLocale } from 'helpers/locale';
+import { detectDeviceTimezone, getAmPm24Time } from 'helpers/time';
 
 import CurrencySelect from 'components/CurrencySelect';
 import SegmentedControl from 'components/SegmentedControl';
 import Select, { SelectItem } from 'components/Select';
-
-const TIMEZONE_OPTIONS = [
-    'UTC',
-    'Europe/London',
-    'Europe/Berlin',
-    'Europe/Moscow',
-    'Asia/Almaty',
-    'Asia/Dubai',
-    'Asia/Tokyo',
-    'America/New_York',
-    'America/Los_Angeles',
-];
 
 interface Props {
     isLoading: boolean;
@@ -29,32 +18,17 @@ interface Props {
 const RegionalSection = ({ isLoading }: Props) => {
     const { t, i18n } = useTranslation('settings');
 
-    const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-    const [isTimezoneAuto, setIsTimezoneAuto] = useState(true);
-    const [timezone, setTimezone] = useState(detectedTimezone);
+    const detectedTimezone = detectDeviceTimezone();
     const [isTimeFormat24h, setIsTimeFormat24h] = useState(false);
 
-    const effectiveTimezone = isTimezoneAuto ? detectedTimezone : timezone;
-
-    const previewTime = new Date().toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: !isTimeFormat24h,
-        timeZone: effectiveTimezone,
-    });
+    const previewTime24 = getAmPm24Time(new Date(), true);
+    const previewTime12 = getAmPm24Time(new Date(), false);
 
     const selectedLanguage: SupportedLocale = SUPPORTED_LOCALES.includes(
         i18n.language as SupportedLocale,
     )
         ? (i18n.language as SupportedLocale)
         : 'en';
-
-    const handleTimezoneAutoChange = (checked: boolean) => {
-        setIsTimezoneAuto(checked);
-        if (checked) {
-            setTimezone(detectedTimezone);
-        }
-    };
 
     const handleTimeFormatChange = (value: string) => {
         setIsTimeFormat24h(value === '24h');
@@ -102,39 +76,15 @@ const RegionalSection = ({ isLoading }: Props) => {
                                 </Text>
                             </Skeleton>
                         </Box>
-                        <Skeleton loading={isLoading}>
-                            <Switch
-                                checked={isTimezoneAuto}
-                                onCheckedChange={handleTimezoneAutoChange}
-                                aria-label={t('regional.autoTimezone')}
-                            />
-                        </Skeleton>
                     </Flex>
 
-                    {!isTimezoneAuto && (
-                        <Box>
-                            <Skeleton loading={isLoading}>
-                                <Text size="2" color="gray">
-                                    {t('common:fields.timezone')}
-                                </Text>
-                            </Skeleton>
-                            <Box mt="2">
-                                <Skeleton loading={isLoading}>
-                                    <Select
-                                        items={TIMEZONE_OPTIONS.map(option => {
-                                            return {
-                                                value: option,
-                                                label: option,
-                                            } satisfies SelectItem;
-                                        })}
-                                        size="2"
-                                        value={timezone}
-                                        onChange={setTimezone}
-                                    />
-                                </Skeleton>
-                            </Box>
-                        </Box>
-                    )}
+                    <Box>
+                        <Skeleton loading={isLoading}>
+                            <Text size="2" color="gray">
+                                {t('common:fields.timezone')}
+                            </Text>
+                        </Skeleton>
+                    </Box>
 
                     <Flex
                         justify="between"
@@ -151,22 +101,14 @@ const RegionalSection = ({ isLoading }: Props) => {
                                     {t('regional.timeFormatDescription')}
                                 </Text>
                             </Skeleton>
-                            <Skeleton loading={isLoading}>
-                                <Text size="2" color="gray" as="p" mt="1">
-                                    {t('regional.timeFormatPreview')}{' '}
-                                    <Text weight="bold" size="2">
-                                        {previewTime}
-                                    </Text>
-                                </Text>
-                            </Skeleton>
                         </Box>
                         <Skeleton loading={isLoading}>
                             <SegmentedControl
                                 value={isTimeFormat24h ? '24h' : '12h'}
                                 onValueChange={handleTimeFormatChange}
                                 items={[
-                                    { value: '12h', label: t('regional.timeFormat12h') },
-                                    { value: '24h', label: t('regional.timeFormat24h') },
+                                    { value: '12h', label: previewTime12 },
+                                    { value: '24h', label: previewTime24 },
                                 ]}
                             />
                         </Skeleton>

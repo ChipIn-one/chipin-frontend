@@ -13,9 +13,6 @@
         "autoTimezoneHint": "Current timezone: {{timezone}}",
         "timeFormatTitle": "Time format",
         "timeFormatDescription": "Choose how times are displayed across the app.",
-        "timeFormatPreview": "Preview:",
-        "timeFormat12h": "12h AM/PM",
-        "timeFormat24h": "24h",
         "currencySearchPlaceholder": "Search currency",
         "currencySearchEmpty": "No currencies found.",
         "languageHint": "Choose your preferred app language."
@@ -55,8 +52,6 @@
         "simplifyDebtsDescription": "Automatically reduce the number of payments needed in groups.",
         "autoSplitTitle": "Auto-split equally",
         "autoSplitDescription": "Default to equal split when adding expenses.",
-        "showCentsTitle": "Show cents",
-        "showCentsDescription": "Display amounts with decimal places.",
         "versionTitle": "App version",
         "versionDescription": "Current build installed on this device.",
         "updateButton": "Update app"

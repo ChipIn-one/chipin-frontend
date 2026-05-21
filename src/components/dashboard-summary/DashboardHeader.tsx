@@ -21,7 +21,7 @@ const DashboardHeader: React.FC = () => {
                     <Skeleton loading={isUserLoading} width="180px" height="var(--space-5)">
                         <Heading size="5">
                             {t('header.greeting', {
-                                name: user?.firstName ?? user?.displayName ?? '',
+                                name: user?.displayName ?? '',
                             })}
                         </Heading>
                     </Skeleton>

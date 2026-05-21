@@ -4,5 +4,13 @@
     "yourConnections": "As suas ligações",
     "searchPlaceholder": "Pesquisar amigos",
     "emptyTitle": "Nenhum amigo ainda",
-    "emptyDescription": "Adicione amigos para acompanhar despesas partilhadas e acertar facilmente."
+    "emptyDescription": "Adicione amigos para acompanhar despesas partilhadas e acertar facilmente.",
+    "filter": {
+        "allCurrencies": "Todas as moedas",
+        "byFriends": "Por amigos"
+    },
+    "actions": {
+        "remind": "Lembrar",
+        "removeFriend": "Remover amigo"
+    }
 }

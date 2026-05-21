@@ -4,5 +4,13 @@
     "yourConnections": "Tus conexiones",
     "searchPlaceholder": "Buscar amigos",
     "emptyTitle": "Aún no tienes amigos",
-    "emptyDescription": "Agrega amigos para rastrear gastos compartidos y liquidar fácilmente."
+    "emptyDescription": "Agrega amigos para rastrear gastos compartidos y liquidar fácilmente.",
+    "filter": {
+        "allCurrencies": "Todas las divisas",
+        "byFriends": "Por amigos"
+    },
+    "actions": {
+        "remind": "Recordar",
+        "removeFriend": "Eliminar amigo"
+    }
 }

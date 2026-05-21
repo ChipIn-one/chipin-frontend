@@ -69,3 +69,21 @@ export const getGreetingPeriod = (): GreetingPeriod => {
 
     return 'night';
 };
+
+export const detectDeviceTimezone = (): string => {
+    try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    } catch {
+        return 'UTC';
+    }
+};
+
+export const getAmPm24Time = (date: Date, is24h = true): string => {
+    // TODO: Pass localte to localeTimeString from user settings.
+    return date.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: is24h,
+        timeZone: detectDeviceTimezone(),
+    });
+};

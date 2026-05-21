@@ -10,6 +10,7 @@ interface Props {
     currency: string;
     size?: ComponentProps<typeof Text>['size'];
     weight?: ComponentProps<typeof Text>['weight'];
+    withPlus?: boolean;
 }
 
 const DebtAmount = ({
@@ -18,15 +19,21 @@ const DebtAmount = ({
     isLoading = false,
     size = '2',
     weight = 'regular',
+    withPlus = false,
 }: Props) => {
-    const isOwed = amount >= 0;
+    const isOwed = amount > 0;
     const isZero = amount === 0;
     const color = isZero ? 'gray' : isOwed ? 'green' : 'red';
 
     return (
-        <Skeleton loading={isLoading} width="170px">
+        <Skeleton loading={isLoading} width="40px">
             <Text as="span" size={size} color={color} weight={weight}>
-                <Amount value={amount} tokenCode={currency} precision={0} />
+                <Amount
+                    value={amount}
+                    customPrefix={withPlus && isOwed ? '+' : undefined}
+                    tokenCode={currency}
+                    precision={0}
+                />
             </Text>
         </Skeleton>
     );

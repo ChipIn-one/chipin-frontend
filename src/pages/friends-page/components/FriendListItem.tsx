@@ -2,6 +2,8 @@ import { Avatar, Flex, Text } from '@radix-ui/themes';
 
 import DebtAmount from 'basics/DebtAmount';
 
+import FriendActionsDropdown from './FriendActionsDropdown';
+
 interface Props {
     picture: string | null;
     displayName: string;
@@ -23,7 +25,10 @@ const FriendListItem = ({ picture, displayName, netAmount, currency }: Props) =>
                     {displayName}
                 </Text>
             </Flex>
-            <DebtAmount amount={netAmount} currency={currency} size="2" />
+            <Flex align="center" gap="4">
+                <DebtAmount amount={netAmount} currency={currency} weight="medium" size="2" />
+                <FriendActionsDropdown />
+            </Flex>
         </Flex>
     );
 };

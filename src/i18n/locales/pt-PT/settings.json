@@ -13,9 +13,6 @@
         "autoTimezoneHint": "Fuso horário atual: {{timezone}}",
         "timeFormatTitle": "Formato de hora",
         "timeFormatDescription": "Escolha como os horários são apresentados na aplicação.",
-        "timeFormatPreview": "Pré-visualização:",
-        "timeFormat12h": "12h AM/PM",
-        "timeFormat24h": "24h",
         "currencySearchPlaceholder": "Pesquisar moeda",
         "currencySearchEmpty": "Nenhuma moeda encontrada.",
         "languageHint": "Escolha o idioma preferido da aplicação."
@@ -55,8 +52,6 @@
         "simplifyDebtsDescription": "Reduz automaticamente o número de pagamentos necessários nos grupos.",
         "autoSplitTitle": "Divisão automática igualitária",
         "autoSplitDescription": "Dividir igualmente por predefinição ao adicionar despesas.",
-        "showCentsTitle": "Mostrar cêntimos",
-        "showCentsDescription": "Apresentar valores com casas decimais.",
         "versionTitle": "Versão da aplicação",
         "versionDescription": "Build atual instalada neste dispositivo.",
         "updateButton": "Atualizar aplicação"

@@ -13,9 +13,6 @@
         "autoTimezoneHint": "Текущий часовой пояс: {{timezone}}",
         "timeFormatTitle": "Формат времени",
         "timeFormatDescription": "Выберите, как отображается время в приложении.",
-        "timeFormatPreview": "Пример:",
-        "timeFormat12h": "12ч AM/PM",
-        "timeFormat24h": "24ч",
         "currencySearchPlaceholder": "Найти валюту",
         "currencySearchEmpty": "Валюты не найдены.",
         "languageHint": "Выберите предпочтительный язык приложения."
@@ -55,8 +52,6 @@
         "simplifyDebtsDescription": "Автоматически уменьшать количество переводов между участниками.",
         "autoSplitTitle": "Авто-разделение поровну",
         "autoSplitDescription": "По умолчанию делить расходы поровну при добавлении.",
-        "showCentsTitle": "Показывать копейки",
-        "showCentsDescription": "Отображать суммы с дробной частью.",
         "versionTitle": "Версия приложения",
         "versionDescription": "Текущая сборка, установленная на этом устройстве.",
         "updateButton": "Обновить приложение"

@@ -4,5 +4,13 @@
     "yourConnections": "Your connections",
     "searchPlaceholder": "Search friends",
     "emptyTitle": "No friends yet",
-    "emptyDescription": "Add friends to track shared expenses and settle up easily."
+    "emptyDescription": "Add friends to track shared expenses and settle up easily.",
+    "filter": {
+        "allCurrencies": "All currencies",
+        "byFriends": "By friends"
+    },
+    "actions": {
+        "remind": "Remind",
+        "removeFriend": "Remove friend"
+    }
 }

@@ -30,7 +30,7 @@ import Logotype from 'assets/logo.svg?react';
 
 import AuthModal from './modals/AuthModal';
 import HeaderNav from './nav-bars/HeaderNav';
-import Dropdown from './DropdownMenu';
+import Dropdown from './Dropdown';
 
 const StickyBox = styled(Box)`
     position: sticky;

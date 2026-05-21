@@ -2,16 +2,14 @@ import { useTranslation } from 'react-i18next';
 
 import { Card, Flex, Separator, Text } from '@radix-ui/themes';
 
-import { BalanceEntry } from 'api/chipin.raw.types';
 import type { ApiUserResponse } from 'api/chipin.types';
 
-import { Amount } from 'basics/numbers';
+import DebtAmount from 'basics/DebtAmount';
 
 import FriendListItem from './FriendListItem';
 
 export interface CurrencyGroupItem {
     user: ApiUserResponse;
-    balances: BalanceEntry[];
     netAmount: number;
 }
 
@@ -36,10 +34,8 @@ const CurrencyGroupCard = ({ currency, netTotal, items }: Props) => {
                         {isOwed ? t('balances.youAreOwed') : t('balances.youOwe')}
                     </Text>
                 </Flex>
-                <Text weight="medium" size="3" color={isOwed ? 'green' : 'red'}>
-                    {isOwed ? '+' : '-'}
-                    <Amount value={Math.abs(netTotal)} tokenCode={currency} precision={0} />
-                </Text>
+
+                <DebtAmount amount={netTotal} currency={currency} weight="bold" size="3" />
             </Flex>
 
             <Flex direction="column" gap="3">
