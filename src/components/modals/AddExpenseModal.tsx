@@ -81,9 +81,10 @@ interface Props {
 const AddExpenseModal = ({ children, context }: Props) => {
     const { t } = useTranslation('group');
     const location = useLocation();
-    const { user, friends } = useUsersStore(
-        useShallow(s => ({ user: s.user, friends: s.friends })),
-    );
+    const { user } = useUsersStore(useShallow(s => ({ user: s.user })));
+    // const { user, friends } = useUsersStore(
+    //     useShallow(s => ({ user: s.user, friends: s.friends })),
+    // );
     const { groups, selectedGroup } = useGroupsStore(
         useShallow(s => ({ groups: s.groups, selectedGroup: s.selectedGroup })),
     );
@@ -122,7 +123,8 @@ const AddExpenseModal = ({ children, context }: Props) => {
     const selectedExpenseGroup = groups.find(group => group.id === groupId) || defaultGroup;
     const isFriendsTab = activeTab === 'friends';
     const groupMembers = selectedExpenseGroup?.members || [];
-    const resolvedMembers = isFriendsTab ? friends.map(f => f.user) : groupMembers;
+    // const resolvedMembers = isFriendsTab ? friends.map(f => f.user) : groupMembers;
+    const resolvedMembers = groupMembers;
     const orderedMembers = getOrderedMembers(resolvedMembers);
 
     const paidByMember = orderedMembers.find(member => member.id === paidById);
@@ -186,10 +188,11 @@ const AddExpenseModal = ({ children, context }: Props) => {
     const getDefaultPayerId = (groupMembers: User[] = resolvedMembers) =>
         getOrderedMembers(groupMembers)[0]?.id || '';
 
-    const getMembersByTab = (tab: ExpenseTab, nextGroupId: string) => {
-        if (tab === 'friends') {
-            return friends.map(f => f.user);
-        }
+    // const getMembersByTab = (tab: ExpenseTab, nextGroupId: string) => {
+    const getMembersByTab = (nextGroupId: string) => {
+        // if (tab === 'friends') {
+        //     return friends.map(f => f.user);
+        // }
 
         const nextGroup = groups.find(group => group.id === nextGroupId) || defaultGroup;
 
@@ -199,7 +202,7 @@ const AddExpenseModal = ({ children, context }: Props) => {
     const resetForm = () => {
         const defaultTab = isFriendsContext ? 'friends' : 'group';
         const defaultGroupId = defaultGroup?.id || '';
-        const defaultMembers = getMembersByTab(defaultTab, defaultGroupId);
+        const defaultMembers = getMembersByTab(defaultGroupId);
         const orderedDefaultMembers = getOrderedMembers(defaultMembers);
 
         setActiveTab(defaultTab);
@@ -220,7 +223,7 @@ const AddExpenseModal = ({ children, context }: Props) => {
         if (isOpen) {
             const defaultTab = isFriendsContext ? 'friends' : 'group';
             const defaultGroupId = defaultGroup?.id || '';
-            const defaultMembers = getMembersByTab(defaultTab, defaultGroupId);
+            const defaultMembers = getMembersByTab(defaultGroupId);
             const orderedDefaultMembers = getOrderedMembers(defaultMembers);
 
             setActiveTab(defaultTab);
@@ -246,7 +249,7 @@ const AddExpenseModal = ({ children, context }: Props) => {
     };
 
     const onChangeTab = (nextTab: ExpenseTab) => {
-        const nextMembers = getMembersByTab(nextTab, groupId);
+        const nextMembers = getMembersByTab(groupId);
         const nextOrdered = getOrderedMembers(nextMembers);
 
         setActiveTab(nextTab);

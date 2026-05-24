@@ -6,6 +6,7 @@ import { getChipInApiUrl } from 'helpers/env';
 import { resolveApiErrorMessage } from 'helpers/errors';
 import { getAuthTokenDB } from 'store/IDB/auth';
 
+import { ApiFriendsResponse } from './chipin.raw.types';
 import type {
     ApiActivityItemsResponse,
     ApiLedgerEntryResponse,
@@ -15,7 +16,6 @@ import type {
     CreateLedgerEntryParams,
     Dashboard,
     FetchActivityParams,
-    Friend,
     Group,
     InviteToGroupParams,
     KickGroupMemberParams,
@@ -146,7 +146,7 @@ export const fetchApiUser = (): Promise<ApiUserResponse> => {
     return apiInstance.get(`/users/self`).then(result => result.data);
 };
 
-export const fetchApiKnownUsers = (): Promise<Friend[]> => {
+export const fetchApiKnownUsers = (): Promise<ApiFriendsResponse> => {
     return apiInstance.get(`/users/known-users`).then(result => result.data);
 };
 

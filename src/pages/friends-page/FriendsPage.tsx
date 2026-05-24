@@ -1,19 +1,23 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { LucideUserPlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Container, Flex } from '@radix-ui/themes';
 
-import type { Friend } from 'api/chipin.types';
-import { getFilterFunction } from 'helpers/text';
 import { useLoadingStore } from 'store/loadingStore';
+import {
+    selectFilteredCurrencyGroups,
+    selectFilteredSettledFriends,
+    selectFriendsCurrencies,
+    selectSettledFriends,
+    selectUnSettledFriends,
+} from 'store/usersSelectors';
 import { useUsersStore } from 'store/usersStore';
 
 import { NoFriendsEmptyState } from 'basics/empty-states';
 import { MobileNavBar } from 'components/nav-bars';
 import { FriendsPageSkeleton } from 'components/skeletons';
 
-import type { CurrencyGroupItem } from './components';
 import {
     CurrencyGroupCard,
     FriendsPageHeader,
@@ -21,70 +25,24 @@ import {
     SettledUpCard,
 } from './components';
 
-interface CurrencyGroup {
-    currency: string;
-    netTotal: number;
-    items: CurrencyGroupItem[];
-}
-
-const buildCurrencyGroups = (friends: Friend[]): CurrencyGroup[] => {
-    const map = new Map<string, CurrencyGroupItem[]>();
-
-    for (const friend of friends) {
-        for (const [currency, balance] of Object.entries(friend.balances)) {
-            const netAmount = balance.netBalance;
-
-            if (!map.has(currency)) {
-                map.set(currency, []);
-            }
-            map.get(currency)!.push({ user: friend.user, netAmount });
-        }
-    }
-
-    return Array.from(map.entries()).map(([currency, items]) => ({
-        currency,
-        netTotal: items.reduce((sum, item) => sum + item.netAmount, 0),
-        items,
-    }));
-};
-
 const FriendsPage = () => {
     const { t } = useTranslation(['common', 'friends']);
-    const friends = useUsersStore(s => s.friends);
+    const unSettledFriends = useUsersStore(selectUnSettledFriends);
+    const settledFriends = useUsersStore(selectSettledFriends);
     const isLoadingFriends = useLoadingStore(state => state.users.friends);
     const [search, setSearch] = useState('');
     const [filterKey, setFilterKey] = useState('all');
 
-    const isSkeletonShown = isLoadingFriends === 'loading' && !friends.length;
-    const isEmptyFriends = isLoadingFriends === 'fetched' && friends.length === 0;
+    const isSkeletonShown =
+        isLoadingFriends === 'loading' && !unSettledFriends.length && !settledFriends.length;
+    const isEmptyFriends =
+        isLoadingFriends === 'fetched' &&
+        unSettledFriends.length === 0 &&
+        settledFriends.length === 0;
 
-    const filterFn = useMemo(() => getFilterFunction(search), [search]);
-
-    const filteredFriends = useMemo(
-        () => (filterFn ? friends.filter(f => filterFn([f.user.displayName])) : friends),
-        [friends, filterFn],
-    );
-
-    const currencies = useMemo(
-        () => Array.from(new Set(filteredFriends.flatMap(f => Object.keys(f.balances)))),
-        [filteredFriends],
-    );
-
-    const currencyGroups = useMemo(
-        () =>
-            buildCurrencyGroups(filteredFriends).filter(
-                g => filterKey === 'all' || g.currency === filterKey,
-            ),
-        [filteredFriends, filterKey],
-    );
-
-    const settledUpFriends = useMemo(
-        () =>
-            filterKey !== 'all'
-                ? []
-                : filteredFriends.filter(f => Object.keys(f.balances).length === 0),
-        [filteredFriends, filterKey],
-    );
+    const currencies = selectFriendsCurrencies(unSettledFriends, search);
+    const currencyGroups = selectFilteredCurrencyGroups(unSettledFriends, search, filterKey);
+    const filteredSettledFriends = selectFilteredSettledFriends(settledFriends, search, filterKey);
 
     return (
         <Container size="2" pb={{ initial: '9', sm: '6' }}>
@@ -116,13 +74,13 @@ const FriendsPage = () => {
                             <CurrencyGroupCard
                                 key={group.currency}
                                 currency={group.currency}
-                                netTotal={group.netTotal}
-                                items={group.items}
+                                netBalance={group.netBalance}
+                                friends={group.friends}
                             />
                         ))}
 
-                        {settledUpFriends.length > 0 && (
-                            <SettledUpCard friends={settledUpFriends} />
+                        {filteredSettledFriends.length > 0 && (
+                            <SettledUpCard friends={filteredSettledFriends} />
                         )}
                     </>
                 )}

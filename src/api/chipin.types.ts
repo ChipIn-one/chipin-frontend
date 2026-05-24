@@ -1,6 +1,7 @@
 import type {
-    ApiFriendResponse,
     ApiGroupResponse,
+    ApiSettledFriend,
+    ApiUnsettledFriend,
     ApiUserResponse,
     BalancesMap,
 } from './chipin.raw.types';
@@ -10,12 +11,14 @@ export type {
     ApiActivityItemsResponse,
     ApiDashboardResponse,
     ApiExpenseDetails,
-    ApiFriendResponse,
+    ApiFriendsResponse,
     ApiGroupResponse,
     ApiLedgerEntryResponse,
     ApiParticipantShare,
     ApiRemoveGroupResponse,
+    ApiSettledFriend,
     ApiSettlementDetails,
+    ApiUnsettledFriend,
     ApiUserResponse,
 } from './chipin.raw.types';
 
@@ -38,8 +41,11 @@ export type {
 /** User as used on the frontend (no parsing needed — all fields are plain). */
 export type User = ApiUserResponse;
 
-/** Known user — raw API shape. */
-export type Friend = ApiFriendResponse;
+/** A currency group within known users response. */
+export type UnsettledFriends = ApiUnsettledFriend;
+
+/** A settled friend with no outstanding balances. */
+export type SettledFriend = ApiSettledFriend;
 
 /** Group — same shape as the API response. */
 export type Group = ApiGroupResponse;

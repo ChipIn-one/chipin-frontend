@@ -51,9 +51,24 @@ export interface ApiActivityItemsResponse {
     nextCursor: number | null;
 }
 
-export interface ApiFriendResponse {
+export interface ApiFriendInCurrency {
     user: ApiUserResponse;
-    balances: BalancesMap;
+    amount: number;
+}
+
+export interface ApiUnsettledFriend {
+    currency: string;
+    netBalance: number;
+    friends: ApiFriendInCurrency[];
+}
+
+export interface ApiSettledFriend {
+    user: ApiUserResponse;
+}
+
+export interface ApiFriendsResponse {
+    currencies: ApiUnsettledFriend[];
+    settledFriends: ApiSettledFriend[];
 }
 
 export interface ApiParticipantShare {

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 import { fetchApiKnownUsers, fetchApiUser } from 'api/chipin';
-import { Friend, User } from 'api/chipin.types';
+import { SettledFriend, UnsettledFriends, User } from 'api/chipin.types';
 
 import { useLoadingStore } from './loadingStore';
 
@@ -10,7 +10,8 @@ export interface UsersStore {
     settings: {
         defaultCurrency: string;
     };
-    friends: Friend[];
+    unSettledFriends: UnsettledFriends[];
+    settledFriends: SettledFriend[];
 
     fetchSetFriends: () => void;
     fetchSetUser: () => void;
@@ -21,7 +22,8 @@ const initialUsersStore = {
     settings: {
         defaultCurrency: 'USD',
     },
-    friends: [],
+    unSettledFriends: [],
+    settledFriends: [],
 };
 
 export const useUsersStore = create<UsersStore>(set => ({
@@ -47,8 +49,8 @@ export const useUsersStore = create<UsersStore>(set => ({
         setLoading('users', 'friends', 'loading');
 
         fetchApiKnownUsers()
-            .then(friends => {
-                set({ friends });
+            .then(({ currencies, settledFriends }) => {
+                set({ unSettledFriends: currencies, settledFriends });
             })
             .catch(error => {
                 console.error('Error fetching known users:', error);

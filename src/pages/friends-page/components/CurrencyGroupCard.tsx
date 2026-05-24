@@ -2,26 +2,15 @@ import { useTranslation } from 'react-i18next';
 
 import { Card, Flex, Separator, Text } from '@radix-ui/themes';
 
-import type { ApiUserResponse } from 'api/chipin.types';
+import type { UnsettledFriends } from 'api/chipin.types';
 
 import DebtAmount from 'basics/DebtAmount';
 
 import FriendListItem from './FriendListItem';
 
-export interface CurrencyGroupItem {
-    user: ApiUserResponse;
-    netAmount: number;
-}
-
-interface Props {
-    currency: string;
-    netTotal: number;
-    items: CurrencyGroupItem[];
-}
-
-const CurrencyGroupCard = ({ currency, netTotal, items }: Props) => {
+const CurrencyGroupCard = ({ currency, netBalance, friends }: UnsettledFriends) => {
     const { t } = useTranslation('common');
-    const isOwed = netTotal >= 0;
+    const isOwed = netBalance >= 0;
 
     return (
         <Card>
@@ -35,17 +24,17 @@ const CurrencyGroupCard = ({ currency, netTotal, items }: Props) => {
                     </Text>
                 </Flex>
 
-                <DebtAmount amount={netTotal} currency={currency} weight="bold" size="3" />
+                <DebtAmount amount={netBalance} currency={currency} weight="bold" size="3" />
             </Flex>
 
             <Flex direction="column" gap="3">
-                {items.map((item, index) => (
+                {friends.map((item, index) => (
                     <Flex key={item.user.id} direction="column" gap="3">
                         {index === 0 && <Separator size="4" />}
                         <FriendListItem
                             picture={item.user.picture}
                             displayName={item.user.displayName}
-                            netAmount={item.netAmount}
+                            netAmount={item.amount}
                             currency={currency}
                         />
                     </Flex>

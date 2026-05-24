@@ -1,4 +1,3 @@
-import type { CurrencyGroupItem } from './CurrencyGroupCard';
 import CurrencyGroupCard from './CurrencyGroupCard';
 import FriendActionsDropdown from './FriendActionsDropdown';
 import FriendListItem from './FriendListItem';
@@ -16,4 +15,3 @@ export {
     FriendsSearchBar,
     SettledUpCard,
 };
-export type { CurrencyGroupItem };
