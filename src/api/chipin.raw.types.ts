@@ -9,6 +9,14 @@ export type BalancesMap = Record<string, BalanceEntry>;
 
 export type CurrenciesRates = Record<string, number>;
 
+export interface ApiCurrencyRatesResponse {
+    base: string;
+    timestamp: number;
+    fetchedAt: number;
+    stale: boolean;
+    rates: CurrenciesRates;
+}
+
 export interface ApiUserResponse {
     id: string;
     email: string;

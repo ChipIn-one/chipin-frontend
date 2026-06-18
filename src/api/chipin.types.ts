@@ -9,6 +9,7 @@ import type {
 // ─── Re-exports: raw response types (for api layer & helpers) ──────────────
 export type {
     ApiActivityItemsResponse,
+    ApiCurrencyRatesResponse,
     ApiDashboardResponse,
     ApiExpenseDetails,
     ApiFriendsResponse,

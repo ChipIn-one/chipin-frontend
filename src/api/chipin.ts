@@ -9,6 +9,7 @@ import { getAccessTokenDB } from 'store/IDB/auth';
 import { ApiFriendsResponse } from './chipin.raw.types';
 import type {
     ApiActivityItemsResponse,
+    ApiCurrencyRatesResponse,
     ApiLedgerEntryResponse,
     ApiOAuthTokenPairResponse,
     ApiRemoveGroupResponse,
@@ -149,6 +150,16 @@ export const inviteApiUserToGroup = async ({
 
 export const fetchApiDashboard = (): Promise<Dashboard> => {
     return apiInstance.get(`/dashboard`).then(result => result.data);
+};
+
+export const fetchApiCurrencyRates = (): Promise<ApiCurrencyRatesResponse> => {
+    return apiInstance
+        .get('/currency-rates', {
+            params: {
+                base: 'USD',
+            },
+        })
+        .then(result => result.data);
 };
 
 export const fetchApiUser = (): Promise<ApiUserResponse> => {
