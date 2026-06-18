@@ -114,3 +114,9 @@ export interface ApiLedgerEntryResponse {
     createdAt: number;
     updatedAt: number;
 }
+
+export interface ApiOAuthTokenPairResponse {
+    token: string;
+    refresh_token: string;
+    is_new_user: boolean;
+}

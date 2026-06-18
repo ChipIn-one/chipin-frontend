@@ -3,6 +3,9 @@ import { create } from 'zustand';
 export type LoadingState = 'initial' | 'loading' | 'fetched';
 
 export interface LoadingStore {
+    auth: {
+        login: LoadingState;
+    };
     group: {
         data: LoadingState;
         add: LoadingState;
@@ -37,6 +40,7 @@ export interface LoadingStore {
 type LoadingSlices = Omit<LoadingStore, 'setLoading'>;
 
 const initialLoadingStore: LoadingSlices = {
+    auth: { login: 'initial' },
     dashboard: { data: 'initial' },
     activity: { data: 'initial', nextPage: 'initial' },
     expense: { add: 'initial' },

@@ -2,7 +2,8 @@ import Dexie, { type EntityTable } from 'dexie';
 
 interface AuthTable {
     id: number;
-    authToken: string;
+    accessToken: string;
+    refreshToken: string;
 }
 
 const db = new Dexie('ChipInDB') as Dexie & {
@@ -12,6 +13,12 @@ const db = new Dexie('ChipInDB') as Dexie & {
 db.version(1).stores({
     auth: 'id',
 });
+
+db.version(2)
+    .stores({
+        auth: 'id',
+    })
+    .upgrade(transaction => transaction.table('auth').clear());
 
 export type { AuthTable };
 export { db };

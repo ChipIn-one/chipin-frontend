@@ -1,44 +1,26 @@
 import { useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
+import { ROUTES } from 'constants/routes';
+import { selectAuthStatus } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { useDashboardStore } from 'store/dashboardStore';
-import { checkTokenValidity, saveAuthTokenDB } from 'store/IDB/auth';
+import { checkTokenValidity } from 'store/IDB/auth';
 import { useUsersStore } from 'store/usersStore';
 
 export const useCheckSignIn = () => {
+    const location = useLocation();
+    const status = useAuthStore(selectAuthStatus);
     const { fetchSetDashboardData } = useDashboardStore();
     const { fetchSetUser, fetchSetFriends } = useUsersStore();
     const { setAuthenticated, setUnauthenticated } = useAuthStore();
 
-    const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
-
     useEffect(() => {
+        if (location.pathname === ROUTES.OAUTH_CALLBACK || status !== 'unknown') {
+            return;
+        }
+
         const run = async () => {
-            const authToken = searchParams.get('jwtAuthToken');
-            const error = searchParams.get('jwtAuthError');
-
-            // 1) If came back from OAuth with token - save and authenticate
-            if (authToken) {
-                await saveAuthTokenDB(authToken);
-                setAuthenticated();
-                fetchSetDashboardData();
-                fetchSetUser();
-                fetchSetFriends();
-
-                // Remove query params, stay on same path (important for join links)
-                navigate(window.location.pathname, { replace: true });
-                return;
-            }
-
-            if (error) {
-                // This is not auth status yet, but at least mark unauth (no redirect)
-                setUnauthenticated('error');
-                return;
-            }
-
-            // 2) Otherwise check token in IDB
             const result = await checkTokenValidity();
             if (result.valid) {
                 setAuthenticated();
@@ -53,5 +35,13 @@ export const useCheckSignIn = () => {
         run().catch(() => {
             setUnauthenticated('error');
         });
-    }, []);
+    }, [
+        fetchSetDashboardData,
+        fetchSetFriends,
+        fetchSetUser,
+        location.pathname,
+        setAuthenticated,
+        setUnauthenticated,
+        status,
+    ]);
 };

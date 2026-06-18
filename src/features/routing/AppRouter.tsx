@@ -5,6 +5,7 @@ import { ROUTES } from 'constants/routes';
 
 import PageLoader from 'basics/PageLoader';
 import GroupJoinPage from 'pages/GroupJoinPage';
+import { OAuthCallbackPage } from 'pages/oauth-callback-page';
 import SignInPage from 'pages/SignInPage';
 
 import HomeRouteGuard from './HomeRouteGuard';
@@ -31,6 +32,7 @@ const AppRouter = () => {
                     }
                 />
                 <Route path={ROUTES.SIGN_IN} element={<SignInPage />} />
+                <Route path={ROUTES.OAUTH_CALLBACK} element={<OAuthCallbackPage />} />
                 <Route
                     path={ROUTES.DASHBOARD}
                     element={

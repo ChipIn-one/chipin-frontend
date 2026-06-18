@@ -10,6 +10,15 @@
     "network": {
         "offline": "Sin conexión a internet"
     },
+    "oauth": {
+        "missing_code": "No se pudo completar el inicio de sesión con Google. Inténtalo de nuevo."
+    },
+    "AUTH": {
+        "INVALID_OAUTH_EXCHANGE_CODE": "El inicio de sesión con Google ha caducado o ya no es válido. Inténtalo de nuevo."
+    },
+    "VALIDATION": {
+        "INVALID": "No se pudo completar el inicio de sesión con Google. Inténtalo de nuevo."
+    },
     "page404": {
         "code": "404",
         "title": "— Página no encontrada",

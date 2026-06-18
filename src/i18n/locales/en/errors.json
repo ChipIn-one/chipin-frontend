@@ -10,6 +10,15 @@
     "network": {
         "offline": "No internet connection"
     },
+    "oauth": {
+        "missing_code": "Google sign-in could not be completed. Please try again."
+    },
+    "AUTH": {
+        "INVALID_OAUTH_EXCHANGE_CODE": "Google sign-in expired or is no longer valid. Please try again."
+    },
+    "VALIDATION": {
+        "INVALID": "Google sign-in could not be completed. Please try again."
+    },
     "page404": {
         "code": "404",
         "title": "\u2014 Page Not Found",

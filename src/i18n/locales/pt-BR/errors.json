@@ -10,6 +10,15 @@
     "network": {
         "offline": "Sem conexão com a internet"
     },
+    "oauth": {
+        "missing_code": "Não foi possível concluir o login com o Google. Tente novamente."
+    },
+    "AUTH": {
+        "INVALID_OAUTH_EXCHANGE_CODE": "O login com o Google expirou ou não é mais válido. Tente novamente."
+    },
+    "VALIDATION": {
+        "INVALID": "Não foi possível concluir o login com o Google. Tente novamente."
+    },
     "page404": {
         "code": "404",
         "title": "— Página não encontrada",

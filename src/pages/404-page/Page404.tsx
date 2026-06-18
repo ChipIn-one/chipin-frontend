@@ -1,4 +1,4 @@
-import { LucideHome, LucideLayoutList, LucideSearch } from 'lucide-react';
+import { LucideChartPie, LucideHome, LucideLayoutList, LucideSearch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Box, Container, Flex, Heading, Separator, Text } from '@radix-ui/themes';
@@ -17,6 +17,7 @@ const Page404 = () => {
 
     const buttonRoute = isLoggedIn ? ROUTES.DASHBOARD : ROUTES.HOME;
     const buttonKey = isLoggedIn ? 'page404.backToDashboard' : 'page404.goHome';
+    const buttonIcon = isLoggedIn ? <LucideChartPie size={24} /> : <LucideHome size={24} />;
 
     return (
         <Container size="2">
@@ -72,7 +73,7 @@ const Page404 = () => {
                 </Flex>
 
                 <NavButton to={buttonRoute} size="4" variant="solid" mt="2">
-                    <LucideHome size={16} />
+                    {buttonIcon}
                     {t(buttonKey)}
                 </NavButton>
             </Flex>

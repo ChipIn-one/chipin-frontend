@@ -1,15 +1,20 @@
 import { db } from './db';
 
-export const saveAuthTokenDB = async (token: string) => {
-    await db.auth.put({ id: 1, authToken: token });
+interface AuthTokens {
+    accessToken: string;
+    refreshToken: string;
+}
+
+export const saveAuthTokensDB = async ({ accessToken, refreshToken }: AuthTokens) => {
+    await db.auth.put({ id: 1, accessToken, refreshToken });
 };
 
-export const getAuthTokenDB = async (): Promise<string | null> => {
+export const getAccessTokenDB = async (): Promise<string | null> => {
     const record = await db.auth.get(1);
-    return record?.authToken ?? null;
+    return record?.accessToken ?? null;
 };
 
-export const deleteAuthTokenDB = async () => {
+export const deleteAuthTokensDB = async () => {
     await db.auth.delete(1);
 };
 
@@ -20,14 +25,14 @@ export type TokenCheckResult =
 export const checkTokenValidity = async (): Promise<TokenCheckResult> => {
     const auth = await db.auth.get(1);
 
-    if (!auth?.authToken) {
+    if (!auth?.accessToken || !auth.refreshToken) {
         return { valid: false, reason: 'missing' };
     }
 
     try {
-        const parts = auth.authToken.split('.');
+        const parts = auth.accessToken.split('.');
         if (parts.length < 2) {
-            await deleteAuthTokenDB();
+            await deleteAuthTokensDB();
             return { valid: false, reason: 'invalid' };
         }
 
@@ -36,13 +41,13 @@ export const checkTokenValidity = async (): Promise<TokenCheckResult> => {
         const payload = JSON.parse(payloadJson) as { exp?: number };
 
         if (payload.exp && Date.now() / 1000 >= payload.exp) {
-            await deleteAuthTokenDB();
+            await deleteAuthTokensDB();
             return { valid: false, reason: 'expired' };
         }
 
         return { valid: true };
     } catch {
-        await deleteAuthTokenDB();
+        await deleteAuthTokensDB();
         return { valid: false, reason: 'invalid' };
     }
 };

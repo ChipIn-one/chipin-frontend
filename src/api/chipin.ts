@@ -4,12 +4,13 @@ import { toast } from 'sonner';
 import { SECOND } from 'constants/time';
 import { getChipInApiUrl } from 'helpers/env';
 import { resolveApiErrorMessage } from 'helpers/errors';
-import { getAuthTokenDB } from 'store/IDB/auth';
+import { getAccessTokenDB } from 'store/IDB/auth';
 
 import { ApiFriendsResponse } from './chipin.raw.types';
 import type {
     ApiActivityItemsResponse,
     ApiLedgerEntryResponse,
+    ApiOAuthTokenPairResponse,
     ApiRemoveGroupResponse,
     ApiUserResponse,
     CreateGroupParams,
@@ -34,7 +35,7 @@ const apiInstance = axios.create({
 });
 
 apiInstance.interceptors.request.use(async config => {
-    const token = await getAuthTokenDB();
+    const token = await getAccessTokenDB();
 
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -71,6 +72,14 @@ apiInstance.interceptors.response.use(
 );
 
 // =============== GROUPS AND USERS ===============
+
+export const exchangeApiGoogleOAuthCode = async (
+    code: string,
+): Promise<ApiOAuthTokenPairResponse> => {
+    const response = await apiInstance.post('/auth/oauth/google/exchange', { code });
+
+    return response.data;
+};
 
 export const fetchApiUserGroups = (): Promise<Group[]> => {
     return apiInstance.get(`/groups`).then(result => result.data);

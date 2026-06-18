@@ -10,6 +10,15 @@
     "network": {
         "offline": "Sem ligação à internet"
     },
+    "oauth": {
+        "missing_code": "Não foi possível concluir o início de sessão com o Google. Tente novamente."
+    },
+    "AUTH": {
+        "INVALID_OAUTH_EXCHANGE_CODE": "O início de sessão com o Google expirou ou deixou de ser válido. Tente novamente."
+    },
+    "VALIDATION": {
+        "INVALID": "Não foi possível concluir o início de sessão com o Google. Tente novamente."
+    },
     "page404": {
         "code": "404",
         "title": "— Página não encontrada",

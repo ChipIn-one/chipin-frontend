@@ -14,6 +14,7 @@ export type {
     ApiFriendsResponse,
     ApiGroupResponse,
     ApiLedgerEntryResponse,
+    ApiOAuthTokenPairResponse,
     ApiParticipantShare,
     ApiRemoveGroupResponse,
     ApiSettledFriend,

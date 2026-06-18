@@ -2,6 +2,7 @@ export const ROUTES = {
     HOME: '/',
     NOT_FOUND_404: '/not-found',
     SIGN_IN: '/sign-in',
+    OAUTH_CALLBACK: '/oauth/callback',
     DASHBOARD: '/dashboard',
     GROUP: '/group',
     GROUP_JOIN: '/group/join',
@@ -18,6 +19,10 @@ export const HEAD_META: Record<string, { title: string; description?: string }> 
     [ROUTES.SIGN_IN]: {
         title: 'ChipIn — Sign In',
         description: 'Sign in to your ChipIn account',
+    },
+    [ROUTES.OAUTH_CALLBACK]: {
+        title: 'ChipIn — Signing In',
+        description: 'Completing sign in to ChipIn',
     },
     [ROUTES.DASHBOARD]: {
         title: 'ChipIn — Dashboard',
