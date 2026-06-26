@@ -9,6 +9,16 @@ export type BalancesMap = Record<string, BalanceEntry>;
 
 export type CurrenciesRates = Record<string, number>;
 
+export type ApiUserRole = 'USER' | 'ADMIN';
+
+export interface ApiUserSettingsResponse {
+    defaultCurrency: string;
+    timeFormat: '12h' | '24h';
+    language: string;
+    theme: 'LIGHT' | 'DARK' | 'SYSTEM';
+    simplifyDebts: boolean;
+}
+
 export interface ApiCurrencyRatesResponse {
     base: string;
     timestamp: number;
@@ -24,6 +34,9 @@ export interface ApiUserResponse {
     firstName: string | null;
     lastName: string | null;
     picture: string | null;
+    role: ApiUserRole;
+    subscriptionUntil: number | null;
+    settings: ApiUserSettingsResponse;
     createdAt: number;
     updatedAt: number;
 }
@@ -127,4 +140,9 @@ export interface ApiOAuthTokenPairResponse {
     token: string;
     refresh_token: string;
     is_new_user: boolean;
+}
+
+export interface ApiRefreshTokenPairResponse {
+    token: string;
+    refresh_token: string;
 }

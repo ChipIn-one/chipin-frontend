@@ -49,6 +49,7 @@
         "signIn": "Войти",
         "testError": "Вызвать тестовую ошибку",
         "switchTheme": "Сменить тему",
+        "addSubscriptionDay": "Добавить 1 день подписки",
         "devMenu": "Меню разработчика"
     },
     "footer": {

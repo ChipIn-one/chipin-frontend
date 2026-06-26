@@ -49,6 +49,7 @@
         "signIn": "Sign in",
         "testError": "Trigger test error",
         "switchTheme": "Switch theme",
+        "addSubscriptionDay": "Add 1 subscription day",
         "devMenu": "Developer menu"
     },
     "footer": {

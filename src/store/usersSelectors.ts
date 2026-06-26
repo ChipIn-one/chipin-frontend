@@ -1,11 +1,14 @@
 import type { SettledFriend, UnsettledFriends } from 'api/chipin.types';
+import { DEFAULT_CURRENCY_CODE } from 'constants/currencies';
 import { getFilterFunction } from 'helpers/text';
 
 import type { UsersStore } from './usersStore';
 
-export const selectUserCurrency = (s: UsersStore) => s.settings.defaultCurrency;
+export const selectUserCurrency = (s: UsersStore) =>
+    s.user?.settings?.defaultCurrency || DEFAULT_CURRENCY_CODE;
 export const selectUnSettledFriends = (s: UsersStore): UnsettledFriends[] => s.unSettledFriends;
 export const selectSettledFriends = (s: UsersStore): SettledFriend[] => s.settledFriends;
+export const selectIsUserAdmin = (s: UsersStore) => s.user?.role === 'ADMIN';
 
 export const selectFriendsCurrencies = (
     unsettled: UnsettledFriends[],

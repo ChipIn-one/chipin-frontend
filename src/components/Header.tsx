@@ -3,6 +3,7 @@ import { UserAvatar } from 'basics';
 import {
     LucideArrowRight,
     LucideBug,
+    LucideCalendarPlus,
     LucideFlaskConical,
     LucideLogIn,
     LucideMenu,
@@ -19,9 +20,9 @@ import { Box, Button, Container, Flex, IconButton, Link, Text } from '@radix-ui/
 import { PROJECT_NAME } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
 import { themeColor } from 'helpers/colors';
-import { getIsDevEnv } from 'helpers/env';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
+import { selectIsUserAdmin } from 'store/usersSelectors';
 import { useUsersStore } from 'store/usersStore';
 
 import { NavButton } from 'basics/buttons';
@@ -98,6 +99,7 @@ const DevMenu = () => {
     const [shouldCrash, setShouldCrash] = useState(false);
     const { theme, setTheme } = useTheme();
     const { t } = useTranslation();
+    const extendUserSubscriptionByDay = useUsersStore(s => s.extendUserSubscriptionByDay);
 
     if (shouldCrash) {
         throw new Error('Manual test error triggered from the header crash button.');
@@ -111,6 +113,12 @@ const DevMenu = () => {
             label: t('header.switchTheme'),
             icon: isDark ? <LucideSun size={16} /> : <LucideMoon size={16} />,
             onSelect: () => setTheme(isDark ? 'light' : 'dark'),
+        },
+        {
+            value: 'extendSubscription',
+            label: t('header.addSubscriptionDay'),
+            icon: <LucideCalendarPlus size={16} />,
+            onSelect: extendUserSubscriptionByDay,
         },
         {
             value: 'testError',
@@ -144,6 +152,7 @@ const DevMenu = () => {
 const Header = () => {
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
     const user = useUsersStore(s => s.user);
+    const canShowDevMenu = useUsersStore(selectIsUserAdmin);
     const location = useLocation();
     const { t } = useTranslation();
 
@@ -169,7 +178,7 @@ const Header = () => {
                     {isLandingPage && <LandingNav />}
 
                     <Flex gap="4" align="center">
-                        {getIsDevEnv() && <DevMenu />}
+                        {canShowDevMenu && <DevMenu />}
                         {isLoggedIn ? (
                             <Flex gap="4" align="center">
                                 <Box display={{ initial: 'none', sm: 'block' }}>
