@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import { Avatar, Box, Button, Card, Flex, Grid, Separator, Skeleton, Text } from '@radix-ui/themes';
 
 import { useAuthStore } from 'store/authStore';
+import { selectAuthSignOutLoading } from 'store/loadingSelectors';
+import { useLoadingStore } from 'store/loadingStore';
 
 interface Props {
     isLoading: boolean;
@@ -12,7 +14,8 @@ interface Props {
 
 const PrivacySecuritySection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
-    const { signOut } = useAuthStore();
+    const signOut = useAuthStore(s => s.signOut);
+    const isSigningOut = useLoadingStore(selectAuthSignOutLoading);
 
     const handleLogoutAllDevices = () => {
         toast.info(t('toasts:settings.logoutAllDevicesSoon'));
@@ -116,7 +119,12 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                         </Skeleton>
                     </Box>
                     <Skeleton loading={isLoading}>
-                        <Button onClick={signOut} variant="soft" color="gray">
+                        <Button
+                            onClick={signOut}
+                            variant="soft"
+                            color="gray"
+                            loading={isSigningOut}
+                        >
                             <LucideLogOut size={16} />
                             {t('common:buttons.signOut')}
                         </Button>

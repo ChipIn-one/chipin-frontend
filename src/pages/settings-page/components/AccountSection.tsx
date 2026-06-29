@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { UserAvatar } from 'basics';
 import { LucideUser } from 'lucide-react';
+import type { ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -23,6 +25,16 @@ interface Props {
 const AccountSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
     const user = useUsersStore(s => s.user);
+    const setUserSettings = useUsersStore(s => s.setUserSettings);
+    const [displayName, setDisplayName] = useState(user?.displayName ?? '');
+
+    const onChangeDisplayName = (event: ChangeEvent<HTMLInputElement>) => {
+        setDisplayName(event.target.value);
+    };
+
+    const onBlurDisplayName = () => {
+        setUserSettings({ displayName });
+    };
 
     return (
         <Card size="3">
@@ -56,12 +68,12 @@ const AccountSection = ({ isLoading }: Props) => {
                     <Flex direction="column" gap="1">
                         <Skeleton loading={isLoading}>
                             <Text weight="medium" size="3">
-                                {user?.displayName || 'Display Name'}
+                                {user?.displayName || t('common:fields.displayName')}
                             </Text>
                         </Skeleton>
                         <Skeleton loading={isLoading}>
                             <Text size="2" color="gray">
-                                {user?.email || 'email@example.com'}
+                                {user?.email}
                             </Text>
                         </Skeleton>
                         <Skeleton loading={isLoading}>
@@ -84,9 +96,10 @@ const AccountSection = ({ isLoading }: Props) => {
                         <TextField.Root
                             mt="2"
                             size="3"
-                            value={user?.displayName || ''}
+                            value={displayName}
                             placeholder={t('account.displayNamePlaceholder')}
-                            readOnly
+                            onChange={onChangeDisplayName}
+                            onBlur={onBlurDisplayName}
                         />
                     </Skeleton>
                 </Box>

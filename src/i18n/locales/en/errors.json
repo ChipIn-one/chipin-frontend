@@ -7,6 +7,45 @@
         "validation_failed": "Validation failed for the request",
         "rate_limited": "Too many requests. Please try again later"
     },
+    "apiErrors": {
+        "AUTH": {
+            "UNAUTHORIZED": "Please sign in to continue",
+            "FORBIDDEN": "You do not have permission to perform this action",
+            "INVALID_TOKEN": "Your session is invalid. Please sign in again.",
+            "EXPIRED_TOKEN": "Your session has expired. Please sign in again.",
+            "INVALID_REFRESH_TOKEN": "Your session could not be refreshed. Please sign in again."
+        },
+        "VALIDATION": {
+            "INVALID": "Validation failed for the request",
+            "REQUIRED": "Required data is missing",
+            "ALREADY_EXISTS": "This value already exists"
+        },
+        "USER": {
+            "NOT_FOUND": "User was not found",
+            "FORBIDDEN": "You do not have permission to access this user",
+            "CANNOT_JOIN_SELF_INVITE": "You cannot join your own invite"
+        },
+        "GROUP": {
+            "NOT_FOUND": "Group was not found",
+            "FORBIDDEN": "You do not have permission to access this group",
+            "MEMBER_NOT_FOUND": "Group member was not found",
+            "CANNOT_KICK_SELF": "You cannot remove yourself from the group this way",
+            "OWNER_MUST_TRANSFER": "Transfer group ownership before leaving",
+            "INVALID_NEW_OWNER": "Selected user cannot become the new owner",
+            "GROUP_INACTIVE": "This group is inactive"
+        },
+        "LEDGER": {
+            "NOT_FOUND": "Ledger entry was not found",
+            "FORBIDDEN": "You do not have permission to access this ledger entry"
+        },
+        "ACTIVITY": {
+            "NOT_FOUND": "Activity item was not found"
+        },
+        "SYSTEM": {
+            "INTERNAL": "Something went wrong. Please try again later.",
+            "SERVICE_UNAVAILABLE": "Service is temporarily unavailable. Please try again later."
+        }
+    },
     "network": {
         "offline": "No internet connection"
     },

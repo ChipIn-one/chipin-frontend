@@ -1,7 +1,26 @@
+import type { ThemeName, User, UserRole, UserSettings } from 'api/chipin.types';
+import {
+    LS_KEY_AUTH_TOKENS,
+    LS_KEY_SW_UPDATE_DISMISSED_AT,
+    LS_KEY_THEME,
+    LS_KEY_USER,
+} from 'constants/localstorage';
+
+export interface LocalUser {
+    role: UserRole;
+    settings: UserSettings;
+}
+
+export interface AuthTokens {
+    accessToken: string;
+    refreshToken: string;
+}
+
 type StorageSchema = {
-    theme: 'light' | 'dark';
-    locale: 'en' | 'es' | 'pt-BR' | 'pt-PT' | 'ru';
-    swUpdateDismissedAt: number;
+    [LS_KEY_USER]: LocalUser;
+    [LS_KEY_THEME]: ThemeName;
+    [LS_KEY_SW_UPDATE_DISMISSED_AT]: number;
+    [LS_KEY_AUTH_TOKENS]: AuthTokens;
 };
 
 type StorageKey = keyof StorageSchema;
@@ -52,5 +71,55 @@ const LocalStorage = {
     },
 };
 
-export { LocalStorage };
+const getStorageValue = <T>(key: StorageKey): T | null => {
+    try {
+        const raw = localStorage.getItem(key);
+
+        if (!raw) {
+            return null;
+        }
+
+        return JSON.parse(raw) as T;
+    } catch {
+        localStorage.removeItem(key);
+        return null;
+    }
+};
+
+const toLocalUser = (user: Pick<User, 'role' | 'settings'>): LocalUser => {
+    return {
+        role: user.role,
+        settings: user.settings,
+    };
+};
+
+const getLocalUser = () => {
+    return getStorageValue<LocalUser>(LS_KEY_USER);
+};
+
+const saveLocalUser = (user: LocalUser) => {
+    LocalStorage.set(LS_KEY_USER, user);
+};
+
+const getAuthTokens = () => {
+    return getStorageValue<AuthTokens>(LS_KEY_AUTH_TOKENS);
+};
+
+const saveAuthTokens = (tokens: AuthTokens) => {
+    LocalStorage.set(LS_KEY_AUTH_TOKENS, tokens);
+};
+
+const clearAuthTokens = () => {
+    LocalStorage.remove(LS_KEY_AUTH_TOKENS);
+};
+
+export {
+    clearAuthTokens,
+    getAuthTokens,
+    getLocalUser,
+    LocalStorage,
+    saveAuthTokens,
+    saveLocalUser,
+    toLocalUser,
+};
 export type { StorageKey, StorageSchema };

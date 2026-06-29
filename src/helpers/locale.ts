@@ -1,5 +1,4 @@
-import { STORAGE_LOCALE_KEY } from 'constants/localstorage';
-import { LocalStorage } from 'helpers/localStorage';
+import { getLocalUser } from 'helpers/localStorage';
 
 const SUPPORTED_LOCALES = ['en', 'ru', 'es', 'pt-BR', 'pt-PT'] as const;
 type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
@@ -8,9 +7,9 @@ type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 const SUPPORTED_LOCALES_SET: ReadonlySet<SupportedLocale> = new Set(SUPPORTED_LOCALES);
 
 // Type predicate wraps the single necessary cast, keeping matchLocale cast-free.
-function isSupportedLocale(s: string): s is SupportedLocale {
+const isSupportedLocale = (s: string): s is SupportedLocale => {
     return (SUPPORTED_LOCALES_SET as ReadonlySet<string>).has(s);
-}
+};
 
 // Only fully-lowercased normalized forms are valid keys (e.g. 'us-en', not 'us-EN').
 // This map handles structurally inverted or otherwise pathological tags.
@@ -36,7 +35,7 @@ const LANGUAGE_FALLBACK: Readonly<Partial<Record<LanguageCode, SupportedLocale>>
  * - Skips script/variant subtags (e.g. zh-Hans-CN → zh-CN)
  * Returns null for structurally invalid inputs.
  */
-function normalizeLocale(input: string): string | null {
+const normalizeLocale = (input: string): string | null => {
     if (!input || typeof input !== 'string') {
         return null;
     }
@@ -60,7 +59,7 @@ function normalizeLocale(input: string): string | null {
     }
 
     return lang;
-}
+};
 
 /**
  * Resolves a raw locale string to a SupportedLocale.
@@ -72,7 +71,7 @@ function normalizeLocale(input: string): string | null {
  * 4. Language fallback — map by lang tag (e.g. 'pt-AO' → 'pt-BR')
  * 5. null
  */
-function matchLocale(raw: string): SupportedLocale | null {
+const matchLocale = (raw: string): SupportedLocale | null => {
     const normalized = normalizeLocale(raw);
 
     if (!normalized) {
@@ -106,43 +105,17 @@ function matchLocale(raw: string): SupportedLocale | null {
 
     // 4. Language fallback — 'pt-AO' → 'pt-BR'
     return LANGUAGE_FALLBACK[lang as LanguageCode] ?? null;
-}
+};
 
-/**
- * Reads the raw stored locale, handling two storage encoding strategies:
- * - JSON-encoded (canonical — LocalStorage.set always calls JSON.stringify): '"en"' → 'en'
- * - Raw unquoted string (legacy or externally written value): 'en' → 'en'
- *
- * Note: no locale validation happens here. The returned string is passed
- * through matchLocale() in resolveLocale(), which is the validation boundary.
- */
-function getStoredLocale(): string | null {
-    const raw = LocalStorage.getRaw(STORAGE_LOCALE_KEY);
-
-    if (raw === null) {
-        return null;
-    }
-
-    // Try JSON decode first (canonical path — storage.set always JSON-encodes).
-    try {
-        const parsed: unknown = JSON.parse(raw);
-
-        if (typeof parsed === 'string') {
-            return parsed;
-        }
-    } catch {
-        // Not valid JSON — fall through to raw string handling.
-    }
-
-    // Accept a plain unquoted string (externally written or legacy).
-    return raw.length > 0 ? raw : null;
-}
+const getStoredLocale = (): string | null => {
+    return getLocalUser()?.settings.language ?? null;
+};
 
 /**
  * Returns the browser's preferred language list.
  * Gracefully handles missing navigator (SSR / test environments).
  */
-function getBrowserLanguages(): readonly string[] {
+const getBrowserLanguages = (): readonly string[] => {
     if (typeof navigator === 'undefined') {
         return [];
     }
@@ -156,17 +129,17 @@ function getBrowserLanguages(): readonly string[] {
     }
 
     return [];
-}
+};
 
 /**
  * Resolves the active locale with priority:
- * 1. Valid locale in localStorage
+ * 1. Valid locale in local user cache
  * 2. First matching browser language
  * 3. Fallback: 'en'
  *
- * Auto-detected locale is NOT persisted — only onChangeLocale writes to storage.
+ * Auto-detected locale is NOT persisted.
  */
-function resolveLocale(): SupportedLocale {
+const resolveLocale = (): SupportedLocale => {
     const stored = getStoredLocale();
 
     if (stored !== null) {
@@ -186,19 +159,18 @@ function resolveLocale(): SupportedLocale {
     }
 
     return 'en';
-}
+};
 
 // Monotonic counter — incremented on every call to onChangeLocale.
 // Each call captures its own snapshot; only the last snapshot matches on resolution.
 let _localeRequestId = 0;
 
 /**
- * Persists the user-selected locale and applies it to i18n.
+ * Applies the user-selected locale to i18n.
  * Dynamic import avoids circular dependency with i18n/index.ts.
  * Last-write-wins: each call increments a request id; superseded calls are dropped.
  */
-function onChangeLocale(locale: SupportedLocale): void {
-    LocalStorage.set(STORAGE_LOCALE_KEY, locale);
+const onChangeLocale = (locale: SupportedLocale): void => {
     const requestId = ++_localeRequestId;
 
     void import('i18n/index')
@@ -208,10 +180,9 @@ function onChangeLocale(locale: SupportedLocale): void {
             }
         })
         .catch(() => {
-            // i18n module failed to load — locale is already persisted in storage
-            // and will be applied on next page load via resolveLocale().
+            // i18n module failed to load. The store cache remains the source of truth.
         });
-}
+};
 
 export { matchLocale, normalizeLocale, onChangeLocale, resolveLocale, SUPPORTED_LOCALES };
 export type { SupportedLocale };

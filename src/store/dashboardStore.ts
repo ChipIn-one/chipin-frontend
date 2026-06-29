@@ -13,6 +13,7 @@ import { useLoadingStore } from './loadingStore';
 
 export interface DashboardStore {
     fetchSetDashboardData: () => void;
+    setInitialDashboardStore: () => void;
 
     balances: BalancesMap;
     owedEntries: BalanceEntry[];
@@ -78,5 +79,8 @@ export const useDashboardStore = create<DashboardStore>(set => ({
                 console.error('Error fetching dashboard data:', error);
                 setLoading('dashboard', 'data', 'fetched');
             });
+    },
+    setInitialDashboardStore: () => {
+        set(initialDashboardStore);
     },
 }));

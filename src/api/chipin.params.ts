@@ -1,7 +1,14 @@
+import type { ApiUserSettings } from './chipin.raw.types';
+
 export interface CreateGroupParams {
     groupName: string;
     groupDescription?: string;
     groupEmoji?: string;
+}
+
+export interface UpdateUserParams {
+    displayName?: string;
+    settings?: ApiUserSettings;
 }
 
 export interface UpdateGroupParams {

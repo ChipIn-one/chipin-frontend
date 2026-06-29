@@ -10,13 +10,19 @@ export type BalancesMap = Record<string, BalanceEntry>;
 export type CurrenciesRates = Record<string, number>;
 
 export type ApiUserRole = 'USER' | 'ADMIN';
+export type ApiUserTheme = 'light' | 'dark' | 'system';
 
-export interface ApiUserSettingsResponse {
+export interface ApiUserSettings {
     defaultCurrency: string;
     timeFormat: '12h' | '24h';
     language: string;
-    theme: 'LIGHT' | 'DARK' | 'SYSTEM';
+    theme: ApiUserTheme;
     simplifyDebts: boolean;
+}
+
+export interface ApiUpdateUserRequest {
+    displayName?: string;
+    settings?: ApiUserSettings;
 }
 
 export interface ApiCurrencyRatesResponse {
@@ -36,7 +42,7 @@ export interface ApiUserResponse {
     picture: string | null;
     role: ApiUserRole;
     subscriptionUntil: number | null;
-    settings: ApiUserSettingsResponse;
+    settings: ApiUserSettings;
     createdAt: number;
     updatedAt: number;
 }

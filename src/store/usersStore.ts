@@ -1,30 +1,42 @@
+import i18n from 'i18next';
+import { toast } from 'sonner';
 import { create } from 'zustand';
 
-import { fetchApiKnownUsers, fetchApiUser } from 'api/chipin';
-import { SettledFriend, UnsettledFriends, User } from 'api/chipin.types';
+import { fetchApiKnownUsers, fetchApiUser, updateApiUser } from 'api/chipin';
+import {
+    SettledFriend,
+    UnsettledFriends,
+    UpdateUserParams,
+    User,
+    UserSettings,
+} from 'api/chipin.types';
 import { DAY, SECOND } from 'constants/time';
+import { getLocalUser, LocalUser, saveLocalUser, toLocalUser } from 'helpers/localStorage';
 import { getUnixTimestampInSec } from 'helpers/time';
 
 import { useLoadingStore } from './loadingStore';
 
 export interface UsersStore {
     user: User | null;
+    localUser: LocalUser | null;
     unSettledFriends: UnsettledFriends[];
     settledFriends: SettledFriend[];
 
     fetchSetFriends: () => void;
     fetchSetUser: () => void;
+    setUserSettings: (params: { displayName?: string; settings?: Partial<UserSettings> }) => void;
     extendUserSubscriptionByDay: () => void;
-    resetUsers: () => void;
+    setInitialUsersStore: () => void;
 }
 
 const initialUsersStore = {
     user: null,
+    localUser: getLocalUser(),
     unSettledFriends: [],
     settledFriends: [],
 };
 
-export const useUsersStore = create<UsersStore>(set => ({
+export const useUsersStore = create<UsersStore>((set, get) => ({
     ...initialUsersStore,
 
     fetchSetUser: () => {
@@ -33,7 +45,9 @@ export const useUsersStore = create<UsersStore>(set => ({
 
         fetchApiUser()
             .then(user => {
-                set({ user });
+                const nextLocalUser = toLocalUser(user);
+                saveLocalUser(nextLocalUser);
+                set({ user, localUser: nextLocalUser });
             })
             .catch(error => {
                 console.error('Error fetching user:', error);
@@ -57,6 +71,62 @@ export const useUsersStore = create<UsersStore>(set => ({
                 setLoading('users', 'friends', 'fetched');
             });
     },
+    setUserSettings: params => {
+        const { user, localUser } = get();
+        const currentSettings = user?.settings ?? localUser?.settings;
+        let nextSettings: UserSettings | undefined;
+
+        if (params.settings) {
+            if (!currentSettings) {
+                return;
+            }
+
+            nextSettings = {
+                ...currentSettings,
+                ...params.settings,
+            };
+        }
+
+        const request = {
+            ...(params.displayName && { displayName: params.displayName }),
+            ...(nextSettings && { settings: nextSettings }),
+        } satisfies UpdateUserParams;
+
+        const nextLocalUser = nextSettings
+            ? ({
+                  role: user?.role ?? localUser?.role ?? 'USER',
+                  settings: nextSettings,
+              } satisfies LocalUser)
+            : localUser;
+
+        if (nextSettings && nextLocalUser) {
+            saveLocalUser(nextLocalUser);
+        }
+
+        set({
+            user: user
+                ? {
+                      ...user,
+                      ...(params.displayName !== undefined && {
+                          displayName: params.displayName,
+                      }),
+                      ...(nextSettings && { settings: nextSettings }),
+                  }
+                : user,
+            localUser: nextLocalUser,
+        });
+
+        updateApiUser(request)
+            .then(user => {
+                const nextLocalUser = toLocalUser(user);
+                saveLocalUser(nextLocalUser);
+                set({ user, localUser: nextLocalUser });
+            })
+            .catch(error => {
+                console.error('Error updating user:', error);
+                toast.error(i18n.t('toasts:settings.saveError'));
+            });
+    },
     extendUserSubscriptionByDay: () => {
         set(state => {
             if (!state.user) {
@@ -77,7 +147,10 @@ export const useUsersStore = create<UsersStore>(set => ({
             };
         });
     },
-    resetUsers: () => {
-        set(initialUsersStore);
+    setInitialUsersStore: () => {
+        set({
+            ...initialUsersStore,
+            localUser: getLocalUser(),
+        });
     },
 }));

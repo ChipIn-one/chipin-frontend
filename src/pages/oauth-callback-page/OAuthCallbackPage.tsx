@@ -4,10 +4,6 @@ import { toast } from 'sonner';
 
 import { ROUTES } from 'constants/routes';
 import { resolveApiErrorMessage } from 'helpers/errors';
-import {
-    selectExchangeGoogleOAuthCode,
-    selectSetUnauthenticated,
-} from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 
 import PageLoader from 'basics/PageLoader';
@@ -34,8 +30,8 @@ export const OAuthCallbackPage = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const hasStartedExchange = useRef(false);
-    const exchangeGoogleOAuthCode = useAuthStore(selectExchangeGoogleOAuthCode);
-    const setUnauthenticated = useAuthStore(selectSetUnauthenticated);
+    const exchangeGoogleOAuthCode = useAuthStore(s => s.exchangeGoogleOAuthCode);
+    const setUnauthenticated = useAuthStore(s => s.setUnauthenticated);
 
     useEffect(() => {
         if (hasStartedExchange.current) {

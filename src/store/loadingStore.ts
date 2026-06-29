@@ -5,6 +5,7 @@ export type LoadingState = 'initial' | 'loading' | 'fetched';
 export interface LoadingStore {
     auth: {
         login: LoadingState;
+        signOut: LoadingState;
     };
     group: {
         data: LoadingState;
@@ -35,12 +36,13 @@ export interface LoadingStore {
         field: F,
         value: LoadingState,
     ) => void;
+    setInitialLoadingStore: () => void;
 }
 
-type LoadingSlices = Omit<LoadingStore, 'setLoading'>;
+type LoadingSlices = Omit<LoadingStore, 'setLoading' | 'setInitialLoadingStore'>;
 
 const initialLoadingStore: LoadingSlices = {
-    auth: { login: 'initial' },
+    auth: { login: 'initial', signOut: 'initial' },
     dashboard: { data: 'initial' },
     activity: { data: 'initial', nextPage: 'initial' },
     expense: { add: 'initial' },
@@ -66,5 +68,8 @@ export const useLoadingStore = create<LoadingStore>((set, get) => ({
                 [field]: value,
             },
         } as Pick<LoadingStore, typeof section>);
+    },
+    setInitialLoadingStore: () => {
+        set(initialLoadingStore);
     },
 }));

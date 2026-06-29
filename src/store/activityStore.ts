@@ -16,6 +16,7 @@ export interface ActivityStore {
     fetchSetActivity: () => void;
     fetchMoreActivity: () => void;
     createExpense: (params: CreateExpenseParams) => Promise<void>;
+    setInitialActivityStore: () => void;
 }
 
 const initialActivityStore = {
@@ -78,5 +79,8 @@ export const useActivityStore = create<ActivityStore>((set, get) => ({
             .finally(() => {
                 setLoading('expense', 'add', 'fetched');
             });
+    },
+    setInitialActivityStore: () => {
+        set(initialActivityStore);
     },
 }));

@@ -1,14 +1,23 @@
-import type { SettledFriend, UnsettledFriends } from 'api/chipin.types';
+import type { SettledFriend, ThemeName, UnsettledFriends, UserSettings } from 'api/chipin.types';
 import { DEFAULT_CURRENCY_CODE } from 'constants/currencies';
 import { getFilterFunction } from 'helpers/text';
 
 import type { UsersStore } from './usersStore';
 
+export const selectUserSettings = (s: UsersStore): UserSettings | null =>
+    s.user?.settings ?? s.localUser?.settings ?? null;
 export const selectUserCurrency = (s: UsersStore) =>
-    s.user?.settings?.defaultCurrency || DEFAULT_CURRENCY_CODE;
+    selectUserSettings(s)?.defaultCurrency || DEFAULT_CURRENCY_CODE;
+export const selectUserDisplayName = (s: UsersStore) => s.user?.displayName ?? '';
+export const selectUserTimeFormat = (s: UsersStore) => selectUserSettings(s)?.timeFormat ?? '12h';
+export const selectUserLanguage = (s: UsersStore) => selectUserSettings(s)?.language ?? 'en';
+export const selectUserTheme = (s: UsersStore): ThemeName =>
+    selectUserSettings(s)?.theme ?? 'system';
+export const selectUserSimplifyDebts = (s: UsersStore) =>
+    selectUserSettings(s)?.simplifyDebts ?? true;
 export const selectUnSettledFriends = (s: UsersStore): UnsettledFriends[] => s.unSettledFriends;
 export const selectSettledFriends = (s: UsersStore): SettledFriend[] => s.settledFriends;
-export const selectIsUserAdmin = (s: UsersStore) => s.user?.role === 'ADMIN';
+export const selectIsUserAdmin = (s: UsersStore) => (s.user?.role ?? s.localUser?.role) === 'ADMIN';
 
 export const selectFriendsCurrencies = (
     unsettled: UnsettledFriends[],

@@ -1,17 +1,13 @@
-import axios from 'axios';
-import { toast } from 'sonner';
+import type { AuthTokens } from 'helpers/localStorage';
 
-import { SECOND } from 'constants/time';
-import { getChipInApiUrl } from 'helpers/env';
-import { resolveApiErrorMessage } from 'helpers/errors';
-import { getAccessTokenDB } from 'store/IDB/auth';
-
-import { ApiFriendsResponse } from './chipin.raw.types';
+import { apiInstance } from './chipin.instance';
+import type { ApiFriendsResponse } from './chipin.raw.types';
 import type {
     ApiActivityItemsResponse,
     ApiCurrencyRatesResponse,
     ApiLedgerEntryResponse,
     ApiOAuthTokenPairResponse,
+    ApiRefreshTokenPairResponse,
     ApiRemoveGroupResponse,
     ApiUserResponse,
     CreateGroupParams,
@@ -25,54 +21,33 @@ import type {
     RemoveGroupParams,
     SharingMode,
     UpdateGroupParams,
+    UpdateUserParams,
 } from './chipin.types';
 
-const apiInstance = axios.create({
-    baseURL: getChipInApiUrl(),
-    headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-    },
-});
-
-apiInstance.interceptors.request.use(async config => {
-    const token = await getAccessTokenDB();
-
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-
-    return config;
-});
-
-apiInstance.interceptors.response.use(
-    response => response,
-    (error: unknown) => {
-        let message: string;
-
-        if (axios.isAxiosError(error)) {
-            // 1. Network / offline
-            if (!error.response) {
-                message = resolveApiErrorMessage(undefined, 'network.offline');
-            }
-
-            // 2. Backend-defined error id
-            else {
-                message = resolveApiErrorMessage(error.response.data);
-            }
-        } else {
-            message = resolveApiErrorMessage(undefined);
-        }
-
-        toast.error(message, {
-            duration: SECOND * 15,
-        });
-
-        return Promise.reject(error);
-    },
-);
-
 // =============== GROUPS AND USERS ===============
+
+export const refreshApiAuthTokens = (
+    refreshToken: string,
+): Promise<ApiRefreshTokenPairResponse> => {
+    return apiInstance
+        .post('/auth/refresh', undefined, {
+            headers: {
+                'X-Refresh-Token': refreshToken,
+            },
+        })
+        .then(response => response.data);
+};
+
+export const logoutApiAuthTokens = ({ accessToken, refreshToken }: AuthTokens): Promise<void> => {
+    return apiInstance
+        .post('/auth/logout', undefined, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'X-Refresh-Token': refreshToken,
+            },
+        })
+        .then(() => undefined);
+};
 
 export const exchangeApiGoogleOAuthCode = async (
     code: string,
@@ -164,6 +139,12 @@ export const fetchApiCurrencyRates = (): Promise<ApiCurrencyRatesResponse> => {
 
 export const fetchApiUser = (): Promise<ApiUserResponse> => {
     return apiInstance.get(`/users/self`).then(result => result.data);
+};
+
+export const updateApiUser = async (params: UpdateUserParams): Promise<ApiUserResponse> => {
+    const response = await apiInstance.patch('/users/self', params);
+
+    return response.data;
 };
 
 export const fetchApiKnownUsers = (): Promise<ApiFriendsResponse> => {

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, Flex } from '@radix-ui/themes';
 
 import { getSocialAuthUrl } from 'helpers/url';
-import { selectAuthLoginLoading, selectSetLoading } from 'store/loadingSelectors';
+import { selectAuthLoginLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
 import AppleIconSvg from 'assets/apple-icon.svg?react';
@@ -12,7 +12,7 @@ import GoogleIconSvg from 'assets/google-icon.svg?react';
 const AuthButtons = () => {
     const { t } = useTranslation('auth');
     const isGoogleLoginLoading = useLoadingStore(selectAuthLoginLoading);
-    const setLoading = useLoadingStore(selectSetLoading);
+    const setLoading = useLoadingStore(s => s.setLoading);
 
     const handleGoogleSignIn = () => {
         const authUrl = getSocialAuthUrl('google');

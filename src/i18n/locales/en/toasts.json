@@ -35,7 +35,8 @@
   },
   "settings": {
     "logoutAllDevicesSoon": "Logout on all devices will be available soon.",
-    "deleteAccountSoon": "Account deletion will be available soon."
+    "deleteAccountSoon": "Account deletion will be available soon.",
+    "saveError": "Failed to save settings."
   },
   "expense": {
     "created": "Expense added successfully!",

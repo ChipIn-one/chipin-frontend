@@ -3,6 +3,9 @@ import type {
     ApiSettledFriend,
     ApiUnsettledFriend,
     ApiUserResponse,
+    ApiUserRole,
+    ApiUserSettings,
+    ApiUserTheme,
     BalancesMap,
 } from './chipin.raw.types';
 
@@ -22,6 +25,7 @@ export type {
     ApiSettledFriend,
     ApiSettlementDetails,
     ApiUnsettledFriend,
+    ApiUpdateUserRequest,
     ApiUserResponse,
 } from './chipin.raw.types';
 
@@ -37,13 +41,16 @@ export type {
     SharingMode,
     SharingModeType,
     UpdateGroupParams,
+    UpdateUserParams,
 } from './chipin.params';
 
 // ─── Frontend types (used in components, store, hooks) ────────────────────
 
 /** User as used on the frontend (no parsing needed — all fields are plain). */
 export type User = ApiUserResponse;
-
+export type UserSettings = ApiUserSettings;
+export type UserRole = ApiUserRole;
+export type ThemeName = ApiUserTheme;
 /** A currency group within known users response. */
 export type UnsettledFriends = ApiUnsettledFriend;
 

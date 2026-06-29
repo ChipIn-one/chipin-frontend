@@ -1,26 +1,28 @@
 import i18n from 'i18next';
 
-type ApiErrorPayload = {
+export interface ApiErrorPayload {
     code?: string;
     details?: Record<string, unknown>;
-    error?: {
-        id?: string;
-        params?: Record<string, unknown>;
-    };
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
 };
 
-export const resolveApiErrorMessage = (payload?: ApiErrorPayload, fallbackKey = 'api.unknown') => {
-    const errorId = payload?.code ?? payload?.error?.id;
-    const params = payload?.details ?? payload?.error?.params;
-
-    if (errorId) {
-        const key = `errors:${errorId}`;
-        const translated = i18n.t(key, params);
-
-        if (translated !== key) {
-            return translated;
-        }
+export const resolveApiErrorMessage = (payload?: unknown, fallbackKey = 'api.unknown') => {
+    if (!isRecord(payload) || typeof payload.code !== 'string') {
+        return i18n.t(`errors:${fallbackKey}`);
     }
 
-    return i18n.t(`errors:${fallbackKey}`);
+    const message = i18n.t(`errors:apiErrors.${payload.code}`);
+
+    if (!isRecord(payload.details)) {
+        return message;
+    }
+
+    const detailsMessage = Object.values(payload.details)
+        .filter((value): value is string => typeof value === 'string' && Boolean(value))
+        .join(', ');
+
+    return detailsMessage ? `${message}, ${detailsMessage}` : message;
 };

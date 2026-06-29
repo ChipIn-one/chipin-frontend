@@ -11,9 +11,3 @@ export const selectIsAuthResolved = (s: AuthStore) => s.status !== 'unknown';
 export const selectUnauthReason = (s: AuthStore) => s.unauthReason;
 
 export const selectIsNewUser = (s: AuthStore) => s.isNewUser;
-
-export const selectExchangeGoogleOAuthCode = (s: AuthStore) => s.exchangeGoogleOAuthCode;
-
-export const selectRefreshAuthTokens = (s: AuthStore) => s.refreshAuthTokens;
-
-export const selectSetUnauthenticated = (s: AuthStore) => s.setUnauthenticated;

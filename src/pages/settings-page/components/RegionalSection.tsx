@@ -1,11 +1,13 @@
-import { useState } from 'react';
 import { LucideGlobe } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar, Box, Card, Flex, Separator, Skeleton, Text } from '@radix-ui/themes';
 
-import { onChangeLocale, SUPPORTED_LOCALES, SupportedLocale } from 'helpers/locale';
+import type { UserSettings } from 'api/chipin.types';
+import { matchLocale, onChangeLocale, SUPPORTED_LOCALES, SupportedLocale } from 'helpers/locale';
 import { detectDeviceTimezone, getAmPm24Time } from 'helpers/time';
+import { selectUserCurrency, selectUserLanguage, selectUserTimeFormat } from 'store/usersSelectors';
+import { useUsersStore } from 'store/usersStore';
 
 import CurrencySelect from 'components/CurrencySelect';
 import SegmentedControl from 'components/SegmentedControl';
@@ -16,26 +18,34 @@ interface Props {
 }
 
 const RegionalSection = ({ isLoading }: Props) => {
-    const { t, i18n } = useTranslation('settings');
+    const { t } = useTranslation('settings');
+    const setUserSettings = useUsersStore(s => s.setUserSettings);
+    const defaultCurrency = useUsersStore(selectUserCurrency);
+    const timeFormat = useUsersStore(selectUserTimeFormat);
+    const language = useUsersStore(selectUserLanguage);
 
     const detectedTimezone = detectDeviceTimezone();
-    const [isTimeFormat24h, setIsTimeFormat24h] = useState(false);
 
     const previewTime24 = getAmPm24Time(new Date(), true);
     const previewTime12 = getAmPm24Time(new Date(), false);
 
-    const selectedLanguage: SupportedLocale = SUPPORTED_LOCALES.includes(
-        i18n.language as SupportedLocale,
-    )
-        ? (i18n.language as SupportedLocale)
-        : 'en';
+    const selectedLanguage = matchLocale(language) ?? 'en';
 
     const handleTimeFormatChange = (value: string) => {
-        setIsTimeFormat24h(value === '24h');
+        setUserSettings({
+            settings: { timeFormat: value as UserSettings['timeFormat'] },
+        });
+    };
+
+    const handleDefaultCurrencyChange = (value: string) => {
+        setUserSettings({ settings: { defaultCurrency: value } });
     };
 
     const handleLanguageChange = (value: string) => {
-        onChangeLocale(value as SupportedLocale);
+        const locale = value as SupportedLocale;
+
+        setUserSettings({ settings: { language: locale } });
+        onChangeLocale(locale);
     };
 
     return (
@@ -104,7 +114,7 @@ const RegionalSection = ({ isLoading }: Props) => {
                         </Box>
                         <Skeleton loading={isLoading}>
                             <SegmentedControl
-                                value={isTimeFormat24h ? '24h' : '12h'}
+                                value={timeFormat}
                                 onValueChange={handleTimeFormatChange}
                                 items={[
                                     { value: '12h', label: previewTime12 },
@@ -123,7 +133,11 @@ const RegionalSection = ({ isLoading }: Props) => {
                             </Text>
                         </Skeleton>
                         <Box mt="2">
-                            <CurrencySelect isLoading={isLoading} />
+                            <CurrencySelect
+                                currency={defaultCurrency}
+                                isLoading={isLoading}
+                                onChange={handleDefaultCurrencyChange}
+                            />
                         </Box>
                     </Box>
 

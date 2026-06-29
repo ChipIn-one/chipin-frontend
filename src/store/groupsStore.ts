@@ -29,6 +29,7 @@ export interface GroupsStore {
 
     setGroups: (groups: Group[]) => void;
     setSelectedGroup: (group: Group) => void;
+    setInitialGroupsStore: () => void;
     fetchSetGroupById: (groupId: string | undefined) => void;
     createGroup: (params: {
         groupName: string;
@@ -73,6 +74,9 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
     setSelectedGroup: group => {
         const { base, rates } = useDashboardStore.getState().currencies;
         set({ selectedGroup: group, ...calcGroupSummary(group.balances, base, rates) });
+    },
+    setInitialGroupsStore: () => {
+        set(initialGroupsStore);
     },
     fetchSetGroupById: groupId => {
         const { groups } = get();

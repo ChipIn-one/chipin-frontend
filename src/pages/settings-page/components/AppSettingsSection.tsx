@@ -24,7 +24,10 @@ import {
 
 import { APP_VERSION } from 'constants/version';
 import { applySwUpdate } from 'helpers/swUpdates';
+import type { ThemeName } from 'helpers/theme';
 import { usePwaStore } from 'store/pwaStore';
+import { selectUserSimplifyDebts, selectUserTheme } from 'store/usersSelectors';
+import { useUsersStore } from 'store/usersStore';
 
 import SegmentedControl from 'components/SegmentedControl';
 
@@ -34,18 +37,23 @@ interface Props {
 
 const AppSettingsSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
-    const { theme, setTheme } = useTheme();
+    const { setTheme } = useTheme();
     const isSwUpdateAvailable = usePwaStore(s => s.isSwUpdateAvailable);
+    const setUserSettings = useUsersStore(s => s.setUserSettings);
+    const theme = useUsersStore(selectUserTheme);
+    const isSimplifyDebtsEnabled = useUsersStore(selectUserSimplifyDebts);
 
-    const [isSimplifyDebtsEnabled, setIsSimplifyDebtsEnabled] = useState(true);
     const [isAutoSplitEnabled, setIsAutoSplitEnabled] = useState(false);
 
-    const selectedTheme = (theme as 'light' | 'dark' | 'system' | undefined) || 'system';
+    const onChangeTheme = (value: string) => {
+        const nextTheme = value as ThemeName;
 
-    const handleThemeChange = (value: string) => {
-        if (value === 'light' || value === 'dark' || value === 'system') {
-            setTheme(value);
-        }
+        setTheme(nextTheme);
+        setUserSettings({ settings: { theme: nextTheme } });
+    };
+
+    const onChangeSimplifyDebts = (isEnabled: boolean) => {
+        setUserSettings({ settings: { simplifyDebts: isEnabled } });
     };
 
     return (
@@ -88,8 +96,8 @@ const AppSettingsSection = ({ isLoading }: Props) => {
 
                     <Skeleton loading={isLoading}>
                         <SegmentedControl
-                            value={selectedTheme}
-                            onValueChange={handleThemeChange}
+                            value={theme}
+                            onValueChange={onChangeTheme}
                             items={[
                                 {
                                     value: 'dark',
@@ -138,7 +146,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                         <Skeleton loading={isLoading}>
                             <Switch
                                 checked={isSimplifyDebtsEnabled}
-                                onCheckedChange={setIsSimplifyDebtsEnabled}
+                                onCheckedChange={onChangeSimplifyDebts}
                                 aria-label={t('app.simplifyDebtsTitle')}
                             />
                         </Skeleton>

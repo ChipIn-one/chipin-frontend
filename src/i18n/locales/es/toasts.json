@@ -35,7 +35,8 @@
     },
     "settings": {
         "logoutAllDevicesSoon": "Cerrar sesión en todos los dispositivos estará disponible pronto.",
-        "deleteAccountSoon": "La eliminación de cuenta estará disponible pronto."
+        "deleteAccountSoon": "La eliminación de cuenta estará disponible pronto.",
+        "saveError": "No se pudieron guardar los ajustes."
     },
     "expense": {
         "created": "¡Gasto agregado exitosamente!",

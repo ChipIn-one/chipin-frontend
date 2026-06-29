@@ -35,7 +35,8 @@
     },
     "settings": {
         "logoutAllDevicesSoon": "Sair em todos os dispositivos estará disponível em breve.",
-        "deleteAccountSoon": "A eliminação de conta estará disponível em breve."
+        "deleteAccountSoon": "A eliminação de conta estará disponível em breve.",
+        "saveError": "Não foi possível guardar as definições."
     },
     "expense": {
         "created": "Despesa adicionada com sucesso!",

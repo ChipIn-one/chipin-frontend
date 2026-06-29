@@ -2,12 +2,14 @@ import { useCheckOnlineStatus, useCheckPwa } from 'hooks/pwaHooks';
 import { useAuthToasts } from 'hooks/useAuthToasts';
 import { useCheckSignIn } from 'hooks/useCheckSignIn';
 import { useRoutesMeta } from 'hooks/useRoutesMeta';
+import { useSyncUserSettings } from 'hooks/useSyncUserSettings';
 
 const GlobalHooks = () => {
     // Permanent hooks
     useRoutesMeta();
     useCheckOnlineStatus();
     useCheckPwa();
+    useSyncUserSettings();
 
     // TODO: Use hooks
     // console.log(useCopyToClipboard('ttt'));

@@ -1,231 +1,108 @@
-# AGENTS.md (PRODUCTION RUNTIME SPEC v2)
+# AGENTS.md
 
-# 0. SYSTEM OVERVIEW
+## Goal
 
-This project uses a two-phase agent system:
+This file defines durable working rules for Codex in this repository.
+Keep changes small, scoped, verified, and consistent with the existing stack.
 
-1. PLANNER AGENT — clarifies requirements, detects ambiguity, produces execution plan
-2. EXECUTOR AGENT — implements approved plan with minimal diff
+## Workflow
 
-No direct execution is allowed without a validated plan.
+- For simple, well-scoped tasks: inspect relevant files, implement the smallest safe diff, run relevant checks, and summarize the result.
+- For ambiguous, broad, risky, architectural, financial, auth, data-flow, dependency, or cross-cutting tasks: ask clarifying questions and propose a plan before editing.
+- When the user explicitly asks for a plan, review, explanation, or analysis only, do not edit files.
+- If an approved plan becomes stale, unsafe, or inconsistent with discovered code, pause and explain the mismatch before continuing.
+- Do not refactor unrelated code or change architecture during narrow tasks.
 
----
+## Repository Stack
 
-# 1. GLOBAL EXECUTION MODEL
+- Vite + React + TypeScript strict + styled-components v6 + Radix Themes.
+- Use the existing import aliases from `tsconfig.app.json`.
+- Prefer existing project patterns over introducing new abstractions.
+- Do not add production dependencies for narrow tasks.
+- Do not add dev dependencies unless the plan names the gap and why the repository needs it.
+- Comments must be in English and explain only non-obvious logic.
 
-FLOW:
+## Architecture
 
-USER → PLANNER → (CLARIFICATIONS) → USER → PLANNER → APPROVED PLAN → EXECUTOR → CODE
+- Preserve dependency direction: pages -> features -> components -> basics.
+- UI should call stores or hooks, not raw API clients.
+- Runtime API calls belong in stores or explicitly approved store-adjacent modules.
+- Type-only imports from API DTO files are allowed.
+- Keep side effects in hooks, stores, or event handlers.
+- Do not call APIs directly from `useEffect` in UI components.
+- Do not change backend API contracts unless explicitly requested.
 
----
+## Stores
 
-STATE MACHINE (HARD)
+- Use global stores only when shared state is genuinely needed.
+- Avoid creating new stores for narrow local behavior.
+- Use selectors for Zustand subscriptions.
+- Use shallow/object selectors only when they avoid unnecessary re-renders without obscuring code.
+- Handle API errors explicitly with existing project helpers such as `resolveApiErrorMessage`.
+- Surface user-relevant failures through the existing toaster pattern.
 
-Every task MUST be in one of:
+## UI
 
-- NEEDS CLARIFICATION
-- READY FOR EXECUTION
+- Prefer Radix Themes primitives, props, and tokens first.
+- Use styled-components when Radix primitives or props are not enough.
+- Do not add new UI libraries.
+- Avoid inline styles in new or touched code; use Radix props or styled-components instead.
+- Avoid raw hex colors in new or touched CSS; prefer theme tokens or existing theme helpers.
+- `className` is allowed for component pass-through and existing library patterns, not as a new styling system.
+- Do not create broad visual redesigns during narrow fixes.
 
-Execution is forbidden unless state = READY FOR EXECUTION.
+## Barrel Exports
 
----
+- New public component subdirectories should expose public symbols through `index.ts`.
+- Prefer importing from a local barrel when it already exists.
+- Do not create broad barrel-export churn during unrelated tasks.
+- For new files, prefer named exports and named re-exports.
 
-# 2. AGENT ROUTING RULE (HARD)
+## React, i18n, And Type Safety
 
-If no approved plan exists → ALWAYS PLANNER  
-If approved plan exists → ALWAYS EXECUTOR  
-Mixing modes is forbidden.
+- Components and hooks must stay pure.
+- Do not define components inside render.
+- Avoid unnecessary memoization.
+- No user-facing strings directly in JSX for production UI; use i18n keys.
+- No `any` or `as any`; use `unknown` plus narrowing when needed.
+- Keep booleans named with `is*` or `has*` when practical.
+- Keep event handlers/actions named with `handle*`, `on*`, or `fetch*` when practical.
+- Use full, descriptive iterator names in non-trivial code.
 
----
+## Money
 
-# 3. RULE PRIORITY
+- Use JavaScript `Number` for frontend money values and API payloads.
+- Backend is the source of truth for financial calculations.
+- Frontend may display rounded values, for example with `toFixed(2)`.
+- Do not introduce BigNumber, cents, or integer-money domain models on the frontend.
+- Existing BigNumber usage is legacy; do not expand it, and do not migrate it during unrelated tasks.
 
-1. HARD rules in this spec
-2. Architecture invariants
-3. Data flow rules
-4. UI system rules
-5. Naming conventions
-6. SOFT heuristics
-7. User request (only within constraints)
+## Legacy Code
 
----
+Some existing code may violate newer rules. Do not perform broad cleanup during narrow tasks.
+Apply these rules to new and touched code. Fix nearby legacy issues only when they are directly related to the requested change.
 
-# 4. PLANNER AGENT
+## Definition Of Done
 
-Responsibilities:
+Before editing:
 
-- interpret request
-- detect ambiguity
-- ask clarifying questions
-- produce execution plan
+- Inspect relevant files and existing patterns.
+- For risky or ambiguous work, explain the plan and wait for approval.
+- Name files, layers, data flow, store/API responsibilities, and UI components when applicable.
 
-MANDATORY (HARD):
+During editing:
 
-- ALWAYS ask clarifying questions before producing the execution plan, even if requirements seem clear
-- No execution plan may be produced in the same response as initial request interpretation
-- Clarifying questions MUST be answered by the user before proceeding to plan
+- Make the smallest safe diff.
+- Prefer workflow, config, or documentation changes when the task is about agent behavior.
+- Do not touch routing, state logic, UI components, or business logic unless the approved plan requires it.
+- Preserve unrelated user changes in the working tree.
 
-FORBIDDEN:
+After editing:
 
-- writing code
-- implementing features
-- skipping unclear requirements
-- producing an execution plan without first receiving answers to clarifying questions
-
-OUTPUT:
-
-## QUESTIONS (required — always present)
-
-...
-
-## ASSUMPTIONS
-
-...
-
-## EXECUTION PLAN
-
-- files
-- layers
-- data flow
-- store/API responsibilities
-- UI components
-
-## CONSTRAINT CHECK
-
-- violations: none | list
-
-## STATE
-
-NEEDS CLARIFICATION | READY FOR EXECUTION
-
----
-
-# 5. EXECUTOR AGENT
-
-Responsibilities:
-
-- execute plan only
-- minimal diff
-- no redesign
-
-FORBIDDEN:
-
-- questions
-- refactoring unrelated code
-- changing architecture
-- adding abstractions
-
-OUTPUT:
-
-- code only
-
----
-
-# 6. ARCHITECTURE INVARIANTS
-
-pages → features → components → basics
-
-UI → store → API
-
----
-
-# 7. STORE RULES
-
-- all API calls in store only
-- no API in UI/hooks/pages
-- global stores only
-- selectors required
-
----
-
-# 8. UI RULES
-
-- Radix UI primary system
-- no inline styles
-- no styled(RadixPart)
-- styled-components only for fallback
-- no hex colors in CSS
-
-# 8a. BARREL EXPORTS (HARD)
-
-- every subdirectory with 1+ components MUST have an `index.ts` that re-exports all public symbols
-- imports from a subdirectory MUST use the barrel: `import { X } from './components'`
-- direct deep imports are forbidden: `import X from './components/X'` ❌
-- barrel format: named imports then named re-exports (no `export { default as X }` for new files)
-
----
-
-# 9. TYPE SAFETY
-
-- no any
-- no as any
-- use unknown + narrowing
-
----
-
-# 10. FINANCIAL RULES
-
-- use JavaScript Number for money values on frontend
-- backend is the source of truth for all financial calculations
-- frontend may display rounded values (e.g. toFixed(2))
-- frontend sends raw Number values to backend
-- no BigNumber or integer/cents model on frontend
-
----
-
-# 11. i18n
-
-- no user-facing strings in JSX
-- must use i18n keys
-
----
-
-# 12. REACT RULES
-
-- no single-line returns
-- no components inside render
-- avoid unnecessary memoization
-
----
-
-# 13. SIDE EFFECTS
-
-- only in hooks or stores
-- no API in useEffect
-
----
-
-# 14. NAMING
-
-Booleans: is*, has*  
-Actions: handle*, on*, fetch\*  
-Collections: plural  
-Iterators: full names
-
----
-
-# 15. ANTI-PATTERNS
-
-- creating new stores unnecessarily
-- refactoring unrelated code
-- architectural changes during tasks
-- overengineering
-
----
-
-# 16. ERROR HANDLING
-
-- all API errors handled
-- use resolveApiErrorMessage
-- show toaster
-- never silent failures
-
----
-
-# 17. COMPLETION CRITERIA
-
-Task is complete only if:
-
-- plan followed
-- minimal diff
-- no violations
+- Run relevant existing scripts from `package.json`.
+- Prefer `npm run verify` when the change reasonably affects app behavior.
+- For narrow docs/config-only changes, explain why full verify was skipped.
+- Do not claim tests, typecheck, format checks, or builds passed if the script is missing or was not run.
+- Summarize exact files changed and why each change helps.
+- Report skipped or failed checks explicitly.
+- Self-review for scope, UI, i18n, API/store, type-safety, money, and legacy-rule violations.

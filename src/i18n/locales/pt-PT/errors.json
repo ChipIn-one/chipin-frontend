@@ -7,6 +7,45 @@
         "validation_failed": "A validação do pedido falhou",
         "rate_limited": "Demasiados pedidos. Tente novamente mais tarde"
     },
+    "apiErrors": {
+        "AUTH": {
+            "UNAUTHORIZED": "Inicie sessão para continuar",
+            "FORBIDDEN": "Não tem permissão para realizar esta ação",
+            "INVALID_TOKEN": "A sua sessão é inválida. Inicie sessão novamente.",
+            "EXPIRED_TOKEN": "A sua sessão expirou. Inicie sessão novamente.",
+            "INVALID_REFRESH_TOKEN": "Não foi possível atualizar a sua sessão. Inicie sessão novamente."
+        },
+        "VALIDATION": {
+            "INVALID": "A validação do pedido falhou",
+            "REQUIRED": "Faltam dados obrigatórios",
+            "ALREADY_EXISTS": "Este valor já existe"
+        },
+        "USER": {
+            "NOT_FOUND": "Utilizador não encontrado",
+            "FORBIDDEN": "Não tem permissão para aceder a este utilizador",
+            "CANNOT_JOIN_SELF_INVITE": "Não pode aderir através do seu próprio convite"
+        },
+        "GROUP": {
+            "NOT_FOUND": "Grupo não encontrado",
+            "FORBIDDEN": "Não tem permissão para aceder a este grupo",
+            "MEMBER_NOT_FOUND": "Membro do grupo não encontrado",
+            "CANNOT_KICK_SELF": "Não pode remover-se do grupo desta forma",
+            "OWNER_MUST_TRANSFER": "Transfira a propriedade do grupo antes de sair",
+            "INVALID_NEW_OWNER": "O utilizador selecionado não pode ser o novo proprietário",
+            "GROUP_INACTIVE": "Este grupo está inativo"
+        },
+        "LEDGER": {
+            "NOT_FOUND": "Registo não encontrado",
+            "FORBIDDEN": "Não tem permissão para aceder a este registo"
+        },
+        "ACTIVITY": {
+            "NOT_FOUND": "Atividade não encontrada"
+        },
+        "SYSTEM": {
+            "INTERNAL": "Algo correu mal. Tente novamente mais tarde.",
+            "SERVICE_UNAVAILABLE": "O serviço está temporariamente indisponível. Tente novamente mais tarde."
+        }
+    },
     "network": {
         "offline": "Sem ligação à internet"
     },
