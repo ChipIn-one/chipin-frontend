@@ -20,6 +20,7 @@ type BaseEvent = {
     groupId: UUID;
     metadata: unknown;
     createdAt: Timestamp;
+    parentActivityId: UUID | null;
 };
 
 type ExpenseMetadata = {

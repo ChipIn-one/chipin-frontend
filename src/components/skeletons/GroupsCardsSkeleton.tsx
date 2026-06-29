@@ -1,29 +1,30 @@
 import { LucideEye } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Avatar, Box, Button, Card, Flex, Skeleton, Text } from '@radix-ui/themes';
+import { Avatar, Button, Card, Flex, Skeleton, Text } from '@radix-ui/themes';
 
 const SKELETON_COUNT = 3;
 
 export const GroupsCardsSkeleton = () => {
-    const { t } = useTranslation('dashboard');
+    const { t: tDashboard } = useTranslation('dashboard');
+    const { t: tSkeletons } = useTranslation('skeletons');
 
     return (
         <Flex direction="column" gap="4">
             <Flex gap="2" wrap="wrap">
                 <Skeleton>
-                    <Button>{t('groups.filterAll')}</Button>
+                    <Button>{tDashboard('groups.filterAll')}</Button>
                 </Skeleton>
                 <Skeleton>
-                    <Button>{t('summary.owedToYou')}</Button>
+                    <Button>{tDashboard('summary.owedToYou')}</Button>
                 </Skeleton>
                 <Skeleton>
-                    <Button>{t('summary.youOwe')}</Button>
+                    <Button>{tDashboard('summary.youOwe')}</Button>
                 </Skeleton>
                 <Skeleton>
                     <Button>
                         <LucideEye size={14} />
-                        {t('groups.filterSettled')}
+                        {tDashboard('groups.filterSettled')}
                     </Button>
                 </Skeleton>
             </Flex>
@@ -37,18 +38,18 @@ export const GroupsCardsSkeleton = () => {
                         <Flex direction="column">
                             <Text size="4" weight="bold" as="span">
                                 <Skeleton>
-                                    <Box width="120px" height="var(--space-4)" />
+                                    {tSkeletons('groupsCards.groupName')}
                                 </Skeleton>
                             </Text>
 
                             <Text size="2" color="grass" weight="medium" as="span">
                                 <Skeleton>
-                                    <Box width="140px" height="var(--space-3)" />
+                                    {tSkeletons('groupsCards.groupBalance')}
                                 </Skeleton>
                             </Text>
 
-                            <Text size="1" color="gray" as="p">
-                                <Skeleton>{t('groupsCard.members', { count: 3 })}</Skeleton>
+                            <Text size="1" color="gray">
+                                <Skeleton>{tSkeletons('groupsCards.members')}</Skeleton>
                             </Text>
                         </Flex>
                     </Flex>

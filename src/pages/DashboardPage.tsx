@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Box, Button, Container, Flex, Grid } from '@radix-ui/themes';
 
+import { useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectDashboardFetched, selectDashboardLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
@@ -17,12 +18,14 @@ import GroupsSectionHeader from 'components/GroupsSectionHeader';
 import { CreateUpdateGroupModal } from 'components/modals';
 import { MobileNavBar } from 'components/nav-bars';
 import { ActivityFeedSkeleton } from 'components/skeletons';
+import { ActivityEventsList } from 'features/activity/components';
 
 const DashboardPage = () => {
     const { t } = useTranslation('dashboard');
     const isDashboardLoading = useLoadingStore(selectDashboardLoading);
     const isDashboardFetched = useLoadingStore(selectDashboardFetched);
 
+    const activityItems = useDashboardStore(s => s.activityItems);
     const groups = useGroupsStore(s => s.groups);
     const hasGroups = groups.length > 0;
 
@@ -71,7 +74,11 @@ const DashboardPage = () => {
                         sm: 'span 2',
                     }}
                 >
-                    <ActivityFeedSkeleton isExpensesOnly />
+                    {!isDashboardFetched || isDashboardLoading ? (
+                        <ActivityFeedSkeleton />
+                    ) : (
+                        <ActivityEventsList events={activityItems} />
+                    )}
                 </Box>
             </Grid>
 

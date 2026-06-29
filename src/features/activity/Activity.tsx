@@ -10,11 +10,10 @@ import { useActivityStore } from 'store/activityStore';
 import { selectActivityLoading, selectActivityNextPageLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
-import { NoActivityEmptyState } from 'basics/empty-states';
 import { ActivityFeedSkeleton } from 'components/skeletons';
 
 import ActivityHeader, { ActivityFilter } from './ActivityHeader';
-import { EventRenderer } from './components';
+import { ActivityEventsList } from './components';
 
 const Activity = () => {
     const { t } = useTranslation('activity');
@@ -59,14 +58,8 @@ const Activity = () => {
 
             {isLoading ? (
                 <ActivityFeedSkeleton />
-            ) : filteredItems.length === 0 ? (
-                <NoActivityEmptyState />
             ) : (
-                <Flex direction="column" gap="2">
-                    {filteredItems.map(event => (
-                        <EventRenderer key={event.id} event={event} />
-                    ))}
-
+                <ActivityEventsList events={filteredItems}>
                     <>
                         {isNextPageLoading && (
                             <Flex justify="center" py="4">
@@ -85,7 +78,7 @@ const Activity = () => {
 
                         <div ref={sentinelRef} />
                     </>
-                </Flex>
+                </ActivityEventsList>
             )}
         </>
     );

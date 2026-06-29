@@ -21,14 +21,14 @@ const FriendsPageHeader = ({ isLoading }: Props) => {
                     />
                 </Skeleton>
                 <Box>
-                    <Skeleton loading={isLoading}>
-                        <Heading size={{ initial: '5', sm: '6' }}>{t('friends:title')}</Heading>
-                    </Skeleton>
-                    <Skeleton loading={isLoading}>
-                        <Text size="2" color="gray">
+                    <Heading size={{ initial: '5', sm: '6' }}>
+                        <Skeleton loading={isLoading}>{t('friends:title')}</Skeleton>
+                    </Heading>
+                    <Text size="2" color="gray">
+                        <Skeleton loading={isLoading}>
                             {t('friends:yourConnections')}
-                        </Text>
-                    </Skeleton>
+                        </Skeleton>
+                    </Text>
                 </Box>
             </Flex>
             <Button variant="soft" loading={isLoading}>

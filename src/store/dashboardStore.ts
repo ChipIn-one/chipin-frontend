@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+import type { AppEvent } from 'api/activity.types';
 import { fetchApiCurrencyRates, fetchApiDashboard } from 'api/chipin';
 import {
     ApiCurrencyRatesResponse,
@@ -22,6 +23,9 @@ export interface DashboardStore {
     owedTotalInBase: number | null;
     owingTotalInBase: number | null;
 
+    activityItems: AppEvent[];
+    activityNextCursor: number | null;
+
     currencies: ApiCurrencyRatesResponse;
 }
 
@@ -32,6 +36,9 @@ const initialDashboardStore = {
     netTotalInBase: null,
     owedTotalInBase: null,
     owingTotalInBase: null,
+
+    activityItems: [],
+    activityNextCursor: null,
 
     currencies: {
         base: 'USD',
@@ -71,6 +78,8 @@ export const useDashboardStore = create<DashboardStore>(set => ({
                     netTotalInBase,
                     owedTotalInBase,
                     owingTotalInBase,
+                    activityItems: dashboard.activity.items,
+                    activityNextCursor: dashboard.activity.nextCursor,
                     currencies,
                 });
                 setLoading('dashboard', 'data', 'fetched');

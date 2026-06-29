@@ -22,6 +22,7 @@ i18n.use(initReactI18next).init({
         'dashboard',
         'settings',
         'friends',
+        'skeletons',
     ],
     defaultNS: 'common',
 

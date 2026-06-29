@@ -1,25 +1,25 @@
+import { useTranslation } from 'react-i18next';
+
 import { Avatar, Card, Flex, Skeleton, Text } from '@radix-ui/themes';
 
 const SKELETON_COUNT = 3;
-const SKELETON_CURRENCY = 'USD';
-const SKELETON_TOTAL = '+9999';
-const SKELETON_NAME = 'Display Name John';
-const SKELETON_AMOUNT = '+999 USD';
 
 export const FriendsPageSkeleton = () => {
+    const { t } = useTranslation('skeletons');
+
     return (
         <>
             {Array.from({ length: SKELETON_COUNT }, (_, i) => (
                 <Card key={i}>
                     <Flex justify="between" align="center" mb="3">
-                        <Skeleton>
-                            <Text size="3" weight="bold">
-                                {SKELETON_CURRENCY}
-                            </Text>
-                        </Skeleton>
-                        <Skeleton>
-                            <Text size="3">{SKELETON_TOTAL}</Text>
-                        </Skeleton>
+                        <Text size="3" weight="bold">
+                            <Skeleton>
+                                {t('friendsPage.currency')}
+                            </Skeleton>
+                        </Text>
+                        <Text size="3">
+                            <Skeleton>{t('friendsPage.total')}</Skeleton>
+                        </Text>
                     </Flex>
                     <Flex direction="column" gap="3">
                         {Array.from({ length: 2 }, (_, j) => (
@@ -32,15 +32,15 @@ export const FriendsPageSkeleton = () => {
                                             fallback="A"
                                         />
                                     </Skeleton>
-                                    <Skeleton>
-                                        <Text size={{ initial: '2', sm: '3' }}>
-                                            {SKELETON_NAME}
-                                        </Text>
-                                    </Skeleton>
+                                    <Text size={{ initial: '2', sm: '3' }}>
+                                        <Skeleton>
+                                            {t('friendsPage.name')}
+                                        </Skeleton>
+                                    </Text>
                                 </Flex>
-                                <Skeleton>
-                                    <Text size="2">{SKELETON_AMOUNT}</Text>
-                                </Skeleton>
+                                <Text size="2">
+                                    <Skeleton>{t('friendsPage.amount')}</Skeleton>
+                                </Text>
                             </Flex>
                         ))}
                     </Flex>

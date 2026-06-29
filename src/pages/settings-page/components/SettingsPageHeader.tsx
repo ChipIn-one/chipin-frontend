@@ -21,14 +21,14 @@ const SettingsPageHeader = ({ isLoading }: Props) => {
                     />
                 </Skeleton>
                 <Box>
-                    <Skeleton loading={isLoading}>
-                        <Heading size={{ initial: '5', sm: '6' }}>{t('title')}</Heading>
-                    </Skeleton>
-                    <Skeleton loading={isLoading}>
-                        <Text size="2" color="gray">
+                    <Heading size={{ initial: '5', sm: '6' }}>
+                        <Skeleton loading={isLoading}>{t('title')}</Skeleton>
+                    </Heading>
+                    <Text size="2" color="gray">
+                        <Skeleton loading={isLoading}>
                             {t('subtitle')}
-                        </Text>
-                    </Skeleton>
+                        </Skeleton>
+                    </Text>
                 </Box>
             </Flex>
         </Flex>

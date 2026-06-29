@@ -1,4 +1,5 @@
 import type {
+    ApiActivityItemsResponse,
     ApiGroupResponse,
     ApiSettledFriend,
     ApiUnsettledFriend,
@@ -64,4 +65,5 @@ export type Group = ApiGroupResponse;
 export type Dashboard = {
     groups: Group[];
     balances: BalancesMap;
+    activity: ApiActivityItemsResponse;
 };

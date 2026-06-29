@@ -1,6 +1,21 @@
-import { Avatar, Box, Card, Flex, Skeleton } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 
-const ExpenseEventSkeleton = () => (
+import { Avatar, Card, Flex, Skeleton, Text } from '@radix-ui/themes';
+
+interface ActivityFeedSkeletonMessages {
+    expenseTitle: string;
+    expenseDescription: string;
+    expenseAmount: string;
+    owedStatus: string;
+    relativeTime: string;
+    memberJoined: string;
+}
+
+interface EventSkeletonProps {
+    messages: ActivityFeedSkeletonMessages;
+}
+
+const ExpenseEventSkeleton = ({ messages }: EventSkeletonProps) => (
     <Card size="1" mb="2">
         <Flex justify="between" align="center" gap="3">
             <Flex gap="4" align="center">
@@ -8,30 +23,40 @@ const ExpenseEventSkeleton = () => (
                     <Avatar size="3" variant="soft" fallback="" />
                 </Skeleton>
                 <Flex direction="column" gap="1">
-                    <Skeleton>
-                        <Box width="120px" height="var(--space-4)" />
-                    </Skeleton>
-                    <Skeleton>
-                        <Box width="170px" height="var(--space-3)" />
-                    </Skeleton>
+                    <Text size="3" weight="medium">
+                        <Skeleton>
+                            {messages.expenseTitle}
+                        </Skeleton>
+                    </Text>
+                    <Text size="2" color="gray">
+                        <Skeleton>
+                            {messages.expenseDescription}
+                        </Skeleton>
+                    </Text>
                 </Flex>
             </Flex>
             <Flex direction="column" align="end" gap="1">
-                <Skeleton>
-                    <Box width="64px" height="var(--space-4)" />
-                </Skeleton>
-                <Skeleton>
-                    <Box width="80px" height="var(--space-3)" />
-                </Skeleton>
-                <Skeleton>
-                    <Box width="52px" height="var(--space-3)" />
-                </Skeleton>
+                <Text size="3" weight="bold">
+                    <Skeleton>
+                        {messages.expenseAmount}
+                    </Skeleton>
+                </Text>
+                <Text size="2">
+                    <Skeleton>
+                        {messages.owedStatus}
+                    </Skeleton>
+                </Text>
+                <Text size="1">
+                    <Skeleton>
+                        {messages.relativeTime}
+                    </Skeleton>
+                </Text>
             </Flex>
         </Flex>
     </Card>
 );
 
-const MemberJoinEventSkeleton = () => (
+const MemberJoinEventSkeleton = ({ messages }: EventSkeletonProps) => (
     <Card size="1" mb="2">
         <Flex justify="between" align="center" gap="3">
             <Flex gap="4" align="center">
@@ -42,14 +67,18 @@ const MemberJoinEventSkeleton = () => (
                     <Skeleton>
                         <Avatar size="1" fallback="" />
                     </Skeleton>
-                    <Skeleton>
-                        <Box width="192px" height="var(--space-4)" />
-                    </Skeleton>
+                    <Text size="3">
+                        <Skeleton>
+                            {messages.memberJoined}
+                        </Skeleton>
+                    </Text>
                 </Flex>
             </Flex>
-            <Skeleton>
-                <Box width="52px" height="var(--space-3)" />
-            </Skeleton>
+            <Text size="1">
+                <Skeleton>
+                    {messages.relativeTime}
+                </Skeleton>
+            </Text>
         </Flex>
     </Card>
 );
@@ -62,18 +91,30 @@ interface Props {
     isExpensesOnly?: boolean;
 }
 
-export const ActivityFeedSkeleton = ({ isExpensesOnly = false }: Props) => (
-    <Flex direction="column" gap="2">
-        {isExpensesOnly
-            ? Array.from({ length: EXPENSE_COUNT }, (_, index) => (
-                  <ExpenseEventSkeleton key={index} />
-              ))
-            : SKELETON_ORDER.map(index =>
-                  MEMBER_JOIN_INDICES.has(index) ? (
-                      <MemberJoinEventSkeleton key={index} />
-                  ) : (
-                      <ExpenseEventSkeleton key={index} />
-                  ),
-              )}
-    </Flex>
-);
+export const ActivityFeedSkeleton = ({ isExpensesOnly = false }: Props) => {
+    const { t } = useTranslation('skeletons');
+    const messages: ActivityFeedSkeletonMessages = {
+        expenseTitle: t('activityFeed.expenseTitle'),
+        expenseDescription: t('activityFeed.expenseDescription'),
+        expenseAmount: t('activityFeed.expenseAmount'),
+        owedStatus: t('activityFeed.owedStatus'),
+        relativeTime: t('activityFeed.relativeTime'),
+        memberJoined: t('activityFeed.memberJoined'),
+    };
+
+    return (
+        <Flex direction="column" gap="2">
+            {isExpensesOnly
+                ? Array.from({ length: EXPENSE_COUNT }, (_, index) => (
+                      <ExpenseEventSkeleton key={index} messages={messages} />
+                  ))
+                : SKELETON_ORDER.map(index =>
+                      MEMBER_JOIN_INDICES.has(index) ? (
+                          <MemberJoinEventSkeleton key={index} messages={messages} />
+                      ) : (
+                          <ExpenseEventSkeleton key={index} messages={messages} />
+                      ),
+                  )}
+        </Flex>
+    );
+};

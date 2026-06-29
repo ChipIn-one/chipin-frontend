@@ -23,14 +23,14 @@ const NotificationsSection = ({ isLoading }: Props) => {
                         />
                     </Skeleton>
                     <Box>
-                        <Skeleton loading={isLoading}>
-                            <Text weight="medium">{t('notifications.title')}</Text>
-                        </Skeleton>
-                        <Skeleton loading={isLoading}>
-                            <Text size="2" color="gray" as="p">
+                        <Text weight="medium">
+                            <Skeleton loading={isLoading}>{t('notifications.title')}</Skeleton>
+                        </Text>
+                        <Text size="2" color="gray">
+                            <Skeleton loading={isLoading}>
                                 {t('notifications.description')}
-                            </Text>
-                        </Skeleton>
+                            </Skeleton>
+                        </Text>
                     </Box>
                 </Flex>
 
@@ -38,14 +38,14 @@ const NotificationsSection = ({ isLoading }: Props) => {
 
                 <Flex justify="between" align="center" gap="3">
                     <Box>
-                        <Skeleton loading={isLoading}>
-                            <Text weight="medium">{t('notifications.pushTitle')}</Text>
-                        </Skeleton>
-                        <Skeleton loading={isLoading}>
-                            <Text size="2" color="gray" as="p">
+                        <Text weight="medium">
+                            <Skeleton loading={isLoading}>{t('notifications.pushTitle')}</Skeleton>
+                        </Text>
+                        <Text size="2" color="gray">
+                            <Skeleton loading={isLoading}>
                                 {t('notifications.pushDescription')}
-                            </Text>
-                        </Skeleton>
+                            </Skeleton>
+                        </Text>
                     </Box>
                     <Skeleton loading={isLoading}>
                         <Switch defaultChecked aria-label={t('notifications.pushTitle')} />
@@ -56,14 +56,14 @@ const NotificationsSection = ({ isLoading }: Props) => {
 
                 <Flex justify="between" align="center" gap="3">
                     <Box>
-                        <Skeleton loading={isLoading}>
-                            <Text weight="medium">{t('notifications.emailTitle')}</Text>
-                        </Skeleton>
-                        <Skeleton loading={isLoading}>
-                            <Text size="2" color="gray" as="p">
+                        <Text weight="medium">
+                            <Skeleton loading={isLoading}>{t('notifications.emailTitle')}</Skeleton>
+                        </Text>
+                        <Text size="2" color="gray">
+                            <Skeleton loading={isLoading}>
                                 {t('notifications.emailDescription')}
-                            </Text>
-                        </Skeleton>
+                            </Skeleton>
+                        </Text>
                     </Box>
                     <Skeleton loading={isLoading}>
                         <Switch aria-label={t('notifications.emailTitle')} />
@@ -74,14 +74,16 @@ const NotificationsSection = ({ isLoading }: Props) => {
 
                 <Flex justify="between" align="center" gap="3">
                     <Box>
-                        <Skeleton loading={isLoading}>
-                            <Text weight="medium">{t('notifications.expenseRemindersTitle')}</Text>
-                        </Skeleton>
-                        <Skeleton loading={isLoading}>
-                            <Text size="2" color="gray" as="p">
+                        <Text weight="medium">
+                            <Skeleton loading={isLoading}>
+                                {t('notifications.expenseRemindersTitle')}
+                            </Skeleton>
+                        </Text>
+                        <Text size="2" color="gray">
+                            <Skeleton loading={isLoading}>
                                 {t('notifications.expenseRemindersDescription')}
-                            </Text>
-                        </Skeleton>
+                            </Skeleton>
+                        </Text>
                     </Box>
                     <Skeleton loading={isLoading}>
                         <Switch
@@ -95,14 +97,16 @@ const NotificationsSection = ({ isLoading }: Props) => {
 
                 <Flex justify="between" align="center" gap="3">
                     <Box>
-                        <Skeleton loading={isLoading}>
-                            <Text weight="medium">{t('notifications.weeklySummaryTitle')}</Text>
-                        </Skeleton>
-                        <Skeleton loading={isLoading}>
-                            <Text size="2" color="gray" as="p">
+                        <Text weight="medium">
+                            <Skeleton loading={isLoading}>
+                                {t('notifications.weeklySummaryTitle')}
+                            </Skeleton>
+                        </Text>
+                        <Text size="2" color="gray">
+                            <Skeleton loading={isLoading}>
                                 {t('notifications.weeklySummaryDescription')}
-                            </Text>
-                        </Skeleton>
+                            </Skeleton>
+                        </Text>
                     </Box>
                     <Skeleton loading={isLoading}>
                         <Switch aria-label={t('notifications.weeklySummaryTitle')} />

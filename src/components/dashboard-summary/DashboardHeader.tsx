@@ -10,6 +10,7 @@ import ViewModeSwitch from '../ViewModeSwitch';
 
 const DashboardHeader: React.FC = () => {
     const { t } = useTranslation('dashboard');
+    const { t: tSkeletons } = useTranslation('skeletons');
     const isUserLoading = useLoadingStore(selectUserSelfLoading);
 
     const user = useUsersStore(s => s.user);
@@ -18,18 +19,22 @@ const DashboardHeader: React.FC = () => {
         <Box mb="4">
             <Flex justify="between" align="center" mb={{ initial: '0', sm: '4' }} gap="2">
                 <Box>
-                    <Skeleton loading={isUserLoading} width="180px" height="var(--space-5)">
-                        <Heading size="5">
-                            {t('header.greeting', {
-                                name: user?.displayName ?? '',
-                            })}
-                        </Heading>
-                    </Skeleton>
-                    <Skeleton loading={isUserLoading} width="220px" height="var(--space-4)">
-                        <Text size={{ initial: '2', sm: '3' }} color="gray" as="span">
-                            {t('header.overview')}
-                        </Text>
-                    </Skeleton>
+                    <Heading size="5">
+                        <Skeleton loading={isUserLoading}>
+                            {isUserLoading
+                                ? tSkeletons('dashboardHeader.greeting')
+                                : t('header.greeting', {
+                                      name: user?.displayName ?? '',
+                                  })}
+                        </Skeleton>
+                    </Heading>
+                    <Text size={{ initial: '2', sm: '3' }} color="gray" as="span">
+                        <Skeleton loading={isUserLoading}>
+                            {isUserLoading
+                                ? tSkeletons('dashboardHeader.overview')
+                                : t('header.overview')}
+                        </Skeleton>
+                    </Text>
                 </Box>
                 <ViewModeSwitch />
             </Flex>

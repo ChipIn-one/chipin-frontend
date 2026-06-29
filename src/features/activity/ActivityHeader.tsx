@@ -35,17 +35,17 @@ const ActivityHeader = ({ isLoading, activeFilter, onFilterChange }: Props) => {
                     </Skeleton>
 
                     <Flex direction="column">
-                        <Skeleton loading={isLoading}>
-                            <Text size="4" weight="medium" as="p" mb="1">
+                        <Text size="4" weight="medium" as="p" mb="1">
+                            <Skeleton loading={isLoading}>
                                 {t('title')}
-                            </Text>
-                        </Skeleton>
+                            </Skeleton>
+                        </Text>
 
-                        <Skeleton loading={isLoading}>
-                            <Text size="2" as="p" color="gray">
+                        <Text size="2" as="p" color="gray">
+                            <Skeleton loading={isLoading}>
                                 {t('subtitle')}
-                            </Text>
-                        </Skeleton>
+                            </Skeleton>
+                        </Text>
                     </Flex>
                 </Flex>
 

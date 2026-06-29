@@ -1,0 +1,31 @@
+{
+    "activityFeed": {
+        "expenseTitle": "Jantar da viagem",
+        "expenseDescription": "O Alex pagou no grupo Viagem",
+        "expenseAmount": "120 USD",
+        "owedStatus": "Devem-lhe",
+        "relativeTime": "ha 2 horas",
+        "memberJoined": "O Alex entrou no grupo Viagem"
+    },
+    "balanceBadges": {
+        "amount": "300 USD"
+    },
+    "dashboardHeader": {
+        "greeting": "Ola, Alex",
+        "overview": "Aqui esta o seu resumo"
+    },
+    "debtAmount": {
+        "amount": "1200 USD"
+    },
+    "friendsPage": {
+        "currency": "USD",
+        "total": "+9999",
+        "name": "Alex Costa",
+        "amount": "+999 USD"
+    },
+    "groupsCards": {
+        "groupName": "Grupo de viagem",
+        "groupBalance": "Devem-lhe 120 USD",
+        "members": "3 membros"
+    }
+}

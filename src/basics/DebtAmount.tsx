@@ -1,4 +1,5 @@
 import { ComponentProps } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Skeleton, Text } from '@radix-ui/themes';
 
@@ -21,21 +22,26 @@ const DebtAmount = ({
     weight = 'regular',
     withPlus = false,
 }: Props) => {
+    const { t } = useTranslation('skeletons');
     const isOwed = amount > 0;
     const isZero = amount === 0;
     const color = isZero ? 'gray' : isOwed ? 'green' : 'red';
 
     return (
-        <Skeleton loading={isLoading} width="40px">
-            <Text as="span" size={size} color={color} weight={weight}>
-                <Amount
-                    value={amount}
-                    customPrefix={withPlus && isOwed ? '+' : undefined}
-                    tokenCode={currency}
-                    precision={0}
-                />
-            </Text>
-        </Skeleton>
+        <Text as="span" size={size} color={color} weight={weight}>
+            <Skeleton loading={isLoading}>
+                {isLoading ? (
+                    t('debtAmount.amount')
+                ) : (
+                    <Amount
+                        value={amount}
+                        customPrefix={withPlus && isOwed ? '+' : undefined}
+                        tokenCode={currency}
+                        precision={0}
+                    />
+                )}
+            </Skeleton>
+        </Text>
     );
 };
 

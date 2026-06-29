@@ -17,6 +17,7 @@ interface Props {
 
 const YouOweCard: React.FC<Props> = ({ isLoading, total, defaultCurrency, entries }) => {
     const { t } = useTranslation('dashboard');
+    const { t: tSkeletons } = useTranslation('skeletons');
 
     if (!entries.length && !isLoading) {
         return null;
@@ -41,18 +42,22 @@ const YouOweCard: React.FC<Props> = ({ isLoading, total, defaultCurrency, entrie
                             />
                         </Skeleton>
 
-                        <Skeleton loading={isLoading}>
-                            <Text color="tomato" size="4" weight="medium">
+                        <Text color="tomato" size="4" weight="medium">
+                            <Skeleton loading={isLoading}>
                                 {t('summary.youOwe')}
-                            </Text>
-                        </Skeleton>
+                            </Skeleton>
+                        </Text>
                     </Flex>
 
-                    <Skeleton loading={isLoading} width="80px">
-                        <Text size="4" color="tomato" weight="bold">
-                            <Amount value={total} tokenCode={defaultCurrency} precision={0} />
-                        </Text>
-                    </Skeleton>
+                    <Text size="4" color="tomato" weight="bold">
+                        <Skeleton loading={isLoading}>
+                            {isLoading ? (
+                                tSkeletons('debtAmount.amount')
+                            ) : (
+                                <Amount value={total} tokenCode={defaultCurrency} precision={0} />
+                            )}
+                        </Skeleton>
+                    </Text>
                 </Flex>
 
                 <BalanceBadges items={badgeItems} isLoading={isLoading} />

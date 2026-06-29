@@ -22,7 +22,7 @@ const ViewModeSwitch: React.FC = () => {
                     onCheckedChange={setIsGroupMode}
                 />
             </Skeleton>
-            <Skeleton loading={isUserLoading} width="80px">
+            <Skeleton loading={isUserLoading}>
                 <Text
                     as="span"
                     size="2"

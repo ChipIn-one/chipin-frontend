@@ -69,14 +69,14 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                         />
                     </Skeleton>
                     <Box>
-                        <Skeleton loading={isLoading}>
-                            <Text weight="medium">{t('app.title')}</Text>
-                        </Skeleton>
-                        <Skeleton loading={isLoading}>
-                            <Text size="2" color="gray" as="p">
+                        <Text weight="medium">
+                            <Skeleton loading={isLoading}>{t('app.title')}</Skeleton>
+                        </Text>
+                        <Text size="2" color="gray">
+                            <Skeleton loading={isLoading}>
                                 {t('app.description')}
-                            </Text>
-                        </Skeleton>
+                            </Skeleton>
+                        </Text>
                     </Box>
                 </Flex>
 
@@ -84,14 +84,14 @@ const AppSettingsSection = ({ isLoading }: Props) => {
 
                 <Flex direction="column" gap="4">
                     <Box>
-                        <Skeleton loading={isLoading}>
-                            <Text weight="medium">{t('app.themeTitle')}</Text>
-                        </Skeleton>
-                        <Skeleton loading={isLoading}>
-                            <Text size="2" color="gray" as="p">
+                        <Text weight="medium">
+                            <Skeleton loading={isLoading}>{t('app.themeTitle')}</Skeleton>
+                        </Text>
+                        <Text size="2" color="gray">
+                            <Skeleton loading={isLoading}>
                                 {t('app.themeDescription')}
-                            </Text>
-                        </Skeleton>
+                            </Skeleton>
+                        </Text>
                     </Box>
 
                     <Skeleton loading={isLoading}>
@@ -134,14 +134,16 @@ const AppSettingsSection = ({ isLoading }: Props) => {
 
                     <Flex justify="between" align="center" gap="3">
                         <Box>
-                            <Skeleton loading={isLoading}>
-                                <Text weight="medium">{t('app.simplifyDebtsTitle')}</Text>
-                            </Skeleton>
-                            <Skeleton loading={isLoading}>
-                                <Text size="2" color="gray" as="p">
+                            <Text weight="medium">
+                                <Skeleton loading={isLoading}>
+                                    {t('app.simplifyDebtsTitle')}
+                                </Skeleton>
+                            </Text>
+                            <Text size="2" color="gray">
+                                <Skeleton loading={isLoading}>
                                     {t('app.simplifyDebtsDescription')}
-                                </Text>
-                            </Skeleton>
+                                </Skeleton>
+                            </Text>
                         </Box>
                         <Skeleton loading={isLoading}>
                             <Switch
@@ -156,14 +158,16 @@ const AppSettingsSection = ({ isLoading }: Props) => {
 
                     <Flex justify="between" align="center" gap="3">
                         <Box>
-                            <Skeleton loading={isLoading}>
-                                <Text weight="medium">{t('app.autoSplitTitle')}</Text>
-                            </Skeleton>
-                            <Skeleton loading={isLoading}>
-                                <Text size="2" color="gray" as="p">
+                            <Text weight="medium">
+                                <Skeleton loading={isLoading}>
+                                    {t('app.autoSplitTitle')}
+                                </Skeleton>
+                            </Text>
+                            <Text size="2" color="gray">
+                                <Skeleton loading={isLoading}>
                                     {t('app.autoSplitDescription')}
-                                </Text>
-                            </Skeleton>
+                                </Skeleton>
+                            </Text>
                         </Box>
                         <Skeleton loading={isLoading}>
                             <Switch
@@ -177,14 +181,14 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                     <Separator size="4" />
 
                     <Box>
-                        <Skeleton loading={isLoading}>
-                            <Text weight="medium">{t('app.versionTitle')}</Text>
-                        </Skeleton>
-                        <Skeleton loading={isLoading}>
-                            <Text size="2" color="gray" as="p">
+                        <Text weight="medium">
+                            <Skeleton loading={isLoading}>{t('app.versionTitle')}</Skeleton>
+                        </Text>
+                        <Text size="2" color="gray">
+                            <Skeleton loading={isLoading}>
                                 {t('app.versionDescription')}
-                            </Text>
-                        </Skeleton>
+                            </Skeleton>
+                        </Text>
                         <Flex align="center" gap="3" mt="2">
                             <Skeleton loading={isLoading}>
                                 <Code>{APP_VERSION}</Code>

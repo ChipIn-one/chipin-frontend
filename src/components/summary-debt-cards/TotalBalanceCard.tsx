@@ -16,11 +16,11 @@ const TotalBalanceCard: React.FC<Props> = ({ isLoading, netTotalInBase, defaultC
     return (
         <Card size="1">
             <Flex direction="column" gap="1">
-                <Skeleton loading={isLoading} width="140px">
-                    <Text size="4" weight="medium" color="gray" as="span">
+                <Text size="4" weight="medium" color="gray" as="span">
+                    <Skeleton loading={isLoading}>
                         {t('summary.totalBalance')}
-                    </Text>
-                </Skeleton>
+                    </Skeleton>
+                </Text>
 
                 <DebtAmount
                     isLoading={isLoading}
@@ -30,11 +30,11 @@ const TotalBalanceCard: React.FC<Props> = ({ isLoading, netTotalInBase, defaultC
                     weight="bold"
                 />
 
-                <Skeleton loading={isLoading} width="150px" height="var(--space-4)">
-                    <Text size="2" color="gray" as="span">
+                <Text size="2" color="gray" as="span">
+                    <Skeleton loading={isLoading}>
                         {t('summary.totalAcrossGroupsAndFriends')}
-                    </Text>
-                </Skeleton>
+                    </Skeleton>
+                </Text>
             </Flex>
         </Card>
     );

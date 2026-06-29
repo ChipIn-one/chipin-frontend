@@ -38,14 +38,14 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                         />
                     </Skeleton>
                     <Box>
-                        <Skeleton loading={isLoading}>
-                            <Text weight="medium">{t('security.title')}</Text>
-                        </Skeleton>
-                        <Skeleton loading={isLoading}>
-                            <Text size="2" color="gray" as="p">
+                        <Text weight="medium">
+                            <Skeleton loading={isLoading}>{t('security.title')}</Skeleton>
+                        </Text>
+                        <Text size="2" color="gray" as="p">
+                            <Skeleton loading={isLoading}>
                                 {t('security.description')}
-                            </Text>
-                        </Skeleton>
+                            </Skeleton>
+                        </Text>
                     </Box>
                 </Flex>
 
@@ -109,14 +109,14 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
 
                 <Flex justify="between" align="center" gap="3">
                     <Box>
-                        <Skeleton loading={isLoading}>
-                            <Text weight="medium">{t('security.signOutTitle')}</Text>
-                        </Skeleton>
-                        <Skeleton loading={isLoading}>
-                            <Text size="2" color="gray" as="p">
+                        <Text weight="medium">
+                            <Skeleton loading={isLoading}>{t('security.signOutTitle')}</Skeleton>
+                        </Text>
+                        <Text size="2" color="gray" as="p">
+                            <Skeleton loading={isLoading}>
                                 {t('security.signOutDescription')}
-                            </Text>
-                        </Skeleton>
+                            </Skeleton>
+                        </Text>
                     </Box>
                     <Skeleton loading={isLoading}>
                         <Button

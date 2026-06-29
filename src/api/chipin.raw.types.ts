@@ -71,6 +71,7 @@ export interface ApiRemoveGroupResponse {
 export interface ApiDashboardResponse {
     groups: ApiGroupResponse[];
     balances: BalancesMap;
+    activity: ApiActivityItemsResponse;
 }
 
 export interface ApiActivityItemsResponse {
