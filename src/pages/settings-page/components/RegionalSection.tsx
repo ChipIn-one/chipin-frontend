@@ -60,7 +60,7 @@ const RegionalSection = ({ isLoading }: Props) => {
                             fallback={<LucideGlobe size={20} />}
                         />
                     </Skeleton>
-                    <Box>
+                    <Flex direction="column">
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('regional.title')}</Skeleton>
                         </Text>
@@ -69,14 +69,14 @@ const RegionalSection = ({ isLoading }: Props) => {
                                 {t('regional.description')}
                             </Skeleton>
                         </Text>
-                    </Box>
+                    </Flex>
                 </Flex>
 
                 <Separator size="4" />
 
                 <Flex direction="column" gap="4">
                     <Flex justify="between" align="center" gap="3">
-                        <Box>
+                        <Flex direction="column">
                             <Text weight="medium">
                                 <Skeleton loading={isLoading}>
                                     {t('regional.autoTimezone')}
@@ -87,7 +87,7 @@ const RegionalSection = ({ isLoading }: Props) => {
                                     {t('regional.autoTimezoneHint', { timezone: detectedTimezone })}
                                 </Skeleton>
                             </Text>
-                        </Box>
+                        </Flex>
                     </Flex>
 
                     <Box>
@@ -104,7 +104,7 @@ const RegionalSection = ({ isLoading }: Props) => {
                         direction={{ initial: 'column', sm: 'row' }}
                         gap="3"
                     >
-                        <Box>
+                        <Flex direction="column">
                             <Text weight="medium">
                                 <Skeleton loading={isLoading}>
                                     {t('regional.timeFormatTitle')}
@@ -115,7 +115,7 @@ const RegionalSection = ({ isLoading }: Props) => {
                                     {t('regional.timeFormatDescription')}
                                 </Skeleton>
                             </Text>
-                        </Box>
+                        </Flex>
                         <Skeleton loading={isLoading}>
                             <SegmentedControl
                                 value={timeFormat}
@@ -147,7 +147,7 @@ const RegionalSection = ({ isLoading }: Props) => {
 
                     <Separator size="4" />
 
-                    <Box>
+                    <Flex direction="column">
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>
                                 {t('common:fields.interfaceLanguage')}
@@ -169,12 +169,14 @@ const RegionalSection = ({ isLoading }: Props) => {
                                 }}
                             />
                         </Box>
-                        <Text size="2" color="gray" mt="1">
-                            <Skeleton loading={isLoading}>
-                                {t('regional.languageHint')}
-                            </Skeleton>
-                        </Text>
-                    </Box>
+                        <Box mt="1">
+                            <Text size="2" color="gray">
+                                <Skeleton loading={isLoading}>
+                                    {t('regional.languageHint')}
+                                </Skeleton>
+                            </Text>
+                        </Box>
+                    </Flex>
                 </Flex>
             </Flex>
         </Card>

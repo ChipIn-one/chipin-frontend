@@ -37,7 +37,7 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                             fallback={<LucideShield size={20} />}
                         />
                     </Skeleton>
-                    <Box>
+                    <Flex direction="column">
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('security.title')}</Skeleton>
                         </Text>
@@ -46,7 +46,7 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                                 {t('security.description')}
                             </Skeleton>
                         </Text>
-                    </Box>
+                    </Flex>
                 </Flex>
 
                 <Separator size="4" />
@@ -108,7 +108,7 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                 <Separator size="4" />
 
                 <Flex justify="between" align="center" gap="3">
-                    <Box>
+                    <Flex direction="column">
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('security.signOutTitle')}</Skeleton>
                         </Text>
@@ -117,7 +117,7 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                                 {t('security.signOutDescription')}
                             </Skeleton>
                         </Text>
-                    </Box>
+                    </Flex>
                     <Skeleton loading={isLoading}>
                         <Button
                             onClick={signOut}

@@ -11,7 +11,6 @@ import { useTranslation } from 'react-i18next';
 
 import {
     Avatar,
-    Box,
     Button,
     Card,
     Code,
@@ -68,7 +67,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                             fallback={<LucideSettings2 size={20} />}
                         />
                     </Skeleton>
-                    <Box>
+                    <Flex direction="column">
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('app.title')}</Skeleton>
                         </Text>
@@ -77,13 +76,13 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                                 {t('app.description')}
                             </Skeleton>
                         </Text>
-                    </Box>
+                    </Flex>
                 </Flex>
 
                 <Separator size="4" />
 
                 <Flex direction="column" gap="4">
-                    <Box>
+                    <Flex direction="column">
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('app.themeTitle')}</Skeleton>
                         </Text>
@@ -92,7 +91,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                                 {t('app.themeDescription')}
                             </Skeleton>
                         </Text>
-                    </Box>
+                    </Flex>
 
                     <Skeleton loading={isLoading}>
                         <SegmentedControl
@@ -133,7 +132,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                     <Separator size="4" />
 
                     <Flex justify="between" align="center" gap="3">
-                        <Box>
+                        <Flex direction="column">
                             <Text weight="medium">
                                 <Skeleton loading={isLoading}>
                                     {t('app.simplifyDebtsTitle')}
@@ -144,7 +143,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                                     {t('app.simplifyDebtsDescription')}
                                 </Skeleton>
                             </Text>
-                        </Box>
+                        </Flex>
                         <Skeleton loading={isLoading}>
                             <Switch
                                 checked={isSimplifyDebtsEnabled}
@@ -157,7 +156,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                     <Separator size="4" />
 
                     <Flex justify="between" align="center" gap="3">
-                        <Box>
+                        <Flex direction="column">
                             <Text weight="medium">
                                 <Skeleton loading={isLoading}>
                                     {t('app.autoSplitTitle')}
@@ -168,7 +167,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                                     {t('app.autoSplitDescription')}
                                 </Skeleton>
                             </Text>
-                        </Box>
+                        </Flex>
                         <Skeleton loading={isLoading}>
                             <Switch
                                 checked={isAutoSplitEnabled}
@@ -180,7 +179,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
 
                     <Separator size="4" />
 
-                    <Box>
+                    <Flex direction="column">
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('app.versionTitle')}</Skeleton>
                         </Text>
@@ -205,7 +204,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                                 </Button>
                             )}
                         </Flex>
-                    </Box>
+                    </Flex>
                 </Flex>
             </Flex>
         </Card>

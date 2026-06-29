@@ -1,7 +1,7 @@
 import { LucideBell } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Avatar, Box, Card, Flex, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
+import { Avatar, Card, Flex, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
 
 interface Props {
     isLoading: boolean;
@@ -22,7 +22,7 @@ const NotificationsSection = ({ isLoading }: Props) => {
                             fallback={<LucideBell size={20} />}
                         />
                     </Skeleton>
-                    <Box>
+                    <Flex direction="column">
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('notifications.title')}</Skeleton>
                         </Text>
@@ -31,13 +31,13 @@ const NotificationsSection = ({ isLoading }: Props) => {
                                 {t('notifications.description')}
                             </Skeleton>
                         </Text>
-                    </Box>
+                    </Flex>
                 </Flex>
 
                 <Separator size="4" />
 
                 <Flex justify="between" align="center" gap="3">
-                    <Box>
+                    <Flex direction="column">
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('notifications.pushTitle')}</Skeleton>
                         </Text>
@@ -46,7 +46,7 @@ const NotificationsSection = ({ isLoading }: Props) => {
                                 {t('notifications.pushDescription')}
                             </Skeleton>
                         </Text>
-                    </Box>
+                    </Flex>
                     <Skeleton loading={isLoading}>
                         <Switch defaultChecked aria-label={t('notifications.pushTitle')} />
                     </Skeleton>
@@ -55,7 +55,7 @@ const NotificationsSection = ({ isLoading }: Props) => {
                 <Separator size="4" />
 
                 <Flex justify="between" align="center" gap="3">
-                    <Box>
+                    <Flex direction="column">
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('notifications.emailTitle')}</Skeleton>
                         </Text>
@@ -64,7 +64,7 @@ const NotificationsSection = ({ isLoading }: Props) => {
                                 {t('notifications.emailDescription')}
                             </Skeleton>
                         </Text>
-                    </Box>
+                    </Flex>
                     <Skeleton loading={isLoading}>
                         <Switch aria-label={t('notifications.emailTitle')} />
                     </Skeleton>
@@ -73,7 +73,7 @@ const NotificationsSection = ({ isLoading }: Props) => {
                 <Separator size="4" />
 
                 <Flex justify="between" align="center" gap="3">
-                    <Box>
+                    <Flex direction="column">
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>
                                 {t('notifications.expenseRemindersTitle')}
@@ -84,7 +84,7 @@ const NotificationsSection = ({ isLoading }: Props) => {
                                 {t('notifications.expenseRemindersDescription')}
                             </Skeleton>
                         </Text>
-                    </Box>
+                    </Flex>
                     <Skeleton loading={isLoading}>
                         <Switch
                             defaultChecked
@@ -96,7 +96,7 @@ const NotificationsSection = ({ isLoading }: Props) => {
                 <Separator size="4" />
 
                 <Flex justify="between" align="center" gap="3">
-                    <Box>
+                    <Flex direction="column">
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>
                                 {t('notifications.weeklySummaryTitle')}
@@ -107,7 +107,7 @@ const NotificationsSection = ({ isLoading }: Props) => {
                                 {t('notifications.weeklySummaryDescription')}
                             </Skeleton>
                         </Text>
-                    </Box>
+                    </Flex>
                     <Skeleton loading={isLoading}>
                         <Switch aria-label={t('notifications.weeklySummaryTitle')} />
                     </Skeleton>

@@ -49,7 +49,7 @@ const AccountSection = ({ isLoading }: Props) => {
                             fallback={<LucideUser size={20} />}
                         />
                     </Skeleton>
-                    <Box>
+                    <Flex direction="column">
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('account.title')}</Skeleton>
                         </Text>
@@ -58,7 +58,7 @@ const AccountSection = ({ isLoading }: Props) => {
                                 {t('account.description')}
                             </Skeleton>
                         </Text>
-                    </Box>
+                    </Flex>
                 </Flex>
 
                 <Separator size="4" />
