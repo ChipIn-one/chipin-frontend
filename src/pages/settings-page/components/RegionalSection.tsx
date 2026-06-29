@@ -61,14 +61,14 @@ const RegionalSection = ({ isLoading }: Props) => {
                         />
                     </Skeleton>
                     <Box>
-                        <Skeleton loading={isLoading}>
-                            <Text weight="medium">{t('regional.title')}</Text>
-                        </Skeleton>
-                        <Skeleton loading={isLoading}>
-                            <Text size="2" color="gray" as="p">
+                        <Text weight="medium">
+                            <Skeleton loading={isLoading}>{t('regional.title')}</Skeleton>
+                        </Text>
+                        <Text size="2" color="gray">
+                            <Skeleton loading={isLoading}>
                                 {t('regional.description')}
-                            </Text>
-                        </Skeleton>
+                            </Skeleton>
+                        </Text>
                     </Box>
                 </Flex>
 
@@ -77,23 +77,25 @@ const RegionalSection = ({ isLoading }: Props) => {
                 <Flex direction="column" gap="4">
                     <Flex justify="between" align="center" gap="3">
                         <Box>
-                            <Skeleton loading={isLoading}>
-                                <Text weight="medium">{t('regional.autoTimezone')}</Text>
-                            </Skeleton>
-                            <Skeleton loading={isLoading}>
-                                <Text size="2" color="gray" as="p">
+                            <Text weight="medium">
+                                <Skeleton loading={isLoading}>
+                                    {t('regional.autoTimezone')}
+                                </Skeleton>
+                            </Text>
+                            <Text size="2" color="gray">
+                                <Skeleton loading={isLoading}>
                                     {t('regional.autoTimezoneHint', { timezone: detectedTimezone })}
-                                </Text>
-                            </Skeleton>
+                                </Skeleton>
+                            </Text>
                         </Box>
                     </Flex>
 
                     <Box>
-                        <Skeleton loading={isLoading}>
-                            <Text size="2" color="gray">
+                        <Text size="2" color="gray">
+                            <Skeleton loading={isLoading}>
                                 {t('common:fields.timezone')}
-                            </Text>
-                        </Skeleton>
+                            </Skeleton>
+                        </Text>
                     </Box>
 
                     <Flex
@@ -103,14 +105,16 @@ const RegionalSection = ({ isLoading }: Props) => {
                         gap="3"
                     >
                         <Box>
-                            <Skeleton loading={isLoading}>
-                                <Text weight="medium">{t('regional.timeFormatTitle')}</Text>
-                            </Skeleton>
-                            <Skeleton loading={isLoading}>
-                                <Text size="2" color="gray" as="p">
+                            <Text weight="medium">
+                                <Skeleton loading={isLoading}>
+                                    {t('regional.timeFormatTitle')}
+                                </Skeleton>
+                            </Text>
+                            <Text size="2" color="gray">
+                                <Skeleton loading={isLoading}>
                                     {t('regional.timeFormatDescription')}
-                                </Text>
-                            </Skeleton>
+                                </Skeleton>
+                            </Text>
                         </Box>
                         <Skeleton loading={isLoading}>
                             <SegmentedControl
@@ -127,11 +131,11 @@ const RegionalSection = ({ isLoading }: Props) => {
                     <Separator size="4" />
 
                     <Box>
-                        <Skeleton loading={isLoading}>
-                            <Text size="2" color="gray">
+                        <Text size="2" color="gray">
+                            <Skeleton loading={isLoading}>
                                 {t('common:fields.defaultCurrency')}
-                            </Text>
-                        </Skeleton>
+                            </Skeleton>
+                        </Text>
                         <Box mt="2">
                             <CurrencySelect
                                 currency={defaultCurrency}
@@ -144,9 +148,11 @@ const RegionalSection = ({ isLoading }: Props) => {
                     <Separator size="4" />
 
                     <Box>
-                        <Skeleton loading={isLoading}>
-                            <Text weight="medium">{t('common:fields.interfaceLanguage')}</Text>
-                        </Skeleton>
+                        <Text weight="medium">
+                            <Skeleton loading={isLoading}>
+                                {t('common:fields.interfaceLanguage')}
+                            </Skeleton>
+                        </Text>
                         <Box mt="2">
                             <Select
                                 items={SUPPORTED_LOCALES.map(option => {
@@ -163,11 +169,11 @@ const RegionalSection = ({ isLoading }: Props) => {
                                 }}
                             />
                         </Box>
-                        <Skeleton loading={isLoading}>
-                            <Text size="2" color="gray" as="p" mt="1">
+                        <Text size="2" color="gray" mt="1">
+                            <Skeleton loading={isLoading}>
                                 {t('regional.languageHint')}
-                            </Text>
-                        </Skeleton>
+                            </Skeleton>
+                        </Text>
                     </Box>
                 </Flex>
             </Flex>

@@ -7,6 +7,10 @@
         "relativeTime": "ha 2 horas",
         "memberJoined": "Alex entrou no grupo Viagem"
     },
+    "account": {
+        "displayName": "Alex Silva",
+        "email": "alex@example.com"
+    },
     "balanceBadges": {
         "amount": "300 USD"
     },

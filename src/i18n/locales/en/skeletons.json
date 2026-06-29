@@ -7,6 +7,10 @@
         "relativeTime": "2 hours ago",
         "memberJoined": "Alex joined Travel group"
     },
+    "account": {
+        "displayName": "Jordan Lee",
+        "email": "jordan@example.com"
+    },
     "balanceBadges": {
         "amount": "300 USD"
     },

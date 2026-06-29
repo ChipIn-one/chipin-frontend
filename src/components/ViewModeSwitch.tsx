@@ -22,17 +22,17 @@ const ViewModeSwitch: React.FC = () => {
                     onCheckedChange={setIsGroupMode}
                 />
             </Skeleton>
-            <Skeleton loading={isUserLoading}>
-                <Text
-                    as="span"
-                    size="2"
-                    weight="medium"
-                    align="right"
-                    color={isGroupMode ? 'grass' : 'violet'}
-                >
+            <Text
+                as="span"
+                size="2"
+                weight="medium"
+                align="right"
+                color={isGroupMode ? 'grass' : 'violet'}
+            >
+                <Skeleton loading={isUserLoading}>
                     {isGroupMode ? t('modes.groupMode') : t('modes.soloMode')}
-                </Text>
-            </Skeleton>
+                </Skeleton>
+            </Text>
         </Flex>
     );
 };

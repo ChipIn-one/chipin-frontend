@@ -147,11 +147,11 @@ const GroupCardBody = ({ group, isLoading }: GroupCardBodyProps) => {
             </Flex>
 
             {group.description && (
-                <Skeleton loading={isLoading}>
-                    <Text size="2" color="gray">
+                <Text size="2" color="gray">
+                    <Skeleton loading={isLoading}>
                         {group.description}
-                    </Text>
-                </Skeleton>
+                    </Skeleton>
+                </Text>
             )}
         </Flex>
     );

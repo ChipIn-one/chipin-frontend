@@ -20,11 +20,11 @@ const GroupsSectionHeader = ({ label, isLoading = false, ...flexProps }: Props) 
                 <Skeleton loading={isLoading}>
                     <Avatar size="2" color="gray" fallback={<LucideUsers size={18} />} />
                 </Skeleton>
-                <Skeleton loading={isLoading}>
-                    <Text size="2" color="gray" weight="medium">
+                <Text size="2" color="gray" weight="medium">
+                    <Skeleton loading={isLoading}>
                         {label}
-                    </Text>
-                </Skeleton>
+                    </Skeleton>
+                </Text>
             </Flex>
 
             <CreateUpdateGroupModal type="create">

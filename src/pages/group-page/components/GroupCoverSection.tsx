@@ -92,9 +92,11 @@ const GroupCoverSection = ({ group, isLoading, ratio = 16 / 5 }: Props) => {
                             </Skeleton>
                         </Box>
                         <Box>
-                            <Skeleton loading={isLoading}>
-                                <Heading size="5">{group?.name || t('page.loadingGroup')}</Heading>
-                            </Skeleton>
+                            <Heading size="5">
+                                <Skeleton loading={isLoading}>
+                                    {group?.name || t('page.loadingGroup')}
+                                </Skeleton>
+                            </Heading>
                         </Box>
                     </Flex>
                 </Flex>

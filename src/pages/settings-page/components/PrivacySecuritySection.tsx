@@ -41,7 +41,7 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('security.title')}</Skeleton>
                         </Text>
-                        <Text size="2" color="gray" as="p">
+                        <Text size="2" color="gray">
                             <Skeleton loading={isLoading}>
                                 {t('security.description')}
                             </Skeleton>
@@ -112,7 +112,7 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                         <Text weight="medium">
                             <Skeleton loading={isLoading}>{t('security.signOutTitle')}</Skeleton>
                         </Text>
-                        <Text size="2" color="gray" as="p">
+                        <Text size="2" color="gray">
                             <Skeleton loading={isLoading}>
                                 {t('security.signOutDescription')}
                             </Skeleton>

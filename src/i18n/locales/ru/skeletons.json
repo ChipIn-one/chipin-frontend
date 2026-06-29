@@ -7,6 +7,10 @@
         "relativeTime": "2 часа назад",
         "memberJoined": "Алекс вступил в группу Поездка"
     },
+    "account": {
+        "displayName": "Александр Иванов",
+        "email": "alex@example.com"
+    },
     "balanceBadges": {
         "amount": "300 USD"
     },

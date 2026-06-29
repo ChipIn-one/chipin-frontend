@@ -24,6 +24,7 @@ interface Props {
 
 const AccountSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
+    const { t: tSkeletons } = useTranslation('skeletons');
     const user = useUsersStore(s => s.user);
     const setUserSettings = useUsersStore(s => s.setUserSettings);
     const [displayName, setDisplayName] = useState(user?.displayName ?? '');
@@ -49,14 +50,14 @@ const AccountSection = ({ isLoading }: Props) => {
                         />
                     </Skeleton>
                     <Box>
-                        <Skeleton loading={isLoading}>
-                            <Text weight="medium">{t('account.title')}</Text>
-                        </Skeleton>
-                        <Skeleton loading={isLoading}>
-                            <Text size="2" color="gray" as="p">
+                        <Text weight="medium">
+                            <Skeleton loading={isLoading}>{t('account.title')}</Skeleton>
+                        </Text>
+                        <Text size="2" color="gray">
+                            <Skeleton loading={isLoading}>
                                 {t('account.description')}
-                            </Text>
-                        </Skeleton>
+                            </Skeleton>
+                        </Text>
                     </Box>
                 </Flex>
 
@@ -66,16 +67,18 @@ const AccountSection = ({ isLoading }: Props) => {
                     <UserAvatar size="4" user={user ?? undefined} isLoading={isLoading} />
 
                     <Flex direction="column" gap="1">
-                        <Skeleton loading={isLoading}>
-                            <Text weight="medium" size="3">
-                                {user?.displayName || t('common:fields.displayName')}
-                            </Text>
-                        </Skeleton>
-                        <Skeleton loading={isLoading}>
-                            <Text size="2" color="gray">
-                                {user?.email}
-                            </Text>
-                        </Skeleton>
+                        <Text weight="medium" size="3">
+                            <Skeleton loading={isLoading}>
+                                {isLoading
+                                    ? tSkeletons('account.displayName')
+                                    : user?.displayName || t('common:fields.displayName')}
+                            </Skeleton>
+                        </Text>
+                        <Text size="2" color="gray">
+                            <Skeleton loading={isLoading}>
+                                {isLoading ? tSkeletons('account.email') : user?.email}
+                            </Skeleton>
+                        </Text>
                         <Skeleton loading={isLoading}>
                             <Link size="2" color="green" href="#">
                                 {t('common:buttons.changePhoto')}
@@ -87,11 +90,11 @@ const AccountSection = ({ isLoading }: Props) => {
                 <Separator size="4" />
 
                 <Box>
-                    <Skeleton loading={isLoading}>
-                        <Text size="2" color="gray">
+                    <Text size="2" color="gray">
+                        <Skeleton loading={isLoading}>
                             {t('common:fields.displayName')}
-                        </Text>
-                    </Skeleton>
+                        </Skeleton>
+                    </Text>
                     <Skeleton loading={isLoading}>
                         <TextField.Root
                             mt="2"
