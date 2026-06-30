@@ -3,10 +3,13 @@ import { useTheme } from 'next-themes';
 
 import { IconButton } from '@radix-ui/themes';
 
-const ThemeSwitcherDev = () => {
-    const { theme, setTheme } = useTheme();
+import { isThemeDark } from 'helpers/theme';
 
-    const icon = theme === 'light' ? <LucideMoon size={20} /> : <LucideSun size={20} />;
+const ThemeSwitcherDev = () => {
+    const { resolvedTheme, setTheme } = useTheme();
+    const isDark = isThemeDark(resolvedTheme);
+
+    const icon = isDark ? <LucideSun size={20} /> : <LucideMoon size={20} />;
 
     return (
         <IconButton
@@ -15,7 +18,7 @@ const ThemeSwitcherDev = () => {
                 sm: '3',
             }}
             variant="surface"
-            onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+            onClick={() => setTheme(isDark ? 'light' : 'dark')}
         >
             {icon}
         </IconButton>

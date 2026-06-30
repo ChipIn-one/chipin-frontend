@@ -3,8 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { Box, Tabs } from '@radix-ui/themes';
 
 import { Group } from 'api/chipin.types';
+import { selectGroupDataLoading } from 'store/loadingSelectors';
+import { useLoadingStore } from 'store/loadingStore';
 
 import { ActivityFeedSkeleton } from 'components/skeletons';
+import { ActivityEventsList } from 'features/activity/components';
 
 import GroupBalancesTab from './GroupBalancesTab';
 import GroupSettingsTab from './GroupSettingsTab';
@@ -15,6 +18,8 @@ interface Props {
 
 const GroupTabsContent = ({ group }: Props) => {
     const { t } = useTranslation('group');
+    const isGroupDataLoading = useLoadingStore(selectGroupDataLoading);
+    const activityItems = group.activity?.items ?? [];
 
     return (
         <Box mt="4">
@@ -27,7 +32,11 @@ const GroupTabsContent = ({ group }: Props) => {
 
                 <Box>
                     <Tabs.Content value="expenses">
-                        <ActivityFeedSkeleton isExpensesOnly />
+                        {isGroupDataLoading ? (
+                            <ActivityFeedSkeleton />
+                        ) : (
+                            <ActivityEventsList events={activityItems} />
+                        )}
                     </Tabs.Content>
 
                     <Tabs.Content value="balances">

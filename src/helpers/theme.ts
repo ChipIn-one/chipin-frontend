@@ -12,5 +12,7 @@ const resolveStoredTheme = (): ThemeName => {
     return localTheme;
 };
 
-export { resolveStoredTheme };
+const isThemeDark = (themeName?: string | null) => themeName === 'dark';
+
+export { isThemeDark, resolveStoredTheme };
 export type { ThemeName };

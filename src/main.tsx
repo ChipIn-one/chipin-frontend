@@ -7,6 +7,7 @@ import { ThemeProvider } from 'styled-components';
 import { Box, Spinner, Theme } from '@radix-ui/themes';
 
 import { darkThemeStyled, lightThemeStyled } from 'constants/styled-themes';
+import { isThemeDark } from 'helpers/theme';
 import { useIsMobile } from 'hooks/common';
 
 import BackgroundBox from 'basics/BackgroundBox';
@@ -26,7 +27,7 @@ const ToastLoadingIcon = () => <Spinner size="2" />;
 const Main = () => {
     const { resolvedTheme } = useTheme();
     const themeName = (resolvedTheme as 'light' | 'dark') || 'system';
-    const styledThemeParams = themeName === 'dark' ? darkThemeStyled : lightThemeStyled;
+    const styledThemeParams = isThemeDark(themeName) ? darkThemeStyled : lightThemeStyled;
     const isMobile = useIsMobile();
 
     return (

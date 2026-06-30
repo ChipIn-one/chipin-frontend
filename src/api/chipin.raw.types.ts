@@ -62,6 +62,7 @@ export interface ApiGroupResponse {
     role: 'OWNER' | 'MEMBER';
     status: 'ACTIVE' | 'ARCHIVED';
     balances: BalancesMap;
+    activity?: ApiActivityItemsResponse;
 }
 
 export interface ApiRemoveGroupResponse {

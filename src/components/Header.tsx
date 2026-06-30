@@ -1,16 +1,9 @@
-import { useState } from 'react';
 import { UserAvatar } from 'basics';
 import {
     LucideArrowRight,
-    LucideBug,
-    LucideCalendarPlus,
-    LucideFlaskConical,
     LucideLogIn,
     LucideMenu,
-    LucideMoon,
-    LucideSun,
 } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import styled from 'styled-components';
@@ -20,7 +13,7 @@ import { Box, Button, Container, Flex, IconButton, Link, Text } from '@radix-ui/
 import { PROJECT_NAME } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
 import { themeColor } from 'helpers/colors';
-import { selectIsLoggedIn } from 'store/authSelectors';
+import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { selectIsUserAdmin } from 'store/usersSelectors';
 import { useUsersStore } from 'store/usersStore';
@@ -31,6 +24,7 @@ import Logotype from 'assets/logo.svg?react';
 
 import AuthModal from './modals/AuthModal';
 import HeaderNav from './nav-bars/HeaderNav';
+import DevMenu from './DevMenu';
 import Dropdown from './Dropdown';
 
 const StickyBox = styled(Box)`
@@ -95,71 +89,22 @@ const LandingMobileMenu = () => {
     );
 };
 
-const DevMenu = () => {
-    const [shouldCrash, setShouldCrash] = useState(false);
-    const { theme, setTheme } = useTheme();
-    const { t } = useTranslation();
-    const extendUserSubscriptionByDay = useUsersStore(s => s.extendUserSubscriptionByDay);
-
-    if (shouldCrash) {
-        throw new Error('Manual test error triggered from the header crash button.');
-    }
-
-    const isDark = theme === 'dark';
-
-    const items = [
-        {
-            value: 'switchTheme',
-            label: t('header.switchTheme'),
-            icon: isDark ? <LucideSun size={16} /> : <LucideMoon size={16} />,
-            onSelect: () => setTheme(isDark ? 'light' : 'dark'),
-        },
-        {
-            value: 'extendSubscription',
-            label: t('header.addSubscriptionDay'),
-            icon: <LucideCalendarPlus size={16} />,
-            onSelect: extendUserSubscriptionByDay,
-        },
-        {
-            value: 'testError',
-            label: t('header.testError'),
-            icon: <LucideBug size={16} />,
-            onSelect: () => setShouldCrash(true),
-        },
-    ];
-
-    return (
-        <Dropdown
-            items={items}
-            trigger={
-                <IconButton
-                    size={{
-                        initial: '2',
-                        sm: '3',
-                    }}
-                    variant="soft"
-                    color="gray"
-                    aria-label={t('header.devMenu')}
-                >
-                    <LucideFlaskConical />
-                </IconButton>
-            }
-            align="end"
-        />
-    );
-};
-
 const Header = () => {
+    const isAuthResolved = useAuthStore(selectIsAuthResolved);
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
     const user = useUsersStore(s => s.user);
     const canShowDevMenu = useUsersStore(selectIsUserAdmin);
     const location = useLocation();
     const { t } = useTranslation();
 
+    if (!isAuthResolved) {
+        return null;
+    }
+
     const isLandingPage = !isLoggedIn && location.pathname === ROUTES.HOME;
 
     return (
-        <StickyBox>
+        <StickyBox display={isLoggedIn ? { initial: 'none', sm: 'block' } : undefined}>
             <Container size="4" p="4">
                 <Flex justify="between" align="center">
                     <NavButton to={isLoggedIn ? ROUTES.DASHBOARD : ROUTES.HOME} unsetStyles>
