@@ -7,6 +7,10 @@
     "emptyTitle": "Aún sin actividad",
     "emptyDescription": "Aquí aparecerán los gastos y liquidaciones recientes.",
     "endOfFeed": "Eso es todo por ahora",
+    "dateDivider": {
+        "today": "Hoy",
+        "yesterday": "Ayer"
+    },
     "event": {
         "expenseCreatedDescription": "Pagado por {{payer}} en {{group}}",
         "groupCreatedMiddleText": "creó el grupo",

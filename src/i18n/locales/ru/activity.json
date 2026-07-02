@@ -7,6 +7,10 @@
     "emptyTitle": "Активности пока нет",
     "emptyDescription": "Здесь появятся последние траты и расчёты.",
     "endOfFeed": "На этом пока всё",
+    "dateDivider": {
+        "today": "Сегодня",
+        "yesterday": "Вчера"
+    },
     "event": {
         "expenseCreatedDescription": "Оплатил(а) {{payer}} в группе {{group}}",
         "groupCreatedMiddleText": "создал(а) группу",

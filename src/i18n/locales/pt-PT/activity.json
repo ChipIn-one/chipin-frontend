@@ -7,6 +7,10 @@
     "emptyTitle": "Ainda sem atividade",
     "emptyDescription": "As despesas e acertos recentes vão aparecer aqui.",
     "endOfFeed": "É isso por enquanto",
+    "dateDivider": {
+        "today": "Hoje",
+        "yesterday": "Ontem"
+    },
     "event": {
         "expenseCreatedDescription": "Pago por {{payer}} em {{group}}",
         "groupCreatedMiddleText": "criou o grupo",
