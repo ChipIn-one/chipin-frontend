@@ -6,6 +6,7 @@ import { Card, Flex, Text } from '@radix-ui/themes';
 
 import { Group } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
+import { useDashboardStore } from 'store/dashboardStore';
 import { selectGroupNonZeroBalances } from 'store/groupsSelectors';
 import { useGroupsStore } from 'store/groupsStore';
 
@@ -24,9 +25,10 @@ interface Props {
 
 const GroupCard: React.FC<Props> = ({ group }) => {
     const { setSelectedGroup } = useGroupsStore();
+    const currencies = useDashboardStore(state => state.currencies);
     const { t } = useTranslation('dashboard');
 
-    const balances = selectGroupNonZeroBalances(group);
+    const balances = selectGroupNonZeroBalances(group, currencies.rates, currencies.base);
 
     return (
         <GroupNavButton

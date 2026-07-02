@@ -60,7 +60,7 @@ export const getCurrencySummary = (
     return { netTotalInBase, owedTotalInBase, owingTotalInBase };
 };
 
-export const sortBalanceEntriesByConvertedValue = (
+export const sortBalancesByCurrency = (
     entries: BalanceEntry[],
     rates: CurrenciesRates,
     baseCurrency: string,

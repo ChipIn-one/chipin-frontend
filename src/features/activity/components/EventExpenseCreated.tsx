@@ -15,7 +15,16 @@ const EventExpenseCreated = ({ event }: Props) => {
     const { t } = useTranslation('activity');
     const user = useUsersStore(state => state.user);
     const { amount } = event.metadata;
-    const isCurrentUserPayer = event.metadata.payerDisplayName === user?.displayName;
+    const isCurrentUserPayer = event.metadata.payerId === user?.id;
+    const iconColor = user ? (isCurrentUserPayer ? 'red' : 'green') : 'gray';
+
+    const userShareAmount = event.metadata.shares.find(
+        share => share.userId === user?.id,
+    )?.shareAmount ?? 0;
+
+    const userExpenseDebt = isCurrentUserPayer
+        ? event.metadata.amount - userShareAmount
+        : userShareAmount * -1;
 
     return (
         <Card size="1" mb="2">
@@ -24,7 +33,7 @@ const EventExpenseCreated = ({ event }: Props) => {
                     <Avatar
                         size="3"
                         variant="soft"
-                        color={isCurrentUserPayer ? 'green' : 'red'}
+                        color={iconColor}
                         fallback={
                             isCurrentUserPayer ? (
                                 <LucideBanknoteArrowUp size={20} />
@@ -52,9 +61,9 @@ const EventExpenseCreated = ({ event }: Props) => {
                             <Amount value={amount} tokenCode={event.metadata.currency} />
                         </Text>
                     ) : null}
-                    {amount ? (
+                    {userExpenseDebt ? (
                         <OwedStatusText
-                            value={amount}
+                            value={userExpenseDebt}
                             currencyCode={event.metadata.currency}
                             size="2"
                         />

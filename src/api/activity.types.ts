@@ -31,7 +31,22 @@ type ExpenseMetadata = {
     description: string;
     amount: number;
     currency: string;
+    payerId: UUID;
     payerDisplayName: string;
+    shares: ExpenseShare[];
+    fieldDiffs: FieldDiff[];
+};
+
+type ExpenseShare = {
+    userId: UUID;
+    shareAmount: number;
+    currency: string;
+};
+
+type FieldDiff = {
+    field: string;
+    oldValue: unknown;
+    newValue: unknown;
 };
 
 type SettlementMetadata = {
@@ -66,6 +81,7 @@ type GroupMetadata = {
     groupId: UUID;
     groupName: string;
     groupEmoji?: string | null;
+    groupImage?: string | null;
     targetUserDisplayName: string | null;
 };
 
