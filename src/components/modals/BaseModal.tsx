@@ -6,7 +6,7 @@ import { Dialog, Flex, IconButton, Separator, Text } from '@radix-ui/themes';
 // (the project-wide designated file for Radix style overrides).
 
 interface Props {
-    triggerElement: React.ReactNode;
+    triggerElement?: React.ReactNode;
     content: React.ReactNode;
     title: string;
     description?: string;
@@ -26,7 +26,7 @@ const BaseModal = ({
 }: Props) => {
     return (
         <Dialog.Root open={isOpened} onOpenChange={setIsOpened}>
-            <Dialog.Trigger>{triggerElement}</Dialog.Trigger>
+            {triggerElement && <Dialog.Trigger>{triggerElement}</Dialog.Trigger>}
 
             <Dialog.Content
                 maxWidth={maxWidth}
@@ -46,7 +46,7 @@ const BaseModal = ({
                 </Dialog.Title>
                 <Separator orientation="horizontal" size="4" />
 
-                <Flex direction="column" mt="6">
+                <Flex direction="column" mt="6" className="base-modal-body">
                     {description && <Dialog.Description size="4">{description}</Dialog.Description>}
 
                     {content}

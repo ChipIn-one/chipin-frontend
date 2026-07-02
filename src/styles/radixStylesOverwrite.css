@@ -41,6 +41,8 @@ body {
 
     .base-modal-content {
         position: fixed !important;
+        display: flex;
+        flex-direction: column;
         top: 0 !important;
         left: 0 !important;
         right: 0 !important;
@@ -53,5 +55,10 @@ body {
         border-radius: 0 !important;
         margin: 0 !important;
         overflow-y: auto;
+    }
+
+    .base-modal-body {
+        flex: 1;
+        min-height: 0;
     }
 }

@@ -93,7 +93,7 @@ export const initChipInApiInterceptors = () => {
             }
 
             toast.error(message, {
-                duration: SECOND * 15,
+                duration: SECOND * 10,
             });
 
             return Promise.reject(error);

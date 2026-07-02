@@ -24,7 +24,7 @@ const OwedStatusText = ({ value, currencyCode, size, align = 'right' }: Props) =
     return (
         <Text size={size} color={isPositive ? 'green' : 'red'} as="span" align={align}>
             {isPositive ? t('common:balances.youOwed') : t('common:balances.youOwe')}{' '}
-            <Amount value={value} tokenCode={currencyCode} precision={0} />
+            <Amount value={Math.abs(value)} tokenCode={currencyCode} precision={0} />
         </Text>
     );
 };
