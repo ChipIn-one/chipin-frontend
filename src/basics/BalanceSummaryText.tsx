@@ -1,11 +1,16 @@
 import { ComponentProps, Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
+import styled from 'styled-components';
 
 import { Flex, Text } from '@radix-ui/themes';
 
 import { BalanceEntry } from 'api/chipin.raw.types';
 
 import { Amount } from './numbers';
+
+const AmountChunk = styled.span`
+    white-space: nowrap;
+`;
 
 interface Props {
     entries: BalanceEntry[];
@@ -34,12 +39,15 @@ const BalanceSummaryText = ({ entries, size, align = 'left' }: Props) => {
                     {t('balances.youOwed')}{' '}
                     {owedEntries.map((entry, i) => (
                         <Fragment key={entry.currency}>
-                            {i > 0 && ', '}
-                            <Amount
-                                value={Math.abs(entry.netBalance!)}
-                                tokenCode={entry.currency}
-                                precision={0}
-                            />
+                            <AmountChunk>
+                                <Amount
+                                    value={Math.abs(entry.netBalance!)}
+                                    tokenCode={entry.currency}
+                                    precision={0}
+                                />
+                                {i < owedEntries.length - 1 && ','}
+                            </AmountChunk>
+                            {i < owedEntries.length - 1 && ' '}
                         </Fragment>
                     ))}
                 </Text>
@@ -49,12 +57,15 @@ const BalanceSummaryText = ({ entries, size, align = 'left' }: Props) => {
                     {t('balances.youOwe')}{' '}
                     {oweEntries.map((entry, i) => (
                         <Fragment key={entry.currency}>
-                            {i > 0 && ', '}
-                            <Amount
-                                value={Math.abs(entry.netBalance!)}
-                                tokenCode={entry.currency}
-                                precision={0}
-                            />
+                            <AmountChunk>
+                                <Amount
+                                    value={Math.abs(entry.netBalance!)}
+                                    tokenCode={entry.currency}
+                                    precision={0}
+                                />
+                                {i < oweEntries.length - 1 && ','}
+                            </AmountChunk>
+                            {i < oweEntries.length - 1 && ' '}
                         </Fragment>
                     ))}
                 </Text>

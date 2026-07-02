@@ -2,18 +2,18 @@ import { create } from 'zustand';
 
 import type { AppEvent } from 'api/activity.types';
 import { fetchApiCurrencyRates, fetchApiDashboard } from 'api/chipin';
-import {
-    ApiCurrencyRatesResponse,
-    BalanceEntry,
-    BalancesMap,
-} from 'api/chipin.raw.types';
+import { ApiCurrencyRatesResponse, BalanceEntry, BalancesMap } from 'api/chipin.raw.types';
+import { sortBalancesByCurrency } from 'helpers/currencies';
 
 import { calcBalancesSummary } from './commonSelectors';
 import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
+import { selectUserCurrency } from './usersSelectors';
+import { useUsersStore } from './usersStore';
 
 export interface DashboardStore {
     fetchSetDashboardData: () => void;
+    setDashboardSummaryCurrency: (defaultCurrency: string) => void;
     setInitialDashboardStore: () => void;
 
     balances: BalancesMap;
@@ -62,19 +62,33 @@ export const useDashboardStore = create<DashboardStore>(set => ({
             .then(([dashboard, currencies]) => {
                 setGroups(dashboard.groups);
 
+                const defaultCurrency = selectUserCurrency(useUsersStore.getState());
                 const entries = Object.values(dashboard.balances);
                 const { netTotalInBase, owedTotalInBase, owingTotalInBase } = calcBalancesSummary(
-                    currencies.base,
+                    defaultCurrency,
                     currencies.rates,
+                    currencies.base,
                     {
                         balances: dashboard.balances,
                     },
                 );
+                const owedEntries = sortBalancesByCurrency(
+                    entries.filter(entry => entry.netBalance > 0),
+                    currencies.rates,
+                    currencies.base,
+                    defaultCurrency,
+                );
+                const oweEntries = sortBalancesByCurrency(
+                    entries.filter(entry => entry.netBalance < 0),
+                    currencies.rates,
+                    currencies.base,
+                    defaultCurrency,
+                );
 
                 set({
                     balances: dashboard.balances,
-                    owedEntries: entries.filter(entry => entry.netBalance > 0),
-                    oweEntries: entries.filter(entry => entry.netBalance < 0),
+                    owedEntries,
+                    oweEntries,
                     netTotalInBase,
                     owedTotalInBase,
                     owingTotalInBase,
@@ -88,6 +102,37 @@ export const useDashboardStore = create<DashboardStore>(set => ({
                 console.error('Error fetching dashboard data:', error);
                 setLoading('dashboard', 'data', 'fetched');
             });
+    },
+    setDashboardSummaryCurrency: defaultCurrency => {
+        set(state => {
+            const entries = Object.values(state.balances);
+            const { netTotalInBase, owedTotalInBase, owingTotalInBase } = calcBalancesSummary(
+                defaultCurrency,
+                state.currencies.rates,
+                state.currencies.base,
+                {
+                    balances: state.balances,
+                },
+            );
+
+            return {
+                netTotalInBase,
+                owedTotalInBase,
+                owingTotalInBase,
+                owedEntries: sortBalancesByCurrency(
+                    entries.filter(entry => entry.netBalance > 0),
+                    state.currencies.rates,
+                    state.currencies.base,
+                    defaultCurrency,
+                ),
+                oweEntries: sortBalancesByCurrency(
+                    entries.filter(entry => entry.netBalance < 0),
+                    state.currencies.rates,
+                    state.currencies.base,
+                    defaultCurrency,
+                ),
+            };
+        });
     },
     setInitialDashboardStore: () => {
         set(initialDashboardStore);

@@ -1,12 +1,29 @@
-import { BalancesMap, CurrenciesRates } from 'api/chipin.raw.types';
+import { BalanceEntry, BalancesMap, CurrenciesRates } from 'api/chipin.raw.types';
+
+export const convertCurrencyAmount = (
+    amount: number,
+    sourceCurrency: string,
+    targetCurrency: string,
+    rates: CurrenciesRates,
+    baseCurrency: string,
+): number | null => {
+    const sourceRate = sourceCurrency === baseCurrency ? 1 : rates[sourceCurrency];
+    const targetRate = targetCurrency === baseCurrency ? 1 : rates[targetCurrency];
+
+    if (!sourceRate || !targetRate) {
+        return null;
+    }
+
+    return (amount / sourceRate) * targetRate;
+};
 
 export const getCurrencySummary = (
     balances: BalancesMap,
     rates: CurrenciesRates,
+    baseCurrency: string,
     defaultCurrency: string,
 ): { netTotalInBase: number; owedTotalInBase: number; owingTotalInBase: number } => {
     const entries = Object.values(balances);
-    const currencyRate = rates[defaultCurrency] ?? 1;
 
     let netTotalInBase = 0;
     let owedTotalInBase = 0;
@@ -19,13 +36,17 @@ export const getCurrencySummary = (
             continue;
         }
 
-        const rate = rates[entry.currency];
+        const converted = convertCurrencyAmount(
+            amount,
+            entry.currency,
+            defaultCurrency,
+            rates,
+            baseCurrency,
+        );
 
-        if (!rate) {
+        if (converted === null) {
             continue;
         }
-
-        const converted = (amount / rate) * currencyRate;
 
         netTotalInBase += converted;
 
@@ -38,3 +59,38 @@ export const getCurrencySummary = (
 
     return { netTotalInBase, owedTotalInBase, owingTotalInBase };
 };
+
+export const sortBalanceEntriesByConvertedValue = (
+    entries: BalanceEntry[],
+    rates: CurrenciesRates,
+    baseCurrency: string,
+    targetCurrency: string,
+): BalanceEntry[] =>
+    entries
+        .map((entry, index) => ({
+            entry,
+            index,
+            convertedValue: convertCurrencyAmount(
+                Math.abs(entry.netBalance || 0),
+                entry.currency,
+                targetCurrency,
+                rates,
+                baseCurrency,
+            ),
+        }))
+        .sort((leftEntry, rightEntry) => {
+            if (leftEntry.convertedValue === null && rightEntry.convertedValue === null) {
+                return leftEntry.index - rightEntry.index;
+            }
+
+            if (leftEntry.convertedValue === null) {
+                return 1;
+            }
+
+            if (rightEntry.convertedValue === null) {
+                return -1;
+            }
+
+            return rightEntry.convertedValue - leftEntry.convertedValue;
+        })
+        .map(({ entry }) => entry);

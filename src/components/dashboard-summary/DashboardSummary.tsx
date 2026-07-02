@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+
 import { Flex } from '@radix-ui/themes';
 
 import { useDashboardStore } from 'store/dashboardStore';
@@ -13,8 +15,18 @@ interface Props {
 
 const DashBoardSummary: React.FC<Props> = ({ isLoading = false }) => {
     const defaultCurrency = useUsersStore(selectUserCurrency);
-    const { netTotalInBase, owedTotalInBase, owingTotalInBase, owedEntries, oweEntries } =
-        useDashboardStore();
+    const {
+        netTotalInBase,
+        owedTotalInBase,
+        owingTotalInBase,
+        owedEntries,
+        oweEntries,
+        setDashboardSummaryCurrency,
+    } = useDashboardStore();
+
+    useEffect(() => {
+        setDashboardSummaryCurrency(defaultCurrency);
+    }, [defaultCurrency, setDashboardSummaryCurrency]);
 
     return (
         <Flex direction="column" gap="4">

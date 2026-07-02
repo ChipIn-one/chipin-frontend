@@ -4,6 +4,7 @@ import { getCurrencySummary } from 'helpers/currencies';
 export const calcBalancesSummary = (
     defaultCurrency: string,
     currenciesRates: CurrenciesRates,
+    baseCurrency: string,
     entity: { balances: BalancesMap },
 ): {
     owedTotalInBase: number;
@@ -13,6 +14,7 @@ export const calcBalancesSummary = (
     const { netTotalInBase, owedTotalInBase, owingTotalInBase } = getCurrencySummary(
         entity.balances,
         currenciesRates,
+        baseCurrency,
         defaultCurrency,
     );
 

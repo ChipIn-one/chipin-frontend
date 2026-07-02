@@ -1,8 +1,10 @@
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Box } from '@radix-ui/themes';
 
 import { Group } from 'api/chipin.types';
+import { useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectUserCurrency } from 'store/usersSelectors';
 import { useUsersStore } from 'store/usersStore';
@@ -20,8 +22,24 @@ interface Props {
 const GroupSummary = ({ groups, selectedGroup, isLoading }: Props) => {
     const { t } = useTranslation('group');
 
-    const { owedTotalInBase, owingTotalInBase, owedEntries, oweEntries } = useGroupsStore();
+    const {
+        owedTotalInBase,
+        owingTotalInBase,
+        owedEntries,
+        oweEntries,
+        setSelectedGroupSummaryCurrency,
+    } = useGroupsStore();
     const defaultCurrency = useUsersStore(selectUserCurrency);
+    const currencies = useDashboardStore(state => state.currencies);
+
+    useEffect(() => {
+        setSelectedGroupSummaryCurrency(defaultCurrency);
+    }, [
+        defaultCurrency,
+        currencies.base,
+        currencies.fetchedAt,
+        setSelectedGroupSummaryCurrency,
+    ]);
 
     return (
         <Box
