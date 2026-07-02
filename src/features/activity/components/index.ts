@@ -1,3 +1,4 @@
+import ActivityDateDivider from './ActivityDateDivider';
 import ActivityEventsList from './ActivityEventsList';
 import EventExpenseCreated from './EventExpenseCreated';
 import EventGroupCreated from './EventGroupCreated';
@@ -8,6 +9,7 @@ import EventMemberLeft from './EventMemberLeft';
 import EventRenderer from './EventRenderer';
 
 export {
+    ActivityDateDivider,
     ActivityEventsList,
     EventExpenseCreated,
     EventGroupCreated,
