@@ -41,5 +41,9 @@
     "expense": {
         "created": "¡Gasto agregado exitosamente!",
         "createError": "Algo salió mal al agregar el gasto."
+    },
+    "ledger": {
+        "entryDeleted": "Entrada eliminada exitosamente.",
+        "entryDeleteError": "Algo salió mal al eliminar la entrada."
     }
 }

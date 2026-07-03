@@ -41,5 +41,9 @@
     "expense": {
         "created": "Despesa adicionada com sucesso!",
         "createError": "Algo deu errado ao adicionar a despesa."
+    },
+    "ledger": {
+        "entryDeleted": "Lançamento excluído com sucesso.",
+        "entryDeleteError": "Algo deu errado ao excluir o lançamento."
     }
 }

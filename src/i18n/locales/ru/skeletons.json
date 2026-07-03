@@ -2,6 +2,7 @@
     "activityFeed": {
         "expenseTitle": "Ужин с друзьями",
         "expenseDescription": "Оплатил Алекс в группе Поездка",
+        "settlementDescription": "Алекс заплатил Иордану в группе Поездка",
         "expenseAmount": "120 USD",
         "owedStatus": "Вам должны",
         "relativeTime": "2 часа назад",

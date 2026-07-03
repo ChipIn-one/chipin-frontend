@@ -13,6 +13,8 @@ import type {
     CreateGroupParams,
     CreateLedgerEntryParams,
     Dashboard,
+    DeleteLedgerEntryParams,
+    FetchActivityChildrenParams,
     FetchActivityParams,
     Group,
     InviteToGroupParams,
@@ -165,6 +167,23 @@ export const fetchApiUserActivities = ({
         .then(result => result.data);
 };
 
+export const fetchApiUserActivityChildren = ({
+    parentActivityId,
+    limit,
+    cursor,
+    category,
+}: FetchActivityChildrenParams): Promise<ApiActivityItemsResponse> => {
+    return apiInstance
+        .get(`/users/self/activities/${parentActivityId}/children`, {
+            params: {
+                ...(limit && { limit }),
+                ...(cursor && { cursor }),
+                ...(category && { category }),
+            },
+        })
+        .then(result => result.data);
+};
+
 // =============== EXPENSES ===============
 
 export const createApiExpense = async ({
@@ -196,4 +215,10 @@ export const createApiExpense = async ({
     });
 
     return response.data;
+};
+
+export const deleteApiLedgerEntry = async ({
+    entryId,
+}: DeleteLedgerEntryParams): Promise<void> => {
+    await apiInstance.delete(`/ledger/entries/${entryId}`);
 };

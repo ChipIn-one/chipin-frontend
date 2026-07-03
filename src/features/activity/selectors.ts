@@ -1,5 +1,6 @@
 import type { AppEvent } from 'api/activity.types';
 import type { BalanceEntry } from 'api/chipin.raw.types';
+import type { ActivityCategory } from 'api/chipin.types';
 import { ACTIVITY_ACTIONS, type ExpenseCreatedAction } from 'constants/activity';
 import { getActivityDateKey } from 'helpers/time';
 
@@ -56,4 +57,35 @@ export const getDailyExpenseSummaries = (
     });
 
     return summaries;
+};
+
+export const getActivityChildCategory = (event?: AppEvent): ActivityCategory | undefined => {
+    if (!event) {
+        return undefined;
+    }
+
+    if (event.action === ACTIVITY_ACTIONS.EXPENSE_CREATED) {
+        return 'expense';
+    }
+
+    if (event.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED) {
+        return 'settlement';
+    }
+
+    return undefined;
+};
+
+export const getActivityLedgerEntryId = (event?: AppEvent): string | undefined => {
+    if (!event) {
+        return undefined;
+    }
+
+    if (
+        event.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ||
+        event.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED
+    ) {
+        return event.metadata.entryId;
+    }
+
+    return undefined;
 };

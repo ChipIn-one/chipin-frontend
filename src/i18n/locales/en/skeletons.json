@@ -2,6 +2,7 @@
     "activityFeed": {
         "expenseTitle": "Weekend dinner",
         "expenseDescription": "Paid by Alex in Travel group",
+        "settlementDescription": "Alex paid Jordan in Travel group",
         "expenseAmount": "120 USD",
         "owedStatus": "You are owed",
         "relativeTime": "2 hours ago",

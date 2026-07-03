@@ -29,11 +29,19 @@ const Activity = () => {
 
     const filteredItems = useMemo(() => {
         if (activeFilter === 'expenses') {
-            return items.filter(item => item.action === ACTIVITY_ACTIONS.EXPENSE_CREATED);
+            return items.filter(
+                item =>
+                    item.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ||
+                    item.action === ACTIVITY_ACTIONS.EXPENSE_REVERSED,
+            );
         }
 
         if (activeFilter === 'settlements') {
-            return items.filter(item => item.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED);
+            return items.filter(
+                item =>
+                    item.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED ||
+                    item.action === ACTIVITY_ACTIONS.SETTLEMENT_REVERSED,
+            );
         }
 
         return items;

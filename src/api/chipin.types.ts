@@ -32,8 +32,11 @@ export type {
 
 // ─── Re-exports: call param types ─────────────────────────────────────────
 export type {
+    ActivityCategory,
     CreateGroupParams,
     CreateLedgerEntryParams,
+    DeleteLedgerEntryParams,
+    FetchActivityChildrenParams,
     FetchActivityParams,
     InviteToGroupParams,
     KickGroupMemberParams,

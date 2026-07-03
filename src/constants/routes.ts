@@ -11,6 +11,9 @@ export const ROUTES = {
     SETTINGS: '/settings',
 };
 
+export const buildActivityChildrenRoute = (parentActivityId: string) =>
+    `${ROUTES.ACTIVITY}/${parentActivityId}`;
+
 export const HEAD_META: Record<string, { title: string; description?: string }> = {
     [ROUTES.HOME]: {
         title: 'ChipIn — Home',
@@ -39,6 +42,10 @@ export const HEAD_META: Record<string, { title: string; description?: string }> 
     [ROUTES.ACTIVITY]: {
         title: 'ChipIn — Activity',
         description: 'View your recent activity',
+    },
+    [buildActivityChildrenRoute(':parentActivityId')]: {
+        title: 'ChipIn — Activity Details',
+        description: 'View updates related to an activity event',
     },
     [ROUTES.FRIENDS]: {
         title: 'ChipIn — Friends',

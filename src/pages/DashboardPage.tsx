@@ -77,7 +77,11 @@ const DashboardPage = () => {
                     {!isDashboardFetched || isDashboardLoading ? (
                         <ActivityFeedSkeleton />
                     ) : (
-                        <ActivityEventsList events={activityItems} />
+                        <ActivityEventsList
+                            events={activityItems}
+                            hasDailySummary
+                            isActivityLinkEnabled
+                        />
                     )}
                 </Box>
             </Grid>
