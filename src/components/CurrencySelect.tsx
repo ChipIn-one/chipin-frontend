@@ -14,6 +14,7 @@ type SearchSelectProps = ComponentProps<typeof SearchSelect>;
 
 interface Props {
     currency?: string;
+    currencies?: string[];
     isLoading?: boolean;
     triggerElement?: SearchSelectProps['triggerElement'];
     contentWidthMode?: SearchSelectProps['contentWidthMode'];
@@ -25,6 +26,7 @@ const CurrencySelect: React.FC<Props> = ({
     onChange,
     isLoading = false,
     currency,
+    currencies,
     triggerElement,
     contentWidthMode,
     widthContainerRef,
@@ -33,19 +35,27 @@ const CurrencySelect: React.FC<Props> = ({
     const defaultCurrency = useDashboardStore(useShallow(selectDefaultCurrency));
 
     const { t } = useTranslation('currencies');
-    const [internalCurrency, setInternalCurrency] = useState(currency ?? defaultCurrency ?? '');
+    const [internalCurrency, setInternalCurrency] = useState(
+        currency ?? currencies?.[0] ?? defaultCurrency ?? '',
+    );
 
     const selectedCurrency =
-        currency || internalCurrency || defaultCurrency || availableCurrencies[0] || '';
+        currency ||
+        internalCurrency ||
+        currencies?.[0] ||
+        defaultCurrency ||
+        availableCurrencies[0] ||
+        '';
+    const selectableCurrencies = currencies ?? availableCurrencies;
 
     const items = useMemo(
         () =>
-            availableCurrencies.map(code => ({
+            selectableCurrencies.map(code => ({
                 value: code,
                 label: `${t(code)}`,
                 searchFields: [code, t(code)],
             })),
-        [availableCurrencies, t],
+        [selectableCurrencies, t],
     );
 
     const selectedCurrencyLabel = selectedCurrency ? `${t(selectedCurrency)}` : selectedCurrency;

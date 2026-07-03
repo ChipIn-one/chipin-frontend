@@ -34,6 +34,7 @@ export type {
 export type {
     CreateGroupParams,
     CreateLedgerEntryParams,
+    CreateSettlementParams,
     FetchActivityParams,
     InviteToGroupParams,
     KickGroupMemberParams,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { LucideUserPlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -43,6 +43,21 @@ const FriendsPage = () => {
     const currencies = selectFriendsCurrencies(unSettledFriends, search);
     const currencyGroups = selectFilteredCurrencyGroups(unSettledFriends, search, filterKey);
     const filteredSettledFriends = selectFilteredSettledFriends(settledFriends, search, filterKey);
+    const friendCurrencyBalances = useMemo(() => {
+        return unSettledFriends.reduce<Record<string, { currency: string; amount: number }[]>>(
+            (acc, group) => {
+                group.friends.forEach(friend => {
+                    acc[friend.user.id] = [
+                        ...(acc[friend.user.id] ?? []),
+                        { currency: group.currency, amount: friend.amount },
+                    ];
+                });
+
+                return acc;
+            },
+            {},
+        );
+    }, [unSettledFriends]);
 
     return (
         <Container size="2" pb={{ initial: '9', sm: '6' }}>
@@ -76,6 +91,7 @@ const FriendsPage = () => {
                                 currency={group.currency}
                                 netBalance={group.netBalance}
                                 friends={group.friends}
+                                friendCurrencyBalances={friendCurrencyBalances}
                             />
                         ))}
 

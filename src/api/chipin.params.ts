@@ -56,6 +56,14 @@ export interface CreateLedgerEntryParams {
     sharingMode?: SharingMode;
 }
 
+export interface CreateSettlementParams {
+    groupId?: string;
+    fromUserId: string;
+    toUserId: string;
+    amount: number;
+    currency: string;
+}
+
 export interface FetchActivityParams {
     limit?: number;
     cursor?: number;

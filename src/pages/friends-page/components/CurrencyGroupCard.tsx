@@ -8,7 +8,11 @@ import DebtAmount from 'basics/DebtAmount';
 
 import FriendListItem from './FriendListItem';
 
-const CurrencyGroupCard = ({ currency, netBalance, friends }: UnsettledFriends) => {
+interface Props extends UnsettledFriends {
+    friendCurrencyBalances: Record<string, { currency: string; amount: number }[]>;
+}
+
+const CurrencyGroupCard = ({ currency, netBalance, friends, friendCurrencyBalances }: Props) => {
     const { t } = useTranslation('common');
     const isOwed = netBalance >= 0;
 
@@ -32,10 +36,10 @@ const CurrencyGroupCard = ({ currency, netBalance, friends }: UnsettledFriends) 
                     <Flex key={item.user.id} direction="column" gap="3">
                         {index === 0 && <Separator size="4" />}
                         <FriendListItem
-                            picture={item.user.picture}
-                            displayName={item.user.displayName}
+                            friend={item.user}
                             netAmount={item.amount}
                             currency={currency}
+                            currencyBalances={friendCurrencyBalances[item.user.id] ?? []}
                         />
                     </Flex>
                 ))}

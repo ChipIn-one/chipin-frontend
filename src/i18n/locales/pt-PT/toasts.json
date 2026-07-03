@@ -41,5 +41,8 @@
     "expense": {
         "created": "Despesa adicionada com sucesso!",
         "createError": "Algo correu mal ao adicionar a despesa."
+    },
+    "settlement": {
+        "created": "Pagamento registado com sucesso!"
     }
 }

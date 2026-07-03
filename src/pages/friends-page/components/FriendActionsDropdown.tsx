@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
     LucideArrowLeftRight,
     LucideBell,
@@ -10,10 +10,22 @@ import { useTranslation } from 'react-i18next';
 
 import { IconButton } from '@radix-ui/themes';
 
-import Dropdown from 'components/Dropdown';
+import type { User } from 'api/chipin.types';
 
-const FriendActionsDropdown = () => {
+import Dropdown from 'components/Dropdown';
+import { SettleUpModal } from 'components/modals';
+
+interface Props {
+    friend: User;
+    initialCurrency?: string;
+    currencyBalances?: { currency: string; amount: number }[];
+}
+
+const FriendActionsDropdown = ({ friend, initialCurrency, currencyBalances = [] }: Props) => {
     const { t } = useTranslation(['common', 'friends']);
+    const [isSettleUpOpened, setIsSettleUpOpened] = useState(false);
+    const resolvedInitialCurrency = initialCurrency ?? currencyBalances[0]?.currency;
+    const isSettleUpAvailable = Boolean(resolvedInitialCurrency && currencyBalances.length > 0);
 
     const actions = useMemo(
         () => [
@@ -38,9 +50,9 @@ const FriendActionsDropdown = () => {
                 label: t('common:buttons.settleUp'),
                 icon: <LucideArrowLeftRight size={16} />,
                 color: 'green' as const,
-                isDisabled: true,
+                isDisabled: !isSettleUpAvailable,
                 onSelect: () => {
-                    /* todo */
+                    setIsSettleUpOpened(true);
                 },
             },
             {
@@ -54,19 +66,30 @@ const FriendActionsDropdown = () => {
                 },
             },
         ],
-        [t],
+        [isSettleUpAvailable, t],
     );
 
     return (
-        <Dropdown
-            items={actions}
-            trigger={
-                <IconButton variant="ghost" size="2" color="gray">
-                    <LucideMoreVertical size={16} />
-                </IconButton>
-            }
-            align="end"
-        />
+        <>
+            <Dropdown
+                items={actions}
+                trigger={
+                    <IconButton variant="ghost" size="2" color="gray">
+                        <LucideMoreVertical size={16} />
+                    </IconButton>
+                }
+                align="end"
+            />
+            {isSettleUpAvailable && isSettleUpOpened && (
+                <SettleUpModal
+                    isOpened={isSettleUpOpened}
+                    setIsOpened={setIsSettleUpOpened}
+                    friend={friend}
+                    balances={currencyBalances}
+                    initialCurrency={resolvedInitialCurrency ?? ''}
+                />
+            )}
+        </>
     );
 };
 
