@@ -4,10 +4,11 @@ import { useTranslation } from 'react-i18next';
 
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 
-import { AppEvent } from 'api/activity.types';
+import type { AppEvent } from 'api/activity.types';
+import type { GroupUpdatedAction } from 'constants/activity';
 
 interface Props {
-    event: Extract<AppEvent, { action: 'GROUP_UPDATED' }>;
+    event: Extract<AppEvent, { action: GroupUpdatedAction }>;
 }
 
 const EventGroupUpdated = ({ event }: Props) => {

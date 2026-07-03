@@ -7,6 +7,7 @@ import EventGroupUpdated from './EventGroupUpdated';
 import EventMemberJoin from './EventMemberJoin';
 import EventMemberLeft from './EventMemberLeft';
 import EventRenderer from './EventRenderer';
+import EventSettlementCreated from './EventSettlementCreated';
 
 export {
     ActivityDateDivider,
@@ -18,4 +19,5 @@ export {
     EventMemberJoin,
     EventMemberLeft,
     EventRenderer,
+    EventSettlementCreated,
 };

@@ -13,6 +13,7 @@
     },
     "event": {
         "expenseCreatedDescription": "Paid by {{payer}} in {{group}}",
+        "settlementCreatedDescription": "{{from}} paid {{to}} in {{group}}",
         "groupCreatedMiddleText": "created the group",
         "groupUpdatedMiddleText": "updated the group",
         "groupDeletedMiddleText": "deleted the group",

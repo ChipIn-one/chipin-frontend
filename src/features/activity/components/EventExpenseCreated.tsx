@@ -4,11 +4,12 @@ import { useTranslation } from 'react-i18next';
 
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 
-import { AppEvent } from 'api/activity.types';
+import type { AppEvent } from 'api/activity.types';
+import type { ExpenseCreatedAction } from 'constants/activity';
 import { useUsersStore } from 'store/usersStore';
 
 interface Props {
-    event: Extract<AppEvent, { action: 'EXPENSE_CREATED' }>;
+    event: Extract<AppEvent, { action: ExpenseCreatedAction }>;
 }
 
 const EventExpenseCreated = ({ event }: Props) => {

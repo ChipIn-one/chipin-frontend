@@ -13,7 +13,7 @@ const UNITS: Array<[TimeUnit, number]> = [
 ];
 
 const toTimestampMs = (date: DateInput): number =>
-    typeof date === 'number' ? date * 1000 : date.getTime();
+    typeof date === 'number' ? date * SECOND : date.getTime();
 
 export const formatActivityAbsoluteDate = (date: DateInput, locale: string): string => {
     return new Intl.DateTimeFormat(locale, {

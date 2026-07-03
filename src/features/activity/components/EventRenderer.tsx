@@ -1,4 +1,5 @@
-import { AppEvent } from 'api/activity.types';
+import type { AppEvent } from 'api/activity.types';
+import { ACTIVITY_ACTIONS } from 'constants/activity';
 
 import EventExpenseCreated from './EventExpenseCreated';
 import EventGroupCreated from './EventGroupCreated';
@@ -6,6 +7,7 @@ import EventGroupDeleted from './EventGroupDeleted';
 import EventGroupUpdated from './EventGroupUpdated';
 import EventMemberJoin from './EventMemberJoin';
 import EventMemberLeft from './EventMemberLeft';
+import EventSettlementCreated from './EventSettlementCreated';
 import EventUnknown from './EventUnknown';
 
 interface Props {
@@ -14,17 +16,19 @@ interface Props {
 
 const EventRenderer = ({ event }: Props) => {
     switch (event.action) {
-        case 'EXPENSE_CREATED':
+        case ACTIVITY_ACTIONS.EXPENSE_CREATED:
             return <EventExpenseCreated event={event} />;
-        case 'MEMBER_JOINED':
+        case ACTIVITY_ACTIONS.SETTLEMENT_CREATED:
+            return <EventSettlementCreated event={event} />;
+        case ACTIVITY_ACTIONS.MEMBER_JOINED:
             return <EventMemberJoin event={event} />;
-        case 'MEMBER_LEFT':
+        case ACTIVITY_ACTIONS.MEMBER_LEFT:
             return <EventMemberLeft event={event} />;
-        case 'GROUP_DELETED':
+        case ACTIVITY_ACTIONS.GROUP_DELETED:
             return <EventGroupDeleted event={event} />;
-        case 'GROUP_CREATED':
+        case ACTIVITY_ACTIONS.GROUP_CREATED:
             return <EventGroupCreated event={event} />;
-        case 'GROUP_UPDATED':
+        case ACTIVITY_ACTIONS.GROUP_UPDATED:
             return <EventGroupUpdated event={event} />;
         default:
             return <EventUnknown event={event} />;

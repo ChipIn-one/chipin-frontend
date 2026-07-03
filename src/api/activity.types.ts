@@ -1,3 +1,13 @@
+import type {
+    ExpenseCreatedAction,
+    GroupCreatedAction,
+    GroupDeletedAction,
+    GroupUpdatedAction,
+    MemberJoinedAction,
+    MemberLeftAction,
+    SettlementCreatedAction,
+} from 'constants/activity';
+
 /** --- LEDGER --- */
 
 type UUID = string;
@@ -56,21 +66,24 @@ type SettlementMetadata = {
     groupName: string;
     amount: number;
     currency: string;
+    actorUserId: UUID;
+    payerId: UUID;
     fromDisplayName: string;
     toDisplayName: string;
+    fieldDiffs: FieldDiff[];
 };
 
 type ExpenseCreatedEvent = BaseEvent & {
     domain: 'LEDGER';
-    action: 'EXPENSE_CREATED';
+    action: ExpenseCreatedAction;
     subjectType: 'expense';
     metadata: ExpenseMetadata;
 };
 
 type SettlementCreatedEvent = BaseEvent & {
     domain: 'LEDGER';
-    action: 'SETTLEMENT_CREATED';
-    subjectType: 'ledger_entry';
+    action: SettlementCreatedAction;
+    subjectType: 'settlement';
     metadata: SettlementMetadata;
 };
 
@@ -87,35 +100,35 @@ type GroupMetadata = {
 
 type GroupCreatedEvent = BaseEvent & {
     domain: 'GROUP';
-    action: 'GROUP_CREATED';
+    action: GroupCreatedAction;
     subjectType: 'group';
     metadata: GroupMetadata;
 };
 
 type GroupUpdatedEvent = BaseEvent & {
     domain: 'GROUP';
-    action: 'GROUP_UPDATED';
+    action: GroupUpdatedAction;
     subjectType: 'group';
     metadata: GroupMetadata;
 };
 
 type GroupDeletedEvent = BaseEvent & {
     domain: 'GROUP';
-    action: 'GROUP_DELETED';
+    action: GroupDeletedAction;
     subjectType: 'group';
     metadata: GroupMetadata;
 };
 
 type MemberJoinedEvent = BaseEvent & {
     domain: 'GROUP';
-    action: 'MEMBER_JOINED';
+    action: MemberJoinedAction;
     subjectType: 'group';
     metadata: GroupMetadata;
 };
 
 type MemberLeftEvent = BaseEvent & {
     domain: 'GROUP';
-    action: 'MEMBER_LEFT';
+    action: MemberLeftAction;
     subjectType: 'group';
     metadata: GroupMetadata;
 };

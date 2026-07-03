@@ -4,10 +4,11 @@ import { useTranslation } from 'react-i18next';
 
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 
-import { AppEvent } from 'api/activity.types';
+import type { AppEvent } from 'api/activity.types';
+import type { MemberLeftAction } from 'constants/activity';
 
 interface Props {
-    event: Extract<AppEvent, { action: 'MEMBER_LEFT' }>;
+    event: Extract<AppEvent, { action: MemberLeftAction }>;
 }
 
 const EventMemberLeft = ({ event }: Props) => {

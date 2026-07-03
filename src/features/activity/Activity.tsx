@@ -6,6 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { Flex, Spinner, Text } from '@radix-ui/themes';
 import { useIntersectionObserver } from '@uidotdev/usehooks';
 
+import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { useActivityStore } from 'store/activityStore';
 import { selectActivityLoading, selectActivityNextPageLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
@@ -28,11 +29,11 @@ const Activity = () => {
 
     const filteredItems = useMemo(() => {
         if (activeFilter === 'expenses') {
-            return items.filter(item => item.action === 'EXPENSE_CREATED');
+            return items.filter(item => item.action === ACTIVITY_ACTIONS.EXPENSE_CREATED);
         }
 
         if (activeFilter === 'settlements') {
-            return items.filter(item => item.action === 'SETTLEMENT_CREATED');
+            return items.filter(item => item.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED);
         }
 
         return items;

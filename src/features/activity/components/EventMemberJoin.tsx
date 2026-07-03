@@ -4,10 +4,11 @@ import { useTranslation } from 'react-i18next';
 
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 
-import { AppEvent } from 'api/activity.types';
+import type { AppEvent } from 'api/activity.types';
+import type { MemberJoinedAction } from 'constants/activity';
 
 interface EventMemberJoinProps {
-    event: Extract<AppEvent, { action: 'MEMBER_JOINED' }>;
+    event: Extract<AppEvent, { action: MemberJoinedAction }>;
 }
 
 const EventMemberJoin = ({ event }: EventMemberJoinProps) => {
