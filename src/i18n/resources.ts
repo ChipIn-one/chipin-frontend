@@ -7,6 +7,7 @@ import enErrors from './locales/en/errors.json';
 import enFriends from './locales/en/friends.json';
 import enGroup from './locales/en/group.json';
 import enLanding from './locales/en/landing.json';
+import enMeta from './locales/en/meta.json';
 import enSettings from './locales/en/settings.json';
 import enSkeletons from './locales/en/skeletons.json';
 import enToasts from './locales/en/toasts.json';
@@ -19,6 +20,7 @@ import esErrors from './locales/es/errors.json';
 import esFriends from './locales/es/friends.json';
 import esGroup from './locales/es/group.json';
 import esLanding from './locales/es/landing.json';
+import esMeta from './locales/es/meta.json';
 import esSettings from './locales/es/settings.json';
 import esSkeletons from './locales/es/skeletons.json';
 import esTranslations from './locales/es/toasts.json';
@@ -31,6 +33,7 @@ import ptBrErrors from './locales/pt-BR/errors.json';
 import ptBrFriends from './locales/pt-BR/friends.json';
 import ptBrGroup from './locales/pt-BR/group.json';
 import ptBrLanding from './locales/pt-BR/landing.json';
+import ptBrMeta from './locales/pt-BR/meta.json';
 import ptBrSettings from './locales/pt-BR/settings.json';
 import ptBrSkeletons from './locales/pt-BR/skeletons.json';
 import ptBrToasts from './locales/pt-BR/toasts.json';
@@ -43,6 +46,7 @@ import ptPtErrors from './locales/pt-PT/errors.json';
 import ptPtFriends from './locales/pt-PT/friends.json';
 import ptPtGroup from './locales/pt-PT/group.json';
 import ptPtLanding from './locales/pt-PT/landing.json';
+import ptPtMeta from './locales/pt-PT/meta.json';
 import ptPtSettings from './locales/pt-PT/settings.json';
 import ptPtSkeletons from './locales/pt-PT/skeletons.json';
 import ptPtToasts from './locales/pt-PT/toasts.json';
@@ -55,6 +59,7 @@ import ruErrors from './locales/ru/errors.json';
 import ruFriends from './locales/ru/friends.json';
 import ruGroup from './locales/ru/group.json';
 import ruLanding from './locales/ru/landing.json';
+import ruMeta from './locales/ru/meta.json';
 import ruSettings from './locales/ru/settings.json';
 import ruSkeletons from './locales/ru/skeletons.json';
 import ruToasts from './locales/ru/toasts.json';
@@ -73,6 +78,7 @@ export const resources = {
         settings: enSettings,
         friends: enFriends,
         skeletons: enSkeletons,
+        meta: enMeta,
     },
     ru: {
         common: ruCommon,
@@ -87,6 +93,7 @@ export const resources = {
         settings: ruSettings,
         friends: ruFriends,
         skeletons: ruSkeletons,
+        meta: ruMeta,
     },
     es: {
         common: esCommon,
@@ -101,6 +108,7 @@ export const resources = {
         settings: esSettings,
         friends: esFriends,
         skeletons: esSkeletons,
+        meta: esMeta,
     },
     'pt-BR': {
         common: ptBrCommon,
@@ -115,6 +123,7 @@ export const resources = {
         settings: ptBrSettings,
         friends: ptBrFriends,
         skeletons: ptBrSkeletons,
+        meta: ptBrMeta,
     },
     'pt-PT': {
         common: ptPtCommon,
@@ -129,5 +138,6 @@ export const resources = {
         settings: ptPtSettings,
         friends: ptPtFriends,
         skeletons: ptPtSkeletons,
+        meta: ptPtMeta,
     },
 } as const;

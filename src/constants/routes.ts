@@ -14,49 +14,70 @@ export const ROUTES = {
 export const buildActivityChildrenRoute = (parentActivityId: string) =>
     `${ROUTES.ACTIVITY}/${parentActivityId}`;
 
-export const HEAD_META: Record<string, { title: string; description?: string }> = {
-    [ROUTES.HOME]: {
-        title: 'ChipIn — Home',
-        description: 'Home page of the ChipIn app',
+export interface RouteMeta {
+    path: string;
+    titleKey: string;
+    descriptionKey: string;
+    groupTitleKey?: string;
+    groupDescriptionKey?: string;
+}
+
+export const ROUTE_META = [
+    {
+        path: ROUTES.HOME,
+        titleKey: 'home.title',
+        descriptionKey: 'home.description',
     },
-    [ROUTES.SIGN_IN]: {
-        title: 'ChipIn — Sign In',
-        description: 'Sign in to your ChipIn account',
+    {
+        path: ROUTES.SIGN_IN,
+        titleKey: 'signIn.title',
+        descriptionKey: 'signIn.description',
     },
-    [ROUTES.OAUTH_CALLBACK]: {
-        title: 'ChipIn — Signing In',
-        description: 'Completing sign in to ChipIn',
+    {
+        path: ROUTES.OAUTH_CALLBACK,
+        titleKey: 'oauthCallback.title',
+        descriptionKey: 'oauthCallback.description',
     },
-    [ROUTES.DASHBOARD]: {
-        title: 'ChipIn — Dashboard',
-        description: 'View and manage your balances',
+    {
+        path: ROUTES.DASHBOARD,
+        titleKey: 'dashboard.title',
+        descriptionKey: 'dashboard.description',
     },
-    [ROUTES.GROUP]: {
-        title: 'ChipIn — Group',
-        description: 'View and manage your group',
+    {
+        path: `${ROUTES.GROUP}/:groupId`,
+        titleKey: 'group.title',
+        descriptionKey: 'group.description',
+        groupTitleKey: 'group.titleWithName',
+        groupDescriptionKey: 'group.descriptionWithName',
     },
-    [ROUTES.GROUP_JOIN]: {
-        title: 'Joining group...',
-        description: 'Trying to join group',
+    {
+        path: `${ROUTES.GROUP_JOIN}/:inviteToken`,
+        titleKey: 'groupJoin.title',
+        descriptionKey: 'groupJoin.description',
     },
-    [ROUTES.ACTIVITY]: {
-        title: 'ChipIn — Activity',
-        description: 'View your recent activity',
+    {
+        path: ROUTES.ACTIVITY,
+        titleKey: 'activity.title',
+        descriptionKey: 'activity.description',
     },
-    [buildActivityChildrenRoute(':parentActivityId')]: {
-        title: 'ChipIn — Activity Details',
-        description: 'View updates related to an activity event',
+    {
+        path: buildActivityChildrenRoute(':parentActivityId'),
+        titleKey: 'activityDetails.title',
+        descriptionKey: 'activityDetails.description',
     },
-    [ROUTES.FRIENDS]: {
-        title: 'ChipIn — Friends',
-        description: 'View your friends list',
+    {
+        path: ROUTES.FRIENDS,
+        titleKey: 'friends.title',
+        descriptionKey: 'friends.description',
     },
-    [ROUTES.SETTINGS]: {
-        title: 'ChipIn — Settings',
-        description: 'Manage your settings',
+    {
+        path: ROUTES.SETTINGS,
+        titleKey: 'settings.title',
+        descriptionKey: 'settings.description',
     },
-    [ROUTES.NOT_FOUND_404]: {
-        title: 'ChipIn — Page Not Found',
-        description: 'The page you are looking for does not exist',
+    {
+        path: ROUTES.NOT_FOUND_404,
+        titleKey: 'notFound.title',
+        descriptionKey: 'notFound.description',
     },
-};
+] satisfies RouteMeta[];

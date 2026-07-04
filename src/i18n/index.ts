@@ -23,6 +23,7 @@ i18n.use(initReactI18next).init({
         'settings',
         'friends',
         'skeletons',
+        'meta',
     ],
     defaultNS: 'common',
 

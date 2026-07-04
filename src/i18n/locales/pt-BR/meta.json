@@ -1,0 +1,44 @@
+{
+    "home": {
+        "title": "ChipIn — Início",
+        "description": "Página inicial do app ChipIn"
+    },
+    "signIn": {
+        "title": "ChipIn — Entrar",
+        "description": "Entre na sua conta ChipIn"
+    },
+    "oauthCallback": {
+        "title": "ChipIn — Entrando",
+        "description": "Concluindo o acesso ao ChipIn"
+    },
+    "dashboard": {
+        "title": "ChipIn — Painel",
+        "description": "Veja e gerencie seus saldos"
+    },
+    "group": {
+        "title": "ChipIn — Grupo",
+        "titleWithName": "ChipIn — {{groupName}}",
+        "description": "Veja e gerencie seu grupo",
+        "descriptionWithName": "Veja e gerencie {{groupName}}"
+    },
+    "groupJoin": {
+        "title": "Entrando no grupo...",
+        "description": "Tentando entrar no grupo"
+    },
+    "activity": {
+        "title": "ChipIn — Atividade",
+        "description": "Veja sua atividade recente"
+    },
+    "friends": {
+        "title": "ChipIn — Amigos",
+        "description": "Veja sua lista de amigos"
+    },
+    "settings": {
+        "title": "ChipIn — Configurações",
+        "description": "Gerencie suas configurações"
+    },
+    "notFound": {
+        "title": "ChipIn — Página não encontrada",
+        "description": "A página que você está procurando não existe"
+    }
+}
