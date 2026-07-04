@@ -1,0 +1,44 @@
+{
+    "home": {
+        "title": "ChipIn — Главная",
+        "description": "Главная страница приложения ChipIn"
+    },
+    "signIn": {
+        "title": "ChipIn — Вход",
+        "description": "Войдите в аккаунт ChipIn"
+    },
+    "oauthCallback": {
+        "title": "ChipIn — Выполняется вход",
+        "description": "Завершаем вход в ChipIn"
+    },
+    "dashboard": {
+        "title": "ChipIn — Дашборд",
+        "description": "Просматривайте и управляйте своими балансами"
+    },
+    "group": {
+        "title": "ChipIn — Группа",
+        "titleWithName": "ChipIn — {{groupName}}",
+        "description": "Просматривайте и управляйте своей группой",
+        "descriptionWithName": "Просматривайте и управляйте группой {{groupName}}"
+    },
+    "groupJoin": {
+        "title": "Вступление в группу...",
+        "description": "Пробуем присоединиться к группе"
+    },
+    "activity": {
+        "title": "ChipIn — Активность",
+        "description": "Просматривайте недавнюю активность"
+    },
+    "friends": {
+        "title": "ChipIn — Друзья",
+        "description": "Просматривайте список друзей"
+    },
+    "settings": {
+        "title": "ChipIn — Настройки",
+        "description": "Управляйте своими настройками"
+    },
+    "notFound": {
+        "title": "ChipIn — Страница не найдена",
+        "description": "Страница, которую вы ищете, не существует"
+    }
+}
