@@ -60,7 +60,7 @@ const GroupSummary = ({ groups, selectedGroup, isLoading }: Props) => {
                 label={t('dashboard:groups.otherTitle')}
                 isLoading={isLoading}
             />
-            <GroupsCards groups={groups.filter(group => group.id !== selectedGroup.id)} />
+            <GroupsCards groups={groups} selectedGroupId={selectedGroup.id} />
         </Box>
     );
 };

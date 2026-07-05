@@ -18,6 +18,7 @@ type GroupFilter = 'all' | 'owed' | 'owes' | 'settled';
 
 interface Props {
     groups: Group[];
+    selectedGroupId?: Group['id'];
 }
 
 const filterGroups = (groups: Group[], filter: GroupFilter): Group[] => {
@@ -40,7 +41,7 @@ const filterGroups = (groups: Group[], filter: GroupFilter): Group[] => {
     });
 };
 
-const GroupsCards: React.FC<Props> = ({ groups }) => {
+const GroupsCards: React.FC<Props> = ({ groups, selectedGroupId }) => {
     const isDashboardFetched = useLoadingStore(selectDashboardFetched);
     const [activeFilter, setActiveFilter] = useState<GroupFilter>('all');
     const { t } = useTranslation('dashboard');
@@ -91,7 +92,7 @@ const GroupsCards: React.FC<Props> = ({ groups }) => {
             )}
 
             {filteredGroups.map(group => (
-                <GroupCard key={group.id} group={group} />
+                <GroupCard key={group.id} group={group} isSelected={group.id === selectedGroupId} />
             ))}
         </Flex>
     );

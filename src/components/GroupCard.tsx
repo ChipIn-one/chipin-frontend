@@ -1,11 +1,12 @@
 import { LucideChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
 
 import { Card, Flex, Text } from '@radix-ui/themes';
 
 import { Group } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
+import { themeColor } from 'helpers/colors';
 import { useDashboardStore } from 'store/dashboardStore';
 import { selectGroupNonZeroBalances } from 'store/groupsSelectors';
 import { useGroupsStore } from 'store/groupsStore';
@@ -19,11 +20,43 @@ const GroupNavButton = styled(NavButton)`
     width: 100%;
 `;
 
+const InteractiveCard = styled(Card)<{ $isSelected: boolean }>`
+    transition:
+        background-color 120ms ease,
+        box-shadow 120ms ease,
+        transform 120ms ease;
+
+    ${({ $isSelected }) =>
+        $isSelected &&
+        css`
+            background-color: ${themeColor('grassA3')};
+            box-shadow: inset 0 0 0 1px ${themeColor('grassA8')};
+        `}
+
+    ${GroupNavButton}:hover & {
+        background-color: ${({ $isSelected, theme }) =>
+            $isSelected ? theme.colors.grassA4 : theme.colors.grayA3};
+        box-shadow: inset 0 0 0 1px
+            ${({ $isSelected, theme }) =>
+                $isSelected ? theme.colors.grassA8 : theme.colors.grayA6};
+        transform: translateY(-1px);
+    }
+
+    ${GroupNavButton}:focus-visible & {
+        box-shadow:
+            inset 0 0 0 1px
+                ${({ $isSelected, theme }) =>
+                    $isSelected ? theme.colors.grassA8 : theme.colors.grayA6},
+            0 0 0 2px ${themeColor('grassA8')};
+    }
+`;
+
 interface Props {
     group: Group;
+    isSelected?: boolean;
 }
 
-const GroupCard: React.FC<Props> = ({ group }) => {
+const GroupCard: React.FC<Props> = ({ group, isSelected = false }) => {
     const { setSelectedGroup } = useGroupsStore();
     const currencies = useDashboardStore(state => state.currencies);
     const { t } = useTranslation('dashboard');
@@ -35,8 +68,9 @@ const GroupCard: React.FC<Props> = ({ group }) => {
             to={`${ROUTES.GROUP}/${group.id}`}
             unsetStyles
             onClick={() => setSelectedGroup(group)}
+            aria-current={isSelected ? 'page' : undefined}
         >
-            <Card size="1">
+            <InteractiveCard size="1" $isSelected={isSelected}>
                 <Flex gap="3" align="center">
                     <GroupAvatar group={group} size="5" />
 
@@ -57,7 +91,7 @@ const GroupCard: React.FC<Props> = ({ group }) => {
                         <LucideChevronRight size={20} />
                     </Flex>
                 </Flex>
-            </Card>
+            </InteractiveCard>
         </GroupNavButton>
     );
 };
