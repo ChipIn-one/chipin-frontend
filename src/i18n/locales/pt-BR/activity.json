@@ -26,6 +26,8 @@
         "expenseReversedDescription": "{{actor}} excluiu esta despesa em {{group}}",
         "settlementCreatedDescription": "{{from}} pagou {{to}} em {{group}}",
         "settlementReversedDescription": "{{actor}} excluiu o pagamento de {{from}} para {{to}} em {{group}}",
+        "paidTo": "pagou a",
+        "friendExpense": "despesa com amigo",
         "groupCreatedMiddleText": "criou o grupo",
         "groupUpdatedMiddleText": "atualizou o grupo",
         "groupDeletedMiddleText": "deletou o grupo",
