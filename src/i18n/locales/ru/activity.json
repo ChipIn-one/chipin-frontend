@@ -14,6 +14,8 @@
     "event": {
         "expenseCreatedDescription": "Оплатил(а) {{payer}} в группе {{group}}",
         "settlementCreatedDescription": "{{from}} заплатил(а) {{to}} в группе {{group}}",
+        "paidTo": "заплатил(а)",
+        "friendExpense": "расход с другом",
         "groupCreatedMiddleText": "создал(а) группу",
         "groupUpdatedMiddleText": "обновил(а) группу",
         "groupDeletedMiddleText": "удалил(а) группу",
