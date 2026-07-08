@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AmountInput, UserAvatar } from 'basics';
-import { LucideArrowRight, LucideInfo } from 'lucide-react';
+import { LucideInfo } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import styled from 'styled-components';
@@ -63,6 +63,38 @@ const LargeAmountInput = styled(AmountInput)`
         font-weight: 700;
         line-height: 1;
     }
+`;
+
+const PaymentFlow = styled.div`
+    display: flex;
+    width: 100%;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    column-gap: var(--space-1);
+    row-gap: var(--space-1);
+    text-align: center;
+`;
+
+const PaymentParticipant = styled.div`
+    display: inline-flex;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    max-width: 100%;
+`;
+
+const RecipientParticipant = styled(PaymentParticipant)`
+    flex-direction: row-reverse;
+`;
+
+const ParticipantName = styled(Text)`
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    text-align: center;
+    white-space: normal;
 `;
 
 const getAmountValue = (balance: FriendBalance) => String(Math.abs(balance.netAmount));
@@ -128,30 +160,28 @@ const SettleUpModal = ({ isOpened, setIsOpened, friend, balances, initialCurrenc
             maxWidth={MODAL_SIZES.default}
             content={
                 <ModalSurface>
-                    <Flex align="center" justify="between" gap="3">
-                        <Flex flexGrow="1" minWidth="0" direction="column" align="center" gap="2">
-                            <UserAvatar size="4" user={payer ?? undefined} />
-                            <Text align="center" weight="bold" truncate>
+                    <PaymentFlow>
+                        <PaymentParticipant>
+                            <UserAvatar size="2" user={payer ?? undefined} />
+                            <ParticipantName weight="bold" size="3">
                                 {payerName}
-                            </Text>
-                        </Flex>
+                            </ParticipantName>
+                        </PaymentParticipant>
 
-                        <Flex direction="column" align="center" gap="1" flexShrink="0">
-                            <Text as="span" color="jade">
-                                <LucideArrowRight size={32} />
-                            </Text>
-                            <Text size="2" weight="bold" color="jade">
-                                {t('friends:settleUp.paid')}
-                            </Text>
-                        </Flex>
+                        <Text align="center" size="3" weight="bold" color="jade">
+                            {t('friends:settleUp.paidAmountTo', {
+                                amount,
+                                currency,
+                            })}
+                        </Text>
 
-                        <Flex flexGrow="1" minWidth="0" direction="column" align="center" gap="2">
-                            <UserAvatar size="4" user={recipient ?? undefined} />
-                            <Text align="center" weight="bold" truncate>
+                        <RecipientParticipant>
+                            <UserAvatar size="2" user={recipient ?? undefined} />
+                            <ParticipantName weight="bold" size="3">
                                 {recipientName}
-                            </Text>
-                        </Flex>
-                    </Flex>
+                            </ParticipantName>
+                        </RecipientParticipant>
+                    </PaymentFlow>
 
                     <Card>
                         <Flex direction="column" gap="4">
