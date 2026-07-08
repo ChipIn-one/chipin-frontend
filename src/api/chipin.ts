@@ -12,6 +12,7 @@ import type {
     ApiUserResponse,
     CreateGroupParams,
     CreateLedgerEntryParams,
+    CreateSettlementParams,
     Dashboard,
     DeleteLedgerEntryParams,
     FetchActivityChildrenParams,
@@ -217,8 +218,29 @@ export const createApiExpense = async ({
     return response.data;
 };
 
-export const deleteApiLedgerEntry = async ({
+export const deleteApiLedgerEntry = ({
     entryId,
 }: DeleteLedgerEntryParams): Promise<void> => {
-    await apiInstance.delete(`/ledger/entries/${entryId}`);
+    return apiInstance.delete<void>(`/ledger/entries/${entryId}`).then(() => undefined);
+};
+
+export const createApiSettlement = ({
+    groupId,
+    fromUserId,
+    toUserId,
+    amount,
+    currency,
+}: CreateSettlementParams): Promise<ApiLedgerEntryResponse> => {
+    return apiInstance
+        .post<ApiLedgerEntryResponse>('/ledger/entries', {
+            type: 'SETTLEMENT',
+            ...(groupId && { groupId }),
+            settlement: {
+                fromUserId,
+                toUserId,
+                amount,
+                currency,
+            },
+        })
+        .then(response => response.data);
 };

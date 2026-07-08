@@ -45,5 +45,8 @@
     "ledger": {
         "entryDeleted": "Entrada eliminada exitosamente.",
         "entryDeleteError": "Algo salió mal al eliminar la entrada."
+    },
+    "settlement": {
+        "created": "¡Pago registrado exitosamente!"
     }
 }

@@ -31,6 +31,9 @@ export interface LoadingStore {
     ledger: {
         remove: LoadingState;
     };
+    settlement: {
+        add: LoadingState;
+    };
     users: {
         self: LoadingState;
         friends: LoadingState;
@@ -57,6 +60,7 @@ const initialLoadingStore: LoadingSlices = {
     },
     expense: { add: 'initial' },
     ledger: { remove: 'initial' },
+    settlement: { add: 'initial' },
     group: {
         data: 'initial',
         add: 'initial',

@@ -8,9 +8,8 @@ import { useLoadingStore } from 'store/loadingStore';
 import {
     selectFilteredCurrencyGroups,
     selectFilteredSettledFriends,
+    selectFriends,
     selectFriendsCurrencies,
-    selectSettledFriends,
-    selectUnSettledFriends,
 } from 'store/usersSelectors';
 import { useUsersStore } from 'store/usersStore';
 
@@ -27,22 +26,17 @@ import {
 
 const FriendsPage = () => {
     const { t } = useTranslation(['common', 'friends']);
-    const unSettledFriends = useUsersStore(selectUnSettledFriends);
-    const settledFriends = useUsersStore(selectSettledFriends);
+    const friends = useUsersStore(selectFriends);
     const isLoadingFriends = useLoadingStore(state => state.users.friends);
     const [search, setSearch] = useState('');
     const [filterKey, setFilterKey] = useState('all');
 
-    const isSkeletonShown =
-        isLoadingFriends === 'loading' && !unSettledFriends.length && !settledFriends.length;
-    const isEmptyFriends =
-        isLoadingFriends === 'fetched' &&
-        unSettledFriends.length === 0 &&
-        settledFriends.length === 0;
+    const isSkeletonShown = isLoadingFriends === 'loading' && !friends.length;
+    const isEmptyFriends = isLoadingFriends === 'fetched' && friends.length === 0;
 
-    const currencies = selectFriendsCurrencies(unSettledFriends, search);
-    const currencyGroups = selectFilteredCurrencyGroups(unSettledFriends, search, filterKey);
-    const filteredSettledFriends = selectFilteredSettledFriends(settledFriends, search, filterKey);
+    const currencies = selectFriendsCurrencies(friends, search);
+    const currencyGroups = selectFilteredCurrencyGroups(friends, search, filterKey);
+    const filteredSettledFriends = selectFilteredSettledFriends(friends, search, filterKey);
 
     return (
         <Container size="2" pb={{ initial: '9', sm: '6' }}>

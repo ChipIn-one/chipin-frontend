@@ -1,4 +1,10 @@
-import type { SettledFriend, ThemeName, UnsettledFriends, UserSettings } from 'api/chipin.types';
+import type {
+    FriendBalance,
+    KnownUser,
+    ThemeName,
+    User,
+    UserSettings,
+} from 'api/chipin.types';
 import { DEFAULT_CURRENCY_CODE } from 'constants/currencies';
 import { getFilterFunction } from 'helpers/text';
 
@@ -9,63 +15,86 @@ export const selectUserSettings = (s: UsersStore): UserSettings | null =>
 export const selectUserCurrency = (s: UsersStore) =>
     selectUserSettings(s)?.defaultCurrency || DEFAULT_CURRENCY_CODE;
 export const selectUserDisplayName = (s: UsersStore) => s.user?.displayName ?? '';
+export const selectUserPreferredName = (
+    user: Pick<User, 'displayName'> & Partial<Pick<User, 'firstName'>>,
+) =>
+    user.firstName || user.displayName;
 export const selectUserTimeFormat = (s: UsersStore) => selectUserSettings(s)?.timeFormat ?? '12h';
 export const selectUserLanguage = (s: UsersStore) => selectUserSettings(s)?.language ?? 'en';
 export const selectUserTheme = (s: UsersStore): ThemeName =>
     selectUserSettings(s)?.theme ?? 'system';
 export const selectUserSimplifyDebts = (s: UsersStore) =>
     selectUserSettings(s)?.simplifyDebts ?? true;
-export const selectUnSettledFriends = (s: UsersStore): UnsettledFriends[] => s.unSettledFriends;
-export const selectSettledFriends = (s: UsersStore): SettledFriend[] => s.settledFriends;
+export const selectFriends = (s: UsersStore): KnownUser[] => s.friends;
 export const selectIsUserAdmin = (s: UsersStore) => (s.user?.role ?? s.localUser?.role) === 'ADMIN';
 
+export interface FriendCurrencyGroup {
+    currency: string;
+    netBalance: number;
+    friends: {
+        friend: KnownUser;
+        balance: FriendBalance;
+    }[];
+}
+
 export const selectFriendsCurrencies = (
-    unsettled: UnsettledFriends[],
+    friends: KnownUser[],
     search: string,
 ): string[] => {
     const filterFn = getFilterFunction(search);
+    const filteredFriends = filterFn
+        ? friends.filter(friend => filterFn([friend.user.displayName]))
+        : friends;
 
-    if (!filterFn) {
-        return unsettled.map(group => group.currency);
-    }
-
-    return unsettled
-        .filter(unsettled => unsettled.friends.some(friend => filterFn([friend.user.displayName])))
-        .map(unsettled => unsettled.currency);
+    return Array.from(
+        new Set(filteredFriends.flatMap(friend => friend.balances.map(balance => balance.currency))),
+    );
 };
 
 export const selectFilteredCurrencyGroups = (
-    groups: UnsettledFriends[],
+    friends: KnownUser[],
     search: string,
     filterKey: string,
-): UnsettledFriends[] => {
+): FriendCurrencyGroup[] => {
     const filterFn = getFilterFunction(search);
+    const groups = new Map<string, FriendCurrencyGroup>();
 
-    return groups
-        .filter(group => filterKey === 'all' || group.currency === filterKey)
-        .map(group => {
-            if (!filterFn) {
-                return group;
+    friends.forEach(friend => {
+        if (filterFn && !filterFn([friend.user.displayName])) {
+            return;
+        }
+
+        friend.balances.forEach(balance => {
+            if (filterKey !== 'all' && balance.currency !== filterKey) {
+                return;
             }
 
-            return {
-                ...group,
-                friends: group.friends.filter(f => filterFn([f.user.displayName])),
+            const group = groups.get(balance.currency) ?? {
+                currency: balance.currency,
+                netBalance: 0,
+                friends: [],
             };
-        })
-        .filter(group => group.friends.length > 0);
+
+            group.netBalance += balance.netAmount;
+            group.friends.push({ friend, balance });
+            groups.set(balance.currency, group);
+        });
+    });
+
+    return Array.from(groups.values());
 };
 
 export const selectFilteredSettledFriends = (
-    settled: SettledFriend[],
+    friends: KnownUser[],
     search: string,
     filterKey: string,
-): SettledFriend[] => {
+): KnownUser[] => {
     if (filterKey !== 'all') {
         return [];
     }
 
     const filterFn = getFilterFunction(search);
+    const settled = friends.filter(friend => friend.balances.length === 0);
 
     if (!filterFn) {
         return settled;

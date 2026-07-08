@@ -31,3 +31,4 @@ export const selectUserSelfFetched = (s: LoadingStore) => s.users.self === 'fetc
 
 export const selectExpenseAdding = (s: LoadingStore) => s.expense.add === 'loading';
 export const selectLedgerEntryRemoving = (s: LoadingStore) => s.ledger.remove === 'loading';
+export const selectSettlementAdding = (s: LoadingStore) => s.settlement.add === 'loading';

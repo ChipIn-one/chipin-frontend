@@ -60,6 +60,14 @@ export interface DeleteLedgerEntryParams {
     entryId: string;
 }
 
+export interface CreateSettlementParams {
+    groupId?: string;
+    fromUserId: string;
+    toUserId: string;
+    amount: number;
+    currency: string;
+}
+
 export interface FetchActivityParams {
     limit?: number;
     cursor?: number;

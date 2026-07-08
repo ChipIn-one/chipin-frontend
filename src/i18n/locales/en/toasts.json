@@ -45,5 +45,8 @@
   "ledger": {
     "entryDeleted": "Entry deleted successfully.",
     "entryDeleteError": "Something went wrong while deleting the entry."
+  },
+  "settlement": {
+    "created": "Payment recorded successfully!"
   }
 }

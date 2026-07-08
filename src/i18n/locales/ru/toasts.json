@@ -45,5 +45,8 @@
   "ledger": {
     "entryDeleted": "Запись успешно удалена.",
     "entryDeleteError": "Не удалось удалить запись."
+  },
+  "settlement": {
+    "created": "Платеж успешно записан!"
   }
 }

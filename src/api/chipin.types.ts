@@ -1,8 +1,9 @@
 import type {
     ApiActivityItemsResponse,
+    ApiFriend,
+    ApiFriendBalance,
+    ApiFriendUser,
     ApiGroupResponse,
-    ApiSettledFriend,
-    ApiUnsettledFriend,
     ApiUserResponse,
     ApiUserRole,
     ApiUserSettings,
@@ -16,16 +17,17 @@ export type {
     ApiCurrencyRatesResponse,
     ApiDashboardResponse,
     ApiExpenseDetails,
+    ApiFriend,
+    ApiFriendBalance,
     ApiFriendsResponse,
+    ApiFriendUser,
     ApiGroupResponse,
     ApiLedgerEntryResponse,
     ApiOAuthTokenPairResponse,
     ApiParticipantShare,
     ApiRefreshTokenPairResponse,
     ApiRemoveGroupResponse,
-    ApiSettledFriend,
     ApiSettlementDetails,
-    ApiUnsettledFriend,
     ApiUpdateUserRequest,
     ApiUserResponse,
 } from './chipin.raw.types';
@@ -35,6 +37,7 @@ export type {
     ActivityCategory,
     CreateGroupParams,
     CreateLedgerEntryParams,
+    CreateSettlementParams,
     DeleteLedgerEntryParams,
     FetchActivityChildrenParams,
     FetchActivityParams,
@@ -55,11 +58,9 @@ export type User = ApiUserResponse;
 export type UserSettings = ApiUserSettings;
 export type UserRole = ApiUserRole;
 export type ThemeName = ApiUserTheme;
-/** A currency group within known users response. */
-export type UnsettledFriends = ApiUnsettledFriend;
-
-/** A settled friend with no outstanding balances. */
-export type SettledFriend = ApiSettledFriend;
+export type FriendUser = ApiFriendUser;
+export type FriendBalance = ApiFriendBalance;
+export type KnownUser = ApiFriend;
 
 /** Group — same shape as the API response. */
 export type Group = ApiGroupResponse;

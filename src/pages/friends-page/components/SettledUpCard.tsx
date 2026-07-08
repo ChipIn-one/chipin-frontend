@@ -3,14 +3,14 @@ import { useTranslation } from 'react-i18next';
 
 import { Card, Flex, Separator, Text } from '@radix-ui/themes';
 
-import type { SettledFriend } from 'api/chipin.types';
+import type { KnownUser } from 'api/chipin.types';
 
 import { UserAvatar } from 'basics/index';
 
 import FriendActionsDropdown from './FriendActionsDropdown';
 
 interface Props {
-    friends: SettledFriend[];
+    friends: KnownUser[];
 }
 
 const SettledUpCard = ({ friends }: Props) => {
@@ -35,7 +35,7 @@ const SettledUpCard = ({ friends }: Props) => {
                                     {friend.user.displayName}
                                 </Text>
                             </Flex>
-                            <FriendActionsDropdown />
+                            <FriendActionsDropdown friend={friend} />
                         </Flex>
                     </Flex>
                 ))}

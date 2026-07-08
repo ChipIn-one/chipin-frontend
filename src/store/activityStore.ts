@@ -1,18 +1,21 @@
 import { create } from 'zustand';
 
-import { AppEvent } from 'api/activity.types';
+import type { AppEvent } from 'api/activity.types';
 import {
     createApiExpense,
+    createApiSettlement,
     deleteApiLedgerEntry,
     fetchApiUserActivities,
     fetchApiUserActivityChildren,
 } from 'api/chipin';
-import type { ActivityCategory } from 'api/chipin.types';
-import {
+import type {
+    ActivityCategory,
     CreateLedgerEntryParams as CreateExpenseParams,
+    CreateSettlementParams,
 } from 'api/chipin.types';
 
 import { useLoadingStore } from './loadingStore';
+import { useUsersStore } from './usersStore';
 
 const ACTIVITY_PAGE_LIMIT = 15;
 
@@ -37,6 +40,7 @@ export interface ActivityStore {
     fetchSetChildActivity: (params: FetchSetChildActivityParams) => void;
     fetchMoreChildActivity: () => void;
     createExpense: (params: CreateExpenseParams) => Promise<void>;
+    createSettlement: (params: CreateSettlementParams) => Promise<void>;
     deleteLedgerEntry: (entryId: string) => Promise<void>;
     setInitialChildActivityStore: () => void;
     setInitialActivityStore: () => void;
@@ -242,6 +246,20 @@ export const useActivityStore = create<ActivityStore>((set, get) => ({
             .then(() => undefined)
             .finally(() => {
                 setLoading('expense', 'add', 'fetched');
+            });
+    },
+
+    createSettlement: params => {
+        const { setLoading } = useLoadingStore.getState();
+        const { setSettlementWithFriend } = useUsersStore.getState();
+        setLoading('settlement', 'add', 'loading');
+
+        return createApiSettlement(params)
+            .then(() => {
+                setSettlementWithFriend(params);
+            })
+            .finally(() => {
+                setLoading('settlement', 'add', 'fetched');
             });
     },
 
