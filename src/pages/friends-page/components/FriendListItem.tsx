@@ -1,33 +1,37 @@
-import { Avatar, Flex, Text } from '@radix-ui/themes';
+import { Flex, Text } from '@radix-ui/themes';
+
+import type { FriendBalance, KnownUser } from 'api/chipin.types';
 
 import DebtAmount from 'basics/DebtAmount';
+import UserAvatar from 'basics/UserAvatar';
 
 import FriendActionsDropdown from './FriendActionsDropdown';
 
 interface Props {
-    picture: string | null;
-    displayName: string;
-    netAmount: number;
-    currency: string;
+    friend: KnownUser;
+    balance: FriendBalance;
 }
 
-const FriendListItem = ({ picture, displayName, netAmount, currency }: Props) => {
+const FriendListItem = ({ friend, balance }: Props) => {
     return (
         <Flex justify="between" align="center">
             <Flex align="center" gap="3">
-                <Avatar
-                    src={picture || ''}
-                    fallback={displayName.charAt(0)}
-                    size={{ initial: '1', sm: '2' }}
-                    radius="full"
-                />
+                <UserAvatar user={friend.user} size={{ initial: '1', sm: '2' }} />
                 <Text as="span" weight="medium" size={{ initial: '2', sm: '3' }}>
-                    {displayName}
+                    {friend.user.displayName}
                 </Text>
             </Flex>
             <Flex align="center" gap="4">
-                <DebtAmount amount={netAmount} currency={currency} weight="medium" size="2" />
-                <FriendActionsDropdown />
+                <DebtAmount
+                    amount={balance.netAmount}
+                    currency={balance.currency}
+                    weight="medium"
+                    size="2"
+                />
+                <FriendActionsDropdown
+                    friend={friend}
+                    balance={balance}
+                />
             </Flex>
         </Flex>
     );

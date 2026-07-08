@@ -41,5 +41,8 @@
   "expense": {
     "created": "Expense added successfully!",
     "createError": "Something went wrong while adding the expense."
+  },
+  "settlement": {
+    "created": "Payment recorded successfully!"
   }
 }

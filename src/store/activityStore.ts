@@ -1,10 +1,14 @@
 import { create } from 'zustand';
 
 import { AppEvent } from 'api/activity.types';
-import { createApiExpense, fetchApiUserActivities } from 'api/chipin';
-import { CreateLedgerEntryParams as CreateExpenseParams } from 'api/chipin.types';
+import { createApiExpense, createApiSettlement, fetchApiUserActivities } from 'api/chipin';
+import {
+    CreateLedgerEntryParams as CreateExpenseParams,
+    CreateSettlementParams,
+} from 'api/chipin.types';
 
 import { useLoadingStore } from './loadingStore';
+import { useUsersStore } from './usersStore';
 
 const ACTIVITY_PAGE_LIMIT = 15;
 
@@ -16,6 +20,7 @@ export interface ActivityStore {
     fetchSetActivity: () => void;
     fetchMoreActivity: () => void;
     createExpense: (params: CreateExpenseParams) => Promise<void>;
+    createSettlement: (params: CreateSettlementParams) => Promise<void>;
     setInitialActivityStore: () => void;
 }
 
@@ -78,6 +83,19 @@ export const useActivityStore = create<ActivityStore>((set, get) => ({
             .then(() => undefined)
             .finally(() => {
                 setLoading('expense', 'add', 'fetched');
+            });
+    },
+    createSettlement: params => {
+        const { setLoading } = useLoadingStore.getState();
+        const { setSettlementWithFriend } = useUsersStore.getState();
+        setLoading('settlement', 'add', 'loading');
+
+        return createApiSettlement(params)
+            .then(() => {
+                setSettlementWithFriend(params);
+            })
+            .finally(() => {
+                setLoading('settlement', 'add', 'fetched');
             });
     },
     setInitialActivityStore: () => {

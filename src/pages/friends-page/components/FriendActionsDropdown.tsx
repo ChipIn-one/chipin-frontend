@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
     LucideArrowLeftRight,
     LucideBell,
@@ -10,10 +10,19 @@ import { useTranslation } from 'react-i18next';
 
 import { IconButton } from '@radix-ui/themes';
 
-import Dropdown from 'components/Dropdown';
+import type { FriendBalance, KnownUser } from 'api/chipin.types';
 
-const FriendActionsDropdown = () => {
+import Dropdown from 'components/Dropdown';
+import { SettleUpModal } from 'components/modals';
+
+interface Props {
+    friend: KnownUser;
+    balance?: FriendBalance;
+}
+
+const FriendActionsDropdown = ({ friend, balance }: Props) => {
     const { t } = useTranslation(['common', 'friends']);
+    const [isSettleUpOpened, setIsSettleUpOpened] = useState(false);
 
     const actions = useMemo(
         () => [
@@ -38,9 +47,9 @@ const FriendActionsDropdown = () => {
                 label: t('common:buttons.settleUp'),
                 icon: <LucideArrowLeftRight size={16} />,
                 color: 'green' as const,
-                isDisabled: true,
+                isDisabled: !balance,
                 onSelect: () => {
-                    /* todo */
+                    setIsSettleUpOpened(true);
                 },
             },
             {
@@ -54,19 +63,30 @@ const FriendActionsDropdown = () => {
                 },
             },
         ],
-        [t],
+        [balance, t],
     );
 
     return (
-        <Dropdown
-            items={actions}
-            trigger={
-                <IconButton variant="ghost" size="2" color="gray">
-                    <LucideMoreVertical size={16} />
-                </IconButton>
-            }
-            align="end"
-        />
+        <>
+            <Dropdown
+                items={actions}
+                trigger={
+                    <IconButton variant="ghost" size="2" color="gray">
+                        <LucideMoreVertical size={16} />
+                    </IconButton>
+                }
+                align="end"
+            />
+            {balance && isSettleUpOpened && (
+                <SettleUpModal
+                    isOpened={isSettleUpOpened}
+                    setIsOpened={setIsSettleUpOpened}
+                    friend={friend.user}
+                    balances={friend.balances}
+                    initialCurrency={balance.currency}
+                />
+            )}
+        </>
     );
 };
 
