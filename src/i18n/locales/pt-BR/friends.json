@@ -12,5 +12,12 @@
     "actions": {
         "remind": "Lembrar",
         "removeFriend": "Remover amigo"
+    },
+    "settleUp": {
+        "you": "Você",
+        "paid": "pagou",
+        "recipient": "Destinatário",
+        "noMoneyMoves": "Registra um pagamento externo. Nenhum dinheiro é movimentado.",
+        "recordPayment": "Registrar pagamento"
     }
 }

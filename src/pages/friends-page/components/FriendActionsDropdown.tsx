@@ -10,16 +10,21 @@ import { useTranslation } from 'react-i18next';
 
 import { IconButton } from '@radix-ui/themes';
 
+import type { FriendBalance, KnownUser } from 'api/chipin.types';
+
 import Dropdown from 'components/Dropdown';
+import { SettleUpModal } from 'components/modals';
 import AddExpenseModal from 'components/modals/AddExpenseModal';
 
 interface Props {
-    friendId: string;
+    friend: KnownUser;
+    balance?: FriendBalance;
 }
 
-const FriendActionsDropdown = ({ friendId }: Props) => {
+const FriendActionsDropdown = ({ friend, balance }: Props) => {
     const { t } = useTranslation(['common', 'friends']);
     const [isExpenseModalOpened, setIsExpenseModalOpened] = useState(false);
+    const [isSettleUpOpened, setIsSettleUpOpened] = useState(false);
 
     const actions = useMemo(
         () => [
@@ -44,9 +49,9 @@ const FriendActionsDropdown = ({ friendId }: Props) => {
                 label: t('common:buttons.settleUp'),
                 icon: <LucideArrowLeftRight size={16} />,
                 color: 'green' as const,
-                isDisabled: true,
+                isDisabled: !balance,
                 onSelect: () => {
-                    /* todo */
+                    setIsSettleUpOpened(true);
                 },
             },
             {
@@ -60,7 +65,7 @@ const FriendActionsDropdown = ({ friendId }: Props) => {
                 },
             },
         ],
-        [t],
+        [balance, t],
     );
 
     return (
@@ -76,10 +81,19 @@ const FriendActionsDropdown = ({ friendId }: Props) => {
             />
             <AddExpenseModal
                 context="friends"
-                friendId={friendId}
+                friendId={friend.user.id}
                 isOpened={isExpenseModalOpened}
                 setIsOpened={setIsExpenseModalOpened}
             />
+            {balance && isSettleUpOpened && (
+                <SettleUpModal
+                    isOpened={isSettleUpOpened}
+                    setIsOpened={setIsSettleUpOpened}
+                    friend={friend.user}
+                    balances={friend.balances}
+                    initialCurrency={balance.currency}
+                />
+            )}
         </>
     );
 };

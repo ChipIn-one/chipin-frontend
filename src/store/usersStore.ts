@@ -4,9 +4,8 @@ import { create } from 'zustand';
 
 import { fetchApiKnownUsers, fetchApiUser, updateApiUser } from 'api/chipin';
 import {
-    ApiFriendsResponse,
-    SettledFriend,
-    UnsettledFriends,
+    CreateSettlementParams,
+    KnownUser,
     UpdateUserParams,
     User,
     UserSettings,
@@ -20,12 +19,11 @@ import { useLoadingStore } from './loadingStore';
 export interface UsersStore {
     user: User | null;
     localUser: LocalUser | null;
-    knownUsers: User[];
-    unSettledFriends: UnsettledFriends[];
-    settledFriends: SettledFriend[];
+    friends: KnownUser[];
 
     fetchSetFriends: () => void;
     fetchSetUser: () => void;
+    setSettlementWithFriend: (params: CreateSettlementParams) => void;
     setUserSettings: (params: { displayName?: string; settings?: Partial<UserSettings> }) => void;
     extendUserSubscriptionByDay: () => void;
     setInitialUsersStore: () => void;
@@ -34,43 +32,7 @@ export interface UsersStore {
 const initialUsersStore = {
     user: null,
     localUser: getLocalUser(),
-    knownUsers: [],
-    unSettledFriends: [],
-    settledFriends: [],
-};
-
-interface KnownUsersResponse extends ApiFriendsResponse {
-    friends?: Array<SettledFriend | User>;
-    knownUsers?: User[];
-    unSettledFriends?: UnsettledFriends[];
-    unsettledFriends?: UnsettledFriends[];
-    users?: User[];
-}
-
-const collectKnownUsers = ({
-    directUsers,
-    settledFriends,
-    unSettledFriends,
-}: {
-    directUsers: Array<SettledFriend | User>;
-    settledFriends: SettledFriend[];
-    unSettledFriends: UnsettledFriends[];
-}): User[] => {
-    const usersById = new Map<string, User>();
-    const addUser = (friend: SettledFriend | User) => {
-        const user = 'user' in friend ? friend.user : friend;
-        usersById.set(user.id, user);
-    };
-
-    directUsers.forEach(addUser);
-    settledFriends.forEach(addUser);
-    unSettledFriends.forEach(currencyGroup => {
-        currencyGroup.friends.forEach(friend => {
-            usersById.set(friend.user.id, friend.user);
-        });
-    });
-
-    return Array.from(usersById.values());
+    friends: [],
 };
 
 export const useUsersStore = create<UsersStore>((set, get) => ({
@@ -98,24 +60,8 @@ export const useUsersStore = create<UsersStore>((set, get) => ({
         setLoading('users', 'friends', 'loading');
 
         fetchApiKnownUsers()
-            .then((response: KnownUsersResponse) => {
-                const unSettledFriends =
-                    response.currencies ??
-                    response.unSettledFriends ??
-                    response.unsettledFriends ??
-                    [];
-                const settledFriends = response.settledFriends ?? [];
-                const knownUsers = collectKnownUsers({
-                    directUsers: [
-                        ...(response.users ?? []),
-                        ...(response.knownUsers ?? []),
-                        ...(response.friends ?? []),
-                    ],
-                    settledFriends,
-                    unSettledFriends,
-                });
-
-                set({ knownUsers, unSettledFriends, settledFriends });
+            .then(({ friends }) => {
+                set({ friends });
             })
             .catch(error => {
                 console.error('Error fetching known users:', error);
@@ -123,6 +69,47 @@ export const useUsersStore = create<UsersStore>((set, get) => ({
             .finally(() => {
                 setLoading('users', 'friends', 'fetched');
             });
+    },
+    setSettlementWithFriend: params => {
+        set(state => {
+            const currentUserId = state.user?.id;
+
+            if (!currentUserId) {
+                return state;
+            }
+
+            const isCurrentUserPayer = params.fromUserId === currentUserId;
+            const isCurrentUserRecipient = params.toUserId === currentUserId;
+
+            if (!isCurrentUserPayer && !isCurrentUserRecipient) {
+                return state;
+            }
+
+            const friendId = isCurrentUserPayer ? params.toUserId : params.fromUserId;
+            const amountToSet = isCurrentUserPayer ? params.amount : -params.amount;
+
+            return {
+                friends: state.friends.map(friend => {
+                    if (friend.user.id !== friendId) {
+                        return friend;
+                    }
+
+                    return {
+                        ...friend,
+                        balances: friend.balances
+                            .map(balance =>
+                                balance.currency === params.currency
+                                    ? {
+                                          ...balance,
+                                          netAmount: balance.netAmount + amountToSet,
+                                      }
+                                    : balance,
+                            )
+                            .filter(balance => balance.netAmount !== 0),
+                    };
+                }),
+            };
+        });
     },
     setUserSettings: params => {
         const { user, localUser } = get();

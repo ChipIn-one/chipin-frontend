@@ -1,19 +1,26 @@
 import { ENV_DEV, ENV_PROD, ENV_URLS } from 'constants/env';
 import type { Environment } from 'constants/env.types';
 
-export const getIsDevEnv = (): boolean => {
+export const getEnv = (): Environment => {
+    const explicitEnv = import.meta.env.VITE_CHIPIN_ENV;
+
+    if (explicitEnv === ENV_DEV || explicitEnv === ENV_PROD) {
+        return explicitEnv;
+    }
+
     if (typeof window === 'undefined') {
-        return false;
+        return ENV_PROD;
     }
 
     const hostname = window.location.hostname;
+    const isDevHostname = hostname === 'localhost' || hostname.endsWith('dev.chipin.one');
 
-    return hostname === 'localhost' || hostname.endsWith('dev.chipin.one');
+    return isDevHostname ? ENV_DEV : ENV_PROD;
 };
 
-export const getIsProdEnv = (): boolean => !getIsDevEnv();
+export const getIsDevEnv = (): boolean => getEnv() === ENV_DEV;
 
-export const getEnv = (): Environment => (getIsDevEnv() ? ENV_DEV : ENV_PROD);
+export const getIsProdEnv = (): boolean => getEnv() === ENV_PROD;
 
 export const getChipInApiUrl = () => ENV_URLS[getEnv()].apiBaseUrl;
 

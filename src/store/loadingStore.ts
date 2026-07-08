@@ -26,6 +26,9 @@ export interface LoadingStore {
     expense: {
         add: LoadingState;
     };
+    settlement: {
+        add: LoadingState;
+    };
     users: {
         self: LoadingState;
         friends: LoadingState;
@@ -46,6 +49,7 @@ const initialLoadingStore: LoadingSlices = {
     dashboard: { data: 'initial' },
     activity: { data: 'initial', nextPage: 'initial' },
     expense: { add: 'initial' },
+    settlement: { add: 'initial' },
     group: {
         data: 'initial',
         add: 'initial',

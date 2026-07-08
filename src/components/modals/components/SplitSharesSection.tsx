@@ -2,22 +2,21 @@ import { useTranslation } from 'react-i18next';
 
 import { Flex } from '@radix-ui/themes';
 
-import { User } from 'api/chipin.types';
-
 import {
     SplitParticipantRow,
     SplitSummaryFooter,
     SplitValueStepperInput,
 } from 'components/modals/add-expense';
+import type { ExpenseParticipant } from 'components/modals/add-expense/expenseParticipants';
 
 interface Props {
-    members: User[];
+    members: ExpenseParticipant[];
     includedParticipantIds: Record<string, boolean>;
     includeParticipantLabel: (name: string) => string;
     onIncludedChange: (userId: string, isIncluded: boolean) => void;
     isIncludeLocked?: boolean;
-    isParticipantLocked?: (member: User) => boolean;
-    isParticipantIncluded?: (member: User) => boolean;
+    isParticipantLocked?: (member: ExpenseParticipant) => boolean;
+    isParticipantIncluded?: (member: ExpenseParticipant) => boolean;
     shares: Record<string, string>;
     onChangeShare: (userId: string, delta: number) => void;
     onShareInput: (userId: string, nextValue: string) => void;

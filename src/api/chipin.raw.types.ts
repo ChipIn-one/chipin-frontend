@@ -80,24 +80,20 @@ export interface ApiActivityItemsResponse {
     nextCursor: number | null;
 }
 
-export interface ApiFriendInCurrency {
-    user: ApiUserResponse;
-    amount: number;
-}
+export type ApiFriendUser = Pick<ApiUserResponse, 'id' | 'displayName' | 'picture'>;
 
-export interface ApiUnsettledFriend {
+export interface ApiFriendBalance {
     currency: string;
-    netBalance: number;
-    friends: ApiFriendInCurrency[];
+    netAmount: number;
 }
 
-export interface ApiSettledFriend {
-    user: ApiUserResponse;
+export interface ApiFriend {
+    user: ApiFriendUser;
+    balances: ApiFriendBalance[];
 }
 
 export interface ApiFriendsResponse {
-    currencies: ApiUnsettledFriend[];
-    settledFriends: ApiSettledFriend[];
+    friends: ApiFriend[];
 }
 
 export interface ApiParticipantShare {

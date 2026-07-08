@@ -12,5 +12,12 @@
     "actions": {
         "remind": "Remind",
         "removeFriend": "Remove friend"
+    },
+    "settleUp": {
+        "you": "You",
+        "paid": "paid",
+        "recipient": "Recipient",
+        "noMoneyMoves": "Records an outside payment. No money moves.",
+        "recordPayment": "Record payment"
     }
 }
