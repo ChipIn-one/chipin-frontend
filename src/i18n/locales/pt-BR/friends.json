@@ -23,7 +23,6 @@
         "you": "Você",
         "paid": "pagou",
         "paidAmountTo": "pagou {{amount}} {{currency}} a",
-        "recipient": "Destinatário",
         "noMoneyMoves": "Registra um pagamento externo. Nenhum dinheiro é movimentado.",
         "recordPayment": "Registrar pagamento"
     }

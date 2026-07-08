@@ -23,7 +23,6 @@
         "you": "You",
         "paid": "paid",
         "paidAmountTo": "paid {{amount}} {{currency}} to",
-        "recipient": "Recipient",
         "noMoneyMoves": "Records an outside payment. No money moves.",
         "recordPayment": "Record payment"
     }
