@@ -3,18 +3,17 @@ import { useTranslation } from 'react-i18next';
 
 import { Flex, Text } from '@radix-ui/themes';
 
-import { User } from 'api/chipin.types';
-
 import { SplitParticipantRow, SplitSummaryFooter } from 'components/modals/add-expense';
+import type { ExpenseParticipant } from 'components/modals/add-expense/expenseParticipants';
 
 interface Props {
-    members: User[];
+    members: ExpenseParticipant[];
     includedParticipantIds: Record<string, boolean>;
     includeParticipantLabel: (name: string) => string;
     onIncludedChange: (userId: string, isIncluded: boolean) => void;
     isIncludeLocked?: boolean;
-    isParticipantLocked?: (member: User) => boolean;
-    isParticipantIncluded?: (member: User) => boolean;
+    isParticipantLocked?: (member: ExpenseParticipant) => boolean;
+    isParticipantIncluded?: (member: ExpenseParticipant) => boolean;
     totalAmount: string;
     currency: string;
     yourShareAmount: number;

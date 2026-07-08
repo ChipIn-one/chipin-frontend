@@ -6,7 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { Button, Card, Flex, Grid, Text } from '@radix-ui/themes';
 
-import { SharingMode, User } from 'api/chipin.types';
+import { SharingMode } from 'api/chipin.types';
 import { EXPENSE_CATEGORIES, ExpenseCategory } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
 import { parseAmountInput } from 'helpers/numbers';
@@ -30,10 +30,10 @@ import { CategorySearchSelect } from 'components/search-select';
 import SegmentedControl from 'components/SegmentedControl';
 
 import {
+    ExpenseParticipant,
     ExpenseTargetMode,
     getDefaultFriendId,
     getFriendExpenseMembers,
-    getKnownFriends,
     isValidDirectExpense,
 } from './add-expense/expenseParticipants';
 import type { SplitStatus } from './add-expense/ExpenseSplitModeControl';
@@ -68,12 +68,10 @@ const AddExpenseModal = ({
 }: Props) => {
     const { t } = useTranslation('group');
     const location = useLocation();
-    const { user, knownUsers, unSettledFriends, settledFriends } = useUsersStore(
+    const { user, friends } = useUsersStore(
         useShallow(s => ({
             user: s.user,
-            knownUsers: s.knownUsers,
-            unSettledFriends: s.unSettledFriends,
-            settledFriends: s.settledFriends,
+            friends: s.friends,
         })),
     );
     const { groups, selectedGroup } = useGroupsStore(
@@ -90,12 +88,11 @@ const AddExpenseModal = ({
     const isShowTabs = !isGroupContext && !isFriendsContext;
 
     const defaultGroup = selectedGroup || groups[0];
-    const groupedKnownFriends = getKnownFriends({ unSettledFriends, settledFriends });
-    const knownFriends = knownUsers.length > 0 ? knownUsers : groupedKnownFriends;
+    const knownFriends = friends.map(friend => friend.user);
     const getDefaultTargetMode = (): ExpenseTargetMode =>
         isFriendsContext || (!groups.length && knownFriends.length > 0) ? 'friends' : 'group';
 
-    const getOrderedMembers = (groupMembers: User[]) => {
+    const getOrderedMembers = (groupMembers: ExpenseParticipant[]) => {
         const currentUserMember = groupMembers.find(member => member.id === user?.id);
         const otherMembers = groupMembers.filter(member => member.id !== user?.id);
 
@@ -129,7 +126,7 @@ const AddExpenseModal = ({
             ? initialFriendId
             : selectedFriendId;
 
-    const buildEqualPercentShares = (members: User[]): Record<string, string> => {
+    const buildEqualPercentShares = (members: ExpenseParticipant[]): Record<string, string> => {
         const count = members.length;
         if (count === 0) {
             return {};
@@ -144,20 +141,22 @@ const AddExpenseModal = ({
         );
     };
 
-    const buildEmptyAmountShares = (members: User[]): Record<string, string> => {
+    const buildEmptyAmountShares = (members: ExpenseParticipant[]): Record<string, string> => {
         return Object.fromEntries(members.map(member => [member.id, '0']));
     };
 
-    const buildEqualShareWeights = (members: User[]): Record<string, string> => {
+    const buildEqualShareWeights = (members: ExpenseParticipant[]): Record<string, string> => {
         return Object.fromEntries(members.map(member => [member.id, '1']));
     };
 
-    const buildIncludedParticipantIds = (members: User[]): Record<string, boolean> => {
+    const buildIncludedParticipantIds = (
+        members: ExpenseParticipant[],
+    ): Record<string, boolean> => {
         return Object.fromEntries(members.map(member => [member.id, true]));
     };
 
     const getIncludedMembers = (
-        members: User[],
+        members: ExpenseParticipant[],
         includedIds: Record<string, boolean>,
         mode: ExpenseTargetMode = targetMode,
         nextFriendId: string = activeFriendId,
@@ -219,11 +218,11 @@ const AddExpenseModal = ({
     // Step is rounded to the nearest unit based on total amount magnitude.
     const amountStep = Math.max(1, Math.round(Number(amount) / 100));
 
-    const getDefaultPayerId = (groupMembers: User[] = resolvedMembers) =>
+    const getDefaultPayerId = (groupMembers: ExpenseParticipant[] = resolvedMembers) =>
         getOrderedMembers(groupMembers)[0]?.id || '';
 
     const buildDefaultIncludedParticipantIds = (
-        members: User[],
+        members: ExpenseParticipant[],
         nextTargetMode: ExpenseTargetMode,
         nextFriendId: string,
     ): Record<string, boolean> => {
@@ -240,7 +239,7 @@ const AddExpenseModal = ({
     };
 
     const resetSplitStateForMembers = (
-        members: User[],
+        members: ExpenseParticipant[],
         nextTargetMode: ExpenseTargetMode,
         nextFriendId: string,
     ) => {
@@ -263,7 +262,10 @@ const AddExpenseModal = ({
         setIsPercentManuallyEdited(false);
     };
 
-    const getDefaultPayerForTarget = (nextTargetMode: ExpenseTargetMode, members: User[]) => {
+    const getDefaultPayerForTarget = (
+        nextTargetMode: ExpenseTargetMode,
+        members: ExpenseParticipant[],
+    ) => {
         if (nextTargetMode === 'friends') {
             return user?.id || members[0]?.id || '';
         }
@@ -619,9 +621,9 @@ const AddExpenseModal = ({
         });
     const includeParticipantLabel = (name: string) =>
         t('expenses.modal.split.includeParticipant', { name });
-    const isParticipantLocked = (member: User) =>
+    const isParticipantLocked = (member: ExpenseParticipant) =>
         targetMode === 'friends' && (Boolean(friendId) || member.id === user?.id);
-    const isParticipantIncluded = (member: User) =>
+    const isParticipantIncluded = (member: ExpenseParticipant) =>
         targetMode === 'friends'
             ? hasParticipantSelectionState
                 ? includedParticipantIds[member.id] === true
