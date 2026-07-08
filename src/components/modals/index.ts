@@ -5,7 +5,7 @@ import BaseModal from './BaseModal';
 import KickGroupMemberModal from './KickGroupMemberModal';
 import LeaveGroupModal from './LeaveGroupModal';
 import RemoveFriendModal from './RemoveFriendModal';
-import { SettleUpModal } from './settle-up';
+import SettleUpModal from './SettleUpModal';
 
 export {
     AddExpenseModal,
