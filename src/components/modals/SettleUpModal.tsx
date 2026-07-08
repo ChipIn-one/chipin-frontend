@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import styled from 'styled-components';
 
-import { Button, Callout, Card, Flex, Text } from '@radix-ui/themes';
+import { Button, Callout, Flex, Text } from '@radix-ui/themes';
 
 import type { CreateSettlementParams, FriendBalance, FriendUser } from 'api/chipin.types';
 import { useActivityStore } from 'store/activityStore';
@@ -139,6 +139,7 @@ const SettleUpModal = ({ isOpened, setIsOpened, friend, balances, initialCurrenc
     const recipientName = isFriendPayer
         ? t('friends:settleUp.you')
         : selectUserPreferredName(friend);
+    const displayedAmount = amount || '0';
 
     const handleSubmit = () => {
         createSettlement(settlementParams)
@@ -159,6 +160,36 @@ const SettleUpModal = ({ isOpened, setIsOpened, friend, balances, initialCurrenc
             maxWidth="460px"
             content={
                 <ModalSurface>
+                    <Flex direction="column" gap="4">
+                        <Flex justify="between" align="center" gap="3">
+                            <Text as="label" size="3" weight="bold" color="gray">
+                                {t('common:fields.amount')}
+                            </Text>
+
+                            {currencyItems.length > 1 ? (
+                                <Select
+                                    items={currencyItems}
+                                    value={currency}
+                                    onChange={handleCurrencyChange}
+                                    size="3"
+                                    triggerVariant="surface"
+                                />
+                            ) : (
+                                <Text size="5" weight="bold">
+                                    {currency}
+                                </Text>
+                            )}
+                        </Flex>
+
+                        <LargeAmountInput
+                            value={amount}
+                            onChange={setAmount}
+                            color="jade"
+                            size="3"
+                            autoFocus
+                        />
+                    </Flex>
+
                     <PaymentFlow>
                         <PaymentParticipant>
                             <UserAvatar size="2" user={payer ?? undefined} />
@@ -169,7 +200,7 @@ const SettleUpModal = ({ isOpened, setIsOpened, friend, balances, initialCurrenc
 
                         <Text align="center" size="3" weight="bold" color="jade">
                             {t('friends:settleUp.paidAmountTo', {
-                                amount,
+                                amount: displayedAmount,
                                 currency,
                             })}
                         </Text>
@@ -181,47 +212,6 @@ const SettleUpModal = ({ isOpened, setIsOpened, friend, balances, initialCurrenc
                             </ParticipantName>
                         </RecipientParticipant>
                     </PaymentFlow>
-
-                    <Card>
-                        <Flex direction="column" gap="4">
-                            <Flex justify="between" align="center" gap="3">
-                                <Text as="label" size="3" weight="bold" color="gray">
-                                    {t('common:fields.amount')}
-                                </Text>
-
-                                {currencyItems.length > 1 ? (
-                                    <Select
-                                        items={currencyItems}
-                                        value={currency}
-                                        onChange={handleCurrencyChange}
-                                        size="3"
-                                        triggerVariant="surface"
-                                    />
-                                ) : (
-                                    <Text size="5" weight="bold">
-                                        {currency}
-                                    </Text>
-                                )}
-                            </Flex>
-
-                            <LargeAmountInput
-                                value={amount}
-                                onChange={setAmount}
-                                color="jade"
-                                size="3"
-                                autoFocus
-                            />
-                        </Flex>
-                    </Card>
-
-                    <Flex justify="between" gap="4">
-                        <Text size="2" weight="bold" color="gray">
-                            {t('friends:settleUp.recipient')}
-                        </Text>
-                        <Text size="2" weight="bold" align="right">
-                            {recipient.displayName}
-                        </Text>
-                    </Flex>
 
                     <Callout.Root color="jade" size="2">
                         <Callout.Icon>
