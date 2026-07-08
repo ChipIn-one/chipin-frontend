@@ -16,6 +16,7 @@
     "settleUp": {
         "you": "Вы",
         "paid": "заплатил(а)",
+        "paidAmountTo": "заплатил(а) {{amount}} {{currency}}",
         "recipient": "Получатель",
         "noMoneyMoves": "Записывает внешний платеж. Деньги не переводятся.",
         "recordPayment": "Записать платеж"
