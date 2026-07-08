@@ -16,6 +16,7 @@
     "settleUp": {
         "you": "Você",
         "paid": "pagou",
+        "paidAmountTo": "pagou {{amount}} {{currency}} a",
         "recipient": "Destinatário",
         "noMoneyMoves": "Regista um pagamento externo. Nenhum dinheiro é movimentado.",
         "recordPayment": "Registar pagamento"
