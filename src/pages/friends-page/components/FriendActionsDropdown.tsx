@@ -13,7 +13,7 @@ import { IconButton } from '@radix-ui/themes';
 import type { FriendBalance, KnownUser } from 'api/chipin.types';
 
 import Dropdown from 'components/Dropdown';
-import { SettleUpModal } from 'components/modals';
+import { RemoveFriendModal, SettleUpModal } from 'components/modals';
 
 interface Props {
     friend: KnownUser;
@@ -23,6 +23,8 @@ interface Props {
 const FriendActionsDropdown = ({ friend, balance }: Props) => {
     const { t } = useTranslation(['common', 'friends']);
     const [isSettleUpOpened, setIsSettleUpOpened] = useState(false);
+    const [isRemoveFriendOpened, setIsRemoveFriendOpened] = useState(false);
+    const hasOutstandingDebt = friend.balances.some(friendBalance => friendBalance.netAmount !== 0);
 
     const actions = useMemo(
         () => [
@@ -38,32 +40,36 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                 value: 'remind',
                 label: t('friends:actions.remind'),
                 icon: <LucideBell size={16} />,
-                onSelect: () => {
-                    /* todo */
-                },
-            },
-            {
-                value: 'settleUp',
-                label: t('common:buttons.settleUp'),
-                icon: <LucideArrowLeftRight size={16} />,
-                color: 'green' as const,
-                isDisabled: !balance,
-                onSelect: () => {
-                    setIsSettleUpOpened(true);
-                },
-            },
-            {
-                value: 'removeFriend',
-                label: t('friends:actions.removeFriend'),
-                icon: <LucideUserX size={16} />,
-                color: 'red' as const,
                 isDisabled: true,
                 onSelect: () => {
                     /* todo */
                 },
             },
+            ...(balance
+                ? [
+                      {
+                          value: 'settleUp',
+                          label: t('common:buttons.settleUp'),
+                          icon: <LucideArrowLeftRight size={16} />,
+                          color: 'green' as const,
+                          onSelect: () => {
+                              setIsSettleUpOpened(true);
+                          },
+                      },
+                  ]
+                : []),
+            {
+                value: 'removeFriend',
+                label: t('friends:actions.removeFriend'),
+                icon: <LucideUserX size={16} />,
+                color: 'red' as const,
+                isDisabled: hasOutstandingDebt,
+                onSelect: () => {
+                    setIsRemoveFriendOpened(true);
+                },
+            },
         ],
-        [balance, t],
+        [balance, hasOutstandingDebt, t],
     );
 
     return (
@@ -84,6 +90,13 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                     friend={friend.user}
                     balances={friend.balances}
                     initialCurrency={balance.currency}
+                />
+            )}
+            {isRemoveFriendOpened && (
+                <RemoveFriendModal
+                    isOpened={isRemoveFriendOpened}
+                    setIsOpened={setIsRemoveFriendOpened}
+                    friend={friend.user}
                 />
             )}
         </>

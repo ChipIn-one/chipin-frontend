@@ -45,6 +45,7 @@ export type {
     KickGroupMemberParams,
     LeaveGroupParams,
     RemoveGroupParams,
+    RemoveKnownUserParams,
     SharingMode,
     SharingModeType,
     UpdateGroupParams,

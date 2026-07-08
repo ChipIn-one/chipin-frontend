@@ -22,6 +22,7 @@ import type {
     KickGroupMemberParams,
     LeaveGroupParams,
     RemoveGroupParams,
+    RemoveKnownUserParams,
     SharingMode,
     UpdateGroupParams,
     UpdateUserParams,
@@ -152,6 +153,10 @@ export const updateApiUser = async (params: UpdateUserParams): Promise<ApiUserRe
 
 export const fetchApiKnownUsers = (): Promise<ApiFriendsResponse> => {
     return apiInstance.get(`/users/known-users`).then(result => result.data);
+};
+
+export const removeApiKnownUser = async ({ userId }: RemoveKnownUserParams): Promise<void> => {
+    await apiInstance.delete(`/users/known-users/${userId}`);
 };
 
 export const fetchApiUserActivities = ({

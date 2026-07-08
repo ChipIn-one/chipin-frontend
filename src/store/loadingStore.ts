@@ -37,6 +37,7 @@ export interface LoadingStore {
     users: {
         self: LoadingState;
         friends: LoadingState;
+        removeFriend: LoadingState;
     };
 
     setLoading: <S extends keyof LoadingStore, F extends keyof LoadingStore[S]>(
@@ -70,7 +71,7 @@ const initialLoadingStore: LoadingSlices = {
         leave: 'initial',
         kick: 'initial',
     },
-    users: { self: 'initial', friends: 'initial' },
+    users: { self: 'initial', friends: 'initial', removeFriend: 'initial' },
 };
 
 export const useLoadingStore = create<LoadingStore>((set, get) => ({

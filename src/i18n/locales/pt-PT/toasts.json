@@ -26,6 +26,9 @@
         "inviteLinkCopied": "Link de convite do grupo copiado",
         "inviteLinkCopyError": "Não foi possível copiar o link"
     },
+    "friend": {
+        "removed": "\"{{name}}\" foi removido dos seus amigos."
+    },
     "pwa": {
         "installing": "A instalar a aplicação no seu ecrã inicial...",
         "offlineReady": "A aplicação está pronta para funcionar offline",
