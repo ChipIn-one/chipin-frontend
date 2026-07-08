@@ -11,10 +11,9 @@ import { useTranslation } from 'react-i18next';
 import { IconButton } from '@radix-ui/themes';
 
 import type { FriendBalance, KnownUser } from 'api/chipin.types';
-import { useActivityStore } from 'store/activityStore';
 
 import Dropdown from 'components/Dropdown';
-import { RemoveFriendModal, SettleUpModal } from 'components/modals';
+import { AddExpenseModal, RemoveFriendModal, SettleUpModal } from 'components/modals';
 
 interface Props {
     friend: KnownUser;
@@ -23,9 +22,9 @@ interface Props {
 
 const FriendActionsDropdown = ({ friend, balance }: Props) => {
     const { t } = useTranslation(['common', 'friends']);
+    const [isExpenseModalOpened, setIsExpenseModalOpened] = useState(false);
     const [isSettleUpOpened, setIsSettleUpOpened] = useState(false);
     const [isRemoveFriendOpened, setIsRemoveFriendOpened] = useState(false);
-    const createSettlement = useActivityStore(state => state.createSettlement);
     const hasOutstandingDebt = friend.balances.some(friendBalance => friendBalance.netAmount !== 0);
 
     const actions = useMemo(
@@ -35,7 +34,7 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                 label: t('common:buttons.addExpense'),
                 icon: <LucidePlusCircle size={16} />,
                 onSelect: () => {
-                    /* todo */
+                    setIsExpenseModalOpened(true);
                 },
             },
             {
@@ -85,15 +84,19 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                 }
                 align="end"
             />
+            <AddExpenseModal
+                context="friends"
+                friendId={friend.user.id}
+                isOpened={isExpenseModalOpened}
+                setIsOpened={setIsExpenseModalOpened}
+            />
             {balance && isSettleUpOpened && (
                 <SettleUpModal
-                    source="friend"
                     isOpened={isSettleUpOpened}
-                    onOpenChange={setIsSettleUpOpened}
+                    setIsOpened={setIsSettleUpOpened}
                     friend={friend.user}
                     balances={friend.balances}
                     initialCurrency={balance.currency}
-                    onSubmit={createSettlement}
                 />
             )}
             {isRemoveFriendOpened && (

@@ -7,17 +7,19 @@ import styled from 'styled-components';
 import { Avatar, Button, Dialog, Flex, Text } from '@radix-ui/themes';
 
 import type { FriendUser } from 'api/chipin.types';
+import { themeColor } from 'helpers/colors';
 import { selectFriendRemoving } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/usersStore';
 
 import BaseModal from './BaseModal';
+import { MODAL_SIZES } from './constants';
 
 const FriendPreview = styled(Flex)`
     padding: var(--space-4);
-    border: 1px solid var(--gray-a6);
+    border: 1px solid ${themeColor('grayA6')};
     border-radius: var(--radius-3);
-    background: var(--gray-a2);
+    background: ${themeColor('grayA2')};
 `;
 
 interface Props {
@@ -31,7 +33,7 @@ const RemoveFriendModal = ({ friend, isOpened, setIsOpened }: Props) => {
     const removeFriend = useUsersStore(state => state.removeFriend);
     const isRemovingFriend = useLoadingStore(selectFriendRemoving);
 
-    const handleRemoveFriend = () => {
+    const onRemoveFriend = () => {
         removeFriend({ userId: friend.id }).then(friendDisplayName => {
             setIsOpened(false);
             toast.success(t('toasts:friend.removed', { name: friendDisplayName }));
@@ -43,7 +45,7 @@ const RemoveFriendModal = ({ friend, isOpened, setIsOpened }: Props) => {
             isOpened={isOpened}
             setIsOpened={setIsOpened}
             title={t('friends:removeModal.title')}
-            maxWidth="480px"
+            maxWidth={MODAL_SIZES.default}
             content={
                 <Flex direction="column" gap="4">
                     <FriendPreview align="center" justify="between" gap="4">
@@ -90,7 +92,7 @@ const RemoveFriendModal = ({ friend, isOpened, setIsOpened }: Props) => {
                             size="3"
                             variant="solid"
                             color="red"
-                            onClick={handleRemoveFriend}
+                            onClick={onRemoveFriend}
                             loading={isRemovingFriend}
                         >
                             {t('friends:actions.removeFriend')}
