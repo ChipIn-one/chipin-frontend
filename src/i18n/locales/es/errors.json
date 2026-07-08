@@ -23,7 +23,8 @@
         "USER": {
             "NOT_FOUND": "No se encontró el usuario",
             "FORBIDDEN": "No tienes permiso para acceder a este usuario",
-            "CANNOT_JOIN_SELF_INVITE": "No puedes unirte con tu propia invitación"
+            "CANNOT_JOIN_SELF_INVITE": "No puedes unirte con tu propia invitación",
+            "OUTSTANDING_DEBT": "Liquida el saldo con este amigo antes de eliminarlo"
         },
         "GROUP": {
             "NOT_FOUND": "No se encontró el grupo",

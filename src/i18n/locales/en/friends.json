@@ -13,6 +13,12 @@
         "remind": "Remind",
         "removeFriend": "Remove friend"
     },
+    "removeModal": {
+        "title": "Remove friend",
+        "friendLabel": "Friend to remove",
+        "confirm": "Are you sure you want to remove this friend?",
+        "description": "This removes the friend connection from both accounts. Shared history stays visible."
+    },
     "settleUp": {
         "you": "You",
         "paid": "paid",

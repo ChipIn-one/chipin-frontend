@@ -4,6 +4,7 @@ import AuthModal from './AuthModal';
 import BaseModal from './BaseModal';
 import KickGroupMemberModal from './KickGroupMemberModal';
 import LeaveGroupModal from './LeaveGroupModal';
+import RemoveFriendModal from './RemoveFriendModal';
 import SettleUpModal from './SettleUpModal';
 
 export {
@@ -13,5 +14,6 @@ export {
     CreateUpdateGroupModal,
     KickGroupMemberModal,
     LeaveGroupModal,
+    RemoveFriendModal,
     SettleUpModal,
 };

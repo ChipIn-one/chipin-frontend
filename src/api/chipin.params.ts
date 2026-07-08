@@ -22,6 +22,10 @@ export interface RemoveGroupParams {
     groupId: string;
 }
 
+export interface RemoveKnownUserParams {
+    userId: string;
+}
+
 export interface LeaveGroupParams {
     groupId: string;
     newOwnerId?: string;

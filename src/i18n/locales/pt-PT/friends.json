@@ -13,6 +13,12 @@
         "remind": "Lembrar",
         "removeFriend": "Remover amigo"
     },
+    "removeModal": {
+        "title": "Remover amigo",
+        "friendLabel": "Amigo a remover",
+        "confirm": "Tem a certeza de que quer remover este amigo?",
+        "description": "Isto remove a ligação de amizade em ambas as contas. O histórico partilhado continua visível."
+    },
     "settleUp": {
         "you": "Você",
         "paid": "pagou",

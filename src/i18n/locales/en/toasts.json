@@ -26,6 +26,9 @@
     "inviteLinkCopied": "Group invite link copied",
     "inviteLinkCopyError": "Failed to copy link"
   },
+  "friend": {
+    "removed": "\"{{name}}\" was removed from your friends."
+  },
   "pwa": {
     "installing": "Installing application on your home screen...",
     "offlineReady": "App is ready to work offline",

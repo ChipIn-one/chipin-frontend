@@ -22,6 +22,7 @@ export const selectGroupKicking = (s: LoadingStore) => s.group.kick === 'loading
 
 export const selectUserSelfLoading = (s: LoadingStore) => s.users.self === 'loading';
 export const selectUserSelfFetched = (s: LoadingStore) => s.users.self === 'fetched';
+export const selectFriendRemoving = (s: LoadingStore) => s.users.removeFriend === 'loading';
 
 export const selectExpenseAdding = (s: LoadingStore) => s.expense.add === 'loading';
 export const selectSettlementAdding = (s: LoadingStore) => s.settlement.add === 'loading';

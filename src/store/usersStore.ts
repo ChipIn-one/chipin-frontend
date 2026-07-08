@@ -2,10 +2,11 @@ import i18n from 'i18next';
 import { toast } from 'sonner';
 import { create } from 'zustand';
 
-import { fetchApiKnownUsers, fetchApiUser, updateApiUser } from 'api/chipin';
+import { fetchApiKnownUsers, fetchApiUser, removeApiKnownUser, updateApiUser } from 'api/chipin';
 import {
     CreateSettlementParams,
     KnownUser,
+    RemoveKnownUserParams,
     UpdateUserParams,
     User,
     UserSettings,
@@ -23,6 +24,7 @@ export interface UsersStore {
 
     fetchSetFriends: () => void;
     fetchSetUser: () => void;
+    removeFriend: (params: RemoveKnownUserParams) => Promise<string>;
     setSettlementWithFriend: (params: CreateSettlementParams) => void;
     setUserSettings: (params: { displayName?: string; settings?: Partial<UserSettings> }) => void;
     extendUserSubscriptionByDay: () => void;
@@ -68,6 +70,28 @@ export const useUsersStore = create<UsersStore>((set, get) => ({
             })
             .finally(() => {
                 setLoading('users', 'friends', 'fetched');
+            });
+    },
+    removeFriend: ({ userId }) => {
+        const friend = get().friends.find(knownUser => knownUser.user.id === userId);
+
+        if (!friend) {
+            return Promise.reject(new Error('Known user not found'));
+        }
+
+        const { setLoading } = useLoadingStore.getState();
+        setLoading('users', 'removeFriend', 'loading');
+
+        return removeApiKnownUser({ userId })
+            .then(() => {
+                set(state => ({
+                    friends: state.friends.filter(knownUser => knownUser.user.id !== userId),
+                }));
+
+                return friend.user.displayName;
+            })
+            .finally(() => {
+                setLoading('users', 'removeFriend', 'fetched');
             });
     },
     setSettlementWithFriend: params => {
