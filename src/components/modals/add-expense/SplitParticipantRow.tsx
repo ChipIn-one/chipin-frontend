@@ -5,8 +5,9 @@ import styled from 'styled-components';
 
 import { Flex, Text } from '@radix-ui/themes';
 
-import { User } from 'api/chipin.types';
 import { themeColor } from 'helpers/colors';
+
+import type { ExpenseParticipant } from './expenseParticipants';
 
 const Row = styled.div`
     display: flex;
@@ -59,7 +60,7 @@ const Controls = styled.div<{ $isIncluded: boolean }>`
 `;
 
 interface Props {
-    member: User;
+    member: ExpenseParticipant;
     isIncluded: boolean;
     isIncludeLocked?: boolean;
     includeLabel: string;

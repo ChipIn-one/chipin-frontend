@@ -1,20 +1,16 @@
-import type { SettledFriend, UnsettledFriends, User } from 'api/chipin.types';
+import type { User } from 'api/chipin.types';
 
 export type ExpenseTargetMode = 'group' | 'friends';
-
-interface KnownFriendsParams {
-    unSettledFriends?: UnsettledFriends[];
-    settledFriends?: SettledFriend[];
-}
+export type ExpenseParticipant = Pick<User, 'id' | 'displayName' | 'picture'>;
 
 interface DirectMembersParams {
     user: User | null;
-    knownFriends: User[];
+    knownFriends: ExpenseParticipant[];
     friendId: string;
 }
 
 interface DefaultFriendIdParams {
-    knownFriends: User[];
+    knownFriends: ExpenseParticipant[];
     preferredFriendId?: string;
 }
 
@@ -22,32 +18,8 @@ interface DirectExpenseValidationParams {
     userId?: string;
     participantIds: string[];
     payerId: string;
-    knownFriends: User[];
+    knownFriends: ExpenseParticipant[];
 }
-
-export const getKnownFriends = ({
-    unSettledFriends = [],
-    settledFriends = [],
-}: KnownFriendsParams): User[] => {
-    const friendsById = new Map<string, User>();
-    const addFriend = (friend: SettledFriend | User | { user: User }) => {
-        const user = 'user' in friend ? friend.user : friend;
-
-        friendsById.set(user.id, user);
-    };
-
-    unSettledFriends.forEach(currencyGroup => {
-        (currencyGroup.friends ?? []).forEach(friend => {
-            addFriend(friend);
-        });
-    });
-
-    settledFriends.forEach(friend => {
-        addFriend(friend);
-    });
-
-    return Array.from(friendsById.values());
-};
 
 export const getDefaultFriendId = ({
     knownFriends,
@@ -60,22 +32,30 @@ export const getDefaultFriendId = ({
     return knownFriends[0]?.id ?? '';
 };
 
-export const getDirectMembers = ({ user, knownFriends, friendId }: DirectMembersParams): User[] => {
+export const getDirectMembers = ({
+    user,
+    knownFriends,
+    friendId,
+}: DirectMembersParams): ExpenseParticipant[] => {
     const selectedFriend = knownFriends.find(friend => friend.id === friendId);
 
-    return [user, selectedFriend].filter((member): member is User => Boolean(member));
+    return [user, selectedFriend].filter((member): member is ExpenseParticipant =>
+        Boolean(member),
+    );
 };
 
 export const getFriendExpenseMembers = ({
     user,
     knownFriends,
     friendId,
-}: DirectMembersParams): User[] => {
+}: DirectMembersParams): ExpenseParticipant[] => {
     if (friendId) {
         return getDirectMembers({ user, knownFriends, friendId });
     }
 
-    return [user, ...knownFriends].filter((member): member is User => Boolean(member));
+    return [user, ...knownFriends].filter((member): member is ExpenseParticipant =>
+        Boolean(member),
+    );
 };
 
 export const isValidDirectExpense = ({

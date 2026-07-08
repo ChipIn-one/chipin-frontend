@@ -1,13 +1,12 @@
 import { UserAvatar } from 'basics';
 
-import type { User } from 'api/chipin.types';
-
 import { SearchSelect } from 'components/search-select';
 
 import ExpenseActionSelectTrigger from './ExpenseActionSelectTrigger';
+import type { ExpenseParticipant } from './expenseParticipants';
 
 interface Props {
-    members: User[];
+    members: ExpenseParticipant[];
     value: string;
     currentUserId?: string;
     title: string;
