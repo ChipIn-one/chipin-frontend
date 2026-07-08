@@ -23,7 +23,8 @@
         "USER": {
             "NOT_FOUND": "User was not found",
             "FORBIDDEN": "You do not have permission to access this user",
-            "CANNOT_JOIN_SELF_INVITE": "You cannot join your own invite"
+            "CANNOT_JOIN_SELF_INVITE": "You cannot join your own invite",
+            "OUTSTANDING_DEBT": "Settle up with this friend before removing them"
         },
         "GROUP": {
             "NOT_FOUND": "Group was not found",
