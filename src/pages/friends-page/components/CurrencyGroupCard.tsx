@@ -2,13 +2,13 @@ import { useTranslation } from 'react-i18next';
 
 import { Card, Flex, Separator, Text } from '@radix-ui/themes';
 
-import type { UnsettledFriends } from 'api/chipin.types';
+import type { FriendCurrencyGroup } from 'store/usersSelectors';
 
 import DebtAmount from 'basics/DebtAmount';
 
 import FriendListItem from './FriendListItem';
 
-const CurrencyGroupCard = ({ currency, netBalance, friends }: UnsettledFriends) => {
+const CurrencyGroupCard = ({ currency, netBalance, friends }: FriendCurrencyGroup) => {
     const { t } = useTranslation('common');
     const isOwed = netBalance >= 0;
 
@@ -28,14 +28,12 @@ const CurrencyGroupCard = ({ currency, netBalance, friends }: UnsettledFriends) 
             </Flex>
 
             <Flex direction="column" gap="3">
-                {friends.map((item, index) => (
-                    <Flex key={item.user.id} direction="column" gap="3">
+                {friends.map(({ friend, balance }, index) => (
+                    <Flex key={friend.user.id} direction="column" gap="3">
                         {index === 0 && <Separator size="4" />}
                         <FriendListItem
-                            picture={item.user.picture}
-                            displayName={item.user.displayName}
-                            netAmount={item.amount}
-                            currency={currency}
+                            friend={friend}
+                            balance={balance}
                         />
                     </Flex>
                 ))}

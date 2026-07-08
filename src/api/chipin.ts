@@ -12,6 +12,7 @@ import type {
     ApiUserResponse,
     CreateGroupParams,
     CreateLedgerEntryParams,
+    CreateSettlementParams,
     Dashboard,
     FetchActivityParams,
     Group,
@@ -192,6 +193,27 @@ export const createApiExpense = async ({
             currency,
             category: category ?? null,
             sharingMode: resolvedSharingMode,
+        },
+    });
+
+    return response.data;
+};
+
+export const createApiSettlement = async ({
+    groupId,
+    fromUserId,
+    toUserId,
+    amount,
+    currency,
+}: CreateSettlementParams): Promise<ApiLedgerEntryResponse> => {
+    const response = await apiInstance.post('/ledger/entries', {
+        type: 'SETTLEMENT',
+        ...(groupId && { groupId }),
+        settlement: {
+            fromUserId,
+            toUserId,
+            amount,
+            currency,
         },
     });
 
