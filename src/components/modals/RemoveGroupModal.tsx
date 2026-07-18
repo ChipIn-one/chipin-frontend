@@ -12,6 +12,7 @@ import { selectGroupRemoving } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
 import BaseModal from './BaseModal';
+import { MODAL_SIZES } from './constants';
 
 interface Props {
     children: React.ReactNode;
@@ -40,19 +41,16 @@ const RemoveGroupModal = ({ children }: Props) => {
             isOpened={isModalOpened}
             setIsOpened={setIsModalOpened}
             triggerElement={children}
-            title="Delete group"
-            maxWidth="480px"
+            title={t('group:removeModal.title')}
+            maxWidth={MODAL_SIZES.default}
             content={
                 <Flex direction="column" gap="6">
-                    <Text size="4">Are you sure you want to delete this group?</Text>
+                    <Text size="4">{t('group:removeModal.confirm')}</Text>
                     <Callout.Root color="red" size="2">
                         <Callout.Icon>
                             <LucideOctagonAlert size={20} />
                         </Callout.Icon>
-                        <Callout.Text>
-                            This action cannot be undone. All group data will be permanently
-                            deleted.
-                        </Callout.Text>
+                        <Callout.Text>{t('group:removeModal.warning')}</Callout.Text>
                     </Callout.Root>
                     <Flex justify="end" gap="4">
                         <Dialog.Close>

@@ -40,12 +40,13 @@ export interface InviteToGroupParams {
     inviteToken: string;
 }
 
-export type SharingModeType = 'AUTO' | 'EXACT' | 'PERCENTAGE';
+export type SharingModeType = 'AUTO' | 'EXACT' | 'PERCENTAGE' | 'SHARES';
 
 export interface SharingMode {
     type: SharingModeType;
     customShares?: Record<string, number>;
     percentageShares?: Record<string, number>;
+    shares?: Record<string, number>;
 }
 
 export interface CreateLedgerEntryParams {

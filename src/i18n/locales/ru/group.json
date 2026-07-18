@@ -27,10 +27,18 @@
             "fields": {
                 "descriptionPlaceholder": "Например, отель, ужин, билеты...",
                 "amountAndCurrency": "Сумма и валюта",
-                "amountPlaceholder": "Введите сумму"
+                "amountPlaceholder": "Введите сумму",
+                "group": "Группа",
+                "friend": "Друг"
             },
             "categorySearchPlaceholder": "Поиск категории",
             "categorySearchEmpty": "Категории не найдены",
+            "payerSearchPlaceholder": "Поиск плательщика",
+            "groupSearchPlaceholder": "Поиск групп",
+            "friendSearchPlaceholder": "Поиск друзей",
+            "noGroups": "Группы не найдены",
+            "noKnownFriends": "Пока нет знакомых друзей",
+            "includeInSolo": "Добавить в Solo",
             "categories": {
                 "food": "Еда и рестораны",
                 "transport": "Транспорт",
@@ -127,10 +135,21 @@
                 "equal": "Поровну",
                 "percent": "Процент",
                 "amounts": "Суммы",
+                "shares": "Доли",
                 "splitEquallyBetween": "Делим поровну между {{count}} участниками",
                 "eachPays": "Каждый платит",
                 "yourShare": "Ваша доля",
+                "includeParticipant": "Включить {{name}} в разделение",
+                "decreaseShare": "Уменьшить долю",
+                "increaseShare": "Увеличить долю",
+                "decreaseAmount": "Уменьшить сумму",
+                "increaseAmount": "Увеличить сумму",
+                "decreasePercent": "Уменьшить процент",
+                "increasePercent": "Увеличить процент",
+                "selectAll": "Выбрать всех",
+                "deselectAll": "Снять выбор",
                 "total": "Итого:",
+                "totalShares": "Всего долей",
                 "totalAssigned": "Распределено",
                 "difference": "Разница"
             }
@@ -189,6 +208,11 @@
         "confirm": "Вы уверены, что хотите покинуть эту группу?",
         "ownerWarning": "Вы являетесь владельцем. Пожалуйста, передайте права перед выходом.",
         "newOwnerPlaceholder": "Выберите нового владельца"
+    },
+    "removeModal": {
+        "title": "Удалить группу",
+        "confirm": "Вы уверены, что хотите удалить эту группу?",
+        "warning": "Это действие нельзя отменить. Все данные группы будут удалены навсегда."
     },
     "kickModal": {
         "title": "Исключить участника",

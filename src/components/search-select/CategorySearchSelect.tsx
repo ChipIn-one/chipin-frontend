@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { ComponentProps, useMemo } from 'react';
 import type { LucideProps } from 'lucide-react';
 import { LucideChevronDown } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
@@ -11,6 +11,7 @@ import { EXPENSE_CATEGORIES, ExpenseCategory } from 'constants/chipin';
 import { SearchSelect } from 'components/search-select';
 
 type LucideIconComponent = React.FC<LucideProps>;
+type SearchSelectProps = ComponentProps<typeof SearchSelect>;
 
 const EXPENSE_CATEGORY_KEYS = Object.keys(EXPENSE_CATEGORIES) as ExpenseCategory[];
 
@@ -27,6 +28,9 @@ const resolveIcon = (iconName: string, size: number, color?: string) => {
 interface Props {
     value?: string;
     isLoading?: boolean;
+    renderTrigger?: (item: CategoryItem | undefined) => React.ReactElement;
+    contentWidthMode?: SearchSelectProps['contentWidthMode'];
+    widthContainerRef?: SearchSelectProps['widthContainerRef'];
     onChange?: (value: string) => void;
 }
 
@@ -38,7 +42,14 @@ type CategoryItem = {
     searchFields: string[];
 };
 
-const CategorySearchSelect: React.FC<Props> = ({ value, isLoading = false, onChange }) => {
+const CategorySearchSelect: React.FC<Props> = ({
+    value,
+    isLoading = false,
+    renderTrigger,
+    contentWidthMode,
+    widthContainerRef,
+    onChange,
+}) => {
     const { t } = useTranslation('group');
 
     const items = useMemo(() => {
@@ -74,7 +85,9 @@ const CategorySearchSelect: React.FC<Props> = ({ value, isLoading = false, onCha
 
     const selectedItem = items.find(item => item.value === value);
 
-    const triggerElement = (
+    const triggerElement = renderTrigger ? (
+        renderTrigger(selectedItem)
+    ) : (
         <Button
             type="button"
             variant="surface"
@@ -102,6 +115,8 @@ const CategorySearchSelect: React.FC<Props> = ({ value, isLoading = false, onCha
             searchPlaceholder={t('expenses.modal.categorySearchPlaceholder')}
             emptyText={t('expenses.modal.categorySearchEmpty')}
             triggerElement={triggerElement}
+            contentWidthMode={contentWidthMode}
+            widthContainerRef={widthContainerRef}
             onChange={onChange}
         />
     );
