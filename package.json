@@ -7,8 +7,10 @@
     "dev": "vite",
     "build": "npm run create-pwa-icons && npm run generate-version && tsc -b && vite build",
     "lint": "eslint .",
+    "test": "vitest",
+    "test:run": "vitest run",
     "typecheck": "tsc -b",
-    "verify": "npm run lint && npm run typecheck && npm run build",
+    "verify": "npm run lint && npm run typecheck && npm run test:run && npm run build",
     "preview": "vite preview",
     "create-pwa-icons": "pwa-assets-generator",
     "generate-version": "bash scripts/version.sh"
@@ -37,6 +39,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@vite-pwa/assets-generator": "^1.0.0",
@@ -47,6 +51,7 @@
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-unused-imports": "^4.1.4",
     "globals": "^17.6.0",
+    "jsdom": "^29.1.1",
     "sharp": "^0.34.2",
     "sharp-ico": "^0.1.5",
     "typescript": "~5.9.3",
@@ -55,6 +60,7 @@
     "vite-plugin-pwa": "^1.0.0",
     "vite-plugin-svgr": "^4.5.0",
     "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^4.1.10",
     "workbox-core": "^7.3.0",
     "workbox-window": "^7.3.0"
   }
