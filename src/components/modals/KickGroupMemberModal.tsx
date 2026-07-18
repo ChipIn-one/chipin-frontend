@@ -11,6 +11,7 @@ import { selectGroupKicking } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
 import BaseModal from './BaseModal';
+import { MODAL_SIZES } from './constants';
 
 interface Props {
     children: React.ReactNode;
@@ -39,7 +40,7 @@ const KickGroupMemberModal = ({ children, member }: Props) => {
             setIsOpened={setIsModalOpened}
             triggerElement={children}
             title={t('group:kickModal.title')}
-            maxWidth="480px"
+            maxWidth={MODAL_SIZES.default}
             content={
                 <Flex direction="column" gap="6">
                     <Text size="4">

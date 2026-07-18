@@ -34,7 +34,7 @@ const Main = () => {
         <ThemeProvider theme={styledThemeParams}>
             <Theme
                 appearance={themeName}
-                accentColor="grass"
+                accentColor="jade"
                 grayColor="olive"
                 radius="large"
                 panelBackground="translucent"

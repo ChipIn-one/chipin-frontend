@@ -1,53 +1,76 @@
-import { Amount, UserAvatar } from 'basics';
-import { LucideUsers } from 'lucide-react';
+import { Amount } from 'basics';
 import { useTranslation } from 'react-i18next';
 
 import { Flex, Text } from '@radix-ui/themes';
 
 import { User } from 'api/chipin.types';
 
+import { SplitParticipantRow, SplitSummaryFooter } from 'components/modals/add-expense';
+
 interface Props {
     members: User[];
+    includedParticipantIds: Record<string, boolean>;
+    includeParticipantLabel: (name: string) => string;
+    onIncludedChange: (userId: string, isIncluded: boolean) => void;
+    isIncludeLocked?: boolean;
+    isParticipantLocked?: (member: User) => boolean;
+    isParticipantIncluded?: (member: User) => boolean;
     totalAmount: string;
     currency: string;
+    yourShareAmount: number;
+    isSummaryHidden?: boolean;
 }
 
-const SplitEqualSection = ({ members, totalAmount, currency }: Props) => {
+const SplitEqualSection = ({
+    members,
+    includedParticipantIds,
+    includeParticipantLabel,
+    onIncludedChange,
+    isIncludeLocked = false,
+    isParticipantLocked,
+    isParticipantIncluded,
+    totalAmount,
+    currency,
+    yourShareAmount,
+    isSummaryHidden = false,
+}: Props) => {
     const { t } = useTranslation('group');
 
     const total = Number(totalAmount) || 0;
-    const count = members.length;
+    const count = members.filter(member => includedParticipantIds[member.id] !== false).length;
     const perPerson = count > 0 ? Math.round((total / count) * 100) / 100 : 0;
 
     return (
         <Flex direction="column" gap="3">
-            <Flex align="center" gap="2" justify="center">
-                <LucideUsers size={18} />
-                <Text size="2" color="gray">
-                    {t('expenses.modal.split.splitEquallyBetween', { count })}
-                </Text>
-            </Flex>
+            {members.map(member => {
+                const isIncluded =
+                    isParticipantIncluded?.(member) ?? includedParticipantIds[member.id] !== false;
 
-            {members.map(member => (
-                <Flex key={member.id} justify="between" align="center">
-                    <Flex align="center" gap="2">
-                        <UserAvatar user={member} size="2" />
-                        <Text size="2">{member.displayName}</Text>
-                    </Flex>
-                    <Text size="2" weight="medium">
-                        <Amount value={perPerson} tokenCode={currency} />
-                    </Text>
-                </Flex>
-            ))}
+                return (
+                    <SplitParticipantRow
+                        key={member.id}
+                        member={member}
+                        isIncluded={isIncluded}
+                        isIncludeLocked={isIncludeLocked || Boolean(isParticipantLocked?.(member))}
+                        includeLabel={includeParticipantLabel(member.displayName)}
+                        onIncludedChange={isNextIncluded =>
+                            onIncludedChange(member.id, isNextIncluded)
+                        }
+                    >
+                        <Text size="2" weight="medium">
+                            <Amount value={isIncluded ? perPerson : 0} tokenCode={currency} />
+                        </Text>
+                    </SplitParticipantRow>
+                );
+            })}
 
-            <Flex justify="between" align="center">
-                <Text size="2" color="gray">
-                    {t('expenses.modal.split.eachPays')}
-                </Text>
-                <Text size="2" weight="bold" color="jade">
-                    <Amount value={perPerson} tokenCode={currency} />
-                </Text>
-            </Flex>
+            {!isSummaryHidden && (
+                <SplitSummaryFooter
+                    label={t('expenses.modal.split.yourShare')}
+                    amount={yourShareAmount}
+                    currency={currency}
+                />
+            )}
         </Flex>
     );
 };

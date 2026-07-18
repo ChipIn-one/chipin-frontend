@@ -1,123 +1,88 @@
-import { LucideMinus, LucidePlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Flex, IconButton, Text } from '@radix-ui/themes';
+import { Flex } from '@radix-ui/themes';
 
 import { User } from 'api/chipin.types';
-import { Amount, UserAvatar } from 'basics';
 
-type AssignedState = 'exact' | 'under' | 'over';
+import {
+    SplitParticipantRow,
+    SplitSummaryFooter,
+    SplitValueStepperInput,
+} from 'components/modals/add-expense';
 
 interface Props {
     members: User[];
+    includedParticipantIds: Record<string, boolean>;
+    includeParticipantLabel: (name: string) => string;
+    onIncludedChange: (userId: string, isIncluded: boolean) => void;
+    isIncludeLocked?: boolean;
+    isParticipantLocked?: (member: User) => boolean;
+    isParticipantIncluded?: (member: User) => boolean;
     amountShares: Record<string, string>;
     onChangeAmount: (userId: string, delta: number) => void;
-    totalAmount: string;
+    onAmountInput: (userId: string, nextValue: string) => void;
     currency: string;
     step: number;
+    yourShareAmount: number;
+    isSummaryHidden?: boolean;
 }
 
 const SplitAmountsSection = ({
     members,
+    includedParticipantIds,
+    includeParticipantLabel,
+    onIncludedChange,
+    isIncludeLocked = false,
+    isParticipantLocked,
+    isParticipantIncluded,
     amountShares,
     onChangeAmount,
-    totalAmount,
+    onAmountInput,
     currency,
     step,
+    yourShareAmount,
+    isSummaryHidden = false,
 }: Props) => {
     const { t } = useTranslation('group');
 
-    const total = Number(totalAmount) || 0;
-
-    const assigned = members.reduce((acc, member) => {
-        return acc + (Number(amountShares[member.id]) || 0);
-    }, 0);
-
-    const difference = Math.abs(total - assigned);
-
-    const assignedState: AssignedState =
-        assigned === total ? 'exact' : assigned < total ? 'under' : 'over';
-
-    const assignedColor =
-        assignedState === 'exact' ? 'jade' : assignedState === 'under' ? 'red' : 'amber';
-
-    const summaryLabel = `${t('expenses.modal.split.totalAssigned')}`;
-
     return (
         <Flex direction="column" gap="3">
-            <Flex justify="between" align="center">
-                <Text size="2" color="gray">
-                    {summaryLabel}
-                </Text>
-                <Flex align="center" gap="1">
-                    <Text size="2" weight="bold" color={assignedColor}>
-                        <Amount value={assigned} tokenCode={currency} />
-                    </Text>
-                    <Text size="2" color="gray">
-                        /
-                    </Text>
-                    <Text size="2" weight="bold" color={assignedColor}>
-                        <Amount value={total} tokenCode={currency} />
-                    </Text>
-                </Flex>
-            </Flex>
-
             {members.map(member => {
-                const share = Number(amountShares[member.id]) || 0;
-                const isDecrementDisabled = share <= 0;
+                const isIncluded =
+                    isParticipantIncluded?.(member) ?? includedParticipantIds[member.id] !== false;
 
                 return (
-                    <Flex key={member.id} justify="between" align="center">
-                        <Flex align="center" gap="2" flexGrow="1">
-                            <UserAvatar user={member} size="2" />
-                            <Text size="2">{member.displayName}</Text>
-                        </Flex>
-                        <Flex align="center" gap="1">
-                            <IconButton
-                                size="1"
-                                variant="soft"
-                                color="gray"
-                                disabled={isDecrementDisabled}
-                                onClick={() => onChangeAmount(member.id, -step)}
-                                aria-label={`-${step}`}
-                            >
-                                <LucideMinus size={12} />
-                            </IconButton>
-                            <Text size="2" color="gray">
-                                $
-                            </Text>
-                            <Flex justify="center" minWidth="48px">
-                                {/* toFixed(2) is used here for interactive stepper display only — not for API submission */}
-                                <Text size="2" weight="medium">
-                                    {share.toFixed(2)}
-                                </Text>
-                            </Flex>
-                            <IconButton
-                                size="1"
-                                variant="soft"
-                                color="gray"
-                                onClick={() => onChangeAmount(member.id, step)}
-                                aria-label={`+${step}`}
-                            >
-                                <LucidePlus size={12} />
-                            </IconButton>
-                        </Flex>
-                    </Flex>
+                    <SplitParticipantRow
+                        key={member.id}
+                        member={member}
+                        isIncluded={isIncluded}
+                        isIncludeLocked={isIncludeLocked || Boolean(isParticipantLocked?.(member))}
+                        includeLabel={includeParticipantLabel(member.displayName)}
+                        onIncludedChange={isNextIncluded =>
+                            onIncludedChange(member.id, isNextIncluded)
+                        }
+                    >
+                        <SplitValueStepperInput
+                            value={amountShares[member.id] ?? '0'}
+                            inputMode="decimal"
+                            isDisabled={!isIncluded}
+                            minLabel={t('expenses.modal.split.decreaseAmount')}
+                            plusLabel={t('expenses.modal.split.increaseAmount')}
+                            stepSize={step}
+                            onChange={value => onAmountInput(member.id, value)}
+                            onStep={delta => onChangeAmount(member.id, delta * step)}
+                        />
+                    </SplitParticipantRow>
                 );
             })}
 
-            <Flex justify="between" align="center">
-                <Text size="2" color="gray">
-                    {t('expenses.modal.split.difference')}
-                </Text>
-                <Text
-                    size="2"
-                    weight="bold"
-                    color={assignedState === 'exact' ? 'jade' : assignedColor}
-                >
-                    <Amount value={difference} tokenCode={currency} />
-                </Text>
-            </Flex>
+            {!isSummaryHidden && (
+                <SplitSummaryFooter
+                    label={t('expenses.modal.split.yourShare')}
+                    amount={yourShareAmount}
+                    currency={currency}
+                />
+            )}
         </Flex>
     );
 };

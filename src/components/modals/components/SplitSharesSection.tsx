@@ -18,15 +18,15 @@ interface Props {
     isIncludeLocked?: boolean;
     isParticipantLocked?: (member: User) => boolean;
     isParticipantIncluded?: (member: User) => boolean;
-    percentShares: Record<string, string>;
-    onChangePercent: (userId: string, delta: number) => void;
-    onPercentInput: (userId: string, nextValue: string) => void;
+    shares: Record<string, string>;
+    onChangeShare: (userId: string, delta: number) => void;
+    onShareInput: (userId: string, nextValue: string) => void;
     currency: string;
     yourShareAmount: number;
     isSummaryHidden?: boolean;
 }
 
-const SplitPercentSection = ({
+const SplitSharesSection = ({
     members,
     includedParticipantIds,
     includeParticipantLabel,
@@ -34,9 +34,9 @@ const SplitPercentSection = ({
     isIncludeLocked = false,
     isParticipantLocked,
     isParticipantIncluded,
-    percentShares,
-    onChangePercent,
-    onPercentInput,
+    shares,
+    onChangeShare,
+    onShareInput,
     currency,
     yourShareAmount,
     isSummaryHidden = false,
@@ -61,14 +61,13 @@ const SplitPercentSection = ({
                         }
                     >
                         <SplitValueStepperInput
-                            value={percentShares[member.id] ?? '0'}
-                            unit="%"
+                            value={shares[member.id] ?? '0'}
                             inputMode="numeric"
                             isDisabled={!isIncluded}
-                            minLabel={t('expenses.modal.split.decreasePercent')}
-                            plusLabel={t('expenses.modal.split.increasePercent')}
-                            onChange={value => onPercentInput(member.id, value)}
-                            onStep={delta => onChangePercent(member.id, delta)}
+                            minLabel={t('expenses.modal.split.decreaseShare')}
+                            plusLabel={t('expenses.modal.split.increaseShare')}
+                            onChange={value => onShareInput(member.id, value)}
+                            onStep={delta => onChangeShare(member.id, delta)}
                         />
                     </SplitParticipantRow>
                 );
@@ -85,4 +84,4 @@ const SplitPercentSection = ({
     );
 };
 
-export default SplitPercentSection;
+export default SplitSharesSection;

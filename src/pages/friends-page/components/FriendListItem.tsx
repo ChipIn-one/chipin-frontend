@@ -5,13 +5,14 @@ import DebtAmount from 'basics/DebtAmount';
 import FriendActionsDropdown from './FriendActionsDropdown';
 
 interface Props {
+    friendId: string;
     picture: string | null;
     displayName: string;
     netAmount: number;
     currency: string;
 }
 
-const FriendListItem = ({ picture, displayName, netAmount, currency }: Props) => {
+const FriendListItem = ({ friendId, picture, displayName, netAmount, currency }: Props) => {
     return (
         <Flex justify="between" align="center">
             <Flex align="center" gap="3">
@@ -27,7 +28,7 @@ const FriendListItem = ({ picture, displayName, netAmount, currency }: Props) =>
             </Flex>
             <Flex align="center" gap="4">
                 <DebtAmount amount={netAmount} currency={currency} weight="medium" size="2" />
-                <FriendActionsDropdown />
+                <FriendActionsDropdown friendId={friendId} />
             </Flex>
         </Flex>
     );

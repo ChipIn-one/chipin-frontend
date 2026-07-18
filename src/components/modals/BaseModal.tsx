@@ -2,6 +2,8 @@ import { LucideX } from 'lucide-react';
 
 import { Dialog, Flex, IconButton, Separator, Text } from '@radix-ui/themes';
 
+import { MODAL_SIZES, type ModalSize } from './constants';
+
 // Mobile fullscreen styles live in src/styles/radixStylesOverwrite.css
 // (the project-wide designated file for Radix style overrides).
 
@@ -10,7 +12,7 @@ interface Props {
     content: React.ReactNode;
     title: string;
     description?: string;
-    maxWidth?: string;
+    maxWidth?: ModalSize;
     isOpened?: boolean;
     setIsOpened?: (isOpen: boolean) => void;
 }
@@ -19,7 +21,7 @@ const BaseModal = ({
     triggerElement,
     title,
     description,
-    maxWidth = '360px',
+    maxWidth = MODAL_SIZES.default,
     content,
     isOpened,
     setIsOpened,

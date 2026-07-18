@@ -1,18 +1,15 @@
-import { useRef, useState } from 'react';
-import { AmountInput, UserAvatar } from 'basics';
-import { LucideChevronDown } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
-import styled from 'styled-components';
 import { useShallow } from 'zustand/react/shallow';
 
-import { Button, Card, Flex, Grid, Text, TextField } from '@radix-ui/themes';
+import { Button, Card, Flex, Grid, Text } from '@radix-ui/themes';
 
 import { SharingMode, User } from 'api/chipin.types';
 import { EXPENSE_CATEGORIES, ExpenseCategory } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
-import { themeColor } from 'helpers/colors';
+import { parseAmountInput } from 'helpers/numbers';
 import { getUnixTimestampInSec } from 'helpers/time';
 import { useActivityStore } from 'store/activityStore';
 import { useGroupsStore } from 'store/groupsStore';
@@ -21,70 +18,64 @@ import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/usersStore';
 
 import CurrencySelect from 'components/CurrencySelect';
+import {
+    ExpenseActionSelectTrigger,
+    ExpenseGroupSearchSelect,
+    ExpenseModalTopSection,
+    ExpensePayerSearchSelect,
+    ExpenseSplitModeControl,
+    SplitParticipantsActions,
+} from 'components/modals/add-expense';
 import { CategorySearchSelect } from 'components/search-select';
 import SegmentedControl from 'components/SegmentedControl';
-import Select, { SelectItem } from 'components/Select';
 
+import {
+    ExpenseTargetMode,
+    getDefaultFriendId,
+    getFriendExpenseMembers,
+    getKnownFriends,
+    isValidDirectExpense,
+} from './add-expense/expenseParticipants';
+import type { SplitStatus } from './add-expense/ExpenseSplitModeControl';
 import SplitAmountsSection from './components/SplitAmountsSection';
 import SplitEqualSection from './components/SplitEqualSection';
 import SplitPercentSection from './components/SplitPercentSection';
+import SplitSharesSection from './components/SplitSharesSection';
 import BaseModal from './BaseModal';
+import { MODAL_SIZES } from './constants';
 
 const EXPENSE_CATEGORY_KEYS = Object.keys(EXPENSE_CATEGORIES) as ExpenseCategory[];
 
 const DEFAULT_CURRENCY = 'USD';
 const DEFAULT_CATEGORY = EXPENSE_CATEGORY_KEYS[0];
 
-type ExpenseTab = 'group' | 'friends';
-
-type SplitMode = 'equal' | 'percent' | 'amounts';
-
-// font-size-8 (35 px, bold) has no equivalent TextField size prop — narrow exception.
-const LargeAmountInput = styled(AmountInput)`
-    box-shadow: none;
-
-    & input {
-        font-size: var(--font-size-8);
-        font-weight: 700;
-    }
-`;
-
-const TabButton = styled.button<{ $isActive: boolean }>`
-    all: unset;
-    flex: 1;
-    text-align: center;
-    padding: var(--space-2) var(--space-4);
-    border-radius: var(--radius-5);
-    font-size: var(--font-size-2);
-    font-weight: 500;
-    cursor: pointer;
-    transition:
-        background 120ms ease,
-        color 120ms ease;
-    background-color: ${({ $isActive }) => ($isActive ? themeColor('jade9') : 'transparent')};
-    color: ${({ $isActive }) => ($isActive ? '#fff' : themeColor('gray11'))};
-`;
-
-const TabsWrapper = styled.div`
-    display: flex;
-    align-items: center;
-    background-color: ${themeColor('gray3')};
-    border-radius: var(--radius-5);
-    padding: var(--space-1);
-`;
+type SplitMode = 'equal' | 'percent' | 'amounts' | 'shares';
 
 interface Props {
-    children: React.ReactNode;
+    children?: React.ReactNode;
     context?: 'friends';
+    friendId?: string;
+    isOpened?: boolean;
+    setIsOpened?: (isOpen: boolean) => void;
 }
 
-const AddExpenseModal = ({ children, context }: Props) => {
+const AddExpenseModal = ({
+    children,
+    context,
+    friendId,
+    isOpened: controlledIsOpened,
+    setIsOpened: setControlledIsOpened,
+}: Props) => {
     const { t } = useTranslation('group');
     const location = useLocation();
-    const { user } = useUsersStore(useShallow(s => ({ user: s.user })));
-    // const { user, friends } = useUsersStore(
-    //     useShallow(s => ({ user: s.user, friends: s.friends })),
-    // );
+    const { user, knownUsers, unSettledFriends, settledFriends } = useUsersStore(
+        useShallow(s => ({
+            user: s.user,
+            knownUsers: s.knownUsers,
+            unSettledFriends: s.unSettledFriends,
+            settledFriends: s.settledFriends,
+        })),
+    );
     const { groups, selectedGroup } = useGroupsStore(
         useShallow(s => ({ groups: s.groups, selectedGroup: s.selectedGroup })),
     );
@@ -99,6 +90,10 @@ const AddExpenseModal = ({ children, context }: Props) => {
     const isShowTabs = !isGroupContext && !isFriendsContext;
 
     const defaultGroup = selectedGroup || groups[0];
+    const groupedKnownFriends = getKnownFriends({ unSettledFriends, settledFriends });
+    const knownFriends = knownUsers.length > 0 ? knownUsers : groupedKnownFriends;
+    const getDefaultTargetMode = (): ExpenseTargetMode =>
+        isFriendsContext || (!groups.length && knownFriends.length > 0) ? 'friends' : 'group';
 
     const getOrderedMembers = (groupMembers: User[]) => {
         const currentUserMember = groupMembers.find(member => member.id === user?.id);
@@ -107,10 +102,13 @@ const AddExpenseModal = ({ children, context }: Props) => {
         return currentUserMember ? [currentUserMember, ...otherMembers] : groupMembers;
     };
 
-    const currencyWidthContainerRef = useRef<HTMLDivElement | null>(null);
-    const [isModalOpened, setIsModalOpened] = useState(false);
-    const [activeTab, setActiveTab] = useState<ExpenseTab>(isFriendsContext ? 'friends' : 'group');
+    const [internalIsModalOpened, setInternalIsModalOpened] = useState(false);
+    const isModalOpened = controlledIsOpened ?? internalIsModalOpened;
+    const [targetMode, setTargetMode] = useState<ExpenseTargetMode>(getDefaultTargetMode());
     const [groupId, setGroupId] = useState(defaultGroup?.id || '');
+    const [selectedFriendId, setSelectedFriendId] = useState(
+        getDefaultFriendId({ knownFriends, preferredFriendId: friendId }),
+    );
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState('');
     const [currency, setCurrency] = useState<string>(DEFAULT_CURRENCY);
@@ -119,17 +117,17 @@ const AddExpenseModal = ({ children, context }: Props) => {
     const [splitMode, setSplitMode] = useState<SplitMode>('equal');
     const [percentShares, setPercentShares] = useState<Record<string, string>>({});
     const [amountShares, setAmountShares] = useState<Record<string, string>>({});
-
-    const selectedExpenseGroup = groups.find(group => group.id === groupId) || defaultGroup;
-    const isFriendsTab = activeTab === 'friends';
-    const groupMembers = selectedExpenseGroup?.members || [];
-    // const resolvedMembers = isFriendsTab ? friends.map(f => f.user) : groupMembers;
-    const resolvedMembers = groupMembers;
-    const orderedMembers = getOrderedMembers(resolvedMembers);
-
-    const paidByMember = orderedMembers.find(member => member.id === paidById);
-
-    const isShowGroupSelect = !isGroupContext && !isFriendsContext && activeTab === 'group';
+    const [shareWeights, setShareWeights] = useState<Record<string, string>>({});
+    const [includedParticipantIds, setIncludedParticipantIds] = useState<Record<string, boolean>>(
+        {},
+    );
+    const [isPercentManuallyEdited, setIsPercentManuallyEdited] = useState(false);
+    const hasParticipantSelectionState = Object.keys(includedParticipantIds).length > 0;
+    const initialFriendId = getDefaultFriendId({ knownFriends, preferredFriendId: friendId });
+    const activeFriendId =
+        targetMode === 'friends' && !selectedFriendId && !hasParticipantSelectionState
+            ? initialFriendId
+            : selectedFriendId;
 
     const buildEqualPercentShares = (members: User[]): Record<string, string> => {
         const count = members.length;
@@ -146,92 +144,178 @@ const AddExpenseModal = ({ children, context }: Props) => {
         );
     };
 
-    const buildEqualAmountShares = (
-        members: User[],
-        totalAmount: string,
-    ): Record<string, string> => {
-        const count = members.length;
-        if (count === 0) {
-            return {};
-        }
-        const total = Number(totalAmount);
-        if (!total || isNaN(total)) {
-            return Object.fromEntries(members.map(member => [member.id, '0']));
-        }
-        const perPerson = Math.round((total / count) * 100) / 100;
-        return Object.fromEntries(members.map(member => [member.id, perPerson.toFixed(2)]));
+    const buildEmptyAmountShares = (members: User[]): Record<string, string> => {
+        return Object.fromEntries(members.map(member => [member.id, '0']));
     };
 
-    // Step is rounded to the nearest unit based on total amount magnitude.
-    const amountStep = Math.max(1, Math.round(Number(amount) / 100));
+    const buildEqualShareWeights = (members: User[]): Record<string, string> => {
+        return Object.fromEntries(members.map(member => [member.id, '1']));
+    };
 
-    const groupItems: SelectItem[] = groups.map(group => {
-        return {
-            value: group.id,
-            label: (
-                <Flex gap="2" align="center">
-                    <Text as="span">{group.emoji} </Text>
-                    <Text as="span">{group.name}</Text>
-                </Flex>
-            ),
-        };
-    });
-    const paidByItems: SelectItem[] = orderedMembers.map(member => {
-        const isCurrentUser = member.id === user?.id;
+    const buildIncludedParticipantIds = (members: User[]): Record<string, boolean> => {
+        return Object.fromEntries(members.map(member => [member.id, true]));
+    };
 
-        return {
-            value: member.id,
-            label: isCurrentUser ? t('expenses.modal.currentUser') : member.displayName,
-        };
-    });
+    const getIncludedMembers = (
+        members: User[],
+        includedIds: Record<string, boolean>,
+        mode: ExpenseTargetMode = targetMode,
+        nextFriendId: string = activeFriendId,
+    ) => {
+        const hasExplicitSelection = Object.keys(includedIds).length > 0;
 
-    const getDefaultPayerId = (groupMembers: User[] = resolvedMembers) =>
-        getOrderedMembers(groupMembers)[0]?.id || '';
+        return members.filter(member => {
+            if (mode === 'friends') {
+                if (!hasExplicitSelection) {
+                    return member.id === user?.id || member.id === nextFriendId;
+                }
 
-    // const getMembersByTab = (tab: ExpenseTab, nextGroupId: string) => {
-    const getMembersByTab = (nextGroupId: string) => {
-        // if (tab === 'friends') {
-        //     return friends.map(f => f.user);
-        // }
+                return includedIds[member.id] === true;
+            }
 
+            return includedIds[member.id] !== false;
+        });
+    };
+
+    const roundMoney = (value: number) => Math.round(value * 100) / 100;
+
+    const getGroupMembersById = (nextGroupId: string) => {
         const nextGroup = groups.find(group => group.id === nextGroupId) || defaultGroup;
 
         return nextGroup?.members || [];
     };
 
-    const resetForm = () => {
-        const defaultTab = isFriendsContext ? 'friends' : 'group';
-        const defaultGroupId = defaultGroup?.id || '';
-        const defaultMembers = getMembersByTab(defaultGroupId);
-        const orderedDefaultMembers = getOrderedMembers(defaultMembers);
+    const getMembersByTarget = (
+        nextTargetMode: ExpenseTargetMode,
+        nextGroupId: string,
+        nextFriendId: string,
+    ) => {
+        if (nextTargetMode === 'friends') {
+            return getFriendExpenseMembers({
+                user,
+                knownFriends,
+                friendId: friendId ? nextFriendId : '',
+            });
+        }
 
-        setActiveTab(defaultTab);
+        return getGroupMembersById(nextGroupId);
+    };
+
+    const resolvedMembers = getMembersByTarget(targetMode, groupId, activeFriendId);
+    const orderedMembers = getOrderedMembers(resolvedMembers);
+    const includedMembers = getIncludedMembers(
+        orderedMembers,
+        includedParticipantIds,
+        targetMode,
+        activeFriendId,
+    );
+    const includedMemberIds = new Set(includedMembers.map(member => member.id));
+
+    const isDirectTarget = targetMode === 'friends';
+    const isShowGroupSelect = !isGroupContext && !isFriendsContext && targetMode === 'group';
+    const isShowParticipantControls =
+        targetMode === 'group' || (targetMode === 'friends' && knownFriends.length > 0);
+
+    // Step is rounded to the nearest unit based on total amount magnitude.
+    const amountStep = Math.max(1, Math.round(Number(amount) / 100));
+
+    const getDefaultPayerId = (groupMembers: User[] = resolvedMembers) =>
+        getOrderedMembers(groupMembers)[0]?.id || '';
+
+    const buildDefaultIncludedParticipantIds = (
+        members: User[],
+        nextTargetMode: ExpenseTargetMode,
+        nextFriendId: string,
+    ): Record<string, boolean> => {
+        if (nextTargetMode === 'friends') {
+            return Object.fromEntries(
+                members.map(member => [
+                    member.id,
+                    member.id === user?.id || member.id === nextFriendId,
+                ]),
+            );
+        }
+
+        return buildIncludedParticipantIds(members);
+    };
+
+    const resetSplitStateForMembers = (
+        members: User[],
+        nextTargetMode: ExpenseTargetMode,
+        nextFriendId: string,
+    ) => {
+        const orderedNextMembers = getOrderedMembers(members);
+        const nextIncludedParticipantIds = buildDefaultIncludedParticipantIds(
+            orderedNextMembers,
+            nextTargetMode,
+            nextFriendId,
+        );
+        const nextIncludedMembers = getIncludedMembers(
+            orderedNextMembers,
+            nextIncludedParticipantIds,
+            nextTargetMode,
+        );
+
+        setPercentShares(buildEqualPercentShares(nextIncludedMembers));
+        setAmountShares(buildEmptyAmountShares(orderedNextMembers));
+        setShareWeights(buildEqualShareWeights(orderedNextMembers));
+        setIncludedParticipantIds(nextIncludedParticipantIds);
+        setIsPercentManuallyEdited(false);
+    };
+
+    const getDefaultPayerForTarget = (nextTargetMode: ExpenseTargetMode, members: User[]) => {
+        if (nextTargetMode === 'friends') {
+            return user?.id || members[0]?.id || '';
+        }
+
+        return getDefaultPayerId(members);
+    };
+
+    const resetForm = () => {
+        const defaultTargetMode = getDefaultTargetMode();
+        const defaultGroupId = defaultGroup?.id || '';
+        const defaultFriendId = getDefaultFriendId({ knownFriends, preferredFriendId: friendId });
+        const defaultMembers = getMembersByTarget(
+            defaultTargetMode,
+            defaultGroupId,
+            defaultFriendId,
+        );
+
+        setTargetMode(defaultTargetMode);
         setGroupId(defaultGroupId);
+        setSelectedFriendId(defaultFriendId);
         setDescription('');
         setAmount('');
         setCurrency(DEFAULT_CURRENCY);
         setCategory(DEFAULT_CATEGORY);
-        setPaidById(getDefaultPayerId(defaultMembers));
+        setPaidById(getDefaultPayerForTarget(defaultTargetMode, defaultMembers));
         setSplitMode('equal');
-        setPercentShares(buildEqualPercentShares(orderedDefaultMembers));
-        setAmountShares({});
+        resetSplitStateForMembers(defaultMembers, defaultTargetMode, defaultFriendId);
     };
 
     const onOpenChange = (isOpen: boolean) => {
-        setIsModalOpened(isOpen);
+        setInternalIsModalOpened(isOpen);
+        setControlledIsOpened?.(isOpen);
 
         if (isOpen) {
-            const defaultTab = isFriendsContext ? 'friends' : 'group';
+            const defaultTargetMode = getDefaultTargetMode();
             const defaultGroupId = defaultGroup?.id || '';
-            const defaultMembers = getMembersByTab(defaultGroupId);
-            const orderedDefaultMembers = getOrderedMembers(defaultMembers);
+            const defaultFriendId = getDefaultFriendId({
+                knownFriends,
+                preferredFriendId: friendId,
+            });
+            const defaultMembers = getMembersByTarget(
+                defaultTargetMode,
+                defaultGroupId,
+                defaultFriendId,
+            );
 
-            setActiveTab(defaultTab);
+            setTargetMode(defaultTargetMode);
             setGroupId(defaultGroupId);
-            setPaidById(getDefaultPayerId(defaultMembers));
+            setSelectedFriendId(defaultFriendId);
+            setPaidById(getDefaultPayerForTarget(defaultTargetMode, defaultMembers));
             setSplitMode('equal');
-            setPercentShares(buildEqualPercentShares(orderedDefaultMembers));
-            setAmountShares(buildEqualAmountShares(orderedDefaultMembers, amount));
+            resetSplitStateForMembers(defaultMembers, defaultTargetMode, defaultFriendId);
             return;
         }
 
@@ -239,39 +323,140 @@ const AddExpenseModal = ({ children, context }: Props) => {
     };
 
     const onChangeGroup = (nextGroupId: string) => {
-        const nextMembers = groups.find(group => group.id === nextGroupId)?.members || [];
-        const nextOrdered = getOrderedMembers(nextMembers);
+        const nextMembers = getMembersByTarget('group', nextGroupId, selectedFriendId);
 
         setGroupId(nextGroupId);
-        setPaidById(getDefaultPayerId(nextMembers));
-        setPercentShares(buildEqualPercentShares(nextOrdered));
-        setAmountShares(buildEqualAmountShares(nextOrdered, amount));
+        setPaidById(getDefaultPayerForTarget('group', nextMembers));
+        resetSplitStateForMembers(nextMembers, 'group', selectedFriendId);
     };
 
-    const onChangeTab = (nextTab: ExpenseTab) => {
-        const nextMembers = getMembersByTab(groupId);
-        const nextOrdered = getOrderedMembers(nextMembers);
+    const onChangeTargetMode = (nextTargetMode: ExpenseTargetMode) => {
+        const nextFriendId =
+            selectedFriendId || getDefaultFriendId({ knownFriends, preferredFriendId: friendId });
+        const nextMembers = getMembersByTarget(nextTargetMode, groupId, nextFriendId);
 
-        setActiveTab(nextTab);
-        setPaidById(getDefaultPayerId(nextMembers));
-        setPercentShares(buildEqualPercentShares(nextOrdered));
-        setAmountShares(buildEqualAmountShares(nextOrdered, amount));
+        setTargetMode(nextTargetMode);
+        setSelectedFriendId(nextFriendId);
+        setPaidById(getDefaultPayerForTarget(nextTargetMode, nextMembers));
+        resetSplitStateForMembers(nextMembers, nextTargetMode, nextFriendId);
+    };
+
+    const handleSelectAllParticipants = () => {
+        setIncludedParticipantIds(buildIncludedParticipantIds(orderedMembers));
+
+        if (splitMode === 'percent' && !isPercentManuallyEdited) {
+            setPercentShares(buildEqualPercentShares(orderedMembers));
+        }
+    };
+
+    const handleDeselectAllParticipants = () => {
+        setIncludedParticipantIds(
+            Object.fromEntries(orderedMembers.map(member => [member.id, false])),
+        );
+
+        if (splitMode === 'percent' && !isPercentManuallyEdited) {
+            setPercentShares({});
+        }
+    };
+
+    const handleSplitModeChange = (nextSplitMode: SplitMode) => {
+        setSplitMode(nextSplitMode);
+
+        if (nextSplitMode === 'percent' && !isPercentManuallyEdited) {
+            setPercentShares(buildEqualPercentShares(includedMembers));
+        }
     };
 
     const handlePercentChange = (userId: string, delta: number) => {
-        setPercentShares(prev => {
-            const current = Number(prev[userId]) || 0;
-            const next = Math.max(0, current + delta);
-            return { ...prev, [userId]: String(next) };
-        });
+        const current = Number(percentShares[userId]) || 0;
+        const next = Math.max(0, current + delta);
+
+        handlePercentInput(userId, String(next));
     };
 
     const handleAmountChange = (userId: string, delta: number) => {
-        setAmountShares(prev => {
-            const current = Number(prev[userId]) || 0;
-            const next = Math.round(Math.max(0, current + delta) * 100) / 100;
-            return { ...prev, [userId]: next.toFixed(2) };
-        });
+        const current = Number(amountShares[userId]) || 0;
+        const next = roundMoney(Math.max(0, current + delta));
+
+        handleAmountInput(userId, next.toFixed(2));
+    };
+
+    const handleShareChange = (userId: string, delta: number) => {
+        const current = Number(shareWeights[userId]) || 0;
+        const next = Math.max(0, current + delta);
+
+        handleShareInput(userId, String(next));
+    };
+
+    const handleIncludedChange = (userId: string, isIncluded: boolean) => {
+        if (isDirectTarget) {
+            if (userId === user?.id) {
+                return;
+            }
+
+            const nextFriendId = isIncluded ? userId : '';
+            const nextIncludedParticipantIds = Object.fromEntries(
+                orderedMembers.map(member => [
+                    member.id,
+                    member.id === user?.id || (Boolean(nextFriendId) && member.id === nextFriendId),
+                ]),
+            );
+            const nextIncludedMembers = getIncludedMembers(
+                orderedMembers,
+                nextIncludedParticipantIds,
+                'friends',
+            );
+
+            setSelectedFriendId(nextFriendId);
+            setIncludedParticipantIds(nextIncludedParticipantIds);
+            setPaidById(prevPaidById =>
+                nextIncludedParticipantIds[prevPaidById] ? prevPaidById : (user?.id ?? ''),
+            );
+
+            if (splitMode === 'percent' && !isPercentManuallyEdited) {
+                setPercentShares(buildEqualPercentShares(nextIncludedMembers));
+            }
+
+            return;
+        }
+
+        setIncludedParticipantIds(prev => ({ ...prev, [userId]: isIncluded }));
+
+        if (isIncluded) {
+            setShareWeights(prev => ({
+                ...prev,
+                [userId]: prev[userId] ?? '1',
+            }));
+        }
+
+        if (splitMode === 'percent' && !isPercentManuallyEdited) {
+            const nextIncluded = orderedMembers.filter(member =>
+                member.id === userId ? isIncluded : includedParticipantIds[member.id] !== false,
+            );
+
+            setPercentShares(buildEqualPercentShares(nextIncluded));
+        }
+    };
+
+    const handlePercentInput = (userId: string, nextValue: string) => {
+        if (/^\d{0,3}$/.test(nextValue)) {
+            setIsPercentManuallyEdited(true);
+            setPercentShares(prev => ({ ...prev, [userId]: nextValue }));
+        }
+    };
+
+    const handleAmountInput = (userId: string, nextValue: string) => {
+        const parsed = parseAmountInput(nextValue);
+
+        if (parsed !== null) {
+            setAmountShares(prev => ({ ...prev, [userId]: parsed }));
+        }
+    };
+
+    const handleShareInput = (userId: string, nextValue: string) => {
+        if (/^\d{0,4}$/.test(nextValue)) {
+            setShareWeights(prev => ({ ...prev, [userId]: nextValue }));
+        }
     };
 
     const buildSharingMode = (): SharingMode => {
@@ -279,7 +464,7 @@ const AddExpenseModal = ({ children, context }: Props) => {
             return {
                 type: 'PERCENTAGE',
                 percentageShares: Object.fromEntries(
-                    orderedMembers.map(member => [
+                    includedMembers.map(member => [
                         member.id,
                         Number(percentShares[member.id] ?? 0),
                     ]),
@@ -290,7 +475,15 @@ const AddExpenseModal = ({ children, context }: Props) => {
             return {
                 type: 'EXACT',
                 customShares: Object.fromEntries(
-                    orderedMembers.map(member => [member.id, Number(amountShares[member.id] ?? 0)]),
+                    includedMembers.map(member => [member.id, Number(amountShares[member.id] ?? 0)]),
+                ),
+            };
+        }
+        if (splitMode === 'shares') {
+            return {
+                type: 'SHARES',
+                shares: Object.fromEntries(
+                    includedMembers.map(member => [member.id, Number(shareWeights[member.id] ?? 0)]),
                 ),
             };
         }
@@ -298,13 +491,14 @@ const AddExpenseModal = ({ children, context }: Props) => {
     };
 
     const onAddExpense = () => {
+        const participantIds = includedMembers.map(member => member.id);
         const params = {
-            payerId: paidById,
-            ...(isFriendsTab ? {} : { groupId }),
+            payerId: effectivePaidById,
+            ...(targetMode === 'group' ? { groupId } : {}),
             description: description,
             amount: Number(amount),
             date: getUnixTimestampInSec(),
-            participantIds: orderedMembers.map(member => member.id),
+            participantIds,
             currency: currency,
             category: category,
             sharingMode: buildSharingMode(),
@@ -322,26 +516,129 @@ const AddExpenseModal = ({ children, context }: Props) => {
 
     const isAmountValid = Number(amount) > 0;
 
-    const totalPercentShares = orderedMembers.reduce(
+    const totalPercentShares = includedMembers.reduce(
         (acc, member) => acc + (Number(percentShares[member.id]) || 0),
         0,
     );
     const isPercentSplitValid = splitMode !== 'percent' || totalPercentShares === 100;
 
-    const totalAmountShares = orderedMembers.reduce((acc, member) => {
+    const totalAmountShares = includedMembers.reduce((acc, member) => {
         return acc + (Number(amountShares[member.id]) || 0);
     }, 0);
     const isAmountSplitValid =
         splitMode !== 'amounts' || Math.abs(totalAmountShares - Number(amount)) < 0.001;
+    const totalShareWeights = includedMembers.reduce((acc, member) => {
+        return acc + (Number(shareWeights[member.id]) || 0);
+    }, 0);
+    const isShareSplitValid = splitMode !== 'shares' || totalShareWeights > 0;
+    const totalExpenseAmount = Number(amount) || 0;
+    const isDirectPairSelected =
+        targetMode !== 'friends' ||
+        (includedMembers.length === 2 && includedMemberIds.has(user?.id ?? ''));
+    const assignedSplitAmount = (() => {
+        if (!isDirectPairSelected) {
+            return 0;
+        }
+
+        if (splitMode === 'equal') {
+            return includedMembers.length > 0 ? totalExpenseAmount : 0;
+        }
+        if (splitMode === 'amounts') {
+            return roundMoney(totalAmountShares);
+        }
+        if (splitMode === 'percent') {
+            return roundMoney((totalExpenseAmount * totalPercentShares) / 100);
+        }
+        if (splitMode === 'shares') {
+            return totalShareWeights > 0 ? totalExpenseAmount : 0;
+        }
+        return totalExpenseAmount;
+    })();
+    const splitStatus: SplitStatus =
+        assignedSplitAmount === totalExpenseAmount
+            ? 'exact'
+            : assignedSplitAmount < totalExpenseAmount
+              ? 'under'
+              : 'over';
+    const progressPercent =
+        totalExpenseAmount > 0 ? (assignedSplitAmount / totalExpenseAmount) * 100 : 0;
+    const currentUserId = user?.id;
+    const yourShareAmount = (() => {
+        if (!isDirectPairSelected) {
+            return 0;
+        }
+
+        if (!currentUserId || !includedMemberIds.has(currentUserId)) {
+            return 0;
+        }
+
+        if (splitMode === 'equal') {
+            return includedMembers.length > 0
+                ? roundMoney(totalExpenseAmount / includedMembers.length)
+                : 0;
+        }
+
+        if (splitMode === 'percent') {
+            return roundMoney(
+                (totalExpenseAmount * (Number(percentShares[currentUserId]) || 0)) / 100,
+            );
+        }
+
+        if (splitMode === 'amounts') {
+            return roundMoney(Number(amountShares[currentUserId]) || 0);
+        }
+
+        if (splitMode === 'shares') {
+            return totalShareWeights > 0
+                ? roundMoney(
+                      (totalExpenseAmount * (Number(shareWeights[currentUserId]) || 0)) /
+                          totalShareWeights,
+                  )
+                : 0;
+        }
+
+        return 0;
+    })();
+    const splitMetrics = {
+        splitStatus,
+        progressPercent,
+        yourShareAmount,
+    };
+    const participantIds = includedMembers.map(member => member.id);
+    const payerMembers = targetMode === 'friends' ? includedMembers : orderedMembers;
+    const effectivePaidById = payerMembers.some(member => member.id === paidById)
+        ? paidById
+        : getDefaultPayerForTarget(targetMode, payerMembers);
+    const isDirectExpenseValid =
+        targetMode !== 'friends' ||
+        isValidDirectExpense({
+            userId: user?.id,
+            participantIds,
+            payerId: effectivePaidById,
+            knownFriends,
+        });
+    const includeParticipantLabel = (name: string) =>
+        t('expenses.modal.split.includeParticipant', { name });
+    const isParticipantLocked = (member: User) =>
+        targetMode === 'friends' && (Boolean(friendId) || member.id === user?.id);
+    const isParticipantIncluded = (member: User) =>
+        targetMode === 'friends'
+            ? hasParticipantSelectionState
+                ? includedParticipantIds[member.id] === true
+                : member.id === user?.id || member.id === activeFriendId
+            : includedParticipantIds[member.id] !== false;
 
     const isSubmitDisabled =
         !description.trim() ||
         !isAmountValid ||
-        !paidById ||
-        (groups.length > 0 && !groupId) ||
+        !effectivePaidById ||
+        (targetMode === 'group' && !groupId) ||
+        (targetMode === 'friends' && !isDirectExpenseValid) ||
+        !includedMembers.length ||
         !resolvedMembers.length ||
         !isPercentSplitValid ||
-        !isAmountSplitValid;
+        !isAmountSplitValid ||
+        !isShareSplitValid;
 
     return (
         <BaseModal
@@ -349,159 +646,118 @@ const AddExpenseModal = ({ children, context }: Props) => {
             setIsOpened={onOpenChange}
             triggerElement={children}
             title={t('expenses.modal.title')}
-            maxWidth="460px"
+            maxWidth={MODAL_SIZES.desktop}
             content={
                 <Flex direction="column" gap="4">
-                    {/* Amount + Currency */}
-                    <Card ref={currencyWidthContainerRef}>
-                        <Flex direction="column" gap="4">
-                            <Flex justify="between" align="center" gap="4">
-                                <LargeAmountInput
-                                    value={amount}
-                                    onChange={setAmount}
-                                    color="gray"
-                                    size="3"
-                                    autoFocus
+                    <ExpenseModalTopSection
+                        amount={amount}
+                        description={description}
+                        amountLabel={t('common:fields.amount')}
+                        descriptionPlaceholder={t('expenses.modal.fields.descriptionPlaceholder')}
+                        onAmountChange={setAmount}
+                        onDescriptionChange={setDescription}
+                    />
+
+                    <Grid columns={{ initial: '1', sm: '2' }} gap="3">
+                        <CategorySearchSelect
+                            value={category}
+                            renderTrigger={selectedCategory => (
+                                <ExpenseActionSelectTrigger
+                                    icon={selectedCategory?.icon}
+                                    title={t('common:fields.category')}
+                                    value={selectedCategory?.label ?? t('common:fields.category')}
                                 />
+                            )}
+                            onChange={setCategory}
+                        />
 
-                                <CurrencySelect
-                                    onChange={setCurrency}
-                                    currency={currency}
-                                    contentWidthMode="parent"
-                                    triggerElement={
-                                        <Button variant="outline" color="teal" size="2">
-                                            {currency}
-                                            <LucideChevronDown size={16} />
-                                        </Button>
-                                    }
-                                    widthContainerRef={currencyWidthContainerRef}
+                        <CurrencySelect
+                            onChange={setCurrency}
+                            currency={currency}
+                            triggerElement={
+                                <ExpenseActionSelectTrigger
+                                    title={t('common:fields.currency')}
+                                    value={currency}
                                 />
-                            </Flex>
-
-                            {/* Paid by */}
-                            <Flex gap="4" align="center" justify="between">
-                                <Text as="label" size="2" weight="bold" color="gray">
-                                    {t('common:fields.paidBy')}
-                                </Text>
-
-                                {orderedMembers.length > 0 ? (
-                                    <Select
-                                        items={paidByItems}
-                                        value={paidById}
-                                        onChange={setPaidById}
-                                        size="3"
-                                        triggerVariant="surface"
-                                        renderValue={item => {
-                                            if (!item || !paidByMember) {
-                                                return undefined;
-                                            }
-
-                                            return (
-                                                <Flex align="center" gap="2">
-                                                    <UserAvatar size="1" user={paidByMember} />
-                                                    <Text>
-                                                        {paidByMember.id === user?.id
-                                                            ? t('expenses.modal.currentUser')
-                                                            : paidByMember.displayName}
-                                                    </Text>
-                                                </Flex>
-                                            );
-                                        }}
-                                        renderItem={item => {
-                                            const member = orderedMembers.find(
-                                                orderedMember => orderedMember.id === item.value,
-                                            );
-
-                                            if (!member) {
-                                                return item.label;
-                                            }
-
-                                            return (
-                                                <Flex align="center" gap="2" minWidth="0">
-                                                    <UserAvatar size="1" user={member} />
-                                                    <Text truncate>{item.label}</Text>
-                                                </Flex>
-                                            );
-                                        }}
-                                    />
-                                ) : (
-                                    <Text size="2" color="gray">
-                                        {t('expenses.modal.noMembers')}
-                                    </Text>
-                                )}
-                            </Flex>
-                        </Flex>
-                    </Card>
-
-                    <Card>
-                        <Grid columns="auto 1fr" gap="4" align="center">
-                            {/* Description */}
-                            <Text as="label" size="2" weight="medium" color="gray">
-                                {t('common:fields.description')}
-                            </Text>
-
-                            <TextField.Root
-                                type="text"
-                                size="3"
-                                variant="surface"
-                                placeholder={t('expenses.modal.fields.descriptionPlaceholder')}
-                                value={description}
-                                onChange={event => setDescription(event.target.value)}
-                            />
-
-                            {/* Category */}
-                            <Text as="label" size="2" weight="medium" color="gray">
-                                {t('common:fields.category')}
-                            </Text>
-
-                            <CategorySearchSelect value={category} onChange={setCategory} />
-                        </Grid>
-                    </Card>
+                            }
+                        />
+                    </Grid>
 
                     {isShowTabs && (
                         <Card>
                             {/* Group / Friends tabs — shown only from non-group, non-friends pages */}
                             <Flex direction="column" gap="4">
-                                <TabsWrapper>
-                                    <TabButton
-                                        $isActive={activeTab === 'group'}
-                                        onClick={() => onChangeTab('group')}
-                                    >
-                                        {t('expenses.modal.tabs.group')}
-                                    </TabButton>
-
-                                    <TabButton
-                                        $isActive={activeTab === 'friends'}
-                                        onClick={() => onChangeTab('friends')}
-                                    >
-                                        {t('expenses.modal.tabs.friends')}
-                                    </TabButton>
-                                </TabsWrapper>
+                                <SegmentedControl
+                                    value={targetMode}
+                                    items={[
+                                        {
+                                            value: 'group',
+                                            label: t('expenses.modal.tabs.group'),
+                                        },
+                                        {
+                                            value: 'friends',
+                                            label: t('expenses.modal.tabs.friends'),
+                                        },
+                                    ]}
+                                    onValueChange={value =>
+                                        onChangeTargetMode(value as ExpenseTargetMode)
+                                    }
+                                />
                                 {/* Group select — hidden when selectedGroup is set (group page) or in friends mode */}
                                 {isShowGroupSelect && (
-                                    <Flex direction="column" gap="2">
-                                        <Select
-                                            items={groupItems}
-                                            value={groupId}
-                                            onChange={onChangeGroup}
-                                            size="3"
-                                            triggerVariant="surface"
-                                        />
-                                    </Flex>
+                                    <ExpenseGroupSearchSelect
+                                        groups={groups}
+                                        value={groupId}
+                                        title={t('expenses.modal.fields.group')}
+                                        searchPlaceholder={t(
+                                            'expenses.modal.groupSearchPlaceholder',
+                                        )}
+                                        emptyText={t('expenses.modal.noGroups')}
+                                        onChange={onChangeGroup}
+                                    />
                                 )}
                             </Flex>
                         </Card>
                     )}
 
-                    <Card>
-                        <Flex direction="column" gap="4">
-                            <Flex justify="between" align="center">
-                                <Text size="2" weight="bold" color="gray">
-                                    {t('expenses.modal.split.title')}
-                                </Text>
-                                <SegmentedControl
+                    {targetMode === 'friends' && knownFriends.length === 0 && (
+                        <Text size="2" color="gray">
+                            {t('expenses.modal.noKnownFriends')}
+                        </Text>
+                    )}
+
+                    {isShowParticipantControls && orderedMembers.length > 0 ? (
+                        <ExpensePayerSearchSelect
+                            members={payerMembers}
+                            value={effectivePaidById}
+                            currentUserId={user?.id}
+                            title={t('common:fields.paidBy')}
+                            currentUserLabel={t('expenses.modal.currentUser')}
+                            searchPlaceholder={t('expenses.modal.payerSearchPlaceholder')}
+                            emptyText={t('expenses.modal.noMembers')}
+                            onChange={setPaidById}
+                        />
+                    ) : targetMode === 'group' ? (
+                        <Text size="2" color="gray">
+                            {t('expenses.modal.noMembers')}
+                        </Text>
+                    ) : null}
+
+                    {isShowParticipantControls && (
+                        <Card>
+                            <Flex direction="column" gap="4">
+                                <ExpenseSplitModeControl
+                                    title={t('expenses.modal.split.title')}
+                                    totalLabel={t('expenses.modal.split.total')}
+                                    assignedAmount={assignedSplitAmount}
+                                    totalAmount={totalExpenseAmount}
+                                    currency={currency}
+                                    status={splitMetrics.splitStatus}
+                                    progressPercent={splitMetrics.progressPercent}
                                     value={splitMode}
-                                    onValueChange={value => setSplitMode(value as SplitMode)}
+                                    onValueChange={value =>
+                                        handleSplitModeChange(value as SplitMode)
+                                    }
                                     items={[
                                         {
                                             value: 'equal',
@@ -515,41 +771,109 @@ const AddExpenseModal = ({ children, context }: Props) => {
                                             value: 'amounts',
                                             label: t('expenses.modal.split.amounts'),
                                         },
+                                        {
+                                            value: 'shares',
+                                            label: t('expenses.modal.split.shares'),
+                                        },
                                     ]}
                                 />
+
+                                {orderedMembers.length > 0 && (
+                                    <SplitParticipantsActions
+                                        selectAllLabel={t('expenses.modal.split.selectAll')}
+                                        deselectAllLabel={t('expenses.modal.split.deselectAll')}
+                                        isAllSelected={orderedMembers.every(
+                                            member => includedParticipantIds[member.id] !== false,
+                                        )}
+                                        isToggleHidden={targetMode !== 'group'}
+                                        yourShareLabel={t('expenses.modal.split.yourShare')}
+                                        yourShareAmount={splitMetrics.yourShareAmount}
+                                        currency={currency}
+                                        onToggleAll={() => {
+                                            const isAllSelected = orderedMembers.every(
+                                                member =>
+                                                    includedParticipantIds[member.id] !== false,
+                                            );
+
+                                            if (isAllSelected) {
+                                                handleDeselectAllParticipants();
+                                                return;
+                                            }
+
+                                            handleSelectAllParticipants();
+                                        }}
+                                    />
+                                )}
+
+                                {splitMode === 'equal' && (
+                                    <SplitEqualSection
+                                        members={orderedMembers}
+                                        includedParticipantIds={includedParticipantIds}
+                                        includeParticipantLabel={includeParticipantLabel}
+                                        onIncludedChange={handleIncludedChange}
+                                        isParticipantLocked={isParticipantLocked}
+                                        isParticipantIncluded={isParticipantIncluded}
+                                        totalAmount={amount}
+                                        currency={currency}
+                                        yourShareAmount={splitMetrics.yourShareAmount}
+                                        isSummaryHidden
+                                    />
+                                )}
+
+                                {splitMode === 'percent' && (
+                                    <SplitPercentSection
+                                        members={orderedMembers}
+                                        includedParticipantIds={includedParticipantIds}
+                                        includeParticipantLabel={includeParticipantLabel}
+                                        onIncludedChange={handleIncludedChange}
+                                        isParticipantLocked={isParticipantLocked}
+                                        isParticipantIncluded={isParticipantIncluded}
+                                        percentShares={percentShares}
+                                        onChangePercent={handlePercentChange}
+                                        onPercentInput={handlePercentInput}
+                                        currency={currency}
+                                        yourShareAmount={splitMetrics.yourShareAmount}
+                                        isSummaryHidden
+                                    />
+                                )}
+
+                                {splitMode === 'amounts' && (
+                                    <SplitAmountsSection
+                                        members={orderedMembers}
+                                        includedParticipantIds={includedParticipantIds}
+                                        includeParticipantLabel={includeParticipantLabel}
+                                        onIncludedChange={handleIncludedChange}
+                                        isParticipantLocked={isParticipantLocked}
+                                        isParticipantIncluded={isParticipantIncluded}
+                                        amountShares={amountShares}
+                                        onChangeAmount={handleAmountChange}
+                                        onAmountInput={handleAmountInput}
+                                        currency={currency}
+                                        step={amountStep}
+                                        yourShareAmount={splitMetrics.yourShareAmount}
+                                        isSummaryHidden
+                                    />
+                                )}
+
+                                {splitMode === 'shares' && (
+                                    <SplitSharesSection
+                                        members={orderedMembers}
+                                        includedParticipantIds={includedParticipantIds}
+                                        includeParticipantLabel={includeParticipantLabel}
+                                        onIncludedChange={handleIncludedChange}
+                                        isParticipantLocked={isParticipantLocked}
+                                        isParticipantIncluded={isParticipantIncluded}
+                                        shares={shareWeights}
+                                        onChangeShare={handleShareChange}
+                                        onShareInput={handleShareInput}
+                                        currency={currency}
+                                        yourShareAmount={splitMetrics.yourShareAmount}
+                                        isSummaryHidden
+                                    />
+                                )}
                             </Flex>
-
-                            {splitMode === 'equal' && (
-                                <SplitEqualSection
-                                    members={orderedMembers}
-                                    totalAmount={amount}
-                                    currency={currency}
-                                />
-                            )}
-
-                            {splitMode === 'percent' && (
-                                <SplitPercentSection
-                                    members={orderedMembers}
-                                    percentShares={percentShares}
-                                    onChangePercent={handlePercentChange}
-                                    totalAmount={amount}
-                                    currency={currency}
-                                    currentUserId={user?.id}
-                                />
-                            )}
-
-                            {splitMode === 'amounts' && (
-                                <SplitAmountsSection
-                                    members={orderedMembers}
-                                    amountShares={amountShares}
-                                    onChangeAmount={handleAmountChange}
-                                    totalAmount={amount}
-                                    currency={currency}
-                                    step={amountStep}
-                                />
-                            )}
-                        </Flex>
-                    </Card>
+                        </Card>
+                    )}
 
                     <Flex justify="end" gap="3">
                         <Button

@@ -15,6 +15,7 @@ import { useUsersStore } from 'store/usersStore';
 import Select, { SelectItem } from 'components/Select';
 
 import BaseModal from './BaseModal';
+import { MODAL_SIZES } from './constants';
 
 interface Props {
     children: React.ReactNode;
@@ -65,7 +66,7 @@ const LeaveGroupModal = ({ children }: Props) => {
             setIsOpened={onOpenChange}
             triggerElement={children}
             title={t('common:buttons.leaveGroup')}
-            maxWidth="480px"
+            maxWidth={MODAL_SIZES.default}
             content={
                 <Flex direction="column" gap="6">
                     {mustTransfer && (

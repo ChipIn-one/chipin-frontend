@@ -32,6 +32,7 @@ const CurrencyGroupCard = ({ currency, netBalance, friends }: UnsettledFriends) 
                     <Flex key={item.user.id} direction="column" gap="3">
                         {index === 0 && <Separator size="4" />}
                         <FriendListItem
+                            friendId={item.user.id}
                             picture={item.user.picture}
                             displayName={item.user.displayName}
                             netAmount={item.amount}

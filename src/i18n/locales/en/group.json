@@ -27,10 +27,18 @@
             "fields": {
                 "descriptionPlaceholder": "e.g. Hotel booking, dinner...",
                 "amountAndCurrency": "Amount & currency",
-                "amountPlaceholder": "Enter amount..."
+                "amountPlaceholder": "Enter amount...",
+                "group": "Group",
+                "friend": "Friend"
             },
             "categorySearchPlaceholder": "Search category",
             "categorySearchEmpty": "No categories found",
+            "payerSearchPlaceholder": "Search payer",
+            "groupSearchPlaceholder": "Search groups",
+            "friendSearchPlaceholder": "Search friends",
+            "noGroups": "No groups found",
+            "noKnownFriends": "No known friends yet",
+            "includeInSolo": "Add to Solo",
             "categories": {
                 "food": "Food & Dining",
                 "transport": "Transport",
@@ -127,10 +135,21 @@
                 "equal": "Equal",
                 "percent": "Percent",
                 "amounts": "Amounts",
+                "shares": "Shares",
                 "splitEquallyBetween": "Split equally between {{count}} participants",
                 "eachPays": "Each pays",
                 "yourShare": "Your share",
+                "includeParticipant": "Include {{name}} in split",
+                "decreaseShare": "Decrease share",
+                "increaseShare": "Increase share",
+                "decreaseAmount": "Decrease amount",
+                "increaseAmount": "Increase amount",
+                "decreasePercent": "Decrease percent",
+                "increasePercent": "Increase percent",
+                "selectAll": "Select all",
+                "deselectAll": "Deselect all",
                 "total": "Total:",
+                "totalShares": "Total shares",
                 "totalAssigned": "Total assigned",
                 "difference": "Difference"
             }
@@ -178,6 +197,11 @@
         "confirm": "Are you sure you want to leave this group?",
         "ownerWarning": "You are the owner. Please transfer ownership before leaving.",
         "newOwnerPlaceholder": "Select new owner"
+    },
+    "removeModal": {
+        "title": "Delete group",
+        "confirm": "Are you sure you want to delete this group?",
+        "warning": "This action cannot be undone. All group data will be permanently deleted."
     },
     "kickModal": {
         "title": "Kick member",

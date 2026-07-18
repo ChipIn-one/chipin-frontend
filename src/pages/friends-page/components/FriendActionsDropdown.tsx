@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
     LucideArrowLeftRight,
     LucideBell,
@@ -11,9 +11,15 @@ import { useTranslation } from 'react-i18next';
 import { IconButton } from '@radix-ui/themes';
 
 import Dropdown from 'components/Dropdown';
+import AddExpenseModal from 'components/modals/AddExpenseModal';
 
-const FriendActionsDropdown = () => {
+interface Props {
+    friendId: string;
+}
+
+const FriendActionsDropdown = ({ friendId }: Props) => {
     const { t } = useTranslation(['common', 'friends']);
+    const [isExpenseModalOpened, setIsExpenseModalOpened] = useState(false);
 
     const actions = useMemo(
         () => [
@@ -22,7 +28,7 @@ const FriendActionsDropdown = () => {
                 label: t('common:buttons.addExpense'),
                 icon: <LucidePlusCircle size={16} />,
                 onSelect: () => {
-                    /* todo */
+                    setIsExpenseModalOpened(true);
                 },
             },
             {
@@ -58,15 +64,23 @@ const FriendActionsDropdown = () => {
     );
 
     return (
-        <Dropdown
-            items={actions}
-            trigger={
-                <IconButton variant="ghost" size="2" color="gray">
-                    <LucideMoreVertical size={16} />
-                </IconButton>
-            }
-            align="end"
-        />
+        <>
+            <Dropdown
+                items={actions}
+                trigger={
+                    <IconButton variant="ghost" size="2" color="gray">
+                        <LucideMoreVertical size={16} />
+                    </IconButton>
+                }
+                align="end"
+            />
+            <AddExpenseModal
+                context="friends"
+                friendId={friendId}
+                isOpened={isExpenseModalOpened}
+                setIsOpened={setIsExpenseModalOpened}
+            />
+        </>
     );
 };
 

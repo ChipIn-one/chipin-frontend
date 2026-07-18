@@ -27,10 +27,18 @@
             "fields": {
                 "descriptionPlaceholder": "ex. Reserva de hotel, jantar...",
                 "amountAndCurrency": "Valor e moeda",
-                "amountPlaceholder": "Digite o valor..."
+                "amountPlaceholder": "Digite o valor...",
+                "group": "Grupo",
+                "friend": "Amigo"
             },
             "categorySearchPlaceholder": "Buscar categoria",
             "categorySearchEmpty": "Nenhuma categoria encontrada",
+            "payerSearchPlaceholder": "Buscar pagador",
+            "groupSearchPlaceholder": "Buscar grupos",
+            "friendSearchPlaceholder": "Buscar amigos",
+            "noGroups": "Nenhum grupo encontrado",
+            "noKnownFriends": "Nenhum amigo conhecido ainda",
+            "includeInSolo": "Adicionar ao Solo",
             "categories": {
                 "food": "Comida e restaurantes",
                 "transport": "Transporte",
@@ -127,10 +135,21 @@
                 "equal": "Igualmente",
                 "percent": "Percentual",
                 "amounts": "Valores",
+                "shares": "Partes",
                 "splitEquallyBetween": "Dividido igualmente entre {{count}} participantes",
                 "eachPays": "Cada um paga",
                 "yourShare": "Sua parte",
+                "includeParticipant": "Incluir {{name}} na divisão",
+                "decreaseShare": "Diminuir parte",
+                "increaseShare": "Aumentar parte",
+                "decreaseAmount": "Diminuir valor",
+                "increaseAmount": "Aumentar valor",
+                "decreasePercent": "Diminuir percentual",
+                "increasePercent": "Aumentar percentual",
+                "selectAll": "Selecionar todos",
+                "deselectAll": "Desmarcar todos",
                 "total": "Total:",
+                "totalShares": "Total de partes",
                 "totalAssigned": "Total atribuído",
                 "difference": "Diferença"
             }
@@ -178,6 +197,11 @@
         "confirm": "Tem certeza que quer sair deste grupo?",
         "ownerWarning": "Você é o dono. Por favor transfira a propriedade antes de sair.",
         "newOwnerPlaceholder": "Selecione o novo dono"
+    },
+    "removeModal": {
+        "title": "Excluir grupo",
+        "confirm": "Tem certeza que quer excluir este grupo?",
+        "warning": "Esta ação não pode ser desfeita. Todos os dados do grupo serão excluídos permanentemente."
     },
     "kickModal": {
         "title": "Remover membro",

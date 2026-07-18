@@ -35,7 +35,7 @@ const SettledUpCard = ({ friends }: Props) => {
                                     {friend.user.displayName}
                                 </Text>
                             </Flex>
-                            <FriendActionsDropdown />
+                            <FriendActionsDropdown friendId={friend.user.id} />
                         </Flex>
                     </Flex>
                 ))}

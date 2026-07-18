@@ -30,6 +30,7 @@
         "amount": "Amount",
         "group": "Group",
         "category": "Category",
+        "currency": "Currency",
         "paidBy": "Paid by",
         "groupName": "Group name",
         "icon": "Icon",
