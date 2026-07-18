@@ -32,3 +32,10 @@ dev-dist
 
 # Generated build version
 src/constants/version.ts
+
+# Local Codex and Superpowers working artifacts
+/.superpowers/
+/docs/superpowers/plans/
+/docs/superpowers/specs/
+/docs/codex/plans/
+/docs/codex/specs/

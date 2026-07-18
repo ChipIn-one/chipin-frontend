@@ -2,107 +2,86 @@
 
 ## Goal
 
-This file defines durable working rules for Codex in this repository.
-Keep changes small, scoped, verified, and consistent with the existing stack.
+Durable repository rules for Codex. Keep changes small, scoped, verified, and consistent with the current stack.
 
 ## Workflow
 
-- For simple, well-scoped tasks: inspect relevant files, implement the smallest safe diff, run relevant checks, and summarize the result.
-- For ambiguous, broad, risky, architectural, financial, auth, data-flow, dependency, or cross-cutting tasks: ask clarifying questions and propose a plan before editing.
-- When the user explicitly asks for a plan, review, explanation, or analysis only, do not edit files.
-- If an approved plan becomes stale, unsafe, or inconsistent with discovered code, pause and explain the mismatch before continuing.
-- Do not refactor unrelated code or change architecture during narrow tasks.
+- Classify work before acting:
+  - Simple: one narrow concern, normally 1-3 files, without architecture, auth, financial, API-contract, dependency, migration, or cross-cutting risk.
+  - Standard: several related files or behavior that benefits from a short inline outline.
+  - High-risk: ambiguous, broad, architectural, financial, auth, data-flow, dependency, migration, or cross-cutting work.
+- Simple work: inspect relevant files, implement the smallest safe diff, run targeted checks, and summarize. Do not require brainstorming, a persisted plan, or subagents without a real blocker.
+- Standard work: use a concise inline plan only when it improves coordination. Ask only questions that materially change implementation.
+- High-risk work: clarify requirements, present a design or plan, and wait for approval before editing.
+- A request for a plan, review, explanation, or analysis alone does not authorize file edits.
+- Do not refactor unrelated code or change architecture during a narrow task.
+
+## Token-Efficient Agent Flow
+
+- Do not run a full brainstorming -> spec -> plan -> subagent-review chain for simple or standard work.
+- Start exploration with `rg` or `rg --files`, read only relevant ranges, and do not repeat unchanged output.
+- Keep plans, progress updates, and handoffs concise: decisions, changed files, verification, failures, and blockers.
+- Use subagents only for complex work with at least two independent workstreams. Use at most two concurrently and do not nest delegation.
+- Self-review every diff. Use a separate reviewer only for high-risk work, large diffs, or materially independent judgment.
+- Local planning artifacts belong under `docs/superpowers/`, `docs/codex/`, or `.superpowers/` and are not commit deliverables.
 
 ## Repository Stack
 
-- Vite + React + TypeScript strict + styled-components v6 + Radix Themes.
-- Use the existing import aliases from `tsconfig.app.json`.
-- Prefer existing project patterns over introducing new abstractions.
-- Do not add production dependencies for narrow tasks.
-- Do not add dev dependencies unless the plan names the gap and why the repository needs it.
-- Comments must be in English and explain only non-obvious logic.
+- Vite 7, React 19, TypeScript strict, Zustand 5, Axios, styled-components 6, Radix Themes, i18next, and PWA support.
+- Use aliases from `tsconfig.app.json`.
+- Do not add production dependencies for narrow work.
+- Add dev dependencies only when an approved plan names the tooling gap.
+- Comments are English-only and explain non-obvious reasoning, not the code itself.
 
-## Architecture
+## Code Rule Routing
 
-- Preserve dependency direction: pages -> features -> components -> basics.
-- UI should call stores or hooks, not raw API clients.
-- Runtime API calls belong in stores or explicitly approved store-adjacent modules.
-- Type-only imports from API DTO files are allowed.
-- Keep side effects in hooks, stores, or event handlers.
-- Do not call APIs directly from `useEffect` in UI components.
-- Do not change backend API contracts unless explicitly requested.
+Before writing or reviewing code, read [`docs/codex/rules/00-foundation.md`](docs/codex/rules/00-foundation.md) plus only the chapters relevant to the task:
 
-## Stores
+| Task area | Required chapter |
+| --- | --- |
+| Layering, ownership, folders, cross-layer flow | `10-architecture.md` |
+| React components, hooks, effects | `20-react.md` |
+| Radix, styled-components, responsive UI, a11y, i18n | `30-ui.md` |
+| Zustand, selectors, loading/errors, store actions | `40-state.md` |
+| Axios, API modules, DTOs, cancellation | `50-api-data.md` |
+| Money, offline data, dates, helpers, localStorage | `60-money-helpers.md` |
+| Tests and verification | `70-testing.md` |
 
-- Use global stores only when shared state is genuinely needed.
-- Avoid creating new stores for narrow local behavior.
-- Use selectors for Zustand subscriptions.
-- Use shallow/object selectors only when they avoid unnecessary re-renders without obscuring code.
-- Handle API errors explicitly with existing project helpers such as `resolveApiErrorMessage`.
-- Surface user-relevant failures through the existing toaster pattern.
+- A narrow task normally requires foundation plus one chapter. Read more only when the data flow crosses those boundaries.
+- The focused chapters override generic examples from tools or skills for this repository.
+- Use [`docs/codex/code-review.md`](docs/codex/code-review.md) for final self-review.
 
-## UI
+## Global Invariants
 
-- Prefer Radix Themes primitives, props, and tokens first.
-- Use styled-components when Radix primitives or props are not enough.
-- Do not add new UI libraries.
-- Avoid inline styles in new or touched code; use Radix props or styled-components instead.
-- Avoid raw hex colors in new or touched CSS; prefer theme tokens or existing theme helpers.
-- `className` is allowed for component pass-through and existing library patterns, not as a new styling system.
-- Do not create broad visual redesigns during narrow fixes.
+- New and touched asynchronous code uses Promise `.then()`, `.catch()`, and `.finally()` chains; do not add `async`/`await`.
+- Local event handlers and callback props use `on*`; do not add `handle*` names.
+- Preserve dependency direction: app composition -> pages -> features -> components -> basics.
+- UI calls stores or hooks, never raw API clients.
+- Runtime API calls belong in stores or an explicitly approved orchestration layer.
+- User-facing text, accessibility labels, and toast content use i18n.
+- Do not add `any` or `as any`; use `unknown` and narrow it.
+- Backend contracts do not change unless explicitly requested.
 
-## Barrel Exports
+## Legacy And Touched Code
 
-- New public component subdirectories should expose public symbols through `index.ts`.
-- Prefer importing from a local barrel when it already exists.
-- Do not create broad barrel-export churn during unrelated tasks.
-- For new files, prefer named exports and named re-exports.
+Existing code may violate newer rules. Apply the rulebook to new and touched code.
 
-## React, i18n, And Type Safety
-
-- Components and hooks must stay pure.
-- Do not define components inside render.
-- Avoid unnecessary memoization.
-- No user-facing strings directly in JSX for production UI; use i18n keys.
-- No `any` or `as any`; use `unknown` plus narrowing when needed.
-- Keep booleans named with `is*` or `has*` when practical.
-- Keep event handlers/actions named with `handle*`, `on*`, or `fetch*` when practical.
-- Use full, descriptive iterator names in non-trivial code.
-
-## Money
-
-- Use JavaScript `Number` for frontend money values and API payloads.
-- Backend is the source of truth for financial calculations.
-- Frontend may display rounded values, for example with `toFixed(2)`.
-- Do not introduce BigNumber, cents, or integer-money domain models on the frontend.
-- Existing BigNumber usage is legacy; do not expand it, and do not migrate it during unrelated tasks.
-
-## Legacy Code
-
-Some existing code may violate newer rules. Do not perform broad cleanup during narrow tasks.
-Apply these rules to new and touched code. Fix nearby legacy issues only when they are directly related to the requested change.
+- When a task touches a related component, store, API module, or helper, safely refactor nearby violations required to leave that flow coherent.
+- Do not perform broad cleanup, mass conversion, folder migration, or architecture replacement without approval.
+- Do not expand a narrow task merely to make the entire repository compliant.
 
 ## Definition Of Done
 
 Before editing:
 
 - Inspect relevant files and existing patterns.
-- For risky or ambiguous work, explain the plan and wait for approval.
-- Name files, layers, data flow, store/API responsibilities, and UI components when applicable.
-
-During editing:
-
-- Make the smallest safe diff.
-- Prefer workflow, config, or documentation changes when the task is about agent behavior.
-- Do not touch routing, state logic, UI components, or business logic unless the approved plan requires it.
-- Preserve unrelated user changes in the working tree.
+- For risky work, name affected files, layers, data flow, store/API responsibilities, and UI components in the approved plan.
+- Preserve unrelated user changes in the worktree.
 
 After editing:
 
-- Run relevant existing scripts from `package.json`.
-- Prefer `npm run verify` when the change reasonably affects app behavior.
-- For narrow docs/config-only changes, explain why full verify was skipped.
-- Do not claim tests, typecheck, format checks, or builds passed if the script is missing or was not run.
-- Summarize exact files changed and why each change helps.
-- Report skipped or failed checks explicitly.
-- Self-review for scope, UI, i18n, API/store, type-safety, money, and legacy-rule violations.
+- Run checks proportional to the change. Prefer targeted tests/lint first; use `npm run verify` for cross-layer or high-risk behavior.
+- Do not claim a test, lint, typecheck, or build passed unless it was run successfully.
+- Report skipped, unavailable, pre-existing, and failed checks explicitly.
+- Self-review scope, architecture, UI/a11y/i18n, API/store flow, type safety, money/offline behavior, and related legacy cleanup.
+- Summarize exact files changed and the outcome without repeating the full plan.
