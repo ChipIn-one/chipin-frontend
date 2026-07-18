@@ -6,6 +6,7 @@ import styled from 'styled-components';
 import {
     Box,
     Button,
+    Card,
     Dialog,
     Flex,
     IconButton,
@@ -15,13 +16,13 @@ import {
     TextField,
 } from '@radix-ui/themes';
 
-import { themeColor } from 'helpers/colors';
 import { isInputCloseToLimit } from 'helpers/text';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupAdding, selectGroupUpdating } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
 import BaseModal from '../BaseModal';
+import { MODAL_SIZES } from '../constants';
 
 import {
     ALL_GROUP_ICONS,
@@ -40,15 +41,6 @@ interface Props {
 
 const FieldLabel = styled(Text)`
     text-transform: uppercase;
-`;
-
-const CategoryButton = styled(Button)`
-    flex-shrink: 0;
-`;
-
-const IconPanel = styled(Box)`
-    border: 1px solid ${themeColor('gray6')};
-    border-radius: var(--radius-5);
 `;
 
 const IconsGrid = styled.div`
@@ -175,9 +167,14 @@ const GroupForm = ({ type, onClose }: FormProps) => {
                 .catch(error => {
                     toast.error(t('toasts:group.updateError'));
                     console.error('Error updating group:', error);
-                });
+            });
         }
     };
+    const inputNameCounter = [inputName.length, GROUP_NAME_MAX_LENGTH].join('/');
+    const inputDescriptionCounter = [
+        inputDescription.length,
+        GROUP_DESCRIPTION_MAX_LENGTH,
+    ].join('/');
 
     return (
         <Flex direction="column" gap="4">
@@ -188,7 +185,7 @@ const GroupForm = ({ type, onClose }: FormProps) => {
                     </FieldLabel>
                     <Box display={isInputNameCloseToLimit ? 'block' : 'none'}>
                         <Text size="2" color="gray">
-                            {inputName.length}/{GROUP_NAME_MAX_LENGTH}
+                            {inputNameCounter}
                         </Text>
                     </Box>
                 </Flex>
@@ -225,7 +222,7 @@ const GroupForm = ({ type, onClose }: FormProps) => {
                     </Flex>
                     <Box display={isInputDescriptionCloseToLimit ? 'block' : 'none'}>
                         <Text size="2" color="gray">
-                            {inputDescription.length}/{GROUP_DESCRIPTION_MAX_LENGTH}
+                            {inputDescriptionCounter}
                         </Text>
                     </Box>
                 </Flex>
@@ -252,22 +249,25 @@ const GroupForm = ({ type, onClose }: FormProps) => {
                 <ScrollArea scrollbars="horizontal" type="always">
                     <Flex gap="2" mb="3">
                         {GROUP_ICON_CATEGORIES.map(category => (
-                            <CategoryButton
-                                key={category.key}
-                                type="button"
-                                size="2"
-                                radius="full"
-                                variant={selectedCategory === category.key ? 'solid' : 'surface'}
-                                color={selectedCategory === category.key ? 'jade' : 'gray'}
-                                onClick={() => onSelectCategory(category.key)}
-                            >
-                                {t(category.labelKey)}
-                            </CategoryButton>
+                            <Box key={category.key} flexShrink="0">
+                                <Button
+                                    type="button"
+                                    size="2"
+                                    radius="full"
+                                    variant={
+                                        selectedCategory === category.key ? 'solid' : 'surface'
+                                    }
+                                    color={selectedCategory === category.key ? 'jade' : 'gray'}
+                                    onClick={() => onSelectCategory(category.key)}
+                                >
+                                    {t(category.labelKey)}
+                                </Button>
+                            </Box>
                         ))}
                     </Flex>
                 </ScrollArea>
 
-                <IconPanel p="2">
+                <Card size="1" variant="surface">
                     <IconsGrid>
                         {selectedCategoryIcons.map(icon => {
                             const isSelected = selectedEmoji === icon;
@@ -287,7 +287,7 @@ const GroupForm = ({ type, onClose }: FormProps) => {
                             );
                         })}
                     </IconsGrid>
-                </IconPanel>
+                </Card>
             </Flex>
 
             <Flex justify="end" gap="3">
@@ -330,7 +330,7 @@ const CreateUpdateGroupModal = ({ children, type }: Props) => {
             setIsOpened={setIsModalOpened}
             triggerElement={children}
             title={isCreateMode ? t('modal.titleCreate') : t('modal.titleEdit')}
-            maxWidth="400px"
+            maxWidth={MODAL_SIZES.default}
             content={
                 <GroupForm
                     key={String(formKey)}

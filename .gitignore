@@ -9,11 +9,14 @@ lerna-debug.log*
 
 node_modules
 dist
+docs/superpowers/*
 dist-ssr
 dev-dist
 *.local
 
 # Editor directories and files
+.codex/*
+.superpowers/*
 .vscode/*
 !.vscode/extensions.json
 .idea

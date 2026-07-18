@@ -1,6 +1,8 @@
 import { LucideX } from 'lucide-react';
 
-import { Dialog, Flex, IconButton, Separator, Text, VisuallyHidden } from '@radix-ui/themes';
+import { Dialog, Flex, IconButton, Separator, Text } from '@radix-ui/themes';
+
+import { MODAL_SIZES, type ModalSize } from './constants';
 
 // Mobile fullscreen styles live in src/styles/radixStylesOverwrite.css
 // (the project-wide designated file for Radix style overrides).
@@ -10,8 +12,7 @@ interface Props {
     content: React.ReactNode;
     title: string;
     description?: string;
-    accessibleDescription?: string;
-    maxWidth?: string;
+    maxWidth?: ModalSize;
     isOpened?: boolean;
     setIsOpened?: (isOpen: boolean) => void;
 }
@@ -20,8 +21,7 @@ const BaseModal = ({
     triggerElement,
     title,
     description,
-    accessibleDescription,
-    maxWidth = '360px',
+    maxWidth = MODAL_SIZES.default,
     content,
     isOpened,
     setIsOpened,
@@ -46,11 +46,6 @@ const BaseModal = ({
                         </Dialog.Close>
                     </Flex>
                 </Dialog.Title>
-                {!description && accessibleDescription && (
-                    <VisuallyHidden>
-                        <Dialog.Description>{accessibleDescription}</Dialog.Description>
-                    </VisuallyHidden>
-                )}
                 <Separator orientation="horizontal" size="4" />
 
                 <Flex direction="column" mt="6" className="base-modal-body">

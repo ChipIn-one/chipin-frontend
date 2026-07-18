@@ -31,6 +31,7 @@
         "amount": "Valor",
         "group": "Grupo",
         "category": "Categoria",
+        "currency": "Moeda",
         "paidBy": "Pago por",
         "groupName": "Nome do grupo",
         "icon": "Ícone",
