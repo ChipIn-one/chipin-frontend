@@ -90,21 +90,180 @@ export default tseslint.config(
                     allowedStrings: [' ', '-', '+'],
                 },
             ],
+
+            /* ===============================
+               MIGRATION GUARDRAILS
+               =============================== */
+
+            // Legacy violations remain warnings until their baseline is cleared.
+            'no-restricted-syntax': [
+                'warn',
+                {
+                    selector:
+                        'FunctionDeclaration[async=true]:not(:has(AwaitExpression)):not(:has(ForOfStatement[await=true]))',
+                    message: 'Use a returned Promise chain instead of async/await.',
+                },
+                {
+                    selector:
+                        'FunctionExpression[async=true]:not(:has(AwaitExpression)):not(:has(ForOfStatement[await=true]))',
+                    message: 'Use a returned Promise chain instead of async/await.',
+                },
+                {
+                    selector:
+                        'ArrowFunctionExpression[async=true]:not(:has(AwaitExpression)):not(:has(ForOfStatement[await=true]))',
+                    message: 'Use a returned Promise chain instead of async/await.',
+                },
+                {
+                    selector: 'AwaitExpression',
+                    message: 'Use .then(), .catch(), and .finally() instead of await.',
+                },
+                {
+                    selector: 'ForOfStatement[await=true]',
+                    message: 'Use a Promise-chain iteration instead of for await.',
+                },
+            ],
+            '@typescript-eslint/naming-convention': [
+                'warn',
+                {
+                    selector: 'default',
+                    format: null,
+                    custom: {
+                        regex: '^handle[A-Z0-9_]',
+                        match: false,
+                    },
+                },
+            ],
+            'no-restricted-globals': [
+                'error',
+                {
+                    name: 'localStorage',
+                    message: 'Use the typed helper in helpers/localStorage.ts.',
+                },
+            ],
+            'no-restricted-imports': [
+                'error',
+                {
+                    paths: [
+                        {
+                            name: 'axios',
+                            message: 'Use the configured Axios instance from src/api.',
+                        },
+                        {
+                            name: 'bignumber.js',
+                            message: 'BigNumber is restricted to the existing legacy number layer.',
+                        },
+                    ],
+                },
+            ],
         },
     },
 
     /* ===============================
-       TECHNICAL FILES
+       IMPORT AND BROWSER BOUNDARIES
        =============================== */
     {
+        files: ['src/api/chipin.instance.ts', 'src/api/chipin.interceptors.ts'],
+        rules: {
+            'no-restricted-imports': [
+                'error',
+                {
+                    paths: [
+                        {
+                            name: 'bignumber.js',
+                            message: 'BigNumber is restricted to the existing legacy number layer.',
+                        },
+                    ],
+                },
+            ],
+        },
+    },
+    {
         files: [
-            '**/api/**/*.{ts,js}',
-            '**/constants/**/*.{ts,js}',
-            '**/helpers/**/*.{ts,js}',
-            '**/*.config.{ts,js}',
+            'src/pages/**/*.{ts,tsx}',
+            'src/features/**/*.{ts,tsx}',
+            'src/components/**/*.{ts,tsx}',
+            'src/basics/**/*.{ts,tsx}',
         ],
         rules: {
-            'no-restricted-syntax': 'off',
+            'no-restricted-imports': [
+                'error',
+                {
+                    paths: [
+                        {
+                            name: 'axios',
+                            message: 'UI must call stores or hooks, not Axios.',
+                        },
+                        {
+                            name: 'bignumber.js',
+                            message: 'BigNumber is restricted to the existing legacy number layer.',
+                        },
+                    ],
+                    patterns: [
+                        {
+                            regex: '^(?:api/|(?:\\.\\.?/)+(?:[^/]+/)*api/)(?!.*\\.types(?:\\.[cm]?[jt]sx?)?$)',
+                            allowTypeImports: true,
+                            message: 'UI must call a store action instead of a runtime API module.',
+                        },
+                    ],
+                },
+            ],
+        },
+    },
+    {
+        files: ['src/helpers/numbers.ts', 'src/basics/numbers/**/*.{ts,tsx}'],
+        rules: {
+            'no-restricted-imports': [
+                'error',
+                {
+                    paths: [
+                        {
+                            name: 'axios',
+                            message: 'The number layer cannot call Axios.',
+                        },
+                    ],
+                    patterns: [
+                        {
+                            regex: '^(?:api/|(?:\\.\\.?/)+(?:[^/]+/)*api/)(?!.*\\.types(?:\\.[cm]?[jt]sx?)?$)',
+                            allowTypeImports: true,
+                            message: 'The number layer cannot call runtime API modules.',
+                        },
+                    ],
+                },
+            ],
+        },
+    },
+    {
+        // Existing auth transport helper narrows Axios errors; migrate it with the auth flow.
+        files: ['src/helpers/authSession.ts'],
+        rules: {
+            'no-restricted-imports': [
+                'error',
+                {
+                    paths: [
+                        {
+                            name: 'bignumber.js',
+                            message: 'BigNumber is restricted to the existing legacy number layer.',
+                        },
+                    ],
+                },
+            ],
+            '@typescript-eslint/no-restricted-imports': [
+                'warn',
+                {
+                    paths: [
+                        {
+                            name: 'axios',
+                            message: 'Legacy exception: do not expand Axios usage in this helper.',
+                        },
+                    ],
+                },
+            ],
+        },
+    },
+    {
+        files: ['src/helpers/localStorage.ts'],
+        rules: {
+            'no-restricted-globals': 'off',
         },
     },
 );
