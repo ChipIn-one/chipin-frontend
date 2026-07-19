@@ -5,7 +5,7 @@ import styled from 'styled-components';
 
 import { Flex, IconButton, Text } from '@radix-ui/themes';
 
-import { User } from 'api/chipin.types';
+import type { GroupUser } from 'api/chipin.types';
 import { themeColor } from 'helpers/colors';
 
 const ProgressBar = styled.div`
@@ -26,7 +26,7 @@ const ProgressFill = styled.div<{ $percent: number; $isValid: boolean }>`
 `;
 
 interface Props {
-    members: User[];
+    members: GroupUser[];
     percentShares: Record<string, string>;
     onChangePercent: (userId: string, delta: number) => void;
     totalAmount: string;

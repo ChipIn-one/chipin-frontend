@@ -11,6 +11,10 @@ Apply these rules to new and touched code. Refactor directly related legacy code
 - Prefer `satisfies` when validating an object without widening its inferred type.
 - Use `import type` for type-only dependencies.
 - Model mutually exclusive states with discriminated unions instead of several loosely related booleans.
+- Reserve `Api*Request` and `Api*Response` names for wire contracts. Pages, features, components,
+  and basics import domain/core names such as `Group` and `GroupUser`, never `Api*` names.
+- Export reusable semantic domain types from the core types module. Do not expose indexed-access
+  expressions such as `Group['members'][number]['user']` in component props or UI imports.
 
 ## Naming
 

@@ -4,6 +4,7 @@ import type {
     ApiFriendBalance,
     ApiFriendUser,
     ApiGroupResponse,
+    ApiGroupUserResponse,
     ApiUserResponse,
     ApiUserRole,
     ApiUserSettings,
@@ -62,10 +63,10 @@ export type KnownUser = ApiFriend;
 
 /** Group — same shape as the API response. */
 export type Group = ApiGroupResponse;
+export type GroupUser = ApiGroupUserResponse;
 
-/** Dashboard response with parsed groups and balances. */
+/** Dashboard response with parsed balances and activity. */
 export type Dashboard = {
-    groups: Group[];
     balances: BalancesMap;
     activity: ApiActivityItemsResponse;
 };

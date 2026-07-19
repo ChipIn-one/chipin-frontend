@@ -60,73 +60,77 @@ export const exchangeApiGoogleOAuthCode = async (
 };
 
 export const fetchApiUserGroups = (): Promise<Group[]> => {
-    return apiInstance.get(`/groups`).then(result => result.data);
+    return apiInstance.get<Group[]>('/groups').then(result => result.data);
 };
 
 export const fetchApiUserGroupById = (groupId: string): Promise<Group> => {
-    return apiInstance.get(`/groups/${groupId}`).then(result => result.data);
+    return apiInstance.get<Group>(`/groups/${groupId}`).then(result => result.data);
 };
 
-export const createApiGroup = async ({
+export const createApiGroup = ({
     groupName,
     groupDescription,
     groupEmoji,
 }: CreateGroupParams): Promise<Group> => {
-    const response = await apiInstance.post('/groups', {
-        name: groupName,
-        ...(groupEmoji && { emoji: groupEmoji }),
-        ...(groupDescription && { description: groupDescription }),
-    });
-
-    return response.data;
+    return apiInstance
+        .post<Group>('/groups', {
+            name: groupName,
+            ...(groupEmoji && { emoji: groupEmoji }),
+            ...(groupDescription && { description: groupDescription }),
+        })
+        .then(response => response.data);
 };
 
-export const updateApiGroup = async ({
+export const updateApiGroup = ({
     groupId,
     groupName,
     groupDescription,
     groupEmoji,
 }: UpdateGroupParams): Promise<Group> => {
-    const response = await apiInstance.patch(`/groups/${groupId}`, {
-        name: groupName,
-        ...(groupEmoji && { emoji: groupEmoji }),
-        ...(groupDescription && { description: groupDescription }),
-    });
-
-    return response.data;
+    return apiInstance
+        .patch<Group>(`/groups/${groupId}`, {
+            name: groupName,
+            ...(groupEmoji && { emoji: groupEmoji }),
+            ...(groupDescription && { description: groupDescription }),
+        })
+        .then(response => response.data);
 };
 
-export const removeApiGroup = async ({
+export const removeApiGroup = ({
     groupId,
 }: RemoveGroupParams): Promise<ApiRemoveGroupResponse> => {
-    const response = await apiInstance.delete(`/groups/${groupId}`);
-
-    return response.data;
+    return apiInstance
+        .delete<ApiRemoveGroupResponse>(`/groups/${groupId}`)
+        .then(response => response.data);
 };
 
-export const leaveApiGroup = async ({ groupId, newOwnerId }: LeaveGroupParams): Promise<void> => {
-    await apiInstance.post(`/groups/${groupId}/leave`, {
-        ...(newOwnerId && { newOwnerId }),
-    });
+export const leaveApiGroup = ({ groupId, newOwnerId }: LeaveGroupParams): Promise<void> => {
+    return apiInstance
+        .post<void>(`/groups/${groupId}/leave`, {
+            ...(newOwnerId && { newOwnerId }),
+        })
+        .then(() => undefined);
 };
 
-export const kickApiGroupMember = async ({
+export const kickApiGroupMember = ({
     groupId,
     userId,
 }: KickGroupMemberParams): Promise<void> => {
-    await apiInstance.post(`/groups/${groupId}/members/${userId}/kick`);
+    return apiInstance
+        .post<void>(`/groups/${groupId}/members/${userId}/kick`)
+        .then(() => undefined);
 };
 
-export const inviteApiUserToGroup = async ({
+export const inviteApiUserToGroup = ({
     inviteToken,
 }: InviteToGroupParams): Promise<Group> => {
-    const response = await apiInstance.post(`/groups/invite/${inviteToken}`);
-
-    return response.data;
+    return apiInstance
+        .post<Group>(`/groups/invite/${inviteToken}`)
+        .then(response => response.data);
 };
 
 export const fetchApiDashboard = (): Promise<Dashboard> => {
-    return apiInstance.get(`/dashboard`).then(result => result.data);
+    return apiInstance.get<Dashboard>('/dashboard').then(result => result.data);
 };
 
 export const fetchApiCurrencyRates = (): Promise<ApiCurrencyRatesResponse> => {

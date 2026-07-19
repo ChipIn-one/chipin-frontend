@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Box, Tabs } from '@radix-ui/themes';
 
-import { Group } from 'api/chipin.types';
+import type { Group } from 'api/chipin.types';
 import { selectGroupDataLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
@@ -19,7 +19,7 @@ interface Props {
 const GroupTabsContent = ({ group }: Props) => {
     const { t } = useTranslation('group');
     const isGroupDataLoading = useLoadingStore(selectGroupDataLoading);
-    const activityItems = group.activity?.items ?? [];
+    const activityItems = group.recentActivities;
 
     return (
         <Box mt="4">

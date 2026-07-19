@@ -1,15 +1,15 @@
+import { Amount, UserAvatar } from 'basics';
 import { LucideMinus, LucidePlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Flex, IconButton, Text } from '@radix-ui/themes';
 
-import { User } from 'api/chipin.types';
-import { Amount, UserAvatar } from 'basics';
+import type { GroupUser } from 'api/chipin.types';
 
 type AssignedState = 'exact' | 'under' | 'over';
 
 interface Props {
-    members: User[];
+    members: GroupUser[];
     amountShares: Record<string, string>;
     onChangeAmount: (userId: string, delta: number) => void;
     totalAmount: string;

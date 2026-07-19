@@ -2,10 +2,10 @@ import { LucideUsers } from 'lucide-react';
 
 import { Avatar, Text } from '@radix-ui/themes';
 
-import { Group } from 'api/chipin.types';
+import type { Group } from 'api/chipin.types';
 
 interface Props {
-    group: Group;
+    group: Pick<Group, 'coverUrl' | 'emoji' | 'name'>;
     variant?: React.ComponentProps<typeof Avatar>['variant'];
     size?: React.ComponentProps<typeof Avatar>['size'];
     color?: React.ComponentProps<typeof Avatar>['color'];

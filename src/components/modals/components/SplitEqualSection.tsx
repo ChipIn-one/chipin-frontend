@@ -4,10 +4,10 @@ import { useTranslation } from 'react-i18next';
 
 import { Flex, Text } from '@radix-ui/themes';
 
-import { User } from 'api/chipin.types';
+import type { GroupUser } from 'api/chipin.types';
 
 interface Props {
-    members: User[];
+    members: GroupUser[];
     totalAmount: string;
     currency: string;
 }

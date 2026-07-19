@@ -2,7 +2,7 @@ import styled from 'styled-components';
 
 import { Avatar, Flex, Text } from '@radix-ui/themes';
 
-import { User } from 'api/chipin.types';
+import type { GroupUser } from 'api/chipin.types';
 
 export const AvatarWrapper = styled.div<{ index: number }>`
     position: relative;
@@ -10,7 +10,7 @@ export const AvatarWrapper = styled.div<{ index: number }>`
 `;
 
 interface Props {
-    members: User[];
+    members: GroupUser[];
     max?: number;
     size?: React.ComponentProps<typeof Avatar>['size'];
 }

@@ -47,6 +47,11 @@ Do not add `Api`, `Store`, `Effect`, or `Action` suffixes merely to distinguish 
 - API input, wire request, wire response, and domain types are distinct only when their shapes or invariants differ.
 - Use `Input` for client-facing input, `Request`/`Response` for wire DTOs, and an unsuffixed name for the domain type.
 - Avoid no-op mappers when response and domain are intentionally identical.
+- When a wire contract is smaller than another response, declare its exact fields explicitly. Do
+  not derive it with `Pick` from a broader response unless the backend contract guarantees that
+  they are the same resource representation.
+- When a wire response and domain shape are identical, export a semantic alias from the core types
+  module and keep the `Api*Response` name below the UI boundary.
 
 ```ts
 export const fetchGroups = (signal?: AbortSignal): Promise<GroupResponse[]> => {

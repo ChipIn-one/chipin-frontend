@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, Flex } from '@radix-ui/themes';
 
-import { Group } from 'api/chipin.types';
+import type { Group } from 'api/chipin.types';
 import { selectGroupBalances } from 'store/groupsSelectors';
-import { selectDashboardFetched } from 'store/loadingSelectors';
+import { selectDashboardFetched, selectGroupListFetched } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
 import { EmptyState } from 'basics/empty-states';
@@ -23,7 +23,7 @@ interface Props {
 
 const filterGroups = (groups: Group[], filter: GroupFilter): Group[] => {
     return groups.filter(group => {
-        const balances = selectGroupBalances(group);
+        const balances = Object.values(selectGroupBalances(group));
 
         if (filter === 'all') {
             return balances.some(entry => entry.netBalance !== 0);
@@ -42,11 +42,12 @@ const filterGroups = (groups: Group[], filter: GroupFilter): Group[] => {
 };
 
 const GroupsCards: React.FC<Props> = ({ groups, selectedGroupId }) => {
+    const isGroupListFetched = useLoadingStore(selectGroupListFetched);
     const isDashboardFetched = useLoadingStore(selectDashboardFetched);
     const [activeFilter, setActiveFilter] = useState<GroupFilter>('all');
     const { t } = useTranslation('dashboard');
 
-    if (!isDashboardFetched) {
+    if (!isGroupListFetched || !isDashboardFetched) {
         return <GroupsCardsSkeleton />;
     }
 

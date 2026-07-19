@@ -13,7 +13,7 @@ import styled from 'styled-components';
 
 import { Avatar, Badge, Box, Button, Card, Flex, Separator, Switch, Text } from '@radix-ui/themes';
 
-import { Group } from 'api/chipin.types';
+import type { Group } from 'api/chipin.types';
 import { useGroupInvite } from 'hooks/pwaHooks';
 import { useUsersStore } from 'store/usersStore';
 
@@ -197,24 +197,24 @@ const GroupSettingsTab = ({ group }: Props) => {
                 </Text>
 
                 {group.members.map(member => {
-                    const isCurrentUser = member.id === user?.id;
-                    const isOwner = member.id === group.creator.id;
+                    const isCurrentUser = member.user.id === user?.id;
+                    const isOwner = member.user.id === group.creator.id;
 
                     return (
-                        <Card key={member.id} size="2">
+                        <Card key={member.user.id} size="2">
                             <Flex align="center" gap="3" justify="between">
                                 <Flex align="center" gap="3">
                                     <Avatar
                                         size="3"
                                         radius="full"
-                                        src={member.picture || ''}
-                                        alt={member.displayName}
-                                        fallback={member.displayName?.[0]}
+                                        src={member.user.picture || ''}
+                                        alt={member.user.displayName}
+                                        fallback={member.user.displayName?.[0]}
                                     />
                                     <Flex direction="column" gap="1">
                                         <Flex align="center" gap="2" wrap="wrap">
                                             <Text weight="medium" size="2">
-                                                {member.displayName}
+                                                {member.user.displayName}
                                             </Text>
                                             <GroupRoleBadge isOwner={isOwner} />
                                             {isCurrentUser && (
@@ -224,12 +224,12 @@ const GroupSettingsTab = ({ group }: Props) => {
                                             )}
                                         </Flex>
                                         <Text size="1" color="gray" truncate>
-                                            {member.email}
+                                            {member.user.email}
                                         </Text>
                                     </Flex>
                                 </Flex>
                                 {isUserOwner && !isCurrentUser && (
-                                    <KickGroupMemberModal member={member}>
+                                    <KickGroupMemberModal member={member.user}>
                                         <Button variant="soft" color="orange" size="1">
                                             <LucideUserMinus size={13} />
                                             {t('common:buttons.kickMember')}

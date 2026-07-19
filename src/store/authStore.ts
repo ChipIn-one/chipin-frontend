@@ -47,27 +47,26 @@ export const useAuthStore = create<AuthStore>(set => ({
         set({ status: 'unauthenticated', unauthReason: reason, isNewUser: null });
     },
 
-    exchangeGoogleOAuthCode: async code => {
-        try {
-            const {
-                token,
-                refresh_token: refreshToken,
-                is_new_user: isNewUser,
-            } = await exchangeApiGoogleOAuthCode(code);
-            saveAuthTokens({ accessToken: token, refreshToken });
-            set({ status: 'authenticated', unauthReason: undefined, isNewUser });
+    exchangeGoogleOAuthCode: code => {
+        return exchangeApiGoogleOAuthCode(code)
+            .then(({ token, refresh_token: refreshToken, is_new_user: isNewUser }) => {
+                saveAuthTokens({ accessToken: token, refreshToken });
+                set({ status: 'authenticated', unauthReason: undefined, isNewUser });
 
-            const { fetchSetDashboardData } = useDashboardStore.getState();
-            const { fetchSetUser, fetchSetFriends } = useUsersStore.getState();
+                const { fetchSetDashboardData } = useDashboardStore.getState();
+                const { fetchSetGroups } = useGroupsStore.getState();
+                const { fetchSetUser, fetchSetFriends } = useUsersStore.getState();
 
-            fetchSetDashboardData();
-            fetchSetUser();
-            fetchSetFriends();
-        } catch (error: unknown) {
-            resetAuthScopedStores();
-            set({ status: 'unauthenticated', unauthReason: 'error', isNewUser: null });
-            throw error;
-        }
+                fetchSetDashboardData();
+                fetchSetGroups().catch(() => undefined);
+                fetchSetUser();
+                fetchSetFriends();
+            })
+            .catch((error: unknown) => {
+                resetAuthScopedStores();
+                set({ status: 'unauthenticated', unauthReason: 'error', isNewUser: null });
+                return Promise.reject(error);
+            });
     },
 
     refreshAuthTokens: () => {
