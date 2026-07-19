@@ -78,6 +78,9 @@
     "copyTargets": {
         "inviteLink": "ссылку-приглашение"
     },
+    "media": {
+        "noImage": "Нет изображения"
+    },
     "roles": {
         "owner": "Владелец"
     },

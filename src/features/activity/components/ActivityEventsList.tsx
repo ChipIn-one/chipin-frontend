@@ -30,14 +30,14 @@ const ActivityEventsList = ({ events, emptyState = <NoActivityEmptyState />, chi
         return emptyState;
     }
 
-    let previousDateKey: string | null = null;
-
     return (
         <Flex direction="column" gap="2">
-            {events.map(event => {
+            {events.map((event, index) => {
                 const dateKey = getActivityDateKey(event.createdAt);
-                const shouldRenderDivider = dateKey !== previousDateKey;
-                previousDateKey = dateKey;
+                const previousEvent = events[index - 1];
+                const shouldRenderDivider =
+                    previousEvent === undefined ||
+                    dateKey !== getActivityDateKey(previousEvent.createdAt);
 
                 return (
                     <Fragment key={event.id}>

@@ -78,6 +78,9 @@
     "copyTargets": {
         "inviteLink": "enlace de invitación"
     },
+    "media": {
+        "noImage": "Sin imagen"
+    },
     "roles": {
         "owner": "Propietario"
     },

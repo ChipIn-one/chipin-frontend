@@ -78,6 +78,9 @@
     "copyTargets": {
         "inviteLink": "link de convite"
     },
+    "media": {
+        "noImage": "Sem imagem"
+    },
     "roles": {
         "owner": "Dono"
     },
