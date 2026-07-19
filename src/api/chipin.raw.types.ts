@@ -47,22 +47,36 @@ export interface ApiUserResponse {
     updatedAt: number;
 }
 
+export interface ApiGroupUserResponse {
+    id: string;
+    email: string;
+    displayName: string;
+    firstName: string | null;
+    lastName: string | null;
+    picture: string | null;
+    createdAt: number;
+    updatedAt: number;
+}
+
+export interface ApiGroupMemberResponse {
+    user: ApiGroupUserResponse;
+    balancesByCurrency: BalancesMap;
+}
+
 export interface ApiGroupResponse {
     id: string;
     name: string;
+    inviteToken: string;
     description: string | null;
-    emoji: string | null;
-    coverUrl: string | null;
+    creator: ApiGroupUserResponse;
+    members: ApiGroupMemberResponse[];
     createdAt: number;
     updatedAt: number;
-    // TODO TO BASE API USER
-    inviteToken: string;
-    creator: ApiUserResponse;
-    members: ApiUserResponse[];
+    emoji: string | null;
+    coverUrl: string | null;
     role: 'OWNER' | 'MEMBER';
     status: 'ACTIVE' | 'ARCHIVED';
-    balances: BalancesMap;
-    activity?: ApiActivityItemsResponse;
+    recentActivities: AppEvent[];
 }
 
 export interface ApiRemoveGroupResponse {
@@ -70,7 +84,6 @@ export interface ApiRemoveGroupResponse {
 }
 
 export interface ApiDashboardResponse {
-    groups: ApiGroupResponse[];
     balances: BalancesMap;
     activity: ApiActivityItemsResponse;
 }

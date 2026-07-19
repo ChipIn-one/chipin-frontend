@@ -8,6 +8,7 @@ export interface LoadingStore {
         signOut: LoadingState;
     };
     group: {
+        list: LoadingState;
         data: LoadingState;
         add: LoadingState;
         update: LoadingState;
@@ -52,6 +53,7 @@ const initialLoadingStore: LoadingSlices = {
     expense: { add: 'initial' },
     settlement: { add: 'initial' },
     group: {
+        list: 'initial',
         data: 'initial',
         add: 'initial',
         join: 'initial',

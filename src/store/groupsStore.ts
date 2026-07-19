@@ -5,17 +5,18 @@ import { create } from 'zustand';
 import {
     createApiGroup,
     fetchApiUserGroupById,
+    fetchApiUserGroups,
     inviteApiUserToGroup,
     kickApiGroupMember,
     leaveApiGroup,
     removeApiGroup,
     updateApiGroup,
 } from 'api/chipin';
-import { BalanceEntry } from 'api/chipin.raw.types';
-import { Group } from 'api/chipin.types';
+import type { BalanceEntry } from 'api/chipin.raw.types';
+import type { Group } from 'api/chipin.types';
 
 import { useDashboardStore } from './dashboardStore';
-import { calcGroupSummary } from './groupsSelectors';
+import { calcGroupSummary, selectGroupBalances } from './groupsSelectors';
 import { useLoadingStore } from './loadingStore';
 import { selectUserCurrency } from './usersSelectors';
 import { useUsersStore } from './usersStore';
@@ -29,10 +30,10 @@ export interface GroupsStore {
     owedTotalInBase: number | null;
     owingTotalInBase: number | null;
 
-    setGroups: (groups: Group[]) => void;
-    setSelectedGroup: (group: Group) => void;
     setInitialGroupsStore: () => void;
-    fetchSetGroupById: (groupId: string | undefined) => void;
+    setSelectedGroup: (group: Group) => void;
+    fetchSetGroups: () => Promise<Group[]>;
+    fetchSetGroupById: (groupId: string | undefined) => Promise<Group | void>;
     createGroup: (params: {
         groupName: string;
         groupDescription?: string;
@@ -71,59 +72,66 @@ const GROUP_SUMMARY_RESET = {
 export const useGroupsStore = create<GroupsStore>((set, get) => ({
     ...initialGroupsStore,
 
-    setGroups: groups => {
-        set({ groups });
+    setInitialGroupsStore: () => {
+        set(initialGroupsStore);
     },
     setSelectedGroup: group => {
         const { base, rates } = useDashboardStore.getState().currencies;
         const defaultCurrency = selectUserCurrency(useUsersStore.getState());
         set({
             selectedGroup: group,
-            ...calcGroupSummary(group.balances, base, rates, defaultCurrency),
+            ...calcGroupSummary(
+                selectGroupBalances(group),
+                base,
+                rates,
+                defaultCurrency,
+            ),
         });
     },
-    setInitialGroupsStore: () => {
-        set(initialGroupsStore);
+    fetchSetGroups: () => {
+        const { setLoading } = useLoadingStore.getState();
+        setLoading('group', 'list', 'loading');
+
+        return fetchApiUserGroups()
+            .then(groups => {
+                set({ groups });
+                return groups;
+            })
+            .catch((error: unknown) => {
+                console.error('Error fetching user groups:', error);
+                return Promise.reject(error);
+            })
+            .finally(() => {
+                setLoading('group', 'list', 'fetched');
+            });
     },
     fetchSetGroupById: groupId => {
-        const { groups } = get();
-
-        // Fallback to join if user group is already in the store
-        const existingGroup = groups.find(group => group.id === groupId);
-        if (existingGroup) {
-            const { base, rates } = useDashboardStore.getState().currencies;
-            const defaultCurrency = selectUserCurrency(useUsersStore.getState());
-            set({
-                selectedGroup: existingGroup,
-                ...calcGroupSummary(existingGroup.balances, base, rates, defaultCurrency),
-            });
-            return;
-        }
-
         if (!groupId) {
             toast.error(i18n.t('toasts:group.invalidGroupId'));
-            return;
+            return Promise.resolve();
         }
+
+        const selectedGroup = get().selectedGroup;
+        if (selectedGroup?.id === groupId) {
+            return Promise.resolve(selectedGroup);
+        }
+
+        const cachedGroup = get().groups.find(group => group.id === groupId);
+        if (cachedGroup) {
+            get().setSelectedGroup(cachedGroup);
+            return Promise.resolve(cachedGroup);
+        }
+
         useLoadingStore.getState().setLoading('group', 'data', 'loading');
 
-        fetchApiUserGroupById(groupId)
+        return fetchApiUserGroupById(groupId)
             .then(groupFromApi => {
-                if (groups.find(group => group.id === groupId)) {
-                    const updatedGroups = groups.map(group =>
-                        group.id === groupId ? groupFromApi : group,
-                    );
-                    set({ groups: updatedGroups });
-                }
-                const { base, rates } = useDashboardStore.getState().currencies;
-                const defaultCurrency = selectUserCurrency(useUsersStore.getState());
-
-                set({
-                    selectedGroup: groupFromApi,
-                    ...calcGroupSummary(groupFromApi.balances, base, rates, defaultCurrency),
-                });
+                get().setSelectedGroup(groupFromApi);
+                return groupFromApi;
             })
-            .catch(error => {
+            .catch((error: unknown) => {
                 console.error('Error fetching user groups:', error);
+                return Promise.reject(error);
             })
             .finally(() => {
                 useLoadingStore.getState().setLoading('group', 'data', 'fetched');
@@ -142,7 +150,12 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 set({
                     groups: [...groups, newGroup],
                     selectedGroup: newGroup,
-                    ...calcGroupSummary(newGroup.balances, base, rates, defaultCurrency),
+                    ...calcGroupSummary(
+                        selectGroupBalances(newGroup),
+                        base,
+                        rates,
+                        defaultCurrency,
+                    ),
                 });
                 return newGroup;
             })
@@ -168,7 +181,6 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         })
             .then(updatedGroup => {
                 const { groups } = get();
-
                 set({
                     groups: groups.map(group =>
                         group.id === updatedGroup.id ? updatedGroup : group,
@@ -242,7 +254,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             return Promise.reject(new Error('No selected group'));
         }
 
-        const kickedMember = selectedGroup.members.find(member => member.id === userId);
+        const kickedMember = selectedGroup.members.find(member => member.user.id === userId);
 
         if (!kickedMember) {
             return Promise.reject(new Error('No member found to kick'));
@@ -256,7 +268,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 const { groups } = get();
                 const updatedSelectedGroup: Group = {
                     ...selectedGroup,
-                    members: selectedGroup.members.filter(member => member.id !== userId),
+                    members: selectedGroup.members.filter(member => member.user.id !== userId),
                 };
 
                 const { base, rates } = useDashboardStore.getState().currencies;
@@ -267,14 +279,14 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     ),
                     selectedGroup: updatedSelectedGroup,
                     ...calcGroupSummary(
-                        updatedSelectedGroup.balances,
+                        selectGroupBalances(updatedSelectedGroup),
                         base,
                         rates,
                         defaultCurrency,
                     ),
                 });
 
-                return kickedMember.displayName;
+                return kickedMember.user.displayName;
             })
             .finally(() => {
                 setLoading('group', 'kick', 'fetched');
@@ -291,7 +303,12 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 set({
                     groups: [...groups, joinedGroup],
                     selectedGroup: joinedGroup,
-                    ...calcGroupSummary(joinedGroup.balances, base, rates, defaultCurrency),
+                    ...calcGroupSummary(
+                        selectGroupBalances(joinedGroup),
+                        base,
+                        rates,
+                        defaultCurrency,
+                    ),
                 });
                 return joinedGroup;
             })
@@ -311,7 +328,12 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
 
             const { base, rates } = useDashboardStore.getState().currencies;
 
-            return calcGroupSummary(state.selectedGroup.balances, base, rates, defaultCurrency);
+            return calcGroupSummary(
+                selectGroupBalances(state.selectedGroup),
+                base,
+                rates,
+                defaultCurrency,
+            );
         });
     },
 }));

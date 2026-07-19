@@ -31,13 +31,13 @@ const LeaveGroupModal = ({ children }: Props) => {
     const [newOwnerId, setNewOwnerId] = useState<string>('');
 
     const isOwner = !!user && !!selectedGroup && selectedGroup.creator.id === user.id;
-    const otherMembers = selectedGroup?.members.filter(m => m.id !== user?.id) ?? [];
+    const otherMembers = selectedGroup?.members.filter(member => member.user.id !== user?.id) ?? [];
     const mustTransfer = isOwner && otherMembers.length > 0;
     const canConfirm = !mustTransfer || !!newOwnerId;
     const ownerItems: SelectItem[] = otherMembers.map(member => {
         return {
-            value: member.id,
-            label: member.displayName,
+            value: member.user.id,
+            label: member.user.displayName,
         };
     });
 
@@ -86,7 +86,7 @@ const LeaveGroupModal = ({ children }: Props) => {
                             placeholder={t('group:leaveModal.newOwnerPlaceholder')}
                             renderItem={item => {
                                 const member = otherMembers.find(
-                                    otherMember => otherMember.id === item.value,
+                                    otherMember => otherMember.user.id === item.value,
                                 );
 
                                 if (!member) {
@@ -95,14 +95,14 @@ const LeaveGroupModal = ({ children }: Props) => {
 
                                 return (
                                     <Flex align="center" gap="2">
-                                        <UserAvatar size="1" user={member} />
-                                        {member.displayName}
+                                        <UserAvatar size="1" user={member.user} />
+                                        {member.user.displayName}
                                     </Flex>
                                 );
                             }}
                             renderValue={item => {
                                 const member = otherMembers.find(
-                                    otherMember => otherMember.id === item?.value,
+                                    otherMember => otherMember.user.id === item?.value,
                                 );
 
                                 if (!member) {
@@ -111,8 +111,8 @@ const LeaveGroupModal = ({ children }: Props) => {
 
                                 return (
                                     <Flex align="center" gap="2">
-                                        <UserAvatar size="1" user={member} />
-                                        {member.displayName}
+                                        <UserAvatar size="1" user={member.user} />
+                                        {member.user.displayName}
                                     </Flex>
                                 );
                             }}

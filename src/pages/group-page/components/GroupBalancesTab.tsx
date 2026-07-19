@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Avatar, Button, Card, Flex, Text } from '@radix-ui/themes';
 
-import { Group } from 'api/chipin.types';
+import type { Group } from 'api/chipin.types';
 import { buildGroupInviteLink } from 'helpers/url';
 import { useUsersStore } from 'store/usersStore';
 
@@ -23,7 +23,7 @@ const GroupBalancesTab = ({ group }: Props) => {
     const { t } = useTranslation('group');
     const user = useUsersStore(s => s.user);
 
-    const otherMembers = group.members.filter(member => member.id !== user?.id);
+    const otherMembers = group.members.filter(member => member.user.id !== user?.id);
     const inviteLink = buildGroupInviteLink({ inviteToken: group.inviteToken });
 
     if (otherMembers.length === 0) {
@@ -44,22 +44,22 @@ const GroupBalancesTab = ({ group }: Props) => {
     return (
         <Flex direction="column" gap="2">
             {otherMembers.map(member => (
-                <Card key={member.id} size="2">
+                <Card key={member.user.id} size="2">
                     <Flex align="center" justify="between" gap="3">
                         <Flex align="center" gap="3">
                             <Avatar
                                 size="3"
                                 radius="full"
-                                src={member.picture || ''}
-                                alt={member.displayName}
-                                fallback={member.displayName?.[0]}
+                                src={member.user.picture || ''}
+                                alt={member.user.displayName}
+                                fallback={member.user.displayName?.[0]}
                             />
                             <Flex direction="column" gap="1">
                                 <Flex align="center" gap="2">
                                     <Text weight="medium" size="2">
-                                        {member.displayName}
+                                        {member.user.displayName}
                                     </Text>
-                                    <GroupRoleBadge isOwner={member.id === group.creator.id} />
+                                    <GroupRoleBadge isOwner={member.user.id === group.creator.id} />
                                 </Flex>
                                 <OwedStatusText
                                     value={0}

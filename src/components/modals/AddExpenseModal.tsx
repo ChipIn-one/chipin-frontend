@@ -6,7 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { Button, Card, Flex, Grid, Text } from '@radix-ui/themes';
 
-import { SharingMode } from 'api/chipin.types';
+import type { SharingMode } from 'api/chipin.types';
 import { EXPENSE_CATEGORIES, ExpenseCategory } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
 import { parseAmountInput } from 'helpers/numbers';
@@ -181,7 +181,7 @@ const AddExpenseModal = ({
     const getGroupMembersById = (nextGroupId: string) => {
         const nextGroup = groups.find(group => group.id === nextGroupId) || defaultGroup;
 
-        return nextGroup?.members || [];
+        return nextGroup?.members.map(member => member.user) || [];
     };
 
     const getMembersByTarget = (

@@ -5,7 +5,11 @@ import { Box, Button, Container, Flex, Grid } from '@radix-ui/themes';
 
 import { useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
-import { selectDashboardFetched, selectDashboardLoading } from 'store/loadingSelectors';
+import {
+    selectDashboardFetched,
+    selectDashboardLoading,
+    selectGroupListFetched,
+} from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
 import { NoGroupsEmptyState } from 'basics/empty-states';
@@ -24,6 +28,7 @@ const DashboardPage = () => {
     const { t } = useTranslation('dashboard');
     const isDashboardLoading = useLoadingStore(selectDashboardLoading);
     const isDashboardFetched = useLoadingStore(selectDashboardFetched);
+    const isGroupListFetched = useLoadingStore(selectGroupListFetched);
 
     const activityItems = useDashboardStore(s => s.activityItems);
     const groups = useGroupsStore(s => s.groups);
@@ -50,7 +55,7 @@ const DashboardPage = () => {
                         />
 
                         <Flex gap="4" direction="column">
-                            {!isDashboardFetched || hasGroups ? (
+                            {!isDashboardFetched || !isGroupListFetched || hasGroups ? (
                                 <GroupsCards groups={groups} />
                             ) : (
                                 <NoGroupsEmptyState

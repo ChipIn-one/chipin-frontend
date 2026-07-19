@@ -6,7 +6,6 @@ import { ApiCurrencyRatesResponse, BalanceEntry, BalancesMap } from 'api/chipin.
 import { sortBalancesByCurrency } from 'helpers/currencies';
 
 import { calcBalancesSummary } from './commonSelectors';
-import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
 import { selectUserCurrency } from './usersSelectors';
 import { useUsersStore } from './usersStore';
@@ -53,15 +52,12 @@ export const useDashboardStore = create<DashboardStore>(set => ({
     ...initialDashboardStore,
 
     fetchSetDashboardData: () => {
-        const { setGroups } = useGroupsStore.getState();
         const { setLoading } = useLoadingStore.getState();
 
         setLoading('dashboard', 'data', 'loading');
 
         Promise.all([fetchApiDashboard(), fetchApiCurrencyRates()])
             .then(([dashboard, currencies]) => {
-                setGroups(dashboard.groups);
-
                 const defaultCurrency = selectUserCurrency(useUsersStore.getState());
                 const entries = Object.values(dashboard.balances);
                 const { netTotalInBase, owedTotalInBase, owingTotalInBase } = calcBalancesSummary(
