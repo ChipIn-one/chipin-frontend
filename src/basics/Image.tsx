@@ -1,7 +1,8 @@
-import { FC, useState } from 'react';
+import { type ImgHTMLAttributes, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
-interface Props extends React.ImgHTMLAttributes<HTMLImageElement> {
+interface Props extends ImgHTMLAttributes<HTMLImageElement> {
     width?: string;
     height?: string;
     src?: string;
@@ -23,20 +24,21 @@ const EmptyImg = styled.div<{ width: string; height: string }>`
     height: ${({ height }) => height};
 `;
 
-const Image: FC<Props> = ({
+const Image = ({
     src,
     width = 'auto',
     height = 'auto',
     alt = '-',
     className,
     ...props
-}) => {
+}: Props) => {
+    const { t } = useTranslation('common');
     const [isError, setIsError] = useState(false);
 
     if (isError || !src) {
         return (
             <EmptyImg width={width} height={height} className={className} {...props}>
-                No image
+                {t('media.noImage')}
             </EmptyImg>
         );
     }

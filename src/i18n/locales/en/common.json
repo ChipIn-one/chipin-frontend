@@ -77,6 +77,9 @@
     "copyTargets": {
         "inviteLink": "invite link"
     },
+    "media": {
+        "noImage": "No image"
+    },
     "roles": {
         "owner": "Owner"
     },
