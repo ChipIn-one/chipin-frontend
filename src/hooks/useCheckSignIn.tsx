@@ -6,14 +6,18 @@ import { getAuthTokens } from 'helpers/localStorage';
 import { selectAuthStatus } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { useDashboardStore } from 'store/dashboardStore';
+import { useGroupsStore } from 'store/groupsStore';
 import { useUsersStore } from 'store/usersStore';
 
 export const useCheckSignIn = () => {
     const location = useLocation();
     const status = useAuthStore(selectAuthStatus);
-    const { fetchSetDashboardData } = useDashboardStore();
-    const { fetchSetUser, fetchSetFriends } = useUsersStore();
-    const { setAuthenticated, setUnauthenticated } = useAuthStore();
+    const fetchSetDashboardData = useDashboardStore(s => s.fetchSetDashboardData);
+    const fetchSetGroups = useGroupsStore(s => s.fetchSetGroups);
+    const fetchSetUser = useUsersStore(s => s.fetchSetUser);
+    const fetchSetFriends = useUsersStore(s => s.fetchSetFriends);
+    const setAuthenticated = useAuthStore(s => s.setAuthenticated);
+    const setUnauthenticated = useAuthStore(s => s.setUnauthenticated);
     const refreshAuthTokens = useAuthStore(s => s.refreshAuthTokens);
 
     useEffect(() => {
@@ -21,27 +25,28 @@ export const useCheckSignIn = () => {
             return;
         }
 
-        const run = async () => {
-            if (!getAuthTokens()) {
-                setUnauthenticated('missing');
-                return;
-            }
+        if (!getAuthTokens()) {
+            setUnauthenticated('missing');
+            return;
+        }
 
-            await refreshAuthTokens();
-            setAuthenticated();
-            fetchSetDashboardData();
-            fetchSetUser();
-            fetchSetFriends();
-        };
-
-        run().catch(() => {
-            if (useAuthStore.getState().status !== 'unauthenticated') {
-                setUnauthenticated('error');
-            }
-        });
+        refreshAuthTokens()
+            .then(() => {
+                setAuthenticated();
+                fetchSetDashboardData();
+                fetchSetGroups().catch(() => undefined);
+                fetchSetUser();
+                fetchSetFriends();
+            })
+            .catch(() => {
+                if (useAuthStore.getState().status !== 'unauthenticated') {
+                    setUnauthenticated('error');
+                }
+            });
     }, [
         fetchSetDashboardData,
         fetchSetFriends,
+        fetchSetGroups,
         fetchSetUser,
         location.pathname,
         refreshAuthTokens,

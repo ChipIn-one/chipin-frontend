@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 
 import { Button, Callout, Dialog, Flex, Text } from '@radix-ui/themes';
 
-import { User } from 'api/chipin.types';
+import type { GroupUser } from 'api/chipin.types';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupKicking } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
@@ -14,7 +14,7 @@ import BaseModal from './BaseModal';
 
 interface Props {
     children: React.ReactNode;
-    member: User;
+    member: GroupUser;
 }
 
 const KickGroupMemberModal = ({ children, member }: Props) => {
@@ -22,7 +22,7 @@ const KickGroupMemberModal = ({ children, member }: Props) => {
     const isKickingMember = useLoadingStore(selectGroupKicking);
     const [isModalOpened, setIsModalOpened] = useState(false);
 
-    const handleKickGroupMember = () => {
+    const onKickGroupMember = () => {
         kickGroupMember({ userId: member.id })
             .then(memberDisplayName => {
                 setIsModalOpened(false);
@@ -64,7 +64,7 @@ const KickGroupMemberModal = ({ children, member }: Props) => {
                             size="3"
                             variant="solid"
                             color="orange"
-                            onClick={handleKickGroupMember}
+                            onClick={onKickGroupMember}
                             loading={isKickingMember}
                         >
                             {t('common:buttons.kickMember')}

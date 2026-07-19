@@ -4,7 +4,7 @@ import styled, { css } from 'styled-components';
 
 import { Card, Flex, Text } from '@radix-ui/themes';
 
-import { Group } from 'api/chipin.types';
+import type { Group } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
 import { themeColor } from 'helpers/colors';
 import { useDashboardStore } from 'store/dashboardStore';
@@ -57,7 +57,7 @@ interface Props {
 }
 
 const GroupCard: React.FC<Props> = ({ group, isSelected = false }) => {
-    const { setSelectedGroup } = useGroupsStore();
+    const setSelectedGroup = useGroupsStore(state => state.setSelectedGroup);
     const currencies = useDashboardStore(state => state.currencies);
     const { t } = useTranslation('dashboard');
 

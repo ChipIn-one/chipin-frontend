@@ -7,7 +7,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { Box, Button, Card, Container, Flex, Grid, Inset, Skeleton, Text } from '@radix-ui/themes';
 
-import { Group } from 'api/chipin.types';
+import type { Group } from 'api/chipin.types';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupDataFetched, selectGroupDataLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
@@ -43,7 +43,7 @@ const GroupPage = () => {
     const { groupId } = useParams<{ groupId: string }>();
 
     useEffect(() => {
-        fetchSetGroupById(groupId);
+        fetchSetGroupById(groupId).catch(() => undefined);
     }, [groupId, fetchSetGroupById]);
 
     if (!groupId) {
@@ -131,7 +131,7 @@ const GroupCardBody = ({ group, isLoading }: GroupCardBodyProps) => {
     return (
         <Flex direction="column" gap="4">
             <Flex align="center" justify="between" gap="2" wrap="wrap">
-                <UsersRow members={group.members} max={10} size="2" />
+                <UsersRow members={group.members.map(member => member.user)} max={10} size="2" />
                 <Flex gap="2" align="center">
                     <AddExpenseModal>
                         <Button variant="outline" size="2">

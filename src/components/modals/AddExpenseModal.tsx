@@ -9,7 +9,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { Button, Card, Flex, Grid, Text, TextField } from '@radix-ui/themes';
 
-import { SharingMode, User } from 'api/chipin.types';
+import type { GroupUser, SharingMode } from 'api/chipin.types';
 import { EXPENSE_CATEGORIES, ExpenseCategory } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
 import { themeColor } from 'helpers/colors';
@@ -100,7 +100,7 @@ const AddExpenseModal = ({ children, context }: Props) => {
 
     const defaultGroup = selectedGroup || groups[0];
 
-    const getOrderedMembers = (groupMembers: User[]) => {
+    const getOrderedMembers = (groupMembers: GroupUser[]) => {
         const currentUserMember = groupMembers.find(member => member.id === user?.id);
         const otherMembers = groupMembers.filter(member => member.id !== user?.id);
 
@@ -122,7 +122,7 @@ const AddExpenseModal = ({ children, context }: Props) => {
 
     const selectedExpenseGroup = groups.find(group => group.id === groupId) || defaultGroup;
     const isFriendsTab = activeTab === 'friends';
-    const groupMembers = selectedExpenseGroup?.members || [];
+    const groupMembers = selectedExpenseGroup?.members.map(member => member.user) || [];
     // const resolvedMembers = isFriendsTab ? friends.map(f => f.user) : groupMembers;
     const resolvedMembers = groupMembers;
     const orderedMembers = getOrderedMembers(resolvedMembers);
@@ -131,7 +131,7 @@ const AddExpenseModal = ({ children, context }: Props) => {
 
     const isShowGroupSelect = !isGroupContext && !isFriendsContext && activeTab === 'group';
 
-    const buildEqualPercentShares = (members: User[]): Record<string, string> => {
+    const buildEqualPercentShares = (members: GroupUser[]): Record<string, string> => {
         const count = members.length;
         if (count === 0) {
             return {};
@@ -147,7 +147,7 @@ const AddExpenseModal = ({ children, context }: Props) => {
     };
 
     const buildEqualAmountShares = (
-        members: User[],
+        members: GroupUser[],
         totalAmount: string,
     ): Record<string, string> => {
         const count = members.length;
@@ -185,7 +185,7 @@ const AddExpenseModal = ({ children, context }: Props) => {
         };
     });
 
-    const getDefaultPayerId = (groupMembers: User[] = resolvedMembers) =>
+    const getDefaultPayerId = (groupMembers: GroupUser[] = resolvedMembers) =>
         getOrderedMembers(groupMembers)[0]?.id || '';
 
     // const getMembersByTab = (tab: ExpenseTab, nextGroupId: string) => {
@@ -196,7 +196,7 @@ const AddExpenseModal = ({ children, context }: Props) => {
 
         const nextGroup = groups.find(group => group.id === nextGroupId) || defaultGroup;
 
-        return nextGroup?.members || [];
+        return nextGroup?.members.map(member => member.user) || [];
     };
 
     const resetForm = () => {
@@ -239,7 +239,8 @@ const AddExpenseModal = ({ children, context }: Props) => {
     };
 
     const onChangeGroup = (nextGroupId: string) => {
-        const nextMembers = groups.find(group => group.id === nextGroupId)?.members || [];
+        const nextMembers =
+            groups.find(group => group.id === nextGroupId)?.members.map(member => member.user) || [];
         const nextOrdered = getOrderedMembers(nextMembers);
 
         setGroupId(nextGroupId);

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Box } from '@radix-ui/themes';
 
-import { Group } from 'api/chipin.types';
+import type { Group } from 'api/chipin.types';
 import { useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectUserCurrency } from 'store/usersSelectors';
