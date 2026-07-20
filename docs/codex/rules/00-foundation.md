@@ -54,7 +54,10 @@ export const fetchGroup = (groupId: string): Promise<Group> => {
 ## Modules And Control Flow
 
 - Prefer named exports. Default exports are limited to established framework boundaries or existing local patterns.
-- A public component subdirectory exposes its public surface through `index.ts`; do not create unrelated barrel churn.
+- Every directory boundary consumed by its parent or an external consumer exposes that boundary through
+  `index.ts`; consumers do not deep-import its files. Files within the same directory may import siblings
+  directly to avoid barrel cycles. Follow the recursive structure in `10-architecture.md` for new and
+  substantially refactored directories; do not create empty structure or migrate unrelated legacy folders.
 - Prefer early returns and explicit branches over deeply nested logic.
 - Do not create an abstraction until it removes real duplication or establishes a necessary boundary.
 - Keep functions focused. Split by responsibility, not by an arbitrary line limit.

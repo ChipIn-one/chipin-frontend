@@ -8,11 +8,19 @@ type TextFieldRootProps = ComponentProps<typeof TextField.Root>;
 
 interface Props extends Omit<TextFieldRootProps, 'onChange' | 'type' | 'inputMode'> {
     onChange: (value: string) => void;
+    maxFractionDigits?: number | null;
 }
 
-const AmountInput = ({ value, onChange, placeholder = '0.00', className, ...rest }: Props) => {
-    const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const parsed = parseAmountInput(event.target.value);
+const AmountInput = ({
+    value,
+    onChange,
+    maxFractionDigits = 2,
+    placeholder = '0.00',
+    className,
+    ...rest
+}: Props) => {
+    const onValueChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const parsed = parseAmountInput(event.target.value, maxFractionDigits);
 
         if (parsed !== null) {
             onChange(parsed);
@@ -27,7 +35,7 @@ const AmountInput = ({ value, onChange, placeholder = '0.00', className, ...rest
             inputMode="decimal"
             placeholder={placeholder}
             value={value}
-            onChange={handleChange}
+            onChange={onValueChange}
         />
     );
 };

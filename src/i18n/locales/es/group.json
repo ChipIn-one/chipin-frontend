@@ -188,6 +188,15 @@
             "settled": "Liquidado",
             "empty": "Aún no hay balances."
         },
+        "settleUp": {
+            "chooseDebtTitle": "Elige una deuda",
+            "chooseDebtAccessibleDescription": "Elige una deuda para registrar un pago.",
+            "youOwe": "Debes",
+            "owedToYou": "Te deben",
+            "showMore_one": "Mostrar {{count}} deuda más",
+            "showMore_other": "Mostrar {{count}} deudas más",
+            "showLess": "Mostrar menos"
+        },
         "membersTab": {
             "you": "Tú",
             "invitePeople": "Invitar personas"

@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { IconButton } from '@radix-ui/themes';
 
 import type { FriendBalance, KnownUser } from 'api/chipin.types';
+import { useActivityStore } from 'store/activityStore';
 
 import Dropdown from 'components/Dropdown';
 import { AddExpenseModal, RemoveFriendModal, SettleUpModal } from 'components/modals';
@@ -25,6 +26,7 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
     const [isExpenseModalOpened, setIsExpenseModalOpened] = useState(false);
     const [isSettleUpOpened, setIsSettleUpOpened] = useState(false);
     const [isRemoveFriendOpened, setIsRemoveFriendOpened] = useState(false);
+    const createSettlement = useActivityStore(state => state.createSettlement);
     const hasOutstandingDebt = friend.balances.some(friendBalance => friendBalance.netAmount !== 0);
 
     const actions = useMemo(
@@ -92,11 +94,13 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
             />
             {balance && isSettleUpOpened && (
                 <SettleUpModal
+                    source="friend"
                     isOpened={isSettleUpOpened}
-                    setIsOpened={setIsSettleUpOpened}
+                    onOpenChange={setIsSettleUpOpened}
                     friend={friend.user}
                     balances={friend.balances}
                     initialCurrency={balance.currency}
+                    onSubmit={createSettlement}
                 />
             )}
             {isRemoveFriendOpened && (

@@ -1,5 +1,6 @@
 {
     "buttons": {
+        "back": "Voltar",
         "cancel": "Cancelar",
         "delete": "Eliminar",
         "reload": "Recarregar página",

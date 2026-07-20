@@ -13,8 +13,29 @@ Durable repository rules for Codex. Keep changes small, scoped, verified, and co
 - Simple work: inspect relevant files, implement the smallest safe diff, run targeted checks, and summarize. Do not require brainstorming, a persisted plan, or subagents without a real blocker.
 - Standard work: use a concise inline plan only when it improves coordination. Ask only questions that materially change implementation.
 - High-risk work: clarify requirements, present a design or plan, and wait for approval before editing.
-- A request for a plan, review, explanation, or analysis alone does not authorize file edits.
+- A request for a plan, review, explanation, or analysis alone does not authorize file edits, except for
+  confirmed Critical and Important fixes in the explicit staged review workflow below.
 - Do not refactor unrelated code or change architecture during a narrow task.
+
+## Staged Code Review Workflow
+
+- The user owns staging. Never run `git add`, modify the index, or commit as part of review unless the
+  user explicitly requests that Git action.
+- When the user sends `review` or `staged` after staging their candidate changes, invoke
+  `superpowers:requesting-code-review` without asking additional questions.
+- Review the staged patch with `git diff --cached` and `git diff --cached --stat`. Findings are scoped to
+  staged changes, although surrounding code may be read for context.
+- Do not include unstaged or untracked changes in a staged review. Use `git diff HEAD` only when the user
+  explicitly asks to review the whole task or all current changes.
+- If the staged patch is empty, report that there is nothing staged to review instead of silently reviewing
+  another scope.
+- Fix confirmed Critical and Important staged-review findings in the working tree. Those fixes must remain
+  unstaged for the user to inspect and stage manually.
+- After the user stages review fixes and sends `review` or `staged` again, re-run the staged review. Do not
+  treat an earlier approval as covering newly staged fixes.
+- This explicit staged trigger controls independent reviewer timing. Finish implementation and local
+  verification first, then hand the unstaged result to the user; do not pre-empt their manual inspection by
+  staging or automatically reviewing a different diff.
 
 ## Token-Efficient Agent Flow
 
@@ -22,7 +43,9 @@ Durable repository rules for Codex. Keep changes small, scoped, verified, and co
 - Start exploration with `rg` or `rg --files`, read only relevant ranges, and do not repeat unchanged output.
 - Keep plans, progress updates, and handoffs concise: decisions, changed files, verification, failures, and blockers.
 - Use subagents only for complex work with at least two independent workstreams. Use at most two concurrently and do not nest delegation.
-- Self-review every diff. Use a separate reviewer only for high-risk work, large diffs, or materially independent judgment.
+- Self-review every diff. Outside the staged workflow, use a separate reviewer only for high-risk work,
+  large diffs, or materially independent judgment. A staged `review`/`staged` trigger always requests the
+  separate Superpowers reviewer regardless of task size.
 - Local planning artifacts belong under `docs/superpowers/`, `docs/codex/`, or `.superpowers/` and are not commit deliverables.
 
 ## Repository Stack

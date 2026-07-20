@@ -188,6 +188,17 @@
             "settled": "Долгов нет",
             "empty": "Балансов пока нет."
         },
+        "settleUp": {
+            "chooseDebtTitle": "Выберите долг",
+            "chooseDebtAccessibleDescription": "Выберите долг для записи платежа.",
+            "youOwe": "Вы должны",
+            "owedToYou": "Вам должны",
+            "showMore_one": "Показать ещё {{count}} долг",
+            "showMore_few": "Показать ещё {{count}} долга",
+            "showMore_many": "Показать ещё {{count}} долгов",
+            "showMore_other": "Показать ещё {{count}} долга",
+            "showLess": "Скрыть"
+        },
         "membersTab": {
             "you": "Вы",
             "invitePeople": "Пригласить людей"

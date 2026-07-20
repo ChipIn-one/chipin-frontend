@@ -37,6 +37,138 @@ app composition → pages → features → components → basics
 - Do not move whole legacy folders while implementing a narrow feature.
 - Shared public directories use a focused `index.ts`; avoid repository-wide barrel rewrites.
 
+## Recursive Nested Directory Structure
+
+Use the same structure at every nesting depth. The immediate directory owns its primary component,
+public types, presentation styles, subcomponents, and private implementation details. Create only files
+that the implementation actually needs; never scaffold empty directories or placeholder files.
+
+```text
+settle-up/
+├── SettleUpModal.tsx
+├── SettleUpModal.friend.test.tsx
+├── SettleUpModal.group.test.tsx
+├── types.ts
+├── styled.ts
+├── components/
+│   ├── SettlementForm.tsx
+│   ├── DebtSection.tsx
+│   └── index.ts
+├── internal/
+│   ├── constants.ts
+│   ├── helpers.ts
+│   ├── helpers.test.ts
+│   ├── hooks.ts
+│   ├── selectors.ts
+│   ├── types.ts
+│   └── index.ts
+└── index.ts
+```
+
+The example shows the available locations, not a required complete file set.
+
+### Ownership
+
+- Keep the directory's primary component at its root and name it for the capability, for example
+  `SettleUpModal.tsx`.
+- Put React subcomponents used by the primary component in `components/`. Whenever `components/`
+  exists, it always has an `index.ts` with semantically named exports, including when it currently
+  contains only one component.
+- Put shared public component types in the root `types.ts`. Export those types by name from the root
+  `index.ts` when consumers need them.
+- Put private implementation types in `internal/types.ts`; do not expose them from the root `index.ts`.
+- Keep styled-components in one root `styled.ts` for that ownership level. Export styled components
+  directly by their readable component names; do not split them into one file per styled component.
+- Put private support code in `internal/`. Use the semantic filenames `constants.ts`, `helpers.ts`,
+  `hooks.ts`, `selectors.ts`, and `types.ts`, creating only the files that are needed.
+- Apply the same rules recursively when a subcomponent grows into its own nested directory.
+
+### Index Files And Import Boundaries
+
+- Every directory imported across a directory boundary has an `index.ts`.
+- A parent or external consumer imports a child directory through that child's `index.ts`; deep imports
+  across the boundary are prohibited.
+- Files within the same directory may import sibling files directly. Do not import through the current
+  directory's own `index.ts`, because that creates avoidable barrel cycles.
+- The root `index.ts` exposes only the capability's public API. It does not re-export `internal/` or
+  private subcomponents.
+- `components/index.ts` exports components by semantic names.
+
+```ts
+// components/index.ts
+export { default as DebtSection } from './DebtSection';
+export { default as SettlementForm } from './SettlementForm';
+
+// settle-up/index.ts
+export { default as SettleUpModal } from './SettleUpModal';
+export type { SettleUpModalProps } from './types';
+```
+
+Use child barrels from the parent and direct sibling imports within one directory:
+
+```ts
+// Correct: crossing into child directories through their public boundary.
+import { DebtSection, SettlementForm } from './components';
+import { helpers } from './internal';
+
+// Incorrect: deep imports across child directory boundaries.
+import DebtSection from './components/DebtSection';
+import { getSettlementViewModel } from './internal/helpers';
+```
+
+### Internal Exports
+
+Export collections of pure functions or values from `internal/index.ts` under universal namespace names.
+The containing directory already provides the capability context, so do not repeat its name in filenames
+or namespaces.
+
+```ts
+export * as constants from './constants';
+export * as helpers from './helpers';
+export * as selectors from './selectors';
+
+export { useSettlementDraft } from './hooks';
+export type { SettlementDraft } from './types';
+```
+
+Use namespace access for `constants`, `helpers`, and `selectors`. Import hooks, private types, and styled
+components directly so hooks remain idiomatic and JSX component names stay immediately readable.
+
+```tsx
+import { helpers, useSettlementDraft } from './internal';
+import { ActionFooter, ModalSurface } from './styled';
+
+const draft = useSettlementDraft();
+const model = helpers.getSettlementViewModel(draft);
+
+return <ModalSurface>{model.amount}</ModalSurface>;
+```
+
+If two local namespace names collide in one file, alias at the import site instead of encoding the
+capability name into every namespace:
+
+```ts
+import { helpers as paymentHelpers } from './payment-form/internal';
+```
+
+### Test Placement And Naming
+
+- Co-locate a unit test with its source: `internal/helpers.ts` uses `internal/helpers.test.ts`, and
+  `components/DebtSection.tsx` uses `components/DebtSection.test.tsx`.
+- Co-locate public component tests with the public component.
+- Split large independent scenarios with a semantic infix, for example
+  `SettleUpModal.friend.test.tsx` and `SettleUpModal.group.test.tsx`.
+- Do not create `tests/`, `__tests__/`, or test barrel directories for these co-located tests.
+- Do not test `styled.ts`, `types.ts`, or `constants.ts` separately when they contain no executable logic.
+- Give an internal component its own test only when it owns meaningful behavior; otherwise cover it through
+  the public component.
+
+### Adoption
+
+- This structure is required for new directories and directories undergoing substantial refactoring.
+- A narrow edit in a legacy directory does not require migrating that entire directory.
+- Do not perform repository-wide structural migrations as incidental cleanup.
+
 ## Cross-Store And App Orchestration
 
 - Stores do not directly write another store's domain data.

@@ -47,7 +47,7 @@ export interface ApiUserResponse {
     updatedAt: number;
 }
 
-export interface ApiGroupUserResponse {
+export interface ApiUserSummary {
     id: string;
     email: string;
     displayName: string;
@@ -57,6 +57,8 @@ export interface ApiGroupUserResponse {
     createdAt: number;
     updatedAt: number;
 }
+
+export type ApiGroupUserResponse = ApiUserSummary;
 
 export interface ApiGroupMemberResponse {
     user: ApiGroupUserResponse;
@@ -93,7 +95,7 @@ export interface ApiActivityItemsResponse {
     nextCursor: number | null;
 }
 
-export type ApiFriendUser = Pick<ApiUserResponse, 'id' | 'displayName' | 'picture'>;
+export type ApiFriendUser = ApiUserSummary;
 
 export interface ApiFriendBalance {
     currency: string;

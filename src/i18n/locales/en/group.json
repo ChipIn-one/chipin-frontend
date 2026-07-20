@@ -188,6 +188,15 @@
             "settled": "Settled up",
             "empty": "No balances to show yet."
         },
+        "settleUp": {
+            "chooseDebtTitle": "Choose a debt",
+            "chooseDebtAccessibleDescription": "Select a debt to record a payment.",
+            "youOwe": "You owe",
+            "owedToYou": "You are owed",
+            "showMore_one": "Show {{count}} more debt",
+            "showMore_other": "Show {{count}} more debts",
+            "showLess": "Show less"
+        },
         "membersTab": {
             "you": "You",
             "invitePeople": "Invite people"
