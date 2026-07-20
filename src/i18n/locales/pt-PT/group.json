@@ -169,6 +169,15 @@
             "settled": "Acertado",
             "empty": "Nenhum saldo ainda."
         },
+        "settleUp": {
+            "chooseDebtTitle": "Escolha uma dívida",
+            "chooseDebtAccessibleDescription": "Escolha uma dívida para registar um pagamento.",
+            "youOwe": "Deve",
+            "owedToYou": "Devem-lhe",
+            "showMore_one": "Mostrar mais {{count}} dívida",
+            "showMore_other": "Mostrar mais {{count}} dívidas",
+            "showLess": "Mostrar menos"
+        },
         "membersTab": {
             "you": "Você",
             "invitePeople": "Convidar pessoas"

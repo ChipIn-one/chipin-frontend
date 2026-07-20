@@ -46,6 +46,7 @@
         "createError": "Algo deu errado ao adicionar a despesa."
     },
     "settlement": {
-        "created": "Pagamento registrado com sucesso!"
+        "created": "Pagamento registrado com sucesso!",
+        "createError": "Não foi possível registrar o pagamento."
     }
 }

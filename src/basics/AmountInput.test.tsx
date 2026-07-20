@@ -15,3 +15,21 @@ test('normalizes a comma decimal separator while typing', () => {
         expect(onChange).toHaveBeenLastCalledWith('12.5');
     });
 });
+
+test('allows unrestricted fractional precision when requested', () => {
+    const onChange = vi.fn<(value: string) => void>();
+    const user = userEvent.setup();
+
+    render(
+        <AmountInput
+            aria-label="Amount"
+            value="30.1234"
+            maxFractionDigits={null}
+            onChange={onChange}
+        />,
+    );
+
+    return user.type(screen.getByRole('textbox', { name: 'Amount' }), '{backspace}').then(() => {
+        expect(onChange).toHaveBeenLastCalledWith('30.123');
+    });
+});

@@ -2,12 +2,11 @@ import type {
     ApiActivityItemsResponse,
     ApiFriend,
     ApiFriendBalance,
-    ApiFriendUser,
     ApiGroupResponse,
-    ApiGroupUserResponse,
     ApiUserResponse,
     ApiUserRole,
     ApiUserSettings,
+    ApiUserSummary,
     ApiUserTheme,
     BalancesMap,
 } from './chipin.raw.types';
@@ -21,7 +20,6 @@ export type {
     ApiFriend,
     ApiFriendBalance,
     ApiFriendsResponse,
-    ApiFriendUser,
     ApiGroupResponse,
     ApiLedgerEntryResponse,
     ApiOAuthTokenPairResponse,
@@ -57,13 +55,14 @@ export type User = ApiUserResponse;
 export type UserSettings = ApiUserSettings;
 export type UserRole = ApiUserRole;
 export type ThemeName = ApiUserTheme;
-export type FriendUser = ApiFriendUser;
+export type UserSummary = ApiUserSummary;
+export type FriendUser = UserSummary;
 export type FriendBalance = ApiFriendBalance;
 export type KnownUser = ApiFriend;
 
 /** Group — same shape as the API response. */
 export type Group = ApiGroupResponse;
-export type GroupUser = ApiGroupUserResponse;
+export type GroupUser = UserSummary;
 
 /** Dashboard response with parsed balances and activity. */
 export type Dashboard = {

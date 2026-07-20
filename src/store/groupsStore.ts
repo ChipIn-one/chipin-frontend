@@ -4,6 +4,7 @@ import { create } from 'zustand';
 
 import {
     createApiGroup,
+    createApiSettlement,
     fetchApiUserGroupById,
     fetchApiUserGroups,
     inviteApiUserToGroup,
@@ -13,7 +14,7 @@ import {
     updateApiGroup,
 } from 'api/chipin';
 import type { BalanceEntry } from 'api/chipin.raw.types';
-import type { Group } from 'api/chipin.types';
+import type { CreateSettlementParams, Group } from 'api/chipin.types';
 
 import { useDashboardStore } from './dashboardStore';
 import { calcGroupSummary, selectGroupBalances } from './groupsSelectors';
@@ -39,6 +40,7 @@ export interface GroupsStore {
         groupDescription?: string;
         groupEmoji?: string;
     }) => Promise<Group>;
+    createSettlement: (params: Omit<CreateSettlementParams, 'groupId'>) => Promise<void>;
     updateGroup: (params: {
         groupName: string;
         groupDescription?: string;
@@ -161,6 +163,96 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             })
             .finally(() => {
                 setLoading('group', 'add', 'fetched');
+            });
+    },
+    createSettlement: params => {
+        const selectedGroup = get().selectedGroup;
+
+        if (!selectedGroup) {
+            return Promise.reject(new Error('Group settlement context is unavailable'));
+        }
+
+        const currentUserId = useUsersStore.getState().user?.id;
+        const memberId = params.fromUserId === currentUserId ? params.toUserId : params.fromUserId;
+        const member = selectedGroup.members.find(groupMember => groupMember.user.id === memberId);
+
+        if (!member) {
+            return Promise.reject(new Error('Group settlement participant is unavailable'));
+        }
+
+        const balance = member.balancesByCurrency[params.currency];
+
+        if (!balance) {
+            return Promise.reject(new Error('Group settlement balance is unavailable'));
+        }
+
+        const { setLoading } = useLoadingStore.getState();
+        const request = { ...params, groupId: selectedGroup.id } satisfies CreateSettlementParams;
+        setLoading('settlement', 'add', 'loading');
+
+        return createApiSettlement(request)
+            .then(() => {
+                set(state => {
+                    const currentGroup = state.selectedGroup;
+
+                    if (!currentGroup || currentGroup.id !== selectedGroup.id) {
+                        return {};
+                    }
+
+                    const updatedGroup: Group = {
+                        ...currentGroup,
+                        members: currentGroup.members.map(groupMember => {
+                            if (groupMember.user.id !== memberId) {
+                                return groupMember;
+                            }
+
+                            const currentBalance = groupMember.balancesByCurrency[params.currency];
+
+                            if (!currentBalance) {
+                                return groupMember;
+                            }
+
+                            const nextBalances =
+                                params.amount === Math.abs(currentBalance.netBalance)
+                                    ? Object.fromEntries(
+                                          Object.entries(groupMember.balancesByCurrency).filter(
+                                              ([currency]) => currency !== params.currency,
+                                          ),
+                                      )
+                                    : {
+                                          ...groupMember.balancesByCurrency,
+                                          [params.currency]: {
+                                              ...currentBalance,
+                                              netBalance:
+                                                  currentBalance.netBalance +
+                                                  (currentBalance.netBalance < 0
+                                                      ? params.amount
+                                                      : -params.amount),
+                                          },
+                                      };
+
+                            return { ...groupMember, balancesByCurrency: nextBalances };
+                        }),
+                    };
+                    const { base, rates } = useDashboardStore.getState().currencies;
+                    const defaultCurrency = selectUserCurrency(useUsersStore.getState());
+
+                    return {
+                        groups: state.groups.map(group =>
+                            group.id === updatedGroup.id ? updatedGroup : group,
+                        ),
+                        selectedGroup: updatedGroup,
+                        ...calcGroupSummary(
+                            selectGroupBalances(updatedGroup),
+                            base,
+                            rates,
+                            defaultCurrency,
+                        ),
+                    };
+                });
+            })
+            .finally(() => {
+                setLoading('settlement', 'add', 'fetched');
             });
     },
     updateGroup: ({ groupName, groupDescription, groupEmoji }) => {

@@ -24,6 +24,10 @@
         "paid": "pagó",
         "paidAmountTo": "pagó {{amount}} {{currency}} a",
         "noMoneyMoves": "Registra un pago externo. No se mueve dinero.",
-        "recordPayment": "Registrar pago"
+        "recordPayment": "Registrar pago",
+        "youOwe": "Le debes a {{name}}",
+        "owedToYou": "{{name}} te debe",
+        "remainingDebt": "Deuda restante:",
+        "debtWillBeSettled": "La deuda quedará saldada"
     }
 }

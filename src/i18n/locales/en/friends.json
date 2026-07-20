@@ -24,6 +24,10 @@
         "paid": "paid",
         "paidAmountTo": "paid {{amount}} {{currency}} to",
         "noMoneyMoves": "Records an outside payment. No money moves.",
-        "recordPayment": "Record payment"
+        "recordPayment": "Record payment",
+        "youOwe": "You owe {{name}}",
+        "owedToYou": "{{name}} owes you",
+        "remainingDebt": "Remaining debt:",
+        "debtWillBeSettled": "The debt will be settled"
     }
 }
