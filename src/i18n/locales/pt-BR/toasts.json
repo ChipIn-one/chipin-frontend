@@ -50,6 +50,7 @@
         "entryDeleteError": "Algo deu errado ao excluir o lançamento."
     },
     "settlement": {
-        "created": "Pagamento registrado com sucesso!"
+        "created": "Pagamento registrado com sucesso!",
+        "createError": "Não foi possível registrar o pagamento."
     }
 }

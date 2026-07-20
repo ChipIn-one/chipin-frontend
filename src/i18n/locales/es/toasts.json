@@ -50,6 +50,7 @@
         "entryDeleteError": "Algo salió mal al eliminar la entrada."
     },
     "settlement": {
-        "created": "¡Pago registrado exitosamente!"
+        "created": "¡Pago registrado exitosamente!",
+        "createError": "No se pudo registrar el pago."
     }
 }

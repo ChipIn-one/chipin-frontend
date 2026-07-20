@@ -1,0 +1,94 @@
+import { AmountInput } from 'basics';
+import styled from 'styled-components';
+
+import { Button, Card, Text } from '@radix-ui/themes';
+
+export const ModalSurface = styled.div`
+    display: flex;
+    min-height: 100%;
+    flex-direction: column;
+    gap: var(--space-4);
+`;
+
+export const ActionFooter = styled.div`
+    display: flex;
+    gap: var(--space-3);
+    margin-top: auto;
+    padding-top: var(--space-2);
+    padding-bottom: env(safe-area-inset-bottom);
+
+    & > button:first-child {
+        flex: 1;
+    }
+
+    & > button:last-child {
+        flex: 2;
+    }
+`;
+
+export const LargeAmountInput = styled(AmountInput)`
+    width: 100%;
+    height: 72px;
+    align-items: center;
+    box-shadow: none;
+
+    & input {
+        height: 100%;
+        padding: 0 var(--space-3);
+        text-align: center;
+        font-size: var(--font-size-8);
+        font-weight: 700;
+        line-height: 1;
+    }
+`;
+
+export const AmountField = styled.div`
+    min-width: 0;
+    flex: 1;
+`;
+
+export const CurrencyField = styled.div`
+    display: flex;
+    min-width: 96px;
+    align-items: stretch;
+
+    & > button {
+        width: 100%;
+        height: 72px;
+        justify-content: center;
+        font-size: var(--font-size-5);
+        font-weight: 700;
+    }
+`;
+
+export const StaticCurrencyField = styled(Card)`
+    display: flex;
+    min-width: 96px;
+    height: 72px;
+    align-items: center;
+    justify-content: center;
+`;
+
+export const ParticipantName = styled(Text)`
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    text-align: left;
+    white-space: normal;
+`;
+
+export const DebtAmount = styled(Text)`
+    flex-shrink: 0;
+`;
+
+export const DebtButton = styled(Button)`
+    width: 100%;
+    height: auto;
+    justify-content: stretch;
+    padding-block: var(--space-3);
+    white-space: normal;
+`;
+
+export const ShowMoreButton = styled(Button)`
+    align-self: center;
+`;

@@ -24,6 +24,10 @@
         "paid": "заплатил(а)",
         "paidAmountTo": "заплатил(а) {{amount}} {{currency}}",
         "noMoneyMoves": "Записывает внешний платеж. Деньги не переводятся.",
-        "recordPayment": "Записать платеж"
+        "recordPayment": "Записать платеж",
+        "youOwe": "Вы должны {{name}}",
+        "owedToYou": "{{name}} должен вам",
+        "remainingDebt": "Остаток долга:",
+        "debtWillBeSettled": "Долг будет погашен"
     }
 }

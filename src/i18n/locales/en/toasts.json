@@ -50,6 +50,7 @@
     "entryDeleteError": "Something went wrong while deleting the entry."
   },
   "settlement": {
-    "created": "Payment recorded successfully!"
+    "created": "Payment recorded successfully!",
+    "createError": "Something went wrong while recording the payment."
   }
 }

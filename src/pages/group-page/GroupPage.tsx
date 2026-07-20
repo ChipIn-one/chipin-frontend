@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { LucideArrowLeftRight, LucidePlus } from 'lucide-react';
+import { LucidePlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import styled from 'styled-components';
@@ -12,7 +12,7 @@ import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupDataFetched, selectGroupDataLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
-import { AddExpenseModal } from 'components/modals';
+import { AddExpenseModal, SettleUpModal } from 'components/modals';
 import { MobileNavBar } from 'components/nav-bars';
 import UsersRow from 'components/UsersRow';
 
@@ -139,10 +139,7 @@ const GroupCardBody = ({ group, isLoading }: GroupCardBodyProps) => {
                             {t('common:buttons.addExpense')}
                         </Button>
                     </AddExpenseModal>
-                    <Button size="2" color="green">
-                        <LucideArrowLeftRight size={15} />
-                        {t('common:buttons.settleUp')}
-                    </Button>
+                    <SettleUpModal source="group" group={group} />
                 </Flex>
             </Flex>
 
