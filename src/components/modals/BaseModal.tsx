@@ -1,6 +1,6 @@
 import { LucideX } from 'lucide-react';
 
-import { Dialog, Flex, IconButton, Separator, Text } from '@radix-ui/themes';
+import { Dialog, Flex, IconButton, Separator, Text, VisuallyHidden } from '@radix-ui/themes';
 
 import { MODAL_SIZES, type ModalSize } from './constants';
 
@@ -12,6 +12,7 @@ interface Props {
     content: React.ReactNode;
     title: string;
     description?: string;
+    accessibleDescription?: string;
     maxWidth?: ModalSize;
     isOpened?: boolean;
     setIsOpened?: (isOpen: boolean) => void;
@@ -21,6 +22,7 @@ const BaseModal = ({
     triggerElement,
     title,
     description,
+    accessibleDescription,
     maxWidth = MODAL_SIZES.default,
     content,
     isOpened,
@@ -46,6 +48,11 @@ const BaseModal = ({
                         </Dialog.Close>
                     </Flex>
                 </Dialog.Title>
+                {!description && accessibleDescription && (
+                    <VisuallyHidden>
+                        <Dialog.Description>{accessibleDescription}</Dialog.Description>
+                    </VisuallyHidden>
+                )}
                 <Separator orientation="horizontal" size="4" />
 
                 <Flex direction="column" mt="6" className="base-modal-body">

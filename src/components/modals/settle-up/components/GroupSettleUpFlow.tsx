@@ -9,7 +9,8 @@ import { useGroupsStore } from 'store/groupsStore';
 import { useUsersStore } from 'store/usersStore';
 
 import BaseModal from '../../BaseModal';
-import { type DebtOption,helpers } from '../internal';
+import { MODAL_SIZES } from '../../constants';
+import { type DebtOption, helpers } from '../internal';
 import type { GroupSettleUpProps } from '../types';
 
 import DebtSelectionStep from './DebtSelectionStep';
@@ -30,7 +31,9 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
         : { youOwe: [], owedToYou: [] };
     const settlementOptions = memberId
         ? {
-              youOwe: groupSettlementOptions.youOwe.filter(option => option.user.id === memberId),
+              youOwe: groupSettlementOptions.youOwe.filter(
+                  option => option.user.id === memberId,
+              ),
               owedToYou: groupSettlementOptions.owedToYou.filter(
                   option => option.user.id === memberId,
               ),
@@ -93,7 +96,7 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
             }
             title={t('group:page.settleUp.chooseDebtTitle')}
             accessibleDescription={t('group:page.settleUp.chooseDebtAccessibleDescription')}
-            maxWidth="460px"
+            maxWidth={MODAL_SIZES.default}
             content={
                 <DebtSelectionStep
                     youOwe={youOwe}

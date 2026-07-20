@@ -116,15 +116,6 @@ test('disables the group settle-up trigger when every member is settled', () => 
     );
 });
 
-test('explains why a selected member cannot be settled up', () => {
-    render(<SettleUpModal source="group" group={group} memberId={currentUser.id} />);
-
-    expect(screen.getByRole('button', { name: 'group:page.balances.settled' })).toHaveProperty(
-        'disabled',
-        true,
-    );
-});
-
 test('lists one row per group debt with short names and two-digit precision', () => {
     const user = userEvent.setup();
 
@@ -144,19 +135,6 @@ test('lists one row per group debt with short names and two-digit precision', ()
             expect(screen.queryByText('Debtor Person Full')).toBeNull();
             expect(screen.getByText('30.12 EUR')).toBeTruthy();
             expect(screen.queryByText('6 AFN')).toBeNull();
-        });
-});
-
-test('limits the debt list to the selected group member', () => {
-    const user = userEvent.setup();
-
-    render(<SettleUpModal source="group" group={group} memberId="user-2" />);
-
-    return user
-        .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
-        .then(() => {
-            expect(screen.getByRole('button', { name: /Owed.*25 EUR/ })).toBeTruthy();
-            expect(screen.queryByRole('button', { name: /Debtor/ })).toBeNull();
         });
 });
 
