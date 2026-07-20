@@ -12,6 +12,7 @@ import { useUsersStore } from 'store/usersStore';
 import type { SelectItem } from 'components/Select';
 
 import BaseModal from '../../BaseModal';
+import { MODAL_SIZES } from '../../constants';
 import { helpers, type SettlementFormProps } from '../internal';
 import { ActionFooter, ModalSurface } from '../styled';
 
@@ -76,7 +77,7 @@ const SettlementForm = ({
             setIsOpened={onOpenChange}
             title={t('friends:settleUp.recordPayment')}
             accessibleDescription={t('friends:settleUp.noMoneyMoves')}
-            maxWidth="460px"
+            maxWidth={MODAL_SIZES.default}
             content={
                 <ModalSurface>
                     {onBack && (
