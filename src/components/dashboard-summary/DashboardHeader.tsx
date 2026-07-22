@@ -23,49 +23,47 @@ const DashboardHeader: React.FC = () => {
     const canShowDevMenu = useUsersStore(selectIsUserAdmin);
 
     return (
-        <Box mb="4">
-            <Flex justify="between" align="center" mb={{ initial: '0', sm: '4' }} gap="2">
-                <Flex align="center" gap="2" minWidth="0">
-                    <Box display={{ initial: 'block', sm: 'none' }}>
-                        <NavButton to={ROUTES.SETTINGS} variant="ghost" radius="full">
-                            <UserAvatar
-                                size="3"
-                                user={user ?? undefined}
-                                isLoading={isUserLoading}
-                            />
-                        </NavButton>
-                    </Box>
+        <Flex justify="between" align="center" gap="2">
+            <Flex align="center" gap="2" minWidth="0">
+                <Box display={{ initial: 'block', sm: 'none' }}>
+                    <NavButton to={ROUTES.SETTINGS} variant="ghost" radius="full">
+                        <UserAvatar
+                            size="3"
+                            user={user ?? undefined}
+                            isLoading={isUserLoading}
+                        />
+                    </NavButton>
+                </Box>
 
-                    <Box>
-                        <Heading size="5">
-                            <Skeleton loading={isUserLoading}>
-                                {isUserLoading
-                                    ? tSkeletons('dashboardHeader.greeting')
-                                    : t('header.greeting', {
-                                          name: user?.displayName ?? '',
-                                      })}
-                            </Skeleton>
-                        </Heading>
-                        <Text size={{ initial: '2', sm: '3' }} color="gray" as="span">
-                            <Skeleton loading={isUserLoading}>
-                                {isUserLoading
-                                    ? tSkeletons('dashboardHeader.overview')
-                                    : t('header.overview')}
-                            </Skeleton>
-                        </Text>
-                    </Box>
-                </Flex>
-
-                <Flex align="center" gap="2">
-                    <ViewModeSwitch />
-                    {canShowDevMenu && (
-                        <Box display={{ initial: 'block', sm: 'none' }}>
-                            <DevMenu />
-                        </Box>
-                    )}
-                </Flex>
+                <Box>
+                    <Heading size="5">
+                        <Skeleton loading={isUserLoading}>
+                            {isUserLoading
+                                ? tSkeletons('dashboardHeader.greeting')
+                                : t('header.greeting', {
+                                      name: user?.displayName ?? '',
+                                  })}
+                        </Skeleton>
+                    </Heading>
+                    <Text size={{ initial: '2', sm: '3' }} color="gray" as="span">
+                        <Skeleton loading={isUserLoading}>
+                            {isUserLoading
+                                ? tSkeletons('dashboardHeader.overview')
+                                : t('header.overview')}
+                        </Skeleton>
+                    </Text>
+                </Box>
             </Flex>
-        </Box>
+
+            <Flex align="center" gap="2">
+                <ViewModeSwitch />
+                {canShowDevMenu && (
+                    <Box display={{ initial: 'block', sm: 'none' }}>
+                        <DevMenu />
+                    </Box>
+                )}
+            </Flex>
+        </Flex>
     );
 };
 
