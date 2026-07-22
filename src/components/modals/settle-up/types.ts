@@ -18,6 +18,7 @@ export interface FriendSettleUpProps {
 export interface GroupSettleUpProps {
     source: 'group';
     group: Group;
+    memberId?: string;
 }
 
 export type SettleUpModalProps = FriendSettleUpProps | GroupSettleUpProps;
