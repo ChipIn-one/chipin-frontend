@@ -25,7 +25,7 @@ const SummaryDebtCards: React.FC<Props> = ({
     defaultCurrency,
 }) => {
     return (
-        <Flex direction="column" gap="4" mb="4">
+        <Flex direction="column" gap="4">
             {!owedEntries.length && !oweEntries.length && !isLoading && <NoDebtsEmptyState />}
             <OwedToYouCard
                 isLoading={isLoading}

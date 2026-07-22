@@ -1,5 +1,5 @@
-import { BalancesMap, CurrenciesRates } from 'api/chipin.raw.types';
-import { getCurrencySummary } from 'helpers/currencies';
+import type { BalancesMap, CurrenciesRates } from 'api/chipin.raw.types';
+import { getBalanceEntriesSummary } from 'helpers/currencies';
 
 export const calcBalancesSummary = (
     defaultCurrency: string,
@@ -11,16 +11,10 @@ export const calcBalancesSummary = (
     owingTotalInBase: number;
     netTotalInBase: number;
 } => {
-    const { netTotalInBase, owedTotalInBase, owingTotalInBase } = getCurrencySummary(
-        entity.balances,
+    return getBalanceEntriesSummary(
+        Object.values(entity.balances),
         currenciesRates,
         baseCurrency,
         defaultCurrency,
     );
-
-    return {
-        netTotalInBase,
-        owedTotalInBase,
-        owingTotalInBase,
-    };
 };

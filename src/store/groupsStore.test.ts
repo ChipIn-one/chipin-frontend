@@ -76,6 +76,38 @@ describe('groupsStore', () => {
         useUsersStore.setState({ user: currentUser });
     });
 
+    test('keeps same-currency debts in both summary directions', () => {
+        const mixedDirectionGroup: Group = {
+            ...group,
+            name: 'Vietnam',
+            members: [
+                { user: creator, balancesByCurrency: {} },
+                {
+                    user: { ...creator, id: 'user-2' },
+                    balancesByCurrency: {
+                        USD: { currency: 'USD', netBalance: 20 },
+                    },
+                },
+                {
+                    user: { ...creator, id: 'user-3' },
+                    balancesByCurrency: {
+                        USD: { currency: 'USD', netBalance: -20 },
+                    },
+                },
+            ],
+        };
+
+        useGroupsStore.getState().setSelectedGroup(mixedDirectionGroup);
+
+        expect(useGroupsStore.getState()).toMatchObject({
+            owedEntries: [{ currency: 'USD', netBalance: 20 }],
+            oweEntries: [{ currency: 'USD', netBalance: -20 }],
+            netTotalInBase: 0,
+            owedTotalInBase: 20,
+            owingTotalInBase: 20,
+        });
+    });
+
     test('creates a scoped partial settlement and updates selected and cached group balances', () => {
         vi.mocked(chipinApi.createApiSettlement).mockResolvedValue({} as never);
         useGroupsStore.setState({ groups: [settlementGroup] });

@@ -4,11 +4,10 @@ import styled, { css } from 'styled-components';
 
 import { Card, Flex, Text } from '@radix-ui/themes';
 
+import type { BalanceEntry } from 'api/chipin.raw.types';
 import type { Group } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
 import { themeColor } from 'helpers/colors';
-import { useDashboardStore } from 'store/dashboardStore';
-import { selectGroupNonZeroBalances } from 'store/groupsSelectors';
 import { useGroupsStore } from 'store/groupsStore';
 
 import BalanceSummaryText from 'basics/BalanceSummaryText';
@@ -53,15 +52,13 @@ const InteractiveCard = styled(Card)<{ $isSelected: boolean }>`
 
 interface Props {
     group: Group;
+    balances: BalanceEntry[];
     isSelected?: boolean;
 }
 
-const GroupCard: React.FC<Props> = ({ group, isSelected = false }) => {
+const GroupCard: React.FC<Props> = ({ group, balances, isSelected = false }) => {
     const setSelectedGroup = useGroupsStore(state => state.setSelectedGroup);
-    const currencies = useDashboardStore(state => state.currencies);
     const { t } = useTranslation('dashboard');
-
-    const balances = selectGroupNonZeroBalances(group, currencies.rates, currencies.base);
 
     return (
         <GroupNavButton

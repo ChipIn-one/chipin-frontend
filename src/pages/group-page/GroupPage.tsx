@@ -8,10 +8,15 @@ import { useShallow } from 'zustand/react/shallow';
 import { Box, Button, Card, Container, Flex, Grid, Inset, Skeleton, Text } from '@radix-ui/themes';
 
 import type { Group } from 'api/chipin.types';
+import { useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupDataFetched, selectGroupDataLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
+import { selectUserCurrency } from 'store/usersSelectors';
+import { useUsersStore } from 'store/usersStore';
 
+import GroupsCards from 'components/GroupsCards';
+import GroupsSectionHeader from 'components/GroupsSectionHeader';
 import { AddExpenseModal, SettleUpModal } from 'components/modals';
 import { MobileNavBar } from 'components/nav-bars';
 import UsersRow from 'components/UsersRow';
@@ -37,7 +42,12 @@ const GroupPage = () => {
         })),
     );
 
-    const { fetchSetGroupById } = useGroupsStore();
+    const fetchSetGroupById = useGroupsStore(state => state.fetchSetGroupById);
+    const setSelectedGroupSummaryCurrency = useGroupsStore(
+        state => state.setSelectedGroupSummaryCurrency,
+    );
+    const defaultCurrency = useUsersStore(selectUserCurrency);
+    const currencies = useDashboardStore(state => state.currencies);
     const isGroupDataLoading = useLoadingStore(selectGroupDataLoading);
     const isGroupDataFetched = useLoadingStore(selectGroupDataFetched);
     const { groupId } = useParams<{ groupId: string }>();
@@ -45,6 +55,16 @@ const GroupPage = () => {
     useEffect(() => {
         fetchSetGroupById(groupId).catch(() => undefined);
     }, [groupId, fetchSetGroupById]);
+
+    useEffect(() => {
+        setSelectedGroupSummaryCurrency(defaultCurrency);
+    }, [
+        defaultCurrency,
+        currencies.base,
+        currencies.fetchedAt,
+        selectedGroup?.id,
+        setSelectedGroupSummaryCurrency,
+    ]);
 
     if (!groupId) {
         return (
@@ -74,11 +94,20 @@ const GroupPage = () => {
         <Container size="4" pb={{ initial: '9', sm: '4' }}>
             <Grid columns="3" gap="6">
                 {/* ── Left sidebar (desktop) ── */}
-                <GroupSummary
-                    groups={groups}
-                    selectedGroup={selectedGroup}
-                    isLoading={isGroupDataLoading}
-                />
+                <Flex
+                    direction="column"
+                    gap="4"
+                    gridColumn={{ initial: 'span 3', sm: 'span 1' }}
+                    mb="6"
+                    display={{ initial: 'none', sm: 'flex' }}
+                >
+                    <GroupSummary isLoading={isGroupDataLoading} />
+                    <GroupsSectionHeader
+                        label={t('dashboard:groups.otherTitle')}
+                        isLoading={isGroupDataLoading}
+                    />
+                    <GroupsCards groups={groups} selectedGroupId={selectedGroup.id} />
+                </Flex>
 
                 {/* ── Main content column ── */}
                 <Box gridColumn={{ initial: 'span 3', sm: 'span 2' }}>
@@ -97,7 +126,11 @@ const GroupPage = () => {
                     </Box>
 
                     {/* Mobile: cover full-bleed inset at top, then card body below */}
-                    <Box display={{ initial: 'block', sm: 'none' }}>
+                    <Flex
+                        direction="column"
+                        gap="4"
+                        display={{ initial: 'flex', sm: 'none' }}
+                    >
                         <MobileCoverBox>
                             <GroupCoverSection
                                 group={selectedGroup}
@@ -105,10 +138,9 @@ const GroupPage = () => {
                                 ratio={16 / 7}
                             />
                         </MobileCoverBox>
-                        <Box mt="4">
-                            <GroupCardBody group={selectedGroup} isLoading={isGroupDataLoading} />
-                        </Box>
-                    </Box>
+                        <GroupCardBody group={selectedGroup} isLoading={isGroupDataLoading} />
+                        <GroupSummary isLoading={isGroupDataLoading} />
+                    </Flex>
 
                     {/* Tabs: Expenses / Balances / Members */}
                     <GroupTabsContent group={selectedGroup} />
