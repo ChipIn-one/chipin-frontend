@@ -1,4 +1,4 @@
-import { LucideArrowLeftRight, LucideUserPlus } from 'lucide-react';
+import { LucideUserPlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar, Button, Card, Flex, Text } from '@radix-ui/themes';
@@ -7,18 +7,15 @@ import type { Group } from 'api/chipin.types';
 import { buildGroupInviteLink } from 'helpers/url';
 import { useUsersStore } from 'store/usersStore';
 
+import BalanceSummaryText from 'basics/BalanceSummaryText';
 import { NoGroupMembersEmptyState } from 'basics/empty-states';
 import GroupRoleBadge from 'basics/GroupRoleBadge';
-import OwedStatusText from 'basics/OwedStatusText';
+import { SettleUpModal } from 'components/modals';
 
 interface Props {
     group: Group;
 }
 
-/**
- * Placeholder balances tab — real balance data comes from the API (not yet wired).
- * Renders members with stub zero balances, ready to be replaced with real data.
- */
 const GroupBalancesTab = ({ group }: Props) => {
     const { t } = useTranslation('group');
     const user = useUsersStore(s => s.user);
@@ -43,42 +40,51 @@ const GroupBalancesTab = ({ group }: Props) => {
 
     return (
         <Flex direction="column" gap="2">
-            {otherMembers.map(member => (
-                <Card key={member.user.id} size="2">
-                    <Flex align="center" justify="between" gap="3">
-                        <Flex align="center" gap="3">
-                            <Avatar
-                                size="3"
-                                radius="full"
-                                src={member.user.picture || ''}
-                                alt={member.user.displayName}
-                                fallback={member.user.displayName?.[0]}
-                            />
-                            <Flex direction="column" gap="1">
-                                <Flex align="center" gap="2">
-                                    <Text weight="medium" size="2">
-                                        {member.user.displayName}
-                                    </Text>
-                                    <GroupRoleBadge isOwner={member.user.id === group.creator.id} />
-                                </Flex>
-                                <OwedStatusText
-                                    value={0}
-                                    currencyCode="USD"
-                                    size="1"
-                                    align="left"
-                                />
-                            </Flex>
-                        </Flex>
+            {otherMembers.map(member => {
+                const balances = Object.values(member.balancesByCurrency);
 
-                        <Flex align="center" gap="2">
-                            <Button size="1" color="green" variant="soft">
-                                <LucideArrowLeftRight size={13} />
-                                {t('page.balances.settled')}
-                            </Button>
+                return (
+                    <Card key={member.user.id} size="2">
+                        <Flex
+                            direction={{ initial: 'column', xs: 'row' }}
+                            align={{ initial: 'stretch', xs: 'center' }}
+                            justify="between"
+                            gap="4"
+                        >
+                            <Flex align="center" gap="3">
+                                <Avatar
+                                    size="3"
+                                    radius="full"
+                                    src={member.user.picture || ''}
+                                    alt={member.user.displayName}
+                                    fallback={member.user.displayName?.[0]}
+                                />
+                                <Flex direction="column" gap="1">
+                                    <Flex align="center" gap="2">
+                                        <Text weight="medium" size="2">
+                                            {member.user.displayName}
+                                        </Text>
+                                        <GroupRoleBadge
+                                            isOwner={member.user.id === group.creator.id}
+                                        />
+                                    </Flex>
+                                    <BalanceSummaryText
+                                        entries={balances}
+                                        size="1"
+                                        align="left"
+                                    />
+                                </Flex>
+                            </Flex>
+
+                            <SettleUpModal
+                                source="group"
+                                group={group}
+                                memberId={member.user.id}
+                            />
                         </Flex>
-                    </Flex>
-                </Card>
-            ))}
+                    </Card>
+                );
+            })}
         </Flex>
     );
 };

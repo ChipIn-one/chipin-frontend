@@ -15,7 +15,7 @@ import type { GroupSettleUpProps } from '../types';
 import DebtSelectionStep from './DebtSelectionStep';
 import SettlementForm from './SettlementForm';
 
-const GroupSettleUpFlow = ({ group }: GroupSettleUpProps) => {
+const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
     const { t } = useTranslation(['group', 'common']);
     const currentUser = useUsersStore(state => state.user);
     const createSettlement = useGroupsStore(state => state.createSettlement);
@@ -25,12 +25,21 @@ const GroupSettleUpFlow = ({ group }: GroupSettleUpProps) => {
     );
     const [isYouOweExpanded, setIsYouOweExpanded] = useState(false);
     const [isOwedToYouExpanded, setIsOwedToYouExpanded] = useState(false);
-    const settlementOptions = currentUser
+    const groupSettlementOptions = currentUser
         ? selectGroupSettlementOptions(group, currentUser.id)
         : { youOwe: [], owedToYou: [] };
+    const settlementOptions = memberId
+        ? {
+              youOwe: groupSettlementOptions.youOwe.filter(option => option.user.id === memberId),
+              owedToYou: groupSettlementOptions.owedToYou.filter(
+                  option => option.user.id === memberId,
+              ),
+          }
+        : groupSettlementOptions;
     const youOwe = helpers.getDebtOptions(settlementOptions.youOwe);
     const owedToYou = helpers.getDebtOptions(settlementOptions.owedToYou);
     const debts = [...youOwe, ...owedToYou];
+    const isSettledMember = Boolean(memberId) && debts.length === 0;
     const selectedOption = selectedDebt
         ? debts.find(
               debt =>
@@ -68,9 +77,18 @@ const GroupSettleUpFlow = ({ group }: GroupSettleUpProps) => {
             isOpened={isOpened}
             setIsOpened={onOpenChange}
             triggerElement={
-                <Button size="2" color="green" disabled={debts.length === 0}>
+                <Button
+                    size={memberId ? '1' : '2'}
+                    color="green"
+                    variant={memberId ? 'soft' : 'solid'}
+                    disabled={debts.length === 0}
+                >
                     <LucideArrowLeftRight size={15} />
-                    {t('common:buttons.settleUp')}
+                    {t(
+                        isSettledMember
+                            ? 'group:page.balances.settled'
+                            : 'common:buttons.settleUp',
+                    )}
                 </Button>
             }
             title={t('group:page.settleUp.chooseDebtTitle')}
