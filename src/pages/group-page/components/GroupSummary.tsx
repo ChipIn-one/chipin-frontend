@@ -10,6 +10,8 @@ interface Props {
     isLoading: boolean;
 }
 
+//TODO: REMOVE THIS TEXT
+
 const GroupSummary = ({ isLoading }: Props) => {
     const { owedTotalInBase, owingTotalInBase, owedEntries, oweEntries } = useGroupsStore(
         useShallow(state => ({
