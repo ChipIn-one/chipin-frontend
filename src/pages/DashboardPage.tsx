@@ -37,7 +37,9 @@ const DashboardPage = () => {
     return (
         <Container size="4" pb={{ initial: '9', sm: '6' }}>
             <Grid columns="3" gap="6">
-                <Box
+                <Flex
+                    direction="column"
+                    gap="4"
                     gridColumn={{
                         initial: 'span 3',
                         sm: 'span 1',
@@ -47,9 +49,8 @@ const DashboardPage = () => {
 
                     <DashBoardSummary isLoading={isDashboardLoading} />
 
-                    <Box>
+                    <Flex direction="column" gap="4">
                         <GroupsSectionHeader
-                            mb="4"
                             label={t('groups.title')}
                             isLoading={isDashboardLoading}
                         />
@@ -70,8 +71,8 @@ const DashboardPage = () => {
                                 />
                             )}
                         </Flex>
-                    </Box>
-                </Box>
+                    </Flex>
+                </Flex>
 
                 <Box
                     gridColumn={{
