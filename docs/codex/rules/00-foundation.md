@@ -51,6 +51,58 @@ export const fetchGroup = (groupId: string): Promise<Group> => {
 };
 ```
 
+## Collection Traversal And Allocation
+
+- A traversal is any operation that can inspect collection elements, including `for`, `for...of`,
+  `for...in`, `map`, `filter`, `find`, `some`, `every`, `reduce`, `sort`, and
+  `Object.keys`/`Object.values`/`Object.entries`. Early termination does not stop an operation from counting
+  as a traversal.
+- A dynamic collection gets at most one primary traversal within one computation. If the computation needs
+  several arrays, counters, flags, lookup tables, or selected items, collect all of them during that pass.
+- Prefer `for...of` for arrays. Mutating a local accumulator or locally owned result collections during the
+  pass is allowed; mutating the input collection is not.
+- `reduce` is an exception for a simple aggregation when it is materially clearer than `for...of`. Do not
+  use `reduce` merely to produce several outputs, and never copy an accumulator with object or array spread
+  on every iteration.
+- A separate `sort` of a derived array is allowed after the primary traversal. Independently derived arrays
+  may then be traversed separately when their own processing is required.
+- Multiple traversals are allowed for small static collections such as a fixed list of UI options. Any other
+  repeated traversal is strongly discouraged and must be justified by a hard size bound or measured need.
+- Do not repeatedly call `Object.keys`, `Object.values`, or `Object.entries` for the same dynamic record.
+  When a record only needs to be visited once, use `for...in` with `Object.hasOwn`. Use an `Object.*` result
+  only when the resulting array is itself required later, compute it once, and reuse it.
+- Avoid nested repeated scans such as `items.map(item => otherItems.find(...))`. Build and reuse a `Map` or
+  `Set` when repeated membership or keyed lookup is required.
+
+```ts
+const owed: BalanceEntry[] = [];
+const owing: BalanceEntry[] = [];
+let selected: BalanceEntry | undefined;
+
+for (const balance of balances) {
+    if (balance.netBalance > 0) {
+        owed.push(balance);
+    } else if (balance.netBalance < 0) {
+        owing.push(balance);
+    }
+
+    if (balance.currency === selectedCurrency) {
+        selected = balance;
+    }
+}
+```
+
+```ts
+for (const currency in balancesByCurrency) {
+    if (!Object.hasOwn(balancesByCurrency, currency)) {
+        continue;
+    }
+
+    const balance = balancesByCurrency[currency];
+    // Process the record value without allocating an intermediate array.
+}
+```
+
 ## Modules And Control Flow
 
 - Prefer named exports. Default exports are limited to established framework boundaries or existing local patterns.

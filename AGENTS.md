@@ -83,6 +83,8 @@ Before writing or reviewing code, read [`docs/codex/rules/00-foundation.md`](doc
 - Runtime API calls belong in stores or an explicitly approved orchestration layer.
 - User-facing text, accessibility labels, and toast content use i18n.
 - Do not add `any` or `as any`; use `unknown` and narrow it.
+- Dynamic arrays and records get one primary traversal per computation. Gather multiple results in one
+  `for...of`/`for...in` pass; follow the exceptions in `docs/codex/rules/00-foundation.md`.
 - Backend contracts do not change unless explicitly requested.
 
 ## Legacy And Touched Code

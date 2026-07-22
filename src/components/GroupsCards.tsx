@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LucideEye, LucideEyeOff, LucideFilterX } from 'lucide-react';
+import { LucideChevronDown, LucideChevronUp, LucideFilterX } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Flex } from '@radix-ui/themes';
@@ -19,7 +19,7 @@ import { GroupsCardsSkeleton } from 'components/skeletons';
 
 import GroupCard from './GroupCard';
 
-type GroupFilter = 'all' | 'owed' | 'owes' | 'settled';
+type DebtFilter = 'all' | 'owed' | 'owes';
 
 interface Props {
     groups: Group[];
@@ -31,46 +31,90 @@ interface GroupCardModel {
     balances: GroupBalances;
 }
 
-const filterGroups = (groups: Group[], filter: GroupFilter): GroupCardModel[] => {
-    return groups.reduce<GroupCardModel[]>((filteredGroups, group) => {
+interface FilterGroupsOptions {
+    filter: DebtFilter;
+    isSettledVisible: boolean;
+    selectedGroupId?: Group['id'];
+}
+
+interface FilterGroupsResult {
+    displayedGroups: GroupCardModel[];
+    hiddenSettledCount: number;
+}
+
+const filterGroups = (
+    groups: Group[],
+    { filter, isSettledVisible, selectedGroupId }: FilterGroupsOptions,
+): FilterGroupsResult => {
+    const activeGroups: GroupCardModel[] = [];
+    const settledGroups: GroupCardModel[] = [];
+    let selectedGroup: GroupCardModel | undefined;
+    let isSelectedGroupVisible = false;
+    let hiddenSettledCount = 0;
+
+    for (const group of groups) {
         const { owedEntries, oweEntries } = selectGroupBalances(group);
         const hasOwedBalance = owedEntries.length > 0;
         const hasOweBalance = oweEntries.length > 0;
-        let shouldIncludeGroup = false;
+        const isSettled = !hasOwedBalance && !hasOweBalance;
+        const isSelected = group.id === selectedGroupId;
+        const groupModel = { group, balances: { owedEntries, oweEntries } };
+        let matchesActiveFilter = false;
 
         if (filter === 'all') {
-            shouldIncludeGroup = hasOwedBalance || hasOweBalance;
-        } else if (filter === 'settled') {
-            shouldIncludeGroup = !hasOwedBalance && !hasOweBalance;
+            matchesActiveFilter = !isSettled;
         } else if (filter === 'owed') {
-            shouldIncludeGroup = hasOwedBalance;
+            matchesActiveFilter = hasOwedBalance;
         } else {
-            shouldIncludeGroup = hasOweBalance;
+            matchesActiveFilter = hasOweBalance;
         }
 
-        if (shouldIncludeGroup) {
-            filteredGroups.push({ group, balances: { owedEntries, oweEntries } });
+        if (isSettled) {
+            settledGroups.push(groupModel);
+
+            if (!isSelected) {
+                hiddenSettledCount += 1;
+            }
+        } else if (matchesActiveFilter) {
+            activeGroups.push(groupModel);
         }
 
-        return filteredGroups;
-    }, []);
+        if (isSelected) {
+            selectedGroup = groupModel;
+            isSelectedGroupVisible = isSettled ? isSettledVisible : matchesActiveFilter;
+        }
+    }
+
+    const filteredGroups = isSettledVisible
+        ? [...activeGroups, ...settledGroups]
+        : activeGroups;
+    const displayedGroups =
+        selectedGroup && !isSelectedGroupVisible
+            ? [selectedGroup, ...filteredGroups]
+            : filteredGroups;
+
+    return { displayedGroups, hiddenSettledCount };
 };
 
-const GroupsCards: React.FC<Props> = ({ groups, selectedGroupId }) => {
+const GroupsCards = ({ groups, selectedGroupId }: Props) => {
     const isGroupListFetched = useLoadingStore(selectGroupListFetched);
     const isDashboardFetched = useLoadingStore(selectDashboardFetched);
     const currencies = useDashboardStore(state => state.currencies);
-    const [activeFilter, setActiveFilter] = useState<GroupFilter>('all');
+    const [activeFilter, setActiveFilter] = useState<DebtFilter>('all');
+    const [isSettledVisible, setIsSettledVisible] = useState(false);
     const { t } = useTranslation('dashboard');
 
     if (!isGroupListFetched || !isDashboardFetched) {
         return <GroupsCardsSkeleton />;
     }
 
-    const filteredGroups = filterGroups(groups, activeFilter);
-    const isSettledFilter = activeFilter === 'settled';
+    const { displayedGroups, hiddenSettledCount } = filterGroups(groups, {
+        filter: activeFilter,
+        isSettledVisible,
+        selectedGroupId,
+    });
 
-    const filterItems: { value: GroupFilter; label: string }[] = [
+    const filterItems: { value: DebtFilter; label: string }[] = [
         { value: 'all', label: t('groups.filterAll') },
         { value: 'owed', label: t('summary.owedToYou') },
         { value: 'owes', label: t('summary.youOwe') },
@@ -90,17 +134,8 @@ const GroupsCards: React.FC<Props> = ({ groups, selectedGroupId }) => {
                         {item.label}
                     </Button>
                 ))}
-                <Button
-                    size="2"
-                    variant="soft"
-                    color={isSettledFilter ? 'grass' : 'gray'}
-                    onClick={() => setActiveFilter('settled')}
-                >
-                    {isSettledFilter ? <LucideEye size={14} /> : <LucideEyeOff size={14} />}
-                    {t('groups.filterSettled')}
-                </Button>
             </Flex>
-            {filteredGroups.length === 0 && (
+            {displayedGroups.length === 0 && (
                 <EmptyState
                     icon={<LucideFilterX size={16} />}
                     title={t('groups.filterEmptyTitle')}
@@ -108,7 +143,7 @@ const GroupsCards: React.FC<Props> = ({ groups, selectedGroupId }) => {
                 />
             )}
 
-            {filteredGroups.map(({ group, balances }) => (
+            {displayedGroups.map(({ group, balances }) => (
                 <GroupCard
                     key={group.id}
                     group={group}
@@ -116,6 +151,24 @@ const GroupsCards: React.FC<Props> = ({ groups, selectedGroupId }) => {
                     isSelected={group.id === selectedGroupId}
                 />
             ))}
+
+            {hiddenSettledCount > 0 && (
+                <Button
+                    size="2"
+                    variant="soft"
+                    color="gray"
+                    onClick={() => setIsSettledVisible(isVisible => !isVisible)}
+                >
+                    {isSettledVisible ? (
+                        <LucideChevronUp size={14} />
+                    ) : (
+                        <LucideChevronDown size={14} />
+                    )}
+                    {isSettledVisible
+                        ? t('groups.hideSettled')
+                        : t('groups.showSettled', { count: hiddenSettledCount })}
+                </Button>
+            )}
         </Flex>
     );
 };

@@ -7,6 +7,8 @@
         "emptyDescription": "Crie o seu primeiro grupo para começar a dividir despesas com amigos, colegas de quarto ou de viagem.",
         "filterAll": "Todos",
         "filterSettled": "Acertados",
+        "showSettled": "Mostrar acertados ({{count}})",
+        "hideSettled": "Ocultar acertados",
         "filterEmptyTitle": "Nenhum grupo encontrado",
         "filterEmptyDescription": "Nenhum grupo corresponde ao filtro selecionado."
     },
