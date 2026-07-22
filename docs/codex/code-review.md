@@ -42,6 +42,9 @@ git diff --cached
 - UI uses Radix responsive props first, project theme helpers, shared money basics, i18n, and accessible semantics.
 - UI calls store actions; runtime API calls remain namespaced and below the UI boundary.
 - Types remain strict; no `any` or `as any` was added.
+- Dynamic collections are traversed once per computation when multiple results can be collected together;
+  repeated array methods, repeated `Object.*` conversions, nested scans, and copying `reduce` accumulators
+  are rejected unless a documented exception applies.
 - Loading/errors remain centralized and offline financial state remains distinguishable until backend reconciliation.
 - Backend contracts remain unchanged unless explicitly in scope.
 

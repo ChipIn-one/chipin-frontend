@@ -7,6 +7,8 @@
         "emptyDescription": "Crea tu primer grupo para empezar a dividir gastos con amigos, compañeros de cuarto o de viaje.",
         "filterAll": "Todos",
         "filterSettled": "Liquidados",
+        "showSettled": "Mostrar liquidados ({{count}})",
+        "hideSettled": "Ocultar liquidados",
         "filterEmptyTitle": "No se encontraron grupos",
         "filterEmptyDescription": "Ningún grupo coincide con el filtro seleccionado."
     },
