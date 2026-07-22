@@ -1,0 +1,111 @@
+import { beforeEach, expect, test, vi } from 'vitest';
+
+import { render, screen } from '@testing-library/react';
+
+import type { Group, User } from 'api/chipin.types';
+import { useGroupsStore } from 'store/groupsStore';
+import { useLoadingStore } from 'store/loadingStore';
+import { useUsersStore } from 'store/usersStore';
+
+import GroupPage from './GroupPage';
+
+vi.mock('react-i18next', () => ({
+    useTranslation: () => ({ t: (key: string) => key }),
+}));
+
+vi.mock('react-router-dom', () => ({
+    useParams: () => ({ groupId: 'group-1' }),
+}));
+
+vi.mock('components/modals', () => ({
+    AddExpenseModal: ({ children }: { children: React.ReactNode }) => children,
+    SettleUpModal: () => null,
+}));
+
+vi.mock('components/GroupsCards', () => ({
+    default: () => null,
+}));
+
+vi.mock('components/GroupsSectionHeader', () => ({
+    default: () => null,
+}));
+
+vi.mock('components/nav-bars', () => ({
+    MobileNavBar: () => null,
+}));
+
+vi.mock('components/UsersRow', () => ({
+    default: () => null,
+}));
+
+vi.mock('./components', () => ({
+    GroupCoverSection: () => null,
+    GroupSummary: (props: Record<string, unknown>) => (
+        <div data-testid="group-summary" data-has-layout={String('layout' in props)} />
+    ),
+    GroupTabsContent: () => <div data-testid="group-tabs" />,
+}));
+
+const creator = {
+    id: 'user-1',
+    email: 'alice@example.com',
+    displayName: 'Alice',
+    firstName: 'Alice',
+    lastName: null,
+    picture: null,
+    createdAt: 1,
+    updatedAt: 1,
+};
+
+const group = {
+    id: 'group-1',
+    name: 'Vietnam',
+    inviteToken: 'invite-token',
+    description: null,
+    creator,
+    members: [{ user: creator, balancesByCurrency: {} }],
+    createdAt: 1,
+    updatedAt: 1,
+    emoji: null,
+    coverUrl: null,
+    role: 'OWNER',
+    status: 'ACTIVE',
+    recentActivities: [],
+} satisfies Group;
+
+const currentUser = {
+    ...creator,
+    role: 'USER',
+    subscriptionUntil: null,
+    settings: {
+        defaultCurrency: 'USD',
+        timeFormat: '12h',
+        language: 'en',
+        theme: 'system',
+        simplifyDebts: true,
+    },
+} satisfies User;
+
+beforeEach(() => {
+    useGroupsStore.getState().setInitialGroupsStore();
+    useGroupsStore.setState({ groups: [group] });
+    useGroupsStore.getState().setSelectedGroup(group);
+    useLoadingStore.getState().setInitialLoadingStore();
+    useUsersStore.setState({ user: currentUser });
+});
+
+test('composes summaries without viewport-specific component props', () => {
+    render(<GroupPage />);
+
+    const summaries = screen.getAllByTestId('group-summary');
+    const mobileSummary = summaries[1];
+    const tabs = screen.getByTestId('group-tabs');
+
+    expect(summaries).toHaveLength(2);
+    summaries.forEach(summary => {
+        expect(summary.dataset.hasLayout).toBe('false');
+    });
+    expect(
+        mobileSummary.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+});

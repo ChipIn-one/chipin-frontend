@@ -1,4 +1,4 @@
-import { BalanceEntry, BalancesMap, CurrenciesRates } from 'api/chipin.raw.types';
+import type { BalanceEntry, CurrenciesRates } from 'api/chipin.raw.types';
 
 export const convertCurrencyAmount = (
     amount: number,
@@ -17,14 +17,12 @@ export const convertCurrencyAmount = (
     return (amount / sourceRate) * targetRate;
 };
 
-export const getCurrencySummary = (
-    balances: BalancesMap,
+export const getBalanceEntriesSummary = (
+    entries: BalanceEntry[],
     rates: CurrenciesRates,
     baseCurrency: string,
     defaultCurrency: string,
 ): { netTotalInBase: number; owedTotalInBase: number; owingTotalInBase: number } => {
-    const entries = Object.values(balances);
-
     let netTotalInBase = 0;
     let owedTotalInBase = 0;
     let owingTotalInBase = 0;

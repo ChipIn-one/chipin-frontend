@@ -5,7 +5,12 @@ import { useTranslation } from 'react-i18next';
 import { Button, Flex } from '@radix-ui/themes';
 
 import type { Group } from 'api/chipin.types';
-import { selectGroupBalances } from 'store/groupsSelectors';
+import { useDashboardStore } from 'store/dashboardStore';
+import {
+    type GroupBalances,
+    selectGroupBalances,
+    sortGroupBalances,
+} from 'store/groupsSelectors';
 import { selectDashboardFetched, selectGroupListFetched } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
@@ -21,29 +26,40 @@ interface Props {
     selectedGroupId?: Group['id'];
 }
 
-const filterGroups = (groups: Group[], filter: GroupFilter): Group[] => {
-    return groups.filter(group => {
-        const balances = Object.values(selectGroupBalances(group));
+interface GroupCardModel {
+    group: Group;
+    balances: GroupBalances;
+}
+
+const filterGroups = (groups: Group[], filter: GroupFilter): GroupCardModel[] => {
+    return groups.reduce<GroupCardModel[]>((filteredGroups, group) => {
+        const { owedEntries, oweEntries } = selectGroupBalances(group);
+        const hasOwedBalance = owedEntries.length > 0;
+        const hasOweBalance = oweEntries.length > 0;
+        let shouldIncludeGroup = false;
 
         if (filter === 'all') {
-            return balances.some(entry => entry.netBalance !== 0);
+            shouldIncludeGroup = hasOwedBalance || hasOweBalance;
+        } else if (filter === 'settled') {
+            shouldIncludeGroup = !hasOwedBalance && !hasOweBalance;
+        } else if (filter === 'owed') {
+            shouldIncludeGroup = hasOwedBalance;
+        } else {
+            shouldIncludeGroup = hasOweBalance;
         }
 
-        if (filter === 'settled') {
-            return balances.every(entry => entry.netBalance === 0);
+        if (shouldIncludeGroup) {
+            filteredGroups.push({ group, balances: { owedEntries, oweEntries } });
         }
 
-        if (filter === 'owed') {
-            return balances.some(entry => entry.netBalance > 0 && entry.netBalance !== 0);
-        }
-
-        return balances.some(entry => entry.netBalance < 0 && entry.netBalance !== 0);
-    });
+        return filteredGroups;
+    }, []);
 };
 
 const GroupsCards: React.FC<Props> = ({ groups, selectedGroupId }) => {
     const isGroupListFetched = useLoadingStore(selectGroupListFetched);
     const isDashboardFetched = useLoadingStore(selectDashboardFetched);
+    const currencies = useDashboardStore(state => state.currencies);
     const [activeFilter, setActiveFilter] = useState<GroupFilter>('all');
     const { t } = useTranslation('dashboard');
 
@@ -92,8 +108,13 @@ const GroupsCards: React.FC<Props> = ({ groups, selectedGroupId }) => {
                 />
             )}
 
-            {filteredGroups.map(group => (
-                <GroupCard key={group.id} group={group} isSelected={group.id === selectedGroupId} />
+            {filteredGroups.map(({ group, balances }) => (
+                <GroupCard
+                    key={group.id}
+                    group={group}
+                    balances={sortGroupBalances(balances, currencies.rates, currencies.base)}
+                    isSelected={group.id === selectedGroupId}
+                />
             ))}
         </Flex>
     );
