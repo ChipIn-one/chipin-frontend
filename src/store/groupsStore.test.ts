@@ -11,6 +11,7 @@ vi.mock('api/chipin', () => ({
     createApiSettlement: vi.fn(),
     fetchApiUserGroupById: vi.fn(),
     fetchApiUserGroups: vi.fn(),
+    inviteApiUserToGroup: vi.fn(),
 }));
 
 const creator = {
@@ -252,6 +253,22 @@ describe('groupsStore', () => {
             expect(fetchedGroups).toEqual(expectedGroups);
             expect(useGroupsStore.getState().groups).toEqual(expectedGroups);
             expect(useLoadingStore.getState().group.list).toBe('fetched');
+        });
+    });
+
+    test('adds and selects the canonical group returned after joining', () => {
+        const joinedGroup = { ...group, role: 'MEMBER' } satisfies Group;
+        vi.mocked(chipinApi.inviteApiUserToGroup).mockResolvedValue(joinedGroup);
+
+        const request = useGroupsStore.getState().joinGroup({ inviteToken: group.inviteToken });
+
+        expect(useLoadingStore.getState().group.join).toBe('loading');
+
+        return request.then(result => {
+            expect(result).toEqual(joinedGroup);
+            expect(useGroupsStore.getState().groups).toEqual([joinedGroup]);
+            expect(useGroupsStore.getState().selectedGroup).toEqual(joinedGroup);
+            expect(useLoadingStore.getState().group.join).toBe('fetched');
         });
     });
 
