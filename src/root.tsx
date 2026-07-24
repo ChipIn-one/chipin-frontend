@@ -9,6 +9,7 @@ import { SpeedInsights } from '@vercel/speed-insights/react';
 import { initChipInApiInterceptors } from 'api/chipin.interceptors';
 import { LS_KEY_THEME } from 'constants/localstorage';
 import { resolveStoredTheme } from 'helpers/theme';
+import { useAuthStore } from 'store/authStore';
 
 import '@radix-ui/themes/styles.css';
 import 'styles/radixStylesOverwrite.css';
@@ -21,7 +22,9 @@ Sentry.init({
     release: import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA, // git sha
 });
 
-initChipInApiInterceptors();
+initChipInApiInterceptors(() => {
+    useAuthStore.getState().expireSession();
+});
 
 createRoot(document.getElementById('root')!).render(
     <Sentry.ErrorBoundary fallback={<></>}>

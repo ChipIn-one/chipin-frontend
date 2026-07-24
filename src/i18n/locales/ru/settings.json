@@ -59,16 +59,16 @@
     "security": {
         "title": "Приватность и безопасность",
         "description": "Управляйте безопасностью аккаунта и данными.",
-        "logoutAllDevicesTitle": "Выйти на всех устройствах",
-        "logoutAllDevicesDescription": "Завершить все активные сессии и потребовать повторный вход.",
-        "logoutAllDevicesButton": "Выйти везде",
+        "logoutOtherDevicesTitle": "Выйти на других устройствах",
+        "logoutOtherDevicesDescription": "Завершить все другие активные сессии. На этом устройстве вы останетесь в системе.",
+        "logoutOtherDevicesLoading": "Выполняется выход на других устройствах… Здесь вы останетесь в системе.",
         "exportDataTitle": "Экспорт данных",
         "exportDataDescription": "Скачать все ваши расходы.",
         "exportDataButton": "Экспорт",
         "deleteAccountTitle": "Удаление аккаунта",
         "deleteAccountDescription": "Безвозвратно удалить ваши данные.",
         "deleteAccountButton": "Удалить аккаунт",
-        "signOutTitle": "Выйти",
-        "signOutDescription": "Выйти со всех устройств."
+        "signOutTitle": "Выйти на этом устройстве",
+        "signOutDescription": "Завершить только эту сессию. На других устройствах вход сохранится."
     }
 }

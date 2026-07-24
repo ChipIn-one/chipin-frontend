@@ -105,8 +105,13 @@ const getAuthTokens = () => {
     return getStorageValue<AuthTokens>(LS_KEY_AUTH_TOKENS);
 };
 
-const saveAuthTokens = (tokens: AuthTokens) => {
-    LocalStorage.set(LS_KEY_AUTH_TOKENS, tokens);
+const saveAuthTokens = (tokens: AuthTokens): boolean => {
+    try {
+        localStorage.setItem(LS_KEY_AUTH_TOKENS, JSON.stringify(tokens));
+        return true;
+    } catch {
+        return false;
+    }
 };
 
 const clearAuthTokens = () => {

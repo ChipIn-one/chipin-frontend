@@ -10,9 +10,11 @@ import { type ApiErrorPayload, resolveApiErrorMessage } from 'helpers/errors';
 import { apiInstance } from './chipin.instance';
 
 const AUTH_LOGOUT_PATH = '/auth/logout';
+const AUTH_OAUTH_EXCHANGE_PATH = '/auth/oauth/google/exchange';
 const AUTH_REQUEST_CANCELLED_MESSAGE = 'Auth request cancelled';
 
 let areChipInApiInterceptorsConfigured = false;
+let onUnauthorizedSession: (() => void) | undefined;
 
 class AuthRequestCancelledError extends Error {
     constructor() {
@@ -32,14 +34,8 @@ const getRequestPathname = (url?: string) => {
     }
 };
 
-const isExpectedLogoutUnauthorizedError = (error: unknown) => {
+const isUnauthorizedError = (error: unknown) => {
     if (!axios.isAxiosError(error)) {
-        return false;
-    }
-
-    const pathname = getRequestPathname(error.config?.url);
-
-    if (pathname !== AUTH_LOGOUT_PATH) {
         return false;
     }
 
@@ -48,7 +44,21 @@ const isExpectedLogoutUnauthorizedError = (error: unknown) => {
     return error.response?.status === 401 || data?.code === API_ERROR_CODE.AUTH_UNAUTHORIZED;
 };
 
-export const initChipInApiInterceptors = () => {
+const isPublicAuthFlowUnauthorizedError = (error: unknown) => {
+    if (!isUnauthorizedError(error) || !axios.isAxiosError(error)) {
+        return false;
+    }
+
+    const pathname = getRequestPathname(error.config?.url);
+
+    return pathname === AUTH_LOGOUT_PATH || pathname === AUTH_OAUTH_EXCHANGE_PATH;
+};
+
+export const initChipInApiInterceptors = (
+    onUnauthorizedSessionCallback?: () => void,
+) => {
+    onUnauthorizedSession = onUnauthorizedSessionCallback;
+
     if (areChipInApiInterceptorsConfigured) {
         return;
     }
@@ -76,7 +86,12 @@ export const initChipInApiInterceptors = () => {
                 return Promise.reject(error);
             }
 
-            if (isExpectedLogoutUnauthorizedError(error)) {
+            if (isPublicAuthFlowUnauthorizedError(error)) {
+                return Promise.reject(error);
+            }
+
+            if (isUnauthorizedError(error)) {
+                onUnauthorizedSession?.();
                 return Promise.reject(error);
             }
 

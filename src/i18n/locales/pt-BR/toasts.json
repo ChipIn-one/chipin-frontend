@@ -1,7 +1,8 @@
 {
     "auth": {
         "sessionExpired": "Sessão expirada, faça login novamente.",
-        "invalidJwt": "Não foi possível validar a sessão. Faça login novamente."
+        "invalidJwt": "Não foi possível validar a sessão. Faça login novamente.",
+        "tokenPersistenceFailed": "As outras sessões foram encerradas, mas não foi possível manter o login neste dispositivo. Faça login novamente."
     },
     "common": {
         "disconnect": "Você foi desconectado.",
@@ -37,7 +38,7 @@
         "laterAction": "Depois"
     },
     "settings": {
-        "logoutAllDevicesSoon": "Sair em todos os dispositivos estará disponível em breve.",
+        "logoutOtherDevicesSuccess": "Você saiu em todos os outros dispositivos e continua conectado aqui.",
         "deleteAccountSoon": "A exclusão de conta estará disponível em breve.",
         "saveError": "Não foi possível salvar as configurações."
     },

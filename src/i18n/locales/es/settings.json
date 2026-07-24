@@ -59,16 +59,16 @@
     "security": {
         "title": "Privacidad y seguridad",
         "description": "Gestiona la seguridad de tu cuenta y tus datos.",
-        "logoutAllDevicesTitle": "Cerrar sesión en todos los dispositivos",
-        "logoutAllDevicesDescription": "Termina todas las sesiones activas y requiere iniciar sesión nuevamente.",
-        "logoutAllDevicesButton": "Cerrar todas las sesiones",
+        "logoutOtherDevicesTitle": "Cerrar sesión en otros dispositivos",
+        "logoutOtherDevicesDescription": "Finaliza todas las demás sesiones activas. Seguirás conectado en este dispositivo.",
+        "logoutOtherDevicesLoading": "Cerrando sesión en otros dispositivos… Seguirás conectado aquí.",
         "exportDataTitle": "Exportar datos",
         "exportDataDescription": "Descarga todos tus gastos.",
         "exportDataButton": "Exportar",
         "deleteAccountTitle": "Eliminar cuenta",
         "deleteAccountDescription": "Elimina permanentemente tus datos.",
         "deleteAccountButton": "Eliminar cuenta",
-        "signOutTitle": "Cerrar sesión",
-        "signOutDescription": "Cerrar sesión en todos los dispositivos."
+        "signOutTitle": "Cerrar sesión en este dispositivo",
+        "signOutDescription": "Finaliza solo esta sesión. Los demás dispositivos seguirán conectados."
     }
 }

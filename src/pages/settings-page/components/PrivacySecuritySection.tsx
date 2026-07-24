@@ -5,7 +5,10 @@ import { toast } from 'sonner';
 import { Avatar, Box, Button, Card, Flex, Grid, Separator, Skeleton, Text } from '@radix-ui/themes';
 
 import { useAuthStore } from 'store/authStore';
-import { selectAuthSignOutLoading } from 'store/loadingSelectors';
+import {
+    selectAuthLogoutOtherDevicesLoading,
+    selectAuthSignOutLoading,
+} from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
 interface Props {
@@ -14,15 +17,27 @@ interface Props {
 
 const PrivacySecuritySection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
+    const logoutOtherDevices = useAuthStore(s => s.logoutOtherDevices);
     const signOut = useAuthStore(s => s.signOut);
     const isSigningOut = useLoadingStore(selectAuthSignOutLoading);
+    const isLoggingOutOtherDevices = useLoadingStore(
+        selectAuthLogoutOtherDevicesLoading,
+    );
 
-    const handleLogoutAllDevices = () => {
-        toast.info(t('toasts:settings.logoutAllDevicesSoon'));
+    const onDeleteAccount = () => {
+        toast.info(t('toasts:settings.deleteAccountSoon'));
     };
 
-    const handleDeleteAccount = () => {
-        toast.info(t('toasts:settings.deleteAccountSoon'));
+    const onLogoutOtherDevices = () => {
+        if (isLoggingOutOtherDevices) {
+            return;
+        }
+
+        logoutOtherDevices()
+            .then(() => {
+                toast.success(t('toasts:settings.logoutOtherDevicesSuccess'));
+            })
+            .catch(() => undefined);
     };
 
     return (
@@ -54,15 +69,23 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                 <Grid columns={{ initial: '1', sm: '3' }} gap="3">
                     <Skeleton loading={isLoading}>
                         <Card asChild>
-                            <button onClick={handleLogoutAllDevices}>
+                            <button
+                                onClick={onLogoutOtherDevices}
+                                disabled={isLoggingOutOtherDevices}
+                                aria-busy={isLoggingOutOtherDevices}
+                            >
                                 <Flex gap="3" align="start">
                                     <LucideLogOut size={20} />
                                     <Box>
                                         <Text weight="medium" as="p">
-                                            {t('security.logoutAllDevicesTitle')}
+                                            {t('security.logoutOtherDevicesTitle')}
                                         </Text>
                                         <Text size="2" color="gray" as="p">
-                                            {t('security.logoutAllDevicesDescription')}
+                                            {t(
+                                                isLoggingOutOtherDevices
+                                                    ? 'security.logoutOtherDevicesLoading'
+                                                    : 'security.logoutOtherDevicesDescription',
+                                            )}
                                         </Text>
                                     </Box>
                                 </Flex>
@@ -88,7 +111,7 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
 
                     <Skeleton loading={isLoading}>
                         <Card asChild>
-                            <button onClick={handleDeleteAccount}>
+                            <button onClick={onDeleteAccount}>
                                 <Flex gap="3" align="start">
                                     <LucideTrash2 size={20} color="var(--red-11)" />
                                     <Box>

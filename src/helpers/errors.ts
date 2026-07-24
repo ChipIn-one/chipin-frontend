@@ -26,3 +26,25 @@ export const resolveApiErrorMessage = (payload?: unknown, fallbackKey = 'api.unk
 
     return detailsMessage ? `${message}, ${detailsMessage}` : message;
 };
+
+export const isUnauthorizedApiError = (error: unknown): boolean => {
+    return getApiErrorStatus(error) === 401;
+};
+
+export const getApiErrorStatus = (error: unknown): number | undefined => {
+    if (!isRecord(error) || error.isAxiosError !== true || !isRecord(error.response)) {
+        return undefined;
+    }
+
+    const { status } = error.response;
+
+    return typeof status === 'number' ? status : undefined;
+};
+
+export const isNetworkApiError = (error: unknown): boolean => {
+    return (
+        isRecord(error) &&
+        error.isAxiosError === true &&
+        error.response === undefined
+    );
+};

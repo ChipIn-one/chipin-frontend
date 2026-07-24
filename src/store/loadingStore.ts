@@ -6,6 +6,7 @@ export interface LoadingStore {
     auth: {
         login: LoadingState;
         signOut: LoadingState;
+        logoutOtherDevices: LoadingState;
     };
     group: {
         list: LoadingState;
@@ -47,7 +48,7 @@ export interface LoadingStore {
 type LoadingSlices = Omit<LoadingStore, 'setLoading' | 'setInitialLoadingStore'>;
 
 const initialLoadingStore: LoadingSlices = {
-    auth: { login: 'initial', signOut: 'initial' },
+    auth: { login: 'initial', signOut: 'initial', logoutOtherDevices: 'initial' },
     dashboard: { data: 'initial' },
     activity: { data: 'initial', nextPage: 'initial' },
     expense: { add: 'initial' },

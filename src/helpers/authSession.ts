@@ -1,6 +1,6 @@
-import axios from 'axios';
-
+import * as authApi from 'api/authApi';
 import { logoutApiAuthTokens, refreshApiAuthTokens } from 'api/chipin';
+import { getApiErrorStatus } from 'helpers/errors';
 import { type AuthTokens, clearAuthTokens, getAuthTokens, saveAuthTokens } from 'helpers/localStorage';
 
 const ACCESS_TOKEN_REFRESH_BUFFER_SECONDS = 60;
@@ -10,7 +10,26 @@ const AUTH_REFRESH_PATH = '/auth/refresh';
 
 let refreshPromise: Promise<AuthTokens | null> | null = null;
 let logoutPromise: Promise<void> | null = null;
+let logoutOtherDevicesPromise: Promise<void> | null = null;
 let isLogoutInProgress = false;
+let authSessionVersion = 0;
+
+export class AuthTokenPersistenceError extends Error {
+    constructor() {
+        super('Rotated auth tokens could not be persisted');
+    }
+}
+
+const assertCurrentAuthSession = (version: number) => {
+    if (version !== authSessionVersion) {
+        throw new Error('Auth session changed during token rotation');
+    }
+};
+
+export const invalidateAuthSession = (): void => {
+    authSessionVersion += 1;
+    clearAuthTokens();
+};
 
 const decodeJwtPayload = (token: string): unknown => {
     const [, payloadBase64] = token.split('.');
@@ -66,28 +85,27 @@ const isAuthSessionRequest = (url?: string) => {
     );
 };
 
-const isRefreshResponseError = (error: unknown) => {
-    if (!axios.isAxiosError(error)) {
-        return false;
-    }
-
-    return Boolean(error.response);
-};
-
 const refreshAuthTokens = (refreshToken: string) => {
     if (!refreshPromise) {
+        const version = authSessionVersion;
+
         refreshPromise = refreshApiAuthTokens(refreshToken)
             .then(({ token, refresh_token: refreshToken }) => {
-                const nextTokens = { accessToken: token, refreshToken };
+                assertCurrentAuthSession(version);
 
-                saveAuthTokens(nextTokens);
+                const nextTokens = { accessToken: token, refreshToken };
+                const isSaved = saveAuthTokens(nextTokens);
+
+                if (!isSaved) {
+                    return Promise.reject(new AuthTokenPersistenceError());
+                }
 
                 return nextTokens;
             })
             .catch(error => {
-                if (isRefreshResponseError(error)) {
+                if (getApiErrorStatus(error) === 401) {
                     console.error('Auth refresh failed with backend error response:', error);
-                    clearAuthTokens();
+                    invalidateAuthSession();
 
                     return null;
                 }
@@ -100,6 +118,20 @@ const refreshAuthTokens = (refreshToken: string) => {
     }
 
     return refreshPromise;
+};
+
+export const validateAuthSession = (): Promise<AuthTokens | null> => {
+    if (isLogoutInProgress) {
+        return Promise.resolve(null);
+    }
+
+    const tokens = getAuthTokens();
+
+    if (!tokens) {
+        return Promise.resolve(null);
+    }
+
+    return refreshAuthTokens(tokens.refreshToken);
 };
 
 export const getFreshAccessToken = () => {
@@ -146,7 +178,7 @@ export const startAuthLogout = () => {
             return logoutApiAuthTokens(tokens).catch(() => undefined);
         })
         .then(() => {
-            clearAuthTokens();
+            invalidateAuthSession();
         })
         .finally(() => {
             isLogoutInProgress = false;
@@ -156,7 +188,46 @@ export const startAuthLogout = () => {
     return logoutPromise;
 };
 
+export const logoutOtherDevicesSession = (): Promise<void> => {
+    if (logoutOtherDevicesPromise) {
+        return logoutOtherDevicesPromise;
+    }
+
+    const version = authSessionVersion;
+
+    logoutOtherDevicesPromise = getFreshAccessToken()
+        .then(accessToken => {
+            const tokens = getAuthTokens();
+
+            if (!accessToken || !tokens) {
+                return Promise.reject(new Error('Auth tokens are missing'));
+            }
+
+            return authApi.logoutOtherDevices(tokens.refreshToken).catch((error: unknown) => {
+                if (error instanceof authApi.InvalidLogoutOtherDevicesResponseError) {
+                    return Promise.reject(new AuthTokenPersistenceError());
+                }
+
+                return Promise.reject(error);
+            });
+        })
+        .then(({ token, refresh_token: refreshToken }) => {
+            assertCurrentAuthSession(version);
+
+            const isSaved = saveAuthTokens({ accessToken: token, refreshToken });
+
+            if (!isSaved) {
+                return Promise.reject(new AuthTokenPersistenceError());
+            }
+        })
+        .finally(() => {
+            logoutOtherDevicesPromise = null;
+        });
+
+    return logoutOtherDevicesPromise;
+};
+
 export const clearExpiredAuthSession = () => {
-    clearAuthTokens();
+    invalidateAuthSession();
     return Promise.resolve();
 };

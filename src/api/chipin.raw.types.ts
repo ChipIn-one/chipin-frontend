@@ -165,3 +165,8 @@ export interface ApiRefreshTokenPairResponse {
     token: string;
     refresh_token: string;
 }
+
+export interface ApiLogoutOtherDevicesResponse {
+    token: string;
+    refresh_token: string;
+}

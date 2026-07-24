@@ -39,7 +39,7 @@ export const useCheckSignIn = () => {
                 fetchSetFriends();
             })
             .catch(() => {
-                if (useAuthStore.getState().status !== 'unauthenticated') {
+                if (useAuthStore.getState().status === 'unknown') {
                     setUnauthenticated('error');
                 }
             });
@@ -54,4 +54,24 @@ export const useCheckSignIn = () => {
         setUnauthenticated,
         status,
     ]);
+
+    useEffect(() => {
+        if (status !== 'authenticated') {
+            return;
+        }
+
+        const onVisibilityChange = () => {
+            if (document.visibilityState !== 'visible') {
+                return;
+            }
+
+            refreshAuthTokens().catch(() => undefined);
+        };
+
+        document.addEventListener('visibilitychange', onVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+        };
+    }, [refreshAuthTokens, status]);
 };
