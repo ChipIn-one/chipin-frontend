@@ -1,7 +1,8 @@
 {
   "auth": {
     "sessionExpired": "Session expired, please log in again.",
-    "invalidJwt": "Failed to validate session. Please log in again."
+    "invalidJwt": "Failed to validate session. Please log in again.",
+    "tokenPersistenceFailed": "Other sessions were ended, but this device couldn’t stay signed in. Please sign in again."
   },
   "common": {
     "disconnect": "You have been disconnected.",
@@ -37,7 +38,7 @@
     "laterAction": "Later"
   },
   "settings": {
-    "logoutAllDevicesSoon": "Logout on all devices will be available soon.",
+    "logoutOtherDevicesSuccess": "Signed out on all other devices. You’re still signed in here.",
     "deleteAccountSoon": "Account deletion will be available soon.",
     "saveError": "Failed to save settings."
   },

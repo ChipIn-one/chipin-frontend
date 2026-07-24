@@ -59,16 +59,16 @@
     "security": {
         "title": "Privacy & Security",
         "description": "Manage your account security and data.",
-        "logoutAllDevicesTitle": "Logout on all devices",
-        "logoutAllDevicesDescription": "End all active sessions and require sign in again.",
-        "logoutAllDevicesButton": "Logout all",
+        "logoutOtherDevicesTitle": "Sign out on other devices",
+        "logoutOtherDevicesDescription": "End all other active sessions. You’ll stay signed in on this device.",
+        "logoutOtherDevicesLoading": "Signing out on other devices… You’ll stay signed in here.",
         "exportDataTitle": "Export data",
         "exportDataDescription": "Download all your expenses.",
         "exportDataButton": "Export",
         "deleteAccountTitle": "Delete account",
         "deleteAccountDescription": "Permanently remove your data.",
         "deleteAccountButton": "Delete account",
-        "signOutTitle": "Sign out",
-        "signOutDescription": "Sign out from all devices."
+        "signOutTitle": "Sign out on this device",
+        "signOutDescription": "End this session only. Other devices will stay signed in."
     }
 }

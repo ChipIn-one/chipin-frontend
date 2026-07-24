@@ -2,6 +2,8 @@ import { LoadingStore } from './loadingStore';
 
 export const selectAuthLoginLoading = (s: LoadingStore) => s.auth.login === 'loading';
 export const selectAuthSignOutLoading = (s: LoadingStore) => s.auth.signOut === 'loading';
+export const selectAuthLogoutOtherDevicesLoading = (s: LoadingStore) =>
+    s.auth.logoutOtherDevices === 'loading';
 
 export const selectDashboardLoading = (s: LoadingStore) => s.dashboard.data === 'loading';
 export const selectDashboardFetched = (s: LoadingStore) => s.dashboard.data === 'fetched';

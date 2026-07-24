@@ -22,5 +22,9 @@ export const useAuthToasts = () => {
         if (reason === 'invalid') {
             toast.error(i18n.t('toasts:auth.invalidJwt'));
         }
+
+        if (reason === 'persistence_error') {
+            toast.error(i18n.t('toasts:auth.tokenPersistenceFailed'));
+        }
     }, [status, reason]);
 };

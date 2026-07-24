@@ -59,16 +59,16 @@
     "security": {
         "title": "Privacidade e segurança",
         "description": "Gira a segurança da sua conta e os seus dados.",
-        "logoutAllDevicesTitle": "Sair em todos os dispositivos",
-        "logoutAllDevicesDescription": "Termine todas as sessões ativas e exija início de sessão novamente.",
-        "logoutAllDevicesButton": "Sair de todos",
+        "logoutOtherDevicesTitle": "Terminar sessão noutros dispositivos",
+        "logoutOtherDevicesDescription": "Termine todas as outras sessões ativas. Continuará com sessão iniciada neste dispositivo.",
+        "logoutOtherDevicesLoading": "A terminar sessão noutros dispositivos… Continuará com sessão iniciada aqui.",
         "exportDataTitle": "Exportar dados",
         "exportDataDescription": "Transfira todas as suas despesas.",
         "exportDataButton": "Exportar",
         "deleteAccountTitle": "Eliminar conta",
         "deleteAccountDescription": "Remova os seus dados permanentemente.",
         "deleteAccountButton": "Eliminar conta",
-        "signOutTitle": "Sair",
-        "signOutDescription": "Sair em todos os dispositivos."
+        "signOutTitle": "Terminar sessão neste dispositivo",
+        "signOutDescription": "Termine apenas esta sessão. Os outros dispositivos continuarão com sessão iniciada."
     }
 }
