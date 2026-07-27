@@ -14,8 +14,7 @@ import { useUsersStore } from 'store/usersStore';
 
 import Select, { SelectItem } from 'components/Select';
 
-import BaseModal from './BaseModal';
-import { MODAL_SIZES } from './constants';
+import { BaseModal, MODAL_SIZES } from './base-modal';
 
 interface Props {
     children: React.ReactNode;

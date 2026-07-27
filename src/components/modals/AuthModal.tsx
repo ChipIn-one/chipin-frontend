@@ -5,7 +5,7 @@ import { Avatar, Flex, Text } from '@radix-ui/themes';
 
 import AuthButtons from 'components/AuthButtons';
 
-import BaseModal from './BaseModal';
+import { BaseModal } from './base-modal';
 
 interface Props {
     children: React.ReactNode;

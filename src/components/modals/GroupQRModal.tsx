@@ -5,7 +5,7 @@ import { Box, Button } from '@radix-ui/themes';
 
 import OfflineQRCode from 'components/OfflineQRCode';
 
-import BaseModal from './BaseModal';
+import { BaseModal } from './base-modal';
 
 interface Props {
     qrLink: string;

@@ -10,8 +10,7 @@ import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupKicking } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
-import BaseModal from './BaseModal';
-import { MODAL_SIZES } from './constants';
+import { BaseModal, MODAL_SIZES } from './base-modal';
 
 interface Props {
     children: React.ReactNode;

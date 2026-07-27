@@ -51,8 +51,13 @@ settle-up/
 ├── types.ts
 ├── styled.ts
 ├── components/
-│   ├── SettlementForm.tsx
-│   ├── DebtSection.tsx
+│   ├── settlement-form/
+│   │   ├── SettlementForm.tsx
+│   │   ├── types.ts
+│   │   └── index.ts
+│   ├── debt-section/
+│   │   ├── DebtSection.tsx
+│   │   └── index.ts
 │   └── index.ts
 ├── internal/
 │   ├── constants.ts
@@ -66,6 +71,15 @@ settle-up/
 ```
 
 The example shows the available locations, not a required complete file set.
+
+### Directory Naming
+
+- Every directory uses `kebab-case`, including capability directories and nested component owners.
+- A capability directory is named after its primary component in `kebab-case`, for example
+  `AddExpenseModal.tsx` belongs to `add-expense-modal/`.
+- Component filenames and exported component names remain `PascalCase`.
+- Do not add a parent-level compatibility component such as `modals/AddExpenseModal.tsx` for a capability
+  already owned by `modals/add-expense-modal/`. Parent exposure belongs in the parent `index.ts`.
 
 ### Ownership
 
@@ -86,22 +100,33 @@ The example shows the available locations, not a required complete file set.
 ### Index Files And Import Boundaries
 
 - Every directory imported across a directory boundary has an `index.ts`.
+- Every `index.ts` contains imports first and exactly one explicit named `export { ... }` block last.
+  Inline re-exports, wildcard exports, multiple export statements, and default exports are prohibited.
 - A parent or external consumer imports a child directory through that child's `index.ts`; deep imports
   across the boundary are prohibited.
+- Import paths that cross a directory boundary end at the directory, never at its component file. The
+  directory's `index.ts` owns the public export.
 - Files within the same directory may import sibling files directly. Do not import through the current
   directory's own `index.ts`, because that creates avoidable barrel cycles.
 - The root `index.ts` exposes only the capability's public API. It does not re-export `internal/` or
   private subcomponents.
+- A public aggregate parent such as `components/modals/index.ts` may re-export child capabilities, but it
+  must source them from each child directory's `index.ts`. Consumers use the aggregate boundary, for
+  example `import { AddExpenseModal } from 'components/modals/';`.
 - `components/index.ts` exports components by semantic names.
 
 ```ts
 // components/index.ts
-export { default as DebtSection } from './DebtSection';
-export { default as SettlementForm } from './SettlementForm';
+import { DebtSection } from './debt-section';
+import { SettlementForm } from './settlement-form';
+
+export { DebtSection, SettlementForm };
 
 // settle-up/index.ts
-export { default as SettleUpModal } from './SettleUpModal';
-export type { SettleUpModalProps } from './types';
+import SettleUpModal from './SettleUpModal';
+import type { SettleUpModalProps } from './types';
+
+export { SettleUpModal, type SettleUpModalProps };
 ```
 
 Use child barrels from the parent and direct sibling imports within one directory:
@@ -123,12 +148,13 @@ The containing directory already provides the capability context, so do not repe
 or namespaces.
 
 ```ts
-export * as constants from './constants';
-export * as helpers from './helpers';
-export * as selectors from './selectors';
+import * as constants from './constants';
+import * as helpers from './helpers';
+import { useSettlementDraft } from './hooks';
+import * as selectors from './selectors';
+import type { SettlementDraft } from './types';
 
-export { useSettlementDraft } from './hooks';
-export type { SettlementDraft } from './types';
+export { constants, helpers, selectors, type SettlementDraft, useSettlementDraft };
 ```
 
 Use namespace access for `constants`, `helpers`, and `selectors`. Import hooks, private types, and styled

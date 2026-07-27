@@ -1,2 +1,4 @@
-export * as helpers from './helpers';
-export type { DebtOption, SettlementFormProps } from './types';
+import * as helpers from './helpers';
+import type { DebtOption, SettlementFormProps } from './types';
+
+export { type DebtOption, helpers, type SettlementFormProps };

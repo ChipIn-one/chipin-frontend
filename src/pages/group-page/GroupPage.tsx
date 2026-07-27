@@ -8,11 +8,12 @@ import { useShallow } from 'zustand/react/shallow';
 import { Box, Button, Card, Container, Flex, Grid, Inset, Skeleton, Text } from '@radix-ui/themes';
 
 import type { Group } from 'api/chipin.types';
+import { useExpenseModalStore } from 'store/expenseModalStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupDataFetched, selectGroupDataLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
-import { AddExpenseModal, SettleUpModal } from 'components/modals';
+import { SettleUpModal } from 'components/modals/';
 import { MobileNavBar } from 'components/nav-bars';
 import UsersRow from 'components/UsersRow';
 
@@ -127,18 +128,22 @@ interface GroupCardBodyProps {
 
 const GroupCardBody = ({ group, isLoading }: GroupCardBodyProps) => {
     const { t } = useTranslation(['group', 'common']);
+    const openAddExpenseModal = useExpenseModalStore(state => state.open);
 
     return (
         <Flex direction="column" gap="4">
             <Flex align="center" justify="between" gap="2" wrap="wrap">
                 <UsersRow members={group.members.map(member => member.user)} max={10} size="2" />
                 <Flex gap="2" align="center">
-                    <AddExpenseModal>
-                        <Button variant="outline" size="2">
-                            <LucidePlus size={15} />
-                            {t('common:buttons.addExpense')}
-                        </Button>
-                    </AddExpenseModal>
+                    <Button
+                        variant="outline"
+                        size="2"
+                        disabled={group.members.length === 0}
+                        onClick={() => openAddExpenseModal()}
+                    >
+                        <LucidePlus size={15} />
+                        {t('common:buttons.addExpense')}
+                    </Button>
                     <SettleUpModal source="group" group={group} />
                 </Flex>
             </Flex>
