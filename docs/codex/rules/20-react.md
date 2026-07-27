@@ -4,6 +4,9 @@
 
 - Components and hooks stay pure; render does not mutate stores, props, browser state, or external objects.
 - Use named function or arrow components with explicit props. Do not add `React.FC`.
+- Component `Props` types stay in the component file immediately above the component. Do not create a
+  separate `types.ts` only for local component props; reserve shared type modules for types with multiple
+  real consumers.
 - Prefer named exports; default exports remain only where an existing boundary requires them.
 - Do not define components inside another component's render.
 - Keep props minimal and semantic. Use discriminated unions when valid prop combinations differ.
@@ -43,6 +46,12 @@ useEffect(() => {
 - Memoization is a measured optimization, not a correctness mechanism.
 - Prefer smaller subscriptions, pure selectors, and simpler component boundaries before memoization.
 - Dependency arrays must remain correct without relying on memoization to hide stale logic.
+- Heavy forms and financial modals must not keep every editable field as broad parent React state when
+  child sections are expensive to render. Prefer local draft stores, narrow selectors, and connected
+  subcomponents so editing one field does not rerender unrelated sections.
+- Repeated rows in editable financial lists use row view-models/selectors. Parent components should pass
+  stable semantic inputs or let rows subscribe narrowly; avoid rebuilding per-row arrays and inline
+  handlers as the only source of truth on every keystroke.
 
 ## Decomposition
 

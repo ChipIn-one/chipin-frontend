@@ -5,6 +5,10 @@
 - Use Zustand for shared domain, session, remote, or cross-feature state.
 - Keep form drafts, modal visibility, hover, and temporary UI state local.
 - Do not create a store only to avoid passing a small number of props.
+- A dedicated global Zustand store is allowed for an explicitly approved, single-active-session
+  financial modal that opens from multiple application contexts. It owns draft transitions,
+  calculations, validation, and payload construction; it resets with the modal lifecycle, exposes
+  narrow stable selectors, and does not perform API requests.
 - Domain stores hold domain data and actions. Request lifecycle and errors remain centralized.
 - Define focused state/action types and explicit Promise return types for async actions.
 
@@ -30,8 +34,12 @@ type RequestError = {
 ## Subscriptions And Selectors
 
 - Never call `useStore()` without a selector in React code.
-- Prefer one selector per value/action.
-- Use `useShallow` only for a cohesive multi-field result that remains shallow-equal.
+- Read a single value or action with a direct selector.
+- When a component reads two or more related values or actions from the same store, combine them
+  in one object selector wrapped with `useShallow`.
+- Do not group unrelated state only to reduce the number of hooks.
+- Keep arrays or objects that require element-level shallow comparison in their own top-level
+  `useShallow` selector instead of nesting them as properties inside another selector result.
 - Reused or derived selectors are named and live next to the store.
 - Selector results must be stable; do not create new arrays/objects on every subscription unless shallow comparison is intentional.
 - Do not use `getState()` during render. It is for store actions or imperative orchestration outside React.

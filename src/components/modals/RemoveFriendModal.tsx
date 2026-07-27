@@ -12,8 +12,7 @@ import { selectFriendRemoving } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/usersStore';
 
-import BaseModal from './BaseModal';
-import { MODAL_SIZES } from './constants';
+import { BaseModal, MODAL_SIZES } from './base-modal';
 
 const FriendPreview = styled(Flex)`
     padding: var(--space-4);

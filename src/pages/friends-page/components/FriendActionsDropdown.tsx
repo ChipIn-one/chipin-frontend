@@ -12,9 +12,10 @@ import { IconButton } from '@radix-ui/themes';
 
 import type { FriendBalance, KnownUser } from 'api/chipin.types';
 import { useActivityStore } from 'store/activityStore';
+import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import Dropdown from 'components/Dropdown';
-import { AddExpenseModal, RemoveFriendModal, SettleUpModal } from 'components/modals';
+import { RemoveFriendModal, SettleUpModal } from 'components/modals/';
 
 interface Props {
     friend: KnownUser;
@@ -23,9 +24,9 @@ interface Props {
 
 const FriendActionsDropdown = ({ friend, balance }: Props) => {
     const { t } = useTranslation(['common', 'friends']);
-    const [isExpenseModalOpened, setIsExpenseModalOpened] = useState(false);
     const [isSettleUpOpened, setIsSettleUpOpened] = useState(false);
     const [isRemoveFriendOpened, setIsRemoveFriendOpened] = useState(false);
+    const openAddExpenseModal = useExpenseModalStore(state => state.open);
     const createSettlement = useActivityStore(state => state.createSettlement);
     const hasOutstandingDebt = friend.balances.some(friendBalance => friendBalance.netAmount !== 0);
 
@@ -36,7 +37,10 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                 label: t('common:buttons.addExpense'),
                 icon: <LucidePlusCircle size={16} />,
                 onSelect: () => {
-                    setIsExpenseModalOpened(true);
+                    openAddExpenseModal({
+                        context: 'friends',
+                        friendId: friend.user.id,
+                    });
                 },
             },
             {
@@ -72,7 +76,7 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                 },
             },
         ],
-        [balance, hasOutstandingDebt, t],
+        [balance, friend.user.id, hasOutstandingDebt, openAddExpenseModal, t],
     );
 
     return (
@@ -85,12 +89,6 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                     </IconButton>
                 }
                 align="end"
-            />
-            <AddExpenseModal
-                context="friends"
-                friendId={friend.user.id}
-                isOpened={isExpenseModalOpened}
-                setIsOpened={setIsExpenseModalOpened}
             />
             {balance && isSettleUpOpened && (
                 <SettleUpModal

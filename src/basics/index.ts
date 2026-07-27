@@ -2,6 +2,7 @@ import AmountInput from './AmountInput';
 import BackgroundBox from './BackgroundBox';
 import BalanceBadges from './BalanceBadges';
 import BalanceSummaryText from './BalanceSummaryText';
+import Checkbox from './Checkbox';
 import ChipInLoader from './ChipInLoader';
 import {
     EmptyState,
@@ -25,6 +26,7 @@ export {
     BackgroundBox,
     BalanceBadges,
     BalanceSummaryText,
+    Checkbox,
     ChipInLoader,
     EmptyState,
     GroupRoleBadge,
