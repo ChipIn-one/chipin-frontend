@@ -5,6 +5,7 @@ import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { buildActivityChildrenRoute } from 'constants/routes';
 
 import { NavButton } from 'basics/buttons';
+import { interactiveCardStyles } from 'components/interactive-card-styles';
 
 import EventExpenseCreated from './EventExpenseCreated';
 import EventExpenseReversed from './EventExpenseReversed';
@@ -20,6 +21,24 @@ import EventUnknown from './EventUnknown';
 const EventNavButton = styled(NavButton)`
     display: block;
     width: 100%;
+
+    & [data-activity-event-card] {
+        ${interactiveCardStyles.transition}
+    }
+
+    &:hover [data-activity-event-card] {
+        ${interactiveCardStyles.hover({
+            backgroundColorToken: 'grayA3',
+            borderColorToken: 'grayA6',
+        })}
+    }
+
+    &:focus-visible [data-activity-event-card] {
+        ${interactiveCardStyles.focus({
+            borderColorToken: 'grayA6',
+            focusColorToken: 'grassA8',
+        })}
+    }
 `;
 
 interface Props {

@@ -84,13 +84,13 @@ const ActivityChildrenPage = () => {
         getRouteParentEvent(location.state, parentActivityId) ??
         findActivityEvent(items, parentActivityId) ??
         findActivityEvent(dashboardActivityItems, parentActivityId) ??
-        findActivityEvent(selectedGroup?.activity?.items ?? [], parentActivityId) ??
+        findActivityEvent(selectedGroup?.recentActivities ?? [], parentActivityId) ??
         groups.reduce<AppEvent | undefined>((foundEvent, group) => {
             if (foundEvent) {
                 return foundEvent;
             }
 
-            return findActivityEvent(group.activity?.items ?? [], parentActivityId);
+            return findActivityEvent(group.recentActivities, parentActivityId);
         }, undefined);
     const childCategory = getActivityChildCategory(parentEvent);
     const parentEntryId = getActivityLedgerEntryId(parentEvent);
@@ -119,7 +119,7 @@ const ActivityChildrenPage = () => {
         fetchMoreChildActivity,
     ]);
 
-    const handleDelete = () => {
+    const onDeleteEntry = () => {
         if (!parentActivityId || !parentEntryId) {
             return;
         }
@@ -140,7 +140,7 @@ const ActivityChildrenPage = () => {
                 parentEvent={parentEvent}
                 isDeleting={isDeletingEntry}
                 canDelete={Boolean(parentEntryId)}
-                onDelete={handleDelete}
+                onDelete={onDeleteEntry}
             />
 
             {shouldShowSkeleton ? (

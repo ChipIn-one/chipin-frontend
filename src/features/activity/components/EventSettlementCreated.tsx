@@ -37,7 +37,7 @@ const EventSettlementCreated = ({ event }: Props) => {
         : groupName ?? t('event.friendExpense');
 
     return (
-        <Card size="1" mb="2">
+        <Card size="1" mb="2" data-activity-event-card>
             <Flex justify="between" align="center" gap="3">
                 <Flex align="center" gap="3" minWidth="0">
                     <UserLabel align="center" gap="2">
