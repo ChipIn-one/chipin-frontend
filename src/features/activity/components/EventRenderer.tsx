@@ -1,25 +1,87 @@
+import styled from 'styled-components';
+
 import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
+import { buildActivityChildrenRoute } from 'constants/routes';
+
+import { NavButton } from 'basics/buttons';
+import { interactiveCardStyles } from 'components/interactive-card-styles';
 
 import EventExpenseCreated from './EventExpenseCreated';
+import EventExpenseReversed from './EventExpenseReversed';
 import EventGroupCreated from './EventGroupCreated';
 import EventGroupDeleted from './EventGroupDeleted';
 import EventGroupUpdated from './EventGroupUpdated';
 import EventMemberJoin from './EventMemberJoin';
 import EventMemberLeft from './EventMemberLeft';
 import EventSettlementCreated from './EventSettlementCreated';
+import EventSettlementReversed from './EventSettlementReversed';
 import EventUnknown from './EventUnknown';
+
+const EventNavButton = styled(NavButton)`
+    display: block;
+    width: 100%;
+
+    & [data-activity-event-card] {
+        ${interactiveCardStyles.transition}
+    }
+
+    &:hover [data-activity-event-card] {
+        ${interactiveCardStyles.hover({
+            backgroundColorToken: 'grayA3',
+            borderColorToken: 'grayA6',
+        })}
+    }
+
+    &:focus-visible [data-activity-event-card] {
+        ${interactiveCardStyles.focus({
+            borderColorToken: 'grayA6',
+            focusColorToken: 'grassA8',
+        })}
+    }
+`;
 
 interface Props {
     event: AppEvent;
+    isActivityLinkEnabled?: boolean;
 }
 
-const EventRenderer = ({ event }: Props) => {
+const EventRenderer = ({ event, isActivityLinkEnabled = false }: Props) => {
     switch (event.action) {
-        case ACTIVITY_ACTIONS.EXPENSE_CREATED:
-            return <EventExpenseCreated event={event} />;
-        case ACTIVITY_ACTIONS.SETTLEMENT_CREATED:
-            return <EventSettlementCreated event={event} />;
+        case ACTIVITY_ACTIONS.EXPENSE_CREATED: {
+            const expenseCard = <EventExpenseCreated event={event} />;
+
+            return isActivityLinkEnabled ? (
+                <EventNavButton
+                    to={buildActivityChildrenRoute(event.id)}
+                    state={{ parentActivityEvent: event }}
+                    unsetStyles
+                >
+                    {expenseCard}
+                </EventNavButton>
+            ) : (
+                expenseCard
+            );
+        }
+        case ACTIVITY_ACTIONS.EXPENSE_REVERSED:
+            return <EventExpenseReversed event={event} />;
+        case ACTIVITY_ACTIONS.SETTLEMENT_CREATED: {
+            const settlementCard = <EventSettlementCreated event={event} />;
+
+            return isActivityLinkEnabled ? (
+                <EventNavButton
+                    to={buildActivityChildrenRoute(event.id)}
+                    state={{ parentActivityEvent: event }}
+                    unsetStyles
+                >
+                    {settlementCard}
+                </EventNavButton>
+            ) : (
+                settlementCard
+            );
+        }
+        case ACTIVITY_ACTIONS.SETTLEMENT_REVERSED:
+            return <EventSettlementReversed event={event} />;
         case ACTIVITY_ACTIONS.MEMBER_JOINED:
             return <EventMemberJoin event={event} />;
         case ACTIVITY_ACTIONS.MEMBER_LEFT:

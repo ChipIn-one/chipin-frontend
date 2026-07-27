@@ -1,5 +1,6 @@
 import type { AppEvent } from 'api/activity.types';
 import type { BalanceEntry } from 'api/chipin.raw.types';
+import type { ActivityCategory } from 'api/chipin.types';
 import { ACTIVITY_ACTIONS, type ExpenseCreatedAction } from 'constants/activity';
 import { getActivityDateKey } from 'helpers/time';
 
@@ -22,38 +23,79 @@ export const getDailyExpenseSummaries = (
     userId?: string,
 ): Record<string, BalanceEntry[]> => {
     const summaries: Record<string, BalanceEntry[]> = {};
+    const summaryIndexes: Record<string, Record<string, BalanceEntry>> = {};
 
     if (!userId) {
         return summaries;
     }
 
-    events.forEach(event => {
+    for (const event of events) {
         if (event.action !== ACTIVITY_ACTIONS.EXPENSE_CREATED) {
-            return;
+            continue;
         }
 
         const netBalance = getUserExpenseValue(event, userId);
 
         if (!netBalance) {
-            return;
+            continue;
         }
 
         const dateKey = getActivityDateKey(event.createdAt);
         const dateSummary = summaries[dateKey] ?? [];
-        const existingEntry = dateSummary.find(entry => entry.currency === event.metadata.currency);
+        const dateIndex = summaryIndexes[dateKey] ?? {};
+        const existingEntry = dateIndex[event.metadata.currency];
 
         if (existingEntry) {
             existingEntry.netBalance += netBalance;
         } else {
-            dateSummary.push({ currency: event.metadata.currency, netBalance });
+            const nextEntry = { currency: event.metadata.currency, netBalance };
+
+            dateSummary.push(nextEntry);
+            dateIndex[event.metadata.currency] = nextEntry;
         }
 
         summaries[dateKey] = dateSummary;
-    });
+        summaryIndexes[dateKey] = dateIndex;
+    }
 
-    Object.keys(summaries).forEach(dateKey => {
+    for (const dateKey in summaries) {
+        if (!Object.prototype.hasOwnProperty.call(summaries, dateKey)) {
+            continue;
+        }
+
         summaries[dateKey] = summaries[dateKey].filter(entry => entry.netBalance !== 0);
-    });
+    }
 
     return summaries;
+};
+
+export const getActivityChildCategory = (event?: AppEvent): ActivityCategory | undefined => {
+    if (!event) {
+        return undefined;
+    }
+
+    if (event.action === ACTIVITY_ACTIONS.EXPENSE_CREATED) {
+        return 'expense';
+    }
+
+    if (event.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED) {
+        return 'settlement';
+    }
+
+    return undefined;
+};
+
+export const getActivityLedgerEntryId = (event?: AppEvent): string | undefined => {
+    if (!event) {
+        return undefined;
+    }
+
+    if (
+        event.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ||
+        event.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED
+    ) {
+        return event.metadata.entryId;
+    }
+
+    return undefined;
 };

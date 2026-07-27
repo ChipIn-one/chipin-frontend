@@ -11,6 +11,12 @@ export const selectDashboardFetched = (s: LoadingStore) => s.dashboard.data === 
 export const selectActivityLoading = (s: LoadingStore) => s.activity.data === 'loading';
 export const selectActivityFetched = (s: LoadingStore) => s.activity.data === 'fetched';
 export const selectActivityNextPageLoading = (s: LoadingStore) => s.activity.nextPage === 'loading';
+export const selectActivityChildrenLoading = (s: LoadingStore) =>
+    s.activity.childData === 'loading';
+export const selectActivityChildrenFetched = (s: LoadingStore) =>
+    s.activity.childData === 'fetched';
+export const selectActivityChildrenNextPageLoading = (s: LoadingStore) =>
+    s.activity.childNextPage === 'loading';
 
 export const selectGroupDataLoading = (s: LoadingStore) => s.group.data === 'loading';
 export const selectGroupDataFetched = (s: LoadingStore) => s.group.data === 'fetched';
@@ -29,4 +35,5 @@ export const selectUserSelfFetched = (s: LoadingStore) => s.users.self === 'fetc
 export const selectFriendRemoving = (s: LoadingStore) => s.users.removeFriend === 'loading';
 
 export const selectExpenseAdding = (s: LoadingStore) => s.expense.add === 'loading';
+export const selectLedgerEntryRemoving = (s: LoadingStore) => s.ledger.remove === 'loading';
 export const selectSettlementAdding = (s: LoadingStore) => s.settlement.add === 'loading';

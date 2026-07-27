@@ -46,6 +46,10 @@
     "created": "Expense added successfully!",
     "createError": "Something went wrong while adding the expense."
   },
+  "ledger": {
+    "entryDeleted": "Entry deleted successfully.",
+    "entryDeleteError": "Something went wrong while deleting the entry."
+  },
   "settlement": {
     "created": "Payment recorded successfully!",
     "createError": "Something went wrong while recording the payment."

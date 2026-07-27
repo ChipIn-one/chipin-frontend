@@ -11,6 +11,9 @@ export const ROUTES = {
     SETTINGS: '/settings',
 };
 
+export const buildActivityChildrenRoute = (parentActivityId: string) =>
+    `${ROUTES.ACTIVITY}/${parentActivityId}`;
+
 export interface RouteMeta {
     path: string;
     titleKey: string;
@@ -56,6 +59,11 @@ export const ROUTE_META = [
         path: ROUTES.ACTIVITY,
         titleKey: 'activity.title',
         descriptionKey: 'activity.description',
+    },
+    {
+        path: buildActivityChildrenRoute(':parentActivityId'),
+        titleKey: 'activityDetails.title',
+        descriptionKey: 'activityDetails.description',
     },
     {
         path: ROUTES.FRIENDS,

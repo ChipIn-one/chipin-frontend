@@ -61,6 +61,10 @@ export interface CreateLedgerEntryParams {
     sharingMode?: SharingMode;
 }
 
+export interface DeleteLedgerEntryParams {
+    entryId: string;
+}
+
 export interface CreateSettlementParams {
     groupId?: string;
     fromUserId: string;
@@ -72,4 +76,11 @@ export interface CreateSettlementParams {
 export interface FetchActivityParams {
     limit?: number;
     cursor?: number;
+}
+
+export type ActivityCategory = 'expense' | 'settlement';
+
+export interface FetchActivityChildrenParams extends FetchActivityParams {
+    parentActivityId: string;
+    category?: ActivityCategory;
 }

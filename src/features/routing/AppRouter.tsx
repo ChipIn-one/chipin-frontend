@@ -15,6 +15,11 @@ const HomePage = lazy(() => import('pages/HomePage'));
 const DashboardPage = lazy(() => import('pages/DashboardPage'));
 const GroupPage = lazy(() => import('pages/group-page'));
 const ActivityPage = lazy(() => import('pages/ActivityPage'));
+const ActivityChildrenPage = lazy(() =>
+    import('pages/activity-children-page').then(module => ({
+        default: module.ActivityChildrenPage,
+    })),
+);
 const FriendsPage = lazy(() => import('pages/friends-page/'));
 const SettingsPage = lazy(() => import('pages/settings-page/'));
 const Page404 = lazy(() => import('pages/404-page'));
@@ -63,6 +68,14 @@ const AppRouter = () => {
                     element={
                         <ProtectedRoute>
                             <ActivityPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path={`${ROUTES.ACTIVITY}/:parentActivityId`}
+                    element={
+                        <ProtectedRoute>
+                            <ActivityChildrenPage />
                         </ProtectedRoute>
                     }
                 />

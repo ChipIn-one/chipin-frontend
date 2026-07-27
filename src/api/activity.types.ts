@@ -1,11 +1,13 @@
 import type {
     ExpenseCreatedAction,
+    ExpenseReversedAction,
     GroupCreatedAction,
     GroupDeletedAction,
     GroupUpdatedAction,
     MemberJoinedAction,
     MemberLeftAction,
     SettlementCreatedAction,
+    SettlementReversedAction,
 } from 'constants/activity';
 
 /** --- LEDGER --- */
@@ -80,9 +82,23 @@ type ExpenseCreatedEvent = BaseEvent & {
     metadata: ExpenseMetadata;
 };
 
+type ExpenseReversedEvent = BaseEvent & {
+    domain: 'LEDGER';
+    action: ExpenseReversedAction;
+    subjectType: 'expense';
+    metadata: ExpenseMetadata;
+};
+
 type SettlementCreatedEvent = BaseEvent & {
     domain: 'LEDGER';
     action: SettlementCreatedAction;
+    subjectType: 'settlement';
+    metadata: SettlementMetadata;
+};
+
+type SettlementReversedEvent = BaseEvent & {
+    domain: 'LEDGER';
+    action: SettlementReversedAction;
     subjectType: 'settlement';
     metadata: SettlementMetadata;
 };
@@ -137,7 +153,9 @@ type MemberLeftEvent = BaseEvent & {
 
 export type AppEvent =
     | ExpenseCreatedEvent
+    | ExpenseReversedEvent
     | SettlementCreatedEvent
+    | SettlementReversedEvent
     | GroupCreatedEvent
     | GroupUpdatedEvent
     | GroupDeletedEvent

@@ -35,7 +35,11 @@ const GroupTabsContent = ({ group }: Props) => {
                         {isGroupDataLoading ? (
                             <ActivityFeedSkeleton />
                         ) : (
-                            <ActivityEventsList events={activityItems} />
+                            <ActivityEventsList
+                                events={activityItems}
+                                hasDailySummary
+                                isActivityLinkEnabled
+                            />
                         )}
                     </Tabs.Content>
 

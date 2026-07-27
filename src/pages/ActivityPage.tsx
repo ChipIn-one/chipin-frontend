@@ -7,7 +7,7 @@ import { selectActivityFetched } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
 import { MobileNavBar } from 'components/nav-bars';
-import Activity from 'features/activity';
+import { Activity } from 'features/activity';
 
 const ActivityPage = () => {
     const { fetchSetActivity } = useActivityStore();
@@ -17,7 +17,7 @@ const ActivityPage = () => {
         if (!isActivityFetched) {
             fetchSetActivity();
         }
-    }, []);
+    }, [fetchSetActivity, isActivityFetched]);
 
     return (
         <Container size="2" pb={{ initial: '9', sm: '6' }}>

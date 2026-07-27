@@ -17,13 +17,21 @@ interface Props {
     events: AppEvent[];
     emptyState?: ReactNode;
     children?: ReactNode;
+    hasDailySummary?: boolean;
+    isActivityLinkEnabled?: boolean;
 }
 
-const ActivityEventsList = ({ events, emptyState = <NoActivityEmptyState />, children }: Props) => {
+const ActivityEventsList = ({
+    events,
+    emptyState = <NoActivityEmptyState />,
+    children,
+    hasDailySummary = false,
+    isActivityLinkEnabled = false,
+}: Props) => {
     const userId = useUsersStore(state => state.user?.id);
     const dailyExpenseSummaries = useMemo(
-        () => getDailyExpenseSummaries(events, userId),
-        [events, userId],
+        () => (hasDailySummary ? getDailyExpenseSummaries(events, userId) : {}),
+        [events, hasDailySummary, userId],
     );
 
     if (events.length === 0) {
@@ -47,7 +55,10 @@ const ActivityEventsList = ({ events, emptyState = <NoActivityEmptyState />, chi
                                 summary={dailyExpenseSummaries[dateKey] ?? []}
                             />
                         )}
-                        <EventRenderer event={event} />
+                        <EventRenderer
+                            event={event}
+                            isActivityLinkEnabled={isActivityLinkEnabled}
+                        />
                     </Fragment>
                 );
             })}

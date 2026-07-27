@@ -2,6 +2,7 @@
     "activityFeed": {
         "expenseTitle": "Cena del viaje",
         "expenseDescription": "Pagó Alex en Grupo de viaje",
+        "settlementDescription": "Alex pagó a Jordan en Grupo de viaje",
         "expenseAmount": "120 USD",
         "owedStatus": "Te deben",
         "relativeTime": "hace 2 horas",

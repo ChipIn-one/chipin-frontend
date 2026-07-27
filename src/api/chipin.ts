@@ -14,6 +14,8 @@ import type {
     CreateLedgerEntryParams,
     CreateSettlementParams,
     Dashboard,
+    DeleteLedgerEntryParams,
+    FetchActivityChildrenParams,
     FetchActivityParams,
     Group,
     InviteToGroupParams,
@@ -175,6 +177,23 @@ export const fetchApiUserActivities = ({
         .then(result => result.data);
 };
 
+export const fetchApiUserActivityChildren = ({
+    parentActivityId,
+    limit,
+    cursor,
+    category,
+}: FetchActivityChildrenParams): Promise<ApiActivityItemsResponse> => {
+    return apiInstance
+        .get(`/users/self/activities/${parentActivityId}/children`, {
+            params: {
+                ...(limit !== undefined && { limit }),
+                ...(cursor !== undefined && { cursor }),
+                ...(category !== undefined && { category }),
+            },
+        })
+        .then(result => result.data);
+};
+
 // =============== EXPENSES ===============
 
 export const createApiExpense = async ({
@@ -208,23 +227,29 @@ export const createApiExpense = async ({
     return response.data;
 };
 
-export const createApiSettlement = async ({
+export const deleteApiLedgerEntry = ({
+    entryId,
+}: DeleteLedgerEntryParams): Promise<void> => {
+    return apiInstance.delete<void>(`/ledger/entries/${entryId}`).then(() => undefined);
+};
+
+export const createApiSettlement = ({
     groupId,
     fromUserId,
     toUserId,
     amount,
     currency,
 }: CreateSettlementParams): Promise<ApiLedgerEntryResponse> => {
-    const response = await apiInstance.post('/ledger/entries', {
-        type: 'SETTLEMENT',
-        ...(groupId && { groupId }),
-        settlement: {
-            fromUserId,
-            toUserId,
-            amount,
-            currency,
-        },
-    });
-
-    return response.data;
+    return apiInstance
+        .post<ApiLedgerEntryResponse>('/ledger/entries', {
+            type: 'SETTLEMENT',
+            ...(groupId && { groupId }),
+            settlement: {
+                fromUserId,
+                toUserId,
+                amount,
+                currency,
+            },
+        })
+        .then(response => response.data);
 };

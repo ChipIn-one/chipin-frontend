@@ -4,6 +4,7 @@ import styled from 'styled-components';
 
 import { Box, Button, Flex, Popover, ScrollArea, Text, TextField } from '@radix-ui/themes';
 
+import { themeColor } from 'helpers/colors';
 import { getFilterFunction } from 'helpers/text';
 
 export interface SearchSelectItem {
@@ -27,6 +28,10 @@ interface Props {
 
 const OptionsScrollArea = styled(ScrollArea)`
     height: 240px;
+    border: 1px solid ${themeColor('grayA7')};
+    border-radius: var(--radius-3);
+    background-color: ${themeColor('grayA2')};
+    box-sizing: border-box;
 
     & [data-radix-scroll-area-viewport] > div {
         min-width: 0;
@@ -34,7 +39,7 @@ const OptionsScrollArea = styled(ScrollArea)`
     }
 `;
 
-const SearchSelect: React.FC<Props> = ({
+const SearchSelect = ({
     items,
     value,
     searchPlaceholder = '',
@@ -43,7 +48,7 @@ const SearchSelect: React.FC<Props> = ({
     contentWidthMode = 'trigger',
     widthContainerRef,
     onChange,
-}) => {
+}: Props) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchValue, setSearchValue] = useState('');
     const [contentWidth, setContentWidth] = useState<number | null>(null);
@@ -88,13 +93,13 @@ const SearchSelect: React.FC<Props> = ({
         };
     }, [isParentWidthMode, widthContainerRef]);
 
-    const handleValueChange = (nextValue: string) => {
+    const onValueChange = (nextValue: string) => {
         onChange?.(nextValue);
         setIsOpen(false);
         setSearchValue('');
     };
 
-    const handleOpenChange = (nextOpen: boolean) => {
+    const onOpenChange = (nextOpen: boolean) => {
         setIsOpen(nextOpen);
 
         if (!nextOpen) {
@@ -108,7 +113,7 @@ const SearchSelect: React.FC<Props> = ({
             : 'var(--radix-popover-trigger-width)';
 
     return (
-        <Popover.Root open={isOpen} onOpenChange={handleOpenChange}>
+        <Popover.Root open={isOpen} onOpenChange={onOpenChange}>
             <Popover.Trigger>{triggerElement}</Popover.Trigger>
 
             <Popover.Content align="end" sideOffset={4} width={popoverWidth}>
@@ -140,7 +145,7 @@ const SearchSelect: React.FC<Props> = ({
                                             variant="soft"
                                             color={isSelected ? 'blue' : 'gray'}
                                             highContrast={isSelected}
-                                            onClick={() => handleValueChange(item.value)}
+                                            onClick={() => onValueChange(item.value)}
                                         >
                                             <Flex
                                                 align="center"

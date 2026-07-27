@@ -29,11 +29,19 @@ const Activity = () => {
 
     const filteredItems = useMemo(() => {
         if (activeFilter === 'expenses') {
-            return items.filter(item => item.action === ACTIVITY_ACTIONS.EXPENSE_CREATED);
+            return items.filter(
+                item =>
+                    item.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ||
+                    item.action === ACTIVITY_ACTIONS.EXPENSE_REVERSED,
+            );
         }
 
         if (activeFilter === 'settlements') {
-            return items.filter(item => item.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED);
+            return items.filter(
+                item =>
+                    item.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED ||
+                    item.action === ACTIVITY_ACTIONS.SETTLEMENT_REVERSED,
+            );
         }
 
         return items;
@@ -70,7 +78,9 @@ const Activity = () => {
 
                         {isEndOfFeed && (
                             <Flex justify="center" align="center" gap="2" py="4">
-                                <LucideChevronsDown size={14} color="var(--gray-8)" />
+                                <Text as="span" color="gray">
+                                    <LucideChevronsDown size={14} />
+                                </Text>
                                 <Text size="1" color="gray">
                                     {t('endOfFeed')}
                                 </Text>

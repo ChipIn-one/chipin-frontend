@@ -1,18 +1,18 @@
 import { LucideChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import styled, { css } from 'styled-components';
+import styled from 'styled-components';
 
 import { Card, Flex, Text } from '@radix-ui/themes';
 
 import type { BalanceEntry } from 'api/chipin.raw.types';
 import type { Group } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
-import { themeColor } from 'helpers/colors';
 import { useGroupsStore } from 'store/groupsStore';
 
 import BalanceSummaryText from 'basics/BalanceSummaryText';
 import { NavButton } from 'basics/buttons';
 import GroupAvatar from 'components/GroupAvatar';
+import { interactiveCardStyles } from 'components/interactive-card-styles';
 
 const GroupNavButton = styled(NavButton)`
     display: block;
@@ -20,33 +20,29 @@ const GroupNavButton = styled(NavButton)`
 `;
 
 const InteractiveCard = styled(Card)<{ $isSelected: boolean }>`
-    transition:
-        background-color 120ms ease,
-        box-shadow 120ms ease,
-        transform 120ms ease;
+    ${interactiveCardStyles.transition}
 
     ${({ $isSelected }) =>
         $isSelected &&
-        css`
-            background-color: ${themeColor('grassA3')};
-            box-shadow: inset 0 0 0 1px ${themeColor('grassA8')};
-        `}
+        interactiveCardStyles.state({
+            backgroundColorToken: 'grassA3',
+            borderColorToken: 'grassA8',
+        })}
 
     ${GroupNavButton}:hover & {
-        background-color: ${({ $isSelected, theme }) =>
-            $isSelected ? theme.colors.grassA4 : theme.colors.grayA3};
-        box-shadow: inset 0 0 0 1px
-            ${({ $isSelected, theme }) =>
-                $isSelected ? theme.colors.grassA8 : theme.colors.grayA6};
-        transform: translateY(-1px);
+        ${({ $isSelected }) =>
+            interactiveCardStyles.hover({
+                backgroundColorToken: $isSelected ? 'grassA4' : 'grayA3',
+                borderColorToken: $isSelected ? 'grassA8' : 'grayA6',
+            })}
     }
 
     ${GroupNavButton}:focus-visible & {
-        box-shadow:
-            inset 0 0 0 1px
-                ${({ $isSelected, theme }) =>
-                    $isSelected ? theme.colors.grassA8 : theme.colors.grayA6},
-            0 0 0 2px ${themeColor('grassA8')};
+        ${({ $isSelected }) =>
+            interactiveCardStyles.focus({
+                borderColorToken: $isSelected ? 'grassA8' : 'grayA6',
+                focusColorToken: 'grassA8',
+            })}
     }
 `;
 
@@ -56,7 +52,7 @@ interface Props {
     isSelected?: boolean;
 }
 
-const GroupCard: React.FC<Props> = ({ group, balances, isSelected = false }) => {
+const GroupCard = ({ group, balances, isSelected = false }: Props) => {
     const setSelectedGroup = useGroupsStore(state => state.setSelectedGroup);
     const { t } = useTranslation('dashboard');
 
