@@ -8,8 +8,7 @@ import { selectGroupSettlementOptions } from 'store/groupsSelectors';
 import { useGroupsStore } from 'store/groupsStore';
 import { useUsersStore } from 'store/usersStore';
 
-import BaseModal from '../../BaseModal';
-import { MODAL_SIZES } from '../../constants';
+import { BaseModal, MODAL_SIZES } from '../../base-modal';
 import { type DebtOption, helpers } from '../internal';
 import type { GroupSettleUpProps } from '../types';
 

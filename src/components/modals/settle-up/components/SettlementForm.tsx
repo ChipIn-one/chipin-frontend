@@ -11,8 +11,7 @@ import { useUsersStore } from 'store/usersStore';
 
 import type { SelectItem } from 'components/Select';
 
-import BaseModal from '../../BaseModal';
-import { MODAL_SIZES } from '../../constants';
+import { BaseModal, MODAL_SIZES } from '../../base-modal';
 import { helpers, type SettlementFormProps } from '../internal';
 import { ActionFooter, ModalSurface } from '../styled';
 

@@ -11,6 +11,8 @@ Apply these rules to new and touched code. Refactor directly related legacy code
 - Prefer `satisfies` when validating an object without widening its inferred type.
 - Use `import type` for type-only dependencies.
 - Model mutually exclusive states with discriminated unions instead of several loosely related booleans.
+- Repeated closed string sets used across files live in a shared `as const` object; derive the union type
+  from that object and use its named values instead of repeating raw string literals.
 - Reserve `Api*Request` and `Api*Response` names for wire contracts. Pages, features, components,
   and basics import domain/core names such as `Group` and `GroupUser`, never `Api*` names.
 - Export reusable semantic domain types from the core types module. Do not expose indexed-access
@@ -19,6 +21,9 @@ Apply these rules to new and touched code. Refactor directly related legacy code
 ## Naming
 
 - Components and types: `PascalCase`; functions and variables: `camelCase`; shared constants: `UPPER_SNAKE_CASE`.
+- Directories use `kebab-case`. A capability directory derives its name from its primary component, for
+  example `AddExpenseModal.tsx` lives in `add-expense-modal/`.
+- React component files remain `PascalCase.tsx` inside their `kebab-case` owner directories.
 - Booleans use `is*`, `has*`, `can*`, or `should*` when practical.
 - Local event handlers and callback props both use `on*`. Do not add `handle*`.
 - Names describe business intent: `setSelectedGroup`, not `setData`; `removeFriend`, not `processItem`.
@@ -106,14 +111,26 @@ for (const currency in balancesByCurrency) {
 ## Modules And Control Flow
 
 - Prefer named exports. Default exports are limited to established framework boundaries or existing local patterns.
+- Every `index.ts` imports its public values and types first, then ends with exactly one explicit named
+  `export { ... }` block. Do not use inline re-exports such as `export { Component } from './component'`,
+  wildcard exports, multiple export statements, or a default export from an index file.
 - Every directory boundary consumed by its parent or an external consumer exposes that boundary through
   `index.ts`; consumers do not deep-import its files. Files within the same directory may import siblings
   directly to avoid barrel cycles. Follow the recursive structure in `10-architecture.md` for new and
   substantially refactored directories; do not create empty structure or migrate unrelated legacy folders.
 - Prefer early returns and explicit branches over deeply nested logic.
+- Do not use nested ternary expressions. When one condition selects several related values or
+  callbacks, move that decision into a focused local helper with explicit branches or a `switch`.
 - Do not create an abstraction until it removes real duplication or establishes a necessary boundary.
 - Keep functions focused. Split by responsibility, not by an arbitrary line limit.
 - Comments explain why a non-obvious decision exists and remain in English.
+
+```ts
+import AddExpenseModal from './AddExpenseModal';
+import type { AddExpenseModalProps } from './types';
+
+export { AddExpenseModal, type AddExpenseModalProps };
+```
 
 ## Touched-Code Rule
 

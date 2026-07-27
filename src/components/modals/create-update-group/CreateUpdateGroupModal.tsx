@@ -21,8 +21,7 @@ import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupAdding, selectGroupUpdating } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
-import BaseModal from '../BaseModal';
-import { MODAL_SIZES } from '../constants';
+import { BaseModal, MODAL_SIZES } from '../base-modal';
 
 import {
     ALL_GROUP_ICONS,
