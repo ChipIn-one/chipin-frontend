@@ -163,6 +163,24 @@ test('allows a group payer to be excluded from the expense participants', () => 
     expect(payload?.participantIds).toEqual([groupMember.id]);
 });
 
+test('allows submitting an expense without a description', () => {
+    const store = useExpenseModalStore.getState();
+    store.initialize({
+        context: 'group',
+        currentUser,
+        defaultCurrency: 'USD',
+        groups: [{ id: 'group-1', members: [currentUser, groupMember] }],
+        knownFriends: [],
+        defaultGroupId: 'group-1',
+    });
+    store.setAmount('100');
+
+    const state = useExpenseModalStore.getState();
+
+    expect(selectIsSubmitDisabled(state)).toBe(false);
+    expect(selectExpensePayload(state, 1_717_200_000)?.description).toBe('');
+});
+
 test('builds shares payload and validation from store state', () => {
     const store = useExpenseModalStore.getState();
     store.initialize({

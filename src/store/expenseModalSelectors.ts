@@ -288,7 +288,6 @@ export const selectIsSubmitDisabled = (state: ExpenseModalStore) => {
     const payerId = selectPayerId(state);
 
     return (
-        !state.description.trim() ||
         split.totalAmount <= 0 ||
         !payerId ||
         (state.targetMode === 'group' && !state.groupId) ||
