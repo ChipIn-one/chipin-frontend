@@ -1,11 +1,13 @@
 {
     "activityFeed": {
+        "dateDivider": "Yesterday",
+        "dateDividerSummary": "you owe 8,000 USD",
         "expenseTitle": "Weekend dinner",
-        "expenseDescription": "Paid by Alex in Travel group",
+        "expenseDescription": "Paid by Alex",
+        "scope": "Travel group",
         "expenseAmount": "120 USD",
         "owedStatus": "You are owed",
-        "relativeTime": "2 hours ago",
-        "memberJoined": "Alex joined Travel group"
+        "relativeTime": "2 hours ago"
     },
     "account": {
         "displayName": "Jordan Lee",

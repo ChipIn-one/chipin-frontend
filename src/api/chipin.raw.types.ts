@@ -144,7 +144,7 @@ export interface ApiSettlementDetails {
     groupId: string;
 }
 
-export interface ApiLedgerEntryResponse {
+export interface ApiCreateLedgerResponse {
     id: string;
     type: 'EXPENSE' | 'SETTLEMENT';
     scope: string;

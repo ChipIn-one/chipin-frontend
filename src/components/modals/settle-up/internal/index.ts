@@ -1,4 +1,16 @@
-import * as helpers from './helpers';
+import {
+    getDebtOptions,
+    getSettlementAmount,
+    getSettlementViewModel,
+    selectSettlementBalance,
+} from './helpers';
 import type { DebtOption, SettlementFormProps } from './types';
 
-export { type DebtOption, helpers, type SettlementFormProps };
+export {
+    type DebtOption,
+    getDebtOptions,
+    getSettlementAmount,
+    getSettlementViewModel,
+    selectSettlementBalance,
+    type SettlementFormProps,
+};

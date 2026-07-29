@@ -2,16 +2,20 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import * as chipinApi from 'api/chipin';
 import type { Group, User } from 'api/chipin.types';
+import * as ledgerApi from 'api/ledgerApi';
 
 import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
 import { useUsersStore } from './usersStore';
 
 vi.mock('api/chipin', () => ({
-    createApiSettlement: vi.fn(),
     fetchApiUserGroupById: vi.fn(),
     fetchApiUserGroups: vi.fn(),
     inviteApiUserToGroup: vi.fn(),
+}));
+
+vi.mock('api/ledgerApi', () => ({
+    createSettlement: vi.fn(),
 }));
 
 const creator = {
@@ -109,7 +113,7 @@ describe('groupsStore', () => {
     });
 
     test('creates a scoped partial settlement and updates selected and cached group balances', () => {
-        vi.mocked(chipinApi.createApiSettlement).mockResolvedValue({} as never);
+        vi.mocked(ledgerApi.createSettlement).mockResolvedValue({} as never);
         useGroupsStore.setState({ groups: [settlementGroup] });
         useGroupsStore.getState().setSelectedGroup(settlementGroup);
 
@@ -123,7 +127,7 @@ describe('groupsStore', () => {
         expect(useLoadingStore.getState().settlement.add).toBe('loading');
 
         return request.then(() => {
-            expect(chipinApi.createApiSettlement).toHaveBeenCalledWith({
+            expect(ledgerApi.createSettlement).toHaveBeenCalledWith({
                 groupId: settlementGroup.id,
                 fromUserId: currentUser.id,
                 toUserId: 'user-2',
@@ -142,7 +146,7 @@ describe('groupsStore', () => {
     });
 
     test('removes a fully settled group currency balance', () => {
-        vi.mocked(chipinApi.createApiSettlement).mockResolvedValue({} as never);
+        vi.mocked(ledgerApi.createSettlement).mockResolvedValue({} as never);
         useGroupsStore.getState().setSelectedGroup(settlementGroup);
 
         return useGroupsStore
@@ -162,7 +166,7 @@ describe('groupsStore', () => {
 
     test('forwards amount validation to the settlement API', () => {
         const requestError = new Error('Amount exceeds balance');
-        vi.mocked(chipinApi.createApiSettlement).mockRejectedValue(requestError);
+        vi.mocked(ledgerApi.createSettlement).mockRejectedValue(requestError);
         useGroupsStore.getState().setSelectedGroup(settlementGroup);
 
         return useGroupsStore
@@ -177,7 +181,7 @@ describe('groupsStore', () => {
                 () => Promise.reject(new Error('Expected settlement to reject')),
                 error => {
                     expect(error).toBe(requestError);
-                    expect(chipinApi.createApiSettlement).toHaveBeenCalledWith({
+                    expect(ledgerApi.createSettlement).toHaveBeenCalledWith({
                         groupId: settlementGroup.id,
                         fromUserId: currentUser.id,
                         toUserId: 'user-2',
@@ -202,7 +206,7 @@ describe('groupsStore', () => {
                 () => Promise.reject(new Error('Expected settlement to reject')),
                 error => {
                     expect(error).toEqual(new Error('Group settlement context is unavailable'));
-                    expect(chipinApi.createApiSettlement).not.toHaveBeenCalled();
+                    expect(ledgerApi.createSettlement).not.toHaveBeenCalled();
                 },
             );
     });
@@ -222,7 +226,7 @@ describe('groupsStore', () => {
                 () => Promise.reject(new Error('Expected settlement to reject')),
                 error => {
                     expect(error).toEqual(new Error('Group settlement participant is unavailable'));
-                    expect(chipinApi.createApiSettlement).not.toHaveBeenCalled();
+                    expect(ledgerApi.createSettlement).not.toHaveBeenCalled();
                 },
             );
     });
@@ -242,14 +246,14 @@ describe('groupsStore', () => {
                 () => Promise.reject(new Error('Expected settlement to reject')),
                 error => {
                     expect(error).toEqual(new Error('Group settlement balance is unavailable'));
-                    expect(chipinApi.createApiSettlement).not.toHaveBeenCalled();
+                    expect(ledgerApi.createSettlement).not.toHaveBeenCalled();
                 },
             );
     });
 
     test('keeps group balances unchanged when settlement creation fails', () => {
         const requestError = new Error('Settlement failed');
-        vi.mocked(chipinApi.createApiSettlement).mockRejectedValue(requestError);
+        vi.mocked(ledgerApi.createSettlement).mockRejectedValue(requestError);
         useGroupsStore.getState().setSelectedGroup(settlementGroup);
 
         return useGroupsStore
@@ -286,6 +290,27 @@ describe('groupsStore', () => {
             expect(useGroupsStore.getState().groups).toEqual(expectedGroups);
             expect(useLoadingStore.getState().group.list).toBe('fetched');
         });
+    });
+
+    test('refreshes the selected group from the fetched group list', () => {
+        const refreshedGroup = {
+            ...settlementGroup,
+            name: 'Updated group',
+        };
+
+        useGroupsStore.getState().setSelectedGroup(settlementGroup);
+        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue([
+            refreshedGroup,
+        ]);
+
+        return useGroupsStore
+            .getState()
+            .fetchSetGroups()
+            .then(() => {
+                expect(useGroupsStore.getState().selectedGroup).toEqual(
+                    refreshedGroup,
+                );
+            });
     });
 
     test('adds and selects the canonical group returned after joining', () => {

@@ -1,0 +1,3 @@
+const ACTIVITY_PAGE_LIMIT = 15;
+
+export { ACTIVITY_PAGE_LIMIT };

@@ -7,7 +7,7 @@ import { selectGroupDataLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
 import { ActivityFeedSkeleton } from 'components/skeletons';
-import { ActivityEventsList } from 'features/activity/components';
+import { ActivityEventsList } from 'features/activity';
 
 import GroupBalancesTab from './GroupBalancesTab';
 import GroupSettingsTab from './GroupSettingsTab';

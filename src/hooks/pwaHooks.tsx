@@ -13,6 +13,7 @@ import { buildGroupInviteLink } from 'helpers/url';
 import { usePwaStore } from 'store/pwaStore';
 
 const INVITE_FEEDBACK_DELAY_MS = 1.5 * SECOND;
+const CONNECTION_RESTORED_TOAST_DURATION = 4 * SECOND;
 
 export const useCheckOnlineStatus = () => {
     const { online } = useNetworkState();
@@ -26,8 +27,12 @@ export const useCheckOnlineStatus = () => {
                 duration: Infinity,
             });
         } else if (online === true) {
-            toast.dismiss(TOASTS_IDS.connectionStatus);
-            toast.success(i18n.t('toasts:common.reconnected'));
+            toast.success(i18n.t('toasts:common.reconnected'), {
+                description: null,
+                duration: CONNECTION_RESTORED_TOAST_DURATION,
+                icon: null,
+                id: TOASTS_IDS.connectionStatus,
+            });
         }
     }, [online]);
 };

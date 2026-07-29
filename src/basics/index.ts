@@ -1,5 +1,6 @@
 import AmountInput from './AmountInput';
 import BackgroundBox from './BackgroundBox';
+import { LedgerScopeBadge } from './badges';
 import BalanceBadges from './BalanceBadges';
 import BalanceSummaryText from './BalanceSummaryText';
 import Checkbox from './Checkbox';
@@ -31,6 +32,7 @@ export {
     EmptyState,
     GroupRoleBadge,
     Image,
+    LedgerScopeBadge,
     NoActivityEmptyState,
     NoFriendsEmptyState,
     NoGroupExpensesEmptyState,

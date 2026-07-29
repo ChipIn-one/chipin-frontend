@@ -29,6 +29,10 @@
         "title": "ChipIn — Активность",
         "description": "Просматривайте недавнюю активность"
     },
+    "activityDetails": {
+        "title": "ChipIn — Детали активности",
+        "description": "Просматривайте историю расхода или расчёта"
+    },
     "friends": {
         "title": "ChipIn — Друзья",
         "description": "Просматривайте список друзей"

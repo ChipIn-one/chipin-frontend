@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { LucideChevronsDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
 import { Flex, Spinner, Text } from '@radix-ui/themes';
-import { useIntersectionObserver } from '@uidotdev/usehooks';
 
 import { ACTIVITY_ACTIONS } from 'constants/activity';
-import { useActivityStore } from 'store/activityStore';
+import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
+import { selectActivityFeed, useActivityStore } from 'store/activity-store';
 import { selectActivityLoading, selectActivityNextPageLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
@@ -18,10 +18,8 @@ import { ActivityEventsList } from './components';
 
 const Activity = () => {
     const { t } = useTranslation('activity');
-    const { items, hasMore } = useActivityStore(
-        useShallow(s => ({ items: s.items, hasMore: s.hasMore })),
-    );
-    const { fetchMoreActivity: fetchAppendActivity } = useActivityStore();
+    const { items, hasMore } = useActivityStore(useShallow(selectActivityFeed));
+    const fetchMoreActivity = useActivityStore(s => s.fetchMoreActivity);
     const isLoading = useLoadingStore(selectActivityLoading);
     const isNextPageLoading = useLoadingStore(selectActivityNextPageLoading);
 
@@ -29,11 +27,19 @@ const Activity = () => {
 
     const filteredItems = useMemo(() => {
         if (activeFilter === 'expenses') {
-            return items.filter(item => item.action === ACTIVITY_ACTIONS.EXPENSE_CREATED);
+            return items.filter(
+                item =>
+                    item.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ||
+                    item.action === ACTIVITY_ACTIONS.EXPENSE_REVERSED,
+            );
         }
 
         if (activeFilter === 'settlements') {
-            return items.filter(item => item.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED);
+            return items.filter(
+                item =>
+                    item.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED ||
+                    item.action === ACTIVITY_ACTIONS.SETTLEMENT_REVERSED,
+            );
         }
 
         return items;
@@ -41,13 +47,11 @@ const Activity = () => {
 
     const isEndOfFeed = !isNextPageLoading && !hasMore && items.length > 0;
 
-    const [sentinelRef, sentinelEntry] = useIntersectionObserver({ threshold: 0 });
-
-    useEffect(() => {
-        if (sentinelEntry?.isIntersecting && hasMore && !isNextPageLoading) {
-            fetchAppendActivity();
-        }
-    }, [sentinelEntry?.isIntersecting, hasMore, isNextPageLoading, fetchAppendActivity]);
+    const sentinelRef = useInfiniteScroll({
+        hasMore,
+        isLoading: isNextPageLoading,
+        onLoadMore: fetchMoreActivity,
+    });
 
     return (
         <>
@@ -58,9 +62,13 @@ const Activity = () => {
             />
 
             {isLoading ? (
-                <ActivityFeedSkeleton />
+                <ActivityFeedSkeleton isShowSummary={false} />
             ) : (
-                <ActivityEventsList events={filteredItems}>
+                <ActivityEventsList
+                    events={filteredItems}
+                    isShowSummary={false}
+                    isNavigable={false}
+                >
                     <>
                         {isNextPageLoading && (
                             <Flex justify="center" py="4">
@@ -70,7 +78,9 @@ const Activity = () => {
 
                         {isEndOfFeed && (
                             <Flex justify="center" align="center" gap="2" py="4">
-                                <LucideChevronsDown size={14} color="var(--gray-8)" />
+                                <Text as="span" color="gray">
+                                    <LucideChevronsDown size={14} />
+                                </Text>
                                 <Text size="1" color="gray">
                                     {t('endOfFeed')}
                                 </Text>

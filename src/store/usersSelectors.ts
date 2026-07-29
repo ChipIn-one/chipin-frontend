@@ -19,7 +19,8 @@ export const selectUserPreferredName = (
     user: Pick<User, 'displayName'> & Partial<Pick<User, 'firstName'>>,
 ) =>
     user.firstName || user.displayName;
-export const selectUserTimeFormat = (s: UsersStore) => selectUserSettings(s)?.timeFormat ?? '12h';
+export const selectIsUserTime24H = (s: UsersStore) =>
+    selectUserSettings(s)?.timeFormat === '24h';
 export const selectUserLanguage = (s: UsersStore) => selectUserSettings(s)?.language ?? 'en';
 export const selectUserTheme = (s: UsersStore): ThemeName =>
     selectUserSettings(s)?.theme ?? 'system';

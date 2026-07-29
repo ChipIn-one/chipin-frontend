@@ -19,7 +19,7 @@ const EventGroupDeleted = ({ event }: Props) => {
             <Flex justify="between" align="center" gap="3">
                 <Flex gap="4" align="center">
                     <Avatar
-                        size="3"
+                        size="4"
                         variant="soft"
                         color="red"
                         fallback={<LucideUserRoundX size={20} />}

@@ -57,7 +57,7 @@ test('validates stored tokens with the server on cold start', () => {
     });
 });
 
-test('revalidates an authenticated session when the app becomes visible', () => {
+test('does not revalidate an authenticated session when the app becomes visible', () => {
     const refreshAuthTokens = vi.fn(() => Promise.resolve('next-access-token'));
     useAuthStore.setState({
         refreshAuthTokens,
@@ -73,11 +73,11 @@ test('revalidates an authenticated session when the app becomes visible', () => 
         configurable: true,
         value: 'visible',
     });
-    document.dispatchEvent(new Event('visibilitychange'));
-
-    return waitFor(() => {
-        expect(refreshAuthTokens).toHaveBeenCalledOnce();
+    act(() => {
+        document.dispatchEvent(new Event('visibilitychange'));
     });
+
+    expect(refreshAuthTokens).not.toHaveBeenCalled();
 });
 
 test('does not overwrite a newer authenticated session after stale validation fails', () => {

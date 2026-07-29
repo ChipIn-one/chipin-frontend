@@ -1,13 +1,9 @@
 import { DAY, HOUR, MINUTE, SECOND } from 'constants/time';
 
-type TimeUnit = Intl.RelativeTimeFormatUnit;
 type DateInput = Date | number;
 
-const MAX_RELATIVE_DAYS = 7; // Relative time limit in days
-
-const UNITS: Array<[TimeUnit, number]> = [
-    ['day', DAY],
-    ['hour', HOUR],
+const RELATIVE_TIME_LIMIT = HOUR;
+const RELATIVE_TIME_UNITS: Array<[Intl.RelativeTimeFormatUnit, number]> = [
     ['minute', MINUTE],
     ['second', SECOND],
 ];
@@ -23,25 +19,35 @@ export const formatActivityAbsoluteDate = (date: DateInput, locale: string): str
     }).format(new Date(toTimestampMs(date)));
 };
 
-export const formatRelativeTime = (date: DateInput, locale: string): string => {
+export const formatRelativeTime = (
+    date: DateInput,
+    locale: string,
+    is24Hour: boolean,
+): string => {
     const timestamp = toTimestampMs(date);
     const diff = timestamp - Date.now();
-    const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
 
-    // Switch to absolute date if difference exceeds relative threshold
-    if (Math.abs(diff) > MAX_RELATIVE_DAYS * DAY) {
-        return formatActivityAbsoluteDate(date, locale);
+    if (Math.abs(diff) >= RELATIVE_TIME_LIMIT) {
+        return new Intl.DateTimeFormat(locale, {
+            day: 'numeric',
+            month: 'long',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: !is24Hour,
+        }).format(new Date(timestamp));
     }
 
-    for (const [unit, ms] of UNITS) {
+    const relativeTimeFormat = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
+
+    for (const [unit, ms] of RELATIVE_TIME_UNITS) {
         const value = Math.round(diff / ms);
 
         if (Math.abs(value) >= 1) {
-            return rtf.format(value, unit);
+            return relativeTimeFormat.format(value, unit);
         }
     }
 
-    return rtf.format(0, 'second');
+    return relativeTimeFormat.format(0, 'second');
 };
 
 export const getActivityDateKey = (date: DateInput): string => {
@@ -100,12 +106,11 @@ export const detectDeviceTimezone = (): string => {
     }
 };
 
-export const getAmPm24Time = (date: Date, is24h = true): string => {
-    // TODO: Pass localte to localeTimeString from user settings.
+export const getAmPm24Time = (date: Date, is24Hour = true): string => {
     return date.toLocaleTimeString([], {
         hour: '2-digit',
         minute: '2-digit',
-        hour12: is24h,
+        hour12: !is24Hour,
         timeZone: detectDeviceTimezone(),
     });
 };

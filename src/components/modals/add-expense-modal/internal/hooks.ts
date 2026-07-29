@@ -6,7 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { ROUTES } from 'constants/routes';
 import { getUnixTimestampInSec } from 'helpers/time';
-import { useActivityStore } from 'store/activityStore';
+import { useActivityStore } from 'store/activity-store';
 import {
     selectExpensePayload,
     selectIsSubmitDisabled,

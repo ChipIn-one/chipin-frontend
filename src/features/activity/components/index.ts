@@ -1,23 +1,27 @@
+import { ActivityEvent } from './activity-event';
+import { ActivityEventsList } from './activity-events-list';
 import ActivityDateDivider from './ActivityDateDivider';
-import ActivityEventsList from './ActivityEventsList';
-import EventExpenseCreated from './EventExpenseCreated';
+import { EventExpense } from './event-expense';
+import { EventExpenseTransferred } from './event-expense-transferred';
+import { EventMemberKicked } from './event-member-kicked';
+import { EventSettlement } from './event-settlement';
 import EventGroupCreated from './EventGroupCreated';
 import EventGroupDeleted from './EventGroupDeleted';
 import EventGroupUpdated from './EventGroupUpdated';
 import EventMemberJoin from './EventMemberJoin';
 import EventMemberLeft from './EventMemberLeft';
-import EventRenderer from './EventRenderer';
-import EventSettlementCreated from './EventSettlementCreated';
 
 export {
     ActivityDateDivider,
+    ActivityEvent,
     ActivityEventsList,
-    EventExpenseCreated,
+    EventExpense,
+    EventExpenseTransferred,
     EventGroupCreated,
     EventGroupDeleted,
     EventGroupUpdated,
     EventMemberJoin,
+    EventMemberKicked,
     EventMemberLeft,
-    EventRenderer,
-    EventSettlementCreated,
+    EventSettlement,
 };

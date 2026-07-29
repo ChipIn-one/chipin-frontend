@@ -58,6 +58,11 @@ export const ROUTE_META = [
         descriptionKey: 'activity.description',
     },
     {
+        path: `${ROUTES.ACTIVITY}/:parentActivityId`,
+        titleKey: 'activityDetails.title',
+        descriptionKey: 'activityDetails.description',
+    },
+    {
         path: ROUTES.FRIENDS,
         titleKey: 'friends.title',
         descriptionKey: 'friends.description',

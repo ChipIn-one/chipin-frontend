@@ -6,7 +6,11 @@ import { Avatar, Box, Card, Flex, Separator, Skeleton, Text } from '@radix-ui/th
 import type { UserSettings } from 'api/chipin.types';
 import { matchLocale, onChangeLocale, SUPPORTED_LOCALES, SupportedLocale } from 'helpers/locale';
 import { detectDeviceTimezone, getAmPm24Time } from 'helpers/time';
-import { selectUserCurrency, selectUserLanguage, selectUserTimeFormat } from 'store/usersSelectors';
+import {
+    selectIsUserTime24H,
+    selectUserCurrency,
+    selectUserLanguage,
+} from 'store/usersSelectors';
 import { useUsersStore } from 'store/usersStore';
 
 import CurrencySelect from 'components/CurrencySelect';
@@ -21,7 +25,7 @@ const RegionalSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
     const setUserSettings = useUsersStore(s => s.setUserSettings);
     const defaultCurrency = useUsersStore(selectUserCurrency);
-    const timeFormat = useUsersStore(selectUserTimeFormat);
+    const isUserTime24H = useUsersStore(selectIsUserTime24H);
     const language = useUsersStore(selectUserLanguage);
 
     const detectedTimezone = detectDeviceTimezone();
@@ -31,17 +35,17 @@ const RegionalSection = ({ isLoading }: Props) => {
 
     const selectedLanguage = matchLocale(language) ?? 'en';
 
-    const handleTimeFormatChange = (value: string) => {
+    const onTimeFormatChange = (value: string) => {
         setUserSettings({
             settings: { timeFormat: value as UserSettings['timeFormat'] },
         });
     };
 
-    const handleDefaultCurrencyChange = (value: string) => {
+    const onDefaultCurrencyChange = (value: string) => {
         setUserSettings({ settings: { defaultCurrency: value } });
     };
 
-    const handleLanguageChange = (value: string) => {
+    const onLanguageChange = (value: string) => {
         const locale = value as SupportedLocale;
 
         setUserSettings({ settings: { language: locale } });
@@ -118,8 +122,8 @@ const RegionalSection = ({ isLoading }: Props) => {
                         </Flex>
                         <Skeleton loading={isLoading}>
                             <SegmentedControl
-                                value={timeFormat}
-                                onValueChange={handleTimeFormatChange}
+                                value={isUserTime24H ? '24h' : '12h'}
+                                onValueChange={onTimeFormatChange}
                                 items={[
                                     { value: '12h', label: previewTime12 },
                                     { value: '24h', label: previewTime24 },
@@ -140,7 +144,7 @@ const RegionalSection = ({ isLoading }: Props) => {
                             <CurrencySelect
                                 currency={defaultCurrency}
                                 isLoading={isLoading}
-                                onChange={handleDefaultCurrencyChange}
+                                onChange={onDefaultCurrencyChange}
                             />
                         </Box>
                     </Box>
@@ -163,7 +167,7 @@ const RegionalSection = ({ isLoading }: Props) => {
                                 })}
                                 size="2"
                                 value={selectedLanguage}
-                                onChange={handleLanguageChange}
+                                onChange={onLanguageChange}
                                 renderValue={item => {
                                     return item?.label;
                                 }}

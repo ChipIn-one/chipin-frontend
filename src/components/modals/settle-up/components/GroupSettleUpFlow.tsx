@@ -9,7 +9,7 @@ import { useGroupsStore } from 'store/groupsStore';
 import { useUsersStore } from 'store/usersStore';
 
 import { BaseModal, MODAL_SIZES } from '../../base-modal';
-import { type DebtOption, helpers } from '../internal';
+import { type DebtOption, getDebtOptions } from '../internal';
 import type { GroupSettleUpProps } from '../types';
 
 import DebtSelectionStep from './DebtSelectionStep';
@@ -38,8 +38,8 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
               ),
           }
         : groupSettlementOptions;
-    const youOwe = helpers.getDebtOptions(settlementOptions.youOwe);
-    const owedToYou = helpers.getDebtOptions(settlementOptions.owedToYou);
+    const youOwe = getDebtOptions(settlementOptions.youOwe);
+    const owedToYou = getDebtOptions(settlementOptions.owedToYou);
     const debts = [...youOwe, ...owedToYou];
     const isSettledMember = Boolean(memberId) && debts.length === 0;
     const selectedOption = selectedDebt

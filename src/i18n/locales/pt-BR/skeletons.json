@@ -1,11 +1,13 @@
 {
     "activityFeed": {
+        "dateDivider": "Ontem",
+        "dateDividerSummary": "você deve 8.000 USD",
         "expenseTitle": "Jantar da viagem",
-        "expenseDescription": "Alex pagou no grupo Viagem",
+        "expenseDescription": "Alex pagou",
+        "scope": "Grupo Viagem",
         "expenseAmount": "120 USD",
         "owedStatus": "Devem a voce",
-        "relativeTime": "ha 2 horas",
-        "memberJoined": "Alex entrou no grupo Viagem"
+        "relativeTime": "ha 2 horas"
     },
     "account": {
         "displayName": "Alex Silva",

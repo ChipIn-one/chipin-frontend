@@ -36,6 +36,9 @@ git diff --cached
 - Dependency direction remains pages -> features -> components -> basics.
 - Directory boundaries expose focused `index.ts` files, consumers avoid deep imports, and root barrels do
   not leak `internal/` implementation details.
+- New or substantially refactored Zustand stores follow the `<domain>-store/` capability layout:
+  `actions.ts`, `types.ts`, optional `constants.ts`, `initialState.ts`, `selectors.ts`, co-located tests,
+  and one explicit public `index.ts`.
 - Primary components, subcomponents, `internal` support files, `styled.ts`, public/private types, and
   co-located tests are placed at their documented ownership level without empty scaffolding.
 - The relevant chapters under `docs/codex/rules/` were applied to new and touched code.

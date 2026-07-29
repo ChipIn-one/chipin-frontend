@@ -1,5 +1,5 @@
 import Activity from './Activity';
 import ActivityHeader from './ActivityHeader';
+import { ActivityEvent, ActivityEventsList } from './components';
 
-export { ActivityHeader };
-export default Activity;
+export { Activity, ActivityEvent, ActivityEventsList, ActivityHeader };
