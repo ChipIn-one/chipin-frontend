@@ -11,6 +11,16 @@ export const selectDashboardFetched = (s: LoadingStore) => s.dashboard.data === 
 export const selectActivityLoading = (s: LoadingStore) => s.activity.data === 'loading';
 export const selectActivityFetched = (s: LoadingStore) => s.activity.data === 'fetched';
 export const selectActivityNextPageLoading = (s: LoadingStore) => s.activity.nextPage === 'loading';
+export const selectActivitySelectedEventLoading = (s: LoadingStore) =>
+    s.activity.selectedEvent === 'loading';
+export const selectActivitySelectedEventFetched = (s: LoadingStore) =>
+    s.activity.selectedEvent === 'fetched';
+export const selectActivitySubeventsLoading = (s: LoadingStore) =>
+    s.activity.subeventsData === 'loading';
+export const selectActivitySubeventsFetched = (s: LoadingStore) =>
+    s.activity.subeventsData === 'fetched';
+export const selectActivitySubeventsNextPageLoading = (s: LoadingStore) =>
+    s.activity.subeventsNextPage === 'loading';
 
 export const selectGroupDataLoading = (s: LoadingStore) => s.group.data === 'loading';
 export const selectGroupDataFetched = (s: LoadingStore) => s.group.data === 'fetched';
@@ -29,4 +39,5 @@ export const selectUserSelfFetched = (s: LoadingStore) => s.users.self === 'fetc
 export const selectFriendRemoving = (s: LoadingStore) => s.users.removeFriend === 'loading';
 
 export const selectExpenseAdding = (s: LoadingStore) => s.expense.add === 'loading';
+export const selectLedgerEntryRemoving = (s: LoadingStore) => s.ledger.remove === 'loading';
 export const selectSettlementAdding = (s: LoadingStore) => s.settlement.add === 'loading';

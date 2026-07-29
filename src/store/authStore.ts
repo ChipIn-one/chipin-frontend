@@ -12,7 +12,7 @@ import {
 import { isNetworkApiError, isUnauthorizedApiError } from 'helpers/errors';
 import { getAuthTokens, saveAuthTokens } from 'helpers/localStorage';
 
-import { useActivityStore } from './activityStore';
+import { useActivityStore } from './activity-store';
 import { useDashboardStore } from './dashboardStore';
 import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
@@ -42,7 +42,7 @@ export interface AuthStore {
 }
 
 const resetAuthScopedStores = () => {
-    useActivityStore.getState().setInitialActivityStore();
+    useActivityStore.getState().resetActivity();
     useDashboardStore.getState().setInitialDashboardStore();
     useGroupsStore.getState().setInitialGroupsStore();
     useUsersStore.getState().setInitialUsersStore();

@@ -1,11 +1,13 @@
 {
     "activityFeed": {
+        "dateDivider": "Ontem",
+        "dateDividerSummary": "deve 8 000 USD",
         "expenseTitle": "Jantar da viagem",
-        "expenseDescription": "O Alex pagou no grupo Viagem",
+        "expenseDescription": "O Alex pagou",
+        "scope": "Grupo Viagem",
         "expenseAmount": "120 USD",
         "owedStatus": "Devem-lhe",
-        "relativeTime": "ha 2 horas",
-        "memberJoined": "O Alex entrou no grupo Viagem"
+        "relativeTime": "ha 2 horas"
     },
     "account": {
         "displayName": "Alex Costa",

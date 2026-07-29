@@ -4,7 +4,6 @@ import { create } from 'zustand';
 
 import {
     createApiGroup,
-    createApiSettlement,
     fetchApiUserGroupById,
     fetchApiUserGroups,
     inviteApiUserToGroup,
@@ -15,6 +14,7 @@ import {
 } from 'api/chipin';
 import type { BalanceEntry } from 'api/chipin.raw.types';
 import type { CreateSettlementParams, Group } from 'api/chipin.types';
+import * as ledgerApi from 'api/ledgerApi';
 
 import { useDashboardStore } from './dashboardStore';
 import { calcGroupSummary, selectGroupBalances } from './groupsSelectors';
@@ -96,7 +96,21 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
 
         return fetchApiUserGroups()
             .then(groups => {
+                const selectedGroupId = get().selectedGroup?.id;
+                let selectedGroup: Group | undefined;
+
+                if (selectedGroupId) {
+                    selectedGroup = groups.find(
+                        group => group.id === selectedGroupId,
+                    );
+                }
+
                 set({ groups });
+
+                if (selectedGroup) {
+                    get().setSelectedGroup(selectedGroup);
+                }
+
                 return groups;
             })
             .catch((error: unknown) => {
@@ -190,7 +204,8 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         const request = { ...params, groupId: selectedGroup.id } satisfies CreateSettlementParams;
         setLoading('settlement', 'add', 'loading');
 
-        return createApiSettlement(request)
+        return ledgerApi
+            .createSettlement(request)
             .then(() => {
                 set(state => {
                     const currentGroup = state.selectedGroup;

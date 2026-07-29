@@ -22,7 +22,7 @@ import GroupsSectionHeader from 'components/GroupsSectionHeader';
 import { CreateUpdateGroupModal } from 'components/modals';
 import { MobileNavBar } from 'components/nav-bars';
 import { ActivityFeedSkeleton } from 'components/skeletons';
-import { ActivityEventsList } from 'features/activity/components';
+import { ActivityEventsList } from 'features/activity';
 
 const DashboardPage = () => {
     const { t } = useTranslation('dashboard');

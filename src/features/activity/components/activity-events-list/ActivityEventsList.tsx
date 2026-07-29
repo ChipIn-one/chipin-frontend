@@ -8,22 +8,29 @@ import { useUsersStore } from 'store/usersStore';
 
 import { NoActivityEmptyState } from 'basics/empty-states';
 
-import { getDailyExpenseSummaries } from '../selectors';
-
-import ActivityDateDivider from './ActivityDateDivider';
-import EventRenderer from './EventRenderer';
+import { selectors } from '../../internal';
+import { ActivityEvent } from '../activity-event';
+import ActivityDateDivider from '../ActivityDateDivider';
 
 interface Props {
     events: AppEvent[];
     emptyState?: ReactNode;
     children?: ReactNode;
+    isShowSummary?: boolean;
+    isNavigable?: boolean;
 }
 
-const ActivityEventsList = ({ events, emptyState = <NoActivityEmptyState />, children }: Props) => {
+const ActivityEventsList = ({
+    events,
+    emptyState = <NoActivityEmptyState />,
+    children,
+    isShowSummary = true,
+    isNavigable = true,
+}: Props) => {
     const userId = useUsersStore(state => state.user?.id);
     const dailyExpenseSummaries = useMemo(
-        () => getDailyExpenseSummaries(events, userId),
-        [events, userId],
+        () => (isShowSummary ? selectors.getDailyExpenseSummary(events, userId) : {}),
+        [events, isShowSummary, userId],
     );
 
     if (events.length === 0) {
@@ -47,7 +54,7 @@ const ActivityEventsList = ({ events, emptyState = <NoActivityEmptyState />, chi
                                 summary={dailyExpenseSummaries[dateKey] ?? []}
                             />
                         )}
-                        <EventRenderer event={event} />
+                        <ActivityEvent event={event} isNavigable={isNavigable} />
                     </Fragment>
                 );
             })}
@@ -57,4 +64,4 @@ const ActivityEventsList = ({ events, emptyState = <NoActivityEmptyState />, chi
     );
 };
 
-export default ActivityEventsList;
+export { ActivityEventsList };

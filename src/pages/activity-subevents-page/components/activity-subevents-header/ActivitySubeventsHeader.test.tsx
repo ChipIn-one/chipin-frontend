@@ -1,0 +1,104 @@
+import { expect, test, vi } from 'vitest';
+
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+
+import type { AppEvent } from 'api/activity.types';
+import { ACTIVITY_ACTIONS } from 'constants/activity';
+
+import { ActivitySubeventsHeader } from './ActivitySubeventsHeader';
+
+vi.mock('features/activity', () => ({
+    ActivityEvent: () => <div data-testid="parent-event" />,
+}));
+
+vi.mock('components/skeletons/activity-event-skeleton', () => ({
+    ActivityEventSkeleton: () => <div data-testid="parent-event-skeleton" />,
+}));
+
+vi.mock('./components', () => ({
+    ActivitySubeventsButtons: () => <div data-testid="subevents-buttons" />,
+}));
+
+vi.mock('react-i18next', () => ({
+    useTranslation: () => ({
+        t: (key: string) => key,
+    }),
+}));
+
+const parentEvent = {
+    id: 'activity-id',
+    seq: 1,
+    domain: 'LEDGER',
+    action: ACTIVITY_ACTIONS.EXPENSE_CREATED,
+    actorUserId: 'user-id',
+    actorSnapshot: {
+        displayName: 'Alex',
+        picture: null,
+    },
+    subjectType: 'expense',
+    subjectId: 'expense-id',
+    groupId: null,
+    metadata: {
+        type: 'expense',
+        entryId: 'expense-id',
+        groupId: null,
+        groupName: null,
+        description: 'Dinner',
+        amount: 30,
+        currency: 'USD',
+        payerId: 'user-id',
+        payerDisplayName: 'Alex',
+        shares: [],
+        fieldDiffs: [],
+    },
+    createdAt: 1_785_328_628,
+    parentActivityId: null,
+} satisfies AppEvent;
+
+test('renders the parent activity header', () => {
+    render(
+        <ActivitySubeventsHeader
+            parentEvent={parentEvent}
+            isLoading={false}
+        />,
+    );
+
+    expect(screen.getByText('subeventsExpenseHistoryTitle')).toBeTruthy();
+    expect(screen.getByTestId('subevents-buttons')).toBeTruthy();
+    expect(screen.getByTestId('parent-event')).toBeTruthy();
+});
+
+test('renders a parent activity skeleton while loading', () => {
+    render(
+        <ActivitySubeventsHeader
+            parentEvent={undefined}
+            isLoading
+        />,
+    );
+
+    expect(screen.getByTestId('parent-event-skeleton')).toBeTruthy();
+    expect(screen.queryByTestId('parent-event')).toBeNull();
+});
+
+test('offers retry when the parent activity fails to load', () => {
+    const user = userEvent.setup();
+    const onRetry = vi.fn();
+
+    render(
+        <ActivitySubeventsHeader
+            parentEvent={undefined}
+            isLoading={false}
+            isError
+            onRetry={onRetry}
+        />,
+    );
+
+    expect(screen.getByText('subeventsParentLoadErrorTitle')).toBeTruthy();
+
+    return user
+        .click(screen.getByRole('button', { name: 'retryAction' }))
+        .then(() => {
+            expect(onRetry).toHaveBeenCalledOnce();
+        });
+});

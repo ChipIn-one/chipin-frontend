@@ -3,12 +3,16 @@ import type { BalanceEntry } from 'api/chipin.raw.types';
 import { ACTIVITY_ACTIONS, type ExpenseCreatedAction } from 'constants/activity';
 import { getActivityDateKey } from 'helpers/time';
 
-const getUserExpenseValue = (
+interface DailyBalance extends BalanceEntry {
+    dateKey: string;
+}
+
+const getUserExpenseBalanceChange = (
     event: Extract<AppEvent, { action: ExpenseCreatedAction }>,
     userId: string,
 ): number => {
-    const userShareAmount = event.metadata.shares.find(share => share.userId === userId)
-        ?.shareAmount ?? 0;
+    const userShareAmount =
+        event.metadata.shares.find(share => share.userId === userId)?.shareAmount ?? 0;
 
     if (event.metadata.payerId === userId) {
         return event.metadata.amount - userShareAmount;
@@ -17,43 +21,49 @@ const getUserExpenseValue = (
     return userShareAmount * -1;
 };
 
-export const getDailyExpenseSummaries = (
+export const getDailyExpenseSummary = (
     events: AppEvent[],
     userId?: string,
 ): Record<string, BalanceEntry[]> => {
     const summaries: Record<string, BalanceEntry[]> = {};
+    const balances = new Map<string, DailyBalance>();
 
     if (!userId) {
         return summaries;
     }
 
-    events.forEach(event => {
+    for (const event of events) {
         if (event.action !== ACTIVITY_ACTIONS.EXPENSE_CREATED) {
-            return;
+            continue;
         }
 
-        const netBalance = getUserExpenseValue(event, userId);
+        const netBalance = getUserExpenseBalanceChange(event, userId);
 
         if (!netBalance) {
-            return;
+            continue;
         }
 
         const dateKey = getActivityDateKey(event.createdAt);
-        const dateSummary = summaries[dateKey] ?? [];
-        const existingEntry = dateSummary.find(entry => entry.currency === event.metadata.currency);
+        const { currency } = event.metadata;
+        const balanceKey = `${dateKey}:${currency}`;
+        const existingBalance = balances.get(balanceKey);
 
-        if (existingEntry) {
-            existingEntry.netBalance += netBalance;
+        if (existingBalance) {
+            existingBalance.netBalance += netBalance;
         } else {
-            dateSummary.push({ currency: event.metadata.currency, netBalance });
+            balances.set(balanceKey, { dateKey, currency, netBalance });
+        }
+    }
+
+    for (const { dateKey, currency, netBalance } of balances.values()) {
+        const dateSummary = summaries[dateKey] ?? [];
+
+        if (netBalance) {
+            dateSummary.push({ currency, netBalance });
         }
 
         summaries[dateKey] = dateSummary;
-    });
-
-    Object.keys(summaries).forEach(dateKey => {
-        summaries[dateKey] = summaries[dateKey].filter(entry => entry.netBalance !== 0);
-    });
+    }
 
     return summaries;
 };

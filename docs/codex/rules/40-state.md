@@ -11,6 +11,9 @@
   narrow stable selectors, and does not perform API requests.
 - Domain stores hold domain data and actions. Request lifecycle and errors remain centralized.
 - Define focused state/action types and explicit Promise return types for async actions.
+- Follow the required `<domain>-store/` capability layout in `10-architecture.md`. `actions.ts` owns
+  `use*Store` and Zustand `set`/`get`, while `initialState.ts` contains the complete state-only reset
+  value.
 
 ## Central Loading And Errors
 
@@ -41,6 +44,7 @@ type RequestError = {
 - Keep arrays or objects that require element-level shallow comparison in their own top-level
   `useShallow` selector instead of nesting them as properties inside another selector result.
 - Reused or derived selectors are named and live next to the store.
+- Named selectors live in the store's `selectors.ts` and are exported through its `index.ts`.
 - Selector results must be stable; do not create new arrays/objects on every subscription unless shallow comparison is intentional.
 - Do not use `getState()` during render. It is for store actions or imperative orchestration outside React.
 

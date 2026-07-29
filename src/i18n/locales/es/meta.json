@@ -29,6 +29,10 @@
         "title": "ChipIn — Actividad",
         "description": "Consulta tu actividad reciente"
     },
+    "activityDetails": {
+        "title": "ChipIn — Detalles de actividad",
+        "description": "Consulta el historial de un gasto o una liquidación"
+    },
     "friends": {
         "title": "ChipIn — Amigos",
         "description": "Consulta tu lista de amigos"

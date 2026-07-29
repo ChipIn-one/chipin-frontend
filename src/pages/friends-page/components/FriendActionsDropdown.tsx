@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { IconButton } from '@radix-ui/themes';
 
 import type { FriendBalance, KnownUser } from 'api/chipin.types';
-import { useActivityStore } from 'store/activityStore';
+import { useActivityStore } from 'store/activity-store';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import Dropdown from 'components/Dropdown';

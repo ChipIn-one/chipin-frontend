@@ -12,7 +12,12 @@ import { useUsersStore } from 'store/usersStore';
 import type { SelectItem } from 'components/Select';
 
 import { BaseModal, MODAL_SIZES } from '../../base-modal';
-import { helpers, type SettlementFormProps } from '../internal';
+import {
+    getSettlementAmount,
+    getSettlementViewModel,
+    selectSettlementBalance,
+    type SettlementFormProps,
+} from '../internal';
 import { ActionFooter, ModalSurface } from '../styled';
 
 import SettlementAmountField from './SettlementAmountField';
@@ -33,8 +38,8 @@ const SettlementForm = ({
     const isSubmitting = useLoadingStore(selectSettlementAdding);
     const amountInputId = useId();
     const [currency, setCurrency] = useState(initialCurrency);
-    const selectedBalance = helpers.selectSettlementBalance(balances, currency);
-    const [amount, setAmount] = useState(() => helpers.getSettlementAmount(selectedBalance));
+    const selectedBalance = selectSettlementBalance(balances, currency);
+    const [amount, setAmount] = useState(() => getSettlementAmount(selectedBalance));
     const currencyItems: SelectItem[] = balances.map(balance => ({
         value: balance.currency,
         label: balance.currency,
@@ -44,7 +49,7 @@ const SettlementForm = ({
         return null;
     }
 
-    const settlement = helpers.getSettlementViewModel({
+    const settlement = getSettlementViewModel({
         user,
         friend,
         balance: selectedBalance,
@@ -52,10 +57,10 @@ const SettlementForm = ({
     });
 
     const onCurrencyChange = (nextCurrency: string) => {
-        const nextBalance = helpers.selectSettlementBalance(balances, nextCurrency);
+        const nextBalance = selectSettlementBalance(balances, nextCurrency);
 
         setCurrency(nextCurrency);
-        setAmount(helpers.getSettlementAmount(nextBalance));
+        setAmount(getSettlementAmount(nextBalance));
     };
 
     const onFormSubmit = () => {

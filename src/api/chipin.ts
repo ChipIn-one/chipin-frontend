@@ -3,25 +3,19 @@ import type { AuthTokens } from 'helpers/localStorage';
 import { apiInstance } from './chipin.instance';
 import type { ApiFriendsResponse } from './chipin.raw.types';
 import type {
-    ApiActivityItemsResponse,
     ApiCurrencyRatesResponse,
-    ApiLedgerEntryResponse,
     ApiOAuthTokenPairResponse,
     ApiRefreshTokenPairResponse,
     ApiRemoveGroupResponse,
     ApiUserResponse,
     CreateGroupParams,
-    CreateLedgerEntryParams,
-    CreateSettlementParams,
     Dashboard,
-    FetchActivityParams,
     Group,
     InviteToGroupParams,
     KickGroupMemberParams,
     LeaveGroupParams,
     RemoveGroupParams,
     RemoveKnownUserParams,
-    SharingMode,
     UpdateGroupParams,
     UpdateUserParams,
 } from './chipin.types';
@@ -51,12 +45,12 @@ export const logoutApiAuthTokens = ({ accessToken, refreshToken }: AuthTokens): 
         .then(() => undefined);
 };
 
-export const exchangeApiGoogleOAuthCode = async (
+export const exchangeApiGoogleOAuthCode = (
     code: string,
 ): Promise<ApiOAuthTokenPairResponse> => {
-    const response = await apiInstance.post('/auth/oauth/google/exchange', { code });
-
-    return response.data;
+    return apiInstance
+        .post<ApiOAuthTokenPairResponse>('/auth/oauth/google/exchange', { code })
+        .then(response => response.data);
 };
 
 export const fetchApiUserGroups = (): Promise<Group[]> => {
@@ -147,84 +141,18 @@ export const fetchApiUser = (): Promise<ApiUserResponse> => {
     return apiInstance.get(`/users/self`).then(result => result.data);
 };
 
-export const updateApiUser = async (params: UpdateUserParams): Promise<ApiUserResponse> => {
-    const response = await apiInstance.patch('/users/self', params);
-
-    return response.data;
+export const updateApiUser = (params: UpdateUserParams): Promise<ApiUserResponse> => {
+    return apiInstance
+        .patch<ApiUserResponse>('/users/self', params)
+        .then(response => response.data);
 };
 
 export const fetchApiKnownUsers = (): Promise<ApiFriendsResponse> => {
     return apiInstance.get(`/users/known-users`).then(result => result.data);
 };
 
-export const removeApiKnownUser = async ({ userId }: RemoveKnownUserParams): Promise<void> => {
-    await apiInstance.delete(`/users/known-users/${userId}`);
-};
-
-export const fetchApiUserActivities = ({
-    limit,
-    cursor,
-}: FetchActivityParams = {}): Promise<ApiActivityItemsResponse> => {
+export const removeApiKnownUser = ({ userId }: RemoveKnownUserParams): Promise<void> => {
     return apiInstance
-        .get(`/users/self/activities`, {
-            params: {
-                ...(limit && { limit }),
-                ...(cursor && { cursor }),
-            },
-        })
-        .then(result => result.data);
-};
-
-// =============== EXPENSES ===============
-
-export const createApiExpense = async ({
-    groupId,
-    description,
-    amount,
-    date,
-    payerId,
-    participantIds,
-    currency,
-    category,
-    sharingMode,
-}: CreateLedgerEntryParams): Promise<ApiLedgerEntryResponse> => {
-    const resolvedSharingMode: SharingMode = sharingMode ?? { type: 'AUTO' };
-
-    const response = await apiInstance.post('/ledger/entries', {
-        type: 'EXPENSE',
-        ...(groupId && { groupId }),
-        expense: {
-            description,
-            amount,
-            date,
-            payerId,
-            participantIds,
-            currency,
-            category: category ?? null,
-            sharingMode: resolvedSharingMode,
-        },
-    });
-
-    return response.data;
-};
-
-export const createApiSettlement = async ({
-    groupId,
-    fromUserId,
-    toUserId,
-    amount,
-    currency,
-}: CreateSettlementParams): Promise<ApiLedgerEntryResponse> => {
-    const response = await apiInstance.post('/ledger/entries', {
-        type: 'SETTLEMENT',
-        ...(groupId && { groupId }),
-        settlement: {
-            fromUserId,
-            toUserId,
-            amount,
-            currency,
-        },
-    });
-
-    return response.data;
+        .delete<void>(`/users/known-users/${userId}`)
+        .then(() => undefined);
 };

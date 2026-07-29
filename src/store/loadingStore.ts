@@ -24,9 +24,15 @@ export interface LoadingStore {
     activity: {
         data: LoadingState;
         nextPage: LoadingState;
+        selectedEvent: LoadingState;
+        subeventsData: LoadingState;
+        subeventsNextPage: LoadingState;
     };
     expense: {
         add: LoadingState;
+    };
+    ledger: {
+        remove: LoadingState;
     };
     settlement: {
         add: LoadingState;
@@ -50,8 +56,15 @@ type LoadingSlices = Omit<LoadingStore, 'setLoading' | 'setInitialLoadingStore'>
 const initialLoadingStore: LoadingSlices = {
     auth: { login: 'initial', signOut: 'initial', logoutOtherDevices: 'initial' },
     dashboard: { data: 'initial' },
-    activity: { data: 'initial', nextPage: 'initial' },
+    activity: {
+        data: 'initial',
+        nextPage: 'initial',
+        selectedEvent: 'initial',
+        subeventsData: 'initial',
+        subeventsNextPage: 'initial',
+    },
     expense: { add: 'initial' },
+    ledger: { remove: 'initial' },
     settlement: { add: 'initial' },
     group: {
         list: 'initial',

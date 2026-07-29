@@ -1,18 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { LucideSearch } from 'lucide-react';
-import styled from 'styled-components';
 
-import { Box, Button, Flex, Popover, ScrollArea, Text, TextField } from '@radix-ui/themes';
+import { Box, Button, Flex, Popover, Text, TextField } from '@radix-ui/themes';
 
 import { getFilterFunction } from 'helpers/text';
 
-export interface SearchSelectItem {
-    value: string;
-    label: string;
-    icon?: React.ReactNode;
-    isIndented?: boolean;
-    searchFields?: string[];
-}
+import { OptionsScrollArea } from './styled';
+import type { SearchSelectItem } from './types';
 
 interface Props {
     items: SearchSelectItem[];
@@ -25,16 +19,7 @@ interface Props {
     onChange?: (value: string) => void;
 }
 
-const OptionsScrollArea = styled(ScrollArea)`
-    height: 240px;
-
-    & [data-radix-scroll-area-viewport] > div {
-        min-width: 0;
-        width: 100%;
-    }
-`;
-
-const SearchSelect: React.FC<Props> = ({
+const SearchSelect = ({
     items,
     value,
     searchPlaceholder = '',
@@ -43,7 +28,7 @@ const SearchSelect: React.FC<Props> = ({
     contentWidthMode = 'trigger',
     widthContainerRef,
     onChange,
-}) => {
+}: Props) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchValue, setSearchValue] = useState('');
     const [contentWidth, setContentWidth] = useState<number | null>(null);
@@ -88,13 +73,13 @@ const SearchSelect: React.FC<Props> = ({
         };
     }, [isParentWidthMode, widthContainerRef]);
 
-    const handleValueChange = (nextValue: string) => {
+    const onValueChange = (nextValue: string) => {
         onChange?.(nextValue);
         setIsOpen(false);
         setSearchValue('');
     };
 
-    const handleOpenChange = (nextOpen: boolean) => {
+    const onOpenChange = (nextOpen: boolean) => {
         setIsOpen(nextOpen);
 
         if (!nextOpen) {
@@ -108,7 +93,7 @@ const SearchSelect: React.FC<Props> = ({
             : 'var(--radix-popover-trigger-width)';
 
     return (
-        <Popover.Root open={isOpen} onOpenChange={handleOpenChange}>
+        <Popover.Root open={isOpen} onOpenChange={onOpenChange}>
             <Popover.Trigger>{triggerElement}</Popover.Trigger>
 
             <Popover.Content align="end" sideOffset={4} width={popoverWidth}>
@@ -140,7 +125,7 @@ const SearchSelect: React.FC<Props> = ({
                                             variant="soft"
                                             color={isSelected ? 'blue' : 'gray'}
                                             highContrast={isSelected}
-                                            onClick={() => handleValueChange(item.value)}
+                                            onClick={() => onValueChange(item.value)}
                                         >
                                             <Flex
                                                 align="center"
@@ -172,4 +157,4 @@ const SearchSelect: React.FC<Props> = ({
     );
 };
 
-export default SearchSelect;
+export { SearchSelect };

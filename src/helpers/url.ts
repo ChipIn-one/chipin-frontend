@@ -21,3 +21,6 @@ export const getSocialAuthUrl = (provider: AuthService) => {
 
 export const buildGroupInviteLink = ({ inviteToken }: { inviteToken: string }) =>
     `${getChipInAppUrl()}${ROUTES.GROUP_JOIN}/${inviteToken}`;
+
+export const buildActivitySubeventsRoute = (parentActivityId: string) =>
+    `${ROUTES.ACTIVITY}/${parentActivityId}`;

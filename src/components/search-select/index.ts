@@ -1,3 +1,5 @@
-export { default as CategorySearchSelect } from './CategorySearchSelect';
-export type { SearchSelectItem } from './SearchSelect';
-export { default as SearchSelect } from './SearchSelect';
+import CategorySearchSelect from './CategorySearchSelect';
+import { SearchSelect } from './SearchSelect';
+import type { SearchSelectItem } from './types';
+
+export { CategorySearchSelect, SearchSelect, type SearchSelectItem };

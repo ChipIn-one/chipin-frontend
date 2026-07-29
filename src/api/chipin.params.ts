@@ -1,3 +1,5 @@
+import type { ActivityCategory } from 'constants/activity';
+
 import type { ApiUserSettings } from './chipin.raw.types';
 
 export interface CreateGroupParams {
@@ -61,6 +63,10 @@ export interface CreateLedgerEntryParams {
     sharingMode?: SharingMode;
 }
 
+export interface RemoveLedgerEntryParams {
+    entryId: string;
+}
+
 export interface CreateSettlementParams {
     groupId?: string;
     fromUserId: string;
@@ -69,7 +75,12 @@ export interface CreateSettlementParams {
     currency: string;
 }
 
-export interface FetchActivityParams {
+export interface FetchActivitiesParams {
     limit?: number;
     cursor?: number;
+}
+
+export interface FetchActivityChildrenParams extends FetchActivitiesParams {
+    parentActivityId: string;
+    category?: ActivityCategory;
 }

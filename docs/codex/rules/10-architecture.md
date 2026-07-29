@@ -134,7 +134,7 @@ Use child barrels from the parent and direct sibling imports within one director
 ```ts
 // Correct: crossing into child directories through their public boundary.
 import { DebtSection, SettlementForm } from './components';
-import { helpers } from './internal';
+import { getSettlementViewModel } from './internal';
 
 // Incorrect: deep imports across child directory boundaries.
 import DebtSection from './components/DebtSection';
@@ -143,38 +143,45 @@ import { getSettlementViewModel } from './internal/helpers';
 
 ### Internal Exports
 
-Export collections of pure functions or values from `internal/index.ts` under universal namespace names.
-The containing directory already provides the capability context, so do not repeat its name in filenames
-or namespaces.
+Export helpers as exact named functions from `internal/index.ts`. Do not import helper modules with
+`import * as helpers`; consumers must show which helpers they depend on. Constants and selectors may
+remain namespaced when the namespace is the established boundary for that module.
 
 ```ts
 import * as constants from './constants';
-import * as helpers from './helpers';
+import { getSettlementViewModel } from './helpers';
 import { useSettlementDraft } from './hooks';
 import * as selectors from './selectors';
 import type { SettlementDraft } from './types';
 
-export { constants, helpers, selectors, type SettlementDraft, useSettlementDraft };
+export {
+    constants,
+    getSettlementViewModel,
+    selectors,
+    type SettlementDraft,
+    useSettlementDraft,
+};
 ```
 
-Use namespace access for `constants`, `helpers`, and `selectors`. Import hooks, private types, and styled
-components directly so hooks remain idiomatic and JSX component names stay immediately readable.
+Import helpers, hooks, private types, and styled components by name so their usage stays immediately
+readable. Namespace access remains allowed for established `constants` and `selectors` boundaries.
 
 ```tsx
-import { helpers, useSettlementDraft } from './internal';
+import { getSettlementViewModel, useSettlementDraft } from './internal';
 import { ActionFooter, ModalSurface } from './styled';
 
 const draft = useSettlementDraft();
-const model = helpers.getSettlementViewModel(draft);
+const model = getSettlementViewModel(draft);
 
 return <ModalSurface>{model.amount}</ModalSurface>;
 ```
 
-If two local namespace names collide in one file, alias at the import site instead of encoding the
-capability name into every namespace:
+If two helper names collide in one file, alias the named import at the import site:
 
 ```ts
-import { helpers as paymentHelpers } from './payment-form/internal';
+import {
+    getSettlementViewModel as getPaymentSettlementViewModel,
+} from './payment-form/internal';
 ```
 
 ### Test Placement And Naming
@@ -194,6 +201,39 @@ import { helpers as paymentHelpers } from './payment-form/internal';
 - This structure is required for new directories and directories undergoing substantial refactoring.
 - A narrow edit in a legacy directory does not require migrating that entire directory.
 - Do not perform repository-wide structural migrations as incidental cleanup.
+
+## Store Capability Structure
+
+Every new or substantially refactored Zustand store lives in its own `kebab-case` directory named
+`<domain>-store`.
+
+```text
+store/
+└── groups-store/
+    ├── actions.ts
+    ├── actions.test.ts
+    ├── types.ts
+    ├── constants.ts
+    ├── initialState.ts
+    ├── selectors.ts
+    ├── selectors.test.ts
+    └── index.ts
+```
+
+- `actions.ts` creates and exports `use*Store`. It owns Zustand `set`/`get` usage and all store actions.
+- `types.ts` owns the store state, action, input, and combined store types.
+- `constants.ts` is optional and contains only constants owned by the store.
+- `initialState.ts` owns the complete typed initial state without actions.
+- `selectors.ts` owns named public or reusable selectors.
+- Tests are co-located with their owner as `actions.test.ts` and `selectors.test.ts`. Add the files when
+  their owner has meaningful behavior to verify; do not create tests for passive types or constants.
+- `index.ts` imports public values and types first and exposes them through exactly one explicit named
+  export block. It does not use wildcard or inline re-exports.
+- External consumers import from the store directory, for example
+  `import { selectSelectedGroup, useGroupsStore } from 'store/groups-store';`. Deep imports such as
+  `store/groups-store/actions` and compatibility files such as `store/groupsStore.ts` are prohibited.
+- Files inside one store directory import sibling files directly and do not import through their own
+  `index.ts`.
 
 ## Cross-Store And App Orchestration
 
