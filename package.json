@@ -50,7 +50,7 @@
     "eslint-plugin-react-refresh": "^0.4.19",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-unused-imports": "^4.1.4",
-    "globals": "^17.6.0",
+    "globals": "^17.8.0",
     "jsdom": "^29.1.1",
     "sharp": "^0.34.2",
     "sharp-ico": "^0.1.5",
