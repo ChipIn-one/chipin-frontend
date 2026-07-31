@@ -52,7 +52,7 @@
     "eslint-plugin-unused-imports": "^4.1.4",
     "globals": "^17.8.0",
     "jsdom": "^29.1.1",
-    "sharp": "^0.34.2",
+    "sharp": "^0.35.3",
     "sharp-ico": "^0.1.5",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.59.0",
