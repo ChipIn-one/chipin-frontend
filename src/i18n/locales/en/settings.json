@@ -1,13 +1,35 @@
 {
     "title": "Settings",
-    "subtitle": "Manage your account, privacy, app preferences, and notifications.",
+    "subtitle": "Your preferences.",
     "account": {
-        "title": "Account",
+        "title": "Profile info",
         "description": "Personal information and profile settings.",
         "displayNamePlaceholder": "Your name or nickname",
+        "displayNameDescription": "Visible to other users",
+        "displayNameRequired": "Display name is required.",
+        "genderTitle": "Gender",
+        "genderDescription": "Choose your gender",
         "sexOptions": {
             "male": "Male",
             "female": "Female"
+        }
+    },
+    "avatarModal": {
+        "title": "Update profile photo",
+        "description": "Choose and preview a new profile photo before uploading it.",
+        "previewLabel": "Profile photo preview",
+        "pickerLabel": "Choose profile photo",
+        "pickerTitle": "Choose a photo or drop it here",
+        "pickerHint": "JPEG, PNG, or WebP · up to 5 MB",
+        "uploading": "Uploading photo",
+        "progress": "{{progress}}%",
+        "progressLabel": "Photo upload progress",
+        "errors": {
+            "unsupportedType": "Choose a JPEG, PNG, or WebP image.",
+            "tooLarge": "The image must be 5 MB or smaller."
+        },
+        "actions": {
+            "upload": "Upload photo"
         }
     },
     "regional": {

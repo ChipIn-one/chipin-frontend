@@ -13,6 +13,11 @@ export interface UpdateUserParams {
     settings?: ApiUserSettings;
 }
 
+export interface UploadUserAvatarParams {
+    file: File;
+    onProgress?: (progress: number) => void;
+}
+
 export interface UpdateGroupParams {
     groupId: string;
     groupName: string;

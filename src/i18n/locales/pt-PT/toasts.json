@@ -40,7 +40,8 @@
     "settings": {
         "logoutOtherDevicesSuccess": "Terminou sessão em todos os outros dispositivos e continua com sessão iniciada aqui.",
         "deleteAccountSoon": "A eliminação de conta estará disponível em breve.",
-        "saveError": "Não foi possível guardar as definições."
+        "saveError": "Não foi possível guardar as definições.",
+        "avatarUpdated": "Fotografia do perfil atualizada."
     },
     "expense": {
         "created": "Despesa adicionada com sucesso!",

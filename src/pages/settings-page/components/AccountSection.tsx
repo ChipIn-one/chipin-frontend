@@ -1,27 +1,18 @@
-import { useState } from 'react';
-import { RadioGroup, UserAvatar } from 'basics';
-import { LucideUser } from 'lucide-react';
-import type { ChangeEvent } from 'react';
+import { RadioCards, TextInput, UserAvatar } from 'basics';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
-import {
-    Avatar,
-    Box,
-    Card,
-    Flex,
-    Link,
-    Separator,
-    Skeleton,
-    Text,
-    TextField,
-} from '@radix-ui/themes';
+import { Button, Card, Flex, Grid, Separator, Skeleton, Text } from '@radix-ui/themes';
 
 import { selectUserSex, useUsersStore } from 'store/users-store';
+
+import { UserAvatarModal } from 'components/modals';
 
 interface Props {
     isLoading: boolean;
 }
+
+const DISPLAY_NAME_MAX_LENGTH = 64;
 
 const AccountSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
@@ -33,14 +24,12 @@ const AccountSection = ({ isLoading }: Props) => {
             setUserSettings: state.setUserSettings,
         })),
     );
-    const [displayNameDraft, setDisplayNameDraft] = useState<string>();
-    const displayName = displayNameDraft ?? user?.displayName ?? '';
 
-    const onChangeDisplayName = (event: ChangeEvent<HTMLInputElement>) => {
-        setDisplayNameDraft(event.target.value);
-    };
+    const onDisplayNameCommit = (displayName: string) => {
+        if (displayName === user?.displayName) {
+            return;
+        }
 
-    const onBlurDisplayName = () => {
         void setUserSettings({ displayName }).catch(() => undefined);
     };
 
@@ -54,36 +43,22 @@ const AccountSection = ({ isLoading }: Props) => {
 
     return (
         <Card size="3">
-            <Flex direction="column" gap="4">
-                <Flex align="center" gap="3">
-                    <Skeleton loading={isLoading}>
-                        <Avatar
-                            variant="soft"
-                            size="3"
-                            color="mint"
-                            fallback={<LucideUser size={20} />}
-                        />
-                    </Skeleton>
-                    <Flex direction="column">
-                        <Text weight="medium">
-                            <Skeleton loading={isLoading}>{t('account.title')}</Skeleton>
-                        </Text>
-                        <Text size="2" color="gray">
-                            <Skeleton loading={isLoading}>
-                                {t('account.description')}
-                            </Skeleton>
-                        </Text>
-                    </Flex>
-                </Flex>
+            <Flex direction="column" gap="5">
+                <Text size="4" weight="bold">
+                    <Skeleton loading={isLoading}>{t('account.title')}</Skeleton>
+                </Text>
 
-                <Separator size="4" />
-
-                <Flex justify="between" align="center" gap="4">
+                <Flex
+                    direction={{ initial: 'column', sm: 'row' }}
+                    align={{ initial: 'stretch', sm: 'center' }}
+                    justify="between"
+                    gap="4"
+                >
                     <Flex align="center" gap="3" minWidth="0">
-                        <UserAvatar size="4" user={user ?? undefined} isLoading={isLoading} />
+                        <UserAvatar size="5" user={user ?? undefined} isLoading={isLoading} />
 
                         <Flex direction="column" gap="1" minWidth="0">
-                            <Text weight="medium" size="3" truncate>
+                            <Text weight="medium" size="4" truncate>
                                 <Skeleton loading={isLoading}>
                                     {isLoading
                                         ? tSkeletons('account.displayName')
@@ -95,53 +70,84 @@ const AccountSection = ({ isLoading }: Props) => {
                                     {isLoading ? tSkeletons('account.email') : user?.email}
                                 </Skeleton>
                             </Text>
-                            <Skeleton loading={isLoading}>
-                                <Link size="2" color="green" href="#">
-                                    {t('common:buttons.changePhoto')}
-                                </Link>
-                            </Skeleton>
                         </Flex>
                     </Flex>
 
-                    <Skeleton loading={isLoading}>
-                        <RadioGroup
-                            name="sex"
+                    <UserAvatarModal>
+                        <Button
+                            type="button"
                             size="2"
-                            value={sex}
-                            items={[
-                                {
-                                    value: 'male',
-                                    label: t('account.sexOptions.male'),
-                                },
-                                {
-                                    value: 'female',
-                                    label: t('account.sexOptions.female'),
-                                },
-                            ]}
-                            onValueChange={onSexChange}
-                        />
-                    </Skeleton>
+                            variant="outline"
+                            color="gray"
+                            disabled={isLoading}
+                        >
+                            <Skeleton loading={isLoading}>
+                                {t('common:buttons.changePhoto')}
+                            </Skeleton>
+                        </Button>
+                    </UserAvatarModal>
                 </Flex>
 
                 <Separator size="4" />
 
-                <Box>
-                    <Text size="2" color="gray">
+                <Grid columns={{ initial: '1', sm: '2' }} gap="4" align="center">
+                    <Flex direction="column" gap="1">
+                        <Text size="2" weight="medium">
+                            <Skeleton loading={isLoading}>{t('account.genderTitle')}</Skeleton>
+                        </Text>
+                        <Text size="2" color="gray">
+                            <Skeleton loading={isLoading}>
+                                {t('account.genderDescription')}
+                            </Skeleton>
+                        </Text>
+                    </Flex>
+
+                    <RadioCards
+                        aria-label={t('account.genderTitle')}
+                        name="sex"
+                        size="1"
+                        color="jade"
+                        variant="surface"
+                        columns={{ initial: '1', xs: '2' }}
+                        value={sex}
+                        disabled={isLoading}
+                        items={[
+                            {
+                                value: 'male',
+                                label: t('account.sexOptions.male'),
+                            },
+                            {
+                                value: 'female',
+                                label: t('account.sexOptions.female'),
+                            },
+                        ]}
+                        onValueChange={onSexChange}
+                    />
+                </Grid>
+
+                <Separator size="4" />
+
+                <TextInput
+                    key={user?.displayName ?? ''}
+                    label={
                         <Skeleton loading={isLoading}>
                             {t('common:fields.displayName')}
                         </Skeleton>
-                    </Text>
-                    <Skeleton loading={isLoading}>
-                        <TextField.Root
-                            mt="2"
-                            size="3"
-                            value={displayName}
-                            placeholder={t('account.displayNamePlaceholder')}
-                            onChange={onChangeDisplayName}
-                            onBlur={onBlurDisplayName}
-                        />
-                    </Skeleton>
-                </Box>
+                    }
+                    description={
+                        <Skeleton loading={isLoading}>
+                            {t('account.displayNameDescription')}
+                        </Skeleton>
+                    }
+                    size="3"
+                    initialValue={user?.displayName ?? ''}
+                    isRequired
+                    maxLength={DISPLAY_NAME_MAX_LENGTH}
+                    placeholder={t('account.displayNamePlaceholder')}
+                    disabled={isLoading}
+                    validationMessage={t('account.displayNameRequired')}
+                    onValueCommit={onDisplayNameCommit}
+                />
             </Flex>
         </Card>
     );

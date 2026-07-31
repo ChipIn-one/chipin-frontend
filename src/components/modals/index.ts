@@ -11,6 +11,7 @@ import { RemoveFriendAlertDialog } from './remove-friend-alert-dialog';
 import { RemoveGroupAlertDialog } from './remove-group-alert-dialog';
 import { RemoveLedgerEntryAlertDialog } from './remove-ledger-entry-alert-dialog';
 import { SettleUpModal } from './settle-up-modal';
+import { UserAvatarModal } from './user-avatar-modal';
 
 export {
     AddExpenseModal,
@@ -26,4 +27,5 @@ export {
     RemoveGroupAlertDialog,
     RemoveLedgerEntryAlertDialog,
     SettleUpModal,
+    UserAvatarModal,
 };

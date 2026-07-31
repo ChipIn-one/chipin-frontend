@@ -62,7 +62,7 @@ afterEach(() => {
     useUsersStore.setState({ setUserSettings: actualSetUserSettings });
 });
 
-test('selects the user sex from the profile radio group', () => {
+test('saves gender immediately without a page-level save action', () => {
     const interaction = userEvent.setup();
 
     render(
@@ -76,16 +76,71 @@ test('selects the user sex from the profile radio group', () => {
 
     expect(maleRadio.getAttribute('aria-checked')).toBe('true');
     expect(femaleRadio.getAttribute('aria-checked')).toBe('false');
+    expect(screen.queryByRole('button', { name: 'Save changes' })).toBeNull();
 
     return interaction
         .click(femaleRadio)
         .then(() =>
             waitFor(() => {
+                expect(setUserSettings).toHaveBeenCalledTimes(1);
+                expect(setUserSettings).toHaveBeenCalledWith({ settings: { sex: 'female' } });
                 expect(useUsersStore.getState().user?.settings.sex).toBe('female');
-                expect(maleRadio.getAttribute('aria-checked')).toBe('false');
-                expect(femaleRadio.getAttribute('aria-checked')).toBe('true');
             }),
         );
+});
+
+test('starts with the current display name and saves it on blur', () => {
+    const interaction = userEvent.setup();
+
+    render(
+        <ThemeProvider theme={lightThemeStyled}>
+            <AccountSection isLoading={false} />
+        </ThemeProvider>,
+    );
+
+    const displayNameInput = screen.getByRole('textbox', {
+        name: 'Display name',
+    }) as HTMLInputElement;
+
+    expect(displayNameInput.value).toBe('Alex');
+    expect(screen.getByText('4 / 64')).toBeTruthy();
+
+    return interaction
+        .clear(displayNameInput)
+        .then(() => interaction.type(displayNameInput, 'Sam'))
+        .then(() => {
+            expect(setUserSettings).not.toHaveBeenCalled();
+            return interaction.tab();
+        })
+        .then(() =>
+            waitFor(() => {
+                expect(setUserSettings).toHaveBeenCalledTimes(1);
+                expect(setUserSettings).toHaveBeenCalledWith({ displayName: 'Sam' });
+                expect(useUsersStore.getState().user?.displayName).toBe('Sam');
+            }),
+        );
+});
+
+test('does not save a whitespace-only display name on blur', () => {
+    const interaction = userEvent.setup();
+
+    render(
+        <ThemeProvider theme={lightThemeStyled}>
+            <AccountSection isLoading={false} />
+        </ThemeProvider>,
+    );
+
+    const displayNameInput = screen.getByRole('textbox', { name: 'Display name' });
+
+    return interaction
+        .clear(displayNameInput)
+        .then(() => interaction.type(displayNameInput, '   '))
+        .then(() => interaction.tab())
+        .then(() => {
+            expect(displayNameInput.getAttribute('aria-invalid')).toBe('true');
+            expect(screen.getByText('Display name is required.')).toBeTruthy();
+            expect(setUserSettings).not.toHaveBeenCalled();
+        });
 });
 
 test('initializes the display name draft when the user fetch completes', () => {
@@ -111,4 +166,20 @@ test('initializes the display name draft when the user fetch completes', () => {
         const input = screen.getByRole('textbox') as HTMLInputElement;
         expect(input.value).toBe(user.displayName);
     });
+});
+
+test('opens the avatar upload modal from the change photo action', () => {
+    const interaction = userEvent.setup();
+
+    render(
+        <ThemeProvider theme={lightThemeStyled}>
+            <AccountSection isLoading={false} />
+        </ThemeProvider>,
+    );
+
+    return interaction
+        .click(screen.getByRole('button', { name: 'Change photo' }))
+        .then(() => {
+            expect(screen.getByRole('dialog', { name: 'Update profile photo' })).toBeTruthy();
+        });
 });

@@ -40,7 +40,8 @@
   "settings": {
     "logoutOtherDevicesSuccess": "Signed out on all other devices. You’re still signed in here.",
     "deleteAccountSoon": "Account deletion will be available soon.",
-    "saveError": "Failed to save settings."
+    "saveError": "Failed to save settings.",
+    "avatarUpdated": "Profile photo updated."
   },
   "expense": {
     "created": "Expense added successfully!",

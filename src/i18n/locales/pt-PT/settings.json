@@ -1,13 +1,35 @@
 {
     "title": "Definições",
-    "subtitle": "Gira a sua conta, privacidade, preferências da aplicação e notificações.",
+    "subtitle": "As suas preferências.",
     "account": {
-        "title": "Conta",
+        "title": "Informações do perfil",
         "description": "Informações pessoais e definições do perfil.",
         "displayNamePlaceholder": "O seu nome ou alcunha",
+        "displayNameDescription": "Visível para outros utilizadores",
+        "displayNameRequired": "O nome de apresentação é obrigatório.",
+        "genderTitle": "Género",
+        "genderDescription": "Escolha o seu género",
         "sexOptions": {
             "male": "Masculino",
             "female": "Feminino"
+        }
+    },
+    "avatarModal": {
+        "title": "Atualizar fotografia do perfil",
+        "description": "Escolha e pré-visualize uma nova fotografia do perfil antes de a enviar.",
+        "previewLabel": "Pré-visualização da fotografia do perfil",
+        "pickerLabel": "Escolher fotografia do perfil",
+        "pickerTitle": "Escolha uma fotografia ou arraste-a para aqui",
+        "pickerHint": "JPEG, PNG ou WebP · até 5 MB",
+        "uploading": "A enviar fotografia",
+        "progress": "{{progress}}%",
+        "progressLabel": "Progresso do envio da fotografia",
+        "errors": {
+            "unsupportedType": "Escolha uma imagem JPEG, PNG ou WebP.",
+            "tooLarge": "A imagem deve ter no máximo 5 MB."
+        },
+        "actions": {
+            "upload": "Enviar fotografia"
         }
     },
     "regional": {

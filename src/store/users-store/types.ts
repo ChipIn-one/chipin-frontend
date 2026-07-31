@@ -3,6 +3,7 @@ import type {
     FriendBalance,
     KnownUser,
     RemoveKnownUserParams,
+    UploadUserAvatarParams,
     User,
     UserSettings,
 } from 'api/chipin.types';
@@ -23,6 +24,7 @@ interface UsersStoreActions {
         displayName?: string;
         settings?: Partial<UserSettings>;
     }) => Promise<void>;
+    uploadUserAvatar: (params: UploadUserAvatarParams) => Promise<User>;
     extendUserSubscriptionByDay: () => void;
     setInitialUsersStore: () => void;
 }

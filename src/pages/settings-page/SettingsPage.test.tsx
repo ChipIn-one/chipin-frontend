@@ -16,7 +16,7 @@ vi.mock('helpers/pwa', () => ({
 }));
 
 const SECTION_TITLES = [
-    'Account',
+    'Profile info',
     'Regional Preferences',
     'Expense Preferences',
     'Solo Preferences',
@@ -35,6 +35,8 @@ test('renders notifications and app settings immediately before privacy and secu
     );
 
     const sectionTitles = SECTION_TITLES.map(title => screen.getByText(title));
+
+    expect(screen.getByText('Your preferences.')).toBeTruthy();
 
     for (let index = 1; index < sectionTitles.length; index += 1) {
         const previousTitle = sectionTitles[index - 1];

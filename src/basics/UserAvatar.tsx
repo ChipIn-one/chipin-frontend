@@ -1,29 +1,36 @@
-import { ComponentProps } from 'react';
 import { LucideUser } from 'lucide-react';
+import type { ComponentProps } from 'react';
 
 import { Avatar, Skeleton } from '@radix-ui/themes';
-
-type AvatarSize = ComponentProps<typeof Avatar>['size'];
 
 interface UserLike {
     displayName: string;
     picture: string | null;
 }
 
-interface Props {
+interface Props extends Omit<ComponentProps<typeof Avatar>, 'fallback'> {
     user?: UserLike;
-    size?: AvatarSize;
     isLoading?: boolean;
 }
 
-const UserAvatar = ({ size = '3', user, isLoading }: Props) => {
+const UserAvatar = ({
+    size = '3',
+    user,
+    isLoading,
+    src = user?.picture || '',
+    variant = 'soft',
+    color = 'mint',
+    radius = 'full',
+    ...avatarProps
+}: Props) => {
     const AvatarNode = (
         <Avatar
-            variant="soft"
+            {...avatarProps}
+            variant={variant}
             size={size}
-            color="mint"
-            radius="full"
-            src={user?.picture || ''}
+            color={color}
+            radius={radius}
+            src={src}
             fallback={user?.displayName.charAt(0) || <LucideUser size={20} />}
         />
     );

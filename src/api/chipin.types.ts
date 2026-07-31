@@ -49,6 +49,7 @@ export type {
     SharingModeType,
     UpdateGroupParams,
     UpdateUserParams,
+    UploadUserAvatarParams,
 } from './chipin.params';
 
 // ─── Frontend types (used in components, store, hooks) ────────────────────

@@ -161,6 +161,27 @@ const useUsersStore = create<UsersStore>((set, get) => ({
                 return Promise.reject(error);
             });
     },
+    uploadUserAvatar: params => {
+        const { setLoading } = useLoadingStore.getState();
+        setLoading('users', 'avatar', 'loading');
+
+        return usersApi
+            .uploadUserAvatar(params)
+            .then(user => {
+                const nextLocalUser = toLocalUser(user);
+                saveLocalUser(nextLocalUser);
+                set({ user, localUser: nextLocalUser });
+
+                return user;
+            })
+            .catch((error: unknown) => {
+                console.error('Error uploading user avatar:', error);
+                return Promise.reject(error);
+            })
+            .finally(() => {
+                setLoading('users', 'avatar', 'fetched');
+            });
+    },
     extendUserSubscriptionByDay: () => {
         set(state => {
             if (!state.user) {

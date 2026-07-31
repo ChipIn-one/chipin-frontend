@@ -4,6 +4,7 @@ import type { KnownUser, User, UserSettings } from 'api/chipin.types';
 import * as usersApi from 'api/usersApi';
 import { LS_KEY_USER } from 'constants/localstorage';
 import { LocalStorage } from 'helpers/localStorage';
+import { useLoadingStore } from 'store/loadingStore';
 
 import { useUsersStore } from './actions';
 
@@ -12,6 +13,7 @@ vi.mock('api/usersApi', () => ({
     fetchUser: vi.fn(),
     removeKnownUser: vi.fn(),
     updateUser: vi.fn(),
+    uploadUserAvatar: vi.fn(),
 }));
 
 const settings = {
@@ -59,6 +61,7 @@ beforeEach(() => {
     LocalStorage.clear();
     vi.clearAllMocks();
     useUsersStore.getState().setInitialUsersStore();
+    useLoadingStore.getState().setInitialLoadingStore();
 });
 
 test('returns the fetched user after updating the store', () => {
@@ -160,6 +163,51 @@ test('does not persist a settings update that the API rejects', () => {
             expect(reason).toBe(error);
             expect(useUsersStore.getState().user).toEqual(user);
             expect(LocalStorage.getRaw(LS_KEY_USER)).toBeNull();
+        },
+    );
+});
+
+test('uploads an avatar and replaces the current user with the response', () => {
+    const file = new File(['avatar'], 'avatar.png', { type: 'image/png' });
+    const updatedUser = { ...user, picture: 'https://cdn.example.com/avatar.png' };
+    const onProgress = vi.fn();
+
+    vi.mocked(usersApi.uploadUserAvatar).mockImplementation(params => {
+        params.onProgress?.(60);
+        return Promise.resolve(updatedUser);
+    });
+    useUsersStore.setState({ user, localUser: null });
+
+    const uploadPromise = useUsersStore.getState().uploadUserAvatar({ file, onProgress });
+
+    expect(uploadPromise).toBeInstanceOf(Promise);
+    expect(useLoadingStore.getState().users.avatar).toBe('loading');
+
+    return uploadPromise.then(result => {
+        expect(result).toEqual(updatedUser);
+        expect(onProgress).toHaveBeenCalledWith(60);
+        expect(useUsersStore.getState().user).toEqual(updatedUser);
+        expect(useLoadingStore.getState().users.avatar).toBe('fetched');
+        expect(LocalStorage.get(LS_KEY_USER, { role: 'USER', settings })).toEqual({
+            role: updatedUser.role,
+            settings: updatedUser.settings,
+        });
+    });
+});
+
+test('keeps the current user when an avatar upload fails', () => {
+    const error = new Error('upload failed');
+    const file = new File(['avatar'], 'avatar.png', { type: 'image/png' });
+
+    vi.mocked(usersApi.uploadUserAvatar).mockRejectedValue(error);
+    useUsersStore.setState({ user, localUser: null });
+
+    return useUsersStore.getState().uploadUserAvatar({ file }).then(
+        () => Promise.reject(new Error('Expected the avatar upload to reject')),
+        reason => {
+            expect(reason).toBe(error);
+            expect(useUsersStore.getState().user).toEqual(user);
+            expect(useLoadingStore.getState().users.avatar).toBe('fetched');
         },
     );
 });

@@ -40,7 +40,8 @@
     "settings": {
         "logoutOtherDevicesSuccess": "Se cerró la sesión en todos los demás dispositivos. Sigues conectado aquí.",
         "deleteAccountSoon": "La eliminación de cuenta estará disponible pronto.",
-        "saveError": "No se pudieron guardar los ajustes."
+        "saveError": "No se pudieron guardar los ajustes.",
+        "avatarUpdated": "Foto de perfil actualizada."
     },
     "expense": {
         "created": "¡Gasto agregado exitosamente!",

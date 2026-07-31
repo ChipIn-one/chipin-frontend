@@ -1,13 +1,35 @@
 {
     "title": "Настройки",
-    "subtitle": "Управляйте аккаунтом, приватностью, параметрами приложения и уведомлениями.",
+    "subtitle": "Ваши настройки.",
     "account": {
-        "title": "Аккаунт",
+        "title": "Информация профиля",
         "description": "Личная информация и настройки профиля.",
         "displayNamePlaceholder": "Ваше имя или ник",
+        "displayNameDescription": "Видно другим пользователям",
+        "displayNameRequired": "Укажите отображаемое имя.",
+        "genderTitle": "Пол",
+        "genderDescription": "Выберите ваш пол",
         "sexOptions": {
             "male": "Мужской",
             "female": "Женский"
+        }
+    },
+    "avatarModal": {
+        "title": "Обновить фото профиля",
+        "description": "Выберите и проверьте новое фото профиля перед загрузкой.",
+        "previewLabel": "Предпросмотр фото профиля",
+        "pickerLabel": "Выбрать фото профиля",
+        "pickerTitle": "Выберите фото или перетащите его сюда",
+        "pickerHint": "JPEG, PNG или WebP · до 5 МБ",
+        "uploading": "Загружаем фото",
+        "progress": "{{progress}}%",
+        "progressLabel": "Прогресс загрузки фото",
+        "errors": {
+            "unsupportedType": "Выберите изображение в формате JPEG, PNG или WebP.",
+            "tooLarge": "Размер изображения не должен превышать 5 МБ."
+        },
+        "actions": {
+            "upload": "Загрузить фото"
         }
     },
     "regional": {

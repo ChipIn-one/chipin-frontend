@@ -16,6 +16,7 @@ interface Props {
     maxWidth?: ModalSize;
     isOpened?: boolean;
     setIsOpened?: (isOpen: boolean) => void;
+    isCloseDisabled?: boolean;
 }
 
 const BaseModal = ({
@@ -26,6 +27,7 @@ const BaseModal = ({
     content,
     isOpened,
     setIsOpened,
+    isCloseDisabled = false,
 }: Props) => {
     const { t } = useTranslation('common');
 
@@ -50,6 +52,7 @@ const BaseModal = ({
                                 variant="ghost"
                                 color="jade"
                                 aria-label={t('buttons.close')}
+                                disabled={isCloseDisabled}
                             >
                                 <LucideX width={24} />
                             </IconButton>
