@@ -119,6 +119,14 @@ test('refetches financial data after deleting an entry', () => {
 
     return user
         .click(screen.getByRole('button', { name: 'subeventsDeleteAction' }))
+        .then(() => {
+            expect(removeLedgerEntry).not.toHaveBeenCalled();
+            expect(screen.getByRole('alertdialog')).toBeTruthy();
+
+            return user.click(
+                screen.getByRole('button', { name: 'subeventsDeleteConfirmAction' }),
+            );
+        })
         .then(() =>
             waitFor(() => {
                 expect(removeLedgerEntry).toHaveBeenCalledWith('expense-id');
@@ -132,4 +140,33 @@ test('refetches financial data after deleting an entry', () => {
                 expect(fetchSetFriends).toHaveBeenCalledOnce();
             }),
         );
+});
+
+test('keeps the confirmation open when deleting an entry fails', () => {
+    const user = userEvent.setup();
+    const removeLedgerEntry = vi.fn().mockRejectedValue(new Error('Delete failed'));
+
+    useActivityStore.setState({
+        subevents: [],
+        subeventsParentId: parentEvent.id,
+        removeLedgerEntry,
+    });
+
+    render(<ActivitySubeventsButtons parentEvent={parentEvent} />);
+
+    return user
+        .click(screen.getByRole('button', { name: 'subeventsDeleteAction' }))
+        .then(() => {
+            return user.click(
+                screen.getByRole('button', { name: 'subeventsDeleteConfirmAction' }),
+            );
+        })
+        .then(() => {
+            return waitFor(() => {
+                expect(screen.getByRole('alertdialog')).toBeTruthy();
+                expect(
+                    screen.getByRole('button', { name: 'subeventsDeleteConfirmAction' }),
+                ).toHaveProperty('disabled', false);
+            });
+        });
 });

@@ -21,15 +21,16 @@ import { NavButton } from 'basics/buttons';
 
 import Logotype from 'assets/logo.svg?react';
 
-import AuthModal from './modals/AuthModal';
 import HeaderNav from './nav-bars/HeaderNav';
 import DevMenu from './DevMenu';
 import Dropdown from './Dropdown';
+import { AuthModal } from './modals';
 
 const StickyBox = styled(Box)`
     position: sticky;
     top: 0;
     width: 100%;
+    /* The root Theme contains this local layer, so Radix portals still paint above it. */
     z-index: 1;
     border-bottom: 1px solid ${themeColor('green6')};
     backdrop-filter: blur(10px);

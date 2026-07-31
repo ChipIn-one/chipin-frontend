@@ -15,7 +15,8 @@ import AddExpenseButton from 'components/AddExpenseButton';
 import { getNavElements, type NavElement } from './constants';
 
 const BoxWrapper = styled(Box)`
-    z-index: 10;
+    /* Keep the persistent navigation above in-flow content without competing with Radix portals. */
+    z-index: 0;
     overflow: visible;
 `;
 
@@ -39,7 +40,6 @@ const CenterAction = styled(Box)`
     top: 0;
     left: 50%;
     transform: translate(-50%, -50%);
-    z-index: 2;
 `;
 
 const NavItems = styled(Flex)`

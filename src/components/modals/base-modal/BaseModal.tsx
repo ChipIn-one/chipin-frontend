@@ -1,19 +1,18 @@
 import { LucideX } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
-import { Dialog, Flex, IconButton, Separator, Text, VisuallyHidden } from '@radix-ui/themes';
+import { Dialog, IconButton, Text, VisuallyHidden } from '@radix-ui/themes';
+
+import { OverlayHeader } from '../components';
 
 import { MODAL_SIZES, type ModalSize } from './constants';
-
-// Mobile fullscreen styles live in src/styles/radixStylesOverwrite.css
-// (the project-wide designated file for Radix style overrides).
 
 interface Props {
     triggerElement?: ReactNode;
     content: ReactNode;
     title: string;
-    description?: string;
-    accessibleDescription?: string;
+    accessibleDescription: string;
     maxWidth?: ModalSize;
     isOpened?: boolean;
     setIsOpened?: (isOpen: boolean) => void;
@@ -22,13 +21,14 @@ interface Props {
 const BaseModal = ({
     triggerElement,
     title,
-    description,
     accessibleDescription,
     maxWidth = MODAL_SIZES.default,
     content,
     isOpened,
     setIsOpened,
 }: Props) => {
+    const { t } = useTranslation('common');
+
     return (
         <Dialog.Root open={isOpened} onOpenChange={setIsOpened}>
             {triggerElement && <Dialog.Trigger>{triggerElement}</Dialog.Trigger>}
@@ -36,31 +36,30 @@ const BaseModal = ({
             <Dialog.Content
                 maxWidth={maxWidth}
                 size={{ initial: '2', sm: '4' }}
-                className="base-modal-content"
+                className="modal-overlay-content"
             >
-                <Dialog.Title size="6">
-                    <Flex justify="between" align="center">
-                        <Text color="gray">{title}</Text>
-
+                <OverlayHeader
+                    title={
+                        <Dialog.Title size="6" mb="0">
+                            <Text color="gray">{title}</Text>
+                        </Dialog.Title>
+                    }
+                    closeControl={
                         <Dialog.Close>
-                            <IconButton variant="ghost" color="jade">
+                            <IconButton
+                                variant="ghost"
+                                color="jade"
+                                aria-label={t('buttons.close')}
+                            >
                                 <LucideX width={24} />
                             </IconButton>
                         </Dialog.Close>
-                    </Flex>
-                </Dialog.Title>
-                {!description && accessibleDescription && (
-                    <VisuallyHidden>
-                        <Dialog.Description>{accessibleDescription}</Dialog.Description>
-                    </VisuallyHidden>
-                )}
-                <Separator orientation="horizontal" size="4" />
-
-                <Flex direction="column" mt="6" className="base-modal-body">
-                    {description && <Dialog.Description size="4">{description}</Dialog.Description>}
-
-                    {content}
-                </Flex>
+                    }
+                />
+                <VisuallyHidden>
+                    <Dialog.Description>{accessibleDescription}</Dialog.Description>
+                </VisuallyHidden>
+                {content}
             </Dialog.Content>
         </Dialog.Root>
     );

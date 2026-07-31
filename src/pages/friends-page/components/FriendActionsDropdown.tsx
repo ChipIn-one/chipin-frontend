@@ -15,7 +15,7 @@ import { useActivityStore } from 'store/activity-store';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import Dropdown from 'components/Dropdown';
-import { RemoveFriendModal, SettleUpModal } from 'components/modals/';
+import { RemoveFriendAlertDialog, SettleUpModal } from 'components/modals/';
 
 interface Props {
     friend: KnownUser;
@@ -102,7 +102,7 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                 />
             )}
             {isRemoveFriendOpened && (
-                <RemoveFriendModal
+                <RemoveFriendAlertDialog
                     isOpened={isRemoveFriendOpened}
                     setIsOpened={setIsRemoveFriendOpened}
                     friend={friend.user}

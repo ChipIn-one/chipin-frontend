@@ -7,6 +7,7 @@ import { Flex } from '@radix-ui/themes';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import { BaseModal, MODAL_SIZES } from '../base-modal';
+import { OverlayBody } from '../components';
 
 import {
     ExpenseButtons,
@@ -54,12 +55,16 @@ const AddExpenseModal = () => {
     useExpenseModalOpenChange(isOpened, onReset);
 
     const content = (
-        <Flex direction="column" gap="4">
-            <ExpenseDetailsSection />
-            <ExpenseTargetSection />
-            <ExpenseSplitCard />
+        <>
+            <OverlayBody>
+                <Flex direction="column" gap="4">
+                    <ExpenseDetailsSection />
+                    <ExpenseTargetSection />
+                    <ExpenseSplitCard />
+                </Flex>
+            </OverlayBody>
             <ExpenseButtons onClose={close} />
-        </Flex>
+        </>
     );
 
     return (
@@ -67,6 +72,7 @@ const AddExpenseModal = () => {
             isOpened={isOpened}
             setIsOpened={setIsOpened}
             title={t('expenses.modal.title')}
+            accessibleDescription={t('expenses.modal.description')}
             maxWidth={MODAL_SIZES.desktop}
             content={content}
         />

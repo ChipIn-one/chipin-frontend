@@ -10,22 +10,6 @@ export const ModalSurface = styled.div`
     gap: var(--space-4);
 `;
 
-export const ActionFooter = styled.div`
-    display: flex;
-    gap: var(--space-3);
-    margin-top: auto;
-    padding-top: var(--space-2);
-    padding-bottom: env(safe-area-inset-bottom);
-
-    & > button:first-child {
-        flex: 1;
-    }
-
-    & > button:last-child {
-        flex: 2;
-    }
-`;
-
 export const LargeAmountInput = styled(AmountInput)`
     width: 100%;
     height: 72px;

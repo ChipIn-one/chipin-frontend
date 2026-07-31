@@ -1,7 +1,8 @@
 import { useTranslation } from 'react-i18next';
 
-import { Button, Flex } from '@radix-ui/themes';
+import { Button } from '@radix-ui/themes';
 
+import { OverlayFooter } from '../../../components';
 import { useExpenseModalSubmit } from '../../internal';
 
 interface Props {
@@ -14,21 +15,24 @@ const ExpenseButtons = ({ onClose }: Props) => {
         useExpenseModalSubmit(onClose);
 
     return (
-        <Flex justify="end" gap="3">
-            <Button size="3" variant="soft" color="gray" onClick={onClose}>
-                {t('common:buttons.cancel')}
-            </Button>
-
-            <Button
-                size="3"
-                variant="solid"
-                disabled={isSubmitDisabled || isSubmitting}
-                loading={isSubmitting}
-                onClick={onSubmit}
-            >
-                {t('common:buttons.addExpense')}
-            </Button>
-        </Flex>
+        <OverlayFooter
+            cancelAction={
+                <Button size="3" variant="soft" color="gray" onClick={onClose}>
+                    {t('common:buttons.cancel')}
+                </Button>
+            }
+            primaryAction={
+                <Button
+                    size="3"
+                    variant="solid"
+                    disabled={isSubmitDisabled || isSubmitting}
+                    loading={isSubmitting}
+                    onClick={onSubmit}
+                >
+                    {t('common:buttons.addExpense')}
+                </Button>
+            }
+        />
     );
 };
 

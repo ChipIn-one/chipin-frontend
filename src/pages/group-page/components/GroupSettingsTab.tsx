@@ -35,9 +35,12 @@ const SettingsRowButton = styled.button`
 `;
 
 import GroupRoleBadge from 'basics/GroupRoleBadge';
-import { BaseModal, KickGroupMemberModal, LeaveGroupModal } from 'components/modals';
-import RemoveGroupModal from 'components/modals/RemoveGroupModal';
-import OfflineQRCode from 'components/OfflineQRCode';
+import {
+    GroupQRModal,
+    KickGroupMemberAlertDialog,
+    LeaveGroupAlertDialog,
+    RemoveGroupAlertDialog,
+} from 'components/modals';
 
 interface Props {
     group: Group;
@@ -139,11 +142,7 @@ const GroupSettingsTab = ({ group }: Props) => {
                 )}
 
                 {/* Show QR code row */}
-                <BaseModal
-                    title={t('group:qr.title')}
-                    description=""
-                    content={<OfflineQRCode url={inviteLink} size="large" />}
-                    triggerElement={
+                <GroupQRModal qrLink={inviteLink}>
                         <Card asChild size="2">
                             <SettingsRowButton>
                                 <Flex align="center" gap="3" p="4">
@@ -165,8 +164,7 @@ const GroupSettingsTab = ({ group }: Props) => {
                                 </Flex>
                             </SettingsRowButton>
                         </Card>
-                    }
-                />
+                </GroupQRModal>
 
                 {/* Add people row (stub) */}
                 <Card size="2">
@@ -229,12 +227,12 @@ const GroupSettingsTab = ({ group }: Props) => {
                                     </Flex>
                                 </Flex>
                                 {isUserOwner && !isCurrentUser && (
-                                    <KickGroupMemberModal member={member.user}>
+                                    <KickGroupMemberAlertDialog member={member.user}>
                                         <Button variant="soft" color="orange" size="1">
                                             <LucideUserMinus size={13} />
                                             {t('common:buttons.kickMember')}
                                         </Button>
-                                    </KickGroupMemberModal>
+                                    </KickGroupMemberAlertDialog>
                                 )}
                             </Flex>
                         </Card>
@@ -267,25 +265,25 @@ const GroupSettingsTab = ({ group }: Props) => {
             <Flex direction="column" gap="1">
                 <Separator size="4" mb="1" />
 
-                <LeaveGroupModal>
+                <LeaveGroupAlertDialog>
                     <Box width="100%" asChild>
                         <Button variant="ghost" color="orange" size="3">
                             <LucideLogOut size={16} />
                             {t('common:buttons.leaveGroup')}
                         </Button>
                     </Box>
-                </LeaveGroupModal>
+                </LeaveGroupAlertDialog>
 
                 <Separator size="4" my="1" />
 
-                <RemoveGroupModal>
+                <RemoveGroupAlertDialog>
                     <Box width="100%" asChild>
                         <Button variant="ghost" color="red" size="3">
                             <LucideTrash2 size={16} />
                             {t('common:buttons.removeGroup')}
                         </Button>
                     </Box>
-                </RemoveGroupModal>
+                </RemoveGroupAlertDialog>
             </Flex>
         </Flex>
     );

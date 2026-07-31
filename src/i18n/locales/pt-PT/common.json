@@ -2,6 +2,7 @@
     "buttons": {
         "back": "Voltar",
         "cancel": "Cancelar",
+        "close": "Fechar",
         "delete": "Eliminar",
         "reload": "Recarregar página",
         "goHome": "Ir para o início",

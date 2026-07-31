@@ -9,6 +9,7 @@ import { useGroupsStore } from 'store/groupsStore';
 import { useUsersStore } from 'store/users-store';
 
 import { BaseModal, MODAL_SIZES } from '../../base-modal';
+import { OverlayBody } from '../../components';
 import { type DebtOption, getDebtOptions } from '../internal';
 import type { GroupSettleUpProps } from '../types';
 
@@ -97,17 +98,21 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
             accessibleDescription={t('group:page.settleUp.chooseDebtAccessibleDescription')}
             maxWidth={MODAL_SIZES.default}
             content={
-                <DebtSelectionStep
-                    youOwe={youOwe}
-                    owedToYou={owedToYou}
-                    isYouOweExpanded={isYouOweExpanded}
-                    isOwedToYouExpanded={isOwedToYouExpanded}
-                    onToggleYouOwe={() => setIsYouOweExpanded(isExpanded => !isExpanded)}
-                    onToggleOwedToYou={() =>
-                        setIsOwedToYouExpanded(isExpanded => !isExpanded)
-                    }
-                    onSelect={setSelectedDebt}
-                />
+                <OverlayBody>
+                    <DebtSelectionStep
+                        youOwe={youOwe}
+                        owedToYou={owedToYou}
+                        isYouOweExpanded={isYouOweExpanded}
+                        isOwedToYouExpanded={isOwedToYouExpanded}
+                        onToggleYouOwe={() =>
+                            setIsYouOweExpanded(isExpanded => !isExpanded)
+                        }
+                        onToggleOwedToYou={() =>
+                            setIsOwedToYouExpanded(isExpanded => !isExpanded)
+                        }
+                        onSelect={setSelectedDebt}
+                    />
+                </OverlayBody>
             }
         />
     );

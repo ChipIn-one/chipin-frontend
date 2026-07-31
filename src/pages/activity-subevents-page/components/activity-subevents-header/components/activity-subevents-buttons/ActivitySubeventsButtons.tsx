@@ -14,6 +14,8 @@ import { selectActivitySubeventsLoading, selectLedgerEntryRemoving } from 'store
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
 
+import { RemoveLedgerEntryAlertDialog } from 'components/modals';
+
 import { hasLedgerEntryReversedEvent } from '../../../../internal';
 
 interface Props {
@@ -52,12 +54,12 @@ const ActivitySubeventsButtons = ({ parentEvent }: Props) => {
         isCurrentParentLoaded &&
         hasLedgerEntryReversedEvent(subevents);
 
-    const onRemove = () => {
+    const onRemove = (): Promise<void> => {
         if (!parentEntryId) {
-            return;
+            return Promise.reject(new Error('No ledger entry found to remove'));
         }
 
-        removeLedgerEntry(parentEntryId)
+        return removeLedgerEntry(parentEntryId)
             .then(() => {
                 toast.success(t('toasts:ledger.entryDeleted'));
                 void fetchSetActivitySubevents({
@@ -69,8 +71,9 @@ const ActivitySubeventsButtons = ({ parentEvent }: Props) => {
                 void fetchSetGroups().catch(() => undefined);
                 void fetchSetFriends().catch(() => undefined);
             })
-            .catch(() => {
+            .catch(error => {
                 toast.error(t('toasts:ledger.entryDeleteError'));
+                return Promise.reject(error);
             });
     };
 
@@ -105,16 +108,20 @@ const ActivitySubeventsButtons = ({ parentEvent }: Props) => {
                 {t('subeventsUpdateAction')}
             </Button>
 
-            <Button
-                size="1"
-                variant="soft"
-                color="red"
-                disabled={!parentEntryId || isRemoving}
-                onClick={onRemove}
+            <RemoveLedgerEntryAlertDialog
+                isActionLoading={isRemoving}
+                onAction={onRemove}
             >
-                <LucideTrash2 size={14} />
-                {t('subeventsDeleteAction')}
-            </Button>
+                <Button
+                    size="1"
+                    variant="soft"
+                    color="red"
+                    disabled={!parentEntryId || isRemoving}
+                >
+                    <LucideTrash2 size={14} />
+                    {t('subeventsDeleteAction')}
+                </Button>
+            </RemoveLedgerEntryAlertDialog>
         </Flex>
     );
 };

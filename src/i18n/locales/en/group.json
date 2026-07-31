@@ -2,6 +2,8 @@
     "modal": {
         "titleCreate": "Create new group",
         "titleEdit": "Edit group",
+        "descriptionCreate": "Create a group to track and split shared expenses.",
+        "descriptionEdit": "Update this group's name, description, or icon.",
         "fields": {
             "namePlaceholder": "e.g. Barcelona Trip, Apartment...",
             "descriptionOptional": "(optional)",

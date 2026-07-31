@@ -2,6 +2,8 @@
     "modal": {
         "titleCreate": "Crear nuevo grupo",
         "titleEdit": "Editar grupo",
+        "descriptionCreate": "Crea un grupo para registrar y dividir gastos compartidos.",
+        "descriptionEdit": "Actualiza el nombre, la descripción o el icono del grupo.",
         "fields": {
             "namePlaceholder": "ej. Viaje a Barcelona, Apartamento...",
             "descriptionOptional": "(opcional)",
