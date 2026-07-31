@@ -8,11 +8,11 @@ import { Text } from '@radix-ui/themes';
 
 import {
     selectAmountStep,
+    selectExpenseParticipant,
     selectIsDirectExpense,
     selectIsUserLocked,
     selectUserAmount,
     selectUserIds,
-    selectUsers,
 } from 'store/expenseModalSelectors';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
@@ -45,9 +45,7 @@ const ExpenseUserRow = memo(({ participantId }: ExpenseUserRowProps) => {
         stepSplitValue,
     } = useExpenseModalStore(
         useShallow(state => ({
-            member: selectUsers(state).find(
-                participant => participant.id === participantId,
-            ),
+            member: selectExpenseParticipant(state, participantId),
             isUserIncluded: state.includedParticipantIds[participantId] !== false,
             isIncludeLocked: selectIsUserLocked(state, participantId),
             isCheckSpacerHidden: selectIsDirectExpense(state),

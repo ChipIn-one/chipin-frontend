@@ -4,7 +4,7 @@ import * as activityApi from 'api/activityApi';
 import * as ledgerApi from 'api/ledgerApi';
 
 import { useLoadingStore } from '../loadingStore';
-import { useUsersStore } from '../usersStore';
+import { useUsersStore } from '../users-store';
 
 import { ACTIVITY_PAGE_LIMIT } from './constants';
 import { initialState } from './initialState';

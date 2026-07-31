@@ -8,10 +8,12 @@ import { MobileNavBar } from 'components/nav-bars';
 import {
     AccountSection,
     AppSettingsSection,
+    ExpensePreferencesSection,
     NotificationsSection,
     PrivacySecuritySection,
     RegionalSection,
     SettingsPageHeader,
+    SoloPreferencesSection,
 } from './components';
 
 const SettingsPage = () => {
@@ -26,6 +28,8 @@ const SettingsPage = () => {
                 <Grid columns={{ initial: '1', md: '2' }} gap="5">
                     <AccountSection isLoading={isLoading} />
                     <RegionalSection isLoading={isLoading} />
+                    <ExpensePreferencesSection isLoading={isLoading} />
+                    <SoloPreferencesSection isLoading={isLoading} />
                     <NotificationsSection isLoading={isLoading} />
                     <AppSettingsSection isLoading={isLoading} />
                     <Box gridColumn={{ md: '1 / -1' }}>

@@ -25,6 +25,8 @@ Apply these rules to new and touched code. Refactor directly related legacy code
   example `AddExpenseModal.tsx` lives in `add-expense-modal/`.
 - React component files remain `PascalCase.tsx` inside their `kebab-case` owner directories.
 - Booleans use `is*`, `has*`, `can*`, or `should*` when practical.
+- Do not declare a boolean that only negates another boolean, such as
+  `const isGroupMode = !isSoloMode`. Use the negation directly at the call site.
 - Local event handlers and callback props both use `on*`. Do not add `handle*`.
 - Names describe business intent: `setSelectedGroup`, not `setData`; `removeFriend`, not `processItem`.
 - Use descriptive iterator names outside trivial expressions.
@@ -124,6 +126,8 @@ for (const currency in balancesByCurrency) {
 - Do not create an abstraction until it removes real duplication or establishes a necessary boundary.
 - Keep functions focused. Split by responsibility, not by an arbitrary line limit.
 - Comments explain why a non-obvious decision exists and remain in English.
+- When the user confirms a code concern but explicitly defers its implementation, add a nearby English
+  `TODO` that states the unresolved risk and the expected follow-up.
 
 ```ts
 import AddExpenseModal from './AddExpenseModal';

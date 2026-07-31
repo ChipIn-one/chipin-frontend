@@ -26,5 +26,10 @@
     "header": {
         "greeting": "Hi, {{name}}",
         "overview": "Here's your summary"
+    },
+    "solo": {
+        "summaryTitle": "Solo summary",
+        "activityTitle": "Solo activity",
+        "inDevelopment": "Still in development."
     }
 }

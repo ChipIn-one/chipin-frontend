@@ -1,8 +1,7 @@
 import { useShallow } from 'zustand/react/shallow';
 
 import { useGroupsStore } from 'store/groupsStore';
-import { selectUserCurrency } from 'store/usersSelectors';
-import { useUsersStore } from 'store/usersStore';
+import { selectUserCurrency, useUsersStore } from 'store/users-store';
 
 import { SummaryDebtCards } from 'components/summary-debt-cards';
 

@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Flex, Text } from '@radix-ui/themes';
 
-import { selectUserPreferredName } from 'store/usersSelectors';
+import { selectUserPreferredName } from 'store/users-store';
 
 import type { DebtOption } from '../internal';
 import { DebtButton, ShowMoreButton } from '../styled';

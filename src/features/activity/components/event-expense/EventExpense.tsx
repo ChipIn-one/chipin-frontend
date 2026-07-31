@@ -9,7 +9,7 @@ import {
     type ExpenseCreatedAction,
     type ExpenseReversedAction,
 } from 'constants/activity';
-import { useUsersStore } from 'store/usersStore';
+import { useUsersStore } from 'store/users-store';
 
 import { ExpenseIcon } from './components';
 import { ExpenseAmount, ExpenseDebt, ExpenseDescription, ExpensePayer } from './styled';

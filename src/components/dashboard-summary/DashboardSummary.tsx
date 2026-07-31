@@ -3,8 +3,7 @@ import { useEffect } from 'react';
 import { Flex } from '@radix-ui/themes';
 
 import { useDashboardStore } from 'store/dashboardStore';
-import { selectUserCurrency } from 'store/usersSelectors';
-import { useUsersStore } from 'store/usersStore';
+import { selectUserCurrency, useUsersStore } from 'store/users-store';
 
 import SummaryDebtCards from '../summary-debt-cards/SummaryDebtCards';
 import TotalBalanceCard from '../summary-debt-cards/TotalBalanceCard';

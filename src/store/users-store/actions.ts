@@ -2,56 +2,37 @@ import i18n from 'i18next';
 import { toast } from 'sonner';
 import { create } from 'zustand';
 
-import { fetchApiKnownUsers, fetchApiUser, removeApiKnownUser, updateApiUser } from 'api/chipin';
-import {
-    CreateSettlementParams,
-    KnownUser,
-    RemoveKnownUserParams,
-    UpdateUserParams,
-    User,
-    UserSettings,
-} from 'api/chipin.types';
+import type { UpdateUserParams, UserSettings } from 'api/chipin.types';
+import * as usersApi from 'api/usersApi';
 import { DAY, SECOND } from 'constants/time';
-import { getLocalUser, LocalUser, saveLocalUser, toLocalUser } from 'helpers/localStorage';
+import { saveLocalUser, toLocalUser } from 'helpers/localStorage';
 import { getUnixTimestampInSec } from 'helpers/time';
 
-import { useLoadingStore } from './loadingStore';
+import { useLoadingStore } from '../loadingStore';
 
-export interface UsersStore {
-    user: User | null;
-    localUser: LocalUser | null;
-    friends: KnownUser[];
+import { createInitialState } from './initialState';
+import type { UsersStore } from './types';
 
-    fetchSetFriends: () => void;
-    fetchSetUser: () => void;
-    removeFriend: (params: RemoveKnownUserParams) => Promise<string>;
-    setSettlementWithFriend: (params: CreateSettlementParams) => void;
-    setUserSettings: (params: { displayName?: string; settings?: Partial<UserSettings> }) => void;
-    extendUserSubscriptionByDay: () => void;
-    setInitialUsersStore: () => void;
-}
-
-const initialUsersStore = {
-    user: null,
-    localUser: getLocalUser(),
-    friends: [],
-};
-
-export const useUsersStore = create<UsersStore>((set, get) => ({
-    ...initialUsersStore,
+// TODO: Guard user-store responses so reset or logout cannot be undone by stale requests.
+const useUsersStore = create<UsersStore>((set, get) => ({
+    ...createInitialState(),
 
     fetchSetUser: () => {
         const { setLoading } = useLoadingStore.getState();
         setLoading('users', 'self', 'loading');
 
-        fetchApiUser()
+        return usersApi
+            .fetchUser()
             .then(user => {
                 const nextLocalUser = toLocalUser(user);
                 saveLocalUser(nextLocalUser);
                 set({ user, localUser: nextLocalUser });
+
+                return user;
             })
-            .catch(error => {
+            .catch((error: unknown) => {
                 console.error('Error fetching user:', error);
+                return Promise.reject(error);
             })
             .finally(() => {
                 setLoading('users', 'self', 'fetched');
@@ -61,12 +42,14 @@ export const useUsersStore = create<UsersStore>((set, get) => ({
         const { setLoading } = useLoadingStore.getState();
         setLoading('users', 'friends', 'loading');
 
-        fetchApiKnownUsers()
+        return usersApi
+            .fetchKnownUsers()
             .then(({ friends }) => {
                 set({ friends });
             })
-            .catch(error => {
+            .catch((error: unknown) => {
                 console.error('Error fetching known users:', error);
+                return Promise.reject(error);
             })
             .finally(() => {
                 setLoading('users', 'friends', 'fetched');
@@ -82,7 +65,8 @@ export const useUsersStore = create<UsersStore>((set, get) => ({
         const { setLoading } = useLoadingStore.getState();
         setLoading('users', 'removeFriend', 'loading');
 
-        return removeApiKnownUser({ userId })
+        return usersApi
+            .removeKnownUser({ userId })
             .then(() => {
                 set(state => ({
                     friends: state.friends.filter(knownUser => knownUser.user.id !== userId),
@@ -118,23 +102,31 @@ export const useUsersStore = create<UsersStore>((set, get) => ({
                         return friend;
                     }
 
+                    const balances = [];
+
+                    for (const balance of friend.balances) {
+                        const nextBalance =
+                            balance.currency === params.currency
+                                ? {
+                                      ...balance,
+                                      netAmount: balance.netAmount + amountToSet,
+                                  }
+                                : balance;
+
+                        if (nextBalance.netAmount !== 0) {
+                            balances.push(nextBalance);
+                        }
+                    }
+
                     return {
                         ...friend,
-                        balances: friend.balances
-                            .map(balance =>
-                                balance.currency === params.currency
-                                    ? {
-                                          ...balance,
-                                          netAmount: balance.netAmount + amountToSet,
-                                      }
-                                    : balance,
-                            )
-                            .filter(balance => balance.netAmount !== 0),
+                        balances,
                     };
                 }),
             };
         });
     },
+    // TODO: Coordinate concurrent full-settings updates so older snapshots cannot overwrite newer changes.
     setUserSettings: params => {
         const { user, localUser } = get();
         const currentSettings = user?.settings ?? localUser?.settings;
@@ -142,7 +134,7 @@ export const useUsersStore = create<UsersStore>((set, get) => ({
 
         if (params.settings) {
             if (!currentSettings) {
-                return;
+                return Promise.resolve();
             }
 
             nextSettings = {
@@ -152,43 +144,21 @@ export const useUsersStore = create<UsersStore>((set, get) => ({
         }
 
         const request = {
-            ...(params.displayName && { displayName: params.displayName }),
+            ...(params.displayName !== undefined && { displayName: params.displayName }),
             ...(nextSettings && { settings: nextSettings }),
         } satisfies UpdateUserParams;
 
-        const nextLocalUser = nextSettings
-            ? ({
-                  role: user?.role ?? localUser?.role ?? 'USER',
-                  settings: nextSettings,
-              } satisfies LocalUser)
-            : localUser;
-
-        if (nextSettings && nextLocalUser) {
-            saveLocalUser(nextLocalUser);
-        }
-
-        set({
-            user: user
-                ? {
-                      ...user,
-                      ...(params.displayName !== undefined && {
-                          displayName: params.displayName,
-                      }),
-                      ...(nextSettings && { settings: nextSettings }),
-                  }
-                : user,
-            localUser: nextLocalUser,
-        });
-
-        updateApiUser(request)
+        return usersApi
+            .updateUser(request)
             .then(user => {
                 const nextLocalUser = toLocalUser(user);
                 saveLocalUser(nextLocalUser);
                 set({ user, localUser: nextLocalUser });
             })
-            .catch(error => {
+            .catch((error: unknown) => {
                 console.error('Error updating user:', error);
                 toast.error(i18n.t('toasts:settings.saveError'));
+                return Promise.reject(error);
             });
     },
     extendUserSubscriptionByDay: () => {
@@ -212,9 +182,8 @@ export const useUsersStore = create<UsersStore>((set, get) => ({
         });
     },
     setInitialUsersStore: () => {
-        set({
-            ...initialUsersStore,
-            localUser: getLocalUser(),
-        });
+        set(createInitialState());
     },
 }));
+
+export { useUsersStore };

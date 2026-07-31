@@ -39,7 +39,7 @@ vi.mock('react-i18next', () => ({
     }),
 }));
 
-vi.mock('store/usersStore', () => ({
+vi.mock('store/users-store', () => ({
     useUsersStore: (selector: (state: { user: { id: string } }) => unknown) =>
         selector({ user: { id: 'current-user' } }),
 }));

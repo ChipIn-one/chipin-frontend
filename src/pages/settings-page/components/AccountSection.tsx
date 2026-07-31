@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { UserAvatar } from 'basics';
+import { RadioGroup, UserAvatar } from 'basics';
 import { LucideUser } from 'lucide-react';
 import type { ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 
 import {
     Avatar,
@@ -16,7 +17,7 @@ import {
     TextField,
 } from '@radix-ui/themes';
 
-import { useUsersStore } from 'store/usersStore';
+import { selectUserSex, useUsersStore } from 'store/users-store';
 
 interface Props {
     isLoading: boolean;
@@ -25,16 +26,30 @@ interface Props {
 const AccountSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
     const { t: tSkeletons } = useTranslation('skeletons');
-    const user = useUsersStore(s => s.user);
-    const setUserSettings = useUsersStore(s => s.setUserSettings);
-    const [displayName, setDisplayName] = useState(user?.displayName ?? '');
+    const { user, sex, setUserSettings } = useUsersStore(
+        useShallow(state => ({
+            user: state.user,
+            sex: selectUserSex(state),
+            setUserSettings: state.setUserSettings,
+        })),
+    );
+    const [displayNameDraft, setDisplayNameDraft] = useState<string>();
+    const displayName = displayNameDraft ?? user?.displayName ?? '';
 
     const onChangeDisplayName = (event: ChangeEvent<HTMLInputElement>) => {
-        setDisplayName(event.target.value);
+        setDisplayNameDraft(event.target.value);
     };
 
     const onBlurDisplayName = () => {
-        setUserSettings({ displayName });
+        void setUserSettings({ displayName }).catch(() => undefined);
+    };
+
+    const onSexChange = (value: string) => {
+        if (value !== 'male' && value !== 'female') {
+            return;
+        }
+
+        void setUserSettings({ settings: { sex: value } }).catch(() => undefined);
     };
 
     return (
@@ -63,28 +78,49 @@ const AccountSection = ({ isLoading }: Props) => {
 
                 <Separator size="4" />
 
-                <Flex align="center" gap="3">
-                    <UserAvatar size="4" user={user ?? undefined} isLoading={isLoading} />
+                <Flex justify="between" align="center" gap="4">
+                    <Flex align="center" gap="3" minWidth="0">
+                        <UserAvatar size="4" user={user ?? undefined} isLoading={isLoading} />
 
-                    <Flex direction="column" gap="1">
-                        <Text weight="medium" size="3">
+                        <Flex direction="column" gap="1" minWidth="0">
+                            <Text weight="medium" size="3" truncate>
+                                <Skeleton loading={isLoading}>
+                                    {isLoading
+                                        ? tSkeletons('account.displayName')
+                                        : user?.displayName || t('common:fields.displayName')}
+                                </Skeleton>
+                            </Text>
+                            <Text size="2" color="gray" truncate>
+                                <Skeleton loading={isLoading}>
+                                    {isLoading ? tSkeletons('account.email') : user?.email}
+                                </Skeleton>
+                            </Text>
                             <Skeleton loading={isLoading}>
-                                {isLoading
-                                    ? tSkeletons('account.displayName')
-                                    : user?.displayName || t('common:fields.displayName')}
+                                <Link size="2" color="green" href="#">
+                                    {t('common:buttons.changePhoto')}
+                                </Link>
                             </Skeleton>
-                        </Text>
-                        <Text size="2" color="gray">
-                            <Skeleton loading={isLoading}>
-                                {isLoading ? tSkeletons('account.email') : user?.email}
-                            </Skeleton>
-                        </Text>
-                        <Skeleton loading={isLoading}>
-                            <Link size="2" color="green" href="#">
-                                {t('common:buttons.changePhoto')}
-                            </Link>
-                        </Skeleton>
+                        </Flex>
                     </Flex>
+
+                    <Skeleton loading={isLoading}>
+                        <RadioGroup
+                            name="sex"
+                            size="2"
+                            value={sex}
+                            items={[
+                                {
+                                    value: 'male',
+                                    label: t('account.sexOptions.male'),
+                                },
+                                {
+                                    value: 'female',
+                                    label: t('account.sexOptions.female'),
+                                },
+                            ]}
+                            onValueChange={onSexChange}
+                        />
+                    </Skeleton>
                 </Flex>
 
                 <Separator size="4" />

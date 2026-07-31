@@ -36,6 +36,8 @@ const initializeGroup = (users = [friend, user]) => {
         context: 'group',
         currentUser: user,
         defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
         groups: [{ id: 'group-1', members: users }],
         knownFriends: [],
         defaultGroupId: 'group-1',

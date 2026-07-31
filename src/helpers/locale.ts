@@ -131,6 +131,20 @@ const getBrowserLanguages = (): readonly string[] => {
     return [];
 };
 
+const resolveBrowserLocale = (
+    languages: readonly string[] = getBrowserLanguages(),
+): SupportedLocale => {
+    for (const language of languages) {
+        const match = matchLocale(language);
+
+        if (match !== null) {
+            return match;
+        }
+    }
+
+    return 'en';
+};
+
 /**
  * Resolves the active locale with priority:
  * 1. Valid locale in local user cache
@@ -150,15 +164,7 @@ const resolveLocale = (): SupportedLocale => {
         }
     }
 
-    for (const lang of getBrowserLanguages()) {
-        const match = matchLocale(lang);
-
-        if (match !== null) {
-            return match;
-        }
-    }
-
-    return 'en';
+    return resolveBrowserLocale();
 };
 
 // Monotonic counter — incremented on every call to onChangeLocale.
@@ -184,5 +190,12 @@ const onChangeLocale = (locale: SupportedLocale): void => {
         });
 };
 
-export { matchLocale, normalizeLocale, onChangeLocale, resolveLocale, SUPPORTED_LOCALES };
+export {
+    matchLocale,
+    normalizeLocale,
+    onChangeLocale,
+    resolveBrowserLocale,
+    resolveLocale,
+    SUPPORTED_LOCALES,
+};
 export type { SupportedLocale };

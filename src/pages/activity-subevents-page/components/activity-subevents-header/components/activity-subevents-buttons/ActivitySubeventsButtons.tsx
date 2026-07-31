@@ -12,7 +12,7 @@ import { useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectActivitySubeventsLoading, selectLedgerEntryRemoving } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/usersStore';
+import { useUsersStore } from 'store/users-store';
 
 import { hasLedgerEntryReversedEvent } from '../../../../internal';
 
@@ -67,7 +67,7 @@ const ActivitySubeventsButtons = ({ parentEvent }: Props) => {
                 void fetchSetActivity();
                 fetchSetDashboardData();
                 void fetchSetGroups().catch(() => undefined);
-                fetchSetFriends();
+                void fetchSetFriends().catch(() => undefined);
             })
             .catch(() => {
                 toast.error(t('toasts:ledger.entryDeleteError'));

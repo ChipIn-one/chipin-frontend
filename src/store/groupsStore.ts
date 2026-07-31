@@ -19,8 +19,8 @@ import * as ledgerApi from 'api/ledgerApi';
 import { useDashboardStore } from './dashboardStore';
 import { calcGroupSummary, selectGroupBalances } from './groupsSelectors';
 import { useLoadingStore } from './loadingStore';
-import { selectUserCurrency } from './usersSelectors';
-import { useUsersStore } from './usersStore';
+import { selectUserCurrency } from './users-store';
+import { useUsersStore } from './users-store';
 
 export interface GroupsStore {
     selectedGroup: Group | null;

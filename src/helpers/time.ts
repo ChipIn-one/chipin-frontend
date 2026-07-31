@@ -106,6 +106,15 @@ export const detectDeviceTimezone = (): string => {
     }
 };
 
+export const formatUtcOffset = (offsetMinutes: number): string => {
+    const sign = offsetMinutes <= 0 ? '+' : '-';
+    const absoluteOffset = Math.abs(offsetMinutes);
+    const hours = Math.floor(absoluteOffset / 60);
+    const minutes = absoluteOffset % 60;
+
+    return `UTC${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
+
 export const getAmPm24Time = (date: Date, is24Hour = true): string => {
     return date.toLocaleTimeString([], {
         hour: '2-digit',

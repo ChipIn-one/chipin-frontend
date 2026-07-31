@@ -3,8 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Text } from '@radix-ui/themes';
 
 import { formatRelativeTime } from 'helpers/time';
-import { selectIsUserTime24H } from 'store/usersSelectors';
-import { useUsersStore } from 'store/usersStore';
+import { selectIsUserTime24H, useUsersStore } from 'store/users-store';
 
 interface Props {
     createdAt: number;

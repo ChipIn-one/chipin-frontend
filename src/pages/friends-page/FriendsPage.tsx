@@ -6,12 +6,10 @@ import { Button, Container, Flex } from '@radix-ui/themes';
 
 import { useLoadingStore } from 'store/loadingStore';
 import {
-    selectFilteredCurrencyGroups,
-    selectFilteredSettledFriends,
+    getFriendsView,
     selectFriends,
-    selectFriendsCurrencies,
-} from 'store/usersSelectors';
-import { useUsersStore } from 'store/usersStore';
+    useUsersStore,
+} from 'store/users-store';
 
 import { NoFriendsEmptyState } from 'basics/empty-states';
 import { MobileNavBar } from 'components/nav-bars';
@@ -34,9 +32,11 @@ const FriendsPage = () => {
     const isSkeletonShown = isLoadingFriends === 'loading' && !friends.length;
     const isEmptyFriends = isLoadingFriends === 'fetched' && friends.length === 0;
 
-    const currencies = selectFriendsCurrencies(friends, search);
-    const currencyGroups = selectFilteredCurrencyGroups(friends, search, filterKey);
-    const filteredSettledFriends = selectFilteredSettledFriends(friends, search, filterKey);
+    const { currencies, currencyGroups, settledFriends } = getFriendsView(
+        friends,
+        search,
+        filterKey,
+    );
 
     return (
         <Container size="2" pb={{ initial: '9', sm: '6' }}>
@@ -73,8 +73,8 @@ const FriendsPage = () => {
                             />
                         ))}
 
-                        {filteredSettledFriends.length > 0 && (
-                            <SettledUpCard friends={filteredSettledFriends} />
+                        {settledFriends.length > 0 && (
+                            <SettledUpCard friends={settledFriends} />
                         )}
                     </>
                 )}

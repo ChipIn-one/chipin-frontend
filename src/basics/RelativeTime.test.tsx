@@ -19,11 +19,8 @@ vi.mock('react-i18next', () => ({
     }),
 }));
 
-vi.mock('store/usersSelectors', () => ({
+vi.mock('store/users-store', () => ({
     selectIsUserTime24H: () => true,
-}));
-
-vi.mock('store/usersStore', () => ({
     useUsersStore: (selector: () => unknown) => selector(),
 }));
 

@@ -15,6 +15,10 @@
         "title": "ChipIn — Дашборд",
         "description": "Просматривайте и управляйте своими балансами"
     },
+    "solo": {
+        "title": "ChipIn — Solo",
+        "description": "Личное пространство расходов"
+    },
     "group": {
         "title": "ChipIn — Группа",
         "titleWithName": "ChipIn — {{groupName}}",

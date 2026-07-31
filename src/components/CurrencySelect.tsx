@@ -1,4 +1,4 @@
-import { ComponentProps, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { LucideChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
@@ -8,27 +8,32 @@ import { Button, Flex, Text } from '@radix-ui/themes';
 import { selectAvailableCurrencies, selectDefaultCurrency } from 'store/dashboardSelectors';
 import { useDashboardStore } from 'store/dashboardStore';
 
+import type { SearchSelectProps } from 'components/search-select';
 import { SearchSelect } from 'components/search-select';
 
-type SearchSelectProps = ComponentProps<typeof SearchSelect>;
-
-interface Props {
+type Props = Pick<
+    SearchSelectProps,
+    | 'contentMaxWidth'
+    | 'contentMinWidth'
+    | 'contentWidth'
+    | 'onChange'
+    | 'triggerWidth'
+> & {
     currency?: string;
     isLoading?: boolean;
     triggerElement?: SearchSelectProps['triggerElement'];
-    contentWidthMode?: SearchSelectProps['contentWidthMode'];
-    widthContainerRef?: SearchSelectProps['widthContainerRef'];
-    onChange?: (value: string) => void;
-}
+};
 
-const CurrencySelect: React.FC<Props> = ({
+const CurrencySelect = ({
     onChange,
     isLoading = false,
     currency,
     triggerElement,
-    contentWidthMode,
-    widthContainerRef,
-}) => {
+    triggerWidth,
+    contentWidth,
+    contentMinWidth,
+    contentMaxWidth,
+}: Props) => {
     const availableCurrencies = useDashboardStore(useShallow(selectAvailableCurrencies));
     const defaultCurrency = useDashboardStore(useShallow(selectDefaultCurrency));
 
@@ -68,7 +73,7 @@ const CurrencySelect: React.FC<Props> = ({
         </Button>
     );
 
-    const handleChange = (nextValue: string) => {
+    const onCurrencyChange = (nextValue: string) => {
         if (currency === undefined) {
             setInternalCurrency(nextValue);
         }
@@ -80,12 +85,14 @@ const CurrencySelect: React.FC<Props> = ({
         <SearchSelect
             items={items}
             value={selectedCurrency}
-            searchPlaceholder={t('regional.currencySearchPlaceholder')}
-            emptyText={t('regional.currencySearchEmpty')}
+            searchPlaceholder={t('searchPlaceholder')}
+            emptyText={t('searchEmpty')}
             triggerElement={triggerElement ?? defaultTriggerElement}
-            contentWidthMode={contentWidthMode}
-            widthContainerRef={widthContainerRef}
-            onChange={handleChange}
+            triggerWidth={triggerWidth}
+            contentWidth={contentWidth}
+            contentMinWidth={contentMinWidth}
+            contentMaxWidth={contentMaxWidth}
+            onChange={onCurrencyChange}
         />
     );
 };

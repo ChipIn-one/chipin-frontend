@@ -200,6 +200,7 @@ export const EXPENSE_CATEGORIES = {
 } as const;
 
 export type ExpenseCategory = keyof typeof EXPENSE_CATEGORIES;
+export const DEFAULT_EXPENSE_CATEGORY: ExpenseCategory = 'other';
 
 export type ExpenseSubcategory<T extends ExpenseCategory = ExpenseCategory> =
     (typeof EXPENSE_CATEGORIES)[T]['subcategories'][number]['key'];

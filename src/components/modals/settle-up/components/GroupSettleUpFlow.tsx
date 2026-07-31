@@ -6,7 +6,7 @@ import { Button } from '@radix-ui/themes';
 
 import { selectGroupSettlementOptions } from 'store/groupsSelectors';
 import { useGroupsStore } from 'store/groupsStore';
-import { useUsersStore } from 'store/usersStore';
+import { useUsersStore } from 'store/users-store';
 
 import { BaseModal, MODAL_SIZES } from '../../base-modal';
 import { type DebtOption, getDebtOptions } from '../internal';

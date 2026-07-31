@@ -10,7 +10,7 @@ import type { FriendUser } from 'api/chipin.types';
 import { themeColor } from 'helpers/colors';
 import { selectFriendRemoving } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/usersStore';
+import { useUsersStore } from 'store/users-store';
 
 import { BaseModal, MODAL_SIZES } from './base-modal';
 

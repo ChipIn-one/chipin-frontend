@@ -2,54 +2,72 @@ import { create } from 'zustand';
 
 import type { AppEvent } from 'api/activity.types';
 import { fetchApiCurrencyRates, fetchApiDashboard } from 'api/chipin';
-import { ApiCurrencyRatesResponse, BalanceEntry, BalancesMap } from 'api/chipin.raw.types';
+import type { ApiCurrencyRatesResponse, BalanceEntry, BalancesMap } from 'api/chipin.raw.types';
 import { sortBalancesByCurrency } from 'helpers/currencies';
+import { getLocalUser } from 'helpers/localStorage';
 
 import { calcBalancesSummary } from './commonSelectors';
 import { useLoadingStore } from './loadingStore';
-import { selectUserCurrency } from './usersSelectors';
-import { useUsersStore } from './usersStore';
+import { selectUserCurrency } from './users-store';
+import { useUsersStore } from './users-store';
 
-export interface DashboardStore {
-    fetchSetDashboardData: () => void;
-    setDashboardSummaryCurrency: (defaultCurrency: string) => void;
-    setInitialDashboardStore: () => void;
+const APP_MODES = {
+    GROUP: 'group',
+    SOLO: 'solo',
+} as const;
 
+type AppMode = (typeof APP_MODES)[keyof typeof APP_MODES];
+
+interface DashboardStoreState {
+    appMode: AppMode;
     balances: BalancesMap;
     owedEntries: BalanceEntry[];
     oweEntries: BalanceEntry[];
     netTotalInBase: number | null;
     owedTotalInBase: number | null;
     owingTotalInBase: number | null;
-
     activityItems: AppEvent[];
     activityNextCursor: number | null;
-
     currencies: ApiCurrencyRatesResponse;
 }
 
-const initialDashboardStore = {
-    balances: {},
-    owedEntries: [],
-    oweEntries: [],
-    netTotalInBase: null,
-    owedTotalInBase: null,
-    owingTotalInBase: null,
+export interface DashboardStore extends DashboardStoreState {
+    fetchSetDashboardData: () => void;
+    setAppMode: (appMode: AppMode) => void;
+    setDefaultAppMode: (isSoloModeByDefault: boolean) => void;
+    setDashboardSummaryCurrency: (defaultCurrency: string) => void;
+    setInitialDashboardStore: () => void;
+}
 
-    activityItems: [],
-    activityNextCursor: null,
+const getDefaultAppMode = (isSoloModeByDefault: boolean): AppMode => {
+    return isSoloModeByDefault ? APP_MODES.SOLO : APP_MODES.GROUP;
+};
 
-    currencies: {
-        base: 'USD',
-        timestamp: 0,
-        fetchedAt: 0,
-        stale: false,
-        rates: {},
-    },
+const createInitialDashboardState = (): DashboardStoreState => {
+    const localUser = getLocalUser();
+
+    return {
+        appMode: getDefaultAppMode(localUser?.settings?.soloModeByDefault ?? false),
+        balances: {},
+        owedEntries: [],
+        oweEntries: [],
+        netTotalInBase: null,
+        owedTotalInBase: null,
+        owingTotalInBase: null,
+        activityItems: [],
+        activityNextCursor: null,
+        currencies: {
+            base: 'USD',
+            timestamp: 0,
+            fetchedAt: 0,
+            stale: false,
+            rates: {},
+        },
+    };
 };
 
 export const useDashboardStore = create<DashboardStore>(set => ({
-    ...initialDashboardStore,
+    ...createInitialDashboardState(),
 
     fetchSetDashboardData: () => {
         const { setLoading } = useLoadingStore.getState();
@@ -130,7 +148,15 @@ export const useDashboardStore = create<DashboardStore>(set => ({
             };
         });
     },
+    setAppMode: appMode => {
+        set({ appMode });
+    },
+    setDefaultAppMode: isSoloModeByDefault => {
+        set({ appMode: getDefaultAppMode(isSoloModeByDefault) });
+    },
     setInitialDashboardStore: () => {
-        set(initialDashboardStore);
+        set(createInitialDashboardState());
     },
 }));
+
+export { APP_MODES, type AppMode };

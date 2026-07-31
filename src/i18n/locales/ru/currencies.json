@@ -1,4 +1,6 @@
 {
+    "searchPlaceholder": "Найти валюту",
+    "searchEmpty": "Валюты не найдены.",
     "USD": "USD - Доллар США",
     "EUR": "EUR - Евро",
     "RUB": "RUB - Российский рубль",

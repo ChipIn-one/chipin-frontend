@@ -1,7 +1,16 @@
-import { LucideBell } from 'lucide-react';
+import { LucideBell, LucideInfo } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Avatar, Card, Flex, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
+import {
+    Avatar,
+    Callout,
+    Card,
+    Flex,
+    Separator,
+    Skeleton,
+    Switch,
+    Text,
+} from '@radix-ui/themes';
 
 interface Props {
     isLoading: boolean;
@@ -34,6 +43,13 @@ const NotificationsSection = ({ isLoading }: Props) => {
                     </Flex>
                 </Flex>
 
+                <Callout.Root color="blue" size="2">
+                    <Callout.Icon>
+                        <LucideInfo size={16} />
+                    </Callout.Icon>
+                    <Callout.Text>{t('notifications.workInProgress')}</Callout.Text>
+                </Callout.Root>
+
                 <Separator size="4" />
 
                 <Flex justify="between" align="center" gap="3">
@@ -48,7 +64,11 @@ const NotificationsSection = ({ isLoading }: Props) => {
                         </Text>
                     </Flex>
                     <Skeleton loading={isLoading}>
-                        <Switch defaultChecked aria-label={t('notifications.pushTitle')} />
+                        <Switch
+                            disabled
+                            defaultChecked
+                            aria-label={t('notifications.pushTitle')}
+                        />
                     </Skeleton>
                 </Flex>
 
@@ -66,7 +86,7 @@ const NotificationsSection = ({ isLoading }: Props) => {
                         </Text>
                     </Flex>
                     <Skeleton loading={isLoading}>
-                        <Switch aria-label={t('notifications.emailTitle')} />
+                        <Switch disabled aria-label={t('notifications.emailTitle')} />
                     </Skeleton>
                 </Flex>
 
@@ -87,6 +107,7 @@ const NotificationsSection = ({ isLoading }: Props) => {
                     </Flex>
                     <Skeleton loading={isLoading}>
                         <Switch
+                            disabled
                             defaultChecked
                             aria-label={t('notifications.expenseRemindersTitle')}
                         />
@@ -109,7 +130,7 @@ const NotificationsSection = ({ isLoading }: Props) => {
                         </Text>
                     </Flex>
                     <Skeleton loading={isLoading}>
-                        <Switch aria-label={t('notifications.weeklySummaryTitle')} />
+                        <Switch disabled aria-label={t('notifications.weeklySummaryTitle')} />
                     </Skeleton>
                 </Flex>
             </Flex>

@@ -1,14 +1,14 @@
 import type {
-    FriendBalance,
     KnownUser,
     ThemeName,
     User,
     UserSettings,
 } from 'api/chipin.types';
+import { DEFAULT_EXPENSE_CATEGORY } from 'constants/chipin';
 import { DEFAULT_CURRENCY_CODE } from 'constants/currencies';
 import { getFilterFunction } from 'helpers/text';
 
-import type { UsersStore } from './usersStore';
+import type { FriendCurrencyGroup, FriendsView, UsersStore } from './types';
 
 export const selectUserSettings = (s: UsersStore): UserSettings | null =>
     s.user?.settings ?? s.localUser?.settings ?? null;
@@ -26,48 +26,47 @@ export const selectUserTheme = (s: UsersStore): ThemeName =>
     selectUserSettings(s)?.theme ?? 'system';
 export const selectUserSimplifyDebts = (s: UsersStore) =>
     selectUserSettings(s)?.simplifyDebts ?? true;
+export const selectUserDefaultCategory = (s: UsersStore) =>
+    selectUserSettings(s)?.defaultCategory ?? DEFAULT_EXPENSE_CATEGORY;
+export const selectUserSkipCategory = (s: UsersStore) =>
+    selectUserSettings(s)?.skipCategory ?? false;
+export const selectUserSoloModeByDefault = (s: UsersStore) =>
+    selectUserSettings(s)?.soloModeByDefault ?? false;
+export const selectUserSaveGroupExpensesToSolo = (s: UsersStore) =>
+    selectUserSettings(s)?.saveGroupExpensesToSolo ?? false;
+export const selectUserSex = (s: UsersStore) =>
+    selectUserSettings(s)?.sex ?? 'male';
 export const selectFriends = (s: UsersStore): KnownUser[] => s.friends;
 export const selectIsUserAdmin = (s: UsersStore) => (s.user?.role ?? s.localUser?.role) === 'ADMIN';
 
-export interface FriendCurrencyGroup {
-    currency: string;
-    netBalance: number;
-    friends: {
-        friend: KnownUser;
-        balance: FriendBalance;
-    }[];
-}
-
-export const selectFriendsCurrencies = (
-    friends: KnownUser[],
-    search: string,
-): string[] => {
-    const filterFn = getFilterFunction(search);
-    const filteredFriends = filterFn
-        ? friends.filter(friend => filterFn([friend.user.displayName]))
-        : friends;
-
-    return Array.from(
-        new Set(filteredFriends.flatMap(friend => friend.balances.map(balance => balance.currency))),
-    );
-};
-
-export const selectFilteredCurrencyGroups = (
+export const getFriendsView = (
     friends: KnownUser[],
     search: string,
     filterKey: string,
-): FriendCurrencyGroup[] => {
+): FriendsView => {
     const filterFn = getFilterFunction(search);
+    const currencies = new Set<string>();
     const groups = new Map<string, FriendCurrencyGroup>();
+    const settledFriends: KnownUser[] = [];
 
-    friends.forEach(friend => {
+    for (const friend of friends) {
         if (filterFn && !filterFn([friend.user.displayName])) {
-            return;
+            continue;
         }
 
-        friend.balances.forEach(balance => {
+        if (friend.balances.length === 0) {
+            if (filterKey === 'all') {
+                settledFriends.push(friend);
+            }
+
+            continue;
+        }
+
+        for (const balance of friend.balances) {
+            currencies.add(balance.currency);
+
             if (filterKey !== 'all' && balance.currency !== filterKey) {
-                return;
+                continue;
             }
 
             const group = groups.get(balance.currency) ?? {
@@ -79,27 +78,12 @@ export const selectFilteredCurrencyGroups = (
             group.netBalance += balance.netAmount;
             group.friends.push({ friend, balance });
             groups.set(balance.currency, group);
-        });
-    });
-
-    return Array.from(groups.values());
-};
-
-export const selectFilteredSettledFriends = (
-    friends: KnownUser[],
-    search: string,
-    filterKey: string,
-): KnownUser[] => {
-    if (filterKey !== 'all') {
-        return [];
+        }
     }
 
-    const filterFn = getFilterFunction(search);
-    const settled = friends.filter(friend => friend.balances.length === 0);
-
-    if (!filterFn) {
-        return settled;
-    }
-
-    return settled.filter(friend => filterFn([friend.user.displayName]));
+    return {
+        currencies: Array.from(currencies),
+        currencyGroups: Array.from(groups.values()),
+        settledFriends,
+    };
 };

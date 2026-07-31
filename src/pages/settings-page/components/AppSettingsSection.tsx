@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
     LucideMonitor,
     LucideMoon,
@@ -6,8 +5,8 @@ import {
     LucideSettings2,
     LucideSun,
 } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 
 import {
     Avatar,
@@ -17,7 +16,6 @@ import {
     Flex,
     Separator,
     Skeleton,
-    Switch,
     Text,
 } from '@radix-ui/themes';
 
@@ -25,8 +23,7 @@ import { APP_VERSION } from 'constants/version';
 import { applySwUpdate } from 'helpers/swUpdates';
 import type { ThemeName } from 'helpers/theme';
 import { usePwaStore } from 'store/pwaStore';
-import { selectUserSimplifyDebts, selectUserTheme } from 'store/usersSelectors';
-import { useUsersStore } from 'store/usersStore';
+import { selectUserTheme, useUsersStore } from 'store/users-store';
 
 import SegmentedControl from 'components/SegmentedControl';
 
@@ -36,23 +33,18 @@ interface Props {
 
 const AppSettingsSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
-    const { setTheme } = useTheme();
     const isSwUpdateAvailable = usePwaStore(s => s.isSwUpdateAvailable);
-    const setUserSettings = useUsersStore(s => s.setUserSettings);
-    const theme = useUsersStore(selectUserTheme);
-    const isSimplifyDebtsEnabled = useUsersStore(selectUserSimplifyDebts);
-
-    const [isAutoSplitEnabled, setIsAutoSplitEnabled] = useState(false);
+    const { setUserSettings, theme } = useUsersStore(
+        useShallow(state => ({
+            setUserSettings: state.setUserSettings,
+            theme: selectUserTheme(state),
+        })),
+    );
 
     const onChangeTheme = (value: string) => {
         const nextTheme = value as ThemeName;
 
-        setTheme(nextTheme);
-        setUserSettings({ settings: { theme: nextTheme } });
-    };
-
-    const onChangeSimplifyDebts = (isEnabled: boolean) => {
-        setUserSettings({ settings: { simplifyDebts: isEnabled } });
+        void setUserSettings({ settings: { theme: nextTheme } }).catch(() => undefined);
     };
 
     return (
@@ -131,79 +123,35 @@ const AppSettingsSection = ({ isLoading }: Props) => {
 
                     <Separator size="4" />
 
-                    <Flex justify="between" align="center" gap="3">
+                    <Flex justify="between" align="center">
                         <Flex direction="column">
                             <Text weight="medium">
                                 <Skeleton loading={isLoading}>
-                                    {t('app.simplifyDebtsTitle')}
+                                    {t('app.versionTitle')}
                                 </Skeleton>
                             </Text>
                             <Text size="2" color="gray">
                                 <Skeleton loading={isLoading}>
-                                    {t('app.simplifyDebtsDescription')}
+                                    {t('app.versionDescription')}
                                 </Skeleton>
                             </Text>
-                        </Flex>
-                        <Skeleton loading={isLoading}>
-                            <Switch
-                                checked={isSimplifyDebtsEnabled}
-                                onCheckedChange={onChangeSimplifyDebts}
-                                aria-label={t('app.simplifyDebtsTitle')}
-                            />
-                        </Skeleton>
-                    </Flex>
-
-                    <Separator size="4" />
-
-                    <Flex justify="between" align="center" gap="3">
-                        <Flex direction="column">
-                            <Text weight="medium">
+                            <Flex align="center" gap="3" mt="2">
                                 <Skeleton loading={isLoading}>
-                                    {t('app.autoSplitTitle')}
+                                    <Code>{APP_VERSION}</Code>
                                 </Skeleton>
-                            </Text>
-                            <Text size="2" color="gray">
-                                <Skeleton loading={isLoading}>
-                                    {t('app.autoSplitDescription')}
-                                </Skeleton>
-                            </Text>
+                            </Flex>
                         </Flex>
-                        <Skeleton loading={isLoading}>
-                            <Switch
-                                checked={isAutoSplitEnabled}
-                                onCheckedChange={setIsAutoSplitEnabled}
-                                aria-label={t('app.autoSplitTitle')}
-                            />
-                        </Skeleton>
-                    </Flex>
-
-                    <Separator size="4" />
-
-                    <Flex direction="column">
-                        <Text weight="medium">
-                            <Skeleton loading={isLoading}>{t('app.versionTitle')}</Skeleton>
-                        </Text>
-                        <Text size="2" color="gray">
-                            <Skeleton loading={isLoading}>
-                                {t('app.versionDescription')}
-                            </Skeleton>
-                        </Text>
-                        <Flex align="center" gap="3" mt="2">
-                            <Skeleton loading={isLoading}>
-                                <Code>{APP_VERSION}</Code>
-                            </Skeleton>
-                            {isSwUpdateAvailable && (
-                                <Button
-                                    variant="soft"
-                                    color="jade"
-                                    size="1"
-                                    onClick={applySwUpdate}
-                                >
-                                    <LucideRefreshCw size={12} />
-                                    {t('app.updateButton')}
-                                </Button>
-                            )}
-                        </Flex>
+                        {isSwUpdateAvailable && (
+                            <Button
+                                variant="soft"
+                                color="jade"
+                                size="2"
+                                onClick={applySwUpdate}
+                            >
+                                <LucideRefreshCw size={12} />
+                                {t('app.updateButton')}
+                            </Button>
+                        )}
                     </Flex>
                 </Flex>
             </Flex>

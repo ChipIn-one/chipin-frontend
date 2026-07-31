@@ -10,19 +10,19 @@ import PageLoader from 'basics/PageLoader';
 
 const resolveReturnTo = (returnTo: string | null): string => {
     if (!returnTo) {
-        return ROUTES.DASHBOARD;
+        return ROUTES.HOME;
     }
 
     try {
         const url = new URL(returnTo, window.location.origin);
 
         if (url.origin !== window.location.origin || url.pathname === ROUTES.OAUTH_CALLBACK) {
-            return ROUTES.DASHBOARD;
+            return ROUTES.HOME;
         }
 
         return `${url.pathname}${url.search}${url.hash}`;
     } catch {
-        return ROUTES.DASHBOARD;
+        return ROUTES.HOME;
     }
 };
 

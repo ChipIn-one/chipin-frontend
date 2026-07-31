@@ -5,7 +5,7 @@ import { render, screen } from '@testing-library/react';
 import type { Group, User } from 'api/chipin.types';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/usersStore';
+import { useUsersStore } from 'store/users-store';
 
 import GroupPage from './GroupPage';
 
@@ -79,10 +79,15 @@ const currentUser = {
     subscriptionUntil: null,
     settings: {
         defaultCurrency: 'USD',
+        defaultCategory: 'food',
         timeFormat: '12h',
         language: 'en',
         theme: 'system',
         simplifyDebts: true,
+        skipCategory: false,
+        soloModeByDefault: false,
+        saveGroupExpensesToSolo: false,
+        sex: 'male',
     },
 } satisfies User;
 

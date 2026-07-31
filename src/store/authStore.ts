@@ -16,7 +16,7 @@ import { useActivityStore } from './activity-store';
 import { useDashboardStore } from './dashboardStore';
 import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
-import { useUsersStore } from './usersStore';
+import { useUsersStore } from './users-store';
 
 export type AuthStatus = 'unknown' | 'authenticated' | 'unauthenticated';
 export type UnauthReason =
@@ -75,14 +75,19 @@ export const useAuthStore = create<AuthStore>(set => ({
                 saveAuthTokens({ accessToken: token, refreshToken });
                 set({ status: 'authenticated', unauthReason: undefined, isNewUser });
 
-                const { fetchSetDashboardData } = useDashboardStore.getState();
+                const { fetchSetDashboardData, setDefaultAppMode } =
+                    useDashboardStore.getState();
                 const { fetchSetGroups } = useGroupsStore.getState();
                 const { fetchSetUser, fetchSetFriends } = useUsersStore.getState();
 
                 fetchSetDashboardData();
                 fetchSetGroups().catch(() => undefined);
-                fetchSetUser();
-                fetchSetFriends();
+                void fetchSetUser()
+                    .then(user => {
+                        setDefaultAppMode(user.settings.soloModeByDefault);
+                    })
+                    .catch(() => undefined);
+                void fetchSetFriends().catch(() => undefined);
             })
             .catch((error: unknown) => {
                 resetAuthScopedStores();

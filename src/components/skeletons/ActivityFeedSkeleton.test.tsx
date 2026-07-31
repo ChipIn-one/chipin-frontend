@@ -20,20 +20,18 @@ test('renders the expense-created skeleton feed', () => {
         container.querySelector(
             '[data-activity-date-divider-summary-skeleton]',
         ),
-    ).toBeTruthy();
+    ).toBeNull();
     expect(
         container.querySelectorAll('[data-activity-event-skeleton]'),
     ).toHaveLength(8);
 });
 
-test('can render the date divider without a daily summary', () => {
-    const { container } = render(
-        <ActivityFeedSkeleton isShowSummary={false} />,
-    );
+test('can render the date divider with a daily summary', () => {
+    const { container } = render(<ActivityFeedSkeleton isShowSummary />);
 
     expect(
         container.querySelector(
             '[data-activity-date-divider-summary-skeleton]',
         ),
-    ).toBeNull();
+    ).toBeTruthy();
 });

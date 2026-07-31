@@ -11,22 +11,25 @@ import { themeColor } from 'helpers/colors';
 import { getCanAddExpense } from 'helpers/expenses';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
+import { selectIsSoloMode } from 'store/dashboardSelectors';
+import { useDashboardStore } from 'store/dashboardStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectDashboardLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/usersStore';
+import { useUsersStore } from 'store/users-store';
 
 const FloatingBox = styled(Box)`
     bottom: var(--space-6);
     right: var(--space-4);
 `;
 
-const ButtonMobile = styled(Button)`
+const ButtonMobile = styled(Button)<{ $isSoloMode: boolean }>`
     width: var(--space-9);
     height: var(--space-9);
     padding: 0;
-    border: 6px solid ${themeColor('grass7')};
+    border: 6px solid
+        ${({ $isSoloMode }) => themeColor($isSoloMode ? 'violet7' : 'grass7')};
 `;
 
 interface Props {
@@ -46,6 +49,7 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
         })),
     );
     const friends = useUsersStore(state => state.friends);
+    const isSoloMode = useDashboardStore(selectIsSoloMode);
     const openAddExpenseModal = useExpenseModalStore(state => state.open);
     const hasAvailableGroup = groups.some(group => group.members.length > 0);
     const canAddExpense = getCanAddExpense({
@@ -62,9 +66,10 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
     if (type === 'mobile') {
         return (
             <ButtonMobile
+                $isSoloMode={isSoloMode}
                 size="4"
                 radius="full"
-                color="jade"
+                color={isSoloMode ? 'violet' : 'jade'}
                 aria-label={t('buttons.addExpense')}
                 loading={isDashboardLoading}
                 disabled={!canAddExpense}
@@ -81,7 +86,7 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
                 <Button
                     size="3"
                     radius="full"
-                    color="jade"
+                    color={isSoloMode ? 'violet' : 'jade'}
                     loading={isDashboardLoading}
                     disabled={!canAddExpense}
                     onClick={() => openAddExpenseModal()}

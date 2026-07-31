@@ -6,6 +6,7 @@ import type {
     ApiUserResponse,
     ApiUserRole,
     ApiUserSettings,
+    ApiUserSex,
     ApiUserSummary,
     ApiUserTheme,
     BalancesMap,
@@ -56,6 +57,7 @@ export type {
 export type User = ApiUserResponse;
 export type UserSettings = ApiUserSettings;
 export type UserRole = ApiUserRole;
+export type UserSex = ApiUserSex;
 export type ThemeName = ApiUserTheme;
 export type UserSummary = ApiUserSummary;
 export type FriendUser = UserSummary;

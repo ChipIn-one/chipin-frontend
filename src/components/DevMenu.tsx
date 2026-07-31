@@ -12,13 +12,13 @@ import { useTranslation } from 'react-i18next';
 import { IconButton } from '@radix-ui/themes';
 
 import { isThemeDark } from 'helpers/theme';
-import { useUsersStore } from 'store/usersStore';
+import { useUsersStore } from 'store/users-store';
 
 import Dropdown from './Dropdown';
 
 const DevMenu = () => {
     const [shouldCrash, setShouldCrash] = useState(false);
-    const { resolvedTheme, setTheme } = useTheme();
+    const { resolvedTheme } = useTheme();
     const { t } = useTranslation();
     const extendUserSubscriptionByDay = useUsersStore(s => s.extendUserSubscriptionByDay);
     const setUserSettings = useUsersStore(s => s.setUserSettings);
@@ -28,11 +28,10 @@ const DevMenu = () => {
     }
 
     const isDark = isThemeDark(resolvedTheme);
-    const handleSwitchTheme = () => {
+    const onSwitchTheme = () => {
         const nextTheme = isDark ? 'light' : 'dark';
 
-        setTheme(nextTheme);
-        setUserSettings({ settings: { theme: nextTheme } });
+        void setUserSettings({ settings: { theme: nextTheme } }).catch(() => undefined);
     };
 
     const items = [
@@ -40,7 +39,7 @@ const DevMenu = () => {
             value: 'switchTheme',
             label: t('header.switchTheme'),
             icon: isDark ? <LucideSun size={16} /> : <LucideMoon size={16} />,
-            onSelect: handleSwitchTheme,
+            onSelect: onSwitchTheme,
         },
         {
             value: 'extendSubscription',

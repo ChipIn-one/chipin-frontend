@@ -1,4 +1,4 @@
-import { ComponentProps, useMemo } from 'react';
+import { useMemo } from 'react';
 import type { LucideProps } from 'lucide-react';
 import { LucideChevronDown } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
@@ -6,12 +6,14 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, Flex, Text } from '@radix-ui/themes';
 
-import { EXPENSE_CATEGORIES, ExpenseCategory } from 'constants/chipin';
+import type { ExpenseCategory } from 'constants/chipin';
+import { EXPENSE_CATEGORIES } from 'constants/chipin';
 
-import { SearchSelect } from 'components/search-select';
+import type { SearchSelectProps } from './SearchSelect';
+import { SearchSelect } from './SearchSelect';
+import type { SearchSelectItem } from './types';
 
 type LucideIconComponent = React.FC<LucideProps>;
-type SearchSelectProps = ComponentProps<typeof SearchSelect>;
 
 const EXPENSE_CATEGORY_KEYS = Object.keys(EXPENSE_CATEGORIES) as ExpenseCategory[];
 
@@ -25,31 +27,37 @@ const resolveIcon = (iconName: string, size: number, color?: string) => {
     return IconComponent ? <IconComponent size={size} color={stroke} /> : null;
 };
 
-interface Props {
-    value?: string;
+type CategorySearchSelectProps = Pick<
+    SearchSelectProps,
+    | 'contentMaxWidth'
+    | 'contentMinWidth'
+    | 'contentWidth'
+    | 'onChange'
+    | 'triggerWidth'
+    | 'value'
+> & {
     isLoading?: boolean;
+    isDisabled?: boolean;
     renderTrigger?: (item: CategoryItem | undefined) => React.ReactElement;
-    contentWidthMode?: SearchSelectProps['contentWidthMode'];
-    widthContainerRef?: SearchSelectProps['widthContainerRef'];
-    onChange?: (value: string) => void;
-}
+};
 
-type CategoryItem = {
-    value: string;
-    label: string;
+type CategoryItem = SearchSelectItem & {
     icon: React.ReactNode;
     isIndented: boolean;
     searchFields: string[];
 };
 
-const CategorySearchSelect: React.FC<Props> = ({
+const CategorySearchSelect = ({
     value,
     isLoading = false,
+    isDisabled = false,
     renderTrigger,
-    contentWidthMode,
-    widthContainerRef,
+    triggerWidth,
+    contentWidth,
+    contentMinWidth,
+    contentMaxWidth,
     onChange,
-}) => {
+}: CategorySearchSelectProps) => {
     const { t } = useTranslation('group');
 
     const items = useMemo(() => {
@@ -95,6 +103,7 @@ const CategorySearchSelect: React.FC<Props> = ({
             size="3"
             radius="large"
             loading={isLoading}
+            disabled={isDisabled}
         >
             <Flex align="center" justify="between" gap="2" width="100%" minWidth="0">
                 <Flex align="center" gap="2" minWidth="0" flexGrow="1">
@@ -115,8 +124,10 @@ const CategorySearchSelect: React.FC<Props> = ({
             searchPlaceholder={t('expenses.modal.categorySearchPlaceholder')}
             emptyText={t('expenses.modal.categorySearchEmpty')}
             triggerElement={triggerElement}
-            contentWidthMode={contentWidthMode}
-            widthContainerRef={widthContainerRef}
+            triggerWidth={triggerWidth}
+            contentWidth={contentWidth}
+            contentMinWidth={contentMinWidth}
+            contentMaxWidth={contentMaxWidth}
             onChange={onChange}
         />
     );

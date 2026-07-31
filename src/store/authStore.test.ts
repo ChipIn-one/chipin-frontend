@@ -1,10 +1,40 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
+import { exchangeApiGoogleOAuthCode } from 'api/chipin';
+import type { User } from 'api/chipin.types';
 import * as authSession from 'helpers/authSession';
 import { clearAuthTokens, getAuthTokens, saveAuthTokens } from 'helpers/localStorage';
 
 import { useAuthStore } from './authStore';
+import { APP_MODES, useDashboardStore } from './dashboardStore';
+import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
+import { useUsersStore } from './users-store';
+
+const user = {
+    id: 'user-1',
+    email: 'user@example.com',
+    displayName: 'User',
+    firstName: null,
+    lastName: null,
+    picture: null,
+    role: 'USER',
+    subscriptionUntil: null,
+    settings: {
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        timeFormat: '24h',
+        language: 'en',
+        theme: 'system',
+        simplifyDebts: true,
+        skipCategory: false,
+        soloModeByDefault: true,
+        saveGroupExpensesToSolo: false,
+        sex: 'male',
+    },
+    createdAt: 1,
+    updatedAt: 1,
+} satisfies User;
 
 const authSessionMocks = vi.hoisted(() => {
     class AuthTokenPersistenceError extends Error {}
@@ -21,9 +51,13 @@ const authSessionMocks = vi.hoisted(() => {
 });
 
 vi.mock('helpers/authSession', () => authSessionMocks);
+vi.mock('api/chipin', () => ({
+    exchangeApiGoogleOAuthCode: vi.fn(),
+}));
 
-describe('authStore.logoutOtherDevices', () => {
+describe('authStore', () => {
     beforeEach(() => {
+        vi.restoreAllMocks();
         vi.clearAllMocks();
         clearAuthTokens();
         authSessionMocks.clearExpiredAuthSession.mockImplementation(() => {
@@ -55,6 +89,39 @@ describe('authStore.logoutOtherDevices', () => {
                 unauthReason: undefined,
             });
         });
+    });
+
+    test('initializes the app mode from the fetched preference after OAuth', () => {
+        vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue({
+            token: 'access-token',
+            refresh_token: 'refresh-token',
+            is_new_user: false,
+        });
+        useDashboardStore.setState({ appMode: APP_MODES.GROUP });
+        const setDefaultAppMode = vi.spyOn(
+            useDashboardStore.getState(),
+            'setDefaultAppMode',
+        );
+        vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockImplementation(
+            () => undefined,
+        );
+        vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockImplementation(() =>
+            Promise.resolve([]),
+        );
+        vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockImplementation(() =>
+            Promise.resolve(user),
+        );
+        vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockImplementation(() =>
+            Promise.resolve(),
+        );
+
+        return useAuthStore
+            .getState()
+            .exchangeGoogleOAuthCode('oauth-code')
+            .then(() => Promise.resolve())
+            .then(() => {
+                expect(setDefaultAppMode).toHaveBeenCalledWith(true);
+            });
     });
 
     test('clears the local session and uses the expired flow after 401', () => {

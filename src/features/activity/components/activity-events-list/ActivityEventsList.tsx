@@ -4,7 +4,7 @@ import { Flex } from '@radix-ui/themes';
 
 import type { AppEvent } from 'api/activity.types';
 import { getActivityDateKey } from 'helpers/time';
-import { useUsersStore } from 'store/usersStore';
+import { useUsersStore } from 'store/users-store';
 
 import { NoActivityEmptyState } from 'basics/empty-states';
 
@@ -24,8 +24,8 @@ const ActivityEventsList = ({
     events,
     emptyState = <NoActivityEmptyState />,
     children,
-    isShowSummary = true,
-    isNavigable = true,
+    isShowSummary = false,
+    isNavigable = false,
 }: Props) => {
     const userId = useUsersStore(state => state.user?.id);
     const dailyExpenseSummaries = useMemo(

@@ -4,18 +4,22 @@
     "account": {
         "title": "Account",
         "description": "Personal information and profile settings.",
-        "displayNamePlaceholder": "Your name or nickname"
+        "displayNamePlaceholder": "Your name or nickname",
+        "sexOptions": {
+            "male": "Male",
+            "female": "Female"
+        }
     },
     "regional": {
         "title": "Regional Preferences",
-        "description": "Timezone, language, and currency for your workspace.",
-        "autoTimezone": "Detect timezone automatically",
-        "autoTimezoneHint": "Current timezone: {{timezone}}",
+        "description": "Timezone, language, and time display.",
+        "autoTimezone": "Your timezone",
+        "autoTimezoneHint": "Detected automatically.",
         "timeFormatTitle": "Time format",
-        "timeFormatDescription": "Choose how times are displayed across the app.",
-        "currencySearchPlaceholder": "Search currency",
-        "currencySearchEmpty": "No currencies found.",
-        "languageHint": "Choose your preferred app language."
+        "timeFormatDescription": "Choose a time format.",
+        "languageSearchPlaceholder": "Search language",
+        "languageSearchEmpty": "No languages found.",
+        "resetLanguage": "Reset language"
     },
     "language": {
         "options": {
@@ -29,6 +33,7 @@
     "notifications": {
         "title": "Notifications",
         "description": "Manage how you receive updates.",
+        "workInProgress": "Notifications are still in development.",
         "pushTitle": "Push notifications",
         "pushDescription": "Receive notifications on your device.",
         "emailTitle": "Email updates",
@@ -38,9 +43,26 @@
         "weeklySummaryTitle": "Weekly summary",
         "weeklySummaryDescription": "Weekly digest of your spending."
     },
+    "expense": {
+        "title": "Expense Preferences",
+        "description": "Defaults and behavior for new expenses.",
+        "defaultCategoryTitle": "Default category",
+        "skipCategoryTitle": "Skip category",
+        "skipCategoryDescription": "Create expenses without choosing a category.",
+        "simplifyDebtsTitle": "Simplify group debts",
+        "simplifyDebtsDescription": "Automatically reduce the number of payments needed in groups."
+    },
+    "solo": {
+        "title": "Solo Preferences",
+        "description": "Defaults and behavior for Solo Mode.",
+        "soloModeTitle": "Solo Mode by default",
+        "soloModeDescription": "Open ChipIn in Solo Mode.",
+        "saveGroupToSoloTitle": "Save group expenses to Solo",
+        "saveGroupToSoloDescription": "Also keep group expenses in Solo records."
+    },
     "app": {
         "title": "App Settings",
-        "description": "Appearance and expense calculation behavior.",
+        "description": "Appearance and app information.",
         "themeTitle": "Theme",
         "themeDescription": "Choose how ChipIn looks on your device.",
         "themeOptions": {
@@ -48,12 +70,8 @@
             "light": "Light",
             "system": "System"
         },
-        "simplifyDebtsTitle": "Simplify group debts",
-        "simplifyDebtsDescription": "Automatically reduce the number of payments needed in groups.",
-        "autoSplitTitle": "Auto-split equally",
-        "autoSplitDescription": "Default to equal split when adding expenses.",
         "versionTitle": "App version",
-        "versionDescription": "Current build installed on this device.",
+        "versionDescription": "Currently installed version.",
         "updateButton": "Update app"
     },
     "security": {

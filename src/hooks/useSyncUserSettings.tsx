@@ -2,8 +2,7 @@ import { useEffect } from 'react';
 import { useTheme } from 'next-themes';
 
 import { matchLocale, onChangeLocale } from 'helpers/locale';
-import { selectUserSettings } from 'store/usersSelectors';
-import { useUsersStore } from 'store/usersStore';
+import { selectUserSettings, useUsersStore } from 'store/users-store';
 
 export const useSyncUserSettings = () => {
     const settings = useUsersStore(selectUserSettings);

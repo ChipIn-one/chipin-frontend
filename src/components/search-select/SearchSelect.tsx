@@ -1,23 +1,45 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { LucideSearch } from 'lucide-react';
+import type { ComponentProps } from 'react';
 
-import { Box, Button, Flex, Popover, Text, TextField } from '@radix-ui/themes';
+import { Box, Flex, Popover, Text, TextField } from '@radix-ui/themes';
 
 import { getFilterFunction } from 'helpers/text';
 
-import { OptionsScrollArea } from './styled';
+import { OptionButton, OptionsScrollArea } from './styled';
 import type { SearchSelectItem } from './types';
 
-interface Props {
+type BoxProps = ComponentProps<typeof Box>;
+type PopoverContentProps = ComponentProps<typeof Popover.Content>;
+
+interface SearchSelectProps {
     items: SearchSelectItem[];
     value?: string;
     searchPlaceholder?: string;
     emptyText?: string;
     triggerElement: React.ReactElement;
-    contentWidthMode?: 'trigger' | 'parent';
-    widthContainerRef?: React.RefObject<HTMLElement | null>;
+    triggerWidth?: 'content' | 'full' | NonNullable<BoxProps['width']>;
+    contentWidth?: 'content' | 'trigger' | NonNullable<PopoverContentProps['width']>;
+    contentMinWidth?: PopoverContentProps['minWidth'];
+    contentMaxWidth?: PopoverContentProps['maxWidth'];
     onChange?: (value: string) => void;
 }
+
+const resolveTriggerWidth = (triggerWidth: SearchSelectProps['triggerWidth']) => {
+    if (triggerWidth === 'content') {
+        return undefined;
+    }
+
+    return triggerWidth === 'full' ? '100%' : triggerWidth;
+};
+
+const resolveContentWidth = (contentWidth: SearchSelectProps['contentWidth']) => {
+    if (contentWidth === 'trigger') {
+        return 'var(--radix-popover-trigger-width)';
+    }
+
+    return contentWidth === 'content' ? 'max-content' : contentWidth;
+};
 
 const SearchSelect = ({
     items,
@@ -25,13 +47,14 @@ const SearchSelect = ({
     searchPlaceholder = '',
     emptyText = '',
     triggerElement,
-    contentWidthMode = 'trigger',
-    widthContainerRef,
+    triggerWidth = 'full',
+    contentWidth = 'trigger',
+    contentMinWidth,
+    contentMaxWidth,
     onChange,
-}: Props) => {
+}: SearchSelectProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const [searchValue, setSearchValue] = useState('');
-    const [contentWidth, setContentWidth] = useState<number | null>(null);
 
     const filteredItems = useMemo(() => {
         const filterFunction = getFilterFunction(searchValue);
@@ -47,32 +70,6 @@ const SearchSelect = ({
         });
     }, [items, searchValue]);
 
-    const isParentWidthMode = contentWidthMode === 'parent';
-
-    useEffect(() => {
-        if (!isParentWidthMode || !widthContainerRef?.current) {
-            return;
-        }
-
-        const widthContainerElement = widthContainerRef.current;
-
-        const updateContentWidth = () => {
-            setContentWidth(widthContainerElement.getBoundingClientRect().width);
-        };
-
-        updateContentWidth();
-
-        const resizeObserver = new ResizeObserver(() => {
-            updateContentWidth();
-        });
-
-        resizeObserver.observe(widthContainerElement);
-
-        return () => {
-            resizeObserver.disconnect();
-        };
-    }, [isParentWidthMode, widthContainerRef]);
-
     const onValueChange = (nextValue: string) => {
         onChange?.(nextValue);
         setIsOpen(false);
@@ -87,16 +84,26 @@ const SearchSelect = ({
         }
     };
 
-    const popoverWidth =
-        isParentWidthMode && contentWidth !== null
-            ? `${contentWidth}px`
-            : 'var(--radix-popover-trigger-width)';
+    const resolvedTriggerWidth = resolveTriggerWidth(triggerWidth);
+    const resolvedContentWidth = resolveContentWidth(contentWidth);
+    const resolvedContentMinWidth =
+        contentMinWidth ?? (contentWidth === 'trigger' ? undefined : '0');
 
     return (
         <Popover.Root open={isOpen} onOpenChange={onOpenChange}>
-            <Popover.Trigger>{triggerElement}</Popover.Trigger>
+            <Popover.Trigger>
+                <Box asChild width={resolvedTriggerWidth} minWidth="0">
+                    {triggerElement}
+                </Box>
+            </Popover.Trigger>
 
-            <Popover.Content align="end" sideOffset={4} width={popoverWidth}>
+            <Popover.Content
+                align="end"
+                sideOffset={4}
+                width={resolvedContentWidth}
+                minWidth={resolvedContentMinWidth}
+                maxWidth={contentMaxWidth}
+            >
                 <Flex direction="column" gap="2">
                     <TextField.Root
                         autoFocus
@@ -118,7 +125,7 @@ const SearchSelect = ({
                                     const isSelected = item.value === value;
 
                                     return (
-                                        <Button
+                                        <OptionButton
                                             key={item.value}
                                             type="button"
                                             size="3"
@@ -139,7 +146,7 @@ const SearchSelect = ({
                                                     {item.label}
                                                 </Text>
                                             </Flex>
-                                        </Button>
+                                        </OptionButton>
                                     );
                                 })
                             ) : (
@@ -157,4 +164,4 @@ const SearchSelect = ({
     );
 };
 
-export { SearchSelect };
+export { SearchSelect, type SearchSelectProps };

@@ -2,9 +2,8 @@ import { create } from 'zustand';
 
 import type { User } from 'api/chipin.types';
 import {
-    EXPENSE_CATEGORIES,
+    DEFAULT_EXPENSE_CATEGORY,
     EXPENSE_SPLIT_MODES,
-    type ExpenseCategory,
     type ExpenseSplitMode,
 } from 'constants/chipin';
 import { parseAmountInput } from 'helpers/numbers';
@@ -18,8 +17,6 @@ import {
 export type ExpenseTargetMode = 'group' | 'friends';
 export type ExpenseParticipant = Pick<User, 'id' | 'displayName' | 'picture'>;
 
-const DEFAULT_CATEGORY = Object.keys(EXPENSE_CATEGORIES)[0] as ExpenseCategory;
-
 export type ExpenseModalContext = 'dashboard' | 'friends' | 'group';
 
 export interface ExpenseModalGroup {
@@ -31,6 +28,8 @@ export interface ExpenseModalSource {
     context: ExpenseModalContext;
     currentUser: ExpenseParticipant | null;
     defaultCurrency: string;
+    defaultCategory: string;
+    skipCategory: boolean;
     groups: ExpenseModalGroup[];
     knownFriends: ExpenseParticipant[];
     defaultGroupId?: string;
@@ -89,6 +88,8 @@ const EMPTY_SOURCE: ExpenseModalSource = {
     context: 'dashboard',
     currentUser: null,
     defaultCurrency: '',
+    defaultCategory: DEFAULT_EXPENSE_CATEGORY,
+    skipCategory: false,
     groups: [],
     knownFriends: [],
 };
@@ -104,7 +105,7 @@ const INITIAL_EXPENSE_MODAL_STATE: ExpenseModalState = {
     description: '',
     amount: '',
     currency: '',
-    category: DEFAULT_CATEGORY,
+    category: DEFAULT_EXPENSE_CATEGORY,
     paidById: '',
     splitMode: EXPENSE_SPLIT_MODES.EQUAL,
     percentShares: {},
@@ -222,6 +223,7 @@ const getInitializedState = (
         groupId,
         selectedFriendId,
         currency: source.defaultCurrency,
+        category: source.skipCategory ? '' : source.defaultCategory,
     };
 
     return {

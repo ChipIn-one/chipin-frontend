@@ -138,14 +138,12 @@ const ActivitySubeventsFeed = ({
     }
 
     if (shouldShowSkeleton) {
-        return <ActivityFeedSkeleton isShowSummary={false} />;
+        return <ActivityFeedSkeleton />;
     }
 
     return (
         <ActivityEventsList
             events={subevents}
-            isShowSummary={false}
-            isNavigable={false}
             emptyState={
                 <EmptyState
                     icon={<LucideListTree size={16} />}

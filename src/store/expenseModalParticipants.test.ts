@@ -1,6 +1,7 @@
 import { beforeEach, expect, test } from 'vitest';
 
 import {
+    selectExpenseParticipant,
     selectIsSubmitDisabled,
     selectUsers,
 } from './expenseModalSelectors';
@@ -36,6 +37,8 @@ test('uses a preferred known friend and falls back to the first friend', () => {
         context: 'friends' as const,
         currentUser,
         defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
         groups: [],
         knownFriends: [friend, anotherFriend],
         preferredFriendId: anotherFriend.id,
@@ -58,6 +61,8 @@ test('shows either a fixed direct pair or the selectable friend list', () => {
         context: 'friends',
         currentUser,
         defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
         groups: [],
         knownFriends: [friend, anotherFriend],
         preferredFriendId: friend.id,
@@ -72,6 +77,8 @@ test('shows either a fixed direct pair or the selectable friend list', () => {
         context: 'dashboard',
         currentUser,
         defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
         groups: [],
         knownFriends: [friend, anotherFriend],
     });
@@ -88,6 +95,8 @@ test('requires current user and one known friend for direct expense', () => {
         context: 'friends',
         currentUser,
         defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
         groups: [],
         knownFriends: [friend],
         preferredFriendId: friend.id,
@@ -105,4 +114,21 @@ test('requires current user and one known friend for direct expense', () => {
     });
 
     expect(selectIsSubmitDisabled(useExpenseModalStore.getState())).toBe(true);
+});
+
+test('resolves a participant from the shared split derivation', () => {
+    useExpenseModalStore.getState().initialize({
+        context: 'dashboard',
+        currentUser,
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
+        groups: [],
+        knownFriends: [friend, anotherFriend],
+    });
+
+    const state = useExpenseModalStore.getState();
+
+    expect(selectExpenseParticipant(state, friend.id)).toBe(friend);
+    expect(selectExpenseParticipant(state, 'missing-user')).toBeUndefined();
 });

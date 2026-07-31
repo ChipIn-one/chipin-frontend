@@ -43,6 +43,8 @@ test('initializes a group expense with equal split defaults', () => {
         context: 'group',
         currentUser,
         defaultCurrency: 'AED',
+        defaultCategory: 'transport',
+        skipCategory: false,
         groups: [{ id: 'group-1', members: [groupMember, currentUser] }],
         knownFriends: [friend],
         defaultGroupId: 'group-1',
@@ -52,6 +54,7 @@ test('initializes a group expense with equal split defaults', () => {
 
     expect(state.targetMode).toBe('group');
     expect(state.currency).toBe('AED');
+    expect(state.category).toBe('transport');
     expect(selectUserIds(state)).toEqual([
         currentUser.id,
         groupMember.id,
@@ -61,6 +64,28 @@ test('initializes a group expense with equal split defaults', () => {
         [groupMember.id]: true,
     });
     expect(selectPayerId(state)).toBe(currentUser.id);
+});
+
+test('builds a null category payload when category selection is skipped', () => {
+    const store = useExpenseModalStore.getState();
+
+    store.initialize({
+        context: 'group',
+        currentUser,
+        defaultCurrency: 'USD',
+        defaultCategory: 'transport',
+        skipCategory: true,
+        groups: [{ id: 'group-1', members: [currentUser, groupMember] }],
+        knownFriends: [],
+        defaultGroupId: 'group-1',
+    });
+    store.setAmount('100');
+
+    const state = useExpenseModalStore.getState();
+
+    expect(state.category).toBe('');
+    expect(state.source.skipCategory).toBe(true);
+    expect(selectExpensePayload(state, 1_717_200_000)?.category).toBeNull();
 });
 
 test('owns the global modal opening context', () => {
@@ -91,6 +116,8 @@ test('keeps a direct expense limited to current user and one known friend', () =
         context: 'friends',
         currentUser,
         defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
         groups: [],
         knownFriends: [friend, groupMember],
         preferredFriendId: friend.id,
@@ -117,6 +144,8 @@ test('replaces the selected dashboard friend and clears progress when none is se
         context: 'dashboard',
         currentUser,
         defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
         groups: [],
         knownFriends: [friend, groupMember],
     });
@@ -147,6 +176,8 @@ test('allows a group payer to be excluded from the expense participants', () => 
         context: 'group',
         currentUser,
         defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
         groups: [{ id: 'group-1', members: [currentUser, groupMember] }],
         knownFriends: [],
         defaultGroupId: 'group-1',
@@ -169,6 +200,8 @@ test('allows submitting an expense without a description', () => {
         context: 'group',
         currentUser,
         defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
         groups: [{ id: 'group-1', members: [currentUser, groupMember] }],
         knownFriends: [],
         defaultGroupId: 'group-1',
@@ -187,6 +220,8 @@ test('builds shares payload and validation from store state', () => {
         context: 'friends',
         currentUser,
         defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
         groups: [],
         knownFriends: [friend],
         preferredFriendId: friend.id,

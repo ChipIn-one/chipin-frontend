@@ -1,11 +1,18 @@
+import type { LucideIcon } from 'lucide-react';
 import { LucideChartBar, LucideChartPie, LucideSettings, LucideUsers } from 'lucide-react';
 
 import { ROUTES } from 'constants/routes';
 
-export const NAV_ELEMENTS = [
+interface NavElement {
+    labelKey: string;
+    href: string;
+    Icon: LucideIcon;
+}
+
+const getNavElements = (homeRoute: string): NavElement[] => [
     {
         labelKey: 'nav.dashboard',
-        href: ROUTES.DASHBOARD,
+        href: homeRoute,
         Icon: LucideChartPie,
     },
     {
@@ -24,3 +31,5 @@ export const NAV_ELEMENTS = [
         Icon: LucideSettings,
     },
 ];
+
+export { getNavElements, type NavElement };

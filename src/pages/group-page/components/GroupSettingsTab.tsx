@@ -15,7 +15,7 @@ import { Avatar, Badge, Box, Button, Card, Flex, Separator, Switch, Text } from 
 
 import type { Group } from 'api/chipin.types';
 import { useGroupInvite } from 'hooks/pwaHooks';
-import { useUsersStore } from 'store/usersStore';
+import { useUsersStore } from 'store/users-store';
 
 /**
  * A plain button reset used as the interactive wrapper for settings-list rows.

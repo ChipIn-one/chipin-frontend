@@ -15,6 +15,10 @@
         "title": "ChipIn — Dashboard",
         "description": "View and manage your balances"
     },
+    "solo": {
+        "title": "ChipIn — Solo",
+        "description": "View your personal expense workspace"
+    },
     "group": {
         "title": "ChipIn — Group",
         "titleWithName": "ChipIn — {{groupName}}",

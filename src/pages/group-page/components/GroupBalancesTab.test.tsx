@@ -3,7 +3,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import type { Group, User } from 'api/chipin.types';
-import { useUsersStore } from 'store/usersStore';
+import { useUsersStore } from 'store/users-store';
 
 import GroupBalancesTab from './GroupBalancesTab';
 
@@ -22,10 +22,15 @@ const currentUser = {
     subscriptionUntil: null,
     settings: {
         defaultCurrency: 'USD',
+        defaultCategory: 'food',
         timeFormat: '12h',
         language: 'en',
         theme: 'system',
         simplifyDebts: true,
+        skipCategory: false,
+        soloModeByDefault: false,
+        saveGroupExpensesToSolo: false,
+        sex: 'male',
     },
     createdAt: 1,
     updatedAt: 1,

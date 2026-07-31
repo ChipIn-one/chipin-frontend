@@ -1,22 +1,21 @@
 import { UserAvatar } from 'basics';
-import {
-    LucideArrowRight,
-    LucideLogIn,
-    LucideMenu,
-} from 'lucide-react';
+import { LucideArrowRight, LucideLogIn, LucideMenu } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import styled from 'styled-components';
+import { useShallow } from 'zustand/react/shallow';
 
 import { Box, Button, Container, Flex, IconButton, Link, Text } from '@radix-ui/themes';
 
 import { PROJECT_NAME } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
 import { themeColor } from 'helpers/colors';
+import { getPreferredModeRoute } from 'helpers/routes';
 import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
-import { selectIsUserAdmin } from 'store/usersSelectors';
-import { useUsersStore } from 'store/usersStore';
+import { selectIsSoloMode } from 'store/dashboardSelectors';
+import { useDashboardStore } from 'store/dashboardStore';
+import { selectIsUserAdmin, useUsersStore } from 'store/users-store';
 
 import { NavButton } from 'basics/buttons';
 
@@ -92,8 +91,13 @@ const LandingMobileMenu = () => {
 const Header = () => {
     const isAuthResolved = useAuthStore(selectIsAuthResolved);
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
-    const user = useUsersStore(s => s.user);
-    const canShowDevMenu = useUsersStore(selectIsUserAdmin);
+    const { user, canShowDevMenu } = useUsersStore(
+        useShallow(state => ({
+            user: state.user,
+            canShowDevMenu: selectIsUserAdmin(state),
+        })),
+    );
+    const isSoloMode = useDashboardStore(selectIsSoloMode);
     const location = useLocation();
     const { t } = useTranslation();
 
@@ -102,12 +106,15 @@ const Header = () => {
     }
 
     const isLandingPage = !isLoggedIn && location.pathname === ROUTES.HOME;
+    const logoRoute = isLoggedIn
+        ? getPreferredModeRoute(isSoloMode)
+        : ROUTES.HOME;
 
     return (
         <StickyBox display={isLoggedIn ? { initial: 'none', sm: 'block' } : undefined}>
             <Container size="4" p="4">
                 <Flex justify="between" align="center">
-                    <NavButton to={isLoggedIn ? ROUTES.DASHBOARD : ROUTES.HOME} unsetStyles>
+                    <NavButton to={logoRoute} unsetStyles>
                         <Flex gap="4" align="center" justify="center">
                             <StyledLogotype />
 

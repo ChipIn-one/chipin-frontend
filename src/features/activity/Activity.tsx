@@ -1,12 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { LucideChevronsDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
 import { Flex, Spinner, Text } from '@radix-ui/themes';
+import { useIntersectionObserver } from '@uidotdev/usehooks';
 
 import { ACTIVITY_ACTIONS } from 'constants/activity';
-import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 import { selectActivityFeed, useActivityStore } from 'store/activity-store';
 import { selectActivityLoading, selectActivityNextPageLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
@@ -47,11 +47,13 @@ const Activity = () => {
 
     const isEndOfFeed = !isNextPageLoading && !hasMore && items.length > 0;
 
-    const sentinelRef = useInfiniteScroll({
-        hasMore,
-        isLoading: isNextPageLoading,
-        onLoadMore: fetchMoreActivity,
-    });
+    const [sentinelRef, sentinelEntry] = useIntersectionObserver({ threshold: 0 });
+
+    useEffect(() => {
+        if (sentinelEntry?.isIntersecting && hasMore && !isNextPageLoading) {
+            void fetchMoreActivity();
+        }
+    }, [sentinelEntry?.isIntersecting, hasMore, isNextPageLoading, fetchMoreActivity]);
 
     return (
         <>
@@ -62,13 +64,9 @@ const Activity = () => {
             />
 
             {isLoading ? (
-                <ActivityFeedSkeleton isShowSummary={false} />
+                <ActivityFeedSkeleton />
             ) : (
-                <ActivityEventsList
-                    events={filteredItems}
-                    isShowSummary={false}
-                    isNavigable={false}
-                >
+                <ActivityEventsList events={filteredItems}>
                     <>
                         {isNextPageLoading && (
                             <Flex justify="center" py="4">

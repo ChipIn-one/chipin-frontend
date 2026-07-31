@@ -5,11 +5,14 @@ import styled from 'styled-components';
 import { Box, Flex, Text } from '@radix-ui/themes';
 
 import { ROUTES } from 'constants/routes';
+import { getPreferredModeRoute } from 'helpers/routes';
+import { selectIsSoloMode } from 'store/dashboardSelectors';
+import { useDashboardStore } from 'store/dashboardStore';
 
 import { NavButton } from 'basics/buttons';
 import AddExpenseButton from 'components/AddExpenseButton';
 
-import { NAV_ELEMENTS } from './constants';
+import { getNavElements, type NavElement } from './constants';
 
 const BoxWrapper = styled(Box)`
     z-index: 10;
@@ -53,20 +56,24 @@ const MobileNavItemButton = styled(NavButton)`
 const MobileNavBar = () => {
     const location = useLocation();
     const { t } = useTranslation('common');
+    const isSoloMode = useDashboardStore(selectIsSoloMode);
+    const activeColor = isSoloMode ? 'violet' : 'green';
+    const navElements = getNavElements(
+        getPreferredModeRoute(isSoloMode),
+    );
 
     const isVisibleExpenseButton = location.pathname !== ROUTES.SETTINGS;
 
-    const renderNavItem = ({ labelKey, href, Icon }: (typeof NAV_ELEMENTS)[number]) => {
+    const renderNavItem = ({ labelKey, href, Icon }: NavElement) => {
         const isActive = location.pathname === href || location.pathname.startsWith(`${href}/`);
 
         return (
             <Box key={href} flexGrow="1">
                 <MobileNavItemButton
                     to={href}
-                    color="green"
+                    color={isActive ? activeColor : 'gray'}
                     radius="none"
                     variant={isActive ? 'solid' : 'surface'}
-                    {...(!isActive && { color: 'gray' })}
                 >
                     <Flex direction="column" align="center" justify="center" gap="1" py="1">
                         <Icon size={20} />
@@ -91,7 +98,7 @@ const MobileNavBar = () => {
 
             <NavContent align="stretch">
                 <NavItems justify="between" align="stretch">
-                    {NAV_ELEMENTS.map(renderNavItem)}
+                    {navElements.map(renderNavItem)}
                 </NavItems>
 
                 <CenterAction>

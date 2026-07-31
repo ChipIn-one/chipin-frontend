@@ -4,18 +4,22 @@
     "account": {
         "title": "Conta",
         "description": "Informações pessoais e definições do perfil.",
-        "displayNamePlaceholder": "O seu nome ou alcunha"
+        "displayNamePlaceholder": "O seu nome ou alcunha",
+        "sexOptions": {
+            "male": "Masculino",
+            "female": "Feminino"
+        }
     },
     "regional": {
         "title": "Preferências regionais",
-        "description": "Fuso horário, idioma e moeda do seu espaço de trabalho.",
-        "autoTimezone": "Detetar fuso horário automaticamente",
-        "autoTimezoneHint": "Fuso horário atual: {{timezone}}",
+        "description": "Fuso horário, idioma e formato da hora.",
+        "autoTimezone": "O seu fuso horário",
+        "autoTimezoneHint": "Detetado automaticamente.",
         "timeFormatTitle": "Formato de hora",
-        "timeFormatDescription": "Escolha como os horários são apresentados na aplicação.",
-        "currencySearchPlaceholder": "Pesquisar moeda",
-        "currencySearchEmpty": "Nenhuma moeda encontrada.",
-        "languageHint": "Escolha o idioma preferido da aplicação."
+        "timeFormatDescription": "Escolha o formato da hora.",
+        "languageSearchPlaceholder": "Pesquisar idioma",
+        "languageSearchEmpty": "Nenhum idioma encontrado.",
+        "resetLanguage": "Repor idioma"
     },
     "language": {
         "options": {
@@ -29,6 +33,7 @@
     "notifications": {
         "title": "Notificações",
         "description": "Gira como recebe atualizações.",
+        "workInProgress": "Ainda estamos a trabalhar nas notificações.",
         "pushTitle": "Notificações push",
         "pushDescription": "Receba notificações no seu dispositivo.",
         "emailTitle": "Atualizações por e-mail",
@@ -38,9 +43,26 @@
         "weeklySummaryTitle": "Resumo semanal",
         "weeklySummaryDescription": "Digest semanal dos seus gastos."
     },
+    "expense": {
+        "title": "Preferências de despesas",
+        "description": "Predefinições e comportamento para novas despesas.",
+        "defaultCategoryTitle": "Categoria predefinida",
+        "skipCategoryTitle": "Ignorar categoria",
+        "skipCategoryDescription": "Crie despesas sem escolher uma categoria.",
+        "simplifyDebtsTitle": "Simplificar dívidas do grupo",
+        "simplifyDebtsDescription": "Reduz automaticamente o número de pagamentos necessários nos grupos."
+    },
+    "solo": {
+        "title": "Preferências do Solo",
+        "description": "Predefinições e comportamento do Modo Solo.",
+        "soloModeTitle": "Modo Solo por predefinição",
+        "soloModeDescription": "Abra o ChipIn no Modo Solo.",
+        "saveGroupToSoloTitle": "Guardar despesas de grupo no Solo",
+        "saveGroupToSoloDescription": "Guarde também despesas de grupo nos registos Solo."
+    },
     "app": {
         "title": "Definições da aplicação",
-        "description": "Aparência e comportamento do cálculo de despesas.",
+        "description": "Aparência e informações da aplicação.",
         "themeTitle": "Tema",
         "themeDescription": "Escolha como o ChipIn aparece no seu dispositivo.",
         "themeOptions": {
@@ -48,12 +70,8 @@
             "light": "Claro",
             "system": "Sistema"
         },
-        "simplifyDebtsTitle": "Simplificar dívidas do grupo",
-        "simplifyDebtsDescription": "Reduz automaticamente o número de pagamentos necessários nos grupos.",
-        "autoSplitTitle": "Divisão automática igualitária",
-        "autoSplitDescription": "Dividir igualmente por predefinição ao adicionar despesas.",
         "versionTitle": "Versão da aplicação",
-        "versionDescription": "Build atual instalada neste dispositivo.",
+        "versionDescription": "Versão atualmente instalada.",
         "updateButton": "Atualizar aplicação"
     },
     "security": {

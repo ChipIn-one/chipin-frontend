@@ -29,6 +29,8 @@ beforeEach(() => {
         context: 'group',
         currentUser,
         defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
         groups: [{ id: 'group-1', members: [currentUser, groupMember] }],
         knownFriends: [],
         defaultGroupId: 'group-1',

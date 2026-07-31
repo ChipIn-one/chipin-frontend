@@ -7,7 +7,7 @@ import { Button, Callout, Flex } from '@radix-ui/themes';
 
 import { selectSettlementAdding } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/usersStore';
+import { useUsersStore } from 'store/users-store';
 
 import type { SelectItem } from 'components/Select';
 

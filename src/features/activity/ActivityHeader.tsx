@@ -36,15 +36,11 @@ const ActivityHeader = ({ isLoading, activeFilter, onFilterChange }: Props) => {
 
                     <Flex direction="column">
                         <Text size="4" weight="medium" mb="1">
-                            <Skeleton loading={isLoading}>
-                                {t('title')}
-                            </Skeleton>
+                            <Skeleton loading={isLoading}>{t('title')}</Skeleton>
                         </Text>
 
                         <Text size="2" color="gray">
-                            <Skeleton loading={isLoading}>
-                                {t('subtitle')}
-                            </Skeleton>
+                            <Skeleton loading={isLoading}>{t('subtitle')}</Skeleton>
                         </Text>
                     </Flex>
                 </Flex>

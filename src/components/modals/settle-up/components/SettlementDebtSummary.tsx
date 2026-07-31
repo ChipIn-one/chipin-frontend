@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, Flex } from '@radix-ui/themes';
 
 import type { FriendUser, UserSummary } from 'api/chipin.types';
-import { selectUserPreferredName } from 'store/usersSelectors';
+import { selectUserPreferredName } from 'store/users-store';
 
 import { DebtAmount, ParticipantName } from '../styled';
 

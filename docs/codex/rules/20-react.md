@@ -10,6 +10,9 @@
 - Prefer named exports; default exports remain only where an existing boundary requires them.
 - Do not define components inside another component's render.
 - Keep props minimal and semantic. Use discriminated unions when valid prop combinations differ.
+- Optional boolean feature and display props default to `false`. Static callers omit the prop for
+  `false` and use JSX shorthand for `true` (`<ActivityFeedSkeleton isShowSummary />`). Forward
+  runtime boolean values explicitly with `prop={value}`.
 - Local handlers and callback props use `on*` only.
 
 ## State

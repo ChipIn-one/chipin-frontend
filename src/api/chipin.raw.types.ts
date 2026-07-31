@@ -11,13 +11,19 @@ export type CurrenciesRates = Record<string, number>;
 
 export type ApiUserRole = 'USER' | 'ADMIN';
 export type ApiUserTheme = 'light' | 'dark' | 'system';
+export type ApiUserSex = 'male' | 'female';
 
 export interface ApiUserSettings {
     defaultCurrency: string;
+    defaultCategory: string;
     timeFormat: '12h' | '24h';
     language: string;
     theme: ApiUserTheme;
     simplifyDebts: boolean;
+    skipCategory: boolean;
+    soloModeByDefault: boolean;
+    saveGroupExpensesToSolo: boolean;
+    sex: ApiUserSex;
 }
 
 export interface ApiUpdateUserRequest {

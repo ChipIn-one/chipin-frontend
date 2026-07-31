@@ -13,6 +13,11 @@ import { ProtectedRoute } from './ProtectedRoute';
 
 const HomePage = lazy(() => import('pages/HomePage'));
 const DashboardPage = lazy(() => import('pages/DashboardPage'));
+const SoloPage = lazy(() =>
+    import('pages/solo-page').then(module => ({
+        default: module.SoloPage,
+    })),
+);
 const GroupPage = lazy(() => import('pages/group-page'));
 const ActivityPage = lazy(() => import('pages/ActivityPage'));
 const ActivitySubeventsPage = lazy(() =>
@@ -43,6 +48,14 @@ const AppRouter = () => {
                     element={
                         <ProtectedRoute>
                             <DashboardPage />
+                        </ProtectedRoute>
+                    }
+                />
+                <Route
+                    path={ROUTES.SOLO}
+                    element={
+                        <ProtectedRoute>
+                            <SoloPage />
                         </ProtectedRoute>
                     }
                 />

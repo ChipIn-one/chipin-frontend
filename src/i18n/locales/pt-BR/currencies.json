@@ -1,4 +1,6 @@
 {
+    "searchPlaceholder": "Buscar moeda",
+    "searchEmpty": "Nenhuma moeda encontrada.",
     "USD": "USD - Dólar americano",
     "EUR": "EUR - Euro",
     "RUB": "RUB - Rublo russo",

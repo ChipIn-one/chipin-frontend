@@ -33,9 +33,13 @@ const GroupTabsContent = ({ group }: Props) => {
                 <Box>
                     <Tabs.Content value="expenses">
                         {isGroupDataLoading ? (
-                            <ActivityFeedSkeleton />
+                            <ActivityFeedSkeleton isShowSummary />
                         ) : (
-                            <ActivityEventsList events={activityItems} />
+                            <ActivityEventsList
+                                events={activityItems}
+                                isShowSummary
+                                isNavigable
+                            />
                         )}
                     </Tabs.Content>
 

@@ -7,16 +7,17 @@ import { useShallow } from 'zustand/react/shallow';
 import { ROUTES } from 'constants/routes';
 import { getUnixTimestampInSec } from 'helpers/time';
 import { useActivityStore } from 'store/activity-store';
-import {
-    selectExpensePayload,
-    selectIsSubmitDisabled,
-} from 'store/expenseModalSelectors';
+import { selectExpensePayload, selectIsSubmitDisabled } from 'store/expenseModalSelectors';
 import { type ExpenseModalSource, useExpenseModalStore } from 'store/expenseModalStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectExpenseAdding } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
-import { selectUserCurrency } from 'store/usersSelectors';
-import { useUsersStore } from 'store/usersStore';
+import {
+    selectUserCurrency,
+    selectUserDefaultCategory,
+    selectUserSkipCategory,
+    useUsersStore,
+} from 'store/users-store';
 
 export const useExpenseModalOpenChange = (isOpened: boolean, onOpenChange: () => void): void => {
     const previousIsOpened = useRef(false);
@@ -62,11 +63,13 @@ export const useExpenseModalSource = ({
     friendId,
 }: ExpenseModalSourceOptions): ExpenseModalSource => {
     const location = useLocation();
-    const { user, friends, defaultCurrency } = useUsersStore(
+    const { user, friends, defaultCurrency, defaultCategory, skipCategory } = useUsersStore(
         useShallow(state => ({
             user: state.user,
             friends: state.friends,
             defaultCurrency: selectUserCurrency(state),
+            defaultCategory: selectUserDefaultCategory(state),
+            skipCategory: selectUserSkipCategory(state),
         })),
     );
 
@@ -83,6 +86,8 @@ export const useExpenseModalSource = ({
             context: openingContext,
             currentUser: user,
             defaultCurrency,
+            defaultCategory,
+            skipCategory,
             groups: groups.map(group => ({
                 id: group.id,
                 members: group.members.map(member => member.user),
@@ -93,11 +98,13 @@ export const useExpenseModalSource = ({
         }),
         [
             defaultCurrency,
+            defaultCategory,
             friendId,
             friends,
             groups,
             openingContext,
             selectedGroup?.id,
+            skipCategory,
             user,
         ],
     );
@@ -107,9 +114,8 @@ export const useExpenseModalSubmit = (onClose: () => void): ExpenseModalSubmitRe
     const { t } = useTranslation('group');
     const createExpense = useActivityStore(state => state.createExpense);
     const isSubmitting = useLoadingStore(selectExpenseAdding);
-    const isSubmitDisabled = useExpenseModalStore(
-        selectIsSubmitDisabled,
-    );
+    const isSubmitDisabled = useExpenseModalStore(selectIsSubmitDisabled);
+
     const onSubmit = useCallback(() => {
         const params = selectExpensePayload(
             useExpenseModalStore.getState(),

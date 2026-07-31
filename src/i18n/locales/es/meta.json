@@ -15,6 +15,10 @@
         "title": "ChipIn — Panel",
         "description": "Consulta y gestiona tus balances"
     },
+    "solo": {
+        "title": "ChipIn — Solo",
+        "description": "Consulta tu espacio personal de gastos"
+    },
     "group": {
         "title": "ChipIn — Grupo",
         "titleWithName": "ChipIn — {{groupName}}",

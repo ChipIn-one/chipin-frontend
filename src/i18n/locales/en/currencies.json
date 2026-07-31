@@ -1,4 +1,6 @@
 {
+    "searchPlaceholder": "Search currency",
+    "searchEmpty": "No currencies found.",
     "USD": "USD - US Dollar",
     "EUR": "EUR - Euro",
     "RUB": "RUB - Russian Ruble",

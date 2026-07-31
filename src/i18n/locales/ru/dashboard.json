@@ -27,5 +27,10 @@
     "header": {
         "greeting": "Привет, {{name}}",
         "overview": "Вот твоя сводка"
+    },
+    "solo": {
+        "summaryTitle": "Сводка Solo",
+        "activityTitle": "Активность Solo",
+        "inDevelopment": "Ещё в разработке."
     }
 }

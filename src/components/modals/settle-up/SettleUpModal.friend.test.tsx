@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 
 import type { CreateSettlementParams, User } from 'api/chipin.types';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/usersStore';
+import { useUsersStore } from 'store/users-store';
 
 import SettleUpModal from './SettleUpModal';
 
@@ -31,10 +31,15 @@ const currentUser = {
     subscriptionUntil: null,
     settings: {
         defaultCurrency: 'USD',
+        defaultCategory: 'food',
         timeFormat: '12h',
         language: 'en',
         theme: 'system',
         simplifyDebts: true,
+        skipCategory: false,
+        soloModeByDefault: false,
+        saveGroupExpensesToSolo: false,
+        sex: 'male',
     },
     createdAt: 1,
     updatedAt: 1,

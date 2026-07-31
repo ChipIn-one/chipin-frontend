@@ -9,7 +9,7 @@ import { useActivityStore } from 'store/activity-store';
 import { useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/usersStore';
+import { useUsersStore } from 'store/users-store';
 
 import { ActivitySubeventsButtons } from './ActivitySubeventsButtons';
 

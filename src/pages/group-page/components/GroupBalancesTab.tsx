@@ -5,7 +5,7 @@ import { Avatar, Button, Card, Flex, Text } from '@radix-ui/themes';
 
 import type { Group } from 'api/chipin.types';
 import { buildGroupInviteLink } from 'helpers/url';
-import { useUsersStore } from 'store/usersStore';
+import { useUsersStore } from 'store/users-store';
 
 import BalanceSummaryText from 'basics/BalanceSummaryText';
 import { NoGroupMembersEmptyState } from 'basics/empty-states';

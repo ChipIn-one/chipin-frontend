@@ -1,13 +1,11 @@
 import type { AuthTokens } from 'helpers/localStorage';
 
 import { apiInstance } from './chipin.instance';
-import type { ApiFriendsResponse } from './chipin.raw.types';
 import type {
     ApiCurrencyRatesResponse,
     ApiOAuthTokenPairResponse,
     ApiRefreshTokenPairResponse,
     ApiRemoveGroupResponse,
-    ApiUserResponse,
     CreateGroupParams,
     Dashboard,
     Group,
@@ -15,9 +13,7 @@ import type {
     KickGroupMemberParams,
     LeaveGroupParams,
     RemoveGroupParams,
-    RemoveKnownUserParams,
     UpdateGroupParams,
-    UpdateUserParams,
 } from './chipin.types';
 
 // =============== GROUPS AND USERS ===============
@@ -135,24 +131,4 @@ export const fetchApiCurrencyRates = (): Promise<ApiCurrencyRatesResponse> => {
             },
         })
         .then(result => result.data);
-};
-
-export const fetchApiUser = (): Promise<ApiUserResponse> => {
-    return apiInstance.get(`/users/self`).then(result => result.data);
-};
-
-export const updateApiUser = (params: UpdateUserParams): Promise<ApiUserResponse> => {
-    return apiInstance
-        .patch<ApiUserResponse>('/users/self', params)
-        .then(response => response.data);
-};
-
-export const fetchApiKnownUsers = (): Promise<ApiFriendsResponse> => {
-    return apiInstance.get(`/users/known-users`).then(result => result.data);
-};
-
-export const removeApiKnownUser = ({ userId }: RemoveKnownUserParams): Promise<void> => {
-    return apiInstance
-        .delete<void>(`/users/known-users/${userId}`)
-        .then(() => undefined);
 };

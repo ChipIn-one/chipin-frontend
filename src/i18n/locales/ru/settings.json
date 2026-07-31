@@ -4,18 +4,22 @@
     "account": {
         "title": "Аккаунт",
         "description": "Личная информация и настройки профиля.",
-        "displayNamePlaceholder": "Ваше имя или ник"
+        "displayNamePlaceholder": "Ваше имя или ник",
+        "sexOptions": {
+            "male": "Мужской",
+            "female": "Женский"
+        }
     },
     "regional": {
         "title": "Региональные параметры",
-        "description": "Часовой пояс, язык и валюта рабочего пространства.",
-        "autoTimezone": "Определять часовой пояс автоматически",
-        "autoTimezoneHint": "Текущий часовой пояс: {{timezone}}",
+        "description": "Часовой пояс, язык и формат времени.",
+        "autoTimezone": "Ваш часовой пояс",
+        "autoTimezoneHint": "Определяется автоматически.",
         "timeFormatTitle": "Формат времени",
-        "timeFormatDescription": "Выберите, как отображается время в приложении.",
-        "currencySearchPlaceholder": "Найти валюту",
-        "currencySearchEmpty": "Валюты не найдены.",
-        "languageHint": "Выберите предпочтительный язык приложения."
+        "timeFormatDescription": "Выберите формат времени.",
+        "languageSearchPlaceholder": "Найти язык",
+        "languageSearchEmpty": "Языки не найдены.",
+        "resetLanguage": "Сбросить язык"
     },
     "language": {
         "options": {
@@ -29,6 +33,7 @@
     "notifications": {
         "title": "Уведомления",
         "description": "Настройте, как вы получаете обновления.",
+        "workInProgress": "Мы ещё работаем над уведомлениями.",
         "pushTitle": "Push-уведомления",
         "pushDescription": "Получать уведомления на устройстве.",
         "emailTitle": "Обновления по почте",
@@ -38,9 +43,26 @@
         "weeklySummaryTitle": "Еженедельная сводка",
         "weeklySummaryDescription": "Еженедельный дайджест ваших расходов."
     },
+    "expense": {
+        "title": "Настройки расходов",
+        "description": "Значения по умолчанию и поведение новых расходов.",
+        "defaultCategoryTitle": "Категория по умолчанию",
+        "skipCategoryTitle": "Пропускать категорию",
+        "skipCategoryDescription": "Создавать расходы без выбора категории.",
+        "simplifyDebtsTitle": "Упрощать долги в группе",
+        "simplifyDebtsDescription": "Автоматически уменьшать количество переводов между участниками."
+    },
+    "solo": {
+        "title": "Настройки Solo",
+        "description": "Значения по умолчанию и поведение сольного режима.",
+        "soloModeTitle": "Сольный режим по умолчанию",
+        "soloModeDescription": "Открывать ChipIn в сольном режиме.",
+        "saveGroupToSoloTitle": "Сохранять групповые расходы в Solo",
+        "saveGroupToSoloDescription": "Также сохранять групповые расходы в записях Solo."
+    },
     "app": {
         "title": "Настройки приложения",
-        "description": "Внешний вид и логика расчёта расходов.",
+        "description": "Внешний вид и информация о приложении.",
         "themeTitle": "Тема",
         "themeDescription": "Выберите, как выглядит ChipIn на вашем устройстве.",
         "themeOptions": {
@@ -48,12 +70,8 @@
             "light": "Светлая",
             "system": "Системная"
         },
-        "simplifyDebtsTitle": "Упрощать долги в группе",
-        "simplifyDebtsDescription": "Автоматически уменьшать количество переводов между участниками.",
-        "autoSplitTitle": "Авто-разделение поровну",
-        "autoSplitDescription": "По умолчанию делить расходы поровну при добавлении.",
         "versionTitle": "Версия приложения",
-        "versionDescription": "Текущая сборка, установленная на этом устройстве.",
+        "versionDescription": "Текущая установленная версия.",
         "updateButton": "Обновить приложение"
     },
     "security": {

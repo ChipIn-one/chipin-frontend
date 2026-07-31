@@ -9,7 +9,7 @@ interface Props {
     isShowSummary?: boolean;
 }
 
-const ActivityFeedSkeleton = ({ isShowSummary = true }: Props) => (
+const ActivityFeedSkeleton = ({ isShowSummary = false }: Props) => (
     <Flex direction="column" gap="2">
         <ActivityDateDividerSkeleton isShowSummary={isShowSummary} />
 

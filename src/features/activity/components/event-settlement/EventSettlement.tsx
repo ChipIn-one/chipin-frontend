@@ -10,7 +10,7 @@ import {
     type SettlementCreatedAction,
     type SettlementReversedAction,
 } from 'constants/activity';
-import { useUsersStore } from 'store/usersStore';
+import { useUsersStore } from 'store/users-store';
 
 import { SettlementParticipants } from './components';
 import { AmountText } from './styled';

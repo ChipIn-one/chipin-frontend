@@ -18,6 +18,7 @@ import Image from './Image';
 import { Amount } from './numbers';
 import OwedStatusText from './OwedStatusText';
 import PageLoader from './PageLoader';
+import { RadioGroup, type RadioGroupItem } from './RadioGroup';
 import RelativeTime from './RelativeTime';
 import UserAvatar from './UserAvatar';
 
@@ -40,6 +41,8 @@ export {
     NoGroupsEmptyState,
     OwedStatusText,
     PageLoader,
+    RadioGroup,
+    type RadioGroupItem,
     RelativeTime,
     UserAvatar,
 };

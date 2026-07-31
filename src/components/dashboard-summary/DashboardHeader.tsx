@@ -6,8 +6,7 @@ import { Box, Flex, Heading, Skeleton, Text } from '@radix-ui/themes';
 import { ROUTES } from 'constants/routes';
 import { selectUserSelfLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
-import { selectIsUserAdmin } from 'store/usersSelectors';
-import { useUsersStore } from 'store/usersStore';
+import { selectIsUserAdmin, useUsersStore } from 'store/users-store';
 
 import { NavButton } from 'basics/buttons';
 import DevMenu from 'components/DevMenu';

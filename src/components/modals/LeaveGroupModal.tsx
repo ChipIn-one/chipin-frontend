@@ -10,7 +10,7 @@ import { ROUTES } from 'constants/routes';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupLeaving } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/usersStore';
+import { useUsersStore } from 'store/users-store';
 
 import Select, { SelectItem } from 'components/Select';
 

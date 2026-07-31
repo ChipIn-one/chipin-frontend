@@ -13,8 +13,7 @@ import { useExpenseModalStore } from 'store/expenseModalStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupDataFetched, selectGroupDataLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
-import { selectUserCurrency } from 'store/usersSelectors';
-import { useUsersStore } from 'store/usersStore';
+import { selectUserCurrency, useUsersStore } from 'store/users-store';
 
 import GroupsCards from 'components/GroupsCards';
 import GroupsSectionHeader from 'components/GroupsSectionHeader';

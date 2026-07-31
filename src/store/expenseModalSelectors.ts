@@ -5,30 +5,29 @@ import {
     type ExpenseSplitStatus,
 } from 'constants/chipin';
 
-import type {
-    ExpenseModalState,
-    ExpenseModalStore,
-    ExpenseParticipant,
-} from './expenseModalStore';
+import type { ExpenseModalState, ExpenseModalStore, ExpenseParticipant } from './expenseModalStore';
 
 type ShareColor = 'gray' | 'jade' | 'red';
 
 const roundMoney = (value: number) => Math.round(value * 100) / 100;
 
-const putCurrentUserFirst = (
-    users: ExpenseParticipant[],
-    currentUserId?: string,
-) => {
-    const currentUser = users.find(user => user.id === currentUserId);
+const putCurrentUserFirst = (users: ExpenseParticipant[], currentUserId?: string) => {
+    const otherUsers: ExpenseParticipant[] = [];
+    let currentUser: ExpenseParticipant | undefined;
+
+    for (const user of users) {
+        if (user.id === currentUserId) {
+            currentUser = user;
+        } else {
+            otherUsers.push(user);
+        }
+    }
 
     if (!currentUser) {
         return users;
     }
 
-    return [
-        currentUser,
-        ...users.filter(user => user.id !== currentUserId),
-    ];
+    return [currentUser, ...otherUsers];
 };
 
 const getDirectExpenseUsers = (state: ExpenseModalState) => {
@@ -44,8 +43,8 @@ const getDirectExpenseUsers = (state: ExpenseModalState) => {
         friend => friend.id === state.selectedFriendId,
     );
 
-    return [currentUser, selectedFriend].filter(
-        (user): user is ExpenseParticipant => Boolean(user),
+    return [currentUser, selectedFriend].filter((user): user is ExpenseParticipant =>
+        Boolean(user),
     );
 };
 
@@ -53,8 +52,7 @@ export const selectUsers = (state: ExpenseModalState) => {
     const users =
         state.targetMode === 'friends'
             ? getDirectExpenseUsers(state)
-            : (state.source.groups.find(group => group.id === state.groupId)
-                  ?.members ?? []);
+            : (state.source.groups.find(group => group.id === state.groupId)?.members ?? []);
 
     return putCurrentUserFirst(users, state.source.currentUser?.id);
 };
@@ -62,19 +60,13 @@ export const selectUsers = (state: ExpenseModalState) => {
 export const selectIncludedUsers = (state: ExpenseModalState) => {
     const users = selectUsers(state);
 
-    return users.filter(
-        user => state.includedParticipantIds[user.id] !== false,
-    );
+    return users.filter(user => state.includedParticipantIds[user.id] !== false);
 };
 
 export const selectPayerUsers = (state: ExpenseModalStore) =>
-    state.targetMode === 'friends'
-        ? selectIncludedUsers(state)
-        : selectUsers(state);
+    state.targetMode === 'friends' ? selectIncludedUsers(state) : selectUsers(state);
 
-export const selectPayerId = (state: ExpenseModalStore) => {
-    const users = selectPayerUsers(state);
-
+const getPayerId = (state: ExpenseModalStore, users: ExpenseParticipant[]) => {
     if (users.some(user => user.id === state.paidById)) {
         return state.paidById;
     }
@@ -86,57 +78,44 @@ export const selectPayerId = (state: ExpenseModalStore) => {
     return users[0]?.id ?? '';
 };
 
+export const selectPayerId = (state: ExpenseModalStore) =>
+    getPayerId(state, selectPayerUsers(state));
+
 const getTotalAmount = (state: ExpenseModalStore) => {
     const amount = Number(state.amount);
 
     return Number.isFinite(amount) ? amount : 0;
 };
 
-const sumUserValues = (
-    users: ExpenseParticipant[],
-    values: Record<string, string>,
-) =>
-    users.reduce(
-        (total, user) => total + (Number(values[user.id]) || 0),
-        0,
-    );
-
 const getUserAmount = (
     state: ExpenseModalStore,
     userId: string,
-    includedUsers: ExpenseParticipant[],
+    includedUserCount: number,
     totalAmount: number,
     totalShares: number,
+    isIncluded: boolean,
 ) => {
-    if (!includedUsers.some(user => user.id === userId)) {
+    if (!isIncluded) {
         return 0;
     }
 
     switch (state.splitMode) {
         case EXPENSE_SPLIT_MODES.EQUAL:
-            return roundMoney(totalAmount / includedUsers.length);
+            return roundMoney(totalAmount / includedUserCount);
         case EXPENSE_SPLIT_MODES.PERCENT:
-            return roundMoney(
-                (totalAmount * (Number(state.percentShares[userId]) || 0)) /
-                    100,
-            );
+            return roundMoney((totalAmount * (Number(state.percentShares[userId]) || 0)) / 100);
         case EXPENSE_SPLIT_MODES.AMOUNTS:
             return roundMoney(Number(state.amountShares[userId]) || 0);
         case EXPENSE_SPLIT_MODES.SHARES:
             return totalShares > 0
                 ? roundMoney(
-                      (totalAmount *
-                          (Number(state.shareWeights[userId]) || 0)) /
-                          totalShares,
+                      (totalAmount * (Number(state.shareWeights[userId]) || 0)) / totalShares,
                   )
                 : 0;
     }
 };
 
-const getSplitStatus = (
-    assignedAmount: number,
-    totalAmount: number,
-): ExpenseSplitStatus => {
+const getSplitStatus = (assignedAmount: number, totalAmount: number): ExpenseSplitStatus => {
     if (assignedAmount === totalAmount) {
         return EXPENSE_SPLIT_STATUSES.EXACT;
     }
@@ -146,20 +125,41 @@ const getSplitStatus = (
         : EXPENSE_SPLIT_STATUSES.OVER;
 };
 
-const getSplit = (state: ExpenseModalStore) => {
-    const includedUsers = selectIncludedUsers(state);
+const calculateSplit = (state: ExpenseModalStore) => {
+    const users = selectUsers(state);
+    const includedUsers: ExpenseParticipant[] = [];
     const totalAmount = getTotalAmount(state);
-    const totalPercent = sumUserValues(includedUsers, state.percentShares);
-    const totalCustomAmount = sumUserValues(
-        includedUsers,
-        state.amountShares,
-    );
-    const totalShares = sumUserValues(includedUsers, state.shareWeights);
     const currentUserId = state.source.currentUser?.id;
+    const includedUserIds = new Set<string>();
+    const userIds: string[] = [];
+    const usersById = new Map<string, ExpenseParticipant>();
+    let directFriend: ExpenseParticipant | undefined;
+    let totalPercent = 0;
+    let totalCustomAmount = 0;
+    let totalShares = 0;
+
+    for (const user of users) {
+        userIds.push(user.id);
+        usersById.set(user.id, user);
+
+        if (state.includedParticipantIds[user.id] === false) {
+            continue;
+        }
+
+        includedUsers.push(user);
+        includedUserIds.add(user.id);
+        totalPercent += Number(state.percentShares[user.id]) || 0;
+        totalCustomAmount += Number(state.amountShares[user.id]) || 0;
+        totalShares += Number(state.shareWeights[user.id]) || 0;
+
+        if (user.id !== currentUserId) {
+            directFriend = user;
+        }
+    }
+
     const isDirectExpenseReady =
         state.targetMode !== 'friends' ||
-        (includedUsers.length === 2 &&
-            includedUsers.some(user => user.id === currentUserId));
+        (includedUsers.length === 2 && Boolean(currentUserId && includedUserIds.has(currentUserId)));
     let assignedAmount = totalAmount;
 
     if (!isDirectExpenseReady) {
@@ -179,73 +179,81 @@ const getSplit = (state: ExpenseModalStore) => {
         totalAmount,
         assignedAmount,
         status: getSplitStatus(assignedAmount, totalAmount),
-        progressPercent:
-            totalAmount > 0 ? (assignedAmount / totalAmount) * 100 : 0,
+        progressPercent: totalAmount > 0 ? (assignedAmount / totalAmount) * 100 : 0,
         yourShareAmount:
             isDirectExpenseReady && currentUserId
                 ? getUserAmount(
                       state,
                       currentUserId,
-                      includedUsers,
+                      includedUsers.length,
                       totalAmount,
                       totalShares,
+                      includedUserIds.has(currentUserId),
                   )
                 : 0,
         isValid:
-            (state.splitMode !== EXPENSE_SPLIT_MODES.PERCENT ||
-                totalPercent === 100) &&
+            (state.splitMode !== EXPENSE_SPLIT_MODES.PERCENT || totalPercent === 100) &&
             (state.splitMode !== EXPENSE_SPLIT_MODES.AMOUNTS ||
                 Math.abs(totalCustomAmount - totalAmount) < 0.001) &&
-            (state.splitMode !== EXPENSE_SPLIT_MODES.SHARES ||
-                totalShares > 0),
+            (state.splitMode !== EXPENSE_SPLIT_MODES.SHARES || totalShares > 0),
         totalShares,
+        includedUserIds,
+        directFriend,
+        userIds,
+        users,
+        usersById,
     };
 };
 
-export const selectUserIds = (state: ExpenseModalStore) =>
-    selectUsers(state).map(user => user.id);
+let cachedSplitState: ExpenseModalStore | undefined;
+let cachedSplit: ReturnType<typeof calculateSplit> | undefined;
+
+const getSplit = (state: ExpenseModalStore) => {
+    if (cachedSplitState === state && cachedSplit) {
+        return cachedSplit;
+    }
+
+    cachedSplitState = state;
+    cachedSplit = calculateSplit(state);
+
+    return cachedSplit;
+};
+
+export const selectUserIds = (state: ExpenseModalStore) => getSplit(state).userIds;
+
+export const selectExpenseParticipant = (state: ExpenseModalStore, userId: string) =>
+    getSplit(state).usersById.get(userId);
 
 export const selectAllUsersSelected = (state: ExpenseModalStore) => {
     const users = selectUsers(state);
 
-    return (
-        users.length > 0 &&
-        users.every(user => state.includedParticipantIds[user.id] !== false)
-    );
+    return users.length > 0 && users.every(user => state.includedParticipantIds[user.id] !== false);
 };
 
-export const selectUserAmount = (
-    state: ExpenseModalStore,
-    userId: string,
-) => {
+export const selectUserAmount = (state: ExpenseModalStore, userId: string) => {
     const split = getSplit(state);
 
     return getUserAmount(
         state,
         userId,
-        split.includedUsers,
+        split.includedUsers.length,
         split.totalAmount,
         split.totalShares,
+        split.includedUserIds.has(userId),
     );
 };
 
-export const selectIsUserLocked = (
-    state: ExpenseModalStore,
-    userId: string,
-) =>
+export const selectIsUserLocked = (state: ExpenseModalStore, userId: string) =>
     state.targetMode === 'friends' &&
-    (Boolean(state.source.preferredFriendId) ||
-        userId === state.source.currentUser?.id);
+    (Boolean(state.source.preferredFriendId) || userId === state.source.currentUser?.id);
 
 export const selectIsDirectExpense = (state: ExpenseModalStore) =>
-    state.targetMode === 'friends' && selectUsers(state).length === 2;
+    state.targetMode === 'friends' && getSplit(state).users.length === 2;
 
 export const selectAmountStep = (state: ExpenseModalStore) =>
     Math.max(1, Math.round(getTotalAmount(state) / 100));
 
-export const selectYourShareColor = (
-    state: ExpenseModalStore,
-): ShareColor => {
+export const selectYourShareColor = (state: ExpenseModalStore): ShareColor => {
     const currentUserId = state.source.currentUser?.id;
     const payerId = selectPayerId(state);
 
@@ -258,7 +266,7 @@ export const selectYourShareColor = (
 
 const isDirectExpenseValid = (
     state: ExpenseModalStore,
-    users: ExpenseParticipant[],
+    split: ReturnType<typeof getSplit>,
     payerId: string,
 ) => {
     if (state.targetMode !== 'friends') {
@@ -266,64 +274,82 @@ const isDirectExpenseValid = (
     }
 
     const currentUserId = state.source.currentUser?.id;
-    const friend = users.find(user => user.id !== currentUserId);
 
     return (
         Boolean(currentUserId) &&
-        users.length === 2 &&
-        new Set(users.map(user => user.id)).size === 2 &&
-        users.some(user => user.id === currentUserId) &&
-        users.some(user => user.id === payerId) &&
+        split.includedUsers.length === 2 &&
+        split.includedUserIds.size === 2 &&
+        Boolean(currentUserId && split.includedUserIds.has(currentUserId)) &&
+        split.includedUserIds.has(payerId) &&
         Boolean(
-            friend &&
+            split.directFriend &&
                 state.source.knownFriends.some(
-                    knownFriend => knownFriend.id === friend.id,
+                    knownFriend => knownFriend.id === split.directFriend?.id,
                 ),
         )
     );
 };
 
-export const selectIsSubmitDisabled = (state: ExpenseModalStore) => {
+const getSubmitState = (state: ExpenseModalStore) => {
     const split = getSplit(state);
-    const payerId = selectPayerId(state);
-
-    return (
+    const payerId = getPayerId(
+        state,
+        state.targetMode === 'friends' ? split.includedUsers : split.users,
+    );
+    const isDisabled =
         split.totalAmount <= 0 ||
         !payerId ||
         (state.targetMode === 'group' && !state.groupId) ||
-        !isDirectExpenseValid(state, split.includedUsers, payerId) ||
+        !isDirectExpenseValid(state, split, payerId) ||
         split.includedUsers.length === 0 ||
-        !split.isValid
-    );
+        !split.isValid;
+
+    return { isDisabled, payerId, split };
 };
 
-const getSharingMode = (
+export const selectIsSubmitDisabled = (state: ExpenseModalStore) =>
+    getSubmitState(state).isDisabled;
+
+const getPayloadParticipants = (
     state: ExpenseModalStore,
     users: ExpenseParticipant[],
-): SharingMode => {
-    const getValues = (values: Record<string, string>) =>
-        Object.fromEntries(
-            users.map(user => [user.id, Number(values[user.id] ?? 0)]),
-        );
+): { participantIds: string[]; sharingMode: SharingMode } => {
+    const participantIds: string[] = [];
+    const values: Record<string, number> = {};
+    let sourceValues: Record<string, string> | undefined;
+
+    switch (state.splitMode) {
+        case EXPENSE_SPLIT_MODES.PERCENT:
+            sourceValues = state.percentShares;
+            break;
+        case EXPENSE_SPLIT_MODES.AMOUNTS:
+            sourceValues = state.amountShares;
+            break;
+        case EXPENSE_SPLIT_MODES.SHARES:
+            sourceValues = state.shareWeights;
+            break;
+    }
+
+    for (const user of users) {
+        participantIds.push(user.id);
+
+        if (sourceValues) {
+            values[user.id] = Number(sourceValues[user.id] ?? 0);
+        }
+    }
 
     switch (state.splitMode) {
         case EXPENSE_SPLIT_MODES.PERCENT:
             return {
-                type: 'PERCENTAGE',
-                percentageShares: getValues(state.percentShares),
+                participantIds,
+                sharingMode: { type: 'PERCENTAGE', percentageShares: values },
             };
         case EXPENSE_SPLIT_MODES.AMOUNTS:
-            return {
-                type: 'EXACT',
-                customShares: getValues(state.amountShares),
-            };
+            return { participantIds, sharingMode: { type: 'EXACT', customShares: values } };
         case EXPENSE_SPLIT_MODES.SHARES:
-            return {
-                type: 'SHARES',
-                shares: getValues(state.shareWeights),
-            };
+            return { participantIds, sharingMode: { type: 'SHARES', shares: values } };
         case EXPENSE_SPLIT_MODES.EQUAL:
-            return { type: 'AUTO' };
+            return { participantIds, sharingMode: { type: 'AUTO' } };
     }
 };
 
@@ -331,22 +357,24 @@ export const selectExpensePayload = (
     state: ExpenseModalStore,
     date: number,
 ): CreateLedgerEntryParams | null => {
-    if (selectIsSubmitDisabled(state)) {
+    const { isDisabled, payerId, split } = getSubmitState(state);
+
+    if (isDisabled) {
         return null;
     }
 
-    const users = selectIncludedUsers(state);
+    const { participantIds, sharingMode } = getPayloadParticipants(state, split.includedUsers);
 
     return {
         ...(state.targetMode === 'group' ? { groupId: state.groupId } : {}),
         description: state.description,
         amount: getTotalAmount(state),
         date,
-        payerId: selectPayerId(state),
-        participantIds: users.map(user => user.id),
+        payerId,
+        participantIds,
         currency: state.currency,
-        category: state.category,
-        sharingMode: getSharingMode(state, users),
+        category: state.category || null,
+        sharingMode,
     };
 };
 

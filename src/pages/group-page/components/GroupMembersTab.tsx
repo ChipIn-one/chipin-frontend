@@ -5,7 +5,7 @@ import { Avatar, Badge, Button, Card, Flex, Text } from '@radix-ui/themes';
 
 import type { Group } from 'api/chipin.types';
 import { buildGroupInviteLink } from 'helpers/url';
-import { useUsersStore } from 'store/usersStore';
+import { useUsersStore } from 'store/users-store';
 
 import GroupRoleBadge from 'basics/GroupRoleBadge';
 

@@ -6,7 +6,7 @@ import * as ledgerApi from 'api/ledgerApi';
 
 import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
-import { useUsersStore } from './usersStore';
+import { useUsersStore } from './users-store';
 
 vi.mock('api/chipin', () => ({
     fetchApiUserGroupById: vi.fn(),
@@ -51,10 +51,15 @@ const currentUser = {
     subscriptionUntil: null,
     settings: {
         defaultCurrency: 'USD',
+        defaultCategory: 'food',
         timeFormat: '12h',
         language: 'en',
         theme: 'system',
         simplifyDebts: true,
+        skipCategory: false,
+        soloModeByDefault: false,
+        saveGroupExpensesToSolo: false,
+        sex: 'male',
     },
 } satisfies User;
 
