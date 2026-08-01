@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { LucideChevronsDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
@@ -13,17 +13,19 @@ import { useLoadingStore } from 'store/loadingStore';
 
 import { ActivityFeedSkeleton } from 'components/skeletons';
 
-import ActivityHeader, { ActivityFilter } from './ActivityHeader';
+import type { ActivityFilter } from './ActivityHeader';
 import { ActivityEventsList } from './components';
 
-const Activity = () => {
+interface Props {
+    activeFilter: ActivityFilter;
+}
+
+const ActivityList = ({ activeFilter }: Props) => {
     const { t } = useTranslation('activity');
     const { items, hasMore } = useActivityStore(useShallow(selectActivityFeed));
-    const fetchMoreActivity = useActivityStore(s => s.fetchMoreActivity);
+    const fetchMoreActivity = useActivityStore(state => state.fetchMoreActivity);
     const isLoading = useLoadingStore(selectActivityLoading);
     const isNextPageLoading = useLoadingStore(selectActivityNextPageLoading);
-
-    const [activeFilter, setActiveFilter] = useState<ActivityFilter>('all');
 
     const filteredItems = useMemo(() => {
         if (activeFilter === 'expenses') {
@@ -46,7 +48,6 @@ const Activity = () => {
     }, [items, activeFilter]);
 
     const isEndOfFeed = !isNextPageLoading && !hasMore && items.length > 0;
-
     const [sentinelRef, sentinelEntry] = useIntersectionObserver({ threshold: 0 });
 
     useEffect(() => {
@@ -55,42 +56,34 @@ const Activity = () => {
         }
     }, [sentinelEntry?.isIntersecting, hasMore, isNextPageLoading, fetchMoreActivity]);
 
+    if (isLoading) {
+        return <ActivityFeedSkeleton />;
+    }
+
     return (
-        <>
-            <ActivityHeader
-                isLoading={isLoading}
-                activeFilter={activeFilter}
-                onFilterChange={setActiveFilter}
-            />
+        <ActivityEventsList events={filteredItems}>
+            <>
+                {isNextPageLoading && (
+                    <Flex justify="center" py="4">
+                        <Spinner size="3" />
+                    </Flex>
+                )}
 
-            {isLoading ? (
-                <ActivityFeedSkeleton />
-            ) : (
-                <ActivityEventsList events={filteredItems}>
-                    <>
-                        {isNextPageLoading && (
-                            <Flex justify="center" py="4">
-                                <Spinner size="3" />
-                            </Flex>
-                        )}
+                {isEndOfFeed && (
+                    <Flex justify="center" align="center" gap="2" py="4">
+                        <Text as="span" color="gray">
+                            <LucideChevronsDown size={14} />
+                        </Text>
+                        <Text size="1" color="gray">
+                            {t('endOfFeed')}
+                        </Text>
+                    </Flex>
+                )}
 
-                        {isEndOfFeed && (
-                            <Flex justify="center" align="center" gap="2" py="4">
-                                <Text as="span" color="gray">
-                                    <LucideChevronsDown size={14} />
-                                </Text>
-                                <Text size="1" color="gray">
-                                    {t('endOfFeed')}
-                                </Text>
-                            </Flex>
-                        )}
-
-                        <div ref={sentinelRef} />
-                    </>
-                </ActivityEventsList>
-            )}
-        </>
+                <div ref={sentinelRef} />
+            </>
+        </ActivityEventsList>
     );
 };
 
-export default Activity;
+export default ActivityList;

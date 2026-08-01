@@ -1,4 +1,4 @@
-import { RadioCards, TextInput, UserAvatar } from 'basics';
+import { RadioCards, TextInput } from 'basics';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -7,6 +7,7 @@ import { Button, Card, Flex, Grid, Separator, Skeleton, Text } from '@radix-ui/t
 import { selectUserSex, useUsersStore } from 'store/users-store';
 
 import { UserAvatarModal } from 'components/modals';
+import { UserProfileSummary } from 'components/user-profile-summary';
 
 interface Props {
     isLoading: boolean;
@@ -16,7 +17,6 @@ const DISPLAY_NAME_MAX_LENGTH = 64;
 
 const AccountSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
-    const { t: tSkeletons } = useTranslation('skeletons');
     const { user, sex, setUserSettings } = useUsersStore(
         useShallow(state => ({
             user: state.user,
@@ -54,24 +54,10 @@ const AccountSection = ({ isLoading }: Props) => {
                     justify="between"
                     gap="4"
                 >
-                    <Flex align="center" gap="3" minWidth="0">
-                        <UserAvatar size="5" user={user ?? undefined} isLoading={isLoading} />
-
-                        <Flex direction="column" gap="1" minWidth="0">
-                            <Text weight="medium" size="4" truncate>
-                                <Skeleton loading={isLoading}>
-                                    {isLoading
-                                        ? tSkeletons('account.displayName')
-                                        : user?.displayName || t('common:fields.displayName')}
-                                </Skeleton>
-                            </Text>
-                            <Text size="2" color="gray" truncate>
-                                <Skeleton loading={isLoading}>
-                                    {isLoading ? tSkeletons('account.email') : user?.email}
-                                </Skeleton>
-                            </Text>
-                        </Flex>
-                    </Flex>
+                    <UserProfileSummary
+                        user={user ?? undefined}
+                        isLoading={isLoading}
+                    />
 
                     <UserAvatarModal>
                         <Button

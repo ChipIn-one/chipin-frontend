@@ -1,10 +1,13 @@
-import { useCallback } from 'react';
+import { type MouseEvent, useCallback } from 'react';
 import { LucideInfo } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
-import { Callout, Flex } from '@radix-ui/themes';
+import { Callout, Flex, Link } from '@radix-ui/themes';
 
+import { ROUTES } from 'constants/routes';
+import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 import { selectIsSingleMemberGroup } from 'store/expenseModalSelectors';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
@@ -21,6 +24,8 @@ import { useExpenseModalOpenChange, useExpenseModalSource } from './internal';
 
 const AddExpenseModal = () => {
     const { t } = useTranslation('group');
+    const navigate = useNavigate();
+    const setAppMode = useDashboardStore(state => state.setAppMode);
     const {
         isOpened,
         openingContext,
@@ -55,6 +60,16 @@ const AddExpenseModal = () => {
         reset();
     }, [initialize, isOpened, reset, source]);
 
+    const onSoloModeClick = useCallback(
+        (event: MouseEvent<HTMLAnchorElement>) => {
+            event.preventDefault();
+            setAppMode(APP_MODES.SOLO);
+            close();
+            navigate(ROUTES.SOLO);
+        },
+        [close, navigate, setAppMode],
+    );
+
     useExpenseModalOpenChange(isOpened, onReset);
 
     const content = (
@@ -67,7 +82,15 @@ const AddExpenseModal = () => {
                                 <LucideInfo />
                             </Callout.Icon>
                             <Callout.Text>
-                                {t('expenses.modal.singleMemberNotice')}
+                                <Trans
+                                    t={t}
+                                    i18nKey="expenses.modal.singleMemberNotice"
+                                    components={{
+                                        soloMode: (
+                                            <Link href={ROUTES.SOLO} onClick={onSoloModeClick} />
+                                        ),
+                                    }}
+                                />
                             </Callout.Text>
                         </Callout.Root>
                     )}

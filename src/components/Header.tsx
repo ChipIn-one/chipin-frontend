@@ -5,12 +5,12 @@ import { useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { useShallow } from 'zustand/react/shallow';
 
-import { Box, Button, Container, Flex, IconButton, Link, Text } from '@radix-ui/themes';
+import { Box, Button, Container, Flex, IconButton, Link } from '@radix-ui/themes';
 
 import { PROJECT_NAME } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
 import { themeColor } from 'helpers/colors';
-import { getPreferredModeRoute } from 'helpers/routes';
+import { getHasDesktopSidebar, getPreferredModeRoute } from 'helpers/routes';
 import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { selectIsSoloMode } from 'store/dashboardSelectors';
@@ -18,8 +18,7 @@ import { useDashboardStore } from 'store/dashboardStore';
 import { selectIsUserAdmin, useUsersStore } from 'store/users-store';
 
 import { NavButton } from 'basics/buttons';
-
-import Logotype from 'assets/logo.svg?react';
+import { ModeLogotype } from 'components/mode-logotype';
 
 import HeaderNav from './nav-bars/HeaderNav';
 import DevMenu from './DevMenu';
@@ -34,11 +33,6 @@ const StickyBox = styled(Box)`
     z-index: 1;
     border-bottom: 1px solid ${themeColor('green6')};
     backdrop-filter: blur(10px);
-`;
-
-const StyledLogotype = styled(Logotype)`
-    width: 40px;
-    height: 40px;
 `;
 
 const LANDING_NAV_LINKS = [
@@ -107,24 +101,27 @@ const Header = () => {
     }
 
     const isLandingPage = !isLoggedIn && location.pathname === ROUTES.HOME;
+    const hasDesktopSidebar = isLoggedIn && getHasDesktopSidebar(location.pathname);
     const logoRoute = isLoggedIn
         ? getPreferredModeRoute(isSoloMode)
         : ROUTES.HOME;
 
     return (
-        <StickyBox display={isLoggedIn ? { initial: 'none', sm: 'block' } : undefined}>
+        <StickyBox
+            display={
+                isLoggedIn
+                    ? {
+                          initial: 'none',
+                          sm: 'block',
+                          ...(hasDesktopSidebar && { lg: 'none' }),
+                      }
+                    : undefined
+            }
+        >
             <Container size="4" p="4">
                 <Flex justify="between" align="center">
-                    <NavButton to={logoRoute} unsetStyles>
-                        <Flex gap="4" align="center" justify="center">
-                            <StyledLogotype />
-
-                            <Box display={{ initial: 'none', sm: 'block' }}>
-                                <Text size="6" weight="bold">
-                                    {PROJECT_NAME}
-                                </Text>
-                            </Box>
-                        </Flex>
+                    <NavButton to={logoRoute} aria-label={PROJECT_NAME} unsetStyles>
+                        <ModeLogotype isSoloMode={isLoggedIn && isSoloMode} />
                     </NavButton>
 
                     {isLoggedIn && <HeaderNav />}

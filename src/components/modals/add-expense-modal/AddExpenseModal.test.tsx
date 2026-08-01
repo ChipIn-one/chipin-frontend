@@ -1,11 +1,13 @@
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import type { Group, User } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
+import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useUsersStore } from 'store/users-store';
@@ -59,7 +61,14 @@ const currentUser = {
     },
 } satisfies User;
 
+const LocationPath = () => {
+    const location = useLocation();
+
+    return <output aria-label="Current route">{location.pathname}</output>;
+};
+
 beforeEach(() => {
+    useDashboardStore.setState({ appMode: APP_MODES.GROUP });
     useExpenseModalStore.getState().reset();
     useGroupsStore.getState().setInitialGroupsStore();
     useGroupsStore.setState({ groups: [group], selectedGroup: group });
@@ -85,4 +94,26 @@ test('explains why adding an expense is unavailable for a single-member group', 
             true,
         );
     });
+});
+
+test('opens Solo mode and closes the expense modal from the single-member notice', () => {
+    const interaction = userEvent.setup();
+
+    render(
+        <MemoryRouter initialEntries={['/group/group-1']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <AddExpenseModal />
+                <LocationPath />
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    return screen
+        .findByRole('link', { name: 'Solo mode' })
+        .then(link => interaction.click(link))
+        .then(() => {
+            expect(screen.getByLabelText('Current route').textContent).toBe('/solo');
+            expect(useDashboardStore.getState().appMode).toBe(APP_MODES.SOLO);
+            expect(useExpenseModalStore.getState().isOpened).toBe(false);
+        });
 });

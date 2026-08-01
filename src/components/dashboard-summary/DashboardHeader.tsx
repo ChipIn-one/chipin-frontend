@@ -26,11 +26,7 @@ const DashboardHeader: React.FC = () => {
             <Flex align="center" gap="2" minWidth="0">
                 <Box display={{ initial: 'block', sm: 'none' }}>
                     <NavButton to={ROUTES.SETTINGS} variant="ghost" radius="full">
-                        <UserAvatar
-                            size="3"
-                            user={user ?? undefined}
-                            isLoading={isUserLoading}
-                        />
+                        <UserAvatar size="3" user={user ?? undefined} isLoading={isUserLoading} />
                     </NavButton>
                 </Box>
 

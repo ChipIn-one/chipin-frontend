@@ -11,7 +11,12 @@ const FriendsPageHeader = ({ isLoading }: Props) => {
     const { t } = useTranslation(['friends', 'common']);
 
     return (
-        <Flex justify="between" align="center">
+        <Flex
+            justify="between"
+            align={{ initial: 'center', lg: 'stretch' }}
+            direction={{ initial: 'row', lg: 'column' }}
+            gap={{ lg: '3' }}
+        >
             <Flex align="center" gap={{ initial: '3', sm: '4' }}>
                 <Skeleton loading={isLoading}>
                     <Avatar

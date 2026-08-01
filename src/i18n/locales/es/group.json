@@ -26,7 +26,7 @@
         "modal": {
             "title": "Agregar gasto",
             "description": "Divide un nuevo gasto entre los miembros del grupo.",
-            "singleMemberNotice": "Eres la única persona del grupo. Añade amigos para llevar la cuenta de los gastos.",
+            "singleMemberNotice": "Eres la única persona del grupo. Añade amigos para llevar la cuenta de los gastos. O usa el <soloMode>modo Solo</soloMode>.",
             "fields": {
                 "descriptionPlaceholder": "ej. Reserva de hotel, cena...",
                 "amountAndCurrency": "Monto y moneda",

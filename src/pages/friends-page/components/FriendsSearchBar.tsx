@@ -26,7 +26,7 @@ const FriendsSearchBar = ({
 
     return (
         <Skeleton loading={isLoading}>
-            <Flex gap="2">
+            <Flex gap="2" direction={{ initial: 'row', lg: 'column' }}>
                 <Box flexGrow="1">
                     <TextField.Root
                         placeholder={t('searchPlaceholder')}
@@ -39,7 +39,11 @@ const FriendsSearchBar = ({
                         </TextField.Slot>
                     </TextField.Root>
                 </Box>
-                <Flex flexBasis={{ sm: '33%' }} flexShrink="0" direction="column">
+                <Flex
+                    flexBasis={{ sm: '33%', lg: 'auto' }}
+                    flexShrink="0"
+                    direction="column"
+                >
                     <FriendsFilterDropdown
                         currencies={currencies}
                         filterKey={filterKey}

@@ -45,9 +45,13 @@ const DashboardPage = () => {
                         sm: 'span 1',
                     }}
                 >
-                    <DashboardGreeting />
+                    <Box display={{ initial: 'block', lg: 'none' }}>
+                        <DashboardGreeting />
+                    </Box>
 
-                    <DashBoardSummary isLoading={isDashboardLoading} />
+                    <Box display={{ initial: 'block' }}>
+                        <DashBoardSummary isLoading={isDashboardLoading} />
+                    </Box>
 
                     <Flex direction="column" gap="4">
                         <GroupsSectionHeader

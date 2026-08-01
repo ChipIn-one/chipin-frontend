@@ -23,7 +23,7 @@ const ActivityHeader = ({ isLoading, activeFilter, onFilterChange }: Props) => {
     ];
 
     return (
-        <Box mb="4">
+        <Box>
             <Flex justify="between" align="center">
                 <Flex align="center" gap="4">
                     <Skeleton loading={isLoading}>

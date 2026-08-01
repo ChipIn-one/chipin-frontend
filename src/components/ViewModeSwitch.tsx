@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
-import { Flex, Skeleton, Switch, Text } from '@radix-ui/themes';
+import { Box, Flex, Skeleton, Switch, Text } from '@radix-ui/themes';
 
 import { getPreferredModeRoute } from 'helpers/routes';
 import { selectIsSoloMode } from 'store/dashboardSelectors';
@@ -29,26 +29,38 @@ const ViewModeSwitch = () => {
     };
 
     return (
-        <Flex gap="2" direction="column" align="end">
-            <Skeleton loading={isUserLoading}>
-                <Switch
-                    size={{ initial: '2', sm: '3' }}
-                    checked={!isSoloMode}
-                    onCheckedChange={onModeChange}
-                    aria-label={t('modes.groupMode')}
-                />
-            </Skeleton>
-            <Text
-                as="span"
-                size="2"
-                weight="medium"
-                align="right"
-                color={!isSoloMode ? 'grass' : 'violet'}
-            >
+        <Flex
+            width={{ lg: '100%' }}
+            gap="2"
+            direction={{ initial: 'column', lg: 'row' }}
+            align={{ initial: 'end', lg: 'center' }}
+            justify={{ lg: 'between' }}
+        >
+            <Box>
+                <Text
+                    as="span"
+                    size="2"
+                    weight="medium"
+                    align={{ initial: 'right', lg: 'left' }}
+                    color={!isSoloMode ? 'green' : 'violet'}
+                >
+                    <Skeleton loading={isUserLoading}>
+                        {!isSoloMode ? t('modes.groupMode') : t('modes.soloMode')}
+                    </Skeleton>
+                </Text>
+            </Box>
+
+            <Box>
                 <Skeleton loading={isUserLoading}>
-                    {!isSoloMode ? t('modes.groupMode') : t('modes.soloMode')}
+                    <Switch
+                        size={{ initial: '2', sm: '3' }}
+                        color={!isSoloMode ? 'green' : 'violet'}
+                        checked={!isSoloMode}
+                        onCheckedChange={onModeChange}
+                        aria-label={t('modes.groupMode')}
+                    />
                 </Skeleton>
-            </Text>
+            </Box>
         </Flex>
     );
 };

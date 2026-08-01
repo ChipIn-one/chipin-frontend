@@ -1,9 +1,10 @@
-import { lazy, Suspense } from 'react';
+import { lazy, type ReactNode, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { ROUTES } from 'constants/routes';
 
 import PageLoader from 'basics/PageLoader';
+import { InternalPageLayout } from 'components/internal-page-layout';
 import GroupJoinPage from 'pages/GroupJoinPage';
 import { OAuthCallbackPage } from 'pages/oauth-callback-page';
 import SignInPage from 'pages/SignInPage';
@@ -29,6 +30,12 @@ const FriendsPage = lazy(() => import('pages/friends-page/'));
 const SettingsPage = lazy(() => import('pages/settings-page/'));
 const Page404 = lazy(() => import('pages/404-page'));
 
+const InternalRoute = ({ children }: { children: ReactNode }) => (
+    <ProtectedRoute>
+        <InternalPageLayout>{children}</InternalPageLayout>
+    </ProtectedRoute>
+);
+
 const AppRouter = () => {
     return (
         <Suspense fallback={<PageLoader />}>
@@ -46,26 +53,26 @@ const AppRouter = () => {
                 <Route
                     path={ROUTES.DASHBOARD}
                     element={
-                        <ProtectedRoute>
+                        <InternalRoute>
                             <DashboardPage />
-                        </ProtectedRoute>
+                        </InternalRoute>
                     }
                 />
                 <Route
                     path={ROUTES.SOLO}
                     element={
-                        <ProtectedRoute>
+                        <InternalRoute>
                             <SoloPage />
-                        </ProtectedRoute>
+                        </InternalRoute>
                     }
                 />
                 {/* TODO MAYBE MERGE GROUP AND JOIN GROUP PAGES (LINK TO PARAM?) */}
                 <Route
                     path={`${ROUTES.GROUP}/:groupId`}
                     element={
-                        <ProtectedRoute>
+                        <InternalRoute>
                             <GroupPage />
-                        </ProtectedRoute>
+                        </InternalRoute>
                     }
                 />
                 <Route
@@ -79,33 +86,33 @@ const AppRouter = () => {
                 <Route
                     path={ROUTES.ACTIVITY}
                     element={
-                        <ProtectedRoute>
+                        <InternalRoute>
                             <ActivityPage />
-                        </ProtectedRoute>
+                        </InternalRoute>
                     }
                 />
                 <Route
                     path={`${ROUTES.ACTIVITY}/:parentActivityId`}
                     element={
-                        <ProtectedRoute>
+                        <InternalRoute>
                             <ActivitySubeventsPage />
-                        </ProtectedRoute>
+                        </InternalRoute>
                     }
                 />
                 <Route
                     path={ROUTES.FRIENDS}
                     element={
-                        <ProtectedRoute>
+                        <InternalRoute>
                             <FriendsPage />
-                        </ProtectedRoute>
+                        </InternalRoute>
                     }
                 />
                 <Route
                     path={ROUTES.SETTINGS}
                     element={
-                        <ProtectedRoute>
+                        <InternalRoute>
                             <SettingsPage />
-                        </ProtectedRoute>
+                        </InternalRoute>
                     }
                 />
                 <Route path={ROUTES.NOT_FOUND_404} element={<Page404 />} />

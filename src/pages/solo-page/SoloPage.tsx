@@ -21,7 +21,9 @@ const SoloPage = () => {
                         sm: 'span 1',
                     }}
                 >
-                    <DashboardHeader />
+                    <Box display={{ initial: 'block', lg: 'none' }}>
+                        <DashboardHeader />
+                    </Box>
 
                     <EmptyState
                         icon={<LucideWalletCards size={20} />}

@@ -23,7 +23,9 @@ const SettingsPage = () => {
 
     return (
         <Container size="4" pb={{ initial: '9', sm: '4' }}>
-            <SettingsPageHeader isLoading={isLoading} />
+            <Box display={{ initial: 'block', lg: 'none' }}>
+                <SettingsPageHeader isLoading={isLoading} />
+            </Box>
             <Flex direction="column" gap="6">
                 <Grid columns={{ initial: '1', md: '2' }} gap="5">
                     <AccountSection isLoading={isLoading} />

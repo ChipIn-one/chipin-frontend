@@ -8,15 +8,25 @@ import {
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
+import styled from 'styled-components';
 
-import { IconButton } from '@radix-ui/themes';
+import { Button, IconButton } from '@radix-ui/themes';
 
 import { isThemeDark } from 'helpers/theme';
 import { useUsersStore } from 'store/users-store';
 
 import Dropdown from './Dropdown';
 
-const DevMenu = () => {
+interface Props {
+    isShowLabel?: boolean;
+}
+
+const LabeledTrigger = styled(Button)`
+    width: 100%;
+    justify-content: flex-start;
+`;
+
+const DevMenu = ({ isShowLabel = false }: Props) => {
     const [shouldCrash, setShouldCrash] = useState(false);
     const { resolvedTheme } = useTheme();
     const { t } = useTranslation();
@@ -54,23 +64,29 @@ const DevMenu = () => {
             onSelect: () => setShouldCrash(true),
         },
     ];
+    const trigger = isShowLabel ? (
+        <LabeledTrigger size="3" variant="ghost" color="gray">
+            <LucideFlaskConical />
+            {t('header.devMenu')}
+        </LabeledTrigger>
+    ) : (
+        <IconButton
+            size={{
+                initial: '2',
+                sm: '3',
+            }}
+            variant="soft"
+            color="gray"
+            aria-label={t('header.devMenu')}
+        >
+            <LucideFlaskConical />
+        </IconButton>
+    );
 
     return (
         <Dropdown
             items={items}
-            trigger={
-                <IconButton
-                    size={{
-                        initial: '2',
-                        sm: '3',
-                    }}
-                    variant="soft"
-                    color="gray"
-                    aria-label={t('header.devMenu')}
-                >
-                    <LucideFlaskConical />
-                </IconButton>
-            }
+            trigger={trigger}
             align="end"
         />
     );

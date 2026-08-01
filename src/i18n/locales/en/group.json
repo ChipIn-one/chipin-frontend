@@ -26,7 +26,7 @@
         "modal": {
             "title": "Add an expense",
             "description": "Split a new expense with your group members.",
-            "singleMemberNotice": "You're the only one in this group. Add friends to track expenses.",
+            "singleMemberNotice": "You're the only one in this group. Add friends to track expenses. Or use <soloMode>Solo mode</soloMode>.",
             "fields": {
                 "descriptionPlaceholder": "e.g. Hotel booking, dinner...",
                 "amountAndCurrency": "Amount & currency",

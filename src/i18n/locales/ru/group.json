@@ -26,7 +26,7 @@
         "modal": {
             "title": "Добавить расход",
             "description": "Разделите новый расход между участниками группы.",
-            "singleMemberNotice": "Вы в группе один. Чтобы считать расходы, добавьте друзей.",
+            "singleMemberNotice": "Вы в группе один. Чтобы считать расходы, добавьте друзей. Или используйте <soloMode>режим Solo</soloMode>.",
             "fields": {
                 "descriptionPlaceholder": "Например, отель, ужин, билеты...",
                 "amountAndCurrency": "Сумма и валюта",

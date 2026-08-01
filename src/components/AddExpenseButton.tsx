@@ -6,7 +6,6 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { Box, Button } from '@radix-ui/themes';
 
-import { ROUTES } from 'constants/routes';
 import { themeColor } from 'helpers/colors';
 import { getCanAddExpense } from 'helpers/expenses';
 import { selectIsLoggedIn } from 'store/authSelectors';
@@ -19,21 +18,15 @@ import { selectDashboardLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
 
-const FloatingBox = styled(Box)`
-    bottom: var(--space-6);
-    right: var(--space-4);
-`;
-
 const ButtonMobile = styled(Button)<{ $isSoloMode: boolean }>`
     width: var(--space-9);
     height: var(--space-9);
     padding: 0;
-    border: 6px solid
-        ${({ $isSoloMode }) => themeColor($isSoloMode ? 'violet7' : 'grass7')};
+    border: 6px solid ${({ $isSoloMode }) => themeColor($isSoloMode ? 'violet7' : 'grass7')};
 `;
 
 interface Props {
-    type?: 'mobile' | 'desktop';
+    type?: 'mobile' | 'desktop' | 'sidebar';
 }
 
 const AddExpenseButton = ({ type = 'desktop' }: Props) => {
@@ -41,7 +34,6 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
     const location = useLocation();
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
     const isDashboardLoading = useLoadingStore(selectDashboardLoading);
-    const isVisibleRoute = location.pathname !== ROUTES.SETTINGS;
     const { groups, selectedGroup } = useGroupsStore(
         useShallow(state => ({
             groups: state.groups,
@@ -59,7 +51,7 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
         hasSelectedGroupMembers: Boolean(selectedGroup?.members.length),
     });
 
-    if (!isLoggedIn || !isVisibleRoute) {
+    if (!isLoggedIn) {
         return null;
     }
 
@@ -80,21 +72,29 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
         );
     }
 
+    const button = (
+        <Button
+            size="3"
+            radius="large"
+            color={isSoloMode ? 'violet' : 'jade'}
+            loading={isDashboardLoading}
+            disabled={!canAddExpense}
+            onClick={() => openAddExpenseModal()}
+        >
+            <LucideCirclePlus />
+            {t('buttons.addExpense')}
+        </Button>
+    );
+
+    if (type === 'sidebar') {
+        return button;
+    }
+
     return (
-        <Box display={{ initial: 'none', sm: 'block' }}>
-            <FloatingBox position="fixed" right="6">
-                <Button
-                    size="3"
-                    radius="full"
-                    color={isSoloMode ? 'violet' : 'jade'}
-                    loading={isDashboardLoading}
-                    disabled={!canAddExpense}
-                    onClick={() => openAddExpenseModal()}
-                >
-                    <LucideCirclePlus />
-                    {t('buttons.addExpense')}
-                </Button>
-            </FloatingBox>
+        <Box display={{ initial: 'none', sm: 'block', lg: 'none' }}>
+            <Box position="fixed" bottom="6" right="6">
+                {button}
+            </Box>
         </Box>
     );
 };
