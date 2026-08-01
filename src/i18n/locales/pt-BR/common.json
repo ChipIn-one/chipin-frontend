@@ -87,7 +87,9 @@
         "owner": "Dono"
     },
     "modes": {
+        "group": "Grupo",
         "groupMode": "Modo grupo",
+        "solo": "Solo",
         "soloMode": "Modo solo"
     },
     "nav": {

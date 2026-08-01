@@ -219,6 +219,14 @@ const getSplit = (state: ExpenseModalStore) => {
     return cachedSplit;
 };
 
+const isSingleMemberGroup = (
+    state: ExpenseModalStore,
+    split: ReturnType<typeof getSplit>,
+) => state.targetMode === 'group' && split.users.length === 1;
+
+export const selectIsSingleMemberGroup = (state: ExpenseModalStore) =>
+    isSingleMemberGroup(state, getSplit(state));
+
 export const selectUserIds = (state: ExpenseModalStore) => getSplit(state).userIds;
 
 export const selectExpenseParticipant = (state: ExpenseModalStore, userId: string) =>
@@ -300,6 +308,7 @@ const getSubmitState = (state: ExpenseModalStore) => {
         split.totalAmount <= 0 ||
         !payerId ||
         (state.targetMode === 'group' && !state.groupId) ||
+        isSingleMemberGroup(state, split) ||
         !isDirectExpenseValid(state, split, payerId) ||
         split.includedUsers.length === 0 ||
         !split.isValid;

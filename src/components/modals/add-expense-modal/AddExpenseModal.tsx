@@ -1,9 +1,11 @@
 import { useCallback } from 'react';
+import { LucideInfo } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
-import { Flex } from '@radix-ui/themes';
+import { Callout, Flex } from '@radix-ui/themes';
 
+import { selectIsSingleMemberGroup } from 'store/expenseModalSelectors';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import { BaseModal, MODAL_SIZES } from '../base-modal';
@@ -42,6 +44,7 @@ const AddExpenseModal = () => {
         context: openingContext,
         friendId: openingFriendId,
     });
+    const isSingleMemberGroup = useExpenseModalStore(selectIsSingleMemberGroup);
 
     const onReset = useCallback(() => {
         if (isOpened) {
@@ -58,6 +61,16 @@ const AddExpenseModal = () => {
         <>
             <OverlayBody>
                 <Flex direction="column" gap="4">
+                    {isSingleMemberGroup && (
+                        <Callout.Root color="blue" size="2" role="status">
+                            <Callout.Icon>
+                                <LucideInfo />
+                            </Callout.Icon>
+                            <Callout.Text>
+                                {t('expenses.modal.singleMemberNotice')}
+                            </Callout.Text>
+                        </Callout.Root>
+                    )}
                     <ExpenseDetailsSection />
                     <ExpenseTargetSection />
                     <ExpenseSplitCard />

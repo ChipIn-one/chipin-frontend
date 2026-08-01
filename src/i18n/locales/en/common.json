@@ -87,7 +87,9 @@
         "owner": "Owner"
     },
     "modes": {
+        "group": "Group",
         "groupMode": "Group mode",
+        "solo": "Solo",
         "soloMode": "Solo mode"
     },
     "nav": {

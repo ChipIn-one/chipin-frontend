@@ -26,6 +26,7 @@
         "modal": {
             "title": "Adicionar despesa",
             "description": "Divida uma nova despesa com os membros do grupo.",
+            "singleMemberNotice": "Você está sozinho no grupo. Adicione amigos para controlar as despesas.",
             "fields": {
                 "descriptionPlaceholder": "ex. Reserva de hotel, jantar...",
                 "amountAndCurrency": "Valor e moeda",

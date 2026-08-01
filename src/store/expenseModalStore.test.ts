@@ -214,6 +214,23 @@ test('allows submitting an expense without a description', () => {
     expect(selectExpensePayload(state, 1_717_200_000)?.description).toBe('');
 });
 
+test('disables a group expense when the current user is the only group member', () => {
+    const store = useExpenseModalStore.getState();
+    store.initialize({
+        context: 'group',
+        currentUser,
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
+        groups: [{ id: 'group-1', members: [currentUser] }],
+        knownFriends: [],
+        defaultGroupId: 'group-1',
+    });
+    store.setAmount('100');
+
+    expect(selectIsSubmitDisabled(useExpenseModalStore.getState())).toBe(true);
+});
+
 test('builds shares payload and validation from store state', () => {
     const store = useExpenseModalStore.getState();
     store.initialize({
