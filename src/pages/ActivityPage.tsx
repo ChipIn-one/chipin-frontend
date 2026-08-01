@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 
-import { Box, Container, Grid } from '@radix-ui/themes';
+import { Container } from '@radix-ui/themes';
 
 import { useActivityStore } from 'store/activity-store';
 import { selectActivityFetched } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
-import { MobileNavBar } from 'components/nav-bars';
+import { InternalPageColumns } from 'components/internal-page-layout';
 import {
     type ActivityFilter,
     ActivityList,
@@ -26,19 +26,17 @@ const ActivityPage = () => {
 
     return (
         <Container size="4" pb={{ initial: '9', sm: '6' }}>
-            <Grid columns="3" gap={{ initial: '3', lg: '6' }}>
-                <Box gridColumn={{ initial: 'span 3', lg: 'span 1' }}>
+            <InternalPageColumns
+                gap={{ initial: '3', lg: '6' }}
+                sidePanel={
                     <ActivitySidebar
                         activeFilter={activeFilter}
                         onFilterChange={setActiveFilter}
                     />
-                </Box>
-
-                <Box gridColumn={{ initial: 'span 3', lg: 'span 2' }}>
-                    <ActivityList activeFilter={activeFilter} />
-                </Box>
-            </Grid>
-            <MobileNavBar />
+                }
+            >
+                <ActivityList activeFilter={activeFilter} />
+            </InternalPageColumns>
         </Container>
     );
 };

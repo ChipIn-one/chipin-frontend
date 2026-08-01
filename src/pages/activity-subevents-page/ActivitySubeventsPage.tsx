@@ -11,8 +11,6 @@ import {
 } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
-import { MobileNavBar } from 'components/nav-bars';
-
 import { ActivitySubeventsFeed, ActivitySubeventsHeader } from './components';
 
 const ActivitySubeventsPage = () => {
@@ -78,8 +76,6 @@ const ActivitySubeventsPage = () => {
                     activityCategory={activityCategory}
                 />
             ) : null}
-
-            <MobileNavBar />
         </Container>
     );
 };

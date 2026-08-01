@@ -180,6 +180,22 @@ test('does not show an explanatory description above the group debt sections', (
         });
 });
 
+test('renders the group debt list inside a dedicated scroll area', () => {
+    const user = userEvent.setup();
+
+    render(<SettleUpModal source="group" group={group} />);
+
+    return user
+        .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
+        .then(() => {
+            expect(
+                screen.getByRole('region', {
+                    name: 'group:page.settleUp.chooseDebtTitle',
+                }),
+            ).toBeTruthy();
+        });
+});
+
 test('keeps a hidden accessible description for the group debt selection dialog', () => {
     const user = userEvent.setup();
 

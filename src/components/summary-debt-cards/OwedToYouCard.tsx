@@ -43,9 +43,7 @@ const OwedToYouCard: React.FC<Props> = ({ isLoading, total, defaultCurrency, ent
                         </Skeleton>
 
                         <Text color="grass" weight="medium" size="4">
-                            <Skeleton loading={isLoading}>
-                                {t('summary.owedToYou')}
-                            </Skeleton>
+                            <Skeleton loading={isLoading}>{t('summary.owedToYou')}</Skeleton>
                         </Text>
                     </Flex>
 
@@ -54,7 +52,12 @@ const OwedToYouCard: React.FC<Props> = ({ isLoading, total, defaultCurrency, ent
                             {isLoading ? (
                                 tSkeletons('debtAmount.amount')
                             ) : (
-                                <Amount value={total} tokenCode={defaultCurrency} precision={0} />
+                                <Amount
+                                    type="summary"
+                                    value={total}
+                                    tokenCode={defaultCurrency}
+                                    precision={0}
+                                />
                             )}
                         </Skeleton>
                     </Text>

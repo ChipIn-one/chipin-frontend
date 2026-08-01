@@ -51,7 +51,13 @@ test('wraps an internal activity route in the desktop sidebar layout', () => {
     renderRouter('/activity');
 
     return screen.findByText(ACTIVITY_ROUTE_CONTENT).then(() => {
-        expect(screen.getByRole('link', { name: 'Chipin Group' })).toBeTruthy();
+        const sidebarLink = screen.getByRole('link', { name: 'Chipin Group' });
+        const pageContent = screen.getByRole('main');
+
+        expect(
+            sidebarLink.compareDocumentPosition(pageContent) &
+                Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
     });
 });
 

@@ -1,4 +1,4 @@
-import { ComponentProps } from 'react';
+import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Skeleton, Text } from '@radix-ui/themes';
@@ -12,6 +12,10 @@ interface Props {
     size?: ComponentProps<typeof Text>['size'];
     weight?: ComponentProps<typeof Text>['weight'];
     withPlus?: boolean;
+    amountProps?: Omit<
+        ComponentProps<typeof Amount>,
+        'customPrefix' | 'precision' | 'tokenCode' | 'value'
+    >;
 }
 
 const DebtAmount = ({
@@ -21,6 +25,7 @@ const DebtAmount = ({
     size = '2',
     weight = 'regular',
     withPlus = false,
+    amountProps,
 }: Props) => {
     const { t } = useTranslation('skeletons');
     const isOwed = amount > 0;
@@ -34,6 +39,7 @@ const DebtAmount = ({
                     t('debtAmount.amount')
                 ) : (
                     <Amount
+                        {...amountProps}
                         value={amount}
                         customPrefix={withPlus && isOwed ? '+' : undefined}
                         tokenCode={currency}

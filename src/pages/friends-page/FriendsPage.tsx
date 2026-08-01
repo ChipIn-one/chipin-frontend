@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { Box, Container, Grid } from '@radix-ui/themes';
+import { Container } from '@radix-ui/themes';
 
 import { useLoadingStore } from 'store/loadingStore';
 import {
@@ -9,7 +9,7 @@ import {
     useUsersStore,
 } from 'store/users-store';
 
-import { MobileNavBar } from 'components/nav-bars';
+import { InternalPageColumns } from 'components/internal-page-layout';
 
 import {
     FriendsList,
@@ -33,8 +33,8 @@ const FriendsPage = () => {
 
     return (
         <Container size="4" pb={{ initial: '9', sm: '6' }}>
-            <Grid columns="3" gap="6">
-                <Box gridColumn={{ initial: 'span 3', lg: 'span 1' }}>
+            <InternalPageColumns
+                sidePanel={
                     <FriendsSidebar
                         search={search}
                         onSearchChange={setSearch}
@@ -43,19 +43,15 @@ const FriendsPage = () => {
                         onFilterChange={setFilterKey}
                         isLoading={isSkeletonShown}
                     />
-                </Box>
-
-                <Box gridColumn={{ initial: 'span 3', lg: 'span 2' }}>
-                    <FriendsList
-                        currencyGroups={currencyGroups}
-                        isEmpty={isEmptyFriends}
-                        isLoading={isSkeletonShown}
-                        settledFriends={settledFriends}
-                    />
-                </Box>
-            </Grid>
-
-            <MobileNavBar />
+                }
+            >
+                <FriendsList
+                    currencyGroups={currencyGroups}
+                    isEmpty={isEmptyFriends}
+                    isLoading={isSkeletonShown}
+                    settledFriends={settledFriends}
+                />
+            </InternalPageColumns>
         </Container>
     );
 };

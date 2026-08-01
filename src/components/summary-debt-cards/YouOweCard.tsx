@@ -43,9 +43,7 @@ const YouOweCard: React.FC<Props> = ({ isLoading, total, defaultCurrency, entrie
                         </Skeleton>
 
                         <Text color="tomato" size="4" weight="medium">
-                            <Skeleton loading={isLoading}>
-                                {t('summary.youOwe')}
-                            </Skeleton>
+                            <Skeleton loading={isLoading}>{t('summary.youOwe')}</Skeleton>
                         </Text>
                     </Flex>
 
@@ -54,7 +52,12 @@ const YouOweCard: React.FC<Props> = ({ isLoading, total, defaultCurrency, entrie
                             {isLoading ? (
                                 tSkeletons('debtAmount.amount')
                             ) : (
-                                <Amount value={total} tokenCode={defaultCurrency} precision={0} />
+                                <Amount
+                                    type="summary"
+                                    value={total}
+                                    tokenCode={defaultCurrency}
+                                    precision={0}
+                                />
                             )}
                         </Skeleton>
                     </Text>

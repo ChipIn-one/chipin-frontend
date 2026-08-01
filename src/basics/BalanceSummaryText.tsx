@@ -41,6 +41,7 @@ const BalanceSummaryText = ({ entries, size, align = 'left' }: Props) => {
                         <Fragment key={entry.currency}>
                             <AmountChunk>
                                 <Amount
+                                    type="summary"
                                     value={Math.abs(entry.netBalance!)}
                                     tokenCode={entry.currency}
                                     precision={0}

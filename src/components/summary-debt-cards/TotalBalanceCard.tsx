@@ -17,12 +17,11 @@ const TotalBalanceCard: React.FC<Props> = ({ isLoading, netTotalInBase, defaultC
         <Card size="1">
             <Flex direction="column" gap="1">
                 <Text size="4" weight="medium" color="gray" as="span">
-                    <Skeleton loading={isLoading}>
-                        {t('summary.totalBalance')}
-                    </Skeleton>
+                    <Skeleton loading={isLoading}>{t('summary.totalBalance')}</Skeleton>
                 </Text>
 
                 <DebtAmount
+                    amountProps={{ type: 'summary' }}
                     isLoading={isLoading}
                     amount={netTotalInBase || 0}
                     currency={defaultCurrency}

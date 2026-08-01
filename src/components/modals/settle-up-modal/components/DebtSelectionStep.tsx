@@ -1,6 +1,9 @@
+import { useTranslation } from 'react-i18next';
+
 import { Flex, Separator } from '@radix-ui/themes';
 
 import type { DebtOption } from '../internal';
+import { DebtSelectionScrollArea } from '../styled';
 
 import DebtSection from './DebtSection';
 
@@ -22,26 +25,39 @@ const DebtSelectionStep = ({
     onToggleYouOwe,
     onToggleOwedToYou,
     onSelect,
-}: Props) => (
-    <Flex direction="column" gap="4">
-        <DebtSection
-            debts={youOwe}
-            isExpanded={isYouOweExpanded}
-            isUserOwing
-            onToggle={onToggleYouOwe}
-            onSelect={onSelect}
-        />
+}: Props) => {
+    const { t } = useTranslation('group');
 
-        {youOwe.length > 0 && owedToYou.length > 0 && <Separator size="4" />}
+    return (
+        <DebtSelectionScrollArea
+            role="region"
+            aria-label={t('group:page.settleUp.chooseDebtTitle')}
+            type="auto"
+            scrollbars="vertical"
+        >
+            <Flex direction="column" gap="4" pr={{ initial: '0', sm: '4' }}>
+                <DebtSection
+                    debts={youOwe}
+                    isExpanded={isYouOweExpanded}
+                    isUserOwing
+                    onToggle={onToggleYouOwe}
+                    onSelect={onSelect}
+                />
 
-        <DebtSection
-            debts={owedToYou}
-            isExpanded={isOwedToYouExpanded}
-            isUserOwing={false}
-            onToggle={onToggleOwedToYou}
-            onSelect={onSelect}
-        />
-    </Flex>
-);
+                {youOwe.length > 0 && owedToYou.length > 0 && (
+                    <Separator size="4" />
+                )}
+
+                <DebtSection
+                    debts={owedToYou}
+                    isExpanded={isOwedToYouExpanded}
+                    isUserOwing={false}
+                    onToggle={onToggleOwedToYou}
+                    onSelect={onSelect}
+                />
+            </Flex>
+        </DebtSelectionScrollArea>
+    );
+};
 
 export default DebtSelectionStep;

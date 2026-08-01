@@ -3,8 +3,6 @@ import { Box, Container, Flex, Grid } from '@radix-ui/themes';
 import { selectUserSelfFetched, selectUserSelfLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
-import { MobileNavBar } from 'components/nav-bars';
-
 import {
     AccountSection,
     AppSettingsSection,
@@ -39,8 +37,6 @@ const SettingsPage = () => {
                     </Box>
                 </Grid>
             </Flex>
-
-            <MobileNavBar />
         </Container>
     );
 };

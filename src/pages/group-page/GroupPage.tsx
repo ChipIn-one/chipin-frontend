@@ -18,7 +18,6 @@ import { selectUserCurrency, useUsersStore } from 'store/users-store';
 import GroupsCards from 'components/GroupsCards';
 import GroupsSectionHeader from 'components/GroupsSectionHeader';
 import { SettleUpModal } from 'components/modals/';
-import { MobileNavBar } from 'components/nav-bars';
 import UsersRow from 'components/UsersRow';
 
 import { GroupCoverSection, GroupSummary, GroupTabsContent } from './components';
@@ -93,11 +92,12 @@ const GroupPage = () => {
     return (
         <Container size="4" pb={{ initial: '9', sm: '4' }}>
             <Grid columns="3" gap="6">
-                {/* ── Left sidebar (desktop) ── */}
+                {/* ── Right sidebar (desktop) ── */}
                 <Flex
                     direction="column"
                     gap="4"
-                    gridColumn={{ initial: 'span 3', sm: 'span 1' }}
+                    gridColumn={{ initial: 'span 3', sm: '3' }}
+                    gridRow={{ sm: '1' }}
                     mb="6"
                     display={{ initial: 'none', sm: 'flex' }}
                 >
@@ -110,7 +110,10 @@ const GroupPage = () => {
                 </Flex>
 
                 {/* ── Main content column ── */}
-                <Box gridColumn={{ initial: 'span 3', sm: 'span 2' }}>
+                <Box
+                    gridColumn={{ initial: 'span 3', sm: '1 / span 2' }}
+                    gridRow={{ sm: '1' }}
+                >
                     {/* Desktop: cover inside a Card with Inset */}
                     <Box display={{ initial: 'none', sm: 'block' }}>
                         <Card size="4" mb="6">
@@ -146,8 +149,6 @@ const GroupPage = () => {
                     <GroupTabsContent group={selectedGroup} />
                 </Box>
             </Grid>
-
-            <MobileNavBar />
         </Container>
     );
 };
