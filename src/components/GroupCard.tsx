@@ -1,8 +1,7 @@
-import { LucideChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
-import { Card, Flex, Text } from '@radix-ui/themes';
+import { Badge, Card, Flex, Text } from '@radix-ui/themes';
 
 import type { BalanceEntry } from 'api/chipin.raw.types';
 import type { Group } from 'api/chipin.types';
@@ -59,24 +58,25 @@ const GroupCard = ({ group, balances, isSelected = false }: Props) => {
             aria-current={isSelected ? 'page' : undefined}
         >
             <Card size="1" data-interactive-card>
-                <Flex gap="3" align="center">
-                    <GroupAvatar group={group} size="5" />
+                <Flex gap="2" direction="column">
+                    <Flex align="center" gap="2">
+                        <Text size="4" weight="bold" as="p">
+                            {group.name}
+                        </Text>
+                        <Badge color="gray" size="1">
+                            {t('groupsCard.members', {
+                                count: group?.members?.length,
+                            })}
+                        </Badge>
+                    </Flex>
+                    <Flex gap="3" align="center">
+                        <GroupAvatar group={group} size="4" />
 
-                    <Flex align="center" justify="between" gap="2" width="100%">
-                        <Flex direction="column">
-                            <Text size="4" weight="bold" as="p">
-                                {group.name}
-                            </Text>
-
-                            <BalanceSummaryText entries={balances} size="2" align="left" />
-
-                            <Text size="1" color="gray" as="p">
-                                {t('groupsCard.members', {
-                                    count: group?.members?.length,
-                                })}
-                            </Text>
+                        <Flex align="center" justify="between" gap="2" width="100%">
+                            <Flex direction="column">
+                                <BalanceSummaryText entries={balances} size="2" align="left" />
+                            </Flex>
                         </Flex>
-                        <LucideChevronRight size={20} />
                     </Flex>
                 </Flex>
             </Card>
