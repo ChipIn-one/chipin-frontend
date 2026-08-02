@@ -6,6 +6,18 @@ import { themeColor } from 'helpers/colors';
 
 import { NavButton } from 'basics/buttons';
 
+const getSidebarNavHighlightStyles = (isSoloMode: boolean) => css`
+    background: linear-gradient(
+        90deg,
+        ${themeColor(isSoloMode ? 'violet4' : 'green4')},
+        transparent 82%
+    );
+
+    &::before {
+        opacity: 1;
+    }
+`;
+
 const SidebarSurface = styled(Flex)`
     position: sticky;
     top: calc(var(--space-6) + var(--space-4));
@@ -27,6 +39,7 @@ const SidebarNavButton = styled(NavButton)<{
     position: relative;
     width: 100%;
     min-height: var(--space-8);
+    margin: 0;
     justify-content: flex-start;
 
     &::before {
@@ -44,26 +57,13 @@ const SidebarNavButton = styled(NavButton)<{
     }
 
     ${({ $isActive, $isSoloMode }) =>
-        $isActive &&
-        css`
-            background: linear-gradient(
-                90deg,
-                ${themeColor($isSoloMode ? 'violet4' : 'green4')},
-                transparent 82%
-            );
+        $isActive && getSidebarNavHighlightStyles($isSoloMode)}
 
-            &::before {
-                opacity: 1;
-            }
-        `}
+    ${({ $isSoloMode }) => css`
+        &:hover {
+            ${getSidebarNavHighlightStyles($isSoloMode)}
+        }
+    `}
 `;
 
-const ProfileNavButton = styled(NavButton)`
-    width: 100%;
-    min-width: 0;
-    height: auto;
-    justify-content: flex-start;
-    text-align: left;
-`;
-
-export { ProfileNavButton, SidebarNavButton, SidebarSurface };
+export { SidebarNavButton, SidebarSurface };

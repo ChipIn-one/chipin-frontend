@@ -22,7 +22,7 @@ const user = {
 } satisfies UserSummary;
 
 test('shows the current user identity', () => {
-    render(
+    const { container } = render(
         <ThemeProvider theme={lightThemeStyled}>
             <UserProfileSummary user={user} />
         </ThemeProvider>,
@@ -30,4 +30,19 @@ test('shows the current user identity', () => {
 
     expect(screen.getByText('Alex')).toBeTruthy();
     expect(screen.getByText('user@example.com')).toBeTruthy();
+    expect(container.querySelector('.rt-AvatarRoot')?.classList.contains('rt-r-size-5')).toBe(
+        true,
+    );
+});
+
+test('uses the requested avatar size', () => {
+    const { container } = render(
+        <ThemeProvider theme={lightThemeStyled}>
+            <UserProfileSummary user={user} avatarSize="4" />
+        </ThemeProvider>,
+    );
+
+    expect(container.querySelector('.rt-AvatarRoot')?.classList.contains('rt-r-size-4')).toBe(
+        true,
+    );
 });
