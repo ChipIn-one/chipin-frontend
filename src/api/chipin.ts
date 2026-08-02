@@ -41,9 +41,7 @@ export const logoutApiAuthTokens = ({ accessToken, refreshToken }: AuthTokens): 
         .then(() => undefined);
 };
 
-export const exchangeApiGoogleOAuthCode = (
-    code: string,
-): Promise<ApiOAuthTokenPairResponse> => {
+export const exchangeApiGoogleOAuthCode = (code: string): Promise<ApiOAuthTokenPairResponse> => {
     return apiInstance
         .post<ApiOAuthTokenPairResponse>('/auth/oauth/google/exchange', { code })
         .then(response => response.data);
@@ -86,9 +84,7 @@ export const updateApiGroup = ({
         .then(response => response.data);
 };
 
-export const removeApiGroup = ({
-    groupId,
-}: RemoveGroupParams): Promise<ApiRemoveGroupResponse> => {
+export const removeApiGroup = ({ groupId }: RemoveGroupParams): Promise<ApiRemoveGroupResponse> => {
     return apiInstance
         .delete<ApiRemoveGroupResponse>(`/groups/${groupId}`)
         .then(response => response.data);
@@ -102,21 +98,14 @@ export const leaveApiGroup = ({ groupId, newOwnerId }: LeaveGroupParams): Promis
         .then(() => undefined);
 };
 
-export const kickApiGroupMember = ({
-    groupId,
-    userId,
-}: KickGroupMemberParams): Promise<void> => {
+export const kickApiGroupMember = ({ groupId, userId }: KickGroupMemberParams): Promise<void> => {
     return apiInstance
         .post<void>(`/groups/${groupId}/members/${userId}/kick`)
         .then(() => undefined);
 };
 
-export const inviteApiUserToGroup = ({
-    inviteToken,
-}: InviteToGroupParams): Promise<Group> => {
-    return apiInstance
-        .post<Group>(`/groups/invite/${inviteToken}`)
-        .then(response => response.data);
+export const inviteApiUserToGroup = ({ inviteToken }: InviteToGroupParams): Promise<Group> => {
+    return apiInstance.post<Group>(`/groups/invite/${inviteToken}`).then(response => response.data);
 };
 
 export const fetchApiDashboard = (): Promise<Dashboard> => {

@@ -1,4 +1,4 @@
-import { AppEvent } from './activity.types';
+import type { AppEvent } from './activity.types';
 
 export interface BalanceEntry {
     currency: string;
@@ -84,7 +84,7 @@ export interface ApiGroupResponse {
     coverUrl: string | null;
     role: 'OWNER' | 'MEMBER';
     status: 'ACTIVE' | 'ARCHIVED';
-    recentActivities: AppEvent[];
+    recentActivities: ApiActivityFeedItemResponse[];
 }
 
 export interface ApiRemoveGroupResponse {
@@ -93,7 +93,17 @@ export interface ApiRemoveGroupResponse {
 
 export interface ApiDashboardResponse {
     balances: BalancesMap;
-    activity: ApiActivityItemsResponse;
+    activity: ApiActivityFeedResponse;
+}
+
+export interface ApiActivityFeedItemResponse {
+    parent: AppEvent;
+    lastEvent: AppEvent;
+}
+
+export interface ApiActivityFeedResponse {
+    items: ApiActivityFeedItemResponse[];
+    nextCursor: number | null;
 }
 
 export interface ApiActivityItemsResponse {

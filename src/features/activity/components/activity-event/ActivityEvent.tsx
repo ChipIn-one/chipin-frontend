@@ -29,13 +29,16 @@ const ActivityEvent = ({ event, isNavigable = true }: Props) => {
 
     switch (event.action) {
         case ACTIVITY_ACTIONS.EXPENSE_CREATED:
+        case ACTIVITY_ACTIONS.EXPENSE_UPDATED:
         case ACTIVITY_ACTIONS.EXPENSE_REVERSED: {
             const expenseCard = <EventExpense event={event} />;
+            const activityId = event.parentActivityId ?? event.id;
 
             return isNavigable &&
-                event.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ? (
+                (event.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ||
+                    event.action === ACTIVITY_ACTIONS.EXPENSE_UPDATED) ? (
                 <ActivityEventLink
-                    to={buildActivitySubeventsRoute(event.id)}
+                    to={buildActivitySubeventsRoute(activityId)}
                     onClick={onSelectEvent}
                     unsetStyles
                 >

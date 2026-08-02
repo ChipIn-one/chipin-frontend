@@ -1,5 +1,6 @@
 import type {
-    ApiActivityItemsResponse,
+    ApiActivityFeedItemResponse,
+    ApiDashboardResponse,
     ApiFriend,
     ApiFriendBalance,
     ApiGroupResponse,
@@ -9,11 +10,12 @@ import type {
     ApiUserSex,
     ApiUserSummary,
     ApiUserTheme,
-    BalancesMap,
 } from './chipin.raw.types';
 
 // ─── Re-exports: raw response types (for api layer & helpers) ──────────────
 export type {
+    ApiActivityFeedItemResponse,
+    ApiActivityFeedResponse,
     ApiActivityItemsResponse,
     ApiCreateLedgerResponse,
     ApiCurrencyRatesResponse,
@@ -65,12 +67,8 @@ export type FriendUser = UserSummary;
 export type FriendBalance = ApiFriendBalance;
 export type KnownUser = ApiFriend;
 
-/** Group — same shape as the API response. */
 export type Group = ApiGroupResponse;
 export type GroupUser = UserSummary;
 
-/** Dashboard response with parsed balances and activity. */
-export type Dashboard = {
-    balances: BalancesMap;
-    activity: ApiActivityItemsResponse;
-};
+export type ActivityFeedItem = ApiActivityFeedItemResponse;
+export type Dashboard = ApiDashboardResponse;

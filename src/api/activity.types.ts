@@ -3,6 +3,7 @@ import type {
     ExpenseReversedAction,
     ExpenseTransferredFromAction,
     ExpenseTransferredToAction,
+    ExpenseUpdatedAction,
     GroupCreatedAction,
     GroupDeletedAction,
     GroupUpdatedAction,
@@ -106,6 +107,13 @@ type ExpenseCreatedEvent = BaseEvent & {
     metadata: ExpenseMetadata;
 };
 
+type ExpenseUpdatedEvent = BaseEvent & {
+    domain: 'LEDGER';
+    action: ExpenseUpdatedAction;
+    subjectType: 'expense';
+    metadata: ExpenseMetadata;
+};
+
 type ExpenseReversedEvent = BaseEvent & {
     domain: 'LEDGER';
     action: ExpenseReversedAction;
@@ -198,6 +206,7 @@ type MemberLeftEvent = BaseEvent & {
 
 export type AppEvent =
     | ExpenseCreatedEvent
+    | ExpenseUpdatedEvent
     | ExpenseReversedEvent
     | ExpenseTransferredFromEvent
     | ExpenseTransferredToEvent

@@ -108,6 +108,13 @@ const expenseCreatedEvent = {
     },
 } satisfies AppEvent;
 
+const expenseUpdatedEvent = {
+    ...expenseCreatedEvent,
+    id: 'updated-expense-id',
+    action: ACTIVITY_ACTIONS.EXPENSE_UPDATED,
+    parentActivityId: expenseCreatedEvent.id,
+} satisfies AppEvent;
+
 const settlementMetadata = {
     type: 'settlement' as const,
     entryId: 'settlement-id',
@@ -154,6 +161,19 @@ test('renders supported events without a link when navigation is disabled', () =
     );
 
     expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.getByTestId('expense-event')).toBeTruthy();
+});
+
+test('renders an updated expense and links it to its parent activity', () => {
+    render(
+        <MemoryRouter>
+            <ActivityEvent event={expenseUpdatedEvent} />
+        </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+        `/activity/${expenseCreatedEvent.id}`,
+    );
     expect(screen.getByTestId('expense-event')).toBeTruthy();
 });
 

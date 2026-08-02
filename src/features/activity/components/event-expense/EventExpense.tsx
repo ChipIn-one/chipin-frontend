@@ -8,6 +8,7 @@ import {
     ACTIVITY_ACTIONS,
     type ExpenseCreatedAction,
     type ExpenseReversedAction,
+    type ExpenseUpdatedAction,
 } from 'constants/activity';
 import { useUsersStore } from 'store/users-store';
 
@@ -15,7 +16,10 @@ import { ExpenseIcon } from './components';
 import { ExpenseAmount, ExpenseDebt, ExpenseDescription, ExpensePayer } from './styled';
 
 interface Props {
-    event: Extract<AppEvent, { action: ExpenseCreatedAction | ExpenseReversedAction }>;
+    event: Extract<
+        AppEvent,
+        { action: ExpenseCreatedAction | ExpenseUpdatedAction | ExpenseReversedAction }
+    >;
 }
 
 const EventExpense = ({ event }: Props) => {

@@ -79,7 +79,7 @@ const DashboardPage = () => {
                     <ActivityFeedSkeleton isShowSummary />
                 ) : (
                     <ActivityEventsList
-                        events={activityItems}
+                        events={activityItems.map(item => item.lastEvent)}
                         isShowSummary
                         isNavigable
                     />

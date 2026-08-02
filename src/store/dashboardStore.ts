@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 
-import type { AppEvent } from 'api/activity.types';
 import { fetchApiCurrencyRates, fetchApiDashboard } from 'api/chipin';
 import type { ApiCurrencyRatesResponse, BalanceEntry, BalancesMap } from 'api/chipin.raw.types';
+import type { ActivityFeedItem } from 'api/chipin.types';
 import { sortBalancesByCurrency } from 'helpers/currencies';
 import { getLocalUser } from 'helpers/localStorage';
 
@@ -26,7 +26,7 @@ interface DashboardStoreState {
     netTotalInBase: number | null;
     owedTotalInBase: number | null;
     owingTotalInBase: number | null;
-    activityItems: AppEvent[];
+    activityItems: ActivityFeedItem[];
     activityNextCursor: number | null;
     currencies: ApiCurrencyRatesResponse;
 }

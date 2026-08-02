@@ -1,5 +1,6 @@
 const ACTIVITY_ACTIONS = {
     EXPENSE_CREATED: 'EXPENSE_CREATED',
+    EXPENSE_UPDATED: 'EXPENSE_UPDATED',
     EXPENSE_REVERSED: 'EXPENSE_REVERSED',
     EXPENSE_TRANSFERRED_FROM: 'EXPENSE_TRANSFERRED_FROM',
     EXPENSE_TRANSFERRED_TO: 'EXPENSE_TRANSFERRED_TO',
@@ -21,6 +22,7 @@ const ACTIVITY_CATEGORIES = {
 type ActivityAction = (typeof ACTIVITY_ACTIONS)[keyof typeof ACTIVITY_ACTIONS];
 type ActivityCategory = (typeof ACTIVITY_CATEGORIES)[keyof typeof ACTIVITY_CATEGORIES];
 type ExpenseCreatedAction = typeof ACTIVITY_ACTIONS.EXPENSE_CREATED;
+type ExpenseUpdatedAction = typeof ACTIVITY_ACTIONS.EXPENSE_UPDATED;
 type ExpenseReversedAction = typeof ACTIVITY_ACTIONS.EXPENSE_REVERSED;
 type ExpenseTransferredFromAction = typeof ACTIVITY_ACTIONS.EXPENSE_TRANSFERRED_FROM;
 type ExpenseTransferredToAction = typeof ACTIVITY_ACTIONS.EXPENSE_TRANSFERRED_TO;
@@ -41,6 +43,7 @@ export type {
     ExpenseReversedAction,
     ExpenseTransferredFromAction,
     ExpenseTransferredToAction,
+    ExpenseUpdatedAction,
     GroupCreatedAction,
     GroupDeletedAction,
     GroupUpdatedAction,

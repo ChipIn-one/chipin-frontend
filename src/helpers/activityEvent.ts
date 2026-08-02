@@ -6,7 +6,10 @@ import {
 } from 'constants/activity';
 
 export const getActivityCategory = (event?: AppEvent): ActivityCategory | undefined => {
-    if (event?.action === ACTIVITY_ACTIONS.EXPENSE_CREATED) {
+    if (
+        event?.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ||
+        event?.action === ACTIVITY_ACTIONS.EXPENSE_UPDATED
+    ) {
         return ACTIVITY_CATEGORIES.EXPENSE;
     }
 
@@ -20,6 +23,7 @@ export const getActivityCategory = (event?: AppEvent): ActivityCategory | undefi
 export const getActivityLedgerEntryId = (event?: AppEvent): string | undefined => {
     if (
         event?.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ||
+        event?.action === ACTIVITY_ACTIONS.EXPENSE_UPDATED ||
         event?.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED
     ) {
         return event.metadata.entryId;

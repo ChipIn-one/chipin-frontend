@@ -32,6 +32,7 @@ const ActivityList = ({ activeFilter }: Props) => {
             return items.filter(
                 item =>
                     item.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ||
+                    item.action === ACTIVITY_ACTIONS.EXPENSE_UPDATED ||
                     item.action === ACTIVITY_ACTIONS.EXPENSE_REVERSED,
             );
         }
