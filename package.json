@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "npm run test:run",
-    "build": "npm run create-pwa-icons && npm run generate-version && tsc -b && vite build",
+    "prebuild": "npm run generate-version && npm run test:run",
+    "build": "npm run create-pwa-icons && tsc -b && vite build",
     "lint": "eslint .",
     "test": "vitest",
     "test:run": "vitest run",
