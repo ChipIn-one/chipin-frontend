@@ -57,6 +57,7 @@
     },
     "footer": {
         "copyright": "{{year}}. All rights reserved ©",
+        "mediaTitle": "We are in the media",
         "privacy": "Privacy",
         "terms": "Terms",
         "contact": "Contact"

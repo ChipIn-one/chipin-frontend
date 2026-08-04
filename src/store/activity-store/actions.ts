@@ -6,7 +6,7 @@ import * as ledgerApi from 'api/ledgerApi';
 import { useLoadingStore } from '../loadingStore';
 import { useUsersStore } from '../users-store';
 
-import { ACTIVITY_PAGE_LIMIT } from './constants';
+import { ACTIVITY_API_LIMIT } from './constants';
 import { initialState } from './initialState';
 import type { ActivityStore } from './types';
 
@@ -18,7 +18,7 @@ const useActivityStore = create<ActivityStore>((set, get) => ({
         setLoading('activity', 'data', 'loading');
 
         return activityApi
-            .fetchActivities({ limit: ACTIVITY_PAGE_LIMIT })
+            .fetchActivities({ limit: ACTIVITY_API_LIMIT })
             .then(data => {
                 set({
                     items: data.items,
@@ -44,7 +44,7 @@ const useActivityStore = create<ActivityStore>((set, get) => ({
 
         return activityApi
             .fetchActivities({
-                limit: ACTIVITY_PAGE_LIMIT,
+                limit: ACTIVITY_API_LIMIT,
                 cursor: nextCursor,
             })
             .then(data => {
@@ -95,7 +95,7 @@ const useActivityStore = create<ActivityStore>((set, get) => ({
             .fetchActivityChildren({
                 parentActivityId,
                 category,
-                limit: ACTIVITY_PAGE_LIMIT,
+                limit: ACTIVITY_API_LIMIT,
             })
             .then(data => {
                 set({
@@ -119,11 +119,7 @@ const useActivityStore = create<ActivityStore>((set, get) => ({
     },
 
     fetchMoreActivitySubevents: () => {
-        const {
-            subeventsNextCursor,
-            subeventsParentId,
-            subeventsCategory,
-        } = get();
+        const { subeventsNextCursor, subeventsParentId, subeventsCategory } = get();
         const { setLoading, activity } = useLoadingStore.getState();
 
         if (
@@ -140,7 +136,7 @@ const useActivityStore = create<ActivityStore>((set, get) => ({
             .fetchActivityChildren({
                 parentActivityId: subeventsParentId,
                 category: subeventsCategory ?? undefined,
-                limit: ACTIVITY_PAGE_LIMIT,
+                limit: ACTIVITY_API_LIMIT,
                 cursor: subeventsNextCursor,
             })
             .then(data => {

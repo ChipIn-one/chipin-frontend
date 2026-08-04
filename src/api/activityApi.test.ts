@@ -25,12 +25,9 @@ describe('activityApi', () => {
         vi.mocked(apiInstance.get).mockResolvedValue({ data: response });
 
         return fetchActivities({ limit: 15, cursor: 0 }).then(result => {
-            expect(apiInstance.get).toHaveBeenCalledWith(
-                '/users/self/activities?includeChildren=true',
-                {
-                    params: { limit: 15, cursor: 0 },
-                },
-            );
+            expect(apiInstance.get).toHaveBeenCalledWith('/users/self/activities', {
+                params: { limit: 15, cursor: 0 },
+            });
             expect(result).toEqual(response);
         });
     });

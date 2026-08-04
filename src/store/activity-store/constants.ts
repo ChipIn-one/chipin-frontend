@@ -1,3 +1,3 @@
-const ACTIVITY_PAGE_LIMIT = 15;
+const ACTIVITY_API_LIMIT = 20;
 
-export { ACTIVITY_PAGE_LIMIT };
+export { ACTIVITY_API_LIMIT };

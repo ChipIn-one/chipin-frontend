@@ -57,6 +57,7 @@
     },
     "footer": {
         "copyright": "{{year}}. Todos os direitos reservados ©",
+        "mediaTitle": "Estamos na mídia",
         "privacy": "Privacidade",
         "terms": "Termos",
         "contact": "Contato"
