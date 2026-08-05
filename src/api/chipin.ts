@@ -3,6 +3,7 @@ import type { AuthTokens } from 'helpers/localStorage';
 import { apiInstance } from './chipin.instance';
 import type {
     ApiCurrencyRatesResponse,
+    ApiGroupsResponse,
     ApiOAuthTokenPairResponse,
     ApiRefreshTokenPairResponse,
     ApiRemoveGroupResponse,
@@ -48,7 +49,7 @@ export const exchangeApiGoogleOAuthCode = (code: string): Promise<ApiOAuthTokenP
 };
 
 export const fetchApiUserGroups = (): Promise<Group[]> => {
-    return apiInstance.get<Group[]>('/groups').then(result => result.data);
+    return apiInstance.get<ApiGroupsResponse>('/groups').then(result => result.data.items);
 };
 
 export const fetchApiUserGroupById = (groupId: string): Promise<Group> => {

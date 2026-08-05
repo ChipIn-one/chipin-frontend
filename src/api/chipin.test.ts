@@ -97,11 +97,16 @@ describe('embedded activity feed responses', () => {
         });
     });
 
-    test('returns activity feed items from group list responses', () => {
-        vi.mocked(apiInstance.get).mockResolvedValue({ data: [groupResponse] });
+    test('unwraps groups from the paginated group list response', () => {
+        vi.mocked(apiInstance.get).mockResolvedValue({
+            data: {
+                items: [groupResponse],
+                nextCursor: null,
+            },
+        });
 
         return fetchApiUserGroups().then(result => {
-            expect(result[0].recentActivities).toEqual(groupResponse.recentActivities);
+            expect(result).toEqual([groupResponse]);
         });
     });
 

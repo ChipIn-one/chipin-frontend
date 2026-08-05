@@ -25,6 +25,7 @@ export type {
     ApiFriendBalance,
     ApiFriendsResponse,
     ApiGroupResponse,
+    ApiGroupsResponse,
     ApiOAuthTokenPairResponse,
     ApiParticipantShare,
     ApiRefreshTokenPairResponse,

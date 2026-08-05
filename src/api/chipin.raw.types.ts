@@ -87,6 +87,11 @@ export interface ApiGroupResponse {
     recentActivities: ApiActivityFeedItemResponse[];
 }
 
+export interface ApiGroupsResponse {
+    items: ApiGroupResponse[];
+    nextCursor: number | null;
+}
+
 export interface ApiRemoveGroupResponse {
     id: string;
 }
