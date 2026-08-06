@@ -42,7 +42,10 @@ test('aggregates group member balances by currency and direction', () => {
         coverUrl: null,
         role: 'OWNER',
         status: 'ACTIVE',
-        recentActivities: [],
+        recentActivities: {
+            items: [],
+            nextCursor: null,
+        },
     };
 
     expect(selectGroupBalances(group)).toEqual({
@@ -89,7 +92,10 @@ test('keeps opposite balances in the same currency as separate debts', () => {
         coverUrl: null,
         role: 'OWNER',
         status: 'ACTIVE',
-        recentActivities: [],
+        recentActivities: {
+            items: [],
+            nextCursor: null,
+        },
     };
 
     expect(selectGroupBalances(group)).toEqual({
@@ -148,7 +154,10 @@ test('groups settlement options by direction and splits mixed member balances', 
         coverUrl: null,
         role: 'OWNER',
         status: 'ACTIVE',
-        recentActivities: [],
+        recentActivities: {
+            items: [],
+            nextCursor: null,
+        },
     };
 
     expect(selectGroupSettlementOptions(group, currentUser.id)).toEqual({
@@ -221,7 +230,10 @@ test('groups settlement options by direction and splits mixed member balances', 
         coverUrl: null,
         role: 'OWNER',
         status: 'ACTIVE',
-        recentActivities: [],
+        recentActivities: {
+            items: [],
+            nextCursor: null,
+        },
     };
 
     expect(selectGroupSettlementOptions(group, currentUser.id)).toEqual({

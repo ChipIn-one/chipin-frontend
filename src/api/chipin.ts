@@ -48,8 +48,8 @@ export const exchangeApiGoogleOAuthCode = (code: string): Promise<ApiOAuthTokenP
         .then(response => response.data);
 };
 
-export const fetchApiUserGroups = (): Promise<Group[]> => {
-    return apiInstance.get<ApiGroupsResponse>('/groups').then(result => result.data.items);
+export const fetchApiUserGroups = (): Promise<ApiGroupsResponse> => {
+    return apiInstance.get<ApiGroupsResponse>('/groups').then(result => result.data);
 };
 
 export const fetchApiUserGroupById = (groupId: string): Promise<Group> => {

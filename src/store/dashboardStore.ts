@@ -1,11 +1,13 @@
 import { create } from 'zustand';
 
+import * as activityApi from 'api/activityApi';
 import { fetchApiCurrencyRates, fetchApiDashboard } from 'api/chipin';
 import type { ApiCurrencyRatesResponse, BalanceEntry, BalancesMap } from 'api/chipin.raw.types';
 import type { ActivityFeedItem } from 'api/chipin.types';
 import { sortBalancesByCurrency } from 'helpers/currencies';
 import { getLocalUser } from 'helpers/localStorage';
 
+import { ACTIVITY_API_LIMIT } from './activity-store/constants';
 import { calcBalancesSummary } from './commonSelectors';
 import { useLoadingStore } from './loadingStore';
 import { selectUserCurrency } from './users-store';
@@ -33,6 +35,7 @@ interface DashboardStoreState {
 
 export interface DashboardStore extends DashboardStoreState {
     fetchSetDashboardData: () => void;
+    fetchMoreDashboardActivity: () => Promise<void>;
     setAppMode: (appMode: AppMode) => void;
     setDefaultAppMode: (isSoloModeByDefault: boolean) => void;
     setDashboardSummaryCurrency: (defaultCurrency: string) => void;
@@ -66,13 +69,14 @@ const createInitialDashboardState = (): DashboardStoreState => {
     };
 };
 
-export const useDashboardStore = create<DashboardStore>(set => ({
+export const useDashboardStore = create<DashboardStore>((set, get) => ({
     ...createInitialDashboardState(),
 
     fetchSetDashboardData: () => {
         const { setLoading } = useLoadingStore.getState();
 
         setLoading('dashboard', 'data', 'loading');
+        setLoading('dashboard', 'nextPage', 'fetched');
 
         Promise.all([fetchApiDashboard(), fetchApiCurrencyRates()])
             .then(([dashboard, currencies]) => {
@@ -117,6 +121,41 @@ export const useDashboardStore = create<DashboardStore>(set => ({
                 setLoading('dashboard', 'data', 'fetched');
             });
     },
+    fetchMoreDashboardActivity: () => {
+        const { activityNextCursor } = get();
+        const { dashboard, setLoading } = useLoadingStore.getState();
+
+        if (activityNextCursor === null || dashboard.nextPage === 'loading') {
+            return Promise.resolve();
+        }
+
+        setLoading('dashboard', 'nextPage', 'loading');
+
+        return activityApi
+            .fetchActivityPreviews({
+                limit: ACTIVITY_API_LIMIT,
+                cursor: activityNextCursor,
+            })
+            .then(data => {
+                if (get().activityNextCursor !== activityNextCursor) {
+                    return;
+                }
+
+                set(state => ({
+                    activityItems: [...state.activityItems, ...data.items],
+                    activityNextCursor: data.nextCursor,
+                }));
+                setLoading('dashboard', 'nextPage', 'fetched');
+            })
+            .catch((error: unknown) => {
+                if (get().activityNextCursor !== activityNextCursor) {
+                    return undefined;
+                }
+
+                setLoading('dashboard', 'nextPage', 'fetched');
+                return Promise.reject(error);
+            });
+    },
     setDashboardSummaryCurrency: defaultCurrency => {
         set(state => {
             const entries = Object.values(state.balances);
@@ -156,6 +195,7 @@ export const useDashboardStore = create<DashboardStore>(set => ({
     },
     setInitialDashboardStore: () => {
         set(createInitialDashboardState());
+        useLoadingStore.getState().setLoading('dashboard', 'nextPage', 'fetched');
     },
 }));
 

@@ -30,6 +30,36 @@ beforeEach(() => {
     useLoadingStore.getState().setInitialLoadingStore();
 });
 
+const createActivityEvent = (id: string, seq: number): AppEvent => ({
+    id,
+    seq,
+    domain: 'LEDGER',
+    action: ACTIVITY_ACTIONS.EXPENSE_CREATED,
+    actorUserId: 'user-1',
+    actorSnapshot: {
+        displayName: 'Alex',
+        picture: null,
+    },
+    subjectType: 'expense',
+    subjectId: `expense-${seq}`,
+    groupId: 'group-1',
+    metadata: {
+        type: 'expense',
+        entryId: `expense-${seq}`,
+        groupId: 'group-1',
+        groupName: 'Group',
+        description: 'Dinner',
+        amount: 30,
+        currency: 'USD',
+        payerId: 'user-1',
+        payerDisplayName: 'Alex',
+        shares: [],
+        fieldDiffs: [],
+    },
+    createdAt: seq,
+    parentActivityId: null,
+});
+
 test('resets activity state', () => {
     useActivityStore.setState({
         nextCursor: 25,
@@ -162,4 +192,55 @@ test('preserves subevent pagination after a page request fails', () => {
                 ).toBe('fetched');
             },
         );
+});
+
+test('appends subevents in API order', () => {
+    const existingEvent = createActivityEvent('activity-1', 1);
+    const nextEvent = createActivityEvent('activity-2', 2);
+    useActivityStore.setState({
+        subevents: [existingEvent],
+        subeventsNextCursor: 40,
+        subeventsParentId: 'parent-1',
+        subeventsCategory: ACTIVITY_CATEGORIES.EXPENSE,
+        hasMoreSubevents: true,
+    });
+    vi.mocked(activityApi.fetchActivityChildren).mockResolvedValue({
+        items: [nextEvent],
+        nextCursor: null,
+    });
+
+    return useActivityStore
+        .getState()
+        .fetchMoreActivitySubevents()
+        .then(() => {
+            expect(useActivityStore.getState().subevents).toEqual([
+                existingEvent,
+                nextEvent,
+            ]);
+        });
+});
+
+test('accepts zero as a valid subevent pagination cursor', () => {
+    useActivityStore.setState({
+        subeventsNextCursor: 0,
+        subeventsParentId: 'parent-1',
+        subeventsCategory: ACTIVITY_CATEGORIES.EXPENSE,
+        hasMoreSubevents: true,
+    });
+    vi.mocked(activityApi.fetchActivityChildren).mockResolvedValue({
+        items: [],
+        nextCursor: null,
+    });
+
+    return useActivityStore
+        .getState()
+        .fetchMoreActivitySubevents()
+        .then(() => {
+            expect(activityApi.fetchActivityChildren).toHaveBeenCalledWith({
+                parentActivityId: 'parent-1',
+                category: ACTIVITY_CATEGORIES.EXPENSE,
+                limit: 20,
+                cursor: 0,
+            });
+        });
 });

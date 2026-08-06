@@ -54,7 +54,10 @@ const group: Group = {
     coverUrl: null,
     role: 'OWNER',
     status: 'ACTIVE',
-    recentActivities: [],
+    recentActivities: {
+        items: [],
+        nextCursor: null,
+    },
 };
 
 const settledGroup: Group = {

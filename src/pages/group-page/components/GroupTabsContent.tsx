@@ -19,7 +19,7 @@ interface Props {
 const GroupTabsContent = ({ group }: Props) => {
     const { t } = useTranslation('group');
     const isGroupDataLoading = useLoadingStore(selectGroupDataLoading);
-    const activityItems = group.recentActivities.map(item => item.lastEvent);
+    const activityItems = group.recentActivities.items.map(item => item.lastEvent);
 
     return (
         <Box mt="4">

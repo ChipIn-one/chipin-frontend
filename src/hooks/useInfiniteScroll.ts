@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { useIntersectionObserver } from '@uidotdev/usehooks';
 
@@ -18,16 +18,23 @@ const useInfiniteScroll = ({
     const [sentinelRef, sentinelEntry] = useIntersectionObserver({
         threshold: 0,
     });
+    const hasTriggeredRef = useRef(false);
 
     useEffect(() => {
-        if (!sentinelEntry?.isIntersecting || !hasMore || isLoading) {
+        if (!sentinelEntry?.isIntersecting) {
+            hasTriggeredRef.current = false;
             return;
         }
 
+        if (!hasMore || isLoading || hasTriggeredRef.current) {
+            return;
+        }
+
+        hasTriggeredRef.current = true;
         void onLoadMore().catch(() => undefined);
     }, [sentinelEntry?.isIntersecting, hasMore, isLoading, onLoadMore]);
 
     return sentinelRef;
 };
 
-export { type InfiniteScrollRef,useInfiniteScroll };
+export { type InfiniteScrollRef, useInfiniteScroll };

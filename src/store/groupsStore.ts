@@ -25,6 +25,7 @@ import { useUsersStore } from './users-store';
 export interface GroupsStore {
     selectedGroup: Group | null;
     groups: Group[];
+    groupsNextCursor: number | null;
     oweEntries: BalanceEntry[];
     owedEntries: BalanceEntry[];
     netTotalInBase: number | null;
@@ -56,6 +57,7 @@ export interface GroupsStore {
 const initialGroupsStore = {
     selectedGroup: null,
     groups: [],
+    groupsNextCursor: null,
     oweEntries: [],
     owedEntries: [],
     netTotalInBase: null,
@@ -95,7 +97,8 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         setLoading('group', 'list', 'loading');
 
         return fetchApiUserGroups()
-            .then(groups => {
+            .then(response => {
+                const groups = response.items;
                 const selectedGroupId = get().selectedGroup?.id;
                 let selectedGroup: Group | undefined;
 
@@ -105,7 +108,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     );
                 }
 
-                set({ groups });
+                set({ groups, groupsNextCursor: response.nextCursor });
 
                 if (selectedGroup) {
                     get().setSelectedGroup(selectedGroup);
@@ -153,7 +156,6 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 useLoadingStore.getState().setLoading('group', 'data', 'fetched');
             });
     },
-
     createGroup: ({ groupName, groupDescription, groupEmoji }) => {
         const { setLoading } = useLoadingStore.getState();
         setLoading('group', 'add', 'loading');

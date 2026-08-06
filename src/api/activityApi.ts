@@ -2,8 +2,11 @@ import type { ActivityCategory } from 'constants/activity';
 
 import type { AppEvent } from './activity.types';
 import { apiInstance } from './chipin.instance';
-import type { ApiActivityItemsResponse } from './chipin.raw.types';
-import type { FetchActivitiesParams, FetchActivityChildrenParams } from './chipin.types';
+import type { ApiActivityFeedResponse, ApiActivityItemsResponse } from './chipin.raw.types';
+import type {
+    FetchActivitiesParams,
+    FetchActivityChildrenParams,
+} from './chipin.types';
 
 const getPaginationParams = ({ limit, cursor }: FetchActivitiesParams): FetchActivitiesParams => {
     return {
@@ -43,6 +46,16 @@ export const fetchActivityChildren = ({
     return apiInstance
         .get<ApiActivityItemsResponse>(`/users/self/activities/${parentActivityId}/children`, {
             params,
+        })
+        .then(response => response.data);
+};
+
+export const fetchActivityPreviews = (
+    params: FetchActivitiesParams,
+): Promise<ApiActivityFeedResponse> => {
+    return apiInstance
+        .get<ApiActivityFeedResponse>('/users/self/activity-previews', {
+            params: getPaginationParams(params),
         })
         .then(response => response.data);
 };

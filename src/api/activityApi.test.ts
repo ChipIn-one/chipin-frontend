@@ -6,6 +6,7 @@ import {
     fetchActivities,
     fetchActivity,
     fetchActivityChildren,
+    fetchActivityPreviews,
 } from './activityApi';
 import { apiInstance } from './chipin.instance';
 
@@ -92,6 +93,18 @@ describe('activityApi', () => {
                     },
                 },
             );
+            expect(result).toEqual(response);
+        });
+    });
+
+    test('fetches the next dashboard activity preview page', () => {
+        const response = { items: [], nextCursor: 60 };
+        vi.mocked(apiInstance.get).mockResolvedValue({ data: response });
+
+        return fetchActivityPreviews({ limit: 20, cursor: 40 }).then(result => {
+            expect(apiInstance.get).toHaveBeenCalledWith('/users/self/activity-previews', {
+                params: { limit: 20, cursor: 40 },
+            });
             expect(result).toEqual(response);
         });
     });

@@ -70,7 +70,10 @@ const group = {
     coverUrl: null,
     role: 'OWNER',
     status: 'ACTIVE',
-    recentActivities: [],
+    recentActivities: {
+        items: [],
+        nextCursor: null,
+    },
 } satisfies Group;
 
 const currentUser = {

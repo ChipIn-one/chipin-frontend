@@ -42,7 +42,10 @@ const group = {
     coverUrl: null,
     role: 'OWNER',
     status: 'ACTIVE',
-    recentActivities: [],
+    recentActivities: {
+        items: [],
+        nextCursor: null,
+    },
 } satisfies Group;
 
 const currentUser = {
@@ -283,7 +286,10 @@ describe('groupsStore', () => {
 
     test('fetches groups into the groups store and settles list loading', () => {
         const expectedGroups = [group];
-        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue(expectedGroups);
+        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({
+            items: expectedGroups,
+            nextCursor: 2,
+        });
 
         const request = useGroupsStore.getState().fetchSetGroups();
 
@@ -293,6 +299,7 @@ describe('groupsStore', () => {
             expect(chipinApi.fetchApiUserGroups).toHaveBeenCalledOnce();
             expect(fetchedGroups).toEqual(expectedGroups);
             expect(useGroupsStore.getState().groups).toEqual(expectedGroups);
+            expect(useGroupsStore.getState().groupsNextCursor).toBe(2);
             expect(useLoadingStore.getState().group.list).toBe('fetched');
         });
     });
@@ -304,9 +311,10 @@ describe('groupsStore', () => {
         };
 
         useGroupsStore.getState().setSelectedGroup(settlementGroup);
-        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue([
-            refreshedGroup,
-        ]);
+        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({
+            items: [refreshedGroup],
+            nextCursor: null,
+        });
 
         return useGroupsStore
             .getState()
@@ -335,14 +343,24 @@ describe('groupsStore', () => {
     });
 
     test('uses the same group response for fetch by id', () => {
-        vi.mocked(chipinApi.fetchApiUserGroupById).mockResolvedValue(group);
+        const groupWithActivityCursor = {
+            ...group,
+            recentActivities: {
+                items: [],
+                nextCursor: 73,
+            },
+        } satisfies Group;
+        vi.mocked(chipinApi.fetchApiUserGroupById).mockResolvedValue(groupWithActivityCursor);
 
         return useGroupsStore
             .getState()
             .fetchSetGroupById(group.id)
             .then(fetchedGroup => {
-                expect(fetchedGroup).toEqual(group);
-                expect(useGroupsStore.getState().selectedGroup).toEqual(group);
+                expect(fetchedGroup).toEqual(groupWithActivityCursor);
+                expect(useGroupsStore.getState().selectedGroup).toEqual(groupWithActivityCursor);
+                expect(
+                    useGroupsStore.getState().selectedGroup?.recentActivities.nextCursor,
+                ).toBe(73);
                 expect(useLoadingStore.getState().group.data).toBe('fetched');
             });
     });
@@ -361,7 +379,10 @@ describe('groupsStore', () => {
 
     test('reuses a cached group on browser back instead of fetching by id', () => {
         const otherGroup = { ...group, id: 'group-2', name: 'Other Group' } satisfies Group;
-        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue([group, otherGroup]);
+        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({
+            items: [group, otherGroup],
+            nextCursor: null,
+        });
 
         return useGroupsStore
             .getState()

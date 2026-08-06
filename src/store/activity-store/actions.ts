@@ -103,6 +103,7 @@ const useActivityStore = create<ActivityStore>((set, get) => ({
                     subeventsNextCursor: data.nextCursor,
                     hasMoreSubevents: data.nextCursor !== null,
                 });
+                setLoading('activity', 'subeventsData', 'fetched');
             })
             .catch((error: unknown) => {
                 set({
@@ -111,10 +112,8 @@ const useActivityStore = create<ActivityStore>((set, get) => ({
                     hasMoreSubevents: false,
                     subeventsParentId: null,
                 });
-                return Promise.reject(error);
-            })
-            .finally(() => {
                 setLoading('activity', 'subeventsData', 'fetched');
+                return Promise.reject(error);
             });
     },
 
@@ -123,7 +122,7 @@ const useActivityStore = create<ActivityStore>((set, get) => ({
         const { setLoading, activity } = useLoadingStore.getState();
 
         if (
-            !subeventsNextCursor ||
+            subeventsNextCursor === null ||
             !subeventsParentId ||
             activity.subeventsNextPage === 'loading'
         ) {
@@ -140,14 +139,16 @@ const useActivityStore = create<ActivityStore>((set, get) => ({
                 cursor: subeventsNextCursor,
             })
             .then(data => {
-                set(state => ({
-                    subevents: [...state.subevents, ...data.items],
+                set(currentState => ({
+                    subevents: [...currentState.subevents, ...data.items],
                     subeventsNextCursor: data.nextCursor,
                     hasMoreSubevents: data.nextCursor !== null,
                 }));
-            })
-            .finally(() => {
                 setLoading('activity', 'subeventsNextPage', 'fetched');
+            })
+            .catch((error: unknown) => {
+                setLoading('activity', 'subeventsNextPage', 'fetched');
+                return Promise.reject(error);
             });
     },
 
@@ -156,6 +157,7 @@ const useActivityStore = create<ActivityStore>((set, get) => ({
     },
 
     resetActivitySubevents: () => {
+        const { setLoading } = useLoadingStore.getState();
         set({
             subevents: initialState.subevents,
             subeventsNextCursor: initialState.subeventsNextCursor,
@@ -163,6 +165,8 @@ const useActivityStore = create<ActivityStore>((set, get) => ({
             subeventsParentId: initialState.subeventsParentId,
             subeventsCategory: initialState.subeventsCategory,
         });
+        setLoading('activity', 'subeventsData', 'fetched');
+        setLoading('activity', 'subeventsNextPage', 'fetched');
     },
 
     createExpense: input => {
@@ -202,7 +206,10 @@ const useActivityStore = create<ActivityStore>((set, get) => ({
     },
 
     resetActivity: () => {
+        const { setLoading } = useLoadingStore.getState();
         set(initialState);
+        setLoading('activity', 'subeventsData', 'fetched');
+        setLoading('activity', 'subeventsNextPage', 'fetched');
     },
 }));
 

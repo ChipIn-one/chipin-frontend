@@ -74,7 +74,10 @@ const groupResponse = {
     coverUrl: null,
     role: 'OWNER',
     status: 'ACTIVE',
-    recentActivities: [{ parent: parentEvent, lastEvent }],
+    recentActivities: {
+        items: [{ parent: parentEvent, lastEvent }],
+        nextCursor: 1,
+    },
 };
 
 describe('embedded activity feed responses', () => {
@@ -97,16 +100,15 @@ describe('embedded activity feed responses', () => {
         });
     });
 
-    test('unwraps groups from the paginated group list response', () => {
-        vi.mocked(apiInstance.get).mockResolvedValue({
-            data: {
-                items: [groupResponse],
-                nextCursor: null,
-            },
-        });
+    test('returns the complete paginated group list response', () => {
+        const response = {
+            items: [groupResponse],
+            nextCursor: 2,
+        };
+        vi.mocked(apiInstance.get).mockResolvedValue({ data: response });
 
         return fetchApiUserGroups().then(result => {
-            expect(result).toEqual([groupResponse]);
+            expect(result).toEqual(response);
         });
     });
 
@@ -167,7 +169,10 @@ describe('inviteApiUserToGroup', () => {
             coverUrl: null,
             role: 'MEMBER' as const,
             status: 'ACTIVE' as const,
-            recentActivities: [{ parent: parentEvent, lastEvent }],
+            recentActivities: {
+                items: [{ parent: parentEvent, lastEvent }],
+                nextCursor: null,
+            },
         };
 
         vi.mocked(apiInstance.post).mockResolvedValue({ data: group });

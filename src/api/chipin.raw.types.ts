@@ -84,7 +84,7 @@ export interface ApiGroupResponse {
     coverUrl: string | null;
     role: 'OWNER' | 'MEMBER';
     status: 'ACTIVE' | 'ARCHIVED';
-    recentActivities: ApiActivityFeedItemResponse[];
+    recentActivities: ApiActivityFeedResponse;
 }
 
 export interface ApiGroupsResponse {

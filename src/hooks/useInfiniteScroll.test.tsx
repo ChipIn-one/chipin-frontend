@@ -38,6 +38,35 @@ test('loads the next page when the sentinel enters the viewport', () => {
     expect(onLoadMore).toHaveBeenCalledOnce();
 });
 
+test('does not load twice while the same intersection stays active', () => {
+    const onLoadMore = vi.fn(() => Promise.resolve());
+    let isLoading = false;
+    const { rerender } = renderHook(() =>
+        useInfiniteScroll({
+            hasMore: true,
+            isLoading,
+            onLoadMore,
+        }),
+    );
+
+    isIntersecting = true;
+    rerender();
+
+    isLoading = true;
+    rerender();
+    isLoading = false;
+    rerender();
+
+    expect(onLoadMore).toHaveBeenCalledOnce();
+
+    isIntersecting = false;
+    rerender();
+    isIntersecting = true;
+    rerender();
+
+    expect(onLoadMore).toHaveBeenCalledTimes(2);
+});
+
 test.each([
     {
         hasMore: false,
