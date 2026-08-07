@@ -73,8 +73,9 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
                             {group ? (
                                 <GroupAvatar
                                     group={group}
-                                    size="5"
+                                    size="6"
                                     variant="solid"
+                                    
                                 />
                             ) : (
                                 <Avatar size="5" fallback={<LucideUsers />} />
@@ -93,16 +94,17 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
                                     {group?.name || t('page.loadingGroup')}
                                 </Skeleton>
                             </Heading>
-                        </Flex>
-                    </Flex>
-
-                    {group?.description ? (
-                        <Text as="p" size={{ initial: '2', sm: '3' }}>
+                            {group?.description ? (
+                        <Text color='gray' size={{ initial: '1', sm: '2' }}>
                             <Skeleton loading={isLoading}>
                                 {group.description}
                             </Skeleton>
                         </Text>
                     ) : null}
+                        </Flex>
+                    </Flex>
+
+                    
                 </Flex>
 
                 <Flex align="center" gap="2">
@@ -124,9 +126,8 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
 
                 {group ? (
                     <Flex
-                        direction={{ initial: 'column', sm: 'row' }}
                         align={{ initial: 'stretch', sm: 'center' }}
-                        justify={{ initial: 'start', sm: 'end' }}
+                        justify='end'
                         gap="2"
                     >
                         <Button
