@@ -49,7 +49,7 @@ const GroupCard = ({ group, balances, isSelected = false }: Props) => {
                         </Badge>
                     </Flex>
                     <Flex gap="2" align="center">
-                        <GroupAvatar group={group} size="4" />
+                        <GroupAvatar group={group} size="5" />
                         <Flex direction="column" minWidth="0">
                             <BalanceSummaryText entries={balances} size="2" align="left" />
                         </Flex>

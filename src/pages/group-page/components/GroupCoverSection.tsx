@@ -73,7 +73,7 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
                             {group ? (
                                 <GroupAvatar
                                     group={group}
-                                    size="6"
+                                    size="7"
                                     variant="solid"
                                     
                                 />
