@@ -13,7 +13,6 @@ import { useIsMobile } from 'hooks/common';
 import BackgroundBox from 'basics/BackgroundBox';
 import PWABadge from 'basics/PWABadge';
 import AddExpenseButton from 'components/AddExpenseButton';
-import GlobalErrorBoundary from 'components/GlobalErrorBoundary';
 import Header from 'components/Header';
 import { AddExpenseModal, ModalOverlayGlobalStyles } from 'components/modals/';
 import AppRouter from 'features/routing';
@@ -42,36 +41,34 @@ const Main = () => {
                 panelBackground="translucent"
                 hasBackground
             >
-                <GlobalErrorBoundary>
-                    <BrowserRouter>
-                        <BackgroundBox>
-                            <Header />
-                            <GlobalHooks />
-                            <Box px="4">
-                                <AppRouter />
-                            </Box>
-                            <AddExpenseButton />
-                            <AddExpenseModal />
-                            <PWABadge />
+                <BrowserRouter>
+                    <BackgroundBox>
+                        <Header />
+                        <GlobalHooks />
+                        <Box px="4">
+                            <AppRouter />
+                        </Box>
+                        <AddExpenseButton />
+                        <AddExpenseModal />
+                        <PWABadge />
 
-                            <Toaster
-                                theme={themeName}
-                                richColors
-                                closeButton
-                                position={isMobile ? 'top-center' : 'bottom-left'}
-                                offset={isMobile ? 12 : 16}
-                                mobileOffset={isMobile ? 12 : 16}
-                                icons={{
-                                    success: <ToastSuccessIcon />,
-                                    info: <ToastInfoIcon />,
-                                    warning: <ToastWarningIcon />,
-                                    error: <ToastErrorIcon />,
-                                    loading: <ToastLoadingIcon />,
-                                }}
-                            />
-                        </BackgroundBox>
-                    </BrowserRouter>
-                </GlobalErrorBoundary>
+                        <Toaster
+                            theme={themeName}
+                            richColors
+                            closeButton
+                            position={isMobile ? 'top-center' : 'bottom-left'}
+                            offset={isMobile ? 12 : 16}
+                            mobileOffset={isMobile ? 12 : 16}
+                            icons={{
+                                success: <ToastSuccessIcon />,
+                                info: <ToastInfoIcon />,
+                                warning: <ToastWarningIcon />,
+                                error: <ToastErrorIcon />,
+                                loading: <ToastLoadingIcon />,
+                            }}
+                        />
+                    </BackgroundBox>
+                </BrowserRouter>
             </Theme>
         </ThemeProvider>
     );

@@ -63,14 +63,12 @@
     },
     "errorBoundary": {
         "title": "A aplicação encontrou um problema",
-        "subtitle": "Ocorreu um erro inesperado e a aplicação não conseguiu recuperar. Os dados da sua sessão estão intactos — tente recarregar ou volte para o painel.",
-        "runtimeError": "Erro de execução",
-        "errorMessage": "Mensagem de erro",
-        "timestamp": "Data e hora",
-        "route": "Rota",
-        "version": "Versão",
-        "stackTrace": "Stack trace",
-        "userAgent": "Agente de utilizador"
+        "runtimeError": "Algo correu mal",
+        "tryAgain": "Tentar novamente",
+        "goToDashboard": "Ir para o painel",
+        "or": "ou",
+        "updateApp": "Atualizar a aplicação",
+        "updatingApp": "A atualizar a aplicação…"
     },
     "copy": {
         "copy": "Copiar {{what}}",

@@ -8,6 +8,7 @@ import { LS_KEY_SW_UPDATE_DISMISSED_AT } from 'constants/localstorage';
 import { HOUR } from 'constants/time';
 import { TOASTS_IDS } from 'constants/toasts';
 import { LocalStorage } from 'helpers/localStorage';
+import { activateServiceWorker, reloadCurrentPage } from 'helpers/serviceWorkerRecovery';
 import { usePwaStore } from 'store/pwaStore';
 const UPDATE_DISMISS_TTL_MS = 4 * HOUR;
 
@@ -24,9 +25,6 @@ let isReloading = false;
 
 /** True when the user chose "Update"; suppresses TTL recording in onDismiss. */
 let isUpdatingNow = false;
-
-/** Bound once to navigator.serviceWorker to prevent listener leaks. */
-let isControllerChangeBound = false;
 
 /** Most recent waiting worker — updated on every maybeShowUpdateToast call. */
 let currentWaitingWorker: ServiceWorker | null = null;
@@ -45,35 +43,26 @@ const recordDismissTime = (): void => {
 // ─── SW activation ───────────────────────────────────────────────────────────
 
 /**
- * Posts SKIP_WAITING to the waiting worker and reloads exactly once after
- * the new worker takes control. The isReloading guard prevents reload loops
- * in multi-tab scenarios where controllerchange fires in every tab.
- *
- * The workbox-generated SW includes a 'message' listener that calls
- * self.skipWaiting() when it receives { type: 'SKIP_WAITING' }
- * (enabled automatically when workbox config has skipWaiting: false).
+ * Activates the waiting worker through the shared service-worker boundary.
+ * Activation failure still reloads safely so the user cannot get trapped.
  */
 const activateWaitingWorker = (): void => {
     if (!currentWaitingWorker) {
         return;
     }
 
-    // Attach the reload handler only once to avoid duplicate listeners.
-    if (!isControllerChangeBound) {
-        isControllerChangeBound = true;
+    usePwaStore.getState().setIsSwUpdateAvailable(false);
 
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
+    void activateServiceWorker(currentWaitingWorker)
+        .catch(() => undefined)
+        .then(() => {
             if (isReloading) {
                 return;
             }
 
             isReloading = true;
-            window.location.reload();
+            reloadCurrentPage();
         });
-    }
-
-    usePwaStore.getState().setIsSwUpdateAvailable(false);
-    currentWaitingWorker.postMessage({ type: 'SKIP_WAITING' });
 };
 
 // ─── Toast ────────────────────────────────────────────────────────────────────

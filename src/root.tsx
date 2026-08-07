@@ -11,6 +11,8 @@ import { LS_KEY_THEME } from 'constants/localstorage';
 import { resolveStoredTheme } from 'helpers/theme';
 import { useAuthStore } from 'store/authStore';
 
+import { GlobalErrorBoundary } from 'components/global-error-boundary';
+
 import '@radix-ui/themes/styles.css';
 import 'styles/radixStylesOverwrite.css';
 
@@ -27,7 +29,7 @@ initChipInApiInterceptors(() => {
 });
 
 createRoot(document.getElementById('root')!).render(
-    <Sentry.ErrorBoundary fallback={<></>}>
+    <GlobalErrorBoundary>
         <ThemeProvider
             attribute="class"
             defaultTheme={resolveStoredTheme()}
@@ -38,5 +40,5 @@ createRoot(document.getElementById('root')!).render(
             <SpeedInsights />
             <Main />
         </ThemeProvider>
-    </Sentry.ErrorBoundary>,
+    </GlobalErrorBoundary>,
 );

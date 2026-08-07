@@ -63,14 +63,12 @@
     },
     "errorBoundary": {
         "title": "The app ran into a problem",
-        "subtitle": "An unexpected error occurred and the application couldn't recover. Your session data is intact — try reloading or go back to the dashboard.",
-        "runtimeError": "Runtime error",
-        "errorMessage": "Error message",
-        "timestamp": "Timestamp",
-        "route": "Route",
-        "version": "Version",
-        "stackTrace": "Stack trace",
-        "userAgent": "User agent"
+        "runtimeError": "Something went wrong",
+        "tryAgain": "Try again",
+        "goToDashboard": "Go to dashboard",
+        "or": "or",
+        "updateApp": "Update app",
+        "updatingApp": "Updating app…"
     },
     "copy": {
         "copy": "Copy {{what}}",

@@ -63,14 +63,12 @@
     },
     "errorBoundary": {
         "title": "La app encontró un problema",
-        "subtitle": "Ocurrió un error inesperado y la aplicación no pudo recuperarse. Los datos de tu sesión están intactos — intenta recargar o vuelve al panel.",
-        "runtimeError": "Error de ejecución",
-        "errorMessage": "Mensaje de error",
-        "timestamp": "Marca de tiempo",
-        "route": "Ruta",
-        "version": "Versión",
-        "stackTrace": "Traza de pila",
-        "userAgent": "Agente de usuario"
+        "runtimeError": "Algo salió mal",
+        "tryAgain": "Intentar de nuevo",
+        "goToDashboard": "Ir al panel",
+        "or": "o",
+        "updateApp": "Actualizar la app",
+        "updatingApp": "Actualizando la app…"
     },
     "copy": {
         "copy": "Copiar {{what}}",
