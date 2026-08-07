@@ -110,7 +110,7 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
                 <Flex align="center" gap="2">
                     <UsersRow
                         members={members.map(member => member.user)}
-                        max={10}
+                        max={5}
                         size="2"
                     />
                     <IconButton
