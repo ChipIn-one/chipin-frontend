@@ -1,18 +1,11 @@
 import { BackButton } from 'basics';
-import {
-    LucidePencil,
-    LucidePlus,
-    LucideUsers,
-} from 'lucide-react';
+import { LucidePencil } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import {
-    Avatar,
     Badge,
     Box,
-    Button,
     Flex,
-    Grid,
     Heading,
     IconButton,
     Skeleton,
@@ -20,11 +13,8 @@ import {
 } from '@radix-ui/themes';
 
 import type { Group } from 'api/chipin.types';
-import { useExpenseModalStore } from 'store/expenseModalStore';
 
-import GroupAvatar from 'components/GroupAvatar';
-import { CreateUpdateGroupModal, SettleUpModal } from 'components/modals';
-import UsersRow from 'components/UsersRow';
+import { CreateUpdateGroupModal } from 'components/modals';
 
 import { CoverGradient, CoverWrapper, GroupCoverImage } from './styled';
 
@@ -34,8 +24,7 @@ interface Props {
 }
 
 const GroupCoverSection = ({ group, isLoading }: Props) => {
-    const { t } = useTranslation(['group', 'common', 'dashboard']);
-    const openAddExpenseModal = useExpenseModalStore(state => state.open);
+    const { t } = useTranslation(['group', 'dashboard']);
     const members = group?.members ?? [];
 
     return (
@@ -52,10 +41,10 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
             />
             {group?.coverUrl ? <CoverGradient aria-hidden /> : null}
 
-            <Grid
-                columns={{ initial: '1', sm: '2' }}
+            <Flex
+                direction="column"
                 gap="4"
-                align="end"
+                align="start"
                 width="100%"
                 mt="auto"
                 px={{ initial: '4', sm: '5' }}
@@ -63,87 +52,28 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
                 pb={{ initial: '4', sm: '5' }}
                 position="relative"
             >
-                <Flex
-                    direction="column"
-                    gap="3"
-                    gridColumn={{ initial: 'auto', sm: '1 / -1' }}
-                >
-                    <Flex gap="3" align="center">
+                <Flex gap="1" direction="column" align="start">
+                    <Skeleton loading={isLoading}>
+                        <Badge size="1" color="gray" variant="solid">
+                            {t('dashboard:groupsCard.members', {
+                                count: members.length,
+                            })}
+                        </Badge>
+                    </Skeleton>
+                    <Heading size={{ initial: '5', sm: '7' }}>
                         <Skeleton loading={isLoading}>
-                            {group ? (
-                                <GroupAvatar
-                                    group={group}
-                                    size="7"
-                                    variant="solid"
-                                    
-                                />
-                            ) : (
-                                <Avatar size="5" fallback={<LucideUsers />} />
-                            )}
+                            {group?.name || t('page.loadingGroup')}
                         </Skeleton>
-                        <Flex gap="1" direction="column" align="start">
-                            <Skeleton loading={isLoading}>
-                                <Badge size="1" color="gray" variant="solid">
-                                    {t('dashboard:groupsCard.members', {
-                                        count: members.length,
-                                    })}
-                                </Badge>
-                            </Skeleton>
-                            <Heading size={{ initial: '5', sm: '7' }}>
-                                <Skeleton loading={isLoading}>
-                                    {group?.name || t('page.loadingGroup')}
-                                </Skeleton>
-                            </Heading>
-                            {group?.description ? (
-                        <Text color='gray' size={{ initial: '1', sm: '2' }}>
+                    </Heading>
+                    {group?.description ? (
+                        <Text color="gray" size={{ initial: '1', sm: '2' }}>
                             <Skeleton loading={isLoading}>
                                 {group.description}
                             </Skeleton>
                         </Text>
                     ) : null}
-                        </Flex>
-                    </Flex>
-
-                    
                 </Flex>
-
-                <Flex align="center" gap="2">
-                    <UsersRow
-                        members={members.map(member => member.user)}
-                        max={5}
-                        size="2"
-                    />
-                    <IconButton
-                        size="2"
-                        color="gray"
-                        variant="outline"
-                        radius="full"
-                        aria-label={t('common:buttons.invitePeople')}
-                    >
-                        <LucidePlus size={18} />
-                    </IconButton>
-                </Flex>
-
-                {group ? (
-                    <Flex
-                        align={{ initial: 'stretch', sm: 'center' }}
-                        justify='end'
-                        gap="2"
-                    >
-                        <Button
-                            variant="outline"
-                            color="green"
-                            size="2"
-                            disabled={members.length === 0}
-                            onClick={() => openAddExpenseModal()}
-                        >
-                            <LucidePlus size={15} />
-                            {t('common:buttons.addExpense')}
-                        </Button>
-                        <SettleUpModal source="group" group={group} />
-                    </Flex>
-                ) : null}
-            </Grid>
+            </Flex>
 
             <Flex
                 position="absolute"
@@ -159,7 +89,7 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
                 <Box ml="auto">
                     <CreateUpdateGroupModal type="update">
                         <IconButton
-                            variant="surface"
+                            variant="soft"
                             color="gray"
                             size="2"
                             aria-label={t('modal.titleEdit')}

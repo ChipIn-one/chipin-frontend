@@ -84,7 +84,7 @@ const group: Group = {
                 firstName: 'Debtor',
             },
             balancesByCurrency: {
-                USD: { currency: 'USD', netBalance: -100 },
+                USD: { currency: 'USD', netBalance: -823_226.67 },
                 EUR: { currency: 'EUR', netBalance: -30.1234 },
                 BDT: { currency: 'BDT', netBalance: -90 },
                 AFN: { currency: 'AFN', netBalance: -6 },
@@ -123,7 +123,7 @@ test('disables the group settle-up trigger when every member is settled', () => 
     );
 });
 
-test('lists one row per group debt with short names and two-digit precision', () => {
+test('lists one row per group debt with display names and two-digit precision', () => {
     const user = userEvent.setup();
 
     render(<SettleUpModal source="group" group={group} />);
@@ -138,10 +138,35 @@ test('lists one row per group debt with short names and two-digit precision', ()
                 userDebtsHeading.compareDocumentPosition(userIsOwedHeading) &
                     Node.DOCUMENT_POSITION_FOLLOWING,
             ).toBeTruthy();
-            expect(screen.getAllByRole('button', { name: /Debtor/ })).toHaveLength(3);
-            expect(screen.queryByText('Debtor Person Full')).toBeNull();
+            expect(
+                screen.getAllByRole('button', { name: /Debtor Person Full/ }),
+            ).toHaveLength(3);
+            expect(screen.getByText('823.23K USD')).toBeTruthy();
             expect(screen.getByText('30.12 EUR')).toBeTruthy();
             expect(screen.queryByText('6 AFN')).toBeNull();
+        });
+});
+
+test('uses summary formatting for the selected debt display', () => {
+    const user = userEvent.setup();
+
+    render(<SettleUpModal source="group" group={group} />);
+
+    return user
+        .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
+        .then(() =>
+            user.click(
+                screen.getByRole('button', {
+                    name: /Debtor Person Full.*823\.23K USD/,
+                }),
+            ),
+        )
+        .then(() => {
+            expect(screen.getByText('823.23K USD')).toBeTruthy();
+            expect(screen.getByRole('textbox')).toHaveProperty(
+                'value',
+                '823226.67',
+            );
         });
 });
 
@@ -228,7 +253,11 @@ test('uses the selected group debt currency as the initial payment currency', ()
     return user
         .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
         .then(() =>
-            user.click(screen.getByRole('button', { name: /Debtor.*30.12 EUR/ })),
+            user.click(
+                screen.getByRole('button', {
+                    name: /Debtor Person Full.*30.12 EUR/,
+                }),
+            ),
         )
         .then(() => {
             expect(screen.getByRole('textbox')).toHaveProperty('value', '30.1234');

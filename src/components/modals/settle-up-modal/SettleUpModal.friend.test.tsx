@@ -179,7 +179,9 @@ test('shows compact debt context and the remaining amount for a partial payment'
 
     const amountInput = screen.getByRole('textbox');
 
-    const debtSummary = screen.getByText('friends:settleUp.youOwe:Bob').parentElement?.parentElement;
+    const debtSummary = screen.getByText(
+        'friends:settleUp.youOwe:Bob Builder',
+    ).parentElement?.parentElement;
 
     expect(debtSummary?.textContent).toContain('100 USD');
     expect(screen.queryByText('friends:settleUp.you')).toBeNull();
@@ -240,7 +242,8 @@ test('updates the amount, context, and remaining debt when the currency changes'
         .then(() => {
             expect(screen.getByRole('textbox')).toHaveProperty('value', '30');
             expect(
-                screen.getByText('friends:settleUp.youOwe:Bob').parentElement?.parentElement
+                screen.getByText('friends:settleUp.youOwe:Bob Builder').parentElement
+                    ?.parentElement
                     ?.textContent,
             ).toContain('30 EUR');
             expect(screen.getByText('friends:settleUp.debtWillBeSettled')).toBeTruthy();

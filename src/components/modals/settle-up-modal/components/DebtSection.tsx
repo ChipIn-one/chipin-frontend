@@ -10,8 +10,6 @@ import { useTranslation } from 'react-i18next';
 
 import { Flex, Text } from '@radix-ui/themes';
 
-import { selectUserPreferredName } from 'store/users-store';
-
 import type { DebtOption } from '../internal';
 import { DebtButton, ShowMoreButton } from '../styled';
 
@@ -66,7 +64,7 @@ const DebtSection = ({ debts, isExpanded, isUserOwing, onToggle, onSelect }: Pro
                         <Flex align="center" gap="3" minWidth="0">
                             <UserAvatar user={debt.user} size="3" />
                             <Text weight="bold" size="2" truncate>
-                                {selectUserPreferredName(debt.user)}
+                                {debt.user.displayName}
                             </Text>
                         </Flex>
 
@@ -76,6 +74,7 @@ const DebtSection = ({ debts, isExpanded, isUserOwing, onToggle, onSelect }: Pro
                                     value={Math.abs(debt.balance.netAmount)}
                                     tokenCode={debt.balance.currency}
                                     precision={2}
+                                    type="summary"
                                 />
                             </Text>
                             <LucideChevronRight size={18} />

@@ -10,7 +10,7 @@ const BackButton = () => {
 
     return (
         <IconButton
-            variant="surface"
+            variant="soft"
             color="gray"
             size="2"
             aria-label={t('buttons.back')}

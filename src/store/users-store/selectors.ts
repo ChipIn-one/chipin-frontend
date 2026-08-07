@@ -1,7 +1,6 @@
 import type {
     KnownUser,
     ThemeName,
-    User,
     UserSettings,
 } from 'api/chipin.types';
 import { DEFAULT_EXPENSE_CATEGORY } from 'constants/chipin';
@@ -15,10 +14,6 @@ export const selectUserSettings = (s: UsersStore): UserSettings | null =>
 export const selectUserCurrency = (s: UsersStore) =>
     selectUserSettings(s)?.defaultCurrency || DEFAULT_CURRENCY_CODE;
 export const selectUserDisplayName = (s: UsersStore) => s.user?.displayName ?? '';
-export const selectUserPreferredName = (
-    user: Pick<User, 'displayName'> & Partial<Pick<User, 'firstName'>>,
-) =>
-    user.firstName || user.displayName;
 export const selectIsUserTime24H = (s: UsersStore) =>
     selectUserSettings(s)?.timeFormat === '24h';
 export const selectUserLanguage = (s: UsersStore) => selectUserSettings(s)?.language ?? 'en';

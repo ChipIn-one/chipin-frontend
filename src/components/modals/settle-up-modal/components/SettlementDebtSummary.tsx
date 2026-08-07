@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { Card, Flex } from '@radix-ui/themes';
 
 import type { FriendUser, UserSummary } from 'api/chipin.types';
-import { selectUserPreferredName } from 'store/users-store';
 
 import { DebtAmount, ParticipantName } from '../styled';
 
@@ -37,12 +36,17 @@ const SettlementDebtSummary = ({
                             isFriendPayer
                                 ? 'friends:settleUp.owedToYou'
                                 : 'friends:settleUp.youOwe',
-                            { name: selectUserPreferredName(friend) },
+                            { name: friend.displayName },
                         )}
                     </ParticipantName>
                 </Flex>
                 <DebtAmount size="3" weight="bold" color={color}>
-                    <Amount value={amount} tokenCode={currency} precision={2} />
+                    <Amount
+                        value={amount}
+                        tokenCode={currency}
+                        precision={2}
+                        type="summary"
+                    />
                 </DebtAmount>
             </Flex>
         </Card>

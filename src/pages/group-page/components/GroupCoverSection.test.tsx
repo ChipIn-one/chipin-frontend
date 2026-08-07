@@ -1,16 +1,13 @@
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { expect, test, vi } from 'vitest';
 
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 
 import type { Group } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 
 import GroupCoverSection from './GroupCoverSection';
-
-const openAddExpenseModal = vi.hoisted(() => vi.fn());
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),
@@ -24,9 +21,8 @@ vi.mock('components/modals', importOriginal =>
     })),
 );
 
-vi.mock('store/expenseModalStore', () => ({
-    useExpenseModalStore: (selector: (state: { open: () => void }) => unknown) =>
-        selector({ open: openAddExpenseModal }),
+vi.mock('components/GroupAvatar', () => ({
+    default: () => <div data-testid="group-avatar" />,
 }));
 
 const creator = {
@@ -54,10 +50,6 @@ const group = {
     status: 'ACTIVE',
     recentActivities: { items: [], nextCursor: null },
 } satisfies Group;
-
-beforeEach(() => {
-    openAddExpenseModal.mockClear();
-});
 
 test('opens group editing from a pencil action', () => {
     const { container } = render(
@@ -87,9 +79,7 @@ test('keeps the group title readable over a cover in the light theme', () => {
     );
 });
 
-test('composes group details and expense actions inside the hero', () => {
-    const user = userEvent.setup();
-
+test('keeps group details without member actions inside the hero', () => {
     render(
         <ThemeProvider theme={lightThemeStyled}>
             <MemoryRouter>
@@ -100,17 +90,17 @@ test('composes group details and expense actions inside the hero', () => {
 
     expect(screen.getByText(group.description)).toBeTruthy();
     expect(screen.getByText('dashboard:groupsCard.members')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'common:buttons.settleUp' })).toBeTruthy();
+    expect(screen.queryByTestId('group-avatar')).toBeNull();
+    expect(
+        screen.queryByRole('button', { name: 'common:buttons.settleUp' }),
+    ).toBeNull();
+    expect(
+        screen.queryByRole('button', { name: 'common:buttons.addExpense' }),
+    ).toBeNull();
     expect(screen.getByRole('button', { name: 'buttons.back' })).toBeTruthy();
     expect(
-        screen.getByRole('button', { name: 'common:buttons.invitePeople' }),
-    ).toBeTruthy();
-
-    return user
-        .click(screen.getByRole('button', { name: 'common:buttons.addExpense' }))
-        .then(() => {
-            expect(openAddExpenseModal).toHaveBeenCalledOnce();
-        });
+        screen.queryByRole('button', { name: 'common:buttons.invitePeople' }),
+    ).toBeNull();
 });
 
 test('uses the shared image fallback when cover is missing', () => {
