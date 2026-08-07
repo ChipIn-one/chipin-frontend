@@ -31,7 +31,11 @@
     },
     "event": {
         "expenseCreatedDescription": "Pagado por {{payer}}",
-        "betweenFriends": "Entre amigos",
+        "paidAmount": "{{payer}} pagó",
+        "you": "Tú",
+        "youLent": "Prestaste",
+        "youBorrowed": "Pediste prestado",
+        "betweenFriends": "Directo",
         "expenseReversedDescription": "{{actor}} eliminó este gasto",
         "expenseTransferredFromTitle": "Deudas transferidas desde {{group}}",
         "expenseTransferredToTitle": "Deudas transferidas a {{group}}",

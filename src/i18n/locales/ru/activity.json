@@ -31,7 +31,11 @@
     },
     "event": {
         "expenseCreatedDescription": "Оплатил(а) {{payer}}",
-        "betweenFriends": "Между друзьями",
+        "paidAmount": "{{payer}} заплатил(а)",
+        "you": "Вы",
+        "youLent": "Вы одолжили",
+        "youBorrowed": "Вы заняли",
+        "betweenFriends": "Напрямую",
         "expenseReversedDescription": "{{actor}} удалил(а) этот расход",
         "expenseTransferredFromTitle": "Долги перенесены из группы {{group}}",
         "expenseTransferredToTitle": "Долги перенесены в группу {{group}}",

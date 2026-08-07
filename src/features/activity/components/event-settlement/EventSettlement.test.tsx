@@ -11,31 +11,56 @@ import { EventSettlement } from './EventSettlement';
 vi.mock('basics', importOriginal =>
     importOriginal<typeof import('basics')>().then(basics => ({
         ...basics,
-        Amount: () => <span />,
-        RelativeTime: () => <time />,
+        Amount: ({
+            tokenCode,
+            type,
+            value,
+        }: {
+            tokenCode?: string;
+            type?: string;
+            value: number;
+        }) => (
+            <span data-testid="settlement-full-amount" data-type={type}>
+                {value} {tokenCode}
+            </span>
+        ),
+        RelativeTime: () => <time data-testid="relative-time" />,
     })),
 );
 
-vi.mock('./styled', () => ({
-    AmountText: ({
-        children,
-        $isReversed,
-    }: {
-        children: ReactNode;
-        $isReversed: boolean;
-    }) => (
-        <span
-            data-testid="settlement-amount"
-            data-is-reversed={String($isReversed)}
-        >
-            {children}
-        </span>
-    ),
-}));
+vi.mock('./styled', importOriginal =>
+    importOriginal<typeof import('./styled')>().then(styledComponents => ({
+        ...styledComponents,
+        AmountText: ({
+            children,
+            $isReversed,
+        }: {
+            children: ReactNode;
+            $isReversed: boolean;
+        }) => (
+            <span
+                data-testid="settlement-amount"
+                data-is-reversed={String($isReversed)}
+            >
+                {children}
+            </span>
+        ),
+    })),
+);
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
-        t: (key: string) => key,
+        t: (key: string, options?: { payer?: string }) => {
+            if (key === 'event.paidAmount') {
+                return `${options?.payer} paid`;
+            }
+
+            if (key === 'event.you') {
+                return 'You';
+            }
+
+            return key;
+        },
     }),
 }));
 
@@ -109,7 +134,26 @@ test('shows participants and group scope', () => {
     expect(screen.getByText('Ilya Govor')).toBeTruthy();
     expect(screen.getByText('event.paidTo')).toBeTruthy();
     expect(screen.getByText('Huek')).toBeTruthy();
+    expect(screen.getByText('Ilya Govor paid')).toBeTruthy();
+    expect(screen.getByText('30 USD')).toBeTruthy();
     expect(screen.getByText('Vietnam')).toBeTruthy();
+    expect(screen.queryByTestId('relative-time')).toBeNull();
+    expect(screen.getByTestId('settlement-full-amount').dataset.type).toBe(
+        'summary',
+    );
+});
+
+test('uses You when the current user paid the settlement', () => {
+    const event = createSettlementEvent({
+        groupId: 'group-1',
+        groupName: 'Vietnam',
+    });
+    event.metadata.payerId = 'current-user';
+
+    render(<EventSettlement event={event} />);
+
+    expect(screen.getByText('You paid')).toBeTruthy();
+    expect(screen.getAllByTestId('settlement-full-amount')).toHaveLength(1);
 });
 
 test('shows between friends for a direct settlement', () => {

@@ -1,4 +1,4 @@
-import { Amount, OwedStatusText } from 'basics';
+import { Amount } from 'basics';
 import styled, { css } from 'styled-components';
 
 import { Text } from '@radix-ui/themes';
@@ -23,7 +23,11 @@ const ExpenseAmount = styled(Amount)<ReversedProps>`
     ${reversedTextStyles}
 `;
 
-const ExpenseDebt = styled(OwedStatusText)<ReversedProps>`
+const ExpenseDebtAmount = styled(Amount)<ReversedProps>`
+    ${reversedTextStyles}
+`;
+
+const ExpenseDebtText = styled(Text)<ReversedProps>`
     ${reversedTextStyles}
 `;
 
@@ -31,8 +35,14 @@ const ExpenseDescription = styled(Text)<ReversedProps>`
     ${reversedTextStyles}
 `;
 
-const ExpensePayer = styled(Text)<ReversedProps>`
+const ExpensePaidAmountText = styled(Text)<ReversedProps>`
     ${reversedTextStyles}
 `;
 
-export { ExpenseAmount, ExpenseDebt, ExpenseDescription, ExpensePayer };
+export {
+    ExpenseAmount,
+    ExpenseDebtAmount,
+    ExpenseDebtText,
+    ExpenseDescription,
+    ExpensePaidAmountText,
+};

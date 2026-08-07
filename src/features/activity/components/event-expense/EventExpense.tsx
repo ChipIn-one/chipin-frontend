@@ -1,4 +1,4 @@
-import { LedgerScopeBadge, RelativeTime } from 'basics';
+import { LedgerScopeBadge } from 'basics';
 import { useTranslation } from 'react-i18next';
 
 import { Card, Flex, Text } from '@radix-ui/themes';
@@ -13,7 +13,13 @@ import {
 import { useUsersStore } from 'store/users-store';
 
 import { ExpenseIcon } from './components';
-import { ExpenseAmount, ExpenseDebt, ExpenseDescription, ExpensePayer } from './styled';
+import {
+    ExpenseAmount,
+    ExpenseDebtAmount,
+    ExpenseDebtText,
+    ExpenseDescription,
+    ExpensePaidAmountText,
+} from './styled';
 
 interface Props {
     event: Extract<
@@ -35,18 +41,14 @@ const EventExpense = ({ event }: Props) => {
     const userExpenseDebt = isCurrentUserPayer
         ? event.metadata.amount - userShareAmount
         : userShareAmount * -1;
+    const isUserLender = userExpenseDebt > 0;
+    const debtColor = isUserLender ? 'green' : 'red';
     const description = event.metadata.description;
 
     return (
         <Card size="1" mb="2" data-interactive-card>
             <Flex justify="between" align="center" gap="3">
-                <Flex direction="column" gap="1" minWidth="0">
-                    {description ? (
-                        <ExpenseDescription size="3" weight="medium" $isReversed={isReversed}>
-                            {description}
-                        </ExpenseDescription>
-                    ) : null}
-
+                <Flex direction="column" gap="1" minWidth="0" flexGrow="1">
                     <Flex gap="3" align="center" minWidth="0">
                         <ExpenseIcon
                             isReversed={isReversed}
@@ -54,22 +56,33 @@ const EventExpense = ({ event }: Props) => {
                             isCurrentUserPayer={isCurrentUserPayer}
                         />
                         <Flex direction="column" align="start" gap="1">
-                            <ExpensePayer
-                                size="3"
+                            {description ? (
+                                <ExpenseDescription
+                                    size="3"
+                                    weight="medium"
+                                    $isReversed={isReversed}
+                                >
+                                    {description}
+                                </ExpenseDescription>
+                            ) : null}
+
+                            <ExpensePaidAmountText
+                                size="2"
                                 color="gray"
-                                weight="medium"
-                                as="span"
                                 $isReversed={isReversed}
                             >
-                                {t('event.expenseCreatedDescription', {
-                                    payer: event.metadata.payerDisplayName,
-                                })}
-                            </ExpensePayer>
-
-                            <LedgerScopeBadge
-                                groupId={event.metadata.groupId}
-                                groupName={event.metadata.groupName}
-                            />
+                                {t('event.paidAmount', {
+                                    payer: isCurrentUserPayer
+                                        ? t('event.you')
+                                        : event.metadata.payerDisplayName,
+                                })}{' '}
+                                <ExpenseAmount
+                                    $isReversed={isReversed}
+                                    value={amount}
+                                    tokenCode={event.metadata.currency}
+                                    type="summary"
+                                />
+                            </ExpensePaidAmountText>
                             {isReversed ? (
                                 <Text size="2" color="gray">
                                     {t('event.expenseReversedDescription', {
@@ -81,25 +94,45 @@ const EventExpense = ({ event }: Props) => {
                     </Flex>
                 </Flex>
 
-                <Flex direction="column" gap="1" align="end" flexShrink="0">
-                    {amount ? (
-                        <Text size="3" weight="bold" as="p" wrap="nowrap">
-                            <ExpenseAmount
-                                $isReversed={isReversed}
-                                value={amount}
-                                tokenCode={event.metadata.currency}
-                            />
-                        </Text>
-                    ) : null}
+                <Flex
+                    direction="column"
+                    gap="1"
+                    align="end"
+                    flexShrink="0"
+                    maxWidth="50%"
+                >
                     {userExpenseDebt ? (
-                        <ExpenseDebt
-                            $isReversed={isReversed}
-                            value={userExpenseDebt}
-                            currencyCode={event.metadata.currency}
-                            size="2"
-                        />
+                        <>
+                            <ExpenseDebtText
+                                $isReversed={isReversed}
+                                color={debtColor}
+                                size="1"
+                            >
+                                {t(
+                                    isUserLender
+                                        ? 'event.youLent'
+                                        : 'event.youBorrowed',
+                                )}
+                            </ExpenseDebtText>
+                            <ExpenseDebtText
+                                $isReversed={isReversed}
+                                color={debtColor}
+                                size="2"
+                            >
+                                <ExpenseDebtAmount
+                                    $isReversed={isReversed}
+                                    value={Math.abs(userExpenseDebt)}
+                                    tokenCode={event.metadata.currency}
+                                    precision={0}
+                                    type="summary"
+                                />
+                            </ExpenseDebtText>
+                        </>
                     ) : null}
-                    <RelativeTime createdAt={event.createdAt} />
+                    <LedgerScopeBadge
+                        groupId={event.metadata.groupId}
+                        groupName={event.metadata.groupName}
+                    />
                 </Flex>
             </Flex>
         </Card>

@@ -1,4 +1,4 @@
-import { Amount, LedgerScopeBadge, RelativeTime } from 'basics';
+import { Amount, LedgerScopeBadge } from 'basics';
 import { LucideArrowLeftRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -37,7 +37,7 @@ const EventSettlement = ({ event }: Props) => {
     return (
         <Card size="1" mb="2" data-interactive-card>
             <Flex justify="between" align="center" gap="3">
-                <Flex align="center" gap="3" minWidth="0">
+                <Flex align="center" gap="3" minWidth="0" flexGrow="1">
                     <Avatar
                         size="4"
                         variant="soft"
@@ -50,10 +50,22 @@ const EventSettlement = ({ event }: Props) => {
                             toDisplayName={toDisplayName}
                             isReversed={isReversed}
                         />
-                        <LedgerScopeBadge
-                            groupId={groupId}
-                            groupName={groupName}
-                        />
+                        <AmountText
+                            color="gray"
+                            size="2"
+                            $isReversed={isReversed}
+                        >
+                            {t('event.paidAmount', {
+                                payer: isCurrentUserPayer
+                                    ? t('event.you')
+                                    : fromDisplayName,
+                            })}{' '}
+                            <Amount
+                                value={amount}
+                                tokenCode={currency}
+                                type="summary"
+                            />
+                        </AmountText>
                         {isReversed ? (
                             <Text size="2" color="gray">
                                 {t('event.settlementReversedDescription', {
@@ -64,17 +76,14 @@ const EventSettlement = ({ event }: Props) => {
                     </Flex>
                 </Flex>
 
-                <Flex direction="column" align="end" gap="1" flexShrink="0">
-                    <AmountText
-                        color={isCurrentUserPayer ? 'red' : 'green'}
-                        size="3"
-                        weight="bold"
-                        $isReversed={isReversed}
-                    >
-                        <Amount value={amount} tokenCode={currency} />
-                    </AmountText>
-
-                    <RelativeTime createdAt={event.createdAt} />
+                <Flex
+                    direction="column"
+                    align="end"
+                    gap="1"
+                    flexShrink="0"
+                    maxWidth="50%"
+                >
+                    <LedgerScopeBadge groupId={groupId} groupName={groupName} />
                 </Flex>
             </Flex>
         </Card>

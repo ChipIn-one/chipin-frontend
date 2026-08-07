@@ -7,7 +7,6 @@ const AmountText = styled(Text)<{
 }>`
     text-decoration: ${({ $isReversed }) =>
         $isReversed ? 'line-through' : 'none'};
-    white-space: nowrap;
 
     & > span {
         text-decoration: inherit;
