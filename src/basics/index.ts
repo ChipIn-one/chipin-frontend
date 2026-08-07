@@ -3,6 +3,7 @@ import BackgroundBox from './BackgroundBox';
 import { LedgerScopeBadge } from './badges';
 import BalanceBadges from './BalanceBadges';
 import BalanceSummaryText from './BalanceSummaryText';
+import { BackButton } from './buttons';
 import Checkbox from './Checkbox';
 import ChipInLoader from './ChipInLoader';
 import {
@@ -21,12 +22,14 @@ import PageLoader from './PageLoader';
 import { RadioCards, type RadioCardsItem } from './radio-cards';
 import { RadioGroup, type RadioGroupItem } from './RadioGroup';
 import RelativeTime from './RelativeTime';
+import { TextArea, type TextAreaValueState } from './text-area';
 import { TextInput, type TextInputValueState } from './text-input';
 import UserAvatar from './UserAvatar';
 
 export {
     Amount,
     AmountInput,
+    BackButton,
     BackgroundBox,
     BalanceBadges,
     BalanceSummaryText,
@@ -48,6 +51,8 @@ export {
     RadioGroup,
     type RadioGroupItem,
     RelativeTime,
+    TextArea,
+    type TextAreaValueState,
     TextInput,
     type TextInputValueState,
     UserAvatar,

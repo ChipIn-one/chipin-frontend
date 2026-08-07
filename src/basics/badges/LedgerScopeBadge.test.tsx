@@ -24,7 +24,7 @@ test('hides the badge when its page context already identifies the group', () =>
                 <Route
                     path="/group/:groupId"
                     element={
-                        <LedgerScopeBadge groupId="group-1" groupName="Vietnam" groupEmoji="🌴" />
+                        <LedgerScopeBadge groupId="group-1" groupName="Vietnam" />
                     }
                 />
             </Routes>
@@ -35,8 +35,7 @@ test('hides the badge when its page context already identifies the group', () =>
 });
 
 test('shows group context when the group is no longer available', () => {
-    render(<LedgerScopeBadge groupId="group-1" groupName="Vietnam" groupEmoji="🌴" />);
+    render(<LedgerScopeBadge groupId="group-1" groupName="Vietnam" />);
 
-    expect(screen.getByText('🌴')).toBeTruthy();
     expect(screen.getByText('Vietnam')).toBeTruthy();
 });

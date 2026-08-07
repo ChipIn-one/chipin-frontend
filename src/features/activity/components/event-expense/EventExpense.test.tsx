@@ -39,7 +39,7 @@ vi.mock('store/groupsStore', () => ({
 const createExpenseEvent = (
     group: Pick<
         Extract<AppEvent, { action: 'EXPENSE_CREATED' }>['metadata'],
-        'groupId' | 'groupName' | 'groupEmoji'
+        'groupId' | 'groupName'
     >,
     description: string | null = 'Dinner',
     action:
@@ -87,19 +87,17 @@ const createExpenseEvent = (
     parentActivityId: null,
 });
 
-test('shows the group emoji and name for a group expense', () => {
+test('shows the group name for a group expense', () => {
     render(
         <EventExpense
             event={createExpenseEvent({
                 groupId: 'group-1',
                 groupName: 'Vietnam',
-                groupEmoji: '🌴',
             })}
         />,
     );
 
     expect(screen.getByText('event.expenseCreatedDescription')).toBeTruthy();
-    expect(screen.getByText('🌴')).toBeTruthy();
     expect(screen.getByText('Vietnam')).toBeTruthy();
 });
 

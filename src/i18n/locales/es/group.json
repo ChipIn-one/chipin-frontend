@@ -3,18 +3,27 @@
         "titleCreate": "Crear nuevo grupo",
         "titleEdit": "Editar grupo",
         "descriptionCreate": "Crea un grupo para registrar y dividir gastos compartidos.",
-        "descriptionEdit": "Actualiza el nombre, la descripción o el icono del grupo.",
+        "descriptionEdit": "Actualiza el nombre o la descripción del grupo.",
         "fields": {
             "namePlaceholder": "ej. Viaje a Barcelona, Apartamento...",
+            "addDescription": "Añadir descripción",
             "descriptionOptional": "(opcional)",
             "descriptionPlaceholder": "Agrega una nota sobre este grupo..."
         },
-        "categories": {
-            "travel": "Viajes",
-            "food": "Comida y bebidas",
-            "home": "Hogar y vida",
-            "fun": "Diversión y deportes",
-            "work": "Trabajo y dinero"
+        "cover": {
+            "label": "Portada del grupo",
+            "hint": "JPEG, PNG o WebP de hasta 5 MB",
+            "action": "Elegir portada del grupo",
+            "pickerLabel": "Elegir una imagen de portada para el grupo",
+            "previewLabel": "Vista previa de la portada del grupo",
+            "uploading": "Subiendo portada",
+            "retry": "Reintentar carga de portada",
+            "progress": "{{progress}}%",
+            "progressLabel": "Progreso de carga de la portada",
+            "errors": {
+                "unsupportedType": "Elige una imagen JPEG, PNG o WebP.",
+                "tooLarge": "La imagen debe tener 5 MB o menos."
+            }
         }
     },
     "qr": {
@@ -159,6 +168,7 @@
         }
     },
     "page": {
+        "coverAlt": "Portada del grupo {{name}}",
         "members": "miembros",
         "loadingGroup": "Cargando grupo...",
         "shareWarning": "Comparte el enlace de invitación solo con personas de confianza.",

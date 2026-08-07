@@ -3,18 +3,27 @@
         "titleCreate": "Create new group",
         "titleEdit": "Edit group",
         "descriptionCreate": "Create a group to track and split shared expenses.",
-        "descriptionEdit": "Update this group's name, description, or icon.",
+        "descriptionEdit": "Update this group's name or description.",
         "fields": {
             "namePlaceholder": "e.g. Barcelona Trip, Apartment...",
+            "addDescription": "Add description",
             "descriptionOptional": "(optional)",
             "descriptionPlaceholder": "Add a note about this group..."
         },
-        "categories": {
-            "travel": "Travel",
-            "food": "Food & Drinks",
-            "home": "Home & Life",
-            "fun": "Fun & Sports",
-            "work": "Work & Money"
+        "cover": {
+            "label": "Group cover",
+            "hint": "JPEG, PNG or WebP up to 5 MB",
+            "action": "Choose group cover",
+            "pickerLabel": "Choose a group cover image",
+            "previewLabel": "Group cover preview",
+            "uploading": "Uploading cover",
+            "retry": "Retry cover upload",
+            "progress": "{{progress}}%",
+            "progressLabel": "Group cover upload progress",
+            "errors": {
+                "unsupportedType": "Choose a JPEG, PNG or WebP image.",
+                "tooLarge": "The image must be 5 MB or smaller."
+            }
         }
     },
     "qr": {
@@ -159,6 +168,7 @@
         }
     },
     "page": {
+        "coverAlt": "{{name}} group cover",
         "members": "members",
         "loadingGroup": "Loading group...",
         "shareWarning": "Share invite link with trusted people only.",

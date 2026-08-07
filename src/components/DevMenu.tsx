@@ -65,7 +65,7 @@ const DevMenu = ({ isShowLabel = false }: Props) => {
         },
     ];
     const trigger = isShowLabel ? (
-        <LabeledTrigger size="3" variant="ghost" color="gray">
+        <LabeledTrigger size="3" variant="outline" color="gray">
             <LucideFlaskConical />
             {t('header.devMenu')}
         </LabeledTrigger>

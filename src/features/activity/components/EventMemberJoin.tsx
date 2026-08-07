@@ -16,8 +16,6 @@ const EventMemberJoin = ({ event }: EventMemberJoinProps) => {
     const targetUserDisplayName =
         event.metadata.targetUserDisplayName || event.actorSnapshot.displayName;
     const groupName = event.metadata.groupName;
-    const groupEmoji = event.metadata.groupEmoji;
-    // TODO: add group emoji to metadata when available after api backend
     return (
         <Card size="1" mb="2">
             <Flex justify="between" align="center" gap="3">
@@ -26,9 +24,7 @@ const EventMemberJoin = ({ event }: EventMemberJoinProps) => {
                         size="4"
                         variant="soft"
                         color="cyan"
-                        fallback={
-                            groupEmoji ? <Text>{groupEmoji}</Text> : <LucideUserPlus size={20} />
-                        }
+                        fallback={<LucideUserPlus size={20} />}
                     />
                     <Flex gap="2" align="center" minWidth="0">
                         <UserAvatar size="1" user={event.actorSnapshot} />

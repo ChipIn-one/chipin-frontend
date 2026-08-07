@@ -13,7 +13,6 @@ interface Props {
 
 const EventGroupUpdated = ({ event }: Props) => {
     const { t } = useTranslation('activity');
-    //  TODO: add group emoji to metadata when available after api backend
     // TODO: add info what was changed in group to metadata when available after api backend
     return (
         <Card size="1" mb="2">

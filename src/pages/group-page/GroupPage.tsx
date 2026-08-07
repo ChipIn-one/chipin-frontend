@@ -1,15 +1,11 @@
 import { useEffect } from 'react';
-import { LucidePlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
-import styled from 'styled-components';
 import { useShallow } from 'zustand/react/shallow';
 
-import { Box, Button, Card, Container, Flex, Grid, Inset, Skeleton, Text } from '@radix-ui/themes';
+import { Box, Card, Container, Flex, Grid, Text } from '@radix-ui/themes';
 
-import type { Group } from 'api/chipin.types';
 import { useDashboardStore } from 'store/dashboardStore';
-import { useExpenseModalStore } from 'store/expenseModalStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupDataFetched, selectGroupDataLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
@@ -17,20 +13,9 @@ import { selectUserCurrency, useUsersStore } from 'store/users-store';
 
 import GroupsCards from 'components/GroupsCards';
 import GroupsSectionHeader from 'components/GroupsSectionHeader';
-import { SettleUpModal } from 'components/modals/';
-import UsersRow from 'components/UsersRow';
 
 import { GroupCoverSection, GroupSummary, GroupTabsContent } from './components';
-
-/**
- * On mobile the cover is rendered full-bleed at the top of the page
- * (outside the Card Inset) so it bleeds to screen edges.
- */
-const MobileCoverBox = styled(Box)`
-    margin-left: calc(-1 * var(--space-4));
-    margin-right: calc(-1 * var(--space-4));
-    margin-top: calc(-1 * var(--space-4));
-`;
+import { GroupCoverBox } from './styled';
 
 const GroupPage = () => {
     const { t } = useTranslation(['group', 'common', 'dashboard']);
@@ -114,80 +99,25 @@ const GroupPage = () => {
                     gridColumn={{ initial: 'span 3', sm: '1 / span 2' }}
                     gridRow={{ sm: '1' }}
                 >
-                    {/* Desktop: cover inside a Card with Inset */}
-                    <Box display={{ initial: 'none', sm: 'block' }}>
-                        <Card size="4" mb="6">
-                            <Inset clip="border-box" side="top" pb="current">
-                                <GroupCoverSection
-                                    group={selectedGroup}
-                                    isLoading={isGroupDataLoading}
-                                    ratio={16 / 4}
-                                />
-                            </Inset>
-                            <GroupCardBody group={selectedGroup} isLoading={isGroupDataLoading} />
-                        </Card>
-                    </Box>
+                    <GroupCoverBox mb={{ initial: '4', sm: '6' }}>
+                        <GroupCoverSection
+                            group={selectedGroup}
+                            isLoading={isGroupDataLoading}
+                        />
+                    </GroupCoverBox>
 
-                    {/* Mobile: cover full-bleed inset at top, then card body below */}
-                    <Flex
-                        direction="column"
-                        gap="4"
-                        display={{ initial: 'flex', sm: 'none' }}
+                    <Box
+                        display={{ initial: 'block', sm: 'none' }}
+                        mb="4"
                     >
-                        <MobileCoverBox>
-                            <GroupCoverSection
-                                group={selectedGroup}
-                                isLoading={isGroupDataLoading}
-                                ratio={16 / 7}
-                            />
-                        </MobileCoverBox>
-                        <GroupCardBody group={selectedGroup} isLoading={isGroupDataLoading} />
                         <GroupSummary isLoading={isGroupDataLoading} />
-                    </Flex>
+                    </Box>
 
                     {/* Tabs: Expenses / Balances / Members */}
                     <GroupTabsContent group={selectedGroup} />
                 </Box>
             </Grid>
         </Container>
-    );
-};
-
-interface GroupCardBodyProps {
-    group: Group;
-    isLoading: boolean;
-}
-
-const GroupCardBody = ({ group, isLoading }: GroupCardBodyProps) => {
-    const { t } = useTranslation(['group', 'common']);
-    const openAddExpenseModal = useExpenseModalStore(state => state.open);
-
-    return (
-        <Flex direction="column" gap="4">
-            <Flex align="center" justify="between" gap="2" wrap="wrap">
-                <UsersRow members={group.members.map(member => member.user)} max={10} size="2" />
-                <Flex gap="2" align="center">
-                    <Button
-                        variant="outline"
-                        size="2"
-                        disabled={group.members.length === 0}
-                        onClick={() => openAddExpenseModal()}
-                    >
-                        <LucidePlus size={15} />
-                        {t('common:buttons.addExpense')}
-                    </Button>
-                    <SettleUpModal source="group" group={group} />
-                </Flex>
-            </Flex>
-
-            {group.description && (
-                <Text size="2" color="gray">
-                    <Skeleton loading={isLoading}>
-                        {group.description}
-                    </Skeleton>
-                </Text>
-            )}
-        </Flex>
     );
 };
 

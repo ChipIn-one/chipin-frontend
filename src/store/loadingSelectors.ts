@@ -35,6 +35,7 @@ export const selectGroupRemoving = (s: LoadingStore) => s.group.remove === 'load
 export const selectGroupJoining = (s: LoadingStore) => s.group.join === 'loading';
 export const selectGroupLeaving = (s: LoadingStore) => s.group.leave === 'loading';
 export const selectGroupKicking = (s: LoadingStore) => s.group.kick === 'loading';
+export const selectGroupCoverUploading = (s: LoadingStore) => s.group.cover === 'loading';
 
 export const selectUserSelfLoading = (s: LoadingStore) => s.users.self === 'loading';
 export const selectUserSelfFetched = (s: LoadingStore) => s.users.self === 'fetched';

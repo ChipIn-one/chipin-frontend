@@ -17,6 +17,7 @@
         "updated": "¡Grupo \"{{name}}\" actualizado exitosamente!",
         "createError": "Algo salió mal al crear el grupo.",
         "updateError": "Algo salió mal al actualizar el grupo.",
+        "coverUploadError": "El grupo se guardó, pero no se pudo subir la portada. Inténtalo de nuevo.",
         "removed": "¡El grupo \"{{name}}\" fue eliminado exitosamente!",
         "removeError": "Algo salió mal al eliminar el grupo.",
         "left": "Saliste del grupo \"{{name}}\".",

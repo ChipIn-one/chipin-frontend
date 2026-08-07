@@ -12,8 +12,8 @@ vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock('./GroupCard', () => ({
-    default: ({ group }: { group: Group }) => <div>{group.name}</div>,
+vi.mock('./group-card', () => ({
+    GroupCard: ({ group }: { group: Group }) => <div>{group.name}</div>,
 }));
 
 const currentUser = {
@@ -50,8 +50,7 @@ const group: Group = {
     ],
     createdAt: 1,
     updatedAt: 1,
-    emoji: null,
-    coverUrl: null,
+    coverUrl: 'https://cdn.example.com/group.webp',
     role: 'OWNER',
     status: 'ACTIVE',
     recentActivities: {

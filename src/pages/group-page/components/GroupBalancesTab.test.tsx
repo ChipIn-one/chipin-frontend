@@ -80,8 +80,7 @@ const group: Group = {
     ],
     createdAt: 1,
     updatedAt: 1,
-    emoji: null,
-    coverUrl: null,
+    coverUrl: 'https://cdn.example.com/group.webp',
     role: 'OWNER',
     status: 'ACTIVE',
     recentActivities: {
@@ -98,7 +97,7 @@ test('shows member debts by direction and disables settlement when there are non
     render(<GroupBalancesTab group={group} />);
 
     expect(screen.getByText('balances.youOwe')).toBeTruthy();
-    expect(screen.getByText('balances.youOwed')).toBeTruthy();
+    expect(screen.getByText('balances.youAreOwed')).toBeTruthy();
     expect(screen.getByText('balances.settledUp')).toBeTruthy();
     expect(
         screen.getAllByText((_, element) => element?.textContent === '20 USD').length,

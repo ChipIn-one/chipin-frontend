@@ -43,7 +43,6 @@
         "interfaceLanguage": "Язык интерфейса"
     },
     "balances": {
-        "youOwed": "вам должны",
         "youOwe": "вы должны",
         "youAreOwed": "Вам должны",
         "settledUp": "Долгов нет"

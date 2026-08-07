@@ -59,12 +59,10 @@ export const fetchApiUserGroupById = (groupId: string): Promise<Group> => {
 export const createApiGroup = ({
     groupName,
     groupDescription,
-    groupEmoji,
 }: CreateGroupParams): Promise<Group> => {
     return apiInstance
         .post<Group>('/groups', {
             name: groupName,
-            ...(groupEmoji && { emoji: groupEmoji }),
             ...(groupDescription && { description: groupDescription }),
         })
         .then(response => response.data);
@@ -74,13 +72,11 @@ export const updateApiGroup = ({
     groupId,
     groupName,
     groupDescription,
-    groupEmoji,
 }: UpdateGroupParams): Promise<Group> => {
     return apiInstance
         .patch<Group>(`/groups/${groupId}`, {
             name: groupName,
-            ...(groupEmoji && { emoji: groupEmoji }),
-            ...(groupDescription && { description: groupDescription }),
+            ...(groupDescription !== undefined && { description: groupDescription }),
         })
         .then(response => response.data);
 };

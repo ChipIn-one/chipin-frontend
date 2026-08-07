@@ -26,7 +26,6 @@ const EventSettlement = ({ event }: Props) => {
         amount,
         currency,
         fromDisplayName,
-        groupEmoji,
         groupId,
         groupName,
         payerId,
@@ -54,7 +53,6 @@ const EventSettlement = ({ event }: Props) => {
                         <LedgerScopeBadge
                             groupId={groupId}
                             groupName={groupName}
-                            groupEmoji={groupEmoji}
                         />
                         {isReversed ? (
                             <Text size="2" color="gray">
@@ -68,9 +66,9 @@ const EventSettlement = ({ event }: Props) => {
 
                 <Flex direction="column" align="end" gap="1" flexShrink="0">
                     <AmountText
+                        color={isCurrentUserPayer ? 'red' : 'green'}
                         size="3"
                         weight="bold"
-                        $isNegative={isCurrentUserPayer}
                         $isReversed={isReversed}
                     >
                         <Amount value={amount} tokenCode={currency} />

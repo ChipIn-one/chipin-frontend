@@ -7,6 +7,11 @@ import { toast } from 'sonner';
 
 import { Avatar, Box, Button, Callout, Dialog, Flex, Text } from '@radix-ui/themes';
 
+import {
+    IMAGE_FILE_ACCEPT,
+    type ImageFileValidationError,
+    validateImageFile,
+} from 'helpers/imageFile';
 import { selectUserAvatarUploading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
@@ -16,11 +21,6 @@ import { ProgressBar } from 'components/progress-bar';
 import { BaseModal } from '../base-modal';
 import { OverlayBody, OverlayFooter } from '../components';
 
-import {
-    AVATAR_FILE_ACCEPT,
-    type AvatarFileValidationError,
-    validateAvatarFile,
-} from './internal';
 import { FileDropZone, HiddenFileInput, PreviewBackdrop } from './styled';
 
 interface Props {
@@ -37,7 +37,7 @@ const UserAvatarModal = ({ children }: Props) => {
     const [selectedFile, setSelectedFile] = useState<File>();
     const [previewUrl, setPreviewUrl] = useState<string>();
     const previewUrlRef = useRef<string | undefined>(undefined);
-    const [validationError, setValidationError] = useState<AvatarFileValidationError | null>(null);
+    const [validationError, setValidationError] = useState<ImageFileValidationError | null>(null);
     const [uploadProgress, setUploadProgress] = useState(0);
 
     useEffect(() => {
@@ -77,7 +77,7 @@ const UserAvatarModal = ({ children }: Props) => {
             return;
         }
 
-        const nextValidationError = validateAvatarFile(file);
+        const nextValidationError = validateImageFile(file);
 
         if (previewUrlRef.current) {
             URL.revokeObjectURL(previewUrlRef.current);
@@ -164,7 +164,7 @@ const UserAvatarModal = ({ children }: Props) => {
                             >
                                 <HiddenFileInput
                                     type="file"
-                                    accept={AVATAR_FILE_ACCEPT}
+                                    accept={IMAGE_FILE_ACCEPT}
                                     aria-label={t('avatarModal.pickerLabel')}
                                     aria-describedby={pickerHintId}
                                     disabled={isUploading}

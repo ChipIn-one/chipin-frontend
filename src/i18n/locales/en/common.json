@@ -43,8 +43,7 @@
         "interfaceLanguage": "Interface language"
     },
     "balances": {
-        "youOwed": "you owed",
-        "youOwe": "you owe",
+        "youOwe": "You owe",
         "youAreOwed": "You are owed",
         "settledUp": "Settled up"
     },

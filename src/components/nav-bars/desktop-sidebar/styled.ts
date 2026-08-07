@@ -1,6 +1,6 @@
 import styled, { css } from 'styled-components';
 
-import { Flex } from '@radix-ui/themes';
+import { Card } from '@radix-ui/themes';
 
 import { themeColor } from 'helpers/colors';
 
@@ -18,18 +18,12 @@ const getSidebarNavHighlightStyles = (isSoloMode: boolean) => css`
     }
 `;
 
-const SidebarSurface = styled(Flex)`
+const SidebarSurface = styled(Card)`
     position: sticky;
     top: calc(var(--space-6) + var(--space-4));
     width: 100%;
-    height: calc(
-        100dvh - var(--space-6) - var(--space-6) - var(--space-4) - var(--space-4)
-    );
+    height: calc(100dvh - var(--space-6) - var(--space-6) - var(--space-4) - var(--space-4));
     overflow-y: auto;
-    border: 1px solid ${themeColor('gray6')};
-    border-radius: var(--radius-5);
-    background-color: ${themeColor('gray2')};
-    backdrop-filter: blur(10px);
 `;
 
 const SidebarNavButton = styled(NavButton)<{
@@ -46,18 +40,17 @@ const SidebarNavButton = styled(NavButton)<{
         content: '';
         position: absolute;
         top: 50%;
-        left: calc(var(--space-5) * -1 - 1px);
+        left: calc(var(--space-4) * -1);
         width: 4px;
         height: var(--space-7);
         border-radius: 0 var(--radius-2) var(--radius-2) 0;
         background-color: currentColor;
-        box-shadow: 0 0 18px currentColor;
+        box-shadow: 0 0 20px currentColor;
         opacity: 0;
         transform: translateY(-50%);
     }
 
-    ${({ $isActive, $isSoloMode }) =>
-        $isActive && getSidebarNavHighlightStyles($isSoloMode)}
+    ${({ $isActive, $isSoloMode }) => $isActive && getSidebarNavHighlightStyles($isSoloMode)}
 
     ${({ $isSoloMode }) => css`
         &:hover {

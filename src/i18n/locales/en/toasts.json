@@ -17,6 +17,7 @@
     "updated": "Group \"{{name}}\" updated successfully!",
     "createError": "Something went wrong while creating the group.",
     "updateError": "Something went wrong while updating the group.",
+    "coverUploadError": "The group was saved, but the cover could not be uploaded. Try again.",
     "removed": "Group \"{{name}}\" was successfully removed!",
     "removeError": "Something went wrong while removing the group.",
     "left": "You left the group \"{{name}}\".",

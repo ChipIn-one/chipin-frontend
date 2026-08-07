@@ -17,6 +17,7 @@ export interface LoadingStore {
         join: LoadingState;
         leave: LoadingState;
         kick: LoadingState;
+        cover: LoadingState;
     };
     dashboard: {
         data: LoadingState;
@@ -77,6 +78,7 @@ const initialLoadingStore: LoadingSlices = {
         update: 'initial',
         leave: 'initial',
         kick: 'initial',
+        cover: 'initial',
     },
     users: {
         self: 'initial',

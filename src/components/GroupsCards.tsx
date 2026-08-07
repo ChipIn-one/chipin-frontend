@@ -17,7 +17,7 @@ import { useLoadingStore } from 'store/loadingStore';
 import { EmptyState } from 'basics/empty-states';
 import { GroupsCardsSkeleton } from 'components/skeletons';
 
-import GroupCard from './GroupCard';
+import { GroupCard } from './group-card';
 
 type DebtFilter = 'all' | 'owed' | 'owes';
 
@@ -147,7 +147,11 @@ const GroupsCards = ({ groups, selectedGroupId }: Props) => {
                 <GroupCard
                     key={group.id}
                     group={group}
-                    balances={sortGroupBalances(balances, currencies.rates, currencies.base)}
+                    balances={sortGroupBalances(
+                        balances,
+                        currencies.rates,
+                        currencies.base,
+                    )}
                     isSelected={group.id === selectedGroupId}
                 />
             ))}

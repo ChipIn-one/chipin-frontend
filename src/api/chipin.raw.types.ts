@@ -80,7 +80,6 @@ export interface ApiGroupResponse {
     members: ApiGroupMemberResponse[];
     createdAt: number;
     updatedAt: number;
-    emoji: string | null;
     coverUrl: string | null;
     role: 'OWNER' | 'MEMBER';
     status: 'ACTIVE' | 'ARCHIVED';

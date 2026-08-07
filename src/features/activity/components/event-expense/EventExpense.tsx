@@ -69,7 +69,6 @@ const EventExpense = ({ event }: Props) => {
                             <LedgerScopeBadge
                                 groupId={event.metadata.groupId}
                                 groupName={event.metadata.groupName}
-                                groupEmoji={event.metadata.groupEmoji}
                             />
                             {isReversed ? (
                                 <Text size="2" color="gray">

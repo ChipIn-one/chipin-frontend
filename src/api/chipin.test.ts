@@ -70,7 +70,6 @@ const groupResponse = {
     members: [{ user: creator, balancesByCurrency: {} }],
     createdAt: 1,
     updatedAt: 1,
-    emoji: '🌿',
     coverUrl: null,
     role: 'OWNER',
     status: 'ACTIVE',
@@ -134,7 +133,12 @@ describe('embedded activity feed responses', () => {
         return updateApiGroup({
             groupId: groupResponse.id,
             groupName: groupResponse.name,
+            groupDescription: '',
         }).then(result => {
+            expect(apiInstance.patch).toHaveBeenCalledWith(`/groups/${groupResponse.id}`, {
+                name: groupResponse.name,
+                description: '',
+            });
             expect(result.recentActivities).toEqual(groupResponse.recentActivities);
         });
     });
@@ -165,7 +169,6 @@ describe('inviteApiUserToGroup', () => {
             ],
             createdAt: 1,
             updatedAt: 1,
-            emoji: '🌿',
             coverUrl: null,
             role: 'MEMBER' as const,
             status: 'ACTIVE' as const,

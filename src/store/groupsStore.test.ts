@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import * as chipinApi from 'api/chipin';
 import type { Group, User } from 'api/chipin.types';
+import * as groupsApi from 'api/groupsApi';
 import * as ledgerApi from 'api/ledgerApi';
 
 import { useGroupsStore } from './groupsStore';
@@ -16,6 +17,10 @@ vi.mock('api/chipin', () => ({
 
 vi.mock('api/ledgerApi', () => ({
     createSettlement: vi.fn(),
+}));
+
+vi.mock('api/groupsApi', () => ({
+    uploadGroupCover: vi.fn(),
 }));
 
 const creator = {
@@ -38,8 +43,7 @@ const group = {
     members: [{ user: creator, balancesByCurrency: {} }],
     createdAt: 1,
     updatedAt: 1,
-    emoji: '✈️',
-    coverUrl: null,
+    coverUrl: 'https://cdn.example.com/group.webp',
     role: 'OWNER',
     status: 'ACTIVE',
     recentActivities: {
@@ -302,6 +306,77 @@ describe('groupsStore', () => {
             expect(useGroupsStore.getState().groupsNextCursor).toBe(2);
             expect(useLoadingStore.getState().group.list).toBe('fetched');
         });
+    });
+
+    test('replaces the matching cached and selected group after a cover upload', () => {
+        const file = new File(['cover'], 'cover.webp', { type: 'image/webp' });
+        const updatedGroup = {
+            ...group,
+            coverUrl: 'https://cdn.example.com/group.webp',
+            updatedAt: 2,
+        } satisfies Group;
+
+        useGroupsStore.setState({ groups: [group] });
+        useGroupsStore.getState().setSelectedGroup(group);
+        vi.mocked(groupsApi.uploadGroupCover).mockResolvedValue(updatedGroup);
+
+        const request = useGroupsStore.getState().uploadGroupCover({
+            groupId: group.id,
+            file,
+        });
+
+        expect(useLoadingStore.getState().group.cover).toBe('loading');
+
+        return request.then(result => {
+            expect(result).toEqual(updatedGroup);
+            expect(useGroupsStore.getState().groups).toEqual([updatedGroup]);
+            expect(useGroupsStore.getState().selectedGroup).toEqual(updatedGroup);
+            expect(useLoadingStore.getState().group.cover).toBe('fetched');
+        });
+    });
+
+    test('does not replace a newer selected group after a cover upload resolves', () => {
+        const file = new File(['cover'], 'cover.webp', { type: 'image/webp' });
+        const otherGroup = { ...group, id: 'group-2', name: 'Other Group' } satisfies Group;
+        const updatedGroup = {
+            ...group,
+            coverUrl: 'https://cdn.example.com/group.webp',
+            updatedAt: 2,
+        } satisfies Group;
+
+        useGroupsStore.setState({ groups: [group, otherGroup] });
+        useGroupsStore.getState().setSelectedGroup(group);
+        vi.mocked(groupsApi.uploadGroupCover).mockResolvedValue(updatedGroup);
+
+        const request = useGroupsStore.getState().uploadGroupCover({
+            groupId: group.id,
+            file,
+        });
+
+        useGroupsStore.getState().setSelectedGroup(otherGroup);
+
+        return request.then(() => {
+            expect(useGroupsStore.getState().groups).toEqual([updatedGroup, otherGroup]);
+            expect(useGroupsStore.getState().selectedGroup).toEqual(otherGroup);
+        });
+    });
+
+    test('settles cover loading and preserves the upload rejection', () => {
+        const file = new File(['cover'], 'cover.webp', { type: 'image/webp' });
+        const uploadError = new Error('Cover upload failed');
+
+        vi.mocked(groupsApi.uploadGroupCover).mockRejectedValue(uploadError);
+
+        return useGroupsStore
+            .getState()
+            .uploadGroupCover({ groupId: group.id, file })
+            .then(
+                () => Promise.reject(new Error('Expected cover upload to reject')),
+                error => {
+                    expect(error).toBe(uploadError);
+                    expect(useLoadingStore.getState().group.cover).toBe('fetched');
+                },
+            );
     });
 
     test('refreshes the selected group from the fetched group list', () => {

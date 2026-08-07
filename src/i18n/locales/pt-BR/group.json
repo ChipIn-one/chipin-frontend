@@ -3,18 +3,27 @@
         "titleCreate": "Criar novo grupo",
         "titleEdit": "Editar grupo",
         "descriptionCreate": "Crie um grupo para acompanhar e dividir despesas compartilhadas.",
-        "descriptionEdit": "Atualize o nome, a descrição ou o ícone do grupo.",
+        "descriptionEdit": "Atualize o nome ou a descrição do grupo.",
         "fields": {
             "namePlaceholder": "ex. Viagem a Barcelona, Apartamento...",
+            "addDescription": "Adicionar descrição",
             "descriptionOptional": "(opcional)",
             "descriptionPlaceholder": "Adicione uma observação sobre este grupo..."
         },
-        "categories": {
-            "travel": "Viagens",
-            "food": "Comida e bebidas",
-            "home": "Casa e vida",
-            "fun": "Diversão e esportes",
-            "work": "Trabalho e dinheiro"
+        "cover": {
+            "label": "Capa do grupo",
+            "hint": "JPEG, PNG ou WebP de até 5 MB",
+            "action": "Escolher capa do grupo",
+            "pickerLabel": "Escolher uma imagem de capa para o grupo",
+            "previewLabel": "Prévia da capa do grupo",
+            "uploading": "Enviando capa",
+            "retry": "Tentar enviar capa novamente",
+            "progress": "{{progress}}%",
+            "progressLabel": "Progresso do envio da capa",
+            "errors": {
+                "unsupportedType": "Escolha uma imagem JPEG, PNG ou WebP.",
+                "tooLarge": "A imagem deve ter no máximo 5 MB."
+            }
         }
     },
     "qr": {
@@ -159,6 +168,7 @@
         }
     },
     "page": {
+        "coverAlt": "Capa do grupo {{name}}",
         "members": "membros",
         "loadingGroup": "Carregando grupo...",
         "shareWarning": "Compartilhe o link de convite apenas com pessoas de confiança.",

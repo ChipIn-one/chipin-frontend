@@ -6,10 +6,9 @@ import { Badge, Text } from '@radix-ui/themes';
 interface Props {
     groupId: string | null;
     groupName: string | null;
-    groupEmoji?: string | null;
 }
 
-const LedgerScopeBadge = ({ groupId, groupName, groupEmoji }: Props) => {
+const LedgerScopeBadge = ({ groupId, groupName }: Props) => {
     const { t } = useTranslation('activity');
     const { groupId: routeGroupId } = useParams<{ groupId: string }>();
 
@@ -22,14 +21,7 @@ const LedgerScopeBadge = ({ groupId, groupName, groupEmoji }: Props) => {
     return (
         <Badge size="1" variant="soft" color="gray">
             {isGroupEvent ? (
-                <>
-                    {groupEmoji ? (
-                        <Text as="span" mr="1">
-                            {groupEmoji}
-                        </Text>
-                    ) : null}
-                    <Text as="span">{groupName}</Text>
-                </>
+                <Text as="span">{groupName}</Text>
             ) : (
                 t('event.betweenFriends')
             )}

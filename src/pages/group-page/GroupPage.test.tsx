@@ -39,7 +39,7 @@ vi.mock('components/UsersRow', () => ({
 }));
 
 vi.mock('./components', () => ({
-    GroupCoverSection: () => null,
+    GroupCoverSection: () => <div data-testid="group-cover-hero" />,
     GroupSummary: (props: Record<string, unknown>) => (
         <div data-testid="group-summary" data-has-layout={String('layout' in props)} />
     ),
@@ -66,8 +66,7 @@ const group = {
     members: [{ user: creator, balancesByCurrency: {} }],
     createdAt: 1,
     updatedAt: 1,
-    emoji: null,
-    coverUrl: null,
+    coverUrl: 'https://cdn.example.com/group.webp',
     role: 'OWNER',
     status: 'ACTIVE',
     recentActivities: {
@@ -116,4 +115,13 @@ test('composes summaries without viewport-specific component props', () => {
     expect(
         mobileSummary.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+});
+
+test('delegates group details and actions to the responsive cover hero', () => {
+    render(<GroupPage />);
+
+    expect(screen.getAllByTestId('group-cover-hero')).toHaveLength(1);
+    expect(
+        screen.queryByRole('button', { name: 'common:buttons.addExpense' }),
+    ).toBeNull();
 });

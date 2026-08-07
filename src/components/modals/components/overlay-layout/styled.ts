@@ -66,6 +66,7 @@ const Body = styled(ScrollArea)`
         width: 100%;
         min-width: 0 !important;
     }
+
 `;
 
 const BodyContent = styled.div`

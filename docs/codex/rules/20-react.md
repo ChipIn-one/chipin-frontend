@@ -4,6 +4,9 @@
 
 - Components and hooks stay pure; render does not mutate stores, props, browser state, or external objects.
 - Use named function or arrow components with explicit props. Do not add `React.FC`.
+- Keep one production React component declaration per component file. Do not declare a sibling or nested
+  component constant/function inside another component's file; move it to its own `PascalCase.tsx` file at
+  the narrowest ownership level. JSX-valued variables and non-component render helpers may stay local.
 - Component `Props` types stay in the component file immediately above the component. Do not create a
   separate `types.ts` only for local component props; reserve shared type modules for types with multiple
   real consumers.

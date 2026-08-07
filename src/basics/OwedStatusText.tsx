@@ -36,7 +36,7 @@ const OwedStatusText = ({
             align={align}
             className={className}
         >
-            {isPositive ? t('common:balances.youOwed') : t('common:balances.youOwe')}{' '}
+            {isPositive ? t('common:balances.youAreOwed') : t('common:balances.youOwe')}{' '}
             <Amount value={Math.abs(value)} tokenCode={currencyCode} precision={0} />
         </Text>
     );

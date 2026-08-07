@@ -44,7 +44,6 @@ type ExpenseMetadata = {
     entryId: UUID;
     groupId: UUID | null;
     groupName: string | null;
-    groupEmoji?: string | null;
     description: string | null;
     amount: number;
     currency: string;
@@ -90,7 +89,6 @@ type SettlementMetadata = {
     entryId: UUID;
     groupId: UUID | null;
     groupName: string | null;
-    groupEmoji?: string | null;
     amount: number;
     currency: string;
     actorUserId: UUID;
@@ -155,7 +153,6 @@ type GroupMetadata = {
     type: 'group';
     groupId: UUID;
     groupName: string;
-    groupEmoji?: string | null;
     groupImage?: string | null;
     targetUserDisplayName: string | null;
 };

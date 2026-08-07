@@ -43,7 +43,6 @@
         "interfaceLanguage": "Idioma de la interfaz"
     },
     "balances": {
-        "youOwed": "te deben",
         "youOwe": "debes",
         "youAreOwed": "Te deben",
         "settledUp": "Liquidado"

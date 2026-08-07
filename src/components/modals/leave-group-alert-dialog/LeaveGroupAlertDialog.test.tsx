@@ -55,8 +55,7 @@ const group = {
     members: [{ user: currentUser, balancesByCurrency: {} }],
     createdAt: 1,
     updatedAt: 1,
-    emoji: null,
-    coverUrl: null,
+    coverUrl: 'https://cdn.example.com/group.webp',
     role: 'OWNER',
     status: 'ACTIVE',
     recentActivities: {

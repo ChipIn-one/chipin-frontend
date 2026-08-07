@@ -13,7 +13,8 @@ import {
     updateApiGroup,
 } from 'api/chipin';
 import type { BalanceEntry } from 'api/chipin.raw.types';
-import type { CreateSettlementParams, Group } from 'api/chipin.types';
+import type { CreateSettlementParams, Group, UploadGroupCoverParams } from 'api/chipin.types';
+import * as groupsApi from 'api/groupsApi';
 import * as ledgerApi from 'api/ledgerApi';
 
 import { useDashboardStore } from './dashboardStore';
@@ -36,17 +37,10 @@ export interface GroupsStore {
     setSelectedGroup: (group: Group) => void;
     fetchSetGroups: () => Promise<Group[]>;
     fetchSetGroupById: (groupId: string | undefined) => Promise<Group | void>;
-    createGroup: (params: {
-        groupName: string;
-        groupDescription?: string;
-        groupEmoji?: string;
-    }) => Promise<Group>;
+    createGroup: (params: { groupName: string; groupDescription?: string }) => Promise<Group>;
     createSettlement: (params: Omit<CreateSettlementParams, 'groupId'>) => Promise<void>;
-    updateGroup: (params: {
-        groupName: string;
-        groupDescription?: string;
-        groupEmoji?: string;
-    }) => Promise<Group>;
+    updateGroup: (params: { groupName: string; groupDescription?: string }) => Promise<Group>;
+    uploadGroupCover: (params: UploadGroupCoverParams) => Promise<Group>;
     removeGroup: () => Promise<Group['name']>;
     leaveGroup: (params?: { newOwnerId?: string }) => Promise<Group['name']>;
     kickGroupMember: ({ userId }: { userId: string }) => Promise<string>;
@@ -84,12 +78,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         const defaultCurrency = selectUserCurrency(useUsersStore.getState());
         set({
             selectedGroup: group,
-            ...calcGroupSummary(
-                selectGroupBalances(group),
-                base,
-                rates,
-                defaultCurrency,
-            ),
+            ...calcGroupSummary(selectGroupBalances(group), base, rates, defaultCurrency),
         });
     },
     fetchSetGroups: () => {
@@ -103,9 +92,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 let selectedGroup: Group | undefined;
 
                 if (selectedGroupId) {
-                    selectedGroup = groups.find(
-                        group => group.id === selectedGroupId,
-                    );
+                    selectedGroup = groups.find(group => group.id === selectedGroupId);
                 }
 
                 set({ groups, groupsNextCursor: response.nextCursor });
@@ -156,11 +143,12 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 useLoadingStore.getState().setLoading('group', 'data', 'fetched');
             });
     },
-    createGroup: ({ groupName, groupDescription, groupEmoji }) => {
+
+    createGroup: ({ groupName, groupDescription }) => {
         const { setLoading } = useLoadingStore.getState();
         setLoading('group', 'add', 'loading');
 
-        return createApiGroup({ groupName, groupDescription, groupEmoji })
+        return createApiGroup({ groupName, groupDescription })
             .then(newGroup => {
                 const { groups } = get();
                 const { base, rates } = useDashboardStore.getState().currencies;
@@ -272,7 +260,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 setLoading('settlement', 'add', 'fetched');
             });
     },
-    updateGroup: ({ groupName, groupDescription, groupEmoji }) => {
+    updateGroup: ({ groupName, groupDescription }) => {
         const { setLoading } = useLoadingStore.getState();
         const { selectedGroup } = get();
 
@@ -286,7 +274,6 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             groupId: selectedGroup.id,
             groupName,
             groupDescription,
-            groupEmoji,
         })
             .then(updatedGroup => {
                 const { groups } = get();
@@ -300,6 +287,28 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             })
             .finally(() => {
                 setLoading('group', 'update', 'fetched');
+            });
+    },
+    uploadGroupCover: params => {
+        const { setLoading } = useLoadingStore.getState();
+        setLoading('group', 'cover', 'loading');
+
+        return groupsApi
+            .uploadGroupCover(params)
+            .then(updatedGroup => {
+                set(state => ({
+                    groups: state.groups.map(group =>
+                        group.id === updatedGroup.id ? updatedGroup : group,
+                    ),
+                    selectedGroup:
+                        state.selectedGroup?.id === updatedGroup.id
+                            ? updatedGroup
+                            : state.selectedGroup,
+                }));
+                return updatedGroup;
+            })
+            .finally(() => {
+                setLoading('group', 'cover', 'fetched');
             });
     },
     removeGroup: () => {

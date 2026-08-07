@@ -5,7 +5,6 @@ import type { ApiUserSettings } from './chipin.raw.types';
 export interface CreateGroupParams {
     groupName: string;
     groupDescription?: string;
-    groupEmoji?: string;
 }
 
 export interface UpdateUserParams {
@@ -18,11 +17,16 @@ export interface UploadUserAvatarParams {
     onProgress?: (progress: number) => void;
 }
 
+export interface UploadGroupCoverParams {
+    groupId: string;
+    file: File;
+    onProgress?: (progress: number) => void;
+}
+
 export interface UpdateGroupParams {
     groupId: string;
     groupName: string;
     groupDescription?: string;
-    groupEmoji?: string;
 }
 
 export interface RemoveGroupParams {

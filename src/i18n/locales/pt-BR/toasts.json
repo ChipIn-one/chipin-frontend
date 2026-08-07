@@ -17,6 +17,7 @@
         "updated": "Grupo \"{{name}}\" atualizado com sucesso!",
         "createError": "Algo deu errado ao criar o grupo.",
         "updateError": "Algo deu errado ao atualizar o grupo.",
+        "coverUploadError": "O grupo foi salvo, mas não foi possível enviar a capa. Tente novamente.",
         "removed": "Grupo \"{{name}}\" removido com sucesso!",
         "removeError": "Algo deu errado ao remover o grupo.",
         "left": "Você saiu do grupo \"{{name}}\".",

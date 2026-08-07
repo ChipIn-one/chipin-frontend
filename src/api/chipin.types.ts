@@ -52,6 +52,7 @@ export type {
     SharingModeType,
     UpdateGroupParams,
     UpdateUserParams,
+    UploadGroupCoverParams,
     UploadUserAvatarParams,
 } from './chipin.params';
 
