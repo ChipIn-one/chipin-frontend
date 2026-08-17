@@ -241,6 +241,19 @@ test('keeps a hidden accessible description for the group debt selection dialog'
         });
 });
 
+test('closes the group debt selection dialog from its cancel footer action', () => {
+    const user = userEvent.setup();
+
+    render(<SettleUpModal source="group" group={group} />);
+
+    return user
+        .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
+        .then(() => user.click(screen.getByRole('button', { name: 'common:buttons.cancel' })))
+        .then(() => {
+            expect(screen.queryByRole('dialog')).toBeNull();
+        });
+});
+
 test('uses the selected group debt currency as the initial payment currency', () => {
     const createSettlement = vi
         .fn<(params: Omit<CreateSettlementParams, 'groupId'>) => Promise<void>>()

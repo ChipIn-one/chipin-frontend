@@ -8,9 +8,10 @@ import { StyledModeLogotype } from './styled';
 
 interface Props {
     isSoloMode: boolean;
+    isModeBadgeVisible?: boolean;
 }
 
-const ModeLogotype = ({ isSoloMode }: Props) => {
+const ModeLogotype = ({ isSoloMode, isModeBadgeVisible = true }: Props) => {
     const { t } = useTranslation('common');
     const activeColor = isSoloMode ? 'violet' : 'green';
     const modeBadgeKey = isSoloMode ? 'modes.solo' : 'modes.group';
@@ -23,9 +24,11 @@ const ModeLogotype = ({ isSoloMode }: Props) => {
                     <Text size="6" weight="bold" color={activeColor}>
                         {PROJECT_NAME}
                     </Text>
-                    <Badge size="1" variant="soft" color={activeColor}>
-                        {t(modeBadgeKey)}
-                    </Badge>
+                    {isModeBadgeVisible && (
+                        <Badge size="1" variant="soft" color={activeColor}>
+                            {t(modeBadgeKey)}
+                        </Badge>
+                    )}
                 </Flex>
             </Box>
         </Flex>

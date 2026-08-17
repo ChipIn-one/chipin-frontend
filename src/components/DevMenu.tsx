@@ -9,10 +9,13 @@ import {
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
+import { useShallow } from 'zustand/react/shallow';
 
 import { Button, IconButton } from '@radix-ui/themes';
 
 import { isThemeDark } from 'helpers/theme';
+import { selectAuthStatus } from 'store/authSelectors';
+import { useAuthStore } from 'store/authStore';
 import { useUsersStore } from 'store/users-store';
 
 import Dropdown from './Dropdown';
@@ -28,10 +31,15 @@ const LabeledTrigger = styled(Button)`
 
 const DevMenu = ({ isShowLabel = false }: Props) => {
     const [shouldCrash, setShouldCrash] = useState(false);
-    const { resolvedTheme } = useTheme();
+    const { resolvedTheme, setTheme } = useTheme();
     const { t } = useTranslation();
-    const extendUserSubscriptionByDay = useUsersStore(s => s.extendUserSubscriptionByDay);
-    const setUserSettings = useUsersStore(s => s.setUserSettings);
+    const authStatus = useAuthStore(selectAuthStatus);
+    const { extendUserSubscriptionByDay, setUserSettings } = useUsersStore(
+        useShallow(state => ({
+            extendUserSubscriptionByDay: state.extendUserSubscriptionByDay,
+            setUserSettings: state.setUserSettings,
+        })),
+    );
 
     if (shouldCrash) {
         throw new Error('Manual test error triggered from the header crash button.');
@@ -40,6 +48,11 @@ const DevMenu = ({ isShowLabel = false }: Props) => {
     const isDark = isThemeDark(resolvedTheme);
     const onSwitchTheme = () => {
         const nextTheme = isDark ? 'light' : 'dark';
+
+        if (authStatus !== 'authenticated') {
+            setTheme(nextTheme);
+            return;
+        }
 
         void setUserSettings({ settings: { theme: nextTheme } }).catch(() => undefined);
     };

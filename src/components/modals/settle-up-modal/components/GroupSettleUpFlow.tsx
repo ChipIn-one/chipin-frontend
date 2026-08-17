@@ -9,7 +9,7 @@ import { useGroupsStore } from 'store/groupsStore';
 import { useUsersStore } from 'store/users-store';
 
 import { BaseModal, MODAL_SIZES } from '../../base-modal';
-import { OverlayBody } from '../../components';
+import { OverlayBody, OverlayFooter } from '../../components';
 import { type DebtOption, getDebtOptions } from '../internal';
 import type { GroupSettleUpProps } from '../types';
 
@@ -98,21 +98,37 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
             accessibleDescription={t('group:page.settleUp.chooseDebtAccessibleDescription')}
             maxWidth={MODAL_SIZES.default}
             content={
-                <OverlayBody>
-                    <DebtSelectionStep
-                        youOwe={youOwe}
-                        owedToYou={owedToYou}
-                        isYouOweExpanded={isYouOweExpanded}
-                        isOwedToYouExpanded={isOwedToYouExpanded}
-                        onToggleYouOwe={() =>
-                            setIsYouOweExpanded(isExpanded => !isExpanded)
+                <>
+                    <OverlayBody>
+                        <DebtSelectionStep
+                            youOwe={youOwe}
+                            owedToYou={owedToYou}
+                            isYouOweExpanded={isYouOweExpanded}
+                            isOwedToYouExpanded={isOwedToYouExpanded}
+                            onToggleYouOwe={() =>
+                                setIsYouOweExpanded(isExpanded => !isExpanded)
+                            }
+                            onToggleOwedToYou={() =>
+                                setIsOwedToYouExpanded(isExpanded => !isExpanded)
+                            }
+                            onSelect={setSelectedDebt}
+                        />
+                    </OverlayBody>
+                    <OverlayFooter
+                        cancelAction={
+                            <Button
+                                type="button"
+                                size="4"
+                                variant="soft"
+                                color="gray"
+                                onClick={() => onOpenChange(false)}
+                            >
+                                {t('common:buttons.cancel')}
+                            </Button>
                         }
-                        onToggleOwedToYou={() =>
-                            setIsOwedToYouExpanded(isExpanded => !isExpanded)
-                        }
-                        onSelect={setSelectedDebt}
+                        primaryAction={null}
                     />
-                </OverlayBody>
+                </>
             }
         />
     );

@@ -99,3 +99,21 @@ test('opens the active Solo mode when the logo is clicked from another page', ()
             expect(screen.getByLabelText('Current route').textContent).toBe('/solo');
         });
 });
+
+test('hides the mode badge on the landing page', () => {
+    useAuthStore.setState({ status: 'unauthenticated' });
+
+    render(
+        <MemoryRouter initialEntries={['/']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <Header />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    expect(screen.getByText(PROJECT_NAME)).toBeTruthy();
+    expect(screen.queryByText('Group')).toBeNull();
+    expect(screen.queryByText('Solo')).toBeNull();
+});

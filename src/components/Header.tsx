@@ -121,7 +121,10 @@ const Header = () => {
             <Container size="4" p="4">
                 <Flex justify="between" align="center">
                     <NavButton to={logoRoute} aria-label={PROJECT_NAME} unsetStyles>
-                        <ModeLogotype isSoloMode={isLoggedIn && isSoloMode} />
+                        <ModeLogotype
+                            isSoloMode={isLoggedIn && isSoloMode}
+                            isModeBadgeVisible={isLoggedIn}
+                        />
                     </NavButton>
 
                     {isLoggedIn && <HeaderNav />}
