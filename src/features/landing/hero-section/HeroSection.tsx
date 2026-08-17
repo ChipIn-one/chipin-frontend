@@ -15,12 +15,12 @@ import { LandingStats } from './components';
 const HeroSection = () => {
     const navigate = useAppNavigate();
     const isPwaInstalled = usePwaStore(state => state.isPwaInstalled);
-    const isPwaInstallable = usePwaStore(state => state.isPwaInstallable);
+    const pwaInstallPrompt = usePwaStore(state => state.pwaInstallPrompt);
     const callPWAInstall = usePwaStore(state => state.callPWAInstall);
     const { t } = useTranslation('landing');
     let pwaAction: ReactNode = null;
 
-    if (isPwaInstalled) {
+    if (isPwaInstalled || pwaInstallPrompt === null) {
         pwaAction = (
             <Button
                 size={{ initial: '3', sm: '4' }}
@@ -31,7 +31,7 @@ const HeroSection = () => {
                 {t('cta.openApp')}
             </Button>
         );
-    } else if (isPwaInstallable) {
+    } else {
         pwaAction = (
             <Button
                 size={{ initial: '3', sm: '4' }}

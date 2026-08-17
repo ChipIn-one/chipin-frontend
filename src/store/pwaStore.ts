@@ -2,14 +2,12 @@ import i18n from 'i18next';
 import { toast } from 'sonner';
 import { create } from 'zustand';
 
-import { checkIsPwaInstallable, checkIsPwaInstalled } from 'helpers/pwa';
+import { checkIsPwaInstalled } from 'helpers/pwa';
 
 interface PwaStore {
     isPwaInstalled: boolean;
-    isPwaInstallable: boolean;
     pwaInstallPrompt: BeforeInstallPromptEvent | null;
     isSwUpdateAvailable: boolean;
-    setIsPwaInstallable: (isPwaInstallable: boolean) => void;
     setIsPwaInstalled: (isPwaInstalled: boolean) => void;
     setPwaInstallPrompt: (pwaInstallPrompt: BeforeInstallPromptEvent | null) => void;
     setIsSwUpdateAvailable: (isSwUpdateAvailable: boolean) => void;
@@ -18,17 +16,12 @@ interface PwaStore {
 
 const initialPWAStore = {
     isPwaInstalled: checkIsPwaInstalled(),
-    isPwaInstallable: checkIsPwaInstallable(),
     pwaInstallPrompt: null,
     isSwUpdateAvailable: false,
 };
 
 export const usePwaStore = create<PwaStore>((set, get) => ({
     ...initialPWAStore,
-
-    setIsPwaInstallable: (isPwaInstallable: boolean) => {
-        set({ isPwaInstallable });
-    },
 
     setIsPwaInstalled: (isPwaInstalled: boolean) => {
         set({ isPwaInstalled });
@@ -42,20 +35,24 @@ export const usePwaStore = create<PwaStore>((set, get) => ({
         set({ isSwUpdateAvailable });
     },
 
-    callPWAInstall: async () => {
+    callPWAInstall: () => {
         const { pwaInstallPrompt } = get();
 
         if (!pwaInstallPrompt) {
-            return;
+            return Promise.resolve();
         }
 
-        pwaInstallPrompt.prompt();
+        return pwaInstallPrompt
+            .prompt()
+            .then(() => pwaInstallPrompt.userChoice)
+            .then(({ outcome }) => {
+                if (outcome === 'accepted') {
+                    set({ isPwaInstalled: true, pwaInstallPrompt: null });
+                    toast.success(i18n.t('toasts:pwa.installing'));
+                    return;
+                }
 
-        const { outcome } = await pwaInstallPrompt.userChoice;
-
-        if (outcome === 'accepted') {
-            set({ isPwaInstalled: true, isPwaInstallable: false, pwaInstallPrompt: null });
-            toast.success(i18n.t('toasts:pwa.installing'));
-        }
+                set({ pwaInstallPrompt: null });
+            });
     },
 }));

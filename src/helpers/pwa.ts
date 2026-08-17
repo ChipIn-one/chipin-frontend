@@ -3,20 +3,11 @@ export const checkIsPwaInstalled = (): boolean => {
         return true;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ((window.navigator as any).standalone === true) {
+    const standaloneNavigator = window.navigator as Navigator & { standalone?: boolean };
+
+    if (standaloneNavigator.standalone === true) {
         return true;
     }
 
     return false;
-};
-
-export const checkIsPwaInstallable = (): boolean => {
-    // Already running as installed PWA — not installable
-    if (checkIsPwaInstalled()) {
-        return false;
-    }
-
-    // Browser supports beforeinstallprompt — installation is possible
-    return 'onbeforeinstallprompt' in window;
 };

@@ -11,7 +11,6 @@ import SettingsPage from './SettingsPage';
 import 'i18n/index';
 
 vi.mock('helpers/pwa', () => ({
-    checkIsPwaInstallable: () => false,
     checkIsPwaInstalled: () => false,
 }));
 

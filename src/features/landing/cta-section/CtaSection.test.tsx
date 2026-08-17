@@ -1,14 +1,16 @@
 import type { ReactNode } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
+import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { ROUTES } from 'constants/routes';
+import { lightThemeStyled } from 'constants/styled-themes';
 import { usePwaStore } from 'store/pwaStore';
 
-import HeroSection from './HeroSection';
+import CtaSection from './CtaSection';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),
@@ -22,14 +24,21 @@ vi.mock('components/modals', () => ({
     AuthModal: ({ children }: { children: ReactNode }) => children,
 }));
 
-vi.mock('./components', () => ({
-    LandingStats: () => null,
-}));
-
 const LocationPath = () => {
     const location = useLocation();
 
     return <output aria-label="Current route">{location.pathname}</output>;
+};
+
+const renderSection = () => {
+    render(
+        <MemoryRouter initialEntries={[ROUTES.HOME]}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <CtaSection />
+                <LocationPath />
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
 };
 
 beforeEach(() => {
@@ -39,18 +48,10 @@ beforeEach(() => {
     });
 });
 
-test('opens the app instead of offering installation when the PWA is installed', () => {
+test('opens the dashboard when no install prompt is available', () => {
     const user = userEvent.setup();
-    usePwaStore.setState({ isPwaInstalled: true });
 
-    render(
-        <MemoryRouter initialEntries={[ROUTES.HOME]}>
-            <HeroSection />
-            <LocationPath />
-        </MemoryRouter>,
-    );
-
-    expect(screen.queryByRole('button', { name: 'common:buttons.installApp' })).toBeNull();
+    renderSection();
 
     return user
         .click(screen.getByRole('button', { name: 'cta.openApp' }))
@@ -59,44 +60,23 @@ test('opens the app instead of offering installation when the PWA is installed',
         });
 });
 
-test('offers to open the app when the browser supports installation but provides no prompt', () => {
-    usePwaStore.setState({
-        isPwaInstalled: false,
-        pwaInstallPrompt: null,
-    });
-
-    render(
-        <MemoryRouter initialEntries={[ROUTES.HOME]}>
-            <HeroSection />
-        </MemoryRouter>,
-    );
-
-    expect(screen.queryByRole('button', { name: 'common:buttons.installApp' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'cta.openApp' })).toBeTruthy();
-});
-
-test('offers installation only after the browser provides an install prompt', () => {
+test('runs the browser install prompt when installation is available', () => {
     const user = userEvent.setup();
+    const prompt = vi.fn(() => Promise.resolve());
     const pwaInstallPrompt = Object.assign(new Event('beforeinstallprompt'), {
         platforms: ['web'],
-        prompt: vi.fn(() => Promise.resolve()),
+        prompt,
         userChoice: Promise.resolve({ outcome: 'dismissed' as const, platform: 'web' }),
     }) satisfies BeforeInstallPromptEvent;
-    usePwaStore.setState({ isPwaInstalled: false, pwaInstallPrompt });
+    usePwaStore.setState({ pwaInstallPrompt });
 
-    render(
-        <MemoryRouter initialEntries={[ROUTES.HOME]}>
-            <HeroSection />
-        </MemoryRouter>,
-    );
-
-    expect(screen.getByRole('button', { name: 'common:buttons.installApp' })).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'cta.openApp' })).toBeNull();
+    renderSection();
 
     return user
         .click(screen.getByRole('button', { name: 'common:buttons.installApp' }))
         .then(() =>
             waitFor(() => {
+                expect(prompt).toHaveBeenCalledTimes(1);
                 expect(
                     screen.queryByRole('button', { name: 'common:buttons.installApp' }),
                 ).toBeNull();

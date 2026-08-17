@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import i18n from 'i18next';
 import { toast } from 'sonner';
+import { useShallow } from 'zustand/react/shallow';
 
 import { Spinner } from '@radix-ui/themes';
 import { useCopyToClipboard, useNetworkState } from '@uidotdev/usehooks';
@@ -38,27 +39,30 @@ export const useCheckOnlineStatus = () => {
 };
 
 export const useCheckPwa = () => {
-    const { setIsPwaInstallable, setIsPwaInstalled, setPwaInstallPrompt } = usePwaStore();
+    const { setIsPwaInstalled, setPwaInstallPrompt } = usePwaStore(
+        useShallow(state => ({
+            setIsPwaInstalled: state.setIsPwaInstalled,
+            setPwaInstallPrompt: state.setPwaInstallPrompt,
+        })),
+    );
 
-    const handleAppInstalled = () => {
+    const onAppInstalled = () => {
         setIsPwaInstalled(true);
-        setIsPwaInstallable(false);
         setPwaInstallPrompt(null);
     };
 
-    const handleBeforeInstallPrompt = (e: BeforeInstallPromptEvent) => {
+    const onBeforeInstallPrompt = (e: BeforeInstallPromptEvent) => {
         e.preventDefault();
         setPwaInstallPrompt(e);
-        setIsPwaInstallable(true);
     };
 
     useEffect(() => {
-        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-        window.addEventListener('appinstalled', handleAppInstalled);
+        window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+        window.addEventListener('appinstalled', onAppInstalled);
 
         return () => {
-            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-            window.removeEventListener('appinstalled', handleAppInstalled);
+            window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+            window.removeEventListener('appinstalled', onAppInstalled);
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
