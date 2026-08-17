@@ -10,6 +10,8 @@ export const selectDashboardFetched = (s: LoadingStore) => s.dashboard.data === 
 export const selectDashboardNextPageLoading = (s: LoadingStore) =>
     s.dashboard.nextPage === 'loading';
 
+export const selectLandingStatsLoading = (s: LoadingStore) => s.landing.stats !== 'fetched';
+
 export const selectActivityLoading = (s: LoadingStore) => s.activity.data === 'loading';
 export const selectActivityFetched = (s: LoadingStore) => s.activity.data === 'fetched';
 export const selectActivityNextPageLoading = (s: LoadingStore) => s.activity.nextPage === 'loading';

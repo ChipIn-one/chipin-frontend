@@ -6,7 +6,7 @@ import {
     LucideUsers,
     LucideZap,
 } from 'lucide-react';
-import type { ComponentPropsWithoutRef } from 'react';
+import type { ComponentPropsWithoutRef, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar, Box, Card, Container, Flex, Grid, Heading, Section, Text } from '@radix-ui/themes';
@@ -16,7 +16,7 @@ type AvatarColor = ComponentPropsWithoutRef<typeof Avatar>['color'];
 interface Feature {
     title: string;
     description: string;
-    icon: React.ReactElement;
+    icon: ReactElement;
     color: AvatarColor;
 }
 

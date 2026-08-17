@@ -9,10 +9,11 @@
     "heroTitleHighlight": "amigos e família",
     "heroDescription": "Crie grupos, adicione despesas e veja quem deve o quê — rápido e justo. Perfeito para viagens, colegas de quarto e atividades em grupo.",
     "stats": {
-        "activeUsers": "Usuários ativos",
+        "regionLabel": "Estatísticas da plataforma",
+        "totalUsers": "Total de usuários",
         "expensesTracked": "Despesas registradas",
         "groupsCreated": "Grupos criados",
-        "userRating": "Avaliação"
+        "settlementsRecorded": "Acertos registrados"
     },
     "howItWorks": {
         "eyebrow": "Simples por design",
@@ -99,7 +100,7 @@
     "cta": {
         "badge": "Grátis para sempre · Sem cartão de crédito",
         "title": "Pronto para parar de se estressar com dinheiro?",
-        "subtitle": "Junte-se a mais de 50.000 usuários que já usam o Chipin para dividir contas e controlar orçamentos — completamente grátis.",
+        "subtitle": "Use o Chipin para dividir contas e controlar orçamentos — completamente grátis.",
         "getStartedFree": "Começar grátis",
         "openApp": "Abrir o app",
         "bullets": {

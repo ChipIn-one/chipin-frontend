@@ -1,4 +1,7 @@
-// HomePage.tsx
+import { useEffect } from 'react';
+
+import { useLandingStatsStore } from 'store/landing-stats-store';
+
 import Footer from 'components/Footer';
 import {
     CtaSection,
@@ -9,6 +12,12 @@ import {
 } from 'features/landing';
 
 const HomePage = () => {
+    const fetchSetStats = useLandingStatsStore(state => state.fetchSetStats);
+
+    useEffect(() => {
+        void fetchSetStats();
+    }, [fetchSetStats]);
+
     return (
         <>
             <HeroSection />

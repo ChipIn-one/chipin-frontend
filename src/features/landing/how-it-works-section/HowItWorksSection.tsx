@@ -1,26 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import styled from 'styled-components';
 
 import { Avatar, Box, Container, Flex, Heading, Section, Text } from '@radix-ui/themes';
 
-import { themeColor } from 'helpers/colors';
-
-const STEP_KEYS = ['step1', 'step2', 'step3', 'step4'] as const;
-
-const TimelineWrap = styled.div`
-    position: relative;
-    max-width: 560px;
-    margin: 0 auto;
-`;
-
-const StepLine = styled.div`
-    width: 2px;
-    flex: 1;
-    min-height: var(--space-9);
-    background-color: ${themeColor('green6')};
-    margin-top: var(--space-2);
-    margin-bottom: var(--space-2);
-`;
+import { STEP_KEYS } from './internal';
+import { StepLine, TimelineWrap } from './styled';
 
 const HowItWorksSection = () => {
     const { t } = useTranslation('landing');

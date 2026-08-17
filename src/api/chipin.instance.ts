@@ -9,3 +9,11 @@ export const apiInstance = axios.create({
         'Content-Type': 'application/json',
     },
 });
+
+export const publicApiInstance = axios.create({
+    baseURL: getChipInApiUrl(),
+    headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+    },
+});
