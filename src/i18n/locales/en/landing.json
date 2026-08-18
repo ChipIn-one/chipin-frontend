@@ -80,7 +80,18 @@
                 "multiCurrency": "Multi-currency support for international groups"
             },
             "cta": "Create a group",
-            "placeholder": "Groups screenshot"
+            "preview": {
+                "label": "Group page preview",
+                "coverAlt": "Lisbon cityscape from Miradouro das Portas do Sol",
+                "groupName": "Weekend in Lisbon",
+                "groupDescription": "Where's the money, Lebowski?",
+                "expensesLabel": "Recent group expenses",
+                "expenses": {
+                    "hotel": "Hotel",
+                    "dinner": "Dinner",
+                    "tickets": "Train tickets"
+                }
+            }
         },
         "expenses": {
             "badge": "Solo mode",
@@ -94,7 +105,9 @@
                 "worksAlongside": "Works alongside your group expenses seamlessly"
             },
             "cta": "Start tracking",
-            "placeholder": "Budget screenshot"
+            "preview": {
+                "label": "Solo page preview"
+            }
         }
     },
     "cta": {

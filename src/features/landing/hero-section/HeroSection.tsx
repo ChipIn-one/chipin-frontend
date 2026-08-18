@@ -1,11 +1,8 @@
 import { LucideArrowRight, LucideDownload } from 'lucide-react';
-import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge, Box, Button, Container, Flex, Heading, Section, Text } from '@radix-ui/themes';
 
-import { ROUTES } from 'constants/routes';
-import { useAppNavigate } from 'hooks/useAppNavigate';
 import { usePwaStore } from 'store/pwaStore';
 
 import { AuthModal } from 'components/modals';
@@ -13,37 +10,21 @@ import { AuthModal } from 'components/modals';
 import { LandingStats } from './components';
 
 const HeroSection = () => {
-    const navigate = useAppNavigate();
     const isPwaInstalled = usePwaStore(state => state.isPwaInstalled);
     const pwaInstallPrompt = usePwaStore(state => state.pwaInstallPrompt);
     const callPWAInstall = usePwaStore(state => state.callPWAInstall);
     const { t } = useTranslation('landing');
-    let pwaAction: ReactNode = null;
-
-    if (isPwaInstalled || pwaInstallPrompt === null) {
-        pwaAction = (
-            <Button
-                size={{ initial: '3', sm: '4' }}
-                variant="soft"
-                color="gray"
-                onClick={() => navigate(ROUTES.DASHBOARD)}
-            >
-                {t('cta.openApp')}
-            </Button>
-        );
-    } else {
-        pwaAction = (
-            <Button
-                size={{ initial: '3', sm: '4' }}
-                variant="soft"
-                color="gray"
-                onClick={callPWAInstall}
-            >
-                {t('common:buttons.installApp')}
-                <LucideDownload />
-            </Button>
-        );
-    }
+    const pwaAction = !isPwaInstalled && pwaInstallPrompt !== null && (
+        <Button
+            size={{ initial: '3', sm: '4' }}
+            variant="soft"
+            color="gray"
+            onClick={callPWAInstall}
+        >
+            {t('common:buttons.installApp')}
+            <LucideDownload />
+        </Button>
+    );
 
     return (
         <Section>

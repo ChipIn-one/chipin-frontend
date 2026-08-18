@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Box, Container, Section } from '@radix-ui/themes';
 
-import { ShowcaseSection } from './components';
+import { GroupPagePreview, ShowcaseSection, SoloPagePreview } from './components';
 import { EXPENSES_BULLET_KEYS, GROUPS_BULLET_KEYS } from './internal';
 
 const ShowcaseSections = () => {
@@ -27,7 +27,7 @@ const ShowcaseSections = () => {
                         bullets={groupsBullets}
                         color="green"
                         description={t('sections.groups.description')}
-                        placeholder={t('sections.groups.placeholder')}
+                        media={<GroupPagePreview />}
                         title={t('sections.groups.titlePart1')}
                         titleHighlight={t('sections.groups.titleHighlight')}
                     />
@@ -43,7 +43,7 @@ const ShowcaseSections = () => {
                         color="violet"
                         description={t('sections.expenses.description')}
                         isMediaFirst
-                        placeholder={t('sections.expenses.placeholder')}
+                        media={<SoloPagePreview />}
                         title={t('sections.expenses.titlePart1')}
                         titleHighlight={t('sections.expenses.titleHighlight')}
                     />

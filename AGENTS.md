@@ -95,6 +95,12 @@ Existing code may violate newer rules. Apply the rulebook to new and touched cod
 - Do not perform broad cleanup, mass conversion, folder migration, or architecture replacement without approval.
 - Do not expand a narrow task merely to make the entire repository compliant.
 
+## Landing Page App Previews
+
+- When changing the UI of `GroupPage` or `SoloPage`, compare the corresponding `GroupPagePreview` or
+  `SoloPagePreview` and update the landing mock when needed.
+- When changing either landing preview, compare it with the current mobile composition of its page.
+
 ## Definition Of Done
 
 Before editing:

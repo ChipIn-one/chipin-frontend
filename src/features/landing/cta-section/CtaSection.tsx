@@ -1,11 +1,8 @@
 import { LucideArrowRight, LucideCheckCircle, LucideDownload } from 'lucide-react';
-import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge, Box, Button, Container, Flex, Heading, Section, Text } from '@radix-ui/themes';
 
-import { ROUTES } from 'constants/routes';
-import { useAppNavigate } from 'hooks/useAppNavigate';
 import { usePwaStore } from 'store/pwaStore';
 
 import { AuthModal } from 'components/modals';
@@ -15,32 +12,16 @@ import { CtaCard } from './styled';
 
 const CtaSection = () => {
     const { t } = useTranslation('landing');
-    const navigate = useAppNavigate();
     const isPwaInstalled = usePwaStore(state => state.isPwaInstalled);
     const pwaInstallPrompt = usePwaStore(state => state.pwaInstallPrompt);
     const callPWAInstall = usePwaStore(state => state.callPWAInstall);
 
-    let secondaryAction: ReactNode;
-
-    if (isPwaInstalled || pwaInstallPrompt === null) {
-        secondaryAction = (
-            <Button
-                size="4"
-                variant="soft"
-                color="gray"
-                onClick={() => navigate(ROUTES.DASHBOARD)}
-            >
-                {t('cta.openApp')}
-            </Button>
-        );
-    } else {
-        secondaryAction = (
-            <Button size="4" variant="soft" color="gray" onClick={callPWAInstall}>
-                {t('common:buttons.installApp')}
-                <LucideDownload />
-            </Button>
-        );
-    }
+    const secondaryAction = !isPwaInstalled && pwaInstallPrompt !== null && (
+        <Button size="4" variant="soft" color="gray" onClick={callPWAInstall}>
+            {t('common:buttons.installApp')}
+            <LucideDownload />
+        </Button>
+    );
 
     return (
         <Section id="pricing" py="8">

@@ -3,8 +3,6 @@ import type { ReactElement } from 'react';
 
 import { Badge, Box, Flex, Grid, Heading, Text } from '@radix-ui/themes';
 
-import { Placeholder } from './styled';
-
 interface Bullet {
     key: string;
     text: string;
@@ -17,7 +15,7 @@ interface Props {
     color: 'green' | 'violet';
     description: string;
     isMediaFirst?: boolean;
-    placeholder: string;
+    media: ReactElement;
     title: string;
     titleHighlight: string;
 }
@@ -29,7 +27,7 @@ const ShowcaseSection = ({
     color,
     description,
     isMediaFirst = false,
-    placeholder,
+    media,
     title,
     titleHighlight,
 }: Props) => {
@@ -65,8 +63,6 @@ const ShowcaseSection = ({
             </Flex>
         </Flex>
     );
-    const media = <Placeholder aria-label={placeholder}>{placeholder}</Placeholder>;
-
     if (!isMediaFirst) {
         return (
             <Grid columns={{ initial: '1', md: '2' }} gap="9" align="center">
@@ -78,9 +74,18 @@ const ShowcaseSection = ({
 
     return (
         <Grid columns={{ initial: '1', md: '2' }} gap="9" align="center">
-            <Box display={{ initial: 'none', md: 'block' }}>{media}</Box>
-            {content}
-            <Box display={{ initial: 'block', md: 'none' }}>{media}</Box>
+            <Box
+                gridColumn={{ initial: '1', md: '2' }}
+                gridRow={{ initial: '1', md: '1' }}
+            >
+                {content}
+            </Box>
+            <Box
+                gridColumn={{ initial: '1', md: '1' }}
+                gridRow={{ initial: '2', md: '1' }}
+            >
+                {media}
+            </Box>
         </Grid>
     );
 };

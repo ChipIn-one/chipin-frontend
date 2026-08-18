@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
@@ -24,18 +24,11 @@ vi.mock('components/modals', () => ({
     AuthModal: ({ children }: { children: ReactNode }) => children,
 }));
 
-const LocationPath = () => {
-    const location = useLocation();
-
-    return <output aria-label="Current route">{location.pathname}</output>;
-};
-
 const renderSection = () => {
     render(
         <MemoryRouter initialEntries={[ROUTES.HOME]}>
             <ThemeProvider theme={lightThemeStyled}>
                 <CtaSection />
-                <LocationPath />
             </ThemeProvider>
         </MemoryRouter>,
     );
@@ -48,16 +41,20 @@ beforeEach(() => {
     });
 });
 
-test('opens the dashboard when no install prompt is available', () => {
-    const user = userEvent.setup();
+test('hides PWA actions when no install prompt is available', () => {
+    renderSection();
+
+    expect(screen.queryByRole('button', { name: 'common:buttons.installApp' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'cta.openApp' })).toBeNull();
+});
+
+test('hides PWA actions when the PWA is installed', () => {
+    usePwaStore.setState({ isPwaInstalled: true });
 
     renderSection();
 
-    return user
-        .click(screen.getByRole('button', { name: 'cta.openApp' }))
-        .then(() => {
-            expect(screen.getByLabelText('Current route').textContent).toBe(ROUTES.DASHBOARD);
-        });
+    expect(screen.queryByRole('button', { name: 'common:buttons.installApp' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'cta.openApp' })).toBeNull();
 });
 
 test('runs the browser install prompt when installation is available', () => {
@@ -80,7 +77,7 @@ test('runs the browser install prompt when installation is available', () => {
                 expect(
                     screen.queryByRole('button', { name: 'common:buttons.installApp' }),
                 ).toBeNull();
-                expect(screen.getByRole('button', { name: 'cta.openApp' })).toBeTruthy();
+                expect(screen.queryByRole('button', { name: 'cta.openApp' })).toBeNull();
             }),
         );
 });
