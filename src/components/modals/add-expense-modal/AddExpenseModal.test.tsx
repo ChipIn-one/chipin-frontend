@@ -5,7 +5,7 @@ import { beforeEach, expect, test } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import type { Group, User } from 'api/chipin.types';
+import type { Group, SelfUser } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
@@ -37,8 +37,10 @@ const group = {
     createdAt: 1,
     updatedAt: 1,
     coverUrl: 'https://cdn.example.com/group.webp',
+    simplifyDebts: true,
     role: 'OWNER',
     status: 'ACTIVE',
+    lastUsedCurrency: null,
     recentActivities: {
         items: [],
         nextCursor: null,
@@ -49,6 +51,7 @@ const currentUser = {
     ...creator,
     role: 'USER',
     subscriptionUntil: null,
+    inviteToken: 'invite-token-user',
     settings: {
         defaultCurrency: 'USD',
         defaultCategory: 'food',
@@ -61,7 +64,7 @@ const currentUser = {
         saveGroupExpensesToSolo: false,
         sex: 'male',
     },
-} satisfies User;
+} satisfies SelfUser;
 
 const LocationPath = () => {
     const location = useLocation();

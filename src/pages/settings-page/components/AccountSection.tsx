@@ -30,7 +30,7 @@ const AccountSection = ({ isLoading }: Props) => {
             return;
         }
 
-        void setUserSettings({ displayName }).catch(() => undefined);
+        setUserSettings({ displayName });
     };
 
     const onSexChange = (value: string) => {
@@ -38,7 +38,7 @@ const AccountSection = ({ isLoading }: Props) => {
             return;
         }
 
-        void setUserSettings({ settings: { sex: value } }).catch(() => undefined);
+        setUserSettings({ settings: { sex: value } });
     };
 
     return (

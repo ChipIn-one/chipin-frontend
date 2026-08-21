@@ -179,11 +179,12 @@ let _localeRequestId = 0;
 const onChangeLocale = (locale: SupportedLocale): void => {
     const requestId = ++_localeRequestId;
 
-    void import('i18n/index')
+    import('i18n/index')
         .then(({ default: i18n }) => {
             if (_localeRequestId === requestId) {
-                void i18n.changeLanguage(locale);
+                return i18n.changeLanguage(locale);
             }
+            return undefined;
         })
         .catch(() => {
             // i18n module failed to load. The store cache remains the source of truth.

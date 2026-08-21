@@ -7,7 +7,8 @@
   "common": {
     "disconnect": "You have been disconnected.",
     "disconnectDescription": "Don't worry, your changes will be saved. Attempting to reconnect...",
-    "reconnected": "Your connection has been restored."
+    "reconnected": "Your connection has been restored.",
+    "requestFailed": "Something went wrong. Please try again."
   },
   "group": {
     "inviteJoinWarning": "Please sign in before joining the group.",
@@ -19,11 +20,8 @@
     "updateError": "Something went wrong while updating the group.",
     "coverUploadError": "The group was saved, but the cover could not be uploaded. Try again.",
     "removed": "Group \"{{name}}\" was successfully removed!",
-    "removeError": "Something went wrong while removing the group.",
     "left": "You left the group \"{{name}}\".",
-    "leaveError": "Something went wrong while leaving the group.",
     "kicked": "Member \"{{name}}\" was removed from the group.",
-    "kickError": "Something went wrong while kicking this member.",
     "inviteLinkNotReady": "Invite link is not ready yet",
     "inviteLinkCopied": "Group invite link copied",
     "inviteLinkCopyError": "Failed to copy link"
@@ -45,15 +43,12 @@
     "avatarUpdated": "Profile photo updated."
   },
   "expense": {
-    "created": "Expense added successfully!",
-    "createError": "Something went wrong while adding the expense."
+    "created": "Expense added successfully!"
   },
   "ledger": {
-    "entryDeleted": "Entry deleted successfully.",
-    "entryDeleteError": "Something went wrong while deleting the entry."
+    "entryDeleted": "Entry deleted successfully."
   },
   "settlement": {
-    "created": "Payment recorded successfully!",
-    "createError": "Something went wrong while recording the payment."
+    "created": "Payment recorded successfully!"
   }
 }

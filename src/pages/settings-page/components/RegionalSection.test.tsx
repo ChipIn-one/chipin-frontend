@@ -4,7 +4,7 @@ import { Theme } from '@radix-ui/themes';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import type { User } from 'api/chipin.types';
+import type { SelfUser } from 'api/chipin.types';
 import type { UsersStoreActions } from 'store/users-store';
 import { useUsersStore } from 'store/users-store';
 
@@ -16,11 +16,10 @@ const user = {
     id: 'user-1',
     email: 'user@example.com',
     displayName: 'Alex',
-    firstName: null,
-    lastName: null,
     picture: null,
     role: 'USER',
     subscriptionUntil: null,
+    inviteToken: 'invite-token-user',
     settings: {
         defaultCurrency: 'USD',
         defaultCategory: 'food',
@@ -35,7 +34,7 @@ const user = {
     },
     createdAt: 1,
     updatedAt: 1,
-} satisfies User;
+} satisfies SelfUser;
 
 const setUserSettings = vi.fn((params: Parameters<UsersStoreActions['setUserSettings']>[0]) => {
     useUsersStore.setState(state => ({

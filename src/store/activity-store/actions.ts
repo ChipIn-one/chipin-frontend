@@ -2,214 +2,369 @@ import { create } from 'zustand';
 
 import * as activityApi from 'api/activityApi';
 import * as ledgerApi from 'api/ledgerApi';
+import { normalizeApiError } from 'helpers/errors';
 
+import { useDashboardStore } from '../dashboardStore';
+import { useErrorsStore } from '../errorsStore';
+import { useGroupsStore } from '../groupsStore';
+import { createRequestChannel } from '../internal/resourceRequests';
 import { useLoadingStore } from '../loadingStore';
 import { useUsersStore } from '../users-store';
 
 import { ACTIVITY_API_LIMIT } from './constants';
 import { initialState } from './initialState';
-import type { ActivityStore } from './types';
+import type {
+    ActivityStore,
+    CreateExpenseParams,
+    CreateSettlementActionParams,
+    ReverseLedgerEntryParams,
+} from './types';
+
+const activityFeedChannel = createRequestChannel();
+const activityFeedPageChannel = createRequestChannel();
+const activityChildrenChannel = createRequestChannel();
+const activityChildrenPageChannel = createRequestChannel();
+
+interface FinancialRefreshContext {
+    groupId?: string;
+    parentActivityId?: string;
+}
+
+const refreshFinancialData = (
+    activityState: ActivityStore,
+    { groupId, parentActivityId }: FinancialRefreshContext,
+): Promise<void> => {
+    const requests: Promise<unknown>[] = [
+        useDashboardStore.getState().fetchSetDashboard(true),
+        activityState.fetchSetActivity(true),
+    ];
+
+    if (groupId) {
+        requests.push(useGroupsStore.getState().fetchSetGroupById(groupId, true));
+    } else {
+        requests.push(useUsersStore.getState().fetchSetFriends(true));
+    }
+
+    if (parentActivityId) {
+        const category =
+            activityState.subeventsParent?.id === parentActivityId
+                ? (activityState.subeventsCategory ?? undefined)
+                : undefined;
+        requests.push(
+            activityState.fetchSetActivitySubevents({
+                parentActivityId,
+                category,
+                force: true,
+            }),
+        );
+    }
+
+    return Promise.all(requests).then(() => undefined);
+};
+
+const createExpense = (get: () => ActivityStore, params: CreateExpenseParams): Promise<void> => {
+    const { parentActivityId, ...request } = params;
+    const { setLoading } = useLoadingStore.getState();
+    const { clearError, setError } = useErrorsStore.getState();
+    clearError('expense', 'add');
+    setLoading('expense', 'add', 'loading');
+
+    return ledgerApi
+        .createExpense(request)
+        .catch((error: unknown) => {
+            setError('expense', 'add', normalizeApiError(error));
+            return Promise.reject(error);
+        })
+        .then(() =>
+            refreshFinancialData(get(), {
+                groupId: request.groupId,
+                parentActivityId,
+            }),
+        )
+        .finally(() => {
+            setLoading('expense', 'add', 'fetched');
+        });
+};
+
+const createSettlement = (
+    get: () => ActivityStore,
+    params: CreateSettlementActionParams,
+): Promise<void> => {
+    const { parentActivityId, ...request } = params;
+    const { setLoading } = useLoadingStore.getState();
+    const { clearError, setError } = useErrorsStore.getState();
+    clearError('settlement', 'add');
+    setLoading('settlement', 'add', 'loading');
+
+    return ledgerApi
+        .createSettlement(request)
+        .catch((error: unknown) => {
+            setError('settlement', 'add', normalizeApiError(error));
+            return Promise.reject(error);
+        })
+        .then(() =>
+            refreshFinancialData(get(), {
+                groupId: request.groupId,
+                parentActivityId,
+            }),
+        )
+        .finally(() => {
+            setLoading('settlement', 'add', 'fetched');
+        });
+};
+
+const reverseLedgerEntry = (
+    get: () => ActivityStore,
+    { entryId, groupId, parentActivityId }: ReverseLedgerEntryParams,
+): Promise<void> => {
+    const { setLoading } = useLoadingStore.getState();
+    const { clearError, setError } = useErrorsStore.getState();
+    clearError('ledger', 'remove');
+    setLoading('ledger', 'remove', 'loading');
+
+    return ledgerApi
+        .removeLedgerEntry({ entryId })
+        .catch((error: unknown) => {
+            setError('ledger', 'remove', normalizeApiError(error));
+            return Promise.reject(error);
+        })
+        .then(() => refreshFinancialData(get(), { groupId, parentActivityId }))
+        .finally(() => {
+            setLoading('ledger', 'remove', 'fetched');
+        });
+};
 
 const useActivityStore = create<ActivityStore>((set, get) => ({
     ...initialState,
 
-    fetchSetActivity: () => {
+    createExpense: params => createExpense(get, params),
+    createSettlement: params => createSettlement(get, params),
+    reverseLedgerEntry: params => reverseLedgerEntry(get, params),
+
+    fetchSetActivity: (force = false) => {
         const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        clearError('activity', 'data');
+
+        if (force) {
+            activityFeedPageChannel.abort();
+            setLoading('activity', 'nextPage', 'fetched');
+        }
+
+        const request = activityFeedChannel.request(
+            signal => activityApi.fetchActivities({ limit: ACTIVITY_API_LIMIT }, signal),
+            { force },
+        );
         setLoading('activity', 'data', 'loading');
 
-        return activityApi
-            .fetchActivities({ limit: ACTIVITY_API_LIMIT })
+        return request.promise
             .then(data => {
+                if (!request.isCurrent()) {
+                    return;
+                }
+
                 set({
                     items: data.items,
                     nextCursor: data.nextCursor,
                     hasMore: data.nextCursor !== null,
                 });
-                setLoading('activity', 'data', 'fetched');
             })
-            .catch(() => {
-                setLoading('activity', 'data', 'fetched');
+            .catch((error: unknown) => {
+                if (request.isCurrent()) {
+                    setError('activity', 'data', normalizeApiError(error));
+                }
+            })
+            .finally(() => {
+                if (request.isCurrent()) {
+                    setLoading('activity', 'data', 'fetched');
+                }
             });
     },
 
     fetchMoreActivity: () => {
-        const { nextCursor, items } = get();
+        const { nextCursor } = get();
+        const { setLoading, activity } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
 
-        if (!nextCursor) {
+        if (nextCursor === null || activity.nextPage === 'loading') {
             return Promise.resolve();
         }
 
-        const { setLoading } = useLoadingStore.getState();
+        clearError('activity', 'nextPage');
         setLoading('activity', 'nextPage', 'loading');
 
-        return activityApi
-            .fetchActivities({
-                limit: ACTIVITY_API_LIMIT,
-                cursor: nextCursor,
-            })
+        const request = activityFeedPageChannel.request(
+            signal =>
+                activityApi.fetchActivities(
+                    {
+                        limit: ACTIVITY_API_LIMIT,
+                        cursor: nextCursor,
+                    },
+                    signal,
+                ),
+            { identity: String(nextCursor) },
+        );
+
+        return request.promise
             .then(data => {
-                set({
-                    items: [...items, ...data.items],
+                if (!request.isCurrent()) {
+                    return;
+                }
+
+                set(state => ({
+                    items: [...state.items, ...data.items],
                     nextCursor: data.nextCursor,
                     hasMore: data.nextCursor !== null,
-                });
-                setLoading('activity', 'nextPage', 'fetched');
-            })
-            .catch(() => {
-                setLoading('activity', 'nextPage', 'fetched');
-            });
-    },
-
-    fetchSetSelectedEvent: activityId => {
-        const { setLoading } = useLoadingStore.getState();
-        setLoading('activity', 'selectedEvent', 'loading');
-
-        return activityApi
-            .fetchActivity(activityId)
-            .then(event => {
-                set({ selectedEvent: event });
+                }));
             })
             .catch((error: unknown) => {
-                set({ selectedEvent: null });
-                return Promise.reject(error);
+                if (request.isCurrent()) {
+                    setError('activity', 'nextPage', normalizeApiError(error));
+                }
             })
             .finally(() => {
-                setLoading('activity', 'selectedEvent', 'fetched');
+                if (request.isCurrent()) {
+                    setLoading('activity', 'nextPage', 'fetched');
+                }
             });
     },
 
-    fetchSetActivitySubevents: ({ parentActivityId, category }) => {
+    fetchSetActivitySubevents: ({ parentActivityId, category, force = false }) => {
         const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        const viewTarget = `${parentActivityId}:${category ?? 'all'}`;
 
-        set({
-            subevents: [],
-            subeventsNextCursor: null,
-            hasMoreSubevents: true,
-            subeventsParentId: parentActivityId,
-            subeventsCategory: category ?? null,
-        });
+        activityChildrenPageChannel.abort();
+
+        const request = activityChildrenChannel.request(
+            signal =>
+                activityApi.fetchActivityChildren(
+                    {
+                        parentActivityId,
+                        category,
+                        limit: ACTIVITY_API_LIMIT,
+                    },
+                    signal,
+                ),
+            { force, identity: viewTarget },
+        );
+        clearError('activity', 'subeventsData');
+        set({ subeventsParent: null });
         setLoading('activity', 'subeventsData', 'loading');
         setLoading('activity', 'subeventsNextPage', 'fetched');
 
-        return activityApi
-            .fetchActivityChildren({
-                parentActivityId,
-                category,
-                limit: ACTIVITY_API_LIMIT,
-            })
+        return request.promise
             .then(data => {
+                if (!request.isCurrent()) {
+                    return;
+                }
+
                 set({
                     subevents: data.items,
+                    subeventsParent: data.parent,
                     subeventsNextCursor: data.nextCursor,
                     hasMoreSubevents: data.nextCursor !== null,
+                    subeventsCategory: category ?? null,
                 });
-                setLoading('activity', 'subeventsData', 'fetched');
             })
             .catch((error: unknown) => {
-                set({
-                    subevents: [],
-                    subeventsNextCursor: null,
-                    hasMoreSubevents: false,
-                    subeventsParentId: null,
-                });
-                setLoading('activity', 'subeventsData', 'fetched');
-                return Promise.reject(error);
+                if (request.isCurrent()) {
+                    setError('activity', 'subeventsData', normalizeApiError(error));
+                }
+            })
+            .finally(() => {
+                if (request.isCurrent()) {
+                    setLoading('activity', 'subeventsData', 'fetched');
+                }
             });
     },
 
     fetchMoreActivitySubevents: () => {
-        const { subeventsNextCursor, subeventsParentId, subeventsCategory } = get();
+        const { subeventsNextCursor, subeventsParent, subeventsCategory } = get();
+        const parentActivityId = subeventsParent?.id;
         const { setLoading, activity } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
 
         if (
             subeventsNextCursor === null ||
-            !subeventsParentId ||
+            !parentActivityId ||
             activity.subeventsNextPage === 'loading'
         ) {
             return Promise.resolve();
         }
 
+        clearError('activity', 'subeventsNextPage');
         setLoading('activity', 'subeventsNextPage', 'loading');
 
-        return activityApi
-            .fetchActivityChildren({
-                parentActivityId: subeventsParentId,
-                category: subeventsCategory ?? undefined,
-                limit: ACTIVITY_API_LIMIT,
-                cursor: subeventsNextCursor,
-            })
+        const request = activityChildrenPageChannel.request(
+            signal =>
+                activityApi.fetchActivityChildren(
+                    {
+                        parentActivityId,
+                        category: subeventsCategory ?? undefined,
+                        limit: ACTIVITY_API_LIMIT,
+                        cursor: subeventsNextCursor,
+                    },
+                    signal,
+                ),
+            {
+                identity: `${parentActivityId}:${subeventsCategory ?? 'all'}:${subeventsNextCursor}`,
+            },
+        );
+
+        return request.promise
             .then(data => {
+                if (!request.isCurrent()) {
+                    return;
+                }
+
                 set(currentState => ({
                     subevents: [...currentState.subevents, ...data.items],
+                    subeventsParent: data.parent,
                     subeventsNextCursor: data.nextCursor,
                     hasMoreSubevents: data.nextCursor !== null,
                 }));
-                setLoading('activity', 'subeventsNextPage', 'fetched');
             })
             .catch((error: unknown) => {
-                setLoading('activity', 'subeventsNextPage', 'fetched');
-                return Promise.reject(error);
+                if (request.isCurrent()) {
+                    setError('activity', 'subeventsNextPage', normalizeApiError(error));
+                }
+            })
+            .finally(() => {
+                if (request.isCurrent()) {
+                    setLoading('activity', 'subeventsNextPage', 'fetched');
+                }
             });
-    },
-
-    setSelectedEvent: event => {
-        set({ selectedEvent: event });
     },
 
     resetActivitySubevents: () => {
         const { setLoading } = useLoadingStore.getState();
+        const { clearError } = useErrorsStore.getState();
+        activityChildrenChannel.abort();
+        activityChildrenPageChannel.abort();
         set({
             subevents: initialState.subevents,
+            subeventsParent: initialState.subeventsParent,
             subeventsNextCursor: initialState.subeventsNextCursor,
             hasMoreSubevents: initialState.hasMoreSubevents,
-            subeventsParentId: initialState.subeventsParentId,
             subeventsCategory: initialState.subeventsCategory,
         });
         setLoading('activity', 'subeventsData', 'fetched');
         setLoading('activity', 'subeventsNextPage', 'fetched');
-    },
-
-    createExpense: input => {
-        const { setLoading } = useLoadingStore.getState();
-        setLoading('expense', 'add', 'loading');
-
-        return ledgerApi
-            .createExpense(input)
-            .then(() => undefined)
-            .finally(() => {
-                setLoading('expense', 'add', 'fetched');
-            });
-    },
-
-    createSettlement: input => {
-        const { setLoading } = useLoadingStore.getState();
-        const { setSettlementWithFriend } = useUsersStore.getState();
-        setLoading('settlement', 'add', 'loading');
-
-        return ledgerApi
-            .createSettlement(input)
-            .then(() => {
-                setSettlementWithFriend(input);
-            })
-            .finally(() => {
-                setLoading('settlement', 'add', 'fetched');
-            });
-    },
-
-    removeLedgerEntry: entryId => {
-        const { setLoading } = useLoadingStore.getState();
-        setLoading('ledger', 'remove', 'loading');
-
-        return ledgerApi.removeLedgerEntry({ entryId }).finally(() => {
-            setLoading('ledger', 'remove', 'fetched');
-        });
+        clearError('activity', 'subeventsData');
+        clearError('activity', 'subeventsNextPage');
     },
 
     resetActivity: () => {
         const { setLoading } = useLoadingStore.getState();
+        activityFeedChannel.abort();
+        activityFeedPageChannel.abort();
+        activityChildrenChannel.abort();
+        activityChildrenPageChannel.abort();
         set(initialState);
         setLoading('activity', 'subeventsData', 'fetched');
         setLoading('activity', 'subeventsNextPage', 'fetched');
+        useErrorsStore.getState().resetErrors();
     },
 }));
 

@@ -7,7 +7,8 @@
     "common": {
         "disconnect": "Foi desconectado.",
         "disconnectDescription": "Não se preocupe, as suas alterações serão guardadas. A tentar restabelecer ligação...",
-        "reconnected": "A sua ligação foi restaurada."
+        "reconnected": "A sua ligação foi restaurada.",
+        "requestFailed": "Algo correu mal. Tente novamente."
     },
     "group": {
         "inviteJoinWarning": "Inicie sessão antes de entrar no grupo.",
@@ -19,11 +20,8 @@
         "updateError": "Algo correu mal ao atualizar o grupo.",
         "coverUploadError": "O grupo foi guardado, mas não foi possível enviar a capa. Tente novamente.",
         "removed": "Grupo \"{{name}}\" removido com sucesso!",
-        "removeError": "Algo correu mal ao remover o grupo.",
         "left": "Saiu do grupo \"{{name}}\".",
-        "leaveError": "Algo correu mal ao sair do grupo.",
         "kicked": "Membro \"{{name}}\" foi removido do grupo.",
-        "kickError": "Algo correu mal ao remover este membro.",
         "inviteLinkNotReady": "O link de convite ainda não está pronto",
         "inviteLinkCopied": "Link de convite do grupo copiado",
         "inviteLinkCopyError": "Não foi possível copiar o link"
@@ -45,15 +43,12 @@
         "avatarUpdated": "Fotografia do perfil atualizada."
     },
     "expense": {
-        "created": "Despesa adicionada com sucesso!",
-        "createError": "Algo correu mal ao adicionar a despesa."
+        "created": "Despesa adicionada com sucesso!"
     },
     "ledger": {
-        "entryDeleted": "Lançamento eliminado com sucesso.",
-        "entryDeleteError": "Algo correu mal ao eliminar o lançamento."
+        "entryDeleted": "Lançamento eliminado com sucesso."
     },
     "settlement": {
-        "created": "Pagamento registado com sucesso!",
-        "createError": "Não foi possível registar o pagamento."
+        "created": "Pagamento registado com sucesso!"
     }
 }

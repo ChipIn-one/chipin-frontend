@@ -36,7 +36,7 @@ const EventExpense = ({ event }: Props) => {
     const isCurrentUserPayer = event.metadata.payerId === user?.id;
 
     const userShareAmount =
-        event.metadata.shares.find(share => share.userId === user?.id)?.shareAmount ?? 0;
+        event.metadata.shares?.find(share => share.userId === user?.id)?.shareAmount ?? 0;
 
     const userExpenseDebt = isCurrentUserPayer
         ? event.metadata.amount - userShareAmount
@@ -130,8 +130,8 @@ const EventExpense = ({ event }: Props) => {
                         </>
                     ) : null}
                     <LedgerScopeBadge
-                        groupId={event.metadata.groupId}
-                        groupName={event.metadata.groupName}
+                        groupId={event.metadata.groupId ?? null}
+                        groupName={event.metadata.groupName ?? null}
                     />
                 </Flex>
             </Flex>

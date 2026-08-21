@@ -7,14 +7,13 @@ import { toast } from 'sonner';
 import { Callout, Flex } from '@radix-ui/themes';
 
 import { ROUTES } from 'constants/routes';
-import { useGroupsStore } from 'store/groupsStore';
-import { selectGroupLeaving } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
+import { resolveApiErrorMessageFromError } from 'helpers/errors';
 
 import Select, { type SelectItem } from 'components/Select';
 
 import { BaseAlertDialog } from '../base-alert-dialog';
+
+import { useConnect } from './internal';
 
 interface Props {
     children: ReactNode;
@@ -23,10 +22,7 @@ interface Props {
 const LeaveGroupAlertDialog = ({ children }: Props) => {
     const { t } = useTranslation(['common', 'group', 'toasts']);
     const navigate = useNavigate();
-    const selectedGroup = useGroupsStore(state => state.selectedGroup);
-    const leaveGroup = useGroupsStore(state => state.leaveGroup);
-    const user = useUsersStore(state => state.user);
-    const isLeavingGroup = useLoadingStore(selectGroupLeaving);
+    const { leaveGroup, selectedGroup, user, isLeavingGroup } = useConnect();
     const [isOpened, setIsOpened] = useState(false);
     const [newOwnerId, setNewOwnerId] = useState('');
     const isOwner = Boolean(user && selectedGroup && selectedGroup.creator.id === user.id);
@@ -51,13 +47,25 @@ const LeaveGroupAlertDialog = ({ children }: Props) => {
     const canConfirm = !mustTransfer || Boolean(newOwnerId);
 
     const onLeaveGroup = () => {
-        return leaveGroup(mustTransfer ? { newOwnerId } : undefined)
-            .then(groupName => {
-                toast.success(t('toasts:group.left', { name: groupName }));
+        if (!selectedGroup) {
+            return Promise.reject(new Error('No selected group'));
+        }
+
+        return leaveGroup({
+            groupId: selectedGroup.id,
+            ...(mustTransfer && { newOwnerId }),
+        })
+            .then(() => {
+                toast.success(t('toasts:group.left', {
+                    name: selectedGroup.name,
+                }));
                 navigate(ROUTES.DASHBOARD, { replace: true });
             })
             .catch(error => {
-                toast.error(t('toasts:group.leaveError'));
+                toast.error(resolveApiErrorMessageFromError(
+                    error,
+                    t('toasts:common.requestFailed'),
+                ));
                 return Promise.reject(error);
             });
     };

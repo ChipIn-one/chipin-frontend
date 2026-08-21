@@ -1,26 +1,19 @@
-import { useShallow } from 'zustand/react/shallow';
-
-import { useGroupsStore } from 'store/groupsStore';
-import { selectUserCurrency, useUsersStore } from 'store/users-store';
-
 import { SummaryDebtCards } from 'components/summary-debt-cards';
+
+import { useConnect } from './internal/group-summary';
 
 interface Props {
     isLoading: boolean;
 }
 
-//TODO: REMOVE THIS TEXT
-
 const GroupSummary = ({ isLoading }: Props) => {
-    const { owedTotalInBase, owingTotalInBase, owedEntries, oweEntries } = useGroupsStore(
-        useShallow(state => ({
-            owedTotalInBase: state.owedTotalInBase,
-            owingTotalInBase: state.owingTotalInBase,
-            owedEntries: state.owedEntries,
-            oweEntries: state.oweEntries,
-        })),
-    );
-    const defaultCurrency = useUsersStore(selectUserCurrency);
+    const {
+        owedTotalInBase,
+        owingTotalInBase,
+        owedEntries,
+        oweEntries,
+        defaultCurrency,
+    } = useConnect();
 
     return (
         <SummaryDebtCards

@@ -1,30 +1,28 @@
 import type {
-    CreateSettlementParams,
     FriendBalance,
     KnownUser,
     RemoveKnownUserParams,
+    SelfUser,
     UploadUserAvatarParams,
-    User,
     UserSettings,
 } from 'api/chipin.types';
 import type { LocalUser } from 'helpers/localStorage';
 
 interface UsersStoreState {
-    user: User | null;
+    user: SelfUser | null;
     localUser: LocalUser | null;
     friends: KnownUser[];
 }
 
 interface UsersStoreActions {
-    fetchSetFriends: () => Promise<void>;
-    fetchSetUser: () => Promise<User>;
-    removeFriend: (params: RemoveKnownUserParams) => Promise<string>;
-    setSettlementWithFriend: (params: CreateSettlementParams) => void;
+    fetchSetFriends: (force?: boolean) => Promise<void>;
+    fetchSetUser: (force?: boolean) => Promise<SelfUser | null>;
+    removeFriend: (params: RemoveKnownUserParams) => Promise<void>;
     setUserSettings: (params: {
         displayName?: string;
         settings?: Partial<UserSettings>;
     }) => Promise<void>;
-    uploadUserAvatar: (params: UploadUserAvatarParams) => Promise<User>;
+    uploadUserAvatar: (params: UploadUserAvatarParams) => Promise<SelfUser>;
     extendUserSubscriptionByDay: () => void;
     setInitialUsersStore: () => void;
 }

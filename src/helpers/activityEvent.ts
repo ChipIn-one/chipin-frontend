@@ -21,10 +21,14 @@ export const getActivityCategory = (event?: AppEvent): ActivityCategory | undefi
 };
 
 export const getActivityLedgerEntryId = (event?: AppEvent): string | undefined => {
+    if (!event?.metadata) {
+        return undefined;
+    }
+
     if (
-        event?.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ||
-        event?.action === ACTIVITY_ACTIONS.EXPENSE_UPDATED ||
-        event?.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED
+        event.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ||
+        event.action === ACTIVITY_ACTIONS.EXPENSE_UPDATED ||
+        event.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED
     ) {
         return event.metadata.entryId;
     }

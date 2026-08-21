@@ -7,6 +7,7 @@ import { LS_KEY_AUTH_TOKENS } from 'constants/localstorage';
 import {
     AuthTokenPersistenceError,
     clearExpiredAuthSession,
+    establishAuthSession,
     logoutOtherDevicesSession,
     validateAuthSession,
 } from './authSession';
@@ -139,6 +140,90 @@ describe('authSession', () => {
             .then(() => {
                 expect(getAuthTokens()).toBeNull();
             });
+    });
+
+    test('keeps a newly established session when an older refresh resolves', () => {
+        let resolveRefresh:
+            | ((value: { token: string; refresh_token: string }) => void)
+            | undefined;
+        const refreshRequest = new Promise<{
+            token: string;
+            refresh_token: string;
+        }>(resolve => {
+            resolveRefresh = resolve;
+        });
+        saveAuthTokens({
+            accessToken: createAccessToken(Date.now() / 1000 + 3_600),
+            refreshToken: 'old-refresh-token',
+        });
+        vi.mocked(chipinApi.refreshApiAuthTokens).mockReturnValue(refreshRequest);
+
+        const validation = validateAuthSession();
+
+        establishAuthSession({
+            accessToken: 'oauth-access-token',
+            refreshToken: 'oauth-refresh-token',
+        });
+        resolveRefresh?.({
+            token: 'stale-access-token',
+            refresh_token: 'stale-refresh-token',
+        });
+
+        return expect(validation)
+            .rejects.toThrow('Auth session changed during token rotation')
+            .then(() => {
+                expect(getAuthTokens()).toEqual({
+                    accessToken: 'oauth-access-token',
+                    refreshToken: 'oauth-refresh-token',
+                });
+            });
+    });
+
+    test('keeps a newly established session when an older refresh rejects with 401', () => {
+        let rejectRefresh: ((reason?: unknown) => void) | undefined;
+        const refreshRequest = new Promise<{
+            token: string;
+            refresh_token: string;
+        }>((_resolve, reject) => {
+            rejectRefresh = reject;
+        });
+        saveAuthTokens({
+            accessToken: createAccessToken(Date.now() / 1000 + 3_600),
+            refreshToken: 'old-refresh-token',
+        });
+        vi.mocked(chipinApi.refreshApiAuthTokens).mockReturnValue(refreshRequest);
+
+        const validation = validateAuthSession();
+
+        establishAuthSession({
+            accessToken: 'oauth-access-token',
+            refreshToken: 'oauth-refresh-token',
+        });
+        rejectRefresh?.({
+            isAxiosError: true,
+            response: { status: 401 },
+        });
+
+        return expect(validation)
+            .rejects.toThrow('Auth session changed during token rotation')
+            .then(() => {
+                expect(getAuthTokens()).toEqual({
+                    accessToken: 'oauth-access-token',
+                    refreshToken: 'oauth-refresh-token',
+                });
+            });
+    });
+
+    test('rejects a new session when its tokens cannot be persisted', () => {
+        setItem.mockImplementation(() => {
+            throw new Error('storage unavailable');
+        });
+
+        expect(() => establishAuthSession({
+            accessToken: 'oauth-access-token',
+            refreshToken: 'oauth-refresh-token',
+        })).toThrow(AuthTokenPersistenceError);
+        expect(getAuthTokens()).toBeNull();
     });
 
     test('uses the current refresh token and persists the rotated pair before resolving', () => {

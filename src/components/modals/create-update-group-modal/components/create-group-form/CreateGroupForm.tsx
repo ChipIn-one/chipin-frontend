@@ -7,6 +7,7 @@ import { Button, Dialog, Flex } from '@radix-ui/themes';
 
 import type { Group } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
+import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { useAppNavigate } from 'hooks/useAppNavigate';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupAdding, selectGroupCoverUploading } from 'store/loadingSelectors';
@@ -58,7 +59,10 @@ const CreateGroupForm = ({ onClose }: Props) => {
             onProgress: setUploadProgress,
         }).catch((error: unknown) => {
             setUploadProgress(0);
-            toast.error(t('toasts:group.coverUploadError'));
+            toast.error(resolveApiErrorMessageFromError(
+                error,
+                t('toasts:group.coverUploadError'),
+            ));
             console.error('Error uploading group cover:', error);
             return Promise.reject(error);
         });
@@ -89,15 +93,19 @@ const CreateGroupForm = ({ onClose }: Props) => {
                       return group;
                   })
                   .catch((error: unknown) => {
-                      toast.error(t('toasts:group.createError'));
+                      toast.error(resolveApiErrorMessageFromError(
+                          error,
+                          t('toasts:group.createError'),
+                      ));
                       console.error('Error creating group:', error);
                       return Promise.reject(error);
                   });
 
         createRequest
             .then(uploadSelectedCover)
-            .then(onSaveSuccess)
-            .catch(() => undefined);
+            .then(onSaveSuccess, () => {
+                // The request stages already show the error and keep the form open.
+            });
     };
 
     const coverPicker = (

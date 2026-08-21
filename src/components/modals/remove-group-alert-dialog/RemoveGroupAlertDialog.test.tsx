@@ -4,6 +4,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import type { Group } from 'api/chipin.types';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
 
@@ -16,7 +17,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('sonner', () => ({
-    toast: { error: vi.fn(), success: vi.fn() },
+    toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
 }));
 
 beforeEach(() => {
@@ -25,10 +26,35 @@ beforeEach(() => {
 });
 
 test('waits for confirmation before removing a group', () => {
-    const removeGroup = vi.fn().mockResolvedValue('Trip');
+    const removeGroup = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
+    const selectedGroup = {
+        id: 'group-1',
+        name: 'Trip',
+        inviteToken: 'invite-token',
+        description: null,
+        creator: {
+            id: 'user-1',
+            email: 'user@example.com',
+            displayName: 'User',
+            firstName: null,
+            lastName: null,
+            picture: null,
+            createdAt: 1,
+            updatedAt: 1,
+        },
+        members: [],
+        createdAt: 1,
+        updatedAt: 1,
+        coverUrl: null,
+        simplifyDebts: true,
+        role: 'OWNER',
+        status: 'ACTIVE',
+        lastUsedCurrency: null,
+        recentActivities: { items: [], nextCursor: null },
+    } satisfies Group;
 
-    useGroupsStore.setState({ removeGroup });
+    useGroupsStore.setState({ removeGroup, selectedGroup });
 
     render(
         <MemoryRouter>
@@ -45,5 +71,7 @@ test('waits for confirmation before removing a group', () => {
             expect(removeGroup).not.toHaveBeenCalled();
             return user.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
         })
-        .then(() => waitFor(() => expect(removeGroup).toHaveBeenCalledOnce()));
+        .then(() => waitFor(() => expect(removeGroup).toHaveBeenCalledWith({
+            groupId: selectedGroup.id,
+        })));
 });

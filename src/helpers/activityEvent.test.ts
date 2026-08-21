@@ -29,7 +29,6 @@ const expenseCreatedEvent = {
         payerId: 'user-1',
         payerDisplayName: 'User',
         shares: [],
-        fieldDiffs: [],
     },
     createdAt: 1,
     parentActivityId: null,
@@ -50,7 +49,6 @@ const settlementCreatedEvent = {
         payerId: 'user-1',
         fromDisplayName: 'User',
         toDisplayName: 'Friend',
-        fieldDiffs: [],
     },
 } satisfies AppEvent;
 

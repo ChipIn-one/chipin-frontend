@@ -2,7 +2,7 @@ import { expect, test } from 'vitest';
 
 import { render, screen } from '@testing-library/react';
 
-import type { User } from 'api/chipin.types';
+import type { SelfUser } from 'api/chipin.types';
 import { useDashboardStore } from 'store/dashboardStore';
 import { useUsersStore } from 'store/users-store';
 
@@ -14,11 +14,10 @@ const user = {
     id: 'user-1',
     email: 'user@example.com',
     displayName: 'Alex',
-    firstName: null,
-    lastName: null,
     picture: null,
     role: 'USER',
     subscriptionUntil: null,
+    inviteToken: 'invite-token-user',
     settings: {
         defaultCurrency: 'USD',
         defaultCategory: 'food',
@@ -33,7 +32,7 @@ const user = {
     },
     createdAt: 1,
     updatedAt: 1,
-} satisfies User;
+} satisfies SelfUser;
 
 test('keeps the selected default category visible but disabled when categories are skipped', () => {
     useUsersStore.setState({ user, localUser: null, friends: [] });

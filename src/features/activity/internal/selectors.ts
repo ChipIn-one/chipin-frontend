@@ -12,7 +12,7 @@ const getUserExpenseBalanceChange = (
     userId: string,
 ): number => {
     const userShareAmount =
-        event.metadata.shares.find(share => share.userId === userId)?.shareAmount ?? 0;
+        event.metadata?.shares?.find(share => share.userId === userId)?.shareAmount ?? 0;
 
     if (event.metadata.payerId === userId) {
         return event.metadata.amount - userShareAmount;
@@ -34,6 +34,10 @@ export const getDailyExpenseSummary = (
 
     for (const event of events) {
         if (event.action !== ACTIVITY_ACTIONS.EXPENSE_CREATED) {
+            continue;
+        }
+
+        if (!event.metadata) {
             continue;
         }
 

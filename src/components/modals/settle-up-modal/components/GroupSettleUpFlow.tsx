@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@radix-ui/themes';
 
+import { useActivityStore } from 'store/activity-store';
 import { selectGroupSettlementOptions } from 'store/groupsSelectors';
-import { useGroupsStore } from 'store/groupsStore';
 import { useUsersStore } from 'store/users-store';
 
 import { BaseModal, MODAL_SIZES } from '../../base-modal';
@@ -19,7 +19,6 @@ import SettlementForm from './SettlementForm';
 const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
     const { t } = useTranslation(['group', 'common']);
     const currentUser = useUsersStore(state => state.user);
-    const createSettlement = useGroupsStore(state => state.createSettlement);
     const [isOpened, setIsOpened] = useState(false);
     const [selectedDebt, setSelectedDebt] = useState<Pick<DebtOption, 'user' | 'balance'> | null>(
         null,
@@ -69,7 +68,9 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
                 friend={selectedOption.user}
                 balances={selectedOption.balances}
                 initialCurrency={selectedOption.balance.currency}
-                onSubmit={createSettlement}
+                onSubmit={params => useActivityStore
+                    .getState()
+                    .createSettlement({ ...params, groupId: group.id })}
                 onBack={() => setSelectedDebt(null)}
             />
         );

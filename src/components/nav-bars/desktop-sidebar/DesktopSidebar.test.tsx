@@ -5,7 +5,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { Theme } from '@radix-ui/themes';
 import { render, screen, within } from '@testing-library/react';
 
-import type { User } from 'api/chipin.types';
+import type { SelfUser } from 'api/chipin.types';
 import { PROJECT_NAME } from 'constants/chipin';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
@@ -27,11 +27,10 @@ const user = {
     id: 'user-1',
     email: 'user@example.com',
     displayName: 'Alex',
-    firstName: null,
-    lastName: null,
     picture: null,
     role: 'USER',
     subscriptionUntil: null,
+    inviteToken: 'invite-token-user',
     settings: {
         defaultCurrency: 'USD',
         defaultCategory: 'food',
@@ -46,7 +45,7 @@ const user = {
     },
     createdAt: 1,
     updatedAt: 1,
-} satisfies User;
+} satisfies SelfUser;
 
 beforeEach(() => {
     useAuthStore.setState({ status: 'authenticated' });

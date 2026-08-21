@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { exchangeApiGoogleOAuthCode } from 'api/chipin';
-import type { User } from 'api/chipin.types';
+import type { SelfUser } from 'api/chipin.types';
 import * as authSession from 'helpers/authSession';
 import { clearAuthTokens, getAuthTokens, saveAuthTokens } from 'helpers/localStorage';
 
@@ -15,11 +15,10 @@ const user = {
     id: 'user-1',
     email: 'user@example.com',
     displayName: 'User',
-    firstName: null,
-    lastName: null,
     picture: null,
     role: 'USER',
     subscriptionUntil: null,
+    inviteToken: 'invite-token-user',
     settings: {
         defaultCurrency: 'USD',
         defaultCategory: 'food',
@@ -34,7 +33,7 @@ const user = {
     },
     createdAt: 1,
     updatedAt: 1,
-} satisfies User;
+} satisfies SelfUser;
 
 const authSessionMocks = vi.hoisted(() => {
     class AuthTokenPersistenceError extends Error {}
@@ -42,6 +41,7 @@ const authSessionMocks = vi.hoisted(() => {
     return {
         AuthTokenPersistenceError,
         clearExpiredAuthSession: vi.fn(),
+        establishAuthSession: vi.fn(),
         getFreshAccessToken: vi.fn(),
         invalidateAuthSession: vi.fn(),
         logoutOtherDevicesSession: vi.fn(),
@@ -66,6 +66,9 @@ describe('authStore', () => {
         });
         authSessionMocks.invalidateAuthSession.mockImplementation(() => {
             clearAuthTokens();
+        });
+        authSessionMocks.establishAuthSession.mockImplementation(tokens => {
+            saveAuthTokens(tokens);
         });
         useLoadingStore.getState().setInitialLoadingStore();
         useAuthStore.setState({
@@ -103,7 +106,7 @@ describe('authStore', () => {
             'setDefaultAppMode',
         );
         vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockImplementation(
-            () => undefined,
+            () => Promise.resolve(),
         );
         vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockImplementation(() =>
             Promise.resolve([]),
@@ -120,7 +123,31 @@ describe('authStore', () => {
             .exchangeGoogleOAuthCode('oauth-code')
             .then(() => Promise.resolve())
             .then(() => {
+                expect(authSession.establishAuthSession).toHaveBeenCalledWith({
+                    accessToken: 'access-token',
+                    refreshToken: 'refresh-token',
+                });
                 expect(setDefaultAppMode).toHaveBeenCalledWith(true);
+            });
+    });
+
+    test('does not authenticate when OAuth tokens cannot be persisted', () => {
+        vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue({
+            token: 'access-token',
+            refresh_token: 'refresh-token',
+            is_new_user: false,
+        });
+        authSessionMocks.establishAuthSession.mockImplementation(() => {
+            throw new authSessionMocks.AuthTokenPersistenceError();
+        });
+
+        return expect(useAuthStore.getState().exchangeGoogleOAuthCode('oauth-code'))
+            .rejects.toBeInstanceOf(authSessionMocks.AuthTokenPersistenceError)
+            .then(() => {
+                expect(useAuthStore.getState()).toMatchObject({
+                    status: 'unauthenticated',
+                    unauthReason: 'persistence_error',
+                });
             });
     });
 

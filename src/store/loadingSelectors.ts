@@ -15,10 +15,6 @@ export const selectLandingStatsLoading = (s: LoadingStore) => s.landing.stats !=
 export const selectActivityLoading = (s: LoadingStore) => s.activity.data === 'loading';
 export const selectActivityFetched = (s: LoadingStore) => s.activity.data === 'fetched';
 export const selectActivityNextPageLoading = (s: LoadingStore) => s.activity.nextPage === 'loading';
-export const selectActivitySelectedEventLoading = (s: LoadingStore) =>
-    s.activity.selectedEvent === 'loading';
-export const selectActivitySelectedEventFetched = (s: LoadingStore) =>
-    s.activity.selectedEvent === 'fetched';
 export const selectActivitySubeventsLoading = (s: LoadingStore) =>
     s.activity.subeventsData === 'loading';
 export const selectActivitySubeventsFetched = (s: LoadingStore) =>
@@ -41,6 +37,7 @@ export const selectGroupCoverUploading = (s: LoadingStore) => s.group.cover === 
 
 export const selectUserSelfLoading = (s: LoadingStore) => s.users.self === 'loading';
 export const selectUserSelfFetched = (s: LoadingStore) => s.users.self === 'fetched';
+export const selectUserSettingsLoading = (s: LoadingStore) => s.users.settings === 'loading';
 export const selectFriendRemoving = (s: LoadingStore) => s.users.removeFriend === 'loading';
 export const selectUserAvatarUploading = (s: LoadingStore) => s.users.avatar === 'loading';
 

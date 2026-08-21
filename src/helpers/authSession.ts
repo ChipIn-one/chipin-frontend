@@ -16,7 +16,7 @@ let authSessionVersion = 0;
 
 export class AuthTokenPersistenceError extends Error {
     constructor() {
-        super('Rotated auth tokens could not be persisted');
+        super('Auth tokens could not be persisted');
     }
 }
 
@@ -26,9 +26,24 @@ const assertCurrentAuthSession = (version: number) => {
     }
 };
 
+export const getAuthSessionVersion = (): number => authSessionVersion;
+
+export const isAuthSessionCurrent = (version: number): boolean => {
+    return version === authSessionVersion;
+};
+
 export const invalidateAuthSession = (): void => {
     authSessionVersion += 1;
     clearAuthTokens();
+};
+
+export const establishAuthSession = (tokens: AuthTokens): void => {
+    authSessionVersion += 1;
+    clearAuthTokens();
+
+    if (!saveAuthTokens(tokens)) {
+        throw new AuthTokenPersistenceError();
+    }
 };
 
 const decodeJwtPayload = (token: string): unknown => {
@@ -104,6 +119,7 @@ const refreshAuthTokens = (refreshToken: string) => {
             })
             .catch(error => {
                 if (getApiErrorStatus(error) === 401) {
+                    assertCurrentAuthSession(version);
                     console.error('Auth refresh failed with backend error response:', error);
                     invalidateAuthSession();
 
@@ -175,7 +191,12 @@ export const startAuthLogout = () => {
                 return undefined;
             }
 
-            return logoutApiAuthTokens(tokens).catch(() => undefined);
+            return logoutApiAuthTokens(tokens).then(
+                () => undefined,
+                () => {
+                    // Local logout must continue when the backend logout request fails.
+                },
+            );
         })
         .then(() => {
             invalidateAuthSession();

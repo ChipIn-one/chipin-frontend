@@ -10,6 +10,10 @@
     --cursor-switch: pointer;
 }
 
+.rt-BaseButton:where(.rt-loading) {
+    cursor: progress;
+}
+
 [role='menuitem'][data-disabled] {
     cursor: not-allowed;
 }

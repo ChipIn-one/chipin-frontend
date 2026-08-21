@@ -4,7 +4,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import type { User } from 'api/chipin.types';
+import type { SelfUser } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useLoadingStore } from 'store/loadingStore';
 import type { UsersStoreActions } from 'store/users-store';
@@ -27,11 +27,10 @@ const currentUser = {
     id: 'user-1',
     email: 'alice@example.com',
     displayName: 'Alice',
-    firstName: 'Alice',
-    lastName: null,
     picture: 'https://cdn.example.com/original.png',
     role: 'USER',
     subscriptionUntil: null,
+    inviteToken: 'invite-token-user',
     settings: {
         defaultCurrency: 'USD',
         defaultCategory: 'food',
@@ -46,7 +45,7 @@ const currentUser = {
     },
     createdAt: 1,
     updatedAt: 1,
-} satisfies User;
+} satisfies SelfUser;
 
 const OPEN_MODAL_LABEL = 'Open avatar modal';
 const uploadUserAvatar = vi.fn<UsersStoreActions['uploadUserAvatar']>();
@@ -110,8 +109,8 @@ test('previews a valid file, shows upload progress, and closes after success', (
     const interaction = userEvent.setup();
     const file = new File(['avatar'], 'new-avatar.webp', { type: 'image/webp' });
     const updatedUser = { ...currentUser, picture: 'https://cdn.example.com/new-avatar.webp' };
-    let resolveUpload: ((user: User) => void) | undefined;
-    const uploadPromise = new Promise<User>(resolve => {
+    let resolveUpload: ((user: SelfUser) => void) | undefined;
+    const uploadPromise = new Promise<SelfUser>(resolve => {
         resolveUpload = resolve;
     });
 

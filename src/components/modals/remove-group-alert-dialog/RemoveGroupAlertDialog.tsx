@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { Callout } from '@radix-ui/themes';
 
 import { ROUTES } from 'constants/routes';
+import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupRemoving } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
@@ -20,18 +21,28 @@ interface Props {
 const RemoveGroupAlertDialog = ({ children }: Props) => {
     const { t } = useTranslation(['common', 'group', 'toasts']);
     const navigate = useNavigate();
-    const removeGroup = useGroupsStore(state => state.removeGroup);
     const isRemovingGroup = useLoadingStore(selectGroupRemoving);
     const [isOpened, setIsOpened] = useState(false);
 
     const onRemoveGroup = () => {
-        return removeGroup()
-            .then(groupName => {
-                toast.success(t('toasts:group.removed', { name: groupName }));
+        const { removeGroup, selectedGroup } = useGroupsStore.getState();
+
+        if (!selectedGroup) {
+            return Promise.reject(new Error('No selected group'));
+        }
+
+        return removeGroup({ groupId: selectedGroup.id })
+            .then(() => {
+                toast.success(t('toasts:group.removed', {
+                    name: selectedGroup.name,
+                }));
                 navigate(ROUTES.DASHBOARD, { replace: true });
             })
             .catch(error => {
-                toast.error(t('toasts:group.removeError'));
+                toast.error(resolveApiErrorMessageFromError(
+                    error,
+                    t('toasts:common.requestFailed'),
+                ));
                 return Promise.reject(error);
             });
     };

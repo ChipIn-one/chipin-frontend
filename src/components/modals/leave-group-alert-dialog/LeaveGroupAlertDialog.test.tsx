@@ -4,7 +4,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import type { Group, User } from 'api/chipin.types';
+import type { Group, SelfUser } from 'api/chipin.types';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
@@ -18,18 +18,17 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('sonner', () => ({
-    toast: { error: vi.fn(), success: vi.fn() },
+    toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
 }));
 
 const currentUser = {
     id: 'user-1',
     email: 'user@example.com',
     displayName: 'Current User',
-    firstName: 'Current',
-    lastName: 'User',
     picture: null,
     role: 'USER',
     subscriptionUntil: null,
+    inviteToken: 'invite-token-user',
     settings: {
         defaultCurrency: 'USD',
         defaultCategory: 'food',
@@ -44,7 +43,7 @@ const currentUser = {
     },
     createdAt: 1,
     updatedAt: 1,
-} satisfies User;
+} satisfies SelfUser;
 
 const group = {
     id: 'group-1',
@@ -56,8 +55,10 @@ const group = {
     createdAt: 1,
     updatedAt: 1,
     coverUrl: 'https://cdn.example.com/group.webp',
+    simplifyDebts: true,
     role: 'OWNER',
     status: 'ACTIVE',
+    lastUsedCurrency: null,
     recentActivities: {
         items: [],
         nextCursor: null,
@@ -71,7 +72,7 @@ beforeEach(() => {
 });
 
 test('waits for confirmation before leaving a group', () => {
-    const leaveGroup = vi.fn().mockResolvedValue(group.name);
+    const leaveGroup = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
 
     useGroupsStore.setState({ leaveGroup, selectedGroup: group });
@@ -92,5 +93,7 @@ test('waits for confirmation before leaving a group', () => {
                 screen.getByRole('button', { name: 'common:buttons.leaveGroup' }),
             );
         })
-        .then(() => waitFor(() => expect(leaveGroup).toHaveBeenCalledWith(undefined)));
+        .then(() => waitFor(() => expect(leaveGroup).toHaveBeenCalledWith({
+            groupId: group.id,
+        })));
 });

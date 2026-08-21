@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Callout } from '@radix-ui/themes';
 
 import type { GroupUser } from 'api/chipin.types';
+import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupKicking } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
@@ -19,17 +20,27 @@ interface Props {
 
 const KickGroupMemberAlertDialog = ({ children, member }: Props) => {
     const { t } = useTranslation(['common', 'group', 'toasts']);
-    const kickGroupMember = useGroupsStore(state => state.kickGroupMember);
     const isKickingMember = useLoadingStore(selectGroupKicking);
     const [isOpened, setIsOpened] = useState(false);
 
     const onKickGroupMember = () => {
-        return kickGroupMember({ userId: member.id })
-            .then(memberDisplayName => {
-                toast.success(t('toasts:group.kicked', { name: memberDisplayName }));
+        const { kickGroupMember, selectedGroup } = useGroupsStore.getState();
+
+        if (!selectedGroup) {
+            return Promise.reject(new Error('No selected group'));
+        }
+
+        return kickGroupMember({ groupId: selectedGroup.id, userId: member.id })
+            .then(() => {
+                toast.success(t('toasts:group.kicked', {
+                    name: member.displayName,
+                }));
             })
             .catch(error => {
-                toast.error(t('toasts:group.kickError'));
+                toast.error(resolveApiErrorMessageFromError(
+                    error,
+                    t('toasts:common.requestFailed'),
+                ));
                 return Promise.reject(error);
             });
     };

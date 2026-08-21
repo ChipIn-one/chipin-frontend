@@ -4,16 +4,18 @@ import { exchangeApiGoogleOAuthCode } from 'api/chipin';
 import {
     AuthTokenPersistenceError,
     clearExpiredAuthSession,
+    establishAuthSession,
     invalidateAuthSession,
     logoutOtherDevicesSession,
     startAuthLogout,
     validateAuthSession,
 } from 'helpers/authSession';
-import { isNetworkApiError, isUnauthorizedApiError } from 'helpers/errors';
-import { getAuthTokens, saveAuthTokens } from 'helpers/localStorage';
+import { isNetworkApiError, isUnauthorizedApiError, normalizeApiError } from 'helpers/errors';
+import { getAuthTokens } from 'helpers/localStorage';
 
 import { useActivityStore } from './activity-store';
 import { useDashboardStore } from './dashboardStore';
+import { useErrorsStore } from './errorsStore';
 import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
 import { useUsersStore } from './users-store';
@@ -70,9 +72,10 @@ export const useAuthStore = create<AuthStore>(set => ({
     },
 
     exchangeGoogleOAuthCode: code => {
+        useErrorsStore.getState().clearError('auth', 'login');
         return exchangeApiGoogleOAuthCode(code)
             .then(({ token, refresh_token: refreshToken, is_new_user: isNewUser }) => {
-                saveAuthTokens({ accessToken: token, refreshToken });
+                establishAuthSession({ accessToken: token, refreshToken });
                 set({ status: 'authenticated', unauthReason: undefined, isNewUser });
 
                 const { fetchSetDashboardData, setDefaultAppMode } =
@@ -80,18 +83,28 @@ export const useAuthStore = create<AuthStore>(set => ({
                 const { fetchSetGroups } = useGroupsStore.getState();
                 const { fetchSetUser, fetchSetFriends } = useUsersStore.getState();
 
-                fetchSetDashboardData();
-                fetchSetGroups().catch(() => undefined);
-                void fetchSetUser()
-                    .then(user => {
-                        setDefaultAppMode(user.settings.soloModeByDefault);
-                    })
-                    .catch(() => undefined);
-                void fetchSetFriends().catch(() => undefined);
+                return Promise.all([
+                    fetchSetDashboardData(),
+                    fetchSetGroups(),
+                    fetchSetUser().then(user => {
+                        if (user) {
+                            setDefaultAppMode(user.settings.soloModeByDefault);
+                        }
+                    }),
+                    fetchSetFriends(),
+                ]).then(() => undefined);
             })
             .catch((error: unknown) => {
                 resetAuthScopedStores();
-                set({ status: 'unauthenticated', unauthReason: 'error', isNewUser: null });
+                set({
+                    status: 'unauthenticated',
+                    unauthReason:
+                        error instanceof AuthTokenPersistenceError
+                            ? 'persistence_error'
+                            : 'error',
+                    isNewUser: null,
+                });
+                useErrorsStore.getState().setError('auth', 'login', normalizeApiError(error));
                 return Promise.reject(error);
             });
     },
@@ -131,11 +144,14 @@ export const useAuthStore = create<AuthStore>(set => ({
 
     logoutOtherDevices: () => {
         const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
 
+        clearError('auth', 'logoutOtherDevices');
         setLoading('auth', 'logoutOtherDevices', 'loading');
 
         return logoutOtherDevicesSession()
             .catch((error: unknown) => {
+                setError('auth', 'logoutOtherDevices', normalizeApiError(error));
                 if (
                     !isUnauthorizedApiError(error) &&
                     !(error instanceof AuthTokenPersistenceError)
@@ -160,7 +176,9 @@ export const useAuthStore = create<AuthStore>(set => ({
 
     signOut: () => {
         const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
 
+        clearError('auth', 'signOut');
         setLoading('auth', 'signOut', 'loading');
 
         return startAuthLogout()
@@ -171,6 +189,7 @@ export const useAuthStore = create<AuthStore>(set => ({
             })
             .catch(error => {
                 setLoading('auth', 'signOut', 'fetched');
+                setError('auth', 'signOut', normalizeApiError(error));
                 throw error;
             });
     },

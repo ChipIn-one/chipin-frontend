@@ -70,13 +70,13 @@ const GlobalErrorFallback = ({ error, timestamp }: GlobalErrorFallbackProps) => 
     useEffect(() => {
         let isMounted = true;
 
-        void checkForServiceWorkerUpdate()
-            .then(worker => {
+        checkForServiceWorkerUpdate().then(worker => {
                 if (isMounted) {
                     setWaitingWorker(worker);
                 }
-            })
-            .catch(() => undefined);
+            }, () => {
+                // Recovery UI can continue without an update check result.
+            });
 
         return () => {
             isMounted = false;
@@ -112,14 +112,16 @@ const GlobalErrorFallback = ({ error, timestamp }: GlobalErrorFallbackProps) => 
         setIsActionPending(true);
         setIsUpdating(true);
 
-        void activateServiceWorker(waitingWorker)
-            .then(() => {
-                reportRecoveryAction(RECOVERY_ACTION.updateApplied, error, timestamp);
-            })
-            .catch(() => {
-                reportRecoveryAction(RECOVERY_ACTION.updateActivationFailed, error, timestamp);
-            })
-            .then(reloadCurrentPage);
+        activateServiceWorker(waitingWorker)
+            .then(
+                () => {
+                    reportRecoveryAction(RECOVERY_ACTION.updateApplied, error, timestamp);
+                },
+                () => {
+                    reportRecoveryAction(RECOVERY_ACTION.updateActivationFailed, error, timestamp);
+                },
+            )
+            .then(reloadCurrentPage, reloadCurrentPage);
     };
 
     return (

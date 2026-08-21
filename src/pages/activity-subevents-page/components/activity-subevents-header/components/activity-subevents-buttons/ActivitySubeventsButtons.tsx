@@ -1,55 +1,35 @@
 import { LucidePencil, LucideTrash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { useShallow } from 'zustand/react/shallow';
 
 import { Button, Flex, Skeleton } from '@radix-ui/themes';
 
 import type { AppEvent } from 'api/activity.types';
-import { getActivityCategory, getActivityLedgerEntryId } from 'helpers/activityEvent';
-import { useActivityStore } from 'store/activity-store';
-import { useDashboardStore } from 'store/dashboardStore';
-import { useGroupsStore } from 'store/groupsStore';
-import { selectActivitySubeventsLoading, selectLedgerEntryRemoving } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
+import { getActivityLedgerEntryId } from 'helpers/activityEvent';
+import { resolveApiErrorMessageFromError } from 'helpers/errors';
 
 import { RemoveLedgerEntryAlertDialog } from 'components/modals';
 
 import { hasLedgerEntryReversedEvent } from '../../../../internal';
+
+import { useConnect } from './internal';
 
 interface Props {
     parentEvent: AppEvent;
 }
 
 const ActivitySubeventsButtons = ({ parentEvent }: Props) => {
-    const { t } = useTranslation('activity');
+    const { t } = useTranslation(['activity', 'toasts']);
     const {
+        reverseLedgerEntry,
         subevents,
-        subeventsParentId,
-        fetchSetActivity,
-        fetchSetActivitySubevents,
-        removeLedgerEntry,
-    } =
-        useActivityStore(
-            useShallow(state => ({
-                subevents: state.subevents,
-                subeventsParentId: state.subeventsParentId,
-                fetchSetActivity: state.fetchSetActivity,
-                fetchSetActivitySubevents: state.fetchSetActivitySubevents,
-                removeLedgerEntry: state.removeLedgerEntry,
-            })),
-        );
-    const fetchSetDashboardData = useDashboardStore(
-        state => state.fetchSetDashboardData,
-    );
-    const fetchSetGroups = useGroupsStore(state => state.fetchSetGroups);
-    const fetchSetFriends = useUsersStore(state => state.fetchSetFriends);
-    const isLoading = useLoadingStore(selectActivitySubeventsLoading);
-    const isRemoving = useLoadingStore(selectLedgerEntryRemoving);
+        subeventsParent,
+        isLoading,
+        isRemoving,
+    } = useConnect();
     const parentEntryId = getActivityLedgerEntryId(parentEvent);
-    const activityCategory = getActivityCategory(parentEvent);
-    const isCurrentParentLoaded = subeventsParentId === parentEvent.id;
+    const rootActivityId = parentEvent.parentActivityId ?? parentEvent.id;
+    const isCurrentParentLoaded = subeventsParent?.id === rootActivityId;
     const isEntryReversed =
         isCurrentParentLoaded &&
         hasLedgerEntryReversedEvent(subevents);
@@ -59,20 +39,19 @@ const ActivitySubeventsButtons = ({ parentEvent }: Props) => {
             return Promise.reject(new Error('No ledger entry found to remove'));
         }
 
-        return removeLedgerEntry(parentEntryId)
+        return reverseLedgerEntry({
+            entryId: parentEntryId,
+            groupId: parentEvent.groupId ?? undefined,
+            parentActivityId: rootActivityId,
+            })
             .then(() => {
                 toast.success(t('toasts:ledger.entryDeleted'));
-                void fetchSetActivitySubevents({
-                    parentActivityId: parentEvent.id,
-                    category: activityCategory,
-                }).catch(() => undefined);
-                void fetchSetActivity();
-                fetchSetDashboardData();
-                void fetchSetGroups().catch(() => undefined);
-                void fetchSetFriends().catch(() => undefined);
             })
             .catch(error => {
-                toast.error(t('toasts:ledger.entryDeleteError'));
+                toast.error(resolveApiErrorMessageFromError(
+                    error,
+                    t('toasts:common.requestFailed'),
+                ));
                 return Promise.reject(error);
             });
     };

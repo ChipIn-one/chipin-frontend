@@ -5,9 +5,7 @@ import { toast } from 'sonner';
 
 import { Button, Callout, Flex } from '@radix-ui/themes';
 
-import { selectSettlementAdding } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
+import { resolveApiErrorMessageFromError } from 'helpers/errors';
 
 import type { SelectItem } from 'components/Select';
 
@@ -18,6 +16,7 @@ import {
     getSettlementViewModel,
     selectSettlementBalance,
     type SettlementFormProps,
+    useConnect,
 } from '../internal';
 import { ModalSurface } from '../styled';
 
@@ -35,8 +34,7 @@ const SettlementForm = ({
     onBack,
 }: SettlementFormProps) => {
     const { t } = useTranslation(['common', 'friends', 'toasts']);
-    const user = useUsersStore(state => state.user);
-    const isSubmitting = useLoadingStore(selectSettlementAdding);
+    const { user, isSubmitting } = useConnect();
     const amountInputId = useId();
     const [currency, setCurrency] = useState(initialCurrency);
     const selectedBalance = selectSettlementBalance(balances, currency);
@@ -67,12 +65,14 @@ const SettlementForm = ({
     const onFormSubmit = () => {
         onSubmit(settlement.params)
             .then(() => {
-                toast.success(t('toasts:settlement.created'));
                 onOpenChange(false);
+                toast.success(t('toasts:settlement.created'));
             })
             .catch(error => {
-                toast.error(t('toasts:settlement.createError'));
-                console.error('Error creating settlement:', error);
+                toast.error(resolveApiErrorMessageFromError(
+                    error,
+                    t('toasts:common.requestFailed'),
+                ));
             });
     };
 

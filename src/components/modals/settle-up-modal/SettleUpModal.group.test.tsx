@@ -3,7 +3,8 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import type { CreateSettlementParams, Group, User } from 'api/chipin.types';
+import type { Group, SelfUser } from 'api/chipin.types';
+import { useActivityStore } from 'store/activity-store';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
@@ -18,18 +19,17 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('sonner', () => ({
-    toast: { error: vi.fn(), success: vi.fn() },
+    toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
 }));
 
 const currentUser = {
     id: 'user-1',
     email: 'alice@example.com',
     displayName: 'Alice',
-    firstName: 'Alice',
-    lastName: null,
     picture: null,
     role: 'USER',
     subscriptionUntil: null,
+    inviteToken: 'invite-token-user',
     settings: {
         defaultCurrency: 'USD',
         defaultCategory: 'food',
@@ -44,14 +44,12 @@ const currentUser = {
     },
     createdAt: 1,
     updatedAt: 1,
-} satisfies User;
+} satisfies SelfUser;
 
 const groupUser = {
     id: currentUser.id,
     email: currentUser.email,
     displayName: currentUser.displayName,
-    firstName: currentUser.firstName,
-    lastName: currentUser.lastName,
     picture: currentUser.picture,
     createdAt: currentUser.createdAt,
     updatedAt: currentUser.updatedAt,
@@ -94,8 +92,10 @@ const group: Group = {
     createdAt: 1,
     updatedAt: 1,
     coverUrl: 'https://cdn.example.com/group.webp',
+    simplifyDebts: true,
     role: 'OWNER',
     status: 'ACTIVE',
+    lastUsedCurrency: null,
     recentActivities: {
         items: [],
         nextCursor: null,
@@ -255,11 +255,10 @@ test('closes the group debt selection dialog from its cancel footer action', () 
 });
 
 test('uses the selected group debt currency as the initial payment currency', () => {
-    const createSettlement = vi
-        .fn<(params: Omit<CreateSettlementParams, 'groupId'>) => Promise<void>>()
-        .mockResolvedValue();
+    const createSettlement = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
-    useGroupsStore.setState({ createSettlement });
+
+    useActivityStore.setState({ createSettlement });
 
     render(<SettleUpModal source="group" group={group} />);
 
@@ -284,6 +283,7 @@ test('uses the selected group debt currency as the initial payment currency', ()
                 toUserId: 'user-3',
                 amount: 30.1234,
                 currency: 'EUR',
+                groupId: group.id,
             });
         });
 });

@@ -41,6 +41,11 @@ git diff --cached
   and one explicit public `index.ts`.
 - Primary components, subcomponents, `internal` support files, `styled.ts`, public/private types, and
   co-located tests are placed at their documented ownership level without empty scaffolding.
+- New and touched components with two or more Zustand subscriptions use a private component-owned
+  `internal/useConnect.ts`; the connector exposes only the render model and `on*` actions the component needs.
+- Helpers do not read Zustand or selectors; selectors and `useConnect` may call helpers. Connectors subscribe
+  directly to stable derived selectors and calculate allocating component render models from stable selected
+  source references inside `useConnect`.
 - The relevant chapters under `docs/codex/rules/` were applied to new and touched code.
 - UI uses Radix responsive props first, project theme helpers, shared money basics, i18n, and accessible semantics.
 - UI calls store actions; runtime API calls remain namespaced and below the UI boundary.
@@ -53,7 +58,10 @@ git diff --cached
 
 ## Validation
 
-- Run checks proportional to the changed behavior and risk; use `npm run verify` for cross-layer app changes.
+- Before completing an explicit staged review, run `npm run verify:review` as the full lint, test, and
+  production-build gate. Do not run this full gate for every intermediate implementation edit.
+- During implementation, use `npm run test:task -- <explicit test paths>`, `npm run typecheck`, and the
+  fast `npm run verify` command as appropriate for the changed behavior.
 - Confirm the evidence is fresh and report skipped, failed, or unavailable checks explicitly.
 - If a check fails, identify whether the failure is related to the diff or appears pre-existing.
 

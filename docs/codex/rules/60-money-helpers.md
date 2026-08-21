@@ -7,6 +7,10 @@
 - Existing `bignumber.js` code under number basics/helpers is legacy. Use its public `Amount` component, but do not import BigNumber into new domain code.
 - Backend is the source of confirmed financial results after synchronization.
 - Frontend may validate input, preview splits, convert display summaries, and maintain local pending offline results.
+- Currency conversion is presentation-derived state: calculate converted summaries only from confirmed
+  backend balances and confirmed backend rates in pure selectors/helpers.
+- Do not persist converted summaries as canonical domain state, synchronize them across stores, or use them
+  to infer balances, debts, mutation results, or mutation payloads.
 
 ## Offline Financial Mutations
 

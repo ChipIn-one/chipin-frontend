@@ -1,7 +1,7 @@
 import { ThemeProvider } from 'styled-components';
 import { expect, test, vi } from 'vitest';
 
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 
 import { lightThemeStyled } from 'constants/styled-themes';
 
@@ -27,6 +27,12 @@ test('renders the mobile Group preview with exactly three expenses', () => {
             name: 'sections.groups.preview.label',
         }),
     ).not.toBeNull();
+    const loadingCover = screen.getByAltText(
+        'sections.groups.preview.coverAlt',
+    );
+
+    fireEvent.load(loadingCover);
+
     const cover = screen.getByRole('img', {
         name: 'sections.groups.preview.coverAlt',
     });

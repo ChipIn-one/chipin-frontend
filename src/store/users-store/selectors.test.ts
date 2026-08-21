@@ -18,11 +18,10 @@ const createState = (settings: UserSettings) => {
             id: 'user-1',
             email: 'user@example.com',
             displayName: 'User',
-            firstName: null,
-            lastName: null,
             picture: null,
             role: 'USER',
             subscriptionUntil: null,
+            inviteToken: 'invite-token-user',
             settings,
             createdAt: 1,
             updatedAt: 1,
@@ -72,6 +71,7 @@ test('builds the friends page view in one coordinated derivation', () => {
             updatedAt: 1,
         },
         balances,
+        lastUsedCurrency: null,
     });
     const friends = [
         createFriend('friend-1', 'Alex', [

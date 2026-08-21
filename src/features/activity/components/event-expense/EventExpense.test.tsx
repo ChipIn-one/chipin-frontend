@@ -95,7 +95,7 @@ const createExpenseEvent = (
     },
     subjectType: 'expense',
     subjectId: 'expense-1',
-    groupId: group.groupId,
+    groupId: group.groupId ?? null,
     metadata: {
         type: 'expense',
         entryId: 'expense-1',
@@ -111,7 +111,6 @@ const createExpenseEvent = (
                 currency: 'USD',
             },
         ],
-        fieldDiffs: [],
         ...group,
     },
     createdAt: 1_785_328_628,

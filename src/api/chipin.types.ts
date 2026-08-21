@@ -4,6 +4,7 @@ import type {
     ApiFriend,
     ApiFriendBalance,
     ApiGroupResponse,
+    ApiSelfUserResponse,
     ApiUserResponse,
     ApiUserRole,
     ApiUserSettings,
@@ -14,6 +15,7 @@ import type {
 
 // ─── Re-exports: raw response types (for api layer & helpers) ──────────────
 export type {
+    ApiActivityChildrenResponse,
     ApiActivityFeedItemResponse,
     ApiActivityFeedResponse,
     ApiActivityItemsResponse,
@@ -29,7 +31,7 @@ export type {
     ApiOAuthTokenPairResponse,
     ApiParticipantShare,
     ApiRefreshTokenPairResponse,
-    ApiRemoveGroupResponse,
+    ApiSelfUserResponse,
     ApiSettlementDetails,
     ApiUpdateUserRequest,
     ApiUserResponse,
@@ -51,6 +53,7 @@ export type {
     SharingMode,
     SharingModeType,
     UpdateGroupParams,
+    UpdateLedgerEntryParams,
     UpdateUserParams,
     UploadGroupCoverParams,
     UploadUserAvatarParams,
@@ -58,8 +61,10 @@ export type {
 
 // ─── Frontend types (used in components, store, hooks) ────────────────────
 
-/** User as used on the frontend (no parsing needed — all fields are plain). */
+/** Public user embedded in friend, group, ledger, and activity contracts. */
 export type User = ApiUserResponse;
+/** Authenticated user returned from `/users/self`. */
+export type SelfUser = ApiSelfUserResponse;
 export type UserSettings = ApiUserSettings;
 export type UserRole = ApiUserRole;
 export type UserSex = ApiUserSex;

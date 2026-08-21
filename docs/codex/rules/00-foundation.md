@@ -5,7 +5,9 @@ Apply these rules to new and touched code. Refactor directly related legacy code
 ## TypeScript
 
 - Keep strict types at boundaries and let TypeScript infer obvious local values.
-- Exported functions, public helpers, and store actions have explicit return types.
+- Exported functions, public helpers, and store actions have explicit return types. Private component
+  `useConnect` hooks may rely on inferred return types when their contract is already established by
+  store selectors/actions, as defined in `20-react.md`.
 - Use `unknown` for untrusted values and narrow with type guards.
 - Do not add `any`, `as any`, unjustified assertions, `@ts-ignore`, or non-null assertions that hide missing validation.
 - Prefer `satisfies` when validating an object without widening its inferred type.
@@ -47,6 +49,9 @@ const onFormSubmit = (input: CreateGroupInput) => {
 - Return `Promise<T>` from every asynchronous action. A caller must be able to await, chain, or reject it.
 - Keep chains flat by returning nested Promises.
 - Do not swallow errors. Normalize or record the error, then reject unless the operation explicitly recovers.
+- Read actions record expected request errors in `errorsStore` and resolve after handling them, so callers do not
+  need fire-and-forget wrappers. Mutations reject when the caller must react; do not add no-op catches or `void`
+  wrappers around requests.
 - Use `.finally()` only for cleanup shared by success and failure.
 - Use `Promise.all` for independent work and sequential chaining for dependent work.
 - Do not wrap an existing Promise with `new Promise`.

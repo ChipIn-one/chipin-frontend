@@ -2,16 +2,19 @@ import { describe, expect, test, vi } from 'vitest';
 
 import {
     createApiGroup,
+    fetchApiCurrencyRates,
     fetchApiDashboard,
     fetchApiUserGroupById,
     fetchApiUserGroups,
     inviteApiUserToGroup,
+    removeApiGroup,
     updateApiGroup,
 } from './chipin';
 import { apiInstance } from './chipin.instance';
 
 vi.mock('./chipin.instance', () => ({
     apiInstance: {
+        delete: vi.fn(),
         get: vi.fn(),
         patch: vi.fn(),
         post: vi.fn(),
@@ -71,8 +74,10 @@ const groupResponse = {
     createdAt: 1,
     updatedAt: 1,
     coverUrl: null,
+    simplifyDebts: true,
     role: 'OWNER',
     status: 'ACTIVE',
+    lastUsedCurrency: null,
     recentActivities: {
         items: [{ parent: parentEvent, lastEvent }],
         nextCursor: 1,
@@ -81,6 +86,7 @@ const groupResponse = {
 
 describe('embedded activity feed responses', () => {
     test('returns activity feed items from the dashboard response', () => {
+        const controller = new AbortController();
         vi.mocked(apiInstance.get).mockResolvedValue({
             data: {
                 balances: {},
@@ -91,7 +97,10 @@ describe('embedded activity feed responses', () => {
             },
         });
 
-        return fetchApiDashboard().then(result => {
+        return fetchApiDashboard(controller.signal).then(result => {
+            expect(apiInstance.get).toHaveBeenCalledWith('/dashboard', {
+                signal: controller.signal,
+            });
             expect(result.activity).toEqual({
                 items: [{ parent: parentEvent, lastEvent }],
                 nextCursor: 1,
@@ -100,22 +109,42 @@ describe('embedded activity feed responses', () => {
     });
 
     test('returns the complete paginated group list response', () => {
+        const controller = new AbortController();
         const response = {
             items: [groupResponse],
-            nextCursor: 2,
+            nextCursor: 'cursor-2',
         };
         vi.mocked(apiInstance.get).mockResolvedValue({ data: response });
 
-        return fetchApiUserGroups().then(result => {
+        return fetchApiUserGroups(controller.signal).then(result => {
+            expect(apiInstance.get).toHaveBeenCalledWith('/groups', {
+                signal: controller.signal,
+            });
             expect(result).toEqual(response);
         });
     });
 
-    test('returns activity feed items from a single group response', () => {
+    test('fetches one canonical group by id with cancellation support', () => {
+        const controller = new AbortController();
         vi.mocked(apiInstance.get).mockResolvedValue({ data: groupResponse });
 
-        return fetchApiUserGroupById(groupResponse.id).then(result => {
-            expect(result.recentActivities).toEqual(groupResponse.recentActivities);
+        return fetchApiUserGroupById(groupResponse.id, controller.signal).then(result => {
+            expect(apiInstance.get).toHaveBeenCalledWith(`/groups/${groupResponse.id}`, {
+                signal: controller.signal,
+            });
+            expect(result).toEqual(groupResponse);
+        });
+    });
+
+    test('forwards cancellation to currency rates', () => {
+        const controller = new AbortController();
+        vi.mocked(apiInstance.get).mockResolvedValue({ data: { rates: {} } });
+
+        return fetchApiCurrencyRates(controller.signal).then(() => {
+            expect(apiInstance.get).toHaveBeenCalledWith('/currency-rates', {
+                params: { base: 'USD' },
+                signal: controller.signal,
+            });
         });
     });
 
@@ -140,6 +169,17 @@ describe('embedded activity feed responses', () => {
                 description: '',
             });
             expect(result.recentActivities).toEqual(groupResponse.recentActivities);
+        });
+    });
+});
+
+describe('removeApiGroup', () => {
+    test('returns no domain object for the 204 response', () => {
+        vi.mocked(apiInstance.delete).mockResolvedValue({ data: undefined });
+
+        return removeApiGroup({ groupId: 'group-1' }).then(result => {
+            expect(apiInstance.delete).toHaveBeenCalledWith('/groups/group-1');
+            expect(result).toBeUndefined();
         });
     });
 });
@@ -170,8 +210,10 @@ describe('inviteApiUserToGroup', () => {
             createdAt: 1,
             updatedAt: 1,
             coverUrl: null,
+            simplifyDebts: true,
             role: 'MEMBER' as const,
             status: 'ACTIVE' as const,
+            lastUsedCurrency: null,
             recentActivities: {
                 items: [{ parent: parentEvent, lastEvent }],
                 nextCursor: null,

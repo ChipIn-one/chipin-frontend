@@ -15,7 +15,7 @@ const HomePage = () => {
     const fetchSetStats = useLandingStatsStore(state => state.fetchSetStats);
 
     useEffect(() => {
-        void fetchSetStats();
+        fetchSetStats();
     }, [fetchSetStats]);
 
     return (

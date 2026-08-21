@@ -4,8 +4,10 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_CATEGORIES } from 'constants/activity';
 import { useActivityStore } from 'store/activity-store';
+import { useErrorsStore } from 'store/errorsStore';
 import { useLoadingStore } from 'store/loadingStore';
 
 import { ActivitySubeventsFeed } from './ActivitySubeventsFeed';
@@ -17,6 +19,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 let onLoadMore: (() => Promise<void>) | undefined;
+const parentEvent = { id: 'activity-1' } as AppEvent;
 
 vi.mock('hooks/useInfiniteScroll', () => ({
     useInfiniteScroll: ({
@@ -46,34 +49,26 @@ vi.mock('features/activity', () => ({
 
 beforeEach(() => {
     onLoadMore = undefined;
+    useErrorsStore.getState().resetErrors();
 });
 
-test('waits for the parent category before fetching subevents', () => {
+test('fetches subevents without a category on a direct visit', () => {
     const fetchSetActivitySubevents = vi.fn().mockResolvedValue(undefined);
     useActivityStore.setState({
         subevents: [],
-        subeventsParentId: null,
+        subeventsParent: null,
         fetchSetActivitySubevents,
     });
     useLoadingStore.getState().setInitialLoadingStore();
 
-    const { rerender } = render(
+    render(
         <ActivitySubeventsFeed parentActivityId="activity-1" />,
-    );
-
-    expect(fetchSetActivitySubevents).not.toHaveBeenCalled();
-
-    rerender(
-        <ActivitySubeventsFeed
-            parentActivityId="activity-1"
-            activityCategory={ACTIVITY_CATEGORIES.EXPENSE}
-        />,
     );
 
     return waitFor(() => {
         expect(fetchSetActivitySubevents).toHaveBeenCalledWith({
             parentActivityId: 'activity-1',
-            category: ACTIVITY_CATEGORIES.EXPENSE,
+            category: undefined,
         });
     });
 });
@@ -83,15 +78,15 @@ test('offers retry after the initial subevents request fails', () => {
     const fetchSetActivitySubevents = vi
         .fn()
         .mockImplementation(() => {
-            useActivityStore.setState({
-                subeventsParentId: 'activity-1',
+            useErrorsStore.getState().setError('activity', 'subeventsData', {
+                message: 'Subevents unavailable',
             });
-            return Promise.reject(new Error('Subevents unavailable'));
+            return Promise.resolve();
         });
     useActivityStore.setState({
         subevents: [],
         hasMoreSubevents: false,
-        subeventsParentId: null,
+        subeventsParent: null,
         fetchSetActivitySubevents,
     });
     useLoadingStore.getState().setInitialLoadingStore();
@@ -116,12 +111,17 @@ test('offers retry after loading the next page fails', () => {
     const user = userEvent.setup();
     const fetchMoreActivitySubevents = vi
         .fn()
-        .mockRejectedValueOnce(new Error('Next page unavailable'))
+        .mockImplementationOnce(() => {
+            useErrorsStore.getState().setError('activity', 'subeventsNextPage', {
+                message: 'Next page unavailable',
+            });
+            return Promise.resolve();
+        })
         .mockResolvedValue(undefined);
     useActivityStore.setState({
         subevents: [],
         hasMoreSubevents: true,
-        subeventsParentId: 'activity-1',
+        subeventsParent: parentEvent,
         fetchMoreActivitySubevents,
     });
     useLoadingStore.getState().setInitialLoadingStore();
@@ -137,8 +137,7 @@ test('offers retry after loading the next page fails', () => {
         return Promise.reject(new Error('Infinite scroll callback is unavailable'));
     }
 
-    return onLoadMore()
-        .catch(() => undefined)
+    return Promise.resolve(onLoadMore())
         .then(() =>
             waitFor(() => {
                 expect(

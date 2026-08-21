@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { apiInstance } from './chipin.instance';
-import type { User } from './chipin.types';
+import type { SelfUser } from './chipin.types';
 import {
     fetchKnownUsers,
     fetchUser,
@@ -23,11 +23,10 @@ const user = {
     id: 'user-1',
     email: 'user@example.com',
     displayName: 'User',
-    firstName: null,
-    lastName: null,
     picture: null,
     role: 'USER',
     subscriptionUntil: null,
+    inviteToken: 'invite-token-user',
     settings: {
         defaultCurrency: 'USD',
         defaultCategory: 'food',
@@ -42,7 +41,7 @@ const user = {
     },
     createdAt: 1,
     updatedAt: 1,
-} satisfies User;
+} satisfies SelfUser;
 
 describe('usersApi', () => {
     beforeEach(() => {
@@ -50,10 +49,13 @@ describe('usersApi', () => {
     });
 
     test('fetches the current user', () => {
+        const controller = new AbortController();
         vi.mocked(apiInstance.get).mockResolvedValue({ data: user });
 
-        return fetchUser().then(result => {
-            expect(apiInstance.get).toHaveBeenCalledWith('/users/self');
+        return fetchUser(controller.signal).then(result => {
+            expect(apiInstance.get).toHaveBeenCalledWith('/users/self', {
+                signal: controller.signal,
+            });
             expect(result).toEqual(user);
         });
     });
@@ -106,12 +108,15 @@ describe('usersApi', () => {
     });
 
     test('fetches and removes known users', () => {
+        const controller = new AbortController();
         vi.mocked(apiInstance.get).mockResolvedValue({ data: { friends: [] } });
         vi.mocked(apiInstance.delete).mockResolvedValue({ data: undefined });
 
-        return fetchKnownUsers()
+        return fetchKnownUsers(controller.signal)
             .then(result => {
-                expect(apiInstance.get).toHaveBeenCalledWith('/users/known-users');
+                expect(apiInstance.get).toHaveBeenCalledWith('/users/known-users', {
+                    signal: controller.signal,
+                });
                 expect(result).toEqual({ friends: [] });
                 return removeKnownUser({ userId: 'friend-1' });
             })

@@ -1,8 +1,7 @@
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { expect, test, vi } from 'vitest';
 
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen } from '@testing-library/react';
 
 import { useActivityStore } from 'store/activity-store';
 import { useLoadingStore } from 'store/loadingStore';
@@ -14,34 +13,18 @@ vi.mock('components/nav-bars', () => ({
 }));
 
 vi.mock('./components', () => ({
-    ActivitySubeventsFeed: () => null,
+    ActivitySubeventsFeed: () => <span data-testid="subevents-feed" />,
     ActivitySubeventsHeader: ({
-        isError,
-        onRetry,
+        isUnavailable,
     }: {
-        isError: boolean;
-        onRetry: () => void;
+        isUnavailable: boolean;
     }) => (
-        <>
-            {isError ? <span data-testid="parent-load-error" /> : null}
-            <button
-                type="button"
-                aria-label="retry-parent"
-                onClick={onRetry}
-            />
-        </>
+        isUnavailable ? <span data-testid="parent-unavailable" /> : null
     ),
 }));
 
-test('retries loading the parent activity after a failed direct visit', () => {
-    const user = userEvent.setup();
-    const fetchSetSelectedEvent = vi
-        .fn()
-        .mockRejectedValue(new Error('Activity unavailable'));
-    useActivityStore.setState({
-        selectedEvent: null,
-        fetchSetSelectedEvent,
-    });
+test('shows a parent fallback and still loads children on a direct visit', () => {
+    useActivityStore.setState({ subeventsParent: null });
     useLoadingStore.getState().setInitialLoadingStore();
 
     render(
@@ -55,11 +38,6 @@ test('retries loading the parent activity after a failed direct visit', () => {
         </MemoryRouter>,
     );
 
-    return waitFor(() => {
-        expect(screen.getByTestId('parent-load-error')).toBeTruthy();
-    })
-        .then(() => user.click(screen.getByRole('button', { name: 'retry-parent' })))
-        .then(() => {
-            expect(fetchSetSelectedEvent).toHaveBeenCalledTimes(2);
-        });
+    expect(screen.getByTestId('parent-unavailable')).toBeTruthy();
+    expect(screen.getByTestId('subevents-feed')).toBeTruthy();
 });

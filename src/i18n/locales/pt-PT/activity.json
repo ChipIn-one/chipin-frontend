@@ -24,6 +24,8 @@
     "subeventsLoadErrorDescription": "Tente carregar novamente as atualizações da atividade.",
     "subeventsParentLoadErrorTitle": "Não foi possível carregar esta atividade",
     "subeventsParentLoadErrorDescription": "Tente carregar novamente a atividade principal.",
+    "subeventsParentUnavailableTitle": "Resumo da atividade indisponível",
+    "subeventsParentUnavailableDescription": "O histórico de atualizações continua disponível abaixo.",
     "retryAction": "Tentar novamente",
     "dateDivider": {
         "today": "Hoje",

@@ -1,31 +1,23 @@
-import { useEffect } from 'react';
-
 import { Flex } from '@radix-ui/themes';
-
-import { useDashboardStore } from 'store/dashboardStore';
-import { selectUserCurrency, useUsersStore } from 'store/users-store';
 
 import SummaryDebtCards from '../summary-debt-cards/SummaryDebtCards';
 import TotalBalanceCard from '../summary-debt-cards/TotalBalanceCard';
+
+import { useConnect } from './internal';
 
 interface Props {
     isLoading?: boolean;
 }
 
-const DashBoardSummary: React.FC<Props> = ({ isLoading = false }) => {
-    const defaultCurrency = useUsersStore(selectUserCurrency);
+const DashBoardSummary = ({ isLoading = false }: Props) => {
     const {
         netTotalInBase,
         owedTotalInBase,
         owingTotalInBase,
         owedEntries,
         oweEntries,
-        setDashboardSummaryCurrency,
-    } = useDashboardStore();
-
-    useEffect(() => {
-        setDashboardSummaryCurrency(defaultCurrency);
-    }, [defaultCurrency, setDashboardSummaryCurrency]);
+        defaultCurrency,
+    } = useConnect();
 
     return (
         <Flex direction="column" gap="4">

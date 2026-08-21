@@ -1,7 +1,6 @@
 import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { buildActivitySubeventsRoute } from 'helpers/url';
-import { useActivityStore } from 'store/activity-store';
 
 import { EventExpense } from '../event-expense';
 import { EventExpenseTransferred } from '../event-expense-transferred';
@@ -22,10 +21,9 @@ interface Props {
 }
 
 const ActivityEvent = ({ event, isNavigable = true }: Props) => {
-    const setSelectedEvent = useActivityStore(state => state.setSelectedEvent);
-    const onSelectEvent = () => {
-        setSelectedEvent(event);
-    };
+    if (!event.metadata) {
+        return <EventUnknown event={event} />;
+    }
 
     switch (event.action) {
         case ACTIVITY_ACTIONS.EXPENSE_CREATED:
@@ -39,7 +37,6 @@ const ActivityEvent = ({ event, isNavigable = true }: Props) => {
                     event.action === ACTIVITY_ACTIONS.EXPENSE_UPDATED) ? (
                 <ActivityEventLink
                     to={buildActivitySubeventsRoute(activityId)}
-                    onClick={onSelectEvent}
                     unsetStyles
                 >
                     {expenseCard}
@@ -59,7 +56,6 @@ const ActivityEvent = ({ event, isNavigable = true }: Props) => {
                 event.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED ? (
                 <ActivityEventLink
                     to={buildActivitySubeventsRoute(event.id)}
-                    onClick={onSelectEvent}
                     unsetStyles
                 >
                     {settlementCard}

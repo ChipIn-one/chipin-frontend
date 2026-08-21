@@ -6,7 +6,6 @@ import type {
     ApiGroupsResponse,
     ApiOAuthTokenPairResponse,
     ApiRefreshTokenPairResponse,
-    ApiRemoveGroupResponse,
     CreateGroupParams,
     Dashboard,
     Group,
@@ -48,12 +47,19 @@ export const exchangeApiGoogleOAuthCode = (code: string): Promise<ApiOAuthTokenP
         .then(response => response.data);
 };
 
-export const fetchApiUserGroups = (): Promise<ApiGroupsResponse> => {
-    return apiInstance.get<ApiGroupsResponse>('/groups').then(result => result.data);
+export const fetchApiUserGroups = (signal?: AbortSignal): Promise<ApiGroupsResponse> => {
+    return apiInstance
+        .get<ApiGroupsResponse>('/groups', { signal })
+        .then(result => result.data);
 };
 
-export const fetchApiUserGroupById = (groupId: string): Promise<Group> => {
-    return apiInstance.get<Group>(`/groups/${groupId}`).then(result => result.data);
+export const fetchApiUserGroupById = (
+    groupId: string,
+    signal?: AbortSignal,
+): Promise<Group> => {
+    return apiInstance
+        .get<Group>(`/groups/${groupId}`, { signal })
+        .then(result => result.data);
 };
 
 export const createApiGroup = ({
@@ -81,10 +87,8 @@ export const updateApiGroup = ({
         .then(response => response.data);
 };
 
-export const removeApiGroup = ({ groupId }: RemoveGroupParams): Promise<ApiRemoveGroupResponse> => {
-    return apiInstance
-        .delete<ApiRemoveGroupResponse>(`/groups/${groupId}`)
-        .then(response => response.data);
+export const removeApiGroup = ({ groupId }: RemoveGroupParams): Promise<void> => {
+    return apiInstance.delete<void>(`/groups/${groupId}`).then(() => undefined);
 };
 
 export const leaveApiGroup = ({ groupId, newOwnerId }: LeaveGroupParams): Promise<void> => {
@@ -105,16 +109,21 @@ export const inviteApiUserToGroup = ({ inviteToken }: InviteToGroupParams): Prom
     return apiInstance.post<Group>(`/groups/invite/${inviteToken}`).then(response => response.data);
 };
 
-export const fetchApiDashboard = (): Promise<Dashboard> => {
-    return apiInstance.get<Dashboard>('/dashboard').then(result => result.data);
+export const fetchApiDashboard = (signal?: AbortSignal): Promise<Dashboard> => {
+    return apiInstance
+        .get<Dashboard>('/dashboard', { signal })
+        .then(result => result.data);
 };
 
-export const fetchApiCurrencyRates = (): Promise<ApiCurrencyRatesResponse> => {
+export const fetchApiCurrencyRates = (
+    signal?: AbortSignal,
+): Promise<ApiCurrencyRatesResponse> => {
     return apiInstance
-        .get('/currency-rates', {
+        .get<ApiCurrencyRatesResponse>('/currency-rates', {
             params: {
                 base: 'USD',
             },
+            signal,
         })
         .then(result => result.data);
 };

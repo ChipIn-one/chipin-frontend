@@ -17,7 +17,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('sonner', () => ({
-    toast: { success: vi.fn() },
+    toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
 }));
 
 const friend = {
@@ -37,7 +37,7 @@ beforeEach(() => {
 });
 
 test('waits for explicit confirmation before removing a friend', () => {
-    const removeFriend = vi.fn().mockResolvedValue(friend.displayName);
+    const removeFriend = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
 
     useUsersStore.setState({ removeFriend });

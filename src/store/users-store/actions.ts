@@ -1,29 +1,93 @@
-import i18n from 'i18next';
-import { toast } from 'sonner';
 import { create } from 'zustand';
 
-import type { UpdateUserParams, UserSettings } from 'api/chipin.types';
+import type { UpdateUserParams } from 'api/chipin.types';
 import * as usersApi from 'api/usersApi';
 import { DAY, SECOND } from 'constants/time';
+import { normalizeApiError } from 'helpers/errors';
+import { getAuthSessionVersion, isAuthSessionCurrent } from 'helpers/authSession';
 import { saveLocalUser, toLocalUser } from 'helpers/localStorage';
 import { getUnixTimestampInSec } from 'helpers/time';
 
+import { useErrorsStore } from '../errorsStore';
+import { createRequestChannel } from '../internal/resourceRequests';
 import { useLoadingStore } from '../loadingStore';
 
 import { createInitialState } from './initialState';
 import type { UsersStore } from './types';
 
-// TODO: Guard user-store responses so reset or logout cannot be undone by stale requests.
+const userChannel = createRequestChannel();
+const friendsChannel = createRequestChannel();
+let profileMutationQueue = Promise.resolve();
+let profileMutationGeneration = 0;
+let settingsMutationId = 0;
+let avatarMutationId = 0;
+
+class ProfileMutationCancelledError extends Error {}
+
+interface ProfileMutationHandle<T> {
+    promise: Promise<T>;
+    isCurrent: () => boolean;
+}
+
+const enqueueProfileMutation = <T>(loader: () => Promise<T>): ProfileMutationHandle<T> => {
+    const generation = profileMutationGeneration;
+    const authSessionVersion = getAuthSessionVersion();
+    const isCurrent = () => {
+        return (
+            generation === profileMutationGeneration &&
+            isAuthSessionCurrent(authSessionVersion)
+        );
+    };
+    const promise = profileMutationQueue
+        .then(() => {
+            if (!isCurrent()) {
+                return Promise.reject(new ProfileMutationCancelledError());
+            }
+
+            return loader();
+        })
+        .then(
+            result => {
+                if (!isCurrent()) {
+                    return Promise.reject(new ProfileMutationCancelledError());
+                }
+
+                return result;
+            },
+            (error: unknown) => {
+                if (!isCurrent()) {
+                    return Promise.reject(new ProfileMutationCancelledError());
+                }
+
+                return Promise.reject(error);
+            },
+        );
+
+    profileMutationQueue = promise.then(
+        () => undefined,
+        () => undefined,
+    );
+
+    return { promise, isCurrent };
+};
+
 const useUsersStore = create<UsersStore>((set, get) => ({
     ...createInitialState(),
 
-    fetchSetUser: () => {
+    fetchSetUser: (force = false) => {
         const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        clearError('users', 'self');
+
+        const request = userChannel.request(usersApi.fetchUser, { force });
         setLoading('users', 'self', 'loading');
 
-        return usersApi
-            .fetchUser()
+        return request.promise
             .then(user => {
+                if (!request.isCurrent()) {
+                    return user;
+                }
+
                 const nextLocalUser = toLocalUser(user);
                 saveLocalUser(nextLocalUser);
                 set({ user, localUser: nextLocalUser });
@@ -31,143 +95,111 @@ const useUsersStore = create<UsersStore>((set, get) => ({
                 return user;
             })
             .catch((error: unknown) => {
-                console.error('Error fetching user:', error);
-                return Promise.reject(error);
+                if (request.isCurrent()) {
+                    setError('users', 'self', normalizeApiError(error));
+                }
+                return get().user;
             })
             .finally(() => {
-                setLoading('users', 'self', 'fetched');
+                if (request.isCurrent()) {
+                    setLoading('users', 'self', 'fetched');
+                }
             });
     },
-    fetchSetFriends: () => {
+    fetchSetFriends: (force = false) => {
         const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        clearError('users', 'friends');
+
+        const request = friendsChannel.request(usersApi.fetchKnownUsers, { force });
         setLoading('users', 'friends', 'loading');
 
-        return usersApi
-            .fetchKnownUsers()
+        return request.promise
             .then(({ friends }) => {
-                set({ friends });
+                if (request.isCurrent()) {
+                    set({ friends });
+                }
             })
             .catch((error: unknown) => {
-                console.error('Error fetching known users:', error);
-                return Promise.reject(error);
+                if (request.isCurrent()) {
+                    setError('users', 'friends', normalizeApiError(error));
+                }
             })
             .finally(() => {
-                setLoading('users', 'friends', 'fetched');
+                if (request.isCurrent()) {
+                    setLoading('users', 'friends', 'fetched');
+                }
             });
     },
     removeFriend: ({ userId }) => {
-        const friend = get().friends.find(knownUser => knownUser.user.id === userId);
-
-        if (!friend) {
-            return Promise.reject(new Error('Known user not found'));
-        }
-
         const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        clearError('users', 'removeFriend');
         setLoading('users', 'removeFriend', 'loading');
 
         return usersApi
             .removeKnownUser({ userId })
-            .then(() => {
-                set(state => ({
-                    friends: state.friends.filter(knownUser => knownUser.user.id !== userId),
-                }));
-
-                return friend.user.displayName;
+            .catch((error: unknown) => {
+                setError('users', 'removeFriend', normalizeApiError(error));
+                return Promise.reject(error);
             })
+            .then(() => get().fetchSetFriends(true))
             .finally(() => {
                 setLoading('users', 'removeFriend', 'fetched');
             });
     },
-    setSettlementWithFriend: params => {
-        set(state => {
-            const currentUserId = state.user?.id;
-
-            if (!currentUserId) {
-                return state;
-            }
-
-            const isCurrentUserPayer = params.fromUserId === currentUserId;
-            const isCurrentUserRecipient = params.toUserId === currentUserId;
-
-            if (!isCurrentUserPayer && !isCurrentUserRecipient) {
-                return state;
-            }
-
-            const friendId = isCurrentUserPayer ? params.toUserId : params.fromUserId;
-            const amountToSet = isCurrentUserPayer ? params.amount : -params.amount;
-
-            return {
-                friends: state.friends.map(friend => {
-                    if (friend.user.id !== friendId) {
-                        return friend;
-                    }
-
-                    const balances = [];
-
-                    for (const balance of friend.balances) {
-                        const nextBalance =
-                            balance.currency === params.currency
-                                ? {
-                                      ...balance,
-                                      netAmount: balance.netAmount + amountToSet,
-                                  }
-                                : balance;
-
-                        if (nextBalance.netAmount !== 0) {
-                            balances.push(nextBalance);
-                        }
-                    }
-
-                    return {
-                        ...friend,
-                        balances,
-                    };
-                }),
-            };
-        });
-    },
-    // TODO: Coordinate concurrent full-settings updates so older snapshots cannot overwrite newer changes.
     setUserSettings: params => {
-        const { user, localUser } = get();
-        const currentSettings = user?.settings ?? localUser?.settings;
-        let nextSettings: UserSettings | undefined;
-
-        if (params.settings) {
-            if (!currentSettings) {
-                return Promise.resolve();
-            }
-
-            nextSettings = {
-                ...currentSettings,
-                ...params.settings,
-            };
-        }
-
+        const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
         const request = {
             ...(params.displayName !== undefined && { displayName: params.displayName }),
-            ...(nextSettings && { settings: nextSettings }),
+            ...(params.settings && { settings: params.settings }),
         } satisfies UpdateUserParams;
+        const mutationId = ++settingsMutationId;
+        clearError('users', 'settings');
+        setLoading('users', 'settings', 'loading');
 
-        return usersApi
-            .updateUser(request)
+        const mutation = enqueueProfileMutation(() => usersApi.updateUser(request));
+
+        return mutation.promise
             .then(user => {
+                if (!mutation.isCurrent()) {
+                    return;
+                }
+
                 const nextLocalUser = toLocalUser(user);
                 saveLocalUser(nextLocalUser);
                 set({ user, localUser: nextLocalUser });
             })
             .catch((error: unknown) => {
-                console.error('Error updating user:', error);
-                toast.error(i18n.t('toasts:settings.saveError'));
-                return Promise.reject(error);
+                if (error instanceof ProfileMutationCancelledError) {
+                    return;
+                }
+                if (mutationId === settingsMutationId && mutation.isCurrent()) {
+                    setError('users', 'settings', normalizeApiError(error));
+                }
+            })
+            .finally(() => {
+                if (mutationId === settingsMutationId) {
+                    setLoading('users', 'settings', 'fetched');
+                }
             });
     },
     uploadUserAvatar: params => {
         const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        const mutationId = ++avatarMutationId;
+        clearError('users', 'avatar');
         setLoading('users', 'avatar', 'loading');
 
-        return usersApi
-            .uploadUserAvatar(params)
+        const mutation = enqueueProfileMutation(() => usersApi.uploadUserAvatar(params));
+
+        return mutation.promise
             .then(user => {
+                if (!mutation.isCurrent()) {
+                    return Promise.reject(new ProfileMutationCancelledError());
+                }
+
                 const nextLocalUser = toLocalUser(user);
                 saveLocalUser(nextLocalUser);
                 set({ user, localUser: nextLocalUser });
@@ -175,11 +207,19 @@ const useUsersStore = create<UsersStore>((set, get) => ({
                 return user;
             })
             .catch((error: unknown) => {
-                console.error('Error uploading user avatar:', error);
+                if (
+                    !(error instanceof ProfileMutationCancelledError) &&
+                    mutationId === avatarMutationId &&
+                    mutation.isCurrent()
+                ) {
+                    setError('users', 'avatar', normalizeApiError(error));
+                }
                 return Promise.reject(error);
             })
             .finally(() => {
-                setLoading('users', 'avatar', 'fetched');
+                if (mutationId === avatarMutationId) {
+                    setLoading('users', 'avatar', 'fetched');
+                }
             });
     },
     extendUserSubscriptionByDay: () => {
@@ -203,7 +243,13 @@ const useUsersStore = create<UsersStore>((set, get) => ({
         });
     },
     setInitialUsersStore: () => {
+        userChannel.abort();
+        friendsChannel.abort();
+        profileMutationGeneration += 1;
+        settingsMutationId += 1;
+        avatarMutationId += 1;
         set(createInitialState());
+        useErrorsStore.getState().resetErrors();
     },
 }));
 

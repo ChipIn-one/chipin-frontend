@@ -4,11 +4,10 @@ const initialState: ActivityStoreState = {
     items: [],
     nextCursor: null,
     hasMore: true,
-    selectedEvent: null,
     subevents: [],
+    subeventsParent: null,
     subeventsNextCursor: null,
     hasMoreSubevents: true,
-    subeventsParentId: null,
     subeventsCategory: null,
 };
 

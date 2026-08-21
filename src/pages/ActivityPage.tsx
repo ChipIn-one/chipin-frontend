@@ -2,10 +2,6 @@ import { useEffect, useState } from 'react';
 
 import { Container } from '@radix-ui/themes';
 
-import { useActivityStore } from 'store/activity-store';
-import { selectActivityFetched } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
-
 import { InternalPageColumns } from 'components/internal-page-layout';
 import {
     type ActivityFilter,
@@ -13,14 +9,15 @@ import {
     ActivitySidebar,
 } from 'features/activity';
 
+import { useConnect } from './internal/activity-page';
+
 const ActivityPage = () => {
-    const fetchSetActivity = useActivityStore(s => s.fetchSetActivity);
-    const isActivityFetched = useLoadingStore(selectActivityFetched);
+    const { fetchSetActivity, isActivityFetched } = useConnect();
     const [activeFilter, setActiveFilter] = useState<ActivityFilter>('all');
 
     useEffect(() => {
         if (!isActivityFetched) {
-            void fetchSetActivity();
+            fetchSetActivity();
         }
     }, [fetchSetActivity, isActivityFetched]);
 

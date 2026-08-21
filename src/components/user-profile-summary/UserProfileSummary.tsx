@@ -6,10 +6,12 @@ import { Flex, Skeleton, Text } from '@radix-ui/themes';
 
 import type { UserSummary } from 'api/chipin.types';
 
+type ProfileUser = Pick<UserSummary, 'displayName' | 'email' | 'picture'>;
+
 interface Props {
     avatarSize?: ComponentProps<typeof UserAvatar>['size'];
     isLoading?: boolean;
-    user?: UserSummary;
+    user?: ProfileUser;
 }
 
 const UserProfileSummary = ({ avatarSize = '5', isLoading = false, user }: Props) => {

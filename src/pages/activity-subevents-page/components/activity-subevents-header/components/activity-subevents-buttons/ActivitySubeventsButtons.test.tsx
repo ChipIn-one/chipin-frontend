@@ -6,10 +6,7 @@ import userEvent from '@testing-library/user-event';
 import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { useActivityStore } from 'store/activity-store';
-import { useDashboardStore } from 'store/dashboardStore';
-import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
 
 import { ActivitySubeventsButtons } from './ActivitySubeventsButtons';
 
@@ -43,7 +40,6 @@ const parentEvent = {
         payerId: 'user-id',
         payerDisplayName: 'Alex',
         shares: [],
-        fieldDiffs: [],
     },
     createdAt: 1_785_328_628,
     parentActivityId: null,
@@ -59,7 +55,7 @@ const reversedEvent = {
 beforeEach(() => {
     useActivityStore.setState({
         subevents: [],
-        subeventsParentId: null,
+        subeventsParent: null,
     });
     useLoadingStore.getState().setInitialLoadingStore();
 });
@@ -79,7 +75,7 @@ test('shows action skeletons while subevents are loading', () => {
 test('hides actions after a reversed expense is loaded', () => {
     useActivityStore.setState({
         subevents: [reversedEvent],
-        subeventsParentId: parentEvent.id,
+        subeventsParent: parentEvent,
     });
 
     render(<ActivitySubeventsButtons parentEvent={parentEvent} />);
@@ -88,39 +84,33 @@ test('hides actions after a reversed expense is loaded', () => {
     expect(screen.queryByText('subeventsDeleteAction')).toBeNull();
 });
 
-test('refetches financial data after deleting an entry', () => {
+test('uses the stable root id when the canonical parent snapshot is a child event', () => {
+    useActivityStore.setState({
+        subevents: [reversedEvent],
+        subeventsParent: parentEvent,
+    });
+
+    render(<ActivitySubeventsButtons parentEvent={reversedEvent} />);
+
+    expect(screen.queryByText('subeventsUpdateAction')).toBeNull();
+    expect(screen.queryByText('subeventsDeleteAction')).toBeNull();
+});
+
+test('delegates entry reversal and its refetches to the activity store', () => {
     const user = userEvent.setup();
-    const removeLedgerEntry = vi.fn().mockResolvedValue(undefined);
-    const fetchSetActivity = vi.fn().mockResolvedValue(undefined);
-    const fetchSetActivitySubevents = vi.fn().mockResolvedValue(undefined);
-    const fetchSetDashboardData = vi.fn();
-    const fetchSetGroups = vi.fn().mockResolvedValue([]);
-    const fetchSetFriends = vi.fn();
+    const reverseLedgerEntry = vi.fn().mockResolvedValue(true);
 
     useActivityStore.setState({
+        reverseLedgerEntry,
         subevents: [],
-        subeventsParentId: parentEvent.id,
-        removeLedgerEntry,
-        fetchSetActivity,
-        fetchSetActivitySubevents,
+        subeventsParent: parentEvent,
     });
-    useDashboardStore.setState({
-        fetchSetDashboardData,
-    });
-    useGroupsStore.setState({
-        fetchSetGroups,
-    });
-    useUsersStore.setState({
-        user: null,
-        fetchSetFriends,
-    });
-
     render(<ActivitySubeventsButtons parentEvent={parentEvent} />);
 
     return user
         .click(screen.getByRole('button', { name: 'subeventsDeleteAction' }))
         .then(() => {
-            expect(removeLedgerEntry).not.toHaveBeenCalled();
+            expect(reverseLedgerEntry).not.toHaveBeenCalled();
             expect(screen.getByRole('alertdialog')).toBeTruthy();
 
             return user.click(
@@ -129,29 +119,24 @@ test('refetches financial data after deleting an entry', () => {
         })
         .then(() =>
             waitFor(() => {
-                expect(removeLedgerEntry).toHaveBeenCalledWith('expense-id');
-                expect(fetchSetActivitySubevents).toHaveBeenCalledWith({
+                expect(reverseLedgerEntry).toHaveBeenCalledWith({
+                    entryId: 'expense-id',
+                    groupId: undefined,
                     parentActivityId: parentEvent.id,
-                    category: 'expense',
                 });
-                expect(fetchSetActivity).toHaveBeenCalledOnce();
-                expect(fetchSetDashboardData).toHaveBeenCalledOnce();
-                expect(fetchSetGroups).toHaveBeenCalledOnce();
-                expect(fetchSetFriends).toHaveBeenCalledOnce();
             }),
         );
 });
 
 test('keeps the confirmation open when deleting an entry fails', () => {
     const user = userEvent.setup();
-    const removeLedgerEntry = vi.fn().mockRejectedValue(new Error('Delete failed'));
+    const reverseLedgerEntry = vi.fn().mockRejectedValue(new Error('Delete failed'));
 
     useActivityStore.setState({
+        reverseLedgerEntry,
         subevents: [],
-        subeventsParentId: parentEvent.id,
-        removeLedgerEntry,
+        subeventsParent: parentEvent,
     });
-
     render(<ActivitySubeventsButtons parentEvent={parentEvent} />);
 
     return user

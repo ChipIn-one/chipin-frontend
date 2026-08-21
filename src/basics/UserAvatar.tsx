@@ -5,7 +5,7 @@ import { Avatar, Skeleton } from '@radix-ui/themes';
 
 interface UserLike {
     displayName: string;
-    picture: string | null;
+    picture?: string | null;
 }
 
 interface Props extends Omit<ComponentProps<typeof Avatar>, 'fallback'> {

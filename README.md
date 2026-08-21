@@ -27,12 +27,18 @@ npm install
 
 ## 🚀 Available Commands
 
-| Command           | Description                          |
-| ----------------- | ------------------------------------ |
-| `npm run dev`     | Start the development server         |
-| `npm run build`   | Type check + build for production    |
-| `npm run preview` | Preview the production build locally |
-| `npm run lint`    | Run ESLint to check code quality     |
+| Command                                      | Description                                      |
+| -------------------------------------------- | ------------------------------------------------ |
+| `npm run dev`                                | Start the development server                     |
+| `npm run test:task -- <test paths>`          | Run only explicitly selected tests               |
+| `npm run test:full`                          | Run the complete test suite                      |
+| `npm run typecheck`                          | Run the TypeScript compiler                      |
+| `npm run verify`                             | Fast lint/typecheck verification                 |
+| `npm run verify:review`                      | Full review gate: lint, tests, and production build |
+| `npm run vercel-build`                       | Vercel gate: full test suite followed by production build |
+| `npm run build`                              | Generate version and build for production        |
+| `npm run preview`                            | Preview the production build locally             |
+| `npm run lint`                               | Run ESLint to check code quality                 |
 
 ## 🛠️ Development
 
@@ -58,6 +64,24 @@ npm run preview
 
 ```bash
 npm run lint
+```
+
+### Run Targeted Tests
+
+During implementation, pass the smallest set of test files that covers the changed behavior:
+
+```bash
+npm run test:task -- src/store/groupsStore.test.ts src/pages/group-page/GroupPage.test.tsx
+```
+
+`test:task` refuses to run without an explicit test path, which prevents an accidental full-suite run.
+
+### Full Review Verification
+
+Run the full gate only for an explicit staged review, merge, or CI/release checkpoint:
+
+```bash
+npm run verify:review
 ```
 
 ## 📝 License

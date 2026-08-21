@@ -5,7 +5,7 @@ import { useIntersectionObserver } from '@uidotdev/usehooks';
 interface UseInfiniteScrollParams {
     hasMore: boolean;
     isLoading: boolean;
-    onLoadMore: () => Promise<void>;
+    onLoadMore: () => void;
 }
 
 type InfiniteScrollRef = ReturnType<typeof useIntersectionObserver>[0];
@@ -31,7 +31,7 @@ const useInfiniteScroll = ({
         }
 
         hasTriggeredRef.current = true;
-        void onLoadMore().catch(() => undefined);
+        onLoadMore();
     }, [sentinelEntry?.isIntersecting, hasMore, isLoading, onLoadMore]);
 
     return sentinelRef;

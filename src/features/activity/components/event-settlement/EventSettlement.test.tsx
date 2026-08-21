@@ -115,7 +115,6 @@ const createSettlementEvent = ({
         payerId: 'from-user',
         fromDisplayName: 'Ilya Govor',
         toDisplayName: 'Huek',
-        fieldDiffs: [],
     },
     createdAt: 1_785_328_628,
     parentActivityId: null,

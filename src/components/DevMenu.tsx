@@ -54,7 +54,7 @@ const DevMenu = ({ isShowLabel = false }: Props) => {
             return;
         }
 
-        void setUserSettings({ settings: { theme: nextTheme } }).catch(() => undefined);
+        setUserSettings({ settings: { theme: nextTheme } });
     };
 
     const items = [
@@ -96,13 +96,7 @@ const DevMenu = ({ isShowLabel = false }: Props) => {
         </IconButton>
     );
 
-    return (
-        <Dropdown
-            items={items}
-            trigger={trigger}
-            align="end"
-        />
-    );
+    return <Dropdown items={items} trigger={trigger} align="end" />;
 };
 
 export default DevMenu;

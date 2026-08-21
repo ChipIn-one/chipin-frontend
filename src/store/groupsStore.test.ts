@@ -1,22 +1,24 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import * as chipinApi from 'api/chipin';
-import type { Group, User } from 'api/chipin.types';
+import type { Group } from 'api/chipin.types';
 import * as groupsApi from 'api/groupsApi';
-import * as ledgerApi from 'api/ledgerApi';
 
+import { useActivityStore } from './activity-store';
+import { useDashboardStore } from './dashboardStore';
+import { useErrorsStore } from './errorsStore';
 import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
 import { useUsersStore } from './users-store';
 
 vi.mock('api/chipin', () => ({
+    createApiGroup: vi.fn(),
     fetchApiUserGroupById: vi.fn(),
     fetchApiUserGroups: vi.fn(),
     inviteApiUserToGroup: vi.fn(),
-}));
-
-vi.mock('api/ledgerApi', () => ({
-    createSettlement: vi.fn(),
+    kickApiGroupMember: vi.fn(),
+    leaveApiGroup: vi.fn(),
+    removeApiGroup: vi.fn(),
 }));
 
 vi.mock('api/groupsApi', () => ({
@@ -44,255 +46,29 @@ const group = {
     createdAt: 1,
     updatedAt: 1,
     coverUrl: 'https://cdn.example.com/group.webp',
+    simplifyDebts: true,
     role: 'OWNER',
     status: 'ACTIVE',
+    lastUsedCurrency: null,
     recentActivities: {
         items: [],
         nextCursor: null,
     },
 } satisfies Group;
 
-const currentUser = {
-    ...creator,
-    role: 'USER',
-    subscriptionUntil: null,
-    settings: {
-        defaultCurrency: 'USD',
-        defaultCategory: 'food',
-        timeFormat: '12h',
-        language: 'en',
-        theme: 'system',
-        simplifyDebts: true,
-        skipCategory: false,
-        soloModeByDefault: false,
-        saveGroupExpensesToSolo: false,
-        sex: 'male',
-    },
-} satisfies User;
-
-const settlementGroup: Group = {
-    ...group,
-    members: [
-        { user: creator, balancesByCurrency: {} },
-        {
-            user: { ...creator, id: 'user-2', displayName: 'Bob' },
-            balancesByCurrency: {
-                USD: { currency: 'USD', netBalance: -100 },
-                EUR: { currency: 'EUR', netBalance: 25 },
-            },
-        },
-    ],
-};
-
 describe('groupsStore', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        useErrorsStore.getState().resetErrors();
         useGroupsStore.getState().setInitialGroupsStore();
         useLoadingStore.getState().setInitialLoadingStore();
-        useUsersStore.setState({ user: currentUser });
-    });
-
-    test('keeps same-currency debts in both summary directions', () => {
-        const mixedDirectionGroup: Group = {
-            ...group,
-            name: 'Vietnam',
-            members: [
-                { user: creator, balancesByCurrency: {} },
-                {
-                    user: { ...creator, id: 'user-2' },
-                    balancesByCurrency: {
-                        USD: { currency: 'USD', netBalance: 20 },
-                    },
-                },
-                {
-                    user: { ...creator, id: 'user-3' },
-                    balancesByCurrency: {
-                        USD: { currency: 'USD', netBalance: -20 },
-                    },
-                },
-            ],
-        };
-
-        useGroupsStore.getState().setSelectedGroup(mixedDirectionGroup);
-
-        expect(useGroupsStore.getState()).toMatchObject({
-            owedEntries: [{ currency: 'USD', netBalance: 20 }],
-            oweEntries: [{ currency: 'USD', netBalance: -20 }],
-            netTotalInBase: 0,
-            owedTotalInBase: 20,
-            owingTotalInBase: 20,
-        });
-    });
-
-    test('creates a scoped partial settlement and updates selected and cached group balances', () => {
-        vi.mocked(ledgerApi.createSettlement).mockResolvedValue({} as never);
-        useGroupsStore.setState({ groups: [settlementGroup] });
-        useGroupsStore.getState().setSelectedGroup(settlementGroup);
-
-        const request = useGroupsStore.getState().createSettlement({
-            fromUserId: currentUser.id,
-            toUserId: 'user-2',
-            amount: 40,
-            currency: 'USD',
-        });
-
-        expect(useLoadingStore.getState().settlement.add).toBe('loading');
-
-        return request.then(() => {
-            expect(ledgerApi.createSettlement).toHaveBeenCalledWith({
-                groupId: settlementGroup.id,
-                fromUserId: currentUser.id,
-                toUserId: 'user-2',
-                amount: 40,
-                currency: 'USD',
-            });
-            expect(
-                useGroupsStore.getState().selectedGroup?.members[1].balancesByCurrency.USD,
-            ).toEqual({ currency: 'USD', netBalance: -60 });
-            expect(useGroupsStore.getState().groups[0].members[1].balancesByCurrency.USD).toEqual({
-                currency: 'USD',
-                netBalance: -60,
-            });
-            expect(useLoadingStore.getState().settlement.add).toBe('fetched');
-        });
-    });
-
-    test('removes a fully settled group currency balance', () => {
-        vi.mocked(ledgerApi.createSettlement).mockResolvedValue({} as never);
-        useGroupsStore.getState().setSelectedGroup(settlementGroup);
-
-        return useGroupsStore
-            .getState()
-            .createSettlement({
-                fromUserId: 'user-2',
-                toUserId: currentUser.id,
-                amount: 25,
-                currency: 'EUR',
-            })
-            .then(() => {
-                expect(
-                    useGroupsStore.getState().selectedGroup?.members[1].balancesByCurrency.EUR,
-                ).toBeUndefined();
-            });
-    });
-
-    test('forwards amount validation to the settlement API', () => {
-        const requestError = new Error('Amount exceeds balance');
-        vi.mocked(ledgerApi.createSettlement).mockRejectedValue(requestError);
-        useGroupsStore.getState().setSelectedGroup(settlementGroup);
-
-        return useGroupsStore
-            .getState()
-            .createSettlement({
-                fromUserId: currentUser.id,
-                toUserId: 'user-2',
-                amount: 100.01,
-                currency: 'USD',
-            })
-            .then(
-                () => Promise.reject(new Error('Expected settlement to reject')),
-                error => {
-                    expect(error).toBe(requestError);
-                    expect(ledgerApi.createSettlement).toHaveBeenCalledWith({
-                        groupId: settlementGroup.id,
-                        fromUserId: currentUser.id,
-                        toUserId: 'user-2',
-                        amount: 100.01,
-                        currency: 'USD',
-                    });
-                    expect(useLoadingStore.getState().settlement.add).toBe('fetched');
-                },
-            );
-    });
-
-    test('rejects settlement when no group is selected', () => {
-        return useGroupsStore
-            .getState()
-            .createSettlement({
-                fromUserId: currentUser.id,
-                toUserId: 'user-2',
-                amount: 10,
-                currency: 'USD',
-            })
-            .then(
-                () => Promise.reject(new Error('Expected settlement to reject')),
-                error => {
-                    expect(error).toEqual(new Error('Group settlement context is unavailable'));
-                    expect(ledgerApi.createSettlement).not.toHaveBeenCalled();
-                },
-            );
-    });
-
-    test('rejects settlement when the participant is not in the selected group', () => {
-        useGroupsStore.getState().setSelectedGroup(settlementGroup);
-
-        return useGroupsStore
-            .getState()
-            .createSettlement({
-                fromUserId: currentUser.id,
-                toUserId: 'missing-user',
-                amount: 10,
-                currency: 'USD',
-            })
-            .then(
-                () => Promise.reject(new Error('Expected settlement to reject')),
-                error => {
-                    expect(error).toEqual(new Error('Group settlement participant is unavailable'));
-                    expect(ledgerApi.createSettlement).not.toHaveBeenCalled();
-                },
-            );
-    });
-
-    test('rejects settlement when the participant has no balance in the currency', () => {
-        useGroupsStore.getState().setSelectedGroup(settlementGroup);
-
-        return useGroupsStore
-            .getState()
-            .createSettlement({
-                fromUserId: currentUser.id,
-                toUserId: 'user-2',
-                amount: 10,
-                currency: 'BZD',
-            })
-            .then(
-                () => Promise.reject(new Error('Expected settlement to reject')),
-                error => {
-                    expect(error).toEqual(new Error('Group settlement balance is unavailable'));
-                    expect(ledgerApi.createSettlement).not.toHaveBeenCalled();
-                },
-            );
-    });
-
-    test('keeps group balances unchanged when settlement creation fails', () => {
-        const requestError = new Error('Settlement failed');
-        vi.mocked(ledgerApi.createSettlement).mockRejectedValue(requestError);
-        useGroupsStore.getState().setSelectedGroup(settlementGroup);
-
-        return useGroupsStore
-            .getState()
-            .createSettlement({
-                fromUserId: currentUser.id,
-                toUserId: 'user-2',
-                amount: 40,
-                currency: 'USD',
-            })
-            .then(
-                () => Promise.reject(new Error('Expected settlement to reject')),
-                error => {
-                    expect(error).toBe(requestError);
-                    expect(
-                        useGroupsStore.getState().selectedGroup?.members[1].balancesByCurrency.USD,
-                    ).toEqual({ currency: 'USD', netBalance: -100 });
-                    expect(useLoadingStore.getState().settlement.add).toBe('fetched');
-                },
-            );
     });
 
     test('fetches groups into the groups store and settles list loading', () => {
         const expectedGroups = [group];
         vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({
             items: expectedGroups,
-            nextCursor: 2,
+            nextCursor: 'cursor-2',
         });
 
         const request = useGroupsStore.getState().fetchSetGroups();
@@ -303,7 +79,7 @@ describe('groupsStore', () => {
             expect(chipinApi.fetchApiUserGroups).toHaveBeenCalledOnce();
             expect(fetchedGroups).toEqual(expectedGroups);
             expect(useGroupsStore.getState().groups).toEqual(expectedGroups);
-            expect(useGroupsStore.getState().groupsNextCursor).toBe(2);
+            expect(useGroupsStore.getState().groupsNextCursor).toBe('cursor-2');
             expect(useLoadingStore.getState().group.list).toBe('fetched');
         });
     });
@@ -381,11 +157,11 @@ describe('groupsStore', () => {
 
     test('refreshes the selected group from the fetched group list', () => {
         const refreshedGroup = {
-            ...settlementGroup,
+            ...group,
             name: 'Updated group',
         };
 
-        useGroupsStore.getState().setSelectedGroup(settlementGroup);
+        useGroupsStore.getState().setSelectedGroup(group);
         vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({
             items: [refreshedGroup],
             nextCursor: null,
@@ -399,6 +175,16 @@ describe('groupsStore', () => {
                     refreshedGroup,
                 );
             });
+    });
+
+    test('fetches a canonical group by id when it is outside the loaded list', () => {
+        vi.mocked(chipinApi.fetchApiUserGroupById).mockResolvedValue(group);
+        useGroupsStore.setState({ groups: [], selectedGroup: null });
+
+        return useGroupsStore.getState().fetchSetGroupById(group.id).then(result => {
+            expect(result).toEqual(group);
+            expect(useGroupsStore.getState().selectedGroup).toEqual(group);
+        });
     });
 
     test('adds and selects the canonical group returned after joining', () => {
@@ -417,59 +203,145 @@ describe('groupsStore', () => {
         });
     });
 
-    test('uses the same group response for fetch by id', () => {
-        const groupWithActivityCursor = {
-            ...group,
-            recentActivities: {
-                items: [],
-                nextCursor: 73,
-            },
-        } satisfies Group;
-        vi.mocked(chipinApi.fetchApiUserGroupById).mockResolvedValue(groupWithActivityCursor);
+    test('does not restore group state when create resolves after reset', () => {
+        let resolveCreate: ((value: Group) => void) | undefined;
+        vi.mocked(chipinApi.createApiGroup).mockImplementation(() => new Promise(resolve => {
+            resolveCreate = resolve;
+        }));
 
-        return useGroupsStore
-            .getState()
-            .fetchSetGroupById(group.id)
-            .then(fetchedGroup => {
-                expect(fetchedGroup).toEqual(groupWithActivityCursor);
-                expect(useGroupsStore.getState().selectedGroup).toEqual(groupWithActivityCursor);
-                expect(
-                    useGroupsStore.getState().selectedGroup?.recentActivities.nextCursor,
-                ).toBe(73);
-                expect(useLoadingStore.getState().group.data).toBe('fetched');
+        const request = useGroupsStore.getState().createGroup({ groupName: group.name });
+
+        return Promise.resolve()
+            .then(() => {
+                useGroupsStore.getState().setInitialGroupsStore();
+                useLoadingStore.getState().setInitialLoadingStore();
+                resolveCreate?.(group);
+                return request;
+            })
+            .then(result => {
+                expect(result).toEqual(group);
+                expect(useGroupsStore.getState().groups).toEqual([]);
+                expect(useGroupsStore.getState().selectedGroup).toBeNull();
+                expect(useLoadingStore.getState().group.add).toBe('initial');
             });
     });
 
-    test('reuses the selected group instead of fetching by id after card navigation', () => {
-        useGroupsStore.getState().setSelectedGroup(group);
+    test('does not restore group errors when join rejects after reset', () => {
+        let rejectJoin: ((reason?: unknown) => void) | undefined;
+        const joinError = new Error('stale join failed');
+        vi.mocked(chipinApi.inviteApiUserToGroup).mockImplementation(() => (
+            new Promise((_resolve, reject) => {
+                rejectJoin = reject;
+            })
+        ));
 
-        return useGroupsStore
-            .getState()
-            .fetchSetGroupById(group.id)
-            .then(fetchedGroup => {
-                expect(fetchedGroup).toEqual(group);
-                expect(chipinApi.fetchApiUserGroupById).not.toHaveBeenCalled();
-            });
-    });
-
-    test('reuses a cached group on browser back instead of fetching by id', () => {
-        const otherGroup = { ...group, id: 'group-2', name: 'Other Group' } satisfies Group;
-        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({
-            items: [group, otherGroup],
-            nextCursor: null,
+        const request = useGroupsStore.getState().joinGroup({
+            inviteToken: group.inviteToken,
         });
 
-        return useGroupsStore
-            .getState()
-            .fetchSetGroups()
+        return Promise.resolve()
             .then(() => {
-                useGroupsStore.getState().setSelectedGroup(otherGroup);
-                return useGroupsStore.getState().fetchSetGroupById(group.id);
+                useGroupsStore.getState().setInitialGroupsStore();
+                useLoadingStore.getState().setInitialLoadingStore();
+                rejectJoin?.(joinError);
+                return expect(request).rejects.toBe(joinError);
             })
-            .then(fetchedGroup => {
-                expect(fetchedGroup).toEqual(group);
-                expect(useGroupsStore.getState().selectedGroup).toEqual(group);
-                expect(chipinApi.fetchApiUserGroupById).not.toHaveBeenCalled();
+            .then(() => {
+                expect(useErrorsStore.getState().errors.group.join).toBeNull();
+                expect(useLoadingStore.getState().group.join).toBe('initial');
             });
+    });
+
+    test('removes a group and refetches every affected backend resource', () => {
+        const fetchSetActivity = vi.fn().mockResolvedValue(undefined);
+        const fetchSetDashboard = vi.fn().mockResolvedValue(undefined);
+        const fetchSetFriends = vi.fn().mockResolvedValue(undefined);
+        const fetchSetGroups = vi.fn().mockResolvedValue([]);
+        vi.mocked(chipinApi.removeApiGroup).mockResolvedValue(undefined);
+        useActivityStore.setState({ fetchSetActivity });
+        useDashboardStore.setState({ fetchSetDashboard });
+        useGroupsStore.setState({ fetchSetGroups });
+        useUsersStore.setState({ fetchSetFriends });
+
+        return useGroupsStore.getState().removeGroup({ groupId: group.id }).then(() => {
+            expect(fetchSetGroups).toHaveBeenCalledWith(true);
+            expect(fetchSetFriends).toHaveBeenCalledWith(true);
+            expect(fetchSetDashboard).toHaveBeenCalledWith(true);
+            expect(fetchSetActivity).toHaveBeenCalledWith(true);
+        });
+    });
+
+    test('leaves a group before refetching backend state', () => {
+        vi.mocked(chipinApi.leaveApiGroup).mockResolvedValue(undefined);
+        useActivityStore.setState({
+            fetchSetActivity: vi.fn().mockResolvedValue(undefined),
+        });
+        useDashboardStore.setState({
+            fetchSetDashboard: vi.fn().mockResolvedValue(undefined),
+        });
+        useGroupsStore.setState({
+            fetchSetGroups: vi.fn().mockResolvedValue([]),
+        });
+        useUsersStore.setState({
+            fetchSetFriends: vi.fn().mockResolvedValue(undefined),
+        });
+
+        return useGroupsStore.getState().leaveGroup({
+            groupId: group.id,
+            newOwnerId: 'user-2',
+        }).then(() => {
+            expect(chipinApi.leaveApiGroup).toHaveBeenCalledWith({
+                groupId: group.id,
+                newOwnerId: 'user-2',
+            });
+        });
+    });
+
+test('resolves after kicking a member and refreshing backend state', () => {
+        vi.mocked(chipinApi.kickApiGroupMember).mockResolvedValue(undefined);
+        useActivityStore.setState({
+            fetchSetActivity: vi.fn().mockResolvedValue(undefined),
+        });
+        useDashboardStore.setState({
+            fetchSetDashboard: vi.fn().mockResolvedValue(undefined),
+        });
+        useGroupsStore.setState({
+            fetchSetGroups: vi.fn().mockResolvedValue([group]),
+        });
+        useUsersStore.setState({
+            fetchSetFriends: vi.fn().mockResolvedValue(undefined),
+        });
+
+        return useGroupsStore.getState().kickGroupMember({
+            groupId: group.id,
+        userId: 'user-2',
+        }).then(result => {
+            expect(result).toBeUndefined();
+            expect(chipinApi.kickApiGroupMember).toHaveBeenCalledOnce();
+        });
+    });
+
+    test('refetches the selected group detail after kicking a member', () => {
+        const fetchSetGroupById = vi.fn().mockResolvedValue(group);
+        vi.mocked(chipinApi.kickApiGroupMember).mockResolvedValue(undefined);
+        useGroupsStore.setState({
+            fetchSetGroupById,
+        });
+        useActivityStore.setState({
+            fetchSetActivity: vi.fn().mockResolvedValue(undefined),
+        });
+        useDashboardStore.setState({
+            fetchSetDashboard: vi.fn().mockResolvedValue(undefined),
+        });
+        useUsersStore.setState({
+            fetchSetFriends: vi.fn().mockResolvedValue(undefined),
+        });
+
+        return useGroupsStore.getState().kickGroupMember({
+            groupId: group.id,
+            userId: 'user-2',
+        }).then(() => {
+            expect(fetchSetGroupById).toHaveBeenCalledWith(group.id, true);
+        });
     });
 });

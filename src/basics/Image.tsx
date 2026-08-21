@@ -1,8 +1,21 @@
-import { type ImgHTMLAttributes, useState } from 'react';
+import {
+    type ImgHTMLAttributes,
+    type ReactEventHandler,
+    useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
-interface Props extends ImgHTMLAttributes<HTMLImageElement> {
+import { Skeleton } from '@radix-ui/themes';
+
+type ImageStatus = 'loading' | 'loaded' | 'error';
+
+interface ImageState {
+    src?: string;
+    status: ImageStatus;
+}
+
+interface ImageProps extends ImgHTMLAttributes<HTMLImageElement> {
     width?: string;
     height?: string;
     src?: string;
@@ -30,12 +43,23 @@ const Image = ({
     height = 'auto',
     alt = '-',
     className,
+    onLoad,
+    onError,
     ...props
-}: Props) => {
+}: ImageProps) => {
     const { t } = useTranslation('common');
-    const [isError, setIsError] = useState(false);
+    const [imageState, setImageState] = useState<ImageState>({
+        src,
+        status: 'loading',
+    });
 
-    if (isError || !src) {
+    if (imageState.src !== src) {
+        setImageState({ src, status: 'loading' });
+    }
+
+    const status = imageState.src === src ? imageState.status : 'loading';
+
+    if (!src || status === 'error') {
         return (
             <EmptyImg width={width} height={height} className={className} {...props}>
                 {t('media.noImage')}
@@ -43,18 +67,29 @@ const Image = ({
         );
     }
 
+    const onImageLoad: ReactEventHandler<HTMLImageElement> = event => {
+        setImageState({ src, status: 'loaded' });
+        onLoad?.(event);
+    };
+
+    const onImageError: ReactEventHandler<HTMLImageElement> = event => {
+        setImageState({ src, status: 'error' });
+        onError?.(event);
+    };
+
     return (
-        <Img
-            width={width}
-            height={height}
-            src={src}
-            alt={alt}
-            onError={() => {
-                setIsError(true);
-            }}
-            className={className}
-            {...props}
-        />
+        <Skeleton loading={status === 'loading'}>
+            <Img
+                {...props}
+                width={width}
+                height={height}
+                src={src}
+                alt={alt}
+                onLoad={onImageLoad}
+                onError={onImageError}
+                className={className}
+            />
+        </Skeleton>
     );
 };
 

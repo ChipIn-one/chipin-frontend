@@ -24,6 +24,8 @@
     "subeventsLoadErrorDescription": "Try loading the activity updates again.",
     "subeventsParentLoadErrorTitle": "Couldn't load this activity",
     "subeventsParentLoadErrorDescription": "Try loading the parent activity again.",
+    "subeventsParentUnavailableTitle": "Activity summary unavailable",
+    "subeventsParentUnavailableDescription": "The update history is still available below.",
     "retryAction": "Retry",
     "dateDivider": {
         "today": "Today",

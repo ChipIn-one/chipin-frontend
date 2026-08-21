@@ -2,7 +2,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 
 import { render, screen } from '@testing-library/react';
 
-import type { Group, User } from 'api/chipin.types';
+import type { Group, SelfUser } from 'api/chipin.types';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
@@ -43,7 +43,9 @@ vi.mock('./components', () => ({
     GroupSummary: (props: Record<string, unknown>) => (
         <div data-testid="group-summary" data-has-layout={String('layout' in props)} />
     ),
-    GroupTabsContent: () => <div data-testid="group-tabs" />,
+    GroupTabsContent: ({ group }: { group: Group }) => (
+        <div data-testid="group-tabs" data-group-id={group.id} />
+    ),
 }));
 
 const creator = {
@@ -67,8 +69,10 @@ const group = {
     createdAt: 1,
     updatedAt: 1,
     coverUrl: 'https://cdn.example.com/group.webp',
+    simplifyDebts: true,
     role: 'OWNER',
     status: 'ACTIVE',
+    lastUsedCurrency: null,
     recentActivities: {
         items: [],
         nextCursor: null,
@@ -79,6 +83,7 @@ const currentUser = {
     ...creator,
     role: 'USER',
     subscriptionUntil: null,
+    inviteToken: 'invite-token-user',
     settings: {
         defaultCurrency: 'USD',
         defaultCategory: 'food',
@@ -91,7 +96,7 @@ const currentUser = {
         saveGroupExpensesToSolo: false,
         sex: 'male',
     },
-} satisfies User;
+} satisfies SelfUser;
 
 beforeEach(() => {
     useGroupsStore.getState().setInitialGroupsStore();
@@ -124,4 +129,27 @@ test('delegates group details and actions to the responsive cover hero', () => {
     expect(
         screen.queryByRole('button', { name: 'common:buttons.addExpense' }),
     ).toBeNull();
+});
+
+test('selects the route group from the loaded group list', () => {
+    useGroupsStore.setState({ selectedGroup: null });
+    useLoadingStore.setState(state => ({
+        group: { ...state.group, list: 'fetched' },
+    }));
+
+    render(<GroupPage />);
+
+    expect(useGroupsStore.getState().selectedGroup).toEqual(group);
+});
+
+test('does not render a previously selected group for a different route', () => {
+    useGroupsStore.setState({
+        groups: [],
+        selectedGroup: { ...group, id: 'group-2' },
+        fetchSetGroupById: vi.fn(() => Promise.resolve(null)),
+    });
+
+    render(<GroupPage />);
+
+    expect(screen.queryByTestId('group-tabs')).toBeNull();
 });

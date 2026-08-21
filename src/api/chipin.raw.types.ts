@@ -28,7 +28,7 @@ export interface ApiUserSettings {
 
 export interface ApiUpdateUserRequest {
     displayName?: string;
-    settings?: ApiUserSettings;
+    settings?: Partial<ApiUserSettings>;
 }
 
 export interface ApiCurrencyRatesResponse {
@@ -43,26 +43,27 @@ export interface ApiUserResponse {
     id: string;
     email: string;
     displayName: string;
-    firstName: string | null;
-    lastName: string | null;
-    picture: string | null;
+    firstName?: string | null;
+    lastName?: string | null;
+    picture?: string | null;
+    createdAt: number;
+    updatedAt: number;
+}
+
+export interface ApiSelfUserResponse {
+    id: string;
+    email: string;
+    displayName: string;
+    picture?: string | null;
     role: ApiUserRole;
     subscriptionUntil: number | null;
+    inviteToken: string;
     settings: ApiUserSettings;
     createdAt: number;
     updatedAt: number;
 }
 
-export interface ApiUserSummary {
-    id: string;
-    email: string;
-    displayName: string;
-    firstName: string | null;
-    lastName: string | null;
-    picture: string | null;
-    createdAt: number;
-    updatedAt: number;
-}
+export type ApiUserSummary = ApiUserResponse;
 
 export type ApiGroupUserResponse = ApiUserSummary;
 
@@ -81,18 +82,16 @@ export interface ApiGroupResponse {
     createdAt: number;
     updatedAt: number;
     coverUrl: string | null;
+    simplifyDebts: boolean;
     role: 'OWNER' | 'MEMBER';
-    status: 'ACTIVE' | 'ARCHIVED';
+    status: 'ACTIVE';
+    lastUsedCurrency: string | null;
     recentActivities: ApiActivityFeedResponse;
 }
 
 export interface ApiGroupsResponse {
     items: ApiGroupResponse[];
-    nextCursor: number | null;
-}
-
-export interface ApiRemoveGroupResponse {
-    id: string;
+    nextCursor: string | null;
 }
 
 export interface ApiDashboardResponse {
@@ -115,6 +114,12 @@ export interface ApiActivityItemsResponse {
     nextCursor: number | null;
 }
 
+export interface ApiActivityChildrenResponse {
+    parent: AppEvent;
+    items: AppEvent[];
+    nextCursor: number | null;
+}
+
 export type ApiFriendUser = ApiUserSummary;
 
 export interface ApiFriendBalance {
@@ -125,6 +130,7 @@ export interface ApiFriendBalance {
 export interface ApiFriend {
     user: ApiFriendUser;
     balances: ApiFriendBalance[];
+    lastUsedCurrency: string | null;
 }
 
 export interface ApiFriendsResponse {
@@ -139,19 +145,27 @@ export interface ApiParticipantShare {
 
 export interface ApiExpenseDetails {
     id: string;
-    description: string;
+    description?: string | null;
     amount: number;
     currency: string;
     date: number;
     payer: ApiUserResponse;
-    groupId: string;
+    groupId?: string | null;
     participants: ApiUserResponse[];
     participantShares: ApiParticipantShare[];
-    category: string;
+    category?: string | null;
+    subcategory?: string | null;
     creator: ApiUserResponse;
+    systemAction?: ApiLedgerSystemAction;
     createdAt: number;
     updatedAt: number;
 }
+
+export type ApiLedgerScope = 'USER' | 'GROUP';
+export type ApiLedgerSystemAction =
+    | 'EXPENSE_TRANSFERRED_TO'
+    | 'EXPENSE_TRANSFERRED_FROM'
+    | null;
 
 export interface ApiSettlementDetails {
     id: string;
@@ -160,20 +174,33 @@ export interface ApiSettlementDetails {
     amount: number;
     currency: string;
     settledAt: number;
-    scope: string;
-    groupId: string;
+    scope: ApiLedgerScope;
+    groupId?: string | null;
+    systemAction?: ApiLedgerSystemAction;
 }
 
-export interface ApiCreateLedgerResponse {
+interface ApiLedgerEntryBase {
     id: string;
-    type: 'EXPENSE' | 'SETTLEMENT';
-    scope: string;
-    groupId: string;
-    expense: ApiExpenseDetails | null;
-    settlement: ApiSettlementDetails | null;
+    scope: ApiLedgerScope;
+    groupId?: string | null;
+    systemAction?: ApiLedgerSystemAction;
     createdAt: number;
     updatedAt: number;
 }
+
+export interface ApiExpenseLedgerEntry extends ApiLedgerEntryBase {
+    type: 'EXPENSE';
+    expense: ApiExpenseDetails;
+    settlement: null;
+}
+
+export interface ApiSettlementLedgerEntry extends ApiLedgerEntryBase {
+    type: 'SETTLEMENT';
+    expense: null;
+    settlement: ApiSettlementDetails;
+}
+
+export type ApiCreateLedgerResponse = ApiExpenseLedgerEntry | ApiSettlementLedgerEntry;
 
 export interface ApiOAuthTokenPairResponse {
     token: string;

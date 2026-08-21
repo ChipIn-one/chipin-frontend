@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import {
     LucideChevronsDown,
     LucideCircleAlert,
@@ -6,25 +6,22 @@ import {
     LucideRefreshCw,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useShallow } from 'zustand/react/shallow';
 
 import { Button, Flex, Spinner, Text } from '@radix-ui/themes';
 
 import type { ActivityCategory } from 'constants/activity';
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 import {
-    selectActivitySubeventsFlow,
-    useActivityStore,
-} from 'store/activity-store';
-import {
-    selectActivitySubeventsLoading,
-    selectActivitySubeventsNextPageLoading,
-} from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
+    selectActivitySubeventsError,
+    selectActivitySubeventsNextPageError,
+} from 'store/errorsSelectors';
+import { useErrorsStore } from 'store/errorsStore';
 
 import { EmptyState } from 'basics/empty-states';
 import { ActivityFeedSkeleton } from 'components/skeletons';
 import { ActivityEventsList } from 'features/activity';
+
+import { useConnect } from './internal';
 
 interface Props {
     parentActivityId?: string;
@@ -39,33 +36,23 @@ const ActivitySubeventsFeed = ({
     const {
         subevents,
         hasMoreSubevents,
-        subeventsParentId,
+        subeventsParent,
         fetchSetActivitySubevents,
         fetchMoreActivitySubevents,
-    } = useActivityStore(
-        useShallow(selectActivitySubeventsFlow),
-    );
-    const isLoading = useLoadingStore(selectActivitySubeventsLoading);
-    const isNextPageLoading = useLoadingStore(selectActivitySubeventsNextPageLoading);
-    const [failedParentId, setFailedParentId] = useState<string | null>(null);
-    const [isNextPageError, setIsNextPageError] = useState(false);
-    const isCurrentParentLoaded = subeventsParentId === parentActivityId;
-    const isLoadError = failedParentId === parentActivityId;
-    const shouldShowSkeleton =
-        isLoading || !activityCategory || !isCurrentParentLoaded;
+        isLoading,
+        isNextPageLoading,
+    } = useConnect();
+    const subeventsError = useErrorsStore(selectActivitySubeventsError);
+    const isNextPageError = useErrorsStore(selectActivitySubeventsNextPageError) !== null;
+    const isCurrentParentLoaded = subeventsParent?.id === parentActivityId;
+    const isLoadError = subeventsError !== null;
+    const shouldShowSkeleton = isLoading || !isCurrentParentLoaded;
     const isEndOfFeed =
         !isNextPageLoading &&
         !hasMoreSubevents &&
         subevents.length > 0;
     const onLoadMore = useCallback(() => {
-        return fetchMoreActivitySubevents()
-            .then(() => {
-                setIsNextPageError(false);
-            })
-            .catch((error: unknown) => {
-                setIsNextPageError(true);
-                return Promise.reject(error);
-            });
+        return fetchMoreActivitySubevents();
     }, [fetchMoreActivitySubevents]);
     const sentinelRef = useInfiniteScroll({
         hasMore: hasMoreSubevents && !isNextPageError,
@@ -76,43 +63,35 @@ const ActivitySubeventsFeed = ({
     useEffect(() => {
         if (
             !parentActivityId ||
-            !activityCategory ||
-            isCurrentParentLoaded ||
-            isLoadError
+            isCurrentParentLoaded
         ) {
             return;
         }
 
-        void fetchSetActivitySubevents({
+        fetchSetActivitySubevents({
             parentActivityId,
             category: activityCategory,
-        }).catch(() => {
-            setFailedParentId(parentActivityId);
         });
     }, [
         parentActivityId,
         activityCategory,
         isCurrentParentLoaded,
-        isLoadError,
         fetchSetActivitySubevents,
     ]);
 
     const onRetry = () => {
-        if (!parentActivityId || !activityCategory) {
+        if (!parentActivityId) {
             return;
         }
 
-        setFailedParentId(null);
-        void fetchSetActivitySubevents({
+        fetchSetActivitySubevents({
             parentActivityId,
             category: activityCategory,
-        }).catch(() => {
-            setFailedParentId(parentActivityId);
         });
     };
 
     const onRetryNextPage = () => {
-        void onLoadMore().catch(() => undefined);
+        onLoadMore();
     };
 
     if (isLoadError) {

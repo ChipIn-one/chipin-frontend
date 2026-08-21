@@ -1,30 +1,32 @@
 import { apiInstance } from './chipin.instance';
-import type { ApiFriendsResponse, ApiUserResponse } from './chipin.raw.types';
+import type { ApiFriendsResponse, ApiSelfUserResponse } from './chipin.raw.types';
 import type {
     RemoveKnownUserParams,
     UpdateUserParams,
     UploadUserAvatarParams,
 } from './chipin.types';
 
-const fetchUser = (): Promise<ApiUserResponse> => {
-    return apiInstance.get<ApiUserResponse>('/users/self').then(response => response.data);
+const fetchUser = (signal?: AbortSignal): Promise<ApiSelfUserResponse> => {
+    return apiInstance
+        .get<ApiSelfUserResponse>('/users/self', { signal })
+        .then(response => response.data);
 };
 
-const updateUser = (params: UpdateUserParams): Promise<ApiUserResponse> => {
+const updateUser = (params: UpdateUserParams): Promise<ApiSelfUserResponse> => {
     return apiInstance
-        .patch<ApiUserResponse>('/users/self', params)
+        .patch<ApiSelfUserResponse>('/users/self', params)
         .then(response => response.data);
 };
 
 const uploadUserAvatar = ({
     file,
     onProgress,
-}: UploadUserAvatarParams): Promise<ApiUserResponse> => {
+}: UploadUserAvatarParams): Promise<ApiSelfUserResponse> => {
     const formData = new FormData();
     formData.append('file', file);
 
     return apiInstance
-        .put<ApiUserResponse>('/users/self/avatar', formData, {
+        .put<ApiSelfUserResponse>('/users/self/avatar', formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
             onUploadProgress: event => {
                 if (!event.total) {
@@ -38,9 +40,9 @@ const uploadUserAvatar = ({
         .then(response => response.data);
 };
 
-const fetchKnownUsers = (): Promise<ApiFriendsResponse> => {
+const fetchKnownUsers = (signal?: AbortSignal): Promise<ApiFriendsResponse> => {
     return apiInstance
-        .get<ApiFriendsResponse>('/users/known-users')
+        .get<ApiFriendsResponse>('/users/known-users', { signal })
         .then(response => response.data);
 };
 

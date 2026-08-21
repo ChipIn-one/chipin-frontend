@@ -5,6 +5,7 @@ import {
     selectSettlementBalance,
 } from './helpers';
 import type { DebtOption, SettlementFormProps } from './types';
+import { useConnect } from './useConnect';
 
 export {
     type DebtOption,
@@ -13,4 +14,5 @@ export {
     getSettlementViewModel,
     selectSettlementBalance,
     type SettlementFormProps,
+    useConnect,
 };

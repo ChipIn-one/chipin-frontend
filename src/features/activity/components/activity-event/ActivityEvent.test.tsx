@@ -1,12 +1,11 @@
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { expect, test, vi } from 'vitest';
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 
 import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
-import { useActivityStore } from 'store/activity-store';
 
 import { ActivityEvent } from './ActivityEvent';
 
@@ -51,10 +50,6 @@ vi.mock('./styled', () => ({
     ),
 }));
 
-beforeEach(() => {
-    useActivityStore.setState({ selectedEvent: null });
-});
-
 const baseEvent = {
     id: 'activity-id',
     seq: 748,
@@ -75,7 +70,7 @@ const transferMetadata = {
     groupName: 'Trip',
     transferredUserId: 'transferred-user-id',
     actorUserId: 'actor-id',
-    reason: 'KICK',
+    reason: 'KICK' as const,
     transfers: [
         {
             debtorId: 'debtor-id',
@@ -104,7 +99,6 @@ const expenseCreatedEvent = {
         payerId: 'payer-id',
         payerDisplayName: 'Alex',
         shares: [],
-        fieldDiffs: [],
     },
 } satisfies AppEvent;
 
@@ -137,20 +131,6 @@ test('makes supported events navigable by default', () => {
     );
 
     expect(screen.getByRole('link').getAttribute('href')).toBe('/activity/activity-id');
-});
-
-test('stores the complete event when its subevents link is selected', () => {
-    render(
-        <MemoryRouter>
-            <ActivityEvent event={expenseCreatedEvent} />
-        </MemoryRouter>,
-    );
-
-    fireEvent.click(screen.getByRole('link'));
-
-    expect(useActivityStore.getState().selectedEvent).toBe(
-        expenseCreatedEvent,
-    );
 });
 
 test('renders supported events without a link when navigation is disabled', () => {

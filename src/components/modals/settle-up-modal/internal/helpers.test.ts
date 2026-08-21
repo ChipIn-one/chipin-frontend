@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import type { User } from 'api/chipin.types';
+import type { SelfUser } from 'api/chipin.types';
 
 import {
     getDebtOptions,
@@ -12,11 +12,10 @@ const currentUser = {
     id: 'user-1',
     email: 'alice@example.com',
     displayName: 'Alice',
-    firstName: 'Alice',
-    lastName: null,
     picture: null,
     role: 'USER',
     subscriptionUntil: null,
+    inviteToken: 'invite-token-user',
     settings: {
         defaultCurrency: 'USD',
         defaultCategory: 'food',
@@ -31,7 +30,7 @@ const currentUser = {
     },
     createdAt: 1,
     updatedAt: 1,
-} satisfies User;
+} satisfies SelfUser;
 
 const friend = {
     id: 'user-2',

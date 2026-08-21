@@ -56,15 +56,15 @@ const RegionalSection = ({ isLoading }: Props) => {
     }));
 
     const onTimeFormatChange = (value: string) => {
-        void setUserSettings({
+        setUserSettings({
             settings: { timeFormat: value as UserSettings['timeFormat'] },
-        }).catch(() => undefined);
+        });
     };
 
     const onLanguageChange = (value: string) => {
         const locale = value as SupportedLocale;
 
-        void setUserSettings({ settings: { language: locale } }).catch(() => undefined);
+        setUserSettings({ settings: { language: locale } });
     };
 
     const onUseSystemLanguage = () => {

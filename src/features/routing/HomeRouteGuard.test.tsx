@@ -3,7 +3,7 @@ import { beforeEach, expect, test } from 'vitest';
 
 import { act, render, screen } from '@testing-library/react';
 
-import type { User, UserSettings } from 'api/chipin.types';
+import type { SelfUser, UserSettings } from 'api/chipin.types';
 import { useAuthStore } from 'store/authStore';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
@@ -93,15 +93,14 @@ test('waits for fetched settings instead of routing from a stale cached preferen
                 id: 'user-1',
                 email: 'user@example.com',
                 displayName: 'Alex',
-                firstName: null,
-                lastName: null,
                 picture: null,
                 role: 'USER',
                 subscriptionUntil: null,
+                inviteToken: 'invite-token-user',
                 settings,
                 createdAt: 1,
                 updatedAt: 1,
-            } satisfies User,
+            } satisfies SelfUser,
         });
         useLoadingStore.getState().setLoading('users', 'self', 'fetched');
     });

@@ -25,15 +25,11 @@ const SoloPreferencesSection = ({ isLoading }: Props) => {
     );
 
     const onSoloModeByDefaultChange = (isEnabled: boolean) => {
-        void setUserSettings({ settings: { soloModeByDefault: isEnabled } }).catch(
-            () => undefined,
-        );
+        setUserSettings({ settings: { soloModeByDefault: isEnabled } });
     };
 
     const onSaveGroupExpensesToSoloChange = (isEnabled: boolean) => {
-        void setUserSettings({ settings: { saveGroupExpensesToSolo: isEnabled } }).catch(
-            () => undefined,
-        );
+        setUserSettings({ settings: { saveGroupExpensesToSolo: isEnabled } });
     };
 
     return (

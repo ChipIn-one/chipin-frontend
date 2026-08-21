@@ -1,10 +1,9 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { ACTIVITY_ACTIONS } from 'constants/activity';
+import type { AppEvent } from 'api/activity.types';
 
 import {
     fetchActivities,
-    fetchActivity,
     fetchActivityChildren,
     fetchActivityPreviews,
 } from './activityApi';
@@ -23,58 +22,21 @@ describe('activityApi', () => {
 
     test('fetches the current user activity feed with pagination', () => {
         const response = { items: [], nextCursor: null };
+        const controller = new AbortController();
         vi.mocked(apiInstance.get).mockResolvedValue({ data: response });
 
-        return fetchActivities({ limit: 15, cursor: 0 }).then(result => {
+        return fetchActivities({ limit: 15, cursor: 0 }, controller.signal).then(result => {
             expect(apiInstance.get).toHaveBeenCalledWith('/users/self/activities', {
                 params: { limit: 15, cursor: 0 },
+                signal: controller.signal,
             });
             expect(result).toEqual(response);
         });
     });
 
-    test('fetches one visible activity by id', () => {
-        const response = {
-            id: 'activity-1',
-            seq: 1,
-            domain: 'LEDGER',
-            action: ACTIVITY_ACTIONS.EXPENSE_CREATED,
-            actorUserId: 'user-1',
-            actorSnapshot: {
-                displayName: 'Alex',
-                picture: null,
-            },
-            subjectType: 'expense',
-            subjectId: 'expense-1',
-            groupId: null,
-            metadata: {
-                type: 'expense',
-                entryId: 'expense-1',
-                groupId: null,
-                groupName: null,
-                description: 'Dinner',
-                amount: 30,
-                currency: 'USD',
-                payerId: 'user-1',
-                payerDisplayName: 'Alex',
-                shares: [],
-                fieldDiffs: [],
-            },
-            createdAt: 1_785_328_628,
-            parentActivityId: null,
-        };
-        vi.mocked(apiInstance.get).mockResolvedValue({ data: response });
-
-        return fetchActivity('activity-1').then(result => {
-            expect(apiInstance.get).toHaveBeenCalledWith(
-                '/users/self/activities/activity-1',
-            );
-            expect(result).toEqual(response);
-        });
-    });
-
     test('fetches child activities for the requested parent and category', () => {
-        const response = { items: [], nextCursor: null };
+        const response = { parent: {} as AppEvent, items: [], nextCursor: null };
+        const controller = new AbortController();
         vi.mocked(apiInstance.get).mockResolvedValue({ data: response });
 
         return fetchActivityChildren({
@@ -82,7 +44,7 @@ describe('activityApi', () => {
             category: 'expense',
             limit: 15,
             cursor: 30,
-        }).then(result => {
+        }, controller.signal).then(result => {
             expect(apiInstance.get).toHaveBeenCalledWith(
                 '/users/self/activities/activity-1/children',
                 {
@@ -91,6 +53,7 @@ describe('activityApi', () => {
                         limit: 15,
                         cursor: 30,
                     },
+                    signal: controller.signal,
                 },
             );
             expect(result).toEqual(response);
@@ -99,11 +62,16 @@ describe('activityApi', () => {
 
     test('fetches the next dashboard activity preview page', () => {
         const response = { items: [], nextCursor: 60 };
+        const controller = new AbortController();
         vi.mocked(apiInstance.get).mockResolvedValue({ data: response });
 
-        return fetchActivityPreviews({ limit: 20, cursor: 40 }).then(result => {
+        return fetchActivityPreviews(
+            { limit: 20, cursor: 40 },
+            controller.signal,
+        ).then(result => {
             expect(apiInstance.get).toHaveBeenCalledWith('/users/self/activity-previews', {
                 params: { limit: 20, cursor: 40 },
+                signal: controller.signal,
             });
             expect(result).toEqual(response);
         });

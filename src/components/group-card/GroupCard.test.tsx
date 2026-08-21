@@ -50,8 +50,10 @@ const group = {
     createdAt: 1,
     updatedAt: 1,
     coverUrl: 'https://cdn.example.com/group-cover.webp',
+    simplifyDebts: true,
     role: 'OWNER',
     status: 'ACTIVE',
+    lastUsedCurrency: null,
     recentActivities: { items: [], nextCursor: null },
 } satisfies Group;
 

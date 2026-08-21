@@ -24,6 +24,8 @@
     "subeventsLoadErrorDescription": "Попробуйте загрузить обновления активности ещё раз.",
     "subeventsParentLoadErrorTitle": "Не удалось загрузить активность",
     "subeventsParentLoadErrorDescription": "Попробуйте загрузить родительскую активность ещё раз.",
+    "subeventsParentUnavailableTitle": "Сводка активности недоступна",
+    "subeventsParentUnavailableDescription": "История обновлений по-прежнему доступна ниже.",
     "retryAction": "Повторить",
     "dateDivider": {
         "today": "Сегодня",

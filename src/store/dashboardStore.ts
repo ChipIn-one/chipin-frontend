@@ -1,17 +1,20 @@
 import { create } from 'zustand';
 
 import * as activityApi from 'api/activityApi';
-import { fetchApiCurrencyRates, fetchApiDashboard } from 'api/chipin';
-import type { ApiCurrencyRatesResponse, BalanceEntry, BalancesMap } from 'api/chipin.raw.types';
-import type { ActivityFeedItem } from 'api/chipin.types';
-import { sortBalancesByCurrency } from 'helpers/currencies';
+import * as chipinApi from 'api/chipin';
+import type { ApiCurrencyRatesResponse } from 'api/chipin.raw.types';
+import type { ActivityFeedItem, Dashboard } from 'api/chipin.types';
+import { normalizeApiError } from 'helpers/errors';
 import { getLocalUser } from 'helpers/localStorage';
 
 import { ACTIVITY_API_LIMIT } from './activity-store/constants';
-import { calcBalancesSummary } from './commonSelectors';
+import { createRequestChannel } from './internal/resourceRequests';
+import { useErrorsStore } from './errorsStore';
 import { useLoadingStore } from './loadingStore';
-import { selectUserCurrency } from './users-store';
-import { useUsersStore } from './users-store';
+
+const dashboardDataChannel = createRequestChannel();
+const dashboardActivityPageChannel = createRequestChannel();
+const currencyRatesChannel = createRequestChannel();
 
 const APP_MODES = {
     GROUP: 'group',
@@ -22,23 +25,18 @@ type AppMode = (typeof APP_MODES)[keyof typeof APP_MODES];
 
 interface DashboardStoreState {
     appMode: AppMode;
-    balances: BalancesMap;
-    owedEntries: BalanceEntry[];
-    oweEntries: BalanceEntry[];
-    netTotalInBase: number | null;
-    owedTotalInBase: number | null;
-    owingTotalInBase: number | null;
+    balances: Dashboard['balances'];
     activityItems: ActivityFeedItem[];
     activityNextCursor: number | null;
     currencies: ApiCurrencyRatesResponse;
 }
 
 export interface DashboardStore extends DashboardStoreState {
-    fetchSetDashboardData: () => void;
+    fetchSetDashboardData: () => Promise<void>;
+    fetchSetDashboard: (force?: boolean) => Promise<void>;
     fetchMoreDashboardActivity: () => Promise<void>;
     setAppMode: (appMode: AppMode) => void;
     setDefaultAppMode: (isSoloModeByDefault: boolean) => void;
-    setDashboardSummaryCurrency: (defaultCurrency: string) => void;
     setInitialDashboardStore: () => void;
 }
 
@@ -52,11 +50,6 @@ const createInitialDashboardState = (): DashboardStoreState => {
     return {
         appMode: getDefaultAppMode(localUser?.settings?.soloModeByDefault ?? false),
         balances: {},
-        owedEntries: [],
-        oweEntries: [],
-        netTotalInBase: null,
-        owedTotalInBase: null,
-        owingTotalInBase: null,
         activityItems: [],
         activityNextCursor: null,
         currencies: {
@@ -73,71 +66,90 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     ...createInitialDashboardState(),
 
     fetchSetDashboardData: () => {
-        const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        clearError('dashboard', 'data');
+        const currenciesRequest = currencyRatesChannel.request(chipinApi.fetchApiCurrencyRates);
 
+        return Promise.all([
+            get().fetchSetDashboard(),
+            currenciesRequest.promise
+                .then(currencies => {
+                    if (currenciesRequest.isCurrent()) {
+                        set({ currencies });
+                    }
+                })
+                .catch((error: unknown) => {
+                    if (currenciesRequest.isCurrent()) {
+                        setError('dashboard', 'data', normalizeApiError(error));
+                    }
+                }),
+        ]).then(() => undefined);
+    },
+    fetchSetDashboard: (force = false) => {
+        const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        clearError('dashboard', 'data');
+
+        if (force) {
+            dashboardActivityPageChannel.abort();
+            clearError('dashboard', 'nextPage');
+        }
+
+        const dashboardRequest = dashboardDataChannel.request(chipinApi.fetchApiDashboard, {
+            force,
+        });
         setLoading('dashboard', 'data', 'loading');
         setLoading('dashboard', 'nextPage', 'fetched');
 
-        Promise.all([fetchApiDashboard(), fetchApiCurrencyRates()])
-            .then(([dashboard, currencies]) => {
-                const defaultCurrency = selectUserCurrency(useUsersStore.getState());
-                const entries = Object.values(dashboard.balances);
-                const { netTotalInBase, owedTotalInBase, owingTotalInBase } = calcBalancesSummary(
-                    defaultCurrency,
-                    currencies.rates,
-                    currencies.base,
-                    {
-                        balances: dashboard.balances,
-                    },
-                );
-                const owedEntries = sortBalancesByCurrency(
-                    entries.filter(entry => entry.netBalance > 0),
-                    currencies.rates,
-                    currencies.base,
-                    defaultCurrency,
-                );
-                const oweEntries = sortBalancesByCurrency(
-                    entries.filter(entry => entry.netBalance < 0),
-                    currencies.rates,
-                    currencies.base,
-                    defaultCurrency,
-                );
+        return dashboardRequest.promise
+            .then(dashboard => {
+                if (!dashboardRequest.isCurrent()) {
+                    return;
+                }
 
                 set({
                     balances: dashboard.balances,
-                    owedEntries,
-                    oweEntries,
-                    netTotalInBase,
-                    owedTotalInBase,
-                    owingTotalInBase,
                     activityItems: dashboard.activity.items,
                     activityNextCursor: dashboard.activity.nextCursor,
-                    currencies,
                 });
-                setLoading('dashboard', 'data', 'fetched');
             })
-            .catch(error => {
-                console.error('Error fetching dashboard data:', error);
-                setLoading('dashboard', 'data', 'fetched');
+            .catch((error: unknown) => {
+                if (dashboardRequest.isCurrent()) {
+                    setError('dashboard', 'data', normalizeApiError(error));
+                }
+            })
+            .finally(() => {
+                if (dashboardRequest.isCurrent()) {
+                    setLoading('dashboard', 'data', 'fetched');
+                }
             });
     },
     fetchMoreDashboardActivity: () => {
         const { activityNextCursor } = get();
         const { dashboard, setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
 
         if (activityNextCursor === null || dashboard.nextPage === 'loading') {
             return Promise.resolve();
         }
 
+        clearError('dashboard', 'nextPage');
         setLoading('dashboard', 'nextPage', 'loading');
+        const request = dashboardActivityPageChannel.request(
+            signal =>
+                activityApi.fetchActivityPreviews(
+                    {
+                        limit: ACTIVITY_API_LIMIT,
+                        cursor: activityNextCursor,
+                    },
+                    signal,
+                ),
+            { identity: String(activityNextCursor) },
+        );
 
-        return activityApi
-            .fetchActivityPreviews({
-                limit: ACTIVITY_API_LIMIT,
-                cursor: activityNextCursor,
-            })
+        return request.promise
             .then(data => {
-                if (get().activityNextCursor !== activityNextCursor) {
+                if (!request.isCurrent()) {
                     return;
                 }
 
@@ -145,47 +157,17 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
                     activityItems: [...state.activityItems, ...data.items],
                     activityNextCursor: data.nextCursor,
                 }));
-                setLoading('dashboard', 'nextPage', 'fetched');
             })
             .catch((error: unknown) => {
-                if (get().activityNextCursor !== activityNextCursor) {
-                    return undefined;
+                if (request.isCurrent()) {
+                    setError('dashboard', 'nextPage', normalizeApiError(error));
                 }
-
-                setLoading('dashboard', 'nextPage', 'fetched');
-                return Promise.reject(error);
+            })
+            .finally(() => {
+                if (request.isCurrent()) {
+                    setLoading('dashboard', 'nextPage', 'fetched');
+                }
             });
-    },
-    setDashboardSummaryCurrency: defaultCurrency => {
-        set(state => {
-            const entries = Object.values(state.balances);
-            const { netTotalInBase, owedTotalInBase, owingTotalInBase } = calcBalancesSummary(
-                defaultCurrency,
-                state.currencies.rates,
-                state.currencies.base,
-                {
-                    balances: state.balances,
-                },
-            );
-
-            return {
-                netTotalInBase,
-                owedTotalInBase,
-                owingTotalInBase,
-                owedEntries: sortBalancesByCurrency(
-                    entries.filter(entry => entry.netBalance > 0),
-                    state.currencies.rates,
-                    state.currencies.base,
-                    defaultCurrency,
-                ),
-                oweEntries: sortBalancesByCurrency(
-                    entries.filter(entry => entry.netBalance < 0),
-                    state.currencies.rates,
-                    state.currencies.base,
-                    defaultCurrency,
-                ),
-            };
-        });
     },
     setAppMode: appMode => {
         set({ appMode });
@@ -194,8 +176,12 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
         set({ appMode: getDefaultAppMode(isSoloModeByDefault) });
     },
     setInitialDashboardStore: () => {
+        dashboardDataChannel.abort();
+        dashboardActivityPageChannel.abort();
+        currencyRatesChannel.abort();
         set(createInitialDashboardState());
         useLoadingStore.getState().setLoading('dashboard', 'nextPage', 'fetched');
+        useErrorsStore.getState().resetErrors();
     },
 }));
 

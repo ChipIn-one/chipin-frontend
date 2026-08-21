@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 
 import type { FriendUser } from 'api/chipin.types';
+import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { selectFriendRemoving } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
@@ -20,13 +21,22 @@ interface Props {
 
 const RemoveFriendAlertDialog = ({ friend, isOpened, setIsOpened }: Props) => {
     const { t } = useTranslation(['common', 'friends', 'toasts']);
-    const removeFriend = useUsersStore(state => state.removeFriend);
     const isRemovingFriend = useLoadingStore(selectFriendRemoving);
 
     const onRemoveFriend = () => {
-        return removeFriend({ userId: friend.id }).then(friendDisplayName => {
-            toast.success(t('toasts:friend.removed', { name: friendDisplayName }));
-        });
+        return useUsersStore.getState().removeFriend({ userId: friend.id })
+            .then(() => {
+                toast.success(t('toasts:friend.removed', {
+                    name: friend.displayName,
+                }));
+            })
+            .catch(error => {
+                toast.error(resolveApiErrorMessageFromError(
+                    error,
+                    t('toasts:common.requestFailed'),
+                ));
+                return Promise.reject(error);
+            });
     };
 
     return (

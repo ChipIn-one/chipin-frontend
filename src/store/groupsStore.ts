@@ -1,92 +1,116 @@
-import i18n from 'i18next';
-import { toast } from 'sonner';
 import { create } from 'zustand';
 
-import {
-    createApiGroup,
-    fetchApiUserGroupById,
-    fetchApiUserGroups,
-    inviteApiUserToGroup,
-    kickApiGroupMember,
-    leaveApiGroup,
-    removeApiGroup,
-    updateApiGroup,
-} from 'api/chipin';
-import type { BalanceEntry } from 'api/chipin.raw.types';
-import type { CreateSettlementParams, Group, UploadGroupCoverParams } from 'api/chipin.types';
+import * as chipinApi from 'api/chipin';
+import type {
+    Group,
+    KickGroupMemberParams,
+    LeaveGroupParams,
+    RemoveGroupParams,
+    UploadGroupCoverParams,
+} from 'api/chipin.types';
 import * as groupsApi from 'api/groupsApi';
-import * as ledgerApi from 'api/ledgerApi';
+import { getAuthSessionVersion, isAuthSessionCurrent } from 'helpers/authSession';
+import { normalizeApiError } from 'helpers/errors';
 
+import { useActivityStore } from './activity-store/actions';
+import { createRequestChannel } from './internal/resourceRequests';
 import { useDashboardStore } from './dashboardStore';
-import { calcGroupSummary, selectGroupBalances } from './groupsSelectors';
+import { useErrorsStore } from './errorsStore';
 import { useLoadingStore } from './loadingStore';
-import { selectUserCurrency } from './users-store';
 import { useUsersStore } from './users-store';
+
+const groupsChannel = createRequestChannel();
+const groupDetailChannel = createRequestChannel();
+let groupsMutationGeneration = 0;
+
+const createGroupsMutationGuard = () => {
+    const generation = groupsMutationGeneration;
+    const authSessionVersion = getAuthSessionVersion();
+
+    return () => {
+        return (
+            generation === groupsMutationGeneration &&
+            isAuthSessionCurrent(authSessionVersion)
+        );
+    };
+};
 
 export interface GroupsStore {
     selectedGroup: Group | null;
     groups: Group[];
-    groupsNextCursor: number | null;
-    oweEntries: BalanceEntry[];
-    owedEntries: BalanceEntry[];
-    netTotalInBase: number | null;
-    owedTotalInBase: number | null;
-    owingTotalInBase: number | null;
+    groupsNextCursor: string | null;
 
     setInitialGroupsStore: () => void;
-    setSelectedGroup: (group: Group) => void;
-    fetchSetGroups: () => Promise<Group[]>;
-    fetchSetGroupById: (groupId: string | undefined) => Promise<Group | void>;
+    setSelectedGroup: (group: Group | null) => void;
+    fetchSetGroups: (force?: boolean) => Promise<Group[]>;
+    fetchSetGroupById: (groupId: string, force?: boolean) => Promise<Group | null>;
     createGroup: (params: { groupName: string; groupDescription?: string }) => Promise<Group>;
-    createSettlement: (params: Omit<CreateSettlementParams, 'groupId'>) => Promise<void>;
+    removeGroup: (params: RemoveGroupParams) => Promise<void>;
+    leaveGroup: (params: LeaveGroupParams) => Promise<void>;
+    kickGroupMember: (params: KickGroupMemberParams) => Promise<void>;
     updateGroup: (params: { groupName: string; groupDescription?: string }) => Promise<Group>;
     uploadGroupCover: (params: UploadGroupCoverParams) => Promise<Group>;
-    removeGroup: () => Promise<Group['name']>;
-    leaveGroup: (params?: { newOwnerId?: string }) => Promise<Group['name']>;
-    kickGroupMember: ({ userId }: { userId: string }) => Promise<string>;
     joinGroup: ({ inviteToken }: { inviteToken: string }) => Promise<Group>;
-    setSelectedGroupSummaryCurrency: (defaultCurrency: string) => void;
 }
 
 const initialGroupsStore = {
     selectedGroup: null,
     groups: [],
     groupsNextCursor: null,
-    oweEntries: [],
-    owedEntries: [],
-    netTotalInBase: null,
-    owedTotalInBase: null,
-    owingTotalInBase: null,
 };
 
-const GROUP_SUMMARY_RESET = {
-    owedEntries: [] as BalanceEntry[],
-    oweEntries: [] as BalanceEntry[],
-    netTotalInBase: null as number | null,
-    owedTotalInBase: null as number | null,
-    owingTotalInBase: null as number | null,
+const refreshAfterGroupRemoval = (
+    fetchSetGroups: (force?: boolean) => Promise<Group[]>,
+): Promise<void> => {
+    return Promise.all([
+        fetchSetGroups(true),
+        useUsersStore.getState().fetchSetFriends(true),
+        useDashboardStore.getState().fetchSetDashboard(true),
+        useActivityStore.getState().fetchSetActivity(true),
+    ]).then(() => undefined);
+};
+
+const refreshAfterGroupMemberChange = (
+    groupId: string,
+    fetchSetGroupById: GroupsStore['fetchSetGroupById'],
+): Promise<void> => {
+    return Promise.all([
+        fetchSetGroupById(groupId, true),
+        useUsersStore.getState().fetchSetFriends(true),
+        useDashboardStore.getState().fetchSetDashboard(true),
+        useActivityStore.getState().fetchSetActivity(true),
+    ]).then(() => undefined);
 };
 
 export const useGroupsStore = create<GroupsStore>((set, get) => ({
     ...initialGroupsStore,
 
     setInitialGroupsStore: () => {
+        groupsChannel.abort();
+        groupDetailChannel.abort();
+        groupsMutationGeneration += 1;
         set(initialGroupsStore);
+        useErrorsStore.getState().resetErrors();
     },
     setSelectedGroup: group => {
-        const { base, rates } = useDashboardStore.getState().currencies;
-        const defaultCurrency = selectUserCurrency(useUsersStore.getState());
-        set({
-            selectedGroup: group,
-            ...calcGroupSummary(selectGroupBalances(group), base, rates, defaultCurrency),
-        });
+        useErrorsStore.getState().clearError('group', 'data');
+        useLoadingStore.getState().setLoading('group', 'data', 'fetched');
+        set({ selectedGroup: group });
     },
-    fetchSetGroups: () => {
+    fetchSetGroups: (force = false) => {
         const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        clearError('group', 'list');
+
+        const request = groupsChannel.request(chipinApi.fetchApiUserGroups, { force });
         setLoading('group', 'list', 'loading');
 
-        return fetchApiUserGroups()
+        return request.promise
             .then(response => {
+                if (!request.isCurrent()) {
+                    return get().groups;
+                }
+
                 const groups = response.items;
                 const selectedGroupId = get().selectedGroup?.id;
                 let selectedGroup: Group | undefined;
@@ -95,363 +119,285 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     selectedGroup = groups.find(group => group.id === selectedGroupId);
                 }
 
-                set({ groups, groupsNextCursor: response.nextCursor });
-
-                if (selectedGroup) {
-                    get().setSelectedGroup(selectedGroup);
-                }
+                set({
+                    groups,
+                    groupsNextCursor: response.nextCursor,
+                    ...(selectedGroupId && { selectedGroup: selectedGroup ?? null }),
+                });
 
                 return groups;
             })
             .catch((error: unknown) => {
-                console.error('Error fetching user groups:', error);
-                return Promise.reject(error);
+                if (request.isCurrent()) {
+                    setError('group', 'list', normalizeApiError(error));
+                }
+                return get().groups;
             })
             .finally(() => {
-                setLoading('group', 'list', 'fetched');
+                if (request.isCurrent()) {
+                    setLoading('group', 'list', 'fetched');
+                }
             });
     },
-    fetchSetGroupById: groupId => {
-        if (!groupId) {
-            toast.error(i18n.t('toasts:group.invalidGroupId'));
-            return Promise.resolve();
-        }
+    fetchSetGroupById: (groupId, force = false) => {
+        const { groups, selectedGroup } = get();
+        const cachedGroup = selectedGroup?.id === groupId
+            ? selectedGroup
+            : groups.find(group => group.id === groupId);
 
-        const selectedGroup = get().selectedGroup;
-        if (selectedGroup?.id === groupId) {
-            return Promise.resolve(selectedGroup);
-        }
-
-        const cachedGroup = get().groups.find(group => group.id === groupId);
-        if (cachedGroup) {
-            get().setSelectedGroup(cachedGroup);
+        if (cachedGroup && !force) {
+            set({ selectedGroup: cachedGroup });
             return Promise.resolve(cachedGroup);
         }
 
-        useLoadingStore.getState().setLoading('group', 'data', 'loading');
+        const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        const request = groupDetailChannel.request(
+            signal => chipinApi.fetchApiUserGroupById(groupId, signal),
+            { force, identity: groupId },
+        );
 
-        return fetchApiUserGroupById(groupId)
-            .then(groupFromApi => {
-                get().setSelectedGroup(groupFromApi);
-                return groupFromApi;
+        clearError('group', 'data');
+        setLoading('group', 'data', 'loading');
+
+        return request.promise
+            .then(group => {
+                if (!request.isCurrent()) {
+                    return get().selectedGroup;
+                }
+
+                set({ selectedGroup: group });
+                return group;
             })
             .catch((error: unknown) => {
-                console.error('Error fetching user groups:', error);
+                if (request.isCurrent()) {
+                    setError('group', 'data', normalizeApiError(error));
+                }
+                return get().selectedGroup?.id === groupId ? get().selectedGroup : null;
+            })
+            .finally(() => {
+                if (request.isCurrent()) {
+                    setLoading('group', 'data', 'fetched');
+                }
+            });
+    },
+    createGroup: ({ groupName, groupDescription }) => {
+        const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        const isCurrent = createGroupsMutationGuard();
+        clearError('group', 'add');
+        setLoading('group', 'add', 'loading');
+
+        return chipinApi
+            .createApiGroup({ groupName, groupDescription })
+            .then(newGroup => {
+                if (isCurrent()) {
+                    const { groups } = get();
+                    set({
+                        groups: [...groups, newGroup],
+                        selectedGroup: newGroup,
+                    });
+                }
+                return newGroup;
+            })
+            .catch((error: unknown) => {
+                if (isCurrent()) {
+                    setError('group', 'add', normalizeApiError(error));
+                }
                 return Promise.reject(error);
             })
             .finally(() => {
-                useLoadingStore.getState().setLoading('group', 'data', 'fetched');
-            });
-    },
-
-    createGroup: ({ groupName, groupDescription }) => {
-        const { setLoading } = useLoadingStore.getState();
-        setLoading('group', 'add', 'loading');
-
-        return createApiGroup({ groupName, groupDescription })
-            .then(newGroup => {
-                const { groups } = get();
-                const { base, rates } = useDashboardStore.getState().currencies;
-                const defaultCurrency = selectUserCurrency(useUsersStore.getState());
-                set({
-                    groups: [...groups, newGroup],
-                    selectedGroup: newGroup,
-                    ...calcGroupSummary(
-                        selectGroupBalances(newGroup),
-                        base,
-                        rates,
-                        defaultCurrency,
-                    ),
-                });
-                return newGroup;
-            })
-            .finally(() => {
-                setLoading('group', 'add', 'fetched');
-            });
-    },
-    createSettlement: params => {
-        const selectedGroup = get().selectedGroup;
-
-        if (!selectedGroup) {
-            return Promise.reject(new Error('Group settlement context is unavailable'));
-        }
-
-        const currentUserId = useUsersStore.getState().user?.id;
-        const memberId = params.fromUserId === currentUserId ? params.toUserId : params.fromUserId;
-        const member = selectedGroup.members.find(groupMember => groupMember.user.id === memberId);
-
-        if (!member) {
-            return Promise.reject(new Error('Group settlement participant is unavailable'));
-        }
-
-        const balance = member.balancesByCurrency[params.currency];
-
-        if (!balance) {
-            return Promise.reject(new Error('Group settlement balance is unavailable'));
-        }
-
-        const { setLoading } = useLoadingStore.getState();
-        const request = { ...params, groupId: selectedGroup.id } satisfies CreateSettlementParams;
-        setLoading('settlement', 'add', 'loading');
-
-        return ledgerApi
-            .createSettlement(request)
-            .then(() => {
-                set(state => {
-                    const currentGroup = state.selectedGroup;
-
-                    if (!currentGroup || currentGroup.id !== selectedGroup.id) {
-                        return {};
-                    }
-
-                    const updatedGroup: Group = {
-                        ...currentGroup,
-                        members: currentGroup.members.map(groupMember => {
-                            if (groupMember.user.id !== memberId) {
-                                return groupMember;
-                            }
-
-                            const currentBalance = groupMember.balancesByCurrency[params.currency];
-
-                            if (!currentBalance) {
-                                return groupMember;
-                            }
-
-                            const nextBalances =
-                                params.amount === Math.abs(currentBalance.netBalance)
-                                    ? Object.fromEntries(
-                                          Object.entries(groupMember.balancesByCurrency).filter(
-                                              ([currency]) => currency !== params.currency,
-                                          ),
-                                      )
-                                    : {
-                                          ...groupMember.balancesByCurrency,
-                                          [params.currency]: {
-                                              ...currentBalance,
-                                              netBalance:
-                                                  currentBalance.netBalance +
-                                                  (currentBalance.netBalance < 0
-                                                      ? params.amount
-                                                      : -params.amount),
-                                          },
-                                      };
-
-                            return { ...groupMember, balancesByCurrency: nextBalances };
-                        }),
-                    };
-                    const { base, rates } = useDashboardStore.getState().currencies;
-                    const defaultCurrency = selectUserCurrency(useUsersStore.getState());
-
-                    return {
-                        groups: state.groups.map(group =>
-                            group.id === updatedGroup.id ? updatedGroup : group,
-                        ),
-                        selectedGroup: updatedGroup,
-                        ...calcGroupSummary(
-                            selectGroupBalances(updatedGroup),
-                            base,
-                            rates,
-                            defaultCurrency,
-                        ),
-                    };
-                });
-            })
-            .finally(() => {
-                setLoading('settlement', 'add', 'fetched');
+                if (isCurrent()) {
+                    setLoading('group', 'add', 'fetched');
+                }
             });
     },
     updateGroup: ({ groupName, groupDescription }) => {
         const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
         const { selectedGroup } = get();
+        const isCurrent = createGroupsMutationGuard();
 
+        clearError('group', 'update');
         setLoading('group', 'update', 'loading');
 
         if (!selectedGroup) {
-            return Promise.reject(new Error('No selected group'));
+            const error = new Error('No selected group');
+            setError('group', 'update', normalizeApiError(error));
+            return Promise.reject(error);
         }
 
-        return updateApiGroup({
-            groupId: selectedGroup.id,
-            groupName,
-            groupDescription,
-        })
+        return chipinApi
+            .updateApiGroup({
+                groupId: selectedGroup.id,
+                groupName,
+                groupDescription,
+            })
             .then(updatedGroup => {
-                const { groups } = get();
-                set({
-                    groups: groups.map(group =>
-                        group.id === updatedGroup.id ? updatedGroup : group,
-                    ),
-                    selectedGroup: updatedGroup,
-                });
+                if (isCurrent()) {
+                    const { groups } = get();
+                    set({
+                        groups: groups.map(group =>
+                            group.id === updatedGroup.id ? updatedGroup : group,
+                        ),
+                        selectedGroup: updatedGroup,
+                    });
+                }
                 return updatedGroup;
             })
+            .catch((error: unknown) => {
+                if (isCurrent()) {
+                    setError('group', 'update', normalizeApiError(error));
+                }
+                return Promise.reject(error);
+            })
             .finally(() => {
-                setLoading('group', 'update', 'fetched');
+                if (isCurrent()) {
+                    setLoading('group', 'update', 'fetched');
+                }
             });
     },
     uploadGroupCover: params => {
         const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        const isCurrent = createGroupsMutationGuard();
+        clearError('group', 'cover');
         setLoading('group', 'cover', 'loading');
 
         return groupsApi
             .uploadGroupCover(params)
             .then(updatedGroup => {
-                set(state => ({
-                    groups: state.groups.map(group =>
-                        group.id === updatedGroup.id ? updatedGroup : group,
-                    ),
-                    selectedGroup:
-                        state.selectedGroup?.id === updatedGroup.id
-                            ? updatedGroup
-                            : state.selectedGroup,
-                }));
+                if (isCurrent()) {
+                    set(state => ({
+                        groups: state.groups.map(group =>
+                            group.id === updatedGroup.id ? updatedGroup : group,
+                        ),
+                        selectedGroup:
+                            state.selectedGroup?.id === updatedGroup.id
+                                ? updatedGroup
+                                : state.selectedGroup,
+                    }));
+                }
                 return updatedGroup;
             })
+            .catch((error: unknown) => {
+                if (isCurrent()) {
+                    setError('group', 'cover', normalizeApiError(error));
+                }
+                return Promise.reject(error);
+            })
             .finally(() => {
-                setLoading('group', 'cover', 'fetched');
+                if (isCurrent()) {
+                    setLoading('group', 'cover', 'fetched');
+                }
             });
     },
-    removeGroup: () => {
-        const selectedGroup = get().selectedGroup;
-
-        if (!selectedGroup) {
-            return Promise.reject(new Error('No selected group'));
-        }
-
+    removeGroup: ({ groupId }) => {
         const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        const isCurrent = createGroupsMutationGuard();
+        clearError('group', 'remove');
         setLoading('group', 'remove', 'loading');
 
-        return removeApiGroup({ groupId: selectedGroup.id })
+        return chipinApi
+            .removeApiGroup({ groupId })
+            .catch((error: unknown) => {
+                if (isCurrent()) {
+                    setError('group', 'remove', normalizeApiError(error));
+                }
+                return Promise.reject(error);
+            })
             .then(() => {
-                const { groups } = get();
-                const updatedGroups = groups.filter(group => group.id !== selectedGroup.id);
-
-                set({
-                    groups: updatedGroups,
-                    selectedGroup: null,
-                    ...GROUP_SUMMARY_RESET,
-                });
-
-                return selectedGroup.name;
+                return isCurrent()
+                    ? refreshAfterGroupRemoval(get().fetchSetGroups)
+                    : undefined;
             })
             .finally(() => {
-                setLoading('group', 'remove', 'fetched');
+                if (isCurrent()) {
+                    setLoading('group', 'remove', 'fetched');
+                }
             });
     },
-    leaveGroup: params => {
-        const selectedGroup = get().selectedGroup;
-
-        if (!selectedGroup) {
-            return Promise.reject(new Error('No selected group'));
-        }
-
+    leaveGroup: ({ groupId, newOwnerId }) => {
         const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        const isCurrent = createGroupsMutationGuard();
+        clearError('group', 'leave');
         setLoading('group', 'leave', 'loading');
 
-        return leaveApiGroup({ groupId: selectedGroup.id, newOwnerId: params?.newOwnerId })
+        return chipinApi
+            .leaveApiGroup({ groupId, newOwnerId })
+            .catch((error: unknown) => {
+                if (isCurrent()) {
+                    setError('group', 'leave', normalizeApiError(error));
+                }
+                return Promise.reject(error);
+            })
             .then(() => {
-                const { groups } = get();
-                const updatedGroups = groups.filter(group => group.id !== selectedGroup.id);
-
-                set({
-                    groups: updatedGroups,
-                    selectedGroup: null,
-                    ...GROUP_SUMMARY_RESET,
-                });
-
-                return selectedGroup.name;
+                return isCurrent()
+                    ? refreshAfterGroupRemoval(get().fetchSetGroups)
+                    : undefined;
             })
             .finally(() => {
-                setLoading('group', 'leave', 'fetched');
+                if (isCurrent()) {
+                    setLoading('group', 'leave', 'fetched');
+                }
             });
     },
-    kickGroupMember: ({ userId }) => {
-        const selectedGroup = get().selectedGroup;
-
-        if (!selectedGroup) {
-            return Promise.reject(new Error('No selected group'));
-        }
-
-        const kickedMember = selectedGroup.members.find(member => member.user.id === userId);
-
-        if (!kickedMember) {
-            return Promise.reject(new Error('No member found to kick'));
-        }
-
+    kickGroupMember: ({ groupId, userId }) => {
         const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        const isCurrent = createGroupsMutationGuard();
+        clearError('group', 'kick');
         setLoading('group', 'kick', 'loading');
 
-        return kickApiGroupMember({ groupId: selectedGroup.id, userId })
+        return chipinApi
+            .kickApiGroupMember({ groupId, userId })
+            .catch((error: unknown) => {
+                if (isCurrent()) {
+                    setError('group', 'kick', normalizeApiError(error));
+                }
+                return Promise.reject(error);
+            })
             .then(() => {
-                const { groups } = get();
-                const updatedSelectedGroup: Group = {
-                    ...selectedGroup,
-                    members: selectedGroup.members.filter(member => member.user.id !== userId),
-                };
-
-                const { base, rates } = useDashboardStore.getState().currencies;
-                const defaultCurrency = selectUserCurrency(useUsersStore.getState());
-                set({
-                    groups: groups.map(group =>
-                        group.id === selectedGroup.id ? updatedSelectedGroup : group,
-                    ),
-                    selectedGroup: updatedSelectedGroup,
-                    ...calcGroupSummary(
-                        selectGroupBalances(updatedSelectedGroup),
-                        base,
-                        rates,
-                        defaultCurrency,
-                    ),
-                });
-
-                return kickedMember.user.displayName;
+                return isCurrent()
+                    ? refreshAfterGroupMemberChange(groupId, get().fetchSetGroupById)
+                    : undefined;
             })
             .finally(() => {
-                setLoading('group', 'kick', 'fetched');
+                if (isCurrent()) {
+                    setLoading('group', 'kick', 'fetched');
+                }
             });
     },
     joinGroup: ({ inviteToken }) => {
         const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        const isCurrent = createGroupsMutationGuard();
+        clearError('group', 'join');
         setLoading('group', 'join', 'loading');
-        return inviteApiUserToGroup({ inviteToken })
+        return chipinApi
+            .inviteApiUserToGroup({ inviteToken })
             .then(joinedGroup => {
-                const { groups } = get();
-                const { base, rates } = useDashboardStore.getState().currencies;
-                const defaultCurrency = selectUserCurrency(useUsersStore.getState());
-                set({
-                    groups: [...groups, joinedGroup],
-                    selectedGroup: joinedGroup,
-                    ...calcGroupSummary(
-                        selectGroupBalances(joinedGroup),
-                        base,
-                        rates,
-                        defaultCurrency,
-                    ),
-                });
+                if (isCurrent()) {
+                    const { groups } = get();
+                    set({
+                        groups: [...groups, joinedGroup],
+                        selectedGroup: joinedGroup,
+                    });
+                }
                 return joinedGroup;
             })
-            .catch(e => {
-                console.error(e);
-                throw e;
+            .catch((error: unknown) => {
+                if (isCurrent()) {
+                    setError('group', 'join', normalizeApiError(error));
+                }
+                return Promise.reject(error);
             })
             .finally(() => {
-                setLoading('group', 'join', 'fetched');
+                if (isCurrent()) {
+                    setLoading('group', 'join', 'fetched');
+                }
             });
-    },
-    setSelectedGroupSummaryCurrency: defaultCurrency => {
-        set(state => {
-            if (!state.selectedGroup) {
-                return {};
-            }
-
-            const { base, rates } = useDashboardStore.getState().currencies;
-
-            return calcGroupSummary(
-                selectGroupBalances(state.selectedGroup),
-                base,
-                rates,
-                defaultCurrency,
-            );
-        });
     },
 }));

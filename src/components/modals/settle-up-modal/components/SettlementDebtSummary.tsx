@@ -3,13 +3,14 @@ import { useTranslation } from 'react-i18next';
 
 import { Card, Flex } from '@radix-ui/themes';
 
-import type { FriendUser, UserSummary } from 'api/chipin.types';
+import type { FriendUser } from 'api/chipin.types';
 
 import { DebtAmount, ParticipantName } from '../styled';
+import type { SettlementUser } from '../types';
 
 interface Props {
     friend: FriendUser;
-    summaryUser: UserSummary;
+    summaryUser: SettlementUser;
     isFriendPayer: boolean;
     amount: number;
     currency: string;

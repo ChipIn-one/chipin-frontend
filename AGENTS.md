@@ -23,6 +23,8 @@ Durable repository rules for Codex. Keep changes small, scoped, verified, and co
   user explicitly requests that Git action.
 - When the user sends `review` or `staged` after staging their candidate changes, invoke
   `superpowers:requesting-code-review` without asking additional questions.
+- The full verification gate is `npm run verify:review`; run it only at an explicit `review`/`staged`
+  checkpoint, merge gate, or CI/release checkpoint.
 - Review the staged patch with `git diff --cached` and `git diff --cached --stat`. Findings are scoped to
   staged changes, although surrounding code may be read for context.
 - Do not include unstaged or untracked changes in a staged review. Use `git diff HEAD` only when the user
@@ -79,8 +81,10 @@ Before writing or reviewing code, read [`docs/codex/rules/00-foundation.md`](doc
 - New and touched asynchronous code uses Promise `.then()`, `.catch()`, and `.finally()` chains; do not add `async`/`await`.
 - Local event handlers and callback props use `on*`; do not add `handle*` names.
 - Preserve dependency direction: app composition -> pages -> features -> components -> basics.
-- UI calls stores or hooks, never raw API clients.
-- Runtime API calls belong in stores or an explicitly approved orchestration layer.
+- UI calls stores or focused hooks, never raw API clients.
+- Runtime API calls belong in store actions.
+- Helpers never read Zustand stores or selectors. Selectors and `useConnect` may call pure helpers;
+  component-specific derived values are assembled in `useConnect`.
 - User-facing text, accessibility labels, and toast content use i18n.
 - Do not add `any` or `as any`; use `unknown` and narrow it.
 - Dynamic arrays and records get one primary traversal per computation. Gather multiple results in one
@@ -111,7 +115,10 @@ Before editing:
 
 After editing:
 
-- Run checks proportional to the change. Prefer targeted tests/lint first; use `npm run verify` for cross-layer or high-risk behavior.
+- Run checks proportional to the change. Use `npm run test:task -- <explicit test paths>` for the tests
+  required by the changed behavior, `npm run typecheck` for TypeScript/API/store changes, and targeted
+  ESLint when the full baseline is not green. `npm run verify` is the fast lint/typecheck check;
+  reserve `npm run verify:review` for the explicit review/merge gate.
 - Do not claim a test, lint, typecheck, or build passed unless it was run successfully.
 - Report skipped, unavailable, pre-existing, and failed checks explicitly.
 - Self-review scope, architecture, UI/a11y/i18n, API/store flow, type safety, money/offline behavior, and related legacy cleanup.

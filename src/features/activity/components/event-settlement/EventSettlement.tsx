@@ -83,7 +83,10 @@ const EventSettlement = ({ event }: Props) => {
                     flexShrink="0"
                     maxWidth="50%"
                 >
-                    <LedgerScopeBadge groupId={groupId} groupName={groupName} />
+                    <LedgerScopeBadge
+                        groupId={groupId ?? null}
+                        groupName={groupName ?? null}
+                    />
                 </Flex>
             </Flex>
         </Card>

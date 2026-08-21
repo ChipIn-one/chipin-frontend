@@ -1,9 +1,10 @@
+import { toast } from 'sonner';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import type { CreateSettlementParams, User } from 'api/chipin.types';
+import type { CreateSettlementParams, SelfUser } from 'api/chipin.types';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
 
@@ -17,18 +18,17 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('sonner', () => ({
-    toast: { error: vi.fn(), success: vi.fn() },
+    toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
 }));
 
 const currentUser = {
     id: 'user-1',
     email: 'alice@example.com',
     displayName: 'Alice',
-    firstName: 'Alice',
-    lastName: null,
     picture: null,
     role: 'USER',
     subscriptionUntil: null,
+    inviteToken: 'invite-token-user',
     settings: {
         defaultCurrency: 'USD',
         defaultCategory: 'food',
@@ -43,7 +43,7 @@ const currentUser = {
     },
     createdAt: 1,
     updatedAt: 1,
-} satisfies User;
+} satisfies SelfUser;
 
 const friend = {
     id: 'user-2',
@@ -251,7 +251,9 @@ test('updates the amount, context, and remaining debt when the currency changes'
 });
 
 test('submits a partial payment through the provided action and closes after success', () => {
-    const onSubmit = vi.fn<(params: CreateSettlementParams) => Promise<void>>().mockResolvedValue();
+    const onSubmit = vi
+        .fn<(params: CreateSettlementParams) => Promise<void>>()
+        .mockResolvedValue(undefined);
     const onOpenChange = vi.fn<(isOpen: boolean) => void>();
     const user = userEvent.setup();
 
@@ -286,6 +288,34 @@ test('submits a partial payment through the provided action and closes after suc
         });
 });
 
+test('closes and shows success when the backend mutation succeeds', () => {
+    const onSubmit = vi
+        .fn<(params: CreateSettlementParams) => Promise<void>>()
+        .mockResolvedValue(undefined);
+    const onOpenChange = vi.fn<(isOpen: boolean) => void>();
+    const user = userEvent.setup();
+
+    render(
+        <SettleUpModal
+            source="friend"
+            isOpened
+            onOpenChange={onOpenChange}
+            friend={friend}
+            balances={[{ currency: 'USD', netAmount: -100 }]}
+            initialCurrency="USD"
+            onSubmit={onSubmit}
+        />,
+    );
+
+    return user
+        .click(screen.getByRole('button', { name: 'friends:settleUp.recordPayment' }))
+        .then(() => {
+            expect(onOpenChange).toHaveBeenCalledWith(false);
+            expect(toast.success).toHaveBeenCalledWith('toasts:settlement.created');
+            expect(toast.warning).not.toHaveBeenCalled();
+        });
+});
+
 test('keeps the modal open when the provided action rejects', () => {
     const onSubmit = vi
         .fn<(params: CreateSettlementParams) => Promise<void>>()
@@ -310,5 +340,6 @@ test('keeps the modal open when the provided action rejects', () => {
         .then(() => {
             expect(onSubmit).toHaveBeenCalledOnce();
             expect(onOpenChange).not.toHaveBeenCalledWith(false);
+            expect(toast.error).toHaveBeenCalledWith('toasts:common.requestFailed');
         });
 });

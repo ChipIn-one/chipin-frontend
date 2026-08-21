@@ -3,7 +3,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 
 import { act, render, waitFor } from '@testing-library/react';
 
-import type { User } from 'api/chipin.types';
+import type { SelfUser } from 'api/chipin.types';
 import { LS_KEY_USER } from 'constants/localstorage';
 import { clearAuthTokens, LocalStorage, saveAuthTokens } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
@@ -17,11 +17,10 @@ const user = {
     id: 'user-1',
     email: 'user@example.com',
     displayName: 'User',
-    firstName: null,
-    lastName: null,
     picture: null,
     role: 'USER',
     subscriptionUntil: null,
+    inviteToken: 'invite-token-user',
     settings: {
         defaultCurrency: 'USD',
         defaultCategory: 'food',
@@ -36,7 +35,7 @@ const user = {
     },
     createdAt: 1,
     updatedAt: 1,
-} satisfies User;
+} satisfies SelfUser;
 
 const CheckSignInHarness = () => {
     useCheckSignIn();
@@ -78,7 +77,7 @@ test('initializes the app mode from the fetched preference without a cached user
         Promise.resolve('next-access-token'),
     );
     vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockImplementation(
-        () => undefined,
+        () => Promise.resolve(),
     );
     vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockImplementation(() =>
         Promise.resolve([]),
@@ -120,7 +119,7 @@ test('preserves the active app mode when a cached user initialized it', () => {
         Promise.resolve('next-access-token'),
     );
     vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockImplementation(
-        () => undefined,
+        () => Promise.resolve(),
     );
     vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockImplementation(() =>
         Promise.resolve([]),
@@ -150,7 +149,7 @@ test('validates stored tokens with the server on cold start', () => {
     const refreshAuthTokens = vi.fn(() => Promise.resolve('next-access-token'));
     useAuthStore.setState({ refreshAuthTokens });
     vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData')
-        .mockImplementation(() => undefined);
+        .mockImplementation(() => Promise.resolve());
     vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups')
         .mockImplementation(() => Promise.resolve([]));
     vi.spyOn(useUsersStore.getState(), 'fetchSetUser')

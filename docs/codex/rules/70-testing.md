@@ -64,12 +64,23 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
 
 ## Commands
 
-- During development: `npm test` or a targeted Vitest path.
-- Non-watch tests: `npm run test:run`.
+- During development: use `npm run test:task -- <explicit test paths>`; this command refuses to run
+  without at least one test path.
+- Select tests by the changed behavior: pure helper/selector changes use their co-located tests,
+  store/API changes use the owning store/API tests plus directly affected UI tests, and component
+  changes use the component test plus the smallest affected integration test.
+- `npm run test:full` runs the complete suite and is reserved for `review`/`staged`, merge, or CI/release
+  checkpoints.
 - Type safety: `npm run typecheck`.
-- Cross-layer/high-risk completion: `npm run verify`.
+- Fast local verification: `npm run verify` (quiet lint plus typecheck; it does not run Vitest or build).
+- Full review verification: `npm run verify:review` (lint, complete Vitest suite, and production build).
+- `npm run build` generates the version and builds the app; it does not run tests implicitly.
+- `npm run vercel-build` is wired through `vercel.json` and runs the complete Vitest suite before
+  the production build; local `npm run build` remains test-free.
 
-Run targeted checks first. Full verification belongs at integration/completion checkpoints, not after every mechanical edit.
+Run targeted checks first. Full verification belongs only at integration/completion checkpoints, not after
+every mechanical edit. Documentation/config-only changes may skip tests when the handoff explains why no
+runtime behavior is affected.
 
 ## Legacy Baseline
 

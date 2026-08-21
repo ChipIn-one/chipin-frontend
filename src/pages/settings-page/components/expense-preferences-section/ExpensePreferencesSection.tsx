@@ -48,21 +48,19 @@ const ExpensePreferencesSection = ({ isLoading }: Props) => {
     );
 
     const onDefaultCurrencyChange = (value: string) => {
-        void setUserSettings({ settings: { defaultCurrency: value } }).catch(() => undefined);
+        setUserSettings({ settings: { defaultCurrency: value } });
     };
 
     const onDefaultCategoryChange = (value: string) => {
-        void setUserSettings({ settings: { defaultCategory: value } }).catch(() => undefined);
+        setUserSettings({ settings: { defaultCategory: value } });
     };
 
     const onSkipCategoryChange = (isEnabled: boolean) => {
-        void setUserSettings({ settings: { skipCategory: isEnabled } }).catch(() => undefined);
+        setUserSettings({ settings: { skipCategory: isEnabled } });
     };
 
     const onSimplifyDebtsChange = (isEnabled: boolean) => {
-        void setUserSettings({ settings: { simplifyDebts: isEnabled } }).catch(
-            () => undefined,
-        );
+        setUserSettings({ settings: { simplifyDebts: isEnabled } });
     };
 
     return (

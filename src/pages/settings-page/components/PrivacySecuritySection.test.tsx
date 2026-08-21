@@ -27,6 +27,7 @@ const translations: Record<string, string> = {
     'security.title': 'Privacy & Security',
     'toasts:settings.logoutOtherDevicesSuccess':
         'Signed out on all other devices. You’re still signed in here.',
+    'toasts:common.requestFailed': 'Request failed',
 };
 
 vi.mock('react-i18next', () => ({
@@ -37,6 +38,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('sonner', () => ({
     toast: {
+        error: vi.fn(),
         info: vi.fn(),
         success: vi.fn(),
     },

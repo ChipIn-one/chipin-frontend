@@ -2,7 +2,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 
 import { render, screen } from '@testing-library/react';
 
-import type { Group, User } from 'api/chipin.types';
+import type { Group, SelfUser } from 'api/chipin.types';
 import { useUsersStore } from 'store/users-store';
 
 import GroupBalancesTab from './GroupBalancesTab';
@@ -15,11 +15,10 @@ const currentUser = {
     id: 'user-1',
     email: 'alice@example.com',
     displayName: 'Alice',
-    firstName: 'Alice',
-    lastName: null,
     picture: null,
     role: 'USER',
     subscriptionUntil: null,
+    inviteToken: 'invite-token-user',
     settings: {
         defaultCurrency: 'USD',
         defaultCategory: 'food',
@@ -34,14 +33,12 @@ const currentUser = {
     },
     createdAt: 1,
     updatedAt: 1,
-} satisfies User;
+} satisfies SelfUser;
 
 const groupUser = {
     id: currentUser.id,
     email: currentUser.email,
     displayName: currentUser.displayName,
-    firstName: currentUser.firstName,
-    lastName: currentUser.lastName,
     picture: currentUser.picture,
     createdAt: currentUser.createdAt,
     updatedAt: currentUser.updatedAt,
@@ -81,8 +78,10 @@ const group: Group = {
     createdAt: 1,
     updatedAt: 1,
     coverUrl: 'https://cdn.example.com/group.webp',
+    simplifyDebts: true,
     role: 'OWNER',
     status: 'ACTIVE',
+    lastUsedCurrency: null,
     recentActivities: {
         items: [],
         nextCursor: null,

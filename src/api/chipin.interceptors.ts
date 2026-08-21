@@ -1,11 +1,13 @@
 import axios from 'axios';
-import { toast } from 'sonner';
 
 import { API_ERROR_CODE } from 'constants/errors';
-import { SECOND } from 'constants/time';
-import { prepareAuthRequest } from 'helpers/authSession';
+import {
+    getAuthSessionVersion,
+    isAuthSessionCurrent,
+    prepareAuthRequest,
+} from 'helpers/authSession';
 import { getChipInApiUrl } from 'helpers/env';
-import { type ApiErrorPayload, resolveApiErrorMessage } from 'helpers/errors';
+import { getApiErrorPayload } from 'helpers/errors';
 
 import { apiInstance } from './chipin.instance';
 
@@ -15,6 +17,7 @@ const AUTH_REQUEST_CANCELLED_MESSAGE = 'Auth request cancelled';
 
 let areChipInApiInterceptorsConfigured = false;
 let onUnauthorizedSession: (() => void) | undefined;
+const requestAuthSessionVersions = new WeakMap<object, number>();
 
 class AuthRequestCancelledError extends Error {
     constructor() {
@@ -39,7 +42,7 @@ const isUnauthorizedError = (error: unknown) => {
         return false;
     }
 
-    const data = error.response?.data as ApiErrorPayload | undefined;
+    const data = getApiErrorPayload(error);
 
     return error.response?.status === 401 || data?.code === API_ERROR_CODE.AUTH_UNAUTHORIZED;
 };
@@ -66,7 +69,11 @@ export const initChipInApiInterceptors = (
     areChipInApiInterceptorsConfigured = true;
 
     apiInstance.interceptors.request.use(config => {
+        const authSessionVersion = getAuthSessionVersion();
+
         return prepareAuthRequest(config.url).then(accessToken => {
+            requestAuthSessionVersions.set(config, authSessionVersion);
+
             if (accessToken === null) {
                 return Promise.reject(new AuthRequestCancelledError());
             }
@@ -91,25 +98,20 @@ export const initChipInApiInterceptors = (
             }
 
             if (isUnauthorizedError(error)) {
+                const requestSessionVersion = axios.isAxiosError(error)
+                    ? requestAuthSessionVersions.get(error.config ?? {})
+                    : undefined;
+
+                if (
+                    requestSessionVersion !== undefined &&
+                    !isAuthSessionCurrent(requestSessionVersion)
+                ) {
+                    return Promise.reject(error);
+                }
+
                 onUnauthorizedSession?.();
                 return Promise.reject(error);
             }
-
-            let message: string;
-
-            if (axios.isAxiosError(error)) {
-                if (!error.response) {
-                    message = resolveApiErrorMessage(undefined, 'network.offline');
-                } else {
-                    message = resolveApiErrorMessage(error.response.data);
-                }
-            } else {
-                message = resolveApiErrorMessage(undefined);
-            }
-
-            toast.error(message, {
-                duration: SECOND * 10,
-            });
 
             return Promise.reject(error);
         },

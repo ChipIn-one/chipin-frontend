@@ -1,4 +1,4 @@
-import type { ThemeName, User, UserRole, UserSettings } from 'api/chipin.types';
+import type { SelfUser, ThemeName, UserRole, UserSettings } from 'api/chipin.types';
 import {
     LS_KEY_AUTH_TOKENS,
     LS_KEY_SW_UPDATE_DISMISSED_AT,
@@ -86,7 +86,7 @@ const getStorageValue = <T>(key: StorageKey): T | null => {
     }
 };
 
-const toLocalUser = (user: Pick<User, 'role' | 'settings'>): LocalUser => {
+const toLocalUser = (user: Pick<SelfUser, 'role' | 'settings'>): LocalUser => {
     return {
         role: user.role,
         settings: user.settings,

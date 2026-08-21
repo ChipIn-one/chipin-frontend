@@ -29,7 +29,6 @@ export interface LoadingStore {
     activity: {
         data: LoadingState;
         nextPage: LoadingState;
-        selectedEvent: LoadingState;
         subeventsData: LoadingState;
         subeventsNextPage: LoadingState;
     };
@@ -45,6 +44,7 @@ export interface LoadingStore {
     users: {
         self: LoadingState;
         friends: LoadingState;
+        settings: LoadingState;
         removeFriend: LoadingState;
         avatar: LoadingState;
     };
@@ -66,7 +66,6 @@ const initialLoadingStore: LoadingSlices = {
     activity: {
         data: 'initial',
         nextPage: 'initial',
-        selectedEvent: 'initial',
         subeventsData: 'initial',
         subeventsNextPage: 'initial',
     },
@@ -87,6 +86,7 @@ const initialLoadingStore: LoadingSlices = {
     users: {
         self: 'initial',
         friends: 'initial',
+        settings: 'initial',
         removeFriend: 'initial',
         avatar: 'initial',
     },

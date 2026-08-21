@@ -6,6 +6,11 @@ import { initChipInApiInterceptors } from './chipin.interceptors';
 
 const onUnauthorizedSession = vi.fn();
 
+const authSessionMocks = vi.hoisted(() => ({
+    currentVersion: 1,
+    prepareAuthRequest: vi.fn(() => Promise.resolve('current-access-token')),
+}));
+
 vi.mock('sonner', () => ({
     toast: {
         error: vi.fn(),
@@ -13,15 +18,13 @@ vi.mock('sonner', () => ({
 }));
 
 vi.mock('helpers/authSession', () => ({
-    prepareAuthRequest: vi.fn(() => Promise.resolve('current-access-token')),
+    getAuthSessionVersion: () => authSessionMocks.currentVersion,
+    isAuthSessionCurrent: (version: number) => version === authSessionMocks.currentVersion,
+    prepareAuthRequest: authSessionMocks.prepareAuthRequest,
 }));
 
 vi.mock('helpers/env', () => ({
     getChipInApiUrl: () => 'https://api.example.test',
-}));
-
-vi.mock('helpers/errors', () => ({
-    resolveApiErrorMessage: vi.fn(() => 'Localized API error'),
 }));
 
 beforeAll(() => {
@@ -30,6 +33,7 @@ beforeAll(() => {
 
 beforeEach(() => {
     vi.clearAllMocks();
+    authSessionMocks.currentVersion = 1;
 });
 
 const rejectRequest = (url: string, status: number) => {
@@ -61,6 +65,41 @@ test('expires the current session for a protected request 401 without a generic 
         .then(() => {
             expect(onUnauthorizedSession).toHaveBeenCalledTimes(1);
             expect(toast.error).not.toHaveBeenCalled();
+        });
+});
+
+test('ignores a protected request 401 from an older auth session', () => {
+    let rejectResponse: ((reason?: unknown) => void) | undefined;
+    let markAdapterStarted: (() => void) | undefined;
+    const adapterStarted = new Promise<void>(resolve => {
+        markAdapterStarted = resolve;
+    });
+    const request = apiInstance.request({
+        method: 'get',
+        url: '/dashboard',
+        adapter: config => new Promise((_resolve, reject) => {
+            rejectResponse = () => reject({
+                config,
+                isAxiosError: true,
+                response: {
+                    data: { code: 'AUTH.UNAUTHORIZED' },
+                    status: 401,
+                },
+            });
+            markAdapterStarted?.();
+        }),
+    });
+
+    return adapterStarted
+        .then(() => {
+            authSessionMocks.currentVersion = 2;
+            rejectResponse?.();
+            return expect(request).rejects.toMatchObject({
+                response: { status: 401 },
+            });
+        })
+        .then(() => {
+            expect(onUnauthorizedSession).not.toHaveBeenCalled();
         });
 });
 
@@ -100,16 +139,13 @@ test.each(['/auth/logout', '/auth/oauth/google/exchange'])(
     },
 );
 
-test('keeps localized interceptor feedback for retryable validation errors', () => {
+test('leaves retryable validation feedback to the owning UI flow', () => {
     return expect(rejectRequest('/auth/logout-other-devices', 400))
         .rejects.toMatchObject({
             response: { status: 400 },
         })
         .then(() => {
             expect(onUnauthorizedSession).not.toHaveBeenCalled();
-            expect(toast.error).toHaveBeenCalledWith(
-                'Localized API error',
-                expect.any(Object),
-            );
+            expect(toast.error).not.toHaveBeenCalled();
         });
 });

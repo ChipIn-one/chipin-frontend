@@ -17,6 +17,10 @@ app composition → pages → features → components → basics
 - Stores own shared application/domain state and call resource API modules.
 - API modules own HTTP contracts and cannot import UI or stores.
 - Helpers are pure unless their module clearly represents a browser boundary.
+- Helpers never import or read Zustand stores, store hooks, or store selectors. Pass every required
+  value through helper parameters.
+- The allowed dependency direction is `selector/useConnect → helper`; helpers cannot depend on selectors
+  or `useConnect`.
 
 `features/routing` is a legacy app-composition exception because it imports pages. Do not copy that dependency direction into new features; new route composition belongs at the app/router boundary.
 
@@ -26,7 +30,7 @@ app composition → pages → features → components → basics
 - Use Zustand only for genuinely shared state, remote domain data, or application session state.
 - Runtime API calls never originate in pages, features, components, or basics.
 - Type-only DTO imports are allowed at mapping/store boundaries. UI should prefer domain types.
-- Side effects belong in store actions, focused hooks, event handlers, or explicit app orchestration.
+- Side effects belong in store actions, focused hooks, event handlers, or explicit app-lifecycle orchestration.
 - Backend API contracts do not change as an incidental frontend refactor.
 
 ## Placement
@@ -64,6 +68,7 @@ settle-up/
 │   ├── helpers.ts
 │   ├── helpers.test.ts
 │   ├── hooks.ts
+│   ├── useConnect.ts
 │   ├── selectors.ts
 │   ├── types.ts
 │   └── index.ts
@@ -95,6 +100,8 @@ The example shows the available locations, not a required complete file set.
   directly by their readable component names; do not split them into one file per styled component.
 - Put private support code in `internal/`. Use the semantic filenames `constants.ts`, `helpers.ts`,
   `hooks.ts`, `selectors.ts`, and `types.ts`, creating only the files that are needed.
+- A component-specific Zustand connector is named `internal/useConnect.ts`. Export it only through the
+  owner's private `internal/index.ts`; do not expose it from the component's public root `index.ts`.
 - Apply the same rules recursively when a subcomponent grows into its own nested directory.
 
 ### Index Files And Import Boundaries
@@ -238,7 +245,11 @@ store/
 ## Cross-Store And App Orchestration
 
 - Stores do not directly write another store's domain data.
-- Avoid circular store imports and hidden `getState()` dependencies.
+- Avoid circular store imports and hidden `getState()` dependencies. The narrow exception is an
+  online-first domain mutation action invoking named canonical fetch actions in other stores after
+  backend success; keep that dependency explicit next to the mutation.
+- For that exception, a store may import the other store's owning `actions.ts` directly when the public
+  barrel would create a circular Rollup chunk. UI consumers still use the public store `index.ts`.
 - Bootstrap, logout, multi-store reset, and offline reconciliation use an app-level orchestrator/hook or an explicitly approved coordination module.
 - Prefer passing required data into an action over secretly reading another store.
 

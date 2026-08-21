@@ -44,16 +44,16 @@ export const useCheckSignIn = () => {
         refreshAuthTokens()
             .then(() => {
                 setAuthenticated();
-                fetchSetDashboardData();
-                fetchSetGroups().catch(() => undefined);
-                void fetchSetUser()
-                    .then(user => {
-                        if (!hasCachedUser) {
+                return Promise.all([
+                    fetchSetDashboardData(),
+                    fetchSetGroups(),
+                    fetchSetUser().then(user => {
+                        if (user && !hasCachedUser) {
                             setDefaultAppMode(user.settings.soloModeByDefault);
                         }
-                    })
-                    .catch(() => undefined);
-                void fetchSetFriends().catch(() => undefined);
+                    }),
+                    fetchSetFriends(),
+                ]).then(() => undefined);
             })
             .catch(() => {
                 if (useAuthStore.getState().status === 'unknown') {

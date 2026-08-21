@@ -53,7 +53,7 @@ const ActivityList = ({ activeFilter }: Props) => {
 
     useEffect(() => {
         if (sentinelEntry?.isIntersecting && hasMore && !isNextPageLoading) {
-            void fetchMoreActivity();
+            fetchMoreActivity();
         }
     }, [sentinelEntry?.isIntersecting, hasMore, isNextPageLoading, fetchMoreActivity]);
 

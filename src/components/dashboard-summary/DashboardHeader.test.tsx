@@ -5,7 +5,7 @@ import { beforeEach, expect, test } from 'vitest';
 import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
 
-import type { User } from 'api/chipin.types';
+import type { SelfUser } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
@@ -18,11 +18,10 @@ const admin = {
     id: 'user-1',
     email: 'admin@example.com',
     displayName: 'Admin',
-    firstName: null,
-    lastName: null,
     picture: null,
     role: 'ADMIN',
     subscriptionUntil: null,
+    inviteToken: 'invite-token-user',
     settings: {
         defaultCurrency: 'USD',
         defaultCategory: 'food',
@@ -37,7 +36,7 @@ const admin = {
     },
     createdAt: 1,
     updatedAt: 1,
-} satisfies User;
+} satisfies SelfUser;
 
 beforeEach(() => {
     useLoadingStore.getState().setLoading('users', 'self', 'fetched');

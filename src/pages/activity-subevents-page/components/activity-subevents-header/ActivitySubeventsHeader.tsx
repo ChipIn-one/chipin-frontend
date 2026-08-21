@@ -1,7 +1,7 @@
-import { LucideCircleAlert, LucideRefreshCw } from 'lucide-react';
+import { LucideInfo } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Box, Button, Flex, Text } from '@radix-ui/themes';
+import { Box, Flex, Text } from '@radix-ui/themes';
 
 import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_CATEGORIES } from 'constants/activity';
@@ -16,39 +16,24 @@ import { ActivitySubeventsButtons } from './components';
 interface Props {
     parentEvent?: AppEvent;
     isLoading: boolean;
-    isError?: boolean;
-    onRetry?: () => void;
+    isUnavailable?: boolean;
 }
 
 const ActivitySubeventsHeader = ({
     parentEvent,
     isLoading,
-    isError = false,
-    onRetry,
+    isUnavailable = false,
 }: Props) => {
     const { t } = useTranslation('activity');
 
-    if (isError) {
+    if (isUnavailable) {
         return (
             <Box mb="4">
                 <EmptyState
-                    icon={<LucideCircleAlert size={16} />}
-                    iconColor="red"
-                    title={t('subeventsParentLoadErrorTitle')}
-                    description={t('subeventsParentLoadErrorDescription')}
-                    action={
-                        onRetry ? (
-                            <Button
-                                type="button"
-                                size="1"
-                                variant="soft"
-                                onClick={onRetry}
-                            >
-                                <LucideRefreshCw size={14} />
-                                {t('retryAction')}
-                            </Button>
-                        ) : undefined
-                    }
+                    icon={<LucideInfo size={16} />}
+                    iconColor="gray"
+                    title={t('subeventsParentUnavailableTitle')}
+                    description={t('subeventsParentUnavailableDescription')}
                 />
             </Box>
         );

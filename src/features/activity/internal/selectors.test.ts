@@ -51,7 +51,6 @@ const createExpenseEvent = ({
                 currency: 'USD',
             },
         ],
-        fieldDiffs: [],
     },
     createdAt: CREATED_AT,
     parentActivityId: null,

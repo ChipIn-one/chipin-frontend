@@ -6,6 +6,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { Button, Dialog, Flex } from '@radix-ui/themes';
 
 import type { Group } from 'api/chipin.types';
+import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupCoverUploading, selectGroupUpdating } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
@@ -58,7 +59,10 @@ const UpdateGroupForm = ({ onClose }: Props) => {
             onProgress: setUploadProgress,
         }).catch((error: unknown) => {
             setUploadProgress(0);
-            toast.error(t('toasts:group.coverUploadError'));
+            toast.error(resolveApiErrorMessageFromError(
+                error,
+                t('toasts:group.coverUploadError'),
+            ));
             console.error('Error uploading group cover:', error);
             return Promise.reject(error);
         });
@@ -82,13 +86,17 @@ const UpdateGroupForm = ({ onClose }: Props) => {
             groupDescription: normalizedDescription,
         })
             .catch((error: unknown) => {
-                toast.error(t('toasts:group.updateError'));
+                toast.error(resolveApiErrorMessageFromError(
+                    error,
+                    t('toasts:group.updateError'),
+                ));
                 console.error('Error updating group:', error);
                 return Promise.reject(error);
             })
             .then(uploadSelectedCover)
-            .then(onSaveSuccess)
-            .catch(() => undefined);
+            .then(onSaveSuccess, () => {
+                // The request stages already show the error and keep the form open.
+            });
     };
 
     const coverUrl = coverPreviewUrl ?? selectedGroup.coverUrl;

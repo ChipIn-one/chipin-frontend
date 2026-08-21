@@ -1,54 +1,43 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
-import { useShallow } from 'zustand/react/shallow';
 
 import { Box, Card, Container, Flex, Grid, Text } from '@radix-ui/themes';
-
-import { useDashboardStore } from 'store/dashboardStore';
-import { useGroupsStore } from 'store/groupsStore';
-import { selectGroupDataFetched, selectGroupDataLoading } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
-import { selectUserCurrency, useUsersStore } from 'store/users-store';
 
 import GroupsCards from 'components/GroupsCards';
 import GroupsSectionHeader from 'components/GroupsSectionHeader';
 
 import { GroupCoverSection, GroupSummary, GroupTabsContent } from './components';
+import { useConnect } from './internal';
 import { GroupCoverBox } from './styled';
 
 const GroupPage = () => {
     const { t } = useTranslation(['group', 'common', 'dashboard']);
-    const { groups, selectedGroup } = useGroupsStore(
-        useShallow(s => ({
-            groups: s.groups,
-            selectedGroup: s.selectedGroup,
-        })),
-    );
-
-    const fetchSetGroupById = useGroupsStore(state => state.fetchSetGroupById);
-    const setSelectedGroupSummaryCurrency = useGroupsStore(
-        state => state.setSelectedGroupSummaryCurrency,
-    );
-    const defaultCurrency = useUsersStore(selectUserCurrency);
-    const currencies = useDashboardStore(state => state.currencies);
-    const isGroupDataLoading = useLoadingStore(selectGroupDataLoading);
-    const isGroupDataFetched = useLoadingStore(selectGroupDataFetched);
+    const {
+        groups,
+        selectedGroup,
+        fetchSetGroupById,
+        setSelectedGroup,
+        isGroupDataLoading,
+        isGroupListFetched,
+    } = useConnect();
     const { groupId } = useParams<{ groupId: string }>();
+    const routeGroup = selectedGroup?.id === groupId ? selectedGroup : null;
 
     useEffect(() => {
-        fetchSetGroupById(groupId).catch(() => undefined);
-    }, [groupId, fetchSetGroupById]);
+        if (!groupId) {
+            return;
+        }
 
-    useEffect(() => {
-        setSelectedGroupSummaryCurrency(defaultCurrency);
-    }, [
-        defaultCurrency,
-        currencies.base,
-        currencies.fetchedAt,
-        selectedGroup?.id,
-        setSelectedGroupSummaryCurrency,
-    ]);
+        const cachedGroup = groups.find(group => group.id === groupId);
+
+        if (cachedGroup) {
+            setSelectedGroup(cachedGroup);
+            return;
+        }
+
+        fetchSetGroupById(groupId);
+    }, [fetchSetGroupById, groupId, groups, setSelectedGroup]);
 
     if (!groupId) {
         return (
@@ -60,8 +49,8 @@ const GroupPage = () => {
         );
     }
 
-    if (!selectedGroup) {
-        if (!isGroupDataFetched) {
+    if (!routeGroup) {
+        if (!isGroupListFetched || isGroupDataLoading) {
             return null;
         }
 
@@ -91,7 +80,7 @@ const GroupPage = () => {
                         label={t('dashboard:groups.otherTitle')}
                         isLoading={isGroupDataLoading}
                     />
-                    <GroupsCards groups={groups} selectedGroupId={selectedGroup.id} />
+                    <GroupsCards groups={groups} selectedGroupId={routeGroup.id} />
                 </Flex>
 
                 {/* ── Main content column ── */}
@@ -101,7 +90,7 @@ const GroupPage = () => {
                 >
                     <GroupCoverBox mb={{ initial: '4', sm: '6' }}>
                         <GroupCoverSection
-                            group={selectedGroup}
+                            group={routeGroup}
                             isLoading={isGroupDataLoading}
                         />
                     </GroupCoverBox>
@@ -114,7 +103,7 @@ const GroupPage = () => {
                     </Box>
 
                     {/* Tabs: Expenses / Balances / Members */}
-                    <GroupTabsContent group={selectedGroup} />
+                    <GroupTabsContent group={routeGroup} />
                 </Box>
             </Grid>
         </Container>

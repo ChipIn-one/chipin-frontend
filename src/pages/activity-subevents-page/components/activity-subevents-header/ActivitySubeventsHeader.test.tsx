@@ -1,7 +1,6 @@
 import { expect, test, vi } from 'vitest';
 
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 
 import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
@@ -50,7 +49,6 @@ const parentEvent = {
         payerId: 'user-id',
         payerDisplayName: 'Alex',
         shares: [],
-        fieldDiffs: [],
     },
     createdAt: 1_785_328_628,
     parentActivityId: null,
@@ -81,24 +79,15 @@ test('renders a parent activity skeleton while loading', () => {
     expect(screen.queryByTestId('parent-event')).toBeNull();
 });
 
-test('offers retry when the parent activity fails to load', () => {
-    const user = userEvent.setup();
-    const onRetry = vi.fn();
-
+test('shows a localized fallback when the parent activity is unavailable', () => {
     render(
         <ActivitySubeventsHeader
             parentEvent={undefined}
             isLoading={false}
-            isError
-            onRetry={onRetry}
+            isUnavailable
         />,
     );
 
-    expect(screen.getByText('subeventsParentLoadErrorTitle')).toBeTruthy();
-
-    return user
-        .click(screen.getByRole('button', { name: 'retryAction' }))
-        .then(() => {
-            expect(onRetry).toHaveBeenCalledOnce();
-        });
+    expect(screen.getByText('subeventsParentUnavailableTitle')).toBeTruthy();
+    expect(screen.getByText('subeventsParentUnavailableDescription')).toBeTruthy();
 });

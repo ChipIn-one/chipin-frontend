@@ -61,10 +61,14 @@ const BaseAlertDialog = ({
 
         setIsSubmitting(true);
         onAction()
-            .then(() => {
-                setIsOpened(false);
-            })
-            .catch(() => undefined)
+            .then(
+                () => {
+                    setIsOpened(false);
+                },
+                () => {
+                    // The action owns its user-facing error; keep the dialog open.
+                },
+            )
             .finally(() => {
                 setIsSubmitting(false);
             });

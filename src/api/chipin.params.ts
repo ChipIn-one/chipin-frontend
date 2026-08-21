@@ -9,7 +9,7 @@ export interface CreateGroupParams {
 
 export interface UpdateUserParams {
     displayName?: string;
-    settings?: ApiUserSettings;
+    settings?: Partial<ApiUserSettings>;
 }
 
 export interface UploadUserAvatarParams {
@@ -62,7 +62,7 @@ export interface SharingMode {
 
 export interface CreateLedgerEntryParams {
     groupId?: string;
-    description: string;
+    description: string | null;
     amount: number;
     date: number;
     payerId: string;
@@ -83,6 +83,35 @@ export interface CreateSettlementParams {
     amount: number;
     currency: string;
 }
+
+export interface UpdateLedgerExpenseParams {
+    type: 'EXPENSE';
+    expense: {
+        description?: string | null;
+        amount: number;
+        date: number;
+        payerId: string;
+        participantIds: string[];
+        category: string;
+        subcategory?: string | null;
+        currency: string;
+        sharingMode: SharingMode;
+    };
+}
+
+export interface UpdateLedgerSettlementParams {
+    type: 'SETTLEMENT';
+    settlement: {
+        toUserId: string;
+        amount: number;
+        currency: string;
+    };
+}
+
+export type UpdateLedgerEntryParams = {
+    entryId: string;
+    entry: UpdateLedgerExpenseParams | UpdateLedgerSettlementParams;
+};
 
 export interface FetchActivitiesParams {
     limit?: number;

@@ -27,7 +27,6 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
     const [isSettleUpOpened, setIsSettleUpOpened] = useState(false);
     const [isRemoveFriendOpened, setIsRemoveFriendOpened] = useState(false);
     const openAddExpenseModal = useExpenseModalStore(state => state.open);
-    const createSettlement = useActivityStore(state => state.createSettlement);
     const hasOutstandingDebt = friend.balances.some(friendBalance => friendBalance.netAmount !== 0);
 
     const actions = useMemo(
@@ -98,7 +97,9 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                     friend={friend.user}
                     balances={friend.balances}
                     initialCurrency={balance.currency}
-                    onSubmit={createSettlement}
+                    onSubmit={params => useActivityStore
+                        .getState()
+                        .createSettlement(params)}
                 />
             )}
             {isRemoveFriendOpened && (

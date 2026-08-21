@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 
 import { Avatar, Box, Button, Card, Flex, Grid, Separator, Skeleton, Text } from '@radix-ui/themes';
 
+import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { useAuthStore } from 'store/authStore';
 import {
     selectAuthLogoutOtherDevicesLoading,
@@ -37,7 +38,12 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
             .then(() => {
                 toast.success(t('toasts:settings.logoutOtherDevicesSuccess'));
             })
-            .catch(() => undefined);
+            .catch((error: unknown) => {
+                toast.error(resolveApiErrorMessageFromError(
+                    error,
+                    t('toasts:common.requestFailed'),
+                ));
+            });
     };
 
     return (

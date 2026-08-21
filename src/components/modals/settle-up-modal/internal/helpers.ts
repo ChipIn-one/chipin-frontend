@@ -1,15 +1,12 @@
-import type {
-    CreateSettlementParams,
-    FriendBalance,
-    FriendUser,
-    UserSummary,
-} from 'api/chipin.types';
+import type { CreateSettlementParams, FriendBalance, FriendUser } from 'api/chipin.types';
 import type { GroupSettlementOption } from 'store/groupsSelectors';
+
+import type { SettlementUser } from '../types';
 
 import type { DebtOption } from './types';
 
 interface SettlementViewModelInput {
-    user: UserSummary;
+    user: SettlementUser;
     friend: FriendUser;
     balance: FriendBalance;
     amount: string;
@@ -23,7 +20,7 @@ export interface SettlementViewModel {
     isSubmitDisabled: boolean;
     isDebtSettled: boolean;
     debtColor: 'green' | 'red';
-    summaryUser: UserSummary;
+    summaryUser: SettlementUser;
 }
 
 export const selectSettlementBalance = (

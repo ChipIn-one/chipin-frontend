@@ -2,7 +2,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import type { Group } from 'api/chipin.types';
@@ -44,8 +44,10 @@ const group = {
     createdAt: 1,
     updatedAt: 1,
     coverUrl: 'https://cdn.example.com/original.webp',
+    simplifyDebts: true,
     role: 'OWNER',
     status: 'ACTIVE',
+    lastUsedCurrency: null,
     recentActivities: { items: [], nextCursor: null },
 } satisfies Group;
 
@@ -253,6 +255,7 @@ test('creates a group before uploading the selected cover and closes after both 
             interaction.upload(screen.getByLabelText('modal.cover.pickerLabel'), file),
         )
         .then(() => {
+            fireEvent.load(screen.getByAltText('modal.cover.previewLabel'));
             expect(screen.getByRole('img', { name: 'modal.cover.previewLabel' })).toHaveProperty(
                 'src',
                 'blob:group-cover-preview',
@@ -348,6 +351,7 @@ test('rejects an unsupported cover before updating a group', () => {
     return interaction
         .click(screen.getByRole('button', { name: OPEN_MODAL_LABEL }))
         .then(() => {
+            fireEvent.load(screen.getByAltText('modal.cover.previewLabel'));
             expect(screen.getByRole('img', { name: 'modal.cover.previewLabel' })).toHaveProperty(
                 'src',
                 group.coverUrl,

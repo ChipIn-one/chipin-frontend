@@ -45,6 +45,8 @@ type RequestError = {
   `useShallow` selector instead of nesting them as properties inside another selector result.
 - Reused or derived selectors are named and live next to the store.
 - Named selectors live in the store's `selectors.ts` and are exported through its `index.ts`.
+- Selectors may call pure helpers. Helpers must receive data as arguments and must not import stores,
+  Zustand hooks, or selectors.
 - Selector results must be stable; do not create new arrays/objects on every subscription unless shallow comparison is intentional.
 - Do not use `getState()` during render. It is for store actions or imperative orchestration outside React.
 
@@ -91,7 +93,7 @@ fetchSetGroups: (): Promise<Group[]> => {
         })
         .catch((error: unknown) => {
             setError('group', 'data', normalizeApiError(error));
-            return Promise.reject(error);
+            return [];
         })
         .finally(() => {
             setLoading('group', 'data', 'fetched');
@@ -100,7 +102,8 @@ fetchSetGroups: (): Promise<Group[]> => {
 ```
 
 - Validate preconditions before entering `loading`.
-- Return the Promise and do not swallow rejections.
+- Read actions record normalized errors and resolve with the confirmed/current value; mutation actions
+  reject when the caller must react to a backend failure.
 - Cancellation is not a domain error.
 - Protect searches/pagination from stale responses and duplicate requests.
 - The simple `.finally(set fetched)` example is valid only for a single-flight operation. Concurrent/latest-wins actions must verify request identity so an older Promise cannot settle the newer request's loading/error state.
@@ -109,6 +112,10 @@ fetchSetGroups: (): Promise<Group[]> => {
 
 ## Store Coordination
 
-- Do not create store import cycles or directly mutate another domain store.
+- Do not directly mutate another domain store.
+- After an online-first domain mutation succeeds, the owning action may call named canonical fetch
+  actions in other stores through `getState()` and wait for them with an explicit `Promise.all`.
+- Keep the affected fetch actions visible beside the mutation; do not introduce a generic mutation map,
+  resource registry, command layer, or action-only mutation store for this flow.
 - Bootstrap, logout, reset, and multi-store offline reconciliation use explicit app orchestration.
-- Prefer action parameters over hidden reads from another store.
+- Prefer action parameters over hidden domain-data reads from another store.

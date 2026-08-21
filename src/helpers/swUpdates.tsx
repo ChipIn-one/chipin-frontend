@@ -53,16 +53,19 @@ const activateWaitingWorker = (): void => {
 
     usePwaStore.getState().setIsSwUpdateAvailable(false);
 
-    void activateServiceWorker(currentWaitingWorker)
-        .catch(() => undefined)
-        .then(() => {
-            if (isReloading) {
-                return;
-            }
+    const reloadAfterActivation = (): void => {
+        if (isReloading) {
+            return;
+        }
 
-            isReloading = true;
-            reloadCurrentPage();
-        });
+        isReloading = true;
+        reloadCurrentPage();
+    };
+
+    activateServiceWorker(currentWaitingWorker).then(
+        reloadAfterActivation,
+        reloadAfterActivation,
+    );
 };
 
 // ─── Toast ────────────────────────────────────────────────────────────────────

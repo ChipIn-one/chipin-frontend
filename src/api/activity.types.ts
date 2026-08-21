@@ -1,18 +1,25 @@
 import type {
+    ActivityAction,
     ExpenseCreatedAction,
     ExpenseReversedAction,
     ExpenseTransferredFromAction,
     ExpenseTransferredToAction,
     ExpenseUpdatedAction,
     GroupCreatedAction,
+    GroupDeactivatedAction,
     GroupDeletedAction,
     GroupUpdatedAction,
     MemberJoinedAction,
     MemberKickedAction,
     MemberLeftAction,
+    MembersAddedAction,
+    OwnershipTransferredAction,
     SettlementCreatedAction,
     SettlementReversedAction,
+    SettlementUpdatedAction,
 } from 'constants/activity';
+
+import type { SharingMode } from './chipin.params';
 
 /** --- LEDGER --- */
 
@@ -21,36 +28,37 @@ type Timestamp = number;
 
 type ActorSnapshot = {
     displayName: string;
-    picture: string | null;
+    picture?: string | null;
 };
 
 type BaseEvent = {
     id: UUID;
     seq: number;
-    domain: 'LEDGER' | 'GROUP' | string;
+    domain: 'LEDGER' | 'GROUP';
     action: string;
-    actorUserId: UUID;
+    actorUserId?: UUID | null;
     actorSnapshot: ActorSnapshot;
     subjectType: string;
     subjectId: UUID;
-    groupId: UUID | null;
-    metadata: unknown;
+    groupId?: UUID | null;
+    metadata?: unknown | null;
     createdAt: Timestamp;
-    parentActivityId: UUID | null;
+    parentActivityId?: UUID | null;
 };
 
 type ExpenseMetadata = {
     type: 'expense';
     entryId: UUID;
-    groupId: UUID | null;
-    groupName: string | null;
-    description: string | null;
+    groupId?: UUID | null;
+    groupName?: string | null;
+    description?: string | null;
     amount: number;
     currency: string;
-    payerId: UUID;
+    category?: string | null;
+    sharingMode?: SharingMode | null;
+    payerId?: UUID | null;
     payerDisplayName: string;
-    shares: ExpenseShare[];
-    fieldDiffs: FieldDiff[];
+    shares?: ExpenseShare[];
 };
 
 type ExpenseShare = {
@@ -71,31 +79,24 @@ type ExpenseTransfer = {
 type ExpenseTransferMetadata = {
     type: 'expense_transfer';
     groupId: UUID;
-    groupName: string;
+    groupName?: string | null;
     transferredUserId: UUID;
     actorUserId: UUID;
-    reason: string;
+    reason: 'LEAVE' | 'KICK' | 'GROUP_DELETED';
     transfers: ExpenseTransfer[];
-};
-
-type FieldDiff = {
-    field: string;
-    oldValue: unknown;
-    newValue: unknown;
 };
 
 type SettlementMetadata = {
     type: 'settlement';
     entryId: UUID;
-    groupId: UUID | null;
-    groupName: string | null;
+    groupId?: UUID | null;
+    groupName?: string | null;
     amount: number;
     currency: string;
-    actorUserId: UUID;
-    payerId: UUID;
+    actorUserId?: UUID | null;
+    payerId?: UUID | null;
     fromDisplayName: string;
     toDisplayName: string;
-    fieldDiffs: FieldDiff[];
 };
 
 type ExpenseCreatedEvent = BaseEvent & {
@@ -153,8 +154,8 @@ type GroupMetadata = {
     type: 'group';
     groupId: UUID;
     groupName: string;
-    groupImage?: string | null;
-    targetUserDisplayName: string | null;
+    targetUserDisplayName?: string | null;
+    targetUsers?: Array<{ userId: UUID; displayName: string }>;
 };
 
 type GroupCreatedEvent = BaseEvent & {
@@ -199,6 +200,20 @@ type MemberLeftEvent = BaseEvent & {
     metadata: GroupMetadata;
 };
 
+type UnsupportedActivityEvent = BaseEvent & {
+    action:
+        | GroupDeactivatedAction
+        | OwnershipTransferredAction
+        | MembersAddedAction
+        | SettlementUpdatedAction;
+    metadata?: ExpenseMetadata | SettlementMetadata | GroupMetadata | null;
+};
+
+type MetadataUnavailableEvent = Omit<BaseEvent, 'action' | 'metadata'> & {
+    action: ActivityAction;
+    metadata?: null;
+};
+
 /** --- Union --- */
 
 export type AppEvent =
@@ -214,4 +229,6 @@ export type AppEvent =
     | GroupDeletedEvent
     | MemberJoinedEvent
     | MemberKickedEvent
-    | MemberLeftEvent;
+    | MemberLeftEvent
+    | UnsupportedActivityEvent
+    | MetadataUnavailableEvent;

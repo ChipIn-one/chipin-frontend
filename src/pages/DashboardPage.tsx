@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { LucideChevronsDown, LucidePlus, LucideRefreshCw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
@@ -7,6 +7,8 @@ import { Box, Button, Container, Flex, Spinner, Text } from '@radix-ui/themes';
 
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 import { useDashboardStore } from 'store/dashboardStore';
+import { selectDashboardNextPageError } from 'store/errorsSelectors';
+import { useErrorsStore } from 'store/errorsStore';
 import { useGroupsStore } from 'store/groupsStore';
 import {
     selectDashboardFetched,
@@ -44,22 +46,13 @@ const DashboardPage = () => {
     );
     const groups = useGroupsStore(s => s.groups);
     const hasGroups = groups.length > 0;
-    const [failedActivityCursor, setFailedActivityCursor] = useState<number | null>(null);
     const hasMoreActivity = activityNextCursor !== null;
-    const isNextPageError =
-        failedActivityCursor !== null && failedActivityCursor === activityNextCursor;
+    const isNextPageError = useErrorsStore(selectDashboardNextPageError) !== null;
     const isEndOfFeed = !isNextPageLoading && !hasMoreActivity && activityItems.length > 0;
 
     const onLoadMore = useCallback(() => {
-        return fetchMoreDashboardActivity()
-            .then(() => {
-                setFailedActivityCursor(null);
-            })
-            .catch((error: unknown) => {
-                setFailedActivityCursor(activityNextCursor);
-                return Promise.reject(error);
-            });
-    }, [activityNextCursor, fetchMoreDashboardActivity]);
+        return fetchMoreDashboardActivity();
+    }, [fetchMoreDashboardActivity]);
 
     const sentinelRef = useInfiniteScroll({
         hasMore: hasMoreActivity && !isNextPageError,
@@ -68,7 +61,7 @@ const DashboardPage = () => {
     });
 
     const onRetryNextPage = () => {
-        void onLoadMore().catch(() => undefined);
+        onLoadMore();
     };
 
     return (

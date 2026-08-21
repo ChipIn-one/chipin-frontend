@@ -7,7 +7,8 @@
     "common": {
         "disconnect": "Se perdió la conexión.",
         "disconnectDescription": "No te preocupes, tus cambios se guardarán. Intentando reconectar...",
-        "reconnected": "La conexión ha sido restablecida."
+        "reconnected": "La conexión ha sido restablecida.",
+        "requestFailed": "Algo salió mal. Inténtalo de nuevo."
     },
     "group": {
         "inviteJoinWarning": "Por favor inicia sesión antes de unirte al grupo.",
@@ -19,11 +20,8 @@
         "updateError": "Algo salió mal al actualizar el grupo.",
         "coverUploadError": "El grupo se guardó, pero no se pudo subir la portada. Inténtalo de nuevo.",
         "removed": "¡El grupo \"{{name}}\" fue eliminado exitosamente!",
-        "removeError": "Algo salió mal al eliminar el grupo.",
         "left": "Saliste del grupo \"{{name}}\".",
-        "leaveError": "Algo salió mal al salir del grupo.",
         "kicked": "El miembro \"{{name}}\" fue removido del grupo.",
-        "kickError": "Algo salió mal al expulsar a este miembro.",
         "inviteLinkNotReady": "El enlace de invitación aún no está listo",
         "inviteLinkCopied": "Enlace de invitación del grupo copiado",
         "inviteLinkCopyError": "No se pudo copiar el enlace"
@@ -45,15 +43,12 @@
         "avatarUpdated": "Foto de perfil actualizada."
     },
     "expense": {
-        "created": "¡Gasto agregado exitosamente!",
-        "createError": "Algo salió mal al agregar el gasto."
+        "created": "¡Gasto agregado exitosamente!"
     },
     "ledger": {
-        "entryDeleted": "Entrada eliminada exitosamente.",
-        "entryDeleteError": "Algo salió mal al eliminar la entrada."
+        "entryDeleted": "Entrada eliminada exitosamente."
     },
     "settlement": {
-        "created": "¡Pago registrado exitosamente!",
-        "createError": "No se pudo registrar el pago."
+        "created": "¡Pago registrado exitosamente!"
     }
 }

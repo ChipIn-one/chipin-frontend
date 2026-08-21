@@ -3,7 +3,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import type { GroupUser } from 'api/chipin.types';
+import type { Group, GroupUser } from 'api/chipin.types';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
 
@@ -19,7 +19,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('sonner', () => ({
-    toast: { error: vi.fn(), success: vi.fn() },
+    toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
 }));
 
 const member = {
@@ -39,10 +39,26 @@ beforeEach(() => {
 });
 
 test('waits for confirmation before kicking a group member', () => {
-    const kickGroupMember = vi.fn().mockResolvedValue(member.displayName);
+    const kickGroupMember = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
+    const group = {
+        id: 'group-1',
+        name: 'Trip',
+        inviteToken: 'invite-token',
+        description: null,
+        creator: member,
+        members: [{ user: member, balancesByCurrency: {} }],
+        createdAt: 1,
+        updatedAt: 1,
+        coverUrl: null,
+        simplifyDebts: true,
+        role: 'OWNER',
+        status: 'ACTIVE',
+        lastUsedCurrency: null,
+        recentActivities: { items: [], nextCursor: null },
+    } satisfies Group;
 
-    useGroupsStore.setState({ kickGroupMember });
+    useGroupsStore.setState({ kickGroupMember, selectedGroup: group });
 
     render(
         <KickGroupMemberAlertDialog member={member}>
@@ -60,7 +76,10 @@ test('waits for confirmation before kicking a group member', () => {
         })
         .then(() => {
             return waitFor(() => {
-                expect(kickGroupMember).toHaveBeenCalledWith({ userId: member.id });
+                expect(kickGroupMember).toHaveBeenCalledWith({
+                    groupId: group.id,
+                    userId: member.id,
+                });
             });
         });
 });

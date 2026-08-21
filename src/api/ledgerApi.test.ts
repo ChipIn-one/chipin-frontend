@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { apiInstance } from './chipin.instance';
-import { createExpense, createSettlement, removeLedgerEntry } from './ledgerApi';
+import {
+    createExpense,
+    createSettlement,
+    removeLedgerEntry,
+} from './ledgerApi';
 
 vi.mock('./chipin.instance', () => ({
     apiInstance: {
@@ -75,4 +79,5 @@ describe('ledgerApi', () => {
             expect(result).toBeUndefined();
         });
     });
+
 });

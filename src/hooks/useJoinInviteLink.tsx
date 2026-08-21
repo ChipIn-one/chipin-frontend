@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { ROUTES } from 'constants/routes';
+import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { useGroupsStore } from 'store/groupsStore';
@@ -28,8 +29,11 @@ export const useJoinInviteLink = () => {
             .then(({ id }) => {
                 navigate(`${ROUTES.GROUP}/${id}`, { replace: true });
             })
-            .catch(() => {
-                toast.error(i18n.t('toasts:group.inviteJoinError'));
+            .catch((error: unknown) => {
+                toast.error(resolveApiErrorMessageFromError(
+                    error,
+                    i18n.t('toasts:group.inviteJoinError'),
+                ));
             });
     }, [inviteToken, isLoggedIn, joinGroup, navigate]);
 };

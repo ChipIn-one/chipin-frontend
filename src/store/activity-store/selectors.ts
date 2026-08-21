@@ -4,8 +4,8 @@ type ActivityFeedSlice = Pick<ActivityStore, 'items' | 'hasMore'>;
 type ActivitySubeventsFlowSlice = Pick<
     ActivityStore,
     | 'subevents'
+    | 'subeventsParent'
     | 'hasMoreSubevents'
-    | 'subeventsParentId'
     | 'fetchSetActivitySubevents'
     | 'fetchMoreActivitySubevents'
 >;
@@ -19,8 +19,8 @@ const selectActivitySubeventsFlow = (
     state: ActivityStore,
 ): ActivitySubeventsFlowSlice => ({
     subevents: state.subevents,
+    subeventsParent: state.subeventsParent,
     hasMoreSubevents: state.hasMoreSubevents,
-    subeventsParentId: state.subeventsParentId,
     fetchSetActivitySubevents: state.fetchSetActivitySubevents,
     fetchMoreActivitySubevents: state.fetchMoreActivitySubevents,
 });

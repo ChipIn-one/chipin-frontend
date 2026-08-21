@@ -35,7 +35,7 @@
 
 ```ts
 useEffect(() => {
-    void fetchSetGroups();
+    fetchSetGroups();
 }, [fetchSetGroups]);
 ```
 
@@ -45,6 +45,34 @@ useEffect(() => {
 - Pure calculations remain helpers, not hooks.
 - Hooks do not expose raw API clients to UI.
 - Do not hide unrelated effects behind one broad hook.
+
+## Component Store Connections
+
+- A new or touched component with two or more Zustand subscriptions (`use*Store(selector)` calls),
+  including action selections, moves them into its private `internal/useConnect.ts`. One subscription
+  may remain inline.
+- `useConnect` may read multiple stores, accept component props or identifiers, compose a
+  component-specific render model, and return bound callbacks named with `on*`.
+- `useConnect` owns only Zustand selectors/actions and their component-specific composition. Keep local
+  UI state, i18n, router hooks, direct API calls, and unrelated effects outside it.
+- When a selector produces a stable component render value, subscribe with it directly inside
+  `useConnect`.
+- When a selector/helper allocates nested arrays or objects, `useConnect` selects its stable source
+  references with `useShallow` and invokes the calculation after the subscription. Do not force direct
+  subscription with memoization or deep comparison merely to hide an unstable selector result.
+- Component-specific derived values belong in `useConnect`: call a pure helper or named selector there
+  and return the ready render value instead of exposing raw store fields to the component.
+- Reusable domain calculations remain named store selectors or pure helpers. Follow the selector grouping
+  and stability rules in `40-state.md` inside the connector.
+- Let `useConnect` infer its return type when it only combines values/actions already typed by store
+  selectors and direct store subscriptions. Do not add a `Connection` interface or explicit return
+  annotation merely to repeat those existing types.
+- Keep an explicit return type only when the connector intentionally narrows or renames a semantic render
+  model, exposes a shared private contract to multiple consumers, or inference would otherwise lose an
+  important boundary. Keep a larger such contract in `internal/types.ts`.
+- Return only fields required for rendering and interaction. Do not expose complete store objects, and
+  do not use the complete returned object as an effect dependency.
+- Apply this convention to new and touched components without mass-migrating unrelated legacy code.
 
 ## Performance
 

@@ -1,9 +1,13 @@
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { ROUTES } from 'constants/routes';
-import { resolveApiErrorMessage } from 'helpers/errors';
+import {
+    resolveApiErrorMessage,
+    resolveApiErrorMessageFromError,
+} from 'helpers/errors';
 import { useAuthStore } from 'store/authStore';
 
 import PageLoader from 'basics/PageLoader';
@@ -27,6 +31,7 @@ const resolveReturnTo = (returnTo: string | null): string => {
 };
 
 export const OAuthCallbackPage = () => {
+    const { t } = useTranslation('errors');
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const hasStartedExchange = useRef(false);
@@ -54,10 +59,14 @@ export const OAuthCallbackPage = () => {
             .then(() => {
                 navigate(returnTo, { replace: true });
             })
-            .catch(() => {
+            .catch((error: unknown) => {
+                toast.error(resolveApiErrorMessageFromError(
+                    error,
+                    t('AUTH.INVALID_OAUTH_EXCHANGE_CODE'),
+                ));
                 navigate(ROUTES.SIGN_IN, { replace: true });
             });
-    }, [exchangeGoogleOAuthCode, navigate, searchParams, setUnauthenticated]);
+    }, [exchangeGoogleOAuthCode, navigate, searchParams, setUnauthenticated, t]);
 
     return <PageLoader />;
 };

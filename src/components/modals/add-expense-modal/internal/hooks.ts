@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
 
 import { ROUTES } from 'constants/routes';
+import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { getUnixTimestampInSec } from 'helpers/time';
 import { useActivityStore } from 'store/activity-store';
 import { selectExpensePayload, selectIsSubmitDisabled } from 'store/expenseModalSelectors';
@@ -132,8 +133,10 @@ export const useExpenseModalSubmit = (onClose: () => void): ExpenseModalSubmitRe
                 toast.success(t('toasts:expense.created'));
             })
             .catch((error: unknown) => {
-                toast.error(t('toasts:expense.createError'));
-                console.error('Error creating expense:', error);
+                toast.error(resolveApiErrorMessageFromError(
+                    error,
+                    t('toasts:common.requestFailed'),
+                ));
             });
     }, [createExpense, onClose, t]);
 
