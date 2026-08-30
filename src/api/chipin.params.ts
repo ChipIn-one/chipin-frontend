@@ -76,6 +76,10 @@ export interface RemoveLedgerEntryParams {
     entryId: string;
 }
 
+export interface FetchLedgerEntryParams {
+    entryId: string;
+}
+
 export interface CreateSettlementParams {
     groupId?: string;
     fromUserId: string;
@@ -88,14 +92,14 @@ export interface UpdateLedgerExpenseParams {
     type: 'EXPENSE';
     expense: {
         description?: string | null;
-        amount: number;
-        date: number;
-        payerId: string;
-        participantIds: string[];
-        category: string;
+        amount?: number;
+        date?: number;
+        payerId?: string;
+        participantIds?: string[];
+        category?: string | null;
         subcategory?: string | null;
-        currency: string;
-        sharingMode: SharingMode;
+        currency?: string;
+        sharingMode?: SharingMode;
     };
 }
 

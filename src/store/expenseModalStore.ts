@@ -7,20 +7,24 @@ import {
     type ExpenseSplitMode,
 } from 'constants/chipin';
 import { parseAmountInput } from 'helpers/numbers';
+import { getUnixTimestampInSec } from 'helpers/time';
 
 import {
     selectAllUsersSelected,
     selectIncludedUsers,
     selectUsers,
 } from './expenseModalSelectors';
+import type { ExpenseModalOriginalState } from './expenseModalUpdate';
 
 export type ExpenseTargetMode = 'group' | 'friends';
+export type ExpenseModalMode = 'create' | 'edit';
 export type ExpenseParticipant = Pick<User, 'id' | 'displayName' | 'picture'>;
 
 export type ExpenseModalContext = 'dashboard' | 'friends' | 'group';
 
 export interface ExpenseModalGroup {
     id: string;
+    name?: string;
     members: ExpenseParticipant[];
 }
 
@@ -41,8 +45,17 @@ export interface ExpenseModalOpenOptions {
     friendId?: string;
 }
 
+export interface ExpenseModalEditContext {
+    entryId: string;
+    groupId?: string;
+    groupName?: string | null;
+    parentActivityId?: string;
+    original: ExpenseModalOriginalState;
+}
+
 export interface ExpenseModalState {
     isOpened: boolean;
+    mode: ExpenseModalMode;
     openingContext?: 'friends';
     openingFriendId?: string;
     source: ExpenseModalSource;
@@ -51,6 +64,7 @@ export interface ExpenseModalState {
     selectedFriendId: string;
     description: string;
     amount: string;
+    date: number;
     currency: string;
     category: string;
     paidById: string;
@@ -60,6 +74,28 @@ export interface ExpenseModalState {
     shareWeights: Record<string, string>;
     includedParticipantIds: Record<string, boolean>;
     isPercentManuallyEdited: boolean;
+    editContext: ExpenseModalEditContext | null;
+}
+
+export interface ExpenseModalEditInitialization {
+    mode: 'edit';
+    source: ExpenseModalSource;
+    targetMode: ExpenseTargetMode;
+    groupId: string;
+    selectedFriendId: string;
+    description: string;
+    amount: string;
+    date: number;
+    currency: string;
+    category: string;
+    paidById: string;
+    splitMode: ExpenseSplitMode;
+    percentShares: Record<string, string>;
+    amountShares: Record<string, string>;
+    shareWeights: Record<string, string>;
+    includedParticipantIds: Record<string, boolean>;
+    isPercentManuallyEdited: boolean;
+    editContext: ExpenseModalEditContext;
 }
 
 interface ExpenseModalActions {
@@ -67,9 +103,11 @@ interface ExpenseModalActions {
     close: () => void;
     setIsOpened: (isOpened: boolean) => void;
     initialize: (source: ExpenseModalSource) => void;
+    initializeEdit: (initialization: ExpenseModalEditInitialization) => void;
     reset: () => void;
     setDescription: (description: string) => void;
     setAmount: (amount: string) => void;
+    setDate: (date: number) => void;
     setCurrency: (currency: string) => void;
     setCategory: (category: string) => void;
     setPaidById: (paidById: string) => void;
@@ -96,6 +134,7 @@ const EMPTY_SOURCE: ExpenseModalSource = {
 
 const INITIAL_EXPENSE_MODAL_STATE: ExpenseModalState = {
     isOpened: false,
+    mode: 'create',
     openingContext: undefined,
     openingFriendId: undefined,
     source: EMPTY_SOURCE,
@@ -104,6 +143,7 @@ const INITIAL_EXPENSE_MODAL_STATE: ExpenseModalState = {
     selectedFriendId: '',
     description: '',
     amount: '',
+    date: 0,
     currency: '',
     category: DEFAULT_EXPENSE_CATEGORY,
     paidById: '',
@@ -113,6 +153,7 @@ const INITIAL_EXPENSE_MODAL_STATE: ExpenseModalState = {
     shareWeights: {},
     includedParticipantIds: {},
     isPercentManuallyEdited: false,
+    editContext: null,
 };
 
 const roundMoney = (value: number) => Math.round(value * 100) / 100;
@@ -215,6 +256,7 @@ const getInitializedState = (
     const state: ExpenseModalState = {
         ...INITIAL_EXPENSE_MODAL_STATE,
         isOpened: true,
+        mode: 'create',
         openingContext:
             source.context === 'friends' ? 'friends' : undefined,
         openingFriendId: source.preferredFriendId,
@@ -224,6 +266,7 @@ const getInitializedState = (
         selectedFriendId,
         currency: source.defaultCurrency,
         category: source.skipCategory ? '' : source.defaultCategory,
+        date: getUnixTimestampInSec(),
     };
 
     return {
@@ -238,6 +281,8 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
         set(state => ({
             ...state,
             isOpened: true,
+            mode: 'create',
+            editContext: null,
             openingContext: options?.context,
             openingFriendId: options?.friendId,
         }));
@@ -264,6 +309,15 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
             ...getInitializedState(source),
         }));
     },
+    initializeEdit: initialization => {
+        set(state => ({
+            ...state,
+            ...initialization,
+            isOpened: true,
+            openingContext: undefined,
+            openingFriendId: undefined,
+        }));
+    },
     reset: () => {
         set(state => ({
             ...state,
@@ -275,6 +329,9 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
     },
     setAmount: amount => {
         set(state => ({ ...state, amount }));
+    },
+    setDate: date => {
+        set(state => ({ ...state, date }));
     },
     setCurrency: currency => {
         set(state => ({ ...state, currency }));

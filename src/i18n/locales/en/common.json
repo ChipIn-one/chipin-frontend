@@ -7,6 +7,7 @@
         "reload": "Reload page",
         "goHome": "Go home",
         "create": "Create",
+        "save": "Save",
         "createGroup": "Create group",
         "saveGroup": "Save group",
         "addExpense": "Add expense",
@@ -27,6 +28,7 @@
     },
     "fields": {
         "description": "Description",
+        "date": "Date",
         "descriptionOptional": "Description (optional)",
         "groupOptional": "Group (optional)",
         "amount": "Amount",

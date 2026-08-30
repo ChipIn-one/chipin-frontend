@@ -122,3 +122,21 @@ test('opens Solo mode and closes the expense modal from the single-member notice
             expect(useExpenseModalStore.getState().isOpened).toBe(false);
         });
 });
+
+test('uses the edit title and Save action in edit mode', () => {
+    useExpenseModalStore.setState({ mode: 'edit', isOpened: true });
+
+    render(
+        <MemoryRouter initialEntries={['/activity']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <AddExpenseModal />
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    expect(screen.getByText('Edit expense')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveProperty(
+        'disabled',
+        true,
+    );
+});

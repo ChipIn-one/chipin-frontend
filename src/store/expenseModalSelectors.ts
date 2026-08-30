@@ -6,6 +6,7 @@ import {
 } from 'constants/chipin';
 
 import type { ExpenseModalState, ExpenseModalStore, ExpenseParticipant } from './expenseModalStore';
+import { buildExpenseUpdateParams } from './expenseModalUpdate';
 
 type ShareColor = 'gray' | 'jade' | 'red';
 
@@ -316,8 +317,24 @@ const getSubmitState = (state: ExpenseModalStore) => {
     return { isDisabled, payerId, split };
 };
 
-export const selectIsSubmitDisabled = (state: ExpenseModalStore) =>
-    getSubmitState(state).isDisabled;
+export const selectIsSubmitDisabled = (state: ExpenseModalStore) => {
+    const { isDisabled } = getSubmitState(state);
+
+    if (isDisabled) {
+        return true;
+    }
+
+    if (state.mode !== 'edit' || !state.editContext) {
+        return false;
+    }
+
+    const payload = selectExpensePayload(state);
+
+    return payload === null || buildExpenseUpdateParams(
+        state.editContext.original,
+        payload,
+    ) === null;
+};
 
 const getPayloadParticipants = (
     state: ExpenseModalStore,
@@ -364,7 +381,7 @@ const getPayloadParticipants = (
 
 export const selectExpensePayload = (
     state: ExpenseModalStore,
-    date: number,
+    date = state.date,
 ): CreateLedgerEntryParams | null => {
     const { isDisabled, payerId, split } = getSubmitState(state);
 

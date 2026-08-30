@@ -7,6 +7,7 @@
         "reload": "Recargar página",
         "goHome": "Ir al inicio",
         "create": "Crear",
+        "save": "Guardar",
         "createGroup": "Crear grupo",
         "saveGroup": "Guardar grupo",
         "addExpense": "Agregar gasto",
@@ -27,6 +28,7 @@
     },
     "fields": {
         "description": "Descripción",
+        "date": "Fecha",
         "descriptionOptional": "Descripción (opcional)",
         "groupOptional": "Grupo (opcional)",
         "amount": "Monto",

@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
 import * as activityApi from 'api/activityApi';
+import type { ApiExpenseLedgerEntry } from 'api/chipin.raw.types';
 import * as ledgerApi from 'api/ledgerApi';
 import {
     ACTIVITY_ACTIONS,
@@ -25,7 +26,9 @@ vi.mock('api/activityApi', () => ({
 vi.mock('api/ledgerApi', () => ({
     createExpense: vi.fn(),
     createSettlement: vi.fn(),
+    fetchLedgerEntry: vi.fn(),
     removeLedgerEntry: vi.fn(),
+    updateExpense: vi.fn(),
 }));
 
 const originalRefreshActions = {
@@ -89,6 +92,47 @@ const createActivityEvent = (id: string, seq: number): AppEvent => ({
     createdAt: seq,
     parentActivityId: null,
 });
+
+const editUser = (id: string, displayName: string) => ({
+    id,
+    email: `${id}@example.com`,
+    displayName,
+    firstName: displayName,
+    lastName: null,
+    picture: null,
+    createdAt: 1,
+    updatedAt: 1,
+});
+
+const editEntry: ApiExpenseLedgerEntry = {
+    id: 'expense-edit-1',
+    type: 'EXPENSE',
+    scope: 'GROUP',
+    groupId: 'group-1',
+    systemAction: null,
+    createdAt: 1,
+    updatedAt: 1,
+    expense: {
+        id: 'expense-edit-1',
+        description: 'Dinner',
+        amount: 30,
+        currency: 'USD',
+        date: 1,
+        payer: editUser('user-1', 'Alex'),
+        groupId: 'group-1',
+        participants: [editUser('user-1', 'Alex'), editUser('user-2', 'Sam')],
+        participantShares: [
+            { userId: 'user-1', shareAmount: 15, currency: 'USD' },
+            { userId: 'user-2', shareAmount: 15, currency: 'USD' },
+        ],
+        category: 'food',
+        subcategory: null,
+        creator: editUser('user-1', 'Alex'),
+        createdAt: 1,
+        updatedAt: 1,
+    },
+    settlement: null,
+};
 
 test('resets activity state', () => {
     useActivityStore.setState({
@@ -481,5 +525,140 @@ test('does not refetch when an expense mutation fails', () => {
         currency: 'USD',
     })).rejects.toBe(mutationError).then(() => {
         expect(fetchSetDashboard).not.toHaveBeenCalled();
+    });
+});
+
+test('prepares an expense edit from a canonical ledger entry', () => {
+    vi.mocked(ledgerApi.fetchLedgerEntry).mockResolvedValue(editEntry);
+
+    return useActivityStore.getState().prepareExpenseEdit({
+        entryId: editEntry.id,
+        activityEvents: [createActivityEvent('activity-edit-1', 1)],
+        parentActivityId: 'parent-1',
+    }).then(result => {
+        expect(ledgerApi.fetchLedgerEntry).toHaveBeenCalledWith({
+            entryId: editEntry.id,
+        });
+        expect(result).toMatchObject({
+            mode: 'edit',
+            editContext: {
+                entryId: editEntry.id,
+                groupId: editEntry.groupId,
+                parentActivityId: 'parent-1',
+            },
+        });
+        expect(useLoadingStore.getState().expense.edit).toBe('fetched');
+    });
+});
+
+test('updates an expense and refreshes the original group scope', () => {
+    const fetchSetActivity = vi.fn().mockResolvedValue(undefined);
+    const fetchSetDashboard = vi.fn().mockResolvedValue(undefined);
+    const fetchSetGroupById = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(ledgerApi.updateExpense).mockResolvedValue(editEntry);
+    useActivityStore.setState({ fetchSetActivity });
+    useDashboardStore.setState({ fetchSetDashboard });
+    useGroupsStore.setState({ fetchSetGroupById });
+
+    const entry = {
+        type: 'EXPENSE' as const,
+        expense: { description: 'Updated dinner' },
+    };
+    const confirmedItems = [createActivityEvent('confirmed-item', 1)];
+    useActivityStore.setState({ items: confirmedItems });
+
+    return useActivityStore.getState().updateExpense({
+        entryId: editEntry.id,
+        entry,
+        groupId: editEntry.groupId ?? undefined,
+        parentActivityId: 'parent-1',
+    }).then(() => {
+        expect(ledgerApi.updateExpense).toHaveBeenCalledWith({
+            entryId: editEntry.id,
+            entry,
+        });
+        expect(fetchSetGroupById).toHaveBeenCalledWith('group-1', true);
+        expect(fetchSetDashboard).toHaveBeenCalledWith(true);
+        expect(fetchSetActivity).toHaveBeenCalledWith(true);
+        expect(useLoadingStore.getState().expense.update).toBe('fetched');
+        expect(useActivityStore.getState().items).toEqual(confirmedItems);
+    });
+});
+
+test('updates a direct expense and refreshes friends and visible subevents', () => {
+    const fetchSetActivity = vi.fn().mockResolvedValue(undefined);
+    const fetchSetDashboard = vi.fn().mockResolvedValue(undefined);
+    const fetchSetFriends = vi.fn().mockResolvedValue(undefined);
+    const fetchSetActivitySubevents = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(ledgerApi.updateExpense).mockResolvedValue(editEntry);
+    useActivityStore.setState({
+        fetchSetActivity,
+        fetchSetActivitySubevents,
+        subeventsParent: createActivityEvent('parent-1', 0),
+        subeventsCategory: ACTIVITY_CATEGORIES.EXPENSE,
+    });
+    useDashboardStore.setState({ fetchSetDashboard });
+    useUsersStore.setState({ fetchSetFriends });
+
+    return useActivityStore.getState().updateExpense({
+        entryId: editEntry.id,
+        entry: {
+            type: 'EXPENSE',
+            expense: { date: 2 },
+        },
+        parentActivityId: 'parent-1',
+    }).then(() => {
+        expect(fetchSetFriends).toHaveBeenCalledWith(true);
+        expect(fetchSetActivitySubevents).toHaveBeenCalledWith({
+            parentActivityId: 'parent-1',
+            category: ACTIVITY_CATEGORIES.EXPENSE,
+            force: true,
+        });
+        expect(fetchSetActivity).toHaveBeenCalledWith(true);
+        expect(fetchSetDashboard).toHaveBeenCalledWith(true);
+    });
+});
+
+test('records and rejects an expense update failure without refreshing', () => {
+    const mutationError = new Error('Update failed');
+    const fetchSetDashboard = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(ledgerApi.updateExpense).mockRejectedValue(mutationError);
+    useDashboardStore.setState({ fetchSetDashboard });
+
+    return expect(useActivityStore.getState().updateExpense({
+        entryId: editEntry.id,
+        entry: {
+            type: 'EXPENSE',
+            expense: { description: 'Updated dinner' },
+        },
+    })).rejects.toBe(mutationError).then(() => {
+        expect(useErrorsStore.getState().errors.expense.update).toEqual(
+            expect.objectContaining({ message: expect.any(String) }),
+        );
+        expect(useLoadingStore.getState().expense.update).toBe('fetched');
+        expect(fetchSetDashboard).not.toHaveBeenCalled();
+    });
+});
+
+test('does not reject a confirmed expense update when canonical refresh rejects', () => {
+    vi.mocked(ledgerApi.updateExpense).mockResolvedValue(editEntry);
+    useActivityStore.setState({
+        fetchSetActivity: vi.fn().mockRejectedValue(new Error('Activity unavailable')),
+    });
+    useDashboardStore.setState({
+        fetchSetDashboard: vi.fn().mockRejectedValue(new Error('Dashboard unavailable')),
+    });
+    useUsersStore.setState({
+        fetchSetFriends: vi.fn().mockRejectedValue(new Error('Friends unavailable')),
+    });
+
+    return useActivityStore.getState().updateExpense({
+        entryId: editEntry.id,
+        entry: {
+            type: 'EXPENSE',
+            expense: { description: 'Updated dinner' },
+        },
+    }).then(() => {
+        expect(ledgerApi.updateExpense).toHaveBeenCalledOnce();
     });
 });

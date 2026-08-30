@@ -18,7 +18,7 @@ const ExpenseCurrencyCategoryFields = () => {
             useShallow(state => ({
                 currency: state.currency,
                 category: state.category,
-                skipCategory: state.source.skipCategory,
+                skipCategory: state.source.skipCategory && state.mode === 'create',
                 setCurrency: state.setCurrency,
                 setCategory: state.setCategory,
             })),

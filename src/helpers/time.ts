@@ -98,6 +98,21 @@ export const formatActivityDateDivider = (
 export const getUnixTimestampInSec = (date?: Date): number =>
     Math.floor((date ? date.getTime() : Date.now()) / 1000);
 
+export const formatUnixTimestampInSecForDateTimeInput = (timestamp: number): string => {
+    const date = new Date(timestamp * 1000);
+    const pad = (value: number) => String(value).padStart(2, '0');
+
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(
+        date.getHours(),
+    )}:${pad(date.getMinutes())}`;
+};
+
+export const parseDateTimeInputToUnixTimestampInSec = (value: string): number | null => {
+    const timestamp = new Date(value).getTime();
+
+    return Number.isNaN(timestamp) ? null : Math.floor(timestamp / 1000);
+};
+
 export const detectDeviceTimezone = (): string => {
     try {
         return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
