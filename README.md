@@ -34,7 +34,7 @@ npm install
 | `npm run test:full`                          | Run the complete test suite                      |
 | `npm run typecheck`                          | Run the TypeScript compiler                      |
 | `npm run verify`                             | Fast lint/typecheck verification                 |
-| `npm run verify:review`                      | Full review gate: lint, tests, and production build |
+| `npm run verify:full`                        | Full completion gate: lint, tests, and production build |
 | `npm run vercel-build`                       | Vercel gate: full test suite followed by production build |
 | `npm run build`                              | Generate version and build for production        |
 | `npm run preview`                            | Preview the production build locally             |
@@ -76,12 +76,12 @@ npm run test:task -- src/store/groupsStore.test.ts src/pages/group-page/GroupPag
 
 `test:task` refuses to run without an explicit test path, which prevents an accidental full-suite run.
 
-### Full Review Verification
+### Full Completion Verification
 
-Run the full gate only for an explicit staged review, merge, or CI/release checkpoint:
+Run the full completion gate at implementation completion and CI/release checkpoints:
 
 ```bash
-npm run verify:review
+npm run verify:full
 ```
 
 ## 📝 License

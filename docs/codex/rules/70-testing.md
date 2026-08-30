@@ -69,11 +69,10 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
 - Select tests by the changed behavior: pure helper/selector changes use their co-located tests,
   store/API changes use the owning store/API tests plus directly affected UI tests, and component
   changes use the component test plus the smallest affected integration test.
-- `npm run test:full` runs the complete suite and is reserved for `review`/`staged`, merge, or CI/release
-  checkpoints.
+- `npm run test:full` runs the complete suite and is used at completion or CI/release checkpoints.
 - Type safety: `npm run typecheck`.
 - Fast local verification: `npm run verify` (quiet lint plus typecheck; it does not run Vitest or build).
-- Full review verification: `npm run verify:review` (lint, complete Vitest suite, and production build).
+- Full completion gate: `npm run verify:full` (lint, complete Vitest suite, and production build).
 - `npm run build` generates the version and builds the app; it does not run tests implicitly.
 - `npm run vercel-build` is wired through `vercel.json` and runs the complete Vitest suite before
   the production build; local `npm run build` remains test-free.

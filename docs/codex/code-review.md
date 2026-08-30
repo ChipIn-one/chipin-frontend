@@ -1,71 +1,31 @@
-# Codex Code Review Checklist
+# Code review
 
-Use this checklist for final self-review. Request a separate reviewer only for high-risk work, large diffs, or changes that benefit from independent judgment.
+## Level 1 — deterministic
 
-## Staged Review Gate
-
-The user manually inspects implementation changes and owns the Git index. `review` and `staged` are explicit
-commands to run `superpowers:requesting-code-review` against the staged candidate.
+During implementation run targeted tests and lint/typecheck where appropriate.
+The final gate is:
 
 ```bash
-git diff --cached --stat
-git diff --cached
+npm run verify:full
 ```
 
-- Review only staged changes by default. Unstaged and untracked files are outside the finding scope.
-- Read surrounding code when necessary to understand the staged patch, but do not broaden findings into
-  unrelated cleanup.
-- Use `git diff HEAD` only when the user explicitly requests review of the whole task or all current changes.
-- If no staged patch exists, report that nothing is staged and stop.
-- Never stage reviewer fixes automatically. Apply confirmed Critical and Important fixes to the working tree
-  as unstaged changes for the user to inspect.
-- Once the user stages fixes and sends `review` or `staged` again, review the staged candidate again before
-  declaring it approved.
-- A review-only request outside this explicit staged workflow remains read-only unless the user authorizes
-  fixes.
+## Level 2 — bounded Luna self-review
 
-## Scope
+Luna performs one findings-first review of the final task diff against base,
+including task-owned untracked files, directly affected callers/consumers, and
+relevant tests/config. Focus on requirements, correctness, regressions,
+state/data flow, races, security, data loss, architecture, and missing
+validation. Ignore formatting/style already enforced by tooling.
 
-- The diff matches the request or approved plan and contains no unrelated churn.
-- The implementation is the smallest safe change and follows existing patterns.
-- New and substantially refactored nested directories follow the recursive ownership structure from
-  `rules/10-architecture.md`; legacy directories are not migrated incidentally.
+## Level 3 — risk-triggered deeper same-Luna review
 
-## Project Invariants
+Only high-risk changes receive one additional focused pass over the final diff,
+affected subsystem, direct callers/consumers, and relevant tests/config. Risk
+triggers include auth/tokens/interceptors, permissions, money/balances,
+settlements/rounding, persistence/offline/idempotency, critical shared stores,
+races, routing/auth composition, service-worker cache behavior, CI security,
+major dependency/security upgrades, or large cross-cutting changes. Heuristics
+are 3+ architecture layers, about 15+ production files, or 800+ changed lines.
 
-- Dependency direction remains pages -> features -> components -> basics.
-- Directory boundaries expose focused `index.ts` files, consumers avoid deep imports, and root barrels do
-  not leak `internal/` implementation details.
-- New or substantially refactored Zustand stores follow the `<domain>-store/` capability layout:
-  `actions.ts`, `types.ts`, optional `constants.ts`, `initialState.ts`, `selectors.ts`, co-located tests,
-  and one explicit public `index.ts`.
-- Primary components, subcomponents, `internal` support files, `styled.ts`, public/private types, and
-  co-located tests are placed at their documented ownership level without empty scaffolding.
-- New and touched components with two or more Zustand subscriptions use a private component-owned
-  `internal/useConnect.ts`; the connector exposes only the render model and `on*` actions the component needs.
-- Helpers do not read Zustand or selectors; selectors and `useConnect` may call helpers. Connectors subscribe
-  directly to stable derived selectors and calculate allocating component render models from stable selected
-  source references inside `useConnect`.
-- The relevant chapters under `docs/codex/rules/` were applied to new and touched code.
-- UI uses Radix responsive props first, project theme helpers, shared money basics, i18n, and accessible semantics.
-- UI calls store actions; runtime API calls remain namespaced and below the UI boundary.
-- Types remain strict; no `any` or `as any` was added.
-- Dynamic collections are traversed once per computation when multiple results can be collected together;
-  repeated array methods, repeated `Object.*` conversions, nested scans, and copying `reduce` accumulators
-  are rejected unless a documented exception applies.
-- Loading/errors remain centralized and offline financial state remains distinguishable until backend reconciliation.
-- Backend contracts remain unchanged unless explicitly in scope.
-
-## Validation
-
-- Before completing an explicit staged review, run `npm run verify:review` as the full lint, test, and
-  production-build gate. Do not run this full gate for every intermediate implementation edit.
-- During implementation, use `npm run test:task -- <explicit test paths>`, `npm run typecheck`, and the
-  fast `npm run verify` command as appropriate for the changed behavior.
-- Confirm the evidence is fresh and report skipped, failed, or unavailable checks explicitly.
-- If a check fails, identify whether the failure is related to the diff or appears pre-existing.
-
-## Handoff
-
-- List exact files changed and the outcome.
-- Report verification results and remaining risks without repeating the full plan.
+No reviewer agent, second model, subagent, manual staged ceremony, or merge is
+required.
