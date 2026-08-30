@@ -1,0 +1,96 @@
+ChipIn Proprietary Source License
+
+Copyright © 2026 Mikhail Douhun. All rights reserved.
+
+Effective date: 2026-08-30
+
+1. Scope and ownership
+
+This license applies only to the ChipIn source code, assets, documentation,
+configuration, and other materials in this repository that are owned by
+Mikhail Douhun (the "Proprietary Materials"). Except for third-party
+components identified in the repository or their distributions, the
+Proprietary Materials are owned by Mikhail Douhun. This is a proprietary,
+source-available license and is not an open-source license.
+
+2. Limited permission
+
+Subject to this license, Mikhail Douhun grants you a personal,
+non-exclusive, non-transferable, non-sublicensable, non-commercial,
+non-production permission to:
+
+* view, inspect, and study the public source code;
+* clone or download the repository for personal, educational, evaluation, or
+  research purposes;
+* run the application locally for those purposes; and
+* make and use private local modifications and private experiments for study
+  and experimentation.
+
+These are the only permissions granted for the Proprietary Materials.
+
+3. Restrictions
+
+Without prior written permission from Mikhail Douhun, you must not:
+
+* use the Proprietary Materials commercially, in a commercial project, paid
+  product, paid service, client work, consulting deliverable, monetized
+  deployment, or production SaaS;
+* deploy the Proprietary Materials or a derivative version as a production
+  application, public service, or other publicly available product;
+* redistribute the Proprietary Materials outside the limited uses expressly
+  allowed in Section 2 or rights independently arising through GitHub's
+  applicable Terms of Service and functionality;
+* sell, resell, sublicense, relicense, transfer, or grant downstream rights
+  to the Proprietary Materials;
+* publicly distribute the Proprietary Materials or publish, distribute, or
+  operate public forks or other modified or derivative versions as
+  independent products;
+* incorporate substantial portions of the Proprietary Materials into
+  another distributed product, rebrand them, or distribute them as another
+  product;
+* remove or obscure copyright or proprietary notices; or
+* represent the Proprietary Materials as open source or grant rights that
+  this license does not grant.
+
+Private modifications and private experiments remain permitted only within
+the limited scope in Section 2. Any permission not expressly granted is
+reserved.
+
+4. GitHub platform rights
+
+The repository is public on GitHub. Nothing in this license is intended to
+restrict GitHub's hosting, display, or other operation of the repository, or
+to revoke rights independently granted to GitHub users under GitHub's
+applicable Terms of Service and GitHub functionality, including viewing and
+forking a public repository through GitHub. Those platform rights do not
+grant any additional commercial, production, sublicensing, sale, or general
+redistribution rights under this license.
+
+5. Third-party software
+
+Third-party software, assets, and other materials remain governed by their
+own license terms. This license does not relicense, replace, or limit those
+terms. You are responsible for complying with the applicable third-party
+licenses and preserving their required notices.
+
+6. Termination
+
+The permissions granted by this license terminate automatically upon a
+material breach. On termination, you must stop exercising the permissions
+granted by this license and delete copies and private modifications in your
+possession or control, except to the extent that retention or rights arise
+independently under applicable law or GitHub's Terms of Service.
+
+7. Disclaimer of warranty
+
+THE PROPRIETARY MATERIALS ARE PROVIDED "AS IS" AND WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING WARRANTIES OF TITLE,
+NON-INFRINGEMENT, MERCHANTABILITY, OR FITNESS FOR A PARTICULAR PURPOSE, TO
+THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW.
+
+8. Limitation of liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, MIKHAIL DOUHUN SHALL NOT
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR
+OTHER DAMAGES ARISING FROM THIS LICENSE OR THE USE OR INABILITY TO USE THE
+PROPRIETARY MATERIALS, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.

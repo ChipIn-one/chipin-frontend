@@ -1,0 +1,144 @@
+ChipIn Frontend — Third-Party Notices
+
+Audit date: 2026-08-30
+
+The ChipIn Proprietary Source License applies only to material owned by
+Mikhail Douhun. Third-party packages remain under their own license terms.
+This file records the production dependency license audit and the direct
+runtime package inventory. It does not replace or relicense any upstream
+license.
+
+Production audit
+
+The production dependency graph recorded in package-lock.json contains 144
+package records: 138 MIT, 3 Apache-2.0, 2 ISC, and 1 0BSD. No GPL, LGPL,
+AGPL, MPL, EPL, CDDL, SSPL, BUSL, custom, UNKNOWN, or UNLICENSED package was
+reachable through the production dependency edges. The GPL/LGPL/MPL entries
+in the lockfile are dev-only tooling dependencies and are not part of the
+production dependency graph.
+
+The 2026-08-30 production build included 83 package names in source maps.
+The minified JavaScript did not preserve upstream license comments, so this
+notice file should accompany any distributed production artifact. Re-run the
+audit when production dependencies change.
+
+Direct runtime packages
+
+@radix-ui/themes — MIT
+@sentry/react — MIT
+@uidotdev/usehooks — MIT
+@vercel/analytics — MIT
+@vercel/speed-insights — Apache-2.0
+axios — MIT
+bignumber.js — MIT
+dexie — Apache-2.0
+dexie-react-hooks — Apache-2.0
+i18next — MIT
+lucide-react — ISC; includes Feather-derived icons under MIT
+next-themes — MIT
+qrcode-generator — MIT
+react — MIT
+react-dom — MIT
+react-i18next — MIT
+react-router-dom — MIT
+sonner — MIT
+styled-components — MIT
+zustand — MIT
+
+Production source-map inventory
+
+The production source maps also include the following transitive packages
+under MIT:
+
+@floating-ui/core, @floating-ui/dom, @floating-ui/react-dom,
+@floating-ui/utils, @radix-ui/colors, @radix-ui/number, @radix-ui/primitive,
+@radix-ui/react-alert-dialog, @radix-ui/react-avatar, @radix-ui/react-checkbox,
+@radix-ui/react-collection, @radix-ui/react-compose-refs,
+@radix-ui/react-context, @radix-ui/react-dialog, @radix-ui/react-direction,
+@radix-ui/react-dismissable-layer, @radix-ui/react-dropdown-menu,
+@radix-ui/react-focus-guards, @radix-ui/react-focus-scope, @radix-ui/react-id,
+@radix-ui/react-menu, @radix-ui/react-popover, @radix-ui/react-popper,
+@radix-ui/react-portal, @radix-ui/react-presence, @radix-ui/react-primitive,
+@radix-ui/react-progress, @radix-ui/react-radio-group,
+@radix-ui/react-roving-focus, @radix-ui/react-scroll-area,
+@radix-ui/react-select, @radix-ui/react-slot, @radix-ui/react-switch,
+@radix-ui/react-tabs, @radix-ui/react-toggle, @radix-ui/react-toggle-group,
+@radix-ui/react-tooltip, @radix-ui/react-use-callback-ref,
+@radix-ui/react-use-controllable-state, @radix-ui/react-use-effect-event,
+@radix-ui/react-use-is-hydrated, @radix-ui/react-use-layout-effect,
+@radix-ui/react-use-previous, @radix-ui/react-use-size,
+@radix-ui/react-visually-hidden, @radix-ui/themes, @sentry/browser,
+@sentry/browser-utils, @sentry/conventions, @sentry/core, @sentry/react,
+@uidotdev/usehooks, @vercel/analytics, aria-hidden, axios, bignumber.js,
+classnames, get-nonce, html-parse-stringify, i18next, next-themes,
+qrcode-generator, radix-ui, react, react-dom, react-i18next,
+react-remove-scroll, react-remove-scroll-bar, react-router,
+react-style-singleton, scheduler, sonner, styled-components, stylis,
+use-callback-ref, use-sidecar, use-sync-external-store, void-elements,
+workbox-window, and zustand.
+
+The remaining source-map packages are @vercel/speed-insights under Apache-2.0,
+lucide-react under ISC, and tslib under 0BSD.
+
+Required upstream attributions
+
+Apache-2.0
+
+@vercel/speed-insights: Copyright (c) 2023 Vercel, Inc.
+Dexie and dexie-react-hooks: Dexie.js, Copyright (c) 2014-2017 David
+Fahlander.
+
+The Apache License, Version 2.0 applies to these packages:
+https://www.apache.org/licenses/LICENSE-2.0
+
+ISC
+
+lucide-react: Copyright (c) 2026 Lucide Icons and Contributors.
+
+ISC License
+
+Copyright (c) 2026 Lucide Icons and Contributors
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+The following Lucide icons are derived from Feather:
+
+Copyright (c) 2013-present Cole Bemis
+
+The MIT permission and disclaimer terms apply to those Feather-derived icons.
+
+0BSD
+
+tslib: Copyright (c) Microsoft Corporation.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
+MIT
+
+The direct MIT packages listed above, together with the transitive MIT
+packages identified by package-lock.json and the production source maps,
+retain their respective upstream MIT copyright, permission, and disclaimer
+notices. Notable bundled MIT attributions include Meta Platforms, WorkOS,
+Floating UI contributors, React Training/Remix/Shopify, Sentry, Vercel,
+Anton Korzunov, and the qrcode-generator implementation by Kazuhiko Arase.
+The upstream package distributions remain the authoritative source for
+package-specific MIT notices.
