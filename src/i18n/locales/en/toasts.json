@@ -43,7 +43,8 @@
     "avatarUpdated": "Profile photo updated."
   },
   "expense": {
-    "created": "Expense added successfully!"
+    "created": "Expense added successfully!",
+    "updated": "Expense updated successfully!"
   },
   "ledger": {
     "entryDeleted": "Entry deleted successfully."

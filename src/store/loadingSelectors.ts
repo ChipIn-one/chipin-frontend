@@ -42,5 +42,7 @@ export const selectFriendRemoving = (s: LoadingStore) => s.users.removeFriend ==
 export const selectUserAvatarUploading = (s: LoadingStore) => s.users.avatar === 'loading';
 
 export const selectExpenseAdding = (s: LoadingStore) => s.expense.add === 'loading';
+export const selectExpenseEditing = (s: LoadingStore) => s.expense.edit === 'loading';
+export const selectExpenseUpdating = (s: LoadingStore) => s.expense.update === 'loading';
 export const selectLedgerEntryRemoving = (s: LoadingStore) => s.ledger.remove === 'loading';
 export const selectSettlementAdding = (s: LoadingStore) => s.settlement.add === 'loading';

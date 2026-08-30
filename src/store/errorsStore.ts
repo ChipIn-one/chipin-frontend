@@ -34,6 +34,8 @@ interface RequestErrors {
     };
     expense: {
         add: RequestError | null;
+        edit: RequestError | null;
+        update: RequestError | null;
     };
     ledger: {
         remove: RequestError | null;
@@ -85,7 +87,7 @@ const initialErrors: RequestErrors = {
         subeventsData: null,
         subeventsNextPage: null,
     },
-    expense: { add: null },
+    expense: { add: null, edit: null, update: null },
     ledger: { remove: null },
     settlement: { add: null },
     users: { self: null, friends: null, settings: null, removeFriend: null, avatar: null },

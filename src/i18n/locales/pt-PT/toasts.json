@@ -43,7 +43,8 @@
         "avatarUpdated": "Fotografia do perfil atualizada."
     },
     "expense": {
-        "created": "Despesa adicionada com sucesso!"
+        "created": "Despesa adicionada com sucesso!",
+        "updated": "Despesa atualizada com sucesso!"
     },
     "ledger": {
         "entryDeleted": "Lançamento eliminado com sucesso."

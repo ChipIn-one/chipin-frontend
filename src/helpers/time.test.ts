@@ -2,7 +2,14 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { HOUR, MINUTE } from 'constants/time';
 
-import { formatRelativeTime, formatUtcOffset, getAmPm24Time } from './time';
+import {
+    formatRelativeTime,
+    formatUnixTimestampInSecForDateTimeInput,
+    formatUtcOffset,
+    getAmPm24Time,
+    getUnixTimestampInSec,
+    parseDateTimeInputToUnixTimestampInSec,
+} from './time';
 
 const activityDate = new Date(2026, 6, 27, 20, 5);
 
@@ -40,4 +47,12 @@ test('maps the is24Hour flag to Intl hour12 correctly', () => {
 test('formats JavaScript timezone offsets as UTC labels', () => {
     expect(formatUtcOffset(-420)).toBe('UTC+07:00');
     expect(formatUtcOffset(210)).toBe('UTC-03:30');
+});
+
+test('round-trips a unix-seconds timestamp through a local date-time input', () => {
+    const timestamp = getUnixTimestampInSec(activityDate);
+
+    expect(parseDateTimeInputToUnixTimestampInSec(
+        formatUnixTimestampInSecForDateTimeInput(timestamp),
+    )).toBe(timestamp);
 });

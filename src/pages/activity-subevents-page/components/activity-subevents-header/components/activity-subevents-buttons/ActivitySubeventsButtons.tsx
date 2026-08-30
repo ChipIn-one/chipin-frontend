@@ -5,7 +5,8 @@ import { toast } from 'sonner';
 import { Button, Flex, Skeleton } from '@radix-ui/themes';
 
 import type { AppEvent } from 'api/activity.types';
-import { getActivityLedgerEntryId } from 'helpers/activityEvent';
+import { ACTIVITY_CATEGORIES } from 'constants/activity';
+import { getActivityCategory, getActivityLedgerEntryId } from 'helpers/activityEvent';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
 
 import { RemoveLedgerEntryAlertDialog } from 'components/modals';
@@ -22,9 +23,12 @@ const ActivitySubeventsButtons = ({ parentEvent }: Props) => {
     const { t } = useTranslation(['activity', 'toasts']);
     const {
         reverseLedgerEntry,
+        prepareExpenseEdit,
+        initializeEdit,
         subevents,
         subeventsParent,
         isLoading,
+        isEditing,
         isRemoving,
     } = useConnect();
     const parentEntryId = getActivityLedgerEntryId(parentEvent);
@@ -33,6 +37,31 @@ const ActivitySubeventsButtons = ({ parentEvent }: Props) => {
     const isEntryReversed =
         isCurrentParentLoaded &&
         hasLedgerEntryReversedEvent(subevents);
+    const isExpense = getActivityCategory(parentEvent) === ACTIVITY_CATEGORIES.EXPENSE;
+
+    const onEdit = (): Promise<void> => {
+        if (!parentEntryId || !isExpense) {
+            return Promise.resolve();
+        }
+
+        return prepareExpenseEdit({
+            entryId: parentEntryId,
+            activityEvents: [parentEvent, ...subevents],
+            parentActivityId: rootActivityId,
+        })
+            .then(initialization => {
+                if (initialization) {
+                    initializeEdit(initialization);
+                }
+            })
+            .catch(error => {
+                toast.error(resolveApiErrorMessageFromError(
+                    error,
+                    t('toasts:common.requestFailed'),
+                ));
+                return Promise.reject(error);
+            });
+    };
 
     const onRemove = (): Promise<void> => {
         if (!parentEntryId) {
@@ -43,7 +72,7 @@ const ActivitySubeventsButtons = ({ parentEvent }: Props) => {
             entryId: parentEntryId,
             groupId: parentEvent.groupId ?? undefined,
             parentActivityId: rootActivityId,
-            })
+        })
             .then(() => {
                 toast.success(t('toasts:ledger.entryDeleted'));
             })
@@ -82,7 +111,13 @@ const ActivitySubeventsButtons = ({ parentEvent }: Props) => {
 
     return (
         <Flex align="center" gap="2" wrap="wrap">
-            <Button size="1" variant="soft" disabled>
+            <Button
+                size="1"
+                variant="soft"
+                disabled={!parentEntryId || !isExpense || isEditing}
+                loading={isEditing}
+                onClick={onEdit}
+            >
                 <LucidePencil size={14} />
                 {t('subeventsUpdateAction')}
             </Button>

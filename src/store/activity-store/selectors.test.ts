@@ -13,6 +13,8 @@ const createStore = (): ActivityStore => ({
     hasMoreSubevents: false,
     subeventsCategory: null,
     createExpense: vi.fn(() => Promise.resolve()),
+    prepareExpenseEdit: vi.fn(() => Promise.resolve(null)),
+    updateExpense: vi.fn(() => Promise.resolve()),
     createSettlement: vi.fn(() => Promise.resolve()),
     reverseLedgerEntry: vi.fn(() => Promise.resolve()),
     fetchSetActivity: vi.fn(() => Promise.resolve()),

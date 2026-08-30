@@ -1,4 +1,4 @@
-import { beforeEach, expect, test } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
 
@@ -36,6 +36,31 @@ const groupMember = {
 
 beforeEach(() => {
     useExpenseModalStore.getState().reset();
+});
+
+afterEach(() => {
+    vi.useRealTimers();
+});
+
+test('initializes a create date once through the editor lifecycle', () => {
+    const currentDate = new Date(2026, 6, 27, 20, 5);
+    vi.useFakeTimers();
+    vi.setSystemTime(currentDate);
+
+    useExpenseModalStore.getState().initialize({
+        context: 'friends',
+        currentUser,
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
+        groups: [],
+        knownFriends: [friend],
+        preferredFriendId: friend.id,
+    });
+
+    expect(useExpenseModalStore.getState().date).toBe(
+        Math.floor(currentDate.getTime() / 1000),
+    );
 });
 
 test('initializes a group expense with equal split defaults', () => {
@@ -269,4 +294,53 @@ test('builds shares payload and validation from store state', () => {
             },
         },
     });
+});
+
+test('disables Save for an unchanged valid edit', () => {
+    useExpenseModalStore.getState().initializeEdit({
+        mode: 'edit',
+        source: {
+            context: 'friends',
+            currentUser,
+            defaultCurrency: 'USD',
+            defaultCategory: 'food',
+            skipCategory: false,
+            groups: [],
+            knownFriends: [friend],
+        },
+        targetMode: 'friends',
+        groupId: '',
+        selectedFriendId: friend.id,
+        description: 'Dinner',
+        amount: '120',
+        date: 1_717_200_000,
+        currency: 'USD',
+        category: 'food',
+        paidById: currentUser.id,
+        splitMode: EXPENSE_SPLIT_MODES.PERCENT,
+        percentShares: { [currentUser.id]: '25', [friend.id]: '75' },
+        amountShares: { [currentUser.id]: '0', [friend.id]: '0' },
+        shareWeights: { [currentUser.id]: '1', [friend.id]: '1' },
+        includedParticipantIds: { [currentUser.id]: true, [friend.id]: true },
+        isPercentManuallyEdited: true,
+        editContext: {
+            entryId: 'entry-1',
+            original: {
+                description: 'Dinner',
+                amount: 120,
+                date: 1_717_200_000,
+                payerId: currentUser.id,
+                participantIds: [currentUser.id, friend.id],
+                currency: 'USD',
+                category: 'food',
+                subcategory: 'restaurants',
+                sharingMode: {
+                    type: 'PERCENTAGE',
+                    percentageShares: { [currentUser.id]: 25, [friend.id]: 75 },
+                },
+            },
+        },
+    });
+
+    expect(selectIsSubmitDisabled(useExpenseModalStore.getState())).toBe(true);
 });

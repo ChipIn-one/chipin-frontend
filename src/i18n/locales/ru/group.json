@@ -34,8 +34,14 @@
     "expenses": {
         "modal": {
             "title": "Добавить расход",
+            "titleEdit": "Редактировать расход",
             "description": "Разделите новый расход между участниками группы.",
+            "descriptionEdit": "Измените этот расход.",
             "singleMemberNotice": "Вы в группе один. Чтобы считать расходы, добавьте друзей. Или используйте <soloMode>режим Solo</soloMode>.",
+            "scope": {
+                "group": "Расход в группе: {{groupName}}",
+                "friends": "Расход P2P с участниками: {{users}}"
+            },
             "fields": {
                 "descriptionPlaceholder": "Например, отель, ужин, билеты...",
                 "amountAndCurrency": "Сумма и валюта",

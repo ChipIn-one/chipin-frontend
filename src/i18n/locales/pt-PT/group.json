@@ -34,8 +34,14 @@
     "expenses": {
         "modal": {
             "title": "Adicionar despesa",
+            "titleEdit": "Editar despesa",
             "description": "Divida uma nova despesa com os membros do grupo.",
+            "descriptionEdit": "Atualiza esta despesa.",
             "singleMemberNotice": "És a única pessoa no grupo. Adiciona amigos para controlar as despesas. Ou utiliza o <soloMode>modo Solo</soloMode>.",
+            "scope": {
+                "group": "Despesa do grupo: {{groupName}}",
+                "friends": "Despesa P2P com {{users}}"
+            },
             "fields": {
                 "descriptionPlaceholder": "ex. Reserva de hotel, jantar...",
                 "amountAndCurrency": "Valor e moeda",

@@ -2,8 +2,11 @@ import type { AppEvent } from 'api/activity.types';
 import type {
     CreateLedgerEntryParams,
     CreateSettlementParams,
+    UpdateLedgerExpenseParams,
 } from 'api/chipin.types';
 import type { ActivityCategory } from 'constants/activity';
+
+import type { ExpenseModalEditInitialization } from '../expenseModalStore';
 
 interface FetchActivitySubeventsParams {
     parentActivityId: string;
@@ -18,6 +21,19 @@ type CreateExpenseParams = CreateLedgerEntryParams & {
 type CreateSettlementActionParams = CreateSettlementParams & {
     parentActivityId?: string;
 };
+
+interface PrepareExpenseEditParams {
+    entryId: string;
+    activityEvents: AppEvent[];
+    parentActivityId?: string;
+}
+
+interface UpdateExpenseParams {
+    entryId: string;
+    entry: UpdateLedgerExpenseParams;
+    groupId?: string;
+    parentActivityId?: string;
+}
 
 interface ReverseLedgerEntryParams {
     entryId: string;
@@ -38,6 +54,10 @@ interface ActivityStoreState {
 
 interface ActivityStoreActions {
     createExpense: (params: CreateExpenseParams) => Promise<void>;
+    prepareExpenseEdit: (
+        params: PrepareExpenseEditParams,
+    ) => Promise<ExpenseModalEditInitialization | null>;
+    updateExpense: (params: UpdateExpenseParams) => Promise<void>;
     createSettlement: (params: CreateSettlementActionParams) => Promise<void>;
     reverseLedgerEntry: (params: ReverseLedgerEntryParams) => Promise<void>;
     fetchSetActivity: (force?: boolean) => Promise<void>;
@@ -59,5 +79,7 @@ export type {
     CreateExpenseParams,
     CreateSettlementActionParams,
     FetchActivitySubeventsParams,
+    PrepareExpenseEditParams,
     ReverseLedgerEntryParams,
+    UpdateExpenseParams,
 };

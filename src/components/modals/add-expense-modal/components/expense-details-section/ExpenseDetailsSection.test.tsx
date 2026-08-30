@@ -61,3 +61,22 @@ test('replaces the category field with the payer field when category selection i
     expect(screen.queryAllByText('Category')).toHaveLength(0);
     expect(screen.getByText('Paid by')).not.toBeNull();
 });
+
+test('keeps category editing available in edit mode even when create skips category', () => {
+    const store = useExpenseModalStore.getState();
+    store.initialize({
+        context: 'friends',
+        currentUser,
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: true,
+        groups: [],
+        knownFriends: [],
+    });
+    useExpenseModalStore.setState({ mode: 'edit' });
+
+    renderSection();
+
+    expect(screen.getAllByText('Category').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Paid by')).toBeNull();
+});

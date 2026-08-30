@@ -3,8 +3,10 @@ import type {
     ApiCreateLedgerResponse,
     CreateLedgerEntryParams,
     CreateSettlementParams,
+    FetchLedgerEntryParams,
     RemoveLedgerEntryParams,
     SharingMode,
+    UpdateLedgerExpenseParams,
 } from './chipin.types';
 
 export const createExpense = ({
@@ -63,4 +65,24 @@ export const removeLedgerEntry = ({
     entryId,
 }: RemoveLedgerEntryParams): Promise<void> => {
     return apiInstance.delete<void>(`/ledger/entries/${entryId}`).then(() => undefined);
+};
+
+export const fetchLedgerEntry = ({
+    entryId,
+}: FetchLedgerEntryParams): Promise<ApiCreateLedgerResponse> => {
+    return apiInstance
+        .get<ApiCreateLedgerResponse>(`/ledger/entries/${entryId}`)
+        .then(response => response.data);
+};
+
+export const updateExpense = ({
+    entryId,
+    entry,
+}: {
+    entryId: string;
+    entry: UpdateLedgerExpenseParams;
+}): Promise<ApiCreateLedgerResponse> => {
+    return apiInstance
+        .patch<ApiCreateLedgerResponse>(`/ledger/entries/${entryId}`, entry)
+        .then(response => response.data);
 };

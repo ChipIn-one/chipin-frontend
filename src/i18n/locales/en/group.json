@@ -34,8 +34,14 @@
     "expenses": {
         "modal": {
             "title": "Add an expense",
+            "titleEdit": "Edit expense",
             "description": "Split a new expense with your group members.",
+            "descriptionEdit": "Update this expense.",
             "singleMemberNotice": "You're the only one in this group. Add friends to track expenses. Or use <soloMode>Solo mode</soloMode>.",
+            "scope": {
+                "group": "Group expense: {{groupName}}",
+                "friends": "P2P expense with {{users}}"
+            },
             "fields": {
                 "descriptionPlaceholder": "e.g. Hotel booking, dinner...",
                 "amountAndCurrency": "Amount & currency",

@@ -5,6 +5,8 @@ import type {
     ActivityStoreActions,
     ActivityStoreState,
     FetchActivitySubeventsParams,
+    PrepareExpenseEditParams,
+    UpdateExpenseParams,
 } from './types';
 
 export {
@@ -12,7 +14,9 @@ export {
     type ActivityStoreActions,
     type ActivityStoreState,
     type FetchActivitySubeventsParams,
+    type PrepareExpenseEditParams,
     selectActivityFeed,
     selectActivitySubeventsFlow,
+    type UpdateExpenseParams,
     useActivityStore,
 };

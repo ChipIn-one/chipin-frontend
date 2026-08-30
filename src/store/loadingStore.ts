@@ -34,6 +34,8 @@ export interface LoadingStore {
     };
     expense: {
         add: LoadingState;
+        edit: LoadingState;
+        update: LoadingState;
     };
     ledger: {
         remove: LoadingState;
@@ -69,7 +71,7 @@ const initialLoadingStore: LoadingSlices = {
         subeventsData: 'initial',
         subeventsNextPage: 'initial',
     },
-    expense: { add: 'initial' },
+    expense: { add: 'initial', edit: 'initial', update: 'initial' },
     ledger: { remove: 'initial' },
     settlement: { add: 'initial' },
     group: {

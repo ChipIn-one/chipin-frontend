@@ -6,10 +6,20 @@ import { normalizeApiError } from 'helpers/errors';
 
 import { useDashboardStore } from '../dashboardStore';
 import { useErrorsStore } from '../errorsStore';
+import { isExpenseLedgerEntry,mapCanonicalExpenseToModalState } from '../expenseModalEditMapping';
+import type {
+    ExpenseModalEditInitialization,
+    ExpenseModalSource,
+} from '../expenseModalStore';
 import { useGroupsStore } from '../groupsStore';
 import { createRequestChannel } from '../internal/resourceRequests';
 import { useLoadingStore } from '../loadingStore';
-import { useUsersStore } from '../users-store';
+import {
+    selectUserCurrency,
+    selectUserDefaultCategory,
+    selectUserSkipCategory,
+    useUsersStore,
+} from '../users-store';
 
 import { ACTIVITY_API_LIMIT } from './constants';
 import { initialState } from './initialState';
@@ -17,7 +27,9 @@ import type {
     ActivityStore,
     CreateExpenseParams,
     CreateSettlementActionParams,
+    PrepareExpenseEditParams,
     ReverseLedgerEntryParams,
+    UpdateExpenseParams,
 } from './types';
 
 const activityFeedChannel = createRequestChannel();
@@ -86,6 +98,82 @@ const createExpense = (get: () => ActivityStore, params: CreateExpenseParams): P
         });
 };
 
+const getExpenseEditSource = (): ExpenseModalSource => {
+    const usersState = useUsersStore.getState();
+    const groupsState = useGroupsStore.getState();
+
+    return {
+        context: 'dashboard',
+        currentUser: usersState.user,
+        defaultCurrency: selectUserCurrency(usersState),
+        defaultCategory: selectUserDefaultCategory(usersState),
+        skipCategory: selectUserSkipCategory(usersState),
+        groups: groupsState.groups.map(group => ({
+            id: group.id,
+            name: group.name,
+            members: group.members.map(member => member.user),
+        })),
+        knownFriends: usersState.friends.map(friend => friend.user),
+        defaultGroupId: groupsState.selectedGroup?.id ?? groupsState.groups[0]?.id,
+    };
+};
+
+const prepareExpenseEdit = ({
+    entryId,
+    activityEvents,
+    parentActivityId,
+}: PrepareExpenseEditParams): Promise<ExpenseModalEditInitialization | null> => {
+    const { setLoading } = useLoadingStore.getState();
+    const { clearError, setError } = useErrorsStore.getState();
+    clearError('expense', 'edit');
+    setLoading('expense', 'edit', 'loading');
+
+    return ledgerApi
+        .fetchLedgerEntry({ entryId })
+        .then(entry => {
+            if (!isExpenseLedgerEntry(entry)) {
+                return null;
+            }
+
+            return mapCanonicalExpenseToModalState({
+                entry,
+                source: getExpenseEditSource(),
+                activityEvents,
+                parentActivityId,
+            });
+        })
+        .catch((error: unknown) => {
+            setError('expense', 'edit', normalizeApiError(error));
+            return Promise.reject(error);
+        })
+        .finally(() => {
+            setLoading('expense', 'edit', 'fetched');
+        });
+};
+
+const updateExpense = (
+    get: () => ActivityStore,
+    { entryId, entry, groupId, parentActivityId }: UpdateExpenseParams,
+): Promise<void> => {
+    const { setLoading } = useLoadingStore.getState();
+    const { clearError, setError } = useErrorsStore.getState();
+    clearError('expense', 'update');
+    setLoading('expense', 'update', 'loading');
+
+    return ledgerApi
+        .updateExpense({ entryId, entry })
+        .catch((error: unknown) => {
+            setError('expense', 'update', normalizeApiError(error));
+            return Promise.reject(error);
+        })
+        .then(() =>
+            refreshFinancialData(get(), { groupId, parentActivityId }).catch(() => undefined),
+        )
+        .finally(() => {
+            setLoading('expense', 'update', 'fetched');
+        });
+};
+
 const createSettlement = (
     get: () => ActivityStore,
     params: CreateSettlementActionParams,
@@ -138,6 +226,8 @@ const useActivityStore = create<ActivityStore>((set, get) => ({
     ...initialState,
 
     createExpense: params => createExpense(get, params),
+    prepareExpenseEdit,
+    updateExpense: params => updateExpense(get, params),
     createSettlement: params => createSettlement(get, params),
     reverseLedgerEntry: params => reverseLedgerEntry(get, params),
 

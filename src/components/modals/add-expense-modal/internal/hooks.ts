@@ -6,12 +6,12 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { ROUTES } from 'constants/routes';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
-import { getUnixTimestampInSec } from 'helpers/time';
 import { useActivityStore } from 'store/activity-store';
 import { selectExpensePayload, selectIsSubmitDisabled } from 'store/expenseModalSelectors';
 import { type ExpenseModalSource, useExpenseModalStore } from 'store/expenseModalStore';
+import { buildExpenseUpdateParams } from 'store/expenseModalUpdate';
 import { useGroupsStore } from 'store/groupsStore';
-import { selectExpenseAdding } from 'store/loadingSelectors';
+import { selectExpenseAdding, selectExpenseUpdating } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 import {
     selectUserCurrency,
@@ -91,6 +91,7 @@ export const useExpenseModalSource = ({
             skipCategory,
             groups: groups.map(group => ({
                 id: group.id,
+                name: group.name,
                 members: group.members.map(member => member.user),
             })),
             knownFriends: friends.map(friend => friend.user),
@@ -113,17 +114,50 @@ export const useExpenseModalSource = ({
 
 export const useExpenseModalSubmit = (onClose: () => void): ExpenseModalSubmitResult => {
     const { t } = useTranslation('group');
-    const createExpense = useActivityStore(state => state.createExpense);
-    const isSubmitting = useLoadingStore(selectExpenseAdding);
+    const { createExpense, updateExpense } = useActivityStore(
+        useShallow(state => ({
+            createExpense: state.createExpense,
+            updateExpense: state.updateExpense,
+        })),
+    );
+    const isSubmitting = useLoadingStore(
+        useShallow(state => selectExpenseAdding(state) || selectExpenseUpdating(state)),
+    );
     const isSubmitDisabled = useExpenseModalStore(selectIsSubmitDisabled);
 
     const onSubmit = useCallback(() => {
-        const params = selectExpensePayload(
-            useExpenseModalStore.getState(),
-            getUnixTimestampInSec(),
-        );
+        const state = useExpenseModalStore.getState();
+        const params = selectExpensePayload(state);
 
         if (!params) {
+            return;
+        }
+
+        const onMutationError = (error: unknown) => {
+            toast.error(resolveApiErrorMessageFromError(
+                error,
+                t('toasts:common.requestFailed'),
+            ));
+        };
+
+        if (state.mode === 'edit' && state.editContext) {
+            const update = buildExpenseUpdateParams(state.editContext.original, params);
+
+            if (!update) {
+                return;
+            }
+
+            updateExpense({
+                entryId: state.editContext.entryId,
+                entry: update,
+                groupId: state.editContext.groupId,
+                parentActivityId: state.editContext.parentActivityId,
+            })
+                .then(() => {
+                    onClose();
+                    toast.success(t('toasts:expense.updated'));
+                })
+                .catch(onMutationError);
             return;
         }
 
@@ -132,13 +166,8 @@ export const useExpenseModalSubmit = (onClose: () => void): ExpenseModalSubmitRe
                 onClose();
                 toast.success(t('toasts:expense.created'));
             })
-            .catch((error: unknown) => {
-                toast.error(resolveApiErrorMessageFromError(
-                    error,
-                    t('toasts:common.requestFailed'),
-                ));
-            });
-    }, [createExpense, onClose, t]);
+            .catch(onMutationError);
+    }, [createExpense, onClose, t, updateExpense]);
 
     return {
         isSubmitDisabled,

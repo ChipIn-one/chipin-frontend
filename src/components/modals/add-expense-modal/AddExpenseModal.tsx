@@ -30,6 +30,7 @@ const AddExpenseModal = () => {
         isOpened,
         openingContext,
         openingFriendId,
+        mode,
         setIsOpened,
         close,
         initialize,
@@ -39,6 +40,7 @@ const AddExpenseModal = () => {
             isOpened: state.isOpened,
             openingContext: state.openingContext,
             openingFriendId: state.openingFriendId,
+            mode: state.mode,
             setIsOpened: state.setIsOpened,
             close: state.close,
             initialize: state.initialize,
@@ -53,12 +55,14 @@ const AddExpenseModal = () => {
 
     const onReset = useCallback(() => {
         if (isOpened) {
-            initialize(source);
+            if (mode === 'create') {
+                initialize(source);
+            }
             return;
         }
 
         reset();
-    }, [initialize, isOpened, reset, source]);
+    }, [initialize, isOpened, mode, reset, source]);
 
     const onSoloModeClick = useCallback(
         (event: MouseEvent<HTMLAnchorElement>) => {
@@ -76,7 +80,7 @@ const AddExpenseModal = () => {
         <>
             <OverlayBody>
                 <Flex direction="column" gap="4">
-                    {isSingleMemberGroup && (
+                    {mode === 'create' && isSingleMemberGroup && (
                         <Callout.Root color="blue" size="2" role="status">
                             <Callout.Icon>
                                 <LucideInfo />
@@ -107,8 +111,12 @@ const AddExpenseModal = () => {
         <BaseModal
             isOpened={isOpened}
             setIsOpened={setIsOpened}
-            title={t('expenses.modal.title')}
-            accessibleDescription={t('expenses.modal.description')}
+            title={t(mode === 'edit' ? 'expenses.modal.titleEdit' : 'expenses.modal.title')}
+            accessibleDescription={t(
+                mode === 'edit'
+                    ? 'expenses.modal.descriptionEdit'
+                    : 'expenses.modal.description',
+            )}
             maxWidth={MODAL_SIZES.desktop}
             content={content}
         />

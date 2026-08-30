@@ -4,12 +4,16 @@ import { apiInstance } from './chipin.instance';
 import {
     createExpense,
     createSettlement,
+    fetchLedgerEntry,
     removeLedgerEntry,
+    updateExpense,
 } from './ledgerApi';
 
 vi.mock('./chipin.instance', () => ({
     apiInstance: {
         delete: vi.fn(),
+        get: vi.fn(),
+        patch: vi.fn(),
         post: vi.fn(),
     },
 }));
@@ -77,6 +81,38 @@ describe('ledgerApi', () => {
         return removeLedgerEntry({ entryId: 'entry-1' }).then(result => {
             expect(apiInstance.delete).toHaveBeenCalledWith('/ledger/entries/entry-1');
             expect(result).toBeUndefined();
+        });
+    });
+
+    test('fetches a canonical ledger entry by id', () => {
+        vi.mocked(apiInstance.get).mockResolvedValue({ data: { id: 'entry-1' } });
+
+        return fetchLedgerEntry({ entryId: 'entry-1' }).then(result => {
+            expect(apiInstance.get).toHaveBeenCalledWith('/ledger/entries/entry-1');
+            expect(result).toEqual({ id: 'entry-1' });
+        });
+    });
+
+    test('patches an expense ledger entry with the update envelope', () => {
+        vi.mocked(apiInstance.patch).mockResolvedValue({ data: { id: 'entry-1' } });
+
+        return updateExpense({
+            entryId: 'entry-1',
+            entry: {
+                type: 'EXPENSE',
+                expense: {
+                    description: 'Updated dinner',
+                },
+            },
+        }).then(result => {
+            expect(apiInstance.patch).toHaveBeenCalledWith(
+                '/ledger/entries/entry-1',
+                {
+                    type: 'EXPENSE',
+                    expense: { description: 'Updated dinner' },
+                },
+            );
+            expect(result).toEqual({ id: 'entry-1' });
         });
     });
 

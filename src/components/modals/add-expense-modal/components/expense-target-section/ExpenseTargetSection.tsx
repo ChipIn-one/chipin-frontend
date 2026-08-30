@@ -12,12 +12,13 @@ import SegmentedControl from 'components/SegmentedControl';
 
 import { ExpensePayerSearchSelect } from '../expense-payer-search-select';
 
-import { ExpenseGroupSearchSelect } from './components';
+import { ExpenseGroupSearchSelect, ExpenseScopeContext } from './components';
 
 const ExpenseTargetSection = () => {
     const { t } = useTranslation('group');
     const {
         targetMode,
+        mode,
         isTabsVisible,
         isGroupSelectVisible,
         skipCategory,
@@ -25,6 +26,7 @@ const ExpenseTargetSection = () => {
     } = useExpenseModalStore(
         useShallow(state => ({
             targetMode: state.targetMode,
+            mode: state.mode,
             isTabsVisible: state.source.context === 'dashboard',
             isGroupSelectVisible:
                 state.source.context === 'dashboard' &&
@@ -33,6 +35,15 @@ const ExpenseTargetSection = () => {
             setTargetMode: state.setTargetMode,
         })),
     );
+
+    if (mode === 'edit') {
+        return (
+            <>
+                <ExpenseScopeContext />
+                <ExpensePayerSearchSelect />
+            </>
+        );
+    }
 
     return (
         <>

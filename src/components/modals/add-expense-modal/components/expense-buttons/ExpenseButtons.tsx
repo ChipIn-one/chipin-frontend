@@ -2,6 +2,8 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@radix-ui/themes';
 
+import { useExpenseModalStore } from 'store/expenseModalStore';
+
 import { OverlayFooter } from '../../../components';
 import { useExpenseModalSubmit } from '../../internal';
 
@@ -11,6 +13,7 @@ interface Props {
 
 const ExpenseButtons = ({ onClose }: Props) => {
     const { t } = useTranslation('group');
+    const mode = useExpenseModalStore(state => state.mode);
     const { isSubmitDisabled, isSubmitting, onSubmit } =
         useExpenseModalSubmit(onClose);
 
@@ -29,7 +32,7 @@ const ExpenseButtons = ({ onClose }: Props) => {
                     loading={isSubmitting}
                     onClick={onSubmit}
                 >
-                    {t('common:buttons.addExpense')}
+                    {t(mode === 'edit' ? 'common:buttons.save' : 'common:buttons.addExpense')}
                 </Button>
             }
         />
