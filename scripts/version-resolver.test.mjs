@@ -34,6 +34,12 @@ test('rejects a non-release build without a usable task SHA', () => {
     expect(() => resolveAppVersion({
         baseVersion: '0.9.0',
         branch: 'luna/version-lifecycle',
+        env: {
+            CHIPIN_TASK_HEAD_SHA: '',
+            GITHUB_PR_HEAD_SHA: '',
+            GITHUB_SHA: '',
+            VERCEL_GIT_COMMIT_SHA: '',
+        },
         readLocalHeadSha: () => '',
     })).toThrow('task HEAD SHA');
 });
