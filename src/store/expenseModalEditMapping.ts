@@ -1,8 +1,12 @@
-import type { AppEvent } from 'api/activity.types';
-import type { ApiExpenseLedgerEntry, ApiUserResponse } from 'api/chipin.raw.types';
-import type { ApiCreateLedgerResponse, SharingMode } from 'api/chipin.types';
+import type {
+    AppEvent,
+    ExpenseActivityMetadata,
+    ExpenseActivityShare,
+} from 'api/activity.types';
+import type { SharingMode } from 'api/chipin.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { EXPENSE_SPLIT_MODES, type ExpenseSplitMode } from 'constants/chipin';
+import { getActivitySubeventsView } from 'helpers/activityEvent';
 
 import type {
     ExpenseModalEditInitialization,
@@ -12,10 +16,10 @@ import type {
 } from './expenseModalStore';
 import type { ExpenseModalOriginalState } from './expenseModalUpdate';
 
-interface ExpenseModalEditMappingParams {
-    entry: ApiExpenseLedgerEntry;
+interface ActivityExpenseEditMappingParams {
+    parentEvent: AppEvent;
+    childEvents: readonly AppEvent[];
     source: ExpenseModalSource;
-    activityEvents: AppEvent[];
     parentActivityId?: string;
 }
 
@@ -24,13 +28,15 @@ type ExpenseActivityEvent = Extract<
     {
         action:
             | typeof ACTIVITY_ACTIONS.EXPENSE_CREATED
-            | typeof ACTIVITY_ACTIONS.EXPENSE_UPDATED;
+            | typeof ACTIVITY_ACTIONS.EXPENSE_UPDATED
+            | typeof ACTIVITY_ACTIONS.EXPENSE_REVERSED;
     }
 >;
 
 const isExpenseActivityEvent = (event: AppEvent): event is ExpenseActivityEvent =>
     (event.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ||
-        event.action === ACTIVITY_ACTIONS.EXPENSE_UPDATED) &&
+        event.action === ACTIVITY_ACTIONS.EXPENSE_UPDATED ||
+        event.action === ACTIVITY_ACTIONS.EXPENSE_REVERSED) &&
     event.metadata?.type === 'expense';
 
 const mergeUsers = (
@@ -40,71 +46,74 @@ const mergeUsers = (
     const users: ExpenseParticipant[] = [];
     const seenIds = new Set<string>();
 
-    for (const user of [...initialUsers, ...additionalUsers]) {
-        if (seenIds.has(user.id)) {
-            continue;
+    for (const user of initialUsers) {
+        if (!seenIds.has(user.id)) {
+            seenIds.add(user.id);
+            users.push(user);
         }
+    }
 
-        seenIds.add(user.id);
-        users.push(user);
+    for (const user of additionalUsers) {
+        if (!seenIds.has(user.id)) {
+            seenIds.add(user.id);
+            users.push(user);
+        }
     }
 
     return users;
 };
 
-const toExpenseParticipant = (user: ApiUserResponse): ExpenseParticipant => ({
-    id: user.id,
-    displayName: user.displayName,
-    picture: user.picture,
+const toExpenseParticipant = (
+    share: Pick<ExpenseActivityShare, 'userId' | 'displayName'>,
+): ExpenseParticipant => ({
+    id: share.userId,
+    displayName: share.displayName,
 });
 
-const getLatestExpenseActivity = (
-    events: AppEvent[],
-    entryId: string,
-): ExpenseActivityEvent | undefined => {
-    let latestEvent: ExpenseActivityEvent | undefined;
-
-    for (const event of events) {
-        if (!isExpenseActivityEvent(event)) {
-            continue;
-        }
-
-        if (event.metadata.entryId !== entryId) {
-            continue;
-        }
-
-        if (!latestEvent || event.seq > latestEvent.seq) {
-            latestEvent = event;
-        }
+const getPayerParticipant = (
+    metadata: ExpenseActivityMetadata,
+): ExpenseParticipant[] => {
+    if (!metadata.payerId) {
+        return [];
     }
 
-    return latestEvent;
+    return [
+        {
+            id: metadata.payerId,
+            displayName: metadata.payerDisplayName,
+        },
+    ];
 };
 
-const getParticipantShares = (
-    entry: ApiExpenseLedgerEntry,
+const getSnapshotParticipants = (
+    metadata: ExpenseActivityMetadata,
+): ExpenseParticipant[] => {
+    const participants: ExpenseParticipant[] = [];
+
+    for (const share of metadata.shares ?? []) {
+        participants.push(toExpenseParticipant(share));
+    }
+
+    return participants;
+};
+
+const getShareAmounts = (
+    shares: readonly ExpenseActivityShare[],
 ): Record<string, number> => {
-    const shares: Record<string, number> = {};
+    const amounts: Record<string, number> = {};
 
-    for (const share of entry.expense.participantShares) {
-        shares[share.userId] = share.shareAmount;
+    for (const share of shares) {
+        amounts[share.userId] = share.shareAmount;
     }
 
-    return shares;
+    return amounts;
 };
 
-const getFallbackExactMode = (entry: ApiExpenseLedgerEntry): SharingMode => ({
+const getActivitySharingMode = (
+    metadata: ExpenseActivityMetadata,
+): SharingMode => metadata.sharingMode ?? {
     type: 'EXACT',
-    customShares: getParticipantShares(entry),
-});
-
-const getLatestSharingMode = (
-    entry: ApiExpenseLedgerEntry,
-    activityEvents: AppEvent[],
-): SharingMode => {
-    const latestEvent = getLatestExpenseActivity(activityEvents, entry.id);
-
-    return latestEvent?.metadata.sharingMode ?? getFallbackExactMode(entry);
+    customShares: getShareAmounts(metadata.shares ?? []),
 };
 
 const getModeValues = (
@@ -142,10 +151,10 @@ const getSplitMode = (sharingMode: SharingMode): ExpenseSplitMode => {
 const getGroupName = (
     source: ExpenseModalSource,
     groupId: string,
-    latestEvent: ExpenseActivityEvent | undefined,
+    metadata: ExpenseActivityMetadata,
 ): string | null => {
-    if (latestEvent?.metadata.groupName) {
-        return latestEvent.metadata.groupName;
+    if (metadata.groupName) {
+        return metadata.groupName;
     }
 
     for (const group of source.groups) {
@@ -159,13 +168,12 @@ const getGroupName = (
 
 const mergeEditSource = (
     source: ExpenseModalSource,
-    entry: ApiExpenseLedgerEntry,
+    metadata: ExpenseActivityMetadata,
     targetMode: 'group' | 'friends',
     groupId: string | null,
-    canonicalUsers: ExpenseParticipant[],
-    latestEvent: ExpenseActivityEvent | undefined,
+    snapshotUsers: ExpenseParticipant[],
 ): ExpenseModalSource => {
-    const groupName = groupId ? getGroupName(source, groupId, latestEvent) : null;
+    const groupName = groupId ? getGroupName(source, groupId, metadata) : null;
     let groups: ExpenseModalGroup[] = source.groups;
 
     if (groupId) {
@@ -179,7 +187,7 @@ const mergeEditSource = (
             return {
                 ...group,
                 name: group.name ?? groupName ?? undefined,
-                members: mergeUsers(group.members, canonicalUsers),
+                members: mergeUsers(group.members, snapshotUsers),
             };
         });
 
@@ -189,30 +197,31 @@ const mergeEditSource = (
                 {
                     id: groupId,
                     name: groupName ?? undefined,
-                    members: canonicalUsers,
+                    members: snapshotUsers,
                 },
             ];
         }
     }
 
     const currentUserId = source.currentUser?.id;
-    const directUsers = mergeUsers(
-        source.knownFriends,
-        canonicalUsers,
-    ).filter(user => user.id !== currentUserId);
+    const directUsers = mergeUsers(source.knownFriends, snapshotUsers).filter(
+        user => user.id !== currentUserId,
+    );
 
     return {
         ...source,
         context: targetMode === 'group' ? 'group' : 'friends',
         groups,
         knownFriends: directUsers,
-        defaultCurrency: entry.expense.currency,
+        defaultCurrency: metadata.currency,
         defaultGroupId: groupId ?? undefined,
         preferredFriendId: undefined,
     };
 };
 
-const createEqualPercentages = (users: ExpenseParticipant[]): Record<string, string> => {
+const createEqualPercentages = (
+    users: ExpenseParticipant[],
+): Record<string, string> => {
     if (users.length === 0) {
         return {};
     }
@@ -265,49 +274,56 @@ const toStringRecord = (
 };
 
 const toOriginalState = (
-    entry: ApiExpenseLedgerEntry,
+    metadata: ExpenseActivityMetadata,
+    participantIds: string[],
     sharingMode: SharingMode,
 ): ExpenseModalOriginalState => ({
-    description: entry.expense.description ?? null,
-    amount: entry.expense.amount,
-    date: entry.expense.date,
-    payerId: entry.expense.payer.id,
-    participantIds: entry.expense.participants.map(user => user.id),
-    currency: entry.expense.currency,
-    category: entry.expense.category ?? null,
-    subcategory: entry.expense.subcategory ?? null,
+    description: metadata.description ?? null,
+    amount: metadata.amount,
+    date: metadata.date ?? 0,
+    payerId: metadata.payerId ?? '',
+    participantIds,
+    currency: metadata.currency,
+    category: metadata.category ?? null,
+    subcategory: metadata.subcategory ?? null,
     sharingMode,
 });
 
-export const mapCanonicalExpenseToModalState = ({
-    entry,
+export const mapActivityExpenseToModalState = ({
+    parentEvent,
+    childEvents,
     source,
-    activityEvents,
     parentActivityId,
-}: ExpenseModalEditMappingParams): ExpenseModalEditInitialization => {
-    const groupId = entry.expense.groupId ?? entry.groupId ?? null;
+}: ActivityExpenseEditMappingParams): ExpenseModalEditInitialization | null => {
+    const activityView = getActivitySubeventsView(parentEvent, childEvents);
+    const currentEvent = activityView?.currentEvent;
+
+    if (!currentEvent || !isExpenseActivityEvent(currentEvent)) {
+        return null;
+    }
+
+    const metadata = currentEvent.metadata;
+    const groupId = metadata.groupId ?? currentEvent.groupId ?? null;
     const targetMode = groupId ? 'group' : 'friends';
-    const latestEvent = getLatestExpenseActivity(activityEvents, entry.id);
-    const sharingMode = getLatestSharingMode(entry, activityEvents);
-    const canonicalParticipants = entry.expense.participants.map(toExpenseParticipant);
-    const canonicalUsers = mergeUsers(
-        [toExpenseParticipant(entry.expense.payer)],
-        canonicalParticipants,
+    const sharingMode = getActivitySharingMode(metadata);
+    const snapshotParticipants = getSnapshotParticipants(metadata);
+    const snapshotUsers = mergeUsers(
+        getPayerParticipant(metadata),
+        snapshotParticipants,
     );
     const editSource = mergeEditSource(
         source,
-        entry,
+        metadata,
         targetMode,
         groupId,
-        canonicalUsers,
-        latestEvent,
+        snapshotUsers,
     );
     const availableUsers = getAvailableUsers(editSource, targetMode, groupId);
-    const participantIds = new Set(canonicalParticipants.map(user => user.id));
+    const participantIds = new Set(snapshotParticipants.map(user => user.id));
     const includedParticipantIds = Object.fromEntries(
         availableUsers.map(user => [user.id, participantIds.has(user.id)]),
     );
-    const fallbackExactValues = getParticipantShares(entry);
+    const fallbackExactValues = getShareAmounts(metadata.shares ?? []);
     const modeValues = getModeValues(sharingMode, fallbackExactValues);
     const splitMode = getSplitMode(sharingMode);
     const percentShares = splitMode === EXPENSE_SPLIT_MODES.PERCENT
@@ -322,7 +338,9 @@ export const mapCanonicalExpenseToModalState = ({
         ? toStringRecord(availableUsers, modeValues)
         : createUserValues(availableUsers, '1');
     const selectedFriendId = targetMode === 'friends'
-        ? (canonicalParticipants.find(user => user.id !== source.currentUser?.id)?.id ?? '')
+        ? (snapshotParticipants.find(
+              user => user.id !== source.currentUser?.id,
+          )?.id ?? '')
         : '';
 
     return {
@@ -331,12 +349,12 @@ export const mapCanonicalExpenseToModalState = ({
         targetMode,
         groupId: groupId ?? '',
         selectedFriendId,
-        description: entry.expense.description ?? '',
-        amount: String(entry.expense.amount),
-        currency: entry.expense.currency,
-        category: entry.expense.category ?? '',
-        paidById: entry.expense.payer.id,
-        date: entry.expense.date,
+        description: metadata.description ?? '',
+        amount: String(metadata.amount),
+        date: metadata.date ?? 0,
+        currency: metadata.currency,
+        category: metadata.category ?? '',
+        paidById: metadata.payerId ?? '',
         splitMode,
         percentShares,
         amountShares,
@@ -344,15 +362,15 @@ export const mapCanonicalExpenseToModalState = ({
         includedParticipantIds,
         isPercentManuallyEdited: splitMode === EXPENSE_SPLIT_MODES.PERCENT,
         editContext: {
-            entryId: entry.id,
+            entryId: metadata.entryId,
             groupId: groupId ?? undefined,
-            groupName: groupId ? getGroupName(editSource, groupId, latestEvent) : null,
+            groupName: groupId ? getGroupName(editSource, groupId, metadata) : null,
             parentActivityId,
-            original: toOriginalState(entry, sharingMode),
+            original: toOriginalState(
+                metadata,
+                snapshotParticipants.map(user => user.id),
+                sharingMode,
+            ),
         },
     };
 };
-
-export const isExpenseLedgerEntry = (
-    entry: ApiCreateLedgerResponse,
-): entry is ApiExpenseLedgerEntry => entry.type === 'EXPENSE' && entry.expense !== null;

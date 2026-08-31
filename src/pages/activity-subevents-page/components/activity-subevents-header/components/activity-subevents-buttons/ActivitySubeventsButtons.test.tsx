@@ -49,6 +49,7 @@ const parentEvent = {
 const reversedEvent = {
     ...parentEvent,
     id: 'reversed-activity-id',
+    seq: 2,
     action: ACTIVITY_ACTIONS.EXPENSE_REVERSED,
     parentActivityId: parentEvent.id,
 } satisfies AppEvent;
@@ -194,7 +195,7 @@ test('keeps the Pencil action unavailable for settlements', () => {
 test('prepares and opens the shared expense editor from the Pencil action', () => {
     const user = userEvent.setup();
     const initializeEdit = vi.fn();
-    const prepareExpenseEdit = vi.fn().mockResolvedValue({ mode: 'edit' });
+    const prepareExpenseEdit = vi.fn().mockReturnValue({ mode: 'edit' });
     const originalInitializeEdit = useExpenseModalStore.getState().initializeEdit;
 
     useActivityStore.setState({
@@ -210,8 +211,8 @@ test('prepares and opens the shared expense editor from the Pencil action', () =
         .then(() =>
             waitFor(() => {
                 expect(prepareExpenseEdit).toHaveBeenCalledWith({
-                    entryId: 'expense-id',
-                    activityEvents: [parentEvent],
+                    parentEvent,
+                    childEvents: [],
                     parentActivityId: parentEvent.id,
                 });
                 expect(initializeEdit).toHaveBeenCalledWith({ mode: 'edit' });

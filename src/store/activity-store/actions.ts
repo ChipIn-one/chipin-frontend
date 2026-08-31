@@ -6,7 +6,7 @@ import { normalizeApiError } from 'helpers/errors';
 
 import { useDashboardStore } from '../dashboardStore';
 import { useErrorsStore } from '../errorsStore';
-import { isExpenseLedgerEntry,mapCanonicalExpenseToModalState } from '../expenseModalEditMapping';
+import { mapActivityExpenseToModalState } from '../expenseModalEditMapping';
 import type {
     ExpenseModalEditInitialization,
     ExpenseModalSource,
@@ -119,36 +119,16 @@ const getExpenseEditSource = (): ExpenseModalSource => {
 };
 
 const prepareExpenseEdit = ({
-    entryId,
-    activityEvents,
+    parentEvent,
+    childEvents,
     parentActivityId,
-}: PrepareExpenseEditParams): Promise<ExpenseModalEditInitialization | null> => {
-    const { setLoading } = useLoadingStore.getState();
-    const { clearError, setError } = useErrorsStore.getState();
-    clearError('expense', 'edit');
-    setLoading('expense', 'edit', 'loading');
-
-    return ledgerApi
-        .fetchLedgerEntry({ entryId })
-        .then(entry => {
-            if (!isExpenseLedgerEntry(entry)) {
-                return null;
-            }
-
-            return mapCanonicalExpenseToModalState({
-                entry,
-                source: getExpenseEditSource(),
-                activityEvents,
-                parentActivityId,
-            });
-        })
-        .catch((error: unknown) => {
-            setError('expense', 'edit', normalizeApiError(error));
-            return Promise.reject(error);
-        })
-        .finally(() => {
-            setLoading('expense', 'edit', 'fetched');
-        });
+}: PrepareExpenseEditParams): ExpenseModalEditInitialization | null => {
+    return mapActivityExpenseToModalState({
+        parentEvent,
+        childEvents,
+        source: getExpenseEditSource(),
+        parentActivityId,
+    });
 };
 
 const updateExpense = (

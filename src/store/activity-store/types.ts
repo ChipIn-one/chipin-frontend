@@ -23,8 +23,8 @@ type CreateSettlementActionParams = CreateSettlementParams & {
 };
 
 interface PrepareExpenseEditParams {
-    entryId: string;
-    activityEvents: AppEvent[];
+    parentEvent: AppEvent;
+    childEvents: readonly AppEvent[];
     parentActivityId?: string;
 }
 
@@ -56,7 +56,7 @@ interface ActivityStoreActions {
     createExpense: (params: CreateExpenseParams) => Promise<void>;
     prepareExpenseEdit: (
         params: PrepareExpenseEditParams,
-    ) => Promise<ExpenseModalEditInitialization | null>;
+    ) => ExpenseModalEditInitialization | null;
     updateExpense: (params: UpdateExpenseParams) => Promise<void>;
     createSettlement: (params: CreateSettlementActionParams) => Promise<void>;
     reverseLedgerEntry: (params: ReverseLedgerEntryParams) => Promise<void>;

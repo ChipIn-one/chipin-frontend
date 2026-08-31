@@ -6,61 +6,61 @@ import { Button, Flex, Skeleton } from '@radix-ui/themes';
 
 import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_CATEGORIES } from 'constants/activity';
-import { getActivityCategory, getActivityLedgerEntryId } from 'helpers/activityEvent';
+import {
+    getActivityCategory,
+    getActivityLedgerEntryId,
+    getActivitySubeventsView,
+} from 'helpers/activityEvent';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
 
 import { RemoveLedgerEntryAlertDialog } from 'components/modals';
-
-import { hasLedgerEntryReversedEvent } from '../../../../internal';
 
 import { useConnect } from './internal';
 
 interface Props {
     parentEvent: AppEvent;
+    currentEvent?: AppEvent;
+    childEvents?: readonly AppEvent[];
 }
 
-const ActivitySubeventsButtons = ({ parentEvent }: Props) => {
+const ActivitySubeventsButtons = ({
+    parentEvent,
+    currentEvent: currentEventProp,
+    childEvents: childEventsProp,
+}: Props) => {
     const { t } = useTranslation(['activity', 'toasts']);
     const {
         reverseLedgerEntry,
         prepareExpenseEdit,
         initializeEdit,
         subevents,
-        subeventsParent,
         isLoading,
-        isEditing,
         isRemoving,
     } = useConnect();
+    const childEvents = childEventsProp ?? subevents;
+    const currentEvent = currentEventProp ?? getActivitySubeventsView(
+        parentEvent,
+        childEvents,
+    )?.currentEvent ?? parentEvent;
     const parentEntryId = getActivityLedgerEntryId(parentEvent);
     const rootActivityId = parentEvent.parentActivityId ?? parentEvent.id;
-    const isCurrentParentLoaded = subeventsParent?.id === rootActivityId;
-    const isEntryReversed =
-        isCurrentParentLoaded &&
-        hasLedgerEntryReversedEvent(subevents);
+    const isEntryReversed = currentEvent.action.endsWith('_REVERSED');
     const isExpense = getActivityCategory(parentEvent) === ACTIVITY_CATEGORIES.EXPENSE;
 
-    const onEdit = (): Promise<void> => {
+    const onEdit = (): void => {
         if (!parentEntryId || !isExpense) {
-            return Promise.resolve();
+            return;
         }
 
-        return prepareExpenseEdit({
-            entryId: parentEntryId,
-            activityEvents: [parentEvent, ...subevents],
+        const initialization = prepareExpenseEdit({
+            parentEvent,
+            childEvents,
             parentActivityId: rootActivityId,
-        })
-            .then(initialization => {
-                if (initialization) {
-                    initializeEdit(initialization);
-                }
-            })
-            .catch(error => {
-                toast.error(resolveApiErrorMessageFromError(
-                    error,
-                    t('toasts:common.requestFailed'),
-                ));
-                return Promise.reject(error);
-            });
+        });
+
+        if (initialization) {
+            initializeEdit(initialization);
+        }
     };
 
     const onRemove = (): Promise<void> => {
@@ -85,7 +85,7 @@ const ActivitySubeventsButtons = ({ parentEvent }: Props) => {
             });
     };
 
-    if (isLoading || !isCurrentParentLoaded) {
+    if (isLoading) {
         return (
             <Flex align="center" gap="2" wrap="wrap">
                 <Skeleton>
@@ -114,8 +114,7 @@ const ActivitySubeventsButtons = ({ parentEvent }: Props) => {
             <Button
                 size="1"
                 variant="soft"
-                disabled={!parentEntryId || !isExpense || isEditing}
-                loading={isEditing}
+                disabled={!parentEntryId || !isExpense}
                 onClick={onEdit}
             >
                 <LucidePencil size={14} />
