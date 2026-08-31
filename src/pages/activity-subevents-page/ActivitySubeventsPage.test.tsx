@@ -13,6 +13,7 @@ vi.mock('components/nav-bars', () => ({
 }));
 
 vi.mock('./components', () => ({
+    ActivitySubeventsDetails: () => <span data-testid="subevents-details" />,
     ActivitySubeventsFeed: () => <span data-testid="subevents-feed" />,
     ActivitySubeventsHeader: ({
         isUnavailable,
@@ -39,5 +40,6 @@ test('shows a parent fallback and still loads children on a direct visit', () =>
     );
 
     expect(screen.getByTestId('parent-unavailable')).toBeTruthy();
+    expect(screen.queryByTestId('subevents-details')).toBeTruthy();
     expect(screen.getByTestId('subevents-feed')).toBeTruthy();
 });

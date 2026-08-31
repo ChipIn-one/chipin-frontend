@@ -3,7 +3,11 @@ import { describe, expect, test } from 'vitest';
 import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 
-import { getActivityCategory, getActivityLedgerEntryId } from './activityEvent';
+import {
+    getActivityCategory,
+    getActivityLedgerEntryId,
+    getActivitySubeventsView,
+} from './activityEvent';
 
 const expenseCreatedEvent = {
     id: 'activity-1',
@@ -69,5 +73,46 @@ describe('activity event helpers', () => {
     test('rejects activities that cannot own child events', () => {
         expect(getActivityCategory(expenseReversedEvent)).toBeUndefined();
         expect(getActivityLedgerEntryId(expenseReversedEvent)).toBeUndefined();
+    });
+
+    test('uses the parent as current state when no children are loaded', () => {
+        expect(getActivitySubeventsView(expenseCreatedEvent, [])).toEqual({
+            originalEvent: expenseCreatedEvent,
+            currentEvent: expenseCreatedEvent,
+        });
+    });
+
+    test('uses the highest-sequence child regardless of array order', () => {
+        const olderChild = {
+            ...expenseCreatedEvent,
+            id: 'activity-2',
+            seq: 2,
+            parentActivityId: expenseCreatedEvent.id,
+        } satisfies AppEvent;
+        const newestChild = {
+            ...expenseCreatedEvent,
+            id: 'activity-7',
+            seq: 7,
+            parentActivityId: expenseCreatedEvent.id,
+        } satisfies AppEvent;
+
+        expect(getActivitySubeventsView(expenseCreatedEvent, [newestChild, olderChild])).toEqual({
+            originalEvent: expenseCreatedEvent,
+            currentEvent: newestChild,
+        });
+    });
+
+    test('keeps the root event as original when the latest event is reversed', () => {
+        const reversedChild = {
+            ...expenseReversedEvent,
+            id: 'activity-reversed',
+            seq: 8,
+            parentActivityId: expenseCreatedEvent.id,
+        } satisfies AppEvent;
+
+        expect(getActivitySubeventsView(expenseCreatedEvent, [reversedChild])).toEqual({
+            originalEvent: expenseCreatedEvent,
+            currentEvent: reversedChild,
+        });
     });
 });

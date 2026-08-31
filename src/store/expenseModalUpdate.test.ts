@@ -10,7 +10,6 @@ import {
 const original: ExpenseModalOriginalState = {
     description: 'Dinner',
     amount: 120,
-    date: 1_700_000_000,
     payerId: 'user-1',
     participantIds: ['user-1', 'user-2'],
     currency: 'USD',
@@ -47,7 +46,7 @@ test('represents an intentionally cleared description as null', () => {
     });
 });
 
-test('includes payer, currency, and changed date independently', () => {
+test('includes payer and currency without sending a changed date', () => {
     expect(buildExpenseUpdateParams(original, {
         ...draft,
         payerId: 'user-2',
@@ -58,9 +57,15 @@ test('includes payer, currency, and changed date independently', () => {
         expense: {
             payerId: 'user-2',
             currency: 'EUR',
-            date: 1_700_000_001,
         },
     });
+});
+
+test('does not create an update for a date-only change', () => {
+    expect(buildExpenseUpdateParams(original, {
+        ...draft,
+        date: 1_700_000_001,
+    })).toBeNull();
 });
 
 test('sends the complete atomic split block when amount changes', () => {

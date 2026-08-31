@@ -64,7 +64,9 @@ afterEach(() => {
     });
 });
 
-const createActivityEvent = (id: string, seq: number): AppEvent => ({
+type ExpenseActivityEvent = Extract<AppEvent, { subjectType: 'expense' }>;
+
+const createActivityEvent = (id: string, seq: number): ExpenseActivityEvent => ({
     id,
     seq,
     domain: 'LEDGER',
@@ -528,26 +530,85 @@ test('does not refetch when an expense mutation fails', () => {
     });
 });
 
-test('prepares an expense edit from a canonical ledger entry', () => {
-    vi.mocked(ledgerApi.fetchLedgerEntry).mockResolvedValue(editEntry);
-
-    return useActivityStore.getState().prepareExpenseEdit({
-        entryId: editEntry.id,
-        activityEvents: [createActivityEvent('activity-edit-1', 1)],
-        parentActivityId: 'parent-1',
-    }).then(result => {
-        expect(ledgerApi.fetchLedgerEntry).toHaveBeenCalledWith({
+test('prepares an expense edit from the latest Activity snapshot without a ledger read', () => {
+    const parentEvent = {
+        ...createActivityEvent('activity-edit-parent', 1),
+        subjectId: editEntry.id,
+        metadata: {
+            type: 'expense' as const,
             entryId: editEntry.id,
-        });
-        expect(result).toMatchObject({
-            mode: 'edit',
-            editContext: {
-                entryId: editEntry.id,
-                groupId: editEntry.groupId,
-                parentActivityId: 'parent-1',
+            groupId: 'group-1',
+            groupName: 'Group',
+            description: 'Dinner',
+            amount: 30,
+            currency: 'USD',
+            category: 'food',
+            subcategory: 'restaurants',
+            payerId: 'user-1',
+            payerDisplayName: 'Alex',
+            shares: [
+                {
+                    userId: 'user-1',
+                    displayName: 'Alex',
+                    shareAmount: 15,
+                    currency: 'USD',
+                },
+                {
+                    userId: 'user-2',
+                    displayName: 'Sam',
+                    shareAmount: 15,
+                    currency: 'USD',
+                },
+            ],
+        },
+    } satisfies AppEvent;
+    const latestEvent = {
+        ...parentEvent,
+        id: 'activity-edit-latest',
+        seq: 2,
+        action: ACTIVITY_ACTIONS.EXPENSE_UPDATED,
+        metadata: {
+            ...parentEvent.metadata,
+            description: 'Updated dinner',
+            amount: 40,
+            shares: [
+                {
+                    userId: 'user-1',
+                    displayName: 'Alex',
+                    shareAmount: 20,
+                    currency: 'USD',
+                },
+                {
+                    userId: 'user-2',
+                    displayName: 'Sam',
+                    shareAmount: 20,
+                    currency: 'USD',
+                },
+            ],
+        },
+        parentActivityId: parentEvent.id,
+    } satisfies AppEvent;
+
+    const result = useActivityStore.getState().prepareExpenseEdit({
+        parentEvent,
+        childEvents: [latestEvent],
+        parentActivityId: 'parent-1',
+    });
+
+    expect(ledgerApi.fetchLedgerEntry).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+        mode: 'edit',
+        description: 'Updated dinner',
+        amount: '40',
+        editContext: {
+            entryId: editEntry.id,
+            groupId: 'group-1',
+            parentActivityId: 'parent-1',
+            original: {
+                category: 'food',
+                subcategory: 'restaurants',
             },
-        });
-        expect(useLoadingStore.getState().expense.edit).toBe('fetched');
+        },
     });
 });
 
@@ -604,7 +665,7 @@ test('updates a direct expense and refreshes friends and visible subevents', () 
         entryId: editEntry.id,
         entry: {
             type: 'EXPENSE',
-            expense: { date: 2 },
+            expense: { description: 'Updated dinner' },
         },
         parentActivityId: 'parent-1',
     }).then(() => {

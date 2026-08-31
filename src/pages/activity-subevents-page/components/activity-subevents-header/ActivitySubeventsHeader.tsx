@@ -11,8 +11,6 @@ import { EmptyState } from 'basics/empty-states';
 import { ActivityEventSkeleton } from 'components/skeletons/activity-event-skeleton';
 import { ActivityEvent } from 'features/activity';
 
-import { ActivitySubeventsButtons } from './components';
-
 interface Props {
     parentEvent?: AppEvent;
     isLoading: boolean;
@@ -59,18 +57,10 @@ const ActivitySubeventsHeader = ({
 
     return (
         <Box mb="4">
-            <Flex
-                justify="between"
-                align={{ initial: 'start', sm: 'center' }}
-                gap="3"
-                mb="2"
-                direction={{ initial: 'column', sm: 'row' }}
-            >
+            <Flex mb="2">
                 <Text size="2" color="gray" weight="medium">
                     {title}
                 </Text>
-
-                <ActivitySubeventsButtons parentEvent={parentEvent} />
             </Flex>
 
             <ActivityEvent event={parentEvent} isNavigable={false} />

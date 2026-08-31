@@ -7,7 +7,6 @@ import type {
 export interface ExpenseModalOriginalState {
     description: string | null;
     amount: number;
-    date: number;
     payerId: string;
     participantIds: string[];
     currency: string;
@@ -114,11 +113,6 @@ export const buildExpenseUpdateParams = (
 
     if (draft.payerId !== original.payerId) {
         expense.payerId = draft.payerId;
-        hasChanges = true;
-    }
-
-    if (draft.date !== original.date) {
-        expense.date = draft.date;
         hasChanges = true;
     }
 

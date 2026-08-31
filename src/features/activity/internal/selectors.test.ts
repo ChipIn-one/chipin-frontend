@@ -47,6 +47,7 @@ const createExpenseEvent = ({
         shares: [
             {
                 userId: CURRENT_USER_ID,
+                displayName: 'Misha',
                 shareAmount,
                 currency: 'USD',
             },
