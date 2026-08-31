@@ -46,4 +46,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Verify frontend
+        env:
+          CHIPIN_TASK_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          CHIPIN_TASK_BRANCH: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
         run: npm run verify:full

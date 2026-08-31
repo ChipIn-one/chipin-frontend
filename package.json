@@ -1,11 +1,10 @@
 {
   "name": "chipin-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.9.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "npm run generate-version",
     "build": "npm run create-pwa-icons && tsc -b && vite build",
     "lint": "eslint .",
     "test": "vitest",
@@ -15,10 +14,13 @@
     "typecheck": "tsc -b",
     "verify": "npm run lint -- --quiet && npm run typecheck",
     "verify:full": "npm run lint && npm run test:full && npm run build",
-    "vercel-build": "npm run generate-version && npm run test:full && npm run build",
+    "vercel-build": "npm run test:full && npm run build",
+    "prepare": "husky",
+    "pr:create": "node scripts/create-pr.mjs",
+    "version:bump": "node scripts/version-bump.mjs",
+    "version:check": "node scripts/version-check.mjs",
     "preview": "vite preview",
-    "create-pwa-icons": "pwa-assets-generator",
-    "generate-version": "bash scripts/version.sh"
+    "create-pwa-icons": "pwa-assets-generator"
   },
   "dependencies": {
     "@radix-ui/themes": "^3.3.0",
@@ -56,6 +58,7 @@
     "eslint-plugin-simple-import-sort": "^14.0.0",
     "eslint-plugin-unused-imports": "^4.1.4",
     "globals": "^17.8.0",
+    "husky": "^9.1.7",
     "jsdom": "^29.1.1",
     "sharp": "^0.35.3",
     "sharp-ico": "^0.1.5",
