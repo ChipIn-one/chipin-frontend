@@ -84,6 +84,9 @@ The generic lifecycle and gate definitions live in the canonical
 
 - `npm run verify:full` is the local completion gate before commit/push.
 - Tracked Husky `pre-push` runs `npm run verify:full`; a non-zero result blocks the push.
+- `npm run pr:create` checks the current task branch, performs a cheap
+  `gh auth status`, and creates/updates a PR with explicit `--base dev`; it
+  returns only a real `/pull/<number>` URL.
 - Luna pushes only task branches, opens/updates a PR into `dev`, and waits for
   required remote `frontend-ci`.
 - Remote PR CI is authoritative for integration readiness; local green does not

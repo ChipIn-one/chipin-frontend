@@ -40,8 +40,13 @@ commands and repository policy.
 - `npm run test:full` — full tests.
 - `npm run verify:full` — full local completion gate and CI gate.
 - tracked Husky `pre-push` runs `npm run verify:full` and blocks a non-zero result.
+- `npm run pr:create` — create or update the current task branch PR with an explicit `dev` base.
 - push only task branches; open/update a PR into `dev` and wait for required
   `frontend-ci` before reporting integration readiness.
+- Normal task PR creation is equivalent to `gh pr create --base dev --head
+  <current-task-branch> ...`; never rely on the repository default `main`.
+- Reuse an existing open PR for the current head, retarget its base to `dev`
+  when allowed, and return its real `/pull/<number>` URL.
 - Luna never pushes directly to `dev`/`main` and never merges; human performs
   the merge after the remote gate is green.
 - `npm run build` — production build.
