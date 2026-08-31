@@ -5,6 +5,11 @@ import {
     type ActivityCategory,
 } from 'constants/activity';
 
+export interface ActivitySubeventsView {
+    originalEvent: AppEvent;
+    currentEvent: AppEvent;
+}
+
 export const getActivityCategory = (event?: AppEvent): ActivityCategory | undefined => {
     if (
         event?.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ||
@@ -34,4 +39,23 @@ export const getActivityLedgerEntryId = (event?: AppEvent): string | undefined =
     }
 
     return undefined;
+};
+
+export const getActivitySubeventsView = (
+    parentEvent: AppEvent | null | undefined,
+    childEvents: readonly AppEvent[],
+): ActivitySubeventsView | undefined => {
+    if (!parentEvent) {
+        return undefined;
+    }
+
+    let currentEvent = parentEvent;
+
+    for (const childEvent of childEvents) {
+        if (childEvent.seq > currentEvent.seq) {
+            currentEvent = childEvent;
+        }
+    }
+
+    return { originalEvent: parentEvent, currentEvent };
 };

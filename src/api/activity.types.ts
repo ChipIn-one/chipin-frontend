@@ -46,7 +46,7 @@ type BaseEvent = {
     parentActivityId?: UUID | null;
 };
 
-type ExpenseMetadata = {
+export type ExpenseActivityMetadata = {
     type: 'expense';
     entryId: UUID;
     groupId?: UUID | null;
@@ -55,14 +55,18 @@ type ExpenseMetadata = {
     amount: number;
     currency: string;
     category?: string | null;
+    subcategory?: string | null;
+    date?: number | null;
     sharingMode?: SharingMode | null;
     payerId?: UUID | null;
     payerDisplayName: string;
-    shares?: ExpenseShare[];
+    shares?: ExpenseActivityShare[];
+    fieldDiffs?: unknown;
 };
 
-type ExpenseShare = {
+export type ExpenseActivityShare = {
     userId: UUID;
+    displayName: string;
     shareAmount: number;
     currency: string;
 };
@@ -103,21 +107,21 @@ type ExpenseCreatedEvent = BaseEvent & {
     domain: 'LEDGER';
     action: ExpenseCreatedAction;
     subjectType: 'expense';
-    metadata: ExpenseMetadata;
+    metadata: ExpenseActivityMetadata;
 };
 
 type ExpenseUpdatedEvent = BaseEvent & {
     domain: 'LEDGER';
     action: ExpenseUpdatedAction;
     subjectType: 'expense';
-    metadata: ExpenseMetadata;
+    metadata: ExpenseActivityMetadata;
 };
 
 type ExpenseReversedEvent = BaseEvent & {
     domain: 'LEDGER';
     action: ExpenseReversedAction;
     subjectType: 'expense';
-    metadata: ExpenseMetadata;
+    metadata: ExpenseActivityMetadata;
 };
 
 type ExpenseTransferredFromEvent = BaseEvent & {
@@ -206,7 +210,7 @@ type UnsupportedActivityEvent = BaseEvent & {
         | OwnershipTransferredAction
         | MembersAddedAction
         | SettlementUpdatedAction;
-    metadata?: ExpenseMetadata | SettlementMetadata | GroupMetadata | null;
+    metadata?: ExpenseActivityMetadata | SettlementMetadata | GroupMetadata | null;
 };
 
 type MetadataUnavailableEvent = Omit<BaseEvent, 'action' | 'metadata'> & {

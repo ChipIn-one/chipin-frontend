@@ -99,7 +99,12 @@ const createExpenseEvent = (
         sharingMode,
         payerId: entry.expense.payer.id,
         payerDisplayName: entry.expense.payer.displayName,
-        shares: entry.expense.participantShares,
+        shares: entry.expense.participantShares.map(share => ({
+            ...share,
+            displayName:
+                entry.expense.participants.find(user => user.id === share.userId)
+                    ?.displayName ?? 'Unknown participant',
+        })),
     },
     createdAt: 1_700_000_000 + seq,
     parentActivityId: 'parent-1',
