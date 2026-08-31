@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Button, Flex, Skeleton } from '@radix-ui/themes';
 
 import type { AppEvent } from 'api/activity.types';
-import { ACTIVITY_CATEGORIES } from 'constants/activity';
+import { ACTIVITY_ACTIONS, ACTIVITY_CATEGORIES } from 'constants/activity';
 import {
     getActivityCategory,
     getActivityLedgerEntryId,
@@ -44,7 +44,9 @@ const ActivitySubeventsButtons = ({
     )?.currentEvent ?? parentEvent;
     const parentEntryId = getActivityLedgerEntryId(parentEvent);
     const rootActivityId = parentEvent.parentActivityId ?? parentEvent.id;
-    const isEntryReversed = currentEvent.action.endsWith('_REVERSED');
+    const isEntryReversed =
+        currentEvent.action === ACTIVITY_ACTIONS.EXPENSE_REVERSED ||
+        currentEvent.action === ACTIVITY_ACTIONS.SETTLEMENT_REVERSED;
     const isExpense = getActivityCategory(parentEvent) === ACTIVITY_CATEGORIES.EXPENSE;
 
     const onEdit = (): void => {

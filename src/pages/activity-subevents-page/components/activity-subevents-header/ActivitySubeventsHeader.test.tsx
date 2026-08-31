@@ -15,10 +15,6 @@ vi.mock('components/skeletons/activity-event-skeleton', () => ({
     ActivityEventSkeleton: () => <div data-testid="parent-event-skeleton" />,
 }));
 
-vi.mock('./components', () => ({
-    ActivitySubeventsButtons: () => <div data-testid="subevents-buttons" />,
-}));
-
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
         t: (key: string) => key,
@@ -63,7 +59,7 @@ test('renders the parent activity header', () => {
     );
 
     expect(screen.getByText('subeventsExpenseHistoryTitle')).toBeTruthy();
-    expect(screen.getByTestId('subevents-buttons')).toBeTruthy();
+    expect(screen.queryByTestId('subevents-buttons')).toBeNull();
     expect(screen.getByTestId('parent-event')).toBeTruthy();
 });
 
