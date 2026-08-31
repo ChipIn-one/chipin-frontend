@@ -39,9 +39,15 @@ commands and repository policy.
 - `npm run verify` — fast lint/typecheck.
 - `npm run test:full` — full tests.
 - `npm run verify:full` — full local completion gate and CI gate.
-- tracked Husky `pre-push` runs `npm run verify:full` and blocks a non-zero result.
+- `npm run version:bump -- <none|patch|minor|major>` — apply the task's explicit SemVer impact before the final commit; `none` is a safe no-op.
+- `npm run version:check` — read-only validation that package and lockfile versions are valid and synchronized.
+- tracked Husky `pre-push` runs `npm run version:check` and `npm run verify:full`; both block a non-zero result and neither mutates repository files.
 - `npm run pr:create` — create or update the current task branch PR with an explicit `dev` base.
-- push only task branches; open/update a PR into `dev` and wait for required
+- Every task prompt includes `Version impact: none | patch | minor | major`, selected from product/API meaning rather than file or LoC counts.
+- For `patch`, `minor`, or `major`, run the automatic `version:bump` before the final commit; `major` is rejected during the pre-1.0 period because `1.0.0` requires an explicit release decision.
+- Runtime labels are `<baseVersion>-dev-<shortTaskHeadSha>` for task/dev/preview builds and `<baseVersion>` for release builds from `main`. GitHub PR builds use the PR head SHA.
+- New task branches use `luna/<task-slug>`; `codex/fix-ci-development-flow` is a temporary exception only for open PR #109 and must not become a general `codex/*` allowance.
+- Push only task branches; open/update a PR into `dev` and wait for required
   `frontend-ci` before reporting integration readiness.
 - Normal task PR creation is equivalent to `gh pr create --base dev --head
   <current-task-branch> ...`; never rely on the repository default `main`.
@@ -52,10 +58,14 @@ commands and repository policy.
 - `npm run build` — production build.
 - `npm run vercel-build` — Vercel pipeline.
 
+The normal lifecycle is:
+
+`implementation → targeted validation → bounded diff review → Version impact from Sol prompt → version:bump → npm run verify:full → stage → commit → push (version:check + verify:full) → npm run pr:create → frontend-ci → human merge`.
+
 ## Git and execution
 
 Generic execution lifecycle is defined by canonical `my-prompt-storage`
-instructions/task prompt. Normal development is `task/*` → `dev`; release is
+instructions/task prompt. Normal development is `luna/*` → `dev`; release is
 `dev` → `main`. When publication is authorized, Luna may stage task-owned
 files, commit, push, and open/update PRs. Luna never merges or enables
 auto-merge. Preserve unrelated work and do not change backend or unrelated

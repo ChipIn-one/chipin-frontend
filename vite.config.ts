@@ -5,9 +5,16 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 
 import react from '@vitejs/plugin-react-swc';
 
+import { resolveAppVersion } from './scripts/version-resolver.mjs';
+
 // https://vite.dev/config/
 
+const appVersion = resolveAppVersion();
+
 export default defineConfig({
+    define: {
+        __APP_VERSION__: JSON.stringify(appVersion),
+    },
     plugins: [
         svgr(),
         react(),
