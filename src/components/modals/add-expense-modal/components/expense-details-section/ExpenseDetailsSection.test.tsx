@@ -20,13 +20,44 @@ beforeEach(() => {
     useExpenseModalStore.getState().reset();
 });
 
-const renderSection = () => {
-    render(
+const renderSection = () => render(
         <ThemeProvider theme={lightThemeStyled}>
             <ExpenseDetailsSection />
         </ThemeProvider>,
     );
-};
+
+test('shows the business date field when creating an expense', () => {
+    useExpenseModalStore.getState().initialize({
+        context: 'friends',
+        currentUser,
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
+        groups: [],
+        knownFriends: [],
+    });
+
+    const view = renderSection();
+
+    expect(view.container.querySelector('input[type="datetime-local"]')).not.toBeNull();
+});
+
+test('hides the business date field when editing an expense', () => {
+    useExpenseModalStore.getState().initialize({
+        context: 'friends',
+        currentUser,
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
+        groups: [],
+        knownFriends: [],
+    });
+    useExpenseModalStore.setState({ mode: 'edit' });
+
+    const view = renderSection();
+
+    expect(view.container.querySelector('input[type="datetime-local"]')).toBeNull();
+});
 
 test('shows the category field when category selection is enabled', () => {
     useExpenseModalStore.getState().initialize({

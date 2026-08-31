@@ -665,7 +665,7 @@ test('updates a direct expense and refreshes friends and visible subevents', () 
         entryId: editEntry.id,
         entry: {
             type: 'EXPENSE',
-            expense: { date: 2 },
+            expense: { description: 'Updated dinner' },
         },
         parentActivityId: 'parent-1',
     }).then(() => {

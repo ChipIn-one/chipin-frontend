@@ -280,7 +280,6 @@ const toOriginalState = (
 ): ExpenseModalOriginalState => ({
     description: metadata.description ?? null,
     amount: metadata.amount,
-    date: metadata.date ?? 0,
     payerId: metadata.payerId ?? '',
     participantIds,
     currency: metadata.currency,
@@ -351,7 +350,6 @@ export const mapActivityExpenseToModalState = ({
         selectedFriendId,
         description: metadata.description ?? '',
         amount: String(metadata.amount),
-        date: metadata.date ?? 0,
         currency: metadata.currency,
         category: metadata.category ?? '',
         paidById: metadata.payerId ?? '',

@@ -85,7 +85,6 @@ export interface ExpenseModalEditInitialization {
     selectedFriendId: string;
     description: string;
     amount: string;
-    date: number;
     currency: string;
     category: string;
     paidById: string;

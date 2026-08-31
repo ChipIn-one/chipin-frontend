@@ -57,7 +57,6 @@ const getEditInitialization = (
     selectedFriendId: targetMode === 'friends' ? friend.id : '',
     description: 'Dinner',
     amount: '30',
-    date: 1_717_200_000,
     currency: 'USD',
     category: 'food',
     paidById: currentUser.id,
@@ -77,7 +76,6 @@ const getEditInitialization = (
         original: {
             description: 'Dinner',
             amount: 30,
-            date: 1_717_200_000,
             payerId: currentUser.id,
             participantIds:
                 targetMode === 'group'

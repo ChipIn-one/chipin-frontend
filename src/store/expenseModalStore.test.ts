@@ -313,7 +313,6 @@ test('disables Save for an unchanged valid edit', () => {
         selectedFriendId: friend.id,
         description: 'Dinner',
         amount: '120',
-        date: 1_717_200_000,
         currency: 'USD',
         category: 'food',
         paidById: currentUser.id,
@@ -328,7 +327,6 @@ test('disables Save for an unchanged valid edit', () => {
             original: {
                 description: 'Dinner',
                 amount: 120,
-                date: 1_717_200_000,
                 payerId: currentUser.id,
                 participantIds: [currentUser.id, friend.id],
                 currency: 'USD',
