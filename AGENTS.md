@@ -31,11 +31,19 @@ composition.
 
 Read `docs/codex/rules/00-foundation.md` and only relevant chapters before
 code changes. Testing guidance is in `docs/codex/rules/70-testing.md`.
+The generic implementation and integration lifecycle is defined by the
+canonical `my-prompt-storage` FLOW; this file contains only ChipIn-specific
+commands and repository policy.
 
 - `npm run test:task -- <explicit test paths>` — focused tests.
 - `npm run verify` — fast lint/typecheck.
 - `npm run test:full` — full tests.
 - `npm run verify:full` — full local completion gate and CI gate.
+- tracked Husky `pre-push` runs `npm run verify:full` and blocks a non-zero result.
+- push only task branches; open/update a PR into `dev` and wait for required
+  `frontend-ci` before reporting integration readiness.
+- Luna never pushes directly to `dev`/`main` and never merges; human performs
+  the merge after the remote gate is green.
 - `npm run build` — production build.
 - `npm run vercel-build` — Vercel pipeline.
 

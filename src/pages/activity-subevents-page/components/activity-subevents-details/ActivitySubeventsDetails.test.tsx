@@ -29,6 +29,9 @@ vi.mock('../activity-subevents-buttons', () => ({
     ActivitySubeventsButtons: () => <div data-testid="subevents-buttons" />,
 }));
 
+// Construct the Unix timestamp at local noon so the displayed local date is stable across CI timezones.
+const stableActivityCreatedAt = Math.floor(new Date(2023, 10, 15, 12).getTime() / 1000);
+
 const expenseCreated = {
     id: 'expense-created',
     seq: 1,
@@ -57,7 +60,7 @@ const expenseCreated = {
             { userId: 'user-2', displayName: 'Sam', shareAmount: 15, currency: 'USD' },
         ],
     },
-    createdAt: 1_700_000_000,
+    createdAt: stableActivityCreatedAt,
     parentActivityId: null,
 } satisfies AppEvent;
 

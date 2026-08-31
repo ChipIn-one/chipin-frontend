@@ -77,6 +77,19 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
 - `npm run vercel-build` is wired through `vercel.json` and runs the complete Vitest suite before
   the production build; local `npm run build` remains test-free.
 
+## Integration boundary
+
+The generic lifecycle and gate definitions live in the canonical
+`my-prompt-storage` FLOW. ChipIn-specific integration policy is:
+
+- `npm run verify:full` is the local completion gate before commit/push.
+- Tracked Husky `pre-push` runs `npm run verify:full`; a non-zero result blocks the push.
+- Luna pushes only task branches, opens/updates a PR into `dev`, and waits for
+  required remote `frontend-ci`.
+- Remote PR CI is authoritative for integration readiness; local green does not
+  authorize merge or direct pushes to `dev`/`main`.
+- Human performs the merge after the required remote check is green.
+
 Run targeted checks first. Full verification belongs only at integration/completion checkpoints, not after
 every mechanical edit. Documentation/config-only changes may skip tests when the handoff explains why no
 runtime behavior is affected.
