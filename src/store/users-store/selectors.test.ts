@@ -1,10 +1,11 @@
 import { expect, test } from 'vitest';
 
-import type { KnownUser, UserSettings } from 'api/chipin.types';
+import type { KnownUser, UserRole, UserSettings } from 'api/chipin.types';
 
 import { useUsersStore } from './actions';
 import {
     getFriendsView,
+    selectCanAccessSolo,
     selectUserDefaultCategory,
     selectUserSaveGroupExpensesToSolo,
     selectUserSex,
@@ -12,14 +13,14 @@ import {
     selectUserSoloModeByDefault,
 } from './selectors';
 
-const createState = (settings: UserSettings) => {
+const createState = (settings: UserSettings, role: UserRole = 'USER') => {
     useUsersStore.setState({
         user: {
             id: 'user-1',
             email: 'user@example.com',
             displayName: 'User',
             picture: null,
-            role: 'USER',
+            role,
             subscriptionUntil: null,
             inviteToken: 'invite-token-user',
             settings,
@@ -32,6 +33,29 @@ const createState = (settings: UserSettings) => {
 
     return useUsersStore.getState();
 };
+
+test.each([
+    { role: 'USER' as const, expected: false },
+    { role: 'ADMIN' as const, expected: true },
+])('allows Solo only for the $role role', ({ role, expected }) => {
+    const state = createState(
+        {
+            defaultCurrency: 'USD',
+            timeFormat: '24h',
+            language: 'en',
+            theme: 'system',
+            simplifyDebts: true,
+            defaultCategory: 'food',
+            skipCategory: false,
+            soloModeByDefault: true,
+            saveGroupExpensesToSolo: false,
+            sex: 'male',
+        },
+        role,
+    );
+
+    expect(selectCanAccessSolo(state)).toBe(expected);
+});
 
 test('selects expense and profile preferences from user settings', () => {
     const state = createState({

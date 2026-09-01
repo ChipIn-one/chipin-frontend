@@ -15,7 +15,7 @@ import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { selectIsSoloMode } from 'store/dashboardSelectors';
 import { useDashboardStore } from 'store/dashboardStore';
-import { selectIsUserAdmin, useUsersStore } from 'store/users-store';
+import { selectCanAccessSolo, selectIsUserAdmin, useUsersStore } from 'store/users-store';
 
 import { NavButton } from 'basics/buttons';
 import { ModeLogotype } from 'components/mode-logotype';
@@ -86,13 +86,15 @@ const LandingMobileMenu = () => {
 const Header = () => {
     const isAuthResolved = useAuthStore(selectIsAuthResolved);
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
-    const { user, canShowDevMenu } = useUsersStore(
+    const { user, canAccessSolo, canShowDevMenu } = useUsersStore(
         useShallow(state => ({
             user: state.user,
+            canAccessSolo: selectCanAccessSolo(state),
             canShowDevMenu: selectIsUserAdmin(state),
         })),
     );
-    const isSoloMode = useDashboardStore(selectIsSoloMode);
+    const isSoloModeFromStore = useDashboardStore(selectIsSoloMode);
+    const isSoloMode = canAccessSolo && isSoloModeFromStore;
     const location = useLocation();
     const { t } = useTranslation();
 

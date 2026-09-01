@@ -16,7 +16,7 @@ import { useExpenseModalStore } from 'store/expenseModalStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectDashboardLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
+import { selectCanAccessSolo, useUsersStore } from 'store/users-store';
 
 const ButtonMobile = styled(Button)<{ $isSoloMode: boolean }>`
     width: var(--space-9);
@@ -41,7 +41,9 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
         })),
     );
     const friends = useUsersStore(state => state.friends);
-    const isSoloMode = useDashboardStore(selectIsSoloMode);
+    const canAccessSolo = useUsersStore(selectCanAccessSolo);
+    const isSoloModeFromStore = useDashboardStore(selectIsSoloMode);
+    const isSoloMode = canAccessSolo && isSoloModeFromStore;
     const openAddExpenseModal = useExpenseModalStore(state => state.open);
     const hasAvailableGroup = groups.some(group => group.members.length > 0);
     const canAddExpense = getCanAddExpense({

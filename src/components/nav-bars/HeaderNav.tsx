@@ -6,6 +6,7 @@ import { Box, Flex, Text } from '@radix-ui/themes';
 import { getPreferredModeRoute } from 'helpers/routes';
 import { selectIsSoloMode } from 'store/dashboardSelectors';
 import { useDashboardStore } from 'store/dashboardStore';
+import { selectCanAccessSolo, useUsersStore } from 'store/users-store';
 
 import { NavButton } from 'basics/buttons';
 
@@ -14,7 +15,9 @@ import { getNavElements } from './constants';
 const HeaderNav = () => {
     const location = useLocation();
     const { t } = useTranslation('common');
-    const isSoloMode = useDashboardStore(selectIsSoloMode);
+    const canAccessSolo = useUsersStore(selectCanAccessSolo);
+    const isSoloModeFromStore = useDashboardStore(selectIsSoloMode);
+    const isSoloMode = canAccessSolo && isSoloModeFromStore;
     const activeColor = isSoloMode ? 'violet' : 'green';
     const navElements = getNavElements(
         getPreferredModeRoute(isSoloMode),

@@ -10,6 +10,7 @@ import { ROUTES } from 'constants/routes';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 import { selectIsSingleMemberGroup } from 'store/expenseModalSelectors';
 import { useExpenseModalStore } from 'store/expenseModalStore';
+import { selectCanAccessSolo, useUsersStore } from 'store/users-store';
 
 import { BaseModal, MODAL_SIZES } from '../base-modal';
 import { OverlayBody } from '../components';
@@ -52,6 +53,7 @@ const AddExpenseModal = () => {
         friendId: openingFriendId,
     });
     const isSingleMemberGroup = useExpenseModalStore(selectIsSingleMemberGroup);
+    const canAccessSolo = useUsersStore(selectCanAccessSolo);
 
     const onReset = useCallback(() => {
         if (isOpened) {
@@ -86,15 +88,19 @@ const AddExpenseModal = () => {
                                 <LucideInfo />
                             </Callout.Icon>
                             <Callout.Text>
-                                <Trans
-                                    t={t}
-                                    i18nKey="expenses.modal.singleMemberNotice"
-                                    components={{
-                                        soloMode: (
-                                            <Link href={ROUTES.SOLO} onClick={onSoloModeClick} />
-                                        ),
-                                    }}
-                                />
+                                {canAccessSolo ? (
+                                    <Trans
+                                        t={t}
+                                        i18nKey="expenses.modal.singleMemberNotice"
+                                        components={{
+                                            soloMode: (
+                                                <Link href={ROUTES.SOLO} onClick={onSoloModeClick} />
+                                            ),
+                                        }}
+                                    />
+                                ) : (
+                                    t('expenses.modal.singleMemberNoticeNonAdmin')
+                                )}
                             </Callout.Text>
                         </Callout.Root>
                     )}

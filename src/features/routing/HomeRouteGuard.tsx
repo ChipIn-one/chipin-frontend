@@ -5,7 +5,7 @@ import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { selectUserSelfFetched } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
-import { selectUserSettings, useUsersStore } from 'store/users-store';
+import { selectCanAccessSolo, selectUserSettings, useUsersStore } from 'store/users-store';
 
 import PageLoader from 'basics/PageLoader';
 
@@ -17,6 +17,7 @@ const HomeRouteGuard = ({ children }: Props) => {
     const isAuthResolved = useAuthStore(selectIsAuthResolved);
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
     const settings = useUsersStore(selectUserSettings);
+    const canAccessSolo = useUsersStore(selectCanAccessSolo);
     const isUserFetched = useLoadingStore(selectUserSelfFetched);
 
     if (!isAuthResolved || (isLoggedIn && !isUserFetched)) {
@@ -26,7 +27,7 @@ const HomeRouteGuard = ({ children }: Props) => {
     if (isLoggedIn) {
         return (
             <Navigate
-                to={getPreferredModeRoute(settings?.soloModeByDefault ?? false)}
+                to={getPreferredModeRoute(canAccessSolo && (settings?.soloModeByDefault ?? false))}
                 replace
             />
         );

@@ -104,6 +104,8 @@ test('explains why adding an expense is unavailable for a single-member group', 
 test('opens Solo mode and closes the expense modal from the single-member notice', () => {
     const interaction = userEvent.setup();
 
+    useUsersStore.setState({ user: { ...currentUser, role: 'ADMIN' }, localUser: null, friends: [] });
+
     render(
         <MemoryRouter initialEntries={['/group/group-1']}>
             <ThemeProvider theme={lightThemeStyled}>
@@ -121,6 +123,18 @@ test('opens Solo mode and closes the expense modal from the single-member notice
             expect(useDashboardStore.getState().appMode).toBe(APP_MODES.SOLO);
             expect(useExpenseModalStore.getState().isOpened).toBe(false);
         });
+});
+
+test('does not offer the Solo entry point to a non-admin user', () => {
+    render(
+        <MemoryRouter initialEntries={['/group/group-1']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <AddExpenseModal />
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('link', { name: 'Solo mode' })).toBeNull();
 });
 
 test('uses the edit title and Save action in edit mode', () => {

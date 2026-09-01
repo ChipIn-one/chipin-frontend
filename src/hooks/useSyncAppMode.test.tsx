@@ -6,6 +6,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
+import { useUsersStore } from 'store/users-store';
 
 import { useSyncAppMode } from './useSyncAppMode';
 
@@ -21,9 +22,30 @@ const TestHarness = () => {
 
 beforeEach(() => {
     useDashboardStore.setState({ appMode: APP_MODES.GROUP });
+    useUsersStore.setState({ user: null, localUser: null, friends: [] });
 });
 
 test('sets Solo mode for a direct Solo route', () => {
+    useUsersStore.setState({
+        user: null,
+        localUser: {
+            role: 'ADMIN',
+            settings: {
+                defaultCurrency: 'USD',
+                defaultCategory: 'food',
+                timeFormat: '24h',
+                language: 'en',
+                theme: 'system',
+                simplifyDebts: true,
+                skipCategory: false,
+                soloModeByDefault: false,
+                saveGroupExpensesToSolo: false,
+                sex: 'male',
+            },
+        },
+        friends: [],
+    });
+
     render(
         <MemoryRouter initialEntries={['/solo']}>
             <TestHarness />
@@ -31,6 +53,16 @@ test('sets Solo mode for a direct Solo route', () => {
     );
 
     expect(useDashboardStore.getState().appMode).toBe(APP_MODES.SOLO);
+});
+
+test('does not activate Solo mode for a non-admin direct Solo route', () => {
+    render(
+        <MemoryRouter initialEntries={['/solo']}>
+            <TestHarness />
+        </MemoryRouter>,
+    );
+
+    expect(useDashboardStore.getState().appMode).toBe(APP_MODES.GROUP);
 });
 
 test('sets Group mode when navigation reaches the dashboard route', () => {
