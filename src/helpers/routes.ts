@@ -1,6 +1,6 @@
 import { matchPath } from 'react-router-dom';
 
-import { ROUTES } from 'constants/routes';
+import { ROUTE_META, ROUTES } from 'constants/routes';
 
 const getPreferredModeRoute = (isSoloModeByDefault: boolean): string =>
     isSoloModeByDefault ? ROUTES.SOLO : ROUTES.DASHBOARD;
@@ -26,4 +26,17 @@ const getHasDesktopSidebar = (pathname: string): boolean => {
     );
 };
 
-export { getHasDesktopSidebar, getPreferredModeRoute };
+const getBreadcrumbParentPath = (pathname: string): string | null => {
+    for (const routeMeta of ROUTE_META) {
+        if (
+            routeMeta.breadcrumb &&
+            matchPath({ path: routeMeta.path, end: true }, pathname)
+        ) {
+            return routeMeta.breadcrumb.parentPath;
+        }
+    }
+
+    return null;
+};
+
+export { getBreadcrumbParentPath, getHasDesktopSidebar, getPreferredModeRoute };

@@ -1,6 +1,10 @@
 import { expect, test } from 'vitest';
 
-import { getHasDesktopSidebar, getPreferredModeRoute } from './routes';
+import {
+    getBreadcrumbParentPath,
+    getHasDesktopSidebar,
+    getPreferredModeRoute,
+} from './routes';
 
 test('selects the Solo route when Solo Mode is the user default', () => {
     expect(getPreferredModeRoute(true)).toBe('/solo');
@@ -26,4 +30,14 @@ test.each([
     ['/not-found', false],
 ] as const)('returns desktop sidebar availability for %s', (pathname, expected) => {
     expect(getHasDesktopSidebar(pathname)).toBe(expected);
+});
+
+test.each([
+    ['/activity/activity-1', '/activity'],
+    ['/activity/activity-1/details', null],
+    ['/activity', null],
+    ['/group/group-1', null],
+    ['/settings', null],
+] as const)('resolves the configured breadcrumb parent for %s', (pathname, expected) => {
+    expect(getBreadcrumbParentPath(pathname)).toBe(expected);
 });
