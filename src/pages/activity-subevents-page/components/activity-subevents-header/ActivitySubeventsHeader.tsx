@@ -1,13 +1,14 @@
 import { LucideInfo } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Box, Flex, Text } from '@radix-ui/themes';
+import { Box } from '@radix-ui/themes';
 
 import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_CATEGORIES } from 'constants/activity';
 import { getActivityCategory } from 'helpers/activityEvent';
 
 import { EmptyState } from 'basics/empty-states';
+import { PageBreadcrumb } from 'components/page-breadcrumb';
 import { ActivityEventSkeleton } from 'components/skeletons/activity-event-skeleton';
 import { ActivityEvent } from 'features/activity';
 
@@ -57,11 +58,9 @@ const ActivitySubeventsHeader = ({
 
     return (
         <Box mb="4">
-            <Flex mb="2">
-                <Text size="2" color="gray" weight="medium">
-                    {title}
-                </Text>
-            </Flex>
+            <Box mb="2">
+                <PageBreadcrumb title={title} />
+            </Box>
 
             <ActivityEvent event={parentEvent} isNavigable={false} />
         </Box>
