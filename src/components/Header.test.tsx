@@ -44,7 +44,7 @@ beforeEach(() => {
     useAuthStore.setState({ status: 'authenticated' });
     useUsersStore.setState({
         user: null,
-        localUser: { role: 'USER', settings },
+        localUser: { role: 'ADMIN', settings },
         friends: [],
     });
     useDashboardStore.setState({ appMode: APP_MODES.SOLO });
@@ -71,13 +71,42 @@ test('opens the preferred Solo route when an authenticated user clicks the logo'
         });
 });
 
+test('falls back to the Group route for a non-admin with stale Solo state', () => {
+    const interaction = userEvent.setup();
+
+    useUsersStore.setState({
+        user: null,
+        localUser: { role: 'USER', settings },
+        friends: [],
+    });
+
+    render(
+        <MemoryRouter initialEntries={['/settings']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <Header />
+                    <LocationPath />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    return interaction
+        .click(screen.getByRole('link', { name: PROJECT_NAME }))
+        .then(() => {
+            expect(screen.getByLabelText('Current route').textContent).toBe('/dashboard');
+            expect(screen.getByText('Group')).toBeTruthy();
+            expect(screen.queryByText('Solo')).toBeNull();
+        });
+});
+
 test('opens the active Solo mode when the logo is clicked from another page', () => {
     const interaction = userEvent.setup();
 
     useDashboardStore.setState({ appMode: APP_MODES.SOLO });
     useUsersStore.setState({
         localUser: {
-            role: 'USER',
+            role: 'ADMIN',
             settings: { ...settings, soloModeByDefault: false },
         },
     });

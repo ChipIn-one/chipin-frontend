@@ -4,7 +4,9 @@ import { expect, test, vi } from 'vitest';
 
 import { render, screen } from '@testing-library/react';
 
+import type { UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
+import { useUsersStore } from 'store/users-store';
 
 import SettingsPage from './SettingsPage';
 
@@ -24,7 +26,20 @@ const SECTION_TITLES = [
     'Privacy & Security',
 ] as const;
 
-test('renders notifications and app settings immediately before privacy and security', () => {
+const settings = {
+    defaultCurrency: 'USD',
+    defaultCategory: 'food',
+    timeFormat: '24h',
+    language: 'en',
+    theme: 'system',
+    simplifyDebts: true,
+    skipCategory: false,
+    soloModeByDefault: false,
+    saveGroupExpensesToSolo: false,
+    sex: 'male',
+} satisfies UserSettings;
+
+const renderSettings = () => {
     render(
         <MemoryRouter>
             <ThemeProvider theme={lightThemeStyled}>
@@ -32,6 +47,11 @@ test('renders notifications and app settings immediately before privacy and secu
             </ThemeProvider>
         </MemoryRouter>,
     );
+};
+
+test('renders notifications and app settings immediately before privacy and security', () => {
+    useUsersStore.setState({ user: null, localUser: { role: 'ADMIN', settings }, friends: [] });
+    renderSettings();
 
     const sectionTitles = SECTION_TITLES.map(title => screen.getByText(title));
 
@@ -46,4 +66,12 @@ test('renders notifications and app settings immediately before privacy and secu
                 Node.DOCUMENT_POSITION_FOLLOWING,
         ).not.toBe(0);
     }
+});
+
+test('hides Solo preferences for a non-admin user', () => {
+    useUsersStore.setState({ user: null, localUser: { role: 'USER', settings }, friends: [] });
+
+    renderSettings();
+
+    expect(screen.queryByText('Solo Preferences')).toBeNull();
 });

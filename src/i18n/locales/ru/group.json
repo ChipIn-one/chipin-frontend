@@ -38,6 +38,7 @@
             "description": "Разделите новый расход между участниками группы.",
             "descriptionEdit": "Измените этот расход.",
             "singleMemberNotice": "Вы в группе один. Чтобы считать расходы, добавьте друзей. Или используйте <soloMode>режим Solo</soloMode>.",
+            "singleMemberNoticeNonAdmin": "Вы в группе один. Чтобы считать расходы, добавьте друзей.",
             "scope": {
                 "group": "Расход в группе: {{groupName}}",
                 "friends": "Расход P2P с участниками: {{users}}"

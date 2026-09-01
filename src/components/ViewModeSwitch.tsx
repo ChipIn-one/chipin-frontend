@@ -9,11 +9,13 @@ import { selectIsSoloMode } from 'store/dashboardSelectors';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 import { selectUserSelfLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
+import { selectCanAccessSolo, useUsersStore } from 'store/users-store';
 
 const ViewModeSwitch = () => {
     const { t } = useTranslation('common');
     const navigate = useNavigate();
     const isUserLoading = useLoadingStore(selectUserSelfLoading);
+    const canAccessSolo = useUsersStore(selectCanAccessSolo);
     const { isSoloMode, setAppMode } = useDashboardStore(
         useShallow(state => ({
             isSoloMode: selectIsSoloMode(state),
@@ -27,6 +29,10 @@ const ViewModeSwitch = () => {
         setAppMode(nextAppMode);
         navigate(getPreferredModeRoute(nextAppMode === APP_MODES.SOLO));
     };
+
+    if (!canAccessSolo) {
+        return null;
+    }
 
     return (
         <Flex

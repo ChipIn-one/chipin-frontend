@@ -2,7 +2,6 @@ import {
     LucideArrowLeftRight,
     LucideCalculator,
     LucideGlobe,
-    LucidePiggyBank,
     LucideUsers,
     LucideZap,
 } from 'lucide-react';
@@ -41,12 +40,6 @@ const FeaturesSection = () => {
             description: t('features.autoCalc.description'),
             icon: <LucideCalculator />,
             color: 'violet',
-        },
-        {
-            title: t('features.soloBudget.title'),
-            description: t('features.soloBudget.description'),
-            icon: <LucidePiggyBank />,
-            color: 'amber',
         },
         {
             title: t('features.multiCurrency.title'),

@@ -54,13 +54,30 @@ beforeEach(() => {
     useLoadingStore.getState().setInitialLoadingStore();
 });
 
-test('opens the preferred Solo route for an authenticated user', () => {
+test('opens the dashboard for a non-admin user regardless of the Solo default', () => {
     useAuthStore.setState({ status: 'authenticated' });
     useLoadingStore.getState().setLoading('users', 'self', 'fetched');
     useUsersStore.setState({
         user: null,
         localUser: {
             role: 'USER',
+            settings,
+        },
+        friends: [],
+    });
+
+    renderGuard();
+
+    expect(screen.getByLabelText('Current route').textContent).toBe('/dashboard');
+});
+
+test('opens the preferred Solo route for an admin user', () => {
+    useAuthStore.setState({ status: 'authenticated' });
+    useLoadingStore.getState().setLoading('users', 'self', 'fetched');
+    useUsersStore.setState({
+        user: null,
+        localUser: {
+            role: 'ADMIN',
             settings,
         },
         friends: [],
@@ -105,5 +122,5 @@ test('waits for fetched settings instead of routing from a stale cached preferen
         useLoadingStore.getState().setLoading('users', 'self', 'fetched');
     });
 
-    expect(screen.getByLabelText('Current route').textContent).toBe('/solo');
+    expect(screen.getByLabelText('Current route').textContent).toBe('/dashboard');
 });
