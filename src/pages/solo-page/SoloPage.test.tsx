@@ -27,7 +27,7 @@ const settings = {
     sex: 'male',
 } satisfies UserSettings;
 
-test('renders the Solo dashboard layout with development placeholders', () => {
+test('renders the preserved Solo dashboard layout without release mode controls', () => {
     useDashboardStore.setState({ appMode: APP_MODES.SOLO });
     useUsersStore.setState({ user: null, localUser: { role: 'ADMIN', settings }, friends: [] });
 
@@ -41,9 +41,7 @@ test('renders the Solo dashboard layout with development placeholders', () => {
         </MemoryRouter>,
     );
 
-    expect(screen.getByRole('switch', { name: 'Group mode' }).getAttribute('aria-checked')).toBe(
-        'false',
-    );
+    expect(screen.queryByRole('switch', { name: 'Group mode' })).toBeNull();
     expect(screen.getByText('Solo summary')).not.toBeNull();
     expect(screen.queryByText('Solo records')).toBeNull();
     expect(screen.getByText('Solo activity')).not.toBeNull();

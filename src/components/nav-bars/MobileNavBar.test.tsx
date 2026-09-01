@@ -42,7 +42,7 @@ beforeEach(() => {
 });
 
 test.each([
-    { appMode: APP_MODES.SOLO, expectedRoute: '/solo' },
+    { appMode: APP_MODES.SOLO, expectedRoute: '/dashboard' },
     { appMode: APP_MODES.GROUP, expectedRoute: '/dashboard' },
 ])('opens $expectedRoute from the home link in $appMode mode', ({ appMode, expectedRoute }) => {
     const interaction = userEvent.setup();

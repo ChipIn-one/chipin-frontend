@@ -33,7 +33,9 @@ export const selectUserSex = (s: UsersStore) =>
     selectUserSettings(s)?.sex ?? 'male';
 export const selectFriends = (s: UsersStore): KnownUser[] => s.friends;
 export const selectIsUserAdmin = (s: UsersStore) => (s.user?.role ?? s.localUser?.role) === 'ADMIN';
-export const selectCanAccessSolo = (s: UsersStore): boolean => selectIsUserAdmin(s);
+const IS_SOLO_MODE_RELEASED = false;
+export const selectCanAccessSolo = (s: UsersStore): boolean =>
+    IS_SOLO_MODE_RELEASED && selectIsUserAdmin(s);
 
 export const getFriendsView = (
     friends: KnownUser[],

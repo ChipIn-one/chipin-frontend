@@ -96,7 +96,7 @@ test('shows the authenticated navigation and profile actions', () => {
     expect(screen.getByRole('button', { name: /Alex.*user@example\.com/i })).toBeTruthy();
 });
 
-test('shows the Solo badge for the active Solo mode', () => {
+test('shows Group branding when Solo mode is stale for an admin', () => {
     useDashboardStore.setState({ appMode: APP_MODES.SOLO });
     useUsersStore.setState({
         user: { ...user, role: 'ADMIN' },
@@ -114,7 +114,7 @@ test('shows the Solo badge for the active Solo mode', () => {
         </MemoryRouter>,
     );
 
-    expect(screen.getByRole('link', { name: `${PROJECT_NAME} Solo` })).toBeTruthy();
+    expect(screen.getByRole('link', { name: `${PROJECT_NAME} Group` })).toBeTruthy();
 });
 
 test('renders Group branding for a non-admin with stale Solo state', () => {

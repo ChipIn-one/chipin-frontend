@@ -1,9 +1,8 @@
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 
 import type { Group, SelfUser } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
@@ -66,12 +65,6 @@ const currentUser = {
     },
 } satisfies SelfUser;
 
-const LocationPath = () => {
-    const location = useLocation();
-
-    return <output aria-label="Current route">{location.pathname}</output>;
-};
-
 beforeEach(() => {
     useDashboardStore.setState({ appMode: APP_MODES.GROUP });
     useExpenseModalStore.getState().reset();
@@ -101,31 +94,9 @@ test('explains why adding an expense is unavailable for a single-member group', 
     });
 });
 
-test('opens Solo mode and closes the expense modal from the single-member notice', () => {
-    const interaction = userEvent.setup();
+test.each(['USER', 'ADMIN'] as const)('does not offer the Solo entry point to a $role user', role => {
+    useUsersStore.setState({ user: { ...currentUser, role }, localUser: null, friends: [] });
 
-    useUsersStore.setState({ user: { ...currentUser, role: 'ADMIN' }, localUser: null, friends: [] });
-
-    render(
-        <MemoryRouter initialEntries={['/group/group-1']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <AddExpenseModal />
-                <LocationPath />
-            </ThemeProvider>
-        </MemoryRouter>,
-    );
-
-    return screen
-        .findByRole('link', { name: 'Solo mode' })
-        .then(link => interaction.click(link))
-        .then(() => {
-            expect(screen.getByLabelText('Current route').textContent).toBe('/solo');
-            expect(useDashboardStore.getState().appMode).toBe(APP_MODES.SOLO);
-            expect(useExpenseModalStore.getState().isOpened).toBe(false);
-        });
-});
-
-test('does not offer the Solo entry point to a non-admin user', () => {
     render(
         <MemoryRouter initialEntries={['/group/group-1']}>
             <ThemeProvider theme={lightThemeStyled}>
