@@ -20,7 +20,6 @@ const SECTION_TITLES = [
     'Profile info',
     'Regional Preferences',
     'Expense Preferences',
-    'Solo Preferences',
     'Notifications',
     'App Settings',
     'Privacy & Security',
@@ -56,6 +55,7 @@ test('renders notifications and app settings immediately before privacy and secu
     const sectionTitles = SECTION_TITLES.map(title => screen.getByText(title));
 
     expect(screen.getByText('Your preferences.')).toBeTruthy();
+    expect(screen.queryByText('Solo Preferences')).toBeNull();
 
     for (let index = 1; index < sectionTitles.length; index += 1) {
         const previousTitle = sectionTitles[index - 1];
@@ -68,8 +68,8 @@ test('renders notifications and app settings immediately before privacy and secu
     }
 });
 
-test('hides Solo preferences for a non-admin user', () => {
-    useUsersStore.setState({ user: null, localUser: { role: 'USER', settings }, friends: [] });
+test.each(['USER', 'ADMIN'] as const)('hides Solo preferences for a $role user', role => {
+    useUsersStore.setState({ user: null, localUser: { role, settings }, friends: [] });
 
     renderSettings();
 

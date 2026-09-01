@@ -71,7 +71,7 @@ test('opens the dashboard for a non-admin user regardless of the Solo default', 
     expect(screen.getByLabelText('Current route').textContent).toBe('/dashboard');
 });
 
-test('opens the preferred Solo route for an admin user', () => {
+test('opens the dashboard for an admin user regardless of the Solo default', () => {
     useAuthStore.setState({ status: 'authenticated' });
     useLoadingStore.getState().setLoading('users', 'self', 'fetched');
     useUsersStore.setState({
@@ -85,7 +85,7 @@ test('opens the preferred Solo route for an admin user', () => {
 
     renderGuard();
 
-    expect(screen.getByLabelText('Current route').textContent).toBe('/solo');
+    expect(screen.getByLabelText('Current route').textContent).toBe('/dashboard');
 });
 
 test('waits for fetched settings instead of routing from a stale cached preference', () => {

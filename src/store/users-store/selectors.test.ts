@@ -36,8 +36,8 @@ const createState = (settings: UserSettings, role: UserRole = 'USER') => {
 
 test.each([
     { role: 'USER' as const, expected: false },
-    { role: 'ADMIN' as const, expected: true },
-])('allows Solo only for the $role role', ({ role, expected }) => {
+    { role: 'ADMIN' as const, expected: false },
+])('keeps Solo unavailable for the $role role', ({ role, expected }) => {
     const state = createState(
         {
             defaultCurrency: 'USD',

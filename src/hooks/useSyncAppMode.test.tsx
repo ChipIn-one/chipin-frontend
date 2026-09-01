@@ -5,12 +5,26 @@ import { Button } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import type { UserSettings } from 'api/chipin.types';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 import { useUsersStore } from 'store/users-store';
 
 import { useSyncAppMode } from './useSyncAppMode';
 
 const DASHBOARD_LABEL = 'Dashboard';
+
+const settings = {
+    defaultCurrency: 'USD',
+    defaultCategory: 'food',
+    timeFormat: '24h',
+    language: 'en',
+    theme: 'system',
+    simplifyDebts: true,
+    skipCategory: false,
+    soloModeByDefault: false,
+    saveGroupExpensesToSolo: false,
+    sex: 'male',
+} satisfies UserSettings;
 
 const TestHarness = () => {
     const navigate = useNavigate();
@@ -25,37 +39,13 @@ beforeEach(() => {
     useUsersStore.setState({ user: null, localUser: null, friends: [] });
 });
 
-test('sets Solo mode for a direct Solo route', () => {
+test.each(['USER', 'ADMIN'] as const)('does not activate Solo mode for a $role direct Solo route', role => {
     useUsersStore.setState({
         user: null,
-        localUser: {
-            role: 'ADMIN',
-            settings: {
-                defaultCurrency: 'USD',
-                defaultCategory: 'food',
-                timeFormat: '24h',
-                language: 'en',
-                theme: 'system',
-                simplifyDebts: true,
-                skipCategory: false,
-                soloModeByDefault: false,
-                saveGroupExpensesToSolo: false,
-                sex: 'male',
-            },
-        },
+        localUser: { role, settings },
         friends: [],
     });
 
-    render(
-        <MemoryRouter initialEntries={['/solo']}>
-            <TestHarness />
-        </MemoryRouter>,
-    );
-
-    expect(useDashboardStore.getState().appMode).toBe(APP_MODES.SOLO);
-});
-
-test('does not activate Solo mode for a non-admin direct Solo route', () => {
     render(
         <MemoryRouter initialEntries={['/solo']}>
             <TestHarness />

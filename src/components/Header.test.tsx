@@ -50,7 +50,7 @@ beforeEach(() => {
     useDashboardStore.setState({ appMode: APP_MODES.SOLO });
 });
 
-test('opens the preferred Solo route when an authenticated user clicks the logo', () => {
+test('opens the Group route when an authenticated user clicks the logo', () => {
     const interaction = userEvent.setup();
 
     render(
@@ -67,11 +67,11 @@ test('opens the preferred Solo route when an authenticated user clicks the logo'
     return interaction
         .click(screen.getByRole('link', { name: PROJECT_NAME }))
         .then(() => {
-            expect(screen.getByLabelText('Current route').textContent).toBe('/solo');
+            expect(screen.getByLabelText('Current route').textContent).toBe('/dashboard');
         });
 });
 
-test('falls back to the Group route for a non-admin with stale Solo state', () => {
+test('opens the Group route for a user with stale Solo state', () => {
     const interaction = userEvent.setup();
 
     useUsersStore.setState({
@@ -100,7 +100,7 @@ test('falls back to the Group route for a non-admin with stale Solo state', () =
         });
 });
 
-test('opens the active Solo mode when the logo is clicked from another page', () => {
+test('opens the Group route when the logo is clicked from another page with stale Solo state', () => {
     const interaction = userEvent.setup();
 
     useDashboardStore.setState({ appMode: APP_MODES.SOLO });
@@ -125,7 +125,7 @@ test('opens the active Solo mode when the logo is clicked from another page', ()
     return interaction
         .click(screen.getByRole('link', { name: PROJECT_NAME }))
         .then(() => {
-            expect(screen.getByLabelText('Current route').textContent).toBe('/solo');
+            expect(screen.getByLabelText('Current route').textContent).toBe('/dashboard');
         });
 });
 

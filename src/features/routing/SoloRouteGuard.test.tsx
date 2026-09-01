@@ -60,14 +60,8 @@ beforeEach(() => {
     useUsersStore.getState().setInitialUsersStore();
 });
 
-test('redirects a non-admin from the Solo route to the dashboard', () => {
-    renderGuard('USER');
+test.each(['USER', 'ADMIN'] as const)('redirects a $role from the Solo route to the dashboard', role => {
+    renderGuard(role);
 
     expect(screen.getByLabelText('Current route').textContent).toBe('/dashboard');
-});
-
-test('allows an admin to open the existing Solo route', () => {
-    renderGuard('ADMIN');
-
-    expect(screen.getByLabelText('Current route').textContent).toBe('/solo');
 });
