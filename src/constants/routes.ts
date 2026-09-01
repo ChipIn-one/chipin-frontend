@@ -18,6 +18,9 @@ export interface RouteMeta {
     descriptionKey: string;
     groupTitleKey?: string;
     groupDescriptionKey?: string;
+    breadcrumb?: {
+        parentPath: string;
+    };
 }
 
 export const ROUTE_META = [
@@ -67,6 +70,9 @@ export const ROUTE_META = [
         path: `${ROUTES.ACTIVITY}/:parentActivityId`,
         titleKey: 'activityDetails.title',
         descriptionKey: 'activityDetails.description',
+        breadcrumb: {
+            parentPath: ROUTES.ACTIVITY,
+        },
     },
     {
         path: ROUTES.FRIENDS,
