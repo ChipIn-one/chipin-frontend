@@ -11,7 +11,7 @@ vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-test('replaces both landing showcase placeholders with app previews', () => {
+test('keeps the Group showcase without exposing a Solo release preview', () => {
     render(
         <ThemeProvider theme={lightThemeStyled}>
             <ShowcaseSections />
@@ -19,7 +19,6 @@ test('replaces both landing showcase placeholders with app previews', () => {
     );
 
     expect(screen.getByLabelText('sections.groups.preview.label')).not.toBeNull();
-    expect(screen.getByLabelText('sections.expenses.preview.label')).not.toBeNull();
+    expect(screen.queryByLabelText('sections.expenses.preview.label')).toBeNull();
     expect(screen.queryByText('sections.groups.placeholder')).toBeNull();
-    expect(screen.queryByText('sections.expenses.placeholder')).toBeNull();
 });

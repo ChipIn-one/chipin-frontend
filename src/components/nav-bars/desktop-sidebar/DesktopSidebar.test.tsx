@@ -92,12 +92,17 @@ test('shows the authenticated navigation and profile actions', () => {
     ).toBeNull();
     expect(screen.getByRole('link', { name: 'Friends' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Settings' })).toBeTruthy();
-    expect(screen.getByRole('switch', { name: 'Group mode' })).toBeTruthy();
+    expect(screen.queryByRole('switch', { name: 'Group mode' })).toBeNull();
     expect(screen.getByRole('button', { name: /Alex.*user@example\.com/i })).toBeTruthy();
 });
 
 test('shows the Solo badge for the active Solo mode', () => {
     useDashboardStore.setState({ appMode: APP_MODES.SOLO });
+    useUsersStore.setState({
+        user: { ...user, role: 'ADMIN' },
+        localUser: null,
+        friends: [],
+    });
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
@@ -110,6 +115,23 @@ test('shows the Solo badge for the active Solo mode', () => {
     );
 
     expect(screen.getByRole('link', { name: `${PROJECT_NAME} Solo` })).toBeTruthy();
+});
+
+test('renders Group branding for a non-admin with stale Solo state', () => {
+    useDashboardStore.setState({ appMode: APP_MODES.SOLO });
+
+    render(
+        <MemoryRouter initialEntries={['/settings']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <DesktopSidebar />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('link', { name: `${PROJECT_NAME} Group` })).toBeTruthy();
+    expect(screen.queryByRole('switch', { name: 'Group mode' })).toBeNull();
 });
 
 test('shows the developer menu for an admin', () => {

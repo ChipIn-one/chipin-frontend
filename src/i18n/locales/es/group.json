@@ -38,6 +38,7 @@
             "description": "Divide un nuevo gasto entre los miembros del grupo.",
             "descriptionEdit": "Actualiza este gasto.",
             "singleMemberNotice": "Eres la única persona del grupo. Añade amigos para llevar la cuenta de los gastos. O usa el <soloMode>modo Solo</soloMode>.",
+            "singleMemberNoticeNonAdmin": "Eres la única persona del grupo. Añade amigos para llevar la cuenta de los gastos.",
             "scope": {
                 "group": "Gasto de grupo: {{groupName}}",
                 "friends": "Gasto P2P con {{users}}"

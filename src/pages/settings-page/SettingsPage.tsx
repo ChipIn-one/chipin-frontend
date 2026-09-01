@@ -6,6 +6,7 @@ import { Box, Container, Flex, Grid } from '@radix-ui/themes';
 import { useErrorsStore } from 'store/errorsStore';
 import { selectUserSelfFetched, selectUserSelfLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
+import { selectCanAccessSolo, useUsersStore } from 'store/users-store';
 
 import {
     AccountSection,
@@ -23,6 +24,7 @@ const SettingsPage = () => {
     const isUserFetched = useLoadingStore(selectUserSelfFetched);
     const settingsError = useErrorsStore(state => state.errors.users.settings);
     const isLoading = isUserLoading || !isUserFetched;
+    const canAccessSolo = useUsersStore(selectCanAccessSolo);
 
     useEffect(() => {
         if (settingsError) {
@@ -40,7 +42,7 @@ const SettingsPage = () => {
                     <AccountSection isLoading={isLoading} />
                     <RegionalSection isLoading={isLoading} />
                     <ExpensePreferencesSection isLoading={isLoading} />
-                    <SoloPreferencesSection isLoading={isLoading} />
+                    {canAccessSolo && <SoloPreferencesSection isLoading={isLoading} />}
                     <NotificationsSection isLoading={isLoading} />
                     <AppSettingsSection isLoading={isLoading} />
                     <Box gridColumn={{ md: '1 / -1' }}>

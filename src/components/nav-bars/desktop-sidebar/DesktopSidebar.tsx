@@ -7,7 +7,7 @@ import { PROJECT_NAME } from 'constants/chipin';
 import { getPreferredModeRoute } from 'helpers/routes';
 import { selectIsSoloMode } from 'store/dashboardSelectors';
 import { useDashboardStore } from 'store/dashboardStore';
-import { selectIsUserAdmin, useUsersStore } from 'store/users-store';
+import { selectCanAccessSolo, selectIsUserAdmin, useUsersStore } from 'store/users-store';
 
 import { NavButton } from 'basics/buttons';
 import AddExpenseButton from 'components/AddExpenseButton';
@@ -24,7 +24,9 @@ import { SidebarNavButton, SidebarSurface } from './styled';
 const DesktopSidebar = () => {
     const location = useLocation();
     const { t } = useTranslation('common');
-    const isSoloMode = useDashboardStore(selectIsSoloMode);
+    const canAccessSolo = useUsersStore(selectCanAccessSolo);
+    const isSoloModeFromStore = useDashboardStore(selectIsSoloMode);
+    const isSoloMode = canAccessSolo && isSoloModeFromStore;
     const canShowDevMenu = useUsersStore(selectIsUserAdmin);
     const homeRoute = getPreferredModeRoute(isSoloMode);
     const activeColor = isSoloMode ? 'violet' : 'green';

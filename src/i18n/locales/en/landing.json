@@ -20,8 +20,8 @@
         "title": "How it works",
         "subtitle": "Up and running in under two minutes.",
         "step1": {
-            "title": "Create a group or go solo",
-            "description": "Start a group for a trip, shared apartment, or event — or just use Chipin solo to track your own spending."
+            "title": "Create a group",
+            "description": "Start a group for a trip, shared apartment, or event and keep everyone's spending organised."
         },
         "step2": {
             "title": "Add expenses as they happen",
@@ -38,10 +38,10 @@
     },
     "features": {
         "eyebrow": "Everything you need",
-        "titlePart1": "Manage shared",
-        "titleHighlight": "and",
-        "titlePart2": "personal expenses",
-        "subtitle": "Powerful features designed to make splitting expenses effortless — whether you're in a group or flying solo.",
+        "titlePart1": "Manage",
+        "titleHighlight": "shared",
+        "titlePart2": "expenses",
+        "subtitle": "Powerful features designed to make splitting shared expenses effortless.",
         "smartGroups": {
             "title": "Smart Groups",
             "description": "Create groups for trips, households, or events. Invite members via shareable links and keep everyone in sync with real-time balance updates."

@@ -1,12 +1,14 @@
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
-import { expect, test } from 'vitest';
+import { beforeEach, expect, test } from 'vitest';
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import type { UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
+import { useUsersStore } from 'store/users-store';
 
 import MobileNavBar from './MobileNavBar';
 
@@ -17,6 +19,27 @@ const LocationPath = () => {
 
     return <output aria-label="Current route">{location.pathname}</output>;
 };
+
+const settings = {
+    defaultCurrency: 'USD',
+    defaultCategory: 'food',
+    timeFormat: '24h',
+    language: 'en',
+    theme: 'system',
+    simplifyDebts: true,
+    skipCategory: false,
+    soloModeByDefault: false,
+    saveGroupExpensesToSolo: false,
+    sex: 'male',
+} satisfies UserSettings;
+
+beforeEach(() => {
+    useUsersStore.setState({
+        user: null,
+        localUser: { role: 'ADMIN', settings },
+        friends: [],
+    });
+});
 
 test.each([
     { appMode: APP_MODES.SOLO, expectedRoute: '/solo' },

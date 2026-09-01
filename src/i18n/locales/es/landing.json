@@ -20,8 +20,8 @@
         "title": "Cómo funciona",
         "subtitle": "Listo en menos de dos minutos.",
         "step1": {
-            "title": "Crea un grupo o úsalo solo",
-            "description": "Inicia un grupo para un viaje, apartamento compartido o evento — o usa Chipin solo para rastrear tus propios gastos."
+            "title": "Crea un grupo",
+            "description": "Inicia un grupo para un viaje, apartamento compartido o evento y mantén organizados los gastos de todos."
         },
         "step2": {
             "title": "Agrega gastos en el momento",
@@ -38,10 +38,10 @@
     },
     "features": {
         "eyebrow": "Todo lo que necesitas",
-        "titlePart1": "Gestiona gastos",
-        "titleHighlight": "compartidos y",
-        "titlePart2": "personales",
-        "subtitle": "Funciones potentes diseñadas para dividir gastos sin esfuerzo — ya sea en grupo o por tu cuenta.",
+        "titlePart1": "Gestiona tus",
+        "titleHighlight": "gastos",
+        "titlePart2": "compartidos",
+        "subtitle": "Funciones potentes diseñadas para dividir gastos compartidos sin esfuerzo.",
         "smartGroups": {
             "title": "Grupos inteligentes",
             "description": "Crea grupos para viajes, hogares compartidos o eventos. Invita miembros con enlaces y mantén a todos sincronizados con actualizaciones de balance en tiempo real."

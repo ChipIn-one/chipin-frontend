@@ -1,6 +1,7 @@
 import { useUsersStore } from './actions';
 import {
     getFriendsView,
+    selectCanAccessSolo,
     selectFriends,
     selectIsUserAdmin,
     selectIsUserTime24H,
@@ -28,6 +29,7 @@ export {
     type FriendCurrencyGroup,
     type FriendsView,
     getFriendsView,
+    selectCanAccessSolo,
     selectFriends,
     selectIsUserAdmin,
     selectIsUserTime24H,

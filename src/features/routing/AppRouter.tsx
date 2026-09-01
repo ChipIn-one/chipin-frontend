@@ -11,6 +11,7 @@ import SignInPage from 'pages/SignInPage';
 
 import HomeRouteGuard from './HomeRouteGuard';
 import { ProtectedRoute } from './ProtectedRoute';
+import SoloRouteGuard from './SoloRouteGuard';
 
 const HomePage = lazy(() => import('pages/HomePage'));
 const DashboardPage = lazy(() => import('pages/DashboardPage'));
@@ -62,7 +63,9 @@ const AppRouter = () => {
                     path={ROUTES.SOLO}
                     element={
                         <InternalRoute>
-                            <SoloPage />
+                            <SoloRouteGuard>
+                                <SoloPage />
+                            </SoloRouteGuard>
                         </InternalRoute>
                     }
                 />
