@@ -465,6 +465,59 @@ test('creates a group settlement and refetches the affected group', () => {
     });
 });
 
+test('does not reject a confirmed group expense when canonical refresh rejects', () => {
+    const refreshError = new Error('Group refresh unavailable');
+    vi.mocked(ledgerApi.createExpense).mockResolvedValue({} as never);
+    useActivityStore.setState({
+        fetchSetActivity: vi.fn().mockResolvedValue(undefined),
+    });
+    useDashboardStore.setState({
+        fetchSetDashboard: vi.fn().mockResolvedValue(undefined),
+    });
+    const fetchSetGroupById = vi.fn().mockRejectedValue(refreshError);
+    useGroupsStore.setState({
+        fetchSetGroupById,
+    });
+
+    return useActivityStore.getState().createExpense({
+        description: 'Dinner',
+        amount: 20,
+        date: 1,
+        payerId: 'user-1',
+        participantIds: ['user-2'],
+        currency: 'USD',
+        groupId: 'group-1',
+    }).then(() => {
+        expect(ledgerApi.createExpense).toHaveBeenCalledOnce();
+        expect(fetchSetGroupById).toHaveBeenCalledWith('group-1', true);
+    });
+});
+
+test('does not reject a confirmed settlement when canonical refresh rejects', () => {
+    vi.mocked(ledgerApi.createSettlement).mockResolvedValue({} as never);
+    useActivityStore.setState({
+        fetchSetActivity: vi.fn().mockResolvedValue(undefined),
+    });
+    useDashboardStore.setState({
+        fetchSetDashboard: vi.fn().mockResolvedValue(undefined),
+    });
+    const fetchSetGroupById = vi.fn().mockRejectedValue(new Error('Group refresh unavailable'));
+    useGroupsStore.setState({
+        fetchSetGroupById,
+    });
+
+    return useActivityStore.getState().createSettlement({
+        fromUserId: 'user-1',
+        toUserId: 'user-2',
+        amount: 10,
+        currency: 'USD',
+        groupId: 'group-1',
+    }).then(() => {
+        expect(ledgerApi.createSettlement).toHaveBeenCalledOnce();
+        expect(fetchSetGroupById).toHaveBeenCalledWith('group-1', true);
+    });
+});
+
 test('reverses a ledger entry without locally patching activity state', () => {
     const confirmedItems = [createActivityEvent('activity-1', 1)];
     vi.mocked(ledgerApi.removeLedgerEntry).mockResolvedValue(undefined);
@@ -484,6 +537,28 @@ test('reverses a ledger entry without locally patching activity state', () => {
     }).then(() => {
         expect(ledgerApi.removeLedgerEntry).toHaveBeenCalledWith({ entryId: 'expense-1' });
         expect(useActivityStore.getState().items).toEqual(confirmedItems);
+    });
+});
+
+test('does not reject a confirmed ledger reversal when canonical refresh rejects', () => {
+    vi.mocked(ledgerApi.removeLedgerEntry).mockResolvedValue(undefined);
+    useActivityStore.setState({
+        fetchSetActivity: vi.fn().mockResolvedValue(undefined),
+    });
+    useDashboardStore.setState({
+        fetchSetDashboard: vi.fn().mockResolvedValue(undefined),
+    });
+    const fetchSetGroupById = vi.fn().mockRejectedValue(new Error('Group refresh unavailable'));
+    useGroupsStore.setState({
+        fetchSetGroupById,
+    });
+
+    return useActivityStore.getState().reverseLedgerEntry({
+        entryId: 'expense-1',
+        groupId: 'group-1',
+    }).then(() => {
+        expect(ledgerApi.removeLedgerEntry).toHaveBeenCalledWith({ entryId: 'expense-1' });
+        expect(fetchSetGroupById).toHaveBeenCalledWith('group-1', true);
     });
 });
 

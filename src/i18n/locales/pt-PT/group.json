@@ -202,7 +202,10 @@
             "addPeopleTitle": "Adicionar pessoas",
             "addPeopleSubtitle": "Convidar por nome ou e-mail",
             "simplifyDebtsTitle": "Simplificar dívidas do grupo",
-            "simplifyDebtsSubtitle": "Minimizar o número de transações"
+            "simplifyDebtsSubtitle": "Minimizar o número de transações",
+            "simplifyDebtsOwnerOnly": "Apenas o proprietário do grupo pode alterar esta definição.",
+            "simplifyDebtsUnsupported": "A simplificação de dívidas não está disponível para este grupo.",
+            "simplifyDebtsUpdating": "A atualizar a simplificação das dívidas..."
         },
         "balances": {
             "settled": "Acertado",

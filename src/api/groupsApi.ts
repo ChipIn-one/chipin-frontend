@@ -1,5 +1,36 @@
 import { apiInstance } from './chipin.instance';
-import type { Group, UploadGroupCoverParams } from './chipin.types';
+import type { Group, UpdateGroupParams, UploadGroupCoverParams } from './chipin.types';
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+};
+
+const hasSupportedGroupResponse = (value: unknown): value is { simplifyDebts: boolean } => {
+    return isRecord(value) && typeof value.simplifyDebts === 'boolean';
+};
+
+const updateGroup = ({
+    groupId,
+    groupName,
+    groupDescription,
+    simplifyDebts,
+}: UpdateGroupParams): Promise<Group> => {
+    const payload = {
+        ...(groupName !== undefined && { name: groupName }),
+        ...(groupDescription !== undefined && { description: groupDescription }),
+        ...(simplifyDebts !== undefined && { simplifyDebts }),
+    };
+
+    return apiInstance
+        .patch<Group>(`/groups/${groupId}`, payload)
+        .then(response => {
+            if (!hasSupportedGroupResponse(response.data)) {
+                throw new Error('Unsupported group simplifyDebts response');
+            }
+
+            return response.data;
+        });
+};
 
 const uploadGroupCover = ({
     groupId,
@@ -24,4 +55,4 @@ const uploadGroupCover = ({
         .then(response => response.data);
 };
 
-export { uploadGroupCover };
+export { updateGroup, uploadGroupCover };

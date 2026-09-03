@@ -8,6 +8,7 @@ import type {
     KickGroupMemberParams,
     LeaveGroupParams,
     RemoveGroupParams,
+    UpdateGroupParams,
     UploadGroupCoverParams,
 } from 'api/chipin.types';
 import * as groupsApi from 'api/groupsApi';
@@ -26,6 +27,11 @@ const groupsChannel = createRequestChannel();
 const groupDetailChannel = createRequestChannel();
 const groupActivityPageChannel = createRequestChannel();
 let groupsMutationGeneration = 0;
+let activeGroupUpdate: {
+    groupId: string;
+    isCurrent: () => boolean;
+    promise: Promise<Group>;
+} | undefined;
 
 const resetGroupActivityPagination = (): void => {
     groupActivityPageChannel.abort();
@@ -85,7 +91,7 @@ export interface GroupsStore {
     removeGroup: (params: RemoveGroupParams) => Promise<void>;
     leaveGroup: (params: LeaveGroupParams) => Promise<void>;
     kickGroupMember: (params: KickGroupMemberParams) => Promise<void>;
-    updateGroup: (params: { groupName: string; groupDescription?: string }) => Promise<Group>;
+    updateGroup: (params: Omit<UpdateGroupParams, 'groupId'>) => Promise<Group>;
     uploadGroupCover: (params: UploadGroupCoverParams) => Promise<Group>;
     joinGroup: ({ inviteToken }: { inviteToken: string }) => Promise<Group>;
 }
@@ -127,11 +133,13 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         groupDetailChannel.abort();
         resetGroupActivityPagination();
         groupsMutationGeneration += 1;
+        activeGroupUpdate = undefined;
         set(initialGroupsStore);
         useErrorsStore.getState().resetErrors();
     },
     setSelectedGroup: group => {
         if (get().selectedGroup?.id !== group?.id) {
+            groupDetailChannel.abort();
             resetGroupActivityPagination();
         }
         useErrorsStore.getState().clearError('group', 'data');
@@ -328,14 +336,11 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 }
             });
     },
-    updateGroup: ({ groupName, groupDescription }) => {
+    updateGroup: ({ groupName, groupDescription, simplifyDebts }) => {
+        const selectedGroup = get().selectedGroup;
         const { setLoading } = useLoadingStore.getState();
         const { clearError, setError } = useErrorsStore.getState();
-        const { selectedGroup } = get();
         const isCurrent = createGroupsMutationGuard();
-
-        clearError('group', 'update');
-        setLoading('group', 'update', 'loading');
 
         if (!selectedGroup) {
             const error = new Error('No selected group');
@@ -343,21 +348,32 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             return Promise.reject(error);
         }
 
-        return chipinApi
-            .updateApiGroup({
-                groupId: selectedGroup.id,
-                groupName,
-                groupDescription,
+        if (activeGroupUpdate?.isCurrent()) {
+            return activeGroupUpdate.promise;
+        }
+
+        clearError('group', 'update');
+        setLoading('group', 'update', 'loading');
+
+        const groupId = selectedGroup.id;
+        const updatePromise = groupsApi
+            .updateGroup({
+                groupId,
+                ...(groupName !== undefined && { groupName }),
+                ...(groupDescription !== undefined && { groupDescription }),
+                ...(simplifyDebts !== undefined && { simplifyDebts }),
             })
             .then(updatedGroup => {
                 if (isCurrent()) {
-                    const { groups } = get();
-                    set({
-                        groups: groups.map(group =>
+                    set(state => ({
+                        groups: state.groups.map(group =>
                             group.id === updatedGroup.id ? updatedGroup : group,
                         ),
-                        selectedGroup: updatedGroup,
-                    });
+                        selectedGroup:
+                            state.selectedGroup?.id === groupId
+                                ? updatedGroup
+                                : state.selectedGroup,
+                    }));
                 }
                 return updatedGroup;
             })
@@ -368,10 +384,21 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 return Promise.reject(error);
             })
             .finally(() => {
-                if (isCurrent()) {
-                    setLoading('group', 'update', 'fetched');
+                if (activeGroupUpdate?.promise === updatePromise) {
+                    activeGroupUpdate = undefined;
+                    if (isCurrent()) {
+                        setLoading('group', 'update', 'fetched');
+                    }
                 }
             });
+
+        activeGroupUpdate = {
+            groupId,
+            isCurrent,
+            promise: updatePromise,
+        };
+
+        return updatePromise;
     },
     uploadGroupCover: params => {
         const { setLoading } = useLoadingStore.getState();
