@@ -122,6 +122,10 @@ export interface FetchActivitiesParams {
     cursor?: number;
 }
 
+export interface FetchGroupActivityPreviewsParams extends FetchActivitiesParams {
+    groupId: string;
+}
+
 export interface FetchActivityChildrenParams extends FetchActivitiesParams {
     parentActivityId: string;
     category?: ActivityCategory;

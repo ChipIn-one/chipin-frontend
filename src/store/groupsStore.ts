@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 
+import * as activityApi from 'api/activityApi';
 import * as chipinApi from 'api/chipin';
 import type {
+    ActivityFeedItem,
     Group,
     KickGroupMemberParams,
     LeaveGroupParams,
@@ -13,6 +15,7 @@ import { getAuthSessionVersion, isAuthSessionCurrent } from 'helpers/authSession
 import { normalizeApiError } from 'helpers/errors';
 
 import { useActivityStore } from './activity-store/actions';
+import { ACTIVITY_API_LIMIT } from './activity-store/constants';
 import { createRequestChannel } from './internal/resourceRequests';
 import { useDashboardStore } from './dashboardStore';
 import { useErrorsStore } from './errorsStore';
@@ -21,7 +24,40 @@ import { useUsersStore } from './users-store';
 
 const groupsChannel = createRequestChannel();
 const groupDetailChannel = createRequestChannel();
+const groupActivityPageChannel = createRequestChannel();
 let groupsMutationGeneration = 0;
+
+const resetGroupActivityPagination = (): void => {
+    groupActivityPageChannel.abort();
+    useLoadingStore.getState().setLoading('group', 'nextPage', 'fetched');
+    useErrorsStore.getState().clearError('group', 'nextPage');
+};
+
+const appendUniqueActivityPreviews = (
+    confirmedItems: ActivityFeedItem[],
+    incomingItems: ActivityFeedItem[],
+): ActivityFeedItem[] => {
+    const uniqueItems: ActivityFeedItem[] = [];
+    const parentIds = new Set<string>();
+    const confirmedItemCount = confirmedItems.length;
+    const totalItemCount = confirmedItemCount + incomingItems.length;
+
+    for (let index = 0; index < totalItemCount; index += 1) {
+        const item = index < confirmedItemCount
+            ? confirmedItems[index]
+            : incomingItems[index - confirmedItemCount];
+        const parentId = item.parent.id;
+
+        if (parentIds.has(parentId)) {
+            continue;
+        }
+
+        parentIds.add(parentId);
+        uniqueItems.push(item);
+    }
+
+    return uniqueItems;
+};
 
 const createGroupsMutationGuard = () => {
     const generation = groupsMutationGeneration;
@@ -44,6 +80,7 @@ export interface GroupsStore {
     setSelectedGroup: (group: Group | null) => void;
     fetchSetGroups: (force?: boolean) => Promise<Group[]>;
     fetchSetGroupById: (groupId: string, force?: boolean) => Promise<Group | null>;
+    fetchMoreGroupActivity: () => Promise<void>;
     createGroup: (params: { groupName: string; groupDescription?: string }) => Promise<Group>;
     removeGroup: (params: RemoveGroupParams) => Promise<void>;
     leaveGroup: (params: LeaveGroupParams) => Promise<void>;
@@ -88,11 +125,15 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
     setInitialGroupsStore: () => {
         groupsChannel.abort();
         groupDetailChannel.abort();
+        resetGroupActivityPagination();
         groupsMutationGeneration += 1;
         set(initialGroupsStore);
         useErrorsStore.getState().resetErrors();
     },
     setSelectedGroup: group => {
+        if (get().selectedGroup?.id !== group?.id) {
+            resetGroupActivityPagination();
+        }
         useErrorsStore.getState().clearError('group', 'data');
         useLoadingStore.getState().setLoading('group', 'data', 'fetched');
         set({ selectedGroup: group });
@@ -119,6 +160,10 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     selectedGroup = groups.find(group => group.id === selectedGroupId);
                 }
 
+                if (selectedGroupId !== selectedGroup?.id) {
+                    resetGroupActivityPagination();
+                }
+
                 set({
                     groups,
                     groupsNextCursor: response.nextCursor,
@@ -141,6 +186,11 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
     },
     fetchSetGroupById: (groupId, force = false) => {
         const { groups, selectedGroup } = get();
+
+        if (force || selectedGroup?.id !== groupId) {
+            resetGroupActivityPagination();
+        }
+
         const cachedGroup = selectedGroup?.id === groupId
             ? selectedGroup
             : groups.find(group => group.id === groupId);
@@ -181,6 +231,71 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 }
             });
     },
+    fetchMoreGroupActivity: () => {
+        const selectedGroup = get().selectedGroup;
+        const groupId = selectedGroup?.id;
+        const nextCursor = selectedGroup?.recentActivities.nextCursor;
+        const { setLoading, group } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+
+        if (!groupId || nextCursor === null || nextCursor === undefined || group.nextPage === 'loading') {
+            return Promise.resolve();
+        }
+
+        clearError('group', 'nextPage');
+        setLoading('group', 'nextPage', 'loading');
+
+        const request = groupActivityPageChannel.request(
+            signal => activityApi.fetchGroupActivityPreviews(
+                {
+                    groupId,
+                    limit: ACTIVITY_API_LIMIT,
+                    cursor: nextCursor,
+                },
+                signal,
+            ),
+            { identity: `${groupId}:${nextCursor}` },
+        );
+
+        return request.promise
+            .then(data => {
+                if (!request.isCurrent() || get().selectedGroup?.id !== groupId) {
+                    return;
+                }
+
+                set(state => {
+                    const currentGroup = state.selectedGroup;
+
+                    if (!currentGroup || currentGroup.id !== groupId) {
+                        return {};
+                    }
+
+                    return {
+                        selectedGroup: {
+                            ...currentGroup,
+                            recentActivities: {
+                                ...currentGroup.recentActivities,
+                                items: appendUniqueActivityPreviews(
+                                    currentGroup.recentActivities.items,
+                                    data.items,
+                                ),
+                                nextCursor: data.nextCursor,
+                            },
+                        },
+                    };
+                });
+            })
+            .catch((error: unknown) => {
+                if (request.isCurrent()) {
+                    setError('group', 'nextPage', normalizeApiError(error));
+                }
+            })
+            .finally(() => {
+                if (request.isCurrent()) {
+                    setLoading('group', 'nextPage', 'fetched');
+                }
+            });
+    },
     createGroup: ({ groupName, groupDescription }) => {
         const { setLoading } = useLoadingStore.getState();
         const { clearError, setError } = useErrorsStore.getState();
@@ -192,6 +307,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             .createApiGroup({ groupName, groupDescription })
             .then(newGroup => {
                 if (isCurrent()) {
+                    resetGroupActivityPagination();
                     const { groups } = get();
                     set({
                         groups: [...groups, newGroup],
@@ -380,6 +496,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             .inviteApiUserToGroup({ inviteToken })
             .then(joinedGroup => {
                 if (isCurrent()) {
+                    resetGroupActivityPagination();
                     const { groups } = get();
                     set({
                         groups: [...groups, joinedGroup],

@@ -26,6 +26,7 @@ export const selectGroupDataLoading = (s: LoadingStore) => s.group.data === 'loa
 export const selectGroupDataFetched = (s: LoadingStore) => s.group.data === 'fetched';
 export const selectGroupListLoading = (s: LoadingStore) => s.group.list === 'loading';
 export const selectGroupListFetched = (s: LoadingStore) => s.group.list === 'fetched';
+export const selectGroupNextPageLoading = (s: LoadingStore) => s.group.nextPage === 'loading';
 
 export const selectGroupAdding = (s: LoadingStore) => s.group.add === 'loading';
 export const selectGroupUpdating = (s: LoadingStore) => s.group.update === 'loading';

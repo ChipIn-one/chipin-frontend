@@ -11,6 +11,7 @@ export interface LoadingStore {
     group: {
         list: LoadingState;
         data: LoadingState;
+        nextPage: LoadingState;
         add: LoadingState;
         update: LoadingState;
         remove: LoadingState;
@@ -77,6 +78,7 @@ const initialLoadingStore: LoadingSlices = {
     group: {
         list: 'initial',
         data: 'initial',
+        nextPage: 'initial',
         add: 'initial',
         join: 'initial',
         remove: 'initial',

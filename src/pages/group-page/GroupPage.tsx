@@ -17,8 +17,11 @@ const GroupPage = () => {
         groups,
         selectedGroup,
         fetchSetGroupById,
+        fetchMoreGroupActivity,
         setSelectedGroup,
         isGroupDataLoading,
+        isGroupActivityNextPageLoading,
+        isGroupActivityNextPageError,
         isGroupListFetched,
     } = useConnect();
     const { groupId } = useParams<{ groupId: string }>();
@@ -103,7 +106,13 @@ const GroupPage = () => {
                     </Box>
 
                     {/* Tabs: Expenses / Balances / Members */}
-                    <GroupTabsContent group={routeGroup} />
+                    <GroupTabsContent
+                        group={routeGroup}
+                        isGroupDataLoading={isGroupDataLoading}
+                        fetchMoreGroupActivity={fetchMoreGroupActivity}
+                        isGroupActivityNextPageLoading={isGroupActivityNextPageLoading}
+                        isGroupActivityNextPageError={isGroupActivityNextPageError}
+                    />
                 </Box>
             </Grid>
         </Container>
