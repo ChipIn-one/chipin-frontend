@@ -62,7 +62,7 @@
     "jsdom": "^29.1.1",
     "sharp": "^0.35.3",
     "sharp-ico": "^0.1.5",
-    "typescript": "~5.9.3",
+    "typescript": "~7.0.2",
     "typescript-eslint": "^8.59.0",
     "vite": "^7.3.1",
     "vite-plugin-pwa": "^1.0.0",
