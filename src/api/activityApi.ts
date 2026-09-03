@@ -9,6 +9,7 @@ import type {
 import type {
     FetchActivitiesParams,
     FetchActivityChildrenParams,
+    FetchGroupActivityPreviewsParams,
 } from './chipin.types';
 
 const getPaginationParams = ({ limit, cursor }: FetchActivitiesParams): FetchActivitiesParams => {
@@ -56,6 +57,19 @@ export const fetchActivityPreviews = (
     return apiInstance
         .get<ApiActivityFeedResponse>('/users/self/activity-previews', {
             params: getPaginationParams(params),
+            signal,
+        })
+        .then(response => response.data);
+};
+
+export const fetchGroupActivityPreviews = ({
+    groupId,
+    limit,
+    cursor,
+}: FetchGroupActivityPreviewsParams, signal?: AbortSignal): Promise<ApiActivityFeedResponse> => {
+    return apiInstance
+        .get<ApiActivityFeedResponse>(`/groups/${groupId}/activity-previews`, {
+            params: getPaginationParams({ limit, cursor }),
             signal,
         })
         .then(response => response.data);

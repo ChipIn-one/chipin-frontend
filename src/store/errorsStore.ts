@@ -11,6 +11,7 @@ interface RequestErrors {
     group: {
         list: RequestError | null;
         data: RequestError | null;
+        nextPage: RequestError | null;
         add: RequestError | null;
         update: RequestError | null;
         remove: RequestError | null;
@@ -71,6 +72,7 @@ const initialErrors: RequestErrors = {
     group: {
         list: null,
         data: null,
+        nextPage: null,
         add: null,
         update: null,
         remove: null,

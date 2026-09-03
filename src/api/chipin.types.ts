@@ -44,6 +44,7 @@ export type {
     CreateSettlementParams,
     FetchActivitiesParams,
     FetchActivityChildrenParams,
+    FetchGroupActivityPreviewsParams,
     FetchLedgerEntryParams,
     InviteToGroupParams,
     KickGroupMemberParams,

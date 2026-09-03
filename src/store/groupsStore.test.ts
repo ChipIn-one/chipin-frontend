@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
+import * as activityApi from 'api/activityApi';
 import * as chipinApi from 'api/chipin';
-import type { Group } from 'api/chipin.types';
+import type { ActivityFeedItem, Group } from 'api/chipin.types';
 import * as groupsApi from 'api/groupsApi';
 
 import { useActivityStore } from './activity-store';
@@ -19,6 +20,13 @@ vi.mock('api/chipin', () => ({
     kickApiGroupMember: vi.fn(),
     leaveApiGroup: vi.fn(),
     removeApiGroup: vi.fn(),
+}));
+
+vi.mock('api/activityApi', () => ({
+    fetchActivities: vi.fn(),
+    fetchActivityChildren: vi.fn(),
+    fetchActivityPreviews: vi.fn(),
+    fetchGroupActivityPreviews: vi.fn(),
 }));
 
 vi.mock('api/groupsApi', () => ({
@@ -55,6 +63,19 @@ const group = {
         nextCursor: null,
     },
 } satisfies Group;
+
+const createActivityItem = (parentId: string): ActivityFeedItem => ({
+    parent: { id: parentId } as ActivityFeedItem['parent'],
+    lastEvent: { id: `event-${parentId}` } as ActivityFeedItem['lastEvent'],
+});
+
+const createGroupWithActivity = (
+    items: ActivityFeedItem[],
+    nextCursor: number | null,
+): Group => ({
+    ...group,
+    recentActivities: { items, nextCursor },
+});
 
 describe('groupsStore', () => {
     beforeEach(() => {
@@ -184,6 +205,180 @@ describe('groupsStore', () => {
         return useGroupsStore.getState().fetchSetGroupById(group.id).then(result => {
             expect(result).toEqual(group);
             expect(useGroupsStore.getState().selectedGroup).toEqual(group);
+        });
+    });
+
+    test('continues the selected group activity feed from its embedded cursor', () => {
+        const initialItem = createActivityItem('parent-1');
+        const secondItem = createActivityItem('parent-2');
+        const thirdItem = createActivityItem('parent-3');
+        const selectedGroup = createGroupWithActivity([initialItem], 20);
+        useGroupsStore.getState().setSelectedGroup(selectedGroup);
+        vi.mocked(activityApi.fetchGroupActivityPreviews).mockResolvedValue({
+            items: [secondItem, thirdItem],
+            nextCursor: null,
+        });
+
+        const request = useGroupsStore.getState().fetchMoreGroupActivity();
+
+        expect(useLoadingStore.getState().group.nextPage).toBe('loading');
+
+        return request.then(() => {
+            expect(activityApi.fetchGroupActivityPreviews).toHaveBeenCalledWith(
+                { groupId: group.id, limit: 20, cursor: 20 },
+                expect.any(AbortSignal),
+            );
+            expect(useGroupsStore.getState().selectedGroup?.recentActivities.items).toEqual([
+                initialItem,
+                secondItem,
+                thirdItem,
+            ]);
+            expect(useGroupsStore.getState().selectedGroup?.recentActivities.nextCursor).toBeNull();
+            expect(useLoadingStore.getState().group.nextPage).toBe('fetched');
+        });
+    });
+
+    test('deduplicates group activity previews by parent id in API order', () => {
+        const initialItems = [createActivityItem('parent-1'), createActivityItem('parent-2')];
+        const incomingItems = [
+            createActivityItem('parent-2'),
+            createActivityItem('parent-3'),
+            createActivityItem('parent-3'),
+            createActivityItem('parent-4'),
+        ];
+        useGroupsStore.getState().setSelectedGroup(createGroupWithActivity(initialItems, 20));
+        vi.mocked(activityApi.fetchGroupActivityPreviews).mockResolvedValue({
+            items: incomingItems,
+            nextCursor: 40,
+        });
+
+        return useGroupsStore.getState().fetchMoreGroupActivity().then(() => {
+            expect(
+                useGroupsStore
+                    .getState()
+                    .selectedGroup?.recentActivities.items.map(item => item.parent.id),
+            ).toEqual(['parent-1', 'parent-2', 'parent-3', 'parent-4']);
+            expect(useGroupsStore.getState().selectedGroup?.recentActivities.nextCursor).toBe(40);
+        });
+    });
+
+    test('does not issue a duplicate request while the same group cursor is loading', () => {
+        let resolveRequest: ((value: { items: []; nextCursor: null }) => void) | undefined;
+        const pendingRequest = new Promise<{ items: []; nextCursor: null }>(resolve => {
+            resolveRequest = resolve;
+        });
+        useGroupsStore.getState().setSelectedGroup(createGroupWithActivity([], 20));
+        vi.mocked(activityApi.fetchGroupActivityPreviews).mockReturnValue(pendingRequest);
+
+        const firstRequest = useGroupsStore.getState().fetchMoreGroupActivity();
+        const duplicateRequest = useGroupsStore.getState().fetchMoreGroupActivity();
+
+        expect(activityApi.fetchGroupActivityPreviews).toHaveBeenCalledOnce();
+
+        resolveRequest?.({ items: [], nextCursor: null });
+
+        return Promise.all([firstRequest, duplicateRequest]);
+    });
+
+    test('preserves confirmed group activity and cursor after a page failure and retries the same cursor', () => {
+        const initialItems = [createActivityItem('parent-1')];
+        const requestError = new Error('Group activity unavailable');
+        useGroupsStore.getState().setSelectedGroup(createGroupWithActivity(initialItems, 20));
+        vi.mocked(activityApi.fetchGroupActivityPreviews)
+            .mockRejectedValueOnce(requestError)
+            .mockResolvedValueOnce({ items: [], nextCursor: null });
+
+        return useGroupsStore.getState().fetchMoreGroupActivity().then(() => {
+            expect(useGroupsStore.getState().selectedGroup?.recentActivities.items).toEqual(
+                initialItems,
+            );
+            expect(useGroupsStore.getState().selectedGroup?.recentActivities.nextCursor).toBe(20);
+            expect(useLoadingStore.getState().group.nextPage).toBe('fetched');
+            expect(useErrorsStore.getState().errors.group.nextPage?.message).toBe(
+                requestError.message,
+            );
+
+            return useGroupsStore.getState().fetchMoreGroupActivity();
+        }).then(() => {
+            expect(activityApi.fetchGroupActivityPreviews).toHaveBeenLastCalledWith(
+                { groupId: group.id, limit: 20, cursor: 20 },
+                expect.any(AbortSignal),
+            );
+            expect(useErrorsStore.getState().errors.group.nextPage).toBeNull();
+        });
+    });
+
+    test('ignores a late group activity success after switching groups', () => {
+        let resolveRequest: ((value: { items: ActivityFeedItem[]; nextCursor: null }) => void) | undefined;
+        const pendingRequest = new Promise<{ items: ActivityFeedItem[]; nextCursor: null }>(resolve => {
+            resolveRequest = resolve;
+        });
+        const firstGroup = createGroupWithActivity([], 20);
+        const secondGroup = { ...group, id: 'group-2' };
+        useGroupsStore.getState().setSelectedGroup(firstGroup);
+        vi.mocked(activityApi.fetchGroupActivityPreviews).mockReturnValue(pendingRequest);
+
+        const request = useGroupsStore.getState().fetchMoreGroupActivity();
+        useGroupsStore.getState().setSelectedGroup(secondGroup);
+        resolveRequest?.({ items: [createActivityItem('stale-parent')], nextCursor: null });
+
+        return request.then(() => {
+            expect(useGroupsStore.getState().selectedGroup).toEqual(secondGroup);
+            expect(useGroupsStore.getState().selectedGroup?.recentActivities.items).toEqual([]);
+            expect(useErrorsStore.getState().errors.group.nextPage).toBeNull();
+        });
+    });
+
+    test('ignores a late group activity failure after switching groups', () => {
+        let rejectRequest: ((reason?: unknown) => void) | undefined;
+        const pendingRequest = new Promise<{ items: ActivityFeedItem[]; nextCursor: null }>((_, reject) => {
+            rejectRequest = reject;
+        });
+        const firstGroup = createGroupWithActivity([], 20);
+        const secondGroup = { ...group, id: 'group-2' };
+        const requestError = new Error('Stale group activity failure');
+        useGroupsStore.getState().setSelectedGroup(firstGroup);
+        vi.mocked(activityApi.fetchGroupActivityPreviews).mockReturnValue(pendingRequest);
+
+        const request = useGroupsStore.getState().fetchMoreGroupActivity();
+        useGroupsStore.getState().setSelectedGroup(secondGroup);
+        rejectRequest?.(requestError);
+
+        return request.then(() => {
+            expect(useGroupsStore.getState().selectedGroup).toEqual(secondGroup);
+            expect(useErrorsStore.getState().errors.group.nextPage).toBeNull();
+            expect(useLoadingStore.getState().group.nextPage).toBe('fetched');
+        });
+    });
+
+    test('invalidates group activity pagination during a forced group refresh', () => {
+        let resolveActivity: ((value: { items: ActivityFeedItem[]; nextCursor: null }) => void) | undefined;
+        let resolveGroup: ((value: Group) => void) | undefined;
+        const pendingActivity = new Promise<{ items: ActivityFeedItem[]; nextCursor: null }>(resolve => {
+            resolveActivity = resolve;
+        });
+        const pendingGroup = new Promise<Group>(resolve => {
+            resolveGroup = resolve;
+        });
+        const selectedGroup = createGroupWithActivity([], 20);
+        const refreshedGroup = createGroupWithActivity([], 40);
+        useGroupsStore.getState().setSelectedGroup(selectedGroup);
+        vi.mocked(activityApi.fetchGroupActivityPreviews).mockReturnValue(pendingActivity);
+        vi.mocked(chipinApi.fetchApiUserGroupById).mockImplementationOnce(() => pendingGroup);
+
+        const activityRequest = useGroupsStore.getState().fetchMoreGroupActivity();
+        const refreshRequest = useGroupsStore.getState().fetchSetGroupById(group.id, true);
+
+        expect(useLoadingStore.getState().group.nextPage).toBe('fetched');
+        expect(useErrorsStore.getState().errors.group.nextPage).toBeNull();
+
+        resolveActivity?.({ items: [createActivityItem('stale-parent')], nextCursor: null });
+        resolveGroup?.(refreshedGroup);
+
+        return Promise.all([activityRequest, refreshRequest]).then(() => {
+            expect(useGroupsStore.getState().selectedGroup).toEqual(refreshedGroup);
+            expect(useGroupsStore.getState().selectedGroup?.recentActivities.items).toEqual([]);
+            expect(useErrorsStore.getState().errors.group.nextPage).toBeNull();
         });
     });
 

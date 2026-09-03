@@ -6,6 +6,7 @@ import {
     fetchActivities,
     fetchActivityChildren,
     fetchActivityPreviews,
+    fetchGroupActivityPreviews,
 } from './activityApi';
 import { apiInstance } from './chipin.instance';
 
@@ -70,6 +71,23 @@ describe('activityApi', () => {
             controller.signal,
         ).then(result => {
             expect(apiInstance.get).toHaveBeenCalledWith('/users/self/activity-previews', {
+                params: { limit: 20, cursor: 40 },
+                signal: controller.signal,
+            });
+            expect(result).toEqual(response);
+        });
+    });
+
+    test('fetches the next group activity preview page with the group cursor', () => {
+        const response = { items: [], nextCursor: 60 };
+        const controller = new AbortController();
+        vi.mocked(apiInstance.get).mockResolvedValue({ data: response });
+
+        return fetchGroupActivityPreviews(
+            { groupId: 'group-1', limit: 20, cursor: 40 },
+            controller.signal,
+        ).then(result => {
+            expect(apiInstance.get).toHaveBeenCalledWith('/groups/group-1/activity-previews', {
                 params: { limit: 20, cursor: 40 },
                 signal: controller.signal,
             });

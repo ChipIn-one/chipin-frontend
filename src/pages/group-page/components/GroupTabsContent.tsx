@@ -1,12 +1,17 @@
-import { LucidePlus } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import {
+    LucideChevronsDown,
+    LucidePlus,
+    LucideRefreshCw,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Box, Flex, IconButton, Tabs } from '@radix-ui/themes';
+import { Box, Button, Flex, IconButton, Spinner, Tabs, Text } from '@radix-ui/themes';
 
 import type { Group } from 'api/chipin.types';
-import { selectGroupDataLoading } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
+import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 
+import { NoGroupExpensesEmptyState } from 'basics/empty-states';
 import { SettleUpModal } from 'components/modals';
 import { ActivityFeedSkeleton } from 'components/skeletons';
 import UsersRow from 'components/UsersRow';
@@ -17,17 +22,41 @@ import GroupSettingsTab from './GroupSettingsTab';
 
 interface Props {
     group: Group;
+    isGroupDataLoading: boolean;
+    fetchMoreGroupActivity: () => Promise<void>;
+    isGroupActivityNextPageLoading: boolean;
+    isGroupActivityNextPageError: boolean;
 }
 
-const GroupTabsContent = ({ group }: Props) => {
-    const { t } = useTranslation(['group', 'common']);
-    const isGroupDataLoading = useLoadingStore(selectGroupDataLoading);
+const GroupTabsContent = ({
+    group,
+    isGroupDataLoading,
+    fetchMoreGroupActivity,
+    isGroupActivityNextPageLoading,
+    isGroupActivityNextPageError,
+}: Props) => {
+    const { t } = useTranslation(['group', 'common', 'activity']);
+    const [activeTab, setActiveTab] = useState('expenses');
     const activityItems = group.recentActivities.items.map(item => item.lastEvent);
     const members = group.members.map(member => member.user);
+    const hasMoreActivity = group.recentActivities.nextCursor !== null;
+    const isEndOfFeed =
+        !isGroupActivityNextPageLoading &&
+        !hasMoreActivity &&
+        activityItems.length > 0;
+    const onLoadMore = useCallback(() => fetchMoreGroupActivity(), [fetchMoreGroupActivity]);
+    const onRetryNextPage = () => {
+        onLoadMore();
+    };
+    const sentinelRef = useInfiniteScroll({
+        hasMore: activeTab === 'expenses' && hasMoreActivity && !isGroupActivityNextPageError,
+        isLoading: isGroupActivityNextPageLoading,
+        onLoadMore,
+    });
 
     return (
         <Box mt="4">
-            <Tabs.Root defaultValue="expenses">
+            <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
                 <Flex align="center" justify="between" gap="3" wrap="wrap" mb="4">
                     <Flex align="center" gap="2">
                         <UsersRow members={members} max={5} size="2" />
@@ -59,9 +88,45 @@ const GroupTabsContent = ({ group }: Props) => {
                         ) : (
                             <ActivityEventsList
                                 events={activityItems}
+                                emptyState={<NoGroupExpensesEmptyState />}
                                 isShowSummary
                                 isNavigable
-                            />
+                            >
+                                <>
+                                    {isGroupActivityNextPageLoading && (
+                                        <Flex justify="center" py="4">
+                                            <Spinner size="3" />
+                                        </Flex>
+                                    )}
+
+                                    {isGroupActivityNextPageError && (
+                                        <Flex justify="center" py="4">
+                                            <Button
+                                                type="button"
+                                                size="1"
+                                                variant="soft"
+                                                onClick={onRetryNextPage}
+                                            >
+                                                <LucideRefreshCw size={14} />
+                                                {t('activity:retryAction')}
+                                            </Button>
+                                        </Flex>
+                                    )}
+
+                                    {isEndOfFeed && (
+                                        <Flex justify="center" align="center" gap="2" py="4">
+                                            <Text as="span" color="gray">
+                                                <LucideChevronsDown size={14} />
+                                            </Text>
+                                            <Text size="1" color="gray">
+                                                {t('activity:endOfFeed')}
+                                            </Text>
+                                        </Flex>
+                                    )}
+
+                                    <div ref={sentinelRef} />
+                                </>
+                            </ActivityEventsList>
                         )}
                     </Tabs.Content>
 
