@@ -25,8 +25,9 @@ export interface UploadGroupCoverParams {
 
 export interface UpdateGroupParams {
     groupId: string;
-    groupName: string;
+    groupName?: string;
     groupDescription?: string;
+    simplifyDebts?: boolean;
 }
 
 export interface RemoveGroupParams {

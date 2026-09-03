@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { apiInstance } from './chipin.instance';
 import type { Group } from './chipin.types';
-import { uploadGroupCover } from './groupsApi';
+import { updateGroup, uploadGroupCover } from './groupsApi';
 
 vi.mock('./chipin.instance', () => ({
     apiInstance: {
+        patch: vi.fn(),
         put: vi.fn(),
     },
 }));
@@ -39,6 +40,36 @@ const group = {
 describe('groupsApi', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+    });
+
+    test('sends false simplifyDebts and returns the canonical response', () => {
+        vi.mocked(apiInstance.patch).mockResolvedValue({ data: group });
+
+        return updateGroup({
+            groupId: group.id,
+            groupName: 'Updated group',
+            groupDescription: '',
+            simplifyDebts: false,
+        }).then(result => {
+            expect(apiInstance.patch).toHaveBeenCalledWith('/groups/group-1', {
+                name: 'Updated group',
+                description: '',
+                simplifyDebts: false,
+            });
+            expect(result).toBe(group);
+        });
+    });
+
+    test('rejects a response without a boolean simplifyDebts contract', () => {
+        vi.mocked(apiInstance.patch).mockResolvedValue({
+            data: { ...group, simplifyDebts: 'unsupported' },
+        } as never);
+
+        return expect(updateGroup({ groupId: group.id })).rejects
+            .toThrow('Unsupported group simplifyDebts response')
+            .then(() => {
+                expect(apiInstance.patch).toHaveBeenCalledWith('/groups/group-1', {});
+            });
     });
 
     test('uploads a group cover as multipart data and reports bounded progress', () => {

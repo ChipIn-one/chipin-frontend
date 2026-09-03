@@ -9,13 +9,16 @@ import {
     LucideUserPlus,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import styled from 'styled-components';
 
-import { Avatar, Badge, Box, Button, Card, Flex, Separator, Switch, Text } from '@radix-ui/themes';
+import { Avatar, Badge, Box, Button, Card, Flex, Separator, Spinner, Switch, Text } from '@radix-ui/themes';
 
 import type { Group } from 'api/chipin.types';
+import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { useGroupInvite } from 'hooks/pwaHooks';
-import { useUsersStore } from 'store/users-store';
+
+import { useConnect } from './internal/group-settings';
 
 /**
  * A plain button reset used as the interactive wrapper for settings-list rows.
@@ -47,8 +50,12 @@ interface Props {
 }
 
 const GroupSettingsTab = ({ group }: Props) => {
-    const { t } = useTranslation(['group', 'common']);
-    const user = useUsersStore(s => s.user);
+    const { t } = useTranslation(['group', 'common', 'toasts']);
+    const {
+        user,
+        updateGroup,
+        isGroupUpdatePending,
+    } = useConnect();
     const {
         inviteLink,
         isNativeShareSupported,
@@ -61,6 +68,23 @@ const GroupSettingsTab = ({ group }: Props) => {
     const shareTitle = t('group:qr.shareText', { groupName: group.name });
 
     const isUserOwner = user?.id === group.creator.id;
+    const isGroupOwner = group.role === 'OWNER';
+    const simplifyDebtsValue: unknown = group.simplifyDebts;
+    const isSimplifyDebtsSupported = typeof simplifyDebtsValue === 'boolean';
+    const isSimplifyDebtsEnabled = isSimplifyDebtsSupported && simplifyDebtsValue;
+
+    const onSimplifyDebtsChange = (nextValue: boolean): void => {
+        if (!isGroupOwner || !isSimplifyDebtsSupported || isGroupUpdatePending) {
+            return;
+        }
+
+        updateGroup({ simplifyDebts: nextValue }).catch((error: unknown) => {
+            toast.error(resolveApiErrorMessageFromError(
+                error,
+                t('toasts:group.updateError'),
+            ));
+        });
+    };
 
     return (
         <Flex direction="column" gap="5">
@@ -255,8 +279,37 @@ const GroupSettingsTab = ({ group }: Props) => {
                             <Text size="1" color="gray">
                                 {t('group:page.settings.simplifyDebtsSubtitle')}
                             </Text>
+                            {!isSimplifyDebtsSupported ? (
+                                <Text size="1" color="orange">
+                                    {t('group:page.settings.simplifyDebtsUnsupported')}
+                                </Text>
+                            ) : !isGroupOwner ? (
+                                <Text size="1" color="gray">
+                                    {t('group:page.settings.simplifyDebtsOwnerOnly')}
+                                </Text>
+                            ) : null}
                         </Flex>
-                        <Switch size="2" disabled />
+                        <Flex align="center" gap="2" flexShrink="0">
+                            {isGroupUpdatePending && (
+                                <Flex align="center" gap="1" role="status">
+                                    <Spinner size="1" aria-hidden="true" />
+                                    <Text size="1" color="gray">
+                                        {t('group:page.settings.simplifyDebtsUpdating')}
+                                    </Text>
+                                </Flex>
+                            )}
+                            <Switch
+                                size="2"
+                                checked={isSimplifyDebtsEnabled}
+                                disabled={
+                                    !isGroupOwner ||
+                                    !isSimplifyDebtsSupported ||
+                                    isGroupUpdatePending
+                                }
+                                aria-label={t('group:page.settings.simplifyDebtsTitle')}
+                                onCheckedChange={onSimplifyDebtsChange}
+                            />
+                        </Flex>
                     </Flex>
                 </Card>
             </Flex>

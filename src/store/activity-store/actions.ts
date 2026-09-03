@@ -91,7 +91,7 @@ const createExpense = (get: () => ActivityStore, params: CreateExpenseParams): P
             refreshFinancialData(get(), {
                 groupId: request.groupId,
                 parentActivityId,
-            }),
+            }).catch(() => undefined),
         )
         .finally(() => {
             setLoading('expense', 'add', 'fetched');
@@ -174,7 +174,7 @@ const createSettlement = (
             refreshFinancialData(get(), {
                 groupId: request.groupId,
                 parentActivityId,
-            }),
+            }).catch(() => undefined),
         )
         .finally(() => {
             setLoading('settlement', 'add', 'fetched');
@@ -196,7 +196,9 @@ const reverseLedgerEntry = (
             setError('ledger', 'remove', normalizeApiError(error));
             return Promise.reject(error);
         })
-        .then(() => refreshFinancialData(get(), { groupId, parentActivityId }))
+        .then(() =>
+            refreshFinancialData(get(), { groupId, parentActivityId }).catch(() => undefined),
+        )
         .finally(() => {
             setLoading('ledger', 'remove', 'fetched');
         });

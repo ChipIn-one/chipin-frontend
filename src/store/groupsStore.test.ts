@@ -30,6 +30,7 @@ vi.mock('api/activityApi', () => ({
 }));
 
 vi.mock('api/groupsApi', () => ({
+    updateGroup: vi.fn(),
     uploadGroupCover: vi.fn(),
 }));
 
@@ -176,6 +177,111 @@ describe('groupsStore', () => {
             );
     });
 
+    test('stores the canonical group returned after updating simplified debts', () => {
+        const updatedGroup = {
+            ...group,
+            updatedAt: 2,
+            simplifyDebts: false,
+            members: [
+                ...group.members,
+                {
+                    user: {
+                        ...creator,
+                        id: 'user-2',
+                        displayName: 'Bob',
+                    },
+                    balancesByCurrency: {
+                        USD: { currency: 'USD', netBalance: -12 },
+                        EUR: { currency: 'EUR', netBalance: 8 },
+                    },
+                },
+            ],
+        } satisfies Group;
+        useGroupsStore.setState({ groups: [group] });
+        useGroupsStore.getState().setSelectedGroup(group);
+        vi.mocked(groupsApi.updateGroup).mockResolvedValue(updatedGroup);
+
+        return useGroupsStore.getState().updateGroup({ simplifyDebts: false }).then(result => {
+            expect(result).toBe(updatedGroup);
+            expect(useGroupsStore.getState().groups).toEqual([updatedGroup]);
+            expect(useGroupsStore.getState().selectedGroup).toBe(updatedGroup);
+            expect(useLoadingStore.getState().group.update).toBe('fetched');
+        });
+    });
+
+    test('rejects without a selected group before entering update loading', () => {
+        const request = useGroupsStore.getState().updateGroup({ simplifyDebts: false });
+
+        return expect(request).rejects.toThrow('No selected group').then(() => {
+            expect(groupsApi.updateGroup).not.toHaveBeenCalled();
+            expect(useLoadingStore.getState().group.update).not.toBe('loading');
+            expect(useErrorsStore.getState().errors.group.update).toEqual(
+                expect.objectContaining({ message: expect.any(String) }),
+            );
+        });
+    });
+
+    test('preserves the confirmed group and records the normalized update error', () => {
+        const requestError = new Error('Update failed');
+        useGroupsStore.setState({ groups: [group] });
+        useGroupsStore.getState().setSelectedGroup(group);
+        vi.mocked(groupsApi.updateGroup).mockRejectedValue(requestError);
+
+        return expect(
+            useGroupsStore.getState().updateGroup({ simplifyDebts: false }),
+        ).rejects.toBe(requestError).then(() => {
+            expect(useGroupsStore.getState().groups).toEqual([group]);
+            expect(useGroupsStore.getState().selectedGroup).toBe(group);
+            expect(useErrorsStore.getState().errors.group.update).toEqual(
+                expect.objectContaining({ message: expect.any(String) }),
+            );
+            expect(useLoadingStore.getState().group.update).toBe('fetched');
+        });
+    });
+
+    test('reuses one pending update request and preserves false in the API input', () => {
+        let resolveUpdate: ((value: Group) => void) | undefined;
+        const request = new Promise<Group>(resolve => {
+            resolveUpdate = resolve;
+        });
+        vi.mocked(groupsApi.updateGroup).mockReturnValue(request);
+        useGroupsStore.getState().setSelectedGroup(group);
+
+        const first = useGroupsStore.getState().updateGroup({ simplifyDebts: false });
+        const duplicate = useGroupsStore.getState().updateGroup({ simplifyDebts: true });
+
+        expect(duplicate).toBe(first);
+        expect(groupsApi.updateGroup).toHaveBeenCalledOnce();
+        expect(groupsApi.updateGroup).toHaveBeenCalledWith({
+            groupId: group.id,
+            simplifyDebts: false,
+        });
+
+        resolveUpdate?.({ ...group, simplifyDebts: false });
+        return first;
+    });
+
+    test('does not replace a newer selected group after an update resolves', () => {
+        let resolveUpdate: ((value: Group) => void) | undefined;
+        const request = new Promise<Group>(resolve => {
+            resolveUpdate = resolve;
+        });
+        const otherGroup = { ...group, id: 'group-2', name: 'Other Group' } satisfies Group;
+        const updatedGroup = { ...group, simplifyDebts: false, updatedAt: 2 } satisfies Group;
+        useGroupsStore.setState({ groups: [group, otherGroup] });
+        useGroupsStore.getState().setSelectedGroup(group);
+        vi.mocked(groupsApi.updateGroup).mockReturnValue(request);
+
+        const updateRequest = useGroupsStore.getState().updateGroup({ simplifyDebts: false });
+        useGroupsStore.getState().setSelectedGroup(otherGroup);
+        resolveUpdate?.(updatedGroup);
+
+        return updateRequest.then(() => {
+            expect(useGroupsStore.getState().groups).toEqual([updatedGroup, otherGroup]);
+            expect(useGroupsStore.getState().selectedGroup).toBe(otherGroup);
+        });
+    });
+
     test('refreshes the selected group from the fetched group list', () => {
         const refreshedGroup = {
             ...group,
@@ -205,6 +311,30 @@ describe('groupsStore', () => {
         return useGroupsStore.getState().fetchSetGroupById(group.id).then(result => {
             expect(result).toEqual(group);
             expect(useGroupsStore.getState().selectedGroup).toEqual(group);
+        });
+    });
+
+    test('ignores a late forced detail response after selecting another cached group', () => {
+        let resolveRequest: ((value: Group) => void) | undefined;
+        let requestSignal: AbortSignal | undefined;
+        const firstGroup = { ...group };
+        const secondGroup = { ...group, id: 'group-2', name: 'Other Group' };
+        useGroupsStore.setState({ groups: [firstGroup, secondGroup] });
+        useGroupsStore.getState().setSelectedGroup(firstGroup);
+        vi.mocked(chipinApi.fetchApiUserGroupById).mockImplementationOnce((_groupId, signal) => {
+            requestSignal = signal;
+            return new Promise(resolve => {
+                resolveRequest = resolve;
+            });
+        });
+
+        const request = useGroupsStore.getState().fetchSetGroupById(firstGroup.id, true);
+        useGroupsStore.getState().setSelectedGroup(secondGroup);
+        resolveRequest?.(firstGroup);
+
+        return request.then(() => {
+            expect(requestSignal?.aborted).toBe(true);
+            expect(useGroupsStore.getState().selectedGroup).toBe(secondGroup);
         });
     });
 

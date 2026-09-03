@@ -202,7 +202,10 @@
             "addPeopleTitle": "Добавить людей",
             "addPeopleSubtitle": "Приглашение по имени или email",
             "simplifyDebtsTitle": "Упростить долги группы",
-            "simplifyDebtsSubtitle": "Минимизировать количество транзакций"
+            "simplifyDebtsSubtitle": "Минимизировать количество транзакций",
+            "simplifyDebtsOwnerOnly": "Только владелец группы может изменить эту настройку.",
+            "simplifyDebtsUnsupported": "Упрощение долгов недоступно для этой группы.",
+            "simplifyDebtsUpdating": "Обновляем настройку упрощения долгов..."
         },
         "balances": {
             "settled": "Долгов нет",

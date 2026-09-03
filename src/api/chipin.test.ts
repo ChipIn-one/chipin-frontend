@@ -8,7 +8,6 @@ import {
     fetchApiUserGroups,
     inviteApiUserToGroup,
     removeApiGroup,
-    updateApiGroup,
 } from './chipin';
 import { apiInstance } from './chipin.instance';
 
@@ -156,21 +155,6 @@ describe('embedded activity feed responses', () => {
         });
     });
 
-    test('returns activity feed items from an updated group response', () => {
-        vi.mocked(apiInstance.patch).mockResolvedValue({ data: groupResponse });
-
-        return updateApiGroup({
-            groupId: groupResponse.id,
-            groupName: groupResponse.name,
-            groupDescription: '',
-        }).then(result => {
-            expect(apiInstance.patch).toHaveBeenCalledWith(`/groups/${groupResponse.id}`, {
-                name: groupResponse.name,
-                description: '',
-            });
-            expect(result.recentActivities).toEqual(groupResponse.recentActivities);
-        });
-    });
 });
 
 describe('removeApiGroup', () => {

@@ -202,7 +202,10 @@
             "addPeopleTitle": "Add people",
             "addPeopleSubtitle": "Invite by name or email",
             "simplifyDebtsTitle": "Simplify group debts",
-            "simplifyDebtsSubtitle": "Minimize the number of transactions"
+            "simplifyDebtsSubtitle": "Minimize the number of transactions",
+            "simplifyDebtsOwnerOnly": "Only the group owner can change this setting.",
+            "simplifyDebtsUnsupported": "Debt simplification is unavailable for this group.",
+            "simplifyDebtsUpdating": "Updating debt simplification..."
         },
         "balances": {
             "settled": "Settled up",

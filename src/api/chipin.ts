@@ -13,7 +13,6 @@ import type {
     KickGroupMemberParams,
     LeaveGroupParams,
     RemoveGroupParams,
-    UpdateGroupParams,
 } from './chipin.types';
 
 // =============== GROUPS AND USERS ===============
@@ -70,19 +69,6 @@ export const createApiGroup = ({
         .post<Group>('/groups', {
             name: groupName,
             ...(groupDescription && { description: groupDescription }),
-        })
-        .then(response => response.data);
-};
-
-export const updateApiGroup = ({
-    groupId,
-    groupName,
-    groupDescription,
-}: UpdateGroupParams): Promise<Group> => {
-    return apiInstance
-        .patch<Group>(`/groups/${groupId}`, {
-            name: groupName,
-            ...(groupDescription !== undefined && { description: groupDescription }),
         })
         .then(response => response.data);
 };
