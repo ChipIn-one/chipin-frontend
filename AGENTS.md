@@ -47,8 +47,8 @@ commands and repository policy.
 - For `patch`, `minor`, or `major`, run the automatic `version:bump` before the final commit; `major` is rejected during the pre-1.0 period because `1.0.0` requires an explicit release decision.
 - Runtime labels are `<baseVersion>-dev-<shortTaskHeadSha>` for task/dev/preview builds and `<baseVersion>` for release builds from `main`. GitHub PR builds use the PR head SHA.
 - New task branches use `luna/<task-slug>`; `codex/fix-ci-development-flow` is a temporary exception only for open PR #109 and must not become a general `codex/*` allowance.
-- Push only task branches; open/update a PR into `dev` and wait for required
-  `frontend-ci` before reporting integration readiness.
+- Executor work stays inside the prepared task branch/worktree and explicit task scope.
+- Publication targets `dev`; required `frontend-ci` remains the remote integration gate after publication.
 - Normal task PR creation is equivalent to `gh pr create --base dev --head
   <current-task-branch> ...`; never rely on the repository default `main`.
 - Reuse an existing open PR for the current head, retarget its base to `dev`
@@ -60,13 +60,17 @@ commands and repository policy.
 
 The normal lifecycle is:
 
-`implementation → targeted validation → bounded diff review → Version impact from Sol prompt → version:bump → npm run verify:full → stage → commit → push (version:check + verify:full) → npm run pr:create → frontend-ci → human merge`.
+`implementation → targeted validation → Version impact from Sol prompt → version:bump → npm run verify:full → IMPLEMENTATION_COMPLETE`.
+
+Luna does not self-review the task-owned diff. Independent code review is performed separately by Sol 5.6 High against the exact pinned diff. Reviewer findings remain separate from Luna execution state and are returned to Luna only after explicit human authorization.
 
 ## Git and execution
 
 Generic execution lifecycle is defined by canonical `my-prompt-storage`
 instructions/task prompt. Normal development is `luna/*` → `dev`; release is
-`dev` → `main`. When publication is authorized, Luna may stage task-owned
-files, commit, push, and open/update PRs. Luna never merges or enables
+`dev` → `main`. Luna is executor-only: she implements and validates the
+authorized scope, then stops at `IMPLEMENTATION_COMPLETE` or `BLOCKED`.
+Commit, push, and PR publication are separate Sol/human-controlled steps after
+independent review and explicit authorization. Luna never merges or enables
 auto-merge. Preserve unrelated work and do not change backend or unrelated
 architecture.
