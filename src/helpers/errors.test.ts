@@ -14,6 +14,7 @@ const i18nMock = vi.hoisted(() => ({
 vi.mock('i18next', () => ({ default: i18nMock }));
 
 import {
+    isLikelyBackendOutageError,
     normalizeApiError,
     resolveApiErrorMessage,
     resolveApiErrorMessageFromError,
@@ -78,4 +79,34 @@ test('keeps a useful message for payload-less request failures', () => {
     expect(normalizeApiError(new Error('Network unavailable'))).toEqual({
         message: 'Network unavailable',
     });
+});
+
+test.each([
+    { response: { status: 500 } },
+    { response: { status: 503 } },
+    { code: 'ECONNABORTED' },
+    {},
+])('identifies likely backend outage candidates %#', error => {
+    expect(isLikelyBackendOutageError({ isAxiosError: true, ...error })).toBe(true);
+});
+
+test.each([400, 401, 403, 404, 429])(
+    'does not identify an application %s response as a backend outage candidate',
+    status => {
+        expect(
+            isLikelyBackendOutageError({
+                isAxiosError: true,
+                response: { status },
+            }),
+        ).toBe(false);
+    },
+);
+
+test('does not identify a cancelled request as a backend outage candidate', () => {
+    expect(
+        isLikelyBackendOutageError({
+            isAxiosError: true,
+            __CANCEL__: true,
+        }),
+    ).toBe(false);
 });

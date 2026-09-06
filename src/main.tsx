@@ -13,6 +13,7 @@ import { useIsMobile } from 'hooks/common';
 import BackgroundBox from 'basics/BackgroundBox';
 import PWABadge from 'basics/PWABadge';
 import AddExpenseButton from 'components/AddExpenseButton';
+import { BackendUnavailableGate } from 'components/backend-unavailable-page';
 import Header from 'components/Header';
 import { AddExpenseModal, ModalOverlayGlobalStyles } from 'components/modals/';
 import AppRouter from 'features/routing';
@@ -43,30 +44,32 @@ const Main = () => {
             >
                 <BrowserRouter>
                     <BackgroundBox>
-                        <Header />
-                        <GlobalHooks />
-                        <Box px="4">
-                            <AppRouter />
-                        </Box>
-                        <AddExpenseButton />
-                        <AddExpenseModal />
-                        <PWABadge />
+                        <BackendUnavailableGate>
+                            <Header />
+                            <GlobalHooks />
+                            <Box px="4">
+                                <AppRouter />
+                            </Box>
+                            <AddExpenseButton />
+                            <AddExpenseModal />
+                            <PWABadge />
 
-                        <Toaster
-                            theme={themeName}
-                            richColors
-                            closeButton
-                            position={isMobile ? 'top-center' : 'bottom-left'}
-                            offset={isMobile ? 12 : 16}
-                            mobileOffset={isMobile ? 12 : 16}
-                            icons={{
-                                success: <ToastSuccessIcon />,
-                                info: <ToastInfoIcon />,
-                                warning: <ToastWarningIcon />,
-                                error: <ToastErrorIcon />,
-                                loading: <ToastLoadingIcon />,
-                            }}
-                        />
+                            <Toaster
+                                theme={themeName}
+                                richColors
+                                closeButton
+                                position={isMobile ? 'top-center' : 'bottom-left'}
+                                offset={isMobile ? 12 : 16}
+                                mobileOffset={isMobile ? 12 : 16}
+                                icons={{
+                                    success: <ToastSuccessIcon />,
+                                    info: <ToastInfoIcon />,
+                                    warning: <ToastWarningIcon />,
+                                    error: <ToastErrorIcon />,
+                                    loading: <ToastLoadingIcon />,
+                                }}
+                            />
+                        </BackendUnavailableGate>
                     </BackgroundBox>
                 </BrowserRouter>
             </Theme>
