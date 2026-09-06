@@ -78,5 +78,13 @@
         },
         "goHome": "Voltar para o início",
         "backToDashboard": "Voltar para o painel"
+    },
+    "backendUnavailable": {
+        "eyebrow": "Temporariamente indisponível",
+        "title": "O ChipIn voltará em breve",
+        "description": "Estamos com dificuldades em estabelecer ligação. A sua sessão e as informações guardadas continuam aqui.",
+        "tryAgain": "Tentar novamente",
+        "checking": "A verificar a ligação",
+        "retryFailed": "Continua indisponível. Tente novamente dentro de instantes."
     }
 }

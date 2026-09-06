@@ -78,5 +78,13 @@
         },
         "goHome": "Back to Home",
         "backToDashboard": "Back to Dashboard"
+    },
+    "backendUnavailable": {
+        "eyebrow": "Temporarily unavailable",
+        "title": "ChipIn will be back shortly",
+        "description": "We’re having trouble connecting right now. Your session and saved information are still here.",
+        "tryAgain": "Try again",
+        "checking": "Checking connection",
+        "retryFailed": "It’s still unavailable. Please try again in a moment."
     }
 }

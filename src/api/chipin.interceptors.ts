@@ -7,13 +7,16 @@ import {
     prepareAuthRequest,
 } from 'helpers/authSession';
 import { getChipInApiUrl } from 'helpers/env';
-import { getApiErrorPayload } from 'helpers/errors';
+import { getApiErrorPayload, isLikelyBackendOutageError } from 'helpers/errors';
+import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
 
-import { apiInstance } from './chipin.instance';
+import { apiInstance, publicApiInstance } from './chipin.instance';
+import { checkBackendHealth } from './healthApi';
 
 const AUTH_LOGOUT_PATH = '/auth/logout';
 const AUTH_OAUTH_EXCHANGE_PATH = '/auth/oauth/google/exchange';
 const AUTH_REQUEST_CANCELLED_MESSAGE = 'Auth request cancelled';
+const HEALTH_PATH = '/health';
 
 let areChipInApiInterceptorsConfigured = false;
 let onUnauthorizedSession: (() => void) | undefined;
@@ -57,6 +60,60 @@ const isPublicAuthFlowUnauthorizedError = (error: unknown) => {
     return pathname === AUTH_LOGOUT_PATH || pathname === AUTH_OAUTH_EXCHANGE_PATH;
 };
 
+const confirmBackendAvailability = (error: unknown): Promise<never> => {
+    return checkBackendHealth().then(
+        () => Promise.reject(error),
+        () => {
+            useBackendAvailabilityStore.getState().setUnavailable();
+            return Promise.reject(error);
+        },
+    );
+};
+
+const processBackendAvailabilityError = (error: unknown): Promise<never> => {
+    if (isLikelyBackendOutageError(error)) {
+        return confirmBackendAvailability(error);
+    }
+
+    return Promise.reject(error);
+};
+
+const processApiResponseError = (error: unknown): Promise<never> => {
+    if (error instanceof AuthRequestCancelledError) {
+        return Promise.reject(error);
+    }
+
+    if (isPublicAuthFlowUnauthorizedError(error)) {
+        return Promise.reject(error);
+    }
+
+    if (isUnauthorizedError(error)) {
+        const requestSessionVersion = axios.isAxiosError(error)
+            ? requestAuthSessionVersions.get(error.config ?? {})
+            : undefined;
+
+        if (
+            requestSessionVersion !== undefined &&
+            !isAuthSessionCurrent(requestSessionVersion)
+        ) {
+            return Promise.reject(error);
+        }
+
+        onUnauthorizedSession?.();
+        return Promise.reject(error);
+    }
+
+    return processBackendAvailabilityError(error);
+};
+
+const processPublicApiResponseError = (error: unknown): Promise<never> => {
+    if (axios.isAxiosError(error) && getRequestPathname(error.config?.url) === HEALTH_PATH) {
+        return Promise.reject(error);
+    }
+
+    return processBackendAvailabilityError(error);
+};
+
 export const initChipInApiInterceptors = (
     onUnauthorizedSessionCallback?: () => void,
 ) => {
@@ -86,34 +143,9 @@ export const initChipInApiInterceptors = (
         });
     });
 
-    apiInstance.interceptors.response.use(
+    apiInstance.interceptors.response.use(response => response, processApiResponseError);
+    publicApiInstance.interceptors.response.use(
         response => response,
-        (error: unknown) => {
-            if (error instanceof AuthRequestCancelledError) {
-                return Promise.reject(error);
-            }
-
-            if (isPublicAuthFlowUnauthorizedError(error)) {
-                return Promise.reject(error);
-            }
-
-            if (isUnauthorizedError(error)) {
-                const requestSessionVersion = axios.isAxiosError(error)
-                    ? requestAuthSessionVersions.get(error.config ?? {})
-                    : undefined;
-
-                if (
-                    requestSessionVersion !== undefined &&
-                    !isAuthSessionCurrent(requestSessionVersion)
-                ) {
-                    return Promise.reject(error);
-                }
-
-                onUnauthorizedSession?.();
-                return Promise.reject(error);
-            }
-
-            return Promise.reject(error);
-        },
+        processPublicApiResponseError,
     );
 };
