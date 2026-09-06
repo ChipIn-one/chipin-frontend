@@ -6,7 +6,6 @@ import {
     LucideShare2,
     LucideTrash2,
     LucideUserMinus,
-    LucideUserPlus,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -190,26 +189,6 @@ const GroupSettingsTab = ({ group }: Props) => {
                         </Card>
                 </GroupQRModal>
 
-                {/* Add people row (stub) */}
-                <Card size="2">
-                    <Flex align="center" gap="3">
-                        <Avatar
-                            size="3"
-                            radius="medium"
-                            variant="soft"
-                            color="green"
-                            fallback={<LucideUserPlus size={16} />}
-                        />
-                        <Flex direction="column" gap="1">
-                            <Text size="2" weight="medium">
-                                {t('group:page.settings.addPeopleTitle')}
-                            </Text>
-                            <Text size="1" color="gray">
-                                {t('group:page.settings.addPeopleSubtitle')}
-                            </Text>
-                        </Flex>
-                    </Flex>
-                </Card>
             </Flex>
 
             {/* ── MEMBERS section ── */}

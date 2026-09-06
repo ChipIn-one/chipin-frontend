@@ -20,7 +20,6 @@ const SECTION_TITLES = [
     'Profile info',
     'Regional Preferences',
     'Expense Preferences',
-    'Notifications',
     'App Settings',
     'Privacy & Security',
 ] as const;
@@ -48,13 +47,14 @@ const renderSettings = () => {
     );
 };
 
-test('renders notifications and app settings immediately before privacy and security', () => {
+test('does not render unfinished notifications settings', () => {
     useUsersStore.setState({ user: null, localUser: { role: 'ADMIN', settings }, friends: [] });
     renderSettings();
 
     const sectionTitles = SECTION_TITLES.map(title => screen.getByText(title));
 
     expect(screen.getByText('Your preferences.')).toBeTruthy();
+    expect(screen.queryByText('Notifications')).toBeNull();
     expect(screen.queryByText('Solo Preferences')).toBeNull();
 
     for (let index = 1; index < sectionTitles.length; index += 1) {

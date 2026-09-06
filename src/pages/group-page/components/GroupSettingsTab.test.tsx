@@ -21,8 +21,6 @@ const translations: Record<string, string> = {
     'common:copy.copied': 'Copied',
     'common:copy.shared': 'Shared',
     'group:page.membersTab.you': 'You',
-    'group:page.settings.addPeopleSubtitle': 'Invite by name or email',
-    'group:page.settings.addPeopleTitle': 'Add people',
     'group:page.settings.copyLinkTitle': 'Copy invite link',
     'group:page.settings.inviteSection': 'INVITE',
     'group:page.settings.membersSection': 'MEMBERS',
@@ -208,4 +206,12 @@ test('shows one localized toast and keeps the confirmed value after update failu
                     .getAttribute('aria-checked'),
             ).toBe('true');
         }));
+});
+
+test('keeps supported invite actions and hides the unfinished add people control', () => {
+    render(<GroupSettingsTab group={group} />);
+
+    expect(screen.getByRole('button', { name: /Copy invite link/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Show QR code/ })).toBeTruthy();
+    expect(screen.queryByText('Add people')).toBeNull();
 });

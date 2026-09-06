@@ -12,7 +12,6 @@ import {
     AccountSection,
     AppSettingsSection,
     ExpensePreferencesSection,
-    NotificationsSection,
     PrivacySecuritySection,
     RegionalSection,
     SettingsPageHeader,
@@ -43,7 +42,6 @@ const SettingsPage = () => {
                     <RegionalSection isLoading={isLoading} />
                     <ExpensePreferencesSection isLoading={isLoading} />
                     {canAccessSolo && <SoloPreferencesSection isLoading={isLoading} />}
-                    <NotificationsSection isLoading={isLoading} />
                     <AppSettingsSection isLoading={isLoading} />
                     <Box gridColumn={{ md: '1 / -1' }}>
                         <PrivacySecuritySection isLoading={isLoading} />
