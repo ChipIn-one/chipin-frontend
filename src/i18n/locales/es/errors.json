@@ -78,5 +78,13 @@
         },
         "goHome": "Volver al inicio",
         "backToDashboard": "Volver al panel"
+    },
+    "backendUnavailable": {
+        "eyebrow": "No disponible temporalmente",
+        "title": "ChipIn volverá en breve",
+        "description": "Tenemos problemas para conectarnos ahora. Tu sesión y la información guardada siguen aquí.",
+        "tryAgain": "Intentar de nuevo",
+        "checking": "Comprobando la conexión",
+        "retryFailed": "Sigue sin estar disponible. Inténtalo de nuevo en un momento."
     }
 }

@@ -1,7 +1,9 @@
 import { toast } from 'sonner';
 import { beforeAll, beforeEach, expect, test, vi } from 'vitest';
 
-import { apiInstance } from './chipin.instance';
+import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
+
+import { apiInstance, publicApiInstance } from './chipin.instance';
 import { initChipInApiInterceptors } from './chipin.interceptors';
 
 const onUnauthorizedSession = vi.fn();
@@ -9,6 +11,10 @@ const onUnauthorizedSession = vi.fn();
 const authSessionMocks = vi.hoisted(() => ({
     currentVersion: 1,
     prepareAuthRequest: vi.fn(() => Promise.resolve('current-access-token')),
+}));
+
+const backendAvailabilityMocks = vi.hoisted(() => ({
+    checkBackendHealth: vi.fn<() => Promise<void>>(),
 }));
 
 vi.mock('sonner', () => ({
@@ -27,6 +33,10 @@ vi.mock('helpers/env', () => ({
     getChipInApiUrl: () => 'https://api.example.test',
 }));
 
+vi.mock('./healthApi', () => ({
+    checkBackendHealth: backendAvailabilityMocks.checkBackendHealth,
+}));
+
 beforeAll(() => {
     initChipInApiInterceptors(onUnauthorizedSession);
 });
@@ -34,6 +44,8 @@ beforeAll(() => {
 beforeEach(() => {
     vi.clearAllMocks();
     authSessionMocks.currentVersion = 1;
+    backendAvailabilityMocks.checkBackendHealth.mockResolvedValue(undefined);
+    useBackendAvailabilityStore.setState({ isUnavailable: false });
 });
 
 const rejectRequest = (url: string, status: number) => {
@@ -53,6 +65,19 @@ const rejectRequest = (url: string, status: number) => {
                     },
                     status,
                 },
+            }),
+    });
+};
+
+const rejectPublicRequest = (url: string, status: number) => {
+    return publicApiInstance.request({
+        method: 'get',
+        url,
+        adapter: config =>
+            Promise.reject({
+                config,
+                isAxiosError: true,
+                response: { status },
             }),
     });
 };
@@ -147,5 +172,57 @@ test('leaves retryable validation feedback to the owning UI flow', () => {
         .then(() => {
             expect(onUnauthorizedSession).not.toHaveBeenCalled();
             expect(toast.error).not.toHaveBeenCalled();
+        });
+});
+
+test('confirms a likely outage through health before entering unavailable state', () => {
+    backendAvailabilityMocks.checkBackendHealth.mockRejectedValueOnce(
+        new Error('health unavailable'),
+    );
+
+    return expect(rejectRequest('/dashboard', 503))
+        .rejects.toMatchObject({
+            response: { status: 503 },
+        })
+        .then(() => {
+            expect(backendAvailabilityMocks.checkBackendHealth).toHaveBeenCalledOnce();
+            expect(useBackendAvailabilityStore.getState().isUnavailable).toBe(true);
+        });
+});
+
+test('keeps the normal error path when health confirms the backend is available', () => {
+    return expect(rejectRequest('/dashboard', 503))
+        .rejects.toMatchObject({
+            response: { status: 503 },
+        })
+        .then(() => {
+            expect(backendAvailabilityMocks.checkBackendHealth).toHaveBeenCalledOnce();
+            expect(useBackendAvailabilityStore.getState().isUnavailable).toBe(false);
+        });
+});
+
+test('does not confirm health or enter unavailable state for an application 4xx', () => {
+    return expect(rejectRequest('/dashboard', 404))
+        .rejects.toMatchObject({
+            response: { status: 404 },
+        })
+        .then(() => {
+            expect(backendAvailabilityMocks.checkBackendHealth).not.toHaveBeenCalled();
+            expect(useBackendAvailabilityStore.getState().isUnavailable).toBe(false);
+        });
+});
+
+test('also confirms a likely outage from the public API path', () => {
+    backendAvailabilityMocks.checkBackendHealth.mockRejectedValueOnce(
+        new Error('health unavailable'),
+    );
+
+    return expect(rejectPublicRequest('/stats', 503))
+        .rejects.toMatchObject({
+            response: { status: 503 },
+        })
+        .then(() => {
+            expect(backendAvailabilityMocks.checkBackendHealth).toHaveBeenCalledOnce();
+            expect(useBackendAvailabilityStore.getState().isUnavailable).toBe(true);
         });
 });
