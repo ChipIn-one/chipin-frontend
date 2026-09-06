@@ -23,6 +23,40 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
+      - name: Notify Slack - CI started
+        if: ${{ github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]') }}
+        continue-on-error: true
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_FE_CI_CD }}
+          REPOSITORY: ${{ github.repository }}
+          WORKFLOW: ${{ github.workflow }}
+          BRANCH: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+          PR_NUMBER: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || '' }}
+          ACTOR: ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK" ]; then
+            exit 0
+          fi
+
+          PR_REFERENCE="none"
+          if [ -n "$PR_NUMBER" ]; then
+            PR_REFERENCE="#$PR_NUMBER"
+          fi
+
+          jq -n \
+            --arg repository "$REPOSITORY" \
+            --arg workflow "$WORKFLOW" \
+            --arg status "started" \
+            --arg branch "$BRANCH" \
+            --arg pr "$PR_REFERENCE" \
+            --arg actor "$ACTOR" \
+            --arg run_url "$RUN_URL" \
+            '{text: ($repository + " - " + $workflow + "\nstatus: " + $status + "\nbranch: " + $branch + "\nPR: " + $pr + "\nactor: " + $actor + "\nrun: " + $run_url)}' \
+            | curl --fail --silent --show-error --max-time 10 \
+              --header 'Content-Type: application/json' \
+              --data-binary @- \
+              "$SLACK_WEBHOOK"
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -50,3 +84,38 @@ jobs:
           CHIPIN_TASK_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           CHIPIN_TASK_BRANCH: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
         run: npm run verify:full
+      - name: Notify Slack - CI completed
+        if: ${{ always() && github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]') }}
+        continue-on-error: true
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_FE_CI_CD }}
+          REPOSITORY: ${{ github.repository }}
+          WORKFLOW: ${{ github.workflow }}
+          STATUS: ${{ job.status }}
+          BRANCH: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+          PR_NUMBER: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || '' }}
+          ACTOR: ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK" ]; then
+            exit 0
+          fi
+
+          PR_REFERENCE="none"
+          if [ -n "$PR_NUMBER" ]; then
+            PR_REFERENCE="#$PR_NUMBER"
+          fi
+
+          jq -n \
+            --arg repository "$REPOSITORY" \
+            --arg workflow "$WORKFLOW" \
+            --arg status "$STATUS" \
+            --arg branch "$BRANCH" \
+            --arg pr "$PR_REFERENCE" \
+            --arg actor "$ACTOR" \
+            --arg run_url "$RUN_URL" \
+            '{text: ($repository + " - " + $workflow + "\nstatus: " + $status + "\nbranch: " + $branch + "\nPR: " + $pr + "\nactor: " + $actor + "\nrun: " + $run_url)}' \
+            | curl --fail --silent --show-error --max-time 10 \
+              --header 'Content-Type: application/json' \
+              --data-binary @- \
+              "$SLACK_WEBHOOK"
