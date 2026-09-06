@@ -6,7 +6,6 @@ import { getSocialAuthUrl } from 'helpers/url';
 import { selectAuthLoginLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
-import AppleIconSvg from 'assets/apple-icon.svg?react';
 import GoogleIconSvg from 'assets/google-icon.svg?react';
 
 const AuthButtons = () => {
@@ -36,10 +35,6 @@ const AuthButtons = () => {
                 {t('button.google')}
             </Button>
 
-            <Button size="4" variant="soft" color="gray" radius="full" disabled>
-                <AppleIconSvg width={18} height={18} />
-                {t('button.apple')}
-            </Button>
         </Flex>
     );
 };
