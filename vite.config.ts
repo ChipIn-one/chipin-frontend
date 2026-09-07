@@ -3,6 +3,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 import svgr from 'vite-plugin-svgr';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 import react from '@vitejs/plugin-react-swc';
 
 import { resolveAppVersion } from './scripts/version-resolver.mjs';
@@ -14,6 +15,12 @@ type SentryEnvironment = 'ci' | 'development' | 'local' | 'preview' | 'productio
 interface SentryBuildConfig {
     enabled: boolean;
     environment: SentryEnvironment;
+}
+
+interface SentryUploadConfig {
+    authToken: string;
+    org: string;
+    project: string;
 }
 
 const resolveSentryBuildConfig = (env: Record<string, string>): SentryBuildConfig => {
@@ -59,21 +66,52 @@ const resolveSentryBuildConfig = (env: Record<string, string>): SentryBuildConfi
     }
 
     return {
-            enabled: false,
-            environment: env.CI === 'true' ? 'ci' : 'local',
-        };
+        enabled: false,
+        environment: env.CI === 'true' ? 'ci' : 'local',
     };
+};
 
-    const appVersion = resolveAppVersion();
+const resolveSentryUploadConfig = (
+    env: Record<string, string>,
+    sentryBuildConfig: SentryBuildConfig,
+): SentryUploadConfig | null => {
+    if (env.VERCEL !== '1' || !sentryBuildConfig.enabled) {
+        return null;
+    }
 
-    export default defineConfig(({ mode }) => {
-        const buildEnvironment = loadEnv(mode, '.', '');
-        const sentryBuildConfig = resolveSentryBuildConfig(buildEnvironment);
+    const authToken = env.SENTRY_AUTH_TOKEN;
+    const org = env.SENTRY_ORG;
+    const project = env.SENTRY_PROJECT;
 
-        return {
+    if (!authToken || !org || !project) {
+        throw new Error(
+            'Sentry source map upload requires SENTRY_AUTH_TOKEN, SENTRY_ORG and SENTRY_PROJECT',
+        );
+    }
+
+    return {
+        authToken,
+        org,
+        project,
+    };
+};
+
+const appVersion = resolveAppVersion();
+
+export default defineConfig(({ mode }) => {
+    const buildEnvironment = loadEnv(mode, '.', '');
+    const sentryBuildConfig = resolveSentryBuildConfig(buildEnvironment);
+    const sentryUploadConfig = resolveSentryUploadConfig(
+        buildEnvironment,
+        sentryBuildConfig,
+    );
+
+    return {
         define: {
             __APP_VERSION__: JSON.stringify(appVersion),
-            'import.meta.env.VITE_SENTRY_ENABLED': JSON.stringify(sentryBuildConfig.enabled),
+            'import.meta.env.VITE_SENTRY_ENABLED': JSON.stringify(
+                sentryBuildConfig.enabled,
+            ),
             'import.meta.env.VITE_SENTRY_ENVIRONMENT': JSON.stringify(
                 sentryBuildConfig.environment,
             ),
@@ -140,6 +178,7 @@ const resolveSentryBuildConfig = (env: Record<string, string>): SentryBuildConfi
 
                 workbox: {
                     globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+                    sourcemap: false,
                     cleanupOutdatedCaches: true,
                     clientsClaim: true,
                     skipWaiting: false,
@@ -152,6 +191,27 @@ const resolveSentryBuildConfig = (env: Record<string, string>): SentryBuildConfi
                     type: 'module',
                 },
             }),
+            ...(sentryUploadConfig
+                ? [
+                      sentryVitePlugin({
+                          authToken: sentryUploadConfig.authToken,
+                          org: sentryUploadConfig.org,
+                          project: sentryUploadConfig.project,
+                          telemetry: false,
+                          release: {
+                              name: appVersion,
+                              inject: false,
+                              create: true,
+                              finalize: true,
+                              setCommits: false,
+                          },
+                          sourcemaps: {
+                              assets: './dist/**',
+                              filesToDeleteAfterUpload: './dist/**/*.map',
+                          },
+                      }),
+                  ]
+                : []),
         ],
 
         build: {
