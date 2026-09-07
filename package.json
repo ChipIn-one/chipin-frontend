@@ -14,7 +14,7 @@
     "typecheck": "tsc -b",
     "verify": "npm run lint -- --quiet && npm run typecheck",
     "verify:full": "npm run lint && npm run test:full && npm run build",
-    "vercel-build": "npm run test:full && npm run build",
+    "vercel-build": "npm run create-pwa-icons && vite build",
     "prepare": "husky",
     "pr:create": "node scripts/create-pr.mjs",
     "version:bump": "node scripts/version-bump.mjs",
