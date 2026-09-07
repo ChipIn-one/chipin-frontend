@@ -64,6 +64,23 @@ The normal lifecycle is:
 
 Luna does not self-review the task-owned diff. Independent code review is performed separately by Sol 5.6 High against the exact pinned diff. Reviewer findings remain separate from Luna execution state and are returned to Luna only after explicit human authorization.
 
+## Trello task publication
+
+These rules apply only to ChipIn frontend tasks.
+
+- Never normalize or mutate backend-team cards or backend notification flow unless explicitly authorized.
+- Area ownership is represented by the `Frontend` label.
+- Every frontend task has exactly one priority label: `P0`, `P1`, `P2`, or `P3`.
+- Do not use legacy frontend priority/severity labels `Critical`, `Major`, `Minor`, `Priority`, or `PROD CRIT` for new frontend tasks.
+- Render priority as `P0 -> 🔴`, `P1 -> 🟠`, `P2 -> 🟡`, `P3 -> ⚪`. Emoji is presentation only and is not independent task state.
+- Until PRE-PROD has its own canonical scope field/label, render PRE-PROD frontend titles as `<emoji> <P#> · PRE-PROD · FE · <semantic task name>`. Do not use old bracket syntax such as `[PRE-PROD] [FE][P0]`.
+- The Trello list is authoritative for workflow status: `Todo` / `In progress` / `DEV` / `PROD` / `Done`. Do not duplicate workflow status in the title or description.
+- A blocker belongs in `Dependencies`.
+- Canonical descriptions use only the relevant durable subset of `Problem`, `Outcome`, `Acceptance`, `Dependencies`, and `References`.
+- Do not add `[TASK DESCRIPTION]`, generic AGENT INSTRUCTIONS, execution journals, runner state, mutable status/history, raw verification logs, or duplicated labels/status/tracker metadata.
+- Durable PR, issue, or documentation links belong in `References` when useful. Transient CI/execution evidence belongs in publication results, Trello comments/activity, or another execution channel unless genuinely required as a durable reference.
+- Slack/Trello notifications are presentation only and must derive meaning from the same canonical task fields/title. Do not invent notification-only priority or status semantics.
+
 ## Git and execution
 
 Generic execution lifecycle is defined by canonical `my-prompt-storage`
