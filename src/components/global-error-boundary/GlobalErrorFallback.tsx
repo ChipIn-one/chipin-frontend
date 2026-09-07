@@ -23,7 +23,6 @@ import BackgroundBox from 'basics/BackgroundBox';
 import './styles.css';
 
 interface GlobalErrorFallbackProps {
-    error: Error;
     timestamp: string;
 }
 
@@ -38,7 +37,6 @@ type RecoveryAction = (typeof RECOVERY_ACTION)[keyof typeof RECOVERY_ACTION];
 
 const reportRecoveryAction = (
     action: RecoveryAction,
-    error: Error,
     timestamp: string,
 ): void => {
     try {
@@ -46,9 +44,7 @@ const reportRecoveryAction = (
             extra: {
                 action,
                 appVersion: APP_VERSION,
-                errorMessage: error.message,
                 errorTimestamp: timestamp,
-                route: window.location.pathname,
             },
             level: action === RECOVERY_ACTION.updateActivationFailed ? 'warning' : 'info',
             tags: {
@@ -61,7 +57,7 @@ const reportRecoveryAction = (
     }
 };
 
-const GlobalErrorFallback = ({ error, timestamp }: GlobalErrorFallbackProps) => {
+const GlobalErrorFallback = ({ timestamp }: GlobalErrorFallbackProps) => {
     const [isActionPending, setIsActionPending] = useState(false);
     const [isUpdating, setIsUpdating] = useState(false);
     const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
@@ -90,7 +86,7 @@ const GlobalErrorFallback = ({ error, timestamp }: GlobalErrorFallbackProps) => 
 
         isActionPendingRef.current = true;
         setIsActionPending(true);
-        reportRecoveryAction(RECOVERY_ACTION.manualReload, error, timestamp);
+        reportRecoveryAction(RECOVERY_ACTION.manualReload, timestamp);
         reloadCurrentPage();
     };
 
@@ -100,7 +96,7 @@ const GlobalErrorFallback = ({ error, timestamp }: GlobalErrorFallbackProps) => 
             return;
         }
 
-        reportRecoveryAction(RECOVERY_ACTION.dashboardNavigation, error, timestamp);
+        reportRecoveryAction(RECOVERY_ACTION.dashboardNavigation, timestamp);
     };
 
     const onUpdate = (): void => {
@@ -115,10 +111,10 @@ const GlobalErrorFallback = ({ error, timestamp }: GlobalErrorFallbackProps) => 
         activateServiceWorker(waitingWorker)
             .then(
                 () => {
-                    reportRecoveryAction(RECOVERY_ACTION.updateApplied, error, timestamp);
+                    reportRecoveryAction(RECOVERY_ACTION.updateApplied, timestamp);
                 },
                 () => {
-                    reportRecoveryAction(RECOVERY_ACTION.updateActivationFailed, error, timestamp);
+                    reportRecoveryAction(RECOVERY_ACTION.updateActivationFailed, timestamp);
                 },
             )
             .then(reloadCurrentPage, reloadCurrentPage);

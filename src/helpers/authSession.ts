@@ -120,7 +120,6 @@ const refreshAuthTokens = (refreshToken: string) => {
             .catch(error => {
                 if (getApiErrorStatus(error) === 401) {
                     assertCurrentAuthSession(version);
-                    console.error('Auth refresh failed with backend error response:', error);
                     invalidateAuthSession();
 
                     return null;
