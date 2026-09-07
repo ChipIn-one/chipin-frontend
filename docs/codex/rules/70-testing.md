@@ -75,8 +75,9 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
 - Full completion gate: `npm run verify:full` (lint, complete Vitest suite, and production build).
 - `npm run build` computes the runtime version through the shared Vite resolver and builds the app;
   it does not run tests implicitly.
-- `npm run vercel-build` is wired through `vercel.json` and runs the complete Vitest suite before
-  the production build without generating a source file.
+- `npm run vercel-build` is wired through `vercel.json` and performs deployment-only artifact generation:
+  PWA asset generation followed by the Vite production build. Verification remains the responsibility of
+  `npm run verify:full` / Frontend CI.
 
 ## Integration boundary
 
