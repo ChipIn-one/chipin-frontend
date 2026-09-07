@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import svgr from 'vite-plugin-svgr';
 import tsconfigPaths from 'vite-tsconfig-paths';
@@ -9,107 +9,171 @@ import { resolveAppVersion } from './scripts/version-resolver.mjs';
 
 // https://vite.dev/config/
 
-const appVersion = resolveAppVersion();
+type SentryEnvironment = 'ci' | 'development' | 'local' | 'preview' | 'production';
 
-export default defineConfig({
-    define: {
-        __APP_VERSION__: JSON.stringify(appVersion),
-    },
-    plugins: [
-        svgr(),
-        react(),
-        tsconfigPaths(),
-        VitePWA({
-            registerType: 'prompt', // or autoUpdate
-            injectRegister: false,
+interface SentryBuildConfig {
+    enabled: boolean;
+    environment: SentryEnvironment;
+}
 
-            manifest: {
-                name: 'ChipIn',
-                short_name: 'ChipIn',
-                description: 'Share expenses without stress',
-                theme_color: '#3e9b4f',
-                display: 'standalone',
-                // DEEP LINKING PARAMS
-                start_url: '/',
-                scope: '/',
-                id: '/',
+const resolveSentryBuildConfig = (env: Record<string, string>): SentryBuildConfig => {
+    const chipInEnvironment = env.VITE_CHIPIN_ENV;
+    const vercelEnvironment = env.VERCEL_ENV;
 
-                icons: [
-                    {
-                        src: '/pwa-64x64.png',
-                        sizes: '64x64',
-                        type: 'image/png',
-                    },
-                    {
-                        src: '/apple-touch-icon-180x180.png',
-                        sizes: '180x180',
-                        type: 'image/png',
-                    },
-                    {
-                        src: '/pwa-192x192.png',
-                        sizes: '192x192',
-                        type: 'image/png',
-                    },
-                    {
-                        src: '/pwa-512x512.png',
-                        sizes: '512x512',
-                        type: 'image/png',
-                    },
-                    {
-                        src: '/maskable-icon-512x512.png',
-                        sizes: '512x512',
-                        type: 'image/png',
-                        purpose: 'maskable',
-                    },
-                    {
-                        src: '/favicon.ico',
-                        sizes: '48x48',
-                        type: 'image/x-icon',
-                    },
-                    {
-                        src: '/favicon.svg',
-                        sizes: 'any',
-                        type: 'image/svg+xml',
-                    },
-                ],
-            },
-            includeManifestIcons: true,
+    if (
+        chipInEnvironment !== undefined &&
+        chipInEnvironment !== 'dev' &&
+        chipInEnvironment !== 'prod'
+    ) {
+        throw new Error(`Unsupported ChipIn environment: ${chipInEnvironment}`);
+    }
 
-            workbox: {
-                globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
-                cleanupOutdatedCaches: true,
-                clientsClaim: true,
-                skipWaiting: false,
-            },
+    if (vercelEnvironment === 'preview') {
+        if (chipInEnvironment !== 'dev') {
+            throw new Error(
+                'VITE_CHIPIN_ENV must be "dev" for a Vercel preview build',
+            );
+        }
 
-            devOptions: {
-                enabled: false,
-                navigateFallback: 'index.html',
-                suppressWarnings: true,
-                type: 'module',
-            },
-        }),
-    ],
+        return { enabled: true, environment: 'preview' };
+    }
 
-    build: {
-        sourcemap: 'hidden',
-        rollupOptions: {
-            output: {
-                manualChunks: {
-                    'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-                    'vendor-radix': ['@radix-ui/themes'],
-                    'vendor-sentry': ['@sentry/react'],
-                    'vendor-styled': ['styled-components'],
-                    'vendor-i18n': ['i18next', 'react-i18next'],
-                    'vendor-misc': [
-                        'axios',
-                        'dexie',
-                        'dexie-react-hooks',
-                        'zustand',
-                        'bignumber.js',
+    if (vercelEnvironment === 'development') {
+        return { enabled: false, environment: 'development' };
+    }
+
+    if (vercelEnvironment === 'production') {
+        if (chipInEnvironment === 'prod') {
+            return { enabled: true, environment: 'production' };
+        }
+
+        if (chipInEnvironment === 'dev') {
+            return { enabled: true, environment: 'development' };
+        }
+
+        throw new Error('VITE_CHIPIN_ENV is required for a Vercel production build');
+    }
+
+    if (vercelEnvironment !== undefined) {
+        throw new Error(`Unsupported Vercel environment: ${vercelEnvironment}`);
+    }
+
+    return {
+            enabled: false,
+            environment: env.CI === 'true' ? 'ci' : 'local',
+        };
+    };
+
+    const appVersion = resolveAppVersion();
+
+    export default defineConfig(({ mode }) => {
+        const buildEnvironment = loadEnv(mode, '.', '');
+        const sentryBuildConfig = resolveSentryBuildConfig(buildEnvironment);
+
+        return {
+        define: {
+            __APP_VERSION__: JSON.stringify(appVersion),
+            'import.meta.env.VITE_SENTRY_ENABLED': JSON.stringify(sentryBuildConfig.enabled),
+            'import.meta.env.VITE_SENTRY_ENVIRONMENT': JSON.stringify(
+                sentryBuildConfig.environment,
+            ),
+        },
+        plugins: [
+            svgr(),
+            react(),
+            tsconfigPaths(),
+            VitePWA({
+                registerType: 'prompt', // or autoUpdate
+                injectRegister: false,
+
+                manifest: {
+                    name: 'ChipIn',
+                    short_name: 'ChipIn',
+                    description: 'Share expenses without stress',
+                    theme_color: '#3e9b4f',
+                    display: 'standalone',
+                    // DEEP LINKING PARAMS
+                    start_url: '/',
+                    scope: '/',
+                    id: '/',
+
+                    icons: [
+                        {
+                            src: '/pwa-64x64.png',
+                            sizes: '64x64',
+                            type: 'image/png',
+                        },
+                        {
+                            src: '/apple-touch-icon-180x180.png',
+                            sizes: '180x180',
+                            type: 'image/png',
+                        },
+                        {
+                            src: '/pwa-192x192.png',
+                            sizes: '192x192',
+                            type: 'image/png',
+                        },
+                        {
+                            src: '/pwa-512x512.png',
+                            sizes: '512x512',
+                            type: 'image/png',
+                        },
+                        {
+                            src: '/maskable-icon-512x512.png',
+                            sizes: '512x512',
+                            type: 'image/png',
+                            purpose: 'maskable',
+                        },
+                        {
+                            src: '/favicon.ico',
+                            sizes: '48x48',
+                            type: 'image/x-icon',
+                        },
+                        {
+                            src: '/favicon.svg',
+                            sizes: 'any',
+                            type: 'image/svg+xml',
+                        },
                     ],
+                },
+                includeManifestIcons: true,
+
+                workbox: {
+                    globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+                    cleanupOutdatedCaches: true,
+                    clientsClaim: true,
+                    skipWaiting: false,
+                },
+
+                devOptions: {
+                    enabled: false,
+                    navigateFallback: 'index.html',
+                    suppressWarnings: true,
+                    type: 'module',
+                },
+            }),
+        ],
+
+        build: {
+            sourcemap: 'hidden',
+            rollupOptions: {
+                output: {
+                    manualChunks: {
+                        'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+                        'vendor-radix': ['@radix-ui/themes'],
+                        'vendor-sentry': ['@sentry/react'],
+                        'vendor-styled': ['styled-components'],
+                        'vendor-i18n': ['i18next', 'react-i18next'],
+                        'vendor-misc': [
+                            'axios',
+                            'dexie',
+                            'dexie-react-hooks',
+                            'zustand',
+                            'bignumber.js',
+                        ],
+                    },
                 },
             },
         },
-    },
+    };
 });

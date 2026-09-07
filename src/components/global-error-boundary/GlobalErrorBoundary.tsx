@@ -10,9 +10,6 @@ interface GlobalErrorBoundaryProps {
     children: ReactNode;
 }
 
-const normalizeError = (error: unknown): Error =>
-    error instanceof Error ? error : new Error(String(error));
-
 const GlobalErrorBoundary = ({ children }: GlobalErrorBoundaryProps) => (
     <Sentry.ErrorBoundary
         beforeCapture={(scope, _error, componentStack) => {
@@ -20,15 +17,11 @@ const GlobalErrorBoundary = ({ children }: GlobalErrorBoundaryProps) => (
             scope.setExtras({
                 appVersion: APP_VERSION,
                 componentStack,
-                route: window.location.pathname,
                 timestamp: new Date().toISOString(),
             });
         }}
-        fallback={({ error }) => (
-            <GlobalErrorFallback
-                error={normalizeError(error)}
-                timestamp={new Date().toISOString()}
-            />
+        fallback={() => (
+            <GlobalErrorFallback timestamp={new Date().toISOString()} />
         )}
     >
         {children}

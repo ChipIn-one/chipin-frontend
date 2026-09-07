@@ -93,7 +93,11 @@ test('reloads the current page once when Try again is clicked repeatedly', () =>
             expect(mocks.captureMessage).toHaveBeenCalledWith(
                 'Application recovery action',
                 expect.objectContaining({
-                    extra: expect.objectContaining({ action: 'manual-reload' }),
+                    extra: {
+                        action: 'manual-reload',
+                        appVersion: APP_VERSION,
+                        errorTimestamp: expect.any(String),
+                    },
                 }),
             );
         });
