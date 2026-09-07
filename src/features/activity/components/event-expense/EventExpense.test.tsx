@@ -12,17 +12,20 @@ vi.mock('basics', importOriginal =>
         ...basics,
         Amount: ({
             className,
+            precision,
             tokenCode,
             type,
             value,
         }: {
             className?: string;
+            precision?: number;
             tokenCode?: string;
             type?: string;
             value: number;
         }) => (
             <span
                 data-testid="expense-amount"
+                data-precision={precision}
                 data-type={type}
                 className={className}
             >
@@ -139,6 +142,31 @@ test('shows the group name for a group expense', () => {
     for (const amount of screen.getAllByTestId('expense-amount')) {
         expect(amount.dataset.type).toBe('summary');
     }
+});
+
+test('uses two-decimal precision for fractional user debt', () => {
+    const event = createExpenseEvent({
+        groupId: 'group-1',
+        groupName: 'Vietnam',
+    });
+
+    event.metadata.amount = 3;
+    event.metadata.shares = [
+        {
+            userId: 'current-user',
+            displayName: 'Current user',
+            shareAmount: 1.5,
+            currency: 'USD',
+        },
+    ];
+
+    render(<EventExpense event={event} />);
+
+    expect(screen.getByText('You borrowed')).toBeTruthy();
+
+    const debtAmount = screen.getByText('1.5 USD');
+
+    expect(debtAmount.dataset.precision).toBe('2');
 });
 
 test('uses You when the current user paid the expense', () => {

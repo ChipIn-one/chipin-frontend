@@ -123,7 +123,7 @@ const EventExpense = ({ event }: Props) => {
                                     $isReversed={isReversed}
                                     value={Math.abs(userExpenseDebt)}
                                     tokenCode={event.metadata.currency}
-                                    precision={0}
+                                    precision={2}
                                     type="summary"
                                 />
                             </ExpenseDebtText>
