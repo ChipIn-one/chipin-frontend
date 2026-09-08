@@ -31,8 +31,8 @@ composition.
 
 Read `docs/codex/rules/00-foundation.md` and only relevant chapters before
 code changes. Testing guidance is in `docs/codex/rules/70-testing.md`.
-The generic implementation and integration lifecycle is defined by the
-canonical `my-prompt-storage` FLOW; this file contains only ChipIn-specific
+The generic AI lifecycle, publication, and reviewer roles are owned by the
+canonical `syllik/ai-workflow`; this file contains only ChipIn-specific
 commands and repository policy.
 
 - `npm run test:task -- <explicit test paths>` — focused tests.
@@ -42,15 +42,16 @@ commands and repository policy.
 - `npm run version:bump -- <none|patch|minor|major>` — apply the task's explicit SemVer impact before the final commit; `none` is a safe no-op.
 - `npm run version:check` — read-only validation that package and lockfile versions are valid and synchronized.
 - tracked Husky `pre-push` runs `npm run version:check` and `npm run verify:full`; both block a non-zero result and neither mutates repository files.
-- `npm run pr:create` — create or update the current task branch PR with an explicit `dev` base.
+- `npm run pr:create` — repository publication helper for trusted Sol/human-controlled publication with an explicit `dev` base; it is not a Luna execution responsibility.
 - Every task prompt includes `Version impact: none | patch | minor | major`, selected from product/API meaning rather than file or LoC counts.
 - For `patch`, `minor`, or `major`, run the automatic `version:bump` before the final commit; `major` is rejected during the pre-1.0 period because `1.0.0` requires an explicit release decision.
 - Runtime labels are `<baseVersion>-dev-<shortTaskHeadSha>` for task/dev/preview builds and `<baseVersion>` for release builds from `main`. GitHub PR builds use the PR head SHA.
 - New task branches use `luna/<task-slug>`; `codex/fix-ci-development-flow` is a temporary exception only for open PR #109 and must not become a general `codex/*` allowance.
 - Executor work stays inside the prepared task branch/worktree and explicit task scope.
 - Publication targets `dev`; required `frontend-ci` remains the remote integration gate after publication.
-- Normal task PR creation is equivalent to `gh pr create --base dev --head
-  <current-task-branch> ...`; never rely on the repository default `main`.
+- Trusted task publication into `dev` may use `gh pr create --base dev --head
+  <current-task-branch> ...` or `npm run pr:create`; never rely on the repository
+  default `main`, and do not treat publication as Luna execution.
 - Reuse an existing open PR for the current head, retarget its base to `dev`
   when allowed, and return its real `/pull/<number>` URL.
 - Luna never pushes directly to `dev`/`main` and never merges; human performs
@@ -58,11 +59,21 @@ commands and repository policy.
 - `npm run build` — production build.
 - `npm run vercel-build` — Vercel pipeline.
 
-The normal lifecycle is:
+The canonical lifecycle is:
 
-`implementation → targeted validation → Version impact from Sol prompt → version:bump → npm run verify:full → IMPLEMENTATION_COMPLETE`.
+`Sol 5.6 planning/architecture → Luna xhigh implementation + local validation → IMPLEMENTATION_COMPLETE → trusted Sol/human publication → managed Codex GitHub Code Review → human-authorized correction cycle if needed → new Codex review for every changed PR head → human merge`.
 
-Luna does not self-review the task-owned diff. Independent code review is performed separately by Sol 5.6 High against the exact pinned diff. Reviewer findings remain separate from Luna execution state and are returned to Luna only after explicit human authorization.
+Luna is executor-only and stops at `IMPLEMENTATION_COMPLETE` or `BLOCKED`.
+Luna does not review her own task diff, perform independent review batches, judge
+merge readiness, commit, push, create or update PRs, merge, or enable auto-merge.
+The managed Codex GitHub Code Review is the routine/default independent reviewer
+and is triggered after trusted publication with `@codex review`. A review is
+current only when its reviewed commit SHA equals the current PR head; every
+changed PR head requires a new `@codex review`. Reviewer findings remain
+separate from Luna execution state and return to Luna only after explicit human
+authorization. Sol 5.6 High is escalation/fallback only for architecture or
+high-risk review, ambiguous or disputed findings, Codex unavailability, or an
+explicit human request. Only a human merges.
 
 ## Trello task publication
 
@@ -83,11 +94,9 @@ These rules apply only to ChipIn frontend tasks.
 
 ## Git and execution
 
-Generic execution lifecycle is defined by canonical `my-prompt-storage`
-instructions/task prompt. Normal development is `luna/*` → `dev`; release is
-`dev` → `main`. Luna is executor-only: she implements and validates the
-authorized scope, then stops at `IMPLEMENTATION_COMPLETE` or `BLOCKED`.
-Commit, push, and PR publication are separate Sol/human-controlled steps after
-independent review and explicit authorization. Luna never merges or enables
-auto-merge. Preserve unrelated work and do not change backend or unrelated
-architecture.
+Generic execution lifecycle and reviewer semantics are defined by canonical
+`syllik/ai-workflow`. Normal development is `luna/*` → `dev`; release is
+`dev` → `main`. Luna implements and validates the authorized scope, then stops
+at `IMPLEMENTATION_COMPLETE` or `BLOCKED`. Trusted publication, independent
+review, corrections, and release decisions remain outside Luna execution.
+Preserve unrelated work and do not change backend or unrelated architecture.

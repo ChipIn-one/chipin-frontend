@@ -81,10 +81,10 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
 
 ## Integration boundary
 
-The generic lifecycle and gate definitions live in the canonical
-`my-prompt-storage` FLOW. ChipIn-specific integration policy is:
+Generic lifecycle and reviewer definitions belong to canonical
+`syllik/ai-workflow`. ChipIn-specific integration policy is:
 
-- `npm run verify:full` is the local completion gate before commit/push.
+- `npm run verify:full` is the local completion gate. Luna stops at `IMPLEMENTATION_COMPLETE` after local validation and does not commit, push, or publish.
 - `npm run version:bump -- <none|patch|minor|major>` applies the task's explicit impact before the final commit;
   `none` is a deterministic no-op.
 - `npm run version:check` validates matching SemVer values in `package.json` and `package-lock.json` without writing.
@@ -96,12 +96,16 @@ The generic lifecycle and gate definitions live in the canonical
 - New task branches use `luna/<task-slug>`. The existing `codex/fix-ci-development-flow` branch is grandfathered only for open PR #109.
 - `npm run pr:create` checks the current task branch, performs a cheap
   `gh auth status`, and creates/updates a PR with explicit `--base dev`; it
-  returns only a real `/pull/<number>` URL.
-- Luna pushes only `luna/*` task branches, opens/updates a PR into `dev`, and waits for
-  required remote `frontend-ci`.
-- Remote PR CI is authoritative for integration readiness; local green does not
-  authorize merge or direct pushes to `dev`/`main`.
-- Human performs the merge after the required remote check is green.
+  returns only a real `/pull/<number>` URL. This is a trusted Sol/human-controlled
+  publication helper, not a Luna responsibility.
+- Trusted publication into `dev` is separate from Luna execution. Remote
+  `frontend-ci` remains authoritative for post-publication integration readiness.
+- Routine independent PR review is managed Codex GitHub Code Review, triggered
+  after publication with `@codex review`. The reviewed SHA must match the current
+  PR head, and every changed PR head requires a new `@codex review`.
+- Reviewer findings remain separate from Luna execution state and return to Luna
+  only after explicit human authorization. Sol 5.6 High is escalation/fallback
+  only. Human performs the merge.
 
 Run targeted checks first. Full verification belongs only at integration/completion checkpoints, not after
 every mechanical edit. Documentation/config-only changes may skip tests when the handoff explains why no
