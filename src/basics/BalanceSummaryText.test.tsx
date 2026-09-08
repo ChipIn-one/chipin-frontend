@@ -4,19 +4,40 @@ import { render, screen } from '@testing-library/react';
 
 import BalanceSummaryText from './BalanceSummaryText';
 
-vi.mock('./numbers', () => ({
-    Amount: ({ type, value }: { type?: string; value: number }) => (
-        <span data-testid="summary-amount" data-type={type}>
-            {value}
-        </span>
-    ),
-}));
-
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-test('uses summary formatting for positive and negative balances', () => {
+test('renders a positive fractional balance with two-decimal summary precision', () => {
+    render(
+        <BalanceSummaryText
+            entries={[{ currency: 'USD', netBalance: 1.5 }]}
+            size="1"
+        />,
+    );
+
+    expect(screen.getByText('balances.youAreOwed')).toBeTruthy();
+    expect(screen.getByText('1.5 USD')).toBeTruthy();
+});
+
+test('renders a negative fractional balance with two-decimal summary precision', () => {
+    render(
+        <BalanceSummaryText entries={[{ currency: 'USD', netBalance: -1.5 }]} size="1" />,
+    );
+
+    expect(screen.getByText('balances.youOwe')).toBeTruthy();
+    expect(screen.getByText('1.5 USD')).toBeTruthy();
+});
+
+test('rounds balances beyond two decimals with the existing amount formatter', () => {
+    render(
+        <BalanceSummaryText entries={[{ currency: 'USD', netBalance: 2.675 }]} size="1" />,
+    );
+
+    expect(screen.getByText('2.68 USD')).toBeTruthy();
+});
+
+test('keeps integer balance summaries visually unchanged', () => {
     render(
         <BalanceSummaryText
             entries={[
@@ -27,10 +48,6 @@ test('uses summary formatting for positive and negative balances', () => {
         />,
     );
 
-    const amounts = screen.getAllByTestId('summary-amount');
-
-    expect(amounts).toHaveLength(2);
-    for (const amount of amounts) {
-        expect(amount.dataset.type).toBe('summary');
-    }
+    expect(screen.getByText('90.00K USD')).toBeTruthy();
+    expect(screen.getByText('123.00K VND')).toBeTruthy();
 });
