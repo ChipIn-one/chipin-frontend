@@ -3,8 +3,8 @@
 ## Money Model
 
 - Frontend money values and API payloads use JavaScript `Number`.
-- Do not introduce cents/integer-money domain models or new BigNumber usage.
-- Existing `bignumber.js` code under number basics/helpers is legacy. Use its public `Amount` component, but do not import BigNumber into new domain code.
+- Do not introduce cents/integer-money domain models or arbitrary-precision arithmetic for frontend display.
+- Keep the public `Amount` component as the shared display boundary; backend-confirmed values remain the financial source of truth.
 - Backend is the source of confirmed financial results after synchronization.
 - Frontend may validate input, preview splits, convert display summaries, and maintain local pending offline results.
 - Currency conversion is presentation-derived state: calculate converted summaries only from confirmed

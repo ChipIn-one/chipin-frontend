@@ -1,5 +1,3 @@
-import Big from 'bignumber.js';
-
 import { getNumberData } from 'helpers/numbers';
 
 import { AmountTypes, GetAmountDataParams, GetAmountDataReturn } from './types';
@@ -14,7 +12,7 @@ export const getAmountTypesBool = (type: AmountTypes) => ({
 
 // For equivalent or summary use, symbol params is required
 export const getAmountData = ({
-    value = Big(0),
+    value = 0,
     type = 'default',
     tokenCode,
     symbol,
@@ -26,7 +24,7 @@ export const getAmountData = ({
     const {
         numberFormatted,
         numberString,
-        numberBig,
+        numberValue,
         numberPart,
         zerosPart,
         minPrecisionAmount,
@@ -53,7 +51,7 @@ export const getAmountData = ({
         amountFormatted,
         amountPart: numberPart,
         amountString: numberString,
-        bigAmount: numberBig,
+        bigAmount: numberValue,
         postfix: tokenCode,
         prefix,
         prefixLess,

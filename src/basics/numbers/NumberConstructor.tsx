@@ -1,12 +1,11 @@
 import { FC } from 'react';
-import Big from 'bignumber.js';
 
-import { tryToBig } from 'helpers/numbers';
+import { tryToNumber } from 'helpers/numbers';
 
 import { BaseProps } from './duck/types';
 
 interface Props {
-    value?: Big | number | string | null;
+    value?: NumericValue;
     isWithoutDash?: boolean;
     currencyName?: string;
 }
@@ -15,20 +14,18 @@ export function constructNumberComponent<P extends BaseProps>(
     Comp: FC<P>,
 ): FC<Props & Omit<P, 'symbol' | 'value'>> {
     return ({ value, isWithoutDash = false, className, ...rest }) => {
-        const bigValue = tryToBig(value);
-        if (isWithoutDash && !bigValue) {
+        const numberValue = tryToNumber(value);
+        if (isWithoutDash && numberValue === null) {
             return null;
         }
 
-        if (!bigValue) {
+        if (numberValue === null) {
             // eslint-disable-next-line
             return <span className={className}>—</span>;
         }
 
-        return (
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore
-            <Comp value={bigValue} className={className} {...rest} />
-        );
+        const componentProps = { value: numberValue, className, ...rest } as P;
+
+        return <Comp {...componentProps} />;
     };
 }

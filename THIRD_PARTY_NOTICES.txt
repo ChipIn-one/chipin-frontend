@@ -10,14 +10,14 @@ license.
 
 Production audit
 
-The production dependency graph recorded in package-lock.json contains 144
+The production dependency graph recorded in package-lock.json contains 143
 package records: 138 MIT, 3 Apache-2.0, 2 ISC, and 1 0BSD. No GPL, LGPL,
 AGPL, MPL, EPL, CDDL, SSPL, BUSL, custom, UNKNOWN, or UNLICENSED package was
 reachable through the production dependency edges. The GPL/LGPL/MPL entries
 in the lockfile are dev-only tooling dependencies and are not part of the
 production dependency graph.
 
-The 2026-08-30 production build included 83 package names in source maps.
+The 2026-08-30 production build included 82 package names in source maps.
 The minified JavaScript did not preserve upstream license comments, so this
 notice file should accompany any distributed production artifact. Re-run the
 audit when production dependencies change.
@@ -30,7 +30,6 @@ Direct runtime packages
 @vercel/analytics — MIT
 @vercel/speed-insights — Apache-2.0
 axios — MIT
-bignumber.js — MIT
 dexie — Apache-2.0
 dexie-react-hooks — Apache-2.0
 i18next — MIT
@@ -69,8 +68,8 @@ under MIT:
 @radix-ui/react-use-previous, @radix-ui/react-use-size,
 @radix-ui/react-visually-hidden, @radix-ui/themes, @sentry/browser,
 @sentry/browser-utils, @sentry/conventions, @sentry/core, @sentry/react,
-@uidotdev/usehooks, @vercel/analytics, aria-hidden, axios, bignumber.js,
-classnames, get-nonce, html-parse-stringify, i18next, next-themes,
+@uidotdev/usehooks, @vercel/analytics, aria-hidden, axios, classnames,
+get-nonce, html-parse-stringify, i18next, next-themes,
 qrcode-generator, radix-ui, react, react-dom, react-i18next,
 react-remove-scroll, react-remove-scroll-bar, react-router,
 react-style-singleton, scheduler, sonner, styled-components, stylis,

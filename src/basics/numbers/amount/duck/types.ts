@@ -1,15 +1,14 @@
 import { ReactNode } from 'react';
-import Big from 'bignumber.js';
 
 export type AmountTypes = 'default' | 'integer' | 'interactive' | 'summary' | 'full';
 
 export interface ClickFuncParams {
     amountString: string;
-    bigAmount: Big;
+    bigAmount: number;
 }
 
 export interface GetAmountDataParams {
-    value?: Big;
+    value?: number;
     type: AmountTypes;
     precision?: Precisions;
     tokenCode?: string | ReactNode; // ReactNode use only <span> with styles
@@ -26,5 +25,5 @@ export interface GetAmountDataReturn {
     amountFormatted: string;
     amountPart: string;
     zerosPart: string;
-    bigAmount: Big;
+    bigAmount: number;
 }

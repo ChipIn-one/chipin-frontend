@@ -49,7 +49,7 @@ const Amount: FC<Props> = ({
             [value, precision, symbol, tokenCode, type, customPrefixTooSmall],
         );
 
-    if (isInteger && !Number.isInteger(value.toNumber())) {
+    if (isInteger && !Number.isInteger(value)) {
         return t('amount.notInteger');
     }
 
