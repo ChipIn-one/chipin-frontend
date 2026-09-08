@@ -1,11 +1,23 @@
 .radix-themes {
     --cursor-button: pointer;
     --cursor-checkbox: pointer;
-    --cursor-disabled: default;
+    --cursor-disabled: not-allowed;
     --cursor-link: pointer;
     --cursor-menu-item: pointer;
     --cursor-radio: pointer;
     --cursor-slider-thumb: grab;
     --cursor-slider-thumb-active: grabbing;
     --cursor-switch: pointer;
+}
+
+.rt-BaseButton:where(.rt-loading) {
+    cursor: progress;
+}
+
+[role='menuitem'][data-disabled] {
+    cursor: not-allowed;
+}
+
+body {
+    margin: 0;
 }

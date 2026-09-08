@@ -1,0 +1,37 @@
+{
+    "activityFeed": {
+        "dateDivider": "Вчера",
+        "dateDividerSummary": "вы должны 8 000 USD",
+        "expenseTitle": "Ужин с друзьями",
+        "expenseDescription": "Оплатил Алекс",
+        "scope": "Группа Поездка",
+        "expenseAmount": "120 USD",
+        "owedStatus": "Вам должны",
+        "relativeTime": "2 часа назад"
+    },
+    "account": {
+        "displayName": "Александр Иванов",
+        "email": "alex@example.com"
+    },
+    "balanceBadges": {
+        "amount": "300 USD"
+    },
+    "dashboardHeader": {
+        "greeting": "Привет, Алекс",
+        "overview": "Вот ваша сводка"
+    },
+    "debtAmount": {
+        "amount": "1 200 USD"
+    },
+    "friendsPage": {
+        "currency": "USD",
+        "total": "+9999",
+        "name": "Александр Иванов",
+        "amount": "+999 USD"
+    },
+    "groupsCards": {
+        "groupName": "Поездка",
+        "groupBalance": "Вам должны 120 USD",
+        "members": "3 участника"
+    }
+}

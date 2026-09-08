@@ -1,0 +1,126 @@
+{
+    "nav": {
+        "features": "Funciones",
+        "howItWorks": "Cómo funciona",
+        "pricing": "Precios"
+    },
+    "badge": "Divide gastos sin estrés",
+    "heroTitle": "Divide cuentas con",
+    "heroTitleHighlight": "amigos y familia",
+    "heroDescription": "Crea grupos, agrega gastos y mira quién debe qué — rápido y justo. Perfecto para viajes, compañeros de cuarto y actividades grupales.",
+    "stats": {
+        "regionLabel": "Estadísticas de la plataforma",
+        "totalUsers": "Usuarios totales",
+        "expensesTracked": "Gastos rastreados",
+        "groupsCreated": "Grupos creados",
+        "settlementsRecorded": "Liquidaciones registradas"
+    },
+    "howItWorks": {
+        "eyebrow": "Simple por diseño",
+        "title": "Cómo funciona",
+        "subtitle": "Listo en menos de dos minutos.",
+        "step1": {
+            "title": "Crea un grupo",
+            "description": "Inicia un grupo para un viaje, apartamento compartido o evento y mantén organizados los gastos de todos."
+        },
+        "step2": {
+            "title": "Agrega gastos en el momento",
+            "description": "Registra cualquier gasto en segundos, elige quién pagó y cómo se divide. Chipin hace los cálculos por todos."
+        },
+        "step3": {
+            "title": "Ve los balances al instante",
+            "description": "Chipin muestra un resumen claro de quién debe qué. Sin hojas de cálculo ni conversaciones incómodas."
+        },
+        "step4": {
+            "title": "Liquida con un toque",
+            "description": "Cuando llegue el momento de pagar, registra el arreglo y Chipin marca la deuda como liquidada."
+        }
+    },
+    "features": {
+        "eyebrow": "Todo lo que necesitas",
+        "titlePart1": "Gestiona tus",
+        "titleHighlight": "gastos",
+        "titlePart2": "compartidos",
+        "subtitle": "Funciones potentes diseñadas para dividir gastos compartidos sin esfuerzo.",
+        "smartGroups": {
+            "title": "Grupos inteligentes",
+            "description": "Crea grupos para viajes, hogares compartidos o eventos. Invita miembros con enlaces y mantén a todos sincronizados con actualizaciones de balance en tiempo real."
+        },
+        "quickExpense": {
+            "title": "Registro rápido de gastos",
+            "description": "Agrega gastos en segundos. Divide en partes iguales o por montos personalizados. Adjunta recibos y categoriza para un mejor seguimiento."
+        },
+        "autoCalc": {
+            "title": "Cálculos automáticos",
+            "description": "Mira quién le debe a quién al instante. Nuestro algoritmo minimiza el número de transacciones para liquidar."
+        },
+        "soloBudget": {
+            "title": "Modo presupuesto personal",
+            "description": "Rastrea gastos personales sin un grupo. Establece presupuestos, monitorea gastos por categoría y controla tus finanzas."
+        },
+        "multiCurrency": {
+            "title": "Múltiples monedas",
+            "description": "¿Viajando al extranjero? Agrega gastos en cualquier moneda. Chipin maneja la conversión automáticamente para que todos paguen lo correcto."
+        },
+        "settleUp": {
+            "title": "Liquidar",
+            "description": "Registra liquidaciones con un toque. Chipin marca las deudas como saldadas y mantiene un historial limpio de todos los pagos."
+        }
+    },
+    "sections": {
+        "groups": {
+            "badge": "Gastos grupales",
+            "titlePart1": "Gestiona grupos",
+            "titleHighlight": "sin el caos",
+            "description": "Organiza viajes, hogares compartidos o eventos. Comparte un enlace de invitación y mantén los balances de todos visibles en un solo lugar. Sin más perseguir a la gente por dinero.",
+            "bullets": {
+                "shareableLink": "Invita por enlace compartible — sin registro requerido para miembros",
+                "realTimeBalances": "Ve los balances en tiempo real de cada persona",
+                "debtSimplification": "La simplificación inteligente de deudas reduce el número de pagos",
+                "multiCurrency": "Soporte multi-moneda para grupos internacionales"
+            },
+            "cta": "Crear un grupo",
+            "preview": {
+                "label": "Vista previa de la página del grupo",
+                "coverAlt": "Vista de Lisboa desde el mirador de Portas do Sol",
+                "groupName": "Fin de semana en Lisboa",
+                "groupDescription": "¿Dónde está el dinero, Lebowski?",
+                "expensesLabel": "Gastos recientes del grupo",
+                "expenses": {
+                    "hotel": "Hotel",
+                    "dinner": "Cena",
+                    "tickets": "Billetes de tren"
+                }
+            }
+        },
+        "expenses": {
+            "badge": "Modo individual",
+            "titlePart1": "Rastrea tu presupuesto",
+            "titleHighlight": "a tu manera",
+            "description": "No necesitas un grupo para aprovechar Chipin. Usa el modo individual para rastrear gastos personales, establecer presupuestos por categoría y tener una imagen clara de a dónde va tu dinero.",
+            "bullets": {
+                "logExpenses": "Registra gastos personales en segundos",
+                "setBudgets": "Establece presupuestos por categoría y monitorea el progreso",
+                "monthlySummaries": "Resúmenes mensuales y tendencias de gastos",
+                "worksAlongside": "Funciona junto a tus gastos grupales sin interrupciones"
+            },
+            "cta": "Empezar a rastrear",
+            "preview": {
+                "label": "Vista previa de la página individual"
+            }
+        }
+    },
+    "cta": {
+        "badge": "Gratis para siempre · Sin tarjeta de crédito",
+        "title": "¿Listo para dejar de estresarte por el dinero?",
+        "subtitle": "Usa Chipin para dividir cuentas y controlar presupuestos — completamente gratis.",
+        "getStartedFree": "Comenzar gratis",
+        "openApp": "Abrir la app",
+        "bullets": {
+            "noCard": "Sin tarjeta de crédito",
+            "unlimitedGroups": "Grupos ilimitados",
+            "freePermanently": "Gratis para siempre",
+            "allDevices": "Funciona en todos los dispositivos"
+        }
+    }
+}

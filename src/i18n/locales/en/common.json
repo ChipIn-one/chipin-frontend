@@ -1,0 +1,106 @@
+{
+    "buttons": {
+        "back": "Back",
+        "cancel": "Cancel",
+        "close": "Close",
+        "delete": "Delete",
+        "reload": "Reload page",
+        "goHome": "Go home",
+        "create": "Create",
+        "save": "Save",
+        "createGroup": "Create group",
+        "saveGroup": "Save group",
+        "addExpense": "Add expense",
+        "settleUp": "Settle up",
+        "removeGroup": "Remove group",
+        "leaveGroup": "Leave group",
+        "kickMember": "Kick",
+        "showQRCode": "Show QR code",
+        "addFriend": "Add friend",
+        "signOut": "Sign Out",
+        "installApp": "Install app",
+        "getStarted": "Get started",
+        "goToDashboard": "Go to dashboard",
+        "copyReport": "Copy report",
+        "changePhoto": "Change photo",
+        "invitePeople": "Invite people",
+        "hide": "Hide"
+    },
+    "fields": {
+        "description": "Description",
+        "date": "Date",
+        "descriptionOptional": "Description (optional)",
+        "groupOptional": "Group (optional)",
+        "amount": "Amount",
+        "group": "Group",
+        "category": "Category",
+        "currency": "Currency",
+        "paidBy": "Paid by",
+        "groupName": "Group name",
+        "icon": "Icon",
+        "email": "Email",
+        "displayName": "Display name",
+        "timezone": "Timezone",
+        "defaultCurrency": "Default currency",
+        "interfaceLanguage": "Interface language"
+    },
+    "balances": {
+        "youOwe": "You owe",
+        "youAreOwed": "You are owed",
+        "settledUp": "Settled up"
+    },
+    "header": {
+        "signIn": "Sign in",
+        "testError": "Trigger test error",
+        "switchTheme": "Switch theme",
+        "addSubscriptionDay": "Add 1 subscription day",
+        "devMenu": "Developer menu"
+    },
+    "footer": {
+        "copyright": "{{year}}. All rights reserved ©",
+        "mediaTitle": "We are in the media",
+        "privacy": "Privacy",
+        "terms": "Terms",
+        "contact": "Contact"
+    },
+    "errorBoundary": {
+        "title": "The app ran into a problem",
+        "runtimeError": "Something went wrong",
+        "tryAgain": "Try again",
+        "goToDashboard": "Go to dashboard",
+        "or": "or",
+        "updateApp": "Update app",
+        "updatingApp": "Updating app…"
+    },
+    "copy": {
+        "copy": "Copy {{what}}",
+        "copied": "Copied!",
+        "shared": "Shared!"
+    },
+    "copyTargets": {
+        "inviteLink": "invite link"
+    },
+    "media": {
+        "noImage": "No image"
+    },
+    "roles": {
+        "owner": "Owner"
+    },
+    "modes": {
+        "group": "Group",
+        "groupMode": "Group mode",
+        "solo": "Solo",
+        "soloMode": "Solo mode"
+    },
+    "nav": {
+        "dashboard": "Dashboard",
+        "activity": "Activity",
+        "friends": "Friends",
+        "settings": "Settings"
+    },
+    "noDebtsTitle": "All settled",
+    "noDebtsDescription": "You don't owe anyone and no one owes you.",
+    "amount": {
+        "notInteger": "Value is not integer!"
+    }
+}

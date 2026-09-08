@@ -1,20 +1,80 @@
-import { StrictMode } from 'react';
-import { ThemeProvider } from 'next-themes';
-import { createRoot } from 'react-dom/client';
+import { LucideCircleCheck, LucideCircleX, LucideInfo, LucideTriangleAlert } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { BrowserRouter } from 'react-router-dom';
+import { Toaster } from 'sonner';
+import { ThemeProvider } from 'styled-components';
 
-import { Theme } from '@radix-ui/themes';
+import { Box, Spinner, Theme } from '@radix-ui/themes';
 
-import { AppRouter } from 'pages/AppRouter';
+import { darkThemeStyled, lightThemeStyled } from 'constants/styled-themes';
+import { isThemeDark } from 'helpers/theme';
+import { useIsMobile } from 'hooks/common';
 
-import '@radix-ui/themes/styles.css';
-import 'styles/radixStylesOverwrite.css';
+import BackgroundBox from 'basics/BackgroundBox';
+import PWABadge from 'basics/PWABadge';
+import AddExpenseButton from 'components/AddExpenseButton';
+import { BackendUnavailableGate } from 'components/backend-unavailable-page';
+import Header from 'components/Header';
+import { AddExpenseModal, ModalOverlayGlobalStyles } from 'components/modals/';
+import AppRouter from 'features/routing';
+import GlobalHooks from 'pages/GlobalHooks';
 
-createRoot(document.getElementById('root')!).render(
-    <StrictMode>
-        <ThemeProvider attribute="class">
-            <Theme accentColor="grass" grayColor="gray" radius="large">
-                <AppRouter />
+const ToastSuccessIcon = () => <LucideCircleCheck size={20} />;
+const ToastInfoIcon = () => <LucideInfo size={20} />;
+const ToastWarningIcon = () => <LucideTriangleAlert size={20} />;
+const ToastErrorIcon = () => <LucideCircleX size={20} />;
+const ToastLoadingIcon = () => <Spinner size="2" />;
+
+const Main = () => {
+    const { resolvedTheme } = useTheme();
+    const themeName = (resolvedTheme as 'light' | 'dark') || 'system';
+    const styledThemeParams = isThemeDark(themeName) ? darkThemeStyled : lightThemeStyled;
+    const isMobile = useIsMobile();
+
+    return (
+        <ThemeProvider theme={styledThemeParams}>
+            <ModalOverlayGlobalStyles />
+            <Theme
+                appearance={themeName}
+                accentColor="jade"
+                grayColor="olive"
+                radius="large"
+                panelBackground="translucent"
+                hasBackground
+            >
+                <BrowserRouter>
+                    <BackgroundBox>
+                        <BackendUnavailableGate>
+                            <Header />
+                            <GlobalHooks />
+                            <Box px="4">
+                                <AppRouter />
+                            </Box>
+                            <AddExpenseButton />
+                            <AddExpenseModal />
+                            <PWABadge />
+
+                            <Toaster
+                                theme={themeName}
+                                richColors
+                                closeButton
+                                position={isMobile ? 'top-center' : 'bottom-left'}
+                                offset={isMobile ? 12 : 16}
+                                mobileOffset={isMobile ? 12 : 16}
+                                icons={{
+                                    success: <ToastSuccessIcon />,
+                                    info: <ToastInfoIcon />,
+                                    warning: <ToastWarningIcon />,
+                                    error: <ToastErrorIcon />,
+                                    loading: <ToastLoadingIcon />,
+                                }}
+                            />
+                        </BackendUnavailableGate>
+                    </BackgroundBox>
+                </BrowserRouter>
             </Theme>
         </ThemeProvider>
-    </StrictMode>,
-);
+    );
+};
+
+export default Main;

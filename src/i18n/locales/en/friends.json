@@ -1,0 +1,33 @@
+{
+    "title": "Friends",
+    "subtitle": "Your contacts and connections",
+    "yourConnections": "Your connections",
+    "searchPlaceholder": "Search friends",
+    "emptyTitle": "No friends yet",
+    "emptyDescription": "Add friends to track shared expenses and settle up easily.",
+    "filter": {
+        "allCurrencies": "All currencies",
+        "byFriends": "By friends"
+    },
+    "actions": {
+        "remind": "Remind",
+        "removeFriend": "Remove friend"
+    },
+    "removeModal": {
+        "title": "Remove friend",
+        "friendLabel": "Friend to remove",
+        "confirm": "Are you sure you want to remove this friend?",
+        "description": "This removes the friend connection from both accounts. Shared history stays visible."
+    },
+    "settleUp": {
+        "you": "You",
+        "paid": "paid",
+        "paidAmountTo": "paid {{amount}} {{currency}} to",
+        "noMoneyMoves": "Records an outside payment. No money moves.",
+        "recordPayment": "Record payment",
+        "youOwe": "You owe {{name}}",
+        "owedToYou": "{{name}} owes you",
+        "remainingDebt": "Remaining debt:",
+        "debtWillBeSettled": "The debt will be settled"
+    }
+}

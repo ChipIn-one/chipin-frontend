@@ -1,0 +1,114 @@
+{
+    "title": "Settings",
+    "subtitle": "Your preferences.",
+    "account": {
+        "title": "Profile info",
+        "description": "Personal information and profile settings.",
+        "displayNamePlaceholder": "Your name or nickname",
+        "displayNameDescription": "Visible to other users",
+        "displayNameRequired": "Display name is required.",
+        "genderTitle": "Gender",
+        "genderDescription": "Choose your gender",
+        "sexOptions": {
+            "male": "Male",
+            "female": "Female"
+        }
+    },
+    "avatarModal": {
+        "title": "Update profile photo",
+        "description": "Choose and preview a new profile photo before uploading it.",
+        "previewLabel": "Profile photo preview",
+        "pickerLabel": "Choose profile photo",
+        "pickerTitle": "Choose a photo or drop it here",
+        "pickerHint": "JPEG, PNG, or WebP · up to 5 MB",
+        "uploading": "Uploading photo",
+        "progress": "{{progress}}%",
+        "progressLabel": "Photo upload progress",
+        "errors": {
+            "unsupportedType": "Choose a JPEG, PNG, or WebP image.",
+            "tooLarge": "The image must be 5 MB or smaller."
+        },
+        "actions": {
+            "upload": "Upload photo"
+        }
+    },
+    "regional": {
+        "title": "Regional Preferences",
+        "description": "Timezone, language, and time display.",
+        "autoTimezone": "Your timezone",
+        "autoTimezoneHint": "Detected automatically.",
+        "timeFormatTitle": "Time format",
+        "timeFormatDescription": "Choose a time format.",
+        "languageSearchPlaceholder": "Search language",
+        "languageSearchEmpty": "No languages found.",
+        "resetLanguage": "Reset language"
+    },
+    "language": {
+        "options": {
+            "en": "English",
+            "ru": "Russian",
+            "es": "Spanish",
+            "pt-BR": "Portuguese (Brazil)",
+            "pt-PT": "Portuguese (Portugal)"
+        }
+    },
+    "notifications": {
+        "title": "Notifications",
+        "description": "Manage how you receive updates.",
+        "workInProgress": "Notifications are still in development.",
+        "pushTitle": "Push notifications",
+        "pushDescription": "Receive notifications on your device.",
+        "emailTitle": "Email updates",
+        "emailDescription": "Get updates and product news by email.",
+        "expenseRemindersTitle": "Expense reminders",
+        "expenseRemindersDescription": "Get reminded about unpaid balances.",
+        "weeklySummaryTitle": "Weekly summary",
+        "weeklySummaryDescription": "Weekly digest of your spending."
+    },
+    "expense": {
+        "title": "Expense Preferences",
+        "description": "Defaults and behavior for new expenses.",
+        "defaultCategoryTitle": "Default category",
+        "skipCategoryTitle": "Skip category",
+        "skipCategoryDescription": "Create expenses without choosing a category.",
+        "simplifyDebtsTitle": "Simplify group debts",
+        "simplifyDebtsDescription": "Automatically reduce the number of payments needed in groups."
+    },
+    "solo": {
+        "title": "Solo Preferences",
+        "description": "Defaults and behavior for Solo Mode.",
+        "soloModeTitle": "Solo Mode by default",
+        "soloModeDescription": "Open ChipIn in Solo Mode.",
+        "saveGroupToSoloTitle": "Save group expenses to Solo",
+        "saveGroupToSoloDescription": "Also keep group expenses in Solo records."
+    },
+    "app": {
+        "title": "App Settings",
+        "description": "Appearance and app information.",
+        "themeTitle": "Theme",
+        "themeDescription": "Choose how ChipIn looks on your device.",
+        "themeOptions": {
+            "dark": "Dark",
+            "light": "Light",
+            "system": "System"
+        },
+        "versionTitle": "App version",
+        "versionDescription": "Currently installed version.",
+        "updateButton": "Update app"
+    },
+    "security": {
+        "title": "Privacy & Security",
+        "description": "Manage your account security and data.",
+        "logoutOtherDevicesTitle": "Sign out on other devices",
+        "logoutOtherDevicesDescription": "End all other active sessions. You’ll stay signed in on this device.",
+        "logoutOtherDevicesLoading": "Signing out on other devices… You’ll stay signed in here.",
+        "exportDataTitle": "Export data",
+        "exportDataDescription": "Download all your expenses.",
+        "exportDataButton": "Export",
+        "deleteAccountTitle": "Delete account",
+        "deleteAccountDescription": "Permanently remove your data.",
+        "deleteAccountButton": "Delete account",
+        "signOutTitle": "Sign out on this device",
+        "signOutDescription": "End this session only. Other devices will stay signed in."
+    }
+}

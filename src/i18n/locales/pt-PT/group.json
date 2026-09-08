@@ -1,0 +1,243 @@
+{
+    "modal": {
+        "titleCreate": "Criar novo grupo",
+        "titleEdit": "Editar grupo",
+        "descriptionCreate": "Crie um grupo para acompanhar e dividir despesas partilhadas.",
+        "descriptionEdit": "Atualize o nome ou a descrição do grupo.",
+        "fields": {
+            "namePlaceholder": "ex. Viagem a Barcelona, Apartamento...",
+            "addDescription": "Adicionar descrição",
+            "descriptionOptional": "(opcional)",
+            "descriptionPlaceholder": "Adicione uma observação sobre este grupo..."
+        },
+        "cover": {
+            "label": "Capa do grupo",
+            "hint": "JPEG, PNG ou WebP até 5 MB",
+            "action": "Escolher capa do grupo",
+            "pickerLabel": "Escolher uma imagem de capa para o grupo",
+            "previewLabel": "Pré-visualização da capa do grupo",
+            "uploading": "A enviar capa",
+            "retry": "Tentar enviar capa novamente",
+            "progress": "{{progress}}%",
+            "progressLabel": "Progresso do envio da capa",
+            "errors": {
+                "unsupportedType": "Escolha uma imagem JPEG, PNG ou WebP.",
+                "tooLarge": "A imagem deve ter no máximo 5 MB."
+            }
+        }
+    },
+    "qr": {
+        "title": "Leia para entrar",
+        "description": "Partilhe este código QR para convidar pessoas ao grupo.",
+        "shareText": "Partilhe este código para convidar pessoas para {{groupName}}"
+    },
+    "expenses": {
+        "modal": {
+            "title": "Adicionar despesa",
+            "titleEdit": "Editar despesa",
+            "description": "Divida uma nova despesa com os membros do grupo.",
+            "descriptionEdit": "Atualiza esta despesa.",
+            "singleMemberNotice": "És a única pessoa no grupo. Adiciona amigos para controlar as despesas. Ou utiliza o <soloMode>modo Solo</soloMode>.",
+            "singleMemberNoticeNonAdmin": "És a única pessoa no grupo. Adiciona amigos para controlar as despesas.",
+            "scope": {
+                "group": "Despesa do grupo: {{groupName}}",
+                "friends": "Despesa P2P com {{users}}"
+            },
+            "fields": {
+                "descriptionPlaceholder": "ex. Reserva de hotel, jantar...",
+                "amountAndCurrency": "Valor e moeda",
+                "amountPlaceholder": "Introduza o valor...",
+                "group": "Grupo",
+                "friend": "Amigo"
+            },
+            "categorySearchPlaceholder": "Pesquisar categoria",
+            "categorySearchEmpty": "Nenhuma categoria encontrada",
+            "payerSearchPlaceholder": "Pesquisar pagador",
+            "groupSearchPlaceholder": "Pesquisar grupos",
+            "friendSearchPlaceholder": "Pesquisar amigos",
+            "noGroups": "Nenhum grupo encontrado",
+            "noKnownFriends": "Ainda não tem amigos conhecidos",
+            "includeInSolo": "Adicionar ao Solo",
+            "categories": {
+                "food": "Comida e restaurantes",
+                "transport": "Transporte",
+                "housing": "Habitação e serviços",
+                "digital": "Digital e tecnologia",
+                "shopping": "Compras",
+                "lifestyle": "Estilo de vida",
+                "personal_care": "Cuidados pessoais",
+                "sports": "Desportos e fitness",
+                "health": "Saúde",
+                "travel": "Viagens",
+                "education": "Educação",
+                "finance": "Finanças",
+                "pets": "Animais de estimação",
+                "other": "Outro"
+            },
+            "subcategories": {
+                "groceries": "Supermercado",
+                "restaurants": "Restaurantes",
+                "fast_food": "Fast food",
+                "coffee": "Café e cafés",
+                "food_delivery": "Entrega ao domicílio",
+                "public_transport": "Transportes públicos",
+                "taxi": "Táxi e rideshare",
+                "fuel": "Combustível",
+                "vehicle_rent": "Aluguer de veículo",
+                "parking": "Estacionamento",
+                "vehicle_repair": "Manutenção do veículo",
+                "vehicle_insurance": "Seguro do veículo",
+                "tolls": "Portagens",
+                "rent": "Renda",
+                "mortgage": "Crédito habitação",
+                "utilities": "Serviços domésticos",
+                "home_maintenance": "Manutenção da casa",
+                "furnishing": "Mobília e decoração",
+                "internet": "Internet",
+                "mobile": "Telemóvel",
+                "subscriptions": "Subscrições",
+                "software": "Software",
+                "clothing": "Vestuário",
+                "electronics": "Eletrónicos",
+                "home_goods": "Artigos para casa",
+                "personal_items": "Artigos pessoais",
+                "gifts": "Presentes",
+                "cinema": "Cinema",
+                "events": "Eventos",
+                "concerts": "Concertos",
+                "games": "Jogos",
+                "nightlife": "Vida noturna",
+                "haircut": "Corte de cabelo",
+                "spa": "Spa",
+                "massage": "Massagem",
+                "beauty_services": "Serviços de beleza",
+                "hygiene": "Higiene",
+                "skincare": "Cuidados com a pele",
+                "cosmetics": "Cosméticos",
+                "subscription": "Ginásio",
+                "coach": "Personal trainer",
+                "equipment": "Equipamentos",
+                "medical": "Medicina",
+                "pharmacy": "Farmácia",
+                "dental": "Dentista",
+                "health_insurance": "Seguro de saúde",
+                "flights": "Passagens aéreas",
+                "accommodation": "Alojamento",
+                "activities": "Atividades",
+                "visa": "Visto",
+                "insurance": "Seguro",
+                "online_courses": "Cursos online",
+                "books": "Livros",
+                "tutoring": "Explicações",
+                "certification": "Certificação",
+                "fees": "Comissões bancárias",
+                "taxes": "Impostos",
+                "loans": "Empréstimos",
+                "investments": "Investimentos",
+                "crypto": "Cripto",
+                "currency_exchange": "Câmbio",
+                "cash_withdrawal": "Levantamento",
+                "transfers": "Transferências",
+                "pet_food": "Ração",
+                "vet": "Veterinário",
+                "pet_items": "Artigos para animais"
+            },
+            "currentUser": "Eu",
+            "splitHint": "Dividido igualmente entre os membros do grupo.",
+            "noMembers": "O grupo ainda não tem membros.",
+            "tabs": {
+                "group": "Grupo",
+                "friends": "Amigos"
+            },
+            "split": {
+                "title": "Como dividir",
+                "equal": "Igualmente",
+                "percent": "Percentagem",
+                "amounts": "Valores",
+                "shares": "Partes",
+                "splitEquallyBetween": "Dividido igualmente entre {{count}} participantes",
+                "eachPays": "Cada um paga",
+                "yourShare": "A sua parte",
+                "includeParticipant": "Incluir {{name}} na divisão",
+                "decreaseShare": "Diminuir parte",
+                "increaseShare": "Aumentar parte",
+                "decreaseAmount": "Diminuir valor",
+                "increaseAmount": "Aumentar valor",
+                "decreasePercent": "Diminuir percentagem",
+                "increasePercent": "Aumentar percentagem",
+                "selectAll": "Selecionar todos",
+                "deselectAll": "Desmarcar todos",
+                "total": "Total:",
+                "totalShares": "Total de partes",
+                "totalAssigned": "Total atribuído",
+                "difference": "Diferença"
+            }
+        }
+    },
+    "page": {
+        "coverAlt": "Capa do grupo {{name}}",
+        "members": "membros",
+        "loadingGroup": "A carregar grupo...",
+        "shareWarning": "Partilhe o link de convite apenas com pessoas de confiança.",
+        "notFound": "ID de grupo inválido ou grupo não encontrado",
+        "activityStubTitle": "Atividade do grupo",
+        "activityStubDescription": "O histórico completo de atividades está disponível na página de Atividade.",
+        "expenses": {
+            "emptyTitle": "Nenhuma despesa ainda",
+            "emptyDescription": "Adicione a primeira despesa para começar a acompanhar os gastos do grupo."
+        },
+        "tabs": {
+            "expenses": "Despesas",
+            "balances": "Saldos",
+            "members": "Membros",
+            "settings": "Definições"
+        },
+        "settings": {
+            "inviteSection": "CONVITE",
+            "membersSection": "MEMBROS",
+            "settingsSection": "DEFINIÇÕES",
+            "copyLinkTitle": "Copiar link de convite",
+            "showQRTitle": "Mostrar código QR",
+            "showQRSubtitle": "Leia o código para entrar no grupo",
+            "addPeopleTitle": "Adicionar pessoas",
+            "addPeopleSubtitle": "Convidar por nome ou e-mail",
+            "simplifyDebtsTitle": "Simplificar dívidas do grupo",
+            "simplifyDebtsSubtitle": "Minimizar o número de transações",
+            "simplifyDebtsOwnerOnly": "Apenas o proprietário do grupo pode alterar esta definição.",
+            "simplifyDebtsUnsupported": "A simplificação de dívidas não está disponível para este grupo.",
+            "simplifyDebtsUpdating": "A atualizar a simplificação das dívidas..."
+        },
+        "balances": {
+            "settled": "Acertado",
+            "empty": "Nenhum saldo ainda."
+        },
+        "settleUp": {
+            "chooseDebtTitle": "Escolha uma dívida",
+            "chooseDebtAccessibleDescription": "Escolha uma dívida para registar um pagamento.",
+            "youOwe": "Deve",
+            "owedToYou": "Devem-lhe",
+            "showMore_one": "Mostrar mais {{count}} dívida",
+            "showMore_other": "Mostrar mais {{count}} dívidas",
+            "showLess": "Mostrar menos"
+        },
+        "membersTab": {
+            "you": "Você",
+            "invitePeople": "Convidar pessoas"
+        }
+    },
+    "leaveModal": {
+        "confirm": "Tem a certeza de que quer sair deste grupo?",
+        "ownerWarning": "É o proprietário. Por favor, transfira a propriedade antes de sair.",
+        "newOwnerPlaceholder": "Selecione o novo proprietário"
+    },
+    "removeModal": {
+        "title": "Eliminar grupo",
+        "confirm": "Tem a certeza de que quer eliminar este grupo?",
+        "warning": "Esta ação não pode ser desfeita. Todos os dados do grupo serão eliminados permanentemente."
+    },
+    "kickModal": {
+        "title": "Remover membro",
+        "confirm": "Tem a certeza de que quer remover {{name}} do grupo?",
+        "transferExpensesWarning": "Se este utilizador tiver despesas não acertadas, estas serão transferidas para despesas de amigos."
+    }
+}

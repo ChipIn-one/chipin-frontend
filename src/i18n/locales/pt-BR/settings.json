@@ -1,0 +1,114 @@
+{
+    "title": "Configurações",
+    "subtitle": "Suas preferências.",
+    "account": {
+        "title": "Informações do perfil",
+        "description": "Informações pessoais e configurações do perfil.",
+        "displayNamePlaceholder": "Seu nome ou apelido",
+        "displayNameDescription": "Visível para outros usuários",
+        "displayNameRequired": "O nome de exibição é obrigatório.",
+        "genderTitle": "Gênero",
+        "genderDescription": "Escolha seu gênero",
+        "sexOptions": {
+            "male": "Masculino",
+            "female": "Feminino"
+        }
+    },
+    "avatarModal": {
+        "title": "Atualizar foto do perfil",
+        "description": "Escolha e visualize uma nova foto do perfil antes de enviar.",
+        "previewLabel": "Prévia da foto do perfil",
+        "pickerLabel": "Escolher foto do perfil",
+        "pickerTitle": "Escolha uma foto ou arraste-a para cá",
+        "pickerHint": "JPEG, PNG ou WebP · até 5 MB",
+        "uploading": "Enviando foto",
+        "progress": "{{progress}}%",
+        "progressLabel": "Progresso do envio da foto",
+        "errors": {
+            "unsupportedType": "Escolha uma imagem JPEG, PNG ou WebP.",
+            "tooLarge": "A imagem deve ter no máximo 5 MB."
+        },
+        "actions": {
+            "upload": "Enviar foto"
+        }
+    },
+    "regional": {
+        "title": "Preferências regionais",
+        "description": "Fuso horário, idioma e formato de hora.",
+        "autoTimezone": "Seu fuso horário",
+        "autoTimezoneHint": "Detectado automaticamente.",
+        "timeFormatTitle": "Formato de hora",
+        "timeFormatDescription": "Escolha o formato de hora.",
+        "languageSearchPlaceholder": "Buscar idioma",
+        "languageSearchEmpty": "Nenhum idioma encontrado.",
+        "resetLanguage": "Redefinir idioma"
+    },
+    "language": {
+        "options": {
+            "en": "Inglês",
+            "ru": "Russo",
+            "es": "Espanhol",
+            "pt-BR": "Português (Brasil)",
+            "pt-PT": "Português (Portugal)"
+        }
+    },
+    "notifications": {
+        "title": "Notificações",
+        "description": "Gerencie como você recebe atualizações.",
+        "workInProgress": "Ainda estamos trabalhando nas notificações.",
+        "pushTitle": "Notificações push",
+        "pushDescription": "Receba notificações no seu dispositivo.",
+        "emailTitle": "Atualizações por e-mail",
+        "emailDescription": "Receba atualizações e novidades do produto por e-mail.",
+        "expenseRemindersTitle": "Lembretes de despesas",
+        "expenseRemindersDescription": "Receba lembretes sobre saldos pendentes.",
+        "weeklySummaryTitle": "Resumo semanal",
+        "weeklySummaryDescription": "Digest semanal dos seus gastos."
+    },
+    "expense": {
+        "title": "Preferências de despesas",
+        "description": "Padrões e comportamento para novas despesas.",
+        "defaultCategoryTitle": "Categoria padrão",
+        "skipCategoryTitle": "Pular categoria",
+        "skipCategoryDescription": "Crie despesas sem escolher uma categoria.",
+        "simplifyDebtsTitle": "Simplificar dívidas do grupo",
+        "simplifyDebtsDescription": "Reduz automaticamente o número de pagamentos necessários nos grupos."
+    },
+    "solo": {
+        "title": "Preferências do Solo",
+        "description": "Padrões e comportamento do Modo Solo.",
+        "soloModeTitle": "Modo Solo por padrão",
+        "soloModeDescription": "Abra o ChipIn no Modo Solo.",
+        "saveGroupToSoloTitle": "Salvar despesas de grupo no Solo",
+        "saveGroupToSoloDescription": "Também salve despesas de grupo nos registros Solo."
+    },
+    "app": {
+        "title": "Configurações do app",
+        "description": "Aparência e informações do app.",
+        "themeTitle": "Tema",
+        "themeDescription": "Escolha como o ChipIn aparece no seu dispositivo.",
+        "themeOptions": {
+            "dark": "Escuro",
+            "light": "Claro",
+            "system": "Sistema"
+        },
+        "versionTitle": "Versão do app",
+        "versionDescription": "Versão instalada atualmente.",
+        "updateButton": "Atualizar app"
+    },
+    "security": {
+        "title": "Privacidade e segurança",
+        "description": "Gerencie a segurança da sua conta e seus dados.",
+        "logoutOtherDevicesTitle": "Sair em outros dispositivos",
+        "logoutOtherDevicesDescription": "Encerre todas as outras sessões ativas. Você continuará conectado neste dispositivo.",
+        "logoutOtherDevicesLoading": "Saindo em outros dispositivos… Você continuará conectado aqui.",
+        "exportDataTitle": "Exportar dados",
+        "exportDataDescription": "Baixe todas as suas despesas.",
+        "exportDataButton": "Exportar",
+        "deleteAccountTitle": "Excluir conta",
+        "deleteAccountDescription": "Remova seus dados permanentemente.",
+        "deleteAccountButton": "Excluir conta",
+        "signOutTitle": "Sair neste dispositivo",
+        "signOutDescription": "Encerre apenas esta sessão. Os outros dispositivos continuarão conectados."
+    }
+}

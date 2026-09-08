@@ -1,0 +1,33 @@
+{
+    "title": "Друзья",
+    "subtitle": "Ваши контакты и связи",
+    "yourConnections": "Ваши контакты",
+    "searchPlaceholder": "Поиск друзей",
+    "emptyTitle": "Друзей пока нет",
+    "emptyDescription": "Добавляйте друзей, чтобы отслеживать общие расходы и легко рассчитываться.",
+    "filter": {
+        "allCurrencies": "Все валюты",
+        "byFriends": "По друзьям"
+    },
+    "actions": {
+        "remind": "Напомнить",
+        "removeFriend": "Удалить друга"
+    },
+    "removeModal": {
+        "title": "Удалить друга",
+        "friendLabel": "Друг для удаления",
+        "confirm": "Вы уверены, что хотите удалить этого друга?",
+        "description": "Связь будет удалена у обоих пользователей. Общая история останется видимой."
+    },
+    "settleUp": {
+        "you": "Вы",
+        "paid": "заплатил(а)",
+        "paidAmountTo": "заплатил(а) {{amount}} {{currency}}",
+        "noMoneyMoves": "Записывает внешний платеж. Деньги не переводятся.",
+        "recordPayment": "Записать платеж",
+        "youOwe": "Вы должны {{name}}",
+        "owedToYou": "{{name}} должен вам",
+        "remainingDebt": "Остаток долга:",
+        "debtWillBeSettled": "Долг будет погашен"
+    }
+}

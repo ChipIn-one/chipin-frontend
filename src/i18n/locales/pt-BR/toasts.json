@@ -1,0 +1,55 @@
+{
+    "auth": {
+        "sessionExpired": "Sessão expirada, faça login novamente.",
+        "invalidJwt": "Não foi possível validar a sessão. Faça login novamente.",
+        "tokenPersistenceFailed": "As outras sessões foram encerradas, mas não foi possível manter o login neste dispositivo. Faça login novamente."
+    },
+    "common": {
+        "disconnect": "Você foi desconectado.",
+        "disconnectDescription": "Não se preocupe, suas alterações serão salvas. Tentando reconectar...",
+        "reconnected": "Sua conexão foi restaurada.",
+        "requestFailed": "Algo deu errado. Tente novamente."
+    },
+    "group": {
+        "inviteJoinWarning": "Faça login antes de entrar no grupo.",
+        "inviteJoinError": "Não foi possível entrar no grupo. Verifique o link de convite e tente novamente.",
+        "invalidGroupId": "ID de grupo inválido",
+        "created": "Grupo \"{{name}}\" criado com sucesso!",
+        "updated": "Grupo \"{{name}}\" atualizado com sucesso!",
+        "createError": "Algo deu errado ao criar o grupo.",
+        "updateError": "Algo deu errado ao atualizar o grupo.",
+        "coverUploadError": "O grupo foi salvo, mas não foi possível enviar a capa. Tente novamente.",
+        "removed": "Grupo \"{{name}}\" removido com sucesso!",
+        "left": "Você saiu do grupo \"{{name}}\".",
+        "kicked": "Membro \"{{name}}\" foi removido do grupo.",
+        "inviteLinkNotReady": "O link de convite ainda não está pronto",
+        "inviteLinkCopied": "Link de convite do grupo copiado",
+        "inviteLinkCopyError": "Não foi possível copiar o link"
+    },
+    "friend": {
+        "removed": "\"{{name}}\" foi removido dos seus amigos."
+    },
+    "pwa": {
+        "installing": "Instalando o aplicativo na sua tela inicial...",
+        "offlineReady": "O app está pronto para funcionar offline",
+        "updateAvailable": "Nova versão disponível",
+        "updateAction": "Atualizar",
+        "laterAction": "Depois"
+    },
+    "settings": {
+        "logoutOtherDevicesSuccess": "Você saiu em todos os outros dispositivos e continua conectado aqui.",
+        "deleteAccountSoon": "A exclusão de conta estará disponível em breve.",
+        "saveError": "Não foi possível salvar as configurações.",
+        "avatarUpdated": "Foto do perfil atualizada."
+    },
+    "expense": {
+        "created": "Despesa adicionada com sucesso!",
+        "updated": "Despesa atualizada com sucesso!"
+    },
+    "ledger": {
+        "entryDeleted": "Lançamento excluído com sucesso."
+    },
+    "settlement": {
+        "created": "Pagamento registrado com sucesso!"
+    }
+}

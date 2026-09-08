@@ -9,11 +9,14 @@ lerna-debug.log*
 
 node_modules
 dist
+docs/superpowers/*
 dist-ssr
 dev-dist
 *.local
 
 # Editor directories and files
+.codex/*
+.superpowers/*
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -23,3 +26,13 @@ dev-dist
 *.njsproj
 *.sln
 *.sw?
+
+# Sentry Config File
+.env.sentry-build-plugin
+
+# Local Codex and Superpowers working artifacts
+/.superpowers/
+/docs/superpowers/plans/
+/docs/superpowers/specs/
+/docs/codex/plans/
+/docs/codex/specs/

@@ -1,0 +1,148 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - main
+  push:
+    branches:
+      - dev
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend-ci:
+    name: frontend-ci
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Notify Slack - CI started
+        if: ${{ github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]') }}
+        continue-on-error: true
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_FE_CI_CD }}
+          REPOSITORY: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
+          BRANCH: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+          BRANCH_REPOSITORY: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || github.repository }}
+          PR_NUMBER: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || '' }}
+          PR_URL: ${{ github.event_name == 'pull_request' && github.event.pull_request.html_url || '' }}
+          ACTOR: ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK" ]; then
+            exit 0
+          fi
+
+          STATUS="started"
+          case "$STATUS" in
+            started) STATUS_EMOJI="⏳" ;;
+            success) STATUS_EMOJI="✅" ;;
+            failure) STATUS_EMOJI="❌" ;;
+            cancelled) STATUS_EMOJI="⚪" ;;
+            *) STATUS_EMOJI="⚪" ;;
+          esac
+
+          REPOSITORY_URL="$SERVER_URL/$REPOSITORY"
+          BRANCH_URL="$SERVER_URL/$BRANCH_REPOSITORY/tree/$BRANCH"
+          ACTOR_URL="$SERVER_URL/$ACTOR"
+
+          jq -n \
+            --arg status_emoji "$STATUS_EMOJI" \
+            --arg repository "$REPOSITORY" \
+            --arg repository_url "$REPOSITORY_URL" \
+            --arg branch "$BRANCH" \
+            --arg branch_url "$BRANCH_URL" \
+            --arg pr_number "$PR_NUMBER" \
+            --arg pr_url "$PR_URL" \
+            --arg actor "$ACTOR" \
+            --arg actor_url "$ACTOR_URL" \
+            --arg run_url "$RUN_URL" \
+            --arg status "$STATUS" \
+            '{text: ($status_emoji + " *Frontend CI · " + $status + "*\n" + "<" + $repository_url + "|" + $repository + ">\n\n" + "*Branch:* <" + $branch_url + "|" + $branch + ">\n" + (if $pr_number != "" then "*PR:* <" + $pr_url + "|#" + $pr_number + ">\n" else "" end) + "*Actor:* <" + $actor_url + "|" + $actor + ">\n\n" + "<" + $run_url + "|View workflow run →>")}' \
+            | curl --fail --silent --show-error --max-time 10 \
+              --header 'Content-Type: application/json' \
+              --data-binary @- \
+              "$SLACK_WEBHOOK"
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 22.23.2
+          package-manager-cache: false
+      - name: Validate release source
+        if: github.event_name == 'pull_request' && github.base_ref == 'main'
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          THIS_REPOSITORY: ${{ github.repository }}
+        run: |
+          if [ "$HEAD_REF" != "dev" ] || [ "$HEAD_REPOSITORY" != "$THIS_REPOSITORY" ]; then
+            echo "PRs to main must originate from the repository dev branch."
+            exit 1
+          fi
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify frontend
+        env:
+          CHIPIN_TASK_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          CHIPIN_TASK_BRANCH: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+        run: npm run verify:full
+      - name: Notify Slack - CI completed
+        if: ${{ always() && github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.user.login != 'dependabot[bot]') }}
+        continue-on-error: true
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_FE_CI_CD }}
+          REPOSITORY: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
+          STATUS: ${{ job.status }}
+          BRANCH: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+          BRANCH_REPOSITORY: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || github.repository }}
+          PR_NUMBER: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || '' }}
+          PR_URL: ${{ github.event_name == 'pull_request' && github.event.pull_request.html_url || '' }}
+          ACTOR: ${{ github.actor }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK" ]; then
+            exit 0
+          fi
+
+          case "$STATUS" in
+            started) STATUS_EMOJI="⏳" ;;
+            success) STATUS_EMOJI="✅" ;;
+            failure) STATUS_EMOJI="❌" ;;
+            cancelled) STATUS_EMOJI="⚪" ;;
+            *) STATUS_EMOJI="⚪" ;;
+          esac
+
+          REPOSITORY_URL="$SERVER_URL/$REPOSITORY"
+          BRANCH_URL="$SERVER_URL/$BRANCH_REPOSITORY/tree/$BRANCH"
+          ACTOR_URL="$SERVER_URL/$ACTOR"
+
+          jq -n \
+            --arg status_emoji "$STATUS_EMOJI" \
+            --arg repository "$REPOSITORY" \
+            --arg repository_url "$REPOSITORY_URL" \
+            --arg status "$STATUS" \
+            --arg branch "$BRANCH" \
+            --arg branch_url "$BRANCH_URL" \
+            --arg pr_number "$PR_NUMBER" \
+            --arg pr_url "$PR_URL" \
+            --arg actor "$ACTOR" \
+            --arg actor_url "$ACTOR_URL" \
+            --arg run_url "$RUN_URL" \
+            '{text: ($status_emoji + " *Frontend CI · " + $status + "*\n" + "<" + $repository_url + "|" + $repository + ">\n\n" + "*Branch:* <" + $branch_url + "|" + $branch + ">\n" + (if $pr_number != "" then "*PR:* <" + $pr_url + "|#" + $pr_number + ">\n" else "" end) + "*Actor:* <" + $actor_url + "|" + $actor + ">\n\n" + "<" + $run_url + "|View workflow run →>")}' \
+            | curl --fail --silent --show-error --max-time 10 \
+              --header 'Content-Type: application/json' \
+              --data-binary @- \
+              "$SLACK_WEBHOOK"

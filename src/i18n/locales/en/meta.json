@@ -1,0 +1,52 @@
+{
+    "home": {
+        "title": "ChipIn — Home",
+        "description": "Home page of the ChipIn app"
+    },
+    "signIn": {
+        "title": "ChipIn — Sign In",
+        "description": "Sign in to your ChipIn account"
+    },
+    "oauthCallback": {
+        "title": "ChipIn — Signing In",
+        "description": "Completing sign in to ChipIn"
+    },
+    "dashboard": {
+        "title": "ChipIn — Dashboard",
+        "description": "View and manage your balances"
+    },
+    "solo": {
+        "title": "ChipIn — Solo",
+        "description": "View your personal expense workspace"
+    },
+    "group": {
+        "title": "ChipIn — Group",
+        "titleWithName": "ChipIn — {{groupName}}",
+        "description": "View and manage your group",
+        "descriptionWithName": "View and manage {{groupName}}"
+    },
+    "groupJoin": {
+        "title": "Joining group...",
+        "description": "Trying to join group"
+    },
+    "activity": {
+        "title": "ChipIn — Activity",
+        "description": "View your recent activity"
+    },
+    "activityDetails": {
+        "title": "ChipIn — Activity details",
+        "description": "View the history of an expense or settlement"
+    },
+    "friends": {
+        "title": "ChipIn — Friends",
+        "description": "View your friends list"
+    },
+    "settings": {
+        "title": "ChipIn — Settings",
+        "description": "Manage your settings"
+    },
+    "notFound": {
+        "title": "ChipIn — Page Not Found",
+        "description": "The page you are looking for does not exist"
+    }
+}

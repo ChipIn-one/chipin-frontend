@@ -1,0 +1,106 @@
+{
+    "buttons": {
+        "back": "Назад",
+        "cancel": "Отмена",
+        "close": "Закрыть",
+        "delete": "Удалить",
+        "reload": "Перезагрузить страницу",
+        "goHome": "На главную",
+        "create": "Создать",
+        "save": "Сохранить",
+        "createGroup": "Создать группу",
+        "saveGroup": "Сохранить группу",
+        "addExpense": "Добавить расход",
+        "settleUp": "Рассчитаться",
+        "removeGroup": "Удалить группу",
+        "leaveGroup": "Покинуть группу",
+        "kickMember": "Исключить",
+        "showQRCode": "Показать QR-код",
+        "addFriend": "Добавить друга",
+        "signOut": "Выйти",
+        "installApp": "Установить",
+        "getStarted": "Начать",
+        "goToDashboard": "На главную",
+        "copyReport": "Скопировать отчёт",
+        "changePhoto": "Изменить фото",
+        "invitePeople": "Пригласить людей",
+        "hide": "Скрыть"
+    },
+    "fields": {
+        "description": "Описание",
+        "date": "Дата",
+        "descriptionOptional": "Описание (необязательно)",
+        "groupOptional": "Группа (необязательно)",
+        "amount": "Сумма",
+        "group": "Группа",
+        "category": "Категория",
+        "currency": "Валюта",
+        "paidBy": "Оплатил",
+        "groupName": "Название группы",
+        "icon": "Иконка",
+        "email": "Эл. почта",
+        "displayName": "Отображаемое имя",
+        "timezone": "Часовой пояс",
+        "defaultCurrency": "Валюта по умолчанию",
+        "interfaceLanguage": "Язык интерфейса"
+    },
+    "balances": {
+        "youOwe": "вы должны",
+        "youAreOwed": "Вам должны",
+        "settledUp": "Долгов нет"
+    },
+    "header": {
+        "signIn": "Войти",
+        "testError": "Вызвать тестовую ошибку",
+        "switchTheme": "Сменить тему",
+        "addSubscriptionDay": "Добавить 1 день подписки",
+        "devMenu": "Меню разработчика"
+    },
+    "footer": {
+        "copyright": "{{year}}. Все права защищены ©",
+        "mediaTitle": "Мы в медиа",
+        "privacy": "Конфиденциальность",
+        "terms": "Условия",
+        "contact": "Контакты"
+    },
+    "errorBoundary": {
+        "title": "В приложении произошла ошибка",
+        "runtimeError": "Что-то пошло не так",
+        "tryAgain": "Попробовать снова",
+        "goToDashboard": "На дашборд",
+        "or": "или",
+        "updateApp": "Обновить приложение",
+        "updatingApp": "Обновляем приложение…"
+    },
+    "copy": {
+        "copy": "Скопировать {{what}}",
+        "copied": "Скопировано!",
+        "shared": "Отправлено!"
+    },
+    "copyTargets": {
+        "inviteLink": "ссылку-приглашение"
+    },
+    "media": {
+        "noImage": "Нет изображения"
+    },
+    "roles": {
+        "owner": "Владелец"
+    },
+    "modes": {
+        "group": "Группа",
+        "groupMode": "Групповой режим",
+        "solo": "Соло",
+        "soloMode": "Сольный режим"
+    },
+    "nav": {
+        "dashboard": "Главная",
+        "activity": "Активность",
+        "friends": "Друзья",
+        "settings": "Настройки"
+    },
+    "noDebtsTitle": "Всё рассчитано",
+    "noDebtsDescription": "Вы никому не должны, и вам никто не должен.",
+    "amount": {
+        "notInteger": "Значение не является целым числом!"
+    }
+}

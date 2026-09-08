@@ -1,0 +1,547 @@
+import { create } from 'zustand';
+
+import * as activityApi from 'api/activityApi';
+import * as chipinApi from 'api/chipin';
+import type {
+    ActivityFeedItem,
+    Group,
+    KickGroupMemberParams,
+    LeaveGroupParams,
+    RemoveGroupParams,
+    UpdateGroupParams,
+    UploadGroupCoverParams,
+} from 'api/chipin.types';
+import * as groupsApi from 'api/groupsApi';
+import { getAuthSessionVersion, isAuthSessionCurrent } from 'helpers/authSession';
+import { normalizeApiError } from 'helpers/errors';
+
+import { useActivityStore } from './activity-store/actions';
+import { ACTIVITY_API_LIMIT } from './activity-store/constants';
+import { createRequestChannel } from './internal/resourceRequests';
+import { useDashboardStore } from './dashboardStore';
+import { useErrorsStore } from './errorsStore';
+import { useLoadingStore } from './loadingStore';
+import { useUsersStore } from './users-store';
+
+const groupsChannel = createRequestChannel();
+const groupDetailChannel = createRequestChannel();
+const groupActivityPageChannel = createRequestChannel();
+let groupsMutationGeneration = 0;
+let activeGroupUpdate: {
+    groupId: string;
+    isCurrent: () => boolean;
+    promise: Promise<Group>;
+} | undefined;
+
+const resetGroupActivityPagination = (): void => {
+    groupActivityPageChannel.abort();
+    useLoadingStore.getState().setLoading('group', 'nextPage', 'fetched');
+    useErrorsStore.getState().clearError('group', 'nextPage');
+};
+
+const appendUniqueActivityPreviews = (
+    confirmedItems: ActivityFeedItem[],
+    incomingItems: ActivityFeedItem[],
+): ActivityFeedItem[] => {
+    const uniqueItems: ActivityFeedItem[] = [];
+    const parentIds = new Set<string>();
+    const confirmedItemCount = confirmedItems.length;
+    const totalItemCount = confirmedItemCount + incomingItems.length;
+
+    for (let index = 0; index < totalItemCount; index += 1) {
+        const item = index < confirmedItemCount
+            ? confirmedItems[index]
+            : incomingItems[index - confirmedItemCount];
+        const parentId = item.parent.id;
+
+        if (parentIds.has(parentId)) {
+            continue;
+        }
+
+        parentIds.add(parentId);
+        uniqueItems.push(item);
+    }
+
+    return uniqueItems;
+};
+
+const createGroupsMutationGuard = () => {
+    const generation = groupsMutationGeneration;
+    const authSessionVersion = getAuthSessionVersion();
+
+    return () => {
+        return (
+            generation === groupsMutationGeneration &&
+            isAuthSessionCurrent(authSessionVersion)
+        );
+    };
+};
+
+export interface GroupsStore {
+    selectedGroup: Group | null;
+    groups: Group[];
+    groupsNextCursor: string | null;
+
+    setInitialGroupsStore: () => void;
+    setSelectedGroup: (group: Group | null) => void;
+    fetchSetGroups: (force?: boolean) => Promise<Group[]>;
+    fetchSetGroupById: (groupId: string, force?: boolean) => Promise<Group | null>;
+    fetchMoreGroupActivity: () => Promise<void>;
+    createGroup: (params: { groupName: string; groupDescription?: string }) => Promise<Group>;
+    removeGroup: (params: RemoveGroupParams) => Promise<void>;
+    leaveGroup: (params: LeaveGroupParams) => Promise<void>;
+    kickGroupMember: (params: KickGroupMemberParams) => Promise<void>;
+    updateGroup: (params: Omit<UpdateGroupParams, 'groupId'>) => Promise<Group>;
+    uploadGroupCover: (params: UploadGroupCoverParams) => Promise<Group>;
+    joinGroup: ({ inviteToken }: { inviteToken: string }) => Promise<Group>;
+}
+
+const initialGroupsStore = {
+    selectedGroup: null,
+    groups: [],
+    groupsNextCursor: null,
+};
+
+const refreshAfterGroupRemoval = (
+    fetchSetGroups: (force?: boolean) => Promise<Group[]>,
+): Promise<void> => {
+    return Promise.all([
+        fetchSetGroups(true),
+        useUsersStore.getState().fetchSetFriends(true),
+        useDashboardStore.getState().fetchSetDashboard(true),
+        useActivityStore.getState().fetchSetActivity(true),
+    ]).then(() => undefined);
+};
+
+const refreshAfterGroupMemberChange = (
+    groupId: string,
+    fetchSetGroupById: GroupsStore['fetchSetGroupById'],
+): Promise<void> => {
+    return Promise.all([
+        fetchSetGroupById(groupId, true),
+        useUsersStore.getState().fetchSetFriends(true),
+        useDashboardStore.getState().fetchSetDashboard(true),
+        useActivityStore.getState().fetchSetActivity(true),
+    ]).then(() => undefined);
+};
+
+export const useGroupsStore = create<GroupsStore>((set, get) => ({
+    ...initialGroupsStore,
+
+    setInitialGroupsStore: () => {
+        groupsChannel.abort();
+        groupDetailChannel.abort();
+        resetGroupActivityPagination();
+        groupsMutationGeneration += 1;
+        activeGroupUpdate = undefined;
+        set(initialGroupsStore);
+        useErrorsStore.getState().resetErrors();
+    },
+    setSelectedGroup: group => {
+        if (get().selectedGroup?.id !== group?.id) {
+            groupDetailChannel.abort();
+            resetGroupActivityPagination();
+        }
+        useErrorsStore.getState().clearError('group', 'data');
+        useLoadingStore.getState().setLoading('group', 'data', 'fetched');
+        set({ selectedGroup: group });
+    },
+    fetchSetGroups: (force = false) => {
+        const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        clearError('group', 'list');
+
+        const request = groupsChannel.request(chipinApi.fetchApiUserGroups, { force });
+        setLoading('group', 'list', 'loading');
+
+        return request.promise
+            .then(response => {
+                if (!request.isCurrent()) {
+                    return get().groups;
+                }
+
+                const groups = response.items;
+                const selectedGroupId = get().selectedGroup?.id;
+                let selectedGroup: Group | undefined;
+
+                if (selectedGroupId) {
+                    selectedGroup = groups.find(group => group.id === selectedGroupId);
+                }
+
+                if (selectedGroupId !== selectedGroup?.id) {
+                    resetGroupActivityPagination();
+                }
+
+                set({
+                    groups,
+                    groupsNextCursor: response.nextCursor,
+                    ...(selectedGroupId && { selectedGroup: selectedGroup ?? null }),
+                });
+
+                return groups;
+            })
+            .catch((error: unknown) => {
+                if (request.isCurrent()) {
+                    setError('group', 'list', normalizeApiError(error));
+                }
+                return get().groups;
+            })
+            .finally(() => {
+                if (request.isCurrent()) {
+                    setLoading('group', 'list', 'fetched');
+                }
+            });
+    },
+    fetchSetGroupById: (groupId, force = false) => {
+        const { groups, selectedGroup } = get();
+
+        if (force || selectedGroup?.id !== groupId) {
+            resetGroupActivityPagination();
+        }
+
+        const cachedGroup = selectedGroup?.id === groupId
+            ? selectedGroup
+            : groups.find(group => group.id === groupId);
+
+        if (cachedGroup && !force) {
+            set({ selectedGroup: cachedGroup });
+            return Promise.resolve(cachedGroup);
+        }
+
+        const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        const request = groupDetailChannel.request(
+            signal => chipinApi.fetchApiUserGroupById(groupId, signal),
+            { force, identity: groupId },
+        );
+
+        clearError('group', 'data');
+        setLoading('group', 'data', 'loading');
+
+        return request.promise
+            .then(group => {
+                if (!request.isCurrent()) {
+                    return get().selectedGroup;
+                }
+
+                set({ selectedGroup: group });
+                return group;
+            })
+            .catch((error: unknown) => {
+                if (request.isCurrent()) {
+                    setError('group', 'data', normalizeApiError(error));
+                }
+                return get().selectedGroup?.id === groupId ? get().selectedGroup : null;
+            })
+            .finally(() => {
+                if (request.isCurrent()) {
+                    setLoading('group', 'data', 'fetched');
+                }
+            });
+    },
+    fetchMoreGroupActivity: () => {
+        const selectedGroup = get().selectedGroup;
+        const groupId = selectedGroup?.id;
+        const nextCursor = selectedGroup?.recentActivities.nextCursor;
+        const { setLoading, group } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+
+        if (!groupId || nextCursor === null || nextCursor === undefined || group.nextPage === 'loading') {
+            return Promise.resolve();
+        }
+
+        clearError('group', 'nextPage');
+        setLoading('group', 'nextPage', 'loading');
+
+        const request = groupActivityPageChannel.request(
+            signal => activityApi.fetchGroupActivityPreviews(
+                {
+                    groupId,
+                    limit: ACTIVITY_API_LIMIT,
+                    cursor: nextCursor,
+                },
+                signal,
+            ),
+            { identity: `${groupId}:${nextCursor}` },
+        );
+
+        return request.promise
+            .then(data => {
+                if (!request.isCurrent() || get().selectedGroup?.id !== groupId) {
+                    return;
+                }
+
+                set(state => {
+                    const currentGroup = state.selectedGroup;
+
+                    if (!currentGroup || currentGroup.id !== groupId) {
+                        return {};
+                    }
+
+                    return {
+                        selectedGroup: {
+                            ...currentGroup,
+                            recentActivities: {
+                                ...currentGroup.recentActivities,
+                                items: appendUniqueActivityPreviews(
+                                    currentGroup.recentActivities.items,
+                                    data.items,
+                                ),
+                                nextCursor: data.nextCursor,
+                            },
+                        },
+                    };
+                });
+            })
+            .catch((error: unknown) => {
+                if (request.isCurrent()) {
+                    setError('group', 'nextPage', normalizeApiError(error));
+                }
+            })
+            .finally(() => {
+                if (request.isCurrent()) {
+                    setLoading('group', 'nextPage', 'fetched');
+                }
+            });
+    },
+    createGroup: ({ groupName, groupDescription }) => {
+        const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        const isCurrent = createGroupsMutationGuard();
+        clearError('group', 'add');
+        setLoading('group', 'add', 'loading');
+
+        return chipinApi
+            .createApiGroup({ groupName, groupDescription })
+            .then(newGroup => {
+                if (isCurrent()) {
+                    resetGroupActivityPagination();
+                    const { groups } = get();
+                    set({
+                        groups: [...groups, newGroup],
+                        selectedGroup: newGroup,
+                    });
+                }
+                return newGroup;
+            })
+            .catch((error: unknown) => {
+                if (isCurrent()) {
+                    setError('group', 'add', normalizeApiError(error));
+                }
+                return Promise.reject(error);
+            })
+            .finally(() => {
+                if (isCurrent()) {
+                    setLoading('group', 'add', 'fetched');
+                }
+            });
+    },
+    updateGroup: ({ groupName, groupDescription, simplifyDebts }) => {
+        const selectedGroup = get().selectedGroup;
+        const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        const isCurrent = createGroupsMutationGuard();
+
+        if (!selectedGroup) {
+            const error = new Error('No selected group');
+            setError('group', 'update', normalizeApiError(error));
+            return Promise.reject(error);
+        }
+
+        if (activeGroupUpdate?.isCurrent()) {
+            return activeGroupUpdate.promise;
+        }
+
+        clearError('group', 'update');
+        setLoading('group', 'update', 'loading');
+
+        const groupId = selectedGroup.id;
+        const updatePromise = groupsApi
+            .updateGroup({
+                groupId,
+                ...(groupName !== undefined && { groupName }),
+                ...(groupDescription !== undefined && { groupDescription }),
+                ...(simplifyDebts !== undefined && { simplifyDebts }),
+            })
+            .then(updatedGroup => {
+                if (isCurrent()) {
+                    set(state => ({
+                        groups: state.groups.map(group =>
+                            group.id === updatedGroup.id ? updatedGroup : group,
+                        ),
+                        selectedGroup:
+                            state.selectedGroup?.id === groupId
+                                ? updatedGroup
+                                : state.selectedGroup,
+                    }));
+                }
+                return updatedGroup;
+            })
+            .catch((error: unknown) => {
+                if (isCurrent()) {
+                    setError('group', 'update', normalizeApiError(error));
+                }
+                return Promise.reject(error);
+            })
+            .finally(() => {
+                if (activeGroupUpdate?.promise === updatePromise) {
+                    activeGroupUpdate = undefined;
+                    if (isCurrent()) {
+                        setLoading('group', 'update', 'fetched');
+                    }
+                }
+            });
+
+        activeGroupUpdate = {
+            groupId,
+            isCurrent,
+            promise: updatePromise,
+        };
+
+        return updatePromise;
+    },
+    uploadGroupCover: params => {
+        const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        const isCurrent = createGroupsMutationGuard();
+        clearError('group', 'cover');
+        setLoading('group', 'cover', 'loading');
+
+        return groupsApi
+            .uploadGroupCover(params)
+            .then(updatedGroup => {
+                if (isCurrent()) {
+                    set(state => ({
+                        groups: state.groups.map(group =>
+                            group.id === updatedGroup.id ? updatedGroup : group,
+                        ),
+                        selectedGroup:
+                            state.selectedGroup?.id === updatedGroup.id
+                                ? updatedGroup
+                                : state.selectedGroup,
+                    }));
+                }
+                return updatedGroup;
+            })
+            .catch((error: unknown) => {
+                if (isCurrent()) {
+                    setError('group', 'cover', normalizeApiError(error));
+                }
+                return Promise.reject(error);
+            })
+            .finally(() => {
+                if (isCurrent()) {
+                    setLoading('group', 'cover', 'fetched');
+                }
+            });
+    },
+    removeGroup: ({ groupId }) => {
+        const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        const isCurrent = createGroupsMutationGuard();
+        clearError('group', 'remove');
+        setLoading('group', 'remove', 'loading');
+
+        return chipinApi
+            .removeApiGroup({ groupId })
+            .catch((error: unknown) => {
+                if (isCurrent()) {
+                    setError('group', 'remove', normalizeApiError(error));
+                }
+                return Promise.reject(error);
+            })
+            .then(() => {
+                return isCurrent()
+                    ? refreshAfterGroupRemoval(get().fetchSetGroups)
+                    : undefined;
+            })
+            .finally(() => {
+                if (isCurrent()) {
+                    setLoading('group', 'remove', 'fetched');
+                }
+            });
+    },
+    leaveGroup: ({ groupId, newOwnerId }) => {
+        const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        const isCurrent = createGroupsMutationGuard();
+        clearError('group', 'leave');
+        setLoading('group', 'leave', 'loading');
+
+        return chipinApi
+            .leaveApiGroup({ groupId, newOwnerId })
+            .catch((error: unknown) => {
+                if (isCurrent()) {
+                    setError('group', 'leave', normalizeApiError(error));
+                }
+                return Promise.reject(error);
+            })
+            .then(() => {
+                return isCurrent()
+                    ? refreshAfterGroupRemoval(get().fetchSetGroups)
+                    : undefined;
+            })
+            .finally(() => {
+                if (isCurrent()) {
+                    setLoading('group', 'leave', 'fetched');
+                }
+            });
+    },
+    kickGroupMember: ({ groupId, userId }) => {
+        const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        const isCurrent = createGroupsMutationGuard();
+        clearError('group', 'kick');
+        setLoading('group', 'kick', 'loading');
+
+        return chipinApi
+            .kickApiGroupMember({ groupId, userId })
+            .catch((error: unknown) => {
+                if (isCurrent()) {
+                    setError('group', 'kick', normalizeApiError(error));
+                }
+                return Promise.reject(error);
+            })
+            .then(() => {
+                return isCurrent()
+                    ? refreshAfterGroupMemberChange(groupId, get().fetchSetGroupById)
+                    : undefined;
+            })
+            .finally(() => {
+                if (isCurrent()) {
+                    setLoading('group', 'kick', 'fetched');
+                }
+            });
+    },
+    joinGroup: ({ inviteToken }) => {
+        const { setLoading } = useLoadingStore.getState();
+        const { clearError, setError } = useErrorsStore.getState();
+        const isCurrent = createGroupsMutationGuard();
+        clearError('group', 'join');
+        setLoading('group', 'join', 'loading');
+        return chipinApi
+            .inviteApiUserToGroup({ inviteToken })
+            .then(joinedGroup => {
+                if (isCurrent()) {
+                    resetGroupActivityPagination();
+                    const { groups } = get();
+                    set({
+                        groups: [...groups, joinedGroup],
+                        selectedGroup: joinedGroup,
+                    });
+                }
+                return joinedGroup;
+            })
+            .catch((error: unknown) => {
+                if (isCurrent()) {
+                    setError('group', 'join', normalizeApiError(error));
+                }
+                return Promise.reject(error);
+            })
+            .finally(() => {
+                if (isCurrent()) {
+                    setLoading('group', 'join', 'fetched');
+                }
+            });
+    },
+}));

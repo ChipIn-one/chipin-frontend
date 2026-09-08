@@ -1,0 +1,55 @@
+{
+  "auth": {
+    "sessionExpired": "Session expired, please log in again.",
+    "invalidJwt": "Failed to validate session. Please log in again.",
+    "tokenPersistenceFailed": "Other sessions were ended, but this device couldn’t stay signed in. Please sign in again."
+  },
+  "common": {
+    "disconnect": "You have been disconnected.",
+    "disconnectDescription": "Don't worry, your changes will be saved. Attempting to reconnect...",
+    "reconnected": "Your connection has been restored.",
+    "requestFailed": "Something went wrong. Please try again."
+  },
+  "group": {
+    "inviteJoinWarning": "Please sign in before joining the group.",
+    "inviteJoinError": "Failed to join the group. Please check the invite link and try again.",
+    "invalidGroupId": "Invalid group ID for fetching group",
+    "created": "Group \"{{name}}\" created successfully!",
+    "updated": "Group \"{{name}}\" updated successfully!",
+    "createError": "Something went wrong while creating the group.",
+    "updateError": "Something went wrong while updating the group.",
+    "coverUploadError": "The group was saved, but the cover could not be uploaded. Try again.",
+    "removed": "Group \"{{name}}\" was successfully removed!",
+    "left": "You left the group \"{{name}}\".",
+    "kicked": "Member \"{{name}}\" was removed from the group.",
+    "inviteLinkNotReady": "Invite link is not ready yet",
+    "inviteLinkCopied": "Group invite link copied",
+    "inviteLinkCopyError": "Failed to copy link"
+  },
+  "friend": {
+    "removed": "\"{{name}}\" was removed from your friends."
+  },
+  "pwa": {
+    "installing": "Installing application on your home screen...",
+    "offlineReady": "App is ready to work offline",
+    "updateAvailable": "New version available",
+    "updateAction": "Update",
+    "laterAction": "Later"
+  },
+  "settings": {
+    "logoutOtherDevicesSuccess": "Signed out on all other devices. You’re still signed in here.",
+    "deleteAccountSoon": "Account deletion will be available soon.",
+    "saveError": "Failed to save settings.",
+    "avatarUpdated": "Profile photo updated."
+  },
+  "expense": {
+    "created": "Expense added successfully!",
+    "updated": "Expense updated successfully!"
+  },
+  "ledger": {
+    "entryDeleted": "Entry deleted successfully."
+  },
+  "settlement": {
+    "created": "Payment recorded successfully!"
+  }
+}

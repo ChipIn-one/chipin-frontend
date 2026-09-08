@@ -1,0 +1,37 @@
+{
+    "activityFeed": {
+        "dateDivider": "Yesterday",
+        "dateDividerSummary": "you owe 8,000 USD",
+        "expenseTitle": "Weekend dinner",
+        "expenseDescription": "Paid by Alex",
+        "scope": "Travel group",
+        "expenseAmount": "120 USD",
+        "owedStatus": "You are owed",
+        "relativeTime": "2 hours ago"
+    },
+    "account": {
+        "displayName": "Jordan Lee",
+        "email": "jordan@example.com"
+    },
+    "balanceBadges": {
+        "amount": "300 USD"
+    },
+    "dashboardHeader": {
+        "greeting": "Hi, Jordan",
+        "overview": "Here's your summary"
+    },
+    "debtAmount": {
+        "amount": "1,200 USD"
+    },
+    "friendsPage": {
+        "currency": "USD",
+        "total": "+9999",
+        "name": "Display Name John",
+        "amount": "+999 USD"
+    },
+    "groupsCards": {
+        "groupName": "Travel group",
+        "groupBalance": "You are owed 120 USD",
+        "members": "3 members"
+    }
+}

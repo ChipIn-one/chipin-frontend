@@ -1,0 +1,106 @@
+{
+    "buttons": {
+        "back": "Voltar",
+        "cancel": "Cancelar",
+        "close": "Fechar",
+        "delete": "Excluir",
+        "reload": "Recarregar página",
+        "goHome": "Ir para o início",
+        "create": "Criar",
+        "save": "Salvar",
+        "createGroup": "Criar grupo",
+        "saveGroup": "Salvar grupo",
+        "addExpense": "Adicionar despesa",
+        "settleUp": "Acertar",
+        "removeGroup": "Excluir grupo",
+        "leaveGroup": "Sair do grupo",
+        "kickMember": "Remover",
+        "showQRCode": "Mostrar QR code",
+        "addFriend": "Adicionar amigo",
+        "signOut": "Sair",
+        "installApp": "Instalar app",
+        "getStarted": "Começar",
+        "goToDashboard": "Ir para o painel",
+        "copyReport": "Copiar relatório",
+        "changePhoto": "Alterar foto",
+        "invitePeople": "Convidar pessoas",
+        "hide": "Ocultar"
+    },
+    "fields": {
+        "description": "Descrição",
+        "date": "Data",
+        "descriptionOptional": "Descrição (opcional)",
+        "groupOptional": "Grupo (opcional)",
+        "amount": "Valor",
+        "group": "Grupo",
+        "category": "Categoria",
+        "currency": "Moeda",
+        "paidBy": "Pago por",
+        "groupName": "Nome do grupo",
+        "icon": "Ícone",
+        "email": "E-mail",
+        "displayName": "Nome de exibição",
+        "timezone": "Fuso horário",
+        "defaultCurrency": "Moeda padrão",
+        "interfaceLanguage": "Idioma da interface"
+    },
+    "balances": {
+        "youOwe": "você deve",
+        "youAreOwed": "Te devem",
+        "settledUp": "Acertado"
+    },
+    "header": {
+        "signIn": "Entrar",
+        "testError": "Disparar erro de teste",
+        "switchTheme": "Alternar tema",
+        "addSubscriptionDay": "Adicionar 1 dia de assinatura",
+        "devMenu": "Menu do desenvolvedor"
+    },
+    "footer": {
+        "copyright": "{{year}}. Todos os direitos reservados ©",
+        "mediaTitle": "Estamos na mídia",
+        "privacy": "Privacidade",
+        "terms": "Termos",
+        "contact": "Contato"
+    },
+    "errorBoundary": {
+        "title": "O app encontrou um problema",
+        "runtimeError": "Algo deu errado",
+        "tryAgain": "Tentar novamente",
+        "goToDashboard": "Ir para o painel",
+        "or": "ou",
+        "updateApp": "Atualizar o app",
+        "updatingApp": "Atualizando o app…"
+    },
+    "copy": {
+        "copy": "Copiar {{what}}",
+        "copied": "Copiado!",
+        "shared": "Compartilhado!"
+    },
+    "copyTargets": {
+        "inviteLink": "link de convite"
+    },
+    "media": {
+        "noImage": "Sem imagem"
+    },
+    "roles": {
+        "owner": "Dono"
+    },
+    "modes": {
+        "group": "Grupo",
+        "groupMode": "Modo grupo",
+        "solo": "Solo",
+        "soloMode": "Modo solo"
+    },
+    "nav": {
+        "dashboard": "Painel",
+        "activity": "Atividade",
+        "friends": "Amigos",
+        "settings": "Configurações"
+    },
+    "noDebtsTitle": "Tudo acertado",
+    "noDebtsDescription": "Você não deve nada a ninguém e ninguém te deve nada.",
+    "amount": {
+        "notInteger": "O valor não é inteiro!"
+    }
+}

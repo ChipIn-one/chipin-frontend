@@ -1,0 +1,106 @@
+{
+    "buttons": {
+        "back": "Atrás",
+        "cancel": "Cancelar",
+        "close": "Cerrar",
+        "delete": "Eliminar",
+        "reload": "Recargar página",
+        "goHome": "Ir al inicio",
+        "create": "Crear",
+        "save": "Guardar",
+        "createGroup": "Crear grupo",
+        "saveGroup": "Guardar grupo",
+        "addExpense": "Agregar gasto",
+        "settleUp": "Liquidar",
+        "removeGroup": "Eliminar grupo",
+        "leaveGroup": "Salir del grupo",
+        "kickMember": "Expulsar",
+        "showQRCode": "Mostrar código QR",
+        "addFriend": "Agregar amigo",
+        "signOut": "Cerrar sesión",
+        "installApp": "Instalar app",
+        "getStarted": "Comenzar",
+        "goToDashboard": "Ir al panel",
+        "copyReport": "Copiar reporte",
+        "changePhoto": "Cambiar foto",
+        "invitePeople": "Invitar personas",
+        "hide": "Ocultar"
+    },
+    "fields": {
+        "description": "Descripción",
+        "date": "Fecha",
+        "descriptionOptional": "Descripción (opcional)",
+        "groupOptional": "Grupo (opcional)",
+        "amount": "Monto",
+        "group": "Grupo",
+        "category": "Categoría",
+        "currency": "Moneda",
+        "paidBy": "Pagado por",
+        "groupName": "Nombre del grupo",
+        "icon": "Ícono",
+        "email": "Correo electrónico",
+        "displayName": "Nombre de pantalla",
+        "timezone": "Zona horaria",
+        "defaultCurrency": "Moneda predeterminada",
+        "interfaceLanguage": "Idioma de la interfaz"
+    },
+    "balances": {
+        "youOwe": "debes",
+        "youAreOwed": "Te deben",
+        "settledUp": "Liquidado"
+    },
+    "header": {
+        "signIn": "Iniciar sesión",
+        "testError": "Disparar error de prueba",
+        "switchTheme": "Cambiar tema",
+        "addSubscriptionDay": "Agregar 1 día de suscripción",
+        "devMenu": "Menú de desarrollador"
+    },
+    "footer": {
+        "copyright": "{{year}}. Todos los derechos reservados ©",
+        "mediaTitle": "Estamos en los medios",
+        "privacy": "Privacidad",
+        "terms": "Términos",
+        "contact": "Contacto"
+    },
+    "errorBoundary": {
+        "title": "La app encontró un problema",
+        "runtimeError": "Algo salió mal",
+        "tryAgain": "Intentar de nuevo",
+        "goToDashboard": "Ir al panel",
+        "or": "o",
+        "updateApp": "Actualizar la app",
+        "updatingApp": "Actualizando la app…"
+    },
+    "copy": {
+        "copy": "Copiar {{what}}",
+        "copied": "¡Copiado!",
+        "shared": "¡Compartido!"
+    },
+    "copyTargets": {
+        "inviteLink": "enlace de invitación"
+    },
+    "media": {
+        "noImage": "Sin imagen"
+    },
+    "roles": {
+        "owner": "Propietario"
+    },
+    "modes": {
+        "group": "Grupo",
+        "groupMode": "Modo grupal",
+        "solo": "Individual",
+        "soloMode": "Modo individual"
+    },
+    "nav": {
+        "dashboard": "Panel",
+        "activity": "Actividad",
+        "friends": "Amigos",
+        "settings": "Configuración"
+    },
+    "noDebtsTitle": "Todo saldado",
+    "noDebtsDescription": "No le debes nada a nadie y nadie te debe a ti.",
+    "amount": {
+        "notInteger": "¡El valor no es entero!"
+    }
+}
