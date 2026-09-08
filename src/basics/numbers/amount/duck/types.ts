@@ -10,6 +10,7 @@ export interface ClickFuncParams {
 export interface GetAmountDataParams {
     value?: number;
     type: AmountTypes;
+    isAbsolute?: boolean;
     precision?: Precisions;
     tokenCode?: string | ReactNode; // ReactNode use only <span> with styles
     symbol?: string;

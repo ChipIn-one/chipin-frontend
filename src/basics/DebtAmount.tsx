@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Skeleton, Text } from '@radix-ui/themes';
+import { Skeleton, Text, VisuallyHidden } from '@radix-ui/themes';
 
 import { Amount } from 'basics/numbers';
 
@@ -28,9 +28,13 @@ const DebtAmount = ({
     amountProps,
 }: Props) => {
     const { t } = useTranslation('skeletons');
+    const { t: tCommon } = useTranslation('common');
     const isOwed = amount > 0;
     const isZero = amount === 0;
     const color = isZero ? 'gray' : isOwed ? 'green' : 'red';
+    const directionLabel = isZero
+        ? tCommon('balances.settledUp')
+        : tCommon(isOwed ? 'balances.youAreOwed' : 'balances.youOwe');
 
     return (
         <Text as="span" size={size} color={color} weight={weight}>
@@ -47,6 +51,7 @@ const DebtAmount = ({
                     />
                 )}
             </Skeleton>
+            {!isLoading && <VisuallyHidden>{directionLabel}</VisuallyHidden>}
         </Text>
     );
 };

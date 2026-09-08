@@ -14,6 +14,7 @@ const Wrapper = styled.span`
 
 interface Props extends BaseProps {
     type?: AmountTypes;
+    isAbsolute?: boolean;
     tokenCode?: string | ReactNode; // ReactNode use only <span> with styles
     customPrefix?: string;
     customPrefixTooSmall?: string;
@@ -27,6 +28,7 @@ const Amount: FC<Props> = ({
     precision,
     symbol,
     type = 'default',
+    isAbsolute = true,
     customPrefix,
     customPrefixTooSmall,
     className,
@@ -43,10 +45,11 @@ const Amount: FC<Props> = ({
                     symbol,
                     tokenCode,
                     type,
+                    isAbsolute,
                     value,
                     customPrefixTooSmall,
                 }),
-            [value, precision, symbol, tokenCode, type, customPrefixTooSmall],
+            [value, precision, symbol, tokenCode, type, isAbsolute, customPrefixTooSmall],
         );
 
     if (isInteger && !Number.isInteger(value)) {

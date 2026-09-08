@@ -66,6 +66,24 @@ test('renders zero values as zero', () => {
     expect(screen.getAllByText('0')).toHaveLength(4);
 });
 
+test('keeps the minus sign for non-monetary landing statistics', () => {
+    useLandingStatsStore.setState({
+        stats: {
+            usersCount: -1_200,
+            expensesCount: 2_300_000,
+            groupsCount: 34_000,
+            settlementsCount: 456_000,
+        },
+    });
+    useLoadingStore.getState().setLoading('landing', 'stats', 'fetched');
+
+    render(<LandingStats />);
+
+    expect(
+        within(screen.getByRole('group', { name: 'stats.totalUsers' })).getByText('-1,200'),
+    ).toBeTruthy();
+});
+
 test('keeps all metric blocks rendered while loading', () => {
     useLoadingStore.getState().setLoading('landing', 'stats', 'loading');
 

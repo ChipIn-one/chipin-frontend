@@ -57,7 +57,11 @@ const LandingStats = () => {
                                     <Flex align="center" gap="1">
                                         <Icon aria-hidden="true" />
                                         {stats ? (
-                                            <Amount type="summary" value={stats[field]} />
+                                            <Amount
+                                                type="summary"
+                                                value={stats[field]}
+                                                isAbsolute={false}
+                                            />
                                         ) : (
                                             '—'
                                         )}
