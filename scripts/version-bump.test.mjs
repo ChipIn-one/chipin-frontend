@@ -61,3 +61,45 @@ test('updates package and lockfile versions together', () => {
         rmSync(directory, { recursive: true, force: true });
     }
 });
+
+test('preserves package.json formatting and unrelated content', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'chipin-version-format-'));
+    const packagePath = join(directory, 'package.json');
+    const lockfilePath = join(directory, 'package-lock.json');
+    const packageSource = `{
+  "name": "chipin-frontend",
+  "version": "0.9.0",
+  "scripts": {
+    "example": "echo keep-formatting"
+  },
+  "metadata": {
+    "version": "nested-version-must-not-change"
+  }
+}
+`;
+
+    writeFileSync(packagePath, packageSource);
+    writeFileSync(lockfilePath, JSON.stringify({
+        name: 'chipin-frontend',
+        version: '0.9.0',
+        packages: { '': { name: 'chipin-frontend', version: '0.9.0' } },
+    }, null, 2) + '\n');
+
+    try {
+        updateManifestVersions('0.9.1', { packagePath, lockfilePath });
+
+        expect(readFileSync(packagePath, 'utf8')).toBe(
+            packageSource.replace(
+                '"version": "0.9.0"',
+                '"version": "0.9.1"',
+            ),
+        );
+
+        const updatedLockfile = JSON.parse(readFileSync(lockfilePath, 'utf8'));
+
+        expect(updatedLockfile.version).toBe('0.9.1');
+        expect(updatedLockfile.packages[''].version).toBe('0.9.1');
+    } finally {
+        rmSync(directory, { recursive: true, force: true });
+    }
+});
