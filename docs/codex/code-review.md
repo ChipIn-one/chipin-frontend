@@ -1,31 +1,52 @@
 # Code review
 
-## Level 1 — deterministic
+## Canonical lifecycle
 
-During implementation run targeted tests and lint/typecheck where appropriate.
-The final gate is:
+Generic reviewer roles and lifecycle semantics belong to the canonical
+`syllik/ai-workflow`. ChipIn follows that workflow:
+
+- Luna is executor-only and does not review her own task diff.
+- After `IMPLEMENTATION_COMPLETE`, trusted Sol/human publication happens before review.
+- Routine independent PR review uses managed Codex GitHub Code Review.
+- Automatic Codex review on every push to an open PR is the default after publication.
+- Use `@codex review` only as a manual fallback/retrigger when automatic review does not start or an explicit retry is needed; do not trigger a duplicate manual review while automatic review is already running.
+- A review is current only when its reviewed commit SHA matches the current PR head.
+- Any correction that changes the PR head invalidates the previous review and requires a fresh Codex review.
+- Reviewer findings remain separate from Luna execution state and return to Luna only after explicit human authorization.
+- Sol 5.6 High is escalation/fallback only for architecture or high-risk review, ambiguous or disputed findings, Codex unavailability, or an explicit human request.
+- Only a human merges.
+
+Luna does not perform independent review batches, judge merge readiness, commit,
+push, create or update PRs, merge, or enable auto-merge. Do not reintroduce
+Luna self-review in any form.
+
+## Deterministic verification
+
+During implementation, run targeted tests and lint/typecheck where appropriate.
+The full local completion gate is:
 
 ```bash
 npm run verify:full
 ```
 
-## Level 2 — bounded Luna self-review
+Remote `frontend-ci` remains the authoritative post-publication integration
+gate. Local verification does not replace the remote gate or authorize merge.
 
-Luna performs one findings-first review of the final task diff against base,
-including task-owned untracked files, directly affected callers/consumers, and
-relevant tests/config. Focus on requirements, correctness, regressions,
-state/data flow, races, security, data loss, architecture, and missing
-validation. Ignore formatting/style already enforced by tooling.
+## ChipIn review focus
 
-## Level 3 — risk-triggered deeper same-Luna review
+Independent review should prioritize:
 
-Only high-risk changes receive one additional focused pass over the final diff,
-affected subsystem, direct callers/consumers, and relevant tests/config. Risk
-triggers include auth/tokens/interceptors, permissions, money/balances,
-settlements/rounding, persistence/offline/idempotency, critical shared stores,
-races, routing/auth composition, service-worker cache behavior, CI security,
-major dependency/security upgrades, or large cross-cutting changes. Heuristics
-are 3+ architecture layers, about 15+ production files, or 800+ changed lines.
-
-No reviewer agent, second model, subagent, manual staged ceremony, or merge is
-required.
+- requirements and regressions;
+- dependency direction;
+- Zustand/store/API ownership;
+- auth, tokens, interceptors, and permissions;
+- money, balances, settlements, and rounding;
+- persistence, offline behavior, idempotency, and reconciliation;
+- races, cancellation, and concurrency;
+- data loss and stale responses;
+- routing and auth composition;
+- service worker and PWA behavior;
+- CI, security, and dependency upgrades;
+- accessibility;
+- i18n;
+- missing behavioral validation.
