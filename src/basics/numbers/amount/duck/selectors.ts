@@ -14,23 +14,24 @@ export const getAmountTypesBool = (type: AmountTypes) => ({
 export const getAmountData = ({
     value = 0,
     type = 'default',
+    isAbsolute = true,
     tokenCode,
     symbol,
     precision,
     customPrefixTooSmall,
 }: GetAmountDataParams): GetAmountDataReturn => {
     const { isDefault, isInteger, isSummary, isInteractive, isFull } = getAmountTypesBool(type);
+    const displayValue = isAbsolute ? Math.abs(value) : value;
 
     const {
         numberFormatted,
         numberString,
-        numberValue,
         numberPart,
         zerosPart,
         minPrecisionAmount,
         isValueTooSmall,
     } = getNumberData({
-        value,
+        value: displayValue,
         precision,
         isKMB: isSummary || isFull,
         isExternal: isSummary,
@@ -51,7 +52,7 @@ export const getAmountData = ({
         amountFormatted,
         amountPart: numberPart,
         amountString: numberString,
-        bigAmount: numberValue,
+        bigAmount: value,
         postfix: tokenCode,
         prefix,
         prefixLess,
