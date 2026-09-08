@@ -51,15 +51,65 @@ export const getIsTooSmallForPrecision = (
     return { minPrecisionAmount, isValueTooSmall };
 };
 
-const roundHalfUp = (value: number, precision: number): number => {
-    const factor = 10 ** precision;
-    const absoluteValue = Math.abs(value);
-    const scaledValue = absoluteValue * factor;
-    // Correct the small binary drift that can move a decimal tie below .5.
-    const floatingPointCorrection = Number.EPSILON * Math.max(1, absoluteValue) * factor;
-    const roundedScaledValue = Math.floor(scaledValue + 0.5 + floatingPointCorrection);
+const getExpandedDecimalParts = (value: number) => {
+    const [coefficient, exponentPart] = value.toString().split('e');
+    const [integerPart = '0', fractionalPart = ''] = coefficient.split('.');
+    const digits = integerPart + fractionalPart;
+    const decimalPosition = integerPart.length + Number(exponentPart ?? 0);
 
-    return (value < 0 ? -1 : 1) * (roundedScaledValue / factor);
+    if (decimalPosition <= 0) {
+        return { integerPart: '0', fractionalPart: '0'.repeat(-decimalPosition) + digits };
+    }
+
+    if (decimalPosition >= digits.length) {
+        return {
+            integerPart: digits + '0'.repeat(decimalPosition - digits.length),
+            fractionalPart: '',
+        };
+    }
+
+    return {
+        integerPart: digits.slice(0, decimalPosition),
+        fractionalPart: digits.slice(decimalPosition),
+    };
+};
+
+const incrementDigits = (digits: string) => {
+    const incrementedDigits = digits.split('');
+
+    for (let index = incrementedDigits.length - 1; index >= 0; index--) {
+        if (incrementedDigits[index] === '9') {
+            incrementedDigits[index] = '0';
+            continue;
+        }
+
+        incrementedDigits[index] = String(Number(incrementedDigits[index]) + 1);
+        return incrementedDigits.join('');
+    }
+
+    return `1${incrementedDigits.join('')}`;
+};
+
+const roundHalfUp = (value: number, precision: number): number => {
+    const sign = value < 0 ? -1 : 1;
+    const { integerPart, fractionalPart } = getExpandedDecimalParts(Math.abs(value));
+    const roundedFractionalPart = fractionalPart.slice(0, precision).padEnd(precision, '0');
+    const firstDiscardedDigit = fractionalPart[precision];
+    const shouldRoundUp = firstDiscardedDigit !== undefined && firstDiscardedDigit >= '5';
+    const roundedDigits = shouldRoundUp
+        ? incrementDigits(integerPart + roundedFractionalPart)
+        : integerPart + roundedFractionalPart;
+
+    if (precision === 0) {
+        return sign * Number(roundedDigits);
+    }
+
+    const integerDigitsLength = roundedDigits.length - precision;
+    const roundedValue = Number(
+        `${roundedDigits.slice(0, integerDigitsLength)}.${roundedDigits.slice(integerDigitsLength)}`,
+    );
+
+    return sign * roundedValue;
 };
 
 const getSplittedNumber = (formattedString: string) => {

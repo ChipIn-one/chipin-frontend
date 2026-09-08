@@ -28,6 +28,20 @@ test.each([
     expect(numberData.numberString).toBe(expected);
 });
 
+test.each([
+    [1_000_000_000_000_000.375, '1000000000000000'],
+    [-1_000_000_000_000_000.375, '-1000000000000000'],
+])('does not round a large non-tie value away from zero: %s', (value, expected) => {
+    expect(getNumberData({ value, precision: 0 }).numberString).toBe(expected);
+});
+
+test.each([
+    [1_000_000_000_000_000.5, '1000000000000001'],
+    [-1_000_000_000_000_000.5, '-1000000000000001'],
+])('rounds a representable large .5 tie away from zero: %s', (value, expected) => {
+    expect(getNumberData({ value, precision: 0 }).numberString).toBe(expected);
+});
+
 test('uses explicit precision zero', () => {
     expect(getNumberData({ value: 123.456, precision: 0 }).numberString).toBe('123');
 });
@@ -57,6 +71,13 @@ test('formats millions with an M suffix', () => {
 
 test('formats billions with a larger KMB suffix', () => {
     expect(getNumberData({ value: 1_234_567_890, precision: 2, isKMB: true }).numberFormatted).toBe('1.23B');
+});
+
+test.each([
+    [1_000_000_000_000, '1.00T'],
+    [1_000_000_000_000_000, '1.00Q'],
+])('keeps large KMB suffixes stable at %s', (value, expected) => {
+    expect(getNumberData({ value, precision: 0, isKMB: true }).numberFormatted).toBe(expected);
 });
 
 test('applies HALF_UP rounding after KMB scaling', () => {
