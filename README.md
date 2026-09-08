@@ -52,3 +52,14 @@ export default tseslint.config({
   },
 })
 ```
+
+## License
+
+ChipIn is proprietary and source-available, not open source. The public
+repository may be viewed and used for personal, non-commercial, local,
+non-production study and private experimentation. Commercial use, production
+deployment, and public distribution of ChipIn proprietary code or derivative
+versions are restricted without prior written permission from Mikhail Douhun.
+
+See the full terms in [LICENSE](./LICENSE). Third-party package notices are
+listed in [THIRD_PARTY_NOTICES.txt](./THIRD_PARTY_NOTICES.txt).
