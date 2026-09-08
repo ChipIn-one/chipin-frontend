@@ -53,7 +53,7 @@ const BalanceSummaryText = ({ entries, size, align = 'left' }: Props) => {
                                     type="summary"
                                     value={Math.abs(entry.netBalance)}
                                     tokenCode={entry.currency}
-                                    precision={0}
+                                    precision={2}
                                 />
                                 {i < owedEntries.length - 1 && ','}
                             </AmountChunk>
@@ -72,7 +72,7 @@ const BalanceSummaryText = ({ entries, size, align = 'left' }: Props) => {
                                     type="summary"
                                     value={Math.abs(entry.netBalance)}
                                     tokenCode={entry.currency}
-                                    precision={0}
+                                    precision={2}
                                 />
                                 {i < oweEntries.length - 1 && ','}
                             </AmountChunk>
