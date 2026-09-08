@@ -1,7 +1,5 @@
-import Big from 'bignumber.js';
-
 interface GetNumberDataArgs {
-    value: Big;
+    value?: number;
     precision?: Precisions;
     isKMB?: boolean;
     isExternal?: boolean;
@@ -12,7 +10,7 @@ interface GetNumberDataArgs {
 }
 
 interface GetNumberPrecisionData {
-    value: Big;
+    value: number;
     precision?: Precisions;
     isExternal?: boolean;
     isInteger?: boolean;
@@ -20,23 +18,48 @@ interface GetNumberPrecisionData {
     isInteractive?: boolean;
 }
 
-export const tryToBig = (value?: Big | number | string | null) => {
-    // Cause of undefined creates unusable new Big constructor
-    if (!value && value !== 0) {
+interface NumberData {
+    numberValue: number;
+    numberString: string;
+    numberFormatted: string;
+    numberPart: string;
+    zerosPart: string;
+    minPrecisionAmount: number;
+    isValueTooSmall: boolean;
+}
+
+export const tryToNumber = (value?: NumericValue): number | null => {
+    if (value === null || value === undefined) {
         return null;
     }
 
-    try {
-        return Big(value);
-    } catch {
+    if (typeof value === 'string' && value.trim() === '') {
         return null;
     }
+
+    const numberValue = typeof value === 'number' ? value : Number(value);
+
+    return Number.isFinite(numberValue) ? numberValue : null;
 };
 
-export const getIsTooSmallForPrecision = (value: Big, precision: number) => {
-    const minPrecisionAmount = Big(1).div(10).pow(precision);
-    const isValueTooSmall = value.lt(minPrecisionAmount) && value.gt(0);
+export const getIsTooSmallForPrecision = (
+    value: number,
+    precision: number,
+): Pick<NumberData, 'minPrecisionAmount' | 'isValueTooSmall'> => {
+    const minPrecisionAmount = 1 / 10 ** precision;
+    const isValueTooSmall = value < minPrecisionAmount && value > 0;
     return { minPrecisionAmount, isValueTooSmall };
+};
+
+const roundHalfUp = (value: number, precision: number): number => {
+    const factor = 10 ** precision;
+    const absoluteValue = Math.abs(value);
+    const scaledValue = absoluteValue * factor;
+    // Correct the small binary drift that can move a decimal tie below .5.
+    const floatingPointCorrection = Number.EPSILON * Math.max(1, absoluteValue) * factor;
+    const roundedScaledValue = Math.floor(scaledValue + 0.5 + floatingPointCorrection);
+
+    return (value < 0 ? -1 : 1) * (roundedScaledValue / factor);
 };
 
 const getSplittedNumber = (formattedString: string) => {
@@ -69,15 +92,15 @@ const getNumberPrecisionData = ({
 
     let precisionToUse = precision;
 
-    if (!precisionToUse && precisionToUse !== 0) {
+    if (precisionToUse === undefined) {
         // values also can be negative
-        const positiveValue = value.abs();
-        const isZero = positiveValue.eq(0);
+        const positiveValue = Math.abs(value);
+        const isZero = positiveValue === 0;
 
         switch (true) {
             case isInteger:
             case isZero && !isExternal:
-            case positiveValue.gte(MAX_THOUSANDS_PRECISION_NUMBER): {
+            case positiveValue >= MAX_THOUSANDS_PRECISION_NUMBER: {
                 precisionToUse = 0;
                 break;
             }
@@ -89,13 +112,13 @@ const getNumberPrecisionData = ({
 
             case isExternal && !isPrice:
             case isExternal && isZero:
-            case positiveValue.gte(MAX_HUNDREDS_PRECISION_NUMBER): {
+            case positiveValue >= MAX_HUNDREDS_PRECISION_NUMBER: {
                 precisionToUse = 2;
                 break;
             }
 
-            case positiveValue.lt(MAX_HUNDREDS_PRECISION_NUMBER) &&
-                positiveValue.gte(MAX_FLOATS_PRECISION_NUMBER): {
+            case positiveValue < MAX_HUNDREDS_PRECISION_NUMBER &&
+                positiveValue >= MAX_FLOATS_PRECISION_NUMBER: {
                 precisionToUse = 4;
                 break;
             }
@@ -114,41 +137,45 @@ const getNumberPrecisionData = ({
     return { precisionToUse, minPrecisionAmount, isValueTooSmall };
 };
 
-const getKMB = (value: Big) => {
-    let values;
+const getKMB = (value: number) => {
+    let kmbValue: number;
+    let postfix: string;
 
     switch (true) {
-        case value.gte(1e15):
-            values = { kmbValue: value.div(1e15), postfix: 'Q' };
+        case value >= 1e15:
+            kmbValue = value / 1e15;
+            postfix = 'Q';
             break;
-        case value.gte(1e12):
-            values = { kmbValue: value.div(1e12), postfix: 'T' };
+        case value >= 1e12:
+            kmbValue = value / 1e12;
+            postfix = 'T';
             break;
-        case value.gte(1e9):
-            values = { kmbValue: value.div(1e9), postfix: 'B' };
+        case value >= 1e9:
+            kmbValue = value / 1e9;
+            postfix = 'B';
             break;
-        case value.gte(1e6):
-            values = { kmbValue: value.div(1e6), postfix: 'M' };
+        case value >= 1e6:
+            kmbValue = value / 1e6;
+            postfix = 'M';
             break;
-        case value.gte(1e3):
-            values = { kmbValue: value.div(1e3), postfix: 'K' };
+        case value >= 1e3:
+            kmbValue = value / 1e3;
+            postfix = 'K';
             break;
         default:
-            values = {
-                kmbValue: value,
-                postfix: '',
-            };
+            kmbValue = value;
+            postfix = '';
     }
 
     return {
-        kmbValue: values.kmbValue.decimalPlaces(2, Big.ROUND_HALF_UP).toFixed(2),
-        postfix: values.postfix,
+        kmbValue: roundHalfUp(kmbValue, 2).toFixed(2),
+        postfix,
     };
 };
 
 export const getNumberData = (
     {
-        value,
+        value = 0,
         precision,
         isKMB = false,
         isExternal = false,
@@ -156,8 +183,8 @@ export const getNumberData = (
         isPrice = false,
         isInteractive = false,
         isZeros = false,
-    } = {} as GetNumberDataArgs,
-) => {
+    }: GetNumberDataArgs = {},
+): NumberData => {
     const { precisionToUse, minPrecisionAmount, isValueTooSmall } = getNumberPrecisionData({
         value,
         precision,
@@ -168,10 +195,10 @@ export const getNumberData = (
     });
     const valueToFormat = isValueTooSmall ? minPrecisionAmount : value;
 
-    const roundedValue = valueToFormat.decimalPlaces(precisionToUse, Big.ROUND_HALF_UP);
+    const roundedValue = roundHalfUp(valueToFormat, precisionToUse);
 
     const { kmbValue, postfix } =
-        !isKMB || roundedValue.lt(1000)
+        !isKMB || roundedValue < 1000
             ? {
                   postfix: '',
                   kmbValue: isZeros
@@ -191,7 +218,7 @@ export const getNumberData = (
     const { numberPart, zerosPart } = getSplittedNumber(numberFormatted);
 
     return {
-        numberBig: isValueTooSmall ? minPrecisionAmount : roundedValue,
+        numberValue: isValueTooSmall ? minPrecisionAmount : roundedValue,
         numberString: roundedValue.toFixed(precisionToUse),
         numberFormatted,
         numberPart,

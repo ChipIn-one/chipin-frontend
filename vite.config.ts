@@ -229,7 +229,6 @@ export default defineConfig(({ mode }) => {
                             'dexie',
                             'dexie-react-hooks',
                             'zustand',
-                            'bignumber.js',
                         ],
                     },
                 },

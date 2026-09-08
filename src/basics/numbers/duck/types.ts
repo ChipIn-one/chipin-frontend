@@ -1,7 +1,5 @@
-import Big from 'bignumber.js';
-
 export interface BaseProps {
-    value: Big;
+    value: number;
     symbol: string;
     precision?: Precisions;
     className?: string;

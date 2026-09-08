@@ -148,10 +148,6 @@ export default tseslint.config(
                             name: 'axios',
                             message: 'Use the configured Axios instance from src/api.',
                         },
-                        {
-                            name: 'bignumber.js',
-                            message: 'BigNumber is restricted to the existing legacy number layer.',
-                        },
                     ],
                 },
             ],
@@ -164,17 +160,8 @@ export default tseslint.config(
     {
         files: ['src/api/chipin.instance.ts', 'src/api/chipin.interceptors.ts'],
         rules: {
-            'no-restricted-imports': [
-                'error',
-                {
-                    paths: [
-                        {
-                            name: 'bignumber.js',
-                            message: 'BigNumber is restricted to the existing legacy number layer.',
-                        },
-                    ],
-                },
-            ],
+            // These modules own the configured Axios instance and interceptors.
+            'no-restricted-imports': 'off',
         },
     },
     {
@@ -192,10 +179,6 @@ export default tseslint.config(
                         {
                             name: 'axios',
                             message: 'UI must call stores or hooks, not Axios.',
-                        },
-                        {
-                            name: 'bignumber.js',
-                            message: 'BigNumber is restricted to the existing legacy number layer.',
                         },
                     ],
                     patterns: [
@@ -236,17 +219,6 @@ export default tseslint.config(
         // Existing auth transport helper narrows Axios errors; migrate it with the auth flow.
         files: ['src/helpers/authSession.ts'],
         rules: {
-            'no-restricted-imports': [
-                'error',
-                {
-                    paths: [
-                        {
-                            name: 'bignumber.js',
-                            message: 'BigNumber is restricted to the existing legacy number layer.',
-                        },
-                    ],
-                },
-            ],
             '@typescript-eslint/no-restricted-imports': [
                 'warn',
                 {
