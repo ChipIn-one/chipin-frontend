@@ -67,9 +67,12 @@ Luna is executor-only and stops at `IMPLEMENTATION_COMPLETE` or `BLOCKED`.
 Luna does not review her own task diff, perform independent review batches, judge
 merge readiness, commit, push, create or update PRs, merge, or enable auto-merge.
 The managed Codex GitHub Code Review is the routine/default independent reviewer
-and is triggered after trusted publication with `@codex review`. A review is
-current only when its reviewed commit SHA equals the current PR head; every
-changed PR head requires a new `@codex review`. Reviewer findings remain
+and runs automatically on every push to an open PR after trusted publication. A
+review is current only when its reviewed commit SHA equals the current PR head;
+every changed PR head requires a new Codex review. Use `@codex review` only as a
+manual fallback/retrigger when automatic review does not start or an explicit
+retry is needed; do not trigger a duplicate manual review while automatic review
+is already running. Reviewer findings remain
 separate from Luna execution state and return to Luna only after explicit human
 authorization. Sol 5.6 High is escalation/fallback only for architecture or
 high-risk review, ambiguous or disputed findings, Codex unavailability, or an

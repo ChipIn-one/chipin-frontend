@@ -9,7 +9,7 @@
 - Remote `frontend-ci` is authoritative after publication; release flow is `dev → main`.
 - Luna is executor-only and stops at `IMPLEMENTATION_COMPLETE` or `BLOCKED`.
 - Publication is separate trusted Sol/human-controlled work.
-- Routine independent review is managed Codex GitHub Code Review; Sol 5.6 High is escalation/fallback.
+- Routine independent review is managed Codex GitHub Code Review, automatically on every push to an open PR; `@codex review` is manual fallback/retrigger only. Sol 5.6 High is escalation/fallback.
 - Only a human merges.
 - Backend contracts are unchanged unless explicitly requested.
 - Preserve ChipIn money, offline, persistence, concurrency, API/data-shape, accessibility, and i18n invariants.

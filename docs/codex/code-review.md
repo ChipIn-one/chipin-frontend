@@ -8,9 +8,10 @@ Generic reviewer roles and lifecycle semantics belong to the canonical
 - Luna is executor-only and does not review her own task diff.
 - After `IMPLEMENTATION_COMPLETE`, trusted Sol/human publication happens before review.
 - Routine independent PR review uses managed Codex GitHub Code Review.
-- Trigger the routine review manually with `@codex review` after publication.
+- Automatic Codex review on every push to an open PR is the default after publication.
+- Use `@codex review` only as a manual fallback/retrigger when automatic review does not start or an explicit retry is needed; do not trigger a duplicate manual review while automatic review is already running.
 - A review is current only when its reviewed commit SHA matches the current PR head.
-- Any correction that changes the PR head requires a new `@codex review`.
+- Any correction that changes the PR head invalidates the previous review and requires a fresh Codex review.
 - Reviewer findings remain separate from Luna execution state and return to Luna only after explicit human authorization.
 - Sol 5.6 High is escalation/fallback only for architecture or high-risk review, ambiguous or disputed findings, Codex unavailability, or an explicit human request.
 - Only a human merges.
