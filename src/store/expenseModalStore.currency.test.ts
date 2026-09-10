@@ -32,9 +32,7 @@ test('uses the selected group last used currency when initializing a group expen
             {
                 id: 'group-1',
                 members: [currentUser, groupMember],
-                ...({ lastUsedCurrency: 'KHR' } as {
-                    lastUsedCurrency: string;
-                }),
+                lastUsedCurrency: 'KHR',
             },
         ],
         knownFriends: [],
@@ -72,9 +70,7 @@ test('keeps a manually selected currency after initialization', () => {
             {
                 id: 'group-1',
                 members: [currentUser, groupMember],
-                ...({ lastUsedCurrency: 'KHR' } as {
-                    lastUsedCurrency: string;
-                }),
+                lastUsedCurrency: 'KHR',
             },
         ],
         knownFriends: [],
