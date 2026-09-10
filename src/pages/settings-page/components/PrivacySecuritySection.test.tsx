@@ -153,3 +153,10 @@ test('does not show success and keeps the card retryable after an error', () => 
             expect(toast.success).toHaveBeenCalledOnce();
         });
 });
+
+test('keeps unsupported account export and deletion actions hidden', () => {
+    render(<PrivacySecuritySection isLoading={false} />);
+
+    expect(screen.queryByText('Export data')).toBeNull();
+    expect(screen.queryByRole('button', { name: /delete account/i })).toBeNull();
+});

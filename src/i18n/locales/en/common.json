@@ -63,6 +63,56 @@
         "terms": "Terms",
         "contact": "Contact"
     },
+    "legal": {
+        "privacy": {
+            "title": "Privacy",
+            "intro": "ChipIn uses the information you provide to operate shared-expense and balance tracking features.",
+            "account": {
+                "title": "Account information",
+                "body": "We use the account and profile details you provide, such as your display name and email address, to identify your account and show your profile where the product does so."
+            },
+            "expenseData": {
+                "title": "Groups and expenses",
+                "body": "The groups, expenses, settlements, and balances you add are used to provide shared-expense tracking and calculate what the app displays."
+            },
+            "sessions": {
+                "title": "Authentication and sessions",
+                "body": "Authentication and session information is used to sign you in and help keep your account secure."
+            },
+            "operations": {
+                "title": "Operating the service",
+                "body": "Operational and error telemetry helps us operate, secure, and improve ChipIn. Production observability is designed not to intentionally expose sensitive authentication details or sensitive request and response bodies."
+            },
+            "updates": {
+                "title": "Updates",
+                "body": "This information may be updated as the product evolves."
+            }
+        },
+        "terms": {
+            "title": "Terms of service",
+            "intro": "ChipIn helps you track shared expenses and balances between people.",
+            "productUse": {
+                "title": "Using ChipIn",
+                "body": "You can use ChipIn to record shared expenses, view balances, and record settlements."
+            },
+            "responsibility": {
+                "title": "Your information",
+                "body": "You are responsible for the information you submit and for checking that your records and participants are accurate."
+            },
+            "records": {
+                "title": "Application records",
+                "body": "Balances shown by ChipIn are application records for tracking. They are not banking or payment-settlement guarantees."
+            },
+            "appropriateUse": {
+                "title": "Appropriate use",
+                "body": "Do not misuse the service, interfere with its operation, or submit information you are not allowed to share."
+            },
+            "changes": {
+                "title": "Changes",
+                "body": "ChipIn may evolve, and its features or these terms may change as the product develops."
+            }
+        }
+    },
     "errorBoundary": {
         "title": "The app ran into a problem",
         "runtimeError": "Something went wrong",

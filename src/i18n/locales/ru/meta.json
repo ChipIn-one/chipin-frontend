@@ -7,6 +7,14 @@
         "title": "ChipIn — Вход",
         "description": "Войдите в аккаунт ChipIn"
     },
+    "privacy": {
+        "title": "ChipIn — Конфиденциальность",
+        "description": "Узнайте, как ChipIn использует информацию для работы сервиса"
+    },
+    "terms": {
+        "title": "ChipIn — Условия использования",
+        "description": "Ознакомьтесь с временными условиями использования ChipIn"
+    },
     "oauthCallback": {
         "title": "ChipIn — Выполняется вход",
         "description": "Завершаем вход в ChipIn"

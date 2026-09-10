@@ -2,6 +2,8 @@ export const ROUTES = {
     HOME: '/',
     NOT_FOUND_404: '/not-found',
     SIGN_IN: '/sign-in',
+    PRIVACY: '/privacy',
+    TERMS: '/terms',
     OAUTH_CALLBACK: '/oauth/callback',
     DASHBOARD: '/dashboard',
     SOLO: '/solo',
@@ -33,6 +35,16 @@ export const ROUTE_META = [
         path: ROUTES.SIGN_IN,
         titleKey: 'signIn.title',
         descriptionKey: 'signIn.description',
+    },
+    {
+        path: ROUTES.PRIVACY,
+        titleKey: 'privacy.title',
+        descriptionKey: 'privacy.description',
+    },
+    {
+        path: ROUTES.TERMS,
+        titleKey: 'terms.title',
+        descriptionKey: 'terms.description',
     },
     {
         path: ROUTES.OAUTH_CALLBACK,

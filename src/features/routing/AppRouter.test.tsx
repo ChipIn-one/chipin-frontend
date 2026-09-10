@@ -67,3 +67,19 @@ test('keeps the Group Join route outside the desktop sidebar layout', () => {
     expect(screen.getByText(JOIN_ROUTE_CONTENT)).toBeTruthy();
     expect(screen.queryByRole('link', { name: 'Chipin Group' })).toBeNull();
 });
+
+test('reaches the public Privacy page without authentication', () => {
+    useAuthStore.setState({ status: 'unauthenticated' });
+
+    renderRouter('/privacy');
+
+    return screen.findByRole('heading', { name: 'Privacy' });
+});
+
+test('reaches the public Terms page without authentication', () => {
+    useAuthStore.setState({ status: 'unauthenticated' });
+
+    renderRouter('/terms');
+
+    return screen.findByRole('heading', { name: 'Terms of service' });
+});
