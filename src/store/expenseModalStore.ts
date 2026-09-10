@@ -26,6 +26,7 @@ export interface ExpenseModalGroup {
     id: string;
     name?: string;
     members: ExpenseParticipant[];
+    lastUsedCurrency?: string | null;
 }
 
 export interface ExpenseModalSource {
@@ -251,6 +252,7 @@ const getInitializedState = (
             ? 'friends'
             : 'group';
     const groupId = source.defaultGroupId ?? source.groups[0]?.id ?? '';
+    const selectedGroup = source.groups.find(group => group.id === groupId);
     const selectedFriendId = getDefaultFriendId(source);
     const state: ExpenseModalState = {
         ...INITIAL_EXPENSE_MODAL_STATE,
@@ -263,7 +265,10 @@ const getInitializedState = (
         targetMode,
         groupId,
         selectedFriendId,
-        currency: source.defaultCurrency,
+        currency:
+            targetMode === 'group'
+                ? (selectedGroup?.lastUsedCurrency ?? source.defaultCurrency)
+                : source.defaultCurrency,
         category: source.skipCategory ? '' : source.defaultCategory,
         date: getUnixTimestampInSec(),
     };
