@@ -224,7 +224,12 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     return get().selectedGroup;
                 }
 
-                set({ selectedGroup: group });
+                set(state => ({
+                    groups: state.groups.map(cachedGroup =>
+                        cachedGroup.id === group.id ? group : cachedGroup,
+                    ),
+                    selectedGroup: group,
+                }));
                 return group;
             })
             .catch((error: unknown) => {
