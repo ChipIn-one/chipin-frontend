@@ -7,6 +7,14 @@
         "title": "ChipIn — Iniciar sessão",
         "description": "Inicie sessão na sua conta ChipIn"
     },
+    "privacy": {
+        "title": "ChipIn — Privacidade",
+        "description": "Saiba como o ChipIn utiliza informações para operar o serviço"
+    },
+    "terms": {
+        "title": "ChipIn — Termos de serviço",
+        "description": "Leia os termos provisórios para utilizar o ChipIn"
+    },
     "oauthCallback": {
         "title": "ChipIn — A iniciar sessão",
         "description": "A concluir o início de sessão no ChipIn"

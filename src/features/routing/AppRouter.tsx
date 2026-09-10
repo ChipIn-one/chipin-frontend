@@ -14,6 +14,8 @@ import { ProtectedRoute } from './ProtectedRoute';
 import SoloRouteGuard from './SoloRouteGuard';
 
 const HomePage = lazy(() => import('pages/HomePage'));
+const PrivacyPage = lazy(() => import('pages/PrivacyPage'));
+const TermsPage = lazy(() => import('pages/TermsPage'));
 const DashboardPage = lazy(() => import('pages/DashboardPage'));
 const SoloPage = lazy(() =>
     import('pages/solo-page').then(module => ({
@@ -50,6 +52,8 @@ const AppRouter = () => {
                     }
                 />
                 <Route path={ROUTES.SIGN_IN} element={<SignInPage />} />
+                <Route path={ROUTES.PRIVACY} element={<PrivacyPage />} />
+                <Route path={ROUTES.TERMS} element={<TermsPage />} />
                 <Route path={ROUTES.OAUTH_CALLBACK} element={<OAuthCallbackPage />} />
                 <Route
                     path={ROUTES.DASHBOARD}

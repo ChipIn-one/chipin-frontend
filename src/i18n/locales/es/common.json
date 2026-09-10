@@ -63,6 +63,56 @@
         "terms": "Términos",
         "contact": "Contacto"
     },
+    "legal": {
+        "privacy": {
+            "title": "Privacidad",
+            "intro": "ChipIn usa la información que proporcionas para operar las funciones de seguimiento de gastos compartidos y saldos.",
+            "account": {
+                "title": "Información de la cuenta",
+                "body": "Usamos los datos de cuenta y perfil que proporcionas, como tu nombre visible y correo electrónico, para identificar tu cuenta y mostrar tu perfil donde la aplicación lo permite."
+            },
+            "expenseData": {
+                "title": "Grupos y gastos",
+                "body": "Los grupos, gastos, liquidaciones y saldos que añades se usan para ofrecer el seguimiento de gastos compartidos y calcular lo que se muestra en la aplicación."
+            },
+            "sessions": {
+                "title": "Autenticación y sesiones",
+                "body": "La información de autenticación y sesión se usa para iniciar sesión y ayudar a mantener tu cuenta protegida."
+            },
+            "operations": {
+                "title": "Operación del servicio",
+                "body": "Los datos operativos y de errores nos ayudan a operar, proteger y mejorar ChipIn. La observabilidad de producción está diseñada para no exponer intencionadamente datos sensibles de autenticación ni cuerpos sensibles de solicitudes o respuestas."
+            },
+            "updates": {
+                "title": "Actualizaciones",
+                "body": "Esta información puede actualizarse a medida que evolucione el producto."
+            }
+        },
+        "terms": {
+            "title": "Términos de servicio",
+            "intro": "ChipIn ayuda a registrar gastos compartidos y saldos entre personas.",
+            "productUse": {
+                "title": "Uso de ChipIn",
+                "body": "Puedes usar ChipIn para registrar gastos compartidos, consultar saldos y registrar liquidaciones."
+            },
+            "responsibility": {
+                "title": "Tu información",
+                "body": "Eres responsable de la información que envías y de comprobar que tus registros y participantes sean correctos."
+            },
+            "records": {
+                "title": "Registros de la aplicación",
+                "body": "Los saldos mostrados por ChipIn son registros de la aplicación para seguimiento. No son garantías bancarias ni garantías de liquidación de pagos."
+            },
+            "appropriateUse": {
+                "title": "Uso adecuado",
+                "body": "No uses el servicio indebidamente, no interfieras con su funcionamiento ni envíes información que no tengas permiso para compartir."
+            },
+            "changes": {
+                "title": "Cambios",
+                "body": "ChipIn puede evolucionar y sus funciones o estos términos pueden cambiar a medida que se desarrolle el producto."
+            }
+        }
+    },
     "errorBoundary": {
         "title": "La app encontró un problema",
         "runtimeError": "Algo salió mal",
