@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-import { Container, Flex, Heading, Section, Text } from '@radix-ui/themes';
+import { Box, Container, Flex, Heading, Section, Text } from '@radix-ui/themes';
 
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
@@ -62,7 +62,12 @@ const PrivacyPage = () => {
                 </Container>
             </Section>
 
-            <Footer />
+            <Box
+                data-testid="legal-page-footer"
+                pb={isLoggedIn ? { initial: '9', sm: '0' } : undefined}
+            >
+                <Footer />
+            </Box>
             {isLoggedIn && <MobileNavBar />}
         </>
     );

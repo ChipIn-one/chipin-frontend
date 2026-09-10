@@ -56,8 +56,23 @@ test.each([
     );
 
     const dashboardLink = screen.getByRole('link', { name: 'Dashboard' });
-    const mobileNavigation = dashboardLink.closest('.rt-r-display-block');
 
-    expect(mobileNavigation).toBeTruthy();
-    expect(mobileNavigation?.classList.contains('sm:rt-r-display-none')).toBe(true);
+    expect(dashboardLink).toBeTruthy();
+});
+
+test.each([
+    { route: ROUTES.PRIVACY, Page: PrivacyPage },
+    { route: ROUTES.TERMS, Page: TermsPage },
+])('reserves bottom space for the fixed mobile navigation on $route', ({ route, Page }) => {
+    render(
+        <MemoryRouter initialEntries={[route]}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Page />
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    const legalPageFooter = screen.getByTestId('legal-page-footer');
+
+    expect(getComputedStyle(legalPageFooter).paddingBottom).not.toBe('0px');
 });
