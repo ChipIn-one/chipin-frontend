@@ -1,6 +1,6 @@
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { render, screen } from '@testing-library/react';
 
@@ -33,6 +33,12 @@ const settings = {
     sex: 'male',
 } satisfies UserSettings;
 
+const MOBILE_VIEWPORT_WIDTH = 375;
+
+afterEach(() => {
+    vi.unstubAllGlobals();
+});
+
 beforeEach(() => {
     useAuthStore.setState({ status: 'authenticated' });
     useUsersStore.setState({
@@ -47,6 +53,8 @@ test.each([
     { route: ROUTES.PRIVACY, Page: PrivacyPage },
     { route: ROUTES.TERMS, Page: TermsPage },
 ])('keeps mobile navigation available for an authenticated user on $route', ({ route, Page }) => {
+    vi.stubGlobal('innerWidth', MOBILE_VIEWPORT_WIDTH);
+
     render(
         <MemoryRouter initialEntries={[route]}>
             <ThemeProvider theme={lightThemeStyled}>
