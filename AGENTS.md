@@ -88,7 +88,8 @@ These rules apply only to ChipIn frontend tasks.
 - ChipIn Development Project #5 `Status` is the canonical workflow state. Do not duplicate status in the Issue title or body.
 - Priority presentation is derived from the canonical `Priority` field. If that field is unavailable, exactly one fallback Issue label `P0`/`P1`/`P2`/`P3` may provide presentation compatibility; conflicts fail closed.
 - PRE-PROD semantics derive from the canonical `Release scope`; title encoding is not the source of truth.
-- Historical Trello links may remain in `References`; Trello metadata and links are evidence only and must not override current GitHub fields.
+- Historical Trello links may remain in `References` as read-only provenance/evidence; Trello must not participate in current task state, notifications as authority, admission, planning, or execution authorization.
+- Active agents and workflows must not create or update Trello cards; move Trello cards or lists; update Trello labels, status, or metadata; write comments or activity to Trello; or invoke or maintain Trello task-tracking integrations.
 - There is no bidirectional Trello-to-GitHub or GitHub-to-Trello synchronization.
 - Slack and other notifications are presentation only and must derive meaning from canonical GitHub Issue and Project fields.
 - Issue or Project status never authorizes AI execution; explicit human approval provenance is required.
