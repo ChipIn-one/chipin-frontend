@@ -67,6 +67,7 @@ export interface ExpenseModalState {
     amount: string;
     date: number;
     currency: string;
+    isCurrencyManuallyEdited: boolean;
     category: string;
     paidById: string;
     splitMode: ExpenseSplitMode;
@@ -145,6 +146,7 @@ const INITIAL_EXPENSE_MODAL_STATE: ExpenseModalState = {
     amount: '',
     date: 0,
     currency: '',
+    isCurrencyManuallyEdited: false,
     category: DEFAULT_EXPENSE_CATEGORY,
     paidById: '',
     splitMode: EXPENSE_SPLIT_MODES.EQUAL,
@@ -169,6 +171,21 @@ const getDefaultFriendId = (source: ExpenseModalSource) => {
     }
 
     return source.knownFriends[0]?.id ?? '';
+};
+
+const getDefaultCurrency = (
+    source: ExpenseModalSource,
+    targetMode: ExpenseTargetMode,
+    groupId: string,
+) => {
+    if (targetMode === 'friends') {
+        return source.defaultCurrency;
+    }
+
+    return (
+        source.groups.find(group => group.id === groupId)?.lastUsedCurrency ??
+        source.defaultCurrency
+    );
 };
 
 const createUserValues = <Value extends string | boolean>(
@@ -252,7 +269,6 @@ const getInitializedState = (
             ? 'friends'
             : 'group';
     const groupId = source.defaultGroupId ?? source.groups[0]?.id ?? '';
-    const selectedGroup = source.groups.find(group => group.id === groupId);
     const selectedFriendId = getDefaultFriendId(source);
     const state: ExpenseModalState = {
         ...INITIAL_EXPENSE_MODAL_STATE,
@@ -265,10 +281,7 @@ const getInitializedState = (
         targetMode,
         groupId,
         selectedFriendId,
-        currency:
-            targetMode === 'group'
-                ? (selectedGroup?.lastUsedCurrency ?? source.defaultCurrency)
-                : source.defaultCurrency,
+        currency: getDefaultCurrency(source, targetMode, groupId),
         category: source.skipCategory ? '' : source.defaultCategory,
         date: getUnixTimestampInSec(),
     };
@@ -318,6 +331,7 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
             ...state,
             ...initialization,
             isOpened: true,
+            isCurrencyManuallyEdited: true,
             openingContext: undefined,
             openingFriendId: undefined,
         }));
@@ -338,7 +352,11 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
         set(state => ({ ...state, date }));
     },
     setCurrency: currency => {
-        set(state => ({ ...state, currency }));
+        set(state => ({
+            ...state,
+            currency,
+            isCurrencyManuallyEdited: true,
+        }));
     },
     setCategory: category => {
         set(state => ({ ...state, category }));
@@ -356,6 +374,9 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
                 ...state,
                 targetMode,
                 selectedFriendId,
+                currency: state.isCurrencyManuallyEdited
+                    ? state.currency
+                    : getDefaultCurrency(state.source, targetMode, state.groupId),
                 ...getSplitDefaults({
                     ...state,
                     targetMode,
@@ -369,6 +390,9 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
             ...state,
             targetMode: 'group',
             groupId,
+            currency: state.isCurrencyManuallyEdited
+                ? state.currency
+                : getDefaultCurrency(state.source, 'group', groupId),
             ...getSplitDefaults({
                 ...state,
                 targetMode: 'group',
