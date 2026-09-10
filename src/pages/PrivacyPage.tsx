@@ -2,10 +2,15 @@ import { useTranslation } from 'react-i18next';
 
 import { Container, Flex, Heading, Section, Text } from '@radix-ui/themes';
 
+import { selectIsLoggedIn } from 'store/authSelectors';
+import { useAuthStore } from 'store/authStore';
+
 import Footer from 'components/Footer';
+import { MobileNavBar } from 'components/nav-bars';
 
 const PrivacyPage = () => {
     const { t } = useTranslation();
+    const isLoggedIn = useAuthStore(selectIsLoggedIn);
 
     return (
         <>
@@ -58,6 +63,7 @@ const PrivacyPage = () => {
             </Section>
 
             <Footer />
+            {isLoggedIn && <MobileNavBar />}
         </>
     );
 };
