@@ -7,6 +7,7 @@ import { CreateUpdateGroupModal } from './create-update-group-modal';
 import { GroupQRModal } from './group-qr-modal';
 import { KickGroupMemberAlertDialog } from './kick-group-member-alert-dialog';
 import { LeaveGroupAlertDialog } from './leave-group-alert-dialog';
+import { PremiumLaunchPromoModal } from './premium-launch-promo-modal';
 import { RemoveFriendAlertDialog } from './remove-friend-alert-dialog';
 import { RemoveGroupAlertDialog } from './remove-group-alert-dialog';
 import { RemoveLedgerEntryAlertDialog } from './remove-ledger-entry-alert-dialog';
@@ -23,6 +24,7 @@ export {
     KickGroupMemberAlertDialog,
     LeaveGroupAlertDialog,
     ModalOverlayGlobalStyles,
+    PremiumLaunchPromoModal,
     RemoveFriendAlertDialog,
     RemoveGroupAlertDialog,
     RemoveLedgerEntryAlertDialog,
