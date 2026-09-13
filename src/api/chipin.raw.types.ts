@@ -57,8 +57,8 @@ export interface ApiSelfUserResponse {
     picture?: string | null;
     role: ApiUserRole;
     subscriptionUntil: number | null;
-    isPremium: boolean;
-    premiumExpiresAt: number | null;
+    isPremium?: boolean;
+    premiumExpiresAt?: number | null;
     inviteToken: string;
     settings: ApiUserSettings;
     createdAt: number;
