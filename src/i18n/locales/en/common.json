@@ -148,6 +148,14 @@
         "friends": "Friends",
         "settings": "Settings"
     },
+    "premiumLaunchPromo": {
+        "title": "Premium unlocked",
+        "accessibleDescription": "Launch Premium reward for early ChipIn users.",
+        "earlyUser": "You're one of the first 5,000 ChipIn users.",
+        "reward": "Premium is yours free for 1 year.",
+        "expires": "Premium expires on {{date}}.",
+        "continue": "Continue"
+    },
     "noDebtsTitle": "All settled",
     "noDebtsDescription": "You don't owe anyone and no one owes you.",
     "amount": {
