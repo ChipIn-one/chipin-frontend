@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import type { SelfUser } from 'api/chipin.types';
+import { LocalStorage } from 'helpers/localStorage';
 import i18n from 'i18n';
 import { useUsersStore } from 'store/users-store';
 
@@ -53,14 +54,14 @@ const premiumUser = {
 } satisfies SelfUser;
 
 beforeEach(() => {
-    localStorage.clear();
+    LocalStorage.clear();
     void i18n.changeLanguage('en');
     useUsersStore.setState({ user: premiumUser });
 });
 
 afterEach(() => {
     useUsersStore.getState().setInitialUsersStore();
-    localStorage.clear();
+    LocalStorage.clear();
 });
 
 test('shows the first-5000 Premium launch promo with the backend expiration date', () => {
