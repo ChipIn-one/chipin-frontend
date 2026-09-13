@@ -15,7 +15,11 @@ import PWABadge from 'basics/PWABadge';
 import AddExpenseButton from 'components/AddExpenseButton';
 import { BackendUnavailableGate } from 'components/backend-unavailable-page';
 import Header from 'components/Header';
-import { AddExpenseModal, ModalOverlayGlobalStyles } from 'components/modals/';
+import {
+    AddExpenseModal,
+    ModalOverlayGlobalStyles,
+    PremiumLaunchPromoModal,
+} from 'components/modals/';
 import AppRouter from 'features/routing';
 import GlobalHooks from 'pages/GlobalHooks';
 
@@ -52,6 +56,7 @@ const Main = () => {
                             </Box>
                             <AddExpenseButton />
                             <AddExpenseModal />
+                            <PremiumLaunchPromoModal />
                             <PWABadge />
 
                             <Toaster
