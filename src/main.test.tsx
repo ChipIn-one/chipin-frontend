@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 import type { SelfUser } from 'api/chipin.types';
 import { LocalStorage } from 'helpers/localStorage';
@@ -53,6 +53,12 @@ const premiumUser = {
     updatedAt: 1,
 } satisfies SelfUser;
 
+const secondPremiumUser = {
+    ...premiumUser,
+    id: 'premium-user-2',
+    email: 'premium-2@example.com',
+} satisfies SelfUser;
+
 beforeEach(() => {
     LocalStorage.clear();
     void i18n.changeLanguage('en');
@@ -70,4 +76,20 @@ test('shows the first-5000 Premium launch promo with the backend expiration date
     expect(screen.getByText("You're one of the first 5,000 ChipIn users.")).toBeTruthy();
     expect(screen.getByText('Premium is yours free for 1 year.')).toBeTruthy();
     expect(screen.getByText(/January 15, 2027/)).toBeTruthy();
+});
+
+test('persists the launch promo acknowledgement per user', () => {
+    const firstRender = render(<Main />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    firstRender.unmount();
+
+    const acknowledgedRender = render(<Main />);
+    expect(screen.queryByText("You're one of the first 5,000 ChipIn users.")).toBeNull();
+    acknowledgedRender.unmount();
+
+    useUsersStore.setState({ user: secondPremiumUser });
+    render(<Main />);
+
+    expect(screen.getByText("You're one of the first 5,000 ChipIn users.")).toBeTruthy();
 });
