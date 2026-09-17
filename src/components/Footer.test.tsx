@@ -23,3 +23,15 @@ test('renders Telegram as a safe external media link', () => {
     expect(telegramLink.getAttribute('target')).toBe('_blank');
     expect(telegramLink.getAttribute('rel')).toBe('noreferrer');
 });
+
+test('points legal links to public pages and does not expose Contact', () => {
+    render(<Footer />);
+
+    expect(screen.getByRole('link', { name: 'footer.privacy' }).getAttribute('href')).toBe(
+        '/privacy',
+    );
+    expect(screen.getByRole('link', { name: 'footer.terms' }).getAttribute('href')).toBe(
+        '/terms',
+    );
+    expect(screen.queryByRole('link', { name: 'footer.contact' })).toBeNull();
+});

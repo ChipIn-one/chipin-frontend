@@ -88,16 +88,33 @@ const writeJson = (filePath, value, indentation) => {
     writeFileSync(filePath, `${JSON.stringify(value, null, indentation)}\n`, 'utf8');
 };
 
+const updatePackageVersion = (filePath, version) => {
+    const source = readFileSync(filePath, 'utf8');
+    const packageJson = JSON.parse(source);
+
+    if (typeof packageJson.version !== 'string') {
+        throw new Error('package.json must contain a version string.');
+    }
+
+    const updatedSource = source.replace(
+        /("version"\s*:\s*")[^"]+(")/u,
+        `$1${version}$2`,
+    );
+
+    if (updatedSource === source || JSON.parse(updatedSource).version !== version) {
+        throw new Error('package.json version could not be updated safely.');
+    }
+
+    writeFileSync(filePath, updatedSource, 'utf8');
+};
+
 export const updateManifestVersions = (version, {
     packagePath = PACKAGE_PATH,
     lockfilePath = LOCKFILE_PATH,
 } = {}) => {
     parseSemVer(version);
 
-    const packageJson = readJson(packagePath);
     const lockJson = readJson(lockfilePath);
-
-    packageJson.version = version;
 
     if (typeof lockJson.version !== 'string' || !lockJson.packages?.['']) {
         throw new Error('package-lock.json must contain packages[""].');
@@ -105,7 +122,8 @@ export const updateManifestVersions = (version, {
 
     lockJson.version = version;
     lockJson.packages[''].version = version;
-    writeJson(packagePath, packageJson, 4);
+
+    updatePackageVersion(packagePath, version);
     writeJson(lockfilePath, lockJson, 2);
 };
 

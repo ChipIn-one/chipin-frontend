@@ -7,6 +7,14 @@
         "title": "ChipIn — Sign In",
         "description": "Sign in to your ChipIn account"
     },
+    "privacy": {
+        "title": "ChipIn — Privacy",
+        "description": "Learn how ChipIn uses information to operate the service"
+    },
+    "terms": {
+        "title": "ChipIn — Terms of Service",
+        "description": "Read the interim terms for using ChipIn"
+    },
     "oauthCallback": {
         "title": "ChipIn — Signing In",
         "description": "Completing sign in to ChipIn"

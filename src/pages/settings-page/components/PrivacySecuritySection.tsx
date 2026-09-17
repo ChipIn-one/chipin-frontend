@@ -1,4 +1,4 @@
-import { LucideDownload, LucideLogOut, LucideShield, LucideTrash2 } from 'lucide-react';
+import { LucideLogOut, LucideShield } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -24,10 +24,6 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
     const isLoggingOutOtherDevices = useLoadingStore(
         selectAuthLogoutOtherDevicesLoading,
     );
-
-    const onDeleteAccount = () => {
-        toast.info(t('toasts:settings.deleteAccountSoon'));
-    };
 
     const onLogoutOtherDevices = () => {
         if (isLoggingOutOtherDevices) {
@@ -72,7 +68,7 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
 
                 <Separator size="4" />
 
-                <Grid columns={{ initial: '1', sm: '3' }} gap="3">
+                <Grid columns={{ initial: '1', sm: '1' }} gap="3">
                     <Skeleton loading={isLoading}>
                         <Card asChild>
                             <button
@@ -92,40 +88,6 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                                                     ? 'security.logoutOtherDevicesLoading'
                                                     : 'security.logoutOtherDevicesDescription',
                                             )}
-                                        </Text>
-                                    </Box>
-                                </Flex>
-                            </button>
-                        </Card>
-                    </Skeleton>
-
-                    <Skeleton loading={isLoading}>
-                        <Card>
-                            <Flex gap="3" align="start">
-                                <LucideDownload size={20} />
-                                <Box>
-                                    <Text weight="medium" as="p">
-                                        {t('security.exportDataTitle')}
-                                    </Text>
-                                    <Text size="2" color="gray" as="p">
-                                        {t('security.exportDataDescription')}
-                                    </Text>
-                                </Box>
-                            </Flex>
-                        </Card>
-                    </Skeleton>
-
-                    <Skeleton loading={isLoading}>
-                        <Card asChild>
-                            <button onClick={onDeleteAccount}>
-                                <Flex gap="3" align="start">
-                                    <LucideTrash2 size={20} color="var(--red-11)" />
-                                    <Box>
-                                        <Text weight="medium" color="red" as="p">
-                                            {t('security.deleteAccountTitle')}
-                                        </Text>
-                                        <Text size="2" color="gray" as="p">
-                                            {t('security.deleteAccountDescription')}
                                         </Text>
                                     </Box>
                                 </Flex>

@@ -93,6 +93,7 @@ export const useExpenseModalSource = ({
                 id: group.id,
                 name: group.name,
                 members: group.members.map(member => member.user),
+                lastUsedCurrency: group.lastUsedCurrency,
             })),
             knownFriends: friends.map(friend => friend.user),
             defaultGroupId: selectedGroup?.id ?? groups[0]?.id,

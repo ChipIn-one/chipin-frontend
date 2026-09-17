@@ -99,14 +99,11 @@ const Footer = () => {
 
                     {/* Right — links */}
                     <Flex justify="center" gap={{ initial: '3', md: '5' }} wrap="wrap">
-                        <Link href="#" color="gray" size="2" underline="hover">
+                        <Link href="/privacy" color="gray" size="2" underline="hover">
                             {t('footer.privacy')}
                         </Link>
-                        <Link href="#" color="gray" size="2" underline="hover">
+                        <Link href="/terms" color="gray" size="2" underline="hover">
                             {t('footer.terms')}
-                        </Link>
-                        <Link href="#" color="gray" size="2" underline="hover">
-                            {t('footer.contact')}
                         </Link>
                     </Flex>
                 </Flex>

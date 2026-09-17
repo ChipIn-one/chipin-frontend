@@ -63,6 +63,56 @@
         "terms": "Termos",
         "contact": "Contacto"
     },
+    "legal": {
+        "privacy": {
+            "title": "Privacidade",
+            "intro": "O ChipIn utiliza as informações que fornece para operar as funcionalidades de acompanhamento de despesas partilhadas e saldos.",
+            "account": {
+                "title": "Informações da conta",
+                "body": "Utilizamos os dados de conta e perfil que fornece, como o nome apresentado e o endereço de e-mail, para identificar a sua conta e mostrar o seu perfil onde o produto o faz."
+            },
+            "expenseData": {
+                "title": "Grupos e despesas",
+                "body": "Os grupos, despesas, acertos e saldos que adiciona são utilizados para acompanhar despesas partilhadas e calcular o que a aplicação apresenta."
+            },
+            "sessions": {
+                "title": "Autenticação e sessões",
+                "body": "As informações de autenticação e sessão são utilizadas para iniciar sessão e ajudar a manter a sua conta segura."
+            },
+            "operations": {
+                "title": "Funcionamento do serviço",
+                "body": "Os dados operacionais e de erros ajudam-nos a operar, proteger e melhorar o ChipIn. A observabilidade de produção foi concebida para não expor intencionalmente dados sensíveis de autenticação nem corpos sensíveis de pedidos e respostas."
+            },
+            "updates": {
+                "title": "Atualizações",
+                "body": "Estas informações podem ser atualizadas à medida que o produto evolui."
+            }
+        },
+        "terms": {
+            "title": "Termos de serviço",
+            "intro": "O ChipIn ajuda a acompanhar despesas partilhadas e saldos entre pessoas.",
+            "productUse": {
+                "title": "Utilizar o ChipIn",
+                "body": "Pode utilizar o ChipIn para registar despesas partilhadas, consultar saldos e registar acertos."
+            },
+            "responsibility": {
+                "title": "As suas informações",
+                "body": "É responsável pelas informações que envia e por verificar se os seus registos e participantes estão corretos."
+            },
+            "records": {
+                "title": "Registos da aplicação",
+                "body": "Os saldos apresentados pelo ChipIn são registos da aplicação para acompanhamento. Não são garantias bancárias nem garantias de liquidação de pagamentos."
+            },
+            "appropriateUse": {
+                "title": "Utilização adequada",
+                "body": "Não utilize o serviço indevidamente, não interfira com o seu funcionamento e não envie informações que não tenha autorização para partilhar."
+            },
+            "changes": {
+                "title": "Alterações",
+                "body": "O ChipIn pode evoluir e as suas funcionalidades ou estes termos podem mudar à medida que o produto se desenvolve."
+            }
+        }
+    },
     "errorBoundary": {
         "title": "A aplicação encontrou um problema",
         "runtimeError": "Algo correu mal",
