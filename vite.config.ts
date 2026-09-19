@@ -216,19 +216,34 @@ export default defineConfig(({ mode }) => {
 
         build: {
             sourcemap: 'hidden',
-            rollupOptions: {
+            rolldownOptions: {
                 output: {
-                    manualChunks: {
-                        'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-                        'vendor-radix': ['@radix-ui/themes'],
-                        'vendor-sentry': ['@sentry/react'],
-                        'vendor-styled': ['styled-components'],
-                        'vendor-i18n': ['i18next', 'react-i18next'],
-                        'vendor-misc': [
-                            'axios',
-                            'dexie',
-                            'dexie-react-hooks',
-                            'zustand',
+                    codeSplitting: {
+                        groups: [
+                            {
+                                name: 'vendor-react',
+                                test: /node_modules[\\/](?:react|react-dom|react-router-dom)[\\/]/,
+                            },
+                            {
+                                name: 'vendor-radix',
+                                test: /node_modules[\\/]@radix-ui[\\/]themes[\\/]/,
+                            },
+                            {
+                                name: 'vendor-sentry',
+                                test: /node_modules[\\/]@sentry[\\/]react[\\/]/,
+                            },
+                            {
+                                name: 'vendor-styled',
+                                test: /node_modules[\\/]styled-components[\\/]/,
+                            },
+                            {
+                                name: 'vendor-i18n',
+                                test: /node_modules[\\/](?:i18next|react-i18next)[\\/]/,
+                            },
+                            {
+                                name: 'vendor-misc',
+                                test: /node_modules[\\/](?:axios|dexie|dexie-react-hooks|zustand)[\\/]/,
+                            },
                         ],
                     },
                 },
