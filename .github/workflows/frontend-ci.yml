@@ -78,7 +78,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
-          node-version: 22.23.2
+          node-version: 24.21.0
           package-manager-cache: false
       - name: Validate release source
         if: github.event_name == 'pull_request' && github.base_ref == 'main'
