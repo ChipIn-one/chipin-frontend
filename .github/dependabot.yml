@@ -31,7 +31,6 @@ updates:
     directory: '/'
     schedule:
       interval: 'weekly'
-    target-branch: 'dev'
     open-pull-requests-limit: 0
     groups:
       npm-security:
