@@ -12,6 +12,10 @@
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
+    "baseUrl": "src",
+    "paths": {
+      "constants/*": ["constants/*"]
+    },
 
     /* Linting */
     "strict": true,
