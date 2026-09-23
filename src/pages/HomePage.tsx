@@ -1,5 +1,6 @@
 import { LucideClock3, LucideCrown, LucideSparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
 import { Button, Flex, Text } from '@radix-ui/themes';
@@ -18,15 +19,6 @@ import {
     ShowcaseSections,
 } from 'features/landing';
 
-const PROMO_COPY = {
-    label: 'EARLY SUPPORTER',
-    title: 'You’re #1–5,000',
-    intro: 'Thank you for being with ChipIn early.',
-    benefit: 'Premium is yours for 1 year — free.',
-    expires: 'Expires on Sep 13, 2027',
-    button: 'Thank you',
-    modalTitle: 'Welcome to ChipIn',
-} as const;
 
 const PromoBody = styled.div`
     min-width: 0;
@@ -162,11 +154,12 @@ const ThankYouButton = styled(Button)`
 `;
 
 const EarlySupporterPreviewModal = () => {
+    const { t } = useTranslation('landing');
     const [isOpen, setIsOpen] = useState(true);
 
     const thankYouAction = (
         <ThankYouButton size="3" onClick={() => setIsOpen(false)}>
-            {PROMO_COPY.button}
+            {t('promo.button')}
         </ThankYouButton>
     );
 
@@ -182,17 +175,17 @@ const EarlySupporterPreviewModal = () => {
                         <Sparkle $side="right" size={27} />
                     </CrownStage>
 
-                    <PromoLabel>{PROMO_COPY.label}</PromoLabel>
-                    <PromoTitle>{PROMO_COPY.title}</PromoTitle>
+                    <PromoLabel>{t('promo.label')}</PromoLabel>
+                    <PromoTitle>{t('promo.title')}</PromoTitle>
                     <PromoCopy>
-                        {PROMO_COPY.intro}
+                        {t('promo.intro')}
                         <br />
-                        {PROMO_COPY.benefit}
+                        {t('promo.benefit')}
                     </PromoCopy>
 
                     <ExpiryPill>
                         <LucideClock3 size={24} />
-                        {PROMO_COPY.expires}
+                        {t('promo.expires')}
                     </ExpiryPill>
                 </PromoStack>
             </PromoBody>
@@ -203,8 +196,8 @@ const EarlySupporterPreviewModal = () => {
 
     return (
         <BaseModal
-            title={PROMO_COPY.modalTitle}
-            accessibleDescription={PROMO_COPY.benefit}
+            title={t('promo.modalTitle')}
+            accessibleDescription={t('promo.benefit')}
             maxWidth="680px"
             content={content}
             isOpened={isOpen}
