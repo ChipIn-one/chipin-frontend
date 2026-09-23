@@ -1,7 +1,6 @@
-import { randomUUID } from 'node:crypto';
-
 import { it } from 'vitest';
 
+import type { ContractEnvironment } from './support/config';
 import { resolveContractConfig } from './support/config';
 import {
     parseRefreshResponse,
@@ -16,7 +15,29 @@ const REQUIRED_OPENAPI_PATHS = [
     '/users/self',
 ] as const;
 
-const createRunId = (): string => `fe-${Date.now()}-${randomUUID()}`;
+const readEnvironmentVariable = (key: keyof ContractEnvironment): string | undefined => {
+    const processValue: unknown = Reflect.get(globalThis, 'process');
+
+    if (typeof processValue !== 'object' || processValue === null) {
+        throw new Error('Contract tests require a Node process environment');
+    }
+
+    const environmentValue: unknown = Reflect.get(processValue, 'env');
+
+    if (typeof environmentValue !== 'object' || environmentValue === null) {
+        throw new Error('Contract tests require a Node process environment');
+    }
+
+    const value: unknown = Reflect.get(environmentValue, key);
+
+    return typeof value === 'string' ? value : undefined;
+};
+
+const createRunId = (): string => {
+    const randomPart = Math.random().toString(36).slice(2, 14);
+
+    return `fe-${Date.now()}-${randomPart}`;
+};
 
 const assertOpenApiPaths = (document: string): void => {
     if (!document.trim()) {
@@ -32,9 +53,11 @@ const assertOpenApiPaths = (document: string): void => {
 
 it('validates the live auth and session contract', () => {
     const config = resolveContractConfig({
-        CHIPIN_CONTRACT_BASE_URL: process.env.CHIPIN_CONTRACT_BASE_URL,
-        CHIPIN_CONTRACT_BASIC_USER: process.env.CHIPIN_CONTRACT_BASIC_USER,
-        CHIPIN_CONTRACT_BASIC_PASSWORD: process.env.CHIPIN_CONTRACT_BASIC_PASSWORD,
+        CHIPIN_CONTRACT_BASE_URL: readEnvironmentVariable('CHIPIN_CONTRACT_BASE_URL'),
+        CHIPIN_CONTRACT_BASIC_USER: readEnvironmentVariable('CHIPIN_CONTRACT_BASIC_USER'),
+        CHIPIN_CONTRACT_BASIC_PASSWORD: readEnvironmentVariable(
+            'CHIPIN_CONTRACT_BASIC_PASSWORD',
+        ),
     });
     const client = createContractHttpClient(config);
     const runId = createRunId();
