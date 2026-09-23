@@ -61,16 +61,21 @@ vi.mock('hooks/pwaHooks', () => ({
     }),
 }));
 
-vi.mock('components/modals', () => {
-    const PassThrough = ({ children }: { children?: ReactNode }) => children;
+vi.mock('components/modals/group-qr-modal', () => ({
+    GroupQRModal: ({ children }: { children?: ReactNode }) => children,
+}));
 
-    return {
-        GroupQRModal: PassThrough,
-        KickGroupMemberAlertDialog: PassThrough,
-        LeaveGroupAlertDialog: PassThrough,
-        RemoveGroupAlertDialog: PassThrough,
-    };
-});
+vi.mock('components/modals/kick-group-member-alert-dialog', () => ({
+    KickGroupMemberAlertDialog: ({ children }: { children?: ReactNode }) => children,
+}));
+
+vi.mock('components/modals/leave-group-alert-dialog', () => ({
+    LeaveGroupAlertDialog: ({ children }: { children?: ReactNode }) => children,
+}));
+
+vi.mock('components/modals/remove-group-alert-dialog', () => ({
+    RemoveGroupAlertDialog: ({ children }: { children?: ReactNode }) => children,
+}));
 
 const owner: SelfUser = {
     id: 'user-1',
