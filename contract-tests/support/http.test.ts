@@ -123,29 +123,52 @@ describe('createContractHttpClient', () => {
                 }),
             );
 
-        return expect(
-            createContractHttpClient(stagingConfig, fetchImpl).requestJson({
+        return createContractHttpClient(stagingConfig, fetchImpl)
+            .requestJson({
                 auth: { kind: 'basic' },
                 body: { runId: 'contract-run' },
                 method: 'POST',
                 path: '/auth/test-register',
-            }),
-        ).rejects.toThrow(
-            'Contract request POST /auth/test-register failed with HTTP 401',
-        );
+            })
+            .then(
+                () => {
+                    throw new Error('Expected the request to fail');
+                },
+                (error: unknown) => {
+                    expect(error).toEqual(
+                        new Error(
+                            'Contract request POST /auth/test-register failed with HTTP 401',
+                        ),
+                    );
+                    expect(String(error)).not.toContain('access-token-secret');
+                },
+            );
     });
 
     it('keeps invalid JSON bodies out of parse errors', () => {
         const fetchImpl: typeof fetch = () =>
             Promise.resolve(new Response('refresh-token-secret not-json', { status: 200 }));
 
-        return expect(
-            createContractHttpClient(stagingConfig, fetchImpl).requestJson({
+        return createContractHttpClient(stagingConfig, fetchImpl)
+            .requestJson({
                 auth: { kind: 'bearer', token: 'access-token-secret' },
                 method: 'GET',
                 path: '/users/self',
-            }),
-        ).rejects.toThrow('Contract request GET /users/self returned invalid JSON');
+            })
+            .then(
+                () => {
+                    throw new Error('Expected the response parse to fail');
+                },
+                (error: unknown) => {
+                    expect(error).toEqual(
+                        new Error(
+                            'Contract request GET /users/self returned invalid JSON',
+                        ),
+                    );
+                    expect(String(error)).not.toContain('refresh-token-secret');
+                    expect(String(error)).not.toContain('access-token-secret');
+                },
+            );
     });
 
     it('does not retry a failed request', () => {
