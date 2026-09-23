@@ -12,6 +12,7 @@ export interface ContractGroup {
         string,
         Record<string, { currency: string; netBalance: number }>
     >;
+    recentActivities: ContractPreviewPage;
 }
 
 export interface ContractPage {
@@ -37,7 +38,13 @@ export interface ContractParticipantShare {
 export type ContractLedgerActivity =
     | {
           type: 'EXPENSE';
+          action: 'EXPENSE_CREATED' | 'EXPENSE_UPDATED' | 'EXPENSE_REVERSED';
           entryId: string;
+          groupId: string | null;
+          groupName: string | null;
+          description: string | null;
+          category: string | null;
+          sharingModeType: 'AUTO' | 'EXACT' | 'PERCENTAGE' | 'SHARES' | null;
           amount: number;
           currency: string;
           payerId: string | null;
@@ -46,7 +53,10 @@ export type ContractLedgerActivity =
       }
     | {
           type: 'SETTLEMENT';
+          action: 'SETTLEMENT_CREATED' | 'SETTLEMENT_UPDATED' | 'SETTLEMENT_REVERSED';
           entryId: string;
+          groupId: string | null;
+          groupName: string | null;
           amount: number;
           currency: string;
           actorUserId: string | null;
@@ -57,6 +67,7 @@ export type ContractLedgerActivity =
 
 export interface ContractDashboard {
     balances: Record<string, { currency: string; netBalance: number }>;
+    activity: ContractPreviewPage;
 }
 
 export interface ContractKnownUser {
@@ -155,12 +166,44 @@ const requireNullableString = (
     throw new Error(`${label}.${key} must be a string or null`);
 };
 
+const readOptionalNullableString = (
+    record: Record<string, unknown>,
+    key: string,
+    label: string,
+): string | null => {
+    const value = record[key];
+    if (value === undefined || value === null) {
+        return null;
+    }
+    if (typeof value !== 'string') {
+        throw new Error(`${label}.${key} must be a string, null, or absent`);
+    }
+    return value;
+};
+
 const requireArray = (value: unknown, label: string): unknown[] => {
     if (!Array.isArray(value)) {
         throw new Error(`${label} must be an array`);
     }
 
     return value;
+};
+
+const readSharingModeType = (
+    record: Record<string, unknown>,
+    key: string,
+    label: string,
+): 'AUTO' | 'EXACT' | 'PERCENTAGE' | 'SHARES' | null => {
+    const value = record[key];
+    if (value === undefined || value === null) {
+        return null;
+    }
+    const sharingMode = requireRecord(value, `${label}.${key}`);
+    const type = requireString(sharingMode, 'type', `${label}.${key}`);
+    if (type !== 'AUTO' && type !== 'EXACT' && type !== 'PERCENTAGE' && type !== 'SHARES') {
+        throw new Error(`${label}.${key}.type must be a supported sharing mode`);
+    }
+    return type;
 };
 
 const parseCurrencyBalanceMap = (
@@ -206,12 +249,18 @@ const parseActivityActorSnapshot = (value: unknown, label: string): void => {
 const parseExpenseActivityMetadata = (
     value: unknown,
     label: string,
+    action: 'EXPENSE_CREATED' | 'EXPENSE_UPDATED' | 'EXPENSE_REVERSED',
 ): Extract<ContractLedgerActivity, { type: 'EXPENSE' }> => {
     const metadata = requireRecord(value, label);
     if (requireString(metadata, 'type', label) !== 'expense') {
         throw new Error(`${label}.type must be expense`);
     }
     const entryId = requireString(metadata, 'entryId', label);
+    const groupId = readOptionalNullableString(metadata, 'groupId', label);
+    const groupName = readOptionalNullableString(metadata, 'groupName', label);
+    const description = readOptionalNullableString(metadata, 'description', label);
+    const category = readOptionalNullableString(metadata, 'category', label);
+    const sharingModeType = readSharingModeType(metadata, 'sharingMode', label);
     const amount = requireNumber(metadata, 'amount', label);
     const currency = requireString(metadata, 'currency', label);
     const payerDisplayName = requireString(metadata, 'payerDisplayName', label);
@@ -234,7 +283,13 @@ const parseExpenseActivityMetadata = (
 
     return {
         type: 'EXPENSE',
+        action,
         entryId,
+        groupId,
+        groupName,
+        description,
+        category,
+        sharingModeType,
         amount,
         currency,
         payerId,
@@ -267,12 +322,15 @@ const parseGroupActivityMetadata = (value: unknown, label: string): void => {
 const parseSettlementActivityMetadata = (
     value: unknown,
     label: string,
+    action: 'SETTLEMENT_CREATED' | 'SETTLEMENT_UPDATED' | 'SETTLEMENT_REVERSED',
 ): Extract<ContractLedgerActivity, { type: 'SETTLEMENT' }> => {
     const metadata = requireRecord(value, label);
     if (requireString(metadata, 'type', label) !== 'settlement') {
         throw new Error(`${label}.type must be settlement`);
     }
     const entryId = requireString(metadata, 'entryId', label);
+    const groupId = readOptionalNullableString(metadata, 'groupId', label);
+    const groupName = readOptionalNullableString(metadata, 'groupName', label);
     const amount = requireNumber(metadata, 'amount', label);
     const currency = requireString(metadata, 'currency', label);
     const fromDisplayName = requireString(metadata, 'fromDisplayName', label);
@@ -288,7 +346,10 @@ const parseSettlementActivityMetadata = (
 
     return {
         type: 'SETTLEMENT',
+        action,
         entryId,
+        groupId,
+        groupName,
         amount,
         currency,
         actorUserId,
@@ -317,7 +378,7 @@ const parseActivityEvent = (
         if (domain !== 'LEDGER' || subjectType !== 'expense') {
             throw new Error(`${label} expense actions must use LEDGER/expense discriminants`);
         }
-        ledgerActivity = parseExpenseActivityMetadata(event.metadata, `${label}.metadata`);
+        ledgerActivity = parseExpenseActivityMetadata(event.metadata, `${label}.metadata`, action);
     }
     if (
         action === 'SETTLEMENT_CREATED' ||
@@ -327,7 +388,7 @@ const parseActivityEvent = (
         if (domain !== 'LEDGER' || subjectType !== 'settlement') {
             throw new Error(`${label} settlement actions must use LEDGER/settlement discriminants`);
         }
-        ledgerActivity = parseSettlementActivityMetadata(event.metadata, `${label}.metadata`);
+        ledgerActivity = parseSettlementActivityMetadata(event.metadata, `${label}.metadata`, action);
     }
     if (
         action === 'GROUP_CREATED' ||
@@ -413,7 +474,7 @@ export const parseGroup = (value: unknown): ContractGroup => {
         throw new Error('group.status must be ACTIVE');
     }
     requireNullableString(group, 'lastUsedCurrency', 'group');
-    parsePreviewPage(group.recentActivities, 'group.recentActivities');
+    const recentActivities = parsePreviewPage(group.recentActivities, 'group.recentActivities');
 
     const members = requireArray(group.members, 'group.members');
     const memberIds: string[] = [];
@@ -437,6 +498,7 @@ export const parseGroup = (value: unknown): ContractGroup => {
         creatorId,
         memberIds,
         memberBalancesByUserId,
+        recentActivities,
     };
 };
 
@@ -536,20 +598,20 @@ const parsePreviewPage = (value: unknown, label: string): ContractPreviewPage =>
     for (let index = 0; index < items.length; index += 1) {
         const item = requireRecord(items[index], `${label}.items[${index}]`);
         const parent = parseActivityEvent(item.parent, `${label}.items[${index}].parent`);
-        ids.push(parent.id);
-        if (parent.ledgerEntryId !== null) {
-            ledgerEntryIds.push(parent.ledgerEntryId);
-        }
-        if (parent.ledgerActivity !== null) {
-            ledgerActivities.push(parent.ledgerActivity);
-        }
         const lastEvent = parseActivityEvent(
             item.lastEvent,
             `${label}.items[${index}].lastEvent`,
         );
-        if (lastEvent.ledgerActivity !== null) {
-            renderedLedgerActivities.push(lastEvent.ledgerActivity);
+        if (parent.ledgerActivity === null || lastEvent.ledgerActivity === null) {
+            throw new Error(`${label}.items[${index}] must contain ledger preview events`);
         }
+        if (parent.ledgerActivity.entryId !== lastEvent.ledgerActivity.entryId) {
+            throw new Error(`${label}.items[${index}] parent and lastEvent must reference the same ledger entry`);
+        }
+        ids.push(parent.id);
+        ledgerEntryIds.push(parent.ledgerActivity.entryId);
+        ledgerActivities.push(parent.ledgerActivity);
+        renderedLedgerActivities.push(lastEvent.ledgerActivity);
     }
     const cursor = response.nextCursor;
     if (cursor !== null && (typeof cursor !== 'number' || !Number.isSafeInteger(cursor))) {
@@ -593,13 +655,13 @@ export const parseActivityPreviewPage = (value: unknown): ContractPreviewPage =>
 export const parseDashboard = (value: unknown): ContractDashboard => {
     const dashboard = requireRecord(value, 'dashboard');
     const balances = parseCurrencyBalanceMap(dashboard.balances, 'dashboard.balances');
-    parsePreviewPage(dashboard.activity, 'dashboard.activity');
+    const activity = parsePreviewPage(dashboard.activity, 'dashboard.activity');
     const groups = requireArray(dashboard.groups, 'dashboard.groups');
     if (groups.length !== 0) {
         throw new Error('dashboard.groups compatibility field must stay empty');
     }
 
-    return { balances };
+    return { balances, activity };
 };
 
 export const parseCurrencyRates = (value: unknown): { base: string } => {

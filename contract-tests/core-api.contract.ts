@@ -22,26 +22,61 @@ import { createContractHttpClient } from './support/http';
 import { assertOpenApiResponseFields } from './support/openapi';
 
 const OPENAPI_RESPONSE_EXPECTATIONS = [
-    { path: '/auth/test-register', method: 'post', status: '201', fields: [] },
-    { path: '/auth/test-runs/{runId}', method: 'delete', status: '200', fields: [] },
-    { path: '/users/self', method: 'get', status: '200', fields: ['isPremium'] },
-    { path: '/users/self', method: 'get', status: '401', fields: ['code'] },
-    { path: '/users/known-users', method: 'get', status: '200', fields: [] },
-    { path: '/users/invite-link', method: 'post', status: '200', fields: [] },
-    { path: '/users/invite/{inviteToken}', method: 'post', status: '200', fields: [] },
-    { path: '/groups', method: 'get', status: '200', fields: ['nextCursor'] },
-    { path: '/groups', method: 'get', status: '400', fields: ['code'] },
-    { path: '/groups', method: 'post', status: '201', fields: ['simplifyDebts'] },
-    { path: '/groups/{id}', method: 'get', status: '200', fields: [] },
-    { path: '/groups/{id}/members', method: 'post', status: '200', fields: [] },
-    { path: '/ledger/entries', method: 'post', status: '201', fields: ['participantShares'] },
-    { path: '/ledger/entries/{id}', method: 'get', status: '200', fields: [] },
-    { path: '/ledger/entries/{id}', method: 'get', status: '404', fields: ['code'] },
-    { path: '/dashboard', method: 'get', status: '200', fields: [] },
-    { path: '/users/self/activities', method: 'get', status: '200', fields: ['nextCursor'] },
-    { path: '/users/self/activity-previews', method: 'get', status: '200', fields: ['nextCursor'] },
-    { path: '/groups/{groupId}/activity-previews', method: 'get', status: '200', fields: ['nextCursor'] },
-    { path: '/currency-rates', method: 'get', status: '200', fields: ['stale'] },
+    { path: '/auth/test-register', method: 'post', status: '201', fieldPaths: [] },
+    { path: '/auth/test-runs/{runId}', method: 'delete', status: '200', fieldPaths: [] },
+    { path: '/users/self', method: 'get', status: '200', fieldPaths: ['isPremium'] },
+    { path: '/users/self', method: 'get', status: '401', fieldPaths: ['code'] },
+    {
+        path: '/users/known-users',
+        method: 'get',
+        status: '200',
+        fieldPaths: ['friends', 'friends.user.id', 'friends.balances', 'friends.lastUsedCurrency'],
+    },
+    { path: '/users/invite-link', method: 'post', status: '200', fieldPaths: ['inviteToken'] },
+    { path: '/users/invite/{inviteToken}', method: 'post', status: '200', fieldPaths: [] },
+    { path: '/groups', method: 'get', status: '200', fieldPaths: ['items', 'nextCursor'] },
+    { path: '/groups', method: 'get', status: '400', fieldPaths: ['code'] },
+    {
+        path: '/groups',
+        method: 'post',
+        status: '201',
+        fieldPaths: ['creator.id', 'members', 'recentActivities.items', 'simplifyDebts'],
+    },
+    {
+        path: '/groups/{id}',
+        method: 'get',
+        status: '200',
+        fieldPaths: ['members', 'recentActivities.items', 'recentActivities.nextCursor'],
+    },
+    { path: '/groups/{id}/members', method: 'post', status: '200', fieldPaths: ['members'] },
+    {
+        path: '/ledger/entries',
+        method: 'post',
+        status: '201',
+        fieldPaths: ['expense.participantShares'],
+    },
+    { path: '/ledger/entries/{id}', method: 'get', status: '200', fieldPaths: [] },
+    { path: '/ledger/entries/{id}', method: 'get', status: '404', fieldPaths: ['code'] },
+    {
+        path: '/dashboard',
+        method: 'get',
+        status: '200',
+        fieldPaths: ['balances', 'activity.items.parent', 'activity.items.lastEvent', 'activity.nextCursor'],
+    },
+    { path: '/users/self/activities', method: 'get', status: '200', fieldPaths: ['items', 'nextCursor'] },
+    {
+        path: '/users/self/activity-previews',
+        method: 'get',
+        status: '200',
+        fieldPaths: ['items.parent', 'items.lastEvent', 'nextCursor'],
+    },
+    {
+        path: '/groups/{groupId}/activity-previews',
+        method: 'get',
+        status: '200',
+        fieldPaths: ['items.parent', 'items.lastEvent', 'nextCursor'],
+    },
+    { path: '/currency-rates', method: 'get', status: '200', fieldPaths: ['stale', 'rates'] },
 ] as const;
 
 const FULL_MATRIX_TIMEOUT_MS = 6 * 60_000;
@@ -103,6 +138,7 @@ it('validates the live core API contract matrix', () => {
         expectedExpenseId: string,
         expectedSettlementId: string,
     ): boolean => {
+        const expectedGroupId = requireState(groupA, 'group A');
         if (activity.type === 'EXPENSE') {
             const expectedParticipants = new Set([a.user.id, b.user.id]);
             const expectedDisplayNames = new Map([
@@ -110,7 +146,13 @@ it('validates the live core API contract matrix', () => {
                 [b.user.id, b.user.displayName],
             ]);
             return (
+                activity.action === 'EXPENSE_CREATED' &&
                 activity.entryId === expectedExpenseId &&
+                activity.groupId === expectedGroupId &&
+                activity.groupName === 'Contract Group A' &&
+                activity.description === 'Contract dinner' &&
+                activity.category === 'food' &&
+                activity.sharingModeType === 'AUTO' &&
                 activity.amount === 12.5 &&
                 activity.currency === 'USD' &&
                 activity.payerId === a.user.id &&
@@ -126,13 +168,40 @@ it('validates the live core API contract matrix', () => {
         }
 
         return (
+            activity.action === 'SETTLEMENT_CREATED' &&
             activity.entryId === expectedSettlementId &&
+            activity.groupId === expectedGroupId &&
+            activity.groupName === 'Contract Group A' &&
             activity.amount === 5 &&
             activity.currency === 'USD' &&
             activity.actorUserId === a.user.id &&
             activity.payerId === b.user.id &&
             activity.fromDisplayName === b.user.displayName &&
             activity.toDisplayName === a.user.displayName
+        );
+    };
+
+    const hasExpectedGeneratedLedgerActivities = (
+        activities: readonly ContractLedgerActivity[],
+        a: ContractRegisterResponse,
+        b: ContractRegisterResponse,
+    ): boolean => {
+        const expectedExpenseId = requireState(expenseId, 'expense');
+        const expectedSettlementId = requireState(settlementId, 'settlement');
+        return (
+            hasExpectedParticipants(
+                activities.map(activity => activity.entryId),
+                new Set([expectedExpenseId, expectedSettlementId]),
+            ) &&
+            activities.every(activity =>
+                isExpectedLedgerActivity(
+                    activity,
+                    a,
+                    b,
+                    expectedExpenseId,
+                    expectedSettlementId,
+                ),
+            )
         );
     };
 
@@ -235,17 +304,19 @@ it('validates the live core API contract matrix', () => {
         })
         .then(value => {
             const group = parseGroup(value);
+            const a = requireState(userA, 'user A');
             if (
                 group.name !== 'Contract Group A' ||
                 group.description !== 'Primary contract group' ||
                 group.simplifyDebts !== false ||
                 group.role !== 'OWNER' ||
-                group.creatorId !== requireState(userA, 'user A').user.id
+                group.creatorId !== a.user.id ||
+                !hasExpectedParticipants(group.memberIds, new Set([a.user.id])) ||
+                group.recentActivities.ids.length !== 0
             ) {
                 throw new Error('Created group A does not match the requested properties');
             }
             groupA = group.id;
-            const a = requireState(userA, 'user A');
             const b = requireState(userB, 'user B');
             return client.requestJson({
                 auth: { kind: 'bearer', token: a.accessToken },
@@ -270,17 +341,19 @@ it('validates the live core API contract matrix', () => {
         })
         .then(value => {
             const group = parseGroup(value);
+            const a = requireState(userA, 'user A');
             if (
                 group.name !== 'Contract Group B' ||
                 group.description !== null ||
                 group.simplifyDebts !== true ||
                 group.role !== 'OWNER' ||
-                group.creatorId !== requireState(userA, 'user A').user.id
+                group.creatorId !== a.user.id ||
+                !hasExpectedParticipants(group.memberIds, new Set([a.user.id])) ||
+                group.recentActivities.ids.length !== 0
             ) {
                 throw new Error('Created group B does not match the requested properties');
             }
             groupB = group.id;
-            const a = requireState(userA, 'user A');
             return client.requestJson({
                 auth: { kind: 'bearer', token: a.accessToken },
                 method: 'GET',
@@ -457,6 +530,18 @@ it('validates the live core API contract matrix', () => {
                 );
             }
             const a = requireState(userA, 'user A');
+            if (
+                !hasExpectedGeneratedLedgerActivities(group.recentActivities.ledgerActivities, a, b) ||
+                !hasExpectedGeneratedLedgerActivities(
+                    group.recentActivities.renderedLedgerActivities,
+                    a,
+                    b,
+                )
+            ) {
+                throw new Error(
+                    'Refetched group recent activity must match both generated ledger entries',
+                );
+            }
             return client.requestJson({
                 auth: { kind: 'bearer', token: a.accessToken },
                 method: 'GET',
@@ -470,6 +555,19 @@ it('validates the live core API contract matrix', () => {
                 throw new Error('Dashboard USD balance must reflect the generated expense and settlement');
             }
             const a = requireState(userA, 'user A');
+            const b = requireState(userB, 'user B');
+            if (
+                !hasExpectedGeneratedLedgerActivities(dashboard.activity.ledgerActivities, a, b) ||
+                !hasExpectedGeneratedLedgerActivities(
+                    dashboard.activity.renderedLedgerActivities,
+                    a,
+                    b,
+                )
+            ) {
+                throw new Error(
+                    'Dashboard activity must match both generated ledger entries',
+                );
+            }
             return client.requestJson({
                 auth: { kind: 'bearer', token: a.accessToken },
                 method: 'GET',
@@ -513,19 +611,7 @@ it('validates the live core API contract matrix', () => {
             const a = requireState(userA, 'user A');
             const b = requireState(userB, 'user B');
             const activityLedgerMetadata = [...first.ledgerActivities, ...next.ledgerActivities];
-            if (
-                activityLedgerMetadata.length !== 2 ||
-                activityLedgerMetadata.some(
-                    activity =>
-                        !isExpectedLedgerActivity(
-                            activity,
-                            a,
-                            b,
-                            requireState(expenseId, 'expense'),
-                            requireState(settlementId, 'settlement'),
-                        ),
-                )
-            ) {
+            if (!hasExpectedGeneratedLedgerActivities(activityLedgerMetadata, a, b)) {
                 throw new Error('User activity metadata must match the generated ledger values');
             }
             return client.requestJson({
@@ -571,38 +657,14 @@ it('validates the live core API contract matrix', () => {
             const a = requireState(userA, 'user A');
             const b = requireState(userB, 'user B');
             const previewLedgerMetadata = [...first.ledgerActivities, ...next.ledgerActivities];
-            if (
-                previewLedgerMetadata.length !== 2 ||
-                previewLedgerMetadata.some(
-                    activity =>
-                        !isExpectedLedgerActivity(
-                            activity,
-                            a,
-                            b,
-                            requireState(expenseId, 'expense'),
-                            requireState(settlementId, 'settlement'),
-                        ),
-                )
-            ) {
+            if (!hasExpectedGeneratedLedgerActivities(previewLedgerMetadata, a, b)) {
                 throw new Error('User activity-preview metadata must match the generated ledger values');
             }
             const renderedPreviewMetadata = [
                 ...first.renderedLedgerActivities,
                 ...next.renderedLedgerActivities,
             ];
-            if (
-                renderedPreviewMetadata.length !== 2 ||
-                renderedPreviewMetadata.some(
-                    activity =>
-                        !isExpectedLedgerActivity(
-                            activity,
-                            a,
-                            b,
-                            requireState(expenseId, 'expense'),
-                            requireState(settlementId, 'settlement'),
-                        ),
-                )
-            ) {
+            if (!hasExpectedGeneratedLedgerActivities(renderedPreviewMetadata, a, b)) {
                 throw new Error(
                     'User activity-preview lastEvent metadata must match the generated ledger values',
                 );

@@ -35,10 +35,12 @@ paths:
                     path: '/ledger/entries',
                     method: 'post',
                     status: '200',
-                    fields: ['participantShares'],
+                    fieldPaths: ['expense.participantShares'],
                 },
             ]),
-        ).toThrow('POST /ledger/entries response 200 is missing field participantShares');
+        ).toThrow(
+            'POST /ledger/entries response 200 is missing field path expense.participantShares',
+        );
     });
 
     it('does not accept a field that exists only in another response status', () => {
@@ -64,8 +66,11 @@ paths:
               schema:
                 type: object
                 properties:
-                  participantShares:
-                    type: array
+                  expense:
+                    type: object
+                    properties:
+                      participantShares:
+                        type: array
 `;
 
         expect(() =>
@@ -74,20 +79,55 @@ paths:
                     path: '/ledger/entries',
                     method: 'post',
                     status: '201',
-                    fields: ['participantShares'],
+                    fieldPaths: ['expense.participantShares'],
                 },
             ]),
-        ).toThrow('POST /ledger/entries response 201 is missing field participantShares');
+        ).toThrow(
+            'POST /ledger/entries response 201 is missing field path expense.participantShares',
+        );
     });
 
-    it('resolves nested response schemas through component references', () => {
+    it('does not accept the right property name at the wrong nesting level', () => {
+        const document = `
+openapi: 3.0.0
+paths:
+  /users/self:
+    get:
+      responses:
+        '200':
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profile:
+                    type: object
+                    properties:
+                      isPremium:
+                        type: boolean
+`;
+
+        expect(() =>
+            assertOpenApiResponseFields(document, [
+                {
+                    path: '/users/self',
+                    method: 'get',
+                    status: '200',
+                    fieldPaths: ['isPremium'],
+                },
+            ]),
+        ).toThrow('GET /users/self response 200 is missing field path isPremium');
+    });
+
+    it('resolves nested response field paths through component references', () => {
         const document = `
 openapi: 3.0.0
 paths:
   /ledger/entries:
     post:
       responses:
-        '200':
+        '201':
           description: created
           content:
             application/json:
@@ -112,8 +152,8 @@ components:
                 {
                     path: '/ledger/entries',
                     method: 'post',
-                    status: '200',
-                    fields: ['participantShares'],
+                    status: '201',
+                    fieldPaths: ['expense.participantShares'],
                 },
             ]),
         ).not.toThrow();
