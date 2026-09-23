@@ -22,6 +22,7 @@ import {
     DetailLabel,
     DetailRow,
     DetailsCard,
+    DisclosureChevron,
     MobileDetails,
     MobileSummary,
     ParticipantRow,
@@ -296,9 +297,7 @@ const ActivitySubeventsDetails = ({ view, isLoading }: Props) => {
                         <SummarySurface size="2">
                             <Flex justify="between" align="center" gap="3">
                                 {summary}
-                                <Text size="1" color="gray">
-                                    {t('subeventsDetailsAction')}
-                                </Text>
+                                <DisclosureChevron size={16} aria-hidden="true" />
                             </Flex>
                         </SummarySurface>
                     </MobileSummary>

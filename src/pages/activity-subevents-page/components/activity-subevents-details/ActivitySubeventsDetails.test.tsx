@@ -143,7 +143,7 @@ test('shows settlement direction without an expense participant list', () => {
     expect(screen.queryByText('subeventsParticipants')).toBeNull();
 });
 
-test('keeps the mobile details disclosure collapsed until requested', async () => {
+test('uses a chevron while preserving the mobile details disclosure behavior', () => {
     const user = userEvent.setup();
     const view = render(
         <ActivitySubeventsDetails
@@ -158,9 +158,11 @@ test('keeps the mobile details disclosure collapsed until requested', async () =
         return Promise.reject(new Error('Mobile details disclosure is unavailable'));
     }
 
+    expect(screen.queryByText('subeventsDetailsAction')).toBeNull();
+    expect(summary.querySelector('svg')).toBeTruthy();
     expect(details.open).toBe(false);
 
-    await user.click(summary);
-
-    expect(details.open).toBe(true);
+    return user.click(summary).then(() => {
+        expect(details.open).toBe(true);
+    });
 });
