@@ -15,6 +15,10 @@ export interface ContractRequestOptions {
 
 export interface ContractHttpClient {
     requestJson: (options: ContractRequestOptions) => Promise<unknown>;
+    requestJsonForStatus: (
+        options: ContractRequestOptions,
+        expectedStatus: number,
+    ) => Promise<unknown>;
     requestText: (options: ContractRequestOptions) => Promise<string>;
 }
 
@@ -78,7 +82,7 @@ const buildHeaders = (
     return headers;
 };
 
-const createRequest = (
+const performRequest = (
     config: ContractConfig,
     fetchImpl: typeof fetch,
     options: ContractRequestOptions,
@@ -115,18 +119,50 @@ const createRequest = (
         redirect: 'error',
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     }).then(
-        (response) => {
-            if (!response.ok) {
-                throw new ContractRequestError(
-                    `Contract request ${requestDescription} failed with HTTP ${response.status}`,
-                );
-            }
-
-            return response;
-        },
+        response => response,
         () => {
             throw new ContractRequestError(
                 `Contract request ${requestDescription} failed`,
+            );
+        },
+    );
+};
+
+const createSuccessfulRequest = (
+    config: ContractConfig,
+    fetchImpl: typeof fetch,
+    options: ContractRequestOptions,
+): Promise<Response> => {
+    const requestDescription = describeRequest(options);
+
+    return performRequest(config, fetchImpl, options).then(response => {
+        if (!response.ok) {
+            throw new ContractRequestError(
+                `Contract request ${requestDescription} failed with HTTP ${response.status}`,
+            );
+        }
+
+        return response;
+    });
+};
+
+const readJsonResponse = (
+    response: Response,
+    requestDescription: string,
+): Promise<unknown> => {
+    return response.text().then(
+        text => {
+            try {
+                return JSON.parse(text);
+            } catch {
+                throw new ContractRequestError(
+                    `Contract request ${requestDescription} returned invalid JSON`,
+                );
+            }
+        },
+        () => {
+            throw new ContractRequestError(
+                `Contract request ${requestDescription} failed while reading response`,
             );
         },
     );
@@ -136,12 +172,12 @@ export const createContractHttpClient = (
     config: ContractConfig,
     fetchImpl: typeof fetch = fetch,
 ): ContractHttpClient => ({
-    requestText: (options) => {
+    requestText: options => {
         const requestDescription = describeRequest(options);
 
-        return createRequest(config, fetchImpl, options).then((response) =>
+        return createSuccessfulRequest(config, fetchImpl, options).then(response =>
             response.text().then(
-                (text) => text,
+                text => text,
                 () => {
                     throw new ContractRequestError(
                         `Contract request ${requestDescription} failed while reading response`,
@@ -150,26 +186,26 @@ export const createContractHttpClient = (
             ),
         );
     },
-    requestJson: (options) => {
+    requestJson: options => {
         const requestDescription = describeRequest(options);
 
-        return createRequest(config, fetchImpl, options).then((response) =>
-            response.text().then(
-                (text) => {
-                    try {
-                        return JSON.parse(text);
-                    } catch {
-                        throw new ContractRequestError(
-                            `Contract request ${requestDescription} returned invalid JSON`,
-                        );
-                    }
-                },
-                () => {
-                    throw new ContractRequestError(
-                        `Contract request ${requestDescription} failed while reading response`,
-                    );
-                },
-            ),
+        return createSuccessfulRequest(config, fetchImpl, options).then(response =>
+            readJsonResponse(response, requestDescription),
         );
+    },
+    requestJsonForStatus: (options, expectedStatus) => {
+        const requestDescription = describeRequest(options);
+
+        return performRequest(config, fetchImpl, options)
+            .then(response => {
+                if (response.status !== expectedStatus) {
+                    throw new ContractRequestError(
+                        `Contract request ${requestDescription} expected HTTP ${expectedStatus} but received HTTP ${response.status}`,
+                    );
+                }
+
+                return response;
+            })
+            .then(response => readJsonResponse(response, requestDescription));
     },
 });

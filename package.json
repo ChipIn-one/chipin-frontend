@@ -22,7 +22,8 @@
         "preview": "vite preview",
         "create-pwa-icons": "pwa-assets-generator",
         "test:contract": "vitest run --config vitest.contract.config.ts",
-        "test:contract:smoke": "vitest run --config vitest.contract.config.ts contract-tests/auth-session.contract.ts"
+        "test:contract:smoke": "vitest run --config vitest.contract.config.ts contract-tests/auth-session.contract.ts",
+        "test:contract:full": "vitest run --config vitest.contract.config.ts contract-tests/core-api.contract.ts"
     },
     "dependencies": {
         "@radix-ui/themes": "^3.3.0",
