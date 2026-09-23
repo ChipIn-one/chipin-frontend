@@ -4,6 +4,7 @@ import type { ContractEnvironment } from './support/config';
 import { resolveContractConfig } from './support/config';
 import { hasExpectedAutoShares } from './support/core-expectations';
 import {
+    type ContractLedgerActivity,
     parseActivityPage,
     parseActivityPreviewPage,
     parseCurrencyRates,
@@ -89,6 +90,46 @@ it('validates the live core API contract matrix', () => {
             participantIds.length === expectedParticipants.size &&
             uniqueParticipantIds.size === expectedParticipants.size &&
             [...expectedParticipants].every(id => uniqueParticipantIds.has(id))
+        );
+    };
+
+    const isExpectedLedgerActivity = (
+        activity: ContractLedgerActivity,
+        a: ContractRegisterResponse,
+        b: ContractRegisterResponse,
+        expectedExpenseId: string,
+        expectedSettlementId: string,
+    ): boolean => {
+        if (activity.type === 'EXPENSE') {
+            const expectedParticipants = new Set([a.user.id, b.user.id]);
+            const expectedDisplayNames = new Map([
+                [a.user.id, a.user.displayName],
+                [b.user.id, b.user.displayName],
+            ]);
+            return (
+                activity.entryId === expectedExpenseId &&
+                activity.amount === 12.5 &&
+                activity.currency === 'USD' &&
+                activity.payerId === a.user.id &&
+                activity.payerDisplayName === a.user.displayName &&
+                hasExpectedAutoShares(activity.shares, expectedParticipants, {
+                    shareAmount: 6.25,
+                    currency: 'USD',
+                }) &&
+                activity.shares.every(
+                    share => expectedDisplayNames.get(share.userId) === share.displayName,
+                )
+            );
+        }
+
+        return (
+            activity.entryId === expectedSettlementId &&
+            activity.amount === 5 &&
+            activity.currency === 'USD' &&
+            activity.actorUserId === a.user.id &&
+            activity.payerId === b.user.id &&
+            activity.fromDisplayName === b.user.displayName &&
+            activity.toDisplayName === a.user.displayName
         );
     };
 
@@ -194,7 +235,8 @@ it('validates the live core API contract matrix', () => {
                 group.name !== 'Contract Group A' ||
                 group.description !== 'Primary contract group' ||
                 group.simplifyDebts !== false ||
-                group.role !== 'OWNER'
+                group.role !== 'OWNER' ||
+                group.creatorId !== requireState(userA, 'user A').user.id
             ) {
                 throw new Error('Created group A does not match the requested properties');
             }
@@ -209,11 +251,12 @@ it('validates the live core API contract matrix', () => {
             });
         })
         .then(value => {
-            const b = requireState(userB, 'user B');
-            if (!parseGroup(value).memberIds.includes(b.user.id)) {
-                throw new Error('Group member response is missing provisioned user B');
-            }
             const a = requireState(userA, 'user A');
+            const b = requireState(userB, 'user B');
+            const group = parseGroup(value);
+            if (!hasExpectedParticipants(group.memberIds, new Set([a.user.id, b.user.id]))) {
+                throw new Error('Group member response must contain exactly the two run-scoped users');
+            }
             return client.requestJson({
                 auth: { kind: 'bearer', token: a.accessToken },
                 body: { name: 'Contract Group B', simplifyDebts: true },
@@ -227,7 +270,8 @@ it('validates the live core API contract matrix', () => {
                 group.name !== 'Contract Group B' ||
                 group.description !== null ||
                 group.simplifyDebts !== true ||
-                group.role !== 'OWNER'
+                group.role !== 'OWNER' ||
+                group.creatorId !== requireState(userA, 'user A').user.id
             ) {
                 throw new Error('Created group B does not match the requested properties');
             }
@@ -463,6 +507,24 @@ it('validates the live core API contract matrix', () => {
                 );
             }
             const a = requireState(userA, 'user A');
+            const b = requireState(userB, 'user B');
+            const activityLedgerMetadata = [...first.ledgerActivities, ...next.ledgerActivities];
+            if (
+                activityLedgerMetadata.length !== 2 ||
+                activityLedgerMetadata.some(
+                    activity =>
+                        !isExpectedLedgerActivity(
+                            activity,
+                            a,
+                            b,
+                            requireState(expenseId, 'expense'),
+                            requireState(settlementId, 'settlement'),
+                        ),
+                )
+            ) {
+                throw new Error('User activity metadata must match the generated ledger values');
+            }
+            const a = requireState(userA, 'user A');
             return client.requestJson({
                 auth: { kind: 'bearer', token: a.accessToken },
                 method: 'GET',
@@ -504,6 +566,24 @@ it('validates the live core API contract matrix', () => {
                 );
             }
             const a = requireState(userA, 'user A');
+            const b = requireState(userB, 'user B');
+            const previewLedgerMetadata = [...first.ledgerActivities, ...next.ledgerActivities];
+            if (
+                previewLedgerMetadata.length !== 2 ||
+                previewLedgerMetadata.some(
+                    activity =>
+                        !isExpectedLedgerActivity(
+                            activity,
+                            a,
+                            b,
+                            requireState(expenseId, 'expense'),
+                            requireState(settlementId, 'settlement'),
+                        ),
+                )
+            ) {
+                throw new Error('User activity-preview metadata must match the generated ledger values');
+            }
+            const a = requireState(userA, 'user A');
             return client.requestJson({
                 auth: { kind: 'bearer', token: a.accessToken },
                 method: 'GET',
@@ -521,6 +601,20 @@ it('validates the live core API contract matrix', () => {
                 !groupPreview.ledgerEntryIds.some(id => generatedLedgerIds.has(id))
             ) {
                 throw new Error('Group preview feed is missing generated ledger activity');
+            }
+            const a = requireState(userA, 'user A');
+            const b = requireState(userB, 'user B');
+            if (
+                groupPreview.ledgerActivities.length !== 1 ||
+                !isExpectedLedgerActivity(
+                    groupPreview.ledgerActivities[0],
+                    a,
+                    b,
+                    requireState(expenseId, 'expense'),
+                    requireState(settlementId, 'settlement'),
+                )
+            ) {
+                throw new Error('Group preview metadata must match the generated ledger values');
             }
             const a = requireState(userA, 'user A');
             return client.requestJson({

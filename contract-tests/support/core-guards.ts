@@ -6,6 +6,7 @@ export interface ContractGroup {
     description: string | null;
     simplifyDebts: boolean;
     role: 'OWNER' | 'MEMBER';
+    creatorId: string;
     memberIds: string[];
     memberBalancesByUserId: Record<
         string,
@@ -20,6 +21,7 @@ export interface ContractPage {
 
 export interface ContractActivityPage extends ContractPage {
     ledgerEntryIds: string[];
+    ledgerActivities: ContractLedgerActivity[];
 }
 
 export type ContractPreviewPage = ContractActivityPage;
@@ -29,6 +31,27 @@ export interface ContractParticipantShare {
     shareAmount: number;
     currency: string;
 }
+
+export type ContractLedgerActivity =
+    | {
+          type: 'EXPENSE';
+          entryId: string;
+          amount: number;
+          currency: string;
+          payerId: string | null;
+          payerDisplayName: string;
+          shares: Array<ContractParticipantShare & { displayName: string }>;
+      }
+    | {
+          type: 'SETTLEMENT';
+          entryId: string;
+          amount: number;
+          currency: string;
+          actorUserId: string | null;
+          payerId: string | null;
+          fromDisplayName: string;
+          toDisplayName: string;
+      };
 
 export interface ContractDashboard {
     balances: Record<string, { currency: string; netBalance: number }>;
@@ -178,30 +201,44 @@ const parseActivityActorSnapshot = (value: unknown, label: string): void => {
     }
 };
 
-const parseExpenseActivityMetadata = (value: unknown, label: string): string => {
+const parseExpenseActivityMetadata = (
+    value: unknown,
+    label: string,
+): Extract<ContractLedgerActivity, { type: 'EXPENSE' }> => {
     const metadata = requireRecord(value, label);
     if (requireString(metadata, 'type', label) !== 'expense') {
         throw new Error(`${label}.type must be expense`);
     }
     const entryId = requireString(metadata, 'entryId', label);
-    requireNumber(metadata, 'amount', label);
-    requireString(metadata, 'currency', label);
-    requireString(metadata, 'payerDisplayName', label);
+    const amount = requireNumber(metadata, 'amount', label);
+    const currency = requireString(metadata, 'currency', label);
+    const payerDisplayName = requireString(metadata, 'payerDisplayName', label);
+    const payerId =
+        metadata.payerId === undefined
+            ? null
+            : requireNullableString(metadata, 'payerId', label);
 
-    if (metadata.payerId !== undefined) {
-        requireNullableString(metadata, 'payerId', label);
-    }
+    const rawShares = requireArray(metadata.shares, `${label}.shares`);
+    const shares = rawShares.map((rawShare, index) => {
+        const shareLabel = `${label}.shares[${index}]`;
+        const share = requireRecord(rawShare, shareLabel);
+        return {
+            userId: requireString(share, 'userId', shareLabel),
+            displayName: requireString(share, 'displayName', shareLabel),
+            shareAmount: requireNumber(share, 'shareAmount', shareLabel),
+            currency: requireString(share, 'currency', shareLabel),
+        };
+    });
 
-    const shares = requireArray(metadata.shares, `${label}.shares`);
-    for (let index = 0; index < shares.length; index += 1) {
-        const share = requireRecord(shares[index], `${label}.shares[${index}]`);
-        requireString(share, 'userId', `${label}.shares[${index}]`);
-        requireString(share, 'displayName', `${label}.shares[${index}]`);
-        requireNumber(share, 'shareAmount', `${label}.shares[${index}]`);
-        requireString(share, 'currency', `${label}.shares[${index}]`);
-    }
-
-    return entryId;
+    return {
+        type: 'EXPENSE',
+        entryId,
+        amount,
+        currency,
+        payerId,
+        payerDisplayName,
+        shares,
+    };
 };
 
 const parseGroupActivityMetadata = (value: unknown, label: string): void => {
@@ -225,31 +262,44 @@ const parseGroupActivityMetadata = (value: unknown, label: string): void => {
     }
 };
 
-const parseSettlementActivityMetadata = (value: unknown, label: string): string => {
+const parseSettlementActivityMetadata = (
+    value: unknown,
+    label: string,
+): Extract<ContractLedgerActivity, { type: 'SETTLEMENT' }> => {
     const metadata = requireRecord(value, label);
     if (requireString(metadata, 'type', label) !== 'settlement') {
         throw new Error(`${label}.type must be settlement`);
     }
     const entryId = requireString(metadata, 'entryId', label);
-    requireNumber(metadata, 'amount', label);
-    requireString(metadata, 'currency', label);
-    requireString(metadata, 'fromDisplayName', label);
-    requireString(metadata, 'toDisplayName', label);
+    const amount = requireNumber(metadata, 'amount', label);
+    const currency = requireString(metadata, 'currency', label);
+    const fromDisplayName = requireString(metadata, 'fromDisplayName', label);
+    const toDisplayName = requireString(metadata, 'toDisplayName', label);
+    const actorUserId =
+        metadata.actorUserId === undefined
+            ? null
+            : requireNullableString(metadata, 'actorUserId', label);
+    const payerId =
+        metadata.payerId === undefined
+            ? null
+            : requireNullableString(metadata, 'payerId', label);
 
-    if (metadata.actorUserId !== undefined) {
-        requireNullableString(metadata, 'actorUserId', label);
-    }
-    if (metadata.payerId !== undefined) {
-        requireNullableString(metadata, 'payerId', label);
-    }
-
-    return entryId;
+    return {
+        type: 'SETTLEMENT',
+        entryId,
+        amount,
+        currency,
+        actorUserId,
+        payerId,
+        fromDisplayName,
+        toDisplayName,
+    };
 };
 
 const parseActivityEvent = (
     value: unknown,
     label: string,
-): { id: string; ledgerEntryId: string | null } => {
+): { id: string; ledgerEntryId: string | null; ledgerActivity: ContractLedgerActivity | null } => {
     const event = requireRecord(value, label);
     const id = requireString(event, 'id', label);
     requireNumber(event, 'seq', label);
@@ -260,12 +310,12 @@ const parseActivityEvent = (
     parseActivityActorSnapshot(event.actorSnapshot, `${label}.actorSnapshot`);
     requireNumber(event, 'createdAt', label);
 
-    let ledgerEntryId: string | null = null;
+    let ledgerActivity: ContractLedgerActivity | null = null;
     if (action === 'EXPENSE_CREATED' || action === 'EXPENSE_UPDATED' || action === 'EXPENSE_REVERSED') {
         if (domain !== 'LEDGER' || subjectType !== 'expense') {
             throw new Error(`${label} expense actions must use LEDGER/expense discriminants`);
         }
-        ledgerEntryId = parseExpenseActivityMetadata(event.metadata, `${label}.metadata`);
+        ledgerActivity = parseExpenseActivityMetadata(event.metadata, `${label}.metadata`);
     }
     if (
         action === 'SETTLEMENT_CREATED' ||
@@ -275,7 +325,7 @@ const parseActivityEvent = (
         if (domain !== 'LEDGER' || subjectType !== 'settlement') {
             throw new Error(`${label} settlement actions must use LEDGER/settlement discriminants`);
         }
-        ledgerEntryId = parseSettlementActivityMetadata(event.metadata, `${label}.metadata`);
+        ledgerActivity = parseSettlementActivityMetadata(event.metadata, `${label}.metadata`);
     }
     if (
         action === 'GROUP_CREATED' ||
@@ -294,7 +344,11 @@ const parseActivityEvent = (
         parseGroupActivityMetadata(event.metadata, `${label}.metadata`);
     }
 
-    return { id, ledgerEntryId };
+    return {
+        id,
+        ledgerEntryId: ledgerActivity?.entryId ?? null,
+        ledgerActivity,
+    };
 };
 
 export const parseSelfUserContract = (value: unknown): ReturnType<typeof parseSelfUserResponse> => {
@@ -342,7 +396,7 @@ export const parseGroup = (value: unknown): ContractGroup => {
     const name = requireString(group, 'name', 'group');
     requireString(group, 'inviteToken', 'group');
     const description = requireNullableString(group, 'description', 'group');
-    parsePublicUser(group.creator, 'group.creator');
+    const creatorId = parsePublicUser(group.creator, 'group.creator');
     requireNumber(group, 'createdAt', 'group');
     requireNumber(group, 'updatedAt', 'group');
     requireNullableString(group, 'coverUrl', 'group');
@@ -378,6 +432,7 @@ export const parseGroup = (value: unknown): ContractGroup => {
         description,
         simplifyDebts,
         role,
+        creatorId,
         memberIds,
         memberBalancesByUserId,
     };
@@ -474,6 +529,7 @@ const parsePreviewPage = (value: unknown, label: string): ContractPreviewPage =>
     const items = requireArray(response.items, `${label}.items`);
     const ids: string[] = [];
     const ledgerEntryIds: string[] = [];
+    const ledgerActivities: ContractLedgerActivity[] = [];
     for (let index = 0; index < items.length; index += 1) {
         const item = requireRecord(items[index], `${label}.items[${index}]`);
         const parent = parseActivityEvent(item.parent, `${label}.items[${index}].parent`);
@@ -481,13 +537,16 @@ const parsePreviewPage = (value: unknown, label: string): ContractPreviewPage =>
         if (parent.ledgerEntryId !== null) {
             ledgerEntryIds.push(parent.ledgerEntryId);
         }
+        if (parent.ledgerActivity !== null) {
+            ledgerActivities.push(parent.ledgerActivity);
+        }
         parseActivityEvent(item.lastEvent, `${label}.items[${index}].lastEvent`);
     }
     const cursor = response.nextCursor;
     if (cursor !== null && (typeof cursor !== 'number' || !Number.isSafeInteger(cursor))) {
         throw new Error(`${label}.nextCursor must be a safe integer or null`);
     }
-    return { ids, nextCursor: cursor, ledgerEntryIds };
+    return { ids, nextCursor: cursor, ledgerEntryIds, ledgerActivities };
 };
 
 export const parseActivityPage = (value: unknown): ContractActivityPage => {
@@ -495,18 +554,22 @@ export const parseActivityPage = (value: unknown): ContractActivityPage => {
     const items = requireArray(response.items, 'activity.items');
     const ids: string[] = [];
     const ledgerEntryIds: string[] = [];
+    const ledgerActivities: ContractLedgerActivity[] = [];
     for (let index = 0; index < items.length; index += 1) {
         const event = parseActivityEvent(items[index], `activity.items[${index}]`);
         ids.push(event.id);
         if (event.ledgerEntryId !== null) {
             ledgerEntryIds.push(event.ledgerEntryId);
         }
+        if (event.ledgerActivity !== null) {
+            ledgerActivities.push(event.ledgerActivity);
+        }
     }
     const cursor = response.nextCursor;
     if (cursor !== null && (typeof cursor !== 'number' || !Number.isSafeInteger(cursor))) {
         throw new Error('activity.nextCursor must be a safe integer or null');
     }
-    return { ids, nextCursor: cursor, ledgerEntryIds };
+    return { ids, nextCursor: cursor, ledgerEntryIds, ledgerActivities };
 };
 
 export const parseActivityPreviewPage = (value: unknown): ContractPreviewPage =>
