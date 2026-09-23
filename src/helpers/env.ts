@@ -39,15 +39,16 @@ export const getIsDevEnv = (): boolean => getEnv() === ENV_DEV;
 
 export const getIsProdEnv = (): boolean => getEnv() === ENV_PROD;
 
-export const getChipInApiUrl = (): string => {
-    getEnv();
-    return API_BASE_PATH;
-};
-
 export const getChipInAppUrl = (): string => {
+    const environment = getEnv();
+
     if (typeof window !== 'undefined') {
         return window.location.origin;
     }
 
-    return ENV_URLS[getEnv()].siteBaseUrl;
+    return ENV_URLS[environment].siteBaseUrl;
+};
+
+export const getChipInApiUrl = (): string => {
+    return new URL(API_BASE_PATH, `${getChipInAppUrl()}/`).toString();
 };
