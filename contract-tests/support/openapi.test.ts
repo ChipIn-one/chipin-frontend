@@ -31,7 +31,12 @@ paths:
 
         expect(() =>
             assertOpenApiResponseFields(document, [
-                { path: '/ledger/entries', method: 'post', status: '200', fields: ['participantShares'] },
+                {
+                    path: '/ledger/entries',
+                    method: 'post',
+                    status: '200',
+                    fields: ['participantShares'],
+                },
             ]),
         ).toThrow('POST /ledger/entries response 200 is missing field participantShares');
     });
@@ -65,7 +70,12 @@ paths:
 
         expect(() =>
             assertOpenApiResponseFields(document, [
-                { path: '/ledger/entries', method: 'post', status: '201', fields: ['participantShares'] },
+                {
+                    path: '/ledger/entries',
+                    method: 'post',
+                    status: '201',
+                    fields: ['participantShares'],
+                },
             ]),
         ).toThrow('POST /ledger/entries response 201 is missing field participantShares');
     });
@@ -99,7 +109,12 @@ components:
 
         expect(() =>
             assertOpenApiResponseFields(document, [
-                { path: '/ledger/entries', method: 'post', status: '200', fields: ['participantShares'] },
+                {
+                    path: '/ledger/entries',
+                    method: 'post',
+                    status: '200',
+                    fields: ['participantShares'],
+                },
             ]),
         ).not.toThrow();
     });
