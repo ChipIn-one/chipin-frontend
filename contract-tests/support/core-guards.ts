@@ -17,9 +17,11 @@ export interface ContractPage {
     nextCursor: number | string | null;
 }
 
-export interface ContractPreviewPage extends ContractPage {
+export interface ContractActivityPage extends ContractPage {
     ledgerEntryIds: string[];
 }
+
+export interface ContractPreviewPage extends ContractActivityPage {}
 
 export interface ContractParticipantShare {
     userId: string;
@@ -453,18 +455,23 @@ const parsePreviewPage = (value: unknown, label: string): ContractPreviewPage =>
     return { ids, nextCursor: cursor, ledgerEntryIds };
 };
 
-export const parseActivityPage = (value: unknown): ContractPage => {
+export const parseActivityPage = (value: unknown): ContractActivityPage => {
     const response = requireRecord(value, 'activity');
     const items = requireArray(response.items, 'activity.items');
     const ids: string[] = [];
+    const ledgerEntryIds: string[] = [];
     for (let index = 0; index < items.length; index += 1) {
-        ids.push(parseActivityEvent(items[index], `activity.items[${index}]`).id);
+        const event = parseActivityEvent(items[index], `activity.items[${index}]`);
+        ids.push(event.id);
+        if (event.ledgerEntryId !== null) {
+            ledgerEntryIds.push(event.ledgerEntryId);
+        }
     }
     const cursor = response.nextCursor;
     if (cursor !== null && (typeof cursor !== 'number' || !Number.isSafeInteger(cursor))) {
         throw new Error('activity.nextCursor must be a safe integer or null');
     }
-    return { ids, nextCursor: cursor };
+    return { ids, nextCursor: cursor, ledgerEntryIds };
 };
 
 export const parseActivityPreviewPage = (value: unknown): ContractPreviewPage =>

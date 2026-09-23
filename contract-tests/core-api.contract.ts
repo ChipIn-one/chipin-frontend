@@ -418,8 +418,14 @@ it('validates the live core API contract matrix', () => {
             const group = parseGroup(value);
             const b = requireState(userB, 'user B');
             const bUsdBalance = group.memberBalancesByUserId[b.user.id]?.USD;
-            if (!bUsdBalance || bUsdBalance.netBalance === 0) {
-                throw new Error('Refetched group is missing the generated USD member balance');
+            if (
+                !bUsdBalance ||
+                bUsdBalance.currency !== 'USD' ||
+                bUsdBalance.netBalance !== 1.25
+            ) {
+                throw new Error(
+                    'Refetched group USD member balance must equal the generated +1.25 creditor position',
+                );
             }
             const a = requireState(userA, 'user A');
             return client.requestJson({
@@ -459,6 +465,22 @@ it('validates the live core API contract matrix', () => {
             if (next.ids.length !== 1 || next.ids[0] === first.ids[0]) {
                 throw new Error('Activity cursor must advance to another generated event');
             }
+            const generatedLedgerIds = new Set([
+                requireState(expenseId, 'expense'),
+                requireState(settlementId, 'settlement'),
+            ]);
+            const activityLedgerIds = new Set([
+                ...first.ledgerEntryIds,
+                ...next.ledgerEntryIds,
+            ]);
+            if (
+                activityLedgerIds.size !== generatedLedgerIds.size ||
+                [...generatedLedgerIds].some(id => !activityLedgerIds.has(id))
+            ) {
+                throw new Error(
+                    'User activity cursor pages must contain the generated expense and settlement',
+                );
+            }
             const a = requireState(userA, 'user A');
             return client.requestJson({
                 auth: { kind: 'bearer', token: a.accessToken },
@@ -483,6 +505,22 @@ it('validates the live core API contract matrix', () => {
         .then(({ first, next }) => {
             if (next.ids.length !== 1 || next.ids[0] === first.ids[0]) {
                 throw new Error('Activity-preview cursor must advance to another generated preview');
+            }
+            const generatedLedgerIds = new Set([
+                requireState(expenseId, 'expense'),
+                requireState(settlementId, 'settlement'),
+            ]);
+            const previewLedgerIds = new Set([
+                ...first.ledgerEntryIds,
+                ...next.ledgerEntryIds,
+            ]);
+            if (
+                previewLedgerIds.size !== generatedLedgerIds.size ||
+                [...generatedLedgerIds].some(id => !previewLedgerIds.has(id))
+            ) {
+                throw new Error(
+                    'User activity-preview cursor pages must contain the generated expense and settlement',
+                );
             }
             const a = requireState(userA, 'user A');
             return client.requestJson({
