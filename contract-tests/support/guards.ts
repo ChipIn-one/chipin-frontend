@@ -20,8 +20,11 @@ export interface ContractRegisterResponse {
     expiresIn: number;
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null && !Array.isArray(value);
+
 const requireRecord = (value: unknown, label: string): Record<string, unknown> => {
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    if (!isRecord(value)) {
         throw new Error(`${label} must be an object`);
     }
 
