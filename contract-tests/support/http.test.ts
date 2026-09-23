@@ -115,6 +115,34 @@ describe('createContractHttpClient', () => {
             });
     });
 
+
+    it('rejects network-path references before sending credentials', () => {
+        let calls = 0;
+        const fetchImpl: typeof fetch = () => {
+            calls += 1;
+
+            return Promise.resolve(new Response('unexpected', { status: 200 }));
+        };
+
+        return createContractHttpClient(stagingConfig, fetchImpl)
+            .requestText({
+                auth: { kind: 'basic' },
+                method: 'GET',
+                path: '//api.chipin.one/auth/test-register',
+            })
+            .then(
+                () => {
+                    throw new Error('Expected the request to fail');
+                },
+                (error: unknown) => {
+                    expect(error).toEqual(
+                        new Error('Contract request path must stay on the configured origin'),
+                    );
+                    expect(calls).toBe(0);
+                },
+            );
+    });
+
     it('keeps HTTP response bodies out of failure messages', () => {
         const fetchImpl: typeof fetch = () =>
             Promise.resolve(
