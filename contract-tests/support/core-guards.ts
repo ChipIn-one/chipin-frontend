@@ -20,6 +20,10 @@ export interface ContractPage {
     nextCursor: number | string | null;
 }
 
+export interface ContractGroupPage extends ContractPage {
+    groups: ContractGroup[];
+}
+
 export interface ContractActivityPage extends ContractPage {
     ledgerEntryIds: string[];
     ledgerActivities: ContractLedgerActivity[];
@@ -502,20 +506,18 @@ export const parseGroup = (value: unknown): ContractGroup => {
     };
 };
 
-export const parseGroupPage = (value: unknown): ContractPage => {
+export const parseGroupPage = (value: unknown): ContractGroupPage => {
     const response = requireRecord(value, 'groups');
     const items = requireArray(response.items, 'groups.items');
-    const ids: string[] = [];
-    for (let index = 0; index < items.length; index += 1) {
-        ids.push(parseGroup(items[index]).id);
-    }
+    const groups = items.map(item => parseGroup(item));
+    const ids = groups.map(group => group.id);
 
     const cursor = response.nextCursor;
     if (cursor !== null && (typeof cursor !== 'string' || cursor.length === 0)) {
         throw new Error('groups.nextCursor must be a non-empty string or null');
     }
 
-    return { ids, nextCursor: cursor };
+    return { ids, nextCursor: cursor, groups };
 };
 
 export const parseLedgerEntry = (value: unknown): ContractLedgerEntry => {

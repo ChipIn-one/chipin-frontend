@@ -34,7 +34,12 @@ const OPENAPI_RESPONSE_EXPECTATIONS = [
     },
     { path: '/users/invite-link', method: 'post', status: '200', fieldPaths: ['inviteToken'] },
     { path: '/users/invite/{inviteToken}', method: 'post', status: '200', fieldPaths: [] },
-    { path: '/groups', method: 'get', status: '200', fieldPaths: ['items', 'nextCursor'] },
+    {
+        path: '/groups',
+        method: 'get',
+        status: '200',
+        fieldPaths: ['items', 'items.creator.id', 'items.members', 'items.recentActivities.items', 'nextCursor'],
+    },
     { path: '/groups', method: 'get', status: '400', fieldPaths: ['code'] },
     {
         path: '/groups',
@@ -379,11 +384,36 @@ it('validates the live core API contract matrix', () => {
                 throw new Error('Group cursor must advance to one distinct group');
             }
             const ids = new Set([...first.ids, ...next.ids]);
-            if (!ids.has(requireState(groupA, 'group A')) || !ids.has(requireState(groupB, 'group B'))) {
+            const groupAId = requireState(groupA, 'group A');
+            const groupBId = requireState(groupB, 'group B');
+            if (!ids.has(groupAId) || !ids.has(groupBId)) {
                 throw new Error('Group cursor pages do not contain both generated groups');
             }
             const a = requireState(userA, 'user A');
             const b = requireState(userB, 'user B');
+            const listedGroups = [...first.groups, ...next.groups];
+            const listedGroupA = listedGroups.find(group => group.id === groupAId);
+            const listedGroupB = listedGroups.find(group => group.id === groupBId);
+            if (
+                !listedGroupA ||
+                listedGroupA.name !== 'Contract Group A' ||
+                listedGroupA.description !== 'Primary contract group' ||
+                listedGroupA.simplifyDebts !== false ||
+                listedGroupA.role !== 'OWNER' ||
+                listedGroupA.creatorId !== a.user.id ||
+                !hasExpectedParticipants(listedGroupA.memberIds, new Set([a.user.id, b.user.id])) ||
+                listedGroupA.recentActivities.ids.length !== 0 ||
+                !listedGroupB ||
+                listedGroupB.name !== 'Contract Group B' ||
+                listedGroupB.description !== null ||
+                listedGroupB.simplifyDebts !== true ||
+                listedGroupB.role !== 'OWNER' ||
+                listedGroupB.creatorId !== a.user.id ||
+                !hasExpectedParticipants(listedGroupB.memberIds, new Set([a.user.id])) ||
+                listedGroupB.recentActivities.ids.length !== 0
+            ) {
+                throw new Error('Group cursor pages must preserve both generated group contracts');
+            }
             return client.requestJson({
                 auth: { kind: 'bearer', token: a.accessToken },
                 body: {
@@ -518,7 +548,11 @@ it('validates the live core API contract matrix', () => {
         })
         .then(value => {
             const group = parseGroup(value);
+            const a = requireState(userA, 'user A');
             const b = requireState(userB, 'user B');
+            if (!hasExpectedParticipants(group.memberIds, new Set([a.user.id, b.user.id]))) {
+                throw new Error('Refetched group must contain exactly the two run-scoped users');
+            }
             const bUsdBalance = group.memberBalancesByUserId[b.user.id]?.USD;
             if (
                 !bUsdBalance ||
@@ -529,7 +563,6 @@ it('validates the live core API contract matrix', () => {
                     'Refetched group USD member balance must equal the generated +1.25 creditor position',
                 );
             }
-            const a = requireState(userA, 'user A');
             if (
                 !hasExpectedGeneratedLedgerActivities(group.recentActivities.ledgerActivities, a, b) ||
                 !hasExpectedGeneratedLedgerActivities(
