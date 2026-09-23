@@ -105,6 +105,13 @@ export default defineConfig(({ mode }) => {
         buildEnvironment,
         sentryBuildConfig,
     );
+    const apiProxy = {
+        '/api': {
+            target: 'https://api-dev.chipin.one',
+            changeOrigin: true,
+            rewrite: (path: string) => path.replace(/^\/api/, ''),
+        },
+    };
 
     return {
         define: {
@@ -216,13 +223,10 @@ export default defineConfig(({ mode }) => {
         ],
 
         server: {
-            proxy: {
-                '/api': {
-                    target: 'https://api-dev.chipin.one',
-                    changeOrigin: true,
-                    rewrite: path => path.replace(/^\/api/, ''),
-                },
-            },
+            proxy: apiProxy,
+        },
+        preview: {
+            proxy: apiProxy,
         },
 
         build: {
