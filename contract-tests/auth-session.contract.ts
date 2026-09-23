@@ -63,6 +63,8 @@ it('validates the live auth and session contract', () => {
     const runId = createRunId();
     let provisionAttempted = false;
     let provisionedUser: ReturnType<typeof parseRegisterResponse> | null = null;
+    let hasPrimaryFailure = false;
+    let primaryFailure: unknown;
 
     return client
         .requestText({
@@ -129,6 +131,12 @@ it('validates the live auth and session contract', () => {
         .then((value) => {
             parseRefreshResponse(value);
         })
+        .catch((error: unknown) => {
+            hasPrimaryFailure = true;
+            primaryFailure = error;
+
+            throw error;
+        })
         .finally(() => {
             if (!provisionAttempted) {
                 return undefined;
@@ -140,6 +148,16 @@ it('validates the live auth and session contract', () => {
                     method: 'DELETE',
                     path: `/auth/test-runs/${encodeURIComponent(runId)}`,
                 })
-                .then(() => undefined);
+                .then(() => undefined)
+                .catch((cleanupError: unknown) => {
+                    if (hasPrimaryFailure) {
+                        throw new AggregateError(
+                            [primaryFailure, cleanupError],
+                            'Contract smoke failed and cleanup also failed',
+                        );
+                    }
+
+                    throw cleanupError;
+                });
         });
 });
