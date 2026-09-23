@@ -44,6 +44,7 @@ export type ContractLedgerEntry =
     | {
           id: string;
           type: 'EXPENSE';
+          scope: 'GROUP' | 'USER';
           groupId: string | null;
           amount: number;
           currency: string;
@@ -54,6 +55,7 @@ export type ContractLedgerEntry =
     | {
           id: string;
           type: 'SETTLEMENT';
+          scope: 'GROUP' | 'USER';
           groupId: string | null;
           amount: number;
           currency: string;
@@ -401,14 +403,15 @@ export const parseLedgerEntry = (value: unknown): ContractLedgerEntry => {
     const entry = requireRecord(value, 'ledger');
     const id = requireString(entry, 'id', 'ledger');
     const type = requireString(entry, 'type', 'ledger');
-    const scope = requireString(entry, 'scope', 'ledger');
+    const scopeValue = requireString(entry, 'scope', 'ledger');
     const groupId = requireNullableString(entry, 'groupId', 'ledger');
     requireNumber(entry, 'createdAt', 'ledger');
     requireNumber(entry, 'updatedAt', 'ledger');
 
-    if (scope !== 'GROUP' && scope !== 'USER') {
+    if (scopeValue !== 'GROUP' && scopeValue !== 'USER') {
         throw new Error('ledger.scope must be GROUP or USER');
     }
+    const scope: ContractLedgerEntry['scope'] = scopeValue;
 
     if (type === 'EXPENSE') {
         const expense = requireRecord(entry.expense, 'ledger.expense');
@@ -440,6 +443,7 @@ export const parseLedgerEntry = (value: unknown): ContractLedgerEntry => {
         return {
             id,
             type,
+            scope,
             groupId,
             amount,
             currency,
@@ -459,7 +463,7 @@ export const parseLedgerEntry = (value: unknown): ContractLedgerEntry => {
         if (entry.expense !== null) {
             throw new Error('ledger.expense must be null for SETTLEMENT');
         }
-        return { id, type, groupId, amount, currency, fromUserId, toUserId };
+        return { id, type, scope, groupId, amount, currency, fromUserId, toUserId };
     }
 
     throw new Error('ledger.type must be EXPENSE or SETTLEMENT');

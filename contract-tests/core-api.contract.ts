@@ -2,6 +2,7 @@ import { it } from 'vitest';
 
 import type { ContractEnvironment } from './support/config';
 import { resolveContractConfig } from './support/config';
+import { hasExpectedAutoShares } from './support/core-expectations';
 import {
     parseActivityPage,
     parseActivityPreviewPage,
@@ -17,35 +18,29 @@ import {
 } from './support/core-guards';
 import { type ContractRegisterResponse, parseRegisterResponse } from './support/guards';
 import { createContractHttpClient } from './support/http';
+import { assertOpenApiResponseFields } from './support/openapi';
 
-const OPENAPI_PATHS = [
-    '/auth/test-register',
-    '/users/self',
-    '/users/known-users',
-    '/users/invite-link',
-    '/users/invite/{inviteToken}',
-    '/groups',
-    '/groups/{id}',
-    '/groups/{id}/members',
-    '/ledger/entries',
-    '/ledger/entries/{id}',
-    '/dashboard',
-    '/users/self/activities',
-    '/users/self/activity-previews',
-    '/groups/{groupId}/activity-previews',
-    '/currency-rates',
+const OPENAPI_RESPONSE_EXPECTATIONS = [
+    { path: '/auth/test-register', method: 'post', fields: [] },
+    { path: '/auth/test-runs/{runId}', method: 'delete', fields: [] },
+    { path: '/users/self', method: 'get', fields: ['isPremium', 'code'] },
+    { path: '/users/known-users', method: 'get', fields: [] },
+    { path: '/users/invite-link', method: 'post', fields: [] },
+    { path: '/users/invite/{inviteToken}', method: 'post', fields: [] },
+    { path: '/groups', method: 'get', fields: ['nextCursor', 'code'] },
+    { path: '/groups', method: 'post', fields: ['simplifyDebts'] },
+    { path: '/groups/{id}', method: 'get', fields: [] },
+    { path: '/groups/{id}/members', method: 'post', fields: [] },
+    { path: '/ledger/entries', method: 'post', fields: ['participantShares'] },
+    { path: '/ledger/entries/{id}', method: 'get', fields: ['code'] },
+    { path: '/dashboard', method: 'get', fields: [] },
+    { path: '/users/self/activities', method: 'get', fields: ['nextCursor'] },
+    { path: '/users/self/activity-previews', method: 'get', fields: ['nextCursor'] },
+    { path: '/groups/{groupId}/activity-previews', method: 'get', fields: ['nextCursor'] },
+    { path: '/currency-rates', method: 'get', fields: ['stale'] },
 ] as const;
 
 const FULL_MATRIX_TIMEOUT_MS = 6 * 60_000;
-
-const OPENAPI_FIELDS = [
-    'isPremium',
-    'simplifyDebts',
-    'participantShares',
-    'nextCursor',
-    'stale',
-    'code',
-] as const;
 
 const readEnvironment = (key: keyof ContractEnvironment): string | undefined => {
     const processValue: unknown = Reflect.get(globalThis, 'process');
@@ -97,23 +92,6 @@ it('validates the live core API contract matrix', () => {
         );
     };
 
-    const hasExpectedAutoShares = (
-        shares: ReadonlyArray<{ userId: string; shareAmount: number; currency: string }>,
-        expectedParticipants: Set<string>,
-    ): boolean => {
-        const shareUserIds = new Set(shares.map(share => share.userId));
-        return (
-            shares.length === expectedParticipants.size &&
-            shareUserIds.size === expectedParticipants.size &&
-            [...expectedParticipants].every(id => shareUserIds.has(id)) &&
-            shares.every(
-                share =>
-                    share.shareAmount === 6.25 &&
-                    share.currency === 'USD',
-            )
-        );
-    };
-
     const register = (displayName: string): Promise<ContractRegisterResponse> => {
         provisionAttempted = true;
         return client
@@ -139,16 +117,7 @@ it('validates the live core API contract matrix', () => {
             path: '/swagger/documentation.yaml',
         })
         .then(document => {
-            for (const path of OPENAPI_PATHS) {
-                if (!document.includes(path)) {
-                    throw new Error(`Runtime OpenAPI is missing required path ${path}`);
-                }
-            }
-            for (const field of OPENAPI_FIELDS) {
-                if (!document.includes(field)) {
-                    throw new Error(`Runtime OpenAPI is missing required field ${field}`);
-                }
-            }
+            assertOpenApiResponseFields(document, OPENAPI_RESPONSE_EXPECTATIONS);
             return client.requestJsonForStatus(
                 { auth: { kind: 'none' }, method: 'GET', path: '/users/self' },
                 401,
@@ -321,12 +290,16 @@ it('validates the live core API contract matrix', () => {
             const expectedParticipants = new Set([a.user.id, b.user.id]);
             if (
                 expense.type !== 'EXPENSE' ||
+                expense.scope !== 'GROUP' ||
                 expense.groupId !== groupA ||
                 expense.amount !== 12.5 ||
                 expense.currency !== 'USD' ||
                 expense.payerId !== a.user.id ||
                 !hasExpectedParticipants(expense.participantIds, expectedParticipants) ||
-                !hasExpectedAutoShares(expense.participantShares, expectedParticipants)
+                !hasExpectedAutoShares(expense.participantShares, expectedParticipants, {
+                    shareAmount: 6.25,
+                    currency: 'USD',
+                })
             ) {
                 throw new Error('Created expense does not match the requested financial contract');
             }
@@ -341,13 +314,17 @@ it('validates the live core API contract matrix', () => {
                     const persisted = parseLedgerEntry(read);
                     if (
                         persisted.type !== 'EXPENSE' ||
+                        persisted.scope !== 'GROUP' ||
                         persisted.id !== expense.id ||
                         persisted.groupId !== groupA ||
                         persisted.amount !== 12.5 ||
                         persisted.currency !== 'USD' ||
                         persisted.payerId !== a.user.id ||
                         !hasExpectedParticipants(persisted.participantIds, expectedParticipants) ||
-                        !hasExpectedAutoShares(persisted.participantShares, expectedParticipants)
+                        !hasExpectedAutoShares(persisted.participantShares, expectedParticipants, {
+                            shareAmount: 6.25,
+                            currency: 'USD',
+                        })
                     ) {
                         throw new Error('Expense read does not preserve the requested financial contract');
                     }
@@ -378,6 +355,7 @@ it('validates the live core API contract matrix', () => {
             const b = requireState(userB, 'user B');
             if (
                 settlement.type !== 'SETTLEMENT' ||
+                settlement.scope !== 'GROUP' ||
                 settlement.groupId !== groupA ||
                 settlement.amount !== 5 ||
                 settlement.currency !== 'USD' ||
@@ -397,6 +375,7 @@ it('validates the live core API contract matrix', () => {
                     const persisted = parseLedgerEntry(read);
                     if (
                         persisted.type !== 'SETTLEMENT' ||
+                        persisted.scope !== 'GROUP' ||
                         persisted.id !== settlement.id ||
                         persisted.groupId !== groupA ||
                         persisted.amount !== 5 ||
@@ -582,11 +561,16 @@ it('validates the live core API contract matrix', () => {
             const expectedParticipants = new Set([a.user.id, b.user.id]);
             if (
                 directExpense.type !== 'EXPENSE' ||
+                directExpense.scope !== 'USER' ||
                 directExpense.groupId !== null ||
                 directExpense.amount !== 8 ||
                 directExpense.currency !== 'USD' ||
                 directExpense.payerId !== a.user.id ||
-                !hasExpectedParticipants(directExpense.participantIds, expectedParticipants)
+                !hasExpectedParticipants(directExpense.participantIds, expectedParticipants) ||
+                !hasExpectedAutoShares(directExpense.participantShares, expectedParticipants, {
+                    shareAmount: 4,
+                    currency: 'USD',
+                })
             ) {
                 throw new Error('Direct expense does not match the requested user-scope contract');
             }
