@@ -9,7 +9,7 @@ import { useLandingStatsStore } from 'store/landing-stats-store';
 
 import Footer from 'components/Footer';
 import { BaseModal } from 'components/modals';
-import { OverlayBody, OverlayFooter } from 'components/modals/components';
+import { OverlayFooter } from 'components/modals/components';
 import {
     CtaSection,
     FeaturesSection,
@@ -28,14 +28,26 @@ const PROMO_COPY = {
     modalTitle: 'Welcome to ChipIn',
 } as const;
 
+const PromoBody = styled.div`
+    min-width: 0;
+    min-height: 0;
+
+    @media ${MEDIA_QUERIES.belowSm} {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        justify-content: center;
+        overflow: auto;
+        padding: var(--space-4);
+    }
+`;
+
 const PromoStack = styled(Flex)`
     padding: 4px 8px 8px;
     text-align: center;
 
     @media ${MEDIA_QUERIES.belowSm} {
-        min-height: calc(100dvh - 164px);
-        justify-content: center;
-        padding: var(--space-4);
+        padding: 0;
     }
 `;
 
@@ -160,7 +172,7 @@ const EarlySupporterPreviewModal = () => {
 
     const content = (
         <>
-            <OverlayBody>
+            <PromoBody>
                 <PromoStack direction="column" align="center">
                     <CrownStage>
                         <Sparkle $side="left" size={24} />
@@ -183,7 +195,7 @@ const EarlySupporterPreviewModal = () => {
                         {PROMO_COPY.expires}
                     </ExpiryPill>
                 </PromoStack>
-            </OverlayBody>
+            </PromoBody>
 
             <OverlayFooter cancelAction={null} primaryAction={thankYouAction} />
         </>
