@@ -1,12 +1,13 @@
-import { LucideClock3, LucideCrown, LucideSparkles, LucideX } from 'lucide-react';
+import { LucideClock3, LucideCrown, LucideSparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import styled from 'styled-components';
 
-import { Button, Dialog, Flex, IconButton, Text } from '@radix-ui/themes';
+import { Button, Flex, Text } from '@radix-ui/themes';
 
 import { useLandingStatsStore } from 'store/landing-stats-store';
 
 import Footer from 'components/Footer';
+import { BaseModal } from 'components/modals';
 import {
     CtaSection,
     FeaturesSection,
@@ -24,39 +25,8 @@ const PROMO_COPY = {
     button: 'Thank you',
 } as const;
 
-const PromoDialogContent = styled(Dialog.Content)`
-    && {
-        width: min(760px, calc(100vw - 32px));
-        max-width: 760px;
-        padding: 36px 42px 42px;
-        overflow: hidden;
-        border: 1px solid rgb(255 255 255 / 18%);
-        border-radius: 28px;
-        background:
-            radial-gradient(circle at 50% -5%, rgb(222 177 55 / 25%), transparent 42%),
-            linear-gradient(180deg, #151819 0%, #0b1012 100%);
-        box-shadow: 0 30px 90px rgb(0 0 0 / 58%);
-        color: #f7f7f5;
-    }
-
-    @media (max-width: 640px) {
-        && {
-            padding: 30px 20px 24px;
-            border-radius: 22px;
-        }
-    }
-`;
-
-const CloseButton = styled(IconButton)`
-    && {
-        position: absolute;
-        top: 18px;
-        right: 18px;
-        color: #c8c9c9;
-    }
-`;
-
 const PromoStack = styled(Flex)`
+    padding: 4px 8px 8px;
     text-align: center;
 `;
 
@@ -105,10 +75,10 @@ const PromoLabel = styled(Text)`
     }
 `;
 
-const PromoTitle = styled(Dialog.Title)`
+const PromoTitle = styled(Text)`
     && {
         margin: 12px 0 14px;
-        color: #f8f8f6;
+        color: var(--gray-12);
         font-size: clamp(34px, 6vw, 48px);
         font-weight: 800;
         line-height: 1.05;
@@ -116,11 +86,11 @@ const PromoTitle = styled(Dialog.Title)`
     }
 `;
 
-const PromoCopy = styled(Dialog.Description)`
+const PromoCopy = styled(Text)`
     && {
         max-width: 580px;
         margin: 0 auto;
-        color: #d5d5d2;
+        color: var(--gray-11);
         font-size: clamp(18px, 3vw, 24px);
         line-height: 1.45;
     }
@@ -133,10 +103,10 @@ const ExpiryPill = styled.div`
     padding: 14px 20px;
     align-items: center;
     gap: 12px;
-    border: 1px solid rgb(255 255 255 / 6%);
+    border: 1px solid var(--gray-a4);
     border-radius: 14px;
-    background: rgb(255 255 255 / 4%);
-    color: #d7d7d4;
+    background: var(--gray-a3);
+    color: var(--gray-11);
     font-size: 18px;
 
     @media (max-width: 640px) {
@@ -149,12 +119,12 @@ const ExpiryPill = styled.div`
 const ThankYouButton = styled(Button)`
     && {
         width: 100%;
-        height: 64px;
-        border-radius: 15px;
+        height: 56px;
+        border-radius: 14px;
         background: linear-gradient(90deg, #f6d36d 0%, #efbe43 100%);
         box-shadow: 0 10px 28px rgb(225 176 47 / 18%);
         color: #111;
-        font-size: 22px;
+        font-size: 20px;
         font-weight: 800;
     }
 
@@ -166,43 +136,44 @@ const ThankYouButton = styled(Button)`
 const EarlySupporterPreviewModal = () => {
     const [isOpen, setIsOpen] = useState(true);
 
+    const content = (
+        <PromoStack direction="column" align="center">
+            <CrownStage>
+                <Sparkle $side="left" size={24} />
+                <CrownCircle>
+                    <LucideCrown size={54} fill="currentColor" strokeWidth={1.8} />
+                </CrownCircle>
+                <Sparkle $side="right" size={27} />
+            </CrownStage>
+
+            <PromoLabel>{PROMO_COPY.label}</PromoLabel>
+            <PromoTitle>{PROMO_COPY.title}</PromoTitle>
+            <PromoCopy>
+                {PROMO_COPY.intro}
+                <br />
+                {PROMO_COPY.benefit}
+            </PromoCopy>
+
+            <ExpiryPill>
+                <LucideClock3 size={24} />
+                {PROMO_COPY.expires}
+            </ExpiryPill>
+
+            <ThankYouButton size="4" onClick={() => setIsOpen(false)}>
+                {PROMO_COPY.button}
+            </ThankYouButton>
+        </PromoStack>
+    );
+
     return (
-        <Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
-            <PromoDialogContent>
-                <Dialog.Close>
-                    <CloseButton variant="ghost" aria-label="Close">
-                        <LucideX size={28} />
-                    </CloseButton>
-                </Dialog.Close>
-
-                <PromoStack direction="column" align="center">
-                    <CrownStage>
-                        <Sparkle $side="left" size={24} />
-                        <CrownCircle>
-                            <LucideCrown size={54} fill="currentColor" strokeWidth={1.8} />
-                        </CrownCircle>
-                        <Sparkle $side="right" size={27} />
-                    </CrownStage>
-
-                    <PromoLabel>{PROMO_COPY.label}</PromoLabel>
-                    <PromoTitle>{PROMO_COPY.title}</PromoTitle>
-                    <PromoCopy>
-                        {PROMO_COPY.intro}
-                        <br />
-                        {PROMO_COPY.benefit}
-                    </PromoCopy>
-
-                    <ExpiryPill>
-                        <LucideClock3 size={24} />
-                        {PROMO_COPY.expires}
-                    </ExpiryPill>
-
-                    <Dialog.Close>
-                        <ThankYouButton size="4">{PROMO_COPY.button}</ThankYouButton>
-                    </Dialog.Close>
-                </PromoStack>
-            </PromoDialogContent>
-        </Dialog.Root>
+        <BaseModal
+            title=""
+            accessibleDescription={PROMO_COPY.benefit}
+            maxWidth="680px"
+            content={content}
+            isOpened={isOpen}
+            setIsOpened={setIsOpen}
+        />
     );
 };
 
