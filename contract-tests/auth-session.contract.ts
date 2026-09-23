@@ -54,9 +54,9 @@ const assertOpenApiPaths = (document: string): void => {
 it('validates the live auth and session contract', () => {
     const config = resolveContractConfig({
         CHIPIN_CONTRACT_BASE_URL: readEnvironmentVariable('CHIPIN_CONTRACT_BASE_URL'),
-        CHIPIN_CONTRACT_BASIC_USER: readEnvironmentVariable('CHIPIN_CONTRACT_BASIC_USER'),
-        CHIPIN_CONTRACT_BASIC_PASSWORD: readEnvironmentVariable(
-            'CHIPIN_CONTRACT_BASIC_PASSWORD',
+        CHIPIN_CONTRACT_SWAGGER_USER: readEnvironmentVariable('CHIPIN_CONTRACT_SWAGGER_USER'),
+        CHIPIN_CONTRACT_SWAGGER_PASSWORD: readEnvironmentVariable(
+            'CHIPIN_CONTRACT_SWAGGER_PASSWORD',
         ),
     });
     const client = createContractHttpClient(config);
