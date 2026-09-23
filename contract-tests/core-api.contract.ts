@@ -224,7 +224,8 @@ it('validates the live core API contract matrix', () => {
             if (
                 group.name !== 'Contract Group A' ||
                 group.description !== 'Primary contract group' ||
-                group.simplifyDebts !== false
+                group.simplifyDebts !== false ||
+                group.role !== 'OWNER'
             ) {
                 throw new Error('Created group A does not match the requested properties');
             }
@@ -256,7 +257,8 @@ it('validates the live core API contract matrix', () => {
             if (
                 group.name !== 'Contract Group B' ||
                 group.description !== null ||
-                group.simplifyDebts !== true
+                group.simplifyDebts !== true ||
+                group.role !== 'OWNER'
             ) {
                 throw new Error('Created group B does not match the requested properties');
             }

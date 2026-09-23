@@ -5,6 +5,7 @@ export interface ContractGroup {
     name: string;
     description: string | null;
     simplifyDebts: boolean;
+    role: 'OWNER' | 'MEMBER';
     memberIds: string[];
     memberBalancesByUserId: Record<
         string,
@@ -244,15 +245,18 @@ const parseActivityEvent = (
     const event = requireRecord(value, label);
     const id = requireString(event, 'id', label);
     requireNumber(event, 'seq', label);
-    requireString(event, 'domain', label);
+    const domain = requireString(event, 'domain', label);
     const action = requireString(event, 'action', label);
-    requireString(event, 'subjectType', label);
+    const subjectType = requireString(event, 'subjectType', label);
     requireString(event, 'subjectId', label);
     parseActivityActorSnapshot(event.actorSnapshot, `${label}.actorSnapshot`);
     requireNumber(event, 'createdAt', label);
 
     let ledgerEntryId: string | null = null;
     if (action === 'EXPENSE_CREATED' || action === 'EXPENSE_UPDATED' || action === 'EXPENSE_REVERSED') {
+        if (domain !== 'LEDGER' || subjectType !== 'expense') {
+            throw new Error(`${label} expense actions must use LEDGER/expense discriminants`);
+        }
         ledgerEntryId = parseExpenseActivityMetadata(event.metadata, `${label}.metadata`);
     }
     if (
@@ -260,6 +264,9 @@ const parseActivityEvent = (
         action === 'SETTLEMENT_UPDATED' ||
         action === 'SETTLEMENT_REVERSED'
     ) {
+        if (domain !== 'LEDGER' || subjectType !== 'settlement') {
+            throw new Error(`${label} settlement actions must use LEDGER/settlement discriminants`);
+        }
         ledgerEntryId = parseSettlementActivityMetadata(event.metadata, `${label}.metadata`);
     }
     if (
@@ -273,6 +280,9 @@ const parseActivityEvent = (
         action === 'MEMBER_KICKED' ||
         action === 'MEMBERS_ADDED'
     ) {
+        if (domain !== 'GROUP' || subjectType !== 'group') {
+            throw new Error(`${label} group actions must use GROUP/group discriminants`);
+        }
         parseGroupActivityMetadata(event.metadata, `${label}.metadata`);
     }
 
@@ -322,8 +332,15 @@ export const parseGroup = (value: unknown): ContractGroup => {
     requireNumber(group, 'updatedAt', 'group');
     requireNullableString(group, 'coverUrl', 'group');
     const simplifyDebts = requireBoolean(group, 'simplifyDebts', 'group');
-    requireString(group, 'role', 'group');
-    requireString(group, 'status', 'group');
+    const roleValue = requireString(group, 'role', 'group');
+    if (roleValue !== 'OWNER' && roleValue !== 'MEMBER') {
+        throw new Error('group.role must be OWNER or MEMBER');
+    }
+    const role: ContractGroup['role'] = roleValue;
+    const status = requireString(group, 'status', 'group');
+    if (status !== 'ACTIVE') {
+        throw new Error('group.status must be ACTIVE');
+    }
     requireNullableString(group, 'lastUsedCurrency', 'group');
     parsePreviewPage(group.recentActivities, 'group.recentActivities');
 
@@ -345,6 +362,7 @@ export const parseGroup = (value: unknown): ContractGroup => {
         name,
         description,
         simplifyDebts,
+        role,
         memberIds,
         memberBalancesByUserId,
     };
