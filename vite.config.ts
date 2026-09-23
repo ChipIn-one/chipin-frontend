@@ -178,6 +178,7 @@ export default defineConfig(({ mode }) => {
 
                 workbox: {
                     globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+                    navigateFallbackDenylist: [/^\/api\//],
                     sourcemap: false,
                     cleanupOutdatedCaches: true,
                     clientsClaim: true,
