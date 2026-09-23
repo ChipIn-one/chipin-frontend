@@ -64,8 +64,9 @@ test('wraps an internal activity route in the desktop sidebar layout', () => {
 test('keeps the Group Join route outside the desktop sidebar layout', () => {
     renderRouter('/group/join/invite-token');
 
-    expect(screen.getByText(JOIN_ROUTE_CONTENT)).toBeTruthy();
-    expect(screen.queryByRole('link', { name: 'Chipin Group' })).toBeNull();
+    return screen.findByText(JOIN_ROUTE_CONTENT).then(() => {
+        expect(screen.queryByRole('link', { name: 'Chipin Group' })).toBeNull();
+    });
 });
 
 test('reaches the public Privacy page without authentication', () => {

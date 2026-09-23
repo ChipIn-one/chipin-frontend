@@ -233,6 +233,9 @@ export default defineConfig(({ mode }) => {
             sourcemap: 'hidden',
             rolldownOptions: {
                 output: {
+                    // Keep long-lived framework dependencies cacheable here.
+                    // Application areas are split by route/modal dynamic imports instead of
+                    // forced manual groups so navigation does not download unrelated features.
                     codeSplitting: {
                         groups: [
                             {

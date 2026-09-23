@@ -1,7 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-import { resolveLocale } from 'helpers/locale';
+import { registerLocaleChangeHandler, resolveLocale } from 'helpers/locale';
 
 import { resources } from './resources';
 
@@ -31,5 +31,7 @@ i18n.use(initReactI18next).init({
         escapeValue: false,
     },
 });
+
+registerLocaleChangeHandler(locale => i18n.changeLanguage(locale));
 
 export default i18n;

@@ -14,7 +14,7 @@ import {
 
 import type { Group } from 'api/chipin.types';
 
-import { CreateUpdateGroupModal } from 'components/modals';
+import { CreateUpdateGroupModal } from 'components/modals/create-update-group-modal';
 
 import { CoverGradient, CoverWrapper, GroupCoverImage } from './styled';
 

@@ -167,27 +167,35 @@ const resolveLocale = (): SupportedLocale => {
     return resolveBrowserLocale();
 };
 
+type LocaleChangeHandler = (locale: SupportedLocale) => Promise<unknown> | unknown;
+
+let localeChangeHandler: LocaleChangeHandler | null = null;
+
 // Monotonic counter — incremented on every call to onChangeLocale.
-// Each call captures its own snapshot; only the last snapshot matches on resolution.
+// Each call captures its own snapshot; only the last snapshot is applied.
 let _localeRequestId = 0;
 
+const registerLocaleChangeHandler = (handler: LocaleChangeHandler): void => {
+    localeChangeHandler = handler;
+};
+
 /**
- * Applies the user-selected locale to i18n.
- * Dynamic import avoids circular dependency with i18n/index.ts.
- * Last-write-wins: each call increments a request id; superseded calls are dropped.
+ * Applies the user-selected locale through the handler registered by i18n/index.ts.
+ * Registration avoids both a circular static import and an ineffective dynamic import.
  */
 const onChangeLocale = (locale: SupportedLocale): void => {
     const requestId = ++_localeRequestId;
 
-    import('i18n/index')
-        .then(({ default: i18n }) => {
-            if (_localeRequestId === requestId) {
-                return i18n.changeLanguage(locale);
+    Promise.resolve()
+        .then(() => {
+            if (_localeRequestId !== requestId || localeChangeHandler === null) {
+                return undefined;
             }
-            return undefined;
+
+            return localeChangeHandler(locale);
         })
         .catch(() => {
-            // i18n module failed to load. The store cache remains the source of truth.
+            // i18n failed to apply the locale. The store cache remains the source of truth.
         });
 };
 
@@ -195,6 +203,7 @@ export {
     matchLocale,
     normalizeLocale,
     onChangeLocale,
+    registerLocaleChangeHandler,
     resolveBrowserLocale,
     resolveLocale,
     SUPPORTED_LOCALES,

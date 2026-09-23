@@ -13,7 +13,7 @@ import {
 } from 'helpers/activityEvent';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
 
-import { RemoveLedgerEntryAlertDialog } from 'components/modals';
+import { RemoveLedgerEntryAlertDialog } from 'components/modals/remove-ledger-entry-alert-dialog';
 
 import { useConnect } from './internal';
 

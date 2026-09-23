@@ -5,7 +5,7 @@ import { Badge, Box, Button, Container, Flex, Heading, Section, Text } from '@ra
 
 import { usePwaStore } from 'store/pwaStore';
 
-import { AuthModal } from 'components/modals';
+import { AuthModal } from 'components/modals/auth-modal';
 
 import { LandingStats } from './components';
 
