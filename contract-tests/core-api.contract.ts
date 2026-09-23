@@ -524,7 +524,6 @@ it('validates the live core API contract matrix', () => {
             ) {
                 throw new Error('User activity metadata must match the generated ledger values');
             }
-            const a = requireState(userA, 'user A');
             return client.requestJson({
                 auth: { kind: 'bearer', token: a.accessToken },
                 method: 'GET',
@@ -583,7 +582,6 @@ it('validates the live core API contract matrix', () => {
             ) {
                 throw new Error('User activity-preview metadata must match the generated ledger values');
             }
-            const a = requireState(userA, 'user A');
             return client.requestJson({
                 auth: { kind: 'bearer', token: a.accessToken },
                 method: 'GET',
@@ -616,7 +614,6 @@ it('validates the live core API contract matrix', () => {
             ) {
                 throw new Error('Group preview metadata must match the generated ledger values');
             }
-            const a = requireState(userA, 'user A');
             return client.requestJson({
                 auth: { kind: 'bearer', token: a.accessToken },
                 method: 'GET',
