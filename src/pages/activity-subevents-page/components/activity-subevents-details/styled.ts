@@ -1,3 +1,4 @@
+import { LucideChevronDown } from 'lucide-react';
 import styled from 'styled-components';
 
 import { Card, Flex, Text } from '@radix-ui/themes';
@@ -7,8 +8,16 @@ const DetailsCard = styled(Card)`
     top: calc(var(--space-6) + var(--space-4));
 `;
 
+const DisclosureChevron = styled(LucideChevronDown)`
+    flex: 0 0 auto;
+`;
+
 const MobileDetails = styled.details`
     width: 100%;
+
+    &[open] ${DisclosureChevron} {
+        transform: rotate(180deg);
+    }
 `;
 
 const MobileSummary = styled.summary`
@@ -40,6 +49,7 @@ export {
     DetailLabel,
     DetailRow,
     DetailsCard,
+    DisclosureChevron,
     MobileDetails,
     MobileSummary,
     ParticipantRow,

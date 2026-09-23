@@ -4,8 +4,9 @@ import { ENV_DEV, ENV_PROD } from 'constants/env';
 
 import { getChipInApiUrl, getEnv } from './env';
 
-const setWindowHostname = (hostname: string): void => {
-    vi.stubGlobal('window', { location: { hostname } });
+const setWindowLocation = (origin: string): void => {
+    const { hostname } = new URL(origin);
+    vi.stubGlobal('window', { location: { hostname, origin } });
 };
 
 afterEach(() => {
@@ -19,59 +20,68 @@ describe('getEnv', () => {
     });
 
     test('uses explicit production configuration', () => {
-        setWindowHostname('chipin.one');
+        setWindowLocation('https://chipin.one');
         vi.stubEnv('VITE_CHIPIN_ENV', ENV_PROD);
 
         expect(getEnv()).toBe(ENV_PROD);
-        expect(getChipInApiUrl()).toBe('https://api.chipin.one/');
+        expect(getChipInApiUrl()).toBe('https://chipin.one/api/');
     });
 
     test('uses explicit development configuration on a Vercel Preview hostname', () => {
-        setWindowHostname('chipin-git-feature-123.vercel.app');
+        setWindowLocation('https://chipin-git-feature-123.vercel.app');
         vi.stubEnv('VITE_CHIPIN_ENV', ENV_DEV);
 
         expect(getEnv()).toBe(ENV_DEV);
-        expect(getChipInApiUrl()).toBe('https://api-dev.chipin.one/');
+        expect(getChipInApiUrl()).toBe('https://chipin-git-feature-123.vercel.app/api/');
+    });
+
+    test('keeps generated Vercel production domains on the development environment', () => {
+        setWindowLocation('https://chipin-frontend.vercel.app');
+        vi.stubEnv('VITE_CHIPIN_ENV', ENV_PROD);
+
+        expect(getEnv()).toBe(ENV_DEV);
+        expect(getChipInApiUrl()).toBe('https://chipin-frontend.vercel.app/api/');
     });
 
     test('uses development on localhost without explicit configuration', () => {
-        setWindowHostname('localhost');
+        setWindowLocation('http://localhost:5173');
 
         expect(getEnv()).toBe(ENV_DEV);
+        expect(getChipInApiUrl()).toBe('http://localhost:5173/api/');
     });
 
     test('uses development on the known development hostname without explicit configuration', () => {
-        setWindowHostname('dev.chipin.one');
+        setWindowLocation('https://dev.chipin.one');
 
         expect(getEnv()).toBe(ENV_DEV);
     });
 
-    test('uses development on an approved development subdomain without explicit configuration', () => {
-        setWindowHostname('preview.dev.chipin.one');
-
-        expect(getEnv()).toBe(ENV_DEV);
-    });
-
-    test('rejects the production hostname without explicit configuration', () => {
-        setWindowHostname('chipin.one');
+    test('rejects unsupported development subdomains without explicit configuration', () => {
+        setWindowLocation('https://preview.dev.chipin.one');
 
         expect(() => getEnv()).toThrowError(/environment configuration/i);
     });
 
-    test('rejects a Vercel-like preview hostname instead of selecting production', () => {
-        setWindowHostname('chipin-git-feature-123.vercel.app');
+    test('rejects the production hostname without explicit configuration', () => {
+        setWindowLocation('https://chipin.one');
+
+        expect(() => getEnv()).toThrowError(/environment configuration/i);
+    });
+
+    test('rejects a Vercel hostname without explicit configuration', () => {
+        setWindowLocation('https://chipin-git-feature-123.vercel.app');
 
         expect(() => getChipInApiUrl()).toThrowError(/environment configuration/i);
     });
 
     test('rejects an arbitrary unknown hostname instead of selecting production', () => {
-        setWindowHostname('example.com');
+        setWindowLocation('https://example.com');
 
         expect(() => getChipInApiUrl()).toThrowError(/environment configuration/i);
     });
 
     test('rejects an invalid explicit environment instead of falling back by hostname', () => {
-        setWindowHostname('localhost');
+        setWindowLocation('http://localhost:5173');
         vi.stubEnv('VITE_CHIPIN_ENV', 'staging');
 
         expect(() => getEnv()).toThrowError(/environment configuration/i);
