@@ -47,6 +47,10 @@ const CloseButton = styled(IconButton)`
     }
 `;
 
+const PromoStack = styled(Flex)`
+    text-align: center;
+`;
+
 const CrownStage = styled.div`
     position: relative;
     display: grid;
@@ -162,7 +166,7 @@ const EarlySupporterPreviewModal = () => {
                     </CloseButton>
                 </Dialog.Close>
 
-                <Flex direction="column" align="center" style={{ textAlign: 'center' }}>
+                <PromoStack direction="column" align="center">
                     <CrownStage>
                         <Sparkle $side="left" size={24} />
                         <CrownCircle>
@@ -187,7 +191,7 @@ const EarlySupporterPreviewModal = () => {
                     <Dialog.Close>
                         <ThankYouButton size="4">Thank you</ThankYouButton>
                     </Dialog.Close>
-                </Flex>
+                </PromoStack>
             </PromoDialogContent>
         </Dialog.Root>
     );
