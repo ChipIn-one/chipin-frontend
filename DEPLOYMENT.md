@@ -7,13 +7,11 @@ Vercel owns the deployment-to-backend mapping:
 | --- | --- |
 | `chipin.one` | `https://api.chipin.one/*` |
 | `dev.chipin.one` | `https://api-dev.chipin.one/*` |
-| `*.dev.chipin.one` branch domains | `https://api-dev.chipin.one/*` |
 | `*.vercel.app` preview | `https://api-dev.chipin.one/*` |
 
-Vercel Branch Domains can give a task branch a stable custom preview URL. For
-example, the branch for issue #199 can use `issue-199.dev.chipin.one`; Vercel
-then keeps that domain pointed at the latest deployment for the selected Git
-branch.
+Vercel-generated Preview Deployment domains are the supported preview hosts.
+Custom `*.dev.chipin.one` branch domains are intentionally not part of the
+deployment contract.
 
 There is no unconditional external API rewrite. Unknown hosts therefore cannot
 fall back to production. The frontend also keeps the explicit environment

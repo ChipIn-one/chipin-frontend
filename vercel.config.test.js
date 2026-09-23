@@ -45,16 +45,14 @@ describe('Vercel API proxy routing', () => {
         );
     });
 
-    test('routes development subdomains to the development API', () => {
-        expect(resolveApiDestination('issue-199.dev.chipin.one')).toBe(
-            'https://api-dev.chipin.one/:path*',
-        );
-    });
-
     test('routes Vercel preview hostnames to the development API', () => {
         expect(resolveApiDestination('chipin-git-feature-123.vercel.app')).toBe(
             'https://api-dev.chipin.one/:path*',
         );
+    });
+
+    test('does not route unsupported custom subdomains to any backend', () => {
+        expect(resolveApiDestination('issue-199.dev.chipin.one')).toBeUndefined();
     });
 
     test('does not route an unknown hostname to any backend', () => {

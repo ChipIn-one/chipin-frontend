@@ -22,9 +22,7 @@ export const getEnv = (): Environment => {
 
     const hostname = window.location.hostname;
     const isDevHostname =
-        hostname === 'localhost' ||
-        hostname === ENV_URLS[ENV_DEV].hostname ||
-        hostname.endsWith(`.${ENV_URLS[ENV_DEV].hostname}`);
+        hostname === 'localhost' || hostname === ENV_URLS[ENV_DEV].hostname;
 
     if (isDevHostname) {
         return ENV_DEV;

@@ -48,10 +48,10 @@ describe('getEnv', () => {
         expect(getEnv()).toBe(ENV_DEV);
     });
 
-    test('uses development on an approved development subdomain without explicit configuration', () => {
+    test('rejects unsupported development subdomains without explicit configuration', () => {
         setWindowLocation('https://preview.dev.chipin.one');
 
-        expect(getEnv()).toBe(ENV_DEV);
+        expect(() => getEnv()).toThrowError(/environment configuration/i);
     });
 
     test('rejects the production hostname without explicit configuration', () => {
