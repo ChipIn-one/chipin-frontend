@@ -7,8 +7,8 @@ describe('resolveContractConfig', () => {
         expect(
             resolveContractConfig({
                 CHIPIN_CONTRACT_BASE_URL: 'https://api-dev.chipin.one/',
-                CHIPIN_CONTRACT_BASIC_USER: 'contract-user',
-                CHIPIN_CONTRACT_BASIC_PASSWORD: 'contract-password',
+                CHIPIN_CONTRACT_SWAGGER_USER: 'contract-user',
+                CHIPIN_CONTRACT_SWAGGER_PASSWORD: 'contract-password',
             }),
         ).toEqual({
             baseUrl: 'https://api-dev.chipin.one',
@@ -65,20 +65,20 @@ describe('resolveContractConfig', () => {
 
     it.each([
         {
-            CHIPIN_CONTRACT_BASIC_PASSWORD: 'contract-password',
-            CHIPIN_CONTRACT_BASIC_USER: undefined,
+            CHIPIN_CONTRACT_SWAGGER_PASSWORD: 'contract-password',
+            CHIPIN_CONTRACT_SWAGGER_USER: undefined,
         },
         {
-            CHIPIN_CONTRACT_BASIC_PASSWORD: undefined,
-            CHIPIN_CONTRACT_BASIC_USER: 'contract-user',
+            CHIPIN_CONTRACT_SWAGGER_PASSWORD: undefined,
+            CHIPIN_CONTRACT_SWAGGER_USER: 'contract-user',
         },
         {
-            CHIPIN_CONTRACT_BASIC_PASSWORD: '',
-            CHIPIN_CONTRACT_BASIC_USER: 'contract-user',
+            CHIPIN_CONTRACT_SWAGGER_PASSWORD: '',
+            CHIPIN_CONTRACT_SWAGGER_USER: 'contract-user',
         },
         {
-            CHIPIN_CONTRACT_BASIC_PASSWORD: 'contract-password',
-            CHIPIN_CONTRACT_BASIC_USER: '',
+            CHIPIN_CONTRACT_SWAGGER_PASSWORD: 'contract-password',
+            CHIPIN_CONTRACT_SWAGGER_USER: '',
         },
     ])('requires both Basic credentials for staging', (credentials) => {
         expect(() =>
