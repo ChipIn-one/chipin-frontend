@@ -122,5 +122,14 @@
             "freePermanently": "Grátis para sempre",
             "allDevices": "Funciona em todos os dispositivos"
         }
+    },
+    "promo": {
+        "modalTitle": "Boas-vindas ao ChipIn",
+        "label": "USUÁRIO PIONEIRO",
+        "title": "Você está entre os primeiros 5.000",
+        "intro": "Obrigado por estar com o ChipIn desde o começo.",
+        "benefit": "Premium é seu por 1 ano — grátis.",
+        "expires": "Expira em 13 de setembro de 2027",
+        "button": "Obrigado"
     }
 }
