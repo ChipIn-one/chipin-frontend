@@ -716,7 +716,8 @@ it('validates the live core API contract matrix', () => {
             const knownUser = knownUsers[0];
             if (
                 knownUsers.length !== 1 ||
-                knownUser?.id !== b.user.id ||
+                !knownUser ||
+                knownUser.id !== b.user.id ||
                 knownUser.balancesByCurrency.USD !== 4 ||
                 knownUser.lastUsedCurrency !== 'USD'
             ) {
