@@ -23,8 +23,8 @@ The normal `npm run test:full` and `npm run verify:full` commands do not execute
 The harness reads:
 
 - `CHIPIN_CONTRACT_BASE_URL`
-- `CHIPIN_CONTRACT_BASIC_USER`
-- `CHIPIN_CONTRACT_BASIC_PASSWORD`
+- `CHIPIN_CONTRACT_SWAGGER_USER`
+- `CHIPIN_CONTRACT_SWAGGER_PASSWORD`
 
 Allowed targets are intentionally closed:
 
@@ -46,8 +46,8 @@ Example staging run:
 
 ```bash
 CHIPIN_CONTRACT_BASE_URL=https://api-dev.chipin.one \
-CHIPIN_CONTRACT_BASIC_USER='<swagger-basic-user>' \
-CHIPIN_CONTRACT_BASIC_PASSWORD='<swagger-basic-password>' \
+CHIPIN_CONTRACT_SWAGGER_USER='<swagger-basic-user>' \
+CHIPIN_CONTRACT_SWAGGER_PASSWORD='<swagger-basic-password>' \
 npm run test:contract:smoke
 ```
 
@@ -79,8 +79,8 @@ Pull-request CI remains credential-free. `frontend-ci.yml` runs `npm run verify:
 
 `.github/workflows/contract-smoke.yml` runs only on a push to `dev`, after code has been human-reviewed and merged into the trusted integration branch. It uses GitHub-hosted runners and these repository or organization secrets:
 
-- `CHIPIN_CONTRACT_BASIC_USER`
-- `CHIPIN_CONTRACT_BASIC_PASSWORD`
+- `CHIPIN_CONTRACT_SWAGGER_USER`
+- `CHIPIN_CONTRACT_SWAGGER_PASSWORD`
 
 The workflow has no `pull_request` or `workflow_dispatch` trigger, so staging credentials are not exposed to untrusted PR code.
 
