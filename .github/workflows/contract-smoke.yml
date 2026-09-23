@@ -28,6 +28,6 @@ jobs:
       - name: Run staging contract smoke
         env:
           CHIPIN_CONTRACT_BASE_URL: https://api-dev.chipin.one
-          CHIPIN_CONTRACT_BASIC_USER: ${{ secrets.CHIPIN_CONTRACT_BASIC_USER }}
-          CHIPIN_CONTRACT_BASIC_PASSWORD: ${{ secrets.CHIPIN_CONTRACT_BASIC_PASSWORD }}
+          CHIPIN_CONTRACT_SWAGGER_USER: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_USER }}
+          CHIPIN_CONTRACT_SWAGGER_PASSWORD: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_PASSWORD }}
         run: npm run test:contract:smoke
