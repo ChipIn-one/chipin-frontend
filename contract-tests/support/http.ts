@@ -89,9 +89,18 @@ const createRequest = (
         );
     }
 
+    let requestUrl: URL;
     let headers: Headers;
 
     try {
+        requestUrl = new URL(options.path, config.baseUrl);
+
+        if (requestUrl.origin !== new URL(config.baseUrl).origin) {
+            throw new ContractRequestError(
+                'Contract request path must stay on the configured origin',
+            );
+        }
+
         headers = buildHeaders(config, options);
     } catch (error) {
         return Promise.reject(error);
@@ -99,7 +108,7 @@ const createRequest = (
 
     const requestDescription = describeRequest(options);
 
-    return fetchImpl(new URL(options.path, config.baseUrl), {
+    return fetchImpl(requestUrl, {
         body: options.body === undefined ? undefined : JSON.stringify(options.body),
         headers,
         method: options.method,
