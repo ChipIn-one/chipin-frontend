@@ -1,4 +1,4 @@
-import { ENV_DEV, ENV_PROD, ENV_URLS } from 'constants/env';
+import { API_BASE_PATH, ENV_DEV, ENV_PROD, ENV_URLS } from 'constants/env';
 import type { Environment } from 'constants/env.types';
 
 export const getEnv = (): Environment => {
@@ -39,7 +39,10 @@ export const getIsDevEnv = (): boolean => getEnv() === ENV_DEV;
 
 export const getIsProdEnv = (): boolean => getEnv() === ENV_PROD;
 
-export const getChipInApiUrl = (): string => ENV_URLS[getEnv()].apiBaseUrl;
+export const getChipInApiUrl = (): string => {
+    getEnv();
+    return API_BASE_PATH;
+};
 
 export const getChipInAppUrl = (): string => {
     if (typeof window !== 'undefined') {

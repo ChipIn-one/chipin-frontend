@@ -214,6 +214,16 @@ export default defineConfig(({ mode }) => {
                 : []),
         ],
 
+        server: {
+            proxy: {
+                '/api': {
+                    target: 'https://api-dev.chipin.one',
+                    changeOrigin: true,
+                    rewrite: path => path.replace(/^\/api/, ''),
+                },
+            },
+        },
+
         build: {
             sourcemap: 'hidden',
             rolldownOptions: {

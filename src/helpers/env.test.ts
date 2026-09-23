@@ -23,7 +23,7 @@ describe('getEnv', () => {
         vi.stubEnv('VITE_CHIPIN_ENV', ENV_PROD);
 
         expect(getEnv()).toBe(ENV_PROD);
-        expect(getChipInApiUrl()).toBe('https://api.chipin.one/');
+        expect(getChipInApiUrl()).toBe('/api/');
     });
 
     test('uses explicit development configuration on a Vercel Preview hostname', () => {
@@ -31,7 +31,7 @@ describe('getEnv', () => {
         vi.stubEnv('VITE_CHIPIN_ENV', ENV_DEV);
 
         expect(getEnv()).toBe(ENV_DEV);
-        expect(getChipInApiUrl()).toBe('https://api-dev.chipin.one/');
+        expect(getChipInApiUrl()).toBe('/api/');
     });
 
     test('uses development on localhost without explicit configuration', () => {
