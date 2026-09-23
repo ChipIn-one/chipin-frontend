@@ -187,9 +187,9 @@ const EarlySupporterPreviewModal = () => {
                     <PromoLabel>{PROMO_COPY.label}</PromoLabel>
                     <PromoTitle>{PROMO_COPY.title}</PromoTitle>
                     <PromoCopy>
-                        Thank you for being with ChipIn early.
+                        {PROMO_COPY.intro}
                         <br />
-                        Premium is yours for 1 year — free.
+                        {PROMO_COPY.benefit}
                     </PromoCopy>
 
                     <ExpiryPill>
