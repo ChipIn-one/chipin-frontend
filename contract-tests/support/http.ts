@@ -112,6 +112,7 @@ const createRequest = (
         body: options.body === undefined ? undefined : JSON.stringify(options.body),
         headers,
         method: options.method,
+        redirect: 'error',
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     }).then(
         (response) => {
