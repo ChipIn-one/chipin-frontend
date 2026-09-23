@@ -204,7 +204,7 @@ it('validates the live core API contract matrix', () => {
         })
         .then(value => {
             const b = requireState(userB, 'user B');
-            if (!parseKnownUsers(value).includes(b.user.id)) {
+            if (!parseKnownUsers(value).some(friend => friend.id === b.user.id)) {
                 throw new Error('Known-user response is missing provisioned user B');
             }
             const a = requireState(userA, 'user A');
@@ -553,6 +553,58 @@ it('validates the live core API contract matrix', () => {
         .then(value => {
             if (parseCurrencyRates(value).base !== 'USD') {
                 throw new Error('Currency rates must retain the requested USD base');
+            }
+            const a = requireState(userA, 'user A');
+            const b = requireState(userB, 'user B');
+            return client.requestJson({
+                auth: { kind: 'bearer', token: a.accessToken },
+                body: {
+                    type: 'EXPENSE',
+                    expense: {
+                        description: 'Direct contract taxi',
+                        amount: 8,
+                        date: Math.floor(Date.now() / 1000),
+                        payerId: a.user.id,
+                        participantIds: [a.user.id, b.user.id],
+                        category: 'transport',
+                        currency: 'USD',
+                        sharingMode: { type: 'AUTO' },
+                    },
+                },
+                method: 'POST',
+                path: '/ledger/entries',
+            });
+        })
+        .then(value => {
+            const directExpense = parseLedgerEntry(value);
+            const a = requireState(userA, 'user A');
+            const b = requireState(userB, 'user B');
+            const expectedParticipants = new Set([a.user.id, b.user.id]);
+            if (
+                directExpense.type !== 'EXPENSE' ||
+                directExpense.groupId !== null ||
+                directExpense.amount !== 8 ||
+                directExpense.currency !== 'USD' ||
+                directExpense.payerId !== a.user.id ||
+                !hasExpectedParticipants(directExpense.participantIds, expectedParticipants)
+            ) {
+                throw new Error('Direct expense does not match the requested user-scope contract');
+            }
+            return client.requestJson({
+                auth: { kind: 'bearer', token: a.accessToken },
+                method: 'GET',
+                path: '/users/known-users',
+            });
+        })
+        .then(value => {
+            const b = requireState(userB, 'user B');
+            const knownUser = parseKnownUsers(value).find(friend => friend.id === b.user.id);
+            if (
+                !knownUser ||
+                knownUser.balancesByCurrency.USD !== 4 ||
+                knownUser.lastUsedCurrency !== 'USD'
+            ) {
+                throw new Error('Known-user USD balance must reflect the generated direct expense');
             }
             const a = requireState(userA, 'user A');
             return client.requestJsonForStatus(

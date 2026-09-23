@@ -34,6 +34,12 @@ export interface ContractDashboard {
     balances: Record<string, { currency: string; netBalance: number }>;
 }
 
+export interface ContractKnownUser {
+    id: string;
+    balancesByCurrency: Record<string, number>;
+    lastUsedCurrency: string | null;
+}
+
 export type ContractLedgerEntry =
     | {
           id: string;
@@ -300,25 +306,32 @@ export const parseSelfUserContract = (value: unknown): ReturnType<typeof parseSe
 export const parseInviteLink = (value: unknown): string =>
     requireString(requireRecord(value, 'inviteLink'), 'inviteToken', 'inviteLink');
 
-export const parseKnownUsers = (value: unknown): string[] => {
+export const parseKnownUsers = (value: unknown): ContractKnownUser[] => {
     const response = requireRecord(value, 'knownUsers');
     const friends = requireArray(response.friends, 'knownUsers.friends');
-    const ids: string[] = [];
+    const parsed: ContractKnownUser[] = [];
 
     for (let index = 0; index < friends.length; index += 1) {
-        const friend = requireRecord(friends[index], `knownUsers.friends[${index}]`);
-        ids.push(parsePublicUser(friend.user, `knownUsers.friends[${index}].user`));
-        const balances = requireArray(friend.balances, `knownUsers.friends[${index}].balances`);
+        const label = `knownUsers.friends[${index}]`;
+        const friend = requireRecord(friends[index], label);
+        const id = parsePublicUser(friend.user, `${label}.user`);
+        const balances = requireArray(friend.balances, `${label}.balances`);
+        const balancesByCurrency: Record<string, number> = {};
         for (let balanceIndex = 0; balanceIndex < balances.length; balanceIndex += 1) {
-            const label = `knownUsers.friends[${index}].balances[${balanceIndex}]`;
-            const balance = requireRecord(balances[balanceIndex], label);
-            requireString(balance, 'currency', label);
-            requireNumber(balance, 'netAmount', label);
+            const balanceLabel = `${label}.balances[${balanceIndex}]`;
+            const balance = requireRecord(balances[balanceIndex], balanceLabel);
+            const currency = requireString(balance, 'currency', balanceLabel);
+            const netAmount = requireNumber(balance, 'netAmount', balanceLabel);
+            if (currency in balancesByCurrency) {
+                throw new Error(`${label}.balances must not repeat currency ${currency}`);
+            }
+            balancesByCurrency[currency] = netAmount;
         }
-        requireNullableString(friend, 'lastUsedCurrency', `knownUsers.friends[${index}]`);
+        const lastUsedCurrency = requireNullableString(friend, 'lastUsedCurrency', label);
+        parsed.push({ id, balancesByCurrency, lastUsedCurrency });
     }
 
-    return ids;
+    return parsed;
 };
 
 export const parseGroup = (value: unknown): ContractGroup => {
