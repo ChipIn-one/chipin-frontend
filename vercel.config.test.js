@@ -3,9 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
 
 const API_SOURCE = '/api/:path*';
-const config = JSON.parse(
-    readFileSync(new URL('./vercel.json', import.meta.url), 'utf8'),
-);
+const config = JSON.parse(readFileSync('vercel.json', 'utf8'));
 
 const apiRewrites = config.rewrites.filter(rewrite => rewrite.source === API_SOURCE);
 
