@@ -90,6 +90,32 @@ describe('createContractHttpClient', () => {
             });
     });
 
+
+    it('disables redirects before sending refresh tokens', () => {
+        let capturedRedirect: RequestRedirect | undefined;
+
+        const fetchImpl: typeof fetch = (_input, init) => {
+            capturedRedirect = init?.redirect;
+
+            return Promise.resolve(
+                new Response(JSON.stringify({ token: 'next', refresh_token: 'next-refresh' }), {
+                    headers: { 'Content-Type': 'application/json' },
+                    status: 200,
+                }),
+            );
+        };
+
+        return createContractHttpClient(stagingConfig, fetchImpl)
+            .requestJson({
+                auth: { kind: 'refresh', token: 'refresh-token-secret' },
+                method: 'POST',
+                path: '/auth/refresh',
+            })
+            .then(() => {
+                expect(capturedRedirect).toBe('error');
+            });
+    });
+
     it('does not send Basic authorization to localhost', () => {
         let capturedHeaders: Headers | null = null;
         const localConfig: ContractConfig = {
