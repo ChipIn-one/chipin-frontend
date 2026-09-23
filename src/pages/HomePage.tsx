@@ -63,14 +63,14 @@ const Sparkle = styled(LucideSparkles)<{ $side: 'left' | 'right' }>`
 const PromoLabel = styled(Text)`
     && {
         color: #f0c850;
-        font-size: 20px;
+        font-size: 17px;
         font-weight: 800;
         letter-spacing: 0.14em;
     }
 
     @media (max-width: 640px) {
         && {
-            font-size: 15px;
+            font-size: 14px;
         }
     }
 `;
@@ -79,7 +79,7 @@ const PromoTitle = styled(Text)`
     && {
         margin: 12px 0 14px;
         color: var(--gray-12);
-        font-size: clamp(34px, 6vw, 48px);
+        font-size: clamp(30px, 5vw, 42px);
         font-weight: 800;
         line-height: 1.05;
         letter-spacing: -0.035em;
@@ -91,7 +91,7 @@ const PromoCopy = styled(Text)`
         max-width: 580px;
         margin: 0 auto;
         color: var(--gray-11);
-        font-size: clamp(18px, 3vw, 24px);
+        font-size: clamp(16px, 2.5vw, 20px);
         line-height: 1.45;
     }
 `;
@@ -107,24 +107,24 @@ const ExpiryPill = styled.div`
     border-radius: 14px;
     background: var(--gray-a3);
     color: var(--gray-11);
-    font-size: 18px;
+    font-size: 16px;
 
     @media (max-width: 640px) {
         margin-top: 22px;
         padding: 12px 16px;
-        font-size: 15px;
+        font-size: 14px;
     }
 `;
 
 const ThankYouButton = styled(Button)`
     && {
         width: 100%;
-        height: 56px;
-        border-radius: 14px;
+        height: 48px;
+        border-radius: 12px;
         background: linear-gradient(90deg, #f6d36d 0%, #efbe43 100%);
         box-shadow: 0 10px 28px rgb(225 176 47 / 18%);
         color: #111;
-        font-size: 20px;
+        font-size: 18px;
         font-weight: 800;
     }
 
