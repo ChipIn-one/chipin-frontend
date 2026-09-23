@@ -1,7 +1,7 @@
 export interface ContractEnvironment {
     CHIPIN_CONTRACT_BASE_URL?: string;
-    CHIPIN_CONTRACT_BASIC_USER?: string;
-    CHIPIN_CONTRACT_BASIC_PASSWORD?: string;
+    CHIPIN_CONTRACT_SWAGGER_USER?: string;
+    CHIPIN_CONTRACT_SWAGGER_PASSWORD?: string;
 }
 
 export interface ContractBasicAuth {
@@ -67,8 +67,8 @@ export const resolveContractConfig = (environment: ContractEnvironment): Contrac
         };
     }
 
-    const username = environment.CHIPIN_CONTRACT_BASIC_USER;
-    const password = environment.CHIPIN_CONTRACT_BASIC_PASSWORD;
+    const username = environment.CHIPIN_CONTRACT_SWAGGER_USER;
+    const password = environment.CHIPIN_CONTRACT_SWAGGER_PASSWORD;
 
     if (!username?.trim() || !password?.trim()) {
         throw new Error('Staging contract tests require Basic credentials');
