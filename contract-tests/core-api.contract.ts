@@ -338,14 +338,16 @@ it('validates the live core API contract matrix', () => {
                 throw new Error('Generated events must produce a numeric activity cursor');
             }
             const a = requireState(userA, 'user A');
-            return client.requestJson({
-                auth: { kind: 'bearer', token: a.accessToken },
-                method: 'GET',
-                path: `/users/self/activities?limit=1&cursor=${first.nextCursor}`,
-            });
+            return client
+                .requestJson({
+                    auth: { kind: 'bearer', token: a.accessToken },
+                    method: 'GET',
+                    path: `/users/self/activities?limit=1&cursor=${first.nextCursor}`,
+                })
+                .then(next => ({ first, next: parseActivityPage(next) }));
         })
-        .then(value => {
-            if (parseActivityPage(value).ids.length !== 1) {
+        .then(({ first, next }) => {
+            if (next.ids.length !== 1 || next.ids[0] === first.ids[0]) {
                 throw new Error('Activity cursor must advance to another generated event');
             }
             const a = requireState(userA, 'user A');
@@ -356,9 +358,22 @@ it('validates the live core API contract matrix', () => {
             });
         })
         .then(value => {
-            const page = parseActivityPreviewPage(value);
-            if (page.ids.length !== 1 || typeof page.nextCursor !== 'number') {
+            const first = parseActivityPreviewPage(value);
+            if (first.ids.length !== 1 || typeof first.nextCursor !== 'number') {
                 throw new Error('Expense and settlement must produce preview pagination');
+            }
+            const a = requireState(userA, 'user A');
+            return client
+                .requestJson({
+                    auth: { kind: 'bearer', token: a.accessToken },
+                    method: 'GET',
+                    path: `/users/self/activity-previews?limit=1&cursor=${first.nextCursor}`,
+                })
+                .then(next => ({ first, next: parseActivityPreviewPage(next) }));
+        })
+        .then(({ first, next }) => {
+            if (next.ids.length !== 1 || next.ids[0] === first.ids[0]) {
+                throw new Error('Activity-preview cursor must advance to another generated preview');
             }
             const a = requireState(userA, 'user A');
             return client.requestJson({
@@ -379,7 +394,9 @@ it('validates the live core API contract matrix', () => {
             });
         })
         .then(value => {
-            parseCurrencyRates(value);
+            if (parseCurrencyRates(value).base !== 'USD') {
+                throw new Error('Currency rates must retain the requested USD base');
+            }
             const a = requireState(userA, 'user A');
             return client.requestJsonForStatus(
                 { auth: { kind: 'bearer', token: a.accessToken }, method: 'GET', path: '/groups?limit=0' },

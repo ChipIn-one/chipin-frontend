@@ -271,9 +271,9 @@ export const parseDashboard = (value: unknown): void => {
     }
 };
 
-export const parseCurrencyRates = (value: unknown): void => {
+export const parseCurrencyRates = (value: unknown): { base: string } => {
     const rates = requireRecord(value, 'currencyRates');
-    requireString(rates, 'base', 'currencyRates');
+    const base = requireString(rates, 'base', 'currencyRates');
     requireNumber(rates, 'timestamp', 'currencyRates');
     requireNumber(rates, 'fetchedAt', 'currencyRates');
     requireBoolean(rates, 'stale', 'currencyRates');
@@ -281,6 +281,8 @@ export const parseCurrencyRates = (value: unknown): void => {
     if (typeof values.EUR !== 'number' || !Number.isFinite(values.EUR)) {
         throw new Error('currencyRates.rates.EUR must be a finite number');
     }
+
+    return { base };
 };
 
 export const parseErrorCode = (value: unknown): { code: string; details?: Record<string, unknown> } => {
