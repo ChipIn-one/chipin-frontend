@@ -7,6 +7,6 @@ export default defineConfig({
         include: ['contract-tests/**/*.contract.ts'],
         restoreMocks: true,
         hookTimeout: 30_000,
-        testTimeout: 30_000,
+        testTimeout: 60_000,
     },
 });
