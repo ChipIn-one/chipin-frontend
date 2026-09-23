@@ -28,6 +28,18 @@
                 {
                     "type": "host",
                     "value": {
+                        "suf": ".dev.chipin.one"
+                    }
+                }
+            ],
+            "destination": "https://api-dev.chipin.one/:path*"
+        },
+        {
+            "source": "/api/:path*",
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
                         "suf": ".vercel.app"
                     }
                 }
