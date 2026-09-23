@@ -4,14 +4,32 @@ import type { Environment } from 'constants/env.types';
 export const getEnv = (): Environment => {
     const explicitEnv: unknown = import.meta.env.VITE_CHIPIN_ENV;
 
-    if (explicitEnv === ENV_DEV || explicitEnv === ENV_PROD) {
-        return explicitEnv;
-    }
-
-    if (explicitEnv !== undefined) {
+    if (
+        explicitEnv !== undefined &&
+        explicitEnv !== ENV_DEV &&
+        explicitEnv !== ENV_PROD
+    ) {
         throw new Error(
             'Invalid ChipIn environment configuration: VITE_CHIPIN_ENV must be "dev" or "prod".',
         );
+    }
+
+    if (typeof window !== 'undefined') {
+        const hostname = window.location.hostname;
+
+        if (hostname.endsWith('.vercel.app')) {
+            if (explicitEnv === undefined) {
+                throw new Error(
+                    'Unable to resolve ChipIn environment configuration without explicit VITE_CHIPIN_ENV.',
+                );
+            }
+
+            return ENV_DEV;
+        }
+    }
+
+    if (explicitEnv === ENV_DEV || explicitEnv === ENV_PROD) {
+        return explicitEnv;
     }
 
     if (typeof window === 'undefined') {

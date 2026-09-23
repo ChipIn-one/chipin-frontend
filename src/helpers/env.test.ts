@@ -35,6 +35,14 @@ describe('getEnv', () => {
         expect(getChipInApiUrl()).toBe('https://chipin-git-feature-123.vercel.app/api/');
     });
 
+    test('keeps generated Vercel production domains on the development environment', () => {
+        setWindowLocation('https://chipin-frontend.vercel.app');
+        vi.stubEnv('VITE_CHIPIN_ENV', ENV_PROD);
+
+        expect(getEnv()).toBe(ENV_DEV);
+        expect(getChipInApiUrl()).toBe('https://chipin-frontend.vercel.app/api/');
+    });
+
     test('uses development on localhost without explicit configuration', () => {
         setWindowLocation('http://localhost:5173');
 
@@ -60,7 +68,7 @@ describe('getEnv', () => {
         expect(() => getEnv()).toThrowError(/environment configuration/i);
     });
 
-    test('rejects a Vercel-like preview hostname instead of selecting production', () => {
+    test('rejects a Vercel hostname without explicit configuration', () => {
         setWindowLocation('https://chipin-git-feature-123.vercel.app');
 
         expect(() => getChipInApiUrl()).toThrowError(/environment configuration/i);
