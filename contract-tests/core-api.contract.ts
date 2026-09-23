@@ -35,6 +35,8 @@ const OPENAPI_PATHS = [
     '/currency-rates',
 ] as const;
 
+const FULL_MATRIX_TIMEOUT_MS = 6 * 60_000;
+
 const OPENAPI_FIELDS = [
     'isPremium',
     'simplifyDebts',
@@ -77,8 +79,22 @@ it('validates the live core API contract matrix', () => {
     let userB: ContractRegisterResponse | null = null;
     let groupA: string | null = null;
     let groupB: string | null = null;
+    let expenseId: string | null = null;
+    let settlementId: string | null = null;
     let primaryFailure: unknown;
     let hasPrimaryFailure = false;
+
+    const hasExpectedAutoShares = (
+        shares: ReadonlyArray<{ userId: string; shareAmount: number; currency: string }>,
+        expectedParticipants: Set<string>,
+    ): boolean =>
+        shares.length === expectedParticipants.size &&
+        shares.every(
+            share =>
+                expectedParticipants.has(share.userId) &&
+                share.shareAmount === 6.25 &&
+                share.currency === 'USD',
+        );
 
     const register = (displayName: string): Promise<ContractRegisterResponse> => {
         provisionAttempted = true;
@@ -272,10 +288,12 @@ it('validates the live core API contract matrix', () => {
                 expense.currency !== 'USD' ||
                 expense.payerId !== a.user.id ||
                 expense.participantIds.length !== expectedParticipants.size ||
-                expense.participantIds.some(id => !expectedParticipants.has(id))
+                expense.participantIds.some(id => !expectedParticipants.has(id)) ||
+                !hasExpectedAutoShares(expense.participantShares, expectedParticipants)
             ) {
                 throw new Error('Created expense does not match the requested financial contract');
             }
+            expenseId = expense.id;
             return client
                 .requestJson({
                     auth: { kind: 'bearer', token: a.accessToken },
@@ -292,7 +310,8 @@ it('validates the live core API contract matrix', () => {
                         persisted.currency !== 'USD' ||
                         persisted.payerId !== a.user.id ||
                         persisted.participantIds.length !== expectedParticipants.size ||
-                        persisted.participantIds.some(id => !expectedParticipants.has(id))
+                        persisted.participantIds.some(id => !expectedParticipants.has(id)) ||
+                        !hasExpectedAutoShares(persisted.participantShares, expectedParticipants)
                     ) {
                         throw new Error('Expense read does not preserve the requested financial contract');
                     }
@@ -331,6 +350,7 @@ it('validates the live core API contract matrix', () => {
             ) {
                 throw new Error('Created settlement does not match the requested financial contract');
             }
+            settlementId = settlement.id;
             return client
                 .requestJson({
                     auth: { kind: 'bearer', token: a.accessToken },
@@ -361,7 +381,11 @@ it('validates the live core API contract matrix', () => {
             });
         })
         .then(value => {
-            parseDashboard(value);
+            const dashboard = parseDashboard(value);
+            const usdBalance = dashboard.balances.USD;
+            if (!usdBalance || usdBalance.currency !== 'USD' || usdBalance.netBalance !== 1.25) {
+                throw new Error('Dashboard USD balance must reflect the generated expense and settlement');
+            }
             const a = requireState(userA, 'user A');
             return client.requestJson({
                 auth: { kind: 'bearer', token: a.accessToken },
@@ -420,7 +444,15 @@ it('validates the live core API contract matrix', () => {
             });
         })
         .then(value => {
-            if (parseActivityPreviewPage(value).ids.length !== 1) {
+            const groupPreview = parseActivityPreviewPage(value);
+            const generatedLedgerIds = new Set([
+                requireState(expenseId, 'expense'),
+                requireState(settlementId, 'settlement'),
+            ]);
+            if (
+                groupPreview.ids.length !== 1 ||
+                !groupPreview.ledgerEntryIds.some(id => generatedLedgerIds.has(id))
+            ) {
                 throw new Error('Group preview feed is missing generated ledger activity');
             }
             const a = requireState(userA, 'user A');
@@ -486,4 +518,4 @@ it('validates the live core API contract matrix', () => {
                     throw cleanupError;
                 });
         });
-});
+}, FULL_MATRIX_TIMEOUT_MS);

@@ -10,6 +10,20 @@ export interface ContractPage {
     nextCursor: number | string | null;
 }
 
+export interface ContractPreviewPage extends ContractPage {
+    ledgerEntryIds: string[];
+}
+
+export interface ContractParticipantShare {
+    userId: string;
+    shareAmount: number;
+    currency: string;
+}
+
+export interface ContractDashboard {
+    balances: Record<string, { currency: string; netBalance: number }>;
+}
+
 export type ContractLedgerEntry =
     | {
           id: string;
@@ -19,6 +33,7 @@ export type ContractLedgerEntry =
           currency: string;
           payerId: string;
           participantIds: string[];
+          participantShares: ContractParticipantShare[];
       }
     | {
           id: string;
@@ -124,12 +139,12 @@ const parseActivityActorSnapshot = (value: unknown, label: string): void => {
     }
 };
 
-const parseExpenseActivityMetadata = (value: unknown, label: string): void => {
+const parseExpenseActivityMetadata = (value: unknown, label: string): string => {
     const metadata = requireRecord(value, label);
     if (requireString(metadata, 'type', label) !== 'expense') {
         throw new Error(`${label}.type must be expense`);
     }
-    requireString(metadata, 'entryId', label);
+    const entryId = requireString(metadata, 'entryId', label);
     requireNumber(metadata, 'amount', label);
     requireString(metadata, 'currency', label);
     requireString(metadata, 'payerDisplayName', label);
@@ -146,14 +161,16 @@ const parseExpenseActivityMetadata = (value: unknown, label: string): void => {
         requireNumber(share, 'shareAmount', `${label}.shares[${index}]`);
         requireString(share, 'currency', `${label}.shares[${index}]`);
     }
+
+    return entryId;
 };
 
-const parseSettlementActivityMetadata = (value: unknown, label: string): void => {
+const parseSettlementActivityMetadata = (value: unknown, label: string): string => {
     const metadata = requireRecord(value, label);
     if (requireString(metadata, 'type', label) !== 'settlement') {
         throw new Error(`${label}.type must be settlement`);
     }
-    requireString(metadata, 'entryId', label);
+    const entryId = requireString(metadata, 'entryId', label);
     requireNumber(metadata, 'amount', label);
     requireString(metadata, 'currency', label);
     requireString(metadata, 'fromDisplayName', label);
@@ -165,9 +182,14 @@ const parseSettlementActivityMetadata = (value: unknown, label: string): void =>
     if (metadata.payerId !== undefined) {
         requireNullableString(metadata, 'payerId', label);
     }
+
+    return entryId;
 };
 
-const parseActivityEvent = (value: unknown, label: string): string => {
+const parseActivityEvent = (
+    value: unknown,
+    label: string,
+): { id: string; ledgerEntryId: string | null } => {
     const event = requireRecord(value, label);
     const id = requireString(event, 'id', label);
     requireNumber(event, 'seq', label);
@@ -178,18 +200,19 @@ const parseActivityEvent = (value: unknown, label: string): string => {
     parseActivityActorSnapshot(event.actorSnapshot, `${label}.actorSnapshot`);
     requireNumber(event, 'createdAt', label);
 
+    let ledgerEntryId: string | null = null;
     if (action === 'EXPENSE_CREATED' || action === 'EXPENSE_UPDATED' || action === 'EXPENSE_REVERSED') {
-        parseExpenseActivityMetadata(event.metadata, `${label}.metadata`);
+        ledgerEntryId = parseExpenseActivityMetadata(event.metadata, `${label}.metadata`);
     }
     if (
         action === 'SETTLEMENT_CREATED' ||
         action === 'SETTLEMENT_UPDATED' ||
         action === 'SETTLEMENT_REVERSED'
     ) {
-        parseSettlementActivityMetadata(event.metadata, `${label}.metadata`);
+        ledgerEntryId = parseSettlementActivityMetadata(event.metadata, `${label}.metadata`);
     }
 
-    return id;
+    return { id, ledgerEntryId };
 };
 
 export const parseSelfUserContract = (value: unknown): ReturnType<typeof parseSelfUserResponse> => {
@@ -284,12 +307,33 @@ export const parseLedgerEntry = (value: unknown): ContractLedgerEntry => {
         const participantIds = participants.map((participant, index) =>
             parsePublicUser(participant, `ledger.expense.participants[${index}]`),
         );
-        requireArray(expense.participantShares, 'ledger.expense.participantShares');
+        const rawParticipantShares = requireArray(
+            expense.participantShares,
+            'ledger.expense.participantShares',
+        );
+        const participantShares = rawParticipantShares.map((share, index) => {
+            const label = `ledger.expense.participantShares[${index}]`;
+            const record = requireRecord(share, label);
+            return {
+                userId: requireString(record, 'userId', label),
+                shareAmount: requireNumber(record, 'shareAmount', label),
+                currency: requireString(record, 'currency', label),
+            };
+        });
         parsePublicUser(expense.creator, 'ledger.expense.creator');
         if (entry.settlement !== null) {
             throw new Error('ledger.settlement must be null for EXPENSE');
         }
-        return { id, type, groupId, amount, currency, payerId, participantIds };
+        return {
+            id,
+            type,
+            groupId,
+            amount,
+            currency,
+            payerId,
+            participantIds,
+            participantShares,
+        };
     }
 
     if (type === 'SETTLEMENT') {
@@ -308,20 +352,25 @@ export const parseLedgerEntry = (value: unknown): ContractLedgerEntry => {
     throw new Error('ledger.type must be EXPENSE or SETTLEMENT');
 };
 
-const parsePreviewPage = (value: unknown, label: string): ContractPage => {
+const parsePreviewPage = (value: unknown, label: string): ContractPreviewPage => {
     const response = requireRecord(value, label);
     const items = requireArray(response.items, `${label}.items`);
     const ids: string[] = [];
+    const ledgerEntryIds: string[] = [];
     for (let index = 0; index < items.length; index += 1) {
         const item = requireRecord(items[index], `${label}.items[${index}]`);
-        ids.push(parseActivityEvent(item.parent, `${label}.items[${index}].parent`));
+        const parent = parseActivityEvent(item.parent, `${label}.items[${index}].parent`);
+        ids.push(parent.id);
+        if (parent.ledgerEntryId !== null) {
+            ledgerEntryIds.push(parent.ledgerEntryId);
+        }
         parseActivityEvent(item.lastEvent, `${label}.items[${index}].lastEvent`);
     }
     const cursor = response.nextCursor;
     if (cursor !== null && (typeof cursor !== 'number' || !Number.isSafeInteger(cursor))) {
         throw new Error(`${label}.nextCursor must be a safe integer or null`);
     }
-    return { ids, nextCursor: cursor };
+    return { ids, nextCursor: cursor, ledgerEntryIds };
 };
 
 export const parseActivityPage = (value: unknown): ContractPage => {
@@ -329,7 +378,7 @@ export const parseActivityPage = (value: unknown): ContractPage => {
     const items = requireArray(response.items, 'activity.items');
     const ids: string[] = [];
     for (let index = 0; index < items.length; index += 1) {
-        ids.push(parseActivityEvent(items[index], `activity.items[${index}]`));
+        ids.push(parseActivityEvent(items[index], `activity.items[${index}]`).id);
     }
     const cursor = response.nextCursor;
     if (cursor !== null && (typeof cursor !== 'number' || !Number.isSafeInteger(cursor))) {
@@ -338,17 +387,30 @@ export const parseActivityPage = (value: unknown): ContractPage => {
     return { ids, nextCursor: cursor };
 };
 
-export const parseActivityPreviewPage = (value: unknown): ContractPage =>
+export const parseActivityPreviewPage = (value: unknown): ContractPreviewPage =>
     parsePreviewPage(value, 'activityPreviews');
 
-export const parseDashboard = (value: unknown): void => {
+export const parseDashboard = (value: unknown): ContractDashboard => {
     const dashboard = requireRecord(value, 'dashboard');
-    requireRecord(dashboard.balances, 'dashboard.balances');
+    const rawBalances = requireRecord(dashboard.balances, 'dashboard.balances');
+    const balances: ContractDashboard['balances'] = {};
+    for (const [key, rawBalance] of Object.entries(rawBalances)) {
+        const label = `dashboard.balances.${key}`;
+        const balance = requireRecord(rawBalance, label);
+        const currency = requireString(balance, 'currency', label);
+        const netBalance = requireNumber(balance, 'netBalance', label);
+        if (currency !== key) {
+            throw new Error(`${label}.currency must match its map key`);
+        }
+        balances[key] = { currency, netBalance };
+    }
     parsePreviewPage(dashboard.activity, 'dashboard.activity');
     const groups = requireArray(dashboard.groups, 'dashboard.groups');
     if (groups.length !== 0) {
         throw new Error('dashboard.groups compatibility field must stay empty');
     }
+
+    return { balances };
 };
 
 export const parseCurrencyRates = (value: unknown): { base: string } => {
