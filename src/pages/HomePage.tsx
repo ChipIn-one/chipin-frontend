@@ -4,11 +4,12 @@ import styled from 'styled-components';
 
 import { Button, Flex, Text } from '@radix-ui/themes';
 
+import { MEDIA_QUERIES } from 'constants/breakpoints';
 import { useLandingStatsStore } from 'store/landing-stats-store';
 
 import Footer from 'components/Footer';
 import { BaseModal } from 'components/modals';
-import { OverlayBody } from 'components/modals/components';
+import { OverlayBody, OverlayFooter } from 'components/modals/components';
 import {
     CtaSection,
     FeaturesSection,
@@ -24,11 +25,18 @@ const PROMO_COPY = {
     benefit: 'Premium is yours for 1 year — free.',
     expires: 'Expires on Sep 13, 2027',
     button: 'Thank you',
+    modalTitle: 'Welcome to ChipIn',
 } as const;
 
 const PromoStack = styled(Flex)`
     padding: 4px 8px 8px;
     text-align: center;
+
+    @media ${MEDIA_QUERIES.belowSm} {
+        min-height: calc(100dvh - 164px);
+        justify-content: center;
+        padding: var(--space-4);
+    }
 `;
 
 const CrownStage = styled.div`
@@ -119,58 +127,71 @@ const ExpiryPill = styled.div`
 
 const ThankYouButton = styled(Button)`
     && {
-        width: 100%;
-        height: 48px;
+        width: 200px;
+        height: 44px;
         border-radius: 12px;
         background: linear-gradient(90deg, #f6d36d 0%, #efbe43 100%);
         box-shadow: 0 10px 28px rgb(225 176 47 / 18%);
         color: #111;
-        font-size: 18px;
+        font-size: 16px;
         font-weight: 800;
     }
 
     &&:hover {
         background: linear-gradient(90deg, #f8dc82 0%, #f3c959 100%);
     }
+
+    @media ${MEDIA_QUERIES.belowSm} {
+        && {
+            width: 100%;
+            grid-column: 1 / -1;
+        }
+    }
 `;
 
 const EarlySupporterPreviewModal = () => {
     const [isOpen, setIsOpen] = useState(true);
 
+    const thankYouAction = (
+        <ThankYouButton size="3" onClick={() => setIsOpen(false)}>
+            {PROMO_COPY.button}
+        </ThankYouButton>
+    );
+
     const content = (
-        <OverlayBody>
-            <PromoStack direction="column" align="center">
-                <CrownStage>
-                    <Sparkle $side="left" size={24} />
-                    <CrownCircle>
-                        <LucideCrown size={54} fill="currentColor" strokeWidth={1.8} />
-                    </CrownCircle>
-                    <Sparkle $side="right" size={27} />
-                </CrownStage>
+        <>
+            <OverlayBody>
+                <PromoStack direction="column" align="center">
+                    <CrownStage>
+                        <Sparkle $side="left" size={24} />
+                        <CrownCircle>
+                            <LucideCrown size={54} fill="currentColor" strokeWidth={1.8} />
+                        </CrownCircle>
+                        <Sparkle $side="right" size={27} />
+                    </CrownStage>
 
-                <PromoLabel>{PROMO_COPY.label}</PromoLabel>
-                <PromoTitle>{PROMO_COPY.title}</PromoTitle>
-                <PromoCopy>
-                    {PROMO_COPY.intro}
-                    <br />
-                    {PROMO_COPY.benefit}
-                </PromoCopy>
+                    <PromoLabel>{PROMO_COPY.label}</PromoLabel>
+                    <PromoTitle>{PROMO_COPY.title}</PromoTitle>
+                    <PromoCopy>
+                        {PROMO_COPY.intro}
+                        <br />
+                        {PROMO_COPY.benefit}
+                    </PromoCopy>
 
-                <ExpiryPill>
-                    <LucideClock3 size={24} />
-                    {PROMO_COPY.expires}
-                </ExpiryPill>
+                    <ExpiryPill>
+                        <LucideClock3 size={24} />
+                        {PROMO_COPY.expires}
+                    </ExpiryPill>
+                </PromoStack>
+            </OverlayBody>
 
-                <ThankYouButton size="4" onClick={() => setIsOpen(false)}>
-                    {PROMO_COPY.button}
-                </ThankYouButton>
-            </PromoStack>
-        </OverlayBody>
+            <OverlayFooter cancelAction={null} primaryAction={thankYouAction} />
+        </>
     );
 
     return (
         <BaseModal
-            title=""
+            title={PROMO_COPY.modalTitle}
             accessibleDescription={PROMO_COPY.benefit}
             maxWidth="680px"
             content={content}
