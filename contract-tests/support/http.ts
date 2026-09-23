@@ -37,8 +37,14 @@ const encodeBasicCredentials = (username: string, password: string): string => {
 
 class ContractRequestError extends Error {}
 
+const redactSensitivePath = (path: string): string =>
+    path.replace(
+        /^\/users\/invite\/[^/?#]+/,
+        '/users/invite/[redacted]',
+    );
+
 const describeRequest = (options: ContractRequestOptions): string =>
-    `${options.method} ${options.path}`;
+    `${options.method} ${redactSensitivePath(options.path)}`;
 
 const buildHeaders = (
     config: ContractConfig,

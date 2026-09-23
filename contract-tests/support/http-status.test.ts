@@ -70,4 +70,26 @@ describe('requestJsonForStatus', () => {
             );
     });
 
+    it('redacts invite tokens from request failure messages', () => {
+        const fetchImpl: typeof fetch = () =>
+            Promise.resolve(new Response('backend failure', { status: 500 }));
+
+        const inviteToken = 'invite-token-secret';
+
+        return createContractHttpClient(stagingConfig, fetchImpl)
+            .requestJson({
+                auth: { kind: 'bearer', token: 'access-token-secret' },
+                method: 'POST',
+                path: `/users/invite/${inviteToken}`,
+            })
+            .then(
+                () => {
+                    throw new Error('Expected the request to fail');
+                },
+                (error: unknown) => {
+                    expect(String(error)).toContain('POST /users/invite/[redacted]');
+                    expect(String(error)).not.toContain(inviteToken);
+                },
+            );
+    });
 });

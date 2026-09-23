@@ -25,6 +25,7 @@ const OPENAPI_PATHS = [
     '/users/invite-link',
     '/users/invite/{inviteToken}',
     '/groups',
+    '/groups/{id}',
     '/groups/{id}/members',
     '/ledger/entries',
     '/ledger/entries/{id}',
@@ -220,6 +221,13 @@ it('validates the live core API contract matrix', () => {
         })
         .then(value => {
             const group = parseGroup(value);
+            if (
+                group.name !== 'Contract Group A' ||
+                group.description !== 'Primary contract group' ||
+                group.simplifyDebts !== false
+            ) {
+                throw new Error('Created group A does not match the requested properties');
+            }
             groupA = group.id;
             const a = requireState(userA, 'user A');
             const b = requireState(userB, 'user B');
@@ -244,7 +252,15 @@ it('validates the live core API contract matrix', () => {
             });
         })
         .then(value => {
-            groupB = parseGroup(value).id;
+            const group = parseGroup(value);
+            if (
+                group.name !== 'Contract Group B' ||
+                group.description !== null ||
+                group.simplifyDebts !== true
+            ) {
+                throw new Error('Created group B does not match the requested properties');
+            }
+            groupB = group.id;
             const a = requireState(userA, 'user A');
             return client.requestJson({
                 auth: { kind: 'bearer', token: a.accessToken },
@@ -267,6 +283,9 @@ it('validates the live core API contract matrix', () => {
                 .then(next => ({ first, next: parseGroupPage(next) }));
         })
         .then(({ first, next }) => {
+            if (next.ids.length !== 1 || next.ids[0] === first.ids[0]) {
+                throw new Error('Group cursor must advance to one distinct group');
+            }
             const ids = new Set([...first.ids, ...next.ids]);
             if (!ids.has(requireState(groupA, 'group A')) || !ids.has(requireState(groupB, 'group B'))) {
                 throw new Error('Group cursor pages do not contain both generated groups');
@@ -388,6 +407,20 @@ it('validates the live core API contract matrix', () => {
                 });
         })
         .then(() => {
+            const a = requireState(userA, 'user A');
+            return client.requestJson({
+                auth: { kind: 'bearer', token: a.accessToken },
+                method: 'GET',
+                path: `/groups/${encodeURIComponent(requireState(groupA, 'group A'))}`,
+            });
+        })
+        .then(value => {
+            const group = parseGroup(value);
+            const b = requireState(userB, 'user B');
+            const bUsdBalance = group.memberBalancesByUserId[b.user.id]?.USD;
+            if (!bUsdBalance || bUsdBalance.netBalance === 0) {
+                throw new Error('Refetched group is missing the generated USD member balance');
+            }
             const a = requireState(userA, 'user A');
             return client.requestJson({
                 auth: { kind: 'bearer', token: a.accessToken },

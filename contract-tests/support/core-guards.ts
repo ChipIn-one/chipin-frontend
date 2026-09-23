@@ -2,7 +2,14 @@ import { parseSelfUserResponse } from './guards';
 
 export interface ContractGroup {
     id: string;
+    name: string;
+    description: string | null;
+    simplifyDebts: boolean;
     memberIds: string[];
+    memberBalancesByUserId: Record<
+        string,
+        Record<string, { currency: string; netBalance: number }>
+    >;
 }
 
 export interface ContractPage {
@@ -118,6 +125,27 @@ const requireArray = (value: unknown, label: string): unknown[] => {
     }
 
     return value;
+};
+
+const parseCurrencyBalanceMap = (
+    value: unknown,
+    label: string,
+): Record<string, { currency: string; netBalance: number }> => {
+    const rawBalances = requireRecord(value, label);
+    const balances: Record<string, { currency: string; netBalance: number }> = {};
+
+    for (const [key, rawBalance] of Object.entries(rawBalances)) {
+        const balanceLabel = `${label}.${key}`;
+        const balance = requireRecord(rawBalance, balanceLabel);
+        const currency = requireString(balance, 'currency', balanceLabel);
+        const netBalance = requireNumber(balance, 'netBalance', balanceLabel);
+        if (currency !== key) {
+            throw new Error(`${balanceLabel}.currency must match its map key`);
+        }
+        balances[key] = { currency, netBalance };
+    }
+
+    return balances;
 };
 
 const parsePublicUser = (value: unknown, label: string): string => {
@@ -284,14 +312,14 @@ export const parseKnownUsers = (value: unknown): string[] => {
 export const parseGroup = (value: unknown): ContractGroup => {
     const group = requireRecord(value, 'group');
     const id = requireString(group, 'id', 'group');
-    requireString(group, 'name', 'group');
+    const name = requireString(group, 'name', 'group');
     requireString(group, 'inviteToken', 'group');
-    requireNullableString(group, 'description', 'group');
+    const description = requireNullableString(group, 'description', 'group');
     parsePublicUser(group.creator, 'group.creator');
     requireNumber(group, 'createdAt', 'group');
     requireNumber(group, 'updatedAt', 'group');
     requireNullableString(group, 'coverUrl', 'group');
-    requireBoolean(group, 'simplifyDebts', 'group');
+    const simplifyDebts = requireBoolean(group, 'simplifyDebts', 'group');
     requireString(group, 'role', 'group');
     requireString(group, 'status', 'group');
     requireNullableString(group, 'lastUsedCurrency', 'group');
@@ -299,13 +327,25 @@ export const parseGroup = (value: unknown): ContractGroup => {
 
     const members = requireArray(group.members, 'group.members');
     const memberIds: string[] = [];
+    const memberBalancesByUserId: ContractGroup['memberBalancesByUserId'] = {};
     for (let index = 0; index < members.length; index += 1) {
         const member = requireRecord(members[index], `group.members[${index}]`);
-        memberIds.push(parsePublicUser(member.user, `group.members[${index}].user`));
-        requireRecord(member.balancesByCurrency, `group.members[${index}].balancesByCurrency`);
+        const memberId = parsePublicUser(member.user, `group.members[${index}].user`);
+        memberIds.push(memberId);
+        memberBalancesByUserId[memberId] = parseCurrencyBalanceMap(
+            member.balancesByCurrency,
+            `group.members[${index}].balancesByCurrency`,
+        );
     }
 
-    return { id, memberIds };
+    return {
+        id,
+        name,
+        description,
+        simplifyDebts,
+        memberIds,
+        memberBalancesByUserId,
+    };
 };
 
 export const parseGroupPage = (value: unknown): ContractPage => {
@@ -432,18 +472,7 @@ export const parseActivityPreviewPage = (value: unknown): ContractPreviewPage =>
 
 export const parseDashboard = (value: unknown): ContractDashboard => {
     const dashboard = requireRecord(value, 'dashboard');
-    const rawBalances = requireRecord(dashboard.balances, 'dashboard.balances');
-    const balances: ContractDashboard['balances'] = {};
-    for (const [key, rawBalance] of Object.entries(rawBalances)) {
-        const label = `dashboard.balances.${key}`;
-        const balance = requireRecord(rawBalance, label);
-        const currency = requireString(balance, 'currency', label);
-        const netBalance = requireNumber(balance, 'netBalance', label);
-        if (currency !== key) {
-            throw new Error(`${label}.currency must match its map key`);
-        }
-        balances[key] = { currency, netBalance };
-    }
+    const balances = parseCurrencyBalanceMap(dashboard.balances, 'dashboard.balances');
     parsePreviewPage(dashboard.activity, 'dashboard.activity');
     const groups = requireArray(dashboard.groups, 'dashboard.groups');
     if (groups.length !== 0) {
@@ -460,8 +489,12 @@ export const parseCurrencyRates = (value: unknown): { base: string } => {
     requireNumber(rates, 'fetchedAt', 'currencyRates');
     requireBoolean(rates, 'stale', 'currencyRates');
     const values = requireRecord(rates.rates, 'currencyRates.rates');
-    if (typeof values.EUR !== 'number' || !Number.isFinite(values.EUR)) {
-        throw new Error('currencyRates.rates.EUR must be a finite number');
+    if (
+        typeof values.EUR !== 'number' ||
+        !Number.isFinite(values.EUR) ||
+        values.EUR <= 0
+    ) {
+        throw new Error('currencyRates.rates.EUR must be a positive finite number');
     }
 
     return { base };
