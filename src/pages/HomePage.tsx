@@ -8,6 +8,7 @@ import { useLandingStatsStore } from 'store/landing-stats-store';
 
 import Footer from 'components/Footer';
 import { BaseModal } from 'components/modals';
+import { OverlayBody } from 'components/modals/components';
 import {
     CtaSection,
     FeaturesSection,
@@ -137,32 +138,34 @@ const EarlySupporterPreviewModal = () => {
     const [isOpen, setIsOpen] = useState(true);
 
     const content = (
-        <PromoStack direction="column" align="center">
-            <CrownStage>
-                <Sparkle $side="left" size={24} />
-                <CrownCircle>
-                    <LucideCrown size={54} fill="currentColor" strokeWidth={1.8} />
-                </CrownCircle>
-                <Sparkle $side="right" size={27} />
-            </CrownStage>
+        <OverlayBody>
+            <PromoStack direction="column" align="center">
+                <CrownStage>
+                    <Sparkle $side="left" size={24} />
+                    <CrownCircle>
+                        <LucideCrown size={54} fill="currentColor" strokeWidth={1.8} />
+                    </CrownCircle>
+                    <Sparkle $side="right" size={27} />
+                </CrownStage>
 
-            <PromoLabel>{PROMO_COPY.label}</PromoLabel>
-            <PromoTitle>{PROMO_COPY.title}</PromoTitle>
-            <PromoCopy>
-                {PROMO_COPY.intro}
-                <br />
-                {PROMO_COPY.benefit}
-            </PromoCopy>
+                <PromoLabel>{PROMO_COPY.label}</PromoLabel>
+                <PromoTitle>{PROMO_COPY.title}</PromoTitle>
+                <PromoCopy>
+                    {PROMO_COPY.intro}
+                    <br />
+                    {PROMO_COPY.benefit}
+                </PromoCopy>
 
-            <ExpiryPill>
-                <LucideClock3 size={24} />
-                {PROMO_COPY.expires}
-            </ExpiryPill>
+                <ExpiryPill>
+                    <LucideClock3 size={24} />
+                    {PROMO_COPY.expires}
+                </ExpiryPill>
 
-            <ThankYouButton size="4" onClick={() => setIsOpen(false)}>
-                {PROMO_COPY.button}
-            </ThankYouButton>
-        </PromoStack>
+                <ThankYouButton size="4" onClick={() => setIsOpen(false)}>
+                    {PROMO_COPY.button}
+                </ThankYouButton>
+            </PromoStack>
+        </OverlayBody>
     );
 
     return (
