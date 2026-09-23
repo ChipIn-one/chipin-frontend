@@ -3,6 +3,7 @@ import { parse } from 'yaml';
 export interface OpenApiResponseFieldExpectation {
     path: string;
     method: 'delete' | 'get' | 'post';
+    status: string;
     fields: readonly string[];
 }
 
@@ -139,16 +140,18 @@ export const assertOpenApiResponseFields = (
             operation.responses,
             `Runtime OpenAPI responses for ${expectation.method.toUpperCase()} ${expectation.path}`,
         );
+        const response = requireRecord(
+            responses[expectation.status],
+            `Runtime OpenAPI response ${expectation.status} for ${expectation.method.toUpperCase()} ${expectation.path}`,
+        );
         const responseFields = new Set<string>();
         const visitedReferences = new Set<string>();
-        for (const response of Object.values(responses)) {
-            collectResponseFields(parsedDocument, response, responseFields, visitedReferences);
-        }
+        collectResponseFields(parsedDocument, response, responseFields, visitedReferences);
 
         for (const field of expectation.fields) {
             if (!responseFields.has(field)) {
                 throw new Error(
-                    `${expectation.method.toUpperCase()} ${expectation.path} response is missing field ${field}`,
+                    `${expectation.method.toUpperCase()} ${expectation.path} response ${expectation.status} is missing field ${field}`,
                 );
             }
         }

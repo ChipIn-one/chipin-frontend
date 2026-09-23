@@ -22,26 +22,29 @@ import { createContractHttpClient } from './support/http';
 import { assertOpenApiResponseFields } from './support/openapi';
 
 const OPENAPI_RESPONSE_EXPECTATIONS = [
-    { path: '/auth/test-register', method: 'post', fields: [] },
-    { path: '/auth/test-runs/{runId}', method: 'delete', fields: [] },
-    { path: '/users/self', method: 'get', fields: ['isPremium', 'code'] },
-    { path: '/users/known-users', method: 'get', fields: [] },
-    { path: '/users/invite-link', method: 'post', fields: [] },
-    { path: '/users/invite/{inviteToken}', method: 'post', fields: [] },
-    { path: '/groups', method: 'get', fields: ['nextCursor', 'code'] },
-    { path: '/groups', method: 'post', fields: ['simplifyDebts'] },
-    { path: '/groups/{id}', method: 'get', fields: [] },
-    { path: '/groups/{id}/members', method: 'post', fields: [] },
-    { path: '/ledger/entries', method: 'post', fields: ['participantShares'] },
-    { path: '/ledger/entries/{id}', method: 'get', fields: ['code'] },
-    { path: '/dashboard', method: 'get', fields: [] },
-    { path: '/users/self/activities', method: 'get', fields: ['nextCursor'] },
-    { path: '/users/self/activity-previews', method: 'get', fields: ['nextCursor'] },
-    { path: '/groups/{groupId}/activity-previews', method: 'get', fields: ['nextCursor'] },
-    { path: '/currency-rates', method: 'get', fields: ['stale'] },
+    { path: '/auth/test-register', method: 'post', status: '201', fields: [] },
+    { path: '/auth/test-runs/{runId}', method: 'delete', status: '200', fields: [] },
+    { path: '/users/self', method: 'get', status: '200', fields: ['isPremium'] },
+    { path: '/users/self', method: 'get', status: '401', fields: ['code'] },
+    { path: '/users/known-users', method: 'get', status: '200', fields: [] },
+    { path: '/users/invite-link', method: 'post', status: '200', fields: [] },
+    { path: '/users/invite/{inviteToken}', method: 'post', status: '200', fields: [] },
+    { path: '/groups', method: 'get', status: '200', fields: ['nextCursor'] },
+    { path: '/groups', method: 'get', status: '400', fields: ['code'] },
+    { path: '/groups', method: 'post', status: '201', fields: ['simplifyDebts'] },
+    { path: '/groups/{id}', method: 'get', status: '200', fields: [] },
+    { path: '/groups/{id}/members', method: 'post', status: '200', fields: [] },
+    { path: '/ledger/entries', method: 'post', status: '201', fields: ['participantShares'] },
+    { path: '/ledger/entries/{id}', method: 'get', status: '200', fields: [] },
+    { path: '/ledger/entries/{id}', method: 'get', status: '404', fields: ['code'] },
+    { path: '/dashboard', method: 'get', status: '200', fields: [] },
+    { path: '/users/self/activities', method: 'get', status: '200', fields: ['nextCursor'] },
+    { path: '/users/self/activity-previews', method: 'get', status: '200', fields: ['nextCursor'] },
+    { path: '/groups/{groupId}/activity-previews', method: 'get', status: '200', fields: ['nextCursor'] },
+    { path: '/currency-rates', method: 'get', status: '200', fields: ['stale'] },
 ] as const;
 
-const FULL_MATRIX_TIMEOUT_MS = 6 * 60_000;
+const FULL_MATRIX_TIMEOUT_MS =const FULL_MATRIX_TIMEOUT_MS = 6 * 60_000;
 
 const readEnvironment = (key: keyof ContractEnvironment): string | undefined => {
     const processValue: unknown = Reflect.get(globalThis, 'process');
@@ -214,8 +217,9 @@ it('validates the live core API contract matrix', () => {
         })
         .then(value => {
             const b = requireState(userB, 'user B');
-            if (!parseKnownUsers(value).some(friend => friend.id === b.user.id)) {
-                throw new Error('Known-user response is missing provisioned user B');
+            const knownUsers = parseKnownUsers(value);
+            if (knownUsers.length !== 1 || knownUsers[0]?.id !== b.user.id) {
+                throw new Error('Known-user response must contain exactly provisioned user B');
             }
             const a = requireState(userA, 'user A');
             return client.requestJson({
@@ -582,6 +586,27 @@ it('validates the live core API contract matrix', () => {
             ) {
                 throw new Error('User activity-preview metadata must match the generated ledger values');
             }
+            const renderedPreviewMetadata = [
+                ...first.renderedLedgerActivities,
+                ...next.renderedLedgerActivities,
+            ];
+            if (
+                renderedPreviewMetadata.length !== 2 ||
+                renderedPreviewMetadata.some(
+                    activity =>
+                        !isExpectedLedgerActivity(
+                            activity,
+                            a,
+                            b,
+                            requireState(expenseId, 'expense'),
+                            requireState(settlementId, 'settlement'),
+                        ),
+                )
+            ) {
+                throw new Error(
+                    'User activity-preview lastEvent metadata must match the generated ledger values',
+                );
+            }
             return client.requestJson({
                 auth: { kind: 'bearer', token: a.accessToken },
                 method: 'GET',
@@ -613,6 +638,20 @@ it('validates the live core API contract matrix', () => {
                 )
             ) {
                 throw new Error('Group preview metadata must match the generated ledger values');
+            }
+            if (
+                groupPreview.renderedLedgerActivities.length !== 1 ||
+                !isExpectedLedgerActivity(
+                    groupPreview.renderedLedgerActivities[0],
+                    a,
+                    b,
+                    requireState(expenseId, 'expense'),
+                    requireState(settlementId, 'settlement'),
+                )
+            ) {
+                throw new Error(
+                    'Group preview lastEvent metadata must match the generated ledger values',
+                );
             }
             return client.requestJson({
                 auth: { kind: 'bearer', token: a.accessToken },
@@ -673,9 +712,11 @@ it('validates the live core API contract matrix', () => {
         })
         .then(value => {
             const b = requireState(userB, 'user B');
-            const knownUser = parseKnownUsers(value).find(friend => friend.id === b.user.id);
+            const knownUsers = parseKnownUsers(value);
+            const knownUser = knownUsers[0];
             if (
-                !knownUser ||
+                knownUsers.length !== 1 ||
+                knownUser?.id !== b.user.id ||
                 knownUser.balancesByCurrency.USD !== 4 ||
                 knownUser.lastUsedCurrency !== 'USD'
             ) {

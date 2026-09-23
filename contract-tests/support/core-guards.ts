@@ -24,7 +24,9 @@ export interface ContractActivityPage extends ContractPage {
     ledgerActivities: ContractLedgerActivity[];
 }
 
-export type ContractPreviewPage = ContractActivityPage;
+export interface ContractPreviewPage extends ContractActivityPage {
+    renderedLedgerActivities: ContractLedgerActivity[];
+}
 
 export interface ContractParticipantShare {
     userId: string;
@@ -530,6 +532,7 @@ const parsePreviewPage = (value: unknown, label: string): ContractPreviewPage =>
     const ids: string[] = [];
     const ledgerEntryIds: string[] = [];
     const ledgerActivities: ContractLedgerActivity[] = [];
+    const renderedLedgerActivities: ContractLedgerActivity[] = [];
     for (let index = 0; index < items.length; index += 1) {
         const item = requireRecord(items[index], `${label}.items[${index}]`);
         const parent = parseActivityEvent(item.parent, `${label}.items[${index}].parent`);
@@ -540,13 +543,25 @@ const parsePreviewPage = (value: unknown, label: string): ContractPreviewPage =>
         if (parent.ledgerActivity !== null) {
             ledgerActivities.push(parent.ledgerActivity);
         }
-        parseActivityEvent(item.lastEvent, `${label}.items[${index}].lastEvent`);
+        const lastEvent = parseActivityEvent(
+            item.lastEvent,
+            `${label}.items[${index}].lastEvent`,
+        );
+        if (lastEvent.ledgerActivity !== null) {
+            renderedLedgerActivities.push(lastEvent.ledgerActivity);
+        }
     }
     const cursor = response.nextCursor;
     if (cursor !== null && (typeof cursor !== 'number' || !Number.isSafeInteger(cursor))) {
         throw new Error(`${label}.nextCursor must be a safe integer or null`);
     }
-    return { ids, nextCursor: cursor, ledgerEntryIds, ledgerActivities };
+    return {
+        ids,
+        nextCursor: cursor,
+        ledgerEntryIds,
+        ledgerActivities,
+        renderedLedgerActivities,
+    };
 };
 
 export const parseActivityPage = (value: unknown): ContractActivityPage => {
