@@ -262,10 +262,20 @@ it('validates the live core API contract matrix', () => {
         })
         .then(value => {
             const expense = parseLedgerEntry(value);
-            if (expense.type !== 'EXPENSE' || expense.groupId !== groupA) {
-                throw new Error('Created expense does not match its generated group');
-            }
             const a = requireState(userA, 'user A');
+            const b = requireState(userB, 'user B');
+            const expectedParticipants = new Set([a.user.id, b.user.id]);
+            if (
+                expense.type !== 'EXPENSE' ||
+                expense.groupId !== groupA ||
+                expense.amount !== 12.5 ||
+                expense.currency !== 'USD' ||
+                expense.payerId !== a.user.id ||
+                expense.participantIds.length !== expectedParticipants.size ||
+                expense.participantIds.some(id => !expectedParticipants.has(id))
+            ) {
+                throw new Error('Created expense does not match the requested financial contract');
+            }
             return client
                 .requestJson({
                     auth: { kind: 'bearer', token: a.accessToken },
@@ -273,8 +283,18 @@ it('validates the live core API contract matrix', () => {
                     path: `/ledger/entries/${encodeURIComponent(expense.id)}`,
                 })
                 .then(read => {
-                    if (parseLedgerEntry(read).id !== expense.id) {
-                        throw new Error('Expense read returned a different ledger entry');
+                    const persisted = parseLedgerEntry(read);
+                    if (
+                        persisted.type !== 'EXPENSE' ||
+                        persisted.id !== expense.id ||
+                        persisted.groupId !== groupA ||
+                        persisted.amount !== 12.5 ||
+                        persisted.currency !== 'USD' ||
+                        persisted.payerId !== a.user.id ||
+                        persisted.participantIds.length !== expectedParticipants.size ||
+                        persisted.participantIds.some(id => !expectedParticipants.has(id))
+                    ) {
+                        throw new Error('Expense read does not preserve the requested financial contract');
                     }
                 });
         })
@@ -299,10 +319,18 @@ it('validates the live core API contract matrix', () => {
         })
         .then(value => {
             const settlement = parseLedgerEntry(value);
-            if (settlement.type !== 'SETTLEMENT' || settlement.groupId !== groupA) {
-                throw new Error('Created settlement does not match its generated group');
-            }
             const a = requireState(userA, 'user A');
+            const b = requireState(userB, 'user B');
+            if (
+                settlement.type !== 'SETTLEMENT' ||
+                settlement.groupId !== groupA ||
+                settlement.amount !== 5 ||
+                settlement.currency !== 'USD' ||
+                settlement.fromUserId !== b.user.id ||
+                settlement.toUserId !== a.user.id
+            ) {
+                throw new Error('Created settlement does not match the requested financial contract');
+            }
             return client
                 .requestJson({
                     auth: { kind: 'bearer', token: a.accessToken },
@@ -310,8 +338,17 @@ it('validates the live core API contract matrix', () => {
                     path: `/ledger/entries/${encodeURIComponent(settlement.id)}`,
                 })
                 .then(read => {
-                    if (parseLedgerEntry(read).id !== settlement.id) {
-                        throw new Error('Settlement read returned a different ledger entry');
+                    const persisted = parseLedgerEntry(read);
+                    if (
+                        persisted.type !== 'SETTLEMENT' ||
+                        persisted.id !== settlement.id ||
+                        persisted.groupId !== groupA ||
+                        persisted.amount !== 5 ||
+                        persisted.currency !== 'USD' ||
+                        persisted.fromUserId !== b.user.id ||
+                        persisted.toUserId !== a.user.id
+                    ) {
+                        throw new Error('Settlement read does not preserve the requested financial contract');
                     }
                 });
         })

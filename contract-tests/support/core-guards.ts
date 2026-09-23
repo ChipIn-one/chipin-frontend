@@ -10,11 +10,25 @@ export interface ContractPage {
     nextCursor: number | string | null;
 }
 
-export interface ContractLedgerEntry {
-    id: string;
-    type: 'EXPENSE' | 'SETTLEMENT';
-    groupId: string | null;
-}
+export type ContractLedgerEntry =
+    | {
+          id: string;
+          type: 'EXPENSE';
+          groupId: string | null;
+          amount: number;
+          currency: string;
+          payerId: string;
+          participantIds: string[];
+      }
+    | {
+          id: string;
+          type: 'SETTLEMENT';
+          groupId: string | null;
+          amount: number;
+          currency: string;
+          fromUserId: string;
+          toUserId: string;
+      };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -102,15 +116,78 @@ const parsePublicUser = (value: unknown, label: string): string => {
     return id;
 };
 
+const parseActivityActorSnapshot = (value: unknown, label: string): void => {
+    const snapshot = requireRecord(value, label);
+    requireString(snapshot, 'displayName', label);
+    if (snapshot.picture !== undefined) {
+        requireNullableString(snapshot, 'picture', label);
+    }
+};
+
+const parseExpenseActivityMetadata = (value: unknown, label: string): void => {
+    const metadata = requireRecord(value, label);
+    if (requireString(metadata, 'type', label) !== 'expense') {
+        throw new Error(`${label}.type must be expense`);
+    }
+    requireString(metadata, 'entryId', label);
+    requireNumber(metadata, 'amount', label);
+    requireString(metadata, 'currency', label);
+    requireString(metadata, 'payerDisplayName', label);
+
+    if (metadata.payerId !== undefined) {
+        requireNullableString(metadata, 'payerId', label);
+    }
+
+    const shares = requireArray(metadata.shares, `${label}.shares`);
+    for (let index = 0; index < shares.length; index += 1) {
+        const share = requireRecord(shares[index], `${label}.shares[${index}]`);
+        requireString(share, 'userId', `${label}.shares[${index}]`);
+        requireString(share, 'displayName', `${label}.shares[${index}]`);
+        requireNumber(share, 'shareAmount', `${label}.shares[${index}]`);
+        requireString(share, 'currency', `${label}.shares[${index}]`);
+    }
+};
+
+const parseSettlementActivityMetadata = (value: unknown, label: string): void => {
+    const metadata = requireRecord(value, label);
+    if (requireString(metadata, 'type', label) !== 'settlement') {
+        throw new Error(`${label}.type must be settlement`);
+    }
+    requireString(metadata, 'entryId', label);
+    requireNumber(metadata, 'amount', label);
+    requireString(metadata, 'currency', label);
+    requireString(metadata, 'fromDisplayName', label);
+    requireString(metadata, 'toDisplayName', label);
+
+    if (metadata.actorUserId !== undefined) {
+        requireNullableString(metadata, 'actorUserId', label);
+    }
+    if (metadata.payerId !== undefined) {
+        requireNullableString(metadata, 'payerId', label);
+    }
+};
+
 const parseActivityEvent = (value: unknown, label: string): string => {
     const event = requireRecord(value, label);
     const id = requireString(event, 'id', label);
     requireNumber(event, 'seq', label);
     requireString(event, 'domain', label);
-    requireString(event, 'action', label);
+    const action = requireString(event, 'action', label);
     requireString(event, 'subjectType', label);
     requireString(event, 'subjectId', label);
+    parseActivityActorSnapshot(event.actorSnapshot, `${label}.actorSnapshot`);
     requireNumber(event, 'createdAt', label);
+
+    if (action === 'EXPENSE_CREATED' || action === 'EXPENSE_UPDATED' || action === 'EXPENSE_REVERSED') {
+        parseExpenseActivityMetadata(event.metadata, `${label}.metadata`);
+    }
+    if (
+        action === 'SETTLEMENT_CREATED' ||
+        action === 'SETTLEMENT_UPDATED' ||
+        action === 'SETTLEMENT_REVERSED'
+    ) {
+        parseSettlementActivityMetadata(event.metadata, `${label}.metadata`);
+    }
 
     return id;
 };
@@ -199,30 +276,33 @@ export const parseLedgerEntry = (value: unknown): ContractLedgerEntry => {
 
     if (type === 'EXPENSE') {
         const expense = requireRecord(entry.expense, 'ledger.expense');
-        requireNumber(expense, 'amount', 'ledger.expense');
-        requireString(expense, 'currency', 'ledger.expense');
+        const amount = requireNumber(expense, 'amount', 'ledger.expense');
+        const currency = requireString(expense, 'currency', 'ledger.expense');
         requireNumber(expense, 'date', 'ledger.expense');
-        parsePublicUser(expense.payer, 'ledger.expense.payer');
-        requireArray(expense.participants, 'ledger.expense.participants');
+        const payerId = parsePublicUser(expense.payer, 'ledger.expense.payer');
+        const participants = requireArray(expense.participants, 'ledger.expense.participants');
+        const participantIds = participants.map((participant, index) =>
+            parsePublicUser(participant, `ledger.expense.participants[${index}]`),
+        );
         requireArray(expense.participantShares, 'ledger.expense.participantShares');
         parsePublicUser(expense.creator, 'ledger.expense.creator');
         if (entry.settlement !== null) {
             throw new Error('ledger.settlement must be null for EXPENSE');
         }
-        return { id, type, groupId };
+        return { id, type, groupId, amount, currency, payerId, participantIds };
     }
 
     if (type === 'SETTLEMENT') {
         const settlement = requireRecord(entry.settlement, 'ledger.settlement');
-        parsePublicUser(settlement.fromUser, 'ledger.settlement.fromUser');
-        parsePublicUser(settlement.toUser, 'ledger.settlement.toUser');
-        requireNumber(settlement, 'amount', 'ledger.settlement');
-        requireString(settlement, 'currency', 'ledger.settlement');
+        const fromUserId = parsePublicUser(settlement.fromUser, 'ledger.settlement.fromUser');
+        const toUserId = parsePublicUser(settlement.toUser, 'ledger.settlement.toUser');
+        const amount = requireNumber(settlement, 'amount', 'ledger.settlement');
+        const currency = requireString(settlement, 'currency', 'ledger.settlement');
         requireNumber(settlement, 'settledAt', 'ledger.settlement');
         if (entry.expense !== null) {
             throw new Error('ledger.expense must be null for SETTLEMENT');
         }
-        return { id, type, groupId };
+        return { id, type, groupId, amount, currency, fromUserId, toUserId };
     }
 
     throw new Error('ledger.type must be EXPENSE or SETTLEMENT');
