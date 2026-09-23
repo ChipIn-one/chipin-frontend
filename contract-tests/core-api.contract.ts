@@ -84,17 +84,34 @@ it('validates the live core API contract matrix', () => {
     let primaryFailure: unknown;
     let hasPrimaryFailure = false;
 
+    const hasExpectedParticipants = (
+        participantIds: readonly string[],
+        expectedParticipants: Set<string>,
+    ): boolean => {
+        const uniqueParticipantIds = new Set(participantIds);
+        return (
+            participantIds.length === expectedParticipants.size &&
+            uniqueParticipantIds.size === expectedParticipants.size &&
+            [...expectedParticipants].every(id => uniqueParticipantIds.has(id))
+        );
+    };
+
     const hasExpectedAutoShares = (
         shares: ReadonlyArray<{ userId: string; shareAmount: number; currency: string }>,
         expectedParticipants: Set<string>,
-    ): boolean =>
-        shares.length === expectedParticipants.size &&
-        shares.every(
-            share =>
-                expectedParticipants.has(share.userId) &&
-                share.shareAmount === 6.25 &&
-                share.currency === 'USD',
+    ): boolean => {
+        const shareUserIds = new Set(shares.map(share => share.userId));
+        return (
+            shares.length === expectedParticipants.size &&
+            shareUserIds.size === expectedParticipants.size &&
+            [...expectedParticipants].every(id => shareUserIds.has(id)) &&
+            shares.every(
+                share =>
+                    share.shareAmount === 6.25 &&
+                    share.currency === 'USD',
+            )
         );
+    };
 
     const register = (displayName: string): Promise<ContractRegisterResponse> => {
         provisionAttempted = true;
@@ -287,8 +304,7 @@ it('validates the live core API contract matrix', () => {
                 expense.amount !== 12.5 ||
                 expense.currency !== 'USD' ||
                 expense.payerId !== a.user.id ||
-                expense.participantIds.length !== expectedParticipants.size ||
-                expense.participantIds.some(id => !expectedParticipants.has(id)) ||
+                !hasExpectedParticipants(expense.participantIds, expectedParticipants) ||
                 !hasExpectedAutoShares(expense.participantShares, expectedParticipants)
             ) {
                 throw new Error('Created expense does not match the requested financial contract');
@@ -309,8 +325,7 @@ it('validates the live core API contract matrix', () => {
                         persisted.amount !== 12.5 ||
                         persisted.currency !== 'USD' ||
                         persisted.payerId !== a.user.id ||
-                        persisted.participantIds.length !== expectedParticipants.size ||
-                        persisted.participantIds.some(id => !expectedParticipants.has(id)) ||
+                        !hasExpectedParticipants(persisted.participantIds, expectedParticipants) ||
                         !hasExpectedAutoShares(persisted.participantShares, expectedParticipants)
                     ) {
                         throw new Error('Expense read does not preserve the requested financial contract');

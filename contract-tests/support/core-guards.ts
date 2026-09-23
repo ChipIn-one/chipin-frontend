@@ -165,6 +165,27 @@ const parseExpenseActivityMetadata = (value: unknown, label: string): string => 
     return entryId;
 };
 
+const parseGroupActivityMetadata = (value: unknown, label: string): void => {
+    const metadata = requireRecord(value, label);
+    if (requireString(metadata, 'type', label) !== 'group') {
+        throw new Error(`${label}.type must be group`);
+    }
+    requireString(metadata, 'groupId', label);
+    requireString(metadata, 'groupName', label);
+
+    if (metadata.targetUserDisplayName !== undefined) {
+        requireNullableString(metadata, 'targetUserDisplayName', label);
+    }
+    if (metadata.targetUsers !== undefined) {
+        const targetUsers = requireArray(metadata.targetUsers, `${label}.targetUsers`);
+        for (let index = 0; index < targetUsers.length; index += 1) {
+            const target = requireRecord(targetUsers[index], `${label}.targetUsers[${index}]`);
+            requireString(target, 'userId', `${label}.targetUsers[${index}]`);
+            requireString(target, 'displayName', `${label}.targetUsers[${index}]`);
+        }
+    }
+};
+
 const parseSettlementActivityMetadata = (value: unknown, label: string): string => {
     const metadata = requireRecord(value, label);
     if (requireString(metadata, 'type', label) !== 'settlement') {
@@ -211,6 +232,19 @@ const parseActivityEvent = (
     ) {
         ledgerEntryId = parseSettlementActivityMetadata(event.metadata, `${label}.metadata`);
     }
+    if (
+        action === 'GROUP_CREATED' ||
+        action === 'GROUP_UPDATED' ||
+        action === 'GROUP_DELETED' ||
+        action === 'GROUP_DEACTIVATED' ||
+        action === 'OWNERSHIP_TRANSFERRED' ||
+        action === 'MEMBER_JOINED' ||
+        action === 'MEMBER_LEFT' ||
+        action === 'MEMBER_KICKED' ||
+        action === 'MEMBERS_ADDED'
+    ) {
+        parseGroupActivityMetadata(event.metadata, `${label}.metadata`);
+    }
 
     return { id, ledgerEntryId };
 };
@@ -234,7 +268,13 @@ export const parseKnownUsers = (value: unknown): string[] => {
     for (let index = 0; index < friends.length; index += 1) {
         const friend = requireRecord(friends[index], `knownUsers.friends[${index}]`);
         ids.push(parsePublicUser(friend.user, `knownUsers.friends[${index}].user`));
-        requireArray(friend.balances, `knownUsers.friends[${index}].balances`);
+        const balances = requireArray(friend.balances, `knownUsers.friends[${index}].balances`);
+        for (let balanceIndex = 0; balanceIndex < balances.length; balanceIndex += 1) {
+            const label = `knownUsers.friends[${index}].balances[${balanceIndex}]`;
+            const balance = requireRecord(balances[balanceIndex], label);
+            requireString(balance, 'currency', label);
+            requireNumber(balance, 'netAmount', label);
+        }
         requireNullableString(friend, 'lastUsedCurrency', `knownUsers.friends[${index}]`);
     }
 
