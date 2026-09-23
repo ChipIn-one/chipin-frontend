@@ -105,6 +105,13 @@ export default defineConfig(({ mode }) => {
         buildEnvironment,
         sentryBuildConfig,
     );
+    const apiProxy = {
+        '/api': {
+            target: 'https://api-dev.chipin.one',
+            changeOrigin: true,
+            rewrite: (path: string) => path.replace(/^\/api/, ''),
+        },
+    };
 
     return {
         define: {
@@ -178,6 +185,7 @@ export default defineConfig(({ mode }) => {
 
                 workbox: {
                     globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+                    navigateFallbackDenylist: [/^\/api\//],
                     sourcemap: false,
                     cleanupOutdatedCaches: true,
                     clientsClaim: true,
@@ -213,6 +221,13 @@ export default defineConfig(({ mode }) => {
                   ]
                 : []),
         ],
+
+        server: {
+            proxy: apiProxy,
+        },
+        preview: {
+            proxy: apiProxy,
+        },
 
         build: {
             sourcemap: 'hidden',
