@@ -15,6 +15,15 @@ import {
     ShowcaseSections,
 } from 'features/landing';
 
+const PROMO_COPY = {
+    label: 'EARLY SUPPORTER',
+    title: 'You’re #1–5,000',
+    intro: 'Thank you for being with ChipIn early.',
+    benefit: 'Premium is yours for 1 year — free.',
+    expires: 'Expires on Sep 13, 2027',
+    button: 'Thank you',
+} as const;
+
 const PromoDialogContent = styled(Dialog.Content)`
     && {
         width: min(760px, calc(100vw - 32px));
@@ -175,8 +184,8 @@ const EarlySupporterPreviewModal = () => {
                         <Sparkle $side="right" size={27} />
                     </CrownStage>
 
-                    <PromoLabel>EARLY SUPPORTER</PromoLabel>
-                    <PromoTitle>You’re #1–5,000</PromoTitle>
+                    <PromoLabel>{PROMO_COPY.label}</PromoLabel>
+                    <PromoTitle>{PROMO_COPY.title}</PromoTitle>
                     <PromoCopy>
                         Thank you for being with ChipIn early.
                         <br />
@@ -185,11 +194,11 @@ const EarlySupporterPreviewModal = () => {
 
                     <ExpiryPill>
                         <LucideClock3 size={24} />
-                        Expires on Sep 13, 2027
+                        {PROMO_COPY.expires}
                     </ExpiryPill>
 
                     <Dialog.Close>
-                        <ThankYouButton size="4">Thank you</ThankYouButton>
+                        <ThankYouButton size="4">{PROMO_COPY.button}</ThankYouButton>
                     </Dialog.Close>
                 </PromoStack>
             </PromoDialogContent>
