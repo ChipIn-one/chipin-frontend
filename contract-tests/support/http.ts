@@ -1,5 +1,3 @@
-import { Buffer } from 'node:buffer';
-
 import type { ContractConfig } from './config';
 
 export type ContractRequestAuth =
@@ -22,6 +20,17 @@ export interface ContractHttpClient {
 
 const REQUEST_TIMEOUT_MS = 10_000;
 
+const encodeBasicCredentials = (username: string, password: string): string => {
+    const bytes = new TextEncoder().encode(`${username}:${password}`);
+    let binary = '';
+
+    for (const byte of bytes) {
+        binary += String.fromCharCode(byte);
+    }
+
+    return btoa(binary);
+};
+
 class ContractRequestError extends Error {}
 
 const describeRequest = (options: ContractRequestOptions): string =>
@@ -42,10 +51,10 @@ const buildHeaders = (
             break;
         case 'basic':
             if (config.basicAuth) {
-                const credentials = Buffer.from(
-                    `${config.basicAuth.username}:${config.basicAuth.password}`,
-                    'utf8',
-                ).toString('base64');
+                const credentials = encodeBasicCredentials(
+                    config.basicAuth.username,
+                    config.basicAuth.password,
+                );
 
                 headers.set('Authorization', `Basic ${credentials}`);
             }
