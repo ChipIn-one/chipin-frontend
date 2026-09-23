@@ -44,7 +44,7 @@ const OPENAPI_RESPONSE_EXPECTATIONS = [
     { path: '/currency-rates', method: 'get', status: '200', fields: ['stale'] },
 ] as const;
 
-const FULL_MATRIX_TIMEOUT_MS =const FULL_MATRIX_TIMEOUT_MS = 6 * 60_000;
+const FULL_MATRIX_TIMEOUT_MS = 6 * 60_000;
 
 const readEnvironment = (key: keyof ContractEnvironment): string | undefined => {
     const processValue: unknown = Reflect.get(globalThis, 'process');
