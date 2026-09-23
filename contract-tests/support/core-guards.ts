@@ -21,7 +21,7 @@ export interface ContractActivityPage extends ContractPage {
     ledgerEntryIds: string[];
 }
 
-export interface ContractPreviewPage extends ContractActivityPage {}
+export type ContractPreviewPage = ContractActivityPage;
 
 export interface ContractParticipantShare {
     userId: string;
