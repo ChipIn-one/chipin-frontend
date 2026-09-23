@@ -28,16 +28,23 @@ const AddExpenseModal = lazy(() =>
 );
 
 const DeferredAddExpenseModal = () => {
-    const isOpened = useExpenseModalStore(state => state.isOpened);
-    const [hasOpened, setHasOpened] = useState(isOpened);
+    const [shouldRender, setShouldRender] = useState(
+        () => useExpenseModalStore.getState().isOpened,
+    );
 
     useEffect(() => {
-        if (isOpened) {
-            setHasOpened(true);
+        if (shouldRender) {
+            return undefined;
         }
-    }, [isOpened]);
 
-    if (!hasOpened && !isOpened) {
+        return useExpenseModalStore.subscribe(state => {
+            if (state.isOpened) {
+                setShouldRender(true);
+            }
+        });
+    }, [shouldRender]);
+
+    if (!shouldRender) {
         return null;
     }
 
