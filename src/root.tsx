@@ -9,7 +9,10 @@ import { SpeedInsights } from '@vercel/speed-insights/react';
 import { initChipInApiInterceptors } from 'api/chipin.interceptors';
 import { LS_KEY_THEME } from 'constants/localstorage';
 import { APP_VERSION } from 'constants/version';
-import { sanitizeTelemetryUrl } from 'helpers/telemetry';
+import {
+    resolveTelemetryEnvironment,
+    sanitizeTelemetryUrl,
+} from 'helpers/telemetry';
 import { resolveStoredTheme } from 'helpers/theme';
 import { useAuthStore } from 'store/authStore';
 
@@ -20,7 +23,10 @@ import 'styles/radixStylesOverwrite.css';
 
 import 'i18n';
 
-const sentryEnvironment = import.meta.env.VITE_SENTRY_ENVIRONMENT;
+const sentryEnvironment = resolveTelemetryEnvironment(
+    import.meta.env.VITE_SENTRY_ENVIRONMENT,
+    window.location.hostname,
+);
 
 Sentry.init({
     dsn: 'https://9c23eacd86e99a489e72c35877a1f6e6@o4510982101794816.ingest.de.sentry.io/4510982104154192',
