@@ -115,6 +115,32 @@ describe('parseLedgerEntry', () => {
             }),
         ).toThrow('ledger.groupId must be a non-empty string for GROUP scope');
     });
+
+    it('rejects an empty groupId for a group-scoped entry', () => {
+        expect(() =>
+            parseLedgerEntry({
+                id: 'group-expense-id',
+                type: 'EXPENSE',
+                scope: 'GROUP',
+                groupId: '',
+                createdAt: 1,
+                updatedAt: 1,
+                expense: {
+                    amount: 8,
+                    currency: 'USD',
+                    date: 1,
+                    payer: userA,
+                    participants: [userA, userB],
+                    participantShares: [
+                        { userId: userA.id, shareAmount: 4, currency: 'USD' },
+                        { userId: userB.id, shareAmount: 4, currency: 'USD' },
+                    ],
+                    creator: userA,
+                },
+                settlement: null,
+            }),
+        ).toThrow('ledger.groupId must be a non-empty string');
+    });
 });
 
 describe('parseActivityPreviewPage', () => {

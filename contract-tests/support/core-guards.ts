@@ -525,7 +525,10 @@ export const parseLedgerEntry = (value: unknown): ContractLedgerEntry => {
     const id = requireString(entry, 'id', 'ledger');
     const type = requireString(entry, 'type', 'ledger');
     const scopeValue = requireString(entry, 'scope', 'ledger');
-    const groupId = readOptionalNullableString(entry, 'groupId', 'ledger');
+    const groupId =
+        entry.groupId === undefined || entry.groupId === null
+            ? null
+            : requireString(entry, 'groupId', 'ledger');
     requireNumber(entry, 'createdAt', 'ledger');
     requireNumber(entry, 'updatedAt', 'ledger');
 
