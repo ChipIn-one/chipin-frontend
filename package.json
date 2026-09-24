@@ -20,7 +20,10 @@
         "version:bump": "node scripts/version-bump.mjs",
         "version:check": "node scripts/version-check.mjs",
         "preview": "vite preview",
-        "create-pwa-icons": "pwa-assets-generator"
+        "create-pwa-icons": "pwa-assets-generator",
+        "test:contract": "vitest run --config vitest.contract.config.ts",
+        "test:contract:smoke": "vitest run --config vitest.contract.config.ts contract-tests/auth-session.contract.ts",
+        "test:contract:full": "vitest run --config vitest.contract.config.ts contract-tests/core-api.contract.ts"
     },
     "dependencies": {
         "@radix-ui/themes": "^3.3.0",
@@ -70,7 +73,8 @@
         "vite-tsconfig-paths": "^5.1.4",
         "vitest": "^4.1.10",
         "workbox-core": "^7.3.0",
-        "workbox-window": "^7.3.0"
+        "workbox-window": "^7.3.0",
+        "yaml": "^2.9.1"
     },
     "overrides": {
         "@vite-pwa/assets-generator": {
