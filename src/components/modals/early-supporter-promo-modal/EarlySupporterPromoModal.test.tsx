@@ -140,3 +140,16 @@ test('dismisses the promo for the current registration and allows a later regist
             expect(screen.getByRole('dialog', { name: 'Welcome to ChipIn' })).toBeTruthy();
         });
 });
+
+test('dismisses the promo from the shared close control', () => {
+    const user = userEvent.setup();
+    setSession(true, createUser('close-control-user', 1_820_000_000));
+
+    render(<EarlySupporterPromoModal />);
+
+    return user
+        .click(screen.getByRole('button', { name: 'Close' }))
+        .then(() => {
+            expect(screen.queryByRole('dialog')).toBeNull();
+        });
+});
