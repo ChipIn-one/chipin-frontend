@@ -65,6 +65,56 @@ describe('parseLedgerEntry', () => {
 
         expect(entry).toMatchObject({ scope: 'USER' });
     });
+
+    it('normalizes an omitted groupId for a user-scoped entry', () => {
+        const entry = parseLedgerEntry({
+            id: 'direct-expense-id',
+            type: 'EXPENSE',
+            scope: 'USER',
+            createdAt: 1,
+            updatedAt: 1,
+            expense: {
+                amount: 8,
+                currency: 'USD',
+                date: 1,
+                payer: userA,
+                participants: [userA, userB],
+                participantShares: [
+                    { userId: userA.id, shareAmount: 4, currency: 'USD' },
+                    { userId: userB.id, shareAmount: 4, currency: 'USD' },
+                ],
+                creator: userA,
+            },
+            settlement: null,
+        });
+
+        expect(entry).toMatchObject({ scope: 'USER', groupId: null });
+    });
+
+    it('requires groupId for a group-scoped entry', () => {
+        expect(() =>
+            parseLedgerEntry({
+                id: 'group-expense-id',
+                type: 'EXPENSE',
+                scope: 'GROUP',
+                createdAt: 1,
+                updatedAt: 1,
+                expense: {
+                    amount: 8,
+                    currency: 'USD',
+                    date: 1,
+                    payer: userA,
+                    participants: [userA, userB],
+                    participantShares: [
+                        { userId: userA.id, shareAmount: 4, currency: 'USD' },
+                        { userId: userB.id, shareAmount: 4, currency: 'USD' },
+                    ],
+                    creator: userA,
+                },
+                settlement: null,
+            }),
+        ).toThrow('ledger.groupId must be a non-empty string for GROUP scope');
+    });
 });
 
 describe('parseActivityPreviewPage', () => {

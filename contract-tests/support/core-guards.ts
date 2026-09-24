@@ -525,7 +525,7 @@ export const parseLedgerEntry = (value: unknown): ContractLedgerEntry => {
     const id = requireString(entry, 'id', 'ledger');
     const type = requireString(entry, 'type', 'ledger');
     const scopeValue = requireString(entry, 'scope', 'ledger');
-    const groupId = requireNullableString(entry, 'groupId', 'ledger');
+    const groupId = readOptionalNullableString(entry, 'groupId', 'ledger');
     requireNumber(entry, 'createdAt', 'ledger');
     requireNumber(entry, 'updatedAt', 'ledger');
 
@@ -533,6 +533,12 @@ export const parseLedgerEntry = (value: unknown): ContractLedgerEntry => {
         throw new Error('ledger.scope must be GROUP or USER');
     }
     const scope: ContractLedgerEntry['scope'] = scopeValue;
+    if (scope === 'GROUP' && groupId === null) {
+        throw new Error('ledger.groupId must be a non-empty string for GROUP scope');
+    }
+    if (scope === 'USER' && groupId !== null) {
+        throw new Error('ledger.groupId must be null or absent for USER scope');
+    }
 
     if (type === 'EXPENSE') {
         const expense = requireRecord(entry.expense, 'ledger.expense');
