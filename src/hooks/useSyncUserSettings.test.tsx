@@ -61,6 +61,18 @@ test('does not reapply cached user theme settings after logout', () => {
     expect(changeLanguage).toHaveBeenCalledWith('en');
 });
 
+test('records locale sync failures', () => {
+    const error = new Error('Failed to change language');
+    changeLanguage.mockRejectedValueOnce(error);
+    useAuthStore.setState({ status: 'unauthenticated' });
+
+    renderHook(() => useSyncUserSettings());
+
+    return Promise.resolve().then(() => {
+        expect(captureException).toHaveBeenCalledWith(error);
+    });
+});
+
 test('applies cached user theme settings while the authenticated user is loading', () => {
     useAuthStore.setState({ status: 'authenticated' });
 
