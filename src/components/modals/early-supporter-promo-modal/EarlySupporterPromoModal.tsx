@@ -13,10 +13,11 @@ import { useConnect } from './internal';
 
 const EarlySupporterPromoModal = () => {
     const { t, i18n } = useTranslation('landing');
-    const { isNewUser, subscriptionUntil, userId } = useConnect();
+    const { isBackendUnavailable, isNewUser, subscriptionUntil, userId } = useConnect();
     const [dismissedUserId, setDismissedUserId] = useState<string | null>(null);
 
     if (
+        isBackendUnavailable ||
         isNewUser !== true ||
         userId === null ||
         subscriptionUntil === null ||

@@ -4,6 +4,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
 import { useAuthStore } from 'store/authStore';
+import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
 import { useUsersStore } from 'store/users-store';
 
 import { EarlySupporterPromoModal } from './EarlySupporterPromoModal';
@@ -81,6 +82,7 @@ beforeEach(() => {
         status: 'unauthenticated',
         unauthReason: 'missing',
     });
+    useBackendAvailabilityStore.setState({ isUnavailable: false });
 });
 
 test('shows the promo for a newly registered user with backend Premium', () => {
@@ -152,4 +154,18 @@ test('dismisses the promo from the shared close control', () => {
         .then(() => {
             expect(screen.queryByRole('dialog')).toBeNull();
         });
+});
+
+test('suppresses the promo while the backend unavailable fallback is active', () => {
+    setSession(true, createUser('backend-unavailable-user', 1_820_000_000));
+
+    render(<EarlySupporterPromoModal />);
+
+    expect(screen.getByRole('dialog', { name: 'Welcome to ChipIn' })).toBeTruthy();
+
+    act(() => {
+        useBackendAvailabilityStore.setState({ isUnavailable: true });
+    });
+
+    expect(screen.queryByRole('dialog')).toBeNull();
 });
