@@ -129,7 +129,7 @@
         "title": "Você está entre os primeiros 5.000",
         "intro": "Obrigado por estar com o ChipIn desde o começo.",
         "benefit": "Premium é seu por 1 ano — grátis.",
-        "expires": "Expira em 13 de setembro de 2027",
+        "expires": "Expira em {{date}}",
         "button": "Obrigado"
     }
 }

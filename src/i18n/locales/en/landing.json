@@ -129,7 +129,7 @@
         "title": "You’re #1–5,000",
         "intro": "Thank you for being with ChipIn early.",
         "benefit": "Premium is yours for 1 year — free.",
-        "expires": "Expires on Sep 13, 2027",
+        "expires": "Expires on {{date}}",
         "button": "Thank you"
     }
 }
