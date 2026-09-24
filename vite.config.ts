@@ -262,26 +262,6 @@ export default defineConfig(({ mode }) => {
                                 name: 'vendor-misc',
                                 test: /node_modules[\\/](?:axios|dexie|dexie-react-hooks|zustand)[\\/]/,
                             },
-                            {
-                                // Keep remaining third-party code out of automatic application
-                                // shared chunks. Entry-aware splitting avoids route-only vendor
-                                // code becoming a global download.
-                                name: 'vendor-other',
-                                test: /node_modules[\\/]/,
-                                entriesAware: true,
-                                maxSize: 250 * 1024,
-                            },
-                            {
-                                // Shared application modules are grouped only when reused by
-                                // multiple entries, with a size target that prevents another
-                                // catch-all 500+ kB application chunk.
-                                name: 'app-common',
-                                test: /[\\/]src[\\/]/,
-                                minShareCount: 2,
-                                minSize: 20 * 1024,
-                                maxSize: 300 * 1024,
-                                entriesAware: true,
-                            },
                         ],
                     },
                 },

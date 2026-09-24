@@ -1,4 +1,3 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
 import { LucideCircleCheck, LucideCircleX, LucideInfo, LucideTriangleAlert } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { BrowserRouter } from 'react-router-dom';
@@ -10,50 +9,16 @@ import { Box, Spinner, Theme } from '@radix-ui/themes';
 import { darkThemeStyled, lightThemeStyled } from 'constants/styled-themes';
 import { isThemeDark } from 'helpers/theme';
 import { useIsMobile } from 'hooks/common';
-import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import BackgroundBox from 'basics/BackgroundBox';
 import PWABadge from 'basics/PWABadge';
 import AddExpenseButton from 'components/AddExpenseButton';
 import { BackendUnavailableGate } from 'components/backend-unavailable-page';
 import Header from 'components/Header';
+import { AddExpenseModal } from 'components/modals/add-expense-modal';
 import { ModalOverlayGlobalStyles } from 'components/modals/components';
 import AppRouter from 'features/routing';
 import GlobalHooks from 'pages/GlobalHooks';
-
-const AddExpenseModal = lazy(() =>
-    import('components/modals/add-expense-modal').then(module => ({
-        default: module.AddExpenseModal,
-    })),
-);
-
-const DeferredAddExpenseModal = () => {
-    const [shouldRender, setShouldRender] = useState(
-        () => useExpenseModalStore.getState().isOpened,
-    );
-
-    useEffect(() => {
-        if (shouldRender) {
-            return undefined;
-        }
-
-        return useExpenseModalStore.subscribe(state => {
-            if (state.isOpened) {
-                setShouldRender(true);
-            }
-        });
-    }, [shouldRender]);
-
-    if (!shouldRender) {
-        return null;
-    }
-
-    return (
-        <Suspense fallback={null}>
-            <AddExpenseModal />
-        </Suspense>
-    );
-};
 
 const ToastSuccessIcon = () => <LucideCircleCheck size={20} />;
 const ToastInfoIcon = () => <LucideInfo size={20} />;
@@ -87,7 +52,7 @@ const Main = () => {
                                 <AppRouter />
                             </Box>
                             <AddExpenseButton />
-                            <DeferredAddExpenseModal />
+                            <AddExpenseModal />
                             <PWABadge />
 
                             <Toaster

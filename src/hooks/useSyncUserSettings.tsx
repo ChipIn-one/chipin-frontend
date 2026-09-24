@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { useTheme } from 'next-themes';
 
-import { matchLocale, onChangeLocale } from 'helpers/locale';
+import { matchLocale } from 'helpers/locale';
+import i18n from 'i18n';
 import { selectAuthStatus } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { selectUserSettings, useUsersStore } from 'store/users-store';
@@ -23,7 +24,7 @@ export const useSyncUserSettings = () => {
         const locale = matchLocale(settings.language);
 
         if (locale) {
-            onChangeLocale(locale);
+            void i18n.changeLanguage(locale);
         }
     }, [authStatus, settings, setTheme]);
 };
