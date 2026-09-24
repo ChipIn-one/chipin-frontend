@@ -3,14 +3,14 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
-import { Button, Flex, Text } from '@radix-ui/themes';
+import { Avatar, Badge, Button, Flex, Heading, Text } from '@radix-ui/themes';
 
 import { MEDIA_QUERIES } from 'constants/breakpoints';
 import { useLandingStatsStore } from 'store/landing-stats-store';
 
 import Footer from 'components/Footer';
 import { BaseModal } from 'components/modals';
-import { OverlayFooter } from 'components/modals/components';
+import { OverlayBody, OverlayFooter } from 'components/modals/components';
 import {
     CtaSection,
     FeaturesSection,
@@ -19,135 +19,9 @@ import {
     ShowcaseSections,
 } from 'features/landing';
 
-
-const PromoBody = styled.div`
-    min-width: 0;
-    min-height: 0;
-
-    @media ${MEDIA_QUERIES.belowSm} {
-        display: flex;
-        flex: 1;
-        align-items: center;
-        justify-content: center;
-        overflow: auto;
-        padding: var(--space-4);
-    }
-`;
-
-const PromoStack = styled(Flex)`
-    padding: 4px 8px 8px;
-    text-align: center;
-
-    @media ${MEDIA_QUERIES.belowSm} {
-        padding: 0;
-    }
-`;
-
-const CrownStage = styled.div`
-    position: relative;
-    display: grid;
-    width: 180px;
-    height: 112px;
-    margin: 0 auto 10px;
-    place-items: center;
-`;
-
-const CrownCircle = styled.div`
-    display: grid;
-    width: 104px;
-    height: 104px;
-    place-items: center;
-    border: 3px solid #e9bd45;
-    border-radius: 50%;
-    box-shadow:
-        0 0 20px rgb(233 189 69 / 28%),
-        inset 0 0 20px rgb(233 189 69 / 10%);
-    color: #f6d36d;
-`;
-
-const Sparkle = styled(LucideSparkles)<{ $side: 'left' | 'right' }>`
-    position: absolute;
-    top: ${({ $side }) => ($side === 'left' ? '42px' : '31px')};
-    ${({ $side }) => ($side === 'left' ? 'left: 3px;' : 'right: 0;')}
-    color: #f0c54f;
-    filter: drop-shadow(0 0 8px rgb(240 197 79 / 45%));
-`;
-
-const PromoLabel = styled(Text)`
-    && {
-        color: #f0c850;
-        font-size: 17px;
-        font-weight: 800;
-        letter-spacing: 0.14em;
-    }
-
-    @media (max-width: 640px) {
-        && {
-            font-size: 14px;
-        }
-    }
-`;
-
-const PromoTitle = styled(Text)`
-    && {
-        margin: 12px 0 14px;
-        color: var(--gray-12);
-        font-size: clamp(30px, 5vw, 42px);
-        font-weight: 800;
-        line-height: 1.05;
-        letter-spacing: -0.035em;
-    }
-`;
-
-const PromoCopy = styled(Text)`
-    && {
-        max-width: 580px;
-        margin: 0 auto;
-        color: var(--gray-11);
-        font-size: clamp(16px, 2.5vw, 20px);
-        line-height: 1.45;
-    }
-`;
-
-const ExpiryPill = styled.div`
-    display: flex;
-    width: fit-content;
-    margin: 28px auto 20px;
-    padding: 14px 20px;
-    align-items: center;
-    gap: 12px;
-    border: 1px solid var(--gray-a4);
-    border-radius: 14px;
-    background: var(--gray-a3);
-    color: var(--gray-11);
-    font-size: 16px;
-
-    @media (max-width: 640px) {
-        margin-top: 22px;
-        padding: 12px 16px;
-        font-size: 14px;
-    }
-`;
-
 const ThankYouButton = styled(Button)`
-    && {
-        width: 200px;
-        height: 44px;
-        border-radius: 12px;
-        background: linear-gradient(90deg, #f6d36d 0%, #efbe43 100%);
-        box-shadow: 0 10px 28px rgb(225 176 47 / 18%);
-        color: #111;
-        font-size: 16px;
-        font-weight: 800;
-    }
-
-    &&:hover {
-        background: linear-gradient(90deg, #f8dc82 0%, #f3c959 100%);
-    }
-
     @media ${MEDIA_QUERIES.belowSm} {
         && {
-            width: 100%;
             grid-column: 1 / -1;
         }
     }
@@ -158,37 +32,74 @@ const EarlySupporterPreviewModal = () => {
     const [isOpen, setIsOpen] = useState(true);
 
     const thankYouAction = (
-        <ThankYouButton size="3" onClick={() => setIsOpen(false)}>
+        <ThankYouButton size="3" color="amber" highContrast onClick={() => setIsOpen(false)}>
             {t('promo.button')}
         </ThankYouButton>
     );
 
     const content = (
         <>
-            <PromoBody>
-                <PromoStack direction="column" align="center">
-                    <CrownStage>
-                        <Sparkle $side="left" size={24} />
-                        <CrownCircle>
-                            <LucideCrown size={54} fill="currentColor" strokeWidth={1.8} />
-                        </CrownCircle>
-                        <Sparkle $side="right" size={27} />
-                    </CrownStage>
+            <OverlayBody>
+                <Flex
+                    direction="column"
+                    align="center"
+                    justify="center"
+                    gap="4"
+                    height="100%"
+                    py={{ initial: '2', sm: '0' }}
+                >
+                    <Flex align="center" justify="center" gap="3">
+                        <Text color="amber">
+                            <LucideSparkles size={20} />
+                        </Text>
+                        <Avatar
+                            size="8"
+                            color="amber"
+                            variant="soft"
+                            radius="full"
+                            fallback={<LucideCrown size={36} />}
+                        />
+                        <Text color="amber">
+                            <LucideSparkles size={22} />
+                        </Text>
+                    </Flex>
 
-                    <PromoLabel>{t('promo.label')}</PromoLabel>
-                    <PromoTitle>{t('promo.title')}</PromoTitle>
-                    <PromoCopy>
-                        {t('promo.intro')}
-                        <br />
-                        {t('promo.benefit')}
-                    </PromoCopy>
+                    <Flex direction="column" align="center" gap="2">
+                        <Text
+                            color="amber"
+                            size={{ initial: '2', sm: '3' }}
+                            weight="bold"
+                            align="center"
+                        >
+                            {t('promo.label')}
+                        </Text>
+                        <Heading
+                            as="h2"
+                            size={{ initial: '7', sm: '8' }}
+                            weight="bold"
+                            align="center"
+                        >
+                            {t('promo.title')}
+                        </Heading>
+                    </Flex>
 
-                    <ExpiryPill>
-                        <LucideClock3 size={24} />
-                        {t('promo.expires')}
-                    </ExpiryPill>
-                </PromoStack>
-            </PromoBody>
+                    <Flex direction="column" align="center" gap="1">
+                        <Text color="gray" size={{ initial: '3', sm: '4' }} align="center">
+                            {t('promo.intro')}
+                        </Text>
+                        <Text color="gray" size={{ initial: '3', sm: '4' }} align="center">
+                            {t('promo.benefit')}
+                        </Text>
+                    </Flex>
+
+                    <Badge size="3" color="gray" variant="surface" radius="full">
+                        <Flex align="center" gap="2">
+                            <LucideClock3 size={16} />
+                            {t('promo.expires')}
+                        </Flex>
+                    </Badge>
+                </Flex>
+            </OverlayBody>
 
             <OverlayFooter cancelAction={null} primaryAction={thankYouAction} />
         </>
