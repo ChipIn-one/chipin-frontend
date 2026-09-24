@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseLedgerEntry } from './core-guards';
+import { parseActivityPreviewPage, parseLedgerEntry } from './core-guards';
 
 const userA = {
     id: 'user-a',
@@ -64,5 +64,45 @@ describe('parseLedgerEntry', () => {
         });
 
         expect(entry).toMatchObject({ scope: 'USER' });
+    });
+});
+
+describe('parseActivityPreviewPage', () => {
+    it('accepts group lifecycle previews without treating them as ledger activity', () => {
+        const parent = {
+            id: 'group-created',
+            seq: 1,
+            domain: 'GROUP',
+            action: 'GROUP_CREATED',
+            actorSnapshot: { displayName: 'Owner', picture: null },
+            subjectType: 'group',
+            subjectId: 'group-id',
+            metadata: {
+                type: 'group',
+                groupId: 'group-id',
+                groupName: 'Contract Group',
+            },
+            createdAt: 1,
+        };
+        const lastEvent = {
+            ...parent,
+            id: 'group-updated',
+            seq: 2,
+            action: 'GROUP_UPDATED',
+            createdAt: 2,
+        };
+
+        expect(
+            parseActivityPreviewPage({
+                items: [{ parent, lastEvent }],
+                nextCursor: null,
+            }),
+        ).toEqual({
+            ids: ['group-created'],
+            nextCursor: null,
+            ledgerEntryIds: [],
+            ledgerActivities: [],
+            renderedLedgerActivities: [],
+        });
     });
 });

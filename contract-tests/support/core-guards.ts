@@ -604,16 +604,23 @@ const parsePreviewPage = (value: unknown, label: string): ContractPreviewPage =>
             item.lastEvent,
             `${label}.items[${index}].lastEvent`,
         );
-        if (parent.ledgerActivity === null || lastEvent.ledgerActivity === null) {
-            throw new Error(`${label}.items[${index}] must contain ledger preview events`);
-        }
-        if (parent.ledgerActivity.entryId !== lastEvent.ledgerActivity.entryId) {
-            throw new Error(`${label}.items[${index}] parent and lastEvent must reference the same ledger entry`);
+        if (
+            parent.ledgerActivity !== null &&
+            lastEvent.ledgerActivity !== null &&
+            parent.ledgerActivity.entryId !== lastEvent.ledgerActivity.entryId
+        ) {
+            throw new Error(
+                `${label}.items[${index}] parent and lastEvent must reference the same ledger entry`,
+            );
         }
         ids.push(parent.id);
-        ledgerEntryIds.push(parent.ledgerActivity.entryId);
-        ledgerActivities.push(parent.ledgerActivity);
-        renderedLedgerActivities.push(lastEvent.ledgerActivity);
+        if (parent.ledgerActivity !== null) {
+            ledgerEntryIds.push(parent.ledgerActivity.entryId);
+            ledgerActivities.push(parent.ledgerActivity);
+        }
+        if (lastEvent.ledgerActivity !== null) {
+            renderedLedgerActivities.push(lastEvent.ledgerActivity);
+        }
     }
     const cursor = response.nextCursor;
     if (cursor !== null && (typeof cursor !== 'number' || !Number.isSafeInteger(cursor))) {

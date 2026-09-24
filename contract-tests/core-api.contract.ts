@@ -317,7 +317,8 @@ it('validates the live core API contract matrix', () => {
                 group.role !== 'OWNER' ||
                 group.creatorId !== a.user.id ||
                 !hasExpectedParticipants(group.memberIds, new Set([a.user.id])) ||
-                group.recentActivities.ids.length !== 0
+                (group.recentActivities.ledgerActivities.length !== 0 ||
+                    group.recentActivities.renderedLedgerActivities.length !== 0)
             ) {
                 throw new Error('Created group A does not match the requested properties');
             }
@@ -354,7 +355,8 @@ it('validates the live core API contract matrix', () => {
                 group.role !== 'OWNER' ||
                 group.creatorId !== a.user.id ||
                 !hasExpectedParticipants(group.memberIds, new Set([a.user.id])) ||
-                group.recentActivities.ids.length !== 0
+                (group.recentActivities.ledgerActivities.length !== 0 ||
+                    group.recentActivities.renderedLedgerActivities.length !== 0)
             ) {
                 throw new Error('Created group B does not match the requested properties');
             }
@@ -402,7 +404,8 @@ it('validates the live core API contract matrix', () => {
                 listedGroupA.role !== 'OWNER' ||
                 listedGroupA.creatorId !== a.user.id ||
                 !hasExpectedParticipants(listedGroupA.memberIds, new Set([a.user.id, b.user.id])) ||
-                listedGroupA.recentActivities.ids.length !== 0 ||
+                (listedGroupA.recentActivities.ledgerActivities.length !== 0 ||
+                    listedGroupA.recentActivities.renderedLedgerActivities.length !== 0) ||
                 !listedGroupB ||
                 listedGroupB.name !== 'Contract Group B' ||
                 listedGroupB.description !== null ||
@@ -410,7 +413,8 @@ it('validates the live core API contract matrix', () => {
                 listedGroupB.role !== 'OWNER' ||
                 listedGroupB.creatorId !== a.user.id ||
                 !hasExpectedParticipants(listedGroupB.memberIds, new Set([a.user.id])) ||
-                listedGroupB.recentActivities.ids.length !== 0
+                (listedGroupB.recentActivities.ledgerActivities.length !== 0 ||
+                    listedGroupB.recentActivities.renderedLedgerActivities.length !== 0)
             ) {
                 throw new Error('Group cursor pages must preserve both generated group contracts');
             }
