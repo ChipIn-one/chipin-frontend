@@ -23,12 +23,9 @@ const originalExchangeGoogleOAuthCode = useAuthStore.getState().exchangeGoogleOA
 
 const Destination = () => {
     const location = useLocation();
+    const currentRoute = `${location.pathname}${location.search}${location.hash}`;
 
-    return (
-        <div data-testid="destination">
-            {`${location.pathname}${location.search}${location.hash}`}
-        </div>
-    );
+    return <div data-testid="destination">{currentRoute}</div>;
 };
 
 const renderCallback = (route: string) => {
