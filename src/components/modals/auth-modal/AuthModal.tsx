@@ -20,7 +20,7 @@ const AuthModal = ({ children }: Props) => {
     const { t } = useTranslation('auth');
 
     const content = (
-        <OverlayBody>
+        <OverlayBody fillHeight>
             <AuthLayout direction="column" align="center" gap="5" height="100%">
                 <Flex direction="column" align="center" gap="2" width="100%">
                     <IllustrationPanel
@@ -40,8 +40,7 @@ const AuthModal = ({ children }: Props) => {
                     </IllustrationPanel>
 
                     <Heading as="h2" size={{ initial: '7', sm: '8' }} align="center">
-                        {t('modal.headlinePrimary')}
-                        <br />
+                        {t('modal.headlinePrimary')} <br />
                         <Text as="span" color="grass">
                             {t('modal.headlineAccent')}
                         </Text>
@@ -76,6 +75,7 @@ const AuthModal = ({ children }: Props) => {
             title={t('modal.title')}
             accessibleDescription={t('modal.trust')}
             content={content}
+            headerSafeArea
         />
     );
 };

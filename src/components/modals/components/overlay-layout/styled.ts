@@ -33,14 +33,19 @@ const ModalOverlayGlobalStyles = createGlobalStyle`
     }
 `;
 
-const HeaderContainer = styled.div`
+const HeaderContainer = styled.div<{ $safeArea: boolean }>`
     flex-shrink: 0;
     background: inherit;
 
     @media ${MEDIA_QUERIES.belowSm} {
         position: sticky;
         top: 0;
-        padding: var(--space-4) var(--space-4) 0;
+        padding: ${({ $safeArea }) =>
+            $safeArea
+                ? `calc(var(--space-4) + env(safe-area-inset-top))
+                    calc(var(--space-4) + env(safe-area-inset-right)) 0
+                    calc(var(--space-4) + env(safe-area-inset-left))`
+                : 'var(--space-4) var(--space-4) 0'};
     }
 `;
 
@@ -52,7 +57,7 @@ const Header = styled.div`
     padding-bottom: var(--space-4);
 `;
 
-const Body = styled(ScrollArea)`
+const Body = styled(ScrollArea)<{ $fillHeight: boolean }>`
     min-width: 0;
     min-height: 0;
     flex: 1;
@@ -65,12 +70,13 @@ const Body = styled(ScrollArea)`
     & [data-radix-scroll-area-viewport] > div {
         width: 100%;
         min-width: 0 !important;
+        height: ${({ $fillHeight }) => ($fillHeight ? '100%' : 'auto')};
     }
-
 `;
 
-const BodyContent = styled.div`
+const BodyContent = styled.div<{ $fillHeight: boolean }>`
     width: 100%;
+    height: ${({ $fillHeight }) => ($fillHeight ? '100%' : 'auto')};
     min-width: 0;
     box-sizing: border-box;
     padding-top: var(--space-6);

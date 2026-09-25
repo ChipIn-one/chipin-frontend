@@ -17,6 +17,7 @@ interface Props {
     isOpened?: boolean;
     setIsOpened?: (isOpen: boolean) => void;
     isCloseDisabled?: boolean;
+    headerSafeArea?: boolean;
 }
 
 const BaseModal = ({
@@ -28,6 +29,7 @@ const BaseModal = ({
     isOpened,
     setIsOpened,
     isCloseDisabled = false,
+    headerSafeArea = false,
 }: Props) => {
     const { t } = useTranslation('common');
 
@@ -41,6 +43,7 @@ const BaseModal = ({
                 className="modal-overlay-content"
             >
                 <OverlayHeader
+                    safeArea={headerSafeArea}
                     title={
                         <Dialog.Title size="6" mb="0">
                             <Text color="gray">{title}</Text>
