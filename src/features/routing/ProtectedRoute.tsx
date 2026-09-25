@@ -7,7 +7,7 @@ import { ROUTES } from 'constants/routes';
 import PageLoader from 'basics/PageLoader';
 import { AuthModal } from 'components/modals/auth-modal';
 
-import { useConnect } from './internal/useConnect';
+import { useConnect } from './internal';
 
 interface Props {
     children: React.ReactNode;
