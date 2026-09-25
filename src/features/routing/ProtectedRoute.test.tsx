@@ -13,6 +13,8 @@ vi.mock('basics/PageLoader', () => ({
     default: () => <div data-testid="page-loader" />,
 }));
 
+const CLOSE_AUTH_LABEL = 'Close auth';
+
 vi.mock('components/modals/auth-modal', () => ({
     AuthModal: ({
         isOpened,
@@ -23,7 +25,7 @@ vi.mock('components/modals/auth-modal', () => ({
     }) => (
         <div data-testid="auth-modal" data-opened={String(isOpened)}>
             <button type="button" onClick={() => setIsOpened?.(false)}>
-                Close auth
+                {CLOSE_AUTH_LABEL}
             </button>
         </div>
     ),
@@ -77,7 +79,7 @@ test('closes the auth gate back to the landing page', () => {
         </MemoryRouter>,
     );
 
-    return interaction.click(screen.getByRole('button', { name: 'Close auth' })).then(() => {
+    return interaction.click(screen.getByRole('button', { name: CLOSE_AUTH_LABEL })).then(() => {
         expect(screen.getByLabelText('Current route').textContent).toBe('/');
     });
 });
