@@ -1,11 +1,8 @@
 import { create } from 'zustand';
 
 import type { User } from 'api/chipin.types';
-import {
-    DEFAULT_EXPENSE_CATEGORY,
-    EXPENSE_SPLIT_MODES,
-    type ExpenseSplitMode,
-} from 'constants/chipin';
+import { DEFAULT_EXPENSE_CATEGORY } from 'constants/category';
+import { EXPENSE_SPLIT_MODES, type ExpenseSplitMode } from 'constants/chipin';
 import { parseAmountInput } from 'helpers/numbers';
 import { getUnixTimestampInSec } from 'helpers/time';
 
