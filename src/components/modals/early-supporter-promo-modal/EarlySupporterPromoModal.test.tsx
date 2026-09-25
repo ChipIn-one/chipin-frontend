@@ -15,7 +15,10 @@ vi.mock('react-i18next', () => ({
             language: 'en',
             resolvedLanguage: 'en',
         },
-        t: (key: string, options?: { date?: string }) => {
+        t: (
+            key: string,
+            options?: { date?: string; position?: string; total?: string },
+        ) => {
             const translations: Record<string, string> = {
                 'buttons.close': 'Close',
                 'promo.benefit': 'Premium is yours for 1 year — free.',
@@ -28,6 +31,9 @@ vi.mock('react-i18next', () => ({
 
             if (key === 'promo.expires') {
                 return `Expires on ${options?.date ?? ''}`;
+            }
+            if (key === 'promo.position') {
+                return `You’re #${options?.position ?? ''} of ${options?.total ?? ''}`;
             }
 
             return translations[key] ?? key;
@@ -59,14 +65,23 @@ const createUser = (id: string, subscriptionUntil: number | null): SelfUser => (
     updatedAt: 1,
 });
 
-const setSession = (isNewUser: boolean | null, user: SelfUser | null) => {
+const setSession = (
+    isNewUser: boolean | null,
+    user: SelfUser | null,
+    premiumPromoRemaining: number | null = null,
+    isPremiumPromoResolved = true,
+) => {
     act(() => {
         useAuthStore.setState({
             isNewUser,
             status: user ? 'authenticated' : 'unauthenticated',
             unauthReason: user ? undefined : 'missing',
         });
-        useUsersStore.setState({ user });
+        useUsersStore.setState({
+            user,
+            premiumPromoRemaining,
+            isPremiumPromoResolved,
+        });
     });
 };
 
@@ -76,6 +91,8 @@ beforeEach(() => {
         friends: [],
         localUser: null,
         user: null,
+        premiumPromoRemaining: null,
+        isPremiumPromoResolved: false,
     });
     useAuthStore.setState({
         isNewUser: null,
@@ -87,7 +104,7 @@ beforeEach(() => {
 
 test('shows the promo for a newly registered user with backend Premium', () => {
     const subscriptionUntil = Math.floor(Date.UTC(2027, 8, 13, 12) / 1000);
-    setSession(true, createUser('new-user', subscriptionUntil));
+    setSession(true, createUser('new-user', subscriptionUntil), 417);
 
     render(<EarlySupporterPromoModal />);
 
@@ -98,8 +115,33 @@ test('shows the promo for a newly registered user with backend Premium', () => {
     }).format(new Date(subscriptionUntil * 1000));
 
     expect(screen.getByRole('dialog', { name: 'Welcome to ChipIn' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'You’re #4,583 of 5,000' })).toBeTruthy();
     expect(screen.getByText(`Expires on ${expectedDate}`)).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Thank you' })).toBeTruthy();
+});
+
+test('renders the first promo position from the remaining counter', () => {
+    setSession(true, createUser('first-promo-user', 1_820_000_000), 4_999);
+
+    render(<EarlySupporterPromoModal />);
+
+    expect(screen.getByRole('heading', { name: 'You’re #1 of 5,000' })).toBeTruthy();
+});
+
+test('falls back to the generic first-5,000 copy when the counter is unavailable', () => {
+    setSession(true, createUser('fallback-user', 1_820_000_000), null);
+
+    render(<EarlySupporterPromoModal />);
+
+    expect(screen.getByRole('heading', { name: 'You’re #1–5,000' })).toBeTruthy();
+});
+
+test('waits for the promo counter request before opening the modal', () => {
+    setSession(true, createUser('pending-counter-user', 1_820_000_000), null, false);
+
+    render(<EarlySupporterPromoModal />);
+
+    expect(screen.queryByRole('dialog')).toBeNull();
 });
 
 test('does not show the promo for an existing user', () => {
@@ -118,12 +160,13 @@ test('does not show the promo when a new user did not receive Premium', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
 });
 
-test('shows the promo for the final eligible registration without using the remaining counter', () => {
-    setSession(true, createUser('final-eligible-user', 1_820_000_000));
+test('shows promo position #5,000 for the final eligible registration', () => {
+    setSession(true, createUser('final-eligible-user', 1_820_000_000), 0);
 
     render(<EarlySupporterPromoModal />);
 
     expect(screen.getByRole('dialog', { name: 'Welcome to ChipIn' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'You’re #5,000 of 5,000' })).toBeTruthy();
 });
 
 test('dismisses the promo for the current registration and allows a later registration', () => {

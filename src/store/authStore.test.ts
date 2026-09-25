@@ -131,6 +131,25 @@ describe('authStore', () => {
             });
     });
 
+    test('loads the premium promo counter after a new registration', () => {
+        vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue({
+            token: 'access-token',
+            refresh_token: 'refresh-token',
+            is_new_user: true,
+        });
+        vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockResolvedValue();
+        vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
+        vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockResolvedValue(user);
+        vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockResolvedValue();
+        const fetchSetPremiumPromoRemaining = vi
+            .spyOn(useUsersStore.getState(), 'fetchSetPremiumPromoRemaining')
+            .mockResolvedValue();
+
+        return useAuthStore.getState().exchangeGoogleOAuthCode('oauth-code').then(() => {
+            expect(fetchSetPremiumPromoRemaining).toHaveBeenCalledOnce();
+        });
+    });
+
     test('does not authenticate when OAuth tokens cannot be persisted', () => {
         vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue({
             token: 'access-token',

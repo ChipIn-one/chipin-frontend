@@ -127,6 +127,7 @@
         "modalTitle": "Boas-vindas ao ChipIn",
         "label": "USUÁRIO PIONEIRO",
         "title": "Você está entre os primeiros 5.000",
+        "position": "Você é o nº {{position}} de {{total}}",
         "intro": "Obrigado por estar com o ChipIn desde o começo.",
         "benefit": "Premium é seu por 1 ano — grátis.",
         "expires": "Expira em {{date}}",

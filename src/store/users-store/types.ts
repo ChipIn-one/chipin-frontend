@@ -12,10 +12,13 @@ interface UsersStoreState {
     user: SelfUser | null;
     localUser: LocalUser | null;
     friends: KnownUser[];
+    premiumPromoRemaining: number | null;
+    isPremiumPromoResolved: boolean;
 }
 
 interface UsersStoreActions {
     fetchSetFriends: (force?: boolean) => Promise<void>;
+    fetchSetPremiumPromoRemaining: () => Promise<void>;
     fetchSetUser: (force?: boolean) => Promise<SelfUser | null>;
     removeFriend: (params: RemoveKnownUserParams) => Promise<void>;
     setUserSettings: (params: {

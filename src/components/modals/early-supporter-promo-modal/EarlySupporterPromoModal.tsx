@@ -11,14 +11,24 @@ import { MODAL_SIZES, OverlayBody, OverlayFooter } from '../components';
 
 import { useConnect } from './internal';
 
+const PREMIUM_PROMO_LIMIT = 5000;
+
 const EarlySupporterPromoModal = () => {
     const { t, i18n } = useTranslation('landing');
-    const { isBackendUnavailable, isNewUser, subscriptionUntil, userId } = useConnect();
+    const {
+        isBackendUnavailable,
+        isNewUser,
+        isPremiumPromoResolved,
+        premiumPromoRemaining,
+        subscriptionUntil,
+        userId,
+    } = useConnect();
     const [dismissedUserId, setDismissedUserId] = useState<string | null>(null);
 
     if (
         isBackendUnavailable ||
         isNewUser !== true ||
+        !isPremiumPromoResolved ||
         userId === null ||
         subscriptionUntil === null ||
         dismissedUserId === userId
@@ -26,11 +36,23 @@ const EarlySupporterPromoModal = () => {
         return null;
     }
 
-    const expiryDate = new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
+    const locale = i18n.resolvedLanguage ?? i18n.language;
+    const expiryDate = new Intl.DateTimeFormat(locale, {
         day: 'numeric',
         month: 'long',
         year: 'numeric',
     }).format(new Date(subscriptionUntil * SECOND));
+    const promoPosition =
+        premiumPromoRemaining === null ? null : PREMIUM_PROMO_LIMIT - premiumPromoRemaining;
+    const isPromoPositionValid =
+        promoPosition !== null && promoPosition >= 1 && promoPosition <= PREMIUM_PROMO_LIMIT;
+    const numberFormatter = new Intl.NumberFormat(locale);
+    const promoTitle = isPromoPositionValid
+        ? t('promo.position', {
+              position: numberFormatter.format(promoPosition),
+              total: numberFormatter.format(PREMIUM_PROMO_LIMIT),
+          })
+        : t('promo.title');
 
     const onOpenChange = (isOpen: boolean) => {
         if (!isOpen) {
@@ -86,7 +108,7 @@ const EarlySupporterPromoModal = () => {
                             weight="bold"
                             align="center"
                         >
-                            {t('promo.title')}
+                            {promoTitle}
                         </Heading>
                     </Flex>
 

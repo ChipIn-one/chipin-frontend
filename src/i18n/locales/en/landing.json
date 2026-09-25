@@ -127,6 +127,7 @@
         "modalTitle": "Welcome to ChipIn",
         "label": "EARLY SUPPORTER",
         "title": "You’re #1–5,000",
+        "position": "You’re #{{position}} of {{total}}",
         "intro": "Thank you for being with ChipIn early.",
         "benefit": "Premium is yours for 1 year — free.",
         "expires": "Expires on {{date}}",
