@@ -3,11 +3,11 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { Box } from '@radix-ui/themes';
 
 import { ROUTES } from 'constants/routes';
-import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
-import { useAuthStore } from 'store/authStore';
 
 import PageLoader from 'basics/PageLoader';
 import { AuthModal } from 'components/modals/auth-modal';
+
+import { useConnect } from './internal/useConnect';
 
 interface Props {
     children: React.ReactNode;
@@ -15,9 +15,7 @@ interface Props {
 
 export const ProtectedRoute = ({ children }: Props) => {
     const navigate = useNavigate();
-    const isAuthResolved = useAuthStore(selectIsAuthResolved);
-    const isLoggedIn = useAuthStore(selectIsLoggedIn);
-    const unauthReason = useAuthStore(state => state.unauthReason);
+    const { isAuthResolved, isLoggedIn, unauthReason } = useConnect();
 
     if (!isAuthResolved) {
         return <PageLoader />;

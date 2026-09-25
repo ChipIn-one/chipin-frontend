@@ -48,18 +48,18 @@ beforeEach(() => {
     });
 });
 
-test('returns a missing-code callback to the sanitized return route', async () => {
+test('returns a missing-code callback to the sanitized return route', () => {
     renderCallback(
         '/oauth/callback?returnTo=%2Fgroup%2F123%3Ftab%3Dmembers%23balances',
     );
 
-    expect((await screen.findByTestId('destination')).textContent).toBe(
-        '/group/123?tab=members#balances',
-    );
-    expect(useAuthStore.getState().unauthReason).toBe('error');
+    return screen.findByTestId('destination').then(destination => {
+        expect(destination.textContent).toBe('/group/123?tab=members#balances');
+        expect(useAuthStore.getState().unauthReason).toBe('error');
+    });
 });
 
-test('returns a failed OAuth exchange to the sanitized return route', async () => {
+test('returns a failed OAuth exchange to the sanitized return route', () => {
     const exchangeGoogleOAuthCode = vi.fn().mockRejectedValue(new Error('exchange failed'));
     useAuthStore.setState({ exchangeGoogleOAuthCode });
 
@@ -67,16 +67,18 @@ test('returns a failed OAuth exchange to the sanitized return route', async () =
         '/oauth/callback?code=bad-code&returnTo=%2Factivity%3Ffilter%3Dmine%23latest',
     );
 
-    expect((await screen.findByTestId('destination')).textContent).toBe(
-        '/activity?filter=mine#latest',
-    );
-    expect(exchangeGoogleOAuthCode).toHaveBeenCalledWith('bad-code');
+    return screen.findByTestId('destination').then(destination => {
+        expect(destination.textContent).toBe('/activity?filter=mine#latest');
+        expect(exchangeGoogleOAuthCode).toHaveBeenCalledWith('bad-code');
+    });
 });
 
-test('falls back home instead of redirecting back into the OAuth callback', async () => {
+test('falls back home instead of redirecting back into the OAuth callback', () => {
     renderCallback(
         '/oauth/callback?returnTo=%2Foauth%2Fcallback%3Fcode%3Dloop',
     );
 
-    expect((await screen.findByTestId('destination')).textContent).toBe('/');
+    return screen.findByTestId('destination').then(destination => {
+        expect(destination.textContent).toBe('/');
+    });
 });
