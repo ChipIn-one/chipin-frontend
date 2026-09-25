@@ -94,22 +94,23 @@ export const fetchGroups = (signal?: AbortSignal): Promise<GroupResponse[]> => {
 ## Online-First Domain Mutations
 
 - Backend responses are the only canonical source for financial and domain state.
-- Expense, settlement, reverse, group lifecycle, and friend mutations live in their owning Zustand
-  stores. Do not add a generic command layer, mutation store, mutation map, or resource registry.
+- Expense, settlement, reverse, group lifecycle, and known-user mutations live in their owning Zustand
+  stores. Existing `friend`-named public/store identifiers are legacy compatibility names and are not
+  renamed incidentally. Do not add a generic command layer, mutation store, mutation map, or resource registry.
 - After mutation success, the action starts the required canonical fetch actions in one explicit
   `Promise.all`. Read actions record their own normalized errors and resolve, so a refresh failure
   cannot turn a confirmed backend mutation into a rejected mutation Promise. Do not patch balances,
-  debts, totals, activity, friends, groups, or dashboard data locally.
+  debts, totals, activity, known-user data, groups, or dashboard data locally.
 - `dashboardStore` owns the `balances` and `activity` fields returned by `/dashboard`. Dashboard
   summaries derive totals from that confirmed response and the separately fetched currency rates.
 - Required refreshes are:
 
   | Mutation | Canonical fetch actions |
   | --- | --- |
-  | Expense / settlement / reverse | dashboard, activity, and selected group detail or friends; current activity children when applicable |
-  | Group delete / leave | groups, friends, dashboard, activity |
-  | Group member removal | selected group detail, friends, dashboard, activity |
-  | Friend removal | friends |
+  | Expense / settlement / reverse | dashboard, activity, and selected group detail or known-user data; current activity children when applicable |
+  | Group delete / leave | groups, known-user data, dashboard, activity |
+  | Group member removal | selected group detail, known-user data, dashboard, activity |
+  | Known-user removal | known-user data |
 
 - A mutation failure preserves the last confirmed state. A refresh failure after mutation success
   does not change the mutation result or show a second partial-success warning; the UI reports only
@@ -121,3 +122,9 @@ export const fetchGroups = (signal?: AbortSignal): Promise<GroupResponse[]> => {
   identical pending reads in the same channel reuse one Promise, and stale responses never update
   state. Each store owns and resets its channels; do not add a global request registry or string key
   map.
+
+## Activity Client Notes
+
+For activity feed/event wire handling, read
+[`docs/api-notes/activity.md`](../../api-notes/activity.md). The link is repository navigation;
+managed Codex Review must not be assumed to load linked documentation automatically.
