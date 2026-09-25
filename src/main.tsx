@@ -37,10 +37,10 @@ const Main = () => {
             <ModalOverlayGlobalStyles />
             <Theme
                 appearance={themeName}
-                accentColor="jade"
+                accentColor="grass"
                 grayColor="olive"
                 radius="large"
-                panelBackground="translucent"
+                panelBackground="solid"
                 hasBackground
             >
                 <BrowserRouter>

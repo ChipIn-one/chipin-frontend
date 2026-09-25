@@ -63,7 +63,7 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
                 $isSoloMode={isSoloMode}
                 size="4"
                 radius="full"
-                color={isSoloMode ? 'violet' : 'jade'}
+                color={isSoloMode ? 'violet' : 'grass'}
                 aria-label={t('buttons.addExpense')}
                 loading={isDashboardLoading}
                 disabled={!canAddExpense}
@@ -78,7 +78,7 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
         <Button
             size="3"
             radius="large"
-            color={isSoloMode ? 'violet' : 'jade'}
+            color={isSoloMode ? 'violet' : 'grass'}
             loading={isDashboardLoading}
             disabled={!canAddExpense}
             onClick={() => openAddExpenseModal()}

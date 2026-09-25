@@ -20,7 +20,7 @@ const AuthModal = ({ children }: Props) => {
             <Avatar
                 size="4"
                 variant="soft"
-                color="jade"
+                color="grass"
                 fallback={<LucideReceiptText size={20} />}
             />
             <Text size="2" color="gray">
