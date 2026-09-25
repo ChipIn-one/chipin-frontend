@@ -8,27 +8,10 @@ import {
     resolveApiErrorMessage,
     resolveApiErrorMessageFromError,
 } from 'helpers/errors';
+import { resolveOAuthReturnTo } from 'helpers/url';
 import { useAuthStore } from 'store/authStore';
 
 import PageLoader from 'basics/PageLoader';
-
-const resolveReturnTo = (returnTo: string | null): string => {
-    if (!returnTo) {
-        return ROUTES.HOME;
-    }
-
-    try {
-        const url = new URL(returnTo, window.location.origin);
-
-        if (url.origin !== window.location.origin || url.pathname === ROUTES.OAUTH_CALLBACK) {
-            return ROUTES.HOME;
-        }
-
-        return `${url.pathname}${url.search}${url.hash}`;
-    } catch {
-        return ROUTES.HOME;
-    }
-};
 
 export const OAuthCallbackPage = () => {
     const { t } = useTranslation('errors');
@@ -46,12 +29,12 @@ export const OAuthCallbackPage = () => {
         hasStartedExchange.current = true;
 
         const code = searchParams.get('code')?.trim();
-        const returnTo = resolveReturnTo(searchParams.get('returnTo'));
+        const returnTo = resolveOAuthReturnTo(searchParams.get('returnTo'));
 
         if (!code) {
             setUnauthenticated('error');
             toast.error(resolveApiErrorMessage(undefined, 'oauth.missing_code'));
-            navigate(ROUTES.SIGN_IN, { replace: true });
+            navigate(returnTo, { replace: true });
             return;
         }
 
@@ -64,7 +47,7 @@ export const OAuthCallbackPage = () => {
                     error,
                     t('AUTH.INVALID_OAUTH_EXCHANGE_CODE'),
                 ));
-                navigate(ROUTES.SIGN_IN, { replace: true });
+                navigate(returnTo, { replace: true });
             });
     }, [exchangeGoogleOAuthCode, navigate, searchParams, setUnauthenticated, t]);
 

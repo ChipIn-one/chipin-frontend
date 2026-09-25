@@ -53,3 +53,10 @@ test('renders the approved mobile sign-in composition without the old intro bloc
         ).toBeNull();
     });
 });
+
+test('can render as an always-open auth gate without a trigger', () => {
+    render(<AuthModal isOpened isCloseDisabled />);
+
+    expect(screen.getByRole('dialog', { name: 'Welcome to ChipIn' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Close' }).hasAttribute('disabled')).toBe(true);
+});

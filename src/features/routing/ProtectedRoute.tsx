@@ -4,7 +4,7 @@ import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 
 import PageLoader from 'basics/PageLoader';
-import SignInPage from 'pages/SignInPage';
+import { AuthModal } from 'components/modals/auth-modal';
 
 interface Props {
     children: React.ReactNode;
@@ -19,7 +19,7 @@ export const ProtectedRoute = ({ children }: Props) => {
     }
 
     if (!isLoggedIn) {
-        return <SignInPage />;
+        return <AuthModal isOpened isCloseDisabled />;
     }
 
     return (

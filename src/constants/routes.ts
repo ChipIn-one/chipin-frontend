@@ -32,11 +32,6 @@ export const ROUTE_META = [
         descriptionKey: 'home.description',
     },
     {
-        path: ROUTES.SIGN_IN,
-        titleKey: 'signIn.title',
-        descriptionKey: 'signIn.description',
-    },
-    {
         path: ROUTES.PRIVACY,
         titleKey: 'privacy.title',
         descriptionKey: 'privacy.description',
