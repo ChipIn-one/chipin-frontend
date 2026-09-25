@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Button, Flex, Text } from '@radix-ui/themes';
 
 import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_KEYS } from 'constants/category';
-import { EXPENSE_CATEGORY_ICONS } from 'constants/category-icons';
+import { EXPENSE_CATEGORY_UI } from 'constants/category-ui';
 
 import type { SearchSelectProps } from './SearchSelect';
 import { SearchSelect } from './SearchSelect';
@@ -51,7 +51,8 @@ const CategorySearchSelect = ({
         for (const key of EXPENSE_CATEGORY_KEYS) {
             const category = EXPENSE_CATEGORIES[key];
             const categoryLabel = t(`expenses.modal.categories.${key}`);
-            const CategoryIcon = EXPENSE_CATEGORY_ICONS[category.icon];
+            const categoryUi = EXPENSE_CATEGORY_UI[key];
+            const CategoryIcon = categoryUi.icon;
 
             result.push({
                 value: key,
@@ -59,28 +60,29 @@ const CategorySearchSelect = ({
                 icon: (
                     <CategoryIcon
                         size={20}
-                        color={`var(--${category.color}-9)`}
+                        color={`var(--${categoryUi.color}-9)`}
                     />
                 ),
                 isIndented: false,
                 searchFields: [key, categoryLabel],
             });
 
-            for (const sub of category.subcategories) {
-                const subLabel = t(`expenses.modal.subcategories.${sub.key}`);
-                const SubcategoryIcon = EXPENSE_CATEGORY_ICONS[sub.icon];
+            for (const subcategory of category.subcategories) {
+                const subLabel = t(`expenses.modal.subcategories.${subcategory}`);
+                const subcategoryUi = categoryUi.subcategories[subcategory];
+                const SubcategoryIcon = subcategoryUi.icon;
 
                 result.push({
-                    value: sub.key,
+                    value: subcategory,
                     label: subLabel,
                     icon: (
                         <SubcategoryIcon
                             size={16}
-                            color={`var(--${sub.color}-9)`}
+                            color={`var(--${subcategoryUi.color}-9)`}
                         />
                     ),
                     isIndented: true,
-                    searchFields: [sub.key, subLabel, categoryLabel],
+                    searchFields: [subcategory, subLabel, categoryLabel],
                 });
             }
         }
