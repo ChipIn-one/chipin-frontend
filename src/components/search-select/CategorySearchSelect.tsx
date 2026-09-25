@@ -1,7 +1,79 @@
 import { useMemo } from 'react';
-import type { LucideProps } from 'lucide-react';
-import { LucideChevronDown } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import {
+    ArrowLeftRight,
+    Award,
+    Backpack,
+    Banknote,
+    Bike,
+    Bitcoin,
+    BookOpen,
+    Building2,
+    Bus,
+    CalendarDays,
+    Car,
+    CarFront,
+    CarTaxiFront,
+    Code,
+    Coffee,
+    CreditCard,
+    Droplets,
+    Dumbbell,
+    FileText,
+    Film,
+    FlaskConical,
+    Flower,
+    Fuel,
+    Gamepad2,
+    Gift,
+    Globe,
+    GraduationCap,
+    Hammer,
+    HandHeart,
+    HeartPulse,
+    Home,
+    Hotel,
+    Landmark,
+    Laptop,
+    LucideChevronDown,
+    MapPin,
+    MoreHorizontal,
+    Music,
+    Package,
+    Paintbrush,
+    ParkingSquare,
+    PartyPopper,
+    PawPrint,
+    PersonStanding,
+    Pill,
+    Plane,
+    Receipt,
+    RefreshCw,
+    Route,
+    Sandwich,
+    Scissors,
+    Shield,
+    ShieldCheck,
+    ShieldPlus,
+    Shirt,
+    ShoppingBag,
+    ShoppingCart,
+    Smartphone,
+    SmilePlus,
+    Sofa,
+    Sparkles,
+    Stethoscope,
+    TrendingDown,
+    TrendingUp,
+    Tv,
+    Users,
+    Utensils,
+    UtensilsCrossed,
+    Wifi,
+    Wine,
+    Wrench,
+    Zap,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Flex, Text } from '@radix-ui/themes';
@@ -13,18 +85,89 @@ import type { SearchSelectProps } from './SearchSelect';
 import { SearchSelect } from './SearchSelect';
 import type { SearchSelectItem } from './types';
 
-type LucideIconComponent = React.FC<LucideProps>;
-
 const EXPENSE_CATEGORY_KEYS = Object.keys(EXPENSE_CATEGORIES) as ExpenseCategory[];
 
-const resolveIcon = (iconName: string, size: number, color?: string) => {
-    const IconComponent = (LucideIcons as unknown as Record<string, LucideIconComponent>)[
-        `Lucide${iconName}`
-    ];
+const EXPENSE_ICON_COMPONENTS = {
+    ArrowLeftRight,
+    Award,
+    Backpack,
+    Banknote,
+    Bike,
+    Bitcoin,
+    BookOpen,
+    Building2,
+    Bus,
+    CalendarDays,
+    Car,
+    CarFront,
+    CarTaxiFront,
+    Code,
+    Coffee,
+    CreditCard,
+    Droplets,
+    Dumbbell,
+    FileText,
+    Film,
+    FlaskConical,
+    Flower,
+    Fuel,
+    Gamepad2,
+    Gift,
+    Globe,
+    GraduationCap,
+    Hammer,
+    HandHeart,
+    HeartPulse,
+    Home,
+    Hotel,
+    Landmark,
+    Laptop,
+    MapPin,
+    MoreHorizontal,
+    Music,
+    Package,
+    Paintbrush,
+    ParkingSquare,
+    PartyPopper,
+    PawPrint,
+    PersonStanding,
+    Pill,
+    Plane,
+    Receipt,
+    RefreshCw,
+    Route,
+    Sandwich,
+    Scissors,
+    Shield,
+    ShieldCheck,
+    ShieldPlus,
+    Shirt,
+    ShoppingBag,
+    ShoppingCart,
+    Smartphone,
+    SmilePlus,
+    Sofa,
+    Sparkles,
+    Stethoscope,
+    TrendingDown,
+    TrendingUp,
+    Tv,
+    Users,
+    Utensils,
+    UtensilsCrossed,
+    Wifi,
+    Wine,
+    Wrench,
+    Zap,
+} satisfies Record<string, LucideIcon>;
 
+type ExpenseIconName = keyof typeof EXPENSE_ICON_COMPONENTS;
+
+const resolveIcon = (iconName: ExpenseIconName, size: number, color?: string) => {
+    const IconComponent = EXPENSE_ICON_COMPONENTS[iconName];
     const stroke = color ? `var(--${color}-9)` : undefined;
 
-    return IconComponent ? <IconComponent size={size} color={stroke} /> : null;
+    return <IconComponent size={size} color={stroke} />;
 };
 
 type CategorySearchSelectProps = Pick<
