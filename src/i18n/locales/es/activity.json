@@ -4,6 +4,7 @@
     "filterAll": "Todo",
     "filterExpenses": "Gastos",
     "filterSettlements": "Liquidaciones",
+    "filterSettingsAction": "Filtros de actividad",
     "emptyTitle": "Aún sin actividad",
     "emptyDescription": "Aquí aparecerán los gastos y liquidaciones recientes.",
     "endOfFeed": "Eso es todo por ahora",

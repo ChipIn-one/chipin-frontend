@@ -27,8 +27,9 @@ const ToastLoadingIcon = () => <Spinner size="2" />;
 
 const Main = () => {
     const { resolvedTheme } = useTheme();
-    const themeName = (resolvedTheme as 'light' | 'dark') || 'system';
-    const styledThemeParams = isThemeDark(themeName) ? darkThemeStyled : lightThemeStyled;
+    const isDarkTheme = isThemeDark(resolvedTheme);
+    const themeName = isDarkTheme ? 'dark' : 'light';
+    const styledThemeParams = isDarkTheme ? darkThemeStyled : lightThemeStyled;
     const isMobile = useIsMobile();
 
     return (
