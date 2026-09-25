@@ -23,14 +23,15 @@ import 'styles/radixStylesOverwrite.css';
 
 import 'i18n';
 
+const sentryDsn = import.meta.env.VITE_SENTRY_DSN?.trim() || undefined;
 const sentryEnvironment = resolveTelemetryEnvironment(
     import.meta.env.VITE_SENTRY_ENVIRONMENT,
     window.location.hostname,
 );
 
 Sentry.init({
-    dsn: 'https://9c23eacd86e99a489e72c35877a1f6e6@o4510982101794816.ingest.de.sentry.io/4510982104154192',
-    enabled: import.meta.env.VITE_SENTRY_ENABLED,
+    dsn: sentryDsn,
+    enabled: import.meta.env.VITE_SENTRY_ENABLED && sentryDsn !== undefined,
     environment: sentryEnvironment,
     release: APP_VERSION,
     sampleRate: 1,
