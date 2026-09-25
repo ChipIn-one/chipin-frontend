@@ -5,9 +5,9 @@
     "tokenPersistenceFailed": "Other sessions were ended, but this device couldn’t stay signed in. Please sign in again."
   },
   "common": {
-    "disconnect": "You have been disconnected.",
-    "disconnectDescription": "Don't worry, your changes will be saved. Attempting to reconnect...",
-    "reconnected": "Your connection has been restored.",
+    "disconnect": "You're offline.",
+    "disconnectDescription": "Some actions may be unavailable until your connection is restored.",
+    "reconnected": "You're back online.",
     "requestFailed": "Something went wrong. Please try again."
   },
   "group": {
@@ -31,7 +31,6 @@
   },
   "pwa": {
     "installing": "Installing application on your home screen...",
-    "offlineReady": "App is ready to work offline",
     "updateAvailable": "New version available",
     "updateAction": "Update",
     "laterAction": "Later"
