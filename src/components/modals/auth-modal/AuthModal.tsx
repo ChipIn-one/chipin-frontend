@@ -10,7 +10,7 @@ import SharedExpensesIllustration from 'assets/auth-shared-expenses.webp';
 import { BaseModal } from '../base-modal';
 import { OverlayBody } from '../components';
 
-import { AuthLayout, IllustrationPanel, SharedExpensesImage } from './styled';
+import { IllustrationPanel, SharedExpensesImage } from './styled';
 
 interface Props {
     children: React.ReactNode;
@@ -21,7 +21,7 @@ const AuthModal = ({ children }: Props) => {
 
     const content = (
         <OverlayBody fillHeight>
-            <AuthLayout direction="column" align="center" gap="5" height="100%">
+            <Flex direction="column" align="center" gap="5" height="100%">
                 <Flex direction="column" align="center" gap="2" width="100%">
                     <IllustrationPanel
                         align="center"
@@ -65,7 +65,7 @@ const AuthModal = ({ children }: Props) => {
                         </Text>
                     </Flex>
                 </Flex>
-            </AuthLayout>
+            </Flex>
         </OverlayBody>
     );
 
@@ -75,7 +75,6 @@ const AuthModal = ({ children }: Props) => {
             title={t('modal.title')}
             accessibleDescription={t('modal.trust')}
             content={content}
-            headerSafeArea
         />
     );
 };

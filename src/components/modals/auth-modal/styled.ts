@@ -4,14 +4,6 @@ import styled from 'styled-components';
 import Image from 'basics/Image';
 import { MEDIA_QUERIES } from 'constants/breakpoints';
 
-const AuthLayout = styled(Flex)`
-    @media ${MEDIA_QUERIES.belowSm} {
-        padding-right: env(safe-area-inset-right);
-        padding-bottom: env(safe-area-inset-bottom);
-        padding-left: env(safe-area-inset-left);
-    }
-`;
-
 const IllustrationPanel = styled(Flex)`
     max-width: 390px;
     overflow: hidden;
@@ -35,4 +27,4 @@ const SharedExpensesImage = styled(Image)`
     }
 `;
 
-export { AuthLayout, IllustrationPanel, SharedExpensesImage };
+export { IllustrationPanel, SharedExpensesImage };

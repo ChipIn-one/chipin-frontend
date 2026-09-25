@@ -7,12 +7,11 @@ import { Header, HeaderContainer } from './styled';
 interface Props {
     title: ReactNode;
     closeControl?: ReactNode;
-    safeArea?: boolean;
 }
 
-const OverlayHeader = ({ title, closeControl, safeArea = false }: Props) => {
+const OverlayHeader = ({ title, closeControl }: Props) => {
     return (
-        <HeaderContainer $safeArea={safeArea}>
+        <HeaderContainer>
             <Header>
                 {title}
                 {closeControl}

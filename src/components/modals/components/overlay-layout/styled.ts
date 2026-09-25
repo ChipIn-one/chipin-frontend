@@ -33,19 +33,14 @@ const ModalOverlayGlobalStyles = createGlobalStyle`
     }
 `;
 
-const HeaderContainer = styled.div<{ $safeArea: boolean }>`
+const HeaderContainer = styled.div`
     flex-shrink: 0;
     background: inherit;
 
     @media ${MEDIA_QUERIES.belowSm} {
         position: sticky;
         top: 0;
-        padding: ${({ $safeArea }) =>
-            $safeArea
-                ? `calc(var(--space-4) + env(safe-area-inset-top))
-                    calc(var(--space-4) + env(safe-area-inset-right)) 0
-                    calc(var(--space-4) + env(safe-area-inset-left))`
-                : 'var(--space-4) var(--space-4) 0'};
+        padding: var(--space-4) var(--space-4) 0;
     }
 `;
 
