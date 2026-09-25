@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 
 import { Flex, Heading, Text } from '@radix-ui/themes';
 
-import Image from 'basics/Image';
 import AuthButtons from 'components/AuthButtons';
 
 import SharedExpensesIllustration from 'assets/auth-shared-expenses.webp';
@@ -32,7 +31,6 @@ const AuthModal = ({ children }: Props) => {
                         aria-hidden="true"
                     >
                         <SharedExpensesImage
-                            as={Image}
                             src={SharedExpensesIllustration}
                             alt=""
                             width="100%"
