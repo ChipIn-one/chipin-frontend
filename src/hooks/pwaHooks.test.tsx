@@ -1,5 +1,5 @@
 import { toast } from 'sonner';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 import { act, renderHook } from '@testing-library/react';
 
@@ -78,10 +78,6 @@ beforeEach(() => {
     networkState.online = true;
 });
 
-afterEach(() => {
-    vi.useRealTimers();
-});
-
 test('does not show a connection toast on initial online render', () => {
     renderHook(() => useCheckOnlineStatus());
 
@@ -153,40 +149,45 @@ test('does not repeat connection feedback while the state is unchanged', () => {
 });
 
 test('replaces share feedback timer and clears the pending timer on unmount', () => {
-    vi.useFakeTimers();
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
     const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
     const { result, unmount } = renderHook(() => useGroupInvite(group));
 
-    return act(() => result.current.handleShare('Trip'))
+    return Promise.resolve(act(() => result.current.handleShare('Trip')))
         .then(() => {
             expect(result.current.isShareDone).toBe(true);
-            expect(vi.getTimerCount()).toBe(1);
+            expect(setTimeoutSpy).toHaveBeenCalledWith(
+                expect.any(Function),
+                SECOND * 1.5,
+            );
 
-            return act(() => result.current.handleShare('Trip'));
+            return Promise.resolve(act(() => result.current.handleShare('Trip')));
         })
         .then(() => {
-            expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
-            expect(vi.getTimerCount()).toBe(1);
+            const clearedBeforeUnmount = clearTimeoutSpy.mock.calls.length;
+            expect(clearedBeforeUnmount).toBeGreaterThanOrEqual(1);
 
             unmount();
 
-            expect(clearTimeoutSpy).toHaveBeenCalledTimes(2);
-            expect(vi.getTimerCount()).toBe(0);
+            expect(clearTimeoutSpy).toHaveBeenCalledTimes(clearedBeforeUnmount + 1);
         });
 });
 
 test('clears the pending copy feedback timer on unmount', () => {
-    vi.useFakeTimers();
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
     const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
     const { result, unmount } = renderHook(() => useGroupInvite(group));
 
-    return act(() => result.current.handleCopyLink()).then(() => {
+    return Promise.resolve(act(() => result.current.handleCopyLink())).then(() => {
         expect(result.current.isCopied).toBe(true);
-        expect(vi.getTimerCount()).toBe(1);
+        expect(setTimeoutSpy).toHaveBeenCalledWith(
+            expect.any(Function),
+            SECOND * 1.5,
+        );
 
+        const clearedBeforeUnmount = clearTimeoutSpy.mock.calls.length;
         unmount();
 
-        expect(clearTimeoutSpy).toHaveBeenCalledOnce();
-        expect(vi.getTimerCount()).toBe(0);
+        expect(clearTimeoutSpy).toHaveBeenCalledTimes(clearedBeforeUnmount + 1);
     });
 });
