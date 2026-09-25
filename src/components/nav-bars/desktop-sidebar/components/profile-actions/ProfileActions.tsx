@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import { LucideLogOut } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 
 import { Button, Flex } from '@radix-ui/themes';
 
-import { ROUTES } from 'constants/routes';
 import { useAuthStore } from 'store/authStore';
 import { selectAuthSignOutLoading, selectUserSelfLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
@@ -21,7 +19,6 @@ interface Props {
 
 const ProfileActions = ({ isSoloMode }: Props) => {
     const { t } = useTranslation('common');
-    const navigate = useNavigate();
     const [isExpanded, setIsExpanded] = useState(false);
     const isUserLoading = useLoadingStore(selectUserSelfLoading);
     const isSigningOut = useLoadingStore(selectAuthSignOutLoading);
@@ -31,12 +28,6 @@ const ProfileActions = ({ isSoloMode }: Props) => {
 
     const onToggle = () => {
         setIsExpanded(expanded => !expanded);
-    };
-
-    const onSignOut = () => {
-        signOut().then(() => {
-            navigate(ROUTES.HOME, { replace: true });
-        });
     };
 
     return (
@@ -64,7 +55,7 @@ const ProfileActions = ({ isSoloMode }: Props) => {
             >
                 <ProfileSignOutContent>
                     <Button
-                        onClick={onSignOut}
+                        onClick={signOut}
                         disabled={!isExpanded || isSigningOut}
                         tabIndex={isExpanded ? 0 : -1}
                         loading={isSigningOut}
