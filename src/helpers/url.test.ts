@@ -4,6 +4,8 @@ import { ROUTES } from 'constants/routes';
 
 import { getSocialAuthUrl, resolveOAuthReturnTo } from './url';
 
+const APP_ORIGIN = 'https://chipin.test';
+
 const getReturnToFromSocialAuthUrl = () => {
     const authUrl = new URL(getSocialAuthUrl('google'));
     const callbackUrl = new URL(authUrl.searchParams.get('redirect_to') ?? '');
@@ -26,13 +28,13 @@ test('preserves the exact protected route including search and hash', () => {
 });
 
 test('keeps a same-origin OAuth return route intact', () => {
-    expect(resolveOAuthReturnTo('/activity?filter=mine#latest')).toBe(
+    expect(resolveOAuthReturnTo('/activity?filter=mine#latest', APP_ORIGIN)).toBe(
         '/activity?filter=mine#latest',
     );
 });
 
 test('rejects cross-origin OAuth return targets', () => {
-    expect(resolveOAuthReturnTo('https://example.com/group/123')).toBe(ROUTES.HOME);
+    expect(resolveOAuthReturnTo('https://example.com/group/123', APP_ORIGIN)).toBe(ROUTES.HOME);
 });
 
 test.each([
@@ -40,5 +42,5 @@ test.each([
     `${ROUTES.OAUTH_CALLBACK}/`,
     `${ROUTES.OAUTH_CALLBACK}?code=loop`,
 ])('prevents OAuth callback redirect loops for %s', returnTo => {
-    expect(resolveOAuthReturnTo(returnTo)).toBe(ROUTES.HOME);
+    expect(resolveOAuthReturnTo(returnTo, APP_ORIGIN)).toBe(ROUTES.HOME);
 });

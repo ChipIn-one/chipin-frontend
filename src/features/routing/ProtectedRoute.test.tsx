@@ -18,13 +18,13 @@ const CLOSE_AUTH_LABEL = 'Close auth';
 vi.mock('components/modals/auth-modal', () => ({
     AuthModal: ({
         isOpened,
-        setIsOpened,
+        onOpenChange,
     }: {
         isOpened?: boolean;
-        setIsOpened?: (isOpen: boolean) => void;
+        onOpenChange?: (isOpen: boolean) => void;
     }) => (
         <div data-testid="auth-modal" data-opened={String(isOpened)}>
-            <button type="button" onClick={() => setIsOpened?.(false)}>
+            <button type="button" onClick={() => onOpenChange?.(false)}>
                 {CLOSE_AUTH_LABEL}
             </button>
         </div>

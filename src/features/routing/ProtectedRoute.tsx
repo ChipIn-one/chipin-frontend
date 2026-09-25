@@ -31,7 +31,7 @@ export const ProtectedRoute = ({ children }: Props) => {
         return (
             <AuthModal
                 isOpened
-                setIsOpened={isOpen => {
+                onOpenChange={isOpen => {
                     if (!isOpen) {
                         navigate(ROUTES.HOME, { replace: true });
                     }

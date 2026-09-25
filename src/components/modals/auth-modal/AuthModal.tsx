@@ -15,10 +15,10 @@ import { IllustrationPanel, SharedExpensesImage } from './styled';
 interface Props {
     children?: React.ReactNode;
     isOpened?: boolean;
-    setIsOpened?: (isOpen: boolean) => void;
+    onOpenChange?: (isOpen: boolean) => void;
 }
 
-const AuthModal = ({ children, isOpened, setIsOpened }: Props) => {
+const AuthModal = ({ children, isOpened, onOpenChange }: Props) => {
     const { t } = useTranslation('auth');
 
     const content = (
@@ -78,7 +78,7 @@ const AuthModal = ({ children, isOpened, setIsOpened }: Props) => {
             accessibleDescription={t('modal.trust')}
             content={content}
             isOpened={isOpened}
-            setIsOpened={setIsOpened}
+            setIsOpened={onOpenChange}
         />
     );
 };

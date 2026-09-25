@@ -28,7 +28,10 @@ export const OAuthCallbackPage = () => {
         hasStartedExchange.current = true;
 
         const code = searchParams.get('code')?.trim();
-        const returnTo = resolveOAuthReturnTo(searchParams.get('returnTo'));
+        const returnTo = resolveOAuthReturnTo(
+            searchParams.get('returnTo'),
+            window.location.origin,
+        );
 
         if (!code) {
             setUnauthenticated('error');

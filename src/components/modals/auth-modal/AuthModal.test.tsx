@@ -56,13 +56,13 @@ test('renders the approved mobile sign-in composition without the old intro bloc
 
 test('can render as a controlled auth gate and request close', () => {
     const user = userEvent.setup();
-    const setIsOpened = vi.fn();
+    const onOpenChange = vi.fn();
 
-    render(<AuthModal isOpened setIsOpened={setIsOpened} />);
+    render(<AuthModal isOpened onOpenChange={onOpenChange} />);
 
     expect(screen.getByRole('dialog', { name: 'Welcome to ChipIn' })).toBeTruthy();
 
     return user.click(screen.getByRole('button', { name: 'Close' })).then(() => {
-        expect(setIsOpened).toHaveBeenCalledWith(false);
+        expect(onOpenChange).toHaveBeenCalledWith(false);
     });
 });

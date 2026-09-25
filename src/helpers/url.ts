@@ -3,18 +3,18 @@ import { ROUTES } from 'constants/routes';
 
 import { getChipInApiUrl, getChipInAppUrl } from './env';
 
-export const resolveOAuthReturnTo = (returnTo: string | null): string => {
+export const resolveOAuthReturnTo = (returnTo: string | null, origin: string): string => {
     if (!returnTo) {
         return ROUTES.HOME;
     }
 
     try {
-        const url = new URL(returnTo, window.location.origin);
+        const url = new URL(returnTo, origin);
         const isOAuthCallback =
             url.pathname === ROUTES.OAUTH_CALLBACK ||
             url.pathname === `${ROUTES.OAUTH_CALLBACK}/`;
 
-        if (url.origin !== window.location.origin || isOAuthCallback) {
+        if (url.origin !== origin || isOAuthCallback) {
             return ROUTES.HOME;
         }
 
