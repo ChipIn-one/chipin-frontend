@@ -97,7 +97,7 @@ test('redirects an explicit sign out to the landing page instead of showing auth
         </MemoryRouter>,
     );
 
-    expect(await screen.findByLabelText('Current route')).toHaveTextContent('/');
+    expect((await screen.findByLabelText('Current route')).textContent).toBe('/');
     expect(screen.queryByTestId('auth-modal')).toBeNull();
     expect(screen.queryByTestId('settings-content')).toBeNull();
 });
