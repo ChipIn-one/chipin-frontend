@@ -1,3 +1,4 @@
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import { act, render, screen } from '@testing-library/react';
@@ -26,6 +27,12 @@ vi.mock('components/modals/auth-modal', () => ({
         />
     ),
 }));
+
+const LocationPath = () => {
+    const location = useLocation();
+
+    return <output aria-label="Current route">{location.pathname}</output>;
+};
 
 beforeEach(() => {
     clearAuthTokens();
@@ -75,4 +82,22 @@ test('replaces protected content with the auth modal on the current route after 
     expect(`${window.location.pathname}${window.location.search}${window.location.hash}`).toBe(
         '/activity?filter=mine#latest',
     );
+});
+
+
+test('redirects an explicit sign out to the landing page instead of showing auth UI', async () => {
+    useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'signed_out' });
+
+    render(
+        <MemoryRouter initialEntries={['/settings']}>
+            <ProtectedRoute>
+                <div data-testid="settings-content" />
+            </ProtectedRoute>
+            <LocationPath />
+        </MemoryRouter>,
+    );
+
+    expect(await screen.findByLabelText('Current route')).toHaveTextContent('/');
+    expect(screen.queryByTestId('auth-modal')).toBeNull();
+    expect(screen.queryByTestId('settings-content')).toBeNull();
 });
