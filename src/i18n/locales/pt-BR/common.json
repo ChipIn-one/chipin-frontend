@@ -53,6 +53,8 @@
         "signIn": "Entrar",
         "testError": "Disparar erro de teste",
         "switchTheme": "Alternar tema",
+        "switchToLightTheme": "Mudar para o tema claro",
+        "switchToDarkTheme": "Mudar para o tema escuro",
         "addSubscriptionDay": "Adicionar 1 dia de assinatura",
         "devMenu": "Menu do desenvolvedor"
     },

@@ -4,6 +4,7 @@
     "filterAll": "All",
     "filterExpenses": "Expenses",
     "filterSettlements": "Settlements",
+    "filterSettingsAction": "Activity filters",
     "emptyTitle": "No activity yet",
     "emptyDescription": "Recent expenses and settlements will appear here.",
     "endOfFeed": "That's everything for now",
