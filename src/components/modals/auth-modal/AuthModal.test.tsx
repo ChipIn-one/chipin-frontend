@@ -46,7 +46,7 @@ test('renders the approved mobile sign-in composition without the old intro bloc
         ).toBeTruthy();
         expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeTruthy();
         expect(
-            screen.getByText('Secure sign-in with Google. No spam.'),
+            screen.getByText('Secure sign-in with Google. No spam.', { selector: 'span' }),
         ).toBeTruthy();
         expect(
             screen.queryByText('Sign in to track and split expenses with your friends'),
