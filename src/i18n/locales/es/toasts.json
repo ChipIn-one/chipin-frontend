@@ -5,9 +5,9 @@
         "tokenPersistenceFailed": "Las demás sesiones finalizaron, pero no se pudo mantener la sesión en este dispositivo. Inicia sesión de nuevo."
     },
     "common": {
-        "disconnect": "Se perdió la conexión.",
-        "disconnectDescription": "No te preocupes, tus cambios se guardarán. Intentando reconectar...",
-        "reconnected": "La conexión ha sido restablecida.",
+        "disconnect": "Estás sin conexión.",
+        "disconnectDescription": "Algunas acciones pueden no estar disponibles hasta que se restablezca la conexión.",
+        "reconnected": "Vuelves a estar en línea.",
         "requestFailed": "Algo salió mal. Inténtalo de nuevo."
     },
     "group": {
@@ -31,7 +31,6 @@
     },
     "pwa": {
         "installing": "Instalando la aplicación en tu pantalla de inicio...",
-        "offlineReady": "La app está lista para funcionar sin conexión",
         "updateAvailable": "Nueva versión disponible",
         "updateAction": "Actualizar",
         "laterAction": "Después"
