@@ -1,3 +1,4 @@
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
@@ -41,13 +42,22 @@ const user = {
 
 const signOut = useAuthStore.getState().signOut;
 
+const LocationPath = () => {
+    const location = useLocation();
+
+    return <output aria-label="Current route">{location.pathname}</output>;
+};
+
 const renderProfileActions = (isSoloMode = false) => {
     return render(
-        <ThemeProvider theme={lightThemeStyled}>
-            <Theme>
-                <ProfileActions isSoloMode={isSoloMode} />
-            </Theme>
-        </ThemeProvider>,
+        <MemoryRouter initialEntries={['/settings']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <ProfileActions isSoloMode={isSoloMode} />
+                    <LocationPath />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
     );
 };
 
@@ -108,6 +118,7 @@ test('signs out directly from the expanded profile actions', () => {
         .then(() => interaction.click(screen.getByRole('button', { name: 'Sign Out' })))
         .then(() => {
             expect(onSignOut).toHaveBeenCalledOnce();
+            expect(screen.getByLabelText('Current route').textContent).toBe('/');
         });
 });
 
