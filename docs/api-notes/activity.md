@@ -27,11 +27,12 @@ specification. Resolve the canonical sources from:
   for list identity/key and ordering, and use `lastEvent` for current display values.
 - **ACT-008 — split representation:** `sharingMode` and calculated `shares` are independent
   snapshot data. Do not infer one from the other.
-- **ACT-023 — cursor ownership:** cursors belong to one feed and are not interchangeable.
-  `/dashboard` supplies the first preview page without a cursor; continuation uses
-  `/users/self/activity-previews` and that feed's cursor.
-- **ACT-022 — preview filtering:** transfer events and chains whose latest event is a reversal
-  do not appear in previews. Do not reintroduce them with client-side merging or fallback logic.
+- **ACT-023 — cursor ownership:** keep continuation state isolated per activity feed. Dashboard
+  preview requests omit a cursor, and continuation must pass only the cursor owned by the
+  corresponding user-preview feed. ACT-023 remains the canonical source for feed semantics.
+- **ACT-022 — preview filtering:** treat preview responses as authoritative. Client-side merge
+  or fallback logic must not synthesize transfer chains or reversed chains that the backend
+  omitted. ACT-022 remains the canonical source for filtering semantics.
 
 ## Current implementation deviation
 
