@@ -18,7 +18,7 @@ vi.mock('react-i18next', () => ({
                 'modal.headlineAccent': 'without the mess.',
                 'modal.headlinePrimary': 'Split shared spending',
                 'modal.title': 'Welcome to ChipIn',
-                'modal.trust': 'We only use Google sign-in for secure access. No spam.',
+                'modal.trust': 'Secure sign-in with Google. No spam.',
             };
 
             return translations[key] ?? key;
@@ -46,7 +46,7 @@ test('renders the approved mobile sign-in composition without the old intro bloc
         ).toBeTruthy();
         expect(screen.getByRole('button', { name: 'Sign in with Google' })).toBeTruthy();
         expect(
-            screen.getByText('We only use Google sign-in for secure access. No spam.'),
+            screen.getByText('Secure sign-in with Google. No spam.'),
         ).toBeTruthy();
         expect(
             screen.queryByText('Sign in to track and split expenses with your friends'),

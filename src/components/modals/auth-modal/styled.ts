@@ -51,11 +51,8 @@ const IllustrationPanel = styled.div`
     background:
         radial-gradient(circle at 50% 18%, var(--grass-a5), transparent 58%),
         var(--color-panel-solid);
-    border: 1px solid var(--grass-a6);
     border-radius: var(--radius-5);
-    box-shadow:
-        inset 0 1px 0 var(--gray-a3),
-        var(--shadow-3);
+    box-shadow: var(--shadow-3);
 
     @media ${MEDIA_QUERIES.belowSm} {
         max-width: 360px;
@@ -78,6 +75,7 @@ const HeroImage = styled.img`
 
 const AuthHeadline = styled(Heading)`
     width: 100%;
+    margin-top: calc(-1 * var(--space-2));
     letter-spacing: -0.02em;
     line-height: 1.08;
 `;

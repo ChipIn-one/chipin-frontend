@@ -1,4 +1,4 @@
-import { LucideLock } from 'lucide-react';
+import { LucideShieldLock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Flex, Text } from '@radix-ui/themes';
@@ -45,7 +45,7 @@ const AuthModal = ({ children }: Props) => {
                     </GoogleAction>
                     <Flex align="center" justify="center" gap="2">
                         <Text color="gray">
-                            <LucideLock size={14} />
+                            <LucideShieldLock size={14} />
                         </Text>
                         <Text size="1" color="gray" align="center">
                             {t('modal.trust')}
