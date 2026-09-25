@@ -19,7 +19,6 @@ const IllustrationPanel = styled(Flex)`
         radial-gradient(circle at 50% 18%, var(--grass-a5), transparent 58%),
         var(--color-panel-solid);
     border-radius: var(--radius-5);
-    box-shadow: var(--shadow-3);
 
     @media ${MEDIA_QUERIES.belowSm} {
         max-width: 360px;
