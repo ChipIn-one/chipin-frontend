@@ -30,6 +30,7 @@ export type {
     ApiGroupsResponse,
     ApiOAuthTokenPairResponse,
     ApiParticipantShare,
+    ApiPremiumPromoRemainingResponse,
     ApiRefreshTokenPairResponse,
     ApiSelfUserResponse,
     ApiSettlementDetails,

@@ -202,6 +202,10 @@ export interface ApiSettlementLedgerEntry extends ApiLedgerEntryBase {
 
 export type ApiCreateLedgerResponse = ApiExpenseLedgerEntry | ApiSettlementLedgerEntry;
 
+export interface ApiPremiumPromoRemainingResponse {
+    premiumPromoRemaining: number;
+}
+
 export interface ApiOAuthTokenPairResponse {
     token: string;
     refresh_token: string;

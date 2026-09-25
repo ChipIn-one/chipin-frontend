@@ -4,6 +4,7 @@ import { BaseAlertDialog } from './base-alert-dialog';
 import { BaseModal } from './base-modal';
 import { ModalOverlayGlobalStyles } from './components';
 import { CreateUpdateGroupModal } from './create-update-group-modal';
+import { EarlySupporterPromoModal } from './early-supporter-promo-modal';
 import { GroupQRModal } from './group-qr-modal';
 import { KickGroupMemberAlertDialog } from './kick-group-member-alert-dialog';
 import { LeaveGroupAlertDialog } from './leave-group-alert-dialog';
@@ -19,6 +20,7 @@ export {
     BaseAlertDialog,
     BaseModal,
     CreateUpdateGroupModal,
+    EarlySupporterPromoModal,
     GroupQRModal,
     KickGroupMemberAlertDialog,
     LeaveGroupAlertDialog,

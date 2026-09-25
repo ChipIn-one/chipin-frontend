@@ -108,6 +108,10 @@ const Footer = styled.div`
             width: 100%;
             min-width: 0;
         }
+
+        & > :only-child {
+            grid-column: 1 / -1;
+        }
     }
 `;
 
