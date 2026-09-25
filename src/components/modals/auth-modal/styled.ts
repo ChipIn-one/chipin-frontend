@@ -38,88 +38,42 @@ const AuthLayout = styled.div`
     }
 `;
 
-const HeroIllustration = styled.div.attrs({ 'aria-hidden': true })`
-    position: relative;
+const IllustrationPanel = styled.div`
+    display: flex;
     flex-shrink: 0;
-    width: min(100%, 260px);
-    height: 180px;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 390px;
+    box-sizing: border-box;
+    padding: var(--space-3);
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 50% 18%, var(--grass-a5), transparent 58%),
+        var(--color-panel-solid);
+    border: 1px solid var(--grass-a6);
+    border-radius: var(--radius-5);
+    box-shadow:
+        inset 0 1px 0 var(--gray-a3),
+        var(--shadow-3);
 
     @media ${MEDIA_QUERIES.belowSm} {
-        height: clamp(136px, 25dvh, 180px);
+        max-width: 360px;
+        padding: var(--space-2);
     }
 `;
 
-const ReceiptNode = styled.div`
-    position: absolute;
-    z-index: 2;
-    top: 52%;
-    left: 50%;
-    display: grid;
-    width: 88px;
-    height: 104px;
-    transform: translate(-50%, -50%);
-    place-items: center;
-    color: var(--grass-9);
-    background: var(--color-panel-solid);
-    border: 1px solid var(--gray-a6);
-    border-radius: var(--radius-4);
-    box-shadow: var(--shadow-3);
-`;
+const HeroImage = styled.img`
+    display: block;
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    max-height: 280px;
+    object-fit: contain;
 
-const AvatarPosition = styled.div`
-    position: absolute;
-    z-index: 3;
-    display: flex;
-    padding: 3px;
-    background: var(--color-panel-solid);
-    border: 1px solid var(--gray-a5);
-    border-radius: 999px;
-    box-shadow: var(--shadow-2);
-`;
-
-const TopAvatar = styled(AvatarPosition)`
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-`;
-
-const LeftAvatar = styled(AvatarPosition)`
-    bottom: 2%;
-    left: 8%;
-`;
-
-const RightAvatar = styled(AvatarPosition)`
-    right: 8%;
-    bottom: 2%;
-`;
-
-const Connection = styled.div`
-    position: absolute;
-    z-index: 1;
-    height: 1px;
-    transform-origin: left center;
-    background: linear-gradient(90deg, var(--grass-a3), var(--grass-a8));
-`;
-
-const ConnectionTop = styled(Connection)`
-    top: 26%;
-    left: 50%;
-    width: 38px;
-    transform: rotate(90deg);
-`;
-
-const ConnectionLeft = styled(Connection)`
-    bottom: 25%;
-    left: 25%;
-    width: 62px;
-    transform: rotate(-25deg);
-`;
-
-const ConnectionRight = styled(Connection)`
-    right: 25%;
-    bottom: 25%;
-    width: 62px;
-    transform: rotate(205deg);
+    @media ${MEDIA_QUERIES.belowSm} {
+        max-height: clamp(160px, 28dvh, 250px);
+    }
 `;
 
 const AuthHeadline = styled(Heading)`
@@ -162,13 +116,7 @@ export {
     AuthBody,
     AuthHeadline,
     AuthLayout,
-    ConnectionLeft,
-    ConnectionRight,
-    ConnectionTop,
     GoogleAction,
-    HeroIllustration,
-    LeftAvatar,
-    ReceiptNode,
-    RightAvatar,
-    TopAvatar,
+    HeroImage,
+    IllustrationPanel,
 };

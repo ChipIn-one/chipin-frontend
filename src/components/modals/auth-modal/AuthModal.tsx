@@ -1,9 +1,11 @@
-import { LucideLock, LucideReceiptText, LucideUser } from 'lucide-react';
+import { LucideLock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Avatar, Flex, Text } from '@radix-ui/themes';
+import { Flex, Text } from '@radix-ui/themes';
 
 import AuthButtons from 'components/AuthButtons';
+
+import SharedExpensesIllustration from 'assets/auth-shared-expenses.webp';
 
 import { BaseModal } from '../base-modal';
 
@@ -13,15 +15,9 @@ import {
     AuthBody,
     AuthHeadline,
     AuthLayout,
-    ConnectionLeft,
-    ConnectionRight,
-    ConnectionTop,
     GoogleAction,
-    HeroIllustration,
-    LeftAvatar,
-    ReceiptNode,
-    RightAvatar,
-    TopAvatar,
+    HeroImage,
+    IllustrationPanel,
 } from './styled';
 
 interface Props {
@@ -34,43 +30,9 @@ const AuthModal = ({ children }: Props) => {
     const content = (
         <AuthBody>
             <AuthLayout>
-                <HeroIllustration>
-                    <ConnectionTop />
-                    <ConnectionLeft />
-                    <ConnectionRight />
-
-                    <ReceiptNode>
-                        <LucideReceiptText size={34} strokeWidth={1.8} />
-                    </ReceiptNode>
-
-                    <TopAvatar>
-                        <Avatar
-                            size="4"
-                            variant="soft"
-                            color="grass"
-                            radius="full"
-                            fallback={<LucideUser size={17} />}
-                        />
-                    </TopAvatar>
-                    <LeftAvatar>
-                        <Avatar
-                            size="4"
-                            variant="soft"
-                            color="blue"
-                            radius="full"
-                            fallback={<LucideUser size={17} />}
-                        />
-                    </LeftAvatar>
-                    <RightAvatar>
-                        <Avatar
-                            size="4"
-                            variant="soft"
-                            color="violet"
-                            radius="full"
-                            fallback={<LucideUser size={17} />}
-                        />
-                    </RightAvatar>
-                </HeroIllustration>
+                <IllustrationPanel aria-hidden="true">
+                    <HeroImage src={SharedExpensesIllustration} alt="" decoding="async" />
+                </IllustrationPanel>
 
                 <AuthHeadline as="h2" size={{ initial: '7', sm: '8' }} align="center">
                     <span>{t('modal.headlinePrimary')}</span>
