@@ -53,6 +53,8 @@
         "signIn": "Войти",
         "testError": "Вызвать тестовую ошибку",
         "switchTheme": "Сменить тему",
+        "switchToLightTheme": "Переключить на светлую тему",
+        "switchToDarkTheme": "Переключить на тёмную тему",
         "addSubscriptionDay": "Добавить 1 день подписки",
         "devMenu": "Меню разработчика"
     },

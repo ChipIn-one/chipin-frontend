@@ -45,7 +45,11 @@ const ActivityHeader = ({ isLoading, activeFilter, onFilterChange }: Props) => {
                     </Flex>
                 </Flex>
 
-                <IconButton variant="ghost" disabled>
+                <IconButton
+                    variant="ghost"
+                    aria-label={t('filterSettingsAction')}
+                    disabled
+                >
                     <LucideSlidersHorizontal size={20} />
                 </IconButton>
             </Flex>
