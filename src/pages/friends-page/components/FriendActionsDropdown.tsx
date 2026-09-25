@@ -15,7 +15,8 @@ import { useActivityStore } from 'store/activity-store';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import Dropdown from 'components/Dropdown';
-import { RemoveFriendAlertDialog, SettleUpModal } from 'components/modals/';
+import { RemoveFriendAlertDialog } from 'components/modals/remove-friend-alert-dialog';
+import { SettleUpModal } from 'components/modals/settle-up-modal';
 
 interface Props {
     friend: KnownUser;

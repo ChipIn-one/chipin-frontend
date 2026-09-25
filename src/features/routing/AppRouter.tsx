@@ -5,14 +5,18 @@ import { ROUTES } from 'constants/routes';
 
 import PageLoader from 'basics/PageLoader';
 import { InternalPageLayout } from 'components/internal-page-layout';
-import GroupJoinPage from 'pages/GroupJoinPage';
-import { OAuthCallbackPage } from 'pages/oauth-callback-page';
 import SignInPage from 'pages/SignInPage';
 
 import HomeRouteGuard from './HomeRouteGuard';
 import { ProtectedRoute } from './ProtectedRoute';
 import SoloRouteGuard from './SoloRouteGuard';
 
+const GroupJoinPage = lazy(() => import('pages/GroupJoinPage'));
+const OAuthCallbackPage = lazy(() =>
+    import('pages/oauth-callback-page').then(module => ({
+        default: module.OAuthCallbackPage,
+    })),
+);
 const HomePage = lazy(() => import('pages/HomePage'));
 const PrivacyPage = lazy(() => import('pages/PrivacyPage'));
 const TermsPage = lazy(() => import('pages/TermsPage'));

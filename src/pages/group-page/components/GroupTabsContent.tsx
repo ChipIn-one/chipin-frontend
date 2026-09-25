@@ -12,7 +12,7 @@ import type { Group } from 'api/chipin.types';
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 
 import { NoGroupExpensesEmptyState } from 'basics/empty-states';
-import { SettleUpModal } from 'components/modals';
+import { SettleUpModal } from 'components/modals/settle-up-modal';
 import { ActivityFeedSkeleton } from 'components/skeletons';
 import UsersRow from 'components/UsersRow';
 import { ActivityEventsList } from 'features/activity';

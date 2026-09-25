@@ -1,4 +1,3 @@
-import { AddExpenseModal } from './add-expense-modal';
 import { AuthModal } from './auth-modal';
 import { BaseAlertDialog } from './base-alert-dialog';
 import { BaseModal } from './base-modal';
@@ -14,7 +13,6 @@ import { SettleUpModal } from './settle-up-modal';
 import { UserAvatarModal } from './user-avatar-modal';
 
 export {
-    AddExpenseModal,
     AuthModal,
     BaseAlertDialog,
     BaseModal,

@@ -37,12 +37,10 @@ const SettingsRowButton = styled.button`
 `;
 
 import GroupRoleBadge from 'basics/GroupRoleBadge';
-import {
-    GroupQRModal,
-    KickGroupMemberAlertDialog,
-    LeaveGroupAlertDialog,
-    RemoveGroupAlertDialog,
-} from 'components/modals';
+import { GroupQRModal } from 'components/modals/group-qr-modal';
+import { KickGroupMemberAlertDialog } from 'components/modals/kick-group-member-alert-dialog';
+import { LeaveGroupAlertDialog } from 'components/modals/leave-group-alert-dialog';
+import { RemoveGroupAlertDialog } from 'components/modals/remove-group-alert-dialog';
 
 interface Props {
     group: Group;
