@@ -40,10 +40,7 @@ const HeaderContainer = styled.div`
     @media ${MEDIA_QUERIES.belowSm} {
         position: sticky;
         top: 0;
-        padding:
-            calc(var(--space-4) + env(safe-area-inset-top))
-            calc(var(--space-4) + env(safe-area-inset-right)) 0
-            calc(var(--space-4) + env(safe-area-inset-left));
+        padding: var(--space-4) var(--space-4) 0;
     }
 `;
 

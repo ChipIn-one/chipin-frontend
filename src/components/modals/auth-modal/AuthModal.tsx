@@ -1,24 +1,17 @@
 import { LucideShieldLock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Flex, Text } from '@radix-ui/themes';
+import { Flex, Heading, Text } from '@radix-ui/themes';
 
+import Image from 'basics/Image';
 import AuthButtons from 'components/AuthButtons';
 
 import SharedExpensesIllustration from 'assets/auth-shared-expenses.webp';
 
 import { BaseModal } from '../base-modal';
+import { OverlayBody } from '../components';
 
-import {
-    AccentLine,
-    ActionSection,
-    AuthBody,
-    AuthHeadline,
-    AuthLayout,
-    GoogleAction,
-    HeroImage,
-    IllustrationPanel,
-} from './styled';
+import { AuthLayout, IllustrationPanel, SharedExpensesImage } from './styled';
 
 interface Props {
     children: React.ReactNode;
@@ -28,21 +21,44 @@ const AuthModal = ({ children }: Props) => {
     const { t } = useTranslation('auth');
 
     const content = (
-        <AuthBody>
-            <AuthLayout>
-                <IllustrationPanel aria-hidden="true">
-                    <HeroImage src={SharedExpensesIllustration} alt="" decoding="async" />
-                </IllustrationPanel>
+        <OverlayBody>
+            <AuthLayout direction="column" align="center" gap="5" height="100%">
+                <Flex direction="column" align="center" gap="2" width="100%">
+                    <IllustrationPanel
+                        align="center"
+                        justify="center"
+                        width="100%"
+                        p={{ initial: '2', sm: '3' }}
+                        aria-hidden="true"
+                    >
+                        <SharedExpensesImage
+                            as={Image}
+                            src={SharedExpensesIllustration}
+                            alt=""
+                            width="100%"
+                            height="auto"
+                            decoding="async"
+                        />
+                    </IllustrationPanel>
 
-                <AuthHeadline as="h2" size={{ initial: '7', sm: '8' }} align="center">
-                    <span>{t('modal.headlinePrimary')}</span>
-                    <AccentLine>{t('modal.headlineAccent')}</AccentLine>
-                </AuthHeadline>
+                    <Heading as="h2" size={{ initial: '7', sm: '8' }} align="center">
+                        {t('modal.headlinePrimary')}
+                        <br />
+                        <Text as="span" color="grass">
+                            {t('modal.headlineAccent')}
+                        </Text>
+                    </Heading>
+                </Flex>
 
-                <ActionSection>
-                    <GoogleAction>
-                        <AuthButtons />
-                    </GoogleAction>
+                <Flex
+                    direction="column"
+                    gap="3"
+                    width="100%"
+                    maxWidth="360px"
+                    mt={{ initial: 'auto', sm: '5' }}
+                    pt={{ initial: '5', sm: '0' }}
+                >
+                    <AuthButtons />
                     <Flex align="center" justify="center" gap="2">
                         <Text color="gray">
                             <LucideShieldLock size={14} />
@@ -51,9 +67,9 @@ const AuthModal = ({ children }: Props) => {
                             {t('modal.trust')}
                         </Text>
                     </Flex>
-                </ActionSection>
+                </Flex>
             </AuthLayout>
-        </AuthBody>
+        </OverlayBody>
     );
 
     return (
