@@ -4,14 +4,13 @@ import { useTranslation } from 'react-i18next';
 
 import { Button, Flex, Text } from '@radix-ui/themes';
 
-import type { ExpenseCategory } from 'constants/chipin';
-import { EXPENSE_CATEGORIES } from 'constants/chipin';
+import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_KEYS } from 'constants/category';
+import { EXPENSE_CATEGORY_ICONS } from 'constants/category-icons';
 
 import type { SearchSelectProps } from './SearchSelect';
 import { SearchSelect } from './SearchSelect';
 import type { SearchSelectItem } from './types';
 
-const EXPENSE_CATEGORY_KEYS = Object.keys(EXPENSE_CATEGORIES) as ExpenseCategory[];
 
 type CategorySearchSelectProps = Pick<
     SearchSelectProps,
@@ -52,7 +51,7 @@ const CategorySearchSelect = ({
         for (const key of EXPENSE_CATEGORY_KEYS) {
             const category = EXPENSE_CATEGORIES[key];
             const categoryLabel = t(`expenses.modal.categories.${key}`);
-            const CategoryIcon = category.icon;
+            const CategoryIcon = EXPENSE_CATEGORY_ICONS[category.icon];
 
             result.push({
                 value: key,
@@ -69,7 +68,7 @@ const CategorySearchSelect = ({
 
             for (const sub of category.subcategories) {
                 const subLabel = t(`expenses.modal.subcategories.${sub.key}`);
-                const SubcategoryIcon = sub.icon;
+                const SubcategoryIcon = EXPENSE_CATEGORY_ICONS[sub.icon];
 
                 result.push({
                     value: sub.key,
