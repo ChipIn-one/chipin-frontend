@@ -14,11 +14,9 @@ const networkState = vi.hoisted(() => ({
 }));
 
 const hookMocks = vi.hoisted(() => ({
-    copyToClipboard: vi.fn((_value: string) => Promise.resolve()),
+    copyToClipboard: vi.fn(() => Promise.resolve()),
     detectNativeShare: vi.fn(() => false),
-    shareGroupInvite: vi.fn((_options: { url: string; title: string }) =>
-        Promise.resolve('shared' as const),
-    ),
+    shareGroupInvite: vi.fn(() => Promise.resolve('shared' as const)),
 }));
 
 vi.mock('@uidotdev/usehooks', () => ({
