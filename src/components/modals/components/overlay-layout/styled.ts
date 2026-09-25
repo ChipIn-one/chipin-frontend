@@ -52,7 +52,7 @@ const Header = styled.div`
     padding-bottom: var(--space-4);
 `;
 
-const Body = styled(ScrollArea)`
+const Body = styled(ScrollArea)<{ $fillHeight: boolean }>`
     min-width: 0;
     min-height: 0;
     flex: 1;
@@ -65,12 +65,13 @@ const Body = styled(ScrollArea)`
     & [data-radix-scroll-area-viewport] > div {
         width: 100%;
         min-width: 0 !important;
+        height: ${({ $fillHeight }) => ($fillHeight ? '100%' : 'auto')};
     }
-
 `;
 
-const BodyContent = styled.div`
+const BodyContent = styled.div<{ $fillHeight: boolean }>`
     width: 100%;
+    height: ${({ $fillHeight }) => ($fillHeight ? '100%' : 'auto')};
     min-width: 0;
     box-sizing: border-box;
     padding-top: var(--space-6);
