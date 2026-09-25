@@ -13,9 +13,8 @@ import AppRouter from './AppRouter';
 
 import 'i18n/index';
 
-const { ACTIVITY_ROUTE_CONTENT, HOME_ROUTE_CONTENT, JOIN_ROUTE_CONTENT } = vi.hoisted(() => ({
+const { ACTIVITY_ROUTE_CONTENT, JOIN_ROUTE_CONTENT } = vi.hoisted(() => ({
     ACTIVITY_ROUTE_CONTENT: 'Activity route content',
-    HOME_ROUTE_CONTENT: 'Home route content',
     JOIN_ROUTE_CONTENT: 'Join route content',
 }));
 
@@ -29,10 +28,6 @@ vi.mock('pages/ActivityPage', () => ({
 
 vi.mock('pages/GroupJoinPage', () => ({
     default: () => <main>{JOIN_ROUTE_CONTENT}</main>,
-}));
-
-vi.mock('pages/HomePage', () => ({
-    default: () => <main>{HOME_ROUTE_CONTENT}</main>,
 }));
 
 beforeEach(() => {
@@ -87,12 +82,4 @@ test('reaches the public Terms page without authentication', () => {
     renderRouter('/terms');
 
     return screen.findByRole('heading', { name: 'Terms of service' });
-});
-
-test('redirects the legacy sign-in route to the public home route', async () => {
-    useAuthStore.setState({ status: 'unauthenticated' });
-
-    renderRouter('/sign-in');
-
-    expect(await screen.findByText(HOME_ROUTE_CONTENT)).toBeTruthy();
 });

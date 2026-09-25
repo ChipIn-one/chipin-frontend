@@ -2,6 +2,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import { act, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { clearAuthTokens } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
@@ -15,28 +16,28 @@ vi.mock('basics/PageLoader', () => ({
 vi.mock('components/modals/auth-modal', () => ({
     AuthModal: ({
         isOpened,
-        isCloseDisabled,
+        setIsOpened,
     }: {
         isOpened?: boolean;
-        isCloseDisabled?: boolean;
+        setIsOpened?: (isOpen: boolean) => void;
     }) => (
-        <div
-            data-testid="auth-modal"
-            data-opened={String(isOpened)}
-            data-close-disabled={String(isCloseDisabled)}
-        />
+        <div data-testid="auth-modal" data-opened={String(isOpened)}>
+            <button type="button" onClick={() => setIsOpened?.(false)}>
+                Close auth
+            </button>
+        </div>
     ),
 }));
 
-const LocationPath = () => {
+const CurrentRoute = () => {
     const location = useLocation();
+    const currentRoute = `${location.pathname}${location.search}${location.hash}`;
 
-    return <output aria-label="Current route">{location.pathname}</output>;
+    return <output aria-label="Current route">{currentRoute}</output>;
 };
 
 beforeEach(() => {
     clearAuthTokens();
-    window.history.replaceState({}, '', '/');
     useAuthStore.setState({
         isNewUser: null,
         status: 'authenticated',
@@ -45,30 +46,50 @@ beforeEach(() => {
 });
 
 test('shows the auth modal on an unauthenticated protected deep link without changing the URL', () => {
-    window.history.replaceState({}, '', '/group/123?tab=members#balances');
     useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'missing' });
 
     render(
-        <ProtectedRoute>
-            <div data-testid="group-content" />
-        </ProtectedRoute>,
+        <MemoryRouter initialEntries={['/group/123?tab=members#balances']}>
+            <ProtectedRoute>
+                <div data-testid="group-content" />
+            </ProtectedRoute>
+            <CurrentRoute />
+        </MemoryRouter>,
     );
 
     expect(screen.getByTestId('auth-modal').dataset.opened).toBe('true');
-    expect(screen.getByTestId('auth-modal').dataset.closeDisabled).toBe('true');
     expect(screen.queryByTestId('group-content')).toBeNull();
-    expect(`${window.location.pathname}${window.location.search}${window.location.hash}`).toBe(
+    expect(screen.getByLabelText('Current route').textContent).toBe(
         '/group/123?tab=members#balances',
     );
 });
 
-test('replaces protected content with the auth modal on the current route after expiration', () => {
-    window.history.replaceState({}, '', '/activity?filter=mine#latest');
+test('closes the auth gate back to the landing page', () => {
+    const interaction = userEvent.setup();
+    useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'missing' });
 
     render(
-        <ProtectedRoute>
-            <div data-testid="dashboard-content" />
-        </ProtectedRoute>,
+        <MemoryRouter initialEntries={['/group/123']}>
+            <ProtectedRoute>
+                <div data-testid="group-content" />
+            </ProtectedRoute>
+            <CurrentRoute />
+        </MemoryRouter>,
+    );
+
+    return interaction.click(screen.getByRole('button', { name: 'Close auth' })).then(() => {
+        expect(screen.getByLabelText('Current route').textContent).toBe('/');
+    });
+});
+
+test('replaces protected content with the auth modal on the current route after expiration', () => {
+    render(
+        <MemoryRouter initialEntries={['/activity?filter=mine#latest']}>
+            <ProtectedRoute>
+                <div data-testid="dashboard-content" />
+            </ProtectedRoute>
+            <CurrentRoute />
+        </MemoryRouter>,
     );
 
     expect(screen.getByTestId('dashboard-content')).toBeTruthy();
@@ -79,13 +100,12 @@ test('replaces protected content with the auth modal on the current route after 
 
     expect(screen.getByTestId('auth-modal')).toBeTruthy();
     expect(screen.queryByTestId('dashboard-content')).toBeNull();
-    expect(`${window.location.pathname}${window.location.search}${window.location.hash}`).toBe(
+    expect(screen.getByLabelText('Current route').textContent).toBe(
         '/activity?filter=mine#latest',
     );
 });
 
-
-test('redirects an explicit sign out to the landing page instead of showing auth UI', async () => {
+test('redirects an explicit sign out to the landing page instead of showing auth UI', () => {
     useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'signed_out' });
 
     render(
@@ -93,11 +113,13 @@ test('redirects an explicit sign out to the landing page instead of showing auth
             <ProtectedRoute>
                 <div data-testid="settings-content" />
             </ProtectedRoute>
-            <LocationPath />
+            <CurrentRoute />
         </MemoryRouter>,
     );
 
-    expect((await screen.findByLabelText('Current route')).textContent).toBe('/');
-    expect(screen.queryByTestId('auth-modal')).toBeNull();
-    expect(screen.queryByTestId('settings-content')).toBeNull();
+    return screen.findByLabelText('Current route').then(currentRoute => {
+        expect(currentRoute.textContent).toBe('/');
+        expect(screen.queryByTestId('auth-modal')).toBeNull();
+        expect(screen.queryByTestId('settings-content')).toBeNull();
+    });
 });

@@ -1,7 +1,6 @@
 export const ROUTES = {
     HOME: '/',
     NOT_FOUND_404: '/not-found',
-    SIGN_IN: '/sign-in',
     PRIVACY: '/privacy',
     TERMS: '/terms',
     OAUTH_CALLBACK: '/oauth/callback',

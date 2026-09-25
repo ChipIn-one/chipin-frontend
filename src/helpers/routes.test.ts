@@ -25,7 +25,6 @@ test.each([
     ['/settings', true],
     ['/group/join/invite-token', false],
     ['/', false],
-    ['/sign-in', false],
     ['/oauth/callback', false],
     ['/not-found', false],
 ] as const)('returns desktop sidebar availability for %s', (pathname, expected) => {

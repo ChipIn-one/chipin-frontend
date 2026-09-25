@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 
 import { Box } from '@radix-ui/themes';
 
@@ -14,6 +14,7 @@ interface Props {
 }
 
 export const ProtectedRoute = ({ children }: Props) => {
+    const navigate = useNavigate();
     const isAuthResolved = useAuthStore(selectIsAuthResolved);
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
     const unauthReason = useAuthStore(state => state.unauthReason);
@@ -27,7 +28,16 @@ export const ProtectedRoute = ({ children }: Props) => {
             return <Navigate to={ROUTES.HOME} replace />;
         }
 
-        return <AuthModal isOpened isCloseDisabled />;
+        return (
+            <AuthModal
+                isOpened
+                setIsOpened={isOpen => {
+                    if (!isOpen) {
+                        navigate(ROUTES.HOME, { replace: true });
+                    }
+                }}
+            />
+        );
     }
 
     return (
