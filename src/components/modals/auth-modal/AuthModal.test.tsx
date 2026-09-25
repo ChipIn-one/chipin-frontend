@@ -26,16 +26,18 @@ vi.mock('react-i18next', () => ({
     }),
 }));
 
+const OPEN_SIGN_IN_LABEL = 'Open sign in';
+
 test('renders the approved mobile sign-in composition without the old intro block', () => {
     const user = userEvent.setup();
 
     render(
         <AuthModal>
-            <button type="button">Open sign in</button>
+            <button type="button">{OPEN_SIGN_IN_LABEL}</button>
         </AuthModal>,
     );
 
-    return user.click(screen.getByRole('button', { name: 'Open sign in' })).then(() => {
+    return user.click(screen.getByRole('button', { name: OPEN_SIGN_IN_LABEL })).then(() => {
         expect(screen.getByRole('dialog', { name: 'Welcome to ChipIn' })).toBeTruthy();
         expect(
             screen.getByRole('heading', {
