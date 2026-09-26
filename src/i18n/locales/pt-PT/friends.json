@@ -1,0 +1,33 @@
+{
+    "title": "Amigos",
+    "subtitle": "Os seus contactos e ligações",
+    "yourConnections": "As suas ligações",
+    "searchPlaceholder": "Pesquisar amigos",
+    "emptyTitle": "Nenhum amigo ainda",
+    "emptyDescription": "Adicione amigos para acompanhar despesas partilhadas e acertar facilmente.",
+    "filter": {
+        "allCurrencies": "Todas as moedas",
+        "byFriends": "Por amigos"
+    },
+    "actions": {
+        "remind": "Lembrar",
+        "removeFriend": "Remover amigo"
+    },
+    "removeModal": {
+        "title": "Remover amigo",
+        "friendLabel": "Amigo a remover",
+        "confirm": "Tem a certeza de que quer remover este amigo?",
+        "description": "Isto remove a ligação de amizade em ambas as contas. O histórico partilhado continua visível."
+    },
+    "settleUp": {
+        "you": "Você",
+        "paid": "pagou",
+        "paidAmountTo": "pagou {{amount}} {{currency}} a",
+        "noMoneyMoves": "Regista um pagamento externo. Nenhum dinheiro é movimentado.",
+        "recordPayment": "Registar pagamento",
+        "youOwe": "Deve a {{name}}",
+        "owedToYou": "{{name}} deve-lhe",
+        "remainingDebt": "Dívida restante:",
+        "debtWillBeSettled": "A dívida ficará liquidada"
+    }
+}

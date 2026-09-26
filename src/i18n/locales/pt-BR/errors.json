@@ -1,0 +1,90 @@
+{
+    "api": {
+        "unknown": "Ocorreu um erro desconhecido",
+        "unauthorized": "Você não tem autorização para realizar esta ação",
+        "forbidden": "Você não tem permissão para acessar este recurso",
+        "not_found": "O recurso solicitado não foi encontrado",
+        "validation_failed": "A validação da solicitação falhou",
+        "rate_limited": "Muitas requisições. Tente novamente mais tarde"
+    },
+    "apiErrors": {
+        "AUTH": {
+            "UNAUTHORIZED": "Entre na sua conta para continuar",
+            "FORBIDDEN": "Você não tem permissão para realizar esta ação",
+            "INVALID_TOKEN": "Sua sessão é inválida. Entre novamente.",
+            "EXPIRED_TOKEN": "Sua sessão expirou. Entre novamente.",
+            "INVALID_REFRESH_TOKEN": "Não foi possível atualizar sua sessão. Entre novamente."
+        },
+        "VALIDATION": {
+            "INVALID": "A validação da solicitação falhou",
+            "REQUIRED": "Dados obrigatórios estão faltando",
+            "ALREADY_EXISTS": "Este valor já existe"
+        },
+        "USER": {
+            "NOT_FOUND": "Usuário não encontrado",
+            "FORBIDDEN": "Você não tem permissão para acessar este usuário",
+            "CANNOT_JOIN_SELF_INVITE": "Você não pode entrar pelo seu próprio convite",
+            "OUTSTANDING_DEBT": "Quite o saldo com este amigo antes de removê-lo"
+        },
+        "GROUP": {
+            "NOT_FOUND": "Grupo não encontrado",
+            "FORBIDDEN": "Você não tem permissão para acessar este grupo",
+            "MEMBER_NOT_FOUND": "Membro do grupo não encontrado",
+            "CANNOT_KICK_SELF": "Você não pode remover a si mesmo do grupo dessa forma",
+            "OWNER_MUST_TRANSFER": "Transfira a propriedade do grupo antes de sair",
+            "INVALID_NEW_OWNER": "O usuário selecionado não pode ser o novo proprietário",
+            "GROUP_INACTIVE": "Este grupo está inativo"
+        },
+        "LEDGER": {
+            "NOT_FOUND": "Registro não encontrado",
+            "FORBIDDEN": "Você não tem permissão para acessar este registro"
+        },
+        "ACTIVITY": {
+            "NOT_FOUND": "Atividade não encontrada"
+        },
+        "SYSTEM": {
+            "INTERNAL": "Algo deu errado. Tente novamente mais tarde.",
+            "SERVICE_UNAVAILABLE": "O serviço está temporariamente indisponível. Tente novamente mais tarde."
+        }
+    },
+    "network": {
+        "offline": "Sem conexão com a internet"
+    },
+    "oauth": {
+        "missing_code": "Não foi possível concluir o login com o Google. Tente novamente."
+    },
+    "AUTH": {
+        "INVALID_OAUTH_EXCHANGE_CODE": "O login com o Google expirou ou não é mais válido. Tente novamente."
+    },
+    "VALIDATION": {
+        "INVALID": "Não foi possível concluir o login com o Google. Tente novamente."
+    },
+    "page404": {
+        "code": "404",
+        "title": "— Página não encontrada",
+        "subtitle": "A página que você está procurando não existe\nou foi movida para outro local.",
+        "whatYouCanDo": "O que você pode fazer:",
+        "checkUrl": {
+            "title": "Verifique a URL",
+            "description": "Certifique-se de que o endereço web está correto."
+        },
+        "goDashboard": {
+            "title": "Ir para o painel",
+            "description": "Volte para a página inicial e comece de novo."
+        },
+        "explore": {
+            "title": "Explorar",
+            "description": "Navegue por outras seções no menu acima."
+        },
+        "goHome": "Voltar para o início",
+        "backToDashboard": "Voltar para o painel"
+    },
+    "backendUnavailable": {
+        "eyebrow": "Indisponível temporariamente",
+        "title": "O ChipIn voltará em breve",
+        "description": "Estamos com dificuldade para conectar agora. Sua sessão e suas informações salvas continuam aqui.",
+        "tryAgain": "Tentar novamente",
+        "checking": "Verificando a conexão",
+        "retryFailed": "Ainda está indisponível. Tente novamente em instantes."
+    }
+}

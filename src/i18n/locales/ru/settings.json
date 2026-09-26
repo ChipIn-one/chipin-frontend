@@ -1,0 +1,114 @@
+{
+    "title": "Настройки",
+    "subtitle": "Ваши настройки.",
+    "account": {
+        "title": "Информация профиля",
+        "description": "Личная информация и настройки профиля.",
+        "displayNamePlaceholder": "Ваше имя или ник",
+        "displayNameDescription": "Видно другим пользователям",
+        "displayNameRequired": "Укажите отображаемое имя.",
+        "genderTitle": "Пол",
+        "genderDescription": "Выберите ваш пол",
+        "sexOptions": {
+            "male": "Мужской",
+            "female": "Женский"
+        }
+    },
+    "avatarModal": {
+        "title": "Обновить фото профиля",
+        "description": "Выберите и проверьте новое фото профиля перед загрузкой.",
+        "previewLabel": "Предпросмотр фото профиля",
+        "pickerLabel": "Выбрать фото профиля",
+        "pickerTitle": "Выберите фото или перетащите его сюда",
+        "pickerHint": "JPEG, PNG или WebP · до 5 МБ",
+        "uploading": "Загружаем фото",
+        "progress": "{{progress}}%",
+        "progressLabel": "Прогресс загрузки фото",
+        "errors": {
+            "unsupportedType": "Выберите изображение в формате JPEG, PNG или WebP.",
+            "tooLarge": "Размер изображения не должен превышать 5 МБ."
+        },
+        "actions": {
+            "upload": "Загрузить фото"
+        }
+    },
+    "regional": {
+        "title": "Региональные параметры",
+        "description": "Часовой пояс, язык и формат времени.",
+        "autoTimezone": "Ваш часовой пояс",
+        "autoTimezoneHint": "Определяется автоматически.",
+        "timeFormatTitle": "Формат времени",
+        "timeFormatDescription": "Выберите формат времени.",
+        "languageSearchPlaceholder": "Найти язык",
+        "languageSearchEmpty": "Языки не найдены.",
+        "resetLanguage": "Сбросить язык"
+    },
+    "language": {
+        "options": {
+            "en": "Английский",
+            "ru": "Русский",
+            "es": "Испанский",
+            "pt-BR": "Португальский (Бразилия)",
+            "pt-PT": "Португальский (Португалия)"
+        }
+    },
+    "notifications": {
+        "title": "Уведомления",
+        "description": "Настройте, как вы получаете обновления.",
+        "workInProgress": "Мы ещё работаем над уведомлениями.",
+        "pushTitle": "Push-уведомления",
+        "pushDescription": "Получать уведомления на устройстве.",
+        "emailTitle": "Обновления по почте",
+        "emailDescription": "Получать обновления и новости продукта на почту.",
+        "expenseRemindersTitle": "Напоминания о расходах",
+        "expenseRemindersDescription": "Получать напоминания о неоплаченных балансах.",
+        "weeklySummaryTitle": "Еженедельная сводка",
+        "weeklySummaryDescription": "Еженедельный дайджест ваших расходов."
+    },
+    "expense": {
+        "title": "Настройки расходов",
+        "description": "Значения по умолчанию и поведение новых расходов.",
+        "defaultCategoryTitle": "Категория по умолчанию",
+        "skipCategoryTitle": "Пропускать категорию",
+        "skipCategoryDescription": "Создавать расходы без выбора категории.",
+        "simplifyDebtsTitle": "Упрощать долги в группе",
+        "simplifyDebtsDescription": "Автоматически уменьшать количество переводов между участниками."
+    },
+    "solo": {
+        "title": "Настройки Solo",
+        "description": "Значения по умолчанию и поведение сольного режима.",
+        "soloModeTitle": "Сольный режим по умолчанию",
+        "soloModeDescription": "Открывать ChipIn в сольном режиме.",
+        "saveGroupToSoloTitle": "Сохранять групповые расходы в Solo",
+        "saveGroupToSoloDescription": "Также сохранять групповые расходы в записях Solo."
+    },
+    "app": {
+        "title": "Настройки приложения",
+        "description": "Внешний вид и информация о приложении.",
+        "themeTitle": "Тема",
+        "themeDescription": "Выберите, как выглядит ChipIn на вашем устройстве.",
+        "themeOptions": {
+            "dark": "Тёмная",
+            "light": "Светлая",
+            "system": "Системная"
+        },
+        "versionTitle": "Версия приложения",
+        "versionDescription": "Текущая установленная версия.",
+        "updateButton": "Обновить приложение"
+    },
+    "security": {
+        "title": "Приватность и безопасность",
+        "description": "Управляйте безопасностью аккаунта и данными.",
+        "logoutOtherDevicesTitle": "Выйти на других устройствах",
+        "logoutOtherDevicesDescription": "Завершить все другие активные сессии. На этом устройстве вы останетесь в системе.",
+        "logoutOtherDevicesLoading": "Выполняется выход на других устройствах… Здесь вы останетесь в системе.",
+        "exportDataTitle": "Экспорт данных",
+        "exportDataDescription": "Скачать все ваши расходы.",
+        "exportDataButton": "Экспорт",
+        "deleteAccountTitle": "Удаление аккаунта",
+        "deleteAccountDescription": "Безвозвратно удалить ваши данные.",
+        "deleteAccountButton": "Удалить аккаунт",
+        "signOutTitle": "Выйти на этом устройстве",
+        "signOutDescription": "Завершить только эту сессию. На других устройствах вход сохранится."
+    }
+}

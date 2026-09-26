@@ -1,0 +1,158 @@
+{
+    "buttons": {
+        "back": "Atrás",
+        "cancel": "Cancelar",
+        "close": "Cerrar",
+        "delete": "Eliminar",
+        "reload": "Recargar página",
+        "goHome": "Ir al inicio",
+        "create": "Crear",
+        "save": "Guardar",
+        "createGroup": "Crear grupo",
+        "saveGroup": "Guardar grupo",
+        "addExpense": "Agregar gasto",
+        "settleUp": "Liquidar",
+        "removeGroup": "Eliminar grupo",
+        "leaveGroup": "Salir del grupo",
+        "kickMember": "Expulsar",
+        "showQRCode": "Mostrar código QR",
+        "addFriend": "Agregar amigo",
+        "signOut": "Cerrar sesión",
+        "installApp": "Instalar app",
+        "getStarted": "Comenzar",
+        "goToDashboard": "Ir al panel",
+        "copyReport": "Copiar reporte",
+        "changePhoto": "Cambiar foto",
+        "invitePeople": "Invitar personas",
+        "hide": "Ocultar"
+    },
+    "fields": {
+        "description": "Descripción",
+        "date": "Fecha",
+        "descriptionOptional": "Descripción (opcional)",
+        "groupOptional": "Grupo (opcional)",
+        "amount": "Monto",
+        "group": "Grupo",
+        "category": "Categoría",
+        "currency": "Moneda",
+        "paidBy": "Pagado por",
+        "groupName": "Nombre del grupo",
+        "icon": "Ícono",
+        "email": "Correo electrónico",
+        "displayName": "Nombre de pantalla",
+        "timezone": "Zona horaria",
+        "defaultCurrency": "Moneda predeterminada",
+        "interfaceLanguage": "Idioma de la interfaz"
+    },
+    "balances": {
+        "youOwe": "debes",
+        "youAreOwed": "Te deben",
+        "settledUp": "Liquidado"
+    },
+    "header": {
+        "signIn": "Iniciar sesión",
+        "testError": "Disparar error de prueba",
+        "switchTheme": "Cambiar tema",
+        "switchToLightTheme": "Cambiar al tema claro",
+        "switchToDarkTheme": "Cambiar al tema oscuro",
+        "addSubscriptionDay": "Agregar 1 día de suscripción",
+        "devMenu": "Menú de desarrollador"
+    },
+    "footer": {
+        "copyright": "{{year}}. Todos los derechos reservados ©",
+        "mediaTitle": "Estamos en los medios",
+        "privacy": "Privacidad",
+        "terms": "Términos",
+        "contact": "Contacto"
+    },
+    "legal": {
+        "privacy": {
+            "title": "Privacidad",
+            "intro": "ChipIn usa la información que proporcionas para operar las funciones de seguimiento de gastos compartidos y saldos.",
+            "account": {
+                "title": "Información de la cuenta",
+                "body": "Usamos los datos de cuenta y perfil que proporcionas, como tu nombre visible y correo electrónico, para identificar tu cuenta y mostrar tu perfil donde la aplicación lo permite."
+            },
+            "expenseData": {
+                "title": "Grupos y gastos",
+                "body": "Los grupos, gastos, liquidaciones y saldos que añades se usan para ofrecer el seguimiento de gastos compartidos y calcular lo que se muestra en la aplicación."
+            },
+            "sessions": {
+                "title": "Autenticación y sesiones",
+                "body": "La información de autenticación y sesión se usa para iniciar sesión y ayudar a mantener tu cuenta protegida."
+            },
+            "operations": {
+                "title": "Operación del servicio",
+                "body": "Los datos operativos y de errores nos ayudan a operar, proteger y mejorar ChipIn. La observabilidad de producción está diseñada para no exponer intencionadamente datos sensibles de autenticación ni cuerpos sensibles de solicitudes o respuestas."
+            },
+            "updates": {
+                "title": "Actualizaciones",
+                "body": "Esta información puede actualizarse a medida que evolucione el producto."
+            }
+        },
+        "terms": {
+            "title": "Términos de servicio",
+            "intro": "ChipIn ayuda a registrar gastos compartidos y saldos entre personas.",
+            "productUse": {
+                "title": "Uso de ChipIn",
+                "body": "Puedes usar ChipIn para registrar gastos compartidos, consultar saldos y registrar liquidaciones."
+            },
+            "responsibility": {
+                "title": "Tu información",
+                "body": "Eres responsable de la información que envías y de comprobar que tus registros y participantes sean correctos."
+            },
+            "records": {
+                "title": "Registros de la aplicación",
+                "body": "Los saldos mostrados por ChipIn son registros de la aplicación para seguimiento. No son garantías bancarias ni garantías de liquidación de pagos."
+            },
+            "appropriateUse": {
+                "title": "Uso adecuado",
+                "body": "No uses el servicio indebidamente, no interfieras con su funcionamiento ni envíes información que no tengas permiso para compartir."
+            },
+            "changes": {
+                "title": "Cambios",
+                "body": "ChipIn puede evolucionar y sus funciones o estos términos pueden cambiar a medida que se desarrolle el producto."
+            }
+        }
+    },
+    "errorBoundary": {
+        "title": "La app encontró un problema",
+        "runtimeError": "Algo salió mal",
+        "tryAgain": "Intentar de nuevo",
+        "goToDashboard": "Ir al panel",
+        "or": "o",
+        "updateApp": "Actualizar la app",
+        "updatingApp": "Actualizando la app…"
+    },
+    "copy": {
+        "copy": "Copiar {{what}}",
+        "copied": "¡Copiado!",
+        "shared": "¡Compartido!"
+    },
+    "copyTargets": {
+        "inviteLink": "enlace de invitación"
+    },
+    "media": {
+        "noImage": "Sin imagen"
+    },
+    "roles": {
+        "owner": "Propietario"
+    },
+    "modes": {
+        "group": "Grupo",
+        "groupMode": "Modo grupal",
+        "solo": "Individual",
+        "soloMode": "Modo individual"
+    },
+    "nav": {
+        "dashboard": "Panel",
+        "activity": "Actividad",
+        "friends": "Amigos",
+        "settings": "Configuración"
+    },
+    "noDebtsTitle": "Todo saldado",
+    "noDebtsDescription": "No le debes nada a nadie y nadie te debe a ti.",
+    "amount": {
+        "notInteger": "¡El valor no es entero!"
+    }
+}

@@ -1,0 +1,245 @@
+{
+    "modal": {
+        "titleCreate": "Создать новую группу",
+        "titleEdit": "Редактировать группу",
+        "descriptionCreate": "Создайте группу, чтобы учитывать и делить общие расходы.",
+        "descriptionEdit": "Измените название или описание группы.",
+        "fields": {
+            "namePlaceholder": "например, Поездка в Барселону, Квартира...",
+            "addDescription": "Добавить описание",
+            "descriptionOptional": "(необязательно)",
+            "descriptionPlaceholder": "Добавь заметку об этой группе..."
+        },
+        "cover": {
+            "label": "Обложка группы",
+            "hint": "JPEG, PNG или WebP до 5 МБ",
+            "action": "Выбрать обложку группы",
+            "pickerLabel": "Выбрать изображение обложки группы",
+            "previewLabel": "Предпросмотр обложки группы",
+            "uploading": "Загружаем обложку",
+            "retry": "Повторить загрузку обложки",
+            "progress": "{{progress}}%",
+            "progressLabel": "Прогресс загрузки обложки группы",
+            "errors": {
+                "unsupportedType": "Выберите изображение JPEG, PNG или WebP.",
+                "tooLarge": "Размер изображения не должен превышать 5 МБ."
+            }
+        }
+    },
+    "qr": {
+        "title": "Сканируй, чтобы вступить",
+        "description": "Поделитесь этим QR-кодом, чтобы пригласить людей в группу.",
+        "shareText": "Поделитесь кодом, чтобы пригласить людей в {{groupName}}"
+    },
+    "expenses": {
+        "modal": {
+            "title": "Добавить расход",
+            "titleEdit": "Редактировать расход",
+            "description": "Разделите новый расход между участниками группы.",
+            "descriptionEdit": "Измените этот расход.",
+            "singleMemberNotice": "Вы в группе один. Чтобы считать расходы, добавьте друзей. Или используйте <soloMode>режим Solo</soloMode>.",
+            "singleMemberNoticeNonAdmin": "Вы в группе один. Чтобы считать расходы, добавьте друзей.",
+            "scope": {
+                "group": "Расход в группе: {{groupName}}",
+                "friends": "Расход P2P с участниками: {{users}}"
+            },
+            "fields": {
+                "descriptionPlaceholder": "Например, отель, ужин, билеты...",
+                "amountAndCurrency": "Сумма и валюта",
+                "amountPlaceholder": "Введите сумму",
+                "group": "Группа",
+                "friend": "Друг"
+            },
+            "categorySearchPlaceholder": "Поиск категории",
+            "categorySearchEmpty": "Категории не найдены",
+            "payerSearchPlaceholder": "Поиск плательщика",
+            "groupSearchPlaceholder": "Поиск групп",
+            "friendSearchPlaceholder": "Поиск друзей",
+            "noGroups": "Группы не найдены",
+            "noKnownFriends": "Пока нет знакомых друзей",
+            "includeInSolo": "Добавить в Solo",
+            "categories": {
+                "food": "Еда и рестораны",
+                "transport": "Транспорт",
+                "housing": "Жильё и коммунальные",
+                "digital": "Цифровые услуги",
+                "shopping": "Покупки",
+                "lifestyle": "Образ жизни",
+                "personal_care": "Уход за собой",
+                "sports": "Спорт и фитнес",
+                "health": "Здоровье",
+                "travel": "Путешествия",
+                "education": "Образование",
+                "finance": "Финансы",
+                "pets": "Питомцы",
+                "other": "Другое"
+            },
+            "subcategories": {
+                "groceries": "Продукты",
+                "restaurants": "Рестораны",
+                "fast_food": "Фастфуд",
+                "coffee": "Кофе и кафе",
+                "food_delivery": "Доставка еды",
+                "public_transport": "Общественный транспорт",
+                "taxi": "Такси",
+                "fuel": "Топливо",
+                "vehicle_rent": "Аренда авто",
+                "parking": "Парковка",
+                "vehicle_repair": "Ремонт авто",
+                "vehicle_insurance": "Страховка авто",
+                "tolls": "Платные дороги",
+                "rent": "Аренда жилья",
+                "mortgage": "Ипотека",
+                "utilities": "Коммунальные услуги",
+                "home_maintenance": "Обслуживание дома",
+                "furnishing": "Мебель и интерьер",
+                "internet": "Интернет",
+                "mobile": "Мобильная связь",
+                "subscriptions": "Подписки",
+                "software": "Программы",
+                "clothing": "Одежда",
+                "electronics": "Электроника",
+                "home_goods": "Товары для дома",
+                "personal_items": "Личные вещи",
+                "gifts": "Подарки",
+                "cinema": "Кино",
+                "events": "Мероприятия",
+                "concerts": "Концерты",
+                "games": "Игры",
+                "nightlife": "Ночная жизнь",
+                "haircut": "Стрижка",
+                "spa": "Спа",
+                "massage": "Массаж",
+                "beauty_services": "Бьюти-услуги",
+                "hygiene": "Гигиена",
+                "skincare": "Уход за кожей",
+                "cosmetics": "Косметика",
+                "subscription": "Абонемент",
+                "coach": "Тренер",
+                "equipment": "Инвентарь",
+                "medical": "Медицина",
+                "pharmacy": "Аптека",
+                "dental": "Стоматология",
+                "health_insurance": "Медстраховка",
+                "flights": "Авиабилеты",
+                "accommodation": "Жильё",
+                "activities": "Активности",
+                "visa": "Виза",
+                "insurance": "Страховка",
+                "online_courses": "Онлайн-курсы",
+                "books": "Книги",
+                "tutoring": "Репетитор",
+                "certification": "Сертификация",
+                "fees": "Банковские комиссии",
+                "taxes": "Налоги",
+                "loans": "Кредиты",
+                "investments": "Инвестиции",
+                "crypto": "Крипто",
+                "currency_exchange": "Обмен валюты",
+                "cash_withdrawal": "Снятие наличных",
+                "transfers": "Переводы",
+                "pet_food": "Корм для питомца",
+                "vet": "Ветеринар",
+                "pet_items": "Товары для питомца"
+            },
+            "currentUser": "Вы",
+            "splitHint": "Пока расход делится поровну между участниками группы.",
+            "noMembers": "В группе пока нет участников.",
+            "tabs": {
+                "group": "Группа",
+                "friends": "Друзья"
+            },
+            "split": {
+                "title": "Как делить",
+                "equal": "Поровну",
+                "percent": "Процент",
+                "amounts": "Суммы",
+                "shares": "Доли",
+                "splitEquallyBetween": "Делим поровну между {{count}} участниками",
+                "eachPays": "Каждый платит",
+                "yourShare": "Ваша доля",
+                "includeParticipant": "Включить {{name}} в разделение",
+                "decreaseShare": "Уменьшить долю",
+                "increaseShare": "Увеличить долю",
+                "decreaseAmount": "Уменьшить сумму",
+                "increaseAmount": "Увеличить сумму",
+                "decreasePercent": "Уменьшить процент",
+                "increasePercent": "Увеличить процент",
+                "selectAll": "Выбрать всех",
+                "deselectAll": "Снять выбор",
+                "total": "Итого:",
+                "totalShares": "Всего долей",
+                "totalAssigned": "Распределено",
+                "difference": "Разница"
+            }
+        }
+    },
+    "page": {
+        "coverAlt": "Обложка группы {{name}}",
+        "members": "участников",
+        "loadingGroup": "Загрузка группы...",
+        "shareWarning": "Делитесь ссылкой-приглашением только с проверенными людьми.",
+        "notFound": "Группа не найдена или ID группы не указан",
+        "activityStubTitle": "Активность группы",
+        "activityStubDescription": "Полная история событий доступна на странице Активности.",
+        "expenses": {
+            "emptyTitle": "Расходов пока нет",
+            "emptyDescription": "Добавьте первый расход, чтобы начать учёт трат в группе."
+        },
+        "tabs": {
+            "expenses": "Расходы",
+            "balances": "Балансы",
+            "members": "Участники",
+            "settings": "Настройки"
+        },
+        "settings": {
+            "inviteSection": "ПРИГЛАШЕНИЕ",
+            "membersSection": "УЧАСТНИКИ",
+            "settingsSection": "НАСТРОЙКИ",
+            "copyLinkTitle": "Скопировать ссылку",
+            "showQRTitle": "Показать QR-код",
+            "showQRSubtitle": "Сканируйте, чтобы войти в группу",
+            "addPeopleTitle": "Добавить людей",
+            "addPeopleSubtitle": "Приглашение по имени или email",
+            "simplifyDebtsTitle": "Упростить долги группы",
+            "simplifyDebtsSubtitle": "Минимизировать количество транзакций",
+            "simplifyDebtsOwnerOnly": "Только владелец группы может изменить эту настройку.",
+            "simplifyDebtsUnsupported": "Упрощение долгов недоступно для этой группы.",
+            "simplifyDebtsUpdating": "Обновляем настройку упрощения долгов..."
+        },
+        "balances": {
+            "settled": "Долгов нет",
+            "empty": "Балансов пока нет."
+        },
+        "settleUp": {
+            "chooseDebtTitle": "Выберите долг",
+            "chooseDebtAccessibleDescription": "Выберите долг для записи платежа.",
+            "youOwe": "Вы должны",
+            "owedToYou": "Вам должны",
+            "showMore_one": "Показать ещё {{count}} долг",
+            "showMore_few": "Показать ещё {{count}} долга",
+            "showMore_many": "Показать ещё {{count}} долгов",
+            "showMore_other": "Показать ещё {{count}} долга",
+            "showLess": "Скрыть"
+        },
+        "membersTab": {
+            "you": "Вы",
+            "invitePeople": "Пригласить людей"
+        }
+    },
+    "leaveModal": {
+        "confirm": "Вы уверены, что хотите покинуть эту группу?",
+        "ownerWarning": "Вы являетесь владельцем. Пожалуйста, передайте права перед выходом.",
+        "newOwnerPlaceholder": "Выберите нового владельца"
+    },
+    "removeModal": {
+        "title": "Удалить группу",
+        "confirm": "Вы уверены, что хотите удалить эту группу?",
+        "warning": "Это действие нельзя отменить. Все данные группы будут удалены навсегда."
+    },
+    "kickModal": {
+        "title": "Исключить участника",
+        "confirm": "Вы уверены, что хотите исключить {{name}} из этой группы?",
+        "transferExpensesWarning": "Если у этого участника есть неурегулированные расходы, они будут перенесены в расходы с друзьями."
+    }
+}

@@ -1,0 +1,324 @@
+import {
+    LucideCheck,
+    LucideLink2,
+    LucideLogOut,
+    LucideQrCode,
+    LucideShare2,
+    LucideTrash2,
+    LucideUserMinus,
+} from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import styled from 'styled-components';
+
+import { Avatar, Badge, Box, Button, Card, Flex, Separator, Spinner, Switch, Text } from '@radix-ui/themes';
+
+import type { Group } from 'api/chipin.types';
+import { resolveApiErrorMessageFromError } from 'helpers/errors';
+import { useGroupInvite } from 'hooks/pwaHooks';
+
+import { useConnect } from './internal/group-settings';
+
+/**
+ * A plain button reset used as the interactive wrapper for settings-list rows.
+ * Justified as a styled component because `cursor`, `background-none`, and
+ * border/padding resets have no Radix prop equivalents.
+ */
+const SettingsRowButton = styled.button`
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+`;
+
+import GroupRoleBadge from 'basics/GroupRoleBadge';
+import {
+    GroupQRModal,
+    KickGroupMemberAlertDialog,
+    LeaveGroupAlertDialog,
+    RemoveGroupAlertDialog,
+} from 'components/modals';
+
+interface Props {
+    group: Group;
+}
+
+const GroupSettingsTab = ({ group }: Props) => {
+    const { t } = useTranslation(['group', 'common', 'toasts']);
+    const {
+        user,
+        updateGroup,
+        isGroupUpdatePending,
+    } = useConnect();
+    const {
+        inviteLink,
+        isNativeShareSupported,
+        isShareDone,
+        isCopied,
+        handleShare,
+        handleCopyLink,
+    } = useGroupInvite(group);
+
+    const shareTitle = t('group:qr.shareText', { groupName: group.name });
+
+    const isUserOwner = user?.id === group.creator.id;
+    const isGroupOwner = group.role === 'OWNER';
+    const simplifyDebtsValue: unknown = group.simplifyDebts;
+    const isSimplifyDebtsSupported = typeof simplifyDebtsValue === 'boolean';
+    const isSimplifyDebtsEnabled = isSimplifyDebtsSupported && simplifyDebtsValue;
+
+    const onSimplifyDebtsChange = (nextValue: boolean): void => {
+        if (!isGroupOwner || !isSimplifyDebtsSupported || isGroupUpdatePending) {
+            return;
+        }
+
+        updateGroup({ simplifyDebts: nextValue }).catch((error: unknown) => {
+            toast.error(resolveApiErrorMessageFromError(
+                error,
+                t('toasts:group.updateError'),
+            ));
+        });
+    };
+
+    return (
+        <Flex direction="column" gap="5">
+            {/* ── INVITE section ── */}
+            <Flex direction="column" gap="2">
+                <Text size="1" color="gray" weight="medium">
+                    {t('group:page.settings.inviteSection')}
+                </Text>
+
+                {/* Primary invite action row — share on mobile, copy on desktop */}
+                <Card asChild size="2">
+                    <SettingsRowButton
+                        onClick={() =>
+                            isNativeShareSupported ? handleShare(shareTitle) : handleCopyLink()
+                        }
+                    >
+                        <Flex align="center" gap="3" p="4">
+                            <Avatar
+                                size="3"
+                                radius="medium"
+                                variant="soft"
+                                color="indigo"
+                                fallback={
+                                    (isNativeShareSupported ? isShareDone : isCopied) ? (
+                                        <LucideCheck size={16} />
+                                    ) : isNativeShareSupported ? (
+                                        <LucideShare2 size={16} />
+                                    ) : (
+                                        <LucideLink2 size={16} />
+                                    )
+                                }
+                            />
+                            <Flex direction="column" gap="1">
+                                <Text size="2" weight="medium">
+                                    {isNativeShareSupported
+                                        ? isShareDone
+                                            ? t('common:copy.shared')
+                                            : t('common:buttons.invitePeople')
+                                        : isCopied
+                                          ? t('common:copy.copied')
+                                          : t('group:page.settings.copyLinkTitle')}
+                                </Text>
+                                <Text size="1" color="gray">
+                                    {t('group:page.shareWarning')}
+                                </Text>
+                            </Flex>
+                        </Flex>
+                    </SettingsRowButton>
+                </Card>
+
+                {/* Copy link row — secondary action on mobile */}
+                {isNativeShareSupported && (
+                    <Card asChild size="2">
+                        <SettingsRowButton onClick={handleCopyLink}>
+                            <Flex align="center" gap="3" p="4">
+                                <Avatar
+                                    size="3"
+                                    radius="medium"
+                                    variant="soft"
+                                    color="indigo"
+                                    fallback={
+                                        isCopied ? (
+                                            <LucideCheck size={16} />
+                                        ) : (
+                                            <LucideLink2 size={16} />
+                                        )
+                                    }
+                                />
+                                <Flex direction="column" gap="1">
+                                    <Text size="2" weight="medium">
+                                        {isCopied
+                                            ? t('common:copy.copied')
+                                            : t('group:page.settings.copyLinkTitle')}
+                                    </Text>
+                                </Flex>
+                            </Flex>
+                        </SettingsRowButton>
+                    </Card>
+                )}
+
+                {/* Show QR code row */}
+                <GroupQRModal qrLink={inviteLink}>
+                        <Card asChild size="2">
+                            <SettingsRowButton>
+                                <Flex align="center" gap="3" p="4">
+                                    <Avatar
+                                        size="3"
+                                        radius="medium"
+                                        variant="soft"
+                                        color="violet"
+                                        fallback={<LucideQrCode size={16} />}
+                                    />
+                                    <Flex direction="column" gap="1">
+                                        <Text size="2" weight="medium">
+                                            {t('group:page.settings.showQRTitle')}
+                                        </Text>
+                                        <Text size="1" color="gray">
+                                            {t('group:page.settings.showQRSubtitle')}
+                                        </Text>
+                                    </Flex>
+                                </Flex>
+                            </SettingsRowButton>
+                        </Card>
+                </GroupQRModal>
+
+            </Flex>
+
+            {/* ── MEMBERS section ── */}
+            <Flex direction="column" gap="2">
+                <Text size="1" color="gray" weight="medium">
+                    {t('group:page.settings.membersSection')}
+                </Text>
+
+                {group.members.map(member => {
+                    const isCurrentUser = member.user.id === user?.id;
+                    const isOwner = member.user.id === group.creator.id;
+
+                    return (
+                        <Card key={member.user.id} size="2">
+                            <Flex align="center" gap="3" justify="between">
+                                <Flex align="center" gap="3">
+                                    <Avatar
+                                        size="3"
+                                        radius="full"
+                                        src={member.user.picture || ''}
+                                        alt={member.user.displayName}
+                                        fallback={member.user.displayName?.[0]}
+                                    />
+                                    <Flex direction="column" gap="1">
+                                        <Flex align="center" gap="2" wrap="wrap">
+                                            <Text weight="medium" size="2">
+                                                {member.user.displayName}
+                                            </Text>
+                                            <GroupRoleBadge isOwner={isOwner} />
+                                            {isCurrentUser && (
+                                                <Badge size="1" color="teal" variant="soft">
+                                                    {t('group:page.membersTab.you')}
+                                                </Badge>
+                                            )}
+                                        </Flex>
+                                        <Text size="1" color="gray" truncate>
+                                            {member.user.email}
+                                        </Text>
+                                    </Flex>
+                                </Flex>
+                                {isUserOwner && !isCurrentUser && (
+                                    <KickGroupMemberAlertDialog member={member.user}>
+                                        <Button variant="soft" color="orange" size="1">
+                                            <LucideUserMinus size={13} />
+                                            {t('common:buttons.kickMember')}
+                                        </Button>
+                                    </KickGroupMemberAlertDialog>
+                                )}
+                            </Flex>
+                        </Card>
+                    );
+                })}
+            </Flex>
+
+            {/* ── SETTINGS section ── */}
+            <Flex direction="column" gap="2">
+                <Text size="1" color="gray" weight="medium">
+                    {t('group:page.settings.settingsSection')}
+                </Text>
+
+                <Card size="2">
+                    <Flex align="center" justify="between" gap="3">
+                        <Flex direction="column" gap="1">
+                            <Text size="2" weight="medium">
+                                {t('group:page.settings.simplifyDebtsTitle')}
+                            </Text>
+                            <Text size="1" color="gray">
+                                {t('group:page.settings.simplifyDebtsSubtitle')}
+                            </Text>
+                            {!isSimplifyDebtsSupported ? (
+                                <Text size="1" color="orange">
+                                    {t('group:page.settings.simplifyDebtsUnsupported')}
+                                </Text>
+                            ) : !isGroupOwner ? (
+                                <Text size="1" color="gray">
+                                    {t('group:page.settings.simplifyDebtsOwnerOnly')}
+                                </Text>
+                            ) : null}
+                        </Flex>
+                        <Flex align="center" gap="2" flexShrink="0">
+                            {isGroupUpdatePending && (
+                                <Flex align="center" gap="1" role="status">
+                                    <Spinner size="1" aria-hidden="true" />
+                                    <Text size="1" color="gray">
+                                        {t('group:page.settings.simplifyDebtsUpdating')}
+                                    </Text>
+                                </Flex>
+                            )}
+                            <Switch
+                                size="2"
+                                checked={isSimplifyDebtsEnabled}
+                                disabled={
+                                    !isGroupOwner ||
+                                    !isSimplifyDebtsSupported ||
+                                    isGroupUpdatePending
+                                }
+                                aria-label={t('group:page.settings.simplifyDebtsTitle')}
+                                onCheckedChange={onSimplifyDebtsChange}
+                            />
+                        </Flex>
+                    </Flex>
+                </Card>
+            </Flex>
+
+            {/* ── Danger actions ── */}
+            <Flex direction="column" gap="1">
+                <Separator size="4" mb="1" />
+
+                <LeaveGroupAlertDialog>
+                    <Box width="100%" asChild>
+                        <Button variant="ghost" color="orange" size="3">
+                            <LucideLogOut size={16} />
+                            {t('common:buttons.leaveGroup')}
+                        </Button>
+                    </Box>
+                </LeaveGroupAlertDialog>
+
+                <Separator size="4" my="1" />
+
+                <RemoveGroupAlertDialog>
+                    <Box width="100%" asChild>
+                        <Button variant="ghost" color="red" size="3">
+                            <LucideTrash2 size={16} />
+                            {t('common:buttons.removeGroup')}
+                        </Button>
+                    </Box>
+                </RemoveGroupAlertDialog>
+            </Flex>
+        </Flex>
+    );
+};
+
+export default GroupSettingsTab;

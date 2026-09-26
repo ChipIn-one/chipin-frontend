@@ -1,0 +1,35 @@
+{
+    "groups": {
+        "title": "Your groups",
+        "otherTitle": "Other groups",
+        "subtitle": "Keep shared balances and trips organized in one place.",
+        "emptyTitle": "No groups yet",
+        "emptyDescription": "Create your first group to start splitting expenses with friends, roommates, or travel buddies.",
+        "filterAll": "All",
+        "filterSettled": "Settled",
+        "showSettled": "Show settled ({{count}})",
+        "hideSettled": "Hide settled",
+        "filterEmptyTitle": "No groups found",
+        "filterEmptyDescription": "No groups match the selected filter."
+    },
+    "groupsCard": {
+        "statusOwed": "You are owed",
+        "members_one": "{{count}} member",
+        "members_other": "{{count}} members"
+    },
+    "summary": {
+        "totalBalance": "Total balance",
+        "totalAcrossGroupsAndFriends": "Across groups and friends",
+        "owedToYou": "Owed to you",
+        "youOwe": "You owe"
+    },
+    "header": {
+        "greeting": "Hi, {{name}}",
+        "overview": "Here's your summary"
+    },
+    "solo": {
+        "summaryTitle": "Solo summary",
+        "activityTitle": "Solo activity",
+        "inDevelopment": "Still in development."
+    }
+}

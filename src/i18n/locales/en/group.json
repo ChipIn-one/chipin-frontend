@@ -1,0 +1,243 @@
+{
+    "modal": {
+        "titleCreate": "Create new group",
+        "titleEdit": "Edit group",
+        "descriptionCreate": "Create a group to track and split shared expenses.",
+        "descriptionEdit": "Update this group's name or description.",
+        "fields": {
+            "namePlaceholder": "e.g. Barcelona Trip, Apartment...",
+            "addDescription": "Add description",
+            "descriptionOptional": "(optional)",
+            "descriptionPlaceholder": "Add a note about this group..."
+        },
+        "cover": {
+            "label": "Group cover",
+            "hint": "JPEG, PNG or WebP up to 5 MB",
+            "action": "Choose group cover",
+            "pickerLabel": "Choose a group cover image",
+            "previewLabel": "Group cover preview",
+            "uploading": "Uploading cover",
+            "retry": "Retry cover upload",
+            "progress": "{{progress}}%",
+            "progressLabel": "Group cover upload progress",
+            "errors": {
+                "unsupportedType": "Choose a JPEG, PNG or WebP image.",
+                "tooLarge": "The image must be 5 MB or smaller."
+            }
+        }
+    },
+    "qr": {
+        "title": "Scan to join",
+        "description": "Share this QR code to invite people to the group.",
+        "shareText": "Share this code to invite people to {{groupName}}"
+    },
+    "expenses": {
+        "modal": {
+            "title": "Add an expense",
+            "titleEdit": "Edit expense",
+            "description": "Split a new expense with your group members.",
+            "descriptionEdit": "Update this expense.",
+            "singleMemberNotice": "You're the only one in this group. Add friends to track expenses. Or use <soloMode>Solo mode</soloMode>.",
+            "singleMemberNoticeNonAdmin": "You're the only one in this group. Add friends to track expenses.",
+            "scope": {
+                "group": "Group expense: {{groupName}}",
+                "friends": "P2P expense with {{users}}"
+            },
+            "fields": {
+                "descriptionPlaceholder": "e.g. Hotel booking, dinner...",
+                "amountAndCurrency": "Amount & currency",
+                "amountPlaceholder": "Enter amount...",
+                "group": "Group",
+                "friend": "Friend"
+            },
+            "categorySearchPlaceholder": "Search category",
+            "categorySearchEmpty": "No categories found",
+            "payerSearchPlaceholder": "Search payer",
+            "groupSearchPlaceholder": "Search groups",
+            "friendSearchPlaceholder": "Search friends",
+            "noGroups": "No groups found",
+            "noKnownFriends": "No known friends yet",
+            "includeInSolo": "Add to Solo",
+            "categories": {
+                "food": "Food & Dining",
+                "transport": "Transport",
+                "housing": "Housing & Utilities",
+                "digital": "Digital & Tech",
+                "shopping": "Shopping",
+                "lifestyle": "Lifestyle",
+                "personal_care": "Personal Care",
+                "sports": "Sports & Fitness",
+                "health": "Health",
+                "travel": "Travel",
+                "education": "Education",
+                "finance": "Finance",
+                "pets": "Pets",
+                "other": "Other"
+            },
+            "subcategories": {
+                "groceries": "Groceries",
+                "restaurants": "Restaurants",
+                "fast_food": "Fast Food",
+                "coffee": "Coffee & Cafes",
+                "food_delivery": "Food Delivery",
+                "public_transport": "Public Transport",
+                "taxi": "Taxi & Ride",
+                "fuel": "Fuel",
+                "vehicle_rent": "Vehicle Rent",
+                "parking": "Parking",
+                "vehicle_repair": "Vehicle Repair",
+                "vehicle_insurance": "Vehicle Insurance",
+                "tolls": "Tolls",
+                "rent": "Rent",
+                "mortgage": "Mortgage",
+                "utilities": "Utilities",
+                "home_maintenance": "Home Maintenance",
+                "furnishing": "Furnishing",
+                "internet": "Internet",
+                "mobile": "Mobile",
+                "subscriptions": "Subscriptions",
+                "software": "Software",
+                "clothing": "Clothing",
+                "electronics": "Electronics",
+                "home_goods": "Home Goods",
+                "personal_items": "Personal Items",
+                "gifts": "Gifts",
+                "cinema": "Cinema",
+                "events": "Events",
+                "concerts": "Concerts",
+                "games": "Games",
+                "nightlife": "Nightlife",
+                "haircut": "Haircut",
+                "spa": "Spa",
+                "massage": "Massage",
+                "beauty_services": "Beauty Services",
+                "hygiene": "Hygiene",
+                "skincare": "Skincare",
+                "cosmetics": "Cosmetics",
+                "subscription": "Gym Subscription",
+                "coach": "Coach",
+                "equipment": "Equipment",
+                "medical": "Medical",
+                "pharmacy": "Pharmacy",
+                "dental": "Dental",
+                "health_insurance": "Health Insurance",
+                "flights": "Flights",
+                "accommodation": "Accommodation",
+                "activities": "Activities",
+                "visa": "Visa",
+                "insurance": "Insurance",
+                "online_courses": "Online Courses",
+                "books": "Books",
+                "tutoring": "Tutoring",
+                "certification": "Certification",
+                "fees": "Bank Fees",
+                "taxes": "Taxes",
+                "loans": "Loans",
+                "investments": "Investments",
+                "crypto": "Crypto",
+                "currency_exchange": "Currency Exchange",
+                "cash_withdrawal": "Cash Withdrawal",
+                "transfers": "Transfers",
+                "pet_food": "Pet Food",
+                "vet": "Vet",
+                "pet_items": "Pet Items"
+            },
+            "currentUser": "You",
+            "splitHint": "Split equally among the group.",
+            "noMembers": "No group members available yet.",
+            "tabs": {
+                "group": "Group",
+                "friends": "Friends"
+            },
+            "split": {
+                "title": "How to split",
+                "equal": "Equal",
+                "percent": "Percent",
+                "amounts": "Amounts",
+                "shares": "Shares",
+                "splitEquallyBetween": "Split equally between {{count}} participants",
+                "eachPays": "Each pays",
+                "yourShare": "Your share",
+                "includeParticipant": "Include {{name}} in split",
+                "decreaseShare": "Decrease share",
+                "increaseShare": "Increase share",
+                "decreaseAmount": "Decrease amount",
+                "increaseAmount": "Increase amount",
+                "decreasePercent": "Decrease percent",
+                "increasePercent": "Increase percent",
+                "selectAll": "Select all",
+                "deselectAll": "Deselect all",
+                "total": "Total:",
+                "totalShares": "Total shares",
+                "totalAssigned": "Total assigned",
+                "difference": "Difference"
+            }
+        }
+    },
+    "page": {
+        "coverAlt": "{{name}} group cover",
+        "members": "members",
+        "loadingGroup": "Loading group...",
+        "shareWarning": "Share invite link with trusted people only.",
+        "notFound": "No group id or group not found",
+        "activityStubTitle": "Group activity",
+        "activityStubDescription": "Full activity history is available on the Activity page.",
+        "expenses": {
+            "emptyTitle": "No expenses yet",
+            "emptyDescription": "Add the first expense to start tracking spending in this group."
+        },
+        "tabs": {
+            "expenses": "Expenses",
+            "balances": "Balances",
+            "members": "Members",
+            "settings": "Settings"
+        },
+        "settings": {
+            "inviteSection": "INVITE",
+            "membersSection": "MEMBERS",
+            "settingsSection": "SETTINGS",
+            "copyLinkTitle": "Copy invite link",
+            "showQRTitle": "Show QR code",
+            "showQRSubtitle": "Scan to join the group",
+            "addPeopleTitle": "Add people",
+            "addPeopleSubtitle": "Invite by name or email",
+            "simplifyDebtsTitle": "Simplify group debts",
+            "simplifyDebtsSubtitle": "Minimize the number of transactions",
+            "simplifyDebtsOwnerOnly": "Only the group owner can change this setting.",
+            "simplifyDebtsUnsupported": "Debt simplification is unavailable for this group.",
+            "simplifyDebtsUpdating": "Updating debt simplification..."
+        },
+        "balances": {
+            "settled": "Settled up",
+            "empty": "No balances to show yet."
+        },
+        "settleUp": {
+            "chooseDebtTitle": "Choose a debt",
+            "chooseDebtAccessibleDescription": "Select a debt to record a payment.",
+            "youOwe": "You owe",
+            "owedToYou": "You are owed",
+            "showMore_one": "Show {{count}} more debt",
+            "showMore_other": "Show {{count}} more debts",
+            "showLess": "Show less"
+        },
+        "membersTab": {
+            "you": "You",
+            "invitePeople": "Invite people"
+        }
+    },
+    "leaveModal": {
+        "confirm": "Are you sure you want to leave this group?",
+        "ownerWarning": "You are the owner. Please transfer ownership before leaving.",
+        "newOwnerPlaceholder": "Select new owner"
+    },
+    "removeModal": {
+        "title": "Delete group",
+        "confirm": "Are you sure you want to delete this group?",
+        "warning": "This action cannot be undone. All group data will be permanently deleted."
+    },
+    "kickModal": {
+        "title": "Kick member",
+        "confirm": "Are you sure you want to kick {{name}} from this group?",
+        "transferExpensesWarning": "If this user has unsettled expenses, they will be moved to friends expenses."
+    }
+}

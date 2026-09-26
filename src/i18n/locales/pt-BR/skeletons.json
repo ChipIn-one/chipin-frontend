@@ -1,0 +1,37 @@
+{
+    "activityFeed": {
+        "dateDivider": "Ontem",
+        "dateDividerSummary": "você deve 8.000 USD",
+        "expenseTitle": "Jantar da viagem",
+        "expenseDescription": "Alex pagou",
+        "scope": "Grupo Viagem",
+        "expenseAmount": "120 USD",
+        "owedStatus": "Devem a voce",
+        "relativeTime": "ha 2 horas"
+    },
+    "account": {
+        "displayName": "Alex Silva",
+        "email": "alex@example.com"
+    },
+    "balanceBadges": {
+        "amount": "300 USD"
+    },
+    "dashboardHeader": {
+        "greeting": "Oi, Alex",
+        "overview": "Aqui esta seu resumo"
+    },
+    "debtAmount": {
+        "amount": "1200 USD"
+    },
+    "friendsPage": {
+        "currency": "USD",
+        "total": "+9999",
+        "name": "Alex Silva",
+        "amount": "+999 USD"
+    },
+    "groupsCards": {
+        "groupName": "Grupo de viagem",
+        "groupBalance": "Devem a voce 120 USD",
+        "members": "3 membros"
+    }
+}

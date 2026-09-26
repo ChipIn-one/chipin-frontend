@@ -1,0 +1,72 @@
+import { LucideUserPlus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+
+import { Avatar, Badge, Button, Card, Flex, Text } from '@radix-ui/themes';
+
+import type { Group } from 'api/chipin.types';
+import { buildGroupInviteLink } from 'helpers/url';
+import { useUsersStore } from 'store/users-store';
+
+import GroupRoleBadge from 'basics/GroupRoleBadge';
+
+interface Props {
+    group: Group;
+}
+
+const GroupMembersTab = ({ group }: Props) => {
+    const { t } = useTranslation('group');
+    const user = useUsersStore(s => s.user);
+    const inviteLink = buildGroupInviteLink({ inviteToken: group.inviteToken });
+
+    return (
+        <Flex direction="column" gap="2">
+            {group.members.map(member => {
+                const isCurrentUser = member.user.id === user?.id;
+                const isOwner = member.user.id === group.creator.id;
+
+                return (
+                    <Card key={member.user.id} size="2">
+                        <Flex align="center" justify="between" gap="3">
+                            <Flex align="center" gap="3">
+                                <Avatar
+                                    size="3"
+                                    radius="full"
+                                    src={member.user.picture || ''}
+                                    alt={member.user.displayName}
+                                    fallback={member.user.displayName?.[0]}
+                                />
+                                <Flex direction="column" gap="1">
+                                    <Flex align="center" gap="2">
+                                        <Text weight="medium" size="2">
+                                            {member.user.displayName}
+                                        </Text>
+                                        <GroupRoleBadge isOwner={isOwner} />
+                                        {isCurrentUser && (
+                                            <Badge size="1" color="teal" variant="soft">
+                                                {t('page.membersTab.you')}
+                                            </Badge>
+                                        )}
+                                    </Flex>
+                                    <Text size="1" color="gray" truncate>
+                                        {member.user.email}
+                                    </Text>
+                                </Flex>
+                            </Flex>
+                        </Flex>
+                    </Card>
+                );
+            })}
+
+            {inviteLink && (
+                <Button variant="ghost" color="gray" size="2" mt="2" asChild>
+                    <a href={inviteLink} target="_blank" rel="noreferrer">
+                        <LucideUserPlus size={16} />
+                        {t('page.membersTab.invitePeople')}
+                    </a>
+                </Button>
+            )}
+        </Flex>
+    );
+};
+
+export default GroupMembersTab;

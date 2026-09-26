@@ -1,0 +1,4 @@
+const DESKTOP_SIDEBAR_WIDTH = '280px';
+const DESKTOP_SHELL_MAX_WIDTH = `calc(${DESKTOP_SIDEBAR_WIDTH} + var(--container-4) + var(--space-6))`;
+
+export { DESKTOP_SHELL_MAX_WIDTH, DESKTOP_SIDEBAR_WIDTH };

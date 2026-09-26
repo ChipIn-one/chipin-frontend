@@ -1,0 +1,36 @@
+{
+    "groups": {
+        "title": "Твои группы",
+        "otherTitle": "Другие группы",
+        "subtitle": "Держи общие балансы, поездки и компании в одном месте.",
+        "emptyTitle": "Пока нет групп",
+        "emptyDescription": "Создай первую группу, чтобы начать делить расходы с друзьями, соседями или в поездках.",
+        "filterAll": "Все",
+        "filterSettled": "Рассчитано",
+        "showSettled": "Показать рассчитанные ({{count}})",
+        "hideSettled": "Скрыть рассчитанные",
+        "filterEmptyTitle": "Группы не найдены",
+        "filterEmptyDescription": "Нет групп, соответствующих выбранному фильтру."
+    },
+    "groupsCard": {
+        "members_one": "{{count}} участник",
+        "members_few": "{{count}} участника",
+        "members_many": "{{count}} участников",
+        "members_other": "{{count}} участника"
+    },
+    "summary": {
+        "totalBalance": "Общий баланс",
+        "totalAcrossGroupsAndFriends": "По группам и друзьям",
+        "owedToYou": "Вам должны",
+        "youOwe": "Вы должны"
+    },
+    "header": {
+        "greeting": "Привет, {{name}}",
+        "overview": "Вот твоя сводка"
+    },
+    "solo": {
+        "summaryTitle": "Сводка Solo",
+        "activityTitle": "Активность Solo",
+        "inDevelopment": "Ещё в разработке."
+    }
+}
