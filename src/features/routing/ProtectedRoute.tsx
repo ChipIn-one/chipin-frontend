@@ -1,25 +1,41 @@
+import { Navigate, useNavigate } from 'react-router-dom';
+
 import { Box } from '@radix-ui/themes';
 
-import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
-import { useAuthStore } from 'store/authStore';
+import { ROUTES } from 'constants/routes';
 
 import PageLoader from 'basics/PageLoader';
-import SignInPage from 'pages/SignInPage';
+import { AuthModal } from 'components/modals/auth-modal';
+
+import { useConnect } from './internal';
 
 interface Props {
     children: React.ReactNode;
 }
 
 export const ProtectedRoute = ({ children }: Props) => {
-    const isAuthResolved = useAuthStore(selectIsAuthResolved);
-    const isLoggedIn = useAuthStore(selectIsLoggedIn);
+    const navigate = useNavigate();
+    const { isAuthResolved, isLoggedIn, unauthReason } = useConnect();
 
     if (!isAuthResolved) {
         return <PageLoader />;
     }
 
     if (!isLoggedIn) {
-        return <SignInPage />;
+        if (unauthReason === 'signed_out') {
+            return <Navigate to={ROUTES.HOME} replace />;
+        }
+
+        return (
+            <AuthModal
+                isOpened
+                onOpenChange={isOpen => {
+                    if (!isOpen) {
+                        navigate(ROUTES.HOME, { replace: true });
+                    }
+                }}
+            />
+        );
     }
 
     return (

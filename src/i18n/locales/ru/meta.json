@@ -3,10 +3,6 @@
         "title": "ChipIn — Главная",
         "description": "Главная страница приложения ChipIn"
     },
-    "signIn": {
-        "title": "ChipIn — Вход",
-        "description": "Войдите в аккаунт ChipIn"
-    },
     "privacy": {
         "title": "ChipIn — Конфиденциальность",
         "description": "Узнайте, как ChipIn использует информацию для работы сервиса"

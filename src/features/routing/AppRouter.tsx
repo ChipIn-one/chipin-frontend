@@ -7,7 +7,6 @@ import PageLoader from 'basics/PageLoader';
 import { InternalPageLayout } from 'components/internal-page-layout';
 import GroupJoinPage from 'pages/GroupJoinPage';
 import { OAuthCallbackPage } from 'pages/oauth-callback-page';
-import SignInPage from 'pages/SignInPage';
 
 import HomeRouteGuard from './HomeRouteGuard';
 import { ProtectedRoute } from './ProtectedRoute';
@@ -51,7 +50,6 @@ const AppRouter = () => {
                         </HomeRouteGuard>
                     }
                 />
-                <Route path={ROUTES.SIGN_IN} element={<SignInPage />} />
                 <Route path={ROUTES.PRIVACY} element={<PrivacyPage />} />
                 <Route path={ROUTES.TERMS} element={<TermsPage />} />
                 <Route path={ROUTES.OAUTH_CALLBACK} element={<OAuthCallbackPage />} />

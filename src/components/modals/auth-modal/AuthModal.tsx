@@ -13,10 +13,12 @@ import { OverlayBody } from '../components';
 import { IllustrationPanel, SharedExpensesImage } from './styled';
 
 interface Props {
-    children: React.ReactNode;
+    children?: React.ReactNode;
+    isOpened?: boolean;
+    onOpenChange?: (isOpen: boolean) => void;
 }
 
-const AuthModal = ({ children }: Props) => {
+const AuthModal = ({ children, isOpened, onOpenChange }: Props) => {
     const { t } = useTranslation('auth');
 
     const content = (
@@ -75,6 +77,8 @@ const AuthModal = ({ children }: Props) => {
             title={t('modal.title')}
             accessibleDescription={t('modal.trust')}
             content={content}
+            isOpened={isOpened}
+            setIsOpened={onOpenChange}
         />
     );
 };
