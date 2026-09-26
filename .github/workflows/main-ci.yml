@@ -1,0 +1,63 @@
+name: Main CI
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: main-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  main-ci:
+    name: main-ci
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate release source
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          THIS_REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git cat-file -e "${BASE_SHA}:.github/workflows/main-ci.yml" 2>/dev/null; then
+            if [ "$HEAD_REF" != "dev" ] || [ "$HEAD_REPOSITORY" != "$THIS_REPOSITORY" ]; then
+              echo "PRs to main must originate from the repository dev branch."
+              exit 1
+            fi
+          else
+            echo "Bootstrap: main-ci is not present on the base commit yet; source restriction activates after this workflow lands on main."
+          fi
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.21.0
+          package-manager-cache: false
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify current main-compatible frontend
+        shell: bash
+        run: |
+          set -euo pipefail
+          if node -e 'const p=require("./package.json"); process.exit(p.scripts?.["verify:full"] ? 0 : 1)'; then
+            npm run verify:full
+          else
+            npm run lint
+            npm run build
+          fi
