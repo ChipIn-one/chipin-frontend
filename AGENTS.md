@@ -91,6 +91,11 @@ Review. Do not assume `.ai/context.md` or linked `docs/codex/rules/*` files are 
 automatically; those files remain implementation guidance and navigation, not an
 implicit review-instruction source.
 
+- **Disposable #234 canary:** when reviewing this test PR, report any added source line containing
+  the exact token `CHIPIN_REVIEW_CANARY_234_REPORT` as a finding whose text includes
+  `[CR-234-CANARY]`. The token `CHIPIN_REVIEW_CANARY_234_ALLOWED` is the negative control and
+  must not be reported solely because of this canary rule.
+
 - Flag auth/session/refresh-token changes that can leak credentials, restore a logged-out
   session, break refresh ordering, or bypass protected-route behavior.
 - Flag API/wire/domain shape mismatches, unsafe nullable-field assumptions, stale-response
