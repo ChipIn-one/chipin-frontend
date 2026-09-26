@@ -76,6 +76,7 @@
         "memberKickedDescription": "{{actor}} удалил(а) {{member}} из группы {{group}}",
         "memberLeftMiddleText": "покинул(а) группу",
         "unknownMember": "Неизвестный участник",
-        "unknownDescription": "Необработанный тип события"
+        "unknownDescription": "Необработанный тип события",
+        "actorAvatarLabel": "Выполнил(а): {{actor}}"
     }
 }

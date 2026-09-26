@@ -76,6 +76,7 @@
         "memberKickedDescription": "{{actor}} removed {{member}} from {{group}}",
         "memberLeftMiddleText": "left the group",
         "unknownMember": "Unknown member",
-        "unknownDescription": "Unhandled event type"
+        "unknownDescription": "Unhandled event type",
+        "actorAvatarLabel": "Performed by {{actor}}"
     }
 }

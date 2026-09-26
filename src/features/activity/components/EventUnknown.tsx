@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next';
 
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 
-import { AppEvent } from 'api/activity.types';
+import type { AppEvent } from 'api/activity.types';
+
+import { EventIcon } from './activity-event';
 
 interface EventUnknownProps {
     event: AppEvent;
@@ -18,12 +20,14 @@ const EventUnknown = ({ event }: EventUnknownProps) => {
         <Card size="1" mb="2">
             <Flex justify="between" align="center" gap="3">
                 <Flex gap="4" align="center">
-                    <Avatar
-                        size="4"
-                        variant="soft"
-                        color="amber"
-                        fallback={<LucideAlertTriangle size={20} />}
-                    />
+                    <EventIcon event={event}>
+                        <Avatar
+                            size="4"
+                            variant="soft"
+                            color="amber"
+                            fallback={<LucideAlertTriangle size={20} />}
+                        />
+                    </EventIcon>
                     <Flex gap="1" direction="column">
                         <Text size="3" as="span" weight="medium">
                             {eventType}
