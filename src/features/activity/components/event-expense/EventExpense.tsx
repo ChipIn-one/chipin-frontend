@@ -12,6 +12,7 @@ import {
 } from 'constants/activity';
 import { useUsersStore } from 'store/users-store';
 
+import { EventIcon } from '../activity-event';
 import { ExpenseIcon } from './components';
 import {
     ExpenseAmount,
@@ -50,11 +51,13 @@ const EventExpense = ({ event }: Props) => {
             <Flex justify="between" align="center" gap="3">
                 <Flex direction="column" gap="1" minWidth="0" flexGrow="1">
                     <Flex gap="3" align="center" minWidth="0">
-                        <ExpenseIcon
-                            isReversed={isReversed}
-                            hasCurrentUser={Boolean(user)}
-                            isCurrentUserPayer={isCurrentUserPayer}
-                        />
+                        <EventIcon event={event} isActorInText={isReversed}>
+                            <ExpenseIcon
+                                isReversed={isReversed}
+                                hasCurrentUser={Boolean(user)}
+                                isCurrentUserPayer={isCurrentUserPayer}
+                            />
+                        </EventIcon>
                         <Flex direction="column" align="start" gap="1">
                             {description ? (
                                 <ExpenseDescription
