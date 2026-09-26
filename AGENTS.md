@@ -35,6 +35,12 @@ The generic AI lifecycle, publication, and reviewer roles are owned by the
 canonical `syllik/ai-workflow`; this file contains only ChipIn-specific
 commands and repository policy.
 
+The read-only knowledge-base dependency is `ChipIn-one/chipin-knowledge-base@main`.
+Resolve it from `../chipin-knowledge-base` when available. In GitHub-only/web
+environments, resolve the same canonical files through authenticated GitHub access;
+a missing sibling checkout alone is not a reason to substitute copied or stale KB
+content.
+
 - `npm run test:task -- <explicit test paths>` — focused tests.
 - `npm run verify` — fast lint/typecheck.
 - `npm run test:full` — full tests.
@@ -61,22 +67,48 @@ commands and repository policy.
 
 The canonical lifecycle is:
 
-`Sol 5.6 planning/architecture → Luna xhigh implementation + local validation → IMPLEMENTATION_COMPLETE → trusted Sol/human publication → managed Codex GitHub Code Review → human-authorized correction cycle if needed → new Codex review for every changed PR head → human merge`.
+`Sol 5.6 planning/architecture → Luna xhigh implementation + local validation → IMPLEMENTATION_COMPLETE → trusted Sol/human publication → green full frontend-ci on the current head → exactly one @codex review for that head → human-authorized correction cycle if needed → changed head repeats green frontend-ci plus one new @codex review → human merge`.
 
 Luna is executor-only and stops at `IMPLEMENTATION_COMPLETE` or `BLOCKED`.
 Luna does not review her own task diff, perform independent review batches, judge
 merge readiness, commit, push, create or update PRs, merge, or enable auto-merge.
-The managed Codex GitHub Code Review is the routine/default independent reviewer
-and runs automatically on every push to an open PR after trusted publication. A
-review is current only when its reviewed commit SHA equals the current PR head;
-every changed PR head requires a new Codex review. Use `@codex review` only as a
-manual fallback/retrigger when automatic review does not start or an explicit
-retry is needed; do not trigger a duplicate manual review while automatic review
-is already running. Reviewer findings remain
-separate from Luna execution state and return to Luna only after explicit human
-authorization. Sol 5.6 High is escalation/fallback only for architecture or
-high-risk review, ambiguous or disputed findings, Codex unavailability, or an
-explicit human request. Only a human merges.
+The managed Codex GitHub Code Review is the routine/default independent reviewer.
+Automatic Codex review is disabled. After trusted publication, wait until required
+`frontend-ci` is green for the current PR head, then post exactly one `@codex review`
+for that head. Never request review while required CI is pending or failing, and do
+not post duplicate review requests for the same head. A review is current only when
+its reviewed commit SHA equals the current PR head; every changed head repeats the
+green-CI gate and receives one new review request. Reviewer findings remain separate
+from Luna execution state and return to Luna only after explicit human authorization.
+Sol 5.6 High is escalation/fallback only for architecture or high-risk review,
+ambiguous or disputed findings, Codex unavailability, or an explicit human request.
+Only a human merges.
+
+## Code Review Rules
+
+These are the self-contained repository-wide rules for managed Codex GitHub Code
+Review. Do not assume `.ai/context.md` or linked `docs/codex/rules/*` files are loaded
+automatically; those files remain implementation guidance and navigation, not an
+implicit review-instruction source.
+
+- Flag auth/session/refresh-token changes that can leak credentials, restore a logged-out
+  session, break refresh ordering, or bypass protected-route behavior.
+- Flag API/wire/domain shape mismatches, unsafe nullable-field assumptions, stale-response
+  application, broken cancellation/concurrency guards, and local patching of canonical
+  backend-owned financial/domain state.
+- Flag money handling that loses decimal precision or coerces decimal wire values with
+  `Number()`/`parseFloat()` instead of preserving the contract and using canonical money
+  helpers at the appropriate boundary.
+- Flag persisted/offline state changes that can corrupt, duplicate, or incorrectly restore
+  state across reload, logout, retry, or reconciliation.
+- Flag React lifecycle/state bugs, routing regressions, CSP/security regressions, and
+  behavior changes that bypass i18n or required accessibility semantics.
+- Require meaningful regression tests for materially changed logic when a practical seam
+  exists. Do not report formatting, import ordering, or other deterministic style checks
+  already enforced by CI unless they cause a concrete correctness problem.
+
+Evidence and the repository decision for instruction loading are recorded in
+`docs/codex/review-instruction-loading.md`.
 
 ## GitHub task authority
 
@@ -86,7 +118,7 @@ These rules apply only to ChipIn frontend tasks.
 - The GitHub Issue title and body are the task specification and dependency record.
 - Organization Issue Fields are canonical structured metadata, including `Priority`, `Severity`, and `Release scope` where applicable.
 - ChipIn Development Project #5 `Status` is the canonical workflow state. Do not duplicate status in the Issue title or body.
-- Priority presentation is derived from the canonical `Priority` field. If that field is unavailable, exactly one fallback Issue label `P0`/`P1`/`P2`/`P3` may provide presentation compatibility; conflicts fail closed.
+- Priority presentation is derived only from the canonical `Priority` field. If that field cannot be read, fail closed; do not substitute Issue labels or title/body encoding.
 - PRE-PROD semantics derive from the canonical `Release scope`; title encoding is not the source of truth.
 - Historical Trello links may remain in `References` as read-only provenance/evidence; Trello must not participate in current task state, notifications as authority, admission, planning, or execution authorization.
 - Active agents and workflows must not create or update Trello cards; move Trello cards or lists; update Trello labels, status, or metadata; write comments or activity to Trello; or invoke or maintain Trello task-tracking integrations.
@@ -109,3 +141,25 @@ Generic execution lifecycle and reviewer semantics are defined by canonical
 at `IMPLEMENTATION_COMPLETE` or `BLOCKED`. Trusted publication, independent
 review, corrections, and release decisions remain outside Luna execution.
 Preserve unrelated work and do not change backend or unrelated architecture.
+
+## GATE — knowledge base
+
+The ChipIn knowledge base (`../chipin-knowledge-base`, github.com/ChipIn-one/chipin-knowledge-base)
+owns the domain language, the behaviour specs and the HTTP contract. This repo owns how they are
+implemented. Do not start a change that touches the domain, the API or user-visible behaviour
+until every item below is done:
+
+1. Read `chipin-knowledge-base/common/glossary.md`. Use its terms in code, DTOs and docs; do not
+   introduce synonyms.
+2. Read `chipin-knowledge-base/common/specs/<capability>.md` for the capability you change.
+   Requirements carry stable ids (`SET-003`). Name tests after them.
+3. If the change alters behaviour or the contract: update the common spec in a linked PR to the
+   knowledge base before or together with this one. A bugfix for behaviour the spec is silent about
+   adds the missing requirement there.
+4. If the change conflicts with an accepted ADR in `chipin-knowledge-base/common/adr/`: stop and ask.
+5. Implementation-only invariants (transactions, locks, state ownership, deviations) go to this
+   repo's `docs/specs/<capability>.md`, referencing the requirement ids, never repeating the rules.
+   Design docs and plans stay in this repo.
+
+If the knowledge base is not checked out next to this repo, clone it there before proceeding:
+`git clone https://github.com/ChipIn-one/chipin-knowledge-base.git ../chipin-knowledge-base`.

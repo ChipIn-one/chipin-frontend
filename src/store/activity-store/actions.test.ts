@@ -605,7 +605,7 @@ test('does not refetch when an expense mutation fails', () => {
     });
 });
 
-test('prepares an expense edit from the latest Activity snapshot without a ledger read', () => {
+test('ACT-004 prepares an expense edit from the latest Activity snapshot without a ledger read', () => {
     const parentEvent = {
         ...createActivityEvent('activity-edit-parent', 1),
         subjectId: editEntry.id,

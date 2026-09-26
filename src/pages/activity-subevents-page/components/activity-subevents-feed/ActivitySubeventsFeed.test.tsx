@@ -52,7 +52,7 @@ beforeEach(() => {
     useErrorsStore.getState().resetErrors();
 });
 
-test('fetches subevents without a category on a direct visit', () => {
+test('ACT-025 fetches subevents without a category on a direct visit', () => {
     const fetchSetActivitySubevents = vi.fn().mockResolvedValue(undefined);
     useActivityStore.setState({
         subevents: [],
