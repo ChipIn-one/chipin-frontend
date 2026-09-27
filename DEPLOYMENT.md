@@ -25,9 +25,10 @@ environment. Configure it independently for the Vercel environments that should
 send events. When the variable is absent or empty, runtime Sentry reporting is
 disabled even if the build would otherwise enable telemetry. PR-controlled
 Actions preview builds use only public `VITE_*` build variables and explicitly
-skip Sentry source-map upload so `SENTRY_AUTH_TOKEN` is never required in the
-untrusted build job. Protected staging/production builds preserve the existing
-Sentry source-map upload behavior.
+skip Sentry source-map upload and disable Vite source-map generation, so neither
+`SENTRY_AUTH_TOKEN` nor unpublished source maps enter the untrusted preview
+artifact. Protected staging/production builds preserve the existing Sentry
+source-map upload behavior.
 
 There is no unconditional external API rewrite. Unknown hosts therefore cannot
 fall back to production.
