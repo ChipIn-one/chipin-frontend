@@ -35,6 +35,28 @@
             "destination": "https://api-dev.chipin.one/:path*"
         },
         {
+            "source": "/manifest.webmanifest",
+            "has": [
+                {
+                    "type": "host",
+                    "value": "dev.chipin.one"
+                }
+            ],
+            "destination": "/manifest-dev.webmanifest"
+        },
+        {
+            "source": "/manifest.webmanifest",
+            "has": [
+                {
+                    "type": "host",
+                    "value": {
+                        "suf": ".vercel.app"
+                    }
+                }
+            ],
+            "destination": "/manifest-dev.webmanifest"
+        },
+        {
             "source": "/.well-known/assetlinks.json",
             "destination": "/.well-known/assetlinks.json"
         },
@@ -109,6 +131,19 @@
         },
         {
             "source": "/manifest.webmanifest",
+            "headers": [
+                {
+                    "key": "Content-Type",
+                    "value": "application/manifest+json"
+                },
+                {
+                    "key": "Cache-Control",
+                    "value": "public, max-age=3600, immutable"
+                }
+            ]
+        },
+        {
+            "source": "/manifest-dev.webmanifest",
             "headers": [
                 {
                     "key": "Content-Type",
