@@ -61,3 +61,36 @@ jobs:
             npm run lint
             npm run build
           fi
+
+  vercel-deploy:
+    name: vercel-deploy
+    needs: main-ci
+    if: >-
+      ${{
+        needs.main-ci.result == 'success' &&
+        vars.VERCEL_ACTIONS_DEPLOY_ENABLED == 'true' &&
+        (
+          (github.event_name == 'push' && github.ref_name == 'main') ||
+          (
+            github.event_name == 'pull_request' &&
+            github.base_ref == 'main' &&
+            github.head_ref == 'dev' &&
+            github.event.pull_request.head.repo.full_name == github.repository &&
+            github.actor != 'dependabot[bot]'
+          )
+        )
+      }}
+    uses: ./.github/workflows/vercel-deploy.yml
+    with:
+      activation_enabled: ${{ vars.VERCEL_ACTIONS_DEPLOY_ENABLED }}
+      ci_result: ${{ needs.main-ci.result }}
+      event_name: ${{ github.event_name }}
+      repository: ${{ github.repository }}
+      source_repository: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || github.repository }}
+      source_branch: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+      base_ref: ${{ github.base_ref }}
+      ci_sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+    secrets:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
