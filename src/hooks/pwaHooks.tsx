@@ -3,11 +3,12 @@ import i18n from 'i18next';
 import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
 
-import { useCopyToClipboard, useNetworkState } from '@uidotdev/usehooks';
+import { useNetworkState } from '@uidotdev/usehooks';
 
 import type { Group } from 'api/chipin.types';
 import { SECOND } from 'constants/time';
 import { TOASTS_IDS } from 'constants/toasts';
+import { copyTextToClipboard } from 'helpers/clipboard';
 import { detectNativeShare, shareGroupInvite } from 'helpers/share';
 import { buildGroupInviteLink } from 'helpers/url';
 import { usePwaStore } from 'store/pwaStore';
@@ -91,7 +92,6 @@ interface UseGroupInviteResult {
 export const useGroupInvite = (group: Group): UseGroupInviteResult => {
     const [isShareDone, setIsShareDone] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
-    const [, copyFn] = useCopyToClipboard();
     const isMounted = useRef(true);
     const shareFeedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const copyFeedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -137,11 +137,17 @@ export const useGroupInvite = (group: Group): UseGroupInviteResult => {
     };
 
     const handleCopyLink = (): Promise<void> => {
-        return copyFn(inviteLink).then(() => {
+        return copyTextToClipboard(inviteLink).then(result => {
             if (!isMounted.current) {
                 return;
             }
 
+            if (result !== 'copied') {
+                toast.error(i18n.t('toasts:group.inviteLinkCopyError'));
+                return;
+            }
+
+            toast.success(i18n.t('toasts:group.inviteLinkCopied'));
             setIsCopied(true);
 
             if (copyFeedbackTimer.current !== null) {

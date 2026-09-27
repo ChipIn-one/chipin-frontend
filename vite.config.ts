@@ -100,6 +100,7 @@ const appVersion = resolveAppVersion();
 
 export default defineConfig(({ mode }) => {
     const buildEnvironment = loadEnv(mode, '.', '');
+    const pwaAppName = buildEnvironment.VITE_CHIPIN_ENV === 'dev' ? 'ChipIn DEV' : 'ChipIn';
     const sentryBuildConfig = resolveSentryBuildConfig(buildEnvironment);
     const sentryUploadConfig = resolveSentryUploadConfig(
         buildEnvironment,
@@ -132,8 +133,8 @@ export default defineConfig(({ mode }) => {
                 injectRegister: false,
 
                 manifest: {
-                    name: 'ChipIn',
-                    short_name: 'ChipIn',
+                    name: pwaAppName,
+                    short_name: pwaAppName,
                     description: 'Share expenses without stress',
                     theme_color: '#3e9b4f',
                     display: 'standalone',
@@ -233,6 +234,9 @@ export default defineConfig(({ mode }) => {
             sourcemap: 'hidden',
             rolldownOptions: {
                 output: {
+                    // Keep long-lived framework dependencies cacheable here.
+                    // Application areas are split by route/modal dynamic imports instead of
+                    // forced manual groups so navigation does not download unrelated features.
                     codeSplitting: {
                         groups: [
                             {

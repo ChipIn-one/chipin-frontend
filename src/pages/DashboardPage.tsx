@@ -26,7 +26,7 @@ import {
 import GroupsCards from 'components/GroupsCards';
 import GroupsSectionHeader from 'components/GroupsSectionHeader';
 import { InternalPageColumnsFromSm } from 'components/internal-page-layout';
-import { CreateUpdateGroupModal } from 'components/modals';
+import { CreateUpdateGroupModal } from 'components/modals/create-update-group-modal';
 import { ActivityFeedSkeleton } from 'components/skeletons';
 import { ActivityEventsList } from 'features/activity';
 

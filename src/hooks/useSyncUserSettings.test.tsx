@@ -9,18 +9,26 @@ import { useUsersStore } from 'store/users-store';
 import { useSyncUserSettings } from './useSyncUserSettings';
 
 const setTheme = vi.hoisted(() => vi.fn());
+const changeLanguage = vi.hoisted(() => vi.fn(() => Promise.resolve()));
+const captureException = vi.hoisted(() => vi.fn());
 const locale = vi.hoisted(() => ({
     matchLocale: vi.fn(() => 'en'),
-    onChangeLocale: vi.fn(),
 }));
 
 vi.mock('next-themes', () => ({
     useTheme: () => ({ setTheme }),
 }));
 
+vi.mock('@sentry/react', () => ({
+    captureException,
+}));
+
 vi.mock('helpers/locale', () => ({
     matchLocale: locale.matchLocale,
-    onChangeLocale: locale.onChangeLocale,
+}));
+
+vi.mock('i18n', () => ({
+    default: { changeLanguage },
 }));
 
 const settings = {
@@ -50,7 +58,19 @@ test('does not reapply cached user theme settings after logout', () => {
     renderHook(() => useSyncUserSettings());
 
     expect(setTheme).not.toHaveBeenCalled();
-    expect(locale.onChangeLocale).toHaveBeenCalledWith('en');
+    expect(changeLanguage).toHaveBeenCalledWith('en');
+});
+
+test('records locale sync failures', () => {
+    const error = new Error('Failed to change language');
+    changeLanguage.mockRejectedValueOnce(error);
+    useAuthStore.setState({ status: 'unauthenticated' });
+
+    renderHook(() => useSyncUserSettings());
+
+    return Promise.resolve().then(() => {
+        expect(captureException).toHaveBeenCalledWith(error);
+    });
 });
 
 test('applies cached user theme settings while the authenticated user is loading', () => {

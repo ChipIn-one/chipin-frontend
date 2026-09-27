@@ -27,7 +27,7 @@ vi.mock('hooks/useInfiniteScroll', () => ({
     useInfiniteScroll: useInfiniteScrollMock,
 }));
 
-vi.mock('components/modals', () => ({
+vi.mock('components/modals/settle-up-modal', () => ({
     SettleUpModal: ({ group }: { group: Group }) => (
         <button type="button">{group.id}</button>
     ),

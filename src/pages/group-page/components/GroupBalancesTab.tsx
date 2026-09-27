@@ -10,7 +10,7 @@ import { useUsersStore } from 'store/users-store';
 import BalanceSummaryText from 'basics/BalanceSummaryText';
 import { NoGroupMembersEmptyState } from 'basics/empty-states';
 import GroupRoleBadge from 'basics/GroupRoleBadge';
-import { SettleUpModal } from 'components/modals';
+import { SettleUpModal } from 'components/modals/settle-up-modal';
 
 interface Props {
     group: Group;

@@ -118,8 +118,11 @@ The example shows the available locations, not a required complete file set.
 - The root `index.ts` exposes only the capability's public API. It does not re-export `internal/` or
   private subcomponents.
 - A public aggregate parent such as `components/modals/index.ts` may re-export child capabilities, but it
-  must source them from each child directory's `index.ts`. Consumers use the aggregate boundary, for
-  example `import { AddExpenseModal } from 'components/modals/';`.
+  must source them from each child directory's `index.ts`. Consumers may use that aggregate convenience
+  boundary when bundle isolation is irrelevant. Performance-sensitive consumers may instead import the
+  focused child directory boundary (for example `components/modals/add-expense-modal`) so bundling does
+  not pull unrelated capabilities into the same eager or route chunk; they still must not deep-import
+  the child's component files.
 - `components/index.ts` exports components by semantic names.
 
 ```ts

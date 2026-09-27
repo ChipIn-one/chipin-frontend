@@ -14,14 +14,19 @@ const networkState = vi.hoisted(() => ({
 }));
 
 const hookMocks = vi.hoisted(() => ({
-    copyToClipboard: vi.fn(() => Promise.resolve()),
+    copyTextToClipboard: vi.fn(
+        (): Promise<'copied' | 'unsupported'> => Promise.resolve('copied'),
+    ),
     detectNativeShare: vi.fn(() => false),
     shareGroupInvite: vi.fn(() => Promise.resolve('shared' as const)),
 }));
 
 vi.mock('@uidotdev/usehooks', () => ({
-    useCopyToClipboard: () => [undefined, hookMocks.copyToClipboard],
     useNetworkState: () => networkState,
+}));
+
+vi.mock('helpers/clipboard', () => ({
+    copyTextToClipboard: hookMocks.copyTextToClipboard,
 }));
 
 vi.mock('helpers/share', () => ({
@@ -38,6 +43,7 @@ vi.mock('i18next', () => ({
 vi.mock('sonner', () => ({
     toast: {
         dismiss: vi.fn(),
+        error: vi.fn(),
         success: vi.fn(),
         warning: vi.fn(),
     },
@@ -75,6 +81,7 @@ const group: Group = {
 
 beforeEach(() => {
     vi.clearAllMocks();
+    hookMocks.copyTextToClipboard.mockResolvedValue('copied');
     networkState.online = true;
 });
 
@@ -171,6 +178,34 @@ test('replaces share feedback timer and clears the pending timer on unmount', ()
 
             expect(clearTimeoutSpy).toHaveBeenCalledTimes(clearedBeforeUnmount + 1);
         });
+});
+
+test('shows copied feedback after a successful invite link copy', () => {
+    const { result } = renderHook(() => useGroupInvite(group));
+
+    return Promise.resolve(act(() => result.current.handleCopyLink())).then(() => {
+        expect(hookMocks.copyTextToClipboard).toHaveBeenCalledWith(
+            expect.stringContaining(group.inviteToken),
+        );
+        expect(result.current.isCopied).toBe(true);
+        expect(vi.mocked(toast.success)).toHaveBeenCalledWith(
+            'toasts:group.inviteLinkCopied',
+        );
+        expect(vi.mocked(toast.error)).not.toHaveBeenCalled();
+    });
+});
+
+test('shows an error and keeps copied feedback off when invite link copy fails', () => {
+    hookMocks.copyTextToClipboard.mockResolvedValueOnce('unsupported');
+    const { result } = renderHook(() => useGroupInvite(group));
+
+    return Promise.resolve(act(() => result.current.handleCopyLink())).then(() => {
+        expect(result.current.isCopied).toBe(false);
+        expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+            'toasts:group.inviteLinkCopyError',
+        );
+        expect(vi.mocked(toast.success)).not.toHaveBeenCalled();
+    });
 });
 
 test('clears the pending copy feedback timer on unmount', () => {

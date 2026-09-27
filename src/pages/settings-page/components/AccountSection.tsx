@@ -6,7 +6,7 @@ import { Button, Card, Flex, Grid, Separator, Skeleton, Text } from '@radix-ui/t
 
 import { selectUserSex, useUsersStore } from 'store/users-store';
 
-import { UserAvatarModal } from 'components/modals';
+import { UserAvatarModal } from 'components/modals/user-avatar-modal';
 import { UserProfileSummary } from 'components/user-profile-summary';
 
 interface Props {
