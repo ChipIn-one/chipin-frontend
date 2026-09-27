@@ -17,6 +17,7 @@ import type { UsersStore } from './types';
 
 const userChannel = createRequestChannel();
 const friendsChannel = createRequestChannel();
+const premiumPromoChannel = createRequestChannel();
 let profileMutationQueue = Promise.resolve();
 let profileMutationGeneration = 0;
 let settingsMutationId = 0;
@@ -103,6 +104,22 @@ const useUsersStore = create<UsersStore>((set, get) => ({
             .finally(() => {
                 if (request.isCurrent()) {
                     setLoading('users', 'self', 'fetched');
+                }
+            });
+    },
+    fetchSetPremiumPromoRemaining: () => {
+        const request = premiumPromoChannel.request(usersApi.fetchPremiumPromoRemaining);
+        set({ premiumPromoRemaining: null, isPremiumPromoResolved: false });
+
+        return request.promise
+            .then(({ premiumPromoRemaining }) => {
+                if (request.isCurrent()) {
+                    set({ premiumPromoRemaining, isPremiumPromoResolved: true });
+                }
+            })
+            .catch(() => {
+                if (request.isCurrent()) {
+                    set({ premiumPromoRemaining: null, isPremiumPromoResolved: true });
                 }
             });
     },
@@ -245,6 +262,7 @@ const useUsersStore = create<UsersStore>((set, get) => ({
     setInitialUsersStore: () => {
         userChannel.abort();
         friendsChannel.abort();
+        premiumPromoChannel.abort();
         profileMutationGeneration += 1;
         settingsMutationId += 1;
         avatarMutationId += 1;

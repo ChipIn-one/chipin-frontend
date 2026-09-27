@@ -171,7 +171,7 @@ test('ignores a stale dashboard failure after a newer refresh succeeds', () => {
     });
 });
 
-test('appends dashboard activity previews and advances the cursor', () => {
+test('ACT-023 appends dashboard activity previews and advances the feed cursor', () => {
     const activityEvent = {
         id: 'activity-1',
         seq: 1,

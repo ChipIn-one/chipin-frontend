@@ -7,6 +7,7 @@ type ViteSentryEnvironment = 'ci' | 'development' | 'local' | 'preview' | 'produ
 
 interface ImportMetaEnv {
     readonly VITE_CHIPIN_ENV?: ViteChipInEnv;
+    readonly VITE_SENTRY_DSN?: string;
     readonly VITE_SENTRY_ENABLED: boolean;
     readonly VITE_SENTRY_ENVIRONMENT: ViteSentryEnvironment;
 }

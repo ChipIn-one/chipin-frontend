@@ -61,7 +61,7 @@ beforeEach(() => {
     useLoadingStore.getState().setLoading('dashboard', 'data', 'fetched');
 });
 
-test('connects dashboard infinite scroll to the next activity preview page', () => {
+test('ACT-023 connects dashboard infinite scroll to the next activity preview page', () => {
     const fetchMoreDashboardActivity = vi.fn(() => Promise.resolve());
     useDashboardStore.setState({
         activityNextCursor: 40,

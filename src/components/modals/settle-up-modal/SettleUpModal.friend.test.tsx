@@ -134,7 +134,7 @@ test('allows editing a prefilled amount with more than two decimal places', () =
     });
 });
 
-test('prevents submitting more than the selected backend balance', () => {
+test('SET-003 prevents submitting more than the selected backend balance', () => {
     const onSubmit = vi.fn<(params: CreateSettlementParams) => Promise<void>>();
     const user = userEvent.setup();
 

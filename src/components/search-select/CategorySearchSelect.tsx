@@ -1,31 +1,15 @@
 import { useMemo } from 'react';
-import type { LucideProps } from 'lucide-react';
 import { LucideChevronDown } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Flex, Text } from '@radix-ui/themes';
 
-import type { ExpenseCategory } from 'constants/chipin';
-import { EXPENSE_CATEGORIES } from 'constants/chipin';
+import { EXPENSE_CATEGORY_KEYS } from 'constants/category';
+import { EXPENSE_CATEGORY_UI } from 'constants/category-ui';
 
 import type { SearchSelectProps } from './SearchSelect';
 import { SearchSelect } from './SearchSelect';
 import type { SearchSelectItem } from './types';
-
-type LucideIconComponent = React.FC<LucideProps>;
-
-const EXPENSE_CATEGORY_KEYS = Object.keys(EXPENSE_CATEGORIES) as ExpenseCategory[];
-
-const resolveIcon = (iconName: string, size: number, color?: string) => {
-    const IconComponent = (LucideIcons as unknown as Record<string, LucideIconComponent>)[
-        `Lucide${iconName}`
-    ];
-
-    const stroke = color ? `var(--${color}-9)` : undefined;
-
-    return IconComponent ? <IconComponent size={size} color={stroke} /> : null;
-};
 
 type CategorySearchSelectProps = Pick<
     SearchSelectProps,
@@ -64,26 +48,40 @@ const CategorySearchSelect = ({
         const result: CategoryItem[] = [];
 
         for (const key of EXPENSE_CATEGORY_KEYS) {
-            const category = EXPENSE_CATEGORIES[key];
             const categoryLabel = t(`expenses.modal.categories.${key}`);
+            const categoryUi = EXPENSE_CATEGORY_UI[key];
+            const CategoryIcon = categoryUi.icon;
 
             result.push({
                 value: key,
                 label: categoryLabel,
-                icon: resolveIcon(category.icon, 20, category.color),
+                icon: (
+                    <CategoryIcon
+                        size={20}
+                        color={`var(--${categoryUi.color}-9)`}
+                    />
+                ),
                 isIndented: false,
                 searchFields: [key, categoryLabel],
             });
 
-            for (const sub of category.subcategories) {
-                const subLabel = t(`expenses.modal.subcategories.${sub.key}`);
+            for (const [subcategory, subcategoryUi] of Object.entries(
+                categoryUi.subcategories,
+            )) {
+                const subLabel = t(`expenses.modal.subcategories.${subcategory}`);
+                const SubcategoryIcon = subcategoryUi.icon;
 
                 result.push({
-                    value: sub.key,
+                    value: subcategory,
                     label: subLabel,
-                    icon: resolveIcon(sub.icon, 16, sub.color),
+                    icon: (
+                        <SubcategoryIcon
+                            size={16}
+                            color={`var(--${subcategoryUi.color}-9)`}
+                        />
+                    ),
                     isIndented: true,
-                    searchFields: [sub.key, subLabel, categoryLabel],
+                    searchFields: [subcategory, subLabel, categoryLabel],
                 });
             }
         }

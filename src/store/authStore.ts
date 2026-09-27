@@ -81,7 +81,8 @@ export const useAuthStore = create<AuthStore>(set => ({
                 const { fetchSetDashboardData, setDefaultAppMode } =
                     useDashboardStore.getState();
                 const { fetchSetGroups } = useGroupsStore.getState();
-                const { fetchSetUser, fetchSetFriends } = useUsersStore.getState();
+                const { fetchSetPremiumPromoRemaining, fetchSetUser, fetchSetFriends } =
+                    useUsersStore.getState();
 
                 return Promise.all([
                     fetchSetDashboardData(),
@@ -92,6 +93,7 @@ export const useAuthStore = create<AuthStore>(set => ({
                         }
                     }),
                     fetchSetFriends(),
+                    isNewUser ? fetchSetPremiumPromoRemaining() : Promise.resolve(),
                 ]).then(() => undefined);
             })
             .catch((error: unknown) => {

@@ -33,7 +33,7 @@ test('keeps existing app content and session state mounted while showing the fal
     );
 
     expect(screen.getByText(CONFIRMED_CLIENT_STATE)).toBeTruthy();
-    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(screen.getByRole('dialog')).toBeTruthy();
     expect(useAuthStore.getState().status).toBe('authenticated');
 });
 

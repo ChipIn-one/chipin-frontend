@@ -4,6 +4,7 @@
     "filterAll": "Todo",
     "filterExpenses": "Gastos",
     "filterSettlements": "Liquidaciones",
+    "filterSettingsAction": "Filtros de actividad",
     "emptyTitle": "Aún sin actividad",
     "emptyDescription": "Aquí aparecerán los gastos y liquidaciones recientes.",
     "endOfFeed": "Eso es todo por ahora",
@@ -75,6 +76,7 @@
         "memberKickedDescription": "{{actor}} eliminó a {{member}} de {{group}}",
         "memberLeftMiddleText": "salió del grupo",
         "unknownMember": "Miembro desconocido",
-        "unknownDescription": "Tipo de evento desconocido"
+        "unknownDescription": "Tipo de evento desconocido",
+        "actorAvatarLabel": "Realizado por {{actor}}"
     }
 }

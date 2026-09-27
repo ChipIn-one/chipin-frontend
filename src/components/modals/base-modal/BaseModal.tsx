@@ -50,7 +50,7 @@ const BaseModal = ({
                         <Dialog.Close>
                             <IconButton
                                 variant="ghost"
-                                color="jade"
+                                color="grass"
                                 aria-label={t('buttons.close')}
                                 disabled={isCloseDisabled}
                             >

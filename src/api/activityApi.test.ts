@@ -35,7 +35,7 @@ describe('activityApi', () => {
         });
     });
 
-    test('fetches child activities for the requested parent and category', () => {
+    test('ACT-025 fetches child activities for the requested parent and category', () => {
         const response = { parent: {} as AppEvent, items: [], nextCursor: null };
         const controller = new AbortController();
         vi.mocked(apiInstance.get).mockResolvedValue({ data: response });
@@ -61,7 +61,7 @@ describe('activityApi', () => {
         });
     });
 
-    test('fetches the next dashboard activity preview page', () => {
+    test('ACT-023 fetches the next user activity preview page with its feed cursor', () => {
         const response = { items: [], nextCursor: 60 };
         const controller = new AbortController();
         vi.mocked(apiInstance.get).mockResolvedValue({ data: response });
@@ -78,7 +78,7 @@ describe('activityApi', () => {
         });
     });
 
-    test('fetches the next group activity preview page with the group cursor', () => {
+    test('ACT-023 fetches the next group activity preview page with the group cursor', () => {
         const response = { items: [], nextCursor: 60 };
         const controller = new AbortController();
         vi.mocked(apiInstance.get).mockResolvedValue({ data: response });

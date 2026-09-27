@@ -144,7 +144,7 @@ test('renders supported events without a link when navigation is disabled', () =
     expect(screen.getByTestId('expense-event')).toBeTruthy();
 });
 
-test('renders an updated expense and links it to its parent activity', () => {
+test('ACT-005 renders an updated expense and links it to its parent activity', () => {
     render(
         <MemoryRouter>
             <ActivityEvent event={expenseUpdatedEvent} />

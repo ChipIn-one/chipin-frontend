@@ -1,4 +1,4 @@
-import { RelativeTime, UserAvatar } from 'basics';
+import { RelativeTime } from 'basics';
 import { LucideUserRoundX } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -6,6 +6,8 @@ import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 
 import type { AppEvent } from 'api/activity.types';
 import type { MemberKickedAction } from 'constants/activity';
+
+import { EventActorInlineAvatar, EventIcon } from '../activity-event';
 
 interface Props {
     event: Extract<AppEvent, { action: MemberKickedAction }>;
@@ -20,14 +22,16 @@ const EventMemberKicked = ({ event }: Props) => {
         <Card size="1" mb="2">
             <Flex justify="between" align="center" gap="3">
                 <Flex gap="4" align="center" minWidth="0">
-                    <Avatar
-                        size="4"
-                        variant="soft"
-                        color="red"
-                        fallback={<LucideUserRoundX size={28} />}
-                    />
+                    <EventIcon event={event} isActorInText>
+                        <Avatar
+                            size="4"
+                            variant="soft"
+                            color="red"
+                            fallback={<LucideUserRoundX size={28} />}
+                        />
+                    </EventIcon>
                     <Flex gap="2" align="center" minWidth="0">
-                        <UserAvatar size="1" user={event.actorSnapshot} />
+                        <EventActorInlineAvatar event={event} />
                         <Text size="3" as="p">
                             {t('event.memberKickedDescription', {
                                 actor: event.actorSnapshot.displayName,

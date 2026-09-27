@@ -11,6 +11,8 @@ import {
     type ExpenseTransferredToAction,
 } from 'constants/activity';
 
+import { EventIcon } from '../activity-event';
+
 interface Props {
     event: Extract<
         AppEvent,
@@ -42,18 +44,20 @@ const EventExpenseTransferred = ({ event }: Props) => {
         <Card size="1" mb="2">
             <Flex justify="between" align="center" gap="3">
                 <Flex gap="4" align="center" minWidth="0">
-                    <Avatar
-                        size="4"
-                        variant="soft"
-                        color={isTransferredFrom ? 'orange' : 'blue'}
-                        fallback={
-                            isTransferredFrom ? (
-                                <LucideUndo2 size={28} />
-                            ) : (
-                                <LucideRedo2 size={28} />
-                            )
-                        }
-                    />
+                    <EventIcon event={event}>
+                        <Avatar
+                            size="4"
+                            variant="soft"
+                            color={isTransferredFrom ? 'orange' : 'blue'}
+                            fallback={
+                                isTransferredFrom ? (
+                                    <LucideUndo2 size={28} />
+                                ) : (
+                                    <LucideRedo2 size={28} />
+                                )
+                            }
+                        />
+                    </EventIcon>
                     <Flex direction="column" gap="1" minWidth="0">
                         <Text size="3" weight="medium" as="p">
                             {t(titleKey, { group: event.metadata.groupName })}

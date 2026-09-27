@@ -126,7 +126,7 @@ const SettlementForm = ({
                                 color={settlement.debtColor}
                             />
 
-                            <Callout.Root color="jade" size="2">
+                            <Callout.Root color="grass" size="2">
                                 <Callout.Icon>
                                     <LucideInfo size={18} />
                                 </Callout.Icon>
@@ -153,7 +153,7 @@ const SettlementForm = ({
                             <Button
                                 type="button"
                                 size="4"
-                                color="jade"
+                                color="grass"
                                 disabled={settlement.isSubmitDisabled}
                                 loading={isSubmitting}
                                 onClick={onFormSubmit}
