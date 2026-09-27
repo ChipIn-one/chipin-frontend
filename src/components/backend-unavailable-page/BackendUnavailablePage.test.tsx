@@ -37,10 +37,10 @@ beforeEach(() => {
     useBackendAvailabilityStore.setState({ isUnavailable: true });
 });
 
-test('renders localized non-technical outage content and an accessible retry action', () => {
+test('renders a blocking localized dialog with an accessible retry action', () => {
     renderPage();
 
-    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(screen.getByRole('dialog')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'backendUnavailable.title' })).toBeTruthy();
     expect(screen.getByText('backendUnavailable.description')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'backendUnavailable.tryAgain' })).toBeTruthy();
@@ -67,26 +67,21 @@ test('shows a stable loading state and prevents duplicate retries', async () => 
 
     renderPage();
 
-    await user.click(screen.getByRole('button', { name: 'backendUnavailable.tryAgain' }));
+    const retryButton = screen.getByRole('button', { name: 'backendUnavailable.tryAgain' });
+    await user.click(retryButton);
 
-    const loadingButton = screen.getByRole('button', {
-        name: 'backendUnavailable.checking',
-    });
+    expect(retryButton.hasAttribute('disabled')).toBe(true);
+    expect(retryButton.getAttribute('aria-busy')).toBe('true');
+    expect(screen.getByRole('button', { name: 'backendUnavailable.tryAgain' })).toBe(retryButton);
 
-    expect(loadingButton.hasAttribute('disabled')).toBe(true);
-    expect(loadingButton.getAttribute('aria-busy')).toBe('true');
-
-    await user.click(loadingButton);
+    await user.click(retryButton);
     expect(healthMocks.checkBackendHealth).toHaveBeenCalledOnce();
 
     resolveHealth?.();
 
     await waitFor(() => {
-        expect(
-            screen.getByRole('button', { name: 'backendUnavailable.tryAgain' }).hasAttribute(
-                'disabled',
-            ),
-        ).toBe(false);
+        expect(retryButton.hasAttribute('disabled')).toBe(false);
+        expect(retryButton.getAttribute('aria-busy')).toBe('false');
     });
 });
 
@@ -100,7 +95,7 @@ test('keeps the page visible when a retry remains unhealthy', () => {
         .click(screen.getByRole('button', { name: 'backendUnavailable.tryAgain' }))
         .then(() => {
             expect(healthMocks.checkBackendHealth).toHaveBeenCalledOnce();
-            expect(screen.getByRole('alert')).toBeTruthy();
+            expect(screen.getByRole('dialog')).toBeTruthy();
             expect(screen.getByText('backendUnavailable.retryFailed')).toBeTruthy();
             expect(
                 screen.getByText('backendUnavailable.retryFailed').getAttribute('aria-hidden'),
