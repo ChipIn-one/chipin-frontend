@@ -1,0 +1,134 @@
+name: Vercel Deploy
+
+on:
+  workflow_call:
+    inputs:
+      activation_enabled:
+        required: true
+        type: string
+      ci_result:
+        required: true
+        type: string
+      event_name:
+        required: true
+        type: string
+      repository:
+        required: true
+        type: string
+      source_repository:
+        required: true
+        type: string
+      source_branch:
+        required: true
+        type: string
+      base_ref:
+        required: false
+        default: ''
+        type: string
+      ci_sha:
+        required: true
+        type: string
+    secrets:
+      VERCEL_TOKEN:
+        required: true
+      VERCEL_ORG_ID:
+        required: true
+      VERCEL_PROJECT_ID:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: vercel-deploy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    concurrency:
+      group: vercel-${{ inputs.event_name }}-${{ inputs.base_ref || 'direct' }}-${{ inputs.source_branch }}
+      cancel-in-progress: true
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      CHIPIN_VERCEL_DEPLOY_ENABLED: ${{ inputs.activation_enabled }}
+      CHIPIN_CI_RESULT: ${{ inputs.ci_result }}
+      CHIPIN_REPOSITORY: ${{ inputs.repository }}
+      CHIPIN_SOURCE_REPOSITORY: ${{ inputs.source_repository }}
+      CHIPIN_EVENT_NAME: ${{ inputs.event_name }}
+      CHIPIN_BASE_REF: ${{ inputs.base_ref }}
+      CHIPIN_SOURCE_BRANCH: ${{ inputs.source_branch }}
+      CHIPIN_CI_SHA: ${{ inputs.ci_sha }}
+      CHIPIN_TASK_BRANCH: ${{ inputs.source_branch }}
+      CHIPIN_TASK_HEAD_SHA: ${{ inputs.ci_sha }}
+      VERCEL_CLI_VERSION: 59.19.1
+    steps:
+      - name: Checkout verified CI SHA
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.ci_sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.21.0
+          package-manager-cache: false
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify deployment provenance
+        id: policy
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          encoded_branch="$(jq -rn --arg value "$CHIPIN_SOURCE_BRANCH" '$value|@uri')"
+          current_source_sha="$(gh api "/repos/$CHIPIN_REPOSITORY/branches/$encoded_branch" --jq '.commit.sha')"
+          checked_out_sha="$(git rev-parse HEAD)"
+          CHIPIN_CURRENT_SOURCE_SHA="$current_source_sha" \
+          CHIPIN_CHECKED_OUT_SHA="$checked_out_sha" \
+            node scripts/vercel-deploy-policy.mjs >> "$GITHUB_OUTPUT"
+      - name: Pull Vercel project settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm exec --yes --package="vercel@$VERCEL_CLI_VERSION" -- \
+            vercel pull --yes --environment="${{ steps.policy.outputs.target }}" --token="$VERCEL_TOKEN"
+      - name: Build Vercel artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm exec --yes --package="vercel@$VERCEL_CLI_VERSION" -- \
+            vercel build --target="${{ steps.policy.outputs.target }}" --token="$VERCEL_TOKEN"
+      - name: Recheck current SHA before publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          encoded_branch="$(jq -rn --arg value "$CHIPIN_SOURCE_BRANCH" '$value|@uri')"
+          current_source_sha="$(gh api "/repos/$CHIPIN_REPOSITORY/branches/$encoded_branch" --jq '.commit.sha')"
+          checked_out_sha="$(git rev-parse HEAD)"
+          CHIPIN_CURRENT_SOURCE_SHA="$current_source_sha" \
+          CHIPIN_CHECKED_OUT_SHA="$checked_out_sha" \
+            node scripts/vercel-deploy-policy.mjs > /dev/null
+      - name: Deploy prebuilt Vercel artifact
+        id: deploy
+        shell: bash
+        run: |
+          set -euo pipefail
+          deployment_url="$(
+            npm exec --yes --package="vercel@$VERCEL_CLI_VERSION" -- \
+              vercel deploy \
+                --prebuilt \
+                --target="${{ steps.policy.outputs.target }}" \
+                --token="$VERCEL_TOKEN" \
+                --meta "githubCommitSha=$CHIPIN_CI_SHA" \
+                --meta "githubRepository=$CHIPIN_REPOSITORY" \
+                --meta "githubRunId=$GITHUB_RUN_ID"
+          )"
+          echo "deployment_url=$deployment_url" >> "$GITHUB_OUTPUT"
+          echo "Vercel target: ${{ steps.policy.outputs.target }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Verified SHA: $CHIPIN_CI_SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "Deployment: $deployment_url" >> "$GITHUB_STEP_SUMMARY"
