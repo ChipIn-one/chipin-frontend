@@ -1,4 +1,10 @@
-import styled, { css } from 'styled-components';
+import styled, { css, keyframes } from 'styled-components';
+
+const backendUnavailableSpin = keyframes`
+    to {
+        transform: rotate(360deg);
+    }
+`;
 
 const AppContent = styled.div<{ $isUnavailable: boolean }>`
     ${({ $isUnavailable }) =>
@@ -14,15 +20,20 @@ const BackendUnavailableSurface = styled.main`
     z-index: 1000;
     inset: 0;
     display: grid;
+    width: 100%;
     min-height: 100vh;
+    min-height: 100dvh;
+    box-sizing: border-box;
     place-items: center;
-    padding: clamp(16px, 4vw, 40px);
+    overflow: auto;
+    padding: clamp(20px, 5vw, 40px);
     color: CanvasText;
     background: color-mix(in srgb, Canvas 88%, transparent);
 `;
 
 const BackendUnavailablePanel = styled.section`
     width: min(100%, 620px);
+    box-sizing: border-box;
     padding: clamp(28px, 6vw, 56px);
     border: 1px solid color-mix(in srgb, CanvasText 18%, transparent);
     border-radius: 18px;
@@ -69,9 +80,12 @@ const BackendUnavailableActions = styled.div`
     margin-top: 32px;
 `;
 
-const BackendUnavailableButton = styled.button`
+const BackendUnavailableButton = styled.button<{ $isLoading: boolean }>`
     display: inline-flex;
+    width: 260px;
+    max-width: 100%;
     min-height: 54px;
+    box-sizing: border-box;
     align-items: center;
     justify-content: center;
     gap: 12px;
@@ -84,6 +98,14 @@ const BackendUnavailableButton = styled.button`
     font: inherit;
     font-weight: 650;
 
+    ${({ $isLoading }) =>
+        $isLoading &&
+        css`
+            svg {
+                animation: ${backendUnavailableSpin} 0.8s linear infinite;
+            }
+        `}
+
     &:focus-visible {
         outline: 3px solid AccentColor;
         outline-offset: 3px;
@@ -95,10 +117,12 @@ const BackendUnavailableButton = styled.button`
     }
 `;
 
-const BackendUnavailableRetryMessage = styled.p`
+const BackendUnavailableRetryMessage = styled.p<{ $visible: boolean }>`
     margin: 18px 0 0;
+    visibility: ${({ $visible }) => ($visible ? 'visible' : 'hidden')};
     color: var(--amber-11, #8f4f00);
     font-size: 15px;
+    line-height: 1.4;
 `;
 
 export {
