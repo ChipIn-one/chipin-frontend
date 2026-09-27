@@ -23,9 +23,11 @@ contract.
 Sentry runtime reporting reads `VITE_SENTRY_DSN` from the deployment
 environment. Configure it independently for the Vercel environments that should
 send events. When the variable is absent or empty, runtime Sentry reporting is
-disabled even if the build would otherwise enable telemetry. The existing
-build-derived Sentry environment, release, source-map upload, and privacy
-configuration remain unchanged.
+disabled even if the build would otherwise enable telemetry. PR-controlled
+Actions preview builds use only public `VITE_*` build variables and explicitly
+skip Sentry source-map upload so `SENTRY_AUTH_TOKEN` is never required in the
+untrusted build job. Protected staging/production builds preserve the existing
+Sentry source-map upload behavior.
 
 There is no unconditional external API rewrite. Unknown hosts therefore cannot
 fall back to production.
@@ -55,19 +57,37 @@ Deployment mapping:
 | Release pull request `dev → main` | `main-ci` | `preview` |
 | Push to `main` | `main-ci` | `production` |
 
-The reusable deployment workflow checks out the CI SHA explicitly, verifies that
-the checked-out SHA and current source-branch SHA still equal the CI SHA, and
-rejects other repositories, forks, unsupported events, failed/cancelled CI, stale
-runs, and invalid release sources. It runs `vercel pull`, `vercel build`, and
-`vercel deploy --prebuilt` against that verified checkout. Deployment metadata
-records the GitHub repository, run id, and verified commit SHA.
+Deployment admission is a `workflow_run` workflow resolved from the repository
+default branch, not from the pull request revision. GitHub only starts this event
+when that workflow exists on the default branch. The triggering CI workflows
+explicitly check out the PR head SHA, so the `workflow_run.head_sha` is also the
+revision that was actually verified.
 
-Deployment concurrency is bounded per event/base/source branch and cancels an
-older in-progress deployment for the same key. A retry is permitted only while
-the source branch still points to the same CI SHA; once the branch advances, the
-freshness check blocks the retry. A retry of an unchanged SHA can create a new
-Vercel deployment of the same artifact source and is therefore an explicit
-operator retry, not an automatic stale publication.
+The trusted deployment policy verifies the successful CI workflow name, repository,
+source repository, event, base/source branches, current source SHA, and exact
+checked-out SHA. It rejects forks, failed/cancelled CI, stale or retargeted PRs,
+unsupported branch/workflow combinations, and a second main deployment from
+`Frontend CI`.
+
+Preview builds use an additional trust split. A trusted job performs `vercel pull`,
+then strips the pulled Preview environment down to client-public `VITE_*` values.
+A separate job checks out and executes PR-controlled code without any Vercel or
+GitHub deployment credential. Its prebuilt output is passed as an immutable Actions
+artifact to a fresh trusted deployment job, which rechecks freshness and runs
+`vercel deploy --prebuilt`. The deployment job never executes PR-controlled
+install/build scripts while `VERCEL_TOKEN` is available.
+
+For protected `dev` and `main` pushes, the same trusted workflow checks out the
+exact successful CI SHA and runs `vercel pull`, `vercel build`, and
+`vercel deploy --prebuilt` only after provenance validation. Vercel credentials
+are step-scoped rather than job-wide.
+
+Deployment concurrency is bounded per triggering CI workflow/event/source branch
+and cancels an older in-progress deployment for the same key. A retry is permitted
+only while the source branch still points to the same CI SHA; once the branch
+advances, the freshness check blocks publication. A retry of an unchanged SHA can
+create a new Vercel deployment of the same artifact source and is therefore an
+explicit operator retry, not an automatic stale publication.
 
 ### Cutover prerequisites
 
@@ -85,9 +105,11 @@ actual Vercel/GitHub settings:
    Sentry/runtime configuration.
 4. GitHub Actions secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and
    `VERCEL_PROJECT_ID` are present for this repository.
-5. The Actions implementation is merged while
-   `VERCEL_ACTIONS_DEPLOY_ENABLED` is still absent or false, so the current Git
-   deployment path continues to work until the controlled cutover.
+5. The Actions implementation is merged through `dev` and then `main` while
+   `VERCEL_ACTIONS_DEPLOY_ENABLED` is still absent or false. The
+   `workflow_run` deployment workflow must exist on the default branch (`main`)
+   before activation; the current Vercel Git deployment path stays authoritative
+   until that controlled cutover.
 
 The reviewable Vercel Git cutover diff is deliberately not applied by the
 implementation change. Apply it in a separate, human-authorized cutover change:
@@ -101,13 +123,15 @@ implementation change. Apply it in a separate, human-authorized cutover change:
      "buildCommand": "npm run vercel-build",
 ```
 
-Immediately before the human merges that cutover change into `dev`, set
-`VERCEL_ACTIONS_DEPLOY_ENABLED=true` and avoid unrelated pushes during the
-cutover window. The merge SHA is the staging canary: `frontend-ci` must succeed,
-the Actions deployment must publish that exact SHA to `staging`, and Vercel must
-show no independent Git-triggered deployment for the same commit. Only after that
-canary is verified should a separately authorized `dev → main` release activate
-the production path.
+After the implementation is present on `main`, prepare the separate cutover
+change with `git.deploymentEnabled=false`. Immediately before the human merges
+that cutover change into `dev`, set `VERCEL_ACTIONS_DEPLOY_ENABLED=true` and
+avoid unrelated pushes during the cutover window. The merge SHA is the staging
+canary: `frontend-ci` must succeed, the trusted `workflow_run` deployment must
+publish that exact SHA to `staging`, and Vercel must show no independent
+Git-triggered deployment for the same commit. Only after that canary is verified
+should a separately authorized `dev → main` release activate the production
+path.
 
 ### Rollback
 
