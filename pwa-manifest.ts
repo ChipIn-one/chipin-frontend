@@ -1,8 +1,27 @@
+interface PwaManifestIcon {
+    src: string;
+    sizes: string;
+    type: string;
+    purpose?: 'maskable';
+}
+
+interface PwaManifest {
+    name: string;
+    short_name: string;
+    description: string;
+    theme_color: string;
+    display: 'standalone';
+    start_url: string;
+    scope: string;
+    id: string;
+    icons: PwaManifestIcon[];
+}
+
 export const PROD_PWA_APP_NAME = 'ChipIn';
 export const DEV_PWA_APP_NAME = 'ChipIn DEV';
 export const DEV_PWA_MANIFEST_FILENAME = 'manifest-dev.webmanifest';
 
-export const createPwaManifest = (name: string) => ({
+export const createPwaManifest = (name: string): PwaManifest => ({
     name,
     short_name: name,
     description: 'Share expenses without stress',
