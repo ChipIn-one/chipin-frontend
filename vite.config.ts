@@ -1,4 +1,4 @@
-import { defineConfig, loadEnv, type Plugin } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import svgr from 'vite-plugin-svgr';
 import tsconfigPaths from 'vite-tsconfig-paths';
@@ -6,12 +6,6 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import react from '@vitejs/plugin-react-swc';
 
-import {
-    createPwaManifest,
-    DEV_PWA_APP_NAME,
-    DEV_PWA_MANIFEST_FILENAME,
-    PROD_PWA_APP_NAME,
-} from './pwa-manifest';
 import { resolveAppVersion } from './scripts/version-resolver.mjs';
 
 // https://vite.dev/config/
@@ -104,19 +98,9 @@ const resolveSentryUploadConfig = (
 
 const appVersion = resolveAppVersion();
 
-const emitDevelopmentPwaManifest = (): Plugin => ({
-    name: 'emit-development-pwa-manifest',
-    generateBundle() {
-        this.emitFile({
-            type: 'asset',
-            fileName: DEV_PWA_MANIFEST_FILENAME,
-            source: JSON.stringify(createPwaManifest(DEV_PWA_APP_NAME)),
-        });
-    },
-});
-
 export default defineConfig(({ mode }) => {
     const buildEnvironment = loadEnv(mode, '.', '');
+    const pwaAppName = buildEnvironment.VITE_CHIPIN_ENV === 'dev' ? 'ChipIn DEV' : 'ChipIn';
     const sentryBuildConfig = resolveSentryBuildConfig(buildEnvironment);
     const sentryUploadConfig = resolveSentryUploadConfig(
         buildEnvironment,
@@ -148,7 +132,56 @@ export default defineConfig(({ mode }) => {
                 registerType: 'prompt', // or autoUpdate
                 injectRegister: false,
 
-                manifest: createPwaManifest(PROD_PWA_APP_NAME),
+                manifest: {
+                    name: pwaAppName,
+                    short_name: pwaAppName,
+                    description: 'Share expenses without stress',
+                    theme_color: '#3e9b4f',
+                    display: 'standalone',
+                    // DEEP LINKING PARAMS
+                    start_url: '/',
+                    scope: '/',
+                    id: '/',
+
+                    icons: [
+                        {
+                            src: '/pwa-64x64.png',
+                            sizes: '64x64',
+                            type: 'image/png',
+                        },
+                        {
+                            src: '/apple-touch-icon-180x180.png',
+                            sizes: '180x180',
+                            type: 'image/png',
+                        },
+                        {
+                            src: '/pwa-192x192.png',
+                            sizes: '192x192',
+                            type: 'image/png',
+                        },
+                        {
+                            src: '/pwa-512x512.png',
+                            sizes: '512x512',
+                            type: 'image/png',
+                        },
+                        {
+                            src: '/maskable-icon-512x512.png',
+                            sizes: '512x512',
+                            type: 'image/png',
+                            purpose: 'maskable',
+                        },
+                        {
+                            src: '/favicon.ico',
+                            sizes: '48x48',
+                            type: 'image/x-icon',
+                        },
+                        {
+                            src: '/favicon.svg',
+                            sizes: 'any',
+                            type: 'image/svg+xml',
+                        },
+                    ],
+                },
                 includeManifestIcons: true,
 
                 workbox: {
@@ -167,7 +200,6 @@ export default defineConfig(({ mode }) => {
                     type: 'module',
                 },
             }),
-            emitDevelopmentPwaManifest(),
             ...(sentryUploadConfig
                 ? [
                       sentryVitePlugin({
