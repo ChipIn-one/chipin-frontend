@@ -73,10 +73,18 @@ unsupported branch/workflow combinations, and a second main deployment from
 Preview builds use an additional trust split. A trusted job performs `vercel pull`,
 then strips the pulled Preview environment down to client-public `VITE_*` values.
 A separate job checks out and executes PR-controlled code without any Vercel or
-GitHub deployment credential. Its prebuilt output is passed as an immutable Actions
-artifact to a fresh trusted deployment job, which rechecks freshness and runs
-`vercel deploy --prebuilt`. The deployment job never executes PR-controlled
-install/build scripts while `VERCEL_TOKEN` is available.
+GitHub deployment credential and produces only the static Vite `dist/` tree. It
+cannot supply Vercel Build Output API configuration, Functions, Middleware, or
+other runtime resources.
+
+A fresh trusted deployment job checks out the default-branch deployment
+configuration, regenerates Vercel's Preview Build Output from that trusted source,
+requires its top-level output to contain only `config.json` and `static/`, and
+then replaces only `static/` with the verified PR build. The final
+`vercel deploy --prebuilt` therefore combines PR-controlled static browser assets
+with trusted routing/configuration and cannot provision PR-controlled runtime code
+that would receive Preview environment variables. The token-bearing deployment
+step never executes PR-controlled install/build scripts.
 
 For protected `dev` and `main` pushes, the same trusted workflow checks out the
 exact successful CI SHA and runs `vercel pull`, `vercel build`, and
