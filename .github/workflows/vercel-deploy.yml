@@ -434,6 +434,45 @@ jobs:
           fi
 
           rm -f control/.vercel/.env.preview.local
+      - name: Recheck preview SHA immediately before publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTIVATION_ENABLED: ${{ vars.VERCEL_ACTIONS_DEPLOY_ENABLED }}
+          CI_RESULT: ${{ github.event.workflow_run.conclusion }}
+          CI_WORKFLOW: ${{ github.event.workflow_run.name }}
+          REPOSITORY: ${{ github.repository }}
+          SOURCE_REPOSITORY: ${{ needs.resolve.outputs.source_repository }}
+          EVENT_NAME: ${{ needs.resolve.outputs.event_name }}
+          BASE_REF: ${{ needs.resolve.outputs.base_ref }}
+          SOURCE_BRANCH: ${{ needs.resolve.outputs.source_branch }}
+          CI_SHA: ${{ needs.resolve.outputs.ci_sha }}
+          PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          pr_json="$(gh api "/repos/$REPOSITORY/pulls/$PR_NUMBER")"
+          current_source_sha="$(jq -r '.head.sha // ""' <<<"$pr_json")"
+          current_source_repository="$(jq -r '.head.repo.full_name // ""' <<<"$pr_json")"
+          current_source_branch="$(jq -r '.head.ref // ""' <<<"$pr_json")"
+          current_base_ref="$(jq -r '.base.ref // ""' <<<"$pr_json")"
+          verified_artifact_sha="$(cat artifact/verified-ci-sha)"
+
+          CHIPIN_VERCEL_DEPLOY_ENABLED="$ACTIVATION_ENABLED" \
+          CHIPIN_CI_RESULT="$CI_RESULT" \
+          CHIPIN_CI_WORKFLOW="$CI_WORKFLOW" \
+          CHIPIN_REPOSITORY="$REPOSITORY" \
+          CHIPIN_SOURCE_REPOSITORY="$SOURCE_REPOSITORY" \
+          CHIPIN_CURRENT_SOURCE_REPOSITORY="$current_source_repository" \
+          CHIPIN_EVENT_NAME="$EVENT_NAME" \
+          CHIPIN_BASE_REF="$BASE_REF" \
+          CHIPIN_CURRENT_BASE_REF="$current_base_ref" \
+          CHIPIN_SOURCE_BRANCH="$SOURCE_BRANCH" \
+          CHIPIN_CURRENT_SOURCE_BRANCH="$current_source_branch" \
+          CHIPIN_CI_SHA="$CI_SHA" \
+          CHIPIN_CURRENT_SOURCE_SHA="$current_source_sha" \
+          CHIPIN_CHECKED_OUT_SHA="$verified_artifact_sha" \
+            node control/scripts/vercel-deploy-policy.mjs > /dev/null
       - name: Deploy prebuilt static preview
         id: deploy
         working-directory: control
