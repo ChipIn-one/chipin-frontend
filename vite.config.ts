@@ -75,7 +75,11 @@ const resolveSentryUploadConfig = (
     env: Record<string, string>,
     sentryBuildConfig: SentryBuildConfig,
 ): SentryUploadConfig | null => {
-    if (env.VERCEL !== '1' || !sentryBuildConfig.enabled) {
+    if (
+        env.VERCEL !== '1' ||
+        !sentryBuildConfig.enabled ||
+        env.CHIPIN_UNTRUSTED_PREVIEW_BUILD === '1'
+    ) {
         return null;
     }
 
@@ -100,6 +104,8 @@ const appVersion = resolveAppVersion();
 
 export default defineConfig(({ mode }) => {
     const buildEnvironment = loadEnv(mode, '.', '');
+    const isUntrustedPreviewBuild =
+        buildEnvironment.CHIPIN_UNTRUSTED_PREVIEW_BUILD === '1';
     const pwaAppName = buildEnvironment.VITE_CHIPIN_ENV === 'dev' ? 'ChipIn DEV' : 'ChipIn';
     const sentryBuildConfig = resolveSentryBuildConfig(buildEnvironment);
     const sentryUploadConfig = resolveSentryUploadConfig(
@@ -231,7 +237,7 @@ export default defineConfig(({ mode }) => {
         },
 
         build: {
-            sourcemap: 'hidden',
+            sourcemap: isUntrustedPreviewBuild ? false : 'hidden',
             rolldownOptions: {
                 output: {
                     // Keep long-lived framework dependencies cacheable here.
