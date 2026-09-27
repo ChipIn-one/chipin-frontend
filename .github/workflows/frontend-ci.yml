@@ -35,14 +35,11 @@ jobs:
       - name: Validate release source
         if: github.event_name == 'pull_request' && github.base_ref == 'main'
         env:
+          BASE_REF: ${{ github.base_ref }}
           HEAD_REF: ${{ github.head_ref }}
           HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
           THIS_REPOSITORY: ${{ github.repository }}
-        run: |
-          if [ "$HEAD_REF" != "dev" ] || [ "$HEAD_REPOSITORY" != "$THIS_REPOSITORY" ]; then
-            echo "PRs to main must originate from the repository dev branch."
-            exit 1
-          fi
+        run: node scripts/release-source-policy.mjs
       - name: Install dependencies
         run: npm ci
       - name: Verify frontend

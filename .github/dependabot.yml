@@ -27,6 +27,9 @@ updates:
         patterns:
           - '*'
 
+  # Dependabot security updates always target the default branch (main).
+  # Treat those PRs as source proposals and integrate the reviewed fix through
+  # dev; see docs/dependabot-security-updates.md.
   - package-ecosystem: 'npm'
     directory: '/'
     schedule:
