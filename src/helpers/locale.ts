@@ -167,34 +167,9 @@ const resolveLocale = (): SupportedLocale => {
     return resolveBrowserLocale();
 };
 
-// Monotonic counter — incremented on every call to onChangeLocale.
-// Each call captures its own snapshot; only the last snapshot matches on resolution.
-let _localeRequestId = 0;
-
-/**
- * Applies the user-selected locale to i18n.
- * Dynamic import avoids circular dependency with i18n/index.ts.
- * Last-write-wins: each call increments a request id; superseded calls are dropped.
- */
-const onChangeLocale = (locale: SupportedLocale): void => {
-    const requestId = ++_localeRequestId;
-
-    import('i18n/index')
-        .then(({ default: i18n }) => {
-            if (_localeRequestId === requestId) {
-                return i18n.changeLanguage(locale);
-            }
-            return undefined;
-        })
-        .catch(() => {
-            // i18n module failed to load. The store cache remains the source of truth.
-        });
-};
-
 export {
     matchLocale,
     normalizeLocale,
-    onChangeLocale,
     resolveBrowserLocale,
     resolveLocale,
     SUPPORTED_LOCALES,
