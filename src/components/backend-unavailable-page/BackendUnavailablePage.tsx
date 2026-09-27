@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { LucideRefreshCw, LucideTriangleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { Dialog } from '@radix-ui/themes';
+
 import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
 
 import {
@@ -12,7 +14,6 @@ import {
     BackendUnavailableIcon,
     BackendUnavailablePanel,
     BackendUnavailableRetryMessage,
-    BackendUnavailableSurface,
     BackendUnavailableTitle,
 } from './styled';
 
@@ -54,8 +55,11 @@ const BackendUnavailablePage = () => {
     };
 
     return (
-        <BackendUnavailableSurface role="alert" aria-labelledby="backend-unavailable-title">
-            <BackendUnavailablePanel>
+        <Dialog.Root open>
+            <BackendUnavailablePanel
+                onEscapeKeyDown={event => event.preventDefault()}
+                onInteractOutside={event => event.preventDefault()}
+            >
                 <BackendUnavailableIcon aria-hidden="true">
                     <LucideTriangleAlert size={34} strokeWidth={2} />
                 </BackendUnavailableIcon>
@@ -63,9 +67,7 @@ const BackendUnavailablePage = () => {
                 <BackendUnavailableEyebrow>
                     {t('backendUnavailable.eyebrow')}
                 </BackendUnavailableEyebrow>
-                <BackendUnavailableTitle id="backend-unavailable-title">
-                    {t('backendUnavailable.title')}
-                </BackendUnavailableTitle>
+                <BackendUnavailableTitle>{t('backendUnavailable.title')}</BackendUnavailableTitle>
                 <BackendUnavailableDescription>
                     {t('backendUnavailable.description')}
                 </BackendUnavailableDescription>
@@ -73,15 +75,16 @@ const BackendUnavailablePage = () => {
                 <BackendUnavailableActions>
                     <BackendUnavailableButton
                         type="button"
+                        size="4"
+                        color="gray"
+                        highContrast
                         disabled={isChecking}
+                        loading={isChecking}
                         aria-busy={isChecking}
-                        $isLoading={isChecking}
                         onClick={onTryAgain}
                     >
                         <LucideRefreshCw size={19} aria-hidden="true" />
-                        {isChecking
-                            ? t('backendUnavailable.checking')
-                            : t('backendUnavailable.tryAgain')}
+                        {t('backendUnavailable.tryAgain')}
                     </BackendUnavailableButton>
                 </BackendUnavailableActions>
 
@@ -94,7 +97,7 @@ const BackendUnavailablePage = () => {
                     {t('backendUnavailable.retryFailed')}
                 </BackendUnavailableRetryMessage>
             </BackendUnavailablePanel>
-        </BackendUnavailableSurface>
+        </Dialog.Root>
     );
 };
 
