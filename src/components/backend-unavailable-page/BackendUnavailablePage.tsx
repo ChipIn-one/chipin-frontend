@@ -74,6 +74,8 @@ const BackendUnavailablePage = () => {
                     <BackendUnavailableButton
                         type="button"
                         disabled={isChecking}
+                        aria-busy={isChecking}
+                        $isLoading={isChecking}
                         onClick={onTryAgain}
                     >
                         <LucideRefreshCw size={19} aria-hidden="true" />
@@ -83,11 +85,14 @@ const BackendUnavailablePage = () => {
                     </BackendUnavailableButton>
                 </BackendUnavailableActions>
 
-                {hasRetryFailed && (
-                    <BackendUnavailableRetryMessage role="status" aria-live="polite">
-                        {t('backendUnavailable.retryFailed')}
-                    </BackendUnavailableRetryMessage>
-                )}
+                <BackendUnavailableRetryMessage
+                    role="status"
+                    aria-live="polite"
+                    aria-hidden={!hasRetryFailed}
+                    $visible={hasRetryFailed}
+                >
+                    {t('backendUnavailable.retryFailed')}
+                </BackendUnavailableRetryMessage>
             </BackendUnavailablePanel>
         </BackendUnavailableSurface>
     );
