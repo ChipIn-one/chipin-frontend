@@ -83,7 +83,9 @@ requires its top-level output to contain only `config.json` and `static/`, and
 then replaces only `static/` with the verified PR build. The final
 `vercel deploy --prebuilt` therefore combines PR-controlled static browser assets
 with trusted routing/configuration and cannot provision PR-controlled runtime code
-that would receive Preview environment variables. The token-bearing deployment
+that would receive Preview environment variables. Preview provenance is checked
+before trusted preparation and again immediately before the token-bearing publish,
+so a PR head change during preparation blocks the stale deployment. The deployment
 step never executes PR-controlled install/build scripts.
 
 For protected `dev` and `main` pushes, the same trusted workflow checks out the
