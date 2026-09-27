@@ -75,7 +75,11 @@ const resolveSentryUploadConfig = (
     env: Record<string, string>,
     sentryBuildConfig: SentryBuildConfig,
 ): SentryUploadConfig | null => {
-    if (env.VERCEL !== '1' || !sentryBuildConfig.enabled) {
+    if (
+        env.VERCEL !== '1' ||
+        !sentryBuildConfig.enabled ||
+        env.CHIPIN_UNTRUSTED_PREVIEW_BUILD === '1'
+    ) {
         return null;
     }
 
