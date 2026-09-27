@@ -68,6 +68,12 @@ const BackendUnavailableActions = styled.div`
 const BackendUnavailableButton = styled(Button)`
     min-width: 180px;
     max-width: 100%;
+
+    @media (prefers-reduced-motion: reduce) {
+        .rt-SpinnerLeaf {
+            animation: none;
+        }
+    }
 `;
 
 const BackendUnavailableRetryMessage = styled.p<{ $visible: boolean }>`
