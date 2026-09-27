@@ -229,56 +229,57 @@ jobs:
       - name: Install source dependencies without deployment credentials
         working-directory: source
         run: npm ci
-      - name: Install pinned Vercel CLI without deployment credentials
-        shell: bash
-        run: |
-          set -euo pipefail
-          npm install \
-            --prefix "$RUNNER_TEMP/vercel-cli" \
-            --no-audit \
-            --no-fund \
-            "vercel@$VERCEL_CLI_VERSION"
       - name: Download sanitized preview settings
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
         with:
           name: vercel-preview-settings-${{ github.run_id }}
           path: ${{ runner.temp }}/preview-settings
-      - name: Restore sanitized preview settings
+      - name: Restore public preview variables
         shell: bash
         run: |
           set -euo pipefail
-          tar -C source -xzf "$RUNNER_TEMP/preview-settings/vercel-preview-settings.tgz"
-      - name: Build preview without deployment credentials
+          mkdir -p "$RUNNER_TEMP/public-preview"
+          tar -C "$RUNNER_TEMP/public-preview" \
+            -xzf "$RUNNER_TEMP/preview-settings/vercel-preview-settings.tgz" \
+            .vercel/.env.preview.local
+          cp "$RUNNER_TEMP/public-preview/.vercel/.env.preview.local" source/.env.local
+      - name: Build static preview without deployment credentials
         working-directory: source
         env:
+          VERCEL: '1'
+          VERCEL_ENV: preview
           CHIPIN_TASK_BRANCH: ${{ needs.resolve.outputs.source_branch }}
           CHIPIN_TASK_HEAD_SHA: ${{ needs.resolve.outputs.ci_sha }}
           CHIPIN_UNTRUSTED_PREVIEW_BUILD: '1'
-        shell: bash
-        run: |
-          set -euo pipefail
-          "$RUNNER_TEMP/vercel-cli/node_modules/.bin/vercel" build --target=preview
-      - name: Package preview output
+        run: npm run vercel-build
+      - name: Validate and package static preview
         env:
           CI_SHA: ${{ needs.resolve.outputs.ci_sha }}
         shell: bash
         run: |
           set -euo pipefail
 
-          if find source/.vercel/output ! -type f ! -type d -print -quit | grep -q .; then
-            echo "Preview output contains an unsupported filesystem object."
+          test -d source/dist
+
+          if find source/dist ! -type f ! -type d -print -quit | grep -q .; then
+            echo "Preview dist contains an unsupported filesystem object."
             exit 1
           fi
 
-          printf '%s\n' "$CI_SHA" > source/.vercel/verified-ci-sha
-          tar -C source -czf "$RUNNER_TEMP/vercel-preview-output.tgz" \
-            .vercel/output \
-            .vercel/verified-ci-sha
-      - name: Upload preview output
+          if find source/dist -type f -name '*.map' -print -quit | grep -q .; then
+            echo "Untrusted preview dist must not contain source maps."
+            exit 1
+          fi
+
+          printf '%s\n' "$CI_SHA" > source/verified-ci-sha
+          tar -C source -czf "$RUNNER_TEMP/vercel-preview-static.tgz" \
+            dist \
+            verified-ci-sha
+      - name: Upload static preview
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: vercel-preview-output-${{ github.run_id }}
-          path: ${{ runner.temp }}/vercel-preview-output.tgz
+          name: vercel-preview-static-${{ github.run_id }}
+          path: ${{ runner.temp }}/vercel-preview-static.tgz
           if-no-files-found: error
           retention-days: 1
 
@@ -290,9 +291,9 @@ jobs:
       - build-preview
     if: needs.resolve.outputs.target == 'preview'
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
-      - name: Checkout trusted deployment policy
+      - name: Checkout trusted deployment source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.sha }}
@@ -303,22 +304,31 @@ jobs:
         with:
           name: vercel-preview-settings-${{ github.run_id }}
           path: ${{ runner.temp }}/preview-settings
-      - name: Download built preview output
+      - name: Download static preview artifact
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53
         with:
-          name: vercel-preview-output-${{ github.run_id }}
-          path: ${{ runner.temp }}/preview-output
-      - name: Restore deployment artifacts
+          name: vercel-preview-static-${{ github.run_id }}
+          path: ${{ runner.temp }}/preview-static
+      - name: Restore trusted settings and static artifact
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p deploy
-          tar -C deploy -xzf "$RUNNER_TEMP/preview-settings/vercel-preview-settings.tgz"
-          tar -C deploy -xzf "$RUNNER_TEMP/preview-output/vercel-preview-output.tgz"
-          rm -f deploy/.vercel/.env.preview.local
+          tar -C control -xzf "$RUNNER_TEMP/preview-settings/vercel-preview-settings.tgz"
+          mkdir -p artifact
+          tar -C artifact -xzf "$RUNNER_TEMP/preview-static/vercel-preview-static.tgz"
 
-          if find deploy/.vercel/output ! -type f ! -type d -print -quit | grep -q .; then
-            echo "Preview output contains an unsupported filesystem object."
+          test -f control/.vercel/project.json
+          test -f control/.vercel/.env.preview.local
+          test -d artifact/dist
+          test -f artifact/verified-ci-sha
+
+          if find artifact/dist ! -type f ! -type d -print -quit | grep -q .; then
+            echo "Preview dist contains an unsupported filesystem object."
+            exit 1
+          fi
+
+          if find artifact/dist -type f -name '*.map' -print -quit | grep -q .; then
+            echo "Untrusted preview dist must not contain source maps."
             exit 1
           fi
       - name: Recheck preview freshness
@@ -343,7 +353,7 @@ jobs:
           current_source_repository="$(jq -r '.head.repo.full_name // ""' <<<"$pr_json")"
           current_source_branch="$(jq -r '.head.ref // ""' <<<"$pr_json")"
           current_base_ref="$(jq -r '.base.ref // ""' <<<"$pr_json")"
-          verified_artifact_sha="$(cat deploy/.vercel/verified-ci-sha)"
+          verified_artifact_sha="$(cat artifact/verified-ci-sha)"
 
           CHIPIN_VERCEL_DEPLOY_ENABLED="$ACTIVATION_ENABLED" \
           CHIPIN_CI_RESULT="$CI_RESULT" \
@@ -365,6 +375,9 @@ jobs:
         with:
           node-version: 24.21.0
           package-manager-cache: false
+      - name: Install trusted source dependencies
+        working-directory: control
+        run: npm ci
       - name: Install pinned Vercel CLI
         shell: bash
         run: |
@@ -374,9 +387,56 @@ jobs:
             --no-audit \
             --no-fund \
             "vercel@$VERCEL_CLI_VERSION"
-      - name: Deploy prebuilt preview
+      - name: Generate trusted static Vercel configuration
+        working-directory: control
+        env:
+          VERCEL: '1'
+          VERCEL_ENV: preview
+          CHIPIN_TASK_BRANCH: ${{ needs.resolve.outputs.source_branch }}
+          CHIPIN_TASK_HEAD_SHA: ${{ needs.resolve.outputs.ci_sha }}
+          CHIPIN_UNTRUSTED_PREVIEW_BUILD: '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/vercel-cli/node_modules/.bin/vercel" build --target=preview
+
+          test -f .vercel/output/config.json
+          test -d .vercel/output/static
+
+          unexpected="$(
+            find .vercel/output -mindepth 1 -maxdepth 1 \
+              ! -name config.json \
+              ! -name static \
+              -print
+          )"
+
+          if [ -n "$unexpected" ]; then
+            echo "Trusted preview configuration is not static-only:"
+            printf '%s\n' "$unexpected"
+            exit 1
+          fi
+
+          if find .vercel/output ! -type f ! -type d -print -quit | grep -q .; then
+            echo "Trusted preview output contains an unsupported filesystem object."
+            exit 1
+          fi
+      - name: Replace trusted static files with verified PR build
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf control/.vercel/output/static
+          mkdir -p control/.vercel/output/static
+          cp -a artifact/dist/. control/.vercel/output/static/
+
+          if [ -e control/.vercel/output/functions ]; then
+            echo "Preview deployment must not contain runtime functions."
+            exit 1
+          fi
+
+          rm -f control/.vercel/.env.preview.local
+      - name: Deploy prebuilt static preview
         id: deploy
-        working-directory: deploy
+        working-directory: control
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           CI_SHA: ${{ needs.resolve.outputs.ci_sha }}
