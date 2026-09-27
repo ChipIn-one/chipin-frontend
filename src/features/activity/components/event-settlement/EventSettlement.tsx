@@ -12,6 +12,7 @@ import {
 } from 'constants/activity';
 import { useUsersStore } from 'store/users-store';
 
+import { EventIcon } from '../activity-event';
 import { SettlementParticipants } from './components';
 import { AmountText } from './styled';
 
@@ -38,12 +39,14 @@ const EventSettlement = ({ event }: Props) => {
         <Card size="1" mb="2" data-interactive-card>
             <Flex justify="between" align="center" gap="3">
                 <Flex align="center" gap="3" minWidth="0" flexGrow="1">
-                    <Avatar
-                        size="4"
-                        variant="soft"
-                        color="green"
-                        fallback={<LucideArrowLeftRight size={28} />}
-                    />
+                    <EventIcon event={event} isActorInText={isReversed}>
+                        <Avatar
+                            size="4"
+                            variant="soft"
+                            color="green"
+                            fallback={<LucideArrowLeftRight size={28} />}
+                        />
+                    </EventIcon>
                     <Flex direction="column" align="start" gap="1" minWidth="0">
                         <SettlementParticipants
                             fromDisplayName={fromDisplayName}

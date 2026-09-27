@@ -3,10 +3,6 @@
         "title": "ChipIn — Inicio",
         "description": "Página de inicio de la aplicación ChipIn"
     },
-    "signIn": {
-        "title": "ChipIn — Iniciar sesión",
-        "description": "Inicia sesión en tu cuenta de ChipIn"
-    },
     "privacy": {
         "title": "ChipIn — Privacidad",
         "description": "Conoce cómo ChipIn usa la información para operar el servicio"

@@ -1,6 +1,4 @@
 import { useEffect } from 'react';
-import i18n from 'i18n';
-import { toast } from 'sonner';
 import { registerSW } from 'virtual:pwa-register';
 
 import { cleanupServiceWorkerUpdates, initServiceWorkerUpdates } from 'helpers/swUpdates';
@@ -9,10 +7,6 @@ import { cleanupServiceWorkerUpdates, initServiceWorkerUpdates } from 'helpers/s
 const PWABadge = () => {
     useEffect(() => {
         registerSW({
-            onOfflineReady() {
-                toast.success(i18n.t('toasts:pwa.offlineReady'), { duration: 3000 });
-            },
-
             // Intentional no-op: update detection, TTL, and user-controlled
             // activation are fully handled by initServiceWorkerUpdates.
             onNeedRefresh() {},

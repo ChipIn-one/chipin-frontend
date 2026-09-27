@@ -3,7 +3,7 @@ import type {
     ThemeName,
     UserSettings,
 } from 'api/chipin.types';
-import { DEFAULT_EXPENSE_CATEGORY } from 'constants/chipin';
+import { DEFAULT_EXPENSE_CATEGORY } from 'constants/category';
 import { DEFAULT_CURRENCY_CODE } from 'constants/currencies';
 import { getFilterFunction } from 'helpers/text';
 

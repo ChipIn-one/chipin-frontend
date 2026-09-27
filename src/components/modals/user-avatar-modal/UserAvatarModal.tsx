@@ -176,7 +176,7 @@ const UserAvatarModal = ({ children }: Props) => {
                                         size="3"
                                         radius="full"
                                         variant="soft"
-                                        color="jade"
+                                        color="grass"
                                         fallback={<LucideImageUp size={20} />}
                                     />
                                     <Flex direction="column" gap="1" minWidth="0">

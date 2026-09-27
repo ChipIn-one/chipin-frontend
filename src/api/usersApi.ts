@@ -1,10 +1,22 @@
 import { apiInstance } from './chipin.instance';
-import type { ApiFriendsResponse, ApiSelfUserResponse } from './chipin.raw.types';
+import type {
+    ApiFriendsResponse,
+    ApiPremiumPromoRemainingResponse,
+    ApiSelfUserResponse,
+} from './chipin.raw.types';
 import type {
     RemoveKnownUserParams,
     UpdateUserParams,
     UploadUserAvatarParams,
 } from './chipin.types';
+
+const fetchPremiumPromoRemaining = (
+    signal?: AbortSignal,
+): Promise<ApiPremiumPromoRemainingResponse> => {
+    return apiInstance
+        .get<ApiPremiumPromoRemainingResponse>('/users/premium-promo', { signal })
+        .then(response => response.data);
+};
 
 const fetchUser = (signal?: AbortSignal): Promise<ApiSelfUserResponse> => {
     return apiInstance
@@ -50,4 +62,11 @@ const removeKnownUser = ({ userId }: RemoveKnownUserParams): Promise<void> => {
     return apiInstance.delete<void>(`/users/known-users/${userId}`).then(() => undefined);
 };
 
-export { fetchKnownUsers, fetchUser, removeKnownUser, updateUser, uploadUserAvatar };
+export {
+    fetchKnownUsers,
+    fetchPremiumPromoRemaining,
+    fetchUser,
+    removeKnownUser,
+    updateUser,
+    uploadUserAvatar,
+};

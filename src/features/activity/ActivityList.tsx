@@ -62,7 +62,7 @@ const ActivityList = ({ activeFilter }: Props) => {
     }
 
     return (
-        <ActivityEventsList events={filteredItems}>
+        <ActivityEventsList events={filteredItems} isFullActivityFeed>
             <>
                 {isNextPageLoading && (
                     <Flex justify="center" py="4">

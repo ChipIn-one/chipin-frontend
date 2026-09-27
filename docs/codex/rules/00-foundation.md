@@ -30,7 +30,7 @@ Apply these rules to new and touched code. Refactor directly related legacy code
 - Do not declare a boolean that only negates another boolean, such as
   `const isGroupMode = !isSoloMode`. Use the negation directly at the call site.
 - Local event handlers and callback props both use `on*`. Do not add `handle*`.
-- Names describe business intent: `setSelectedGroup`, not `setData`; `removeFriend`, not `processItem`.
+- Names describe business intent: `setSelectedGroup`, not `setData`; `removeKnownUser`, not `processItem`.
 - Use descriptive iterator names outside trivial expressions.
 
 ```tsx

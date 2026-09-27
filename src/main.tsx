@@ -17,6 +17,7 @@ import { BackendUnavailableGate } from 'components/backend-unavailable-page';
 import Header from 'components/Header';
 import { AddExpenseModal } from 'components/modals/add-expense-modal';
 import { ModalOverlayGlobalStyles } from 'components/modals/components';
+import { EarlySupporterPromoModal } from 'components/modals/early-supporter-promo-modal';
 import AppRouter from 'features/routing';
 import GlobalHooks from 'pages/GlobalHooks';
 
@@ -28,8 +29,9 @@ const ToastLoadingIcon = () => <Spinner size="2" />;
 
 const Main = () => {
     const { resolvedTheme } = useTheme();
-    const themeName = (resolvedTheme as 'light' | 'dark') || 'system';
-    const styledThemeParams = isThemeDark(themeName) ? darkThemeStyled : lightThemeStyled;
+    const isDarkTheme = isThemeDark(resolvedTheme);
+    const themeName = isDarkTheme ? 'dark' : 'light';
+    const styledThemeParams = isDarkTheme ? darkThemeStyled : lightThemeStyled;
     const isMobile = useIsMobile();
 
     return (
@@ -37,10 +39,10 @@ const Main = () => {
             <ModalOverlayGlobalStyles />
             <Theme
                 appearance={themeName}
-                accentColor="jade"
+                accentColor="grass"
                 grayColor="olive"
                 radius="large"
-                panelBackground="translucent"
+                panelBackground="solid"
                 hasBackground
             >
                 <BrowserRouter>
@@ -71,6 +73,7 @@ const Main = () => {
                                 }}
                             />
                         </BackendUnavailableGate>
+                        <EarlySupporterPromoModal />
                     </BackgroundBox>
                 </BrowserRouter>
             </Theme>

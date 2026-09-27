@@ -4,6 +4,7 @@
     "filterAll": "Все",
     "filterExpenses": "Расходы",
     "filterSettlements": "Расчёты",
+    "filterSettingsAction": "Фильтры активности",
     "emptyTitle": "Активности пока нет",
     "emptyDescription": "Здесь появятся последние траты и расчёты.",
     "endOfFeed": "На этом пока всё",
@@ -75,6 +76,7 @@
         "memberKickedDescription": "{{actor}} удалил(а) {{member}} из группы {{group}}",
         "memberLeftMiddleText": "покинул(а) группу",
         "unknownMember": "Неизвестный участник",
-        "unknownDescription": "Необработанный тип события"
+        "unknownDescription": "Необработанный тип события",
+        "actorAvatarLabel": "Выполнил(а): {{actor}}"
     }
 }

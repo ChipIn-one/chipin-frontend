@@ -338,7 +338,7 @@ describe('groupsStore', () => {
         });
     });
 
-    test('continues the selected group activity feed from its embedded cursor', () => {
+    test('ACT-023 continues the selected group activity feed from its embedded cursor', () => {
         const initialItem = createActivityItem('parent-1');
         const secondItem = createActivityItem('parent-2');
         const thirdItem = createActivityItem('parent-3');
@@ -368,7 +368,7 @@ describe('groupsStore', () => {
         });
     });
 
-    test('deduplicates group activity previews by parent id in API order', () => {
+    test('ACT-021 deduplicates group activity previews by parent id in API order', () => {
         const initialItems = [createActivityItem('parent-1'), createActivityItem('parent-2')];
         const incomingItems = [
             createActivityItem('parent-2'),

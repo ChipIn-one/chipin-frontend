@@ -3,10 +3,6 @@
         "title": "ChipIn — Home",
         "description": "Home page of the ChipIn app"
     },
-    "signIn": {
-        "title": "ChipIn — Sign In",
-        "description": "Sign in to your ChipIn account"
-    },
     "privacy": {
         "title": "ChipIn — Privacy",
         "description": "Learn how ChipIn uses information to operate the service"

@@ -100,13 +100,13 @@ Generic lifecycle and reviewer definitions belong to canonical
   publication helper, not a Luna responsibility.
 - Trusted publication into `dev` is separate from Luna execution. Remote
   `frontend-ci` remains authoritative for post-publication integration readiness.
-- Routine independent PR review is managed Codex GitHub Code Review, automatically
-  on every push to an open PR. Use `@codex review` only as a manual
-  fallback/retrigger when automatic review does not start or an explicit retry is
-  needed; do not trigger a duplicate manual review while automatic review is
-  already running. The reviewed SHA must match the current PR head, and every
-  changed PR head invalidates the previous review and requires a fresh Codex
-  review.
+- Routine independent PR review is managed Codex GitHub Code Review. Automatic
+  Codex review is disabled. After required `frontend-ci` is green for the current
+  PR head, trusted Sol/human publication posts exactly one `@codex review` for that
+  head. Never request review while required CI is pending/failing, and do not post
+  a duplicate request for the same SHA. The reviewed SHA must match the current PR
+  head; every changed head invalidates the previous review and repeats the green-CI
+  gate before one fresh review request.
 - Reviewer findings remain separate from Luna execution state and return to Luna
   only after explicit human authorization. Sol 5.6 High is escalation/fallback
   only. Human performs the merge.

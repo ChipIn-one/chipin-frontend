@@ -108,7 +108,7 @@ const createView = (
     currentEvent: AppEvent = originalEvent,
 ): ActivitySubeventsView => ({ originalEvent, currentEvent });
 
-test('shows current expense details from the latest snapshot', () => {
+test('ACT-004 shows current expense details from the latest snapshot', () => {
     render(
         <ActivitySubeventsDetails
             view={createView(expenseCreated, expenseUpdated)}

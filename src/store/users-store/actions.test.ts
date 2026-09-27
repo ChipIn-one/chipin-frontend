@@ -11,6 +11,7 @@ import { useUsersStore } from './actions';
 
 vi.mock('api/usersApi', () => ({
     fetchKnownUsers: vi.fn(),
+    fetchPremiumPromoRemaining: vi.fn(),
     fetchUser: vi.fn(),
     removeKnownUser: vi.fn(),
     updateUser: vi.fn(),
@@ -65,6 +66,39 @@ test('returns the fetched user after updating the store', () => {
     return Promise.resolve(fetchPromise).then(fetchedUser => {
         expect(fetchedUser).toEqual(user);
         expect(useUsersStore.getState().user).toEqual(user);
+    });
+});
+
+test('stores the premium promo remaining counter', () => {
+    vi.mocked(usersApi.fetchPremiumPromoRemaining).mockResolvedValue({
+        premiumPromoRemaining: 417,
+    });
+
+    const fetchPromise = useUsersStore.getState().fetchSetPremiumPromoRemaining();
+
+    expect(useUsersStore.getState()).toMatchObject({
+        premiumPromoRemaining: null,
+        isPremiumPromoResolved: false,
+    });
+
+    return fetchPromise.then(() => {
+        expect(useUsersStore.getState()).toMatchObject({
+            premiumPromoRemaining: 417,
+            isPremiumPromoResolved: true,
+        });
+    });
+});
+
+test('resolves the premium promo counter with fallback state after a request error', () => {
+    vi.mocked(usersApi.fetchPremiumPromoRemaining).mockRejectedValue(
+        new Error('promo counter unavailable'),
+    );
+
+    return useUsersStore.getState().fetchSetPremiumPromoRemaining().then(() => {
+        expect(useUsersStore.getState()).toMatchObject({
+            premiumPromoRemaining: null,
+            isPremiumPromoResolved: true,
+        });
     });
 });
 

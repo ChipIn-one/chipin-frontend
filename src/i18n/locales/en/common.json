@@ -53,6 +53,8 @@
         "signIn": "Sign in",
         "testError": "Trigger test error",
         "switchTheme": "Switch theme",
+        "switchToLightTheme": "Switch to light theme",
+        "switchToDarkTheme": "Switch to dark theme",
         "addSubscriptionDay": "Add 1 subscription day",
         "devMenu": "Developer menu"
     },

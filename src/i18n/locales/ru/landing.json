@@ -122,5 +122,15 @@
             "freePermanently": "Бесплатно",
             "allDevices": "На любом устройстве"
         }
+    },
+    "promo": {
+        "modalTitle": "Добро пожаловать в ChipIn",
+        "label": "РАННИЙ УЧАСТНИК",
+        "title": "Вы в числе первых 5 000",
+        "position": "Вы №{{position}} из {{total}}",
+        "intro": "Спасибо, что вы с ChipIn с самого начала.",
+        "benefit": "Premium — бесплатно на 1 год.",
+        "expires": "Действует до {{date}}",
+        "button": "Спасибо"
     }
 }

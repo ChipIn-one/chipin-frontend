@@ -82,7 +82,7 @@ describe('activity event helpers', () => {
         });
     });
 
-    test('uses the highest-sequence child regardless of array order', () => {
+    test('ACT-002 uses the highest-sequence child regardless of array order', () => {
         const olderChild = {
             ...expenseCreatedEvent,
             id: 'activity-2',

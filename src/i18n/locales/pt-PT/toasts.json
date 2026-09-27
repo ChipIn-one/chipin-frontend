@@ -5,9 +5,9 @@
         "tokenPersistenceFailed": "As outras sessões foram terminadas, mas não foi possível manter a sessão neste dispositivo. Inicie sessão novamente."
     },
     "common": {
-        "disconnect": "Foi desconectado.",
-        "disconnectDescription": "Não se preocupe, as suas alterações serão guardadas. A tentar restabelecer ligação...",
-        "reconnected": "A sua ligação foi restaurada.",
+        "disconnect": "Está offline.",
+        "disconnectDescription": "Algumas ações podem ficar indisponíveis até a ligação ser restabelecida.",
+        "reconnected": "Está online novamente.",
         "requestFailed": "Algo correu mal. Tente novamente."
     },
     "group": {
@@ -31,7 +31,6 @@
     },
     "pwa": {
         "installing": "A instalar a aplicação no seu ecrã inicial...",
-        "offlineReady": "A aplicação está pronta para funcionar offline",
         "updateAvailable": "Nova versão disponível",
         "updateAction": "Atualizar",
         "laterAction": "Depois"
