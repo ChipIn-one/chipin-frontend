@@ -11,7 +11,12 @@ import { Box, Button, Container, Flex, IconButton, Link } from '@radix-ui/themes
 import { PROJECT_NAME } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
 import { themeColor } from 'helpers/colors';
-import { matchLocale, saveLocalePreference, type SupportedLocale } from 'helpers/locale';
+import {
+    matchLocale,
+    saveLocalePreference,
+    SUPPORTED_LOCALES,
+    type SupportedLocale,
+} from 'helpers/locale';
 import { getHasDesktopSidebar, getPreferredModeRoute } from 'helpers/routes';
 import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
@@ -44,7 +49,12 @@ const LANDING_NAV_LINKS = [
     { labelKey: 'nav.pricing', href: '#pricing' },
 ] as const;
 
-const LandingNav = () => {
+interface LandingLanguageProps {
+    value: SupportedLocale;
+    onChange: (locale: SupportedLocale) => void;
+}
+
+const LandingNav = ({ value, onChange }: LandingLanguageProps) => {
     const { t } = useTranslation('landing');
 
     return (
@@ -57,25 +67,41 @@ const LandingNav = () => {
                         </Link>
                     </Button>
                 ))}
+                <LanguageSelector value={value} variant="compact" onChange={onChange} />
             </Flex>
         </Box>
     );
 };
 
-const LandingMobileMenu = () => {
+const LandingMobileMenu = ({ value, onChange }: LandingLanguageProps) => {
     const { t } = useTranslation('landing');
+    const { t: tSettings } = useTranslation('settings');
 
-    const items = LANDING_NAV_LINKS.map(({ labelKey, href }) => ({
+    const navItems = LANDING_NAV_LINKS.map(({ labelKey, href }) => ({
         value: href,
         label: t(labelKey),
         onSelect: () => {
             window.location.href = href;
         },
     }));
+    const languageItems = SUPPORTED_LOCALES.map(locale => ({
+        value: locale,
+        label: tSettings(`language.options.${locale}`),
+        color: locale === value ? ('green' as const) : undefined,
+        onSelect: () => {
+            onChange(locale);
+        },
+    }));
 
     return (
         <Dropdown
-            items={items}
+            sections={[
+                { items: navItems },
+                {
+                    label: tSettings('common:fields.interfaceLanguage'),
+                    items: languageItems,
+                },
+            ]}
             trigger={
                 <IconButton variant="ghost" color="gray" size="2">
                     <LucideMenu />
@@ -145,7 +171,12 @@ const Header = () => {
                     </NavButton>
 
                     {isLoggedIn && <HeaderNav />}
-                    {isLandingPage && <LandingNav />}
+                    {isLandingPage && (
+                        <LandingNav
+                            value={landingLocale}
+                            onChange={onLandingLanguageChange}
+                        />
+                    )}
 
                     <Flex gap="4" align="center">
                         {canShowDevMenu && <DevMenu />}
@@ -159,11 +190,6 @@ const Header = () => {
                             </Flex>
                         ) : isLandingPage ? (
                             <Flex align="center" gap="2">
-                                <LanguageSelector
-                                    value={landingLocale}
-                                    variant="compact"
-                                    onChange={onLandingLanguageChange}
-                                />
                                 <AuthModal>
                                     <Button size="2" variant="soft" color="green" radius="full">
                                         {t('header.signIn')}
@@ -171,7 +197,10 @@ const Header = () => {
                                     </Button>
                                 </AuthModal>
                                 <Box display={{ initial: 'block', md: 'none' }}>
-                                    <LandingMobileMenu />
+                                    <LandingMobileMenu
+                                        value={landingLocale}
+                                        onChange={onLandingLanguageChange}
+                                    />
                                 </Box>
                             </Flex>
                         ) : (
