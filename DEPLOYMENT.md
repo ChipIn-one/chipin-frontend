@@ -23,11 +23,10 @@ contract.
 Sentry runtime reporting reads `VITE_SENTRY_DSN` from the deployment
 environment. Configure it independently for the Vercel environments that should
 send events. When the variable is absent or empty, runtime Sentry reporting is
-disabled even if the build would otherwise enable telemetry. PR-controlled
-Actions preview builds use only public `VITE_*` build variables and explicitly
-skip Sentry source-map upload and disable Vite source-map generation, so neither
-`SENTRY_AUTH_TOKEN` nor unpublished source maps enter the untrusted preview
-artifact. Protected `dev` Preview and production builds preserve the existing Sentry
+disabled even if the build would otherwise enable telemetry. After cutover,
+pull requests run GitHub CI only and do not create Actions-triggered Vercel
+previews. Deploy Hook builds for protected `dev` Preview and Production use the
+normal Vercel environment configuration and preserve the existing Sentry
 source-map upload behavior.
 
 There is no unconditional external API rewrite. Unknown hosts therefore cannot
@@ -64,10 +63,14 @@ these workflow/branch pairs:
 - `Frontend CI` on `dev`
 - `Main CI` on `main`
 
-Immediately before triggering Vercel, GitHub Actions reads the current branch SHA.
-If the branch has advanced since the successful CI run, the deployment is skipped.
-This prevents an obsolete CI run from intentionally triggering a newer branch
-state in the normal case.
+Deployment admission is implemented in `scripts/vercel-deploy-hook-policy.mjs`
+and covered by focused regression tests for allowed workflow/branch pairs, failed
+or cancelled CI, pull-request events, repository provenance, malformed SHAs, and
+stale branch state. Immediately before triggering Vercel, GitHub Actions reads
+the current branch SHA and passes it through that policy. If the branch has
+advanced since the successful CI run, the deployment is skipped. This prevents
+an obsolete CI run from intentionally triggering a newer branch state in the
+normal case.
 
 Deploy Hooks are intentionally branch-based rather than exact-SHA deployment.
 There is a small race window after the final GitHub SHA check because Vercel
