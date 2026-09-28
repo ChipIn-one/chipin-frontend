@@ -1,4 +1,5 @@
-import { getLocalUser } from 'helpers/localStorage';
+import { LS_KEY_LOCALE } from 'constants/localstorage';
+import { getAuthTokens, getLocalUser, LocalStorage } from 'helpers/localStorage';
 
 const SUPPORTED_LOCALES = ['en', 'ru', 'es', 'pt-BR', 'pt-PT'] as const;
 type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
@@ -108,7 +109,33 @@ const matchLocale = (raw: string): SupportedLocale | null => {
 };
 
 const getStoredLocale = (): string | null => {
-    return getLocalUser()?.settings.language ?? null;
+    const userLocale = getLocalUser()?.settings.language;
+    const explicitLocale = LocalStorage.get(LS_KEY_LOCALE, '');
+    const hasAuthSession = getAuthTokens() !== null;
+
+    if (hasAuthSession && userLocale) {
+        const matchedUserLocale = matchLocale(userLocale);
+
+        if (matchedUserLocale !== null) {
+            return matchedUserLocale;
+        }
+    }
+
+    const matchedExplicitLocale = matchLocale(explicitLocale);
+
+    if (matchedExplicitLocale !== null) {
+        return matchedExplicitLocale;
+    }
+
+    if (!hasAuthSession && userLocale) {
+        return matchLocale(userLocale);
+    }
+
+    return null;
+};
+
+const saveLocalePreference = (locale: SupportedLocale): void => {
+    LocalStorage.set(LS_KEY_LOCALE, locale);
 };
 
 /**
@@ -147,9 +174,11 @@ const resolveBrowserLocale = (
 
 /**
  * Resolves the active locale with priority:
- * 1. Valid locale in local user cache
- * 2. First matching browser language
- * 3. Fallback: 'en'
+ * 1. Valid local user locale while an auth session is being restored
+ * 2. Explicit persisted locale preference
+ * 3. Legacy cached user locale when no explicit preference exists
+ * 4. First matching browser language
+ * 5. Fallback: 'en'
  *
  * Auto-detected locale is NOT persisted.
  */
@@ -172,6 +201,7 @@ export {
     normalizeLocale,
     resolveBrowserLocale,
     resolveLocale,
+    saveLocalePreference,
     SUPPORTED_LOCALES,
 };
 export type { SupportedLocale };

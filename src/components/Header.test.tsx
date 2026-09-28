@@ -3,12 +3,15 @@ import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import { Theme } from '@radix-ui/themes';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import type { UserSettings } from 'api/chipin.types';
 import { PROJECT_NAME } from 'constants/chipin';
+import { LS_KEY_LOCALE } from 'constants/localstorage';
 import { lightThemeStyled } from 'constants/styled-themes';
+import { LocalStorage } from 'helpers/localStorage';
+import i18n from 'i18n';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 import { useUsersStore } from 'store/users-store';
@@ -48,6 +51,9 @@ beforeEach(() => {
         friends: [],
     });
     useDashboardStore.setState({ appMode: APP_MODES.SOLO });
+    LocalStorage.remove(LS_KEY_LOCALE);
+
+    return i18n.changeLanguage('en');
 });
 
 test('opens the Group route when an authenticated user clicks the logo', () => {
@@ -145,4 +151,30 @@ test('hides the mode badge on the landing page', () => {
     expect(screen.getByText(PROJECT_NAME)).toBeTruthy();
     expect(screen.queryByText('Group')).toBeNull();
     expect(screen.queryByText('Solo')).toBeNull();
+});
+
+
+test('changes and persists the landing page language', () => {
+    const interaction = userEvent.setup();
+    useAuthStore.setState({ status: 'unauthenticated' });
+
+    render(
+        <MemoryRouter initialEntries={['/']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <Header />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    return interaction
+        .click(screen.getByRole('button', { name: 'Interface language' }))
+        .then(() => interaction.click(screen.getByRole('button', { name: 'Russian' })))
+        .then(() =>
+            waitFor(() => {
+                expect(screen.getByText('Возможности')).toBeTruthy();
+                expect(LocalStorage.get(LS_KEY_LOCALE, '')).toBe('ru');
+            }),
+        );
 });

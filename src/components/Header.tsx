@@ -5,11 +5,18 @@ import { useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { useShallow } from 'zustand/react/shallow';
 
+import * as Sentry from '@sentry/react';
 import { Box, Button, Container, Flex, IconButton, Link } from '@radix-ui/themes';
 
 import { PROJECT_NAME } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
 import { themeColor } from 'helpers/colors';
+import {
+    matchLocale,
+    saveLocalePreference,
+    SUPPORTED_LOCALES,
+    type SupportedLocale,
+} from 'helpers/locale';
 import { getHasDesktopSidebar, getPreferredModeRoute } from 'helpers/routes';
 import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
@@ -18,6 +25,7 @@ import { useDashboardStore } from 'store/dashboardStore';
 import { selectCanAccessSolo, selectIsUserAdmin, useUsersStore } from 'store/users-store';
 
 import { NavButton } from 'basics/buttons';
+import LanguageSelector from 'components/LanguageSelector';
 import { ModeLogotype } from 'components/mode-logotype';
 
 import HeaderNav from './nav-bars/HeaderNav';
@@ -41,7 +49,12 @@ const LANDING_NAV_LINKS = [
     { labelKey: 'nav.pricing', href: '#pricing' },
 ] as const;
 
-const LandingNav = () => {
+interface LandingLanguageProps {
+    value: SupportedLocale;
+    onChange: (locale: SupportedLocale) => void;
+}
+
+const LandingNav = ({ value, onChange }: LandingLanguageProps) => {
     const { t } = useTranslation('landing');
 
     return (
@@ -54,25 +67,45 @@ const LandingNav = () => {
                         </Link>
                     </Button>
                 ))}
+                <LanguageSelector value={value} variant="compact" onChange={onChange} />
             </Flex>
         </Box>
     );
 };
 
-const LandingMobileMenu = () => {
+const LandingMobileMenu = ({ value, onChange }: LandingLanguageProps) => {
     const { t } = useTranslation('landing');
+    const { t: tSettings } = useTranslation('settings');
 
-    const items = LANDING_NAV_LINKS.map(({ labelKey, href }) => ({
+    const navItems = LANDING_NAV_LINKS.map(({ labelKey, href }) => ({
         value: href,
         label: t(labelKey),
         onSelect: () => {
             window.location.href = href;
         },
     }));
+    const languageItems = SUPPORTED_LOCALES.map(locale => ({
+        value: locale,
+        label: tSettings(`language.options.${locale}`),
+    }));
 
     return (
         <Dropdown
-            items={items}
+            sections={[
+                { items: navItems },
+                {
+                    label: tSettings('common:fields.interfaceLanguage'),
+                    items: languageItems,
+                    value,
+                    onValueChange: nextValue => {
+                        const locale = matchLocale(nextValue);
+
+                        if (locale) {
+                            onChange(locale);
+                        }
+                    },
+                },
+            ]}
             trigger={
                 <IconButton variant="ghost" color="gray" size="2">
                     <LucideMenu />
@@ -96,7 +129,19 @@ const Header = () => {
     const isSoloModeFromStore = useDashboardStore(selectIsSoloMode);
     const isSoloMode = canAccessSolo && isSoloModeFromStore;
     const location = useLocation();
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const landingLocale = matchLocale(i18n.resolvedLanguage ?? i18n.language) ?? 'en';
+
+    const onLandingLanguageChange = (locale: SupportedLocale) => {
+        return i18n
+            .changeLanguage(locale)
+            .then(() => {
+                saveLocalePreference(locale);
+            })
+            .catch((error: unknown) => {
+                Sentry.captureException(error);
+            });
+    };
 
     if (!isAuthResolved) {
         return null;
@@ -130,7 +175,12 @@ const Header = () => {
                     </NavButton>
 
                     {isLoggedIn && <HeaderNav />}
-                    {isLandingPage && <LandingNav />}
+                    {isLandingPage && (
+                        <LandingNav
+                            value={landingLocale}
+                            onChange={onLandingLanguageChange}
+                        />
+                    )}
 
                     <Flex gap="4" align="center">
                         {canShowDevMenu && <DevMenu />}
@@ -151,7 +201,10 @@ const Header = () => {
                                     </Button>
                                 </AuthModal>
                                 <Box display={{ initial: 'block', md: 'none' }}>
-                                    <LandingMobileMenu />
+                                    <LandingMobileMenu
+                                        value={landingLocale}
+                                        onChange={onLandingLanguageChange}
+                                    />
                                 </Box>
                             </Flex>
                         ) : (
