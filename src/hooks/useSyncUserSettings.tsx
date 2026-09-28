@@ -15,13 +15,11 @@ export const useSyncUserSettings = () => {
     const { setTheme } = useTheme();
 
     useEffect(() => {
-        if (!settings) {
+        if (!settings || authStatus !== 'authenticated') {
             return;
         }
 
-        if (authStatus === 'authenticated') {
-            setTheme(settings.theme);
-        }
+        setTheme(settings.theme);
 
         const locale = matchLocale(settings.language);
 
