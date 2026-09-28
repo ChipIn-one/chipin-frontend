@@ -39,8 +39,13 @@ test('stretches the trigger and matches the dropdown width by default', () => {
     expect(trigger.style.getPropertyValue('--width')).toBe('100%');
 
     return interaction.click(trigger).then(() => {
-        expect(screen.getByRole('dialog').style.getPropertyValue('--width')).toBe(
+        const dropdown = screen.getByRole('dialog');
+
+        expect(dropdown.style.getPropertyValue('--width')).toBe(
             'var(--radix-popover-trigger-width)',
+        );
+        expect(dropdown.style.getPropertyValue('--max-height')).toBe(
+            'var(--radix-popover-content-available-height)',
         );
     });
 });
