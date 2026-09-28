@@ -105,8 +105,9 @@ const SearchSelect = ({
                 maxWidth={contentMaxWidth}
                 maxHeight="var(--radix-popover-content-available-height)"
             >
-                <Flex direction="column" gap="2" minHeight="0" flexGrow="1">
-                    <TextField.Root
+                <Flex direction="column" gap="2" minHeight="0">
+                    <Box flexShrink="0">
+                        <TextField.Root
                         autoFocus
                         size="3"
                         placeholder={searchPlaceholder}
@@ -117,9 +118,10 @@ const SearchSelect = ({
                         <TextField.Slot side="left">
                             <LucideSearch size={16} />
                         </TextField.Slot>
-                    </TextField.Root>
+                        </TextField.Root>
+                    </Box>
 
-                    <OptionsScrollArea type="always" scrollbars="vertical">
+                    <OptionsScrollArea type="auto" scrollbars="vertical">
                         <Flex direction="column" gap="2" pr="4">
                             {filteredItems.length > 0 ? (
                                 filteredItems.map(item => {

@@ -11,15 +11,21 @@ const SearchSelectContent = styled(Popover.Content)`
 `;
 
 const OptionsScrollArea = styled(ScrollArea)`
-    height: 240px;
+    height: fit-content;
+    max-height: 240px;
     min-height: 0;
     flex-shrink: 1;
     background-color: ${themeColor('grayA2')};
+
+    & [data-radix-scroll-area-viewport] {
+        height: 100%;
+    }
 
     & [data-radix-scroll-area-viewport] > div {
         display: block !important;
         width: 100%;
         min-width: 0 !important;
+        flex-grow: 0;
     }
 `;
 
