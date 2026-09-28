@@ -113,3 +113,121 @@ jobs:
           if [ -n "$job_id" ]; then
             echo "Vercel job: $job_id" >> "$GITHUB_STEP_SUMMARY"
           fi
+  deploy-preview:
+    name: preview-${{ github.event.workflow_run.head_branch }}
+    if: >-
+      ${{
+        vars.VERCEL_ACTIONS_DEPLOY_ENABLED == 'true' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'pull_request' &&
+        github.event.workflow_run.name == 'Frontend CI' &&
+        github.event.workflow_run.head_repository.full_name == github.repository
+      }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout trusted deployment policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Resolve Preview admission
+        id: policy
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHIPIN_VERCEL_DEPLOY_ENABLED: ${{ vars.VERCEL_ACTIONS_DEPLOY_ENABLED }}
+          CHIPIN_CI_RESULT: ${{ github.event.workflow_run.conclusion }}
+          CHIPIN_CI_WORKFLOW: ${{ github.event.workflow_run.name }}
+          CHIPIN_EVENT_NAME: ${{ github.event.workflow_run.event }}
+          CHIPIN_REPOSITORY: ${{ github.repository }}
+          CHIPIN_SOURCE_REPOSITORY: ${{ github.event.workflow_run.head_repository.full_name }}
+          CHIPIN_SOURCE_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          CHIPIN_CI_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          owner="${CHIPIN_REPOSITORY%%/*}"
+          prs_json="$(
+            gh api --method GET "/repos/$CHIPIN_REPOSITORY/pulls" \
+              -f state=open \
+              -f head="$owner:$CHIPIN_SOURCE_BRANCH" \
+              -f base=dev
+          )"
+
+          pr_count="$(jq 'length' <<<"$prs_json")"
+
+          if [ "$pr_count" -ne 1 ]; then
+            echo "action=skip" >> "$GITHUB_OUTPUT"
+            echo "source_branch=$CHIPIN_SOURCE_BRANCH" >> "$GITHUB_OUTPUT"
+            echo "ci_sha=$CHIPIN_CI_SHA" >> "$GITHUB_OUTPUT"
+            echo "reason=pr-not-current" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          current_sha="$(jq -r '.[0].head.sha // ""' <<<"$prs_json")"
+
+          CHIPIN_BASE_BRANCH="dev" \
+          CHIPIN_CURRENT_SOURCE_SHA="$current_sha" \
+            node scripts/vercel-deploy-hook-policy.mjs >> "$GITHUB_OUTPUT"
+      - name: Record Preview skip
+        if: steps.policy.outputs.action == 'skip'
+        env:
+          SOURCE_BRANCH: ${{ steps.policy.outputs.source_branch }}
+          CI_SHA: ${{ steps.policy.outputs.ci_sha }}
+          REASON: ${{ steps.policy.outputs.reason }}
+        run: echo "Skipped Vercel Preview for $SOURCE_BRANCH at $CI_SHA ($REASON)." >> "$GITHUB_STEP_SUMMARY"
+      - name: Create Vercel Preview from verified SHA
+        if: steps.policy.outputs.action == 'deploy'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          REPO_ID: ${{ github.event.workflow_run.head_repository.id }}
+          SOURCE_BRANCH: ${{ steps.policy.outputs.source_branch }}
+          CI_SHA: ${{ steps.policy.outputs.ci_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ]; then
+            echo "Missing VERCEL_TOKEN or VERCEL_ORG_ID."
+            exit 1
+          fi
+
+          payload="$(
+            jq -n \
+              --arg name "chipin-frontend" \
+              --arg ref "$SOURCE_BRANCH" \
+              --arg sha "$CI_SHA" \
+              --argjson repo_id "$REPO_ID" \
+              '{
+                name: $name,
+                gitSource: {
+                  type: "github",
+                  repoId: $repo_id,
+                  ref: $ref,
+                  sha: $sha
+                }
+              }'
+          )"
+
+          response="$(
+            curl --fail-with-body --silent --show-error \
+              --request POST \
+              --url "https://api.vercel.com/v13/deployments?teamId=$VERCEL_ORG_ID" \
+              --header "Authorization: Bearer $VERCEL_TOKEN" \
+              --header "Content-Type: application/json" \
+              --data "$payload"
+          )"
+
+          deployment_url="$(jq -r '.url // empty' <<<"$response")"
+          deployment_id="$(jq -r '.id // empty' <<<"$response")"
+
+          if [ -z "$deployment_url" ] || [ -z "$deployment_id" ]; then
+            echo "Vercel did not return a deployment id and URL."
+            exit 1
+          fi
+
+          echo "Vercel Preview: https://$deployment_url" >> "$GITHUB_STEP_SUMMARY"
+          echo "Deployment: $deployment_id" >> "$GITHUB_STEP_SUMMARY"
+          echo "Verified CI SHA: $CI_SHA" >> "$GITHUB_STEP_SUMMARY"

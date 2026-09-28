@@ -35,6 +35,7 @@ export const resolveVercelDeployHookPlan = ({
     eventName,
     repository,
     sourceRepository,
+    baseBranch = '',
     sourceBranch,
     ciSha,
     currentSourceSha,
@@ -44,11 +45,7 @@ export const resolveVercelDeployHookPlan = ({
     }
 
     if (normalize(ciResult) !== 'success') {
-        throw new Error('Only successful CI may trigger a Vercel Deploy Hook.');
-    }
-
-    if (normalize(eventName) !== 'push') {
-        throw new Error('Only push CI runs may trigger a Vercel Deploy Hook.');
+        throw new Error('Only successful CI may trigger a Vercel deployment.');
     }
 
     const resolvedRepository = requireValue('repository', repository);
@@ -63,21 +60,38 @@ export const resolveVercelDeployHookPlan = ({
     }
 
     const resolvedWorkflow = requireValue('ciWorkflow', ciWorkflow);
+    const resolvedEvent = requireValue('eventName', eventName);
     const resolvedBranch = requireValue('sourceBranch', sourceBranch);
+    const resolvedBase = normalize(baseBranch);
     const resolvedCiSha = requireSha('ciSha', ciSha);
     const resolvedCurrentSha = requireSha('currentSourceSha', currentSourceSha);
 
     let channel;
     let environment;
 
-    if (resolvedWorkflow === FRONTEND_CI && resolvedBranch === 'dev') {
+    if (
+        resolvedEvent === 'pull_request' &&
+        resolvedWorkflow === FRONTEND_CI &&
+        resolvedBase === 'dev'
+    ) {
+        channel = 'preview';
+        environment = 'Preview';
+    } else if (
+        resolvedEvent === 'push' &&
+        resolvedWorkflow === FRONTEND_CI &&
+        resolvedBranch === 'dev'
+    ) {
         channel = 'dev';
         environment = 'Preview';
-    } else if (resolvedWorkflow === MAIN_CI && resolvedBranch === 'main') {
+    } else if (
+        resolvedEvent === 'push' &&
+        resolvedWorkflow === MAIN_CI &&
+        resolvedBranch === 'main'
+    ) {
         channel = 'production';
         environment = 'Production';
     } else {
-        throw new Error('Unsupported CI workflow and branch deployment combination.');
+        throw new Error('Unsupported CI event, workflow, and branch deployment combination.');
     }
 
     if (resolvedCurrentSha !== resolvedCiSha) {
@@ -112,6 +126,7 @@ if (isCli) {
             eventName: process.env.CHIPIN_EVENT_NAME,
             repository: process.env.CHIPIN_REPOSITORY,
             sourceRepository: process.env.CHIPIN_SOURCE_REPOSITORY,
+            baseBranch: process.env.CHIPIN_BASE_BRANCH,
             sourceBranch: process.env.CHIPIN_SOURCE_BRANCH,
             ciSha: process.env.CHIPIN_CI_SHA,
             currentSourceSha: process.env.CHIPIN_CURRENT_SOURCE_SHA,

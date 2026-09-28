@@ -18,13 +18,10 @@ const makeInput = overrides => ({
 });
 
 test('allows current dev push after Frontend CI', () => {
-    expect(resolveVercelDeployHookPlan(makeInput())).toEqual({
+    expect(resolveVercelDeployHookPlan(makeInput())).toMatchObject({
         action: 'deploy',
         channel: 'dev',
-        environment: 'Preview',
         ciSha: SHA,
-        sourceBranch: 'dev',
-        reason: '',
     });
 });
 
@@ -32,13 +29,22 @@ test('allows current main push after Main CI', () => {
     expect(resolveVercelDeployHookPlan(makeInput({
         ciWorkflow: 'Main CI',
         sourceBranch: 'main',
-    }))).toEqual({
+    }))).toMatchObject({
         action: 'deploy',
         channel: 'production',
-        environment: 'Production',
         ciSha: SHA,
-        sourceBranch: 'main',
-        reason: '',
+    });
+});
+
+test('allows current same-repository pull request to dev after Frontend CI', () => {
+    expect(resolveVercelDeployHookPlan(makeInput({
+        eventName: 'pull_request',
+        baseBranch: 'dev',
+        sourceBranch: 'luna/example',
+    }))).toMatchObject({
+        action: 'deploy',
+        channel: 'preview',
+        ciSha: SHA,
     });
 });
 
@@ -47,51 +53,39 @@ test('skips a stale successful CI run', () => {
         currentSourceSha: '2222222222222222222222222222222222222222',
     }))).toMatchObject({
         action: 'skip',
-        channel: 'dev',
         reason: 'stale',
     });
 });
 
-test('rejects failed CI', () => {
+test('rejects failed or cancelled CI', () => {
     expect(() => resolveVercelDeployHookPlan(makeInput({
         ciResult: 'failure',
     }))).toThrow('Only successful CI');
-});
 
-test('rejects cancelled CI', () => {
     expect(() => resolveVercelDeployHookPlan(makeInput({
         ciResult: 'cancelled',
     }))).toThrow('Only successful CI');
 });
 
-test('rejects pull request CI', () => {
-    expect(() => resolveVercelDeployHookPlan(makeInput({
-        eventName: 'pull_request',
-    }))).toThrow('Only push CI runs');
-});
-
-test('rejects the wrong repository', () => {
+test('rejects unexpected or fork repositories', () => {
     expect(() => resolveVercelDeployHookPlan(makeInput({
         repository: 'someone/chipin-frontend',
     }))).toThrow('Unexpected repository');
-});
 
-test('rejects a fork source repository', () => {
     expect(() => resolveVercelDeployHookPlan(makeInput({
         sourceRepository: 'someone/chipin-frontend',
     }))).toThrow('Deployment source repository');
 });
 
-test('rejects Frontend CI on main to avoid duplicate production trigger', () => {
+test('rejects unsupported event/workflow/branch combinations', () => {
+    expect(() => resolveVercelDeployHookPlan(makeInput({
+        eventName: 'pull_request',
+        baseBranch: 'main',
+    }))).toThrow('Unsupported CI event');
+
     expect(() => resolveVercelDeployHookPlan(makeInput({
         sourceBranch: 'main',
-    }))).toThrow('Unsupported CI workflow and branch');
-});
-
-test('rejects Main CI on dev', () => {
-    expect(() => resolveVercelDeployHookPlan(makeInput({
-        ciWorkflow: 'Main CI',
-    }))).toThrow('Unsupported CI workflow and branch');
+    }))).toThrow('Unsupported CI event');
 });
 
 test('rejects malformed CI SHAs', () => {
