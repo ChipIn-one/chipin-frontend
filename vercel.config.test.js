@@ -92,7 +92,7 @@ describe('Vercel API proxy routing', () => {
         expect(headers['X-Vercel-Enable-Rewrite-Caching']).toBe('0');
     });
 
-    test('keeps automatic Vercel Git deployments disabled', () => {
-        expect(config.git?.deploymentEnabled).toBe(false);
+    test('disables automatic Vercel Git deployments only for dev and main', () => {
+        expect(config.git?.deploymentEnabled).toEqual({ dev: false, main: false });
     });
 });
