@@ -32,7 +32,7 @@ test('maps a successful current pull request SHA to preview', () => {
     });
 });
 
-test('maps a successful current dev push SHA to staging', () => {
+test('maps a successful current dev push SHA to preview', () => {
     expect(resolveVercelDeployPlan(makeInput({
         eventName: 'push',
         baseRef: '',
@@ -42,7 +42,7 @@ test('maps a successful current dev push SHA to staging', () => {
     }))).toEqual({
         ciSha: SHA,
         sourceBranch: 'dev',
-        target: 'staging',
+        target: 'preview',
     });
 });
 
