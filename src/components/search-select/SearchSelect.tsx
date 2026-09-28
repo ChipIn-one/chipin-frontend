@@ -108,16 +108,16 @@ const SearchSelect = ({
                 <Flex direction="column" gap="2" minHeight="0">
                     <Box flexShrink="0">
                         <TextField.Root
-                        autoFocus
-                        size="3"
-                        placeholder={searchPlaceholder}
-                        value={searchValue}
-                        onChange={event => setSearchValue(event.target.value)}
-                        aria-label={searchPlaceholder}
-                    >
-                        <TextField.Slot side="left">
-                            <LucideSearch size={16} />
-                        </TextField.Slot>
+                            autoFocus
+                            size="3"
+                            placeholder={searchPlaceholder}
+                            value={searchValue}
+                            onChange={event => setSearchValue(event.target.value)}
+                            aria-label={searchPlaceholder}
+                        >
+                            <TextField.Slot side="left">
+                                <LucideSearch size={16} />
+                            </TextField.Slot>
                         </TextField.Root>
                     </Box>
 
