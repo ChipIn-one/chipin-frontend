@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event';
 
 import type { UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
+import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 import { useUsersStore } from 'store/users-store';
 
@@ -63,6 +64,7 @@ test.each([
 });
 
 test('lifts the mobile add-expense action without changing the nav item layout', () => {
+    useAuthStore.setState({ status: 'authenticated' });
     useDashboardStore.setState({ appMode: APP_MODES.GROUP });
 
     render(
