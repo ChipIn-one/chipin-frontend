@@ -138,7 +138,11 @@ jobs:
   prepare-preview:
     name: prepare-preview-settings
     needs: resolve
-    if: needs.resolve.outputs.target == 'preview'
+    if: >-
+      ${{
+        needs.resolve.outputs.target == 'preview' &&
+        needs.resolve.outputs.event_name == 'pull_request'
+      }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -204,7 +208,11 @@ jobs:
     needs:
       - resolve
       - prepare-preview
-    if: needs.resolve.outputs.target == 'preview'
+    if: >-
+      ${{
+        needs.resolve.outputs.target == 'preview' &&
+        needs.resolve.outputs.event_name == 'pull_request'
+      }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -289,7 +297,11 @@ jobs:
       - resolve
       - prepare-preview
       - build-preview
-    if: needs.resolve.outputs.target == 'preview'
+    if: >-
+      ${{
+        needs.resolve.outputs.target == 'preview' &&
+        needs.resolve.outputs.event_name == 'pull_request'
+      }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -503,8 +515,11 @@ jobs:
     needs: resolve
     if: >-
       ${{
-        needs.resolve.outputs.target == 'staging' ||
-        needs.resolve.outputs.target == 'production'
+        needs.resolve.outputs.event_name == 'push' &&
+        (
+          needs.resolve.outputs.target == 'preview' ||
+          needs.resolve.outputs.target == 'production'
+        )
       }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -635,3 +650,21 @@ jobs:
           echo "Vercel target: $TARGET" >> "$GITHUB_STEP_SUMMARY"
           echo "Verified SHA: $CI_SHA" >> "$GITHUB_STEP_SUMMARY"
           echo "Deployment: $deployment_url" >> "$GITHUB_STEP_SUMMARY"
+      - name: Point dev.chipin.one at verified dev preview
+        if: >-
+          ${{
+            needs.resolve.outputs.target == 'preview' &&
+            needs.resolve.outputs.source_branch == 'dev'
+          }}
+        working-directory: source
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/vercel-cli/node_modules/.bin/vercel" alias set \
+            "$DEPLOYMENT_URL" \
+            dev.chipin.one \
+            --token="$VERCEL_TOKEN"
+          echo "Stable dev domain: https://dev.chipin.one" >> "$GITHUB_STEP_SUMMARY"
