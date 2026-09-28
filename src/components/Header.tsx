@@ -148,13 +148,6 @@ const Header = () => {
                     {isLandingPage && <LandingNav />}
 
                     <Flex gap="4" align="center">
-                        {isLandingPage && (
-                            <LanguageSelector
-                                value={landingLocale}
-                                variant="compact"
-                                onChange={onLandingLanguageChange}
-                            />
-                        )}
                         {canShowDevMenu && <DevMenu />}
                         {isLoggedIn ? (
                             <Flex gap="4" align="center">
@@ -166,6 +159,11 @@ const Header = () => {
                             </Flex>
                         ) : isLandingPage ? (
                             <Flex align="center" gap="2">
+                                <LanguageSelector
+                                    value={landingLocale}
+                                    variant="compact"
+                                    onChange={onLandingLanguageChange}
+                                />
                                 <AuthModal>
                                     <Button size="2" variant="soft" color="green" radius="full">
                                         {t('header.signIn')}
