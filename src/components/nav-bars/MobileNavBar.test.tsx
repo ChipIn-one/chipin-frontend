@@ -77,9 +77,19 @@ test('lifts the mobile add-expense action without changing the nav item layout',
 
     const addExpenseButton = screen.getByRole('button', { name: 'Add expense' });
     const centerAction = addExpenseButton.parentElement as HTMLElement;
-    const navSurface = centerAction.parentElement?.previousElementSibling as HTMLElement;
+    const navContent = centerAction.parentElement as HTMLElement;
+    const navWrapper = navContent.parentElement as HTMLElement;
+    const navSurface = navContent.previousElementSibling as HTMLElement;
 
-    expect(getComputedStyle(centerAction).transform).toBe('translate(-50%, -70%)');
+    expect(getComputedStyle(navWrapper).getPropertyValue('--mobile-nav-action-lift').trim()).toBe(
+        'var(--space-3)',
+    );
+    expect(getComputedStyle(navWrapper).getPropertyValue('--mobile-nav-cutout-center-y').trim()).toBe(
+        'calc(0px - var(--mobile-nav-action-lift))',
+    );
+    expect(getComputedStyle(centerAction).transform).toBe(
+        'translate(-50%, calc(-50% - var(--mobile-nav-action-lift)))',
+    );
     expect(getComputedStyle(navSurface).getPropertyValue('--mobile-nav-cutout-radius').trim()).toBe(
         'calc(var(--space-7) - var(--space-1))',
     );
