@@ -54,20 +54,20 @@ beforeEach(() => {
     });
 });
 
-test('does not reapply cached user theme settings after logout', () => {
+test('does not reapply cached user settings after logout', () => {
     useAuthStore.setState({ status: 'unauthenticated' });
 
     renderHook(() => useSyncUserSettings());
 
     expect(setTheme).not.toHaveBeenCalled();
-    expect(locale.saveLocalePreference).toHaveBeenCalledWith('en');
-    expect(changeLanguage).toHaveBeenCalledWith('en');
+    expect(locale.saveLocalePreference).not.toHaveBeenCalled();
+    expect(changeLanguage).not.toHaveBeenCalled();
 });
 
 test('records locale sync failures', () => {
     const error = new Error('Failed to change language');
     changeLanguage.mockRejectedValueOnce(error);
-    useAuthStore.setState({ status: 'unauthenticated' });
+    useAuthStore.setState({ status: 'authenticated' });
 
     renderHook(() => useSyncUserSettings());
 
@@ -82,4 +82,6 @@ test('applies cached user theme settings while the authenticated user is loading
     renderHook(() => useSyncUserSettings());
 
     expect(setTheme).toHaveBeenCalledWith('light');
+    expect(locale.saveLocalePreference).toHaveBeenCalledWith('en');
+    expect(changeLanguage).toHaveBeenCalledWith('en');
 });
