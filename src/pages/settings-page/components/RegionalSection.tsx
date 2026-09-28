@@ -1,4 +1,4 @@
-import { LucideChevronDown, LucideGlobe, LucideRotateCcw } from 'lucide-react';
+import { LucideGlobe, LucideRotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -17,7 +17,6 @@ import type { UserSettings } from 'api/chipin.types';
 import {
     matchLocale,
     resolveBrowserLocale,
-    SUPPORTED_LOCALES,
     type SupportedLocale,
 } from 'helpers/locale';
 import { detectDeviceTimezone, formatUtcOffset, getAmPm24Time } from 'helpers/time';
@@ -27,7 +26,7 @@ import {
     useUsersStore,
 } from 'store/users-store';
 
-import { SearchSelect } from 'components/search-select';
+import LanguageSelector from 'components/LanguageSelector';
 import SegmentedControl from 'components/SegmentedControl';
 
 interface Props {
@@ -49,11 +48,6 @@ const RegionalSection = ({ isLoading }: Props) => {
     const previewTime24 = getAmPm24Time(new Date(), true);
     const previewTime12 = getAmPm24Time(new Date(), false);
     const selectedLanguage = matchLocale(language) ?? 'en';
-    const languageItems = SUPPORTED_LOCALES.map(locale => ({
-        value: locale,
-        label: t(`language.options.${locale}`),
-        searchFields: [locale, t(`language.options.${locale}`)],
-    }));
 
     const onTimeFormatChange = (value: string) => {
         setUserSettings({
@@ -61,9 +55,7 @@ const RegionalSection = ({ isLoading }: Props) => {
         });
     };
 
-    const onLanguageChange = (value: string) => {
-        const locale = value as SupportedLocale;
-
+    const onLanguageChange = (locale: SupportedLocale) => {
         setUserSettings({ settings: { language: locale } });
     };
 
@@ -177,33 +169,9 @@ const RegionalSection = ({ isLoading }: Props) => {
                             gap="2"
                         >
                             <Box flexGrow="1">
-                                <SearchSelect
-                                    items={languageItems}
+                                <LanguageSelector
                                     value={selectedLanguage}
-                                    searchPlaceholder={t('regional.languageSearchPlaceholder')}
-                                    emptyText={t('regional.languageSearchEmpty')}
-                                    triggerElement={
-                                        <Button
-                                            type="button"
-                                            variant="surface"
-                                            color="gray"
-                                            size="3"
-                                            radius="large"
-                                            loading={isLoading}
-                                        >
-                                            <Flex
-                                                align="center"
-                                                justify="between"
-                                                gap="2"
-                                                width="100%"
-                                            >
-                                                <Text truncate>
-                                                    {t(`language.options.${selectedLanguage}`)}
-                                                </Text>
-                                                <LucideChevronDown size={16} />
-                                            </Flex>
-                                        </Button>
-                                    }
+                                    isLoading={isLoading}
                                     onChange={onLanguageChange}
                                 />
                             </Box>

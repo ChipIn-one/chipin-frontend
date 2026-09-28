@@ -1,4 +1,5 @@
-import { getLocalUser } from 'helpers/localStorage';
+import { LS_KEY_LOCALE } from 'constants/localstorage';
+import { getLocalUser, LocalStorage } from 'helpers/localStorage';
 
 const SUPPORTED_LOCALES = ['en', 'ru', 'es', 'pt-BR', 'pt-PT'] as const;
 type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
@@ -108,7 +109,17 @@ const matchLocale = (raw: string): SupportedLocale | null => {
 };
 
 const getStoredLocale = (): string | null => {
-    return getLocalUser()?.settings.language ?? null;
+    const userLocale = getLocalUser()?.settings.language;
+
+    if (userLocale) {
+        return userLocale;
+    }
+
+    return LocalStorage.get(LS_KEY_LOCALE, '') || null;
+};
+
+const saveLocalePreference = (locale: SupportedLocale): void => {
+    LocalStorage.set(LS_KEY_LOCALE, locale);
 };
 
 /**
@@ -148,8 +159,9 @@ const resolveBrowserLocale = (
 /**
  * Resolves the active locale with priority:
  * 1. Valid locale in local user cache
- * 2. First matching browser language
- * 3. Fallback: 'en'
+ * 2. Explicit persisted locale preference
+ * 3. First matching browser language
+ * 4. Fallback: 'en'
  *
  * Auto-detected locale is NOT persisted.
  */
@@ -172,6 +184,7 @@ export {
     normalizeLocale,
     resolveBrowserLocale,
     resolveLocale,
+    saveLocalePreference,
     SUPPORTED_LOCALES,
 };
 export type { SupportedLocale };

@@ -1,6 +1,7 @@
 import type { SelfUser, ThemeName, UserRole, UserSettings } from 'api/chipin.types';
 import {
     LS_KEY_AUTH_TOKENS,
+    LS_KEY_LOCALE,
     LS_KEY_SW_UPDATE_DISMISSED_AT,
     LS_KEY_THEME,
     LS_KEY_USER,
@@ -18,6 +19,7 @@ export interface AuthTokens {
 
 type StorageSchema = {
     [LS_KEY_USER]: LocalUser;
+    [LS_KEY_LOCALE]: string;
     [LS_KEY_THEME]: ThemeName;
     [LS_KEY_SW_UPDATE_DISMISSED_AT]: number;
     [LS_KEY_AUTH_TOKENS]: AuthTokens;

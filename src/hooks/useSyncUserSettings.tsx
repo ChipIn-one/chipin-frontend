@@ -3,7 +3,7 @@ import { useTheme } from 'next-themes';
 
 import * as Sentry from '@sentry/react';
 
-import { matchLocale } from 'helpers/locale';
+import { matchLocale, saveLocalePreference } from 'helpers/locale';
 import i18n from 'i18n';
 import { selectAuthStatus } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
@@ -26,6 +26,7 @@ export const useSyncUserSettings = () => {
         const locale = matchLocale(settings.language);
 
         if (locale) {
+            saveLocalePreference(locale);
             i18n.changeLanguage(locale).catch(error => {
                 Sentry.captureException(error);
             });

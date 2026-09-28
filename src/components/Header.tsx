@@ -5,11 +5,13 @@ import { useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { useShallow } from 'zustand/react/shallow';
 
+import * as Sentry from '@sentry/react';
 import { Box, Button, Container, Flex, IconButton, Link } from '@radix-ui/themes';
 
 import { PROJECT_NAME } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
 import { themeColor } from 'helpers/colors';
+import { matchLocale, saveLocalePreference, type SupportedLocale } from 'helpers/locale';
 import { getHasDesktopSidebar, getPreferredModeRoute } from 'helpers/routes';
 import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
@@ -18,6 +20,7 @@ import { useDashboardStore } from 'store/dashboardStore';
 import { selectCanAccessSolo, selectIsUserAdmin, useUsersStore } from 'store/users-store';
 
 import { NavButton } from 'basics/buttons';
+import LanguageSelector from 'components/LanguageSelector';
 import { ModeLogotype } from 'components/mode-logotype';
 
 import HeaderNav from './nav-bars/HeaderNav';
@@ -96,7 +99,19 @@ const Header = () => {
     const isSoloModeFromStore = useDashboardStore(selectIsSoloMode);
     const isSoloMode = canAccessSolo && isSoloModeFromStore;
     const location = useLocation();
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const landingLocale = matchLocale(i18n.resolvedLanguage ?? i18n.language) ?? 'en';
+
+    const onLandingLanguageChange = (locale: SupportedLocale) => {
+        return i18n
+            .changeLanguage(locale)
+            .then(() => {
+                saveLocalePreference(locale);
+            })
+            .catch((error: unknown) => {
+                Sentry.captureException(error);
+            });
+    };
 
     if (!isAuthResolved) {
         return null;
@@ -133,6 +148,13 @@ const Header = () => {
                     {isLandingPage && <LandingNav />}
 
                     <Flex gap="4" align="center">
+                        {isLandingPage && (
+                            <LanguageSelector
+                                value={landingLocale}
+                                variant="compact"
+                                onChange={onLandingLanguageChange}
+                            />
+                        )}
                         {canShowDevMenu && <DevMenu />}
                         {isLoggedIn ? (
                             <Flex gap="4" align="center">

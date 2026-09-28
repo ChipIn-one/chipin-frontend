@@ -13,6 +13,7 @@ const changeLanguage = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 const captureException = vi.hoisted(() => vi.fn());
 const locale = vi.hoisted(() => ({
     matchLocale: vi.fn(() => 'en'),
+    saveLocalePreference: vi.fn(),
 }));
 
 vi.mock('next-themes', () => ({
@@ -25,6 +26,7 @@ vi.mock('@sentry/react', () => ({
 
 vi.mock('helpers/locale', () => ({
     matchLocale: locale.matchLocale,
+    saveLocalePreference: locale.saveLocalePreference,
 }));
 
 vi.mock('i18n', () => ({
@@ -58,6 +60,7 @@ test('does not reapply cached user theme settings after logout', () => {
     renderHook(() => useSyncUserSettings());
 
     expect(setTheme).not.toHaveBeenCalled();
+    expect(locale.saveLocalePreference).toHaveBeenCalledWith('en');
     expect(changeLanguage).toHaveBeenCalledWith('en');
 });
 
