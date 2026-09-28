@@ -40,14 +40,10 @@ const MobileNavItems = styled(Box)`
         repeat(2, minmax(0, 1fr));
     width: 100%;
     align-items: end;
+`;
 
-    > :nth-child(3) {
-        grid-column: 4;
-    }
-
-    > :nth-child(4) {
-        grid-column: 5;
-    }
+const MobileNavItem = styled(Box)<{ $gridColumn: number }>`
+    grid-column: ${({ $gridColumn }) => $gridColumn};
 `;
 
 const MobileNavItemButton = styled(NavButton)`
@@ -60,6 +56,7 @@ export {
     MobileNavBarWrapper,
     MobileNavCenterAction,
     MobileNavContent,
+    MobileNavItem,
     MobileNavItemButton,
     MobileNavItems,
     MobileNavSurface,
