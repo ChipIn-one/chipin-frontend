@@ -658,11 +658,23 @@ jobs:
           }}
         working-directory: source
         env:
+          GH_TOKEN: ${{ github.token }}
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment_url }}
+          REPOSITORY: ${{ github.repository }}
+          SOURCE_BRANCH: ${{ needs.resolve.outputs.source_branch }}
+          CI_SHA: ${{ needs.resolve.outputs.ci_sha }}
         shell: bash
         run: |
           set -euo pipefail
+          encoded_branch="$(jq -rn --arg value "$SOURCE_BRANCH" '$value|@uri')"
+          current_source_sha="$(gh api "/repos/$REPOSITORY/branches/$encoded_branch" --jq '.commit.sha')"
+
+          if [ "$current_source_sha" != "$CI_SHA" ]; then
+            echo "CI SHA became stale before dev domain alias."
+            exit 1
+          fi
+
           "$RUNNER_TEMP/vercel-cli/node_modules/.bin/vercel" alias set \
             "$DEPLOYMENT_URL" \
             dev.chipin.one \
