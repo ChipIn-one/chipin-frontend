@@ -62,7 +62,7 @@ test.each([
     });
 });
 
-test('reserves a center gap around the mobile add-expense action', () => {
+test('lifts the mobile add-expense action without changing the nav item layout', () => {
     useDashboardStore.setState({ appMode: APP_MODES.GROUP });
 
     render(
@@ -73,17 +73,14 @@ test('reserves a center gap around the mobile add-expense action', () => {
         </MemoryRouter>,
     );
 
-    const dashboardItem = screen.getByRole('link', { name: 'Dashboard' }).parentElement as HTMLElement;
-    const friendsItem = screen.getByRole('link', { name: 'Friends' }).parentElement as HTMLElement;
-    const settingsItem = screen.getByRole('link', { name: 'Settings' }).parentElement as HTMLElement;
-    const navItems = dashboardItem.parentElement as HTMLElement;
-    const navStyle = getComputedStyle(navItems);
+    const addExpenseButton = screen.getByRole('button', { name: 'Add expense' });
+    const centerAction = addExpenseButton.parentElement as HTMLElement;
+    const navItems = centerAction.previousElementSibling as HTMLElement;
+    const navSurface = centerAction.parentElement?.previousElementSibling as HTMLElement;
 
-    expect(navStyle.display).toBe('grid');
-    expect(navStyle.getPropertyValue('--mobile-nav-center-gap').trim()).toBe(
-        'calc(var(--space-7) + var(--space-7))',
+    expect(getComputedStyle(navItems).display).toBe('flex');
+    expect(getComputedStyle(centerAction).transform).toBe('translate(-50%, -70%)');
+    expect(getComputedStyle(navSurface).getPropertyValue('--mobile-nav-cutout-radius').trim()).toBe(
+        'calc(var(--space-7) - var(--space-1))',
     );
-    expect(navStyle.gridTemplateColumns).toContain('var(--mobile-nav-center-gap)');
-    expect(getComputedStyle(friendsItem).gridColumn).toBe('4');
-    expect(getComputedStyle(settingsItem).gridColumn).toBe('5');
 });

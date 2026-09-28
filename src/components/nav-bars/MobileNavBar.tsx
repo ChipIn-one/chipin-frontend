@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 
-import { Flex, Text } from '@radix-ui/themes';
+import { Box, Flex, Text } from '@radix-ui/themes';
 
 import { getPreferredModeRoute } from 'helpers/routes';
 import { selectIsSoloMode } from 'store/dashboardSelectors';
@@ -15,7 +15,6 @@ import {
     MobileNavBarWrapper,
     MobileNavCenterAction,
     MobileNavContent,
-    MobileNavItem,
     MobileNavItemButton,
     MobileNavItems,
     MobileNavSurface,
@@ -32,12 +31,11 @@ const MobileNavBar = () => {
         getPreferredModeRoute(isSoloMode),
     );
 
-    const renderNavItem = ({ labelKey, href, Icon }: NavElement, index: number) => {
+    const renderNavItem = ({ labelKey, href, Icon }: NavElement) => {
         const isActive = location.pathname === href || location.pathname.startsWith(`${href}/`);
-        const gridColumn = index < 2 ? index + 1 : index + 2;
 
         return (
-            <MobileNavItem key={href} $gridColumn={gridColumn}>
+            <Box key={href} flexGrow="1">
                 <MobileNavItemButton
                     to={href}
                     color={isActive ? activeColor : 'gray'}
@@ -51,7 +49,7 @@ const MobileNavBar = () => {
                         </Text>
                     </Flex>
                 </MobileNavItemButton>
-            </MobileNavItem>
+            </Box>
         );
     };
 
@@ -66,7 +64,7 @@ const MobileNavBar = () => {
             <MobileNavSurface />
 
             <MobileNavContent align="stretch">
-                <MobileNavItems>
+                <MobileNavItems justify="between" align="stretch">
                     {navElements.map(renderNavItem)}
                 </MobileNavItems>
 
