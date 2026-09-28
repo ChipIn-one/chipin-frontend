@@ -91,4 +91,8 @@ describe('Vercel API proxy routing', () => {
         expect(headers['Vercel-CDN-Cache-Control']).toBe('no-store');
         expect(headers['X-Vercel-Enable-Rewrite-Caching']).toBe('0');
     });
+
+    test('keeps automatic Vercel Git deployments disabled', () => {
+        expect(config.git?.deploymentEnabled).toBe(false);
+    });
 });
