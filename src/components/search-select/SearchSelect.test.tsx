@@ -63,3 +63,30 @@ test('supports an explicit dropdown width and max width', () => {
         expect(dropdown.style.getPropertyValue('--max-width')).toBe('none');
     });
 });
+
+
+test('exposes the selected option with pressed semantics', () => {
+    const interaction = userEvent.setup();
+
+    renderSelect({
+        items: [
+            { value: 'one', label: 'One' },
+            { value: 'two', label: 'Two' },
+        ],
+    });
+
+    return interaction.click(screen.getByRole('button', { name: 'One' })).then(() => {
+        expect(
+            screen.getByRole('button', {
+                name: 'One',
+                pressed: true,
+            }),
+        ).toBeTruthy();
+        expect(
+            screen.getByRole('button', {
+                name: 'Two',
+                pressed: false,
+            }),
+        ).toBeTruthy();
+    });
+});
