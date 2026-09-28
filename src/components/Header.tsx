@@ -87,10 +87,6 @@ const LandingMobileMenu = ({ value, onChange }: LandingLanguageProps) => {
     const languageItems = SUPPORTED_LOCALES.map(locale => ({
         value: locale,
         label: tSettings(`language.options.${locale}`),
-        color: locale === value ? ('green' as const) : undefined,
-        onSelect: () => {
-            onChange(locale);
-        },
     }));
 
     return (
@@ -100,6 +96,14 @@ const LandingMobileMenu = ({ value, onChange }: LandingLanguageProps) => {
                 {
                     label: tSettings('common:fields.interfaceLanguage'),
                     items: languageItems,
+                    value,
+                    onValueChange: nextValue => {
+                        const locale = matchLocale(nextValue);
+
+                        if (locale) {
+                            onChange(locale);
+                        }
+                    },
                 },
             ]}
             trigger={
