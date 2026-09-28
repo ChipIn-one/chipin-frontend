@@ -38,52 +38,75 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Verify branch freshness and trigger Vercel Deploy Hook
+      - name: Checkout trusted deployment policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Resolve deployment admission
+        id: policy
         env:
           GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
-          CI_WORKFLOW: ${{ github.event.workflow_run.name }}
-          SOURCE_BRANCH: ${{ github.event.workflow_run.head_branch }}
-          CI_SHA: ${{ github.event.workflow_run.head_sha }}
+          CHIPIN_VERCEL_DEPLOY_ENABLED: ${{ vars.VERCEL_ACTIONS_DEPLOY_ENABLED }}
+          CHIPIN_CI_RESULT: ${{ github.event.workflow_run.conclusion }}
+          CHIPIN_CI_WORKFLOW: ${{ github.event.workflow_run.name }}
+          CHIPIN_EVENT_NAME: ${{ github.event.workflow_run.event }}
+          CHIPIN_REPOSITORY: ${{ github.repository }}
+          CHIPIN_SOURCE_REPOSITORY: ${{ github.event.workflow_run.head_repository.full_name }}
+          CHIPIN_SOURCE_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          CHIPIN_CI_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          encoded_branch="$(jq -rn --arg value "$CHIPIN_SOURCE_BRANCH" '$value|@uri')"
+          current_sha="$(gh api "/repos/$CHIPIN_REPOSITORY/branches/$encoded_branch" --jq '.commit.sha')"
+
+          CHIPIN_CURRENT_SOURCE_SHA="$current_sha" \
+            node scripts/vercel-deploy-hook-policy.mjs >> "$GITHUB_OUTPUT"
+      - name: Record stale deployment skip
+        if: steps.policy.outputs.action == 'skip'
+        env:
+          SOURCE_BRANCH: ${{ steps.policy.outputs.source_branch }}
+          CI_SHA: ${{ steps.policy.outputs.ci_sha }}
+        shell: bash
+        run: |
+          echo "Skipped stale Vercel deployment for $SOURCE_BRANCH at $CI_SHA." >> "$GITHUB_STEP_SUMMARY"
+      - name: Trigger Vercel Deploy Hook
+        if: steps.policy.outputs.action == 'deploy'
+        env:
+          CHANNEL: ${{ steps.policy.outputs.channel }}
+          ENVIRONMENT: ${{ steps.policy.outputs.environment }}
+          SOURCE_BRANCH: ${{ steps.policy.outputs.source_branch }}
+          CI_SHA: ${{ steps.policy.outputs.ci_sha }}
           VERCEL_DEV_DEPLOY_HOOK: ${{ secrets.VERCEL_DEV_DEPLOY_HOOK }}
           VERCEL_PROD_DEPLOY_HOOK: ${{ secrets.VERCEL_PROD_DEPLOY_HOOK }}
         shell: bash
         run: |
           set -euo pipefail
 
-          case "$CI_WORKFLOW:$SOURCE_BRANCH" in
-            "Frontend CI:dev")
+          case "$CHANNEL" in
+            dev)
               deploy_hook="$VERCEL_DEV_DEPLOY_HOOK"
-              environment="Preview"
               ;;
-            "Main CI:main")
+            production)
               deploy_hook="$VERCEL_PROD_DEPLOY_HOOK"
-              environment="Production"
               ;;
             *)
-              echo "Unsupported CI/branch deployment combination."
+              echo "Unsupported deployment channel: $CHANNEL"
               exit 1
               ;;
           esac
 
           if [ -z "$deploy_hook" ]; then
-            echo "Missing Vercel Deploy Hook secret for $SOURCE_BRANCH."
+            echo "Missing Vercel Deploy Hook secret for $CHANNEL."
             exit 1
-          fi
-
-          encoded_branch="$(jq -rn --arg value "$SOURCE_BRANCH" '$value|@uri')"
-          current_sha="$(gh api "/repos/$REPOSITORY/branches/$encoded_branch" --jq '.commit.sha')"
-
-          if [ "$current_sha" != "$CI_SHA" ]; then
-            echo "Skipping stale deployment: $SOURCE_BRANCH moved from $CI_SHA to $current_sha."
-            echo "Vercel deploy skipped because the branch advanced after this CI run." >> "$GITHUB_STEP_SUMMARY"
-            exit 0
           fi
 
           response="$(curl --fail-with-body --silent --show-error --request POST "$deploy_hook")"
 
           echo "Vercel Deploy Hook accepted for $SOURCE_BRANCH." >> "$GITHUB_STEP_SUMMARY"
-          echo "Environment: $environment" >> "$GITHUB_STEP_SUMMARY"
+          echo "Environment: $ENVIRONMENT" >> "$GITHUB_STEP_SUMMARY"
           echo "CI SHA checked immediately before trigger: $CI_SHA" >> "$GITHUB_STEP_SUMMARY"
 
           job_id="$(jq -r '.job.id // empty' <<<"$response")"
