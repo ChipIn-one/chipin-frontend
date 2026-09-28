@@ -35,7 +35,7 @@ const MobileNavBar = () => {
         const isActive = location.pathname === href || location.pathname.startsWith(`${href}/`);
 
         return (
-            <Box key={href} flexGrow="1">
+            <Box key={href}>
                 <MobileNavItemButton
                     to={href}
                     color={isActive ? activeColor : 'gray'}
@@ -64,7 +64,7 @@ const MobileNavBar = () => {
             <MobileNavSurface />
 
             <MobileNavContent align="stretch">
-                <MobileNavItems justify="between" align="stretch">
+                <MobileNavItems>
                     {navElements.map(renderNavItem)}
                 </MobileNavItems>
 

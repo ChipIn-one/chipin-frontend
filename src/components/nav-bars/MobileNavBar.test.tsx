@@ -61,3 +61,28 @@ test.each([
         expect(screen.getByLabelText('Current route').textContent).toBe(expectedRoute);
     });
 });
+
+test('reserves a center gap around the mobile add-expense action', () => {
+    useDashboardStore.setState({ appMode: APP_MODES.GROUP });
+
+    render(
+        <MemoryRouter initialEntries={['/dashboard']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <MobileNavBar />
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    const dashboardItem = screen.getByRole('link', { name: 'Dashboard' }).parentElement as HTMLElement;
+    const friendsItem = screen.getByRole('link', { name: 'Friends' }).parentElement as HTMLElement;
+    const settingsItem = screen.getByRole('link', { name: 'Settings' }).parentElement as HTMLElement;
+    const navItems = dashboardItem.parentElement as HTMLElement;
+    const navStyle = getComputedStyle(navItems);
+
+    expect(navStyle.display).toBe('grid');
+    expect(navStyle.getPropertyValue('--mobile-nav-center-gap').trim()).toBe(
+        'calc(var(--space-7) + var(--space-7))',
+    );
+    expect(getComputedStyle(friendsItem).gridColumnStart).toBe('4');
+    expect(getComputedStyle(settingsItem).gridColumnStart).toBe('5');
+});

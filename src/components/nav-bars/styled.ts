@@ -30,9 +30,24 @@ const MobileNavCenterAction = styled(Box)`
     transform: translate(-50%, -50%);
 `;
 
-const MobileNavItems = styled(Flex)`
+const MobileNavItems = styled(Box)`
+    --mobile-nav-center-gap: calc(var(--space-7) + var(--space-7));
+
+    display: grid;
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr))
+        var(--mobile-nav-center-gap)
+        repeat(2, minmax(0, 1fr));
     width: 100%;
     align-items: end;
+
+    > :nth-child(3) {
+        grid-column: 4;
+    }
+
+    > :nth-child(4) {
+        grid-column: 5;
+    }
 `;
 
 const MobileNavItemButton = styled(NavButton)`
