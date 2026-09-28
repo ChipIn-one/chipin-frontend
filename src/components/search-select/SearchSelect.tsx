@@ -135,6 +135,9 @@ const SearchSelect = ({
                                             variant="soft"
                                             color={isSelected ? 'blue' : 'gray'}
                                             highContrast={isSelected}
+                                            aria-pressed={
+                                                value === undefined ? undefined : isSelected
+                                            }
                                             onClick={() => onValueChange(item.value)}
                                         >
                                             <Flex
