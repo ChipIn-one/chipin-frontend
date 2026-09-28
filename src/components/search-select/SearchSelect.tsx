@@ -6,7 +6,7 @@ import { Box, Flex, Popover, Text, TextField } from '@radix-ui/themes';
 
 import { getFilterFunction } from 'helpers/text';
 
-import { OptionButton, OptionsScrollArea } from './styled';
+import { OptionButton, OptionsScrollArea, SearchSelectContent } from './styled';
 import type { SearchSelectItem } from './types';
 
 type BoxProps = ComponentProps<typeof Box>;
@@ -97,14 +97,15 @@ const SearchSelect = ({
                 </Box>
             </Popover.Trigger>
 
-            <Popover.Content
+            <SearchSelectContent
                 align="end"
                 sideOffset={4}
                 width={resolvedContentWidth}
                 minWidth={resolvedContentMinWidth}
                 maxWidth={contentMaxWidth}
+                maxHeight="var(--radix-popover-content-available-height)"
             >
-                <Flex direction="column" gap="2">
+                <Flex direction="column" gap="2" minHeight="0" flexGrow="1">
                     <TextField.Root
                         autoFocus
                         size="3"
@@ -159,7 +160,7 @@ const SearchSelect = ({
                         </Flex>
                     </OptionsScrollArea>
                 </Flex>
-            </Popover.Content>
+            </SearchSelectContent>
         </Popover.Root>
     );
 };
