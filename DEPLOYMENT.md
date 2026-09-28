@@ -27,7 +27,7 @@ disabled even if the build would otherwise enable telemetry. PR-controlled
 Actions preview builds use only public `VITE_*` build variables and explicitly
 skip Sentry source-map upload and disable Vite source-map generation, so neither
 `SENTRY_AUTH_TOKEN` nor unpublished source maps enter the untrusted preview
-artifact. Protected staging/production builds preserve the existing Sentry
+artifact. Protected `dev` Preview and production builds preserve the existing Sentry
 source-map upload behavior.
 
 There is no unconditional external API rewrite. Unknown hosts therefore cannot
@@ -54,7 +54,7 @@ Deployment mapping:
 | GitHub event | Required successful gate | Vercel target |
 | --- | --- | --- |
 | Pull request to `dev` from this repository | `frontend-ci` | `preview` |
-| Push to `dev` | `frontend-ci` | `staging` |
+| Push to `dev` | `frontend-ci` | `preview` + `dev.chipin.one` alias |
 | Release pull request `dev → main` | `main-ci` | `preview` |
 | Push to `main` | `main-ci` | `production` |
 
@@ -90,8 +90,11 @@ step never executes PR-controlled install/build scripts.
 
 For protected `dev` and `main` pushes, the same trusted workflow checks out the
 exact successful CI SHA and runs `vercel pull`, `vercel build`, and
-`vercel deploy --prebuilt` only after provenance validation. Vercel credentials
-are step-scoped rather than job-wide.
+`vercel deploy --prebuilt` only after provenance validation. A successful `dev`
+push deploys to the standard Vercel Preview environment and then explicitly
+aliases that exact deployment to `dev.chipin.one`; this replaces branch-domain
+auto-assignment once Git Integration is disabled. Vercel credentials are
+step-scoped rather than job-wide.
 
 Deployment concurrency is bounded per triggering CI workflow/event/source branch
 and cancels an older in-progress deployment for the same key. A retry is permitted
@@ -107,12 +110,12 @@ actual Vercel/GitHub settings:
 
 1. The Vercel project is the project for `ChipIn-one/chipin-frontend`, with
    `main` still the production source branch.
-2. Vercel targets `preview`, `staging`, and `production` exist as intended.
-   The `staging` target must be a real custom environment; do not silently map it
-   to `preview`. Its persistent development domain should remain
-   `dev.chipin.one`.
-3. Vercel environment variables preserve `VITE_CHIPIN_ENV=dev` for preview and
-   staging, and `VITE_CHIPIN_ENV=prod` for production, together with the existing
+2. The standard Vercel `preview` and `production` environments exist as intended.
+   No paid custom `staging` environment is required. The persistent development
+   domain remains `dev.chipin.one`, and Actions explicitly aliases the verified
+   `dev` Preview deployment to that domain after publish.
+3. Vercel environment variables preserve `VITE_CHIPIN_ENV=dev` for Preview and
+   `VITE_CHIPIN_ENV=prod` for Production, together with the existing
    Sentry/runtime configuration.
 4. GitHub Actions secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, and
    `VERCEL_PROJECT_ID` are present for this repository.
@@ -139,8 +142,9 @@ change with `git.deploymentEnabled=false`. Immediately before the human merges
 that cutover change into `dev`, set `VERCEL_ACTIONS_DEPLOY_ENABLED=true` and
 avoid unrelated pushes during the cutover window. The merge SHA is the staging
 canary: `frontend-ci` must succeed, the trusted `workflow_run` deployment must
-publish that exact SHA to `staging`, and Vercel must show no independent
-Git-triggered deployment for the same commit. Only after that canary is verified
+publish that exact SHA to `preview`, alias that exact deployment to
+`dev.chipin.one`, and Vercel must show no independent Git-triggered deployment
+for the same commit. Only after that canary is verified
 should a separately authorized `dev → main` release activate the production
 path.
 
