@@ -9,6 +9,7 @@ import Dropdown from './Dropdown';
 test('exposes a selected radio item in a selectable section', () => {
     const interaction = userEvent.setup();
     const onValueChange = vi.fn();
+    const triggerLabel = 'Open menu';
 
     render(
         <Theme>
@@ -24,13 +25,13 @@ test('exposes a selected radio item in a selectable section', () => {
                         ],
                     },
                 ]}
-                trigger={<button type="button">Open menu</button>}
+                trigger={<button type="button">{triggerLabel}</button>}
             />
         </Theme>,
     );
 
     return interaction
-        .click(screen.getByRole('button', { name: 'Open menu' }))
+        .click(screen.getByRole('button', { name: triggerLabel }))
         .then(() => {
             expect(
                 screen.getByRole('menuitemradio', {
