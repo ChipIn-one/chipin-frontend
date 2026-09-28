@@ -220,3 +220,18 @@ test('keeps supported invite actions and hides the unfinished add people control
     expect(screen.getByRole('button', { name: /Show QR code/ })).toBeTruthy();
     expect(screen.queryByText('Add people')).toBeNull();
 });
+
+test('GRP-050 shows the delete group action for the owner', () => {
+    render(<GroupSettingsTab group={group} />);
+
+    expect(screen.getByRole('button', { name: 'Remove group' })).toBeTruthy();
+});
+
+test('GRP-050 hides the delete group action for a non-owner member', () => {
+    const memberGroup = { ...group, role: 'MEMBER' as const };
+
+    render(<GroupSettingsTab group={memberGroup} />);
+
+    expect(screen.queryByRole('button', { name: 'Remove group' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Leave group' })).toBeTruthy();
+});
