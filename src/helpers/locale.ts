@@ -112,7 +112,11 @@ const getStoredLocale = (): string | null => {
     const userLocale = getLocalUser()?.settings.language;
 
     if (userLocale) {
-        return userLocale;
+        const matchedUserLocale = matchLocale(userLocale);
+
+        if (matchedUserLocale !== null) {
+            return matchedUserLocale;
+        }
     }
 
     return LocalStorage.get(LS_KEY_LOCALE, '') || null;
