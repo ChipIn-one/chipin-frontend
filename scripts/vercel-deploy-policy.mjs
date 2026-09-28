@@ -45,7 +45,7 @@ const resolveTarget = ({ ciWorkflow, eventName, baseRef, sourceBranch }) => {
 
     if (eventName === 'push') {
         if (ciWorkflow === FRONTEND_CI && sourceBranch === 'dev') {
-            return 'staging';
+            return 'preview';
         }
 
         if (ciWorkflow === MAIN_CI && sourceBranch === 'main') {
