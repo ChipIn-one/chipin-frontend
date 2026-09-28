@@ -140,7 +140,7 @@ implementation change. Apply it in a separate, human-authorized cutover change:
 After the implementation is present on `main`, prepare the separate cutover
 change with `git.deploymentEnabled=false`. Immediately before the human merges
 that cutover change into `dev`, set `VERCEL_ACTIONS_DEPLOY_ENABLED=true` and
-avoid unrelated pushes during the cutover window. The merge SHA is the staging
+avoid unrelated pushes during the cutover window. The merge SHA is the dev Preview
 canary: `frontend-ci` must succeed, the trusted `workflow_run` deployment must
 publish that exact SHA to `preview`, alias that exact deployment to
 `dev.chipin.one`, and Vercel must show no independent Git-triggered deployment
