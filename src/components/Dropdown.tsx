@@ -17,6 +17,8 @@ export interface DropdownMenuItem {
 export interface DropdownMenuSection {
     label?: ReactNode;
     items: DropdownMenuItem[];
+    value?: string;
+    onValueChange?: (value: string) => void;
 }
 
 interface Props {
@@ -73,6 +75,19 @@ const Dropdown = ({
         );
     };
 
+    const renderRadioItem = (item: DropdownMenuItem, selectedValue?: string) => (
+        <DropdownMenu.RadioItem
+            key={item.value}
+            value={item.value}
+            disabled={item.isDisabled}
+            color={selectedValue === item.value ? 'green' : item.color}
+            onSelect={item.onSelect}
+        >
+            {item.icon}
+            {item.label}
+        </DropdownMenu.RadioItem>
+    );
+
     const renderContent = () => {
         if (sections) {
             return sections.flatMap((section, index) => {
@@ -87,7 +102,19 @@ const Dropdown = ({
                         </DropdownMenu.Label>,
                     );
                 }
-                section.items.forEach(item => nodes.push(renderItem(item)));
+                if (section.value !== undefined || section.onValueChange !== undefined) {
+                    nodes.push(
+                        <DropdownMenu.RadioGroup
+                            key={`radio-${index}`}
+                            value={section.value}
+                            onValueChange={section.onValueChange}
+                        >
+                            {section.items.map(item => renderRadioItem(item, section.value))}
+                        </DropdownMenu.RadioGroup>,
+                    );
+                } else {
+                    section.items.forEach(item => nodes.push(renderItem(item)));
+                }
                 return nodes;
             });
         }
