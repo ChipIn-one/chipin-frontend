@@ -55,13 +55,53 @@ const readRefreshCookie = (response: Response): string | null | undefined => {
         return undefined;
     }
 
-    const match = setCookie.match(/(?:^|,\s*)__Host-chipin_refresh=([^;]*)/);
+    const cookiePrefix = `${REFRESH_COOKIE_NAME}=`;
+    const cookieStart = setCookie.indexOf(cookiePrefix);
 
-    if (!match) {
+    if (cookieStart === -1) {
         return undefined;
     }
 
-    return match[1] ? `${REFRESH_COOKIE_NAME}=${match[1]}` : null;
+    const cookieAndAttributes = setCookie.slice(cookieStart);
+    const nextCookieBoundary = cookieAndAttributes.search(
+        /,\s*(?=[!#$%&'*+\-.^_\`|~0-9A-Za-z]+=)/,
+    );
+    const refreshCookieHeader = nextCookieBoundary === -1
+        ? cookieAndAttributes
+        : cookieAndAttributes.slice(0, nextCookieBoundary);
+    const [cookiePair, ...rawAttributes] = refreshCookieHeader
+        .split(';')
+        .map(part => part.trim());
+    const attributes = new Map<string, string | null>();
+
+    for (const rawAttribute of rawAttributes) {
+        const separatorIndex = rawAttribute.indexOf('=');
+        const name = (separatorIndex === -1
+            ? rawAttribute
+            : rawAttribute.slice(0, separatorIndex)
+        ).toLowerCase();
+        const value = separatorIndex === -1
+            ? null
+            : rawAttribute.slice(separatorIndex + 1).toLowerCase();
+
+        attributes.set(name, value);
+    }
+
+    const hasRequiredSecurityAttributes =
+        attributes.get('secure') === null &&
+        attributes.get('httponly') === null &&
+        attributes.get('path') === '/' &&
+        attributes.get('samesite') === 'strict' &&
+        !attributes.has('domain');
+
+    if (!hasRequiredSecurityAttributes) {
+        throw new ContractRequestError(
+            'Contract refresh cookie violates required security attributes',
+        );
+    }
+
+    const cookieValue = cookiePair.slice(cookiePrefix.length);
+    return cookieValue ? `${REFRESH_COOKIE_NAME}=${cookieValue}` : null;
 };
 
 const readJsonResponse = (

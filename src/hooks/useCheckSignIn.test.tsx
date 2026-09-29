@@ -7,6 +7,7 @@ import type { SelfUser } from 'api/chipin.types';
 import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
 import * as localStorageHelpers from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
+import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useUsersStore } from 'store/users-store';
@@ -65,6 +66,7 @@ beforeEach(() => {
     vi.restoreAllMocks();
     localStorageHelpers.LocalStorage.remove(LS_KEY_AUTH_SESSION_HINT);
     localStorageHelpers.LocalStorage.remove(LS_KEY_USER);
+    useBackendAvailabilityStore.setState({ isUnavailable: false });
     useDashboardStore.getState().setInitialDashboardStore();
     useUsersStore.getState().setInitialUsersStore();
     useAuthStore.setState({
@@ -106,6 +108,48 @@ test('attempts cookie-backed session restore on cold start without persisted aut
     return waitFor(() => {
         expect(refreshAuthTokens).toHaveBeenCalledOnce();
     });
+});
+
+test('retries cookie-backed restoration after confirmed backend recovery', () => {
+    markRestorableAuthSession();
+    let rejectFirstRestore: ((reason: Error) => void) | undefined;
+    const firstRestore = new Promise<string>((_resolve, reject) => {
+        rejectFirstRestore = reject;
+    });
+    const refreshAuthTokens = vi
+        .fn<() => Promise<string>>()
+        .mockReturnValueOnce(firstRestore)
+        .mockResolvedValueOnce('next-access-token');
+    useAuthStore.setState({ refreshAuthTokens });
+    mockAuthenticatedDataFetches();
+
+    renderHook();
+
+    return waitFor(() => {
+        expect(refreshAuthTokens).toHaveBeenCalledOnce();
+    })
+        .then(() => {
+            act(() => {
+                useBackendAvailabilityStore.getState().setUnavailable();
+                rejectFirstRestore?.(new Error('backend unavailable'));
+            });
+
+            return waitFor(() => {
+                expect(useBackendAvailabilityStore.getState().isUnavailable).toBe(true);
+                expect(useAuthStore.getState().status).toBe('unknown');
+                expect(refreshAuthTokens).toHaveBeenCalledOnce();
+            });
+        })
+        .then(() => {
+            act(() => {
+                useBackendAvailabilityStore.getState().clearUnavailable();
+            });
+
+            return waitFor(() => {
+                expect(refreshAuthTokens).toHaveBeenCalledTimes(2);
+                expect(useAuthStore.getState().status).toBe('authenticated');
+            });
+        });
 });
 
 test('initializes the app mode from the fetched preference without a cached user', () => {

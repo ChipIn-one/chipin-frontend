@@ -119,6 +119,60 @@ describe('createContractHttpClient', () => {
             });
     });
 
+    it.each([
+        [
+            'Secure',
+            '__Host-chipin_refresh=refresh-cookie; Path=/; HttpOnly; SameSite=Strict',
+        ],
+        [
+            'HttpOnly',
+            '__Host-chipin_refresh=refresh-cookie; Path=/; Secure; SameSite=Strict',
+        ],
+        [
+            'host-only scope',
+            '__Host-chipin_refresh=refresh-cookie; Path=/; Secure; HttpOnly; SameSite=Strict; Domain=api-dev.chipin.one',
+        ],
+        [
+            'Path=/',
+            '__Host-chipin_refresh=refresh-cookie; Path=/auth; Secure; HttpOnly; SameSite=Strict',
+        ],
+        [
+            'SameSite=Strict',
+            '__Host-chipin_refresh=refresh-cookie; Path=/; Secure; HttpOnly; SameSite=Lax',
+        ],
+    ])('rejects a refresh cookie without %s', (_requirement, setCookie) => {
+        const fetchImpl: typeof fetch = () =>
+            Promise.resolve(
+                new Response(JSON.stringify({ accessToken: 'access-token' }), {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Set-Cookie': setCookie,
+                    },
+                    status: 200,
+                }),
+            );
+
+        return createContractHttpClient(stagingConfig, fetchImpl)
+            .requestJson({
+                auth: { kind: 'basic' },
+                method: 'POST',
+                path: '/auth/test-register',
+            })
+            .then(
+                () => {
+                    throw new Error('Expected the request to fail');
+                },
+                (error: unknown) => {
+                    expect(error).toEqual(
+                        new Error(
+                            'Contract refresh cookie violates required security attributes',
+                        ),
+                    );
+                    expect(String(error)).not.toContain('refresh-cookie');
+                },
+            );
+    });
+
     it('uses the rotated refresh cookie on the next session request', () => {
         const sessionCookies: string[] = [];
         let call = 0;

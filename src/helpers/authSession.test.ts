@@ -57,6 +57,10 @@ describe('authSession', () => {
         vi.unstubAllGlobals();
     });
 
+    const markRestorableAuthSession = (): void => {
+        values.set(LS_KEY_AUTH_SESSION_HINT, 'true');
+    };
+
     test('restores a reloaded session by refreshing the HttpOnly cookie and clears legacy tokens', () => {
         values.set(
             LS_KEY_AUTH_TOKENS,
@@ -65,7 +69,7 @@ describe('authSession', () => {
                 refreshToken: 'legacy-refresh-token',
             }),
         );
-        values.set(LS_KEY_AUTH_SESSION_HINT, 'true');
+        markRestorableAuthSession();
         vi.mocked(chipinApi.refreshApiAuthTokens).mockResolvedValue({
             token: 'next-access-token',
         });
@@ -113,6 +117,7 @@ describe('authSession', () => {
     });
 
     test('shares one in-flight refresh between concurrent callers', () => {
+        markRestorableAuthSession();
         let resolveRefresh: ((value: { token: string }) => void) | undefined;
         const refreshRequest = new Promise<{ token: string }>(resolve => {
             resolveRefresh = resolve;
@@ -133,12 +138,14 @@ describe('authSession', () => {
     });
 
     test('clears the in-memory session when refresh is rejected with 401', () => {
+        markRestorableAuthSession();
         vi.mocked(chipinApi.refreshApiAuthTokens).mockRejectedValue({
             isAxiosError: true,
             response: { status: 401 },
         });
 
         return validateAuthSession().then(accessToken => {
+            expect(chipinApi.refreshApiAuthTokens).toHaveBeenCalledOnce();
             expect(accessToken).toBeNull();
             expect(values.has(LS_KEY_AUTH_SESSION_HINT)).toBe(false);
             expect(setItem).not.toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS, expect.anything());
@@ -146,6 +153,7 @@ describe('authSession', () => {
     });
 
     test('reports an expired session when logout-other-devices cannot restore the cookie session', () => {
+        markRestorableAuthSession();
         vi.mocked(chipinApi.refreshApiAuthTokens).mockRejectedValue({
             isAxiosError: true,
             response: { status: 401 },
@@ -154,6 +162,7 @@ describe('authSession', () => {
         return expect(logoutOtherDevicesSession())
             .rejects.toBeInstanceOf(AuthSessionExpiredError)
             .then(() => {
+                expect(chipinApi.refreshApiAuthTokens).toHaveBeenCalledOnce();
                 expect(authApi.logoutOtherDevices).not.toHaveBeenCalled();
                 expect(values.has(LS_KEY_AUTH_SESSION_HINT)).toBe(false);
             });
@@ -172,6 +181,7 @@ describe('authSession', () => {
     });
 
     test('does not restore a stale refresh after the session was invalidated', () => {
+        markRestorableAuthSession();
         let resolveRefresh: ((value: { token: string }) => void) | undefined;
         const refreshRequest = new Promise<{ token: string }>(resolve => {
             resolveRefresh = resolve;
@@ -189,6 +199,7 @@ describe('authSession', () => {
     });
 
     test('does not let an older refresh 401 clear a newer OAuth session', () => {
+        markRestorableAuthSession();
         let rejectRefresh: ((reason?: unknown) => void) | undefined;
         const refreshRequest = new Promise<{ token: string }>((_resolve, reject) => {
             rejectRefresh = reject;

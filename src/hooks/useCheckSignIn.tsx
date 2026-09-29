@@ -6,6 +6,7 @@ import { ROUTES } from 'constants/routes';
 import { clearLegacyAuthTokens, hasAuthSessionHint } from 'helpers/localStorage';
 import { selectAuthStatus } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
+import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
 import { useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useUsersStore } from 'store/users-store';
@@ -13,6 +14,9 @@ import { useUsersStore } from 'store/users-store';
 export const useCheckSignIn = () => {
     const location = useLocation();
     const status = useAuthStore(selectAuthStatus);
+    const isBackendUnavailable = useBackendAvailabilityStore(
+        state => state.isUnavailable,
+    );
     const { fetchSetDashboardData, setDefaultAppMode } = useDashboardStore(
         useShallow(state => ({
             fetchSetDashboardData: state.fetchSetDashboardData,
@@ -32,7 +36,11 @@ export const useCheckSignIn = () => {
     const refreshAuthTokens = useAuthStore(s => s.refreshAuthTokens);
 
     useEffect(() => {
-        if (location.pathname === ROUTES.OAUTH_CALLBACK || status !== 'unknown') {
+        if (
+            location.pathname === ROUTES.OAUTH_CALLBACK ||
+            status !== 'unknown' ||
+            isBackendUnavailable
+        ) {
             return;
         }
 
@@ -57,6 +65,10 @@ export const useCheckSignIn = () => {
                 ]).then(() => undefined);
             })
             .catch(() => {
+                if (useBackendAvailabilityStore.getState().isUnavailable) {
+                    return;
+                }
+
                 if (useAuthStore.getState().status === 'unknown') {
                     setUnauthenticated('error');
                 }
@@ -67,6 +79,7 @@ export const useCheckSignIn = () => {
         fetchSetGroups,
         fetchSetUser,
         hasCachedUser,
+        isBackendUnavailable,
         location.pathname,
         refreshAuthTokens,
         setAuthenticated,
