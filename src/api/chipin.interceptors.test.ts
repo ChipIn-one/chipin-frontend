@@ -174,6 +174,33 @@ test('expires the session when refresh cannot restore a protected request', () =
         });
 });
 
+test('expires the session when a protected request cannot restore the cookie session before sending', () => {
+    let adapterCalls = 0;
+    authSessionMocks.prepareAuthRequest.mockResolvedValue(null);
+
+    return expect(
+        apiInstance.request({
+            method: 'get',
+            url: '/dashboard',
+            adapter: config => {
+                adapterCalls += 1;
+                return Promise.resolve({
+                    config,
+                    data: { ok: true },
+                    headers: {},
+                    status: 200,
+                    statusText: 'OK',
+                });
+            },
+        }),
+    )
+        .rejects.toThrow('Auth request cancelled')
+        .then(() => {
+            expect(adapterCalls).toBe(0);
+            expect(onUnauthorizedSession).toHaveBeenCalledOnce();
+        });
+});
+
 test('ignores a protected request 401 from an older auth session', () => {
     let rejectResponse: ((reason?: unknown) => void) | undefined;
     let markAdapterStarted: (() => void) | undefined;

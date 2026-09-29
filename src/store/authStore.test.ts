@@ -34,15 +34,20 @@ const user = {
     updatedAt: 1,
 } satisfies SelfUser;
 
-const authSessionMocks = vi.hoisted(() => ({
-    clearExpiredAuthSession: vi.fn(),
-    establishAuthSession: vi.fn(),
-    getFreshAccessToken: vi.fn(),
-    invalidateAuthSession: vi.fn(),
-    logoutOtherDevicesSession: vi.fn(),
-    startAuthLogout: vi.fn(),
-    validateAuthSession: vi.fn(),
-}));
+const authSessionMocks = vi.hoisted(() => {
+    class AuthSessionExpiredError extends Error {}
+
+    return {
+        AuthSessionExpiredError,
+        clearExpiredAuthSession: vi.fn(),
+        establishAuthSession: vi.fn(),
+        getFreshAccessToken: vi.fn(),
+        invalidateAuthSession: vi.fn(),
+        logoutOtherDevicesSession: vi.fn(),
+        startAuthLogout: vi.fn(),
+        validateAuthSession: vi.fn(),
+    };
+});
 
 vi.mock('helpers/authSession', () => authSessionMocks);
 vi.mock('api/chipin', () => ({
@@ -130,6 +135,21 @@ describe('authStore', () => {
 
         return expect(useAuthStore.getState().logoutOtherDevices())
             .rejects.toBe(unauthorizedError)
+            .then(() => {
+                expect(authSession.clearExpiredAuthSession).toHaveBeenCalledOnce();
+                expect(useAuthStore.getState()).toMatchObject({
+                    status: 'unauthenticated',
+                    unauthReason: 'expired',
+                });
+            });
+    });
+
+    test('expires the session when logout-other-devices cannot restore the cookie session', () => {
+        const expiredError = new authSession.AuthSessionExpiredError();
+        vi.mocked(authSession.logoutOtherDevicesSession).mockRejectedValue(expiredError);
+
+        return expect(useAuthStore.getState().logoutOtherDevices())
+            .rejects.toBe(expiredError)
             .then(() => {
                 expect(authSession.clearExpiredAuthSession).toHaveBeenCalledOnce();
                 expect(useAuthStore.getState()).toMatchObject({

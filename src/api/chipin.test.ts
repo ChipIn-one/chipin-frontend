@@ -156,7 +156,6 @@ describe('embedded activity feed responses', () => {
             expect(result.recentActivities).toEqual(groupResponse.recentActivities);
         });
     });
-
 });
 
 describe('removeApiGroup', () => {
@@ -213,7 +212,6 @@ describe('inviteApiUserToGroup', () => {
         });
     });
 });
-
 
 describe('cookie-backed auth transport', () => {
     test('refreshes through the HttpOnly cookie with the CSRF header', () => {

@@ -1,7 +1,10 @@
 import * as authApi from 'api/authApi';
 import { logoutApiAuthTokens, refreshApiAuthTokens } from 'api/chipin';
 import { getApiErrorStatus } from 'helpers/errors';
-import { clearLegacyAuthTokens } from 'helpers/localStorage';
+import {
+    clearLegacyAuthTokens,
+    setAuthSessionHint,
+} from 'helpers/localStorage';
 
 const ACCESS_TOKEN_REFRESH_BUFFER_SECONDS = 60;
 const AUTH_GOOGLE_EXCHANGE_PATH = '/auth/oauth/google/exchange';
@@ -14,6 +17,12 @@ let logoutPromise: Promise<void> | null = null;
 let logoutOtherDevicesPromise: Promise<void> | null = null;
 let isLogoutInProgress = false;
 let authSessionVersion = 0;
+
+export class AuthSessionExpiredError extends Error {
+    constructor() {
+        super('Auth session is missing or expired');
+    }
+}
 
 const assertCurrentAuthSession = (version: number): void => {
     if (version !== authSessionVersion) {
@@ -31,11 +40,13 @@ export const invalidateAuthSession = (): void => {
     authSessionVersion += 1;
     accessToken = null;
     clearLegacyAuthTokens();
+    setAuthSessionHint(false);
 };
 
 export const establishAuthSession = (nextAccessToken: string): void => {
     authSessionVersion += 1;
     clearLegacyAuthTokens();
+    setAuthSessionHint(true);
     accessToken = nextAccessToken;
 };
 
@@ -100,6 +111,7 @@ const refreshAccessToken = (): Promise<string | null> => {
         refreshPromise = refreshApiAuthTokens()
             .then(({ token }) => {
                 assertCurrentAuthSession(version);
+                setAuthSessionHint(true);
                 accessToken = token;
                 return token;
             })
@@ -189,7 +201,7 @@ export const logoutOtherDevicesSession = (): Promise<void> => {
     logoutOtherDevicesPromise = getFreshAccessToken()
         .then(currentAccessToken => {
             if (!currentAccessToken) {
-                return Promise.reject(new Error('Auth access token is missing'));
+                return Promise.reject(new AuthSessionExpiredError());
             }
 
             return authApi.logoutOtherDevices();

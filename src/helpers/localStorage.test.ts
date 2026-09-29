@@ -1,8 +1,15 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { LS_KEY_AUTH_TOKENS } from 'constants/localstorage';
+import {
+    LS_KEY_AUTH_SESSION_HINT,
+    LS_KEY_AUTH_TOKENS,
+} from 'constants/localstorage';
 
-import { clearLegacyAuthTokens } from './localStorage';
+import {
+    clearLegacyAuthTokens,
+    hasAuthSessionHint,
+    setAuthSessionHint,
+} from './localStorage';
 
 describe('legacy auth token storage', () => {
     let values: Map<string, string>;
@@ -35,6 +42,19 @@ describe('legacy auth token storage', () => {
         expect(removeItem).toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS);
         expect(values.has(LS_KEY_AUTH_TOKENS)).toBe(false);
         expect(setItem).not.toHaveBeenCalled();
+    });
+
+    test('stores only a non-secret boolean session hint', () => {
+        setAuthSessionHint(true);
+
+        expect(hasAuthSessionHint()).toBe(true);
+        expect(values.get(LS_KEY_AUTH_SESSION_HINT)).toBe('true');
+        expect(values.has(LS_KEY_AUTH_TOKENS)).toBe(false);
+
+        setAuthSessionHint(false);
+
+        expect(hasAuthSessionHint()).toBe(false);
+        expect(values.has(LS_KEY_AUTH_SESSION_HINT)).toBe(false);
     });
 
     test('does not fail when legacy auth storage is unavailable', () => {

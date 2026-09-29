@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import { exchangeApiGoogleOAuthCode } from 'api/chipin';
 import {
+    AuthSessionExpiredError,
     clearExpiredAuthSession,
     establishAuthSession,
     invalidateAuthSession,
@@ -128,7 +129,10 @@ export const useAuthStore = create<AuthStore>(set => ({
         return logoutOtherDevicesSession()
             .catch((error: unknown) => {
                 setError('auth', 'logoutOtherDevices', normalizeApiError(error));
-                if (!isUnauthorizedApiError(error)) {
+                if (
+                    !isUnauthorizedApiError(error) &&
+                    !(error instanceof AuthSessionExpiredError)
+                ) {
                     return Promise.reject(error);
                 }
 

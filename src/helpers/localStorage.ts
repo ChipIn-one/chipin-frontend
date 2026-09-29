@@ -1,5 +1,6 @@
 import type { SelfUser, ThemeName, UserRole, UserSettings } from 'api/chipin.types';
 import {
+    LS_KEY_AUTH_SESSION_HINT,
     LS_KEY_AUTH_TOKENS,
     LS_KEY_LOCALE,
     LS_KEY_SW_UPDATE_DISMISSED_AT,
@@ -13,6 +14,7 @@ export interface LocalUser {
 }
 
 type StorageSchema = {
+    [LS_KEY_AUTH_SESSION_HINT]: boolean;
     [LS_KEY_USER]: LocalUser;
     [LS_KEY_LOCALE]: string;
     [LS_KEY_THEME]: ThemeName;
@@ -105,11 +107,26 @@ const clearLegacyAuthTokens = (): void => {
     }
 };
 
+const hasAuthSessionHint = (): boolean => {
+    return LocalStorage.get(LS_KEY_AUTH_SESSION_HINT, false);
+};
+
+const setAuthSessionHint = (hasSession: boolean): void => {
+    if (hasSession) {
+        LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
+        return;
+    }
+
+    LocalStorage.remove(LS_KEY_AUTH_SESSION_HINT);
+};
+
 export {
     clearLegacyAuthTokens,
     getLocalUser,
+    hasAuthSessionHint,
     LocalStorage,
     saveLocalUser,
+    setAuthSessionHint,
     toLocalUser,
 };
 export type { StorageKey, StorageSchema };

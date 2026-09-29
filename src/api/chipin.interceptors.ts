@@ -89,6 +89,7 @@ const processBackendAvailabilityError = (error: unknown): Promise<never> => {
 
 const processApiResponseError = (error: unknown) => {
     if (error instanceof AuthRequestCancelledError) {
+        onUnauthorizedSession?.();
         return Promise.reject(error);
     }
 

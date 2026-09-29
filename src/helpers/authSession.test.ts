@@ -2,9 +2,13 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import * as authApi from 'api/authApi';
 import * as chipinApi from 'api/chipin';
-import { LS_KEY_AUTH_TOKENS } from 'constants/localstorage';
+import {
+    LS_KEY_AUTH_SESSION_HINT,
+    LS_KEY_AUTH_TOKENS,
+} from 'constants/localstorage';
 
 import {
+    AuthSessionExpiredError,
     clearExpiredAuthSession,
     establishAuthSession,
     getFreshAccessToken,
@@ -70,7 +74,8 @@ describe('authSession', () => {
             expect(accessToken).toBe('next-access-token');
             expect(removeItem).toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS);
             expect(values.has(LS_KEY_AUTH_TOKENS)).toBe(false);
-            expect(setItem).not.toHaveBeenCalled();
+            expect(values.get(LS_KEY_AUTH_SESSION_HINT)).toBe('true');
+            expect(setItem).not.toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS, expect.anything());
         });
     });
 
@@ -82,7 +87,7 @@ describe('authSession', () => {
         return getFreshAccessToken().then(result => {
             expect(result).toBe(accessToken);
             expect(chipinApi.refreshApiAuthTokens).not.toHaveBeenCalled();
-            expect(setItem).not.toHaveBeenCalled();
+            expect(setItem).not.toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS, expect.anything());
         });
     });
 
@@ -102,7 +107,7 @@ describe('authSession', () => {
 
         return Promise.all([firstRequest, secondRequest]).then(results => {
             expect(results).toEqual(['next-access-token', 'next-access-token']);
-            expect(setItem).not.toHaveBeenCalled();
+            expect(setItem).not.toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS, expect.anything());
         });
     });
 
@@ -114,8 +119,23 @@ describe('authSession', () => {
 
         return validateAuthSession().then(accessToken => {
             expect(accessToken).toBeNull();
-            expect(setItem).not.toHaveBeenCalled();
+            expect(values.has(LS_KEY_AUTH_SESSION_HINT)).toBe(false);
+            expect(setItem).not.toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS, expect.anything());
         });
+    });
+
+    test('reports an expired session when logout-other-devices cannot restore the cookie session', () => {
+        vi.mocked(chipinApi.refreshApiAuthTokens).mockRejectedValue({
+            isAxiosError: true,
+            response: { status: 401 },
+        });
+
+        return expect(logoutOtherDevicesSession())
+            .rejects.toBeInstanceOf(AuthSessionExpiredError)
+            .then(() => {
+                expect(authApi.logoutOtherDevices).not.toHaveBeenCalled();
+                expect(values.has(LS_KEY_AUTH_SESSION_HINT)).toBe(false);
+            });
     });
 
     test('refreshes an expiring access token before a protected request', () => {
@@ -203,7 +223,7 @@ describe('authSession', () => {
             .then(accessToken => {
                 expect(authApi.logoutOtherDevices).toHaveBeenCalledWith();
                 expect(accessToken).toBe(nextAccessToken);
-                expect(setItem).not.toHaveBeenCalled();
+                expect(setItem).not.toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS, expect.anything());
             });
     });
 
