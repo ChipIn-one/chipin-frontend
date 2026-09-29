@@ -97,10 +97,10 @@ const isAccessTokenExpiring = (token: string): boolean => {
 };
 
 const isAuthSessionRequest = (url?: string): boolean => {
-    return (
+    return Boolean(
         url?.endsWith(AUTH_GOOGLE_EXCHANGE_PATH) ||
         url?.endsWith(AUTH_REFRESH_PATH) ||
-        url?.endsWith(AUTH_LOGOUT_PATH)
+        url?.endsWith(AUTH_LOGOUT_PATH),
     );
 };
 
