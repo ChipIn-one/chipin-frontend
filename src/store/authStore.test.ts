@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { exchangeApiGoogleOAuthCode } from 'api/chipin';
 import type { SelfUser } from 'api/chipin.types';
 import * as authSession from 'helpers/authSession';
-import { clearAuthTokens, getAuthTokens, saveAuthTokens } from 'helpers/localStorage';
 
 import { useAuthStore } from './authStore';
 import { APP_MODES, useDashboardStore } from './dashboardStore';
@@ -36,10 +35,12 @@ const user = {
 } satisfies SelfUser;
 
 const authSessionMocks = vi.hoisted(() => {
-    class AuthTokenPersistenceError extends Error {}
+    class AuthSessionExpiredError extends Error {}
+    class AuthSessionPersistenceError extends Error {}
 
     return {
-        AuthTokenPersistenceError,
+        AuthSessionExpiredError,
+        AuthSessionPersistenceError,
         clearExpiredAuthSession: vi.fn(),
         establishAuthSession: vi.fn(),
         getFreshAccessToken: vi.fn(),
@@ -55,21 +56,20 @@ vi.mock('api/chipin', () => ({
     exchangeApiGoogleOAuthCode: vi.fn(),
 }));
 
+const mockAuthenticatedDataFetches = (): void => {
+    vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockResolvedValue();
+    vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
+    vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockResolvedValue(user);
+    vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockResolvedValue();
+};
+
 describe('authStore', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
         vi.clearAllMocks();
-        clearAuthTokens();
-        authSessionMocks.clearExpiredAuthSession.mockImplementation(() => {
-            clearAuthTokens();
-            return Promise.resolve();
-        });
-        authSessionMocks.invalidateAuthSession.mockImplementation(() => {
-            clearAuthTokens();
-        });
-        authSessionMocks.establishAuthSession.mockImplementation(tokens => {
-            saveAuthTokens(tokens);
-        });
+        authSessionMocks.clearExpiredAuthSession.mockResolvedValue(undefined);
+        authSessionMocks.establishAuthSession.mockImplementation(() => undefined);
+        authSessionMocks.startAuthLogout.mockResolvedValue(undefined);
         useLoadingStore.getState().setInitialLoadingStore();
         useAuthStore.setState({
             isNewUser: null,
@@ -78,7 +78,7 @@ describe('authStore', () => {
         });
     });
 
-    test('tracks loading and keeps the current device authenticated after success', () => {
+    test('keeps the current device authenticated after logout-other-devices succeeds', () => {
         vi.mocked(authSession.logoutOtherDevicesSession).mockResolvedValue();
 
         const request = useAuthStore.getState().logoutOtherDevices();
@@ -94,10 +94,9 @@ describe('authStore', () => {
         });
     });
 
-    test('initializes the app mode from the fetched preference after OAuth', () => {
+    test('establishes OAuth with an access token only', () => {
         vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue({
             token: 'access-token',
-            refresh_token: 'refresh-token',
             is_new_user: false,
         });
         useDashboardStore.setState({ appMode: APP_MODES.GROUP });
@@ -105,42 +104,41 @@ describe('authStore', () => {
             useDashboardStore.getState(),
             'setDefaultAppMode',
         );
-        vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockImplementation(
-            () => Promise.resolve(),
-        );
-        vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockImplementation(() =>
-            Promise.resolve([]),
-        );
-        vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockImplementation(() =>
-            Promise.resolve(user),
-        );
-        vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockImplementation(() =>
-            Promise.resolve(),
-        );
+        mockAuthenticatedDataFetches();
 
-        return useAuthStore
-            .getState()
-            .exchangeGoogleOAuthCode('oauth-code')
-            .then(() => Promise.resolve())
+        return useAuthStore.getState().exchangeGoogleOAuthCode('oauth-code').then(() => {
+            expect(authSession.establishAuthSession).toHaveBeenCalledWith('access-token');
+            expect(setDefaultAppMode).toHaveBeenCalledWith(true);
+        });
+    });
+
+    test('cleans up the cookie session when the restore hint cannot be persisted', () => {
+        const persistenceError = new authSession.AuthSessionPersistenceError();
+        vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue({
+            token: 'access-token',
+            is_new_user: false,
+        });
+        vi.mocked(authSession.establishAuthSession).mockImplementation(() => {
+            throw persistenceError;
+        });
+
+        return expect(useAuthStore.getState().exchangeGoogleOAuthCode('oauth-code'))
+            .rejects.toBe(persistenceError)
             .then(() => {
-                expect(authSession.establishAuthSession).toHaveBeenCalledWith({
-                    accessToken: 'access-token',
-                    refreshToken: 'refresh-token',
+                expect(authSession.startAuthLogout).toHaveBeenCalledOnce();
+                expect(useAuthStore.getState()).toMatchObject({
+                    status: 'unauthenticated',
+                    unauthReason: 'persistence_error',
                 });
-                expect(setDefaultAppMode).toHaveBeenCalledWith(true);
             });
     });
 
     test('loads the premium promo counter after a new registration', () => {
         vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue({
             token: 'access-token',
-            refresh_token: 'refresh-token',
             is_new_user: true,
         });
-        vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockResolvedValue();
-        vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
-        vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockResolvedValue(user);
-        vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockResolvedValue();
+        mockAuthenticatedDataFetches();
         const fetchSetPremiumPromoRemaining = vi
             .spyOn(useUsersStore.getState(), 'fetchSetPremiumPromoRemaining')
             .mockResolvedValue();
@@ -150,31 +148,7 @@ describe('authStore', () => {
         });
     });
 
-    test('does not authenticate when OAuth tokens cannot be persisted', () => {
-        vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue({
-            token: 'access-token',
-            refresh_token: 'refresh-token',
-            is_new_user: false,
-        });
-        authSessionMocks.establishAuthSession.mockImplementation(() => {
-            throw new authSessionMocks.AuthTokenPersistenceError();
-        });
-
-        return expect(useAuthStore.getState().exchangeGoogleOAuthCode('oauth-code'))
-            .rejects.toBeInstanceOf(authSessionMocks.AuthTokenPersistenceError)
-            .then(() => {
-                expect(useAuthStore.getState()).toMatchObject({
-                    status: 'unauthenticated',
-                    unauthReason: 'persistence_error',
-                });
-            });
-    });
-
-    test('clears the local session and uses the expired flow after 401', () => {
-        saveAuthTokens({
-            accessToken: 'current-access-token',
-            refreshToken: 'current-refresh-token',
-        });
+    test('expires the session after logout-other-devices receives 401', () => {
         const unauthorizedError = {
             isAxiosError: true,
             response: { status: 401 },
@@ -187,7 +161,6 @@ describe('authStore', () => {
             .rejects.toBe(unauthorizedError)
             .then(() => {
                 expect(authSession.clearExpiredAuthSession).toHaveBeenCalledOnce();
-                expect(getAuthTokens()).toBeNull();
                 expect(useAuthStore.getState()).toMatchObject({
                     status: 'unauthenticated',
                     unauthReason: 'expired',
@@ -195,23 +168,22 @@ describe('authStore', () => {
             });
     });
 
-    test('signs out this device when the rotated pair cannot be persisted', () => {
-        vi.mocked(authSession.logoutOtherDevicesSession).mockRejectedValue(
-            new authSession.AuthTokenPersistenceError(),
-        );
+    test('expires the session when logout-other-devices cannot restore the cookie session', () => {
+        const expiredError = new authSession.AuthSessionExpiredError();
+        vi.mocked(authSession.logoutOtherDevicesSession).mockRejectedValue(expiredError);
 
         return expect(useAuthStore.getState().logoutOtherDevices())
-            .rejects.toBeInstanceOf(authSession.AuthTokenPersistenceError)
+            .rejects.toBe(expiredError)
             .then(() => {
                 expect(authSession.clearExpiredAuthSession).toHaveBeenCalledOnce();
                 expect(useAuthStore.getState()).toMatchObject({
                     status: 'unauthenticated',
-                    unauthReason: 'persistence_error',
+                    unauthReason: 'expired',
                 });
             });
     });
 
-    test('leaves the current session authenticated after a retryable validation error', () => {
+    test('keeps the current session after a retryable logout-other-devices error', () => {
         const validationError = {
             isAxiosError: true,
             response: { status: 400 },
@@ -226,119 +198,50 @@ describe('authStore', () => {
                     status: 'authenticated',
                     unauthReason: undefined,
                 });
-                expect(useLoadingStore.getState().auth.logoutOtherDevices).toBe('fetched');
             });
     });
 
-    test('forces server validation when resolving the stored session', () => {
-        vi.mocked(authSession.validateAuthSession).mockResolvedValue({
-            accessToken: 'next-access-token',
-            refreshToken: 'next-refresh-token',
-        });
+    test('restores authentication from a successful cookie refresh', () => {
+        vi.mocked(authSession.validateAuthSession).mockResolvedValue('next-access-token');
 
         return useAuthStore
             .getState()
             .refreshAuthTokens()
             .then(accessToken => {
-                expect(authSession.validateAuthSession).toHaveBeenCalledOnce();
                 expect(accessToken).toBe('next-access-token');
                 expect(useAuthStore.getState().status).toBe('authenticated');
             });
     });
 
-    test('keeps cached authentication when server validation is unavailable', () => {
-        saveAuthTokens({
-            accessToken: 'cached-access-token',
-            refreshToken: 'cached-refresh-token',
-        });
-        vi.mocked(authSession.validateAuthSession).mockRejectedValue(
-            { isAxiosError: true },
-        );
-
-        return useAuthStore
-            .getState()
-            .refreshAuthTokens()
-            .then(accessToken => {
-                expect(accessToken).toBe('cached-access-token');
-                expect(useAuthStore.getState()).toMatchObject({
-                    status: 'authenticated',
-                    unauthReason: undefined,
-                });
-                expect(getAuthTokens()).toEqual({
-                    accessToken: 'cached-access-token',
-                    refreshToken: 'cached-refresh-token',
-                });
-            });
-    });
-
-    test.each([400, 403])(
-        'does not authenticate from cache after server validation responds with %s',
-        status => {
-            const validationError = {
-                isAxiosError: true,
-                response: { status },
-            };
-            saveAuthTokens({
-                accessToken: 'cached-access-token',
-                refreshToken: 'cached-refresh-token',
-            });
-            useAuthStore.setState({
-                status: 'unknown',
-                unauthReason: undefined,
-            });
-            vi.mocked(authSession.validateAuthSession).mockRejectedValue(
-                validationError,
-            );
-
-            return expect(useAuthStore.getState().refreshAuthTokens())
-                .rejects.toBe(validationError)
-                .then(() => {
-                    expect(useAuthStore.getState()).toMatchObject({
-                        status: 'unknown',
-                        unauthReason: undefined,
-                    });
-                    expect(getAuthTokens()).toEqual({
-                        accessToken: 'cached-access-token',
-                        refreshToken: 'cached-refresh-token',
-                    });
-                });
-        },
-    );
-
-    test('does not authenticate from cache after a non-network error', () => {
-        const validationError = new Error('Unexpected validation failure');
-        saveAuthTokens({
-            accessToken: 'cached-access-token',
-            refreshToken: 'cached-refresh-token',
-        });
+    test('does not authenticate from stale client state when refresh is unavailable', () => {
+        const validationError = new Error('Refresh unavailable');
         useAuthStore.setState({
             status: 'unknown',
             unauthReason: undefined,
         });
-        vi.mocked(authSession.validateAuthSession).mockRejectedValue(
-            validationError,
-        );
+        vi.mocked(authSession.validateAuthSession).mockRejectedValue(validationError);
 
         return expect(useAuthStore.getState().refreshAuthTokens())
             .rejects.toBe(validationError)
             .then(() => {
-                expect(useAuthStore.getState().status).toBe('unknown');
+                expect(useAuthStore.getState()).toMatchObject({
+                    status: 'unknown',
+                    unauthReason: undefined,
+                });
             });
     });
 
-    test('expires the current session and clears protected state synchronously', () => {
-        saveAuthTokens({
-            accessToken: 'revoked-access-token',
-            refreshToken: 'revoked-refresh-token',
-        });
+    test('expires the session when the cookie refresh returns no access token', () => {
+        vi.mocked(authSession.validateAuthSession).mockResolvedValue(null);
 
-        useAuthStore.getState().expireSession();
-
-        expect(authSession.invalidateAuthSession).toHaveBeenCalledOnce();
-        expect(getAuthTokens()).toBeNull();
-        expect(useAuthStore.getState()).toMatchObject({
-            status: 'unauthenticated',
-            unauthReason: 'expired',
-        });
+        return expect(useAuthStore.getState().refreshAuthTokens())
+            .rejects.toThrow('Auth session is missing or expired')
+            .then(() => {
+                expect(authSession.invalidateAuthSession).toHaveBeenCalledOnce();
+                expect(useAuthStore.getState()).toMatchObject({
+                    status: 'unauthenticated',
+                    unauthReason: 'expired',
+                });
+            });
     });
 });

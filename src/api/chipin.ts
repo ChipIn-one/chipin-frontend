@@ -1,5 +1,4 @@
-import type { AuthTokens } from 'helpers/localStorage';
-
+import { AUTH_API_PATH, AUTH_CSRF_HEADERS } from './auth.constants';
 import { apiInstance } from './chipin.instance';
 import type {
     ApiCurrencyRatesResponse,
@@ -17,32 +16,25 @@ import type {
 
 // =============== GROUPS AND USERS ===============
 
-export const refreshApiAuthTokens = (
-    refreshToken: string,
-): Promise<ApiRefreshTokenPairResponse> => {
+export const refreshApiAuthTokens = (): Promise<ApiRefreshTokenPairResponse> => {
     return apiInstance
-        .post('/auth/refresh', undefined, {
-            headers: {
-                'X-Refresh-Token': refreshToken,
-            },
+        .post<ApiRefreshTokenPairResponse>(AUTH_API_PATH.REFRESH, undefined, {
+            headers: AUTH_CSRF_HEADERS,
         })
         .then(response => response.data);
 };
 
-export const logoutApiAuthTokens = ({ accessToken, refreshToken }: AuthTokens): Promise<void> => {
+export const logoutApiAuthTokens = (): Promise<void> => {
     return apiInstance
-        .post('/auth/logout', undefined, {
-            headers: {
-                Authorization: `Bearer ${accessToken}`,
-                'X-Refresh-Token': refreshToken,
-            },
+        .post(AUTH_API_PATH.LOGOUT, undefined, {
+            headers: AUTH_CSRF_HEADERS,
         })
         .then(() => undefined);
 };
 
 export const exchangeApiGoogleOAuthCode = (code: string): Promise<ApiOAuthTokenPairResponse> => {
     return apiInstance
-        .post<ApiOAuthTokenPairResponse>('/auth/oauth/google/exchange', { code })
+        .post<ApiOAuthTokenPairResponse>(AUTH_API_PATH.GOOGLE_OAUTH_EXCHANGE, { code })
         .then(response => response.data);
 };
 

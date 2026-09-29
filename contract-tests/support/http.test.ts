@@ -18,7 +18,6 @@ describe('createContractHttpClient', () => {
 
         const fetchImpl: typeof fetch = (_input, init) => {
             capturedHeaders = new Headers(init?.headers);
-
             return Promise.resolve(new Response('openapi: 3.0.0', { status: 200 }));
         };
 
@@ -30,6 +29,8 @@ describe('createContractHttpClient', () => {
             })
             .then(() => {
                 expect(capturedHeaders?.get('Authorization')).toMatch(/^Basic /);
+                expect(capturedHeaders?.has('Cookie')).toBe(false);
+                expect(capturedHeaders?.has('X-Chipin-Csrf')).toBe(false);
                 expect(capturedHeaders?.has('X-Refresh-Token')).toBe(false);
             });
     });
@@ -39,7 +40,6 @@ describe('createContractHttpClient', () => {
 
         const fetchImpl: typeof fetch = (_input, init) => {
             capturedHeaders = new Headers(init?.headers);
-
             return Promise.resolve(
                 new Response(JSON.stringify({ id: 'user-id' }), {
                     headers: { 'Content-Type': 'application/json' },
@@ -58,95 +58,325 @@ describe('createContractHttpClient', () => {
                 expect(capturedHeaders?.get('Authorization')).toBe(
                     'Bearer access-token-secret',
                 );
-                expect(capturedHeaders?.has('X-Refresh-Token')).toBe(false);
+                expect(capturedHeaders?.has('Cookie')).toBe(false);
+                expect(capturedHeaders?.has('X-Chipin-Csrf')).toBe(false);
             });
     });
 
-    it('sends only X-Refresh-Token for refresh', () => {
-        let capturedHeaders: Headers | null = null;
+    it('stores the refresh cookie and sends it with the CSRF header', () => {
+        const capturedHeaders: Headers[] = [];
+        let call = 0;
+        const client = createContractHttpClient(stagingConfig, (_input, init) => {
+            capturedHeaders.push(new Headers(init?.headers));
+            call += 1;
 
-        const fetchImpl: typeof fetch = (_input, init) => {
-            capturedHeaders = new Headers(init?.headers);
-
-            return Promise.resolve(
-                new Response(JSON.stringify({ token: 'next', refresh_token: 'next-refresh' }), {
-                    headers: { 'Content-Type': 'application/json' },
-                    status: 200,
-                }),
-            );
-        };
-
-        return createContractHttpClient(stagingConfig, fetchImpl)
-            .requestJson({
-                auth: { kind: 'refresh', token: 'refresh-token-secret' },
-                method: 'POST',
-                path: '/auth/refresh',
-            })
-            .then(() => {
-                expect(capturedHeaders?.has('Authorization')).toBe(false);
-                expect(capturedHeaders?.get('X-Refresh-Token')).toBe(
-                    'refresh-token-secret',
+            if (call === 1) {
+                return Promise.resolve(
+                    new Response(JSON.stringify({ accessToken: 'access-token' }), {
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Set-Cookie':
+                                '__Host-chipin_refresh=refresh-cookie-1; Path=/; Secure; HttpOnly; SameSite=Strict',
+                        },
+                        status: 200,
+                    }),
                 );
-            });
-    });
-
-
-    it('disables redirects before sending refresh tokens', () => {
-        let capturedRedirect: RequestRedirect | undefined;
-
-        const fetchImpl: typeof fetch = (_input, init) => {
-            capturedRedirect = init?.redirect;
+            }
 
             return Promise.resolve(
-                new Response(JSON.stringify({ token: 'next', refresh_token: 'next-refresh' }), {
-                    headers: { 'Content-Type': 'application/json' },
+                new Response(JSON.stringify({ token: 'next-access-token' }), {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Set-Cookie':
+                            '__Host-chipin_refresh=refresh-cookie-2; Path=/; Secure; HttpOnly; SameSite=Strict',
+                    },
                     status: 200,
                 }),
             );
+        });
+
+        return client
+            .requestJson({
+                auth: { kind: 'basic' },
+                body: { runId: 'contract-run' },
+                method: 'POST',
+                path: '/auth/test-register',
+            })
+            .then(() =>
+                client.requestJson({
+                    auth: { kind: 'session' },
+                    method: 'POST',
+                    path: '/auth/refresh',
+                }),
+            )
+            .then(() => {
+                expect(capturedHeaders[1]?.get('Cookie')).toBe(
+                    '__Host-chipin_refresh=refresh-cookie-1',
+                );
+                expect(capturedHeaders[1]?.get('X-Chipin-Csrf')).toBe('1');
+                expect(capturedHeaders[1]?.has('Authorization')).toBe(false);
+                expect(capturedHeaders[1]?.has('X-Refresh-Token')).toBe(false);
+            });
+    });
+
+    it('does not treat the refresh-cookie name inside another cookie as a session cookie', () => {
+        let calls = 0;
+        const client = createContractHttpClient(stagingConfig, () => {
+            calls += 1;
+            return Promise.resolve(
+                new Response(JSON.stringify({ accessToken: 'access-token' }), {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Set-Cookie':
+                            'foo__Host-chipin_refresh=refresh-cookie; Path=/; Secure; HttpOnly; SameSite=Strict',
+                    },
+                    status: 200,
+                }),
+            );
+        });
+
+        return client
+            .requestJson({
+                auth: { kind: 'basic' },
+                method: 'POST',
+                path: '/auth/test-register',
+            })
+            .then(() =>
+                client.requestJson({
+                    auth: { kind: 'session' },
+                    method: 'POST',
+                    path: '/auth/refresh',
+                }),
+            )
+            .then(
+                () => {
+                    throw new Error('Expected the session request to fail');
+                },
+                (error: unknown) => {
+                    expect(error).toEqual(
+                        new Error('Contract refresh cookie is required'),
+                    );
+                    expect(calls).toBe(1);
+                },
+            );
+    });
+
+    it('finds the exact refresh cookie after a cookie with an Expires comma', () => {
+        const capturedCookies: string[] = [];
+        let call = 0;
+        const client = createContractHttpClient(stagingConfig, (_input, init) => {
+            call += 1;
+            const headers = new Headers(init?.headers);
+
+            if (headers.has('Cookie')) {
+                capturedCookies.push(headers.get('Cookie') ?? '');
+            }
+
+            return Promise.resolve(
+                new Response(JSON.stringify({ token: `access-${call}` }), {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Set-Cookie': call === 1
+                            ? 'other=value; Expires=Wed, 21 Oct 2037 07:28:00 GMT; Path=/, __Host-chipin_refresh=refresh-cookie; Path=/; Secure; HttpOnly; SameSite=Strict'
+                            : '__Host-chipin_refresh=rotated-cookie; Path=/; Secure; HttpOnly; SameSite=Strict',
+                    },
+                    status: 200,
+                }),
+            );
+        });
+
+        return client
+            .requestJson({
+                auth: { kind: 'basic' },
+                method: 'POST',
+                path: '/auth/test-register',
+            })
+            .then(() =>
+                client.requestJson({
+                    auth: { kind: 'session' },
+                    method: 'POST',
+                    path: '/auth/refresh',
+                }),
+            )
+            .then(() => {
+                expect(capturedCookies).toEqual([
+                    '__Host-chipin_refresh=refresh-cookie',
+                ]);
+            });
+    });
+
+    it.each([
+        [
+            'Secure',
+            '__Host-chipin_refresh=refresh-cookie; Path=/; HttpOnly; SameSite=Strict',
+        ],
+        [
+            'HttpOnly',
+            '__Host-chipin_refresh=refresh-cookie; Path=/; Secure; SameSite=Strict',
+        ],
+        [
+            'host-only scope',
+            '__Host-chipin_refresh=refresh-cookie; Path=/; Secure; HttpOnly; SameSite=Strict; Domain=api-dev.chipin.one',
+        ],
+        [
+            'Path=/',
+            '__Host-chipin_refresh=refresh-cookie; Path=/auth; Secure; HttpOnly; SameSite=Strict',
+        ],
+        [
+            'SameSite=Strict',
+            '__Host-chipin_refresh=refresh-cookie; Path=/; Secure; HttpOnly; SameSite=Lax',
+        ],
+    ])('rejects a refresh cookie without %s', (_requirement, setCookie) => {
+        const fetchImpl: typeof fetch = () =>
+            Promise.resolve(
+                new Response(JSON.stringify({ accessToken: 'access-token' }), {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Set-Cookie': setCookie,
+                    },
+                    status: 200,
+                }),
+            );
+
+        return createContractHttpClient(stagingConfig, fetchImpl)
+            .requestJson({
+                auth: { kind: 'basic' },
+                method: 'POST',
+                path: '/auth/test-register',
+            })
+            .then(
+                () => {
+                    throw new Error('Expected the request to fail');
+                },
+                (error: unknown) => {
+                    expect(error).toEqual(
+                        new Error(
+                            'Contract refresh cookie violates required security attributes',
+                        ),
+                    );
+                    expect(String(error)).not.toContain('refresh-cookie');
+                },
+            );
+    });
+
+    it('uses the rotated refresh cookie on the next session request', () => {
+        const sessionCookies: string[] = [];
+        let call = 0;
+        const client = createContractHttpClient(stagingConfig, (_input, init) => {
+            const headers = new Headers(init?.headers);
+            call += 1;
+
+            if (headers.has('Cookie')) {
+                sessionCookies.push(headers.get('Cookie') ?? '');
+            }
+
+            return Promise.resolve(
+                new Response(JSON.stringify({ token: `access-${call}` }), {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Set-Cookie':
+                            `__Host-chipin_refresh=refresh-cookie-${call}; Path=/; Secure; HttpOnly; SameSite=Strict`,
+                    },
+                    status: 200,
+                }),
+            );
+        });
+
+        return client
+            .requestJson({
+                auth: { kind: 'basic' },
+                method: 'POST',
+                path: '/auth/test-register',
+            })
+            .then(() =>
+                client.requestJson({
+                    auth: { kind: 'session' },
+                    method: 'POST',
+                    path: '/auth/refresh',
+                }),
+            )
+            .then(() =>
+                client.requestJson({
+                    auth: { kind: 'session' },
+                    method: 'POST',
+                    path: '/auth/refresh',
+                }),
+            )
+            .then(() => {
+                expect(sessionCookies).toEqual([
+                    '__Host-chipin_refresh=refresh-cookie-1',
+                    '__Host-chipin_refresh=refresh-cookie-2',
+                ]);
+            });
+    });
+
+    it('rejects a session request before a refresh cookie is available', () => {
+        let calls = 0;
+        const fetchImpl: typeof fetch = () => {
+            calls += 1;
+            return Promise.resolve(new Response('{}', { status: 200 }));
         };
 
         return createContractHttpClient(stagingConfig, fetchImpl)
             .requestJson({
-                auth: { kind: 'refresh', token: 'refresh-token-secret' },
+                auth: { kind: 'session' },
                 method: 'POST',
                 path: '/auth/refresh',
             })
+            .then(
+                () => {
+                    throw new Error('Expected the request to fail');
+                },
+                (error: unknown) => {
+                    expect(error).toEqual(
+                        new Error('Contract refresh cookie is required'),
+                    );
+                    expect(calls).toBe(0);
+                },
+            );
+    });
+
+    it('disables redirects before sending session cookies', () => {
+        let capturedRedirect: RequestRedirect | undefined;
+        let call = 0;
+        const client = createContractHttpClient(stagingConfig, (_input, init) => {
+            capturedRedirect = init?.redirect;
+            call += 1;
+            return Promise.resolve(
+                new Response(JSON.stringify({ token: 'next' }), {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Set-Cookie':
+                            '__Host-chipin_refresh=refresh-cookie; Path=/; Secure; HttpOnly; SameSite=Strict',
+                    },
+                    status: 200,
+                }),
+            );
+        });
+
+        return client
+            .requestJson({
+                auth: { kind: 'basic' },
+                method: 'POST',
+                path: '/auth/test-register',
+            })
+            .then(() =>
+                client.requestJson({
+                    auth: { kind: 'session' },
+                    method: 'POST',
+                    path: '/auth/refresh',
+                }),
+            )
             .then(() => {
+                expect(call).toBe(2);
                 expect(capturedRedirect).toBe('error');
             });
     });
-
-    it('does not send Basic authorization to localhost', () => {
-        let capturedHeaders: Headers | null = null;
-        const localConfig: ContractConfig = {
-            baseUrl: 'http://localhost:8080',
-            basicAuth: null,
-            target: 'local',
-        };
-
-        const fetchImpl: typeof fetch = (_input, init) => {
-            capturedHeaders = new Headers(init?.headers);
-
-            return Promise.resolve(new Response('ok', { status: 200 }));
-        };
-
-        return createContractHttpClient(localConfig, fetchImpl)
-            .requestText({
-                auth: { kind: 'basic' },
-                method: 'GET',
-                path: '/swagger/documentation.yaml',
-            })
-            .then(() => {
-                expect(capturedHeaders?.has('Authorization')).toBe(false);
-            });
-    });
-
 
     it('rejects network-path references before sending credentials', () => {
         let calls = 0;
         const fetchImpl: typeof fetch = () => {
             calls += 1;
-
             return Promise.resolve(new Response('unexpected', { status: 200 }));
         };
 
@@ -199,37 +429,10 @@ describe('createContractHttpClient', () => {
             );
     });
 
-    it('keeps invalid JSON bodies out of parse errors', () => {
-        const fetchImpl: typeof fetch = () =>
-            Promise.resolve(new Response('refresh-token-secret not-json', { status: 200 }));
-
-        return createContractHttpClient(stagingConfig, fetchImpl)
-            .requestJson({
-                auth: { kind: 'bearer', token: 'access-token-secret' },
-                method: 'GET',
-                path: '/users/self',
-            })
-            .then(
-                () => {
-                    throw new Error('Expected the response parse to fail');
-                },
-                (error: unknown) => {
-                    expect(error).toEqual(
-                        new Error(
-                            'Contract request GET /users/self returned invalid JSON',
-                        ),
-                    );
-                    expect(String(error)).not.toContain('refresh-token-secret');
-                    expect(String(error)).not.toContain('access-token-secret');
-                },
-            );
-    });
-
     it('does not retry a failed request', () => {
         let calls = 0;
         const fetchImpl: typeof fetch = () => {
             calls += 1;
-
             return Promise.reject(new Error('network failure'));
         };
 

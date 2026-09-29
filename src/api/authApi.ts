@@ -1,3 +1,4 @@
+import { AUTH_API_PATH, AUTH_CSRF_HEADERS } from './auth.constants';
 import { apiInstance } from './chipin.instance';
 import type { ApiLogoutOtherDevicesResponse } from './chipin.raw.types';
 
@@ -16,22 +17,13 @@ const isLogoutOtherDevicesResponse = (
 
     const response = value as Record<string, unknown>;
 
-    return (
-        typeof response.token === 'string' &&
-        response.token.length > 0 &&
-        typeof response.refresh_token === 'string' &&
-        response.refresh_token.length > 0
-    );
+    return typeof response.token === 'string' && response.token.length > 0;
 };
 
-export const logoutOtherDevices = (
-    refreshToken: string,
-): Promise<ApiLogoutOtherDevicesResponse> => {
+export const logoutOtherDevices = (): Promise<ApiLogoutOtherDevicesResponse> => {
     return apiInstance
-        .post<unknown>('/auth/logout-other-devices', undefined, {
-            headers: {
-                'X-Refresh-Token': refreshToken,
-            },
+        .post<unknown>(AUTH_API_PATH.LOGOUT_OTHER_DEVICES, undefined, {
+            headers: AUTH_CSRF_HEADERS,
         })
         .then(response => {
             if (!isLogoutOtherDevicesResponse(response.data)) {
