@@ -7,6 +7,10 @@ export class InvalidLogoutOtherDevicesResponseError extends Error {
     }
 }
 
+const CSRF_HEADERS = {
+    'X-Chipin-Csrf': '1',
+} as const;
+
 const isLogoutOtherDevicesResponse = (
     value: unknown,
 ): value is ApiLogoutOtherDevicesResponse => {
@@ -16,22 +20,13 @@ const isLogoutOtherDevicesResponse = (
 
     const response = value as Record<string, unknown>;
 
-    return (
-        typeof response.token === 'string' &&
-        response.token.length > 0 &&
-        typeof response.refresh_token === 'string' &&
-        response.refresh_token.length > 0
-    );
+    return typeof response.token === 'string' && response.token.length > 0;
 };
 
-export const logoutOtherDevices = (
-    refreshToken: string,
-): Promise<ApiLogoutOtherDevicesResponse> => {
+export const logoutOtherDevices = (): Promise<ApiLogoutOtherDevicesResponse> => {
     return apiInstance
         .post<unknown>('/auth/logout-other-devices', undefined, {
-            headers: {
-                'X-Refresh-Token': refreshToken,
-            },
+            headers: CSRF_HEADERS,
         })
         .then(response => {
             if (!isLogoutOtherDevicesResponse(response.data)) {
