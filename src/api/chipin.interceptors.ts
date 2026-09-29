@@ -4,6 +4,7 @@ import { API_ERROR_CODE } from 'constants/errors';
 import {
     getAuthSessionVersion,
     isAuthSessionCurrent,
+    isAuthSessionSignedOut,
     prepareAuthRequest,
     refreshAuthSession,
 } from 'helpers/authSession';
@@ -86,7 +87,10 @@ const processBackendAvailabilityError = (error: unknown): Promise<never> => {
 
 const processApiResponseError = (error: unknown) => {
     if (error instanceof AuthRequestCancelledError) {
-        onUnauthorizedSession?.();
+        if (!isAuthSessionSignedOut()) {
+            onUnauthorizedSession?.();
+        }
+
         return Promise.reject(error);
     }
 
