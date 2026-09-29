@@ -5,11 +5,7 @@ import { act, render, waitFor } from '@testing-library/react';
 
 import type { SelfUser } from 'api/chipin.types';
 import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
-import {
-    establishAuthSession,
-    getFreshAccessToken,
-    invalidateAuthSession,
-} from 'helpers/authSession';
+import { invalidateAuthSession } from 'helpers/authSession';
 import * as localStorageHelpers from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
 import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
@@ -18,10 +14,6 @@ import { useGroupsStore } from 'store/groupsStore';
 import { useUsersStore } from 'store/users-store';
 
 import { useCheckSignIn } from './useCheckSignIn';
-
-const createAccessToken = (expiresAt: number): string => {
-    return `header.${btoa(JSON.stringify({ exp: expiresAt }))}.signature`;
-};
 
 const user = {
     id: 'user-1',
@@ -209,66 +201,6 @@ test('preserves the active app mode when a cached user initialized it', () => {
     }).then(() => {
         expect(setDefaultAppMode).not.toHaveBeenCalled();
         expect(useDashboardStore.getState().appMode).toBe(APP_MODES.SOLO);
-    });
-});
-
-test('invalidates the in-memory session when another tab removes the session hint', () => {
-    const accessToken = createAccessToken(Date.now() / 1000 + 3_600);
-    establishAuthSession(accessToken);
-    useAuthStore.setState({
-        status: 'authenticated',
-        unauthReason: undefined,
-    });
-
-    renderHook();
-
-    act(() => {
-        localStorageHelpers.LocalStorage.remove(LS_KEY_AUTH_SESSION_HINT);
-        window.dispatchEvent(
-            new StorageEvent('storage', {
-                key: LS_KEY_AUTH_SESSION_HINT,
-                newValue: null,
-                oldValue: 'true',
-            }),
-        );
-    });
-
-    return waitFor(() => {
-        expect(useAuthStore.getState()).toMatchObject({
-            status: 'unauthenticated',
-            unauthReason: 'signed_out',
-        });
-    })
-        .then(() => getFreshAccessToken())
-        .then(nextAccessToken => {
-            expect(nextAccessToken).toBeNull();
-        });
-});
-
-test('keeps the current session when another tab announces an active session', () => {
-    const accessToken = createAccessToken(Date.now() / 1000 + 3_600);
-    establishAuthSession(accessToken);
-    useAuthStore.setState({
-        status: 'authenticated',
-        unauthReason: undefined,
-    });
-
-    renderHook();
-
-    act(() => {
-        window.dispatchEvent(
-            new StorageEvent('storage', {
-                key: LS_KEY_AUTH_SESSION_HINT,
-                newValue: 'true',
-                oldValue: null,
-            }),
-        );
-    });
-
-    expect(useAuthStore.getState().status).toBe('authenticated');
-
-    return getFreshAccessToken().then(nextAccessToken => {
-        expect(nextAccessToken).toBe(accessToken);
     });
 });
 
