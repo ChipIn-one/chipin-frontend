@@ -4,12 +4,8 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { act, render, waitFor } from '@testing-library/react';
 
 import type { SelfUser } from 'api/chipin.types';
-import {
-    LS_KEY_AUTH_SESSION_HINT,
-    LS_KEY_AUTH_TOKENS,
-    LS_KEY_USER,
-} from 'constants/localstorage';
-import { LocalStorage } from 'helpers/localStorage';
+import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
+import * as localStorageHelpers from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
@@ -62,14 +58,13 @@ const mockAuthenticatedDataFetches = (): void => {
 };
 
 const markRestorableAuthSession = (): void => {
-    LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
+    localStorageHelpers.LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
 };
 
 beforeEach(() => {
     vi.restoreAllMocks();
-    LocalStorage.remove(LS_KEY_AUTH_SESSION_HINT);
-    LocalStorage.remove(LS_KEY_USER);
-    localStorage.removeItem(LS_KEY_AUTH_TOKENS);
+    localStorageHelpers.LocalStorage.remove(LS_KEY_AUTH_SESSION_HINT);
+    localStorageHelpers.LocalStorage.remove(LS_KEY_USER);
     useDashboardStore.getState().setInitialDashboardStore();
     useUsersStore.getState().setInitialUsersStore();
     useAuthStore.setState({
@@ -80,12 +75,9 @@ beforeEach(() => {
 });
 
 test('keeps a signed-out cold start unauthenticated, purges legacy tokens, and skips refresh', () => {
-    localStorage.setItem(
-        LS_KEY_AUTH_TOKENS,
-        JSON.stringify({
-            accessToken: 'legacy-access-token',
-            refreshToken: 'legacy-refresh-token',
-        }),
+    const clearLegacyAuthTokens = vi.spyOn(
+        localStorageHelpers,
+        'clearLegacyAuthTokens',
     );
     const refreshAuthTokens = vi.fn(() => Promise.resolve('unexpected-access-token'));
     useAuthStore.setState({ refreshAuthTokens });
@@ -99,7 +91,7 @@ test('keeps a signed-out cold start unauthenticated, purges legacy tokens, and s
         });
     }).then(() => {
         expect(refreshAuthTokens).not.toHaveBeenCalled();
-        expect(localStorage.getItem(LS_KEY_AUTH_TOKENS)).toBeNull();
+        expect(clearLegacyAuthTokens).toHaveBeenCalledOnce();
     });
 });
 
@@ -141,7 +133,7 @@ test('preserves the active app mode when a cached user initialized it', () => {
         ...user,
         settings: { ...user.settings, soloModeByDefault: false },
     };
-    LocalStorage.set(LS_KEY_USER, {
+    localStorageHelpers.LocalStorage.set(LS_KEY_USER, {
         role: groupDefaultUser.role,
         settings: groupDefaultUser.settings,
     });
