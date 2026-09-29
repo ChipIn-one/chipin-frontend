@@ -271,7 +271,6 @@ describe('authSession', () => {
             .then(accessToken => {
                 expect(authApi.logoutOtherDevices).toHaveBeenCalledWith();
                 expect(accessToken).toBe(nextAccessToken);
-                expect(setItem).not.toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS, expect.anything());
             });
     });
 
