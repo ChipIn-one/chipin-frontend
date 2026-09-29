@@ -68,6 +68,7 @@ describe('authStore', () => {
         vi.restoreAllMocks();
         vi.clearAllMocks();
         authSessionMocks.clearExpiredAuthSession.mockResolvedValue(undefined);
+        authSessionMocks.establishAuthSession.mockImplementation(() => undefined);
         authSessionMocks.startAuthLogout.mockResolvedValue(undefined);
         useLoadingStore.getState().setInitialLoadingStore();
         useAuthStore.setState({
