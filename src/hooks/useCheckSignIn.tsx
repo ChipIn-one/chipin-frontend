@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { LS_KEY_AUTH_SESSION_HINT } from 'constants/localstorage';
 import { ROUTES } from 'constants/routes';
-import { invalidateAuthSession } from 'helpers/authSession';
+import { markAuthSessionSignedOut } from 'helpers/authSession';
 import { hasAuthSessionHint } from 'helpers/localStorage';
 import { selectAuthStatus } from 'store/authSelectors';
 import { AUTH_STATUS, UNAUTH_REASON } from 'store/authConstants';
@@ -48,7 +48,7 @@ export const useCheckSignIn = () => {
                 return;
             }
 
-            invalidateAuthSession();
+            markAuthSessionSignedOut();
             useAuthStore.getState().setUnauthenticated(UNAUTH_REASON.SIGNED_OUT);
         };
 
