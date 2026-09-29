@@ -2,10 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import * as authApi from 'api/authApi';
 import * as chipinApi from 'api/chipin';
-import {
-    LS_KEY_AUTH_SESSION_HINT,
-    LS_KEY_AUTH_TOKENS,
-} from 'constants/localstorage';
+import { LS_KEY_AUTH_SESSION_HINT } from 'constants/localstorage';
 
 import {
     AuthSessionExpiredError,
@@ -62,14 +59,7 @@ describe('authSession', () => {
         values.set(LS_KEY_AUTH_SESSION_HINT, 'true');
     };
 
-    test('restores a reloaded session by refreshing the HttpOnly cookie and clears legacy tokens', () => {
-        values.set(
-            LS_KEY_AUTH_TOKENS,
-            JSON.stringify({
-                accessToken: 'legacy-access-token',
-                refreshToken: 'legacy-refresh-token',
-            }),
-        );
+    test('restores a reloaded session by refreshing the HttpOnly cookie', () => {
         markRestorableAuthSession();
         vi.mocked(chipinApi.refreshApiAuthTokens).mockResolvedValue({
             token: 'next-access-token',
@@ -78,21 +68,11 @@ describe('authSession', () => {
         return validateAuthSession().then(accessToken => {
             expect(chipinApi.refreshApiAuthTokens).toHaveBeenCalledWith();
             expect(accessToken).toBe('next-access-token');
-            expect(removeItem).toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS);
-            expect(values.has(LS_KEY_AUTH_TOKENS)).toBe(false);
             expect(values.get(LS_KEY_AUTH_SESSION_HINT)).toBe('true');
-            expect(setItem).not.toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS, expect.anything());
         });
     });
 
-    test('purges legacy tokens without refreshing when no session hint exists', () => {
-        values.set(
-            LS_KEY_AUTH_TOKENS,
-            JSON.stringify({
-                accessToken: 'legacy-access-token',
-                refreshToken: 'legacy-refresh-token',
-            }),
-        );
+    test('does not refresh when no session hint exists', () => {
         vi.mocked(chipinApi.refreshApiAuthTokens).mockResolvedValue({
             token: 'unexpected-access-token',
         });
@@ -100,8 +80,6 @@ describe('authSession', () => {
         return validateAuthSession().then(accessToken => {
             expect(accessToken).toBeNull();
             expect(chipinApi.refreshApiAuthTokens).not.toHaveBeenCalled();
-            expect(removeItem).toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS);
-            expect(values.has(LS_KEY_AUTH_TOKENS)).toBe(false);
         });
     });
 
@@ -128,7 +106,8 @@ describe('authSession', () => {
         return getFreshAccessToken().then(result => {
             expect(result).toBe(accessToken);
             expect(chipinApi.refreshApiAuthTokens).not.toHaveBeenCalled();
-            expect(setItem).not.toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS, expect.anything());
+            expect(setItem).toHaveBeenCalledOnce();
+            expect(setItem).toHaveBeenCalledWith(LS_KEY_AUTH_SESSION_HINT, 'true');
         });
     });
 
@@ -149,7 +128,6 @@ describe('authSession', () => {
 
         return Promise.all([firstRequest, secondRequest]).then(results => {
             expect(results).toEqual(['next-access-token', 'next-access-token']);
-            expect(setItem).not.toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS, expect.anything());
         });
     });
 
@@ -164,7 +142,6 @@ describe('authSession', () => {
             expect(chipinApi.refreshApiAuthTokens).toHaveBeenCalledOnce();
             expect(accessToken).toBeNull();
             expect(values.has(LS_KEY_AUTH_SESSION_HINT)).toBe(false);
-            expect(setItem).not.toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS, expect.anything());
         });
     });
 

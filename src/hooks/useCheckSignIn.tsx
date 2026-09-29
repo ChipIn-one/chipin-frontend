@@ -3,8 +3,9 @@ import { useLocation } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
 import { ROUTES } from 'constants/routes';
-import { clearLegacyAuthTokens, hasAuthSessionHint } from 'helpers/localStorage';
+import { hasAuthSessionHint } from 'helpers/localStorage';
 import { selectAuthStatus } from 'store/authSelectors';
+import { AUTH_STATUS, UNAUTH_REASON } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
 import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
 import { useDashboardStore } from 'store/dashboardStore';
@@ -38,15 +39,14 @@ export const useCheckSignIn = () => {
     useEffect(() => {
         if (
             location.pathname === ROUTES.OAUTH_CALLBACK ||
-            status !== 'unknown' ||
+            status !== AUTH_STATUS.UNKNOWN ||
             isBackendUnavailable
         ) {
             return;
         }
 
         if (!hasAuthSessionHint()) {
-            clearLegacyAuthTokens();
-            setUnauthenticated('missing');
+            setUnauthenticated(UNAUTH_REASON.MISSING);
             return;
         }
 
@@ -69,8 +69,8 @@ export const useCheckSignIn = () => {
                     return;
                 }
 
-                if (useAuthStore.getState().status === 'unknown') {
-                    setUnauthenticated('error');
+                if (useAuthStore.getState().status === AUTH_STATUS.UNKNOWN) {
+                    setUnauthenticated(UNAUTH_REASON.ERROR);
                 }
             });
     }, [

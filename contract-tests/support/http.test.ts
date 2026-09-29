@@ -119,6 +119,92 @@ describe('createContractHttpClient', () => {
             });
     });
 
+    it('does not treat the refresh-cookie name inside another cookie as a session cookie', () => {
+        let calls = 0;
+        const client = createContractHttpClient(stagingConfig, () => {
+            calls += 1;
+            return Promise.resolve(
+                new Response(JSON.stringify({ accessToken: 'access-token' }), {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Set-Cookie':
+                            'foo__Host-chipin_refresh=refresh-cookie; Path=/; Secure; HttpOnly; SameSite=Strict',
+                    },
+                    status: 200,
+                }),
+            );
+        });
+
+        return client
+            .requestJson({
+                auth: { kind: 'basic' },
+                method: 'POST',
+                path: '/auth/test-register',
+            })
+            .then(() =>
+                client.requestJson({
+                    auth: { kind: 'session' },
+                    method: 'POST',
+                    path: '/auth/refresh',
+                }),
+            )
+            .then(
+                () => {
+                    throw new Error('Expected the session request to fail');
+                },
+                (error: unknown) => {
+                    expect(error).toEqual(
+                        new Error('Contract refresh cookie is required'),
+                    );
+                    expect(calls).toBe(1);
+                },
+            );
+    });
+
+    it('finds the exact refresh cookie after a cookie with an Expires comma', () => {
+        const capturedCookies: string[] = [];
+        let call = 0;
+        const client = createContractHttpClient(stagingConfig, (_input, init) => {
+            call += 1;
+            const headers = new Headers(init?.headers);
+
+            if (headers.has('Cookie')) {
+                capturedCookies.push(headers.get('Cookie') ?? '');
+            }
+
+            return Promise.resolve(
+                new Response(JSON.stringify({ token: `access-${call}` }), {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Set-Cookie': call === 1
+                            ? 'other=value; Expires=Wed, 21 Oct 2037 07:28:00 GMT; Path=/, __Host-chipin_refresh=refresh-cookie; Path=/; Secure; HttpOnly; SameSite=Strict'
+                            : '__Host-chipin_refresh=rotated-cookie; Path=/; Secure; HttpOnly; SameSite=Strict',
+                    },
+                    status: 200,
+                }),
+            );
+        });
+
+        return client
+            .requestJson({
+                auth: { kind: 'basic' },
+                method: 'POST',
+                path: '/auth/test-register',
+            })
+            .then(() =>
+                client.requestJson({
+                    auth: { kind: 'session' },
+                    method: 'POST',
+                    path: '/auth/refresh',
+                }),
+            )
+            .then(() => {
+                expect(capturedCookies).toEqual([
+                    '__Host-chipin_refresh=refresh-cookie',
+                ]);
+            });
+    });
+
     it.each([
         [
             'Secure',

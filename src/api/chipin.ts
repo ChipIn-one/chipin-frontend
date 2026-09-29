@@ -1,3 +1,4 @@
+import { AUTH_API_PATH, AUTH_CSRF_HEADERS } from './auth.constants';
 import { apiInstance } from './chipin.instance';
 import type {
     ApiCurrencyRatesResponse,
@@ -15,29 +16,25 @@ import type {
 
 // =============== GROUPS AND USERS ===============
 
-const CSRF_HEADERS = {
-    'X-Chipin-Csrf': '1',
-} as const;
-
 export const refreshApiAuthTokens = (): Promise<ApiRefreshTokenPairResponse> => {
     return apiInstance
-        .post<ApiRefreshTokenPairResponse>('/auth/refresh', undefined, {
-            headers: CSRF_HEADERS,
+        .post<ApiRefreshTokenPairResponse>(AUTH_API_PATH.REFRESH, undefined, {
+            headers: AUTH_CSRF_HEADERS,
         })
         .then(response => response.data);
 };
 
 export const logoutApiAuthTokens = (): Promise<void> => {
     return apiInstance
-        .post('/auth/logout', undefined, {
-            headers: CSRF_HEADERS,
+        .post(AUTH_API_PATH.LOGOUT, undefined, {
+            headers: AUTH_CSRF_HEADERS,
         })
         .then(() => undefined);
 };
 
 export const exchangeApiGoogleOAuthCode = (code: string): Promise<ApiOAuthTokenPairResponse> => {
     return apiInstance
-        .post<ApiOAuthTokenPairResponse>('/auth/oauth/google/exchange', { code })
+        .post<ApiOAuthTokenPairResponse>(AUTH_API_PATH.GOOGLE_OAUTH_EXCHANGE, { code })
         .then(response => response.data);
 };
 

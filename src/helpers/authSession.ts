@@ -1,17 +1,10 @@
+import { AUTH_API_PATH } from 'api/auth.constants';
 import * as authApi from 'api/authApi';
 import { logoutApiAuthTokens, refreshApiAuthTokens } from 'api/chipin';
 import { getApiErrorStatus } from 'helpers/errors';
-import {
-    clearLegacyAuthTokens,
-    hasAuthSessionHint,
-    setAuthSessionHint,
-} from 'helpers/localStorage';
+import { hasAuthSessionHint, setAuthSessionHint } from 'helpers/localStorage';
 
 const ACCESS_TOKEN_REFRESH_BUFFER_SECONDS = 60;
-const AUTH_GOOGLE_EXCHANGE_PATH = '/auth/oauth/google/exchange';
-const AUTH_LOGOUT_PATH = '/auth/logout';
-const AUTH_REFRESH_PATH = '/auth/refresh';
-
 let accessToken: string | null = null;
 let refreshPromise: Promise<string | null> | null = null;
 let logoutPromise: Promise<void> | null = null;
@@ -47,14 +40,12 @@ export const isAuthSessionCurrent = (version: number): boolean => {
 export const invalidateAuthSession = (): void => {
     authSessionVersion += 1;
     accessToken = null;
-    clearLegacyAuthTokens();
     isSessionRestorationBlocked = !setAuthSessionHint(false);
 };
 
 export const establishAuthSession = (nextAccessToken: string): void => {
     authSessionVersion += 1;
     accessToken = null;
-    clearLegacyAuthTokens();
 
     if (!setAuthSessionHint(true)) {
         isSessionRestorationBlocked = true;
@@ -113,9 +104,9 @@ const isAccessTokenExpiring = (token: string): boolean => {
 
 const isAuthSessionRequest = (url?: string): boolean => {
     return Boolean(
-        url?.endsWith(AUTH_GOOGLE_EXCHANGE_PATH) ||
-        url?.endsWith(AUTH_REFRESH_PATH) ||
-        url?.endsWith(AUTH_LOGOUT_PATH),
+        url?.endsWith(AUTH_API_PATH.GOOGLE_OAUTH_EXCHANGE) ||
+        url?.endsWith(AUTH_API_PATH.REFRESH) ||
+        url?.endsWith(AUTH_API_PATH.LOGOUT),
     );
 };
 
@@ -151,8 +142,6 @@ export const refreshAuthSession = (): Promise<string | null> => {
         return Promise.resolve(null);
     }
 
-    clearLegacyAuthTokens();
-
     if (!accessToken && !hasAuthSessionHint()) {
         return Promise.resolve(null);
     }
@@ -168,8 +157,6 @@ export const getFreshAccessToken = (): Promise<string | null> => {
     if (isLogoutInProgress || isSessionRestorationBlocked) {
         return Promise.resolve(null);
     }
-
-    clearLegacyAuthTokens();
 
     if (!accessToken && !hasAuthSessionHint()) {
         return Promise.resolve(null);

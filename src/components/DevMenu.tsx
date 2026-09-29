@@ -15,6 +15,7 @@ import { Button, IconButton } from '@radix-ui/themes';
 
 import { isThemeDark } from 'helpers/theme';
 import { selectAuthStatus } from 'store/authSelectors';
+import { AUTH_STATUS } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
 import { useUsersStore } from 'store/users-store';
 
@@ -49,7 +50,7 @@ const DevMenu = ({ isShowLabel = false }: Props) => {
     const onSwitchTheme = () => {
         const nextTheme = isDark ? 'light' : 'dark';
 
-        if (authStatus !== 'authenticated') {
+        if (authStatus !== AUTH_STATUS.AUTHENTICATED) {
             setTheme(nextTheme);
             return;
         }

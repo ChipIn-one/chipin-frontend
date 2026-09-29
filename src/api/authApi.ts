@@ -1,3 +1,4 @@
+import { AUTH_API_PATH, AUTH_CSRF_HEADERS } from './auth.constants';
 import { apiInstance } from './chipin.instance';
 import type { ApiLogoutOtherDevicesResponse } from './chipin.raw.types';
 
@@ -6,10 +7,6 @@ export class InvalidLogoutOtherDevicesResponseError extends Error {
         super('Invalid logout-other-devices response');
     }
 }
-
-const CSRF_HEADERS = {
-    'X-Chipin-Csrf': '1',
-} as const;
 
 const isLogoutOtherDevicesResponse = (
     value: unknown,
@@ -25,8 +22,8 @@ const isLogoutOtherDevicesResponse = (
 
 export const logoutOtherDevices = (): Promise<ApiLogoutOtherDevicesResponse> => {
     return apiInstance
-        .post<unknown>('/auth/logout-other-devices', undefined, {
-            headers: CSRF_HEADERS,
+        .post<unknown>(AUTH_API_PATH.LOGOUT_OTHER_DEVICES, undefined, {
+            headers: AUTH_CSRF_HEADERS,
         })
         .then(response => {
             if (!isLogoutOtherDevicesResponse(response.data)) {

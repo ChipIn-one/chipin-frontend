@@ -76,11 +76,7 @@ beforeEach(() => {
     });
 });
 
-test('keeps a signed-out cold start unauthenticated, purges legacy tokens, and skips refresh', () => {
-    const clearLegacyAuthTokens = vi.spyOn(
-        localStorageHelpers,
-        'clearLegacyAuthTokens',
-    );
+test('keeps a signed-out cold start unauthenticated and skips refresh', () => {
     const refreshAuthTokens = vi.fn(() => Promise.resolve('unexpected-access-token'));
     useAuthStore.setState({ refreshAuthTokens });
 
@@ -93,7 +89,6 @@ test('keeps a signed-out cold start unauthenticated, purges legacy tokens, and s
         });
     }).then(() => {
         expect(refreshAuthTokens).not.toHaveBeenCalled();
-        expect(clearLegacyAuthTokens).toHaveBeenCalledOnce();
     });
 });
 

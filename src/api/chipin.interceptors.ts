@@ -11,13 +11,10 @@ import { getChipInApiUrl } from 'helpers/env';
 import { getApiErrorPayload, isLikelyBackendOutageError } from 'helpers/errors';
 import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
 
+import { AUTH_API_PATH } from './auth.constants';
 import { apiInstance, publicApiInstance } from './chipin.instance';
 import { checkBackendHealth } from './healthApi';
 
-const AUTH_LOGOUT_OTHER_DEVICES_PATH = '/auth/logout-other-devices';
-const AUTH_LOGOUT_PATH = '/auth/logout';
-const AUTH_OAUTH_EXCHANGE_PATH = '/auth/oauth/google/exchange';
-const AUTH_REFRESH_PATH = '/auth/refresh';
 const AUTH_REQUEST_CANCELLED_MESSAGE = 'Auth request cancelled';
 const AUTH_RETRY_CONFIG_KEY = 'chipinAuthRetry';
 const HEALTH_PATH = '/health';
@@ -62,10 +59,10 @@ const isOwnedAuthFlowUnauthorizedError = (error: unknown): boolean => {
     const pathname = getRequestPathname(error.config?.url);
 
     return (
-        pathname === AUTH_LOGOUT_PATH ||
-        pathname === AUTH_OAUTH_EXCHANGE_PATH ||
-        pathname === AUTH_REFRESH_PATH ||
-        pathname === AUTH_LOGOUT_OTHER_DEVICES_PATH
+        pathname === AUTH_API_PATH.LOGOUT ||
+        pathname === AUTH_API_PATH.GOOGLE_OAUTH_EXCHANGE ||
+        pathname === AUTH_API_PATH.REFRESH ||
+        pathname === AUTH_API_PATH.LOGOUT_OTHER_DEVICES
     );
 };
 

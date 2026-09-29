@@ -6,6 +6,7 @@ import * as Sentry from '@sentry/react';
 import { matchLocale, saveLocalePreference } from 'helpers/locale';
 import i18n from 'i18n';
 import { selectAuthStatus } from 'store/authSelectors';
+import { AUTH_STATUS } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
 import { selectUserSettings, useUsersStore } from 'store/users-store';
 
@@ -15,7 +16,7 @@ export const useSyncUserSettings = () => {
     const { setTheme } = useTheme();
 
     useEffect(() => {
-        if (!settings || authStatus !== 'authenticated') {
+        if (!settings || authStatus !== AUTH_STATUS.AUTHENTICATED) {
             return;
         }
 

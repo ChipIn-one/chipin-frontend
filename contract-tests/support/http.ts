@@ -55,20 +55,29 @@ const readRefreshCookie = (response: Response): string | null | undefined => {
         return undefined;
     }
 
-    const cookiePrefix = `${REFRESH_COOKIE_NAME}=`;
-    const cookieStart = setCookie.indexOf(cookiePrefix);
+    const cookieHeaders = setCookie.split(
+        /,\s*(?=[!#$%&'*+\-.^_`|~0-9A-Za-z]+=)/,
+    );
+    let refreshCookieHeader: string | undefined;
 
-    if (cookieStart === -1) {
+    for (const cookieHeader of cookieHeaders) {
+        const cookiePair = cookieHeader.split(';', 1)[0]?.trim();
+        const separatorIndex = cookiePair?.indexOf('=') ?? -1;
+
+        if (
+            separatorIndex > 0 &&
+            cookiePair?.slice(0, separatorIndex) === REFRESH_COOKIE_NAME
+        ) {
+            refreshCookieHeader = cookieHeader;
+            break;
+        }
+    }
+
+    if (!refreshCookieHeader) {
         return undefined;
     }
 
-    const cookieAndAttributes = setCookie.slice(cookieStart);
-    const nextCookieBoundary = cookieAndAttributes.search(
-        /,\s*(?=[!#$%&'*+\-.^_`|~0-9A-Za-z]+=)/,
-    );
-    const refreshCookieHeader = nextCookieBoundary === -1
-        ? cookieAndAttributes
-        : cookieAndAttributes.slice(0, nextCookieBoundary);
+    const cookiePrefix = `${REFRESH_COOKIE_NAME}=`;
     const [cookiePair, ...rawAttributes] = refreshCookieHeader
         .split(';')
         .map(part => part.trim());

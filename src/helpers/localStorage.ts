@@ -1,7 +1,6 @@
 import type { SelfUser, ThemeName, UserRole, UserSettings } from 'api/chipin.types';
 import {
     LS_KEY_AUTH_SESSION_HINT,
-    LS_KEY_AUTH_TOKENS,
     LS_KEY_LOCALE,
     LS_KEY_SW_UPDATE_DISMISSED_AT,
     LS_KEY_THEME,
@@ -99,14 +98,6 @@ const saveLocalUser = (user: LocalUser) => {
     LocalStorage.set(LS_KEY_USER, user);
 };
 
-const clearLegacyAuthTokens = (): void => {
-    try {
-        localStorage.removeItem(LS_KEY_AUTH_TOKENS);
-    } catch {
-        // Legacy auth state must never block the cookie-backed session flow.
-    }
-};
-
 const hasAuthSessionHint = (): boolean => {
     return LocalStorage.get(LS_KEY_AUTH_SESSION_HINT, false);
 };
@@ -139,7 +130,6 @@ const setAuthSessionHint = (hasSession: boolean): boolean => {
 };
 
 export {
-    clearLegacyAuthTokens,
     getLocalUser,
     hasAuthSessionHint,
     LocalStorage,

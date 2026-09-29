@@ -1,17 +1,10 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
-import {
-    LS_KEY_AUTH_SESSION_HINT,
-    LS_KEY_AUTH_TOKENS,
-} from 'constants/localstorage';
+import { LS_KEY_AUTH_SESSION_HINT } from 'constants/localstorage';
 
-import {
-    clearLegacyAuthTokens,
-    hasAuthSessionHint,
-    setAuthSessionHint,
-} from './localStorage';
+import { hasAuthSessionHint, setAuthSessionHint } from './localStorage';
 
-describe('legacy auth token storage', () => {
+describe('auth session hint storage', () => {
     let values: Map<string, string>;
     let removeItem: ReturnType<typeof vi.fn>;
     let setItem: ReturnType<typeof vi.fn>;
@@ -28,28 +21,11 @@ describe('legacy auth token storage', () => {
         });
     });
 
-    test('clears the old access-plus-refresh token shape without writing a replacement', () => {
-        values.set(
-            LS_KEY_AUTH_TOKENS,
-            JSON.stringify({
-                accessToken: 'legacy-access-token',
-                refreshToken: 'legacy-refresh-token',
-            }),
-        );
-
-        clearLegacyAuthTokens();
-
-        expect(removeItem).toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS);
-        expect(values.has(LS_KEY_AUTH_TOKENS)).toBe(false);
-        expect(setItem).not.toHaveBeenCalled();
-    });
-
     test('stores only a non-secret boolean session hint', () => {
         expect(setAuthSessionHint(true)).toBe(true);
 
         expect(hasAuthSessionHint()).toBe(true);
         expect(values.get(LS_KEY_AUTH_SESSION_HINT)).toBe('true');
-        expect(values.has(LS_KEY_AUTH_TOKENS)).toBe(false);
 
         expect(setAuthSessionHint(false)).toBe(true);
 
@@ -90,12 +66,4 @@ describe('legacy auth token storage', () => {
         expect(values.get(LS_KEY_AUTH_SESSION_HINT)).toBe('true');
     });
 
-    test('does not fail when legacy auth storage is unavailable', () => {
-        removeItem.mockImplementation(() => {
-            throw new Error('storage unavailable');
-        });
-
-        expect(() => clearLegacyAuthTokens()).not.toThrow();
-        expect(setItem).not.toHaveBeenCalled();
-    });
 });
