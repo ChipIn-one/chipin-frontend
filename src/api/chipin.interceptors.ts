@@ -113,10 +113,7 @@ const processApiResponseError = (error: unknown) => {
             return Promise.reject(error);
         }
 
-        if (
-            !requestConfig ||
-            Reflect.get(requestConfig, AUTH_RETRY_CONFIG_KEY) === true
-        ) {
+        if (!requestConfig) {
             onUnauthorizedSession?.();
             return Promise.reject(error);
         }
@@ -127,6 +124,20 @@ const processApiResponseError = (error: unknown) => {
             authorizationHeader.startsWith(AUTHORIZATION_BEARER_PREFIX)
                 ? authorizationHeader.slice(AUTHORIZATION_BEARER_PREFIX.length)
                 : null;
+        const hasRetriedRequest =
+            Reflect.get(requestConfig, AUTH_RETRY_CONFIG_KEY) === true;
+
+        if (hasRetriedRequest) {
+            if (
+                requestAccessToken &&
+                hasAuthAccessTokenRotated(requestAccessToken)
+            ) {
+                return Promise.reject(error);
+            }
+
+            onUnauthorizedSession?.();
+            return Promise.reject(error);
+        }
 
         if (
             requestAccessToken &&
