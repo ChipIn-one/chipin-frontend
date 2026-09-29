@@ -7,6 +7,8 @@ import {
     fetchApiUserGroupById,
     fetchApiUserGroups,
     inviteApiUserToGroup,
+    logoutApiAuthTokens,
+    refreshApiAuthTokens,
     removeApiGroup,
 } from './chipin';
 import { apiInstance } from './chipin.instance';
@@ -154,7 +156,6 @@ describe('embedded activity feed responses', () => {
             expect(result.recentActivities).toEqual(groupResponse.recentActivities);
         });
     });
-
 });
 
 describe('removeApiGroup', () => {
@@ -208,6 +209,44 @@ describe('inviteApiUserToGroup', () => {
 
         return inviteApiUserToGroup({ inviteToken: group.inviteToken }).then(result => {
             expect(result.recentActivities).toEqual(group.recentActivities);
+        });
+    });
+});
+
+describe('cookie-backed auth transport', () => {
+    test('refreshes through the HttpOnly cookie with the CSRF header', () => {
+        vi.mocked(apiInstance.post).mockResolvedValue({
+            data: { token: 'next-access-token' },
+        });
+
+        return refreshApiAuthTokens().then(result => {
+            expect(apiInstance.post).toHaveBeenLastCalledWith(
+                '/auth/refresh',
+                undefined,
+                {
+                    headers: {
+                        'X-Chipin-Csrf': '1',
+                    },
+                },
+            );
+            expect(result).toEqual({ token: 'next-access-token' });
+        });
+    });
+
+    test('logs out through the cookie without sending a JavaScript refresh token', () => {
+        vi.mocked(apiInstance.post).mockResolvedValue({ data: undefined });
+
+        return logoutApiAuthTokens().then(result => {
+            expect(apiInstance.post).toHaveBeenLastCalledWith(
+                '/auth/logout',
+                undefined,
+                {
+                    headers: {
+                        'X-Chipin-Csrf': '1',
+                    },
+                },
+            );
+            expect(result).toBeUndefined();
         });
     });
 });

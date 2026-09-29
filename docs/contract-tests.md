@@ -68,8 +68,9 @@ Each smoke run:
 3. creates a unique run with `POST /auth/test-register`;
 4. validates the provisioning response at field level;
 5. calls `GET /users/self` with the returned Bearer token and validates the frontend self-user fields;
-6. calls `POST /auth/refresh` with only `X-Refresh-Token` and validates the returned token pair;
-7. deletes the run with `DELETE /auth/test-runs/{runId}` from a `finally` path after provisioning was attempted.
+6. captures the host-only refresh cookie from provisioning, calls `POST /auth/refresh` with the cookie plus `X-Chipin-Csrf`, and validates the access-token-only response;
+7. repeats refresh with the rotated cookie to verify cookie rotation;
+8. deletes the run with `DELETE /auth/test-runs/{runId}` from a `finally` path after provisioning was attempted.
 
 ## Full core API matrix
 
