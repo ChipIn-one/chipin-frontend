@@ -3,6 +3,7 @@ import axios from 'axios';
 import { API_ERROR_CODE } from 'constants/errors';
 import {
     getAuthSessionVersion,
+    hasAuthAccessTokenRotated,
     isAuthSessionCurrent,
     isAuthSessionSignedOut,
     prepareAuthRequest,
@@ -16,6 +17,7 @@ import { AUTH_API_PATH } from './auth.constants';
 import { apiInstance, publicApiInstance } from './chipin.instance';
 import { checkBackendHealth } from './healthApi';
 
+const AUTHORIZATION_BEARER_PREFIX = 'Bearer ';
 const AUTH_REQUEST_CANCELLED_MESSAGE = 'Auth request cancelled';
 const AUTH_RETRY_CONFIG_KEY = 'chipinAuthRetry';
 const HEALTH_PATH = '/health';
@@ -117,6 +119,21 @@ const processApiResponseError = (error: unknown) => {
         ) {
             onUnauthorizedSession?.();
             return Promise.reject(error);
+        }
+
+        const authorizationHeader = requestConfig.headers.Authorization;
+        const requestAccessToken =
+            typeof authorizationHeader === 'string' &&
+            authorizationHeader.startsWith(AUTHORIZATION_BEARER_PREFIX)
+                ? authorizationHeader.slice(AUTHORIZATION_BEARER_PREFIX.length)
+                : null;
+
+        if (
+            requestAccessToken &&
+            hasAuthAccessTokenRotated(requestAccessToken)
+        ) {
+            Reflect.set(requestConfig, AUTH_RETRY_CONFIG_KEY, true);
+            return apiInstance.request(requestConfig);
         }
 
         const refreshSessionVersion = getAuthSessionVersion();

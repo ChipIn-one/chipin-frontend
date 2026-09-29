@@ -56,6 +56,10 @@ export const markAuthSessionSignedOut = (): void => {
 
 export const isAuthSessionSignedOut = (): boolean => isSessionExplicitlySignedOut;
 
+export const hasAuthAccessTokenRotated = (previousAccessToken: string): boolean => {
+    return accessToken !== null && accessToken !== previousAccessToken;
+};
+
 export const establishAuthSession = (nextAccessToken: string): void => {
     authSessionVersion += 1;
     accessToken = null;

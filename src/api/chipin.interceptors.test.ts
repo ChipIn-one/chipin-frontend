@@ -13,6 +13,7 @@ const authSessionMocks = vi.hoisted(() => ({
     currentVersion: 1,
     signedOut: false,
     prepareAuthRequest: vi.fn<() => Promise<string | null | undefined>>(),
+    hasAuthAccessTokenRotated: vi.fn<(previousAccessToken: string) => boolean>(),
     refreshAuthSession: vi.fn<() => Promise<string | null>>(),
 }));
 
@@ -28,6 +29,7 @@ vi.mock('sonner', () => ({
 
 vi.mock('helpers/authSession', () => ({
     getAuthSessionVersion: () => authSessionMocks.currentVersion,
+    hasAuthAccessTokenRotated: authSessionMocks.hasAuthAccessTokenRotated,
     isAuthSessionCurrent: (version: number) => version === authSessionMocks.currentVersion,
     isAuthSessionSignedOut: () => authSessionMocks.signedOut,
     prepareAuthRequest: authSessionMocks.prepareAuthRequest,
@@ -53,6 +55,9 @@ beforeEach(() => {
     authSessionMocks.signedOut = false;
     authSessionMocks.prepareAuthRequest.mockImplementation(() =>
         Promise.resolve(authSessionMocks.accessToken),
+    );
+    authSessionMocks.hasAuthAccessTokenRotated.mockImplementation(
+        previousAccessToken => previousAccessToken !== authSessionMocks.accessToken,
     );
     authSessionMocks.refreshAuthSession.mockImplementation(() => {
         authSessionMocks.accessToken = 'next-access-token';
