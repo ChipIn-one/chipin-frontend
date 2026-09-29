@@ -2,9 +2,7 @@ import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
-import { LS_KEY_AUTH_SESSION_HINT } from 'constants/localstorage';
 import { ROUTES } from 'constants/routes';
-import { markAuthSessionSignedOut } from 'helpers/authSession';
 import { hasAuthSessionHint } from 'helpers/localStorage';
 import { selectAuthStatus } from 'store/authSelectors';
 import { AUTH_STATUS, UNAUTH_REASON } from 'store/authConstants';
@@ -37,27 +35,6 @@ export const useCheckSignIn = () => {
     const setAuthenticated = useAuthStore(s => s.setAuthenticated);
     const setUnauthenticated = useAuthStore(s => s.setUnauthenticated);
     const refreshAuthTokens = useAuthStore(s => s.refreshAuthTokens);
-
-    useEffect(() => {
-        const onStorage = (event: StorageEvent): void => {
-            const didRemoveSessionHint =
-                event.key === LS_KEY_AUTH_SESSION_HINT && event.newValue !== 'true';
-            const didClearStorage = event.key === null && !hasAuthSessionHint();
-
-            if (!didRemoveSessionHint && !didClearStorage) {
-                return;
-            }
-
-            markAuthSessionSignedOut();
-            useAuthStore.getState().setUnauthenticated(UNAUTH_REASON.SIGNED_OUT);
-        };
-
-        window.addEventListener('storage', onStorage);
-
-        return () => {
-            window.removeEventListener('storage', onStorage);
-        };
-    }, []);
 
     useEffect(() => {
         if (
