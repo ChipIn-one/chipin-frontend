@@ -4,6 +4,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { clearAuthTokens } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
 
 import { ProtectedRoute } from './ProtectedRoute';
@@ -38,6 +39,7 @@ const CurrentRoute = () => {
 };
 
 beforeEach(() => {
+    clearAuthTokens();
     useAuthStore.setState({
         isNewUser: null,
         status: 'authenticated',

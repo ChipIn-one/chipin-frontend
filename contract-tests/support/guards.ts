@@ -16,6 +16,7 @@ export interface ContractRegisterResponse {
     runId: string;
     user: ContractRegisterUser;
     accessToken: string;
+    refreshToken: string;
     expiresIn: number;
 }
 
@@ -146,10 +147,6 @@ export const parseRegisterResponse = (value: unknown): ContractRegisterResponse 
         throw new Error('register.expiresIn must be greater than zero');
     }
 
-    if ('refreshToken' in response || 'refresh_token' in response) {
-        throw new Error('register response must not expose a refresh token');
-    }
-
     return {
         runId: requireString(response, 'runId', 'register', true),
         user: {
@@ -158,6 +155,7 @@ export const parseRegisterResponse = (value: unknown): ContractRegisterResponse 
             displayName: requireString(user, 'displayName', 'register.user', true),
         },
         accessToken: requireString(response, 'accessToken', 'register', true),
+        refreshToken: requireString(response, 'refreshToken', 'register', true),
         expiresIn,
     };
 };
@@ -198,11 +196,8 @@ export const parseSelfUserResponse = (value: unknown): ApiSelfUserResponse => {
 export const parseRefreshResponse = (value: unknown): ApiRefreshTokenPairResponse => {
     const response = requireRecord(value, 'refresh');
 
-    if ('refreshToken' in response || 'refresh_token' in response) {
-        throw new Error('refresh response must not expose a refresh token');
-    }
-
     return {
         token: requireString(response, 'token', 'refresh', true),
+        refresh_token: requireString(response, 'refresh_token', 'refresh', true),
     };
 };

@@ -1,3 +1,5 @@
+import type { AuthTokens } from 'helpers/localStorage';
+
 import { apiInstance } from './chipin.instance';
 import type {
     ApiCurrencyRatesResponse,
@@ -15,22 +17,25 @@ import type {
 
 // =============== GROUPS AND USERS ===============
 
-const CSRF_HEADERS = {
-    'X-Chipin-Csrf': '1',
-} as const;
-
-export const refreshApiAuthTokens = (): Promise<ApiRefreshTokenPairResponse> => {
+export const refreshApiAuthTokens = (
+    refreshToken: string,
+): Promise<ApiRefreshTokenPairResponse> => {
     return apiInstance
-        .post<ApiRefreshTokenPairResponse>('/auth/refresh', undefined, {
-            headers: CSRF_HEADERS,
+        .post('/auth/refresh', undefined, {
+            headers: {
+                'X-Refresh-Token': refreshToken,
+            },
         })
         .then(response => response.data);
 };
 
-export const logoutApiAuthTokens = (): Promise<void> => {
+export const logoutApiAuthTokens = ({ accessToken, refreshToken }: AuthTokens): Promise<void> => {
     return apiInstance
         .post('/auth/logout', undefined, {
-            headers: CSRF_HEADERS,
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'X-Refresh-Token': refreshToken,
+            },
         })
         .then(() => undefined);
 };

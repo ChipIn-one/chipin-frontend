@@ -1,6 +1,5 @@
 import type { SelfUser, ThemeName, UserRole, UserSettings } from 'api/chipin.types';
 import {
-    LS_KEY_AUTH_SESSION_HINT,
     LS_KEY_AUTH_TOKENS,
     LS_KEY_LOCALE,
     LS_KEY_SW_UPDATE_DISMISSED_AT,
@@ -13,12 +12,17 @@ export interface LocalUser {
     settings: UserSettings;
 }
 
+export interface AuthTokens {
+    accessToken: string;
+    refreshToken: string;
+}
+
 type StorageSchema = {
-    [LS_KEY_AUTH_SESSION_HINT]: boolean;
     [LS_KEY_USER]: LocalUser;
     [LS_KEY_LOCALE]: string;
     [LS_KEY_THEME]: ThemeName;
     [LS_KEY_SW_UPDATE_DISMISSED_AT]: number;
+    [LS_KEY_AUTH_TOKENS]: AuthTokens;
 };
 
 type StorageKey = keyof StorageSchema;
@@ -99,34 +103,30 @@ const saveLocalUser = (user: LocalUser) => {
     LocalStorage.set(LS_KEY_USER, user);
 };
 
-const clearLegacyAuthTokens = (): void => {
+const getAuthTokens = () => {
+    return getStorageValue<AuthTokens>(LS_KEY_AUTH_TOKENS);
+};
+
+const saveAuthTokens = (tokens: AuthTokens): boolean => {
     try {
-        localStorage.removeItem(LS_KEY_AUTH_TOKENS);
+        localStorage.setItem(LS_KEY_AUTH_TOKENS, JSON.stringify(tokens));
+        return true;
     } catch {
-        // Legacy auth state must never block the cookie-backed session flow.
+        return false;
     }
 };
 
-const hasAuthSessionHint = (): boolean => {
-    return LocalStorage.get(LS_KEY_AUTH_SESSION_HINT, false);
-};
-
-const setAuthSessionHint = (hasSession: boolean): void => {
-    if (hasSession) {
-        LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
-        return;
-    }
-
-    LocalStorage.remove(LS_KEY_AUTH_SESSION_HINT);
+const clearAuthTokens = () => {
+    LocalStorage.remove(LS_KEY_AUTH_TOKENS);
 };
 
 export {
-    clearLegacyAuthTokens,
+    clearAuthTokens,
+    getAuthTokens,
     getLocalUser,
-    hasAuthSessionHint,
     LocalStorage,
+    saveAuthTokens,
     saveLocalUser,
-    setAuthSessionHint,
     toLocalUser,
 };
 export type { StorageKey, StorageSchema };

@@ -208,13 +208,16 @@ export interface ApiPremiumPromoRemainingResponse {
 
 export interface ApiOAuthTokenPairResponse {
     token: string;
+    refresh_token: string;
     is_new_user: boolean;
 }
 
 export interface ApiRefreshTokenPairResponse {
     token: string;
+    refresh_token: string;
 }
 
 export interface ApiLogoutOtherDevicesResponse {
     token: string;
+    refresh_token: string;
 }

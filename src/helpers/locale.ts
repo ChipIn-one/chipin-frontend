@@ -1,9 +1,5 @@
 import { LS_KEY_LOCALE } from 'constants/localstorage';
-import {
-    getLocalUser,
-    hasAuthSessionHint,
-    LocalStorage,
-} from 'helpers/localStorage';
+import { getAuthTokens, getLocalUser, LocalStorage } from 'helpers/localStorage';
 
 const SUPPORTED_LOCALES = ['en', 'ru', 'es', 'pt-BR', 'pt-PT'] as const;
 type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
@@ -115,7 +111,7 @@ const matchLocale = (raw: string): SupportedLocale | null => {
 const getStoredLocale = (): string | null => {
     const userLocale = getLocalUser()?.settings.language;
     const explicitLocale = LocalStorage.get(LS_KEY_LOCALE, '');
-    const hasAuthSession = hasAuthSessionHint();
+    const hasAuthSession = getAuthTokens() !== null;
 
     if (hasAuthSession && userLocale) {
         const matchedUserLocale = matchLocale(userLocale);
@@ -178,7 +174,7 @@ const resolveBrowserLocale = (
 
 /**
  * Resolves the active locale with priority:
- * 1. Valid local user locale while a non-secret auth-session hint is present
+ * 1. Valid local user locale while an auth session is being restored
  * 2. Explicit persisted locale preference
  * 3. Legacy cached user locale when no explicit preference exists
  * 4. First matching browser language

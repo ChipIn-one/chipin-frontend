@@ -120,16 +120,10 @@ it('validates the live auth and session contract', () => {
             }
 
             return client.requestJson({
-                auth: { kind: 'session' },
-                method: 'POST',
-                path: '/auth/refresh',
-            });
-        })
-        .then((value) => {
-            parseRefreshResponse(value);
-
-            return client.requestJson({
-                auth: { kind: 'session' },
+                auth: {
+                    kind: 'refresh',
+                    token: provisionedUser.refreshToken,
+                },
                 method: 'POST',
                 path: '/auth/refresh',
             });
