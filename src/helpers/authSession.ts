@@ -3,6 +3,7 @@ import { logoutApiAuthTokens, refreshApiAuthTokens } from 'api/chipin';
 import { getApiErrorStatus } from 'helpers/errors';
 import {
     clearLegacyAuthTokens,
+    hasAuthSessionHint,
     setAuthSessionHint,
 } from 'helpers/localStorage';
 
@@ -138,6 +139,11 @@ export const refreshAuthSession = (): Promise<string | null> => {
     }
 
     clearLegacyAuthTokens();
+
+    if (!accessToken && !hasAuthSessionHint()) {
+        return Promise.resolve(null);
+    }
+
     return refreshAccessToken();
 };
 
@@ -151,6 +157,10 @@ export const getFreshAccessToken = (): Promise<string | null> => {
     }
 
     clearLegacyAuthTokens();
+
+    if (!accessToken && !hasAuthSessionHint()) {
+        return Promise.resolve(null);
+    }
 
     if (!accessToken || isAccessTokenExpiring(accessToken)) {
         return refreshAccessToken();

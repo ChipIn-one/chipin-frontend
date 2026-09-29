@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
 import { ROUTES } from 'constants/routes';
-import { hasAuthSessionHint } from 'helpers/localStorage';
+import { clearLegacyAuthTokens, hasAuthSessionHint } from 'helpers/localStorage';
 import { selectAuthStatus } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { useDashboardStore } from 'store/dashboardStore';
@@ -37,6 +37,7 @@ export const useCheckSignIn = () => {
         }
 
         if (!hasAuthSessionHint()) {
+            clearLegacyAuthTokens();
             setUnauthenticated('missing');
             return;
         }

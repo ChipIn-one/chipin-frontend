@@ -65,6 +65,7 @@ describe('authSession', () => {
                 refreshToken: 'legacy-refresh-token',
             }),
         );
+        values.set(LS_KEY_AUTH_SESSION_HINT, 'true');
         vi.mocked(chipinApi.refreshApiAuthTokens).mockResolvedValue({
             token: 'next-access-token',
         });
@@ -76,6 +77,26 @@ describe('authSession', () => {
             expect(values.has(LS_KEY_AUTH_TOKENS)).toBe(false);
             expect(values.get(LS_KEY_AUTH_SESSION_HINT)).toBe('true');
             expect(setItem).not.toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS, expect.anything());
+        });
+    });
+
+    test('purges legacy tokens without refreshing when no session hint exists', () => {
+        values.set(
+            LS_KEY_AUTH_TOKENS,
+            JSON.stringify({
+                accessToken: 'legacy-access-token',
+                refreshToken: 'legacy-refresh-token',
+            }),
+        );
+        vi.mocked(chipinApi.refreshApiAuthTokens).mockResolvedValue({
+            token: 'unexpected-access-token',
+        });
+
+        return validateAuthSession().then(accessToken => {
+            expect(accessToken).toBeNull();
+            expect(chipinApi.refreshApiAuthTokens).not.toHaveBeenCalled();
+            expect(removeItem).toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS);
+            expect(values.has(LS_KEY_AUTH_TOKENS)).toBe(false);
         });
     });
 
@@ -196,18 +217,20 @@ describe('authSession', () => {
         vi.mocked(chipinApi.logoutApiAuthTokens).mockRejectedValue(
             new Error('network unavailable'),
         );
-        vi.mocked(chipinApi.refreshApiAuthTokens).mockRejectedValue({
-            isAxiosError: true,
-            response: { status: 401 },
+        vi.mocked(chipinApi.refreshApiAuthTokens).mockResolvedValue({
+            token: 'unexpected-access-token',
         });
 
         return startAuthLogout()
             .then(() => {
                 expect(chipinApi.logoutApiAuthTokens).toHaveBeenCalledWith();
-                return getFreshAccessToken();
+                return Promise.all([getFreshAccessToken(), validateAuthSession()]);
             })
-            .then(accessToken => {
+            .then(([accessToken, restoredAccessToken]) => {
                 expect(accessToken).toBeNull();
+                expect(restoredAccessToken).toBeNull();
+                expect(chipinApi.refreshApiAuthTokens).not.toHaveBeenCalled();
+                expect(values.has(LS_KEY_AUTH_SESSION_HINT)).toBe(false);
             });
     });
 
