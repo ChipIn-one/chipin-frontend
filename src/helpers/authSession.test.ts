@@ -11,6 +11,7 @@ import {
     establishAuthSession,
     getFreshAccessToken,
     invalidateAuthSession,
+    isAuthSessionSignedOut,
     logoutOtherDevicesSession,
     startAuthLogout,
     validateAuthSession,
@@ -131,6 +132,45 @@ describe('authSession', () => {
         });
     });
 
+    test('waits for the cross-tab refresh lock before rotating the cookie', () => {
+        markRestorableAuthSession();
+        let runLockedRefresh: (() => void) | undefined;
+        const lockRequest = vi.fn(
+            (
+                _name: string,
+                callback: () => Promise<string | null>,
+            ): Promise<string | null> =>
+                new Promise<string | null>((resolve, reject) => {
+                    runLockedRefresh = () => {
+                        callback().then(resolve, reject);
+                    };
+                }),
+        );
+        vi.stubGlobal('navigator', {
+            locks: {
+                request: lockRequest,
+            },
+        });
+        vi.mocked(chipinApi.refreshApiAuthTokens).mockResolvedValue({
+            token: 'next-access-token',
+        });
+
+        const validation = validateAuthSession();
+
+        expect(lockRequest).toHaveBeenCalledWith(
+            'chipin-auth-refresh',
+            expect.any(Function),
+        );
+        expect(chipinApi.refreshApiAuthTokens).not.toHaveBeenCalled();
+
+        runLockedRefresh?.();
+
+        return validation.then(accessToken => {
+            expect(accessToken).toBe('next-access-token');
+            expect(chipinApi.refreshApiAuthTokens).toHaveBeenCalledOnce();
+        });
+    });
+
     test('clears the in-memory session when refresh is rejected with 401', () => {
         markRestorableAuthSession();
         vi.mocked(chipinApi.refreshApiAuthTokens).mockRejectedValue({
@@ -246,7 +286,12 @@ describe('authSession', () => {
             token: 'unexpected-access-token',
         });
 
-        return startAuthLogout()
+        const logout = startAuthLogout();
+
+        expect(isAuthSessionSignedOut()).toBe(true);
+        expect(values.has(LS_KEY_AUTH_SESSION_HINT)).toBe(false);
+
+        return logout
             .then(() => {
                 expect(chipinApi.logoutApiAuthTokens).toHaveBeenCalledWith();
                 return Promise.all([getFreshAccessToken(), validateAuthSession()]);
