@@ -17,35 +17,38 @@ describe('authApi.logoutOtherDevices', () => {
         vi.clearAllMocks();
     });
 
-    test('uses the cookie session with CSRF protection and returns the new access token', () => {
-        vi.mocked(apiInstance.post).mockResolvedValue({
-            data: { token: 'next-access-token' },
-        });
+    test('posts the current refresh token and returns the rotated token pair', () => {
+        const tokenPair = {
+            token: 'next-access-token',
+            refresh_token: 'next-refresh-token',
+        };
 
-        return logoutOtherDevices().then(result => {
+        vi.mocked(apiInstance.post).mockResolvedValue({ data: tokenPair });
+
+        return logoutOtherDevices('current-refresh-token').then(result => {
             expect(apiInstance.post).toHaveBeenCalledWith(
                 '/auth/logout-other-devices',
                 undefined,
                 {
                     headers: {
-                        'X-Chipin-Csrf': '1',
+                        'X-Refresh-Token': 'current-refresh-token',
                     },
                 },
             );
-            expect(result).toEqual({ token: 'next-access-token' });
+            expect(result).toEqual(tokenPair);
         });
     });
 
     test.each([
-        {},
-        { token: '' },
-        { token: 42 },
-        { refresh_token: 'must-not-be-used' },
-    ])('rejects an unusable access-token response %#', responseData => {
+        { refresh_token: 'next-refresh-token' },
+        { token: 'next-access-token' },
+        { token: '', refresh_token: 'next-refresh-token' },
+        { token: 'next-access-token', refresh_token: '' },
+    ])('rejects an unusable rotated token pair %#', responseData => {
         vi.mocked(apiInstance.post).mockResolvedValue({ data: responseData });
 
-        return expect(logoutOtherDevices()).rejects.toBeInstanceOf(
-            InvalidLogoutOtherDevicesResponseError,
-        );
+        return expect(
+            logoutOtherDevices('current-refresh-token'),
+        ).rejects.toBeInstanceOf(InvalidLogoutOtherDevicesResponseError);
     });
 });

@@ -1,30 +1,26 @@
 import * as authApi from 'api/authApi';
 import { logoutApiAuthTokens, refreshApiAuthTokens } from 'api/chipin';
 import { getApiErrorStatus } from 'helpers/errors';
-import {
-    clearLegacyAuthTokens,
-    setAuthSessionHint,
-} from 'helpers/localStorage';
+import { type AuthTokens, clearAuthTokens, getAuthTokens, saveAuthTokens } from 'helpers/localStorage';
 
 const ACCESS_TOKEN_REFRESH_BUFFER_SECONDS = 60;
 const AUTH_GOOGLE_EXCHANGE_PATH = '/auth/oauth/google/exchange';
 const AUTH_LOGOUT_PATH = '/auth/logout';
 const AUTH_REFRESH_PATH = '/auth/refresh';
 
-let accessToken: string | null = null;
-let refreshPromise: Promise<string | null> | null = null;
+let refreshPromise: Promise<AuthTokens | null> | null = null;
 let logoutPromise: Promise<void> | null = null;
 let logoutOtherDevicesPromise: Promise<void> | null = null;
 let isLogoutInProgress = false;
 let authSessionVersion = 0;
 
-export class AuthSessionExpiredError extends Error {
+export class AuthTokenPersistenceError extends Error {
     constructor() {
-        super('Auth session is missing or expired');
+        super('Auth tokens could not be persisted');
     }
 }
 
-const assertCurrentAuthSession = (version: number): void => {
+const assertCurrentAuthSession = (version: number) => {
     if (version !== authSessionVersion) {
         throw new Error('Auth session changed during token rotation');
     }
@@ -38,16 +34,16 @@ export const isAuthSessionCurrent = (version: number): boolean => {
 
 export const invalidateAuthSession = (): void => {
     authSessionVersion += 1;
-    accessToken = null;
-    clearLegacyAuthTokens();
-    setAuthSessionHint(false);
+    clearAuthTokens();
 };
 
-export const establishAuthSession = (nextAccessToken: string): void => {
+export const establishAuthSession = (tokens: AuthTokens): void => {
     authSessionVersion += 1;
-    clearLegacyAuthTokens();
-    setAuthSessionHint(true);
-    accessToken = nextAccessToken;
+    clearAuthTokens();
+
+    if (!saveAuthTokens(tokens)) {
+        throw new AuthTokenPersistenceError();
+    }
 };
 
 const decodeJwtPayload = (token: string): unknown => {
@@ -86,7 +82,7 @@ const getJwtExpiration = (token: string): number | null => {
     return exp;
 };
 
-const isAccessTokenExpiring = (token: string): boolean => {
+const isAccessTokenExpiring = (token: string) => {
     const expiration = getJwtExpiration(token);
 
     if (!expiration) {
@@ -96,33 +92,40 @@ const isAccessTokenExpiring = (token: string): boolean => {
     return Date.now() / 1000 >= expiration - ACCESS_TOKEN_REFRESH_BUFFER_SECONDS;
 };
 
-const isAuthSessionRequest = (url?: string): boolean => {
-    return Boolean(
+const isAuthSessionRequest = (url?: string) => {
+    return (
         url?.endsWith(AUTH_GOOGLE_EXCHANGE_PATH) ||
         url?.endsWith(AUTH_REFRESH_PATH) ||
-        url?.endsWith(AUTH_LOGOUT_PATH),
+        url?.endsWith(AUTH_LOGOUT_PATH)
     );
 };
 
-const refreshAccessToken = (): Promise<string | null> => {
+const refreshAuthTokens = (refreshToken: string) => {
     if (!refreshPromise) {
         const version = authSessionVersion;
 
-        refreshPromise = refreshApiAuthTokens()
-            .then(({ token }) => {
+        refreshPromise = refreshApiAuthTokens(refreshToken)
+            .then(({ token, refresh_token: refreshToken }) => {
                 assertCurrentAuthSession(version);
-                setAuthSessionHint(true);
-                accessToken = token;
-                return token;
+
+                const nextTokens = { accessToken: token, refreshToken };
+                const isSaved = saveAuthTokens(nextTokens);
+
+                if (!isSaved) {
+                    return Promise.reject(new AuthTokenPersistenceError());
+                }
+
+                return nextTokens;
             })
-            .catch((error: unknown) => {
+            .catch(error => {
                 if (getApiErrorStatus(error) === 401) {
                     assertCurrentAuthSession(version);
                     invalidateAuthSession();
+
                     return null;
                 }
 
-                return Promise.reject(error);
+                throw error;
             })
             .finally(() => {
                 refreshPromise = null;
@@ -132,36 +135,41 @@ const refreshAccessToken = (): Promise<string | null> => {
     return refreshPromise;
 };
 
-export const refreshAuthSession = (): Promise<string | null> => {
+export const validateAuthSession = (): Promise<AuthTokens | null> => {
     if (isLogoutInProgress) {
         return Promise.resolve(null);
     }
 
-    clearLegacyAuthTokens();
-    return refreshAccessToken();
+    const tokens = getAuthTokens();
+
+    if (!tokens) {
+        return Promise.resolve(null);
+    }
+
+    return refreshAuthTokens(tokens.refreshToken);
 };
 
-export const validateAuthSession = (): Promise<string | null> => {
-    return refreshAuthSession();
-};
-
-export const getFreshAccessToken = (): Promise<string | null> => {
+export const getFreshAccessToken = () => {
     if (isLogoutInProgress) {
         return Promise.resolve(null);
     }
 
-    clearLegacyAuthTokens();
+    const tokens = getAuthTokens();
 
-    if (!accessToken || isAccessTokenExpiring(accessToken)) {
-        return refreshAccessToken();
+    if (!tokens) {
+        return Promise.resolve(null);
     }
 
-    return Promise.resolve(accessToken);
+    if (!isAccessTokenExpiring(tokens.accessToken)) {
+        return Promise.resolve(tokens.accessToken);
+    }
+
+    return refreshAuthTokens(tokens.refreshToken).then(nextTokens => {
+        return nextTokens?.accessToken ?? null;
+    });
 };
 
-export const prepareAuthRequest = (
-    url?: string,
-): Promise<string | null | undefined> => {
+export const prepareAuthRequest = (url?: string) => {
     if (isAuthSessionRequest(url)) {
         return Promise.resolve(undefined);
     }
@@ -169,16 +177,25 @@ export const prepareAuthRequest = (
     return getFreshAccessToken();
 };
 
-export const startAuthLogout = (): Promise<void> => {
+export const startAuthLogout = () => {
     if (logoutPromise) {
         return logoutPromise;
     }
 
     isLogoutInProgress = true;
 
-    logoutPromise = logoutApiAuthTokens()
-        .catch(() => {
-            // Local logout must continue when the backend logout request fails.
+    logoutPromise = Promise.resolve(getAuthTokens())
+        .then(tokens => {
+            if (!tokens) {
+                return undefined;
+            }
+
+            return logoutApiAuthTokens(tokens).then(
+                () => undefined,
+                () => {
+                    // Local logout must continue when the backend logout request fails.
+                },
+            );
         })
         .then(() => {
             invalidateAuthSession();
@@ -199,16 +216,29 @@ export const logoutOtherDevicesSession = (): Promise<void> => {
     const version = authSessionVersion;
 
     logoutOtherDevicesPromise = getFreshAccessToken()
-        .then(currentAccessToken => {
-            if (!currentAccessToken) {
-                return Promise.reject(new AuthSessionExpiredError());
+        .then(accessToken => {
+            const tokens = getAuthTokens();
+
+            if (!accessToken || !tokens) {
+                return Promise.reject(new Error('Auth tokens are missing'));
             }
 
-            return authApi.logoutOtherDevices();
+            return authApi.logoutOtherDevices(tokens.refreshToken).catch((error: unknown) => {
+                if (error instanceof authApi.InvalidLogoutOtherDevicesResponseError) {
+                    return Promise.reject(new AuthTokenPersistenceError());
+                }
+
+                return Promise.reject(error);
+            });
         })
-        .then(({ token }) => {
+        .then(({ token, refresh_token: refreshToken }) => {
             assertCurrentAuthSession(version);
-            accessToken = token;
+
+            const isSaved = saveAuthTokens({ accessToken: token, refreshToken });
+
+            if (!isSaved) {
+                return Promise.reject(new AuthTokenPersistenceError());
+            }
         })
         .finally(() => {
             logoutOtherDevicesPromise = null;
@@ -217,7 +247,7 @@ export const logoutOtherDevicesSession = (): Promise<void> => {
     return logoutOtherDevicesPromise;
 };
 
-export const clearExpiredAuthSession = (): Promise<void> => {
+export const clearExpiredAuthSession = () => {
     invalidateAuthSession();
     return Promise.resolve();
 };

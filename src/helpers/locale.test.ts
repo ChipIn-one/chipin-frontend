@@ -1,7 +1,7 @@
 import { beforeEach, expect, test } from 'vitest';
 
 import {
-    LS_KEY_AUTH_SESSION_HINT,
+    LS_KEY_AUTH_TOKENS,
     LS_KEY_LOCALE,
     LS_KEY_USER,
 } from 'constants/localstorage';
@@ -14,7 +14,7 @@ import {
 } from './locale';
 
 beforeEach(() => {
-    LocalStorage.remove(LS_KEY_AUTH_SESSION_HINT);
+    LocalStorage.remove(LS_KEY_AUTH_TOKENS);
     LocalStorage.remove(LS_KEY_LOCALE);
     LocalStorage.remove(LS_KEY_USER);
 });
@@ -55,6 +55,7 @@ test('uses the explicit locale preference when cached user language is invalid',
     expect(resolveLocale()).toBe('ru');
 });
 
+
 test('prefers an explicit guest locale over a valid signed-out user cache', () => {
     LocalStorage.set(LS_KEY_USER, {
         role: 'USER',
@@ -92,7 +93,10 @@ test('prefers the cached user locale while an auth session is being restored', (
             sex: 'male',
         },
     });
-    LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
+    LocalStorage.set(LS_KEY_AUTH_TOKENS, {
+        accessToken: 'cached-access-token',
+        refreshToken: 'cached-refresh-token',
+    });
     saveLocalePreference('ru');
 
     expect(resolveLocale()).toBe('es');

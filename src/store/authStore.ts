@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 import { exchangeApiGoogleOAuthCode } from 'api/chipin';
 import {
-    AuthSessionExpiredError,
+    AuthTokenPersistenceError,
     clearExpiredAuthSession,
     establishAuthSession,
     invalidateAuthSession,
@@ -10,7 +10,8 @@ import {
     startAuthLogout,
     validateAuthSession,
 } from 'helpers/authSession';
-import { isUnauthorizedApiError, normalizeApiError } from 'helpers/errors';
+import { isNetworkApiError, isUnauthorizedApiError, normalizeApiError } from 'helpers/errors';
+import { getAuthTokens } from 'helpers/localStorage';
 
 import { useActivityStore } from './activity-store';
 import { useDashboardStore } from './dashboardStore';
@@ -73,8 +74,8 @@ export const useAuthStore = create<AuthStore>(set => ({
     exchangeGoogleOAuthCode: code => {
         useErrorsStore.getState().clearError('auth', 'login');
         return exchangeApiGoogleOAuthCode(code)
-            .then(({ token, is_new_user: isNewUser }) => {
-                establishAuthSession(token);
+            .then(({ token, refresh_token: refreshToken, is_new_user: isNewUser }) => {
+                establishAuthSession({ accessToken: token, refreshToken });
                 set({ status: 'authenticated', unauthReason: undefined, isNewUser });
 
                 const { fetchSetDashboardData, setDefaultAppMode } =
@@ -99,7 +100,10 @@ export const useAuthStore = create<AuthStore>(set => ({
                 resetAuthScopedStores();
                 set({
                     status: 'unauthenticated',
-                    unauthReason: 'error',
+                    unauthReason:
+                        error instanceof AuthTokenPersistenceError
+                            ? 'persistence_error'
+                            : 'error',
                     isNewUser: null,
                 });
                 useErrorsStore.getState().setError('auth', 'login', normalizeApiError(error));
@@ -108,15 +112,36 @@ export const useAuthStore = create<AuthStore>(set => ({
     },
 
     refreshAuthTokens: () => {
-        return validateAuthSession().then(nextAccessToken => {
-            if (!nextAccessToken) {
-                useAuthStore.getState().expireSession();
-                return Promise.reject(new Error('Auth session is missing or expired'));
-            }
+        return validateAuthSession()
+            .then(tokens => {
+                if (!tokens) {
+                    useAuthStore.getState().expireSession();
+                    return Promise.reject(new Error('Auth tokens are missing'));
+                }
 
-            set({ status: 'authenticated', unauthReason: undefined });
-            return nextAccessToken;
-        });
+                set({ status: 'authenticated', unauthReason: undefined });
+
+                return tokens.accessToken;
+            })
+            .catch((error: unknown) => {
+                if (error instanceof AuthTokenPersistenceError) {
+                    useAuthStore.getState().expireSession();
+                    return Promise.reject(error);
+                }
+
+                if (!isNetworkApiError(error)) {
+                    return Promise.reject(error);
+                }
+
+                const cachedTokens = getAuthTokens();
+
+                if (!cachedTokens) {
+                    return Promise.reject(error);
+                }
+
+                set({ status: 'authenticated', unauthReason: undefined });
+                return cachedTokens.accessToken;
+            });
     },
 
     logoutOtherDevices: () => {
@@ -131,13 +156,18 @@ export const useAuthStore = create<AuthStore>(set => ({
                 setError('auth', 'logoutOtherDevices', normalizeApiError(error));
                 if (
                     !isUnauthorizedApiError(error) &&
-                    !(error instanceof AuthSessionExpiredError)
+                    !(error instanceof AuthTokenPersistenceError)
                 ) {
                     return Promise.reject(error);
                 }
 
+                const reason =
+                    error instanceof AuthTokenPersistenceError
+                        ? 'persistence_error'
+                        : 'expired';
+
                 return clearExpiredAuthSession().then(() => {
-                    useAuthStore.getState().setUnauthenticated('expired');
+                    useAuthStore.getState().setUnauthenticated(reason);
                     return Promise.reject(error);
                 });
             })
