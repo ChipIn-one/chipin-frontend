@@ -207,7 +207,7 @@ test('does not show an explanatory description above the group debt sections', (
         });
 });
 
-test('renders the group debt list inside a dedicated scroll area', () => {
+test('renders the group debt list as an accessible selection region', () => {
     const user = userEvent.setup();
 
     render(<SettleUpModal source="group" group={group} />);
