@@ -2,7 +2,8 @@ import { create } from 'zustand';
 
 import { exchangeApiGoogleOAuthCode } from 'api/chipin';
 import {
-    AuthTokenPersistenceError,
+    AuthSessionExpiredError,
+    AuthSessionPersistenceError,
     clearExpiredAuthSession,
     establishAuthSession,
     invalidateAuthSession,
@@ -10,24 +11,20 @@ import {
     startAuthLogout,
     validateAuthSession,
 } from 'helpers/authSession';
-import { isNetworkApiError, isUnauthorizedApiError, normalizeApiError } from 'helpers/errors';
-import { getAuthTokens } from 'helpers/localStorage';
+import { isUnauthorizedApiError, normalizeApiError } from 'helpers/errors';
 
 import { useActivityStore } from './activity-store';
+import {
+    AUTH_STATUS,
+    type AuthStatus,
+    UNAUTH_REASON,
+    type UnauthReason,
+} from './authConstants';
 import { useDashboardStore } from './dashboardStore';
 import { useErrorsStore } from './errorsStore';
 import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
 import { useUsersStore } from './users-store';
-
-export type AuthStatus = 'unknown' | 'authenticated' | 'unauthenticated';
-export type UnauthReason =
-    | 'missing'
-    | 'expired'
-    | 'invalid'
-    | 'signed_out'
-    | 'error'
-    | 'persistence_error';
 
 export interface AuthStore {
     status: AuthStatus;
@@ -52,31 +49,31 @@ const resetAuthScopedStores = () => {
 };
 
 export const useAuthStore = create<AuthStore>(set => ({
-    status: 'unknown',
+    status: AUTH_STATUS.UNKNOWN,
     unauthReason: undefined,
     isNewUser: null,
 
     setAuthenticated: () => {
-        set({ status: 'authenticated', unauthReason: undefined });
+        set({ status: AUTH_STATUS.AUTHENTICATED, unauthReason: undefined });
     },
 
     setUnauthenticated: reason => {
         resetAuthScopedStores();
-        set({ status: 'unauthenticated', unauthReason: reason, isNewUser: null });
+        set({ status: AUTH_STATUS.UNAUTHENTICATED, unauthReason: reason, isNewUser: null });
     },
 
     expireSession: () => {
         invalidateAuthSession();
         resetAuthScopedStores();
-        set({ status: 'unauthenticated', unauthReason: 'expired', isNewUser: null });
+        set({ status: AUTH_STATUS.UNAUTHENTICATED, unauthReason: UNAUTH_REASON.EXPIRED, isNewUser: null });
     },
 
     exchangeGoogleOAuthCode: code => {
         useErrorsStore.getState().clearError('auth', 'login');
         return exchangeApiGoogleOAuthCode(code)
-            .then(({ token, refresh_token: refreshToken, is_new_user: isNewUser }) => {
-                establishAuthSession({ accessToken: token, refreshToken });
-                set({ status: 'authenticated', unauthReason: undefined, isNewUser });
+            .then(({ token, is_new_user: isNewUser }) => {
+                establishAuthSession(token);
+                set({ status: AUTH_STATUS.AUTHENTICATED, unauthReason: undefined, isNewUser });
 
                 const { fetchSetDashboardData, setDefaultAppMode } =
                     useDashboardStore.getState();
@@ -97,51 +94,40 @@ export const useAuthStore = create<AuthStore>(set => ({
                 ]).then(() => undefined);
             })
             .catch((error: unknown) => {
-                resetAuthScopedStores();
-                set({
-                    status: 'unauthenticated',
-                    unauthReason:
-                        error instanceof AuthTokenPersistenceError
-                            ? 'persistence_error'
-                            : 'error',
-                    isNewUser: null,
+                const cleanup = error instanceof AuthSessionPersistenceError
+                    ? startAuthLogout()
+                    : Promise.resolve();
+
+                return cleanup.then(() => {
+                    resetAuthScopedStores();
+                    set({
+                        status: AUTH_STATUS.UNAUTHENTICATED,
+                        unauthReason:
+                            error instanceof AuthSessionPersistenceError
+                                ? UNAUTH_REASON.PERSISTENCE_ERROR
+                                : UNAUTH_REASON.ERROR,
+                        isNewUser: null,
+                    });
+                    useErrorsStore.getState().setError(
+                        'auth',
+                        'login',
+                        normalizeApiError(error),
+                    );
+                    return Promise.reject(error);
                 });
-                useErrorsStore.getState().setError('auth', 'login', normalizeApiError(error));
-                return Promise.reject(error);
             });
     },
 
     refreshAuthTokens: () => {
-        return validateAuthSession()
-            .then(tokens => {
-                if (!tokens) {
-                    useAuthStore.getState().expireSession();
-                    return Promise.reject(new Error('Auth tokens are missing'));
-                }
+        return validateAuthSession().then(nextAccessToken => {
+            if (!nextAccessToken) {
+                useAuthStore.getState().expireSession();
+                return Promise.reject(new Error('Auth session is missing or expired'));
+            }
 
-                set({ status: 'authenticated', unauthReason: undefined });
-
-                return tokens.accessToken;
-            })
-            .catch((error: unknown) => {
-                if (error instanceof AuthTokenPersistenceError) {
-                    useAuthStore.getState().expireSession();
-                    return Promise.reject(error);
-                }
-
-                if (!isNetworkApiError(error)) {
-                    return Promise.reject(error);
-                }
-
-                const cachedTokens = getAuthTokens();
-
-                if (!cachedTokens) {
-                    return Promise.reject(error);
-                }
-
-                set({ status: 'authenticated', unauthReason: undefined });
-                return cachedTokens.accessToken;
-            });
+            set({ status: AUTH_STATUS.AUTHENTICATED, unauthReason: undefined });
+            return nextAccessToken;
+        });
     },
 
     logoutOtherDevices: () => {
@@ -156,18 +142,13 @@ export const useAuthStore = create<AuthStore>(set => ({
                 setError('auth', 'logoutOtherDevices', normalizeApiError(error));
                 if (
                     !isUnauthorizedApiError(error) &&
-                    !(error instanceof AuthTokenPersistenceError)
+                    !(error instanceof AuthSessionExpiredError)
                 ) {
                     return Promise.reject(error);
                 }
 
-                const reason =
-                    error instanceof AuthTokenPersistenceError
-                        ? 'persistence_error'
-                        : 'expired';
-
                 return clearExpiredAuthSession().then(() => {
-                    useAuthStore.getState().setUnauthenticated(reason);
+                    useAuthStore.getState().setUnauthenticated(UNAUTH_REASON.EXPIRED);
                     return Promise.reject(error);
                 });
             })
@@ -187,7 +168,7 @@ export const useAuthStore = create<AuthStore>(set => ({
             .then(() => {
                 setLoading('auth', 'signOut', 'fetched');
                 resetAuthScopedStores();
-                set({ status: 'unauthenticated', unauthReason: 'signed_out', isNewUser: null });
+                set({ status: AUTH_STATUS.UNAUTHENTICATED, unauthReason: UNAUTH_REASON.SIGNED_OUT, isNewUser: null });
             })
             .catch(error => {
                 setLoading('auth', 'signOut', 'fetched');

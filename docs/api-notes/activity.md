@@ -6,9 +6,9 @@ The ChipIn knowledge base is the authority for activity semantics. This page rec
 frontend/API-boundary handling needed to implement those requirements without copying the
 specification. Resolve the canonical sources from:
 
-- `ChipIn-one/chipin-knowledge-base@main/common/glossary.md`
-- `ChipIn-one/chipin-knowledge-base@main/common/specs/activity.md`
-- `ChipIn-one/chipin-knowledge-base@main/common/specs/api/README.md`
+- `ChipIn-one/chipin-knowledge-base@master/common/glossary.md`
+- `ChipIn-one/chipin-knowledge-base@master/common/specs/activity.md`
+- `ChipIn-one/chipin-knowledge-base@master/common/specs/api/README.md`
 
 ## Client boundary rules
 

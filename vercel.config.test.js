@@ -92,7 +92,32 @@ describe('Vercel API proxy routing', () => {
         expect(headers['X-Vercel-Enable-Rewrite-Caching']).toBe('0');
     });
 
-    test('keeps automatic Vercel Git deployments disabled', () => {
-        expect(config.git?.deploymentEnabled).toBe(false);
+    test('disables automatic Vercel Git deployments only for dev and main', () => {
+        expect(config.git?.deploymentEnabled).toEqual({ dev: false, main: false });
+    });
+});
+
+
+describe('Vercel production security headers', () => {
+    test('keeps script-src free of unsafe-inline while preserving connect-src', () => {
+        const appHeadersRule = config.headers.find(rule => rule.source === '/(.*)');
+        const headers = Object.fromEntries(
+            appHeadersRule.headers.map(header => [header.key, header.value]),
+        );
+        const directives = Object.fromEntries(
+            headers['Content-Security-Policy']
+                .split(';')
+                .map(directive => directive.trim())
+                .filter(Boolean)
+                .map(directive => {
+                    const [name, ...values] = directive.split(/\s+/);
+                    return [name, values.join(' ')];
+                }),
+        );
+
+        expect(directives['script-src']).toBe("'self' blob:");
+        expect(directives['script-src']).not.toContain("'unsafe-inline'");
+        expect(directives['connect-src']).toBe("'self' https://*.sentry.io");
+        expect(headers['X-Frame-Options']).toBe('DENY');
     });
 });

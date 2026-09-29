@@ -1,26 +1,33 @@
+import { AUTH_API_PATH } from 'api/auth.constants';
 import * as authApi from 'api/authApi';
 import { logoutApiAuthTokens, refreshApiAuthTokens } from 'api/chipin';
 import { getApiErrorStatus } from 'helpers/errors';
-import { type AuthTokens, clearAuthTokens, getAuthTokens, saveAuthTokens } from 'helpers/localStorage';
+import { hasAuthSessionHint, setAuthSessionHint } from 'helpers/localStorage';
 
 const ACCESS_TOKEN_REFRESH_BUFFER_SECONDS = 60;
-const AUTH_GOOGLE_EXCHANGE_PATH = '/auth/oauth/google/exchange';
-const AUTH_LOGOUT_PATH = '/auth/logout';
-const AUTH_REFRESH_PATH = '/auth/refresh';
-
-let refreshPromise: Promise<AuthTokens | null> | null = null;
+const AUTH_REFRESH_LOCK_NAME = 'chipin-auth-refresh';
+let accessToken: string | null = null;
+let refreshPromise: Promise<string | null> | null = null;
 let logoutPromise: Promise<void> | null = null;
 let logoutOtherDevicesPromise: Promise<void> | null = null;
 let isLogoutInProgress = false;
+let isSessionRestorationBlocked = false;
+let isSessionExplicitlySignedOut = false;
 let authSessionVersion = 0;
 
-export class AuthTokenPersistenceError extends Error {
+export class AuthSessionExpiredError extends Error {
     constructor() {
-        super('Auth tokens could not be persisted');
+        super('Auth session is missing or expired');
     }
 }
 
-const assertCurrentAuthSession = (version: number) => {
+export class AuthSessionPersistenceError extends Error {
+    constructor() {
+        super('Auth session restore marker could not be persisted');
+    }
+}
+
+const assertCurrentAuthSession = (version: number): void => {
     if (version !== authSessionVersion) {
         throw new Error('Auth session changed during token rotation');
     }
@@ -32,18 +39,39 @@ export const isAuthSessionCurrent = (version: number): boolean => {
     return version === authSessionVersion;
 };
 
-export const invalidateAuthSession = (): void => {
+const invalidateAuthSessionState = (isSignedOut: boolean): void => {
     authSessionVersion += 1;
-    clearAuthTokens();
+    accessToken = null;
+    isSessionExplicitlySignedOut = isSignedOut;
+    isSessionRestorationBlocked = !setAuthSessionHint(false);
 };
 
-export const establishAuthSession = (tokens: AuthTokens): void => {
-    authSessionVersion += 1;
-    clearAuthTokens();
+export const invalidateAuthSession = (): void => {
+    invalidateAuthSessionState(false);
+};
 
-    if (!saveAuthTokens(tokens)) {
-        throw new AuthTokenPersistenceError();
+export const markAuthSessionSignedOut = (): void => {
+    invalidateAuthSessionState(true);
+};
+
+export const isAuthSessionSignedOut = (): boolean => isSessionExplicitlySignedOut;
+
+export const hasAuthAccessTokenRotated = (previousAccessToken: string): boolean => {
+    return accessToken !== null && accessToken !== previousAccessToken;
+};
+
+export const establishAuthSession = (nextAccessToken: string): void => {
+    authSessionVersion += 1;
+    accessToken = null;
+
+    if (!setAuthSessionHint(true)) {
+        isSessionRestorationBlocked = true;
+        throw new AuthSessionPersistenceError();
     }
+
+    isSessionRestorationBlocked = false;
+    isSessionExplicitlySignedOut = false;
+    accessToken = nextAccessToken;
 };
 
 const decodeJwtPayload = (token: string): unknown => {
@@ -82,7 +110,7 @@ const getJwtExpiration = (token: string): number | null => {
     return exp;
 };
 
-const isAccessTokenExpiring = (token: string) => {
+const isAccessTokenExpiring = (token: string): boolean => {
     const expiration = getJwtExpiration(token);
 
     if (!expiration) {
@@ -92,40 +120,80 @@ const isAccessTokenExpiring = (token: string) => {
     return Date.now() / 1000 >= expiration - ACCESS_TOKEN_REFRESH_BUFFER_SECONDS;
 };
 
-const isAuthSessionRequest = (url?: string) => {
-    return (
-        url?.endsWith(AUTH_GOOGLE_EXCHANGE_PATH) ||
-        url?.endsWith(AUTH_REFRESH_PATH) ||
-        url?.endsWith(AUTH_LOGOUT_PATH)
+const isAuthSessionRequest = (url?: string): boolean => {
+    return Boolean(
+        url?.endsWith(AUTH_API_PATH.GOOGLE_OAUTH_EXCHANGE) ||
+        url?.endsWith(AUTH_API_PATH.REFRESH) ||
+        url?.endsWith(AUTH_API_PATH.LOGOUT),
     );
 };
 
-const refreshAuthTokens = (refreshToken: string) => {
+interface AuthRefreshLockManager {
+    request: (
+        name: string,
+        callback: () => Promise<string | null>,
+    ) => Promise<string | null>;
+}
+
+const getAuthRefreshLockManager = (): AuthRefreshLockManager | null => {
+    if (typeof navigator === 'undefined') {
+        return null;
+    }
+
+    const locks = Reflect.get(navigator, 'locks');
+
+    if (
+        !locks ||
+        typeof locks !== 'object' ||
+        typeof Reflect.get(locks, 'request') !== 'function'
+    ) {
+        return null;
+    }
+
+    return locks as AuthRefreshLockManager;
+};
+
+const withAuthRefreshLock = (
+    callback: () => Promise<string | null>,
+): Promise<string | null> => {
+    const lockManager = getAuthRefreshLockManager();
+
+    if (!lockManager) {
+        return callback();
+    }
+
+    return lockManager.request(AUTH_REFRESH_LOCK_NAME, callback);
+};
+
+const refreshAccessToken = (): Promise<string | null> => {
     if (!refreshPromise) {
         const version = authSessionVersion;
 
-        refreshPromise = refreshApiAuthTokens(refreshToken)
-            .then(({ token, refresh_token: refreshToken }) => {
+        refreshPromise = withAuthRefreshLock(() => {
+            assertCurrentAuthSession(version);
+
+            if (
+                isLogoutInProgress ||
+                isSessionRestorationBlocked ||
+                (!accessToken && !hasAuthSessionHint())
+            ) {
+                return Promise.resolve(null);
+            }
+
+            return refreshApiAuthTokens().then(({ token }) => {
                 assertCurrentAuthSession(version);
-
-                const nextTokens = { accessToken: token, refreshToken };
-                const isSaved = saveAuthTokens(nextTokens);
-
-                if (!isSaved) {
-                    return Promise.reject(new AuthTokenPersistenceError());
-                }
-
-                return nextTokens;
-            })
-            .catch(error => {
+                accessToken = token;
+                return token;
+            });
+        })
+            .catch((error: unknown) => {
                 if (getApiErrorStatus(error) === 401) {
                     assertCurrentAuthSession(version);
                     invalidateAuthSession();
-
                     return null;
                 }
 
-                throw error;
+                return Promise.reject(error);
             })
             .finally(() => {
                 refreshPromise = null;
@@ -135,41 +203,41 @@ const refreshAuthTokens = (refreshToken: string) => {
     return refreshPromise;
 };
 
-export const validateAuthSession = (): Promise<AuthTokens | null> => {
-    if (isLogoutInProgress) {
+export const refreshAuthSession = (): Promise<string | null> => {
+    if (isLogoutInProgress || isSessionRestorationBlocked) {
         return Promise.resolve(null);
     }
 
-    const tokens = getAuthTokens();
-
-    if (!tokens) {
+    if (!accessToken && !hasAuthSessionHint()) {
         return Promise.resolve(null);
     }
 
-    return refreshAuthTokens(tokens.refreshToken);
+    return refreshAccessToken();
 };
 
-export const getFreshAccessToken = () => {
-    if (isLogoutInProgress) {
-        return Promise.resolve(null);
-    }
-
-    const tokens = getAuthTokens();
-
-    if (!tokens) {
-        return Promise.resolve(null);
-    }
-
-    if (!isAccessTokenExpiring(tokens.accessToken)) {
-        return Promise.resolve(tokens.accessToken);
-    }
-
-    return refreshAuthTokens(tokens.refreshToken).then(nextTokens => {
-        return nextTokens?.accessToken ?? null;
-    });
+export const validateAuthSession = (): Promise<string | null> => {
+    return refreshAuthSession();
 };
 
-export const prepareAuthRequest = (url?: string) => {
+export const getFreshAccessToken = (): Promise<string | null> => {
+    if (isLogoutInProgress || isSessionRestorationBlocked) {
+        return Promise.resolve(null);
+    }
+
+    if (!accessToken && !hasAuthSessionHint()) {
+        return Promise.resolve(null);
+    }
+
+    if (!accessToken || isAccessTokenExpiring(accessToken)) {
+        return refreshAccessToken();
+    }
+
+    return Promise.resolve(accessToken);
+};
+
+export const prepareAuthRequest = (
+    url?: string,
+): Promise<string | null | undefined> => {
     if (isAuthSessionRequest(url)) {
         return Promise.resolve(undefined);
     }
@@ -177,28 +245,17 @@ export const prepareAuthRequest = (url?: string) => {
     return getFreshAccessToken();
 };
 
-export const startAuthLogout = () => {
+export const startAuthLogout = (): Promise<void> => {
     if (logoutPromise) {
         return logoutPromise;
     }
 
     isLogoutInProgress = true;
+    markAuthSessionSignedOut();
 
-    logoutPromise = Promise.resolve(getAuthTokens())
-        .then(tokens => {
-            if (!tokens) {
-                return undefined;
-            }
-
-            return logoutApiAuthTokens(tokens).then(
-                () => undefined,
-                () => {
-                    // Local logout must continue when the backend logout request fails.
-                },
-            );
-        })
-        .then(() => {
-            invalidateAuthSession();
+    logoutPromise = logoutApiAuthTokens()
+        .catch(() => {
+            // Local logout must continue when the backend logout request fails.
         })
         .finally(() => {
             isLogoutInProgress = false;
@@ -216,29 +273,16 @@ export const logoutOtherDevicesSession = (): Promise<void> => {
     const version = authSessionVersion;
 
     logoutOtherDevicesPromise = getFreshAccessToken()
-        .then(accessToken => {
-            const tokens = getAuthTokens();
-
-            if (!accessToken || !tokens) {
-                return Promise.reject(new Error('Auth tokens are missing'));
+        .then(currentAccessToken => {
+            if (!currentAccessToken) {
+                return Promise.reject(new AuthSessionExpiredError());
             }
 
-            return authApi.logoutOtherDevices(tokens.refreshToken).catch((error: unknown) => {
-                if (error instanceof authApi.InvalidLogoutOtherDevicesResponseError) {
-                    return Promise.reject(new AuthTokenPersistenceError());
-                }
-
-                return Promise.reject(error);
-            });
+            return authApi.logoutOtherDevices();
         })
-        .then(({ token, refresh_token: refreshToken }) => {
+        .then(({ token }) => {
             assertCurrentAuthSession(version);
-
-            const isSaved = saveAuthTokens({ accessToken: token, refreshToken });
-
-            if (!isSaved) {
-                return Promise.reject(new AuthTokenPersistenceError());
-            }
+            accessToken = token;
         })
         .finally(() => {
             logoutOtherDevicesPromise = null;
@@ -247,7 +291,7 @@ export const logoutOtherDevicesSession = (): Promise<void> => {
     return logoutOtherDevicesPromise;
 };
 
-export const clearExpiredAuthSession = () => {
+export const clearExpiredAuthSession = (): Promise<void> => {
     invalidateAuthSession();
     return Promise.resolve();
 };

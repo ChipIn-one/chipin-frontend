@@ -304,16 +304,20 @@ const GroupSettingsTab = ({ group }: Props) => {
                     </Box>
                 </LeaveGroupAlertDialog>
 
-                <Separator size="4" my="1" />
+                {isGroupOwner && (
+                    <>
+                        <Separator size="4" my="1" />
 
-                <RemoveGroupAlertDialog>
-                    <Box width="100%" asChild>
-                        <Button variant="ghost" color="red" size="3">
-                            <LucideTrash2 size={16} />
-                            {t('common:buttons.removeGroup')}
-                        </Button>
-                    </Box>
-                </RemoveGroupAlertDialog>
+                        <RemoveGroupAlertDialog>
+                            <Box width="100%" asChild>
+                                <Button variant="ghost" color="red" size="3">
+                                    <LucideTrash2 size={16} />
+                                    {t('common:buttons.removeGroup')}
+                                </Button>
+                            </Box>
+                        </RemoveGroupAlertDialog>
+                    </>
+                )}
             </Flex>
         </Flex>
     );

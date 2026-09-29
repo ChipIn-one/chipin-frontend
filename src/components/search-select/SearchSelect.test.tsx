@@ -39,8 +39,13 @@ test('stretches the trigger and matches the dropdown width by default', () => {
     expect(trigger.style.getPropertyValue('--width')).toBe('100%');
 
     return interaction.click(trigger).then(() => {
-        expect(screen.getByRole('dialog').style.getPropertyValue('--width')).toBe(
+        const dropdown = screen.getByRole('dialog');
+
+        expect(dropdown.style.getPropertyValue('--width')).toBe(
             'var(--radix-popover-trigger-width)',
+        );
+        expect(dropdown.style.getPropertyValue('--max-height')).toBe(
+            'var(--radix-popover-content-available-height)',
         );
     });
 });
@@ -56,5 +61,32 @@ test('supports an explicit dropdown width and max width', () => {
         expect(dropdown.style.getPropertyValue('--width')).toBe('320px');
         expect(dropdown.style.getPropertyValue('--min-width')).toBe('0');
         expect(dropdown.style.getPropertyValue('--max-width')).toBe('none');
+    });
+});
+
+
+test('exposes the selected option with pressed semantics', () => {
+    const interaction = userEvent.setup();
+
+    renderSelect({
+        items: [
+            { value: 'one', label: 'One' },
+            { value: 'two', label: 'Two' },
+        ],
+    });
+
+    return interaction.click(screen.getByRole('button', { name: 'One' })).then(() => {
+        expect(
+            screen.getByRole('button', {
+                name: 'One',
+                pressed: true,
+            }),
+        ).toBeTruthy();
+        expect(
+            screen.getByRole('button', {
+                name: 'Two',
+                pressed: false,
+            }),
+        ).toBeTruthy();
     });
 });

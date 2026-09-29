@@ -40,7 +40,6 @@ describe('parseRegisterResponse', () => {
                 displayName: 'Contract User',
             },
             accessToken: 'access-token',
-            refreshToken: 'refresh-token',
             expiresIn: 3600,
         };
 
@@ -50,7 +49,6 @@ describe('parseRegisterResponse', () => {
     it.each([
         { field: 'runId', value: '' },
         { field: 'accessToken', value: '' },
-        { field: 'refreshToken', value: '' },
         { field: 'expiresIn', value: 0 },
         { field: 'expiresIn', value: Number.POSITIVE_INFINITY },
     ])('rejects an invalid $field field', ({ field, value }) => {
@@ -62,12 +60,27 @@ describe('parseRegisterResponse', () => {
                 displayName: 'Contract User',
             },
             accessToken: 'access-token',
-            refreshToken: 'refresh-token',
             expiresIn: 3600,
             [field]: value,
         };
 
         expect(() => parseRegisterResponse(response)).toThrow();
+    });
+
+    it('rejects a response that exposes a refresh token', () => {
+        expect(() =>
+            parseRegisterResponse({
+                runId: 'contract-run',
+                user: {
+                    id: 'user-id',
+                    email: 'contract@example.com',
+                    displayName: 'Contract User',
+                },
+                accessToken: 'access-token',
+                refreshToken: 'refresh-token',
+                expiresIn: 3600,
+            }),
+        ).toThrow('register response must not expose a refresh token');
     });
 
     it.each(['id', 'email', 'displayName'])('rejects an empty user.%s field', (field) => {
@@ -81,7 +94,6 @@ describe('parseRegisterResponse', () => {
                     [field]: '',
                 },
                 accessToken: 'access-token',
-                refreshToken: 'refresh-token',
                 expiresIn: 3600,
             }),
         ).toThrow();
@@ -139,20 +151,24 @@ describe('parseSelfUserResponse', () => {
 });
 
 describe('parseRefreshResponse', () => {
-    it('accepts a non-empty refresh token pair', () => {
+    it('accepts a non-empty access-token response', () => {
         const value = {
             token: 'new-access-token',
-            refresh_token: 'new-refresh-token',
         };
 
         expect(parseRefreshResponse(value)).toEqual(value);
     });
 
-    it.each([
-        { refresh_token: 'new-refresh-token', token: '' },
-        { refresh_token: '', token: 'new-access-token' },
-        { refresh_token: 42, token: 'new-access-token' },
-    ])('rejects an invalid refresh token pair', (value) => {
-        expect(() => parseRefreshResponse(value)).toThrow();
+    it('rejects an empty access token', () => {
+        expect(() => parseRefreshResponse({ token: '' })).toThrow();
+    });
+
+    it('rejects a response that exposes a refresh token', () => {
+        expect(() =>
+            parseRefreshResponse({
+                token: 'new-access-token',
+                refresh_token: 'new-refresh-token',
+            }),
+        ).toThrow('refresh response must not expose a refresh token');
     });
 });

@@ -3,9 +3,11 @@ import { useLocation } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
 import { ROUTES } from 'constants/routes';
-import { getAuthTokens } from 'helpers/localStorage';
+import { hasAuthSessionHint } from 'helpers/localStorage';
 import { selectAuthStatus } from 'store/authSelectors';
+import { AUTH_STATUS, UNAUTH_REASON } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
+import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
 import { useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useUsersStore } from 'store/users-store';
@@ -13,6 +15,9 @@ import { useUsersStore } from 'store/users-store';
 export const useCheckSignIn = () => {
     const location = useLocation();
     const status = useAuthStore(selectAuthStatus);
+    const isBackendUnavailable = useBackendAvailabilityStore(
+        state => state.isUnavailable,
+    );
     const { fetchSetDashboardData, setDefaultAppMode } = useDashboardStore(
         useShallow(state => ({
             fetchSetDashboardData: state.fetchSetDashboardData,
@@ -32,12 +37,16 @@ export const useCheckSignIn = () => {
     const refreshAuthTokens = useAuthStore(s => s.refreshAuthTokens);
 
     useEffect(() => {
-        if (location.pathname === ROUTES.OAUTH_CALLBACK || status !== 'unknown') {
+        if (
+            location.pathname === ROUTES.OAUTH_CALLBACK ||
+            status !== AUTH_STATUS.UNKNOWN ||
+            isBackendUnavailable
+        ) {
             return;
         }
 
-        if (!getAuthTokens()) {
-            setUnauthenticated('missing');
+        if (!hasAuthSessionHint()) {
+            setUnauthenticated(UNAUTH_REASON.MISSING);
             return;
         }
 
@@ -56,8 +65,12 @@ export const useCheckSignIn = () => {
                 ]).then(() => undefined);
             })
             .catch(() => {
-                if (useAuthStore.getState().status === 'unknown') {
-                    setUnauthenticated('error');
+                if (useBackendAvailabilityStore.getState().isUnavailable) {
+                    return;
+                }
+
+                if (useAuthStore.getState().status === AUTH_STATUS.UNKNOWN) {
+                    setUnauthenticated(UNAUTH_REASON.ERROR);
                 }
             });
     }, [
@@ -66,6 +79,7 @@ export const useCheckSignIn = () => {
         fetchSetGroups,
         fetchSetUser,
         hasCachedUser,
+        isBackendUnavailable,
         location.pathname,
         refreshAuthTokens,
         setAuthenticated,

@@ -6,7 +6,7 @@ import { Box, Flex, Popover, Text, TextField } from '@radix-ui/themes';
 
 import { getFilterFunction } from 'helpers/text';
 
-import { OptionButton, OptionsScrollArea } from './styled';
+import { OptionButton, OptionsScrollArea, SearchSelectContent } from './styled';
 import type { SearchSelectItem } from './types';
 
 type BoxProps = ComponentProps<typeof Box>;
@@ -97,28 +97,31 @@ const SearchSelect = ({
                 </Box>
             </Popover.Trigger>
 
-            <Popover.Content
+            <SearchSelectContent
                 align="end"
                 sideOffset={4}
                 width={resolvedContentWidth}
                 minWidth={resolvedContentMinWidth}
                 maxWidth={contentMaxWidth}
+                maxHeight="var(--radix-popover-content-available-height)"
             >
-                <Flex direction="column" gap="2">
-                    <TextField.Root
-                        autoFocus
-                        size="3"
-                        placeholder={searchPlaceholder}
-                        value={searchValue}
-                        onChange={event => setSearchValue(event.target.value)}
-                        aria-label={searchPlaceholder}
-                    >
-                        <TextField.Slot side="left">
-                            <LucideSearch size={16} />
-                        </TextField.Slot>
-                    </TextField.Root>
+                <Flex direction="column" gap="2" minHeight="0">
+                    <Box flexShrink="0">
+                        <TextField.Root
+                            autoFocus
+                            size="3"
+                            placeholder={searchPlaceholder}
+                            value={searchValue}
+                            onChange={event => setSearchValue(event.target.value)}
+                            aria-label={searchPlaceholder}
+                        >
+                            <TextField.Slot side="left">
+                                <LucideSearch size={16} />
+                            </TextField.Slot>
+                        </TextField.Root>
+                    </Box>
 
-                    <OptionsScrollArea type="always" scrollbars="vertical">
+                    <OptionsScrollArea type="auto" scrollbars="vertical">
                         <Flex direction="column" gap="2" pr="4">
                             {filteredItems.length > 0 ? (
                                 filteredItems.map(item => {
@@ -132,6 +135,9 @@ const SearchSelect = ({
                                             variant="soft"
                                             color={isSelected ? 'blue' : 'gray'}
                                             highContrast={isSelected}
+                                            aria-pressed={
+                                                value === undefined ? undefined : isSelected
+                                            }
                                             onClick={() => onValueChange(item.value)}
                                         >
                                             <Flex
@@ -159,7 +165,7 @@ const SearchSelect = ({
                         </Flex>
                     </OptionsScrollArea>
                 </Flex>
-            </Popover.Content>
+            </SearchSelectContent>
         </Popover.Root>
     );
 };

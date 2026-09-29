@@ -35,7 +35,7 @@ The generic AI lifecycle, publication, and reviewer roles are owned by the
 canonical `syllik/ai-workflow`; this file contains only ChipIn-specific
 commands and repository policy.
 
-The read-only knowledge-base dependency is `ChipIn-one/chipin-knowledge-base@main`.
+The read-only knowledge-base dependency is `ChipIn-one/chipin-knowledge-base@master`.
 Resolve it from `../chipin-knowledge-base` when available. In GitHub-only/web
 environments, resolve the same canonical files through authenticated GitHub access;
 a missing sibling checkout alone is not a reason to substitute copied or stale KB

@@ -3,19 +3,23 @@ import axios from 'axios';
 import { API_ERROR_CODE } from 'constants/errors';
 import {
     getAuthSessionVersion,
+    hasAuthAccessTokenRotated,
     isAuthSessionCurrent,
+    isAuthSessionSignedOut,
     prepareAuthRequest,
+    refreshAuthSession,
 } from 'helpers/authSession';
 import { getChipInApiUrl } from 'helpers/env';
 import { getApiErrorPayload, isLikelyBackendOutageError } from 'helpers/errors';
 import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
 
+import { AUTH_API_PATH } from './auth.constants';
 import { apiInstance, publicApiInstance } from './chipin.instance';
 import { checkBackendHealth } from './healthApi';
 
-const AUTH_LOGOUT_PATH = '/auth/logout';
-const AUTH_OAUTH_EXCHANGE_PATH = '/auth/oauth/google/exchange';
+const AUTHORIZATION_BEARER_PREFIX = 'Bearer ';
 const AUTH_REQUEST_CANCELLED_MESSAGE = 'Auth request cancelled';
+const AUTH_RETRY_CONFIG_KEY = 'chipinAuthRetry';
 const HEALTH_PATH = '/health';
 
 let areChipInApiInterceptorsConfigured = false;
@@ -28,7 +32,7 @@ class AuthRequestCancelledError extends Error {
     }
 }
 
-const getRequestPathname = (url?: string) => {
+const getRequestPathname = (url?: string): string => {
     if (!url) {
         return '';
     }
@@ -40,7 +44,7 @@ const getRequestPathname = (url?: string) => {
     }
 };
 
-const isUnauthorizedError = (error: unknown) => {
+const isUnauthorizedError = (error: unknown): boolean => {
     if (!axios.isAxiosError(error)) {
         return false;
     }
@@ -50,14 +54,19 @@ const isUnauthorizedError = (error: unknown) => {
     return error.response?.status === 401 || data?.code === API_ERROR_CODE.AUTH_UNAUTHORIZED;
 };
 
-const isPublicAuthFlowUnauthorizedError = (error: unknown) => {
+const isOwnedAuthFlowUnauthorizedError = (error: unknown): boolean => {
     if (!isUnauthorizedError(error) || !axios.isAxiosError(error)) {
         return false;
     }
 
     const pathname = getRequestPathname(error.config?.url);
 
-    return pathname === AUTH_LOGOUT_PATH || pathname === AUTH_OAUTH_EXCHANGE_PATH;
+    return (
+        pathname === AUTH_API_PATH.LOGOUT ||
+        pathname === AUTH_API_PATH.GOOGLE_OAUTH_EXCHANGE ||
+        pathname === AUTH_API_PATH.REFRESH ||
+        pathname === AUTH_API_PATH.LOGOUT_OTHER_DEVICES
+    );
 };
 
 const confirmBackendAvailability = (error: unknown): Promise<never> => {
@@ -78,18 +87,23 @@ const processBackendAvailabilityError = (error: unknown): Promise<never> => {
     return Promise.reject(error);
 };
 
-const processApiResponseError = (error: unknown): Promise<never> => {
+const processApiResponseError = (error: unknown) => {
     if (error instanceof AuthRequestCancelledError) {
+        if (!isAuthSessionSignedOut()) {
+            onUnauthorizedSession?.();
+        }
+
         return Promise.reject(error);
     }
 
-    if (isPublicAuthFlowUnauthorizedError(error)) {
+    if (isOwnedAuthFlowUnauthorizedError(error)) {
         return Promise.reject(error);
     }
 
-    if (isUnauthorizedError(error)) {
-        const requestSessionVersion = axios.isAxiosError(error)
-            ? requestAuthSessionVersions.get(error.config ?? {})
+    if (isUnauthorizedError(error) && axios.isAxiosError(error)) {
+        const requestConfig = error.config;
+        const requestSessionVersion = requestConfig
+            ? requestAuthSessionVersions.get(requestConfig)
             : undefined;
 
         if (
@@ -99,8 +113,54 @@ const processApiResponseError = (error: unknown): Promise<never> => {
             return Promise.reject(error);
         }
 
-        onUnauthorizedSession?.();
-        return Promise.reject(error);
+        if (!requestConfig) {
+            onUnauthorizedSession?.();
+            return Promise.reject(error);
+        }
+
+        const authorizationHeader = requestConfig.headers.Authorization;
+        const requestAccessToken =
+            typeof authorizationHeader === 'string' &&
+            authorizationHeader.startsWith(AUTHORIZATION_BEARER_PREFIX)
+                ? authorizationHeader.slice(AUTHORIZATION_BEARER_PREFIX.length)
+                : null;
+        const hasRetriedRequest =
+            Reflect.get(requestConfig, AUTH_RETRY_CONFIG_KEY) === true;
+
+        if (hasRetriedRequest) {
+            if (
+                requestAccessToken &&
+                hasAuthAccessTokenRotated(requestAccessToken)
+            ) {
+                return Promise.reject(error);
+            }
+
+            onUnauthorizedSession?.();
+            return Promise.reject(error);
+        }
+
+        if (
+            requestAccessToken &&
+            hasAuthAccessTokenRotated(requestAccessToken)
+        ) {
+            Reflect.set(requestConfig, AUTH_RETRY_CONFIG_KEY, true);
+            return apiInstance.request(requestConfig);
+        }
+
+        const refreshSessionVersion = getAuthSessionVersion();
+
+        return refreshAuthSession().then(nextAccessToken => {
+            if (
+                !nextAccessToken ||
+                !isAuthSessionCurrent(refreshSessionVersion)
+            ) {
+                onUnauthorizedSession?.();
+                return Promise.reject(error);
+            }
+
+            Reflect.set(requestConfig, AUTH_RETRY_CONFIG_KEY, true);
+            return apiInstance.request(requestConfig);
+        });
     }
 
     return processBackendAvailabilityError(error);
@@ -116,7 +176,7 @@ const processPublicApiResponseError = (error: unknown): Promise<never> => {
 
 export const initChipInApiInterceptors = (
     onUnauthorizedSessionCallback?: () => void,
-) => {
+): void => {
     onUnauthorizedSession = onUnauthorizedSessionCallback;
 
     if (areChipInApiInterceptorsConfigured) {
@@ -128,15 +188,15 @@ export const initChipInApiInterceptors = (
     apiInstance.interceptors.request.use(config => {
         const authSessionVersion = getAuthSessionVersion();
 
-        return prepareAuthRequest(config.url).then(accessToken => {
+        return prepareAuthRequest(config.url).then(currentAccessToken => {
             requestAuthSessionVersions.set(config, authSessionVersion);
 
-            if (accessToken === null) {
+            if (currentAccessToken === null) {
                 return Promise.reject(new AuthRequestCancelledError());
             }
 
-            if (accessToken) {
-                config.headers.Authorization = `Bearer ${accessToken}`;
+            if (currentAccessToken) {
+                config.headers.Authorization = `Bearer ${currentAccessToken}`;
             }
 
             return config;

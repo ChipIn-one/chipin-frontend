@@ -12,6 +12,6 @@
 - After trusted publication, required `frontend-ci` must be green on the current PR head; then post exactly one `@codex review` for that head. Automatic Codex review is disabled. A changed head repeats green CI plus one fresh review request. Sol 5.6 High is escalation/fallback.
 - Only a human merges.
 - Review-critical repository instructions live in `AGENTS.md`; do not assume `.ai/context.md` or linked documentation is automatically loaded by managed GitHub review.
-- The read-only KB dependency is `ChipIn-one/chipin-knowledge-base@main`; resolve canonical files from a sibling checkout or authenticated GitHub/web access and never duplicate them locally.
+- The read-only KB dependency is `ChipIn-one/chipin-knowledge-base@master`; resolve canonical files from a sibling checkout or authenticated GitHub/web access and never duplicate them locally.
 - Backend contracts are unchanged unless explicitly requested.
 - Preserve ChipIn money, offline, persistence, concurrency, API/data-shape, accessibility, and i18n invariants.
