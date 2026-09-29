@@ -5,22 +5,18 @@ import * as chipinApi from 'api/chipin';
 import { LS_KEY_AUTH_TOKENS } from 'constants/localstorage';
 
 import {
-    AuthTokenPersistenceError,
     clearExpiredAuthSession,
     establishAuthSession,
+    getFreshAccessToken,
+    invalidateAuthSession,
     logoutOtherDevicesSession,
+    startAuthLogout,
     validateAuthSession,
 } from './authSession';
-import { getAuthTokens, saveAuthTokens } from './localStorage';
 
-const authApiMocks = vi.hoisted(() => {
-    class InvalidLogoutOtherDevicesResponseError extends Error {}
-
-    return {
-        InvalidLogoutOtherDevicesResponseError,
-        logoutOtherDevices: vi.fn(),
-    };
-});
+const authApiMocks = vi.hoisted(() => ({
+    logoutOtherDevices: vi.fn(),
+}));
 
 vi.mock('api/authApi', () => authApiMocks);
 
@@ -29,25 +25,27 @@ vi.mock('api/chipin', () => ({
     refreshApiAuthTokens: vi.fn(),
 }));
 
-const createAccessToken = (expiresAt: number) => {
+const createAccessToken = (expiresAt: number): string => {
     return `header.${btoa(JSON.stringify({ exp: expiresAt }))}.signature`;
 };
 
 describe('authSession', () => {
     let values: Map<string, string>;
+    let removeItem: ReturnType<typeof vi.fn>;
     let setItem: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
         values = new Map();
-        setItem = vi.fn((key: string, value: string) => {
-            values.set(key, value);
-        });
+        removeItem = vi.fn((key: string) => values.delete(key));
+        setItem = vi.fn((key: string, value: string) => values.set(key, value));
         vi.stubGlobal('localStorage', {
             clear: vi.fn(() => values.clear()),
             getItem: vi.fn((key: string) => values.get(key) ?? null),
-            removeItem: vi.fn((key: string) => values.delete(key)),
+            removeItem,
             setItem,
         });
+        vi.clearAllMocks();
+        invalidateAuthSession();
         vi.clearAllMocks();
     });
 
@@ -55,150 +53,111 @@ describe('authSession', () => {
         vi.unstubAllGlobals();
     });
 
-    test('forces server validation even when the local access token is not expiring', () => {
-        saveAuthTokens({
-            accessToken: createAccessToken(Date.now() / 1000 + 3_600),
-            refreshToken: 'current-refresh-token',
-        });
+    test('restores a reloaded session by refreshing the HttpOnly cookie and clears legacy tokens', () => {
+        values.set(
+            LS_KEY_AUTH_TOKENS,
+            JSON.stringify({
+                accessToken: 'legacy-access-token',
+                refreshToken: 'legacy-refresh-token',
+            }),
+        );
         vi.mocked(chipinApi.refreshApiAuthTokens).mockResolvedValue({
             token: 'next-access-token',
-            refresh_token: 'next-refresh-token',
         });
 
-        return validateAuthSession().then(tokens => {
-            expect(chipinApi.refreshApiAuthTokens).toHaveBeenCalledWith(
-                'current-refresh-token',
-            );
-            expect(tokens).toEqual({
-                accessToken: 'next-access-token',
-                refreshToken: 'next-refresh-token',
-            });
+        return validateAuthSession().then(accessToken => {
+            expect(chipinApi.refreshApiAuthTokens).toHaveBeenCalledWith();
+            expect(accessToken).toBe('next-access-token');
+            expect(removeItem).toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS);
+            expect(values.has(LS_KEY_AUTH_TOKENS)).toBe(false);
+            expect(setItem).not.toHaveBeenCalled();
         });
     });
 
-    test('preserves cached tokens when validation fails without a 401 response', () => {
-        const currentTokens = {
-            accessToken: createAccessToken(Date.now() / 1000 + 3_600),
-            refreshToken: 'current-refresh-token',
-        };
-        const serviceError = {
-            isAxiosError: true,
-            response: { status: 500 },
-        };
-        saveAuthTokens(currentTokens);
-        vi.mocked(chipinApi.refreshApiAuthTokens).mockRejectedValue(serviceError);
+    test('keeps a fresh OAuth access token in memory without persisting it', () => {
+        const accessToken = createAccessToken(Date.now() / 1000 + 3_600);
 
-        return expect(validateAuthSession())
-            .rejects.toBe(serviceError)
-            .then(() => {
-                expect(getAuthTokens()).toEqual(currentTokens);
-            });
+        establishAuthSession(accessToken);
+
+        return getFreshAccessToken().then(result => {
+            expect(result).toBe(accessToken);
+            expect(chipinApi.refreshApiAuthTokens).not.toHaveBeenCalled();
+            expect(setItem).not.toHaveBeenCalled();
+        });
     });
 
-    test('clears revoked tokens after validation receives 401', () => {
-        saveAuthTokens({
-            accessToken: createAccessToken(Date.now() / 1000 + 3_600),
-            refreshToken: 'revoked-refresh-token',
+    test('shares one in-flight refresh between concurrent callers', () => {
+        let resolveRefresh: ((value: { token: string }) => void) | undefined;
+        const refreshRequest = new Promise<{ token: string }>(resolve => {
+            resolveRefresh = resolve;
         });
+        vi.mocked(chipinApi.refreshApiAuthTokens).mockReturnValue(refreshRequest);
+
+        const firstRequest = validateAuthSession();
+        const secondRequest = validateAuthSession();
+
+        expect(chipinApi.refreshApiAuthTokens).toHaveBeenCalledOnce();
+
+        resolveRefresh?.({ token: 'next-access-token' });
+
+        return Promise.all([firstRequest, secondRequest]).then(results => {
+            expect(results).toEqual(['next-access-token', 'next-access-token']);
+            expect(setItem).not.toHaveBeenCalled();
+        });
+    });
+
+    test('clears the in-memory session when refresh is rejected with 401', () => {
         vi.mocked(chipinApi.refreshApiAuthTokens).mockRejectedValue({
             isAxiosError: true,
             response: { status: 401 },
         });
 
-        return validateAuthSession().then(tokens => {
-            expect(tokens).toBeNull();
-            expect(getAuthTokens()).toBeNull();
+        return validateAuthSession().then(accessToken => {
+            expect(accessToken).toBeNull();
+            expect(setItem).not.toHaveBeenCalled();
         });
     });
 
-    test('does not restore tokens when validation resolves after session expiration', () => {
-        let resolveRefresh:
-            | ((value: { token: string; refresh_token: string }) => void)
-            | undefined;
-        const refreshRequest = new Promise<{
-            token: string;
-            refresh_token: string;
-        }>(resolve => {
-            resolveRefresh = resolve;
+    test('refreshes an expiring access token before a protected request', () => {
+        establishAuthSession(createAccessToken(0));
+        vi.mocked(chipinApi.refreshApiAuthTokens).mockResolvedValue({
+            token: 'next-access-token',
         });
-        saveAuthTokens({
-            accessToken: createAccessToken(Date.now() / 1000 + 3_600),
-            refreshToken: 'current-refresh-token',
+
+        return getFreshAccessToken().then(accessToken => {
+            expect(accessToken).toBe('next-access-token');
+            expect(chipinApi.refreshApiAuthTokens).toHaveBeenCalledOnce();
+        });
+    });
+
+    test('does not restore a stale refresh after the session was invalidated', () => {
+        let resolveRefresh: ((value: { token: string }) => void) | undefined;
+        const refreshRequest = new Promise<{ token: string }>(resolve => {
+            resolveRefresh = resolve;
         });
         vi.mocked(chipinApi.refreshApiAuthTokens).mockReturnValue(refreshRequest);
 
         const validation = validateAuthSession();
 
         clearExpiredAuthSession();
-        resolveRefresh?.({
-            token: 'stale-access-token',
-            refresh_token: 'stale-refresh-token',
-        });
+        resolveRefresh?.({ token: 'stale-access-token' });
 
-        return expect(validation)
-            .rejects.toThrow('Auth session changed during token rotation')
-            .then(() => {
-                expect(getAuthTokens()).toBeNull();
-            });
+        return expect(validation).rejects.toThrow(
+            'Auth session changed during token rotation',
+        );
     });
 
-    test('keeps a newly established session when an older refresh resolves', () => {
-        let resolveRefresh:
-            | ((value: { token: string; refresh_token: string }) => void)
-            | undefined;
-        const refreshRequest = new Promise<{
-            token: string;
-            refresh_token: string;
-        }>(resolve => {
-            resolveRefresh = resolve;
-        });
-        saveAuthTokens({
-            accessToken: createAccessToken(Date.now() / 1000 + 3_600),
-            refreshToken: 'old-refresh-token',
-        });
-        vi.mocked(chipinApi.refreshApiAuthTokens).mockReturnValue(refreshRequest);
-
-        const validation = validateAuthSession();
-
-        establishAuthSession({
-            accessToken: 'oauth-access-token',
-            refreshToken: 'oauth-refresh-token',
-        });
-        resolveRefresh?.({
-            token: 'stale-access-token',
-            refresh_token: 'stale-refresh-token',
-        });
-
-        return expect(validation)
-            .rejects.toThrow('Auth session changed during token rotation')
-            .then(() => {
-                expect(getAuthTokens()).toEqual({
-                    accessToken: 'oauth-access-token',
-                    refreshToken: 'oauth-refresh-token',
-                });
-            });
-    });
-
-    test('keeps a newly established session when an older refresh rejects with 401', () => {
+    test('does not let an older refresh 401 clear a newer OAuth session', () => {
         let rejectRefresh: ((reason?: unknown) => void) | undefined;
-        const refreshRequest = new Promise<{
-            token: string;
-            refresh_token: string;
-        }>((_resolve, reject) => {
+        const refreshRequest = new Promise<{ token: string }>((_resolve, reject) => {
             rejectRefresh = reject;
         });
-        saveAuthTokens({
-            accessToken: createAccessToken(Date.now() / 1000 + 3_600),
-            refreshToken: 'old-refresh-token',
-        });
         vi.mocked(chipinApi.refreshApiAuthTokens).mockReturnValue(refreshRequest);
 
         const validation = validateAuthSession();
+        const newAccessToken = createAccessToken(Date.now() / 1000 + 3_600);
 
-        establishAuthSession({
-            accessToken: 'oauth-access-token',
-            refreshToken: 'oauth-refresh-token',
-        });
+        establishAuthSession(newAccessToken);
         rejectRefresh?.({
             isAxiosError: true,
             response: { status: 401 },
@@ -206,108 +165,53 @@ describe('authSession', () => {
 
         return expect(validation)
             .rejects.toThrow('Auth session changed during token rotation')
-            .then(() => {
-                expect(getAuthTokens()).toEqual({
-                    accessToken: 'oauth-access-token',
-                    refreshToken: 'oauth-refresh-token',
-                });
+            .then(() => getFreshAccessToken())
+            .then(accessToken => {
+                expect(accessToken).toBe(newAccessToken);
             });
     });
 
-    test('rejects a new session when its tokens cannot be persisted', () => {
-        setItem.mockImplementation(() => {
-            throw new Error('storage unavailable');
-        });
-
-        expect(() => establishAuthSession({
-            accessToken: 'oauth-access-token',
-            refreshToken: 'oauth-refresh-token',
-        })).toThrow(AuthTokenPersistenceError);
-        expect(getAuthTokens()).toBeNull();
-    });
-
-    test('uses the current refresh token and persists the rotated pair before resolving', () => {
-        saveAuthTokens({
-            accessToken: createAccessToken(Date.now() / 1000 + 3_600),
-            refreshToken: 'current-refresh-token',
-        });
-        vi.mocked(authApi.logoutOtherDevices).mockResolvedValue({
-            token: 'next-access-token',
-            refresh_token: 'next-refresh-token',
-        });
-
-        return logoutOtherDevicesSession().then(() => {
-            expect(authApi.logoutOtherDevices).toHaveBeenCalledWith('current-refresh-token');
-            expect(getAuthTokens()).toEqual({
-                accessToken: 'next-access-token',
-                refreshToken: 'next-refresh-token',
-            });
-        });
-    });
-
-    test('refreshes an expiring access token before reading the refresh header value', () => {
-        saveAuthTokens({
-            accessToken: createAccessToken(0),
-            refreshToken: 'stale-refresh-token',
-        });
-        vi.mocked(chipinApi.refreshApiAuthTokens).mockResolvedValue({
-            token: createAccessToken(Date.now() / 1000 + 3_600),
-            refresh_token: 'current-refresh-token',
-        });
-        vi.mocked(authApi.logoutOtherDevices).mockResolvedValue({
-            token: 'next-access-token',
-            refresh_token: 'next-refresh-token',
-        });
-
-        return logoutOtherDevicesSession().then(() => {
-            expect(chipinApi.refreshApiAuthTokens).toHaveBeenCalledWith('stale-refresh-token');
-            expect(authApi.logoutOtherDevices).toHaveBeenCalledWith('current-refresh-token');
-        });
-    });
-
-    test('does not continue with a stale refresh token when preflight rotation cannot be saved', () => {
-        saveAuthTokens({
-            accessToken: createAccessToken(0),
-            refreshToken: 'stale-refresh-token',
-        });
-        vi.mocked(chipinApi.refreshApiAuthTokens).mockResolvedValue({
-            token: createAccessToken(Date.now() / 1000 + 3_600),
-            refresh_token: 'current-refresh-token',
-        });
-        setItem.mockImplementation(() => {
-            throw new Error('Storage is unavailable');
-        });
-
-        return expect(logoutOtherDevicesSession())
-            .rejects.toBeInstanceOf(AuthTokenPersistenceError)
-            .then(() => {
-                expect(authApi.logoutOtherDevices).not.toHaveBeenCalled();
-            });
-    });
-
-    test('treats an unusable successful response as a token persistence failure', () => {
-        saveAuthTokens({
-            accessToken: createAccessToken(Date.now() / 1000 + 3_600),
-            refreshToken: 'current-refresh-token',
-        });
-        vi.mocked(authApi.logoutOtherDevices).mockRejectedValue(
-            new authApi.InvalidLogoutOtherDevicesResponseError(),
+    test('logs out locally even when the backend logout request fails', () => {
+        establishAuthSession(createAccessToken(Date.now() / 1000 + 3_600));
+        vi.mocked(chipinApi.logoutApiAuthTokens).mockRejectedValue(
+            new Error('network unavailable'),
         );
+        vi.mocked(chipinApi.refreshApiAuthTokens).mockRejectedValue({
+            isAxiosError: true,
+            response: { status: 401 },
+        });
 
-        return expect(logoutOtherDevicesSession()).rejects.toBeInstanceOf(
-            AuthTokenPersistenceError,
-        );
+        return startAuthLogout()
+            .then(() => {
+                expect(chipinApi.logoutApiAuthTokens).toHaveBeenCalledWith();
+                return getFreshAccessToken();
+            })
+            .then(accessToken => {
+                expect(accessToken).toBeNull();
+            });
     });
 
-    test('shares one in-flight request between repeated submissions', () => {
-        let resolveRequest: ((value: { token: string; refresh_token: string }) => void) | undefined;
-        const request = new Promise<{ token: string; refresh_token: string }>(resolve => {
+    test('replaces the in-memory access token after logout-other-devices', () => {
+        establishAuthSession(createAccessToken(Date.now() / 1000 + 3_600));
+        const nextAccessToken = createAccessToken(Date.now() / 1000 + 7_200);
+        vi.mocked(authApi.logoutOtherDevices).mockResolvedValue({
+            token: nextAccessToken,
+        });
+
+        return logoutOtherDevicesSession()
+            .then(() => getFreshAccessToken())
+            .then(accessToken => {
+                expect(authApi.logoutOtherDevices).toHaveBeenCalledWith();
+                expect(accessToken).toBe(nextAccessToken);
+                expect(setItem).not.toHaveBeenCalled();
+            });
+    });
+
+    test('shares one logout-other-devices request between repeated submissions', () => {
+        establishAuthSession(createAccessToken(Date.now() / 1000 + 3_600));
+        let resolveRequest: ((value: { token: string }) => void) | undefined;
+        const request = new Promise<{ token: string }>(resolve => {
             resolveRequest = resolve;
-        });
-
-        saveAuthTokens({
-            accessToken: createAccessToken(Date.now() / 1000 + 3_600),
-            refreshToken: 'current-refresh-token',
         });
         vi.mocked(authApi.logoutOtherDevices).mockReturnValue(request);
 
@@ -316,86 +220,12 @@ describe('authSession', () => {
 
         expect(secondRequest).toBe(firstRequest);
 
-        return Promise.resolve()
-            .then(() => {
-                expect(authApi.logoutOtherDevices).toHaveBeenCalledOnce();
-                resolveRequest?.({
-                    token: 'next-access-token',
-                    refresh_token: 'next-refresh-token',
-                });
-            })
-            .then(() => Promise.all([firstRequest, secondRequest]));
-    });
-
-    test('does not restore tokens when logout-other-devices resolves after expiration', () => {
-        let resolveRequest:
-            | ((value: { token: string; refresh_token: string }) => void)
-            | undefined;
-        const request = new Promise<{
-            token: string;
-            refresh_token: string;
-        }>(resolve => {
-            resolveRequest = resolve;
-        });
-        saveAuthTokens({
-            accessToken: createAccessToken(Date.now() / 1000 + 3_600),
-            refreshToken: 'current-refresh-token',
-        });
-        vi.mocked(authApi.logoutOtherDevices).mockReturnValue(request);
-
-        const logoutOtherDevices = logoutOtherDevicesSession();
-
-        return Promise.resolve()
-            .then(() => {
-                clearExpiredAuthSession();
-                resolveRequest?.({
-                    token: 'stale-access-token',
-                    refresh_token: 'stale-refresh-token',
-                });
-
-                return expect(logoutOtherDevices).rejects.toThrow(
-                    'Auth session changed during token rotation',
-                );
-            })
-            .then(() => {
-                expect(getAuthTokens()).toBeNull();
-            });
-    });
-
-    test('rejects when the rotated pair cannot be persisted and allows a later retry', () => {
-        saveAuthTokens({
-            accessToken: createAccessToken(Date.now() / 1000 + 3_600),
-            refreshToken: 'current-refresh-token',
-        });
-        vi.mocked(authApi.logoutOtherDevices).mockResolvedValue({
-            token: 'next-access-token',
-            refresh_token: 'next-refresh-token',
-        });
-        setItem.mockImplementation(() => {
-            throw new Error('Storage is unavailable');
+        resolveRequest?.({
+            token: createAccessToken(Date.now() / 1000 + 7_200),
         });
 
-        return expect(logoutOtherDevicesSession())
-            .rejects.toBeInstanceOf(AuthTokenPersistenceError)
-            .then(() => {
-                setItem.mockImplementation((key: string, value: string) => {
-                    values.set(key, value);
-                });
-                values.set(
-                    LS_KEY_AUTH_TOKENS,
-                    JSON.stringify({
-                        accessToken: createAccessToken(Date.now() / 1000 + 3_600),
-                        refreshToken: 'retry-refresh-token',
-                    }),
-                );
-
-                return logoutOtherDevicesSession();
-            })
-            .then(() => {
-                expect(authApi.logoutOtherDevices).toHaveBeenCalledTimes(2);
-                expect(authApi.logoutOtherDevices).toHaveBeenLastCalledWith(
-                    'retry-refresh-token',
-                );
-            });
+        return Promise.all([firstRequest, secondRequest]).then(() => {
+            expect(authApi.logoutOtherDevices).toHaveBeenCalledOnce();
+        });
     });
 });

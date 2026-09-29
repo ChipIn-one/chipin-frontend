@@ -2,55 +2,47 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { LS_KEY_AUTH_TOKENS } from 'constants/localstorage';
 
-import { getAuthTokens, saveAuthTokens } from './localStorage';
+import { clearLegacyAuthTokens } from './localStorage';
 
-describe('auth token storage', () => {
+describe('legacy auth token storage', () => {
     let values: Map<string, string>;
+    let removeItem: ReturnType<typeof vi.fn>;
     let setItem: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
         values = new Map();
-        setItem = vi.fn((key: string, value: string) => {
-            values.set(key, value);
-        });
+        removeItem = vi.fn((key: string) => values.delete(key));
+        setItem = vi.fn((key: string, value: string) => values.set(key, value));
         vi.stubGlobal('localStorage', {
             clear: vi.fn(() => values.clear()),
             getItem: vi.fn((key: string) => values.get(key) ?? null),
-            removeItem: vi.fn((key: string) => values.delete(key)),
+            removeItem,
             setItem,
         });
     });
 
-    test('writes both tokens together and reports success', () => {
-        const tokens = {
-            accessToken: 'next-access-token',
-            refreshToken: 'next-refresh-token',
-        };
+    test('clears the old access-plus-refresh token shape without writing a replacement', () => {
+        values.set(
+            LS_KEY_AUTH_TOKENS,
+            JSON.stringify({
+                accessToken: 'legacy-access-token',
+                refreshToken: 'legacy-refresh-token',
+            }),
+        );
 
-        const isSaved = saveAuthTokens(tokens);
+        clearLegacyAuthTokens();
 
-        expect(setItem).toHaveBeenCalledOnce();
-        expect(setItem).toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS, JSON.stringify(tokens));
-        expect(isSaved).toBe(true);
-        expect(getAuthTokens()).toEqual(tokens);
+        expect(removeItem).toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS);
+        expect(values.has(LS_KEY_AUTH_TOKENS)).toBe(false);
+        expect(setItem).not.toHaveBeenCalled();
     });
 
-    test('reports failure without treating the old pair as rotated', () => {
-        const currentTokens = {
-            accessToken: 'current-access-token',
-            refreshToken: 'current-refresh-token',
-        };
-        values.set(LS_KEY_AUTH_TOKENS, JSON.stringify(currentTokens));
-        setItem.mockImplementation(() => {
-            throw new Error('Storage is unavailable');
+    test('does not fail when legacy auth storage is unavailable', () => {
+        removeItem.mockImplementation(() => {
+            throw new Error('storage unavailable');
         });
 
-        const isSaved = saveAuthTokens({
-            accessToken: 'next-access-token',
-            refreshToken: 'next-refresh-token',
-        });
-
-        expect(isSaved).toBe(false);
-        expect(getAuthTokens()).toEqual(currentTokens);
+        expect(() => clearLegacyAuthTokens()).not.toThrow();
+        expect(setItem).not.toHaveBeenCalled();
     });
 });

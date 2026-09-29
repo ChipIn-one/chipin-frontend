@@ -3,7 +3,6 @@ import { useLocation } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
 import { ROUTES } from 'constants/routes';
-import { getAuthTokens } from 'helpers/localStorage';
 import { selectAuthStatus } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { useDashboardStore } from 'store/dashboardStore';
@@ -33,11 +32,6 @@ export const useCheckSignIn = () => {
 
     useEffect(() => {
         if (location.pathname === ROUTES.OAUTH_CALLBACK || status !== 'unknown') {
-            return;
-        }
-
-        if (!getAuthTokens()) {
-            setUnauthenticated('missing');
             return;
         }
 

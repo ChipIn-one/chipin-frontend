@@ -5,7 +5,7 @@ import { act, render, waitFor } from '@testing-library/react';
 
 import type { SelfUser } from 'api/chipin.types';
 import { LS_KEY_USER } from 'constants/localstorage';
-import { clearAuthTokens, LocalStorage, saveAuthTokens } from 'helpers/localStorage';
+import { LocalStorage } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
@@ -50,9 +50,15 @@ const renderHook = () => {
     );
 };
 
+const mockAuthenticatedDataFetches = (): void => {
+    vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockResolvedValue();
+    vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
+    vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockResolvedValue(user);
+    vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockResolvedValue();
+};
+
 beforeEach(() => {
     vi.restoreAllMocks();
-    clearAuthTokens();
     LocalStorage.remove(LS_KEY_USER);
     useDashboardStore.getState().setInitialDashboardStore();
     useUsersStore.getState().setInitialUsersStore();
@@ -63,31 +69,28 @@ beforeEach(() => {
     });
 });
 
-test('initializes the app mode from the fetched preference without a cached user', () => {
-    saveAuthTokens({
-        accessToken: 'cached-access-token',
-        refreshToken: 'cached-refresh-token',
+test('attempts cookie-backed session restore on cold start without persisted auth tokens', () => {
+    const refreshAuthTokens = vi.fn(() => Promise.resolve('next-access-token'));
+    useAuthStore.setState({ refreshAuthTokens });
+    mockAuthenticatedDataFetches();
+
+    renderHook();
+
+    return waitFor(() => {
+        expect(refreshAuthTokens).toHaveBeenCalledOnce();
     });
+});
+
+test('initializes the app mode from the fetched preference without a cached user', () => {
     useDashboardStore.setState({ appMode: APP_MODES.GROUP });
     const setDefaultAppMode = vi.spyOn(
         useDashboardStore.getState(),
         'setDefaultAppMode',
     );
-    vi.spyOn(useAuthStore.getState(), 'refreshAuthTokens').mockImplementation(() =>
-        Promise.resolve('next-access-token'),
+    vi.spyOn(useAuthStore.getState(), 'refreshAuthTokens').mockResolvedValue(
+        'next-access-token',
     );
-    vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockImplementation(
-        () => Promise.resolve(),
-    );
-    vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockImplementation(() =>
-        Promise.resolve([]),
-    );
-    vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockImplementation(() =>
-        Promise.resolve(user),
-    );
-    vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockImplementation(() =>
-        Promise.resolve(),
-    );
+    mockAuthenticatedDataFetches();
 
     renderHook();
 
@@ -107,29 +110,19 @@ test('preserves the active app mode when a cached user initialized it', () => {
     });
     useUsersStore.getState().setInitialUsersStore();
     useDashboardStore.setState({ appMode: APP_MODES.SOLO });
-    saveAuthTokens({
-        accessToken: 'cached-access-token',
-        refreshToken: 'cached-refresh-token',
-    });
     const setDefaultAppMode = vi.spyOn(
         useDashboardStore.getState(),
         'setDefaultAppMode',
     );
-    vi.spyOn(useAuthStore.getState(), 'refreshAuthTokens').mockImplementation(() =>
-        Promise.resolve('next-access-token'),
+    vi.spyOn(useAuthStore.getState(), 'refreshAuthTokens').mockResolvedValue(
+        'next-access-token',
     );
-    vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockImplementation(
-        () => Promise.resolve(),
-    );
-    vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockImplementation(() =>
-        Promise.resolve([]),
-    );
+    vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockResolvedValue();
+    vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
     const fetchSetUser = vi
         .spyOn(useUsersStore.getState(), 'fetchSetUser')
-        .mockImplementation(() => Promise.resolve(groupDefaultUser));
-    vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockImplementation(() =>
-        Promise.resolve(),
-    );
+        .mockResolvedValue(groupDefaultUser);
+    vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockResolvedValue();
 
     renderHook();
 
@@ -138,29 +131,6 @@ test('preserves the active app mode when a cached user initialized it', () => {
     }).then(() => {
         expect(setDefaultAppMode).not.toHaveBeenCalled();
         expect(useDashboardStore.getState().appMode).toBe(APP_MODES.SOLO);
-    });
-});
-
-test('validates stored tokens with the server on cold start', () => {
-    saveAuthTokens({
-        accessToken: 'cached-access-token',
-        refreshToken: 'cached-refresh-token',
-    });
-    const refreshAuthTokens = vi.fn(() => Promise.resolve('next-access-token'));
-    useAuthStore.setState({ refreshAuthTokens });
-    vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData')
-        .mockImplementation(() => Promise.resolve());
-    vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups')
-        .mockImplementation(() => Promise.resolve([]));
-    vi.spyOn(useUsersStore.getState(), 'fetchSetUser')
-        .mockImplementation(() => Promise.resolve(user));
-    vi.spyOn(useUsersStore.getState(), 'fetchSetFriends')
-        .mockImplementation(() => Promise.resolve());
-
-    renderHook();
-
-    return waitFor(() => {
-        expect(refreshAuthTokens).toHaveBeenCalledOnce();
     });
 });
 
@@ -189,14 +159,10 @@ test('does not revalidate an authenticated session when the app becomes visible'
 
 test('does not overwrite a newer authenticated session after stale validation fails', () => {
     let rejectValidation: ((reason: Error) => void) | undefined;
-    const validation = new Promise<string>((_, reject) => {
+    const validation = new Promise<string>((_resolve, reject) => {
         rejectValidation = reject;
     });
     const refreshAuthTokens = vi.fn(() => validation);
-    saveAuthTokens({
-        accessToken: 'cached-access-token',
-        refreshToken: 'cached-refresh-token',
-    });
     useAuthStore.setState({ refreshAuthTokens });
 
     renderHook();
@@ -212,10 +178,11 @@ test('does not overwrite a newer authenticated session after stale validation fa
                 new Error('Auth session changed during token rotation'),
             );
 
-            return expect(validation)
-                .rejects.toThrow('Auth session changed during token rotation')
-                .then(() => {
-                    expect(useAuthStore.getState().status).toBe('authenticated');
-                });
+            return expect(validation).rejects.toThrow(
+                'Auth session changed during token rotation',
+            );
+        })
+        .then(() => {
+            expect(useAuthStore.getState().status).toBe('authenticated');
         });
 });
