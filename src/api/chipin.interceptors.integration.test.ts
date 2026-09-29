@@ -1,13 +1,24 @@
-import type { InternalAxiosRequestConfig } from 'axios';
 import { afterEach, beforeAll, beforeEach, expect, test, vi } from 'vitest';
 
-import { establishAuthSession, invalidateAuthSession } from 'helpers/authSession';
+import {
+    establishAuthSession,
+    getFreshAccessToken,
+    invalidateAuthSession,
+    logoutOtherDevicesSession,
+} from 'helpers/authSession';
+import { hasAuthSessionHint } from 'helpers/localStorage';
 
 import { apiInstance } from './chipin.instance';
 import { initChipInApiInterceptors } from './chipin.interceptors';
 
-const onUnauthorizedSession = vi.fn();
+const onUnauthorizedSession = vi.fn(() => {
+    invalidateAuthSession();
+});
 const defaultAdapter = apiInstance.defaults.adapter;
+
+type ApiRequestConfig = Parameters<
+    NonNullable<Parameters<typeof apiInstance.interceptors.request.use>[0]>
+>[0];
 
 const createAccessToken = (subject: string): string => {
     return `header.${btoa(
@@ -19,14 +30,14 @@ const createAccessToken = (subject: string): string => {
 };
 
 const getAuthorizationHeader = (
-    config: InternalAxiosRequestConfig,
+    config: ApiRequestConfig,
 ): string | undefined => {
     const authorizationHeader = config.headers.Authorization;
 
     return typeof authorizationHeader === 'string' ? authorizationHeader : undefined;
 };
 
-const unauthorizedResponse = (config: InternalAxiosRequestConfig) => ({
+const unauthorizedResponse = (config: ApiRequestConfig) => ({
     config,
     isAxiosError: true,
     response: {
@@ -39,7 +50,7 @@ const unauthorizedResponse = (config: InternalAxiosRequestConfig) => ({
 });
 
 const successResponse = (
-    config: InternalAxiosRequestConfig,
+    config: ApiRequestConfig,
     data: unknown = { ok: true },
 ) => ({
     config,
@@ -199,6 +210,101 @@ test('deduplicates pending and delayed 401 refreshes without blocking the next r
                 `Bearer ${accessTokenT2}`,
             ]);
             expect(onUnauthorizedSession).not.toHaveBeenCalled();
+        });
+});
+
+
+test('preserves a rotated session after a delayed retried request is rejected', () => {
+    const accessTokenT0 = createAccessToken('stale-t0');
+    const accessTokenT1 = createAccessToken('retry-t1');
+    const accessTokenT2 = createAccessToken('rotated-t2');
+    const authorizationHeaders: string[] = [];
+    let refreshCalls = 0;
+    let staleRequestAttempts = 0;
+    let nextRequestAttempts = 0;
+    let logoutOtherDevicesCalls = 0;
+    let markRetryStarted: (() => void) | undefined;
+    let rejectRetryUnauthorized: (() => void) | undefined;
+    const retryStarted = new Promise<void>(resolve => {
+        markRetryStarted = resolve;
+    });
+
+    establishAuthSession(accessTokenT0);
+
+    apiInstance.defaults.adapter = config => {
+        const authorizationHeader = getAuthorizationHeader(config);
+
+        if (config.url === '/auth/refresh') {
+            refreshCalls += 1;
+            return Promise.resolve(successResponse(config, { token: accessTokenT1 }));
+        }
+
+        if (config.url === '/auth/logout-other-devices') {
+            logoutOtherDevicesCalls += 1;
+            return Promise.resolve(successResponse(config, { token: accessTokenT2 }));
+        }
+
+        if (config.url?.includes('request=stale-retry')) {
+            staleRequestAttempts += 1;
+
+            if (authorizationHeader) {
+                authorizationHeaders.push(authorizationHeader);
+            }
+
+            if (authorizationHeader === `Bearer ${accessTokenT0}`) {
+                return Promise.reject(unauthorizedResponse(config));
+            }
+
+            if (authorizationHeader === `Bearer ${accessTokenT1}`) {
+                return new Promise((_resolve, reject) => {
+                    rejectRetryUnauthorized = () => reject(unauthorizedResponse(config));
+                    markRetryStarted?.();
+                });
+            }
+        }
+
+        if (config.url?.includes('request=after-rotation')) {
+            nextRequestAttempts += 1;
+
+            if (authorizationHeader) {
+                authorizationHeaders.push(authorizationHeader);
+            }
+
+            return Promise.resolve(successResponse(config));
+        }
+
+        return Promise.reject(new Error(`Unexpected request: ${config.url}`));
+    };
+
+    const staleRequest = apiInstance.get('/dashboard?request=stale-retry');
+
+    return retryStarted
+        .then(() => logoutOtherDevicesSession())
+        .then(() => {
+            expect(logoutOtherDevicesCalls).toBe(1);
+            rejectRetryUnauthorized?.();
+
+            return expect(staleRequest).rejects.toMatchObject({
+                response: { status: 401 },
+            });
+        })
+        .then(() => getFreshAccessToken())
+        .then(currentAccessToken => {
+            expect(currentAccessToken).toBe(accessTokenT2);
+            expect(hasAuthSessionHint()).toBe(true);
+            expect(onUnauthorizedSession).not.toHaveBeenCalled();
+
+            return apiInstance.get('/dashboard?request=after-rotation');
+        })
+        .then(() => {
+            expect(refreshCalls).toBe(1);
+            expect(staleRequestAttempts).toBe(2);
+            expect(nextRequestAttempts).toBe(1);
+            expect(authorizationHeaders).toEqual([
+                `Bearer ${accessTokenT0}`,
+                `Bearer ${accessTokenT1}`,
+                `Bearer ${accessTokenT2}`,
+            ]);
         });
 });
 
