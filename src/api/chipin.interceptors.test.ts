@@ -11,6 +11,7 @@ const onUnauthorizedSession = vi.fn();
 const authSessionMocks = vi.hoisted(() => ({
     accessToken: 'current-access-token',
     currentVersion: 1,
+    signedOut: false,
     prepareAuthRequest: vi.fn<() => Promise<string | null | undefined>>(),
     refreshAuthSession: vi.fn<() => Promise<string | null>>(),
 }));
@@ -28,6 +29,7 @@ vi.mock('sonner', () => ({
 vi.mock('helpers/authSession', () => ({
     getAuthSessionVersion: () => authSessionMocks.currentVersion,
     isAuthSessionCurrent: (version: number) => version === authSessionMocks.currentVersion,
+    isAuthSessionSignedOut: () => authSessionMocks.signedOut,
     prepareAuthRequest: authSessionMocks.prepareAuthRequest,
     refreshAuthSession: authSessionMocks.refreshAuthSession,
 }));
@@ -48,6 +50,7 @@ beforeEach(() => {
     vi.clearAllMocks();
     authSessionMocks.accessToken = 'current-access-token';
     authSessionMocks.currentVersion = 1;
+    authSessionMocks.signedOut = false;
     authSessionMocks.prepareAuthRequest.mockImplementation(() =>
         Promise.resolve(authSessionMocks.accessToken),
     );
@@ -198,6 +201,34 @@ test('expires the session when a protected request cannot restore the cookie ses
         .then(() => {
             expect(adapterCalls).toBe(0);
             expect(onUnauthorizedSession).toHaveBeenCalledOnce();
+        });
+});
+
+test('preserves an explicit signed-out state when a late protected request is cancelled', () => {
+    let adapterCalls = 0;
+    authSessionMocks.signedOut = true;
+    authSessionMocks.prepareAuthRequest.mockResolvedValue(null);
+
+    return expect(
+        apiInstance.request({
+            method: 'get',
+            url: '/dashboard',
+            adapter: config => {
+                adapterCalls += 1;
+                return Promise.resolve({
+                    config,
+                    data: { ok: true },
+                    headers: {},
+                    status: 200,
+                    statusText: 'OK',
+                });
+            },
+        }),
+    )
+        .rejects.toThrow('Auth request cancelled')
+        .then(() => {
+            expect(adapterCalls).toBe(0);
+            expect(onUnauthorizedSession).not.toHaveBeenCalled();
         });
 });
 
