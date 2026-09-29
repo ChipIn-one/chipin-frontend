@@ -64,7 +64,7 @@ const readRefreshCookie = (response: Response): string | null | undefined => {
 
     const cookieAndAttributes = setCookie.slice(cookieStart);
     const nextCookieBoundary = cookieAndAttributes.search(
-        /,\s*(?=[!#$%&'*+\-.^_\`|~0-9A-Za-z]+=)/,
+        /,\s*(?=[!#$%&'*+\-.^_`|~0-9A-Za-z]+=)/,
     );
     const refreshCookieHeader = nextCookieBoundary === -1
         ? cookieAndAttributes
