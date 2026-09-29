@@ -111,13 +111,31 @@ const hasAuthSessionHint = (): boolean => {
     return LocalStorage.get(LS_KEY_AUTH_SESSION_HINT, false);
 };
 
-const setAuthSessionHint = (hasSession: boolean): void => {
+const setAuthSessionHint = (hasSession: boolean): boolean => {
     if (hasSession) {
-        LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
-        return;
+        try {
+            localStorage.setItem(LS_KEY_AUTH_SESSION_HINT, JSON.stringify(true));
+            return localStorage.getItem(LS_KEY_AUTH_SESSION_HINT) === 'true';
+        } catch {
+            return false;
+        }
     }
 
-    LocalStorage.remove(LS_KEY_AUTH_SESSION_HINT);
+    try {
+        localStorage.removeItem(LS_KEY_AUTH_SESSION_HINT);
+    } catch {
+        try {
+            localStorage.setItem(LS_KEY_AUTH_SESSION_HINT, JSON.stringify(false));
+        } catch {
+            return false;
+        }
+    }
+
+    try {
+        return localStorage.getItem(LS_KEY_AUTH_SESSION_HINT) !== 'true';
+    } catch {
+        return false;
+    }
 };
 
 export {

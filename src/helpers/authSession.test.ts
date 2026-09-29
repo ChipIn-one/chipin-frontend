@@ -9,6 +9,7 @@ import {
 
 import {
     AuthSessionExpiredError,
+    AuthSessionPersistenceError,
     clearExpiredAuthSession,
     establishAuthSession,
     getFreshAccessToken,
@@ -101,6 +102,21 @@ describe('authSession', () => {
             expect(chipinApi.refreshApiAuthTokens).not.toHaveBeenCalled();
             expect(removeItem).toHaveBeenCalledWith(LS_KEY_AUTH_TOKENS);
             expect(values.has(LS_KEY_AUTH_TOKENS)).toBe(false);
+        });
+    });
+
+    test('rejects OAuth session establishment when the restore hint cannot be persisted', () => {
+        setItem.mockImplementation(() => {
+            throw new Error('storage unavailable');
+        });
+
+        expect(() => establishAuthSession('access-token')).toThrow(
+            AuthSessionPersistenceError,
+        );
+
+        return getFreshAccessToken().then(accessToken => {
+            expect(accessToken).toBeNull();
+            expect(chipinApi.refreshApiAuthTokens).not.toHaveBeenCalled();
         });
     });
 
@@ -221,6 +237,27 @@ describe('authSession', () => {
             .then(accessToken => {
                 expect(accessToken).toBe(newAccessToken);
             });
+    });
+
+    test('blocks same-runtime restoration when the session hint cannot be cleared', () => {
+        establishAuthSession(createAccessToken(Date.now() / 1000 + 3_600));
+        removeItem.mockImplementation(() => {
+            throw new Error('remove unavailable');
+        });
+        setItem.mockImplementation(() => {
+            throw new Error('write unavailable');
+        });
+        vi.mocked(chipinApi.refreshApiAuthTokens).mockResolvedValue({
+            token: 'unexpected-access-token',
+        });
+
+        invalidateAuthSession();
+
+        return validateAuthSession().then(accessToken => {
+            expect(accessToken).toBeNull();
+            expect(chipinApi.refreshApiAuthTokens).not.toHaveBeenCalled();
+            expect(values.get(LS_KEY_AUTH_SESSION_HINT)).toBe('true');
+        });
     });
 
     test('logs out locally even when the backend logout request fails', () => {

@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { exchangeApiGoogleOAuthCode } from 'api/chipin';
 import {
     AuthSessionExpiredError,
+    AuthSessionPersistenceError,
     clearExpiredAuthSession,
     establishAuthSession,
     invalidateAuthSession,
@@ -96,14 +97,27 @@ export const useAuthStore = create<AuthStore>(set => ({
                 ]).then(() => undefined);
             })
             .catch((error: unknown) => {
-                resetAuthScopedStores();
-                set({
-                    status: 'unauthenticated',
-                    unauthReason: 'error',
-                    isNewUser: null,
+                const cleanup = error instanceof AuthSessionPersistenceError
+                    ? startAuthLogout()
+                    : Promise.resolve();
+
+                return cleanup.then(() => {
+                    resetAuthScopedStores();
+                    set({
+                        status: 'unauthenticated',
+                        unauthReason:
+                            error instanceof AuthSessionPersistenceError
+                                ? 'persistence_error'
+                                : 'error',
+                        isNewUser: null,
+                    });
+                    useErrorsStore.getState().setError(
+                        'auth',
+                        'login',
+                        normalizeApiError(error),
+                    );
+                    return Promise.reject(error);
                 });
-                useErrorsStore.getState().setError('auth', 'login', normalizeApiError(error));
-                return Promise.reject(error);
             });
     },
 

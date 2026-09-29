@@ -17,11 +17,18 @@ let refreshPromise: Promise<string | null> | null = null;
 let logoutPromise: Promise<void> | null = null;
 let logoutOtherDevicesPromise: Promise<void> | null = null;
 let isLogoutInProgress = false;
+let isSessionRestorationBlocked = false;
 let authSessionVersion = 0;
 
 export class AuthSessionExpiredError extends Error {
     constructor() {
         super('Auth session is missing or expired');
+    }
+}
+
+export class AuthSessionPersistenceError extends Error {
+    constructor() {
+        super('Auth session restore marker could not be persisted');
     }
 }
 
@@ -41,13 +48,20 @@ export const invalidateAuthSession = (): void => {
     authSessionVersion += 1;
     accessToken = null;
     clearLegacyAuthTokens();
-    setAuthSessionHint(false);
+    isSessionRestorationBlocked = !setAuthSessionHint(false);
 };
 
 export const establishAuthSession = (nextAccessToken: string): void => {
     authSessionVersion += 1;
+    accessToken = null;
     clearLegacyAuthTokens();
-    setAuthSessionHint(true);
+
+    if (!setAuthSessionHint(true)) {
+        isSessionRestorationBlocked = true;
+        throw new AuthSessionPersistenceError();
+    }
+
+    isSessionRestorationBlocked = false;
     accessToken = nextAccessToken;
 };
 
@@ -112,7 +126,6 @@ const refreshAccessToken = (): Promise<string | null> => {
         refreshPromise = refreshApiAuthTokens()
             .then(({ token }) => {
                 assertCurrentAuthSession(version);
-                setAuthSessionHint(true);
                 accessToken = token;
                 return token;
             })
@@ -134,7 +147,7 @@ const refreshAccessToken = (): Promise<string | null> => {
 };
 
 export const refreshAuthSession = (): Promise<string | null> => {
-    if (isLogoutInProgress) {
+    if (isLogoutInProgress || isSessionRestorationBlocked) {
         return Promise.resolve(null);
     }
 
@@ -152,7 +165,7 @@ export const validateAuthSession = (): Promise<string | null> => {
 };
 
 export const getFreshAccessToken = (): Promise<string | null> => {
-    if (isLogoutInProgress) {
+    if (isLogoutInProgress || isSessionRestorationBlocked) {
         return Promise.resolve(null);
     }
 

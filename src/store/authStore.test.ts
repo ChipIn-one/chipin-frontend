@@ -36,9 +36,11 @@ const user = {
 
 const authSessionMocks = vi.hoisted(() => {
     class AuthSessionExpiredError extends Error {}
+    class AuthSessionPersistenceError extends Error {}
 
     return {
         AuthSessionExpiredError,
+        AuthSessionPersistenceError,
         clearExpiredAuthSession: vi.fn(),
         establishAuthSession: vi.fn(),
         getFreshAccessToken: vi.fn(),
@@ -107,6 +109,27 @@ describe('authStore', () => {
             expect(authSession.establishAuthSession).toHaveBeenCalledWith('access-token');
             expect(setDefaultAppMode).toHaveBeenCalledWith(true);
         });
+    });
+
+    test('cleans up the cookie session when the restore hint cannot be persisted', () => {
+        const persistenceError = new authSession.AuthSessionPersistenceError();
+        vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue({
+            token: 'access-token',
+            is_new_user: false,
+        });
+        vi.mocked(authSession.establishAuthSession).mockImplementation(() => {
+            throw persistenceError;
+        });
+
+        return expect(useAuthStore.getState().exchangeGoogleOAuthCode('oauth-code'))
+            .rejects.toBe(persistenceError)
+            .then(() => {
+                expect(authSession.startAuthLogout).toHaveBeenCalledOnce();
+                expect(useAuthStore.getState()).toMatchObject({
+                    status: 'unauthenticated',
+                    unauthReason: 'persistence_error',
+                });
+            });
     });
 
     test('loads the premium promo counter after a new registration', () => {
