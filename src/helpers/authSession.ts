@@ -5,12 +5,14 @@ import { getApiErrorStatus } from 'helpers/errors';
 import { hasAuthSessionHint, setAuthSessionHint } from 'helpers/localStorage';
 
 const ACCESS_TOKEN_REFRESH_BUFFER_SECONDS = 60;
+const AUTH_REFRESH_LOCK_NAME = 'chipin-auth-refresh';
 let accessToken: string | null = null;
 let refreshPromise: Promise<string | null> | null = null;
 let logoutPromise: Promise<void> | null = null;
 let logoutOtherDevicesPromise: Promise<void> | null = null;
 let isLogoutInProgress = false;
 let isSessionRestorationBlocked = false;
+let isSessionExplicitlySignedOut = false;
 let authSessionVersion = 0;
 
 export class AuthSessionExpiredError extends Error {
@@ -37,11 +39,22 @@ export const isAuthSessionCurrent = (version: number): boolean => {
     return version === authSessionVersion;
 };
 
-export const invalidateAuthSession = (): void => {
+const invalidateAuthSessionState = (isSignedOut: boolean): void => {
     authSessionVersion += 1;
     accessToken = null;
+    isSessionExplicitlySignedOut = isSignedOut;
     isSessionRestorationBlocked = !setAuthSessionHint(false);
 };
+
+export const invalidateAuthSession = (): void => {
+    invalidateAuthSessionState(false);
+};
+
+export const markAuthSessionSignedOut = (): void => {
+    invalidateAuthSessionState(true);
+};
+
+export const isAuthSessionSignedOut = (): boolean => isSessionExplicitlySignedOut;
 
 export const establishAuthSession = (nextAccessToken: string): void => {
     authSessionVersion += 1;
@@ -53,6 +66,7 @@ export const establishAuthSession = (nextAccessToken: string): void => {
     }
 
     isSessionRestorationBlocked = false;
+    isSessionExplicitlySignedOut = false;
     accessToken = nextAccessToken;
 };
 
@@ -110,16 +124,64 @@ const isAuthSessionRequest = (url?: string): boolean => {
     );
 };
 
+interface AuthRefreshLockManager {
+    request: (
+        name: string,
+        callback: () => Promise<string | null>,
+    ) => Promise<string | null>;
+}
+
+const getAuthRefreshLockManager = (): AuthRefreshLockManager | null => {
+    if (typeof navigator === 'undefined') {
+        return null;
+    }
+
+    const locks = Reflect.get(navigator, 'locks');
+
+    if (
+        !locks ||
+        typeof locks !== 'object' ||
+        typeof Reflect.get(locks, 'request') !== 'function'
+    ) {
+        return null;
+    }
+
+    return locks as AuthRefreshLockManager;
+};
+
+const withAuthRefreshLock = (
+    callback: () => Promise<string | null>,
+): Promise<string | null> => {
+    const lockManager = getAuthRefreshLockManager();
+
+    if (!lockManager) {
+        return callback();
+    }
+
+    return lockManager.request(AUTH_REFRESH_LOCK_NAME, callback);
+};
+
 const refreshAccessToken = (): Promise<string | null> => {
     if (!refreshPromise) {
         const version = authSessionVersion;
 
-        refreshPromise = refreshApiAuthTokens()
-            .then(({ token }) => {
+        refreshPromise = withAuthRefreshLock(() => {
+            assertCurrentAuthSession(version);
+
+            if (
+                isLogoutInProgress ||
+                isSessionRestorationBlocked ||
+                (!accessToken && !hasAuthSessionHint())
+            ) {
+                return Promise.resolve(null);
+            }
+
+            return refreshApiAuthTokens().then(({ token }) => {
                 assertCurrentAuthSession(version);
                 accessToken = token;
                 return token;
-            })
+            });
+        })
             .catch((error: unknown) => {
                 if (getApiErrorStatus(error) === 401) {
                     assertCurrentAuthSession(version);
@@ -185,13 +247,11 @@ export const startAuthLogout = (): Promise<void> => {
     }
 
     isLogoutInProgress = true;
+    markAuthSessionSignedOut();
 
     logoutPromise = logoutApiAuthTokens()
         .catch(() => {
             // Local logout must continue when the backend logout request fails.
-        })
-        .then(() => {
-            invalidateAuthSession();
         })
         .finally(() => {
             isLogoutInProgress = false;
