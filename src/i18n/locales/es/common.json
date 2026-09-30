@@ -76,7 +76,7 @@
             },
             "googleSignIn": {
                 "title": "Inicio de sesión con Google",
-                "body": "Cuando inicias sesión con Google, ChipIn recibe el ID de tu cuenta de Google, tu dirección de correo electrónico, tu nombre y la URL de tu foto de perfil (ámbitos: openid, email, profile). Usamos estos datos solo para crear e identificar tu cuenta de ChipIn y para mostrar tu nombre y foto de perfil a los miembros de los grupos que compartes. No vendemos los datos de usuario de Google ni los usamos para publicidad. El uso y la transferencia por parte de ChipIn de la información recibida de las API de Google cumplen la Google API Services User Data Policy, incluidos los requisitos de uso limitado (Limited Use)."
+                "body": "Cuando inicias sesión con Google, ChipIn recibe el ID de tu cuenta de Google, tu dirección de correo electrónico, tu nombre y la URL de tu foto de perfil (ámbitos: openid, email, profile). Usamos estos datos solo para crear e identificar tu cuenta de ChipIn y para mostrar tu nombre, tu correo electrónico y tu foto de perfil a los miembros de los grupos que compartes. No vendemos los datos de usuario de Google ni los usamos para publicidad. El uso y la transferencia por parte de ChipIn de la información recibida de las API de Google cumplen la Google API Services User Data Policy, incluidos los requisitos de uso limitado (Limited Use)."
             },
             "expenseData": {
                 "title": "Grupos y gastos",
@@ -88,7 +88,7 @@
             },
             "sharing": {
                 "title": "Compartir datos",
-                "body": "No vendemos tus datos personales. Tu nombre, tu foto de perfil y los gastos que añades son visibles para los miembros de los grupos que compartes. Compartimos datos con proveedores de servicios solo en la medida necesaria para alojar, almacenar y supervisar ChipIn, como proveedores de alojamiento, almacenamiento de archivos y monitorización de errores."
+                "body": "No vendemos tus datos personales. Tu nombre, tu correo electrónico, tu foto de perfil y los gastos que añades son visibles para los miembros de los grupos que compartes. Compartimos datos con proveedores de servicios solo en la medida necesaria para alojar, almacenar y supervisar ChipIn, como proveedores de alojamiento, almacenamiento de archivos y monitorización de errores."
             },
             "operations": {
                 "title": "Operación del servicio",

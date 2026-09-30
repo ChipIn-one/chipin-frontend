@@ -76,7 +76,7 @@
             },
             "googleSignIn": {
                 "title": "Google Sign-In",
-                "body": "When you sign in with Google, ChipIn receives your Google account ID, email address, name, and profile picture URL (scopes: openid, email, profile). We use this data only to create and identify your ChipIn account and to show your name and profile picture to members of the groups you share. We do not sell Google user data or use it for advertising. ChipIn's use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements."
+                "body": "When you sign in with Google, ChipIn receives your Google account ID, email address, name, and profile picture URL (scopes: openid, email, profile). We use this data only to create and identify your ChipIn account and to show your name, email address, and profile picture to members of the groups you share. We do not sell Google user data or use it for advertising. ChipIn's use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements."
             },
             "expenseData": {
                 "title": "Groups and expenses",
@@ -88,7 +88,7 @@
             },
             "sharing": {
                 "title": "Sharing",
-                "body": "We do not sell your personal data. Your name, profile picture, and the expenses you add are visible to members of the groups you share. We share data with service providers only as needed to host, store, and monitor ChipIn, such as hosting, file storage, and error monitoring providers."
+                "body": "We do not sell your personal data. Your name, email address, profile picture, and the expenses you add are visible to members of the groups you share. We share data with service providers only as needed to host, store, and monitor ChipIn, such as hosting, file storage, and error monitoring providers."
             },
             "operations": {
                 "title": "Operating the service",

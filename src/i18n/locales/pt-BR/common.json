@@ -76,7 +76,7 @@
             },
             "googleSignIn": {
                 "title": "Login com o Google",
-                "body": "Quando você entra com o Google, o ChipIn recebe o ID da sua conta Google, seu endereço de e-mail, seu nome e a URL da sua foto de perfil (escopos: openid, email, profile). Usamos esses dados apenas para criar e identificar sua conta do ChipIn e para mostrar seu nome e foto de perfil aos membros dos grupos que você compartilha. Não vendemos dados de usuários do Google nem os usamos para publicidade. O uso e a transferência, pelo ChipIn, de informações recebidas das APIs do Google seguem a Google API Services User Data Policy, incluindo os requisitos de uso limitado (Limited Use)."
+                "body": "Quando você entra com o Google, o ChipIn recebe o ID da sua conta Google, seu endereço de e-mail, seu nome e a URL da sua foto de perfil (escopos: openid, email, profile). Usamos esses dados apenas para criar e identificar sua conta do ChipIn e para mostrar seu nome, e-mail e foto de perfil aos membros dos grupos que você compartilha. Não vendemos dados de usuários do Google nem os usamos para publicidade. O uso e a transferência, pelo ChipIn, de informações recebidas das APIs do Google seguem a Google API Services User Data Policy, incluindo os requisitos de uso limitado (Limited Use)."
             },
             "expenseData": {
                 "title": "Grupos e despesas",
@@ -88,7 +88,7 @@
             },
             "sharing": {
                 "title": "Compartilhamento de dados",
-                "body": "Não vendemos seus dados pessoais. Seu nome, sua foto de perfil e as despesas que você adiciona ficam visíveis para os membros dos grupos que você compartilha. Compartilhamos dados com prestadores de serviços apenas na medida necessária para hospedar, armazenar e monitorar o ChipIn, como provedores de hospedagem, armazenamento de arquivos e monitoramento de erros."
+                "body": "Não vendemos seus dados pessoais. Seu nome, seu e-mail, sua foto de perfil e as despesas que você adiciona ficam visíveis para os membros dos grupos que você compartilha. Compartilhamos dados com prestadores de serviços apenas na medida necessária para hospedar, armazenar e monitorar o ChipIn, como provedores de hospedagem, armazenamento de arquivos e monitoramento de erros."
             },
             "operations": {
                 "title": "Operação do serviço",
