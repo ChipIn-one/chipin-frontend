@@ -69,9 +69,14 @@
         "privacy": {
             "title": "Privacidad",
             "intro": "ChipIn usa la información que proporcionas para operar las funciones de seguimiento de gastos compartidos y saldos.",
+            "effectiveDate": "Fecha de entrada en vigor: 30 de septiembre de 2026",
             "account": {
                 "title": "Información de la cuenta",
                 "body": "Usamos los datos de cuenta y perfil que proporcionas, como tu nombre visible y correo electrónico, para identificar tu cuenta y mostrar tu perfil donde la aplicación lo permite."
+            },
+            "googleSignIn": {
+                "title": "Inicio de sesión con Google",
+                "body": "Cuando inicias sesión con Google, ChipIn recibe el ID de tu cuenta de Google, tu dirección de correo electrónico, tu nombre y la URL de tu foto de perfil (ámbitos: openid, email, profile). Usamos estos datos solo para crear e identificar tu cuenta de ChipIn y para mostrar tu nombre y foto de perfil a los miembros de los grupos que compartes. No vendemos los datos de usuario de Google ni los usamos para publicidad. El uso y la transferencia por parte de ChipIn de la información recibida de las API de Google cumplen la Google API Services User Data Policy, incluidos los requisitos de uso limitado (Limited Use)."
             },
             "expenseData": {
                 "title": "Grupos y gastos",
@@ -81,9 +86,21 @@
                 "title": "Autenticación y sesiones",
                 "body": "La información de autenticación y sesión se usa para iniciar sesión y ayudar a mantener tu cuenta protegida."
             },
+            "sharing": {
+                "title": "Compartir datos",
+                "body": "No vendemos tus datos personales. Tu nombre, tu foto de perfil y los gastos que añades son visibles para los miembros de los grupos que compartes. Compartimos datos con proveedores de servicios solo en la medida necesaria para alojar, almacenar y supervisar ChipIn, como proveedores de alojamiento, almacenamiento de archivos y monitorización de errores."
+            },
             "operations": {
                 "title": "Operación del servicio",
                 "body": "Los datos operativos y de errores nos ayudan a operar, proteger y mejorar ChipIn. La observabilidad de producción está diseñada para no exponer intencionadamente datos sensibles de autenticación ni cuerpos sensibles de solicitudes o respuestas."
+            },
+            "retention": {
+                "title": "Conservación y eliminación de datos",
+                "body": "Conservamos tus datos mientras tu cuenta esté activa. Para solicitar la eliminación de tu cuenta y de los datos personales asociados, escríbenos a la dirección indicada abajo."
+            },
+            "contact": {
+                "title": "Contacto",
+                "body": "Preguntas sobre esta política o tus datos:"
             },
             "updates": {
                 "title": "Actualizaciones",

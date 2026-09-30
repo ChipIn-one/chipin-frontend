@@ -69,9 +69,14 @@
         "privacy": {
             "title": "Privacy",
             "intro": "ChipIn uses the information you provide to operate shared-expense and balance tracking features.",
+            "effectiveDate": "Effective date: September 30, 2026",
             "account": {
                 "title": "Account information",
                 "body": "We use the account and profile details you provide, such as your display name and email address, to identify your account and show your profile where the product does so."
+            },
+            "googleSignIn": {
+                "title": "Google Sign-In",
+                "body": "When you sign in with Google, ChipIn receives your Google account ID, email address, name, and profile picture URL (scopes: openid, email, profile). We use this data only to create and identify your ChipIn account and to show your name and profile picture to members of the groups you share. We do not sell Google user data or use it for advertising. ChipIn's use and transfer of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements."
             },
             "expenseData": {
                 "title": "Groups and expenses",
@@ -81,9 +86,21 @@
                 "title": "Authentication and sessions",
                 "body": "Authentication and session information is used to sign you in and help keep your account secure."
             },
+            "sharing": {
+                "title": "Sharing",
+                "body": "We do not sell your personal data. Your name, profile picture, and the expenses you add are visible to members of the groups you share. We share data with service providers only as needed to host, store, and monitor ChipIn, such as hosting, file storage, and error monitoring providers."
+            },
             "operations": {
                 "title": "Operating the service",
                 "body": "Operational and error telemetry helps us operate, secure, and improve ChipIn. Production observability is designed not to intentionally expose sensitive authentication details or sensitive request and response bodies."
+            },
+            "retention": {
+                "title": "Data retention and deletion",
+                "body": "We keep your data while your account is active. To request deletion of your account and associated personal data, contact us at the address below."
+            },
+            "contact": {
+                "title": "Contact",
+                "body": "Questions about this policy or your data:"
             },
             "updates": {
                 "title": "Updates",
