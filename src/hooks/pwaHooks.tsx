@@ -9,8 +9,8 @@ import type { Group } from 'api/chipin.types';
 import { SECOND } from 'constants/time';
 import { TOASTS_IDS } from 'constants/toasts';
 import { copyTextToClipboard } from 'helpers/clipboard';
-import { detectNativeShare, shareGroupInvite } from 'helpers/share';
-import { buildGroupInviteLink } from 'helpers/url';
+import { detectNativeShare, shareInvite } from 'helpers/share';
+import { buildFriendInviteLink, buildGroupInviteLink } from 'helpers/url';
 import { usePwaStore } from 'store/pwaStore';
 
 const INVITE_FEEDBACK_DELAY_MS = 1.5 * SECOND;
@@ -80,23 +80,36 @@ export const useCheckPwa = () => {
     }, []);
 };
 
-interface UseGroupInviteResult {
+export interface InviteShareContent {
+    title: string;
+    text: string;
+}
+
+interface UseInviteResult {
     inviteLink: string;
     isNativeShareSupported: boolean;
     isShareDone: boolean;
     isCopied: boolean;
-    handleShare: (shareTitle: string) => Promise<void>;
-    handleCopyLink: () => Promise<void>;
+    onShare: (content: InviteShareContent) => Promise<void>;
+    onCopyLink: () => Promise<void>;
 }
 
-export const useGroupInvite = (group: Group): UseGroupInviteResult => {
+interface UseInviteParams {
+    inviteLink: string;
+    copySuccessMessage: string;
+    copyErrorMessage: string;
+}
+
+const useInvite = ({
+    inviteLink,
+    copySuccessMessage,
+    copyErrorMessage,
+}: UseInviteParams): UseInviteResult => {
     const [isShareDone, setIsShareDone] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
     const isMounted = useRef(true);
     const shareFeedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const copyFeedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    const inviteLink = buildGroupInviteLink({ inviteToken: group.inviteToken });
     const isNativeShareSupported = detectNativeShare();
 
     useEffect(() => {
@@ -117,8 +130,12 @@ export const useGroupInvite = (group: Group): UseGroupInviteResult => {
         };
     }, []);
 
-    const handleShare = (shareTitle: string): Promise<void> => {
-        return shareGroupInvite({ url: inviteLink, title: shareTitle }).then(result => {
+    const onShare = (content: InviteShareContent): Promise<void> => {
+        return shareInvite({
+            url: inviteLink,
+            title: content.title,
+            text: content.text,
+        }).then(result => {
             if (result !== 'shared' || !isMounted.current) {
                 return;
             }
@@ -136,18 +153,18 @@ export const useGroupInvite = (group: Group): UseGroupInviteResult => {
         });
     };
 
-    const handleCopyLink = (): Promise<void> => {
+    const onCopyLink = (): Promise<void> => {
         return copyTextToClipboard(inviteLink).then(result => {
             if (!isMounted.current) {
                 return;
             }
 
             if (result !== 'copied') {
-                toast.error(i18n.t('toasts:group.inviteLinkCopyError'));
+                toast.error(copyErrorMessage);
                 return;
             }
 
-            toast.success(i18n.t('toasts:group.inviteLinkCopied'));
+            toast.success(copySuccessMessage);
             setIsCopied(true);
 
             if (copyFeedbackTimer.current !== null) {
@@ -166,7 +183,23 @@ export const useGroupInvite = (group: Group): UseGroupInviteResult => {
         isNativeShareSupported,
         isShareDone,
         isCopied,
-        handleShare,
-        handleCopyLink,
+        onShare,
+        onCopyLink,
     };
+};
+
+export const useGroupInvite = (group: Group): UseInviteResult => {
+    return useInvite({
+        inviteLink: buildGroupInviteLink({ inviteToken: group.inviteToken }),
+        copySuccessMessage: i18n.t('toasts:group.inviteLinkCopied'),
+        copyErrorMessage: i18n.t('toasts:group.inviteLinkCopyError'),
+    });
+};
+
+export const useFriendInvite = (inviteToken: string): UseInviteResult => {
+    return useInvite({
+        inviteLink: buildFriendInviteLink({ inviteToken }),
+        copySuccessMessage: i18n.t('toasts:friend.inviteLinkCopied'),
+        copyErrorMessage: i18n.t('toasts:friend.inviteLinkCopyError'),
+    });
 };
