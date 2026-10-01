@@ -38,6 +38,10 @@ export interface RemoveKnownUserParams {
     userId: string;
 }
 
+export interface AcceptUserInviteParams {
+    inviteToken: string;
+}
+
 export interface LeaveGroupParams {
     groupId: string;
     newOwnerId?: string;
