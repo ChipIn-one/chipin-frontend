@@ -101,6 +101,7 @@ beforeEach(() => {
 test('shows invite onboarding for an empty single-member group', () => {
     render(
         <GroupBalancesTab
+            showInviteOnboarding
             group={{
                 ...group,
                 members: [group.members[0]],
@@ -115,6 +116,7 @@ test('shows invite onboarding for an empty single-member group', () => {
 test('keeps the existing no-members state after the group has expense history', () => {
     render(
         <GroupBalancesTab
+            showInviteOnboarding={false}
             group={{
                 ...group,
                 members: [group.members[0]],
@@ -128,7 +130,7 @@ test('keeps the existing no-members state after the group has expense history', 
 });
 
 test('shows member debts by direction and disables settlement when there are none', () => {
-    render(<GroupBalancesTab group={group} />);
+    render(<GroupBalancesTab group={group} showInviteOnboarding={false} />);
 
     expect(screen.getByText('balances.youOwe')).toBeTruthy();
     expect(screen.getByText('balances.youAreOwed')).toBeTruthy();
