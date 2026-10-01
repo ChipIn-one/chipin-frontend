@@ -11,6 +11,12 @@ vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),
 }));
 
+vi.mock('./GroupInviteEmptyState', () => ({
+    default: ({ group: inviteGroup }: { group: Group }) => (
+        <div data-testid="group-invite-empty-state">{inviteGroup.id}</div>
+    ),
+}));
+
 const currentUser = {
     id: 'user-1',
     email: 'alice@example.com',
@@ -90,6 +96,35 @@ const group: Group = {
 
 beforeEach(() => {
     useUsersStore.setState({ user: currentUser });
+});
+
+test('shows invite onboarding for an empty single-member group', () => {
+    render(
+        <GroupBalancesTab
+            group={{
+                ...group,
+                members: [group.members[0]],
+                lastUsedCurrency: null,
+            }}
+        />,
+    );
+
+    expect(screen.getByTestId('group-invite-empty-state').textContent).toBe(group.id);
+});
+
+test('keeps the existing no-members state after the group has expense history', () => {
+    render(
+        <GroupBalancesTab
+            group={{
+                ...group,
+                members: [group.members[0]],
+                lastUsedCurrency: 'USD',
+            }}
+        />,
+    );
+
+    expect(screen.queryByTestId('group-invite-empty-state')).toBeNull();
+    expect(screen.getByText('empty.noGroupMembers.title')).toBeTruthy();
 });
 
 test('shows member debts by direction and disables settlement when there are none', () => {
