@@ -98,6 +98,7 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
             title={t('group:page.settleUp.chooseDebtTitle')}
             accessibleDescription={t('group:page.settleUp.chooseDebtAccessibleDescription')}
             maxWidth={MODAL_SIZES.default}
+            constrainBodyScroll
             content={
                 <>
                     <OverlayBody>
