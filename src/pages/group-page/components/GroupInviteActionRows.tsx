@@ -1,34 +1,9 @@
-import {
-    LucideCheck,
-    LucideLink2,
-    LucideQrCode,
-    LucideShare2,
-} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import styled from 'styled-components';
-
-import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 
 import type { Group } from 'api/chipin.types';
 import { useGroupInvite } from 'hooks/pwaHooks';
 
-import { GroupQRModal } from 'components/modals/group-qr-modal';
-
-/**
- * Shared invite rows used by both group settings and single-member onboarding.
- * Keep the behavior and visual structure identical in both places.
- */
-const InviteActionButton = styled.button`
-    display: block;
-    width: 100%;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    font: inherit;
-    color: inherit;
-    text-align: left;
-`;
+import { InviteActionRows } from 'components/invite';
 
 interface Props {
     group: Group;
@@ -41,111 +16,34 @@ const GroupInviteActionRows = ({ group }: Props) => {
         isNativeShareSupported,
         isShareDone,
         isCopied,
-        handleShare: onShare,
-        handleCopyLink: onCopyLink,
+        onShare,
+        onCopyLink,
     } = useGroupInvite(group);
-    const shareTitle = t('group:qr.shareText', { groupName: group.name });
-
-    let primaryIcon = <LucideLink2 size={16} />;
-    let primaryLabel = isCopied
-        ? t('common:copy.copied')
-        : t('group:page.settings.copyLinkTitle');
-
-    if (isNativeShareSupported) {
-        primaryIcon = isShareDone
-            ? <LucideCheck size={16} />
-            : <LucideShare2 size={16} />;
-        primaryLabel = isShareDone
-            ? t('common:copy.shared')
-            : t('common:buttons.invitePeople');
-    }
-
-    const onPrimaryInvite = (): Promise<void> => {
-        if (isNativeShareSupported) {
-            return onShare(shareTitle);
-        }
-
-        return onCopyLink();
+    const shareContent = {
+        title: t('group:qr.shareTitle', { groupName: group.name }),
+        text: t('group:qr.shareText', { groupName: group.name }),
     };
 
     return (
-        <Flex direction="column" gap="2">
-            <Card asChild size="2">
-                <InviteActionButton type="button" onClick={onPrimaryInvite}>
-                    <Flex align="center" gap="3" p="4">
-                        <Avatar
-                            size="3"
-                            radius="medium"
-                            variant="soft"
-                            color="indigo"
-                            fallback={primaryIcon}
-                        />
-                        <Flex direction="column" gap="1">
-                            <Text size="2" weight="medium">
-                                {primaryLabel}
-                            </Text>
-                            <Text size="1" color="gray">
-                                {t('group:page.shareWarning')}
-                            </Text>
-                        </Flex>
-                    </Flex>
-                </InviteActionButton>
-            </Card>
-
-            {isNativeShareSupported && (
-                <Card asChild size="2">
-                    <InviteActionButton type="button" onClick={onCopyLink}>
-                        <Flex align="center" gap="3" p="4">
-                            <Avatar
-                                size="3"
-                                radius="medium"
-                                variant="soft"
-                                color="indigo"
-                                fallback={
-                                    isCopied
-                                        ? <LucideCheck size={16} />
-                                        : <LucideLink2 size={16} />
-                                }
-                            />
-                            <Flex direction="column" gap="1">
-                                <Text size="2" weight="medium">
-                                    {isCopied
-                                        ? t('common:copy.copied')
-                                        : t('group:page.settings.copyLinkTitle')}
-                                </Text>
-                                <Text size="1" color="gray">
-                                    {t('group:page.shareWarning')}
-                                </Text>
-                            </Flex>
-                        </Flex>
-                    </InviteActionButton>
-                </Card>
-            )}
-
-            <GroupQRModal qrLink={inviteLink} groupName={group.name}>
-                <Card asChild size="2">
-                    <InviteActionButton type="button">
-                        <Flex align="center" gap="3" p="4">
-                            <Avatar
-                                size="3"
-                                radius="medium"
-                                variant="soft"
-                                color="violet"
-                                fallback={<LucideQrCode size={16} />}
-                            />
-                            <Flex direction="column" gap="1">
-                                <Text size="2" weight="medium">
-                                    {t('group:page.settings.showQRTitle')}
-                                </Text>
-                                <Text size="1" color="gray">
-                                    {t('group:page.settings.showQRSubtitle')}
-                                </Text>
-                            </Flex>
-                        </Flex>
-                    </InviteActionButton>
-                </Card>
-            </GroupQRModal>
-        </Flex>
+        <InviteActionRows
+            inviteLink={inviteLink}
+            isNativeShareSupported={isNativeShareSupported}
+            isShareDone={isShareDone}
+            isCopied={isCopied}
+            onShare={onShare}
+            onCopyLink={onCopyLink}
+            shareContent={shareContent}
+            inviteLabel={t('common:buttons.invitePeople')}
+            copyLabel={t('group:page.settings.copyLinkTitle')}
+            copiedLabel={t('common:copy.copied')}
+            sharedLabel={t('common:copy.shared')}
+            shareWarning={t('group:page.shareWarning')}
+            qrLabel={t('group:page.settings.showQRTitle')}
+            qrSubtitle={t('group:page.settings.showQRSubtitle')}
+            qrTitle={t('group:qr.title')}
+            qrAccessibleDescription={t('group:qr.description')}
+            qrDescription={t('group:qr.joinDescription', { groupName: group.name })}
+        />
     );
 };
 
