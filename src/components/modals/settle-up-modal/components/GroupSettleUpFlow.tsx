@@ -100,7 +100,7 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
             maxWidth={MODAL_SIZES.default}
             content={
                 <>
-                    <OverlayBody>
+                    <OverlayBody maxHeight="min(60dvh, 640px)">
                         <DebtSelectionStep
                             youOwe={youOwe}
                             owedToYou={owedToYou}
