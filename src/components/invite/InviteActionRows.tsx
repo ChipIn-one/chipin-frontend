@@ -8,7 +8,7 @@ import styled from 'styled-components';
 
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 
-import type { InviteShareContent } from 'hooks/pwaHooks';
+import type { InviteShareContent } from 'helpers/share';
 
 import InviteQRModal from './InviteQRModal';
 
