@@ -1,9 +1,11 @@
 import type {
+    AcceptUserInviteParams,
     FriendBalance,
     KnownUser,
     RemoveKnownUserParams,
     SelfUser,
     UploadUserAvatarParams,
+    User,
     UserSettings,
 } from 'api/chipin.types';
 import type { LocalUser } from 'helpers/localStorage';
@@ -17,6 +19,7 @@ interface UsersStoreState {
 }
 
 interface UsersStoreActions {
+    acceptFriendInvite: (params: AcceptUserInviteParams) => Promise<User>;
     fetchSetFriends: (force?: boolean) => Promise<void>;
     fetchSetPremiumPromoRemaining: () => Promise<void>;
     fetchSetUser: (force?: boolean) => Promise<SelfUser | null>;
