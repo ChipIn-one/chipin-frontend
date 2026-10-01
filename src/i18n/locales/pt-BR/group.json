@@ -29,7 +29,8 @@
     "qr": {
         "title": "Escaneie para entrar",
         "description": "Compartilhe este QR code para convidar pessoas ao grupo.",
-        "shareText": "Compartilhe este código para convidar pessoas para {{groupName}}"
+        "shareText": "Compartilhe este código para convidar pessoas para {{groupName}}",
+        "joinDescription": "Escaneie o código QR para entrar em {{groupName}}."
     },
     "expenses": {
         "modal": {
@@ -184,7 +185,11 @@
         "activityStubDescription": "O histórico completo de atividades está disponível na página de Atividade.",
         "expenses": {
             "emptyTitle": "Nenhuma despesa ainda",
-            "emptyDescription": "Adicione a primeira despesa para começar a rastrear os gastos do grupo."
+            "emptyDescription": "Adicione a primeira despesa para começar a rastrear os gastos do grupo.",
+            "inviteTitle": "Convide seus amigos",
+            "inviteDescription": "Convide pessoas para começar a dividir despesas.",
+            "inviteAction": "Convidar amigos",
+            "shareVia": "ou compartilhe por"
         },
         "tabs": {
             "expenses": "Despesas",

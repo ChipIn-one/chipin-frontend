@@ -1,46 +1,23 @@
 import {
-    LucideCheck,
-    LucideLink2,
     LucideLogOut,
-    LucideQrCode,
-    LucideShare2,
     LucideTrash2,
     LucideUserMinus,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import styled from 'styled-components';
 
 import { Avatar, Badge, Box, Button, Card, Flex, Separator, Spinner, Switch, Text } from '@radix-ui/themes';
 
 import type { Group } from 'api/chipin.types';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
-import { useGroupInvite } from 'hooks/pwaHooks';
-
-import { useConnect } from './internal/group-settings';
-
-/**
- * A plain button reset used as the interactive wrapper for settings-list rows.
- * Justified as a styled component because `cursor`, `background-none`, and
- * border/padding resets have no Radix prop equivalents.
- */
-const SettingsRowButton = styled.button`
-    display: block;
-    width: 100%;
-    background: none;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    font: inherit;
-    color: inherit;
-    text-align: left;
-`;
 
 import GroupRoleBadge from 'basics/GroupRoleBadge';
-import { GroupQRModal } from 'components/modals/group-qr-modal';
 import { KickGroupMemberAlertDialog } from 'components/modals/kick-group-member-alert-dialog';
 import { LeaveGroupAlertDialog } from 'components/modals/leave-group-alert-dialog';
 import { RemoveGroupAlertDialog } from 'components/modals/remove-group-alert-dialog';
+
+import GroupInviteActionRows from './GroupInviteActionRows';
+import { useConnect } from './internal/group-settings';
 
 interface Props {
     group: Group;
@@ -53,17 +30,6 @@ const GroupSettingsTab = ({ group }: Props) => {
         updateGroup,
         isGroupUpdatePending,
     } = useConnect();
-    const {
-        inviteLink,
-        isNativeShareSupported,
-        isShareDone,
-        isCopied,
-        handleShare,
-        handleCopyLink,
-    } = useGroupInvite(group);
-
-    const shareTitle = t('group:qr.shareText', { groupName: group.name });
-
     const isUserOwner = user?.id === group.creator.id;
     const isGroupOwner = group.role === 'OWNER';
     const simplifyDebtsValue: unknown = group.simplifyDebts;
@@ -90,103 +56,7 @@ const GroupSettingsTab = ({ group }: Props) => {
                 <Text size="1" color="gray" weight="medium">
                     {t('group:page.settings.inviteSection')}
                 </Text>
-
-                {/* Primary invite action row — share on mobile, copy on desktop */}
-                <Card asChild size="2">
-                    <SettingsRowButton
-                        onClick={() =>
-                            isNativeShareSupported ? handleShare(shareTitle) : handleCopyLink()
-                        }
-                    >
-                        <Flex align="center" gap="3" p="4">
-                            <Avatar
-                                size="3"
-                                radius="medium"
-                                variant="soft"
-                                color="indigo"
-                                fallback={
-                                    (isNativeShareSupported ? isShareDone : isCopied) ? (
-                                        <LucideCheck size={16} />
-                                    ) : isNativeShareSupported ? (
-                                        <LucideShare2 size={16} />
-                                    ) : (
-                                        <LucideLink2 size={16} />
-                                    )
-                                }
-                            />
-                            <Flex direction="column" gap="1">
-                                <Text size="2" weight="medium">
-                                    {isNativeShareSupported
-                                        ? isShareDone
-                                            ? t('common:copy.shared')
-                                            : t('common:buttons.invitePeople')
-                                        : isCopied
-                                          ? t('common:copy.copied')
-                                          : t('group:page.settings.copyLinkTitle')}
-                                </Text>
-                                <Text size="1" color="gray">
-                                    {t('group:page.shareWarning')}
-                                </Text>
-                            </Flex>
-                        </Flex>
-                    </SettingsRowButton>
-                </Card>
-
-                {/* Copy link row — secondary action on mobile */}
-                {isNativeShareSupported && (
-                    <Card asChild size="2">
-                        <SettingsRowButton onClick={handleCopyLink}>
-                            <Flex align="center" gap="3" p="4">
-                                <Avatar
-                                    size="3"
-                                    radius="medium"
-                                    variant="soft"
-                                    color="indigo"
-                                    fallback={
-                                        isCopied ? (
-                                            <LucideCheck size={16} />
-                                        ) : (
-                                            <LucideLink2 size={16} />
-                                        )
-                                    }
-                                />
-                                <Flex direction="column" gap="1">
-                                    <Text size="2" weight="medium">
-                                        {isCopied
-                                            ? t('common:copy.copied')
-                                            : t('group:page.settings.copyLinkTitle')}
-                                    </Text>
-                                </Flex>
-                            </Flex>
-                        </SettingsRowButton>
-                    </Card>
-                )}
-
-                {/* Show QR code row */}
-                <GroupQRModal qrLink={inviteLink}>
-                        <Card asChild size="2">
-                            <SettingsRowButton>
-                                <Flex align="center" gap="3" p="4">
-                                    <Avatar
-                                        size="3"
-                                        radius="medium"
-                                        variant="soft"
-                                        color="violet"
-                                        fallback={<LucideQrCode size={16} />}
-                                    />
-                                    <Flex direction="column" gap="1">
-                                        <Text size="2" weight="medium">
-                                            {t('group:page.settings.showQRTitle')}
-                                        </Text>
-                                        <Text size="1" color="gray">
-                                            {t('group:page.settings.showQRSubtitle')}
-                                        </Text>
-                                    </Flex>
-                                </Flex>
-                            </SettingsRowButton>
-                        </Card>
-                </GroupQRModal>
-
+                <GroupInviteActionRows group={group} />
             </Flex>
 
             {/* ── MEMBERS section ── */}

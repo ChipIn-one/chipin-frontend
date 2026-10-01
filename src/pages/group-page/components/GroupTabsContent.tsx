@@ -18,6 +18,7 @@ import UsersRow from 'components/UsersRow';
 import { ActivityEventsList } from 'features/activity';
 
 import GroupBalancesTab from './GroupBalancesTab';
+import GroupInviteEmptyState from './GroupInviteEmptyState';
 import GroupSettingsTab from './GroupSettingsTab';
 
 interface Props {
@@ -39,6 +40,9 @@ const GroupTabsContent = ({
     const [activeTab, setActiveTab] = useState('expenses');
     const activityItems = group.recentActivities.items.map(item => item.lastEvent);
     const members = group.members.map(member => member.user);
+    const isSingleMemberGroup = group.members.length === 1;
+    const shouldShowInviteOnboarding =
+        isSingleMemberGroup && group.lastUsedCurrency === null;
     const hasMoreActivity = group.recentActivities.nextCursor !== null;
     const isEndOfFeed =
         !isGroupActivityNextPageLoading &&
@@ -86,52 +90,71 @@ const GroupTabsContent = ({
                         {isGroupDataLoading ? (
                             <ActivityFeedSkeleton isShowSummary />
                         ) : (
-                            <ActivityEventsList
-                                events={activityItems}
-                                emptyState={<NoGroupExpensesEmptyState />}
-                                isShowSummary
-                                isNavigable
-                            >
-                                <>
-                                    {isGroupActivityNextPageLoading && (
-                                        <Flex justify="center" py="4">
-                                            <Spinner size="3" />
-                                        </Flex>
-                                    )}
+                            <>
+                                {shouldShowInviteOnboarding && (
+                                    <Box mb={activityItems.length > 0 ? '4' : undefined}>
+                                        <GroupInviteEmptyState group={group} />
+                                    </Box>
+                                )}
+                                <ActivityEventsList
+                                    events={activityItems}
+                                    emptyState={
+                                        shouldShowInviteOnboarding
+                                            ? null
+                                            : <NoGroupExpensesEmptyState />
+                                    }
+                                    isShowSummary
+                                    isNavigable
+                                >
+                                    <>
+                                        {isGroupActivityNextPageLoading && (
+                                            <Flex justify="center" py="4">
+                                                <Spinner size="3" />
+                                            </Flex>
+                                        )}
 
-                                    {isGroupActivityNextPageError && (
-                                        <Flex justify="center" py="4">
-                                            <Button
-                                                type="button"
-                                                size="1"
-                                                variant="soft"
-                                                onClick={onRetryNextPage}
+                                        {isGroupActivityNextPageError && (
+                                            <Flex justify="center" py="4">
+                                                <Button
+                                                    type="button"
+                                                    size="1"
+                                                    variant="soft"
+                                                    onClick={onRetryNextPage}
+                                                >
+                                                    <LucideRefreshCw size={14} />
+                                                    {t('activity:retryAction')}
+                                                </Button>
+                                            </Flex>
+                                        )}
+
+                                        {isEndOfFeed && (
+                                            <Flex
+                                                justify="center"
+                                                align="center"
+                                                gap="2"
+                                                py="4"
                                             >
-                                                <LucideRefreshCw size={14} />
-                                                {t('activity:retryAction')}
-                                            </Button>
-                                        </Flex>
-                                    )}
+                                                <Text as="span" color="gray">
+                                                    <LucideChevronsDown size={14} />
+                                                </Text>
+                                                <Text size="1" color="gray">
+                                                    {t('activity:endOfFeed')}
+                                                </Text>
+                                            </Flex>
+                                        )}
 
-                                    {isEndOfFeed && (
-                                        <Flex justify="center" align="center" gap="2" py="4">
-                                            <Text as="span" color="gray">
-                                                <LucideChevronsDown size={14} />
-                                            </Text>
-                                            <Text size="1" color="gray">
-                                                {t('activity:endOfFeed')}
-                                            </Text>
-                                        </Flex>
-                                    )}
-
-                                    <div ref={sentinelRef} />
-                                </>
-                            </ActivityEventsList>
+                                        <div ref={sentinelRef} />
+                                    </>
+                                </ActivityEventsList>
+                            </>
                         )}
                     </Tabs.Content>
 
                     <Tabs.Content value="balances">
-                        <GroupBalancesTab group={group} />
+                        <GroupBalancesTab
+                            group={group}
+                            showInviteOnboarding={shouldShowInviteOnboarding}
+                        />
                     </Tabs.Content>
 
                     <Tabs.Content value="settings">
