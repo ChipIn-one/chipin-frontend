@@ -10,6 +10,7 @@ import { useErrorsStore } from '../errorsStore';
 import { useUsersStore } from './actions';
 
 vi.mock('api/usersApi', () => ({
+    acceptKnownUserInvite: vi.fn(),
     fetchKnownUsers: vi.fn(),
     fetchPremiumPromoRemaining: vi.fn(),
     fetchUser: vi.fn(),
@@ -99,6 +100,28 @@ test('resolves the premium promo counter with fallback state after a request err
             premiumPromoRemaining: null,
             isPremiumPromoResolved: true,
         });
+    });
+});
+
+
+test('accepts a friend invite and refreshes the canonical friends list', () => {
+    const friend = {
+        id: 'friend-1',
+        email: 'friend@example.com',
+        displayName: 'Friend',
+        createdAt: 1,
+        updatedAt: 1,
+    };
+    const fetchSetFriends = vi.fn().mockResolvedValue(undefined);
+    vi.mocked(usersApi.acceptKnownUserInvite).mockResolvedValue(friend);
+    useUsersStore.setState({ fetchSetFriends });
+
+    return useUsersStore.getState().acceptFriendInvite({ inviteToken: 'friend-token' }).then(result => {
+        expect(usersApi.acceptKnownUserInvite).toHaveBeenCalledWith({
+            inviteToken: 'friend-token',
+        });
+        expect(fetchSetFriends).toHaveBeenCalledWith(true);
+        expect(result).toEqual(friend);
     });
 });
 
