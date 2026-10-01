@@ -86,7 +86,8 @@ const DebtSection = ({ debts, isExpanded, isUserOwing, onToggle, onSelect }: Pro
             {hasCollapsibleDebts && (
                 <ShowMoreButton
                     type="button"
-                    variant="ghost"
+                    size="4"
+                    variant="soft"
                     color={color}
                     onClick={onToggle}
                 >
@@ -94,9 +95,9 @@ const DebtSection = ({ debts, isExpanded, isUserOwing, onToggle, onSelect }: Pro
                         ? t('group:page.settleUp.showLess')
                         : t('group:page.settleUp.showMore', { count: hiddenDebtCount })}
                     {isExpanded ? (
-                        <LucideChevronUp size={16} />
+                        <LucideChevronUp size={18} />
                     ) : (
-                        <LucideChevronDown size={16} />
+                        <LucideChevronDown size={18} />
                     )}
                 </ShowMoreButton>
             )}
