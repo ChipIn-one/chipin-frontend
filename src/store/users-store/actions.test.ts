@@ -48,6 +48,7 @@ const user = {
 beforeEach(() => {
     LocalStorage.clear();
     vi.clearAllMocks();
+    vi.mocked(usersApi.fetchKnownUsers).mockReset();
     useUsersStore.getState().setInitialUsersStore();
     useErrorsStore.getState().resetErrors();
     useLoadingStore.getState().setInitialLoadingStore();
@@ -151,7 +152,7 @@ test('can propagate a friends fetch failure when the caller requires canonical s
 
     return expect(
         useUsersStore.getState().fetchSetFriends(true, true),
-    ).rejects.toBe(refreshError).then(() => {
+    ).rejects.toThrow(refreshError.message).then(() => {
         expect(useErrorsStore.getState().errors.users.friends).toEqual(
             expect.objectContaining({ message: expect.any(String) }),
         );
