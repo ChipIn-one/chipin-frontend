@@ -4,7 +4,7 @@ import styled from 'styled-components';
 
 import { Button, Card, Flex, Heading, Text } from '@radix-ui/themes';
 
-import type { InviteShareContent } from 'hooks/pwaHooks';
+import type { InviteShareContent } from 'helpers/share';
 
 import InviteIllustrationAsset from 'assets/group-invite-empty-state.png';
 
