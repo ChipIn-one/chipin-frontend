@@ -223,6 +223,22 @@ test('renders the group debt list as an accessible selection region', () => {
         });
 });
 
+test('keeps the group debt selection dialog constrained for body scrolling', () => {
+    const user = userEvent.setup();
+
+    render(<SettleUpModal source="group" group={group} />);
+
+    return user
+        .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
+        .then(() => {
+            const dialogStyles = getComputedStyle(screen.getByRole('dialog'));
+
+            expect(dialogStyles.display).toBe('flex');
+            expect(dialogStyles.flexDirection).toBe('column');
+            expect(dialogStyles.overflow).toBe('hidden');
+        });
+});
+
 test('keeps a hidden accessible description for the group debt selection dialog', () => {
     const user = userEvent.setup();
 
