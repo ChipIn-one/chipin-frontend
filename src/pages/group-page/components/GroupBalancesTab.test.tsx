@@ -124,7 +124,7 @@ test('keeps the existing no-members state after the group has expense history', 
     );
 
     expect(screen.queryByTestId('group-invite-empty-state')).toBeNull();
-    expect(screen.getByText('empty.noGroupMembers.title')).toBeTruthy();
+    expect(screen.getByText('page.balances.empty')).toBeTruthy();
 });
 
 test('shows member debts by direction and disables settlement when there are none', () => {
