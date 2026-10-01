@@ -57,7 +57,7 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
         return null;
     }
 
-    if (!isDashboardLoading && !canAddExpense) {
+    if (!canAddExpense) {
         return null;
     }
 
