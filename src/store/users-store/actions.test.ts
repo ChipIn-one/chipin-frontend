@@ -113,15 +113,22 @@ test('accepts a friend invite and refreshes the canonical friends list', () => {
         createdAt: 1,
         updatedAt: 1,
     };
-    const fetchSetFriends = vi.fn().mockResolvedValue(undefined);
+    const knownFriend = {
+        user: friend,
+        balances: [],
+        lastUsedCurrency: null,
+    };
     vi.mocked(usersApi.acceptKnownUserInvite).mockResolvedValue(friend);
-    useUsersStore.setState({ fetchSetFriends });
+    vi.mocked(usersApi.fetchKnownUsers).mockResolvedValue({
+        friends: [knownFriend],
+    });
 
     return useUsersStore.getState().acceptFriendInvite({ inviteToken: 'friend-token' }).then(result => {
         expect(usersApi.acceptKnownUserInvite).toHaveBeenCalledWith({
             inviteToken: 'friend-token',
         });
-        expect(fetchSetFriends).toHaveBeenCalledWith(true, true);
+        expect(usersApi.fetchKnownUsers).toHaveBeenCalledOnce();
+        expect(useUsersStore.getState().friends).toEqual([knownFriend]);
         expect(result).toEqual(friend);
     });
 });
@@ -135,24 +142,13 @@ test('rejects friend invite acceptance when the canonical friends refresh fails'
         createdAt: 1,
         updatedAt: 1,
     };
-    const fetchSetFriends = vi.fn().mockRejectedValue(refreshError);
     vi.mocked(usersApi.acceptKnownUserInvite).mockResolvedValue(friend);
-    useUsersStore.setState({ fetchSetFriends });
-
-    return expect(
-        useUsersStore.getState().acceptFriendInvite({ inviteToken: 'friend-token' }),
-    ).rejects.toBe(refreshError).then(() => {
-        expect(fetchSetFriends).toHaveBeenCalledWith(true, true);
-    });
-});
-
-test('can propagate a friends fetch failure when the caller requires canonical state', () => {
-    const refreshError = new Error('friends refresh failed');
     vi.mocked(usersApi.fetchKnownUsers).mockRejectedValue(refreshError);
 
     return expect(
-        useUsersStore.getState().fetchSetFriends(true, true),
+        useUsersStore.getState().acceptFriendInvite({ inviteToken: 'friend-token' }),
     ).rejects.toThrow(refreshError.message).then(() => {
+        expect(usersApi.fetchKnownUsers).toHaveBeenCalledOnce();
         expect(useErrorsStore.getState().errors.users.friends).toEqual(
             expect.objectContaining({ message: expect.any(String) }),
         );
