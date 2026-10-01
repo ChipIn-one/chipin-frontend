@@ -2,89 +2,120 @@ import { describe, expect, test } from 'vitest';
 
 import { ROUTES } from 'constants/routes';
 
-import { getCanAddExpense } from './expenses';
+import {
+    getAddExpenseAvailability,
+    hasValidFriendExpenseTarget,
+    hasValidGroupExpenseTarget,
+} from './expenses';
 
-interface Availability {
-    hasFriends: boolean;
-    hasAvailableGroup: boolean;
-    hasSelectedGroupMembers: boolean;
-}
+describe('expense targets', () => {
+    test.each([
+        { friendCount: 0, expected: false },
+        { friendCount: 1, expected: true },
+    ])('friend count $friendCount availability', ({ friendCount, expected }) => {
+        expect(hasValidFriendExpenseTarget(friendCount)).toBe(expected);
+    });
 
-const unavailable: Availability = {
-    hasFriends: false,
-    hasAvailableGroup: false,
-    hasSelectedGroupMembers: false,
-};
+    test.each([
+        { memberCount: 0, expected: false },
+        { memberCount: 1, expected: false },
+        { memberCount: 2, expected: true },
+    ])('group member count $memberCount availability', ({ memberCount, expected }) => {
+        expect(hasValidGroupExpenseTarget(memberCount)).toBe(expected);
+    });
+});
 
-describe('getCanAddExpense', () => {
+describe('getAddExpenseAvailability', () => {
     test.each([
         {
             name: 'dashboard with a friend',
             pathname: ROUTES.DASHBOARD,
-            availability: { ...unavailable, hasFriends: true },
-            expected: true,
+            friendCount: 1,
+            groupMemberCounts: [],
+            selectedGroupMemberCount: 0,
+            expected: { canAddExpense: true, unavailableReason: null },
         },
         {
-            name: 'dashboard with a non-empty group',
+            name: 'dashboard with a usable group',
             pathname: ROUTES.DASHBOARD,
-            availability: { ...unavailable, hasAvailableGroup: true },
-            expected: true,
+            friendCount: 0,
+            groupMemberCounts: [2],
+            selectedGroupMemberCount: 0,
+            expected: { canAddExpense: true, unavailableReason: null },
+        },
+        {
+            name: 'dashboard with only a single-member group',
+            pathname: ROUTES.DASHBOARD,
+            friendCount: 0,
+            groupMemberCounts: [1],
+            selectedGroupMemberCount: 0,
+            expected: { canAddExpense: false, unavailableReason: 'dashboard' },
         },
         {
             name: 'empty dashboard',
             pathname: ROUTES.DASHBOARD,
-            availability: unavailable,
-            expected: false,
+            friendCount: 0,
+            groupMemberCounts: [],
+            selectedGroupMemberCount: 0,
+            expected: { canAddExpense: false, unavailableReason: 'dashboard' },
         },
         {
-            name: 'friends page with friends',
+            name: 'friends page with a friend',
             pathname: ROUTES.FRIENDS,
-            availability: { ...unavailable, hasFriends: true },
-            expected: true,
+            friendCount: 1,
+            groupMemberCounts: [],
+            selectedGroupMemberCount: 0,
+            expected: { canAddExpense: true, unavailableReason: null },
         },
         {
             name: 'friends page without friends',
             pathname: ROUTES.FRIENDS,
-            availability: {
-                ...unavailable,
-                hasAvailableGroup: true,
-            },
-            expected: false,
+            friendCount: 0,
+            groupMemberCounts: [2],
+            selectedGroupMemberCount: 0,
+            expected: { canAddExpense: false, unavailableReason: 'friends' },
         },
         {
-            name: 'group page with members',
+            name: 'group page with another member',
             pathname: `${ROUTES.GROUP}/group-1`,
-            availability: {
-                ...unavailable,
-                hasSelectedGroupMembers: true,
-            },
-            expected: true,
+            friendCount: 0,
+            groupMemberCounts: [],
+            selectedGroupMemberCount: 2,
+            expected: { canAddExpense: true, unavailableReason: null },
         },
         {
-            name: 'empty group page',
+            name: 'single-member group page',
             pathname: `${ROUTES.GROUP}/group-1`,
-            availability: {
-                ...unavailable,
-                hasFriends: true,
-                hasAvailableGroup: true,
-            },
-            expected: false,
+            friendCount: 1,
+            groupMemberCounts: [2],
+            selectedGroupMemberCount: 1,
+            expected: { canAddExpense: false, unavailableReason: 'group' },
         },
         {
-            name: 'group join route with an available group',
+            name: 'group join route uses global targets',
             pathname: `${ROUTES.GROUP_JOIN}/invite-token`,
-            availability: {
-                ...unavailable,
-                hasAvailableGroup: true,
-            },
-            expected: true,
+            friendCount: 0,
+            groupMemberCounts: [2],
+            selectedGroupMemberCount: 0,
+            expected: { canAddExpense: true, unavailableReason: null },
         },
-    ])('$name', ({ pathname, availability, expected }) => {
-        expect(
-            getCanAddExpense({
-                pathname,
-                ...availability,
-            }),
-        ).toBe(expected);
-    });
+    ])(
+        '$name',
+        ({
+            pathname,
+            friendCount,
+            groupMemberCounts,
+            selectedGroupMemberCount,
+            expected,
+        }) => {
+            expect(
+                getAddExpenseAvailability({
+                    pathname,
+                    friendCount,
+                    groupMemberCounts,
+                    selectedGroupMemberCount,
+                }),
+            ).toEqual(expected);
+        },
+    );
 });

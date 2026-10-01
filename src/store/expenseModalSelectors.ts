@@ -1,4 +1,5 @@
 import type { CreateLedgerEntryParams, SharingMode } from 'api/chipin.types';
+import { hasValidGroupExpenseTarget } from 'helpers/expenses';
 import {
     EXPENSE_SPLIT_MODES,
     EXPENSE_SPLIT_STATUSES,
@@ -309,7 +310,7 @@ const getSubmitState = (state: ExpenseModalStore) => {
         split.totalAmount <= 0 ||
         !payerId ||
         (state.targetMode === 'group' && !state.groupId) ||
-        isSingleMemberGroup(state, split) ||
+        (state.targetMode === 'group' && !hasValidGroupExpenseTarget(split.users.length)) ||
         !isDirectExpenseValid(state, split, payerId) ||
         split.includedUsers.length === 0 ||
         !split.isValid;

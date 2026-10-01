@@ -5,7 +5,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { Theme } from '@radix-ui/themes';
 import { render, screen, within } from '@testing-library/react';
 
-import type { KnownUser, SelfUser } from 'api/chipin.types';
+import type { SelfUser } from 'api/chipin.types';
 import { PROJECT_NAME } from 'constants/chipin';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
@@ -47,21 +47,6 @@ const user = {
     updatedAt: 1,
 } satisfies SelfUser;
 
-const friend = {
-    user: {
-        id: 'friend-1',
-        email: 'friend@example.com',
-        displayName: 'Friend',
-        firstName: 'Friend',
-        lastName: null,
-        picture: null,
-        createdAt: 1,
-        updatedAt: 1,
-    },
-    balances: [],
-    lastUsedCurrency: null,
-} satisfies KnownUser;
-
 beforeEach(() => {
     useAuthStore.setState({ status: 'authenticated' });
     useDashboardStore.setState({ appMode: APP_MODES.GROUP });
@@ -70,9 +55,7 @@ beforeEach(() => {
     useUsersStore.setState({ user, localUser: null, friends: [] });
 });
 
-test('shows the Add expense action on Settings when a valid target exists', () => {
-    useUsersStore.setState({ friends: [friend] });
-
+test('shows the Add expense action on Settings', () => {
     render(
         <MemoryRouter initialEntries={['/settings']}>
             <ThemeProvider theme={lightThemeStyled}>
