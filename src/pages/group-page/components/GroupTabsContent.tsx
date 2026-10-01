@@ -151,7 +151,10 @@ const GroupTabsContent = ({
                     </Tabs.Content>
 
                     <Tabs.Content value="balances">
-                        <GroupBalancesTab group={group} />
+                        <GroupBalancesTab
+                            group={group}
+                            showInviteOnboarding={shouldShowInviteOnboarding}
+                        />
                     </Tabs.Content>
 
                     <Tabs.Content value="settings">
