@@ -18,7 +18,10 @@ const hookMocks = vi.hoisted(() => ({
         (): Promise<'copied' | 'unsupported'> => Promise.resolve('copied'),
     ),
     detectNativeShare: vi.fn(() => false),
-    shareInvite: vi.fn(() => Promise.resolve('shared' as const)),
+    shareInvite: vi.fn(
+        (): Promise<'shared' | 'copied' | 'cancelled' | 'unsupported'> =>
+            Promise.resolve('shared'),
+    ),
 }));
 
 vi.mock('@uidotdev/usehooks', () => ({
