@@ -70,7 +70,6 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
                 color={isSoloMode ? 'violet' : 'grass'}
                 aria-label={t('buttons.addExpense')}
                 loading={isDashboardLoading}
-                disabled={!canAddExpense}
                 onClick={() => openAddExpenseModal()}
             >
                 <LucidePlus size={28} />
@@ -84,7 +83,6 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
             radius="large"
             color={isSoloMode ? 'violet' : 'grass'}
             loading={isDashboardLoading}
-            disabled={!canAddExpense}
             onClick={() => openAddExpenseModal()}
         >
             <LucideCirclePlus />
