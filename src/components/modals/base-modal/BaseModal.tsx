@@ -7,7 +7,6 @@ import { Dialog, IconButton, Text, VisuallyHidden } from '@radix-ui/themes';
 import { OverlayHeader } from '../components';
 
 import { MODAL_SIZES, type ModalSize } from './constants';
-import { ModalContent } from './styled';
 
 interface Props {
     triggerElement?: ReactNode;
@@ -18,7 +17,6 @@ interface Props {
     isOpened?: boolean;
     setIsOpened?: (isOpen: boolean) => void;
     isCloseDisabled?: boolean;
-    constrainBodyScroll?: boolean;
 }
 
 const BaseModal = ({
@@ -30,7 +28,6 @@ const BaseModal = ({
     isOpened,
     setIsOpened,
     isCloseDisabled = false,
-    constrainBodyScroll = false,
 }: Props) => {
     const { t } = useTranslation('common');
 
@@ -38,11 +35,10 @@ const BaseModal = ({
         <Dialog.Root open={isOpened} onOpenChange={setIsOpened}>
             {triggerElement && <Dialog.Trigger>{triggerElement}</Dialog.Trigger>}
 
-            <ModalContent
+            <Dialog.Content
                 maxWidth={maxWidth}
                 size={{ initial: '2', sm: '4' }}
                 className="modal-overlay-content"
-                $constrainBodyScroll={constrainBodyScroll}
             >
                 <OverlayHeader
                     title={
@@ -67,7 +63,7 @@ const BaseModal = ({
                     <Dialog.Description>{accessibleDescription}</Dialog.Description>
                 </VisuallyHidden>
                 {content}
-            </ModalContent>
+            </Dialog.Content>
         </Dialog.Root>
     );
 };
