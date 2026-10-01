@@ -28,6 +28,17 @@ vi.mock('hooks/useInfiniteScroll', () => ({
     useInfiniteScroll: useInfiniteScrollMock,
 }));
 
+vi.mock('hooks/pwaHooks', () => ({
+    useGroupInvite: () => ({
+        inviteLink: 'https://chipin.one/invite/group-1',
+        isNativeShareSupported: true,
+        isShareDone: false,
+        isCopied: false,
+        handleShare: () => Promise.resolve(),
+        handleCopyLink: () => Promise.resolve(),
+    }),
+}));
+
 vi.mock('components/modals/settle-up-modal', () => ({
     SettleUpModal: ({ group }: { group: Group }) => (
         <button type="button">{group.id}</button>
