@@ -6,7 +6,7 @@ import { Theme } from '@radix-ui/themes';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import type { KnownUser } from 'api/chipin.types';
+import type { Group, KnownUser } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
@@ -37,6 +37,37 @@ const friend = {
     balances: [],
     lastUsedCurrency: null,
 } satisfies KnownUser;
+
+const groupCreator = {
+    id: 'user-1',
+    email: 'owner@example.com',
+    displayName: 'Owner',
+    firstName: 'Owner',
+    lastName: null,
+    picture: null,
+    createdAt: 1,
+    updatedAt: 1,
+};
+
+const singleMemberGroup = {
+    id: 'group-1',
+    name: 'Group',
+    inviteToken: 'invite-token',
+    description: null,
+    creator: groupCreator,
+    members: [{ user: groupCreator, balancesByCurrency: {} }],
+    createdAt: 1,
+    updatedAt: 1,
+    coverUrl: null,
+    simplifyDebts: true,
+    role: 'OWNER',
+    status: 'ACTIVE',
+    lastUsedCurrency: null,
+    recentActivities: {
+        items: [],
+        nextCursor: null,
+    },
+} satisfies Group;
 
 const renderButton = (
     pathname: string,
@@ -170,6 +201,28 @@ test('does not treat a failed group load as an empty group', () => {
     expect(button).toHaveProperty('disabled', true);
     expect(button.getAttribute('aria-disabled')).toBeNull();
     expect(screen.queryByText('Add group members to start')).toBeNull();
+});
+
+
+test('uses a resolved route group even when the group list request failed', async () => {
+    const interaction = userEvent.setup();
+    useGroupsStore.setState({ selectedGroup: singleMemberGroup });
+    useErrorsStore.getState().setError('group', 'list', {
+        message: 'Groups unavailable',
+    });
+
+    renderButton(`${ROUTES.GROUP}/group-1`);
+
+    const button = screen.getByRole('button', { name: 'Add expense' });
+
+    expect(button).toHaveProperty('disabled', false);
+    expect(button.getAttribute('aria-disabled')).toBe('true');
+
+    await interaction.click(button);
+
+    expect(
+        (await screen.findAllByText('Add group members to start')).length,
+    ).toBeGreaterThan(0);
 });
 
 test('shows the unavailable mobile tooltip after target lists settle empty', async () => {

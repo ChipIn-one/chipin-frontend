@@ -92,12 +92,15 @@ const useConnect = (pathname: string) => {
         canAddExpense =
             (routeGroup?.members.length ?? 0) >= MIN_GROUP_EXPENSE_PARTICIPANTS;
         hasTargetLoadError =
-            !canAddExpense && (hasGroupListLoadError || hasGroupDataLoadError);
+            !canAddExpense &&
+            routeGroup === null &&
+            (hasGroupListLoadError || hasGroupDataLoadError);
         areTargetsResolved =
             canAddExpense ||
+            routeGroup !== null ||
             (!hasTargetLoadError &&
-                (routeGroup !== null ||
-                    (isGroupListResolved && isGroupDataResolved)));
+                isGroupListResolved &&
+                isGroupDataResolved);
         unavailableReason = 'group';
     } else {
         canAddExpense = hasFriends || hasAvailableGroup;
