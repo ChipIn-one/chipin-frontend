@@ -57,6 +57,10 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
         return null;
     }
 
+    if (!isDashboardLoading && !canAddExpense) {
+        return null;
+    }
+
     if (type === 'mobile') {
         return (
             <ButtonMobile
