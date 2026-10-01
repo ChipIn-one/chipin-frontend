@@ -5,6 +5,7 @@ import styled from 'styled-components';
 import { Button, Card, Flex, Heading, Text } from '@radix-ui/themes';
 
 import type { Group } from 'api/chipin.types';
+import { useGroupInvite } from 'hooks/pwaHooks';
 
 import GroupInviteIllustration from 'assets/group-invite-empty-state.png';
 
@@ -46,6 +47,20 @@ interface Props {
 
 const GroupInviteEmptyState = ({ group }: Props) => {
     const { t } = useTranslation('group');
+    const {
+        isNativeShareSupported,
+        handleShare: onShare,
+        handleCopyLink: onCopyLink,
+    } = useGroupInvite(group);
+    const shareTitle = t('qr.shareText', { groupName: group.name });
+
+    const onInviteFriends = (): Promise<void> => {
+        if (isNativeShareSupported) {
+            return onShare(shareTitle);
+        }
+
+        return onCopyLink();
+    };
 
     return (
         <Flex direction="column" gap="3">
@@ -72,6 +87,7 @@ const GroupInviteEmptyState = ({ group }: Props) => {
                         size="3"
                         color="green"
                         radius="full"
+                        onClick={onInviteFriends}
                     >
                         <LucideUserPlus size={18} />
                         {t('page.expenses.inviteAction')}
