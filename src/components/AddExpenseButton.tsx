@@ -3,27 +3,14 @@ import { LucideCirclePlus, LucidePlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import styled from 'styled-components';
-import { useShallow } from 'zustand/react/shallow';
 
 import { Box, Button, Tooltip } from '@radix-ui/themes';
 
 import { themeColor } from 'helpers/colors';
-import { getAddExpenseAvailability } from 'helpers/expenses';
-import { selectIsLoggedIn } from 'store/authSelectors';
-import { useAuthStore } from 'store/authStore';
-import { selectIsSoloMode } from 'store/dashboardSelectors';
-import { useDashboardStore } from 'store/dashboardStore';
-import { useExpenseModalStore } from 'store/expenseModalStore';
-import { useGroupsStore } from 'store/groupsStore';
-import { selectDashboardLoading } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
-import { selectCanAccessSolo, useUsersStore } from 'store/users-store';
 
-const AddExpenseAction = styled(Button)<{ $isUnavailable: boolean }>`
-    ${({ $isUnavailable }) => $isUnavailable && 'pointer-events: auto;'}
-`;
+import { useConnect } from './add-expense-button/internal/useConnect';
 
-const ButtonMobile = styled(AddExpenseAction)<{ $isSoloMode: boolean }>`
+const ButtonMobile = styled(Button)<{ $isSoloMode: boolean; $isUnavailable: boolean }>`
     width: var(--space-9);
     height: var(--space-9);
     padding: 0;
@@ -39,27 +26,14 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
     const { t } = useTranslation('common');
     const location = useLocation();
     const [isUnavailableTooltipOpen, setIsUnavailableTooltipOpen] = useState(false);
-    const isLoggedIn = useAuthStore(selectIsLoggedIn);
-    const isDashboardLoading = useLoadingStore(selectDashboardLoading);
-    const { groups, selectedGroup } = useGroupsStore(
-        useShallow(state => ({
-            groups: state.groups,
-            selectedGroup: state.selectedGroup,
-        })),
-    );
-    const friends = useUsersStore(state => state.friends);
-    const canAccessSolo = useUsersStore(selectCanAccessSolo);
-    const isSoloModeFromStore = useDashboardStore(selectIsSoloMode);
-    const isSoloMode = canAccessSolo && isSoloModeFromStore;
-    const openAddExpenseModal = useExpenseModalStore(state => state.open);
-    const { canAddExpense, unavailableReason } = getAddExpenseAvailability({
-        pathname: location.pathname,
-        friendCount: friends.length,
-        groupMemberCounts: groups.map(group => group.members.length),
-        selectedGroupMemberCount: selectedGroup?.members.length ?? 0,
-    });
-    const isUnavailable = !canAddExpense;
-    const isButtonLoading = isDashboardLoading && canAddExpense;
+    const {
+        isLoggedIn,
+        isSoloMode,
+        isUnavailable,
+        isButtonLoading,
+        unavailableReason,
+        onAddExpense,
+    } = useConnect(location.pathname);
     const unavailableMessage = unavailableReason
         ? t(`addExpenseUnavailable.${unavailableReason}`)
         : null;
@@ -68,13 +42,17 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
         return null;
     }
 
-    const onAddExpenseClick = () => {
+    const onClick = () => {
+        if (isButtonLoading) {
+            return;
+        }
+
         if (isUnavailable) {
             setIsUnavailableTooltipOpen(true);
             return;
         }
 
-        openAddExpenseModal();
+        onAddExpense();
     };
 
     const withUnavailableTooltip = (button: ReactElement) => {
@@ -106,7 +84,7 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
                 aria-label={t('buttons.addExpense')}
                 aria-disabled={isUnavailable || undefined}
                 loading={isButtonLoading}
-                onClick={onAddExpenseClick}
+                onClick={onClick}
             >
                 <LucidePlus size={28} />
             </ButtonMobile>,
@@ -114,18 +92,17 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
     }
 
     const button = withUnavailableTooltip(
-        <AddExpenseAction
-            $isUnavailable={isUnavailable}
+        <Button
             size="3"
             radius="large"
             color={buttonColor}
             aria-disabled={isUnavailable || undefined}
             loading={isButtonLoading}
-            onClick={onAddExpenseClick}
+            onClick={onClick}
         >
             <LucideCirclePlus />
             {t('buttons.addExpense')}
-        </AddExpenseAction>,
+        </Button>,
     );
 
     if (type === 'sidebar') {

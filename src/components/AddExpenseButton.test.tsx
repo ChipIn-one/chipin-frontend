@@ -64,6 +64,9 @@ beforeEach(() => {
     });
     useLoadingStore.getState().setInitialLoadingStore();
     useLoadingStore.getState().setLoading('dashboard', 'data', 'fetched');
+    useLoadingStore.getState().setLoading('group', 'list', 'fetched');
+    useLoadingStore.getState().setLoading('group', 'data', 'fetched');
+    useLoadingStore.getState().setLoading('users', 'friends', 'fetched');
 });
 
 test.each(['mobile', 'desktop', 'sidebar'] as const)(
@@ -112,7 +115,20 @@ test('enables the add-expense action when a friend is available', () => {
     ).toBeNull();
 });
 
-test('keeps unavailable mobile action interactive while the dashboard is loading', async () => {
+test('keeps unresolved target availability loading during a cold sign-in', () => {
+    useLoadingStore.getState().setLoading('group', 'list', 'loading');
+    useLoadingStore.getState().setLoading('users', 'friends', 'loading');
+
+    renderButton(ROUTES.DASHBOARD);
+
+    const button = screen.getByRole('button', { name: 'Add expense' });
+
+    expect(button).toHaveProperty('disabled', true);
+    expect(button.getAttribute('aria-disabled')).toBeNull();
+    expect(screen.queryByText('Add friends or group members to start')).toBeNull();
+});
+
+test('shows the unavailable mobile tooltip after target lists settle empty', async () => {
     const interaction = userEvent.setup();
     useLoadingStore.getState().setLoading('dashboard', 'data', 'loading');
 
