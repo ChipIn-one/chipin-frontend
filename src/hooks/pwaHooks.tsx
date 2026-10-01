@@ -9,7 +9,11 @@ import type { Group } from 'api/chipin.types';
 import { SECOND } from 'constants/time';
 import { TOASTS_IDS } from 'constants/toasts';
 import { copyTextToClipboard } from 'helpers/clipboard';
-import { detectNativeShare, shareInvite } from 'helpers/share';
+import {
+    detectNativeShare,
+    type InviteShareContent,
+    shareInvite,
+} from 'helpers/share';
 import { buildFriendInviteLink, buildGroupInviteLink } from 'helpers/url';
 import { usePwaStore } from 'store/pwaStore';
 
@@ -79,11 +83,6 @@ export const useCheckPwa = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 };
-
-export interface InviteShareContent {
-    title: string;
-    text: string;
-}
 
 interface UseInviteResult {
     inviteLink: string;
