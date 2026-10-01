@@ -5,8 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Box, Button, Card, Dialog, Flex, Text } from '@radix-ui/themes';
 
 import OfflineQRCode from 'components/OfflineQRCode';
-import { BaseModal } from 'components/modals/base-modal';
-import { OverlayBody, OverlayFooter } from 'components/modals/components';
+import { BaseModal, OverlayBody, OverlayFooter } from 'components/modals';
 
 interface Props {
     accessibleDescription: string;
