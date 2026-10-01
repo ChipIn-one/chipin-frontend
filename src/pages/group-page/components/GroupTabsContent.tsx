@@ -41,6 +41,8 @@ const GroupTabsContent = ({
     const activityItems = group.recentActivities.items.map(item => item.lastEvent);
     const members = group.members.map(member => member.user);
     const isSingleMemberGroup = group.members.length === 1;
+    const shouldShowInviteOnboarding =
+        isSingleMemberGroup && group.lastUsedCurrency === null;
     const hasMoreActivity = group.recentActivities.nextCursor !== null;
     const isEndOfFeed =
         !isGroupActivityNextPageLoading &&
@@ -88,18 +90,22 @@ const GroupTabsContent = ({
                         {isGroupDataLoading ? (
                             <ActivityFeedSkeleton isShowSummary />
                         ) : (
-                            <ActivityEventsList
-                                events={activityItems}
-                                emptyState={
-                                    isSingleMemberGroup ? (
+                            <>
+                                {shouldShowInviteOnboarding && (
+                                    <Box mb={activityItems.length > 0 ? '4' : undefined}>
                                         <GroupInviteEmptyState group={group} />
-                                    ) : (
-                                        <NoGroupExpensesEmptyState />
-                                    )
-                                }
-                                isShowSummary
-                                isNavigable
-                            >
+                                    </Box>
+                                )}
+                                <ActivityEventsList
+                                    events={activityItems}
+                                    emptyState={
+                                        shouldShowInviteOnboarding
+                                            ? null
+                                            : <NoGroupExpensesEmptyState />
+                                    }
+                                    isShowSummary
+                                    isNavigable
+                                >
                                 <>
                                     {isGroupActivityNextPageLoading && (
                                         <Flex justify="center" py="4">
@@ -134,7 +140,8 @@ const GroupTabsContent = ({
 
                                     <div ref={sentinelRef} />
                                 </>
-                            </ActivityEventsList>
+                                </ActivityEventsList>
+                            </>
                         )}
                     </Tabs.Content>
 
