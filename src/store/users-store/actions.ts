@@ -123,6 +123,11 @@ const useUsersStore = create<UsersStore>((set, get) => ({
                 }
             });
     },
+    acceptFriendInvite: ({ inviteToken }) => {
+        return usersApi
+            .acceptKnownUserInvite({ inviteToken })
+            .then(friend => get().fetchSetFriends(true).then(() => friend));
+    },
     fetchSetFriends: (force = false) => {
         const { setLoading } = useLoadingStore.getState();
         const { clearError, setError } = useErrorsStore.getState();
