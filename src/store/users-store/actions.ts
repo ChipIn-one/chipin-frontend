@@ -126,9 +126,9 @@ const useUsersStore = create<UsersStore>((set, get) => ({
     acceptFriendInvite: ({ inviteToken }) => {
         return usersApi
             .acceptKnownUserInvite({ inviteToken })
-            .then(friend => get().fetchSetFriends(true).then(() => friend));
+            .then(friend => get().fetchSetFriends(true, true).then(() => friend));
     },
-    fetchSetFriends: (force = false) => {
+    fetchSetFriends: (force = false, rejectOnError = false) => {
         const { setLoading } = useLoadingStore.getState();
         const { clearError, setError } = useErrorsStore.getState();
         clearError('users', 'friends');
@@ -145,6 +145,10 @@ const useUsersStore = create<UsersStore>((set, get) => ({
             .catch((error: unknown) => {
                 if (request.isCurrent()) {
                     setError('users', 'friends', normalizeApiError(error));
+                }
+
+                if (rejectOnError) {
+                    return Promise.reject(error);
                 }
             })
             .finally(() => {
