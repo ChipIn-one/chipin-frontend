@@ -29,8 +29,9 @@
     "qr": {
         "title": "Сканируй, чтобы вступить",
         "description": "Поделитесь этим QR-кодом, чтобы пригласить людей в группу.",
-        "shareText": "Поделитесь кодом, чтобы пригласить людей в {{groupName}}",
-        "joinDescription": "Отсканируйте QR-код, чтобы вступить в группу «{{groupName}}»."
+        "shareText": "Присоединяйтесь к группе {{groupName}} в ChipIn, чтобы вместе учитывать расходы.",
+        "joinDescription": "Отсканируйте QR-код, чтобы вступить в группу «{{groupName}}».",
+        "shareTitle": "Присоединяйтесь к {{groupName}} в ChipIn"
     },
     "expenses": {
         "modal": {
