@@ -3,8 +3,10 @@ import type {
     ApiFriendsResponse,
     ApiPremiumPromoRemainingResponse,
     ApiSelfUserResponse,
+    ApiUserResponse,
 } from './chipin.raw.types';
 import type {
+    AcceptUserInviteParams,
     RemoveKnownUserParams,
     UpdateUserParams,
     UploadUserAvatarParams,
@@ -58,11 +60,20 @@ const fetchKnownUsers = (signal?: AbortSignal): Promise<ApiFriendsResponse> => {
         .then(response => response.data);
 };
 
+const acceptKnownUserInvite = ({
+    inviteToken,
+}: AcceptUserInviteParams): Promise<ApiUserResponse> => {
+    return apiInstance
+        .post<ApiUserResponse>(`/users/invite/${encodeURIComponent(inviteToken)}`)
+        .then(response => response.data);
+};
+
 const removeKnownUser = ({ userId }: RemoveKnownUserParams): Promise<void> => {
     return apiInstance.delete<void>(`/users/known-users/${userId}`).then(() => undefined);
 };
 
 export {
+    acceptKnownUserInvite,
     fetchKnownUsers,
     fetchPremiumPromoRemaining,
     fetchUser,
