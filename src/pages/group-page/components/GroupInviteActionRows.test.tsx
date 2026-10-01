@@ -26,8 +26,8 @@ vi.mock('hooks/pwaHooks', () => ({
         isNativeShareSupported: true,
         isShareDone: false,
         isCopied: false,
-        handleShare: mocks.onShare,
-        handleCopyLink: mocks.onCopyLink,
+        onShare: mocks.onShare,
+        onCopyLink: mocks.onCopyLink,
     }),
 }));
 
@@ -102,7 +102,10 @@ test('keeps share and copy behavior in the shared rows', () => {
             name: /common:buttons\.invitePeople/,
         }))
         .then(() => {
-            expect(mocks.onShare).toHaveBeenCalledWith('group:qr.shareText');
+            expect(mocks.onShare).toHaveBeenCalledWith({
+                title: 'group:qr.shareTitle',
+                text: 'group:qr.shareText',
+            });
 
             return user.click(screen.getByRole('button', {
                 name: /group:page\.settings\.copyLinkTitle/,
