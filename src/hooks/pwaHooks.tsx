@@ -129,13 +129,41 @@ const useInvite = ({
         };
     }, []);
 
+    const showCopiedFeedback = (): void => {
+        toast.success(copySuccessMessage);
+        setIsCopied(true);
+
+        if (copyFeedbackTimer.current !== null) {
+            clearTimeout(copyFeedbackTimer.current);
+        }
+
+        copyFeedbackTimer.current = setTimeout(() => {
+            setIsCopied(false);
+            copyFeedbackTimer.current = null;
+        }, INVITE_FEEDBACK_DELAY_MS);
+    };
+
     const onShare = (content: InviteShareContent): Promise<void> => {
         return shareInvite({
             url: inviteLink,
             title: content.title,
             text: content.text,
         }).then(result => {
-            if (result !== 'shared' || !isMounted.current) {
+            if (!isMounted.current) {
+                return;
+            }
+
+            if (result === 'copied') {
+                showCopiedFeedback();
+                return;
+            }
+
+            if (result === 'unsupported') {
+                toast.error(copyErrorMessage);
+                return;
+            }
+
+            if (result !== 'shared') {
                 return;
             }
 
@@ -163,17 +191,7 @@ const useInvite = ({
                 return;
             }
 
-            toast.success(copySuccessMessage);
-            setIsCopied(true);
-
-            if (copyFeedbackTimer.current !== null) {
-                clearTimeout(copyFeedbackTimer.current);
-            }
-
-            copyFeedbackTimer.current = setTimeout(() => {
-                setIsCopied(false);
-                copyFeedbackTimer.current = null;
-            }, INVITE_FEEDBACK_DELAY_MS);
+            showCopiedFeedback();
         });
     };
 
