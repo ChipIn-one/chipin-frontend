@@ -3,6 +3,7 @@ import {
     LucideLink2,
     LucideQrCode,
     LucideShare2,
+    LucideUserPlus,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
@@ -30,11 +31,14 @@ const InviteActionButton = styled.button`
     text-align: left;
 `;
 
+type InviteActionsMode = 'default' | 'onboarding';
+
 interface Props {
     group: Group;
+    mode?: InviteActionsMode;
 }
 
-const GroupInviteActions = ({ group }: Props) => {
+const GroupInviteActions = ({ group, mode = 'default' }: Props) => {
     const { t } = useTranslation(['group', 'common']);
     const {
         inviteLink,
@@ -45,6 +49,90 @@ const GroupInviteActions = ({ group }: Props) => {
         handleCopyLink: onCopyLink,
     } = useGroupInvite(group);
     const shareTitle = t('group:qr.shareText', { groupName: group.name });
+
+    const copyInviteAction = (
+        <Card asChild size="2">
+            <InviteActionButton type="button" onClick={onCopyLink}>
+                <Flex align="center" gap="3" p="4">
+                    <Avatar
+                        size="3"
+                        radius="medium"
+                        variant="soft"
+                        color="indigo"
+                        fallback={
+                            isCopied
+                                ? <LucideCheck size={16} />
+                                : <LucideLink2 size={16} />
+                        }
+                    />
+                    <Flex direction="column" gap="1">
+                        <Text size="2" weight="medium">
+                            {isCopied
+                                ? t('common:copy.copied')
+                                : t('group:page.settings.copyLinkTitle')}
+                        </Text>
+                    </Flex>
+                </Flex>
+            </InviteActionButton>
+        </Card>
+    );
+
+    const qrInviteAction = (
+        <GroupQRModal qrLink={inviteLink}>
+            <Card asChild size="2">
+                <InviteActionButton type="button">
+                    <Flex align="center" gap="3" p="4">
+                        <Avatar
+                            size="3"
+                            radius="medium"
+                            variant="soft"
+                            color="violet"
+                            fallback={<LucideQrCode size={16} />}
+                        />
+                        <Flex direction="column" gap="1">
+                            <Text size="2" weight="medium">
+                                {t('group:page.settings.showQRTitle')}
+                            </Text>
+                            <Text size="1" color="gray">
+                                {t('group:page.settings.showQRSubtitle')}
+                            </Text>
+                        </Flex>
+                    </Flex>
+                </InviteActionButton>
+            </Card>
+        </GroupQRModal>
+    );
+
+    if (mode === 'onboarding') {
+        return (
+            <Flex direction="column" gap="2">
+                <Card asChild size="2">
+                    <InviteActionButton type="button">
+                        <Flex align="center" gap="3" p="4">
+                            <Avatar
+                                size="3"
+                                radius="medium"
+                                variant="soft"
+                                color="indigo"
+                                fallback={<LucideUserPlus size={16} />}
+                            />
+                            <Flex direction="column" gap="1">
+                                <Text size="2" weight="medium">
+                                    {t('common:buttons.invitePeople')}
+                                </Text>
+                                <Text size="1" color="gray">
+                                    {t('group:page.shareWarning')}
+                                </Text>
+                            </Flex>
+                        </Flex>
+                    </InviteActionButton>
+                </Card>
+
+                {copyInviteAction}
+                {qrInviteAction}
+            </Flex>
+        );
+    }
 
     let primaryIcon = <LucideLink2 size={16} />;
     let primaryLabel = isCopied
@@ -71,7 +159,7 @@ const GroupInviteActions = ({ group }: Props) => {
     return (
         <Flex direction="column" gap="2">
             <Card asChild size="2">
-                <InviteActionButton onClick={onPrimaryInvite}>
+                <InviteActionButton type="button" onClick={onPrimaryInvite}>
                     <Flex align="center" gap="3" p="4">
                         <Avatar
                             size="3"
@@ -92,56 +180,8 @@ const GroupInviteActions = ({ group }: Props) => {
                 </InviteActionButton>
             </Card>
 
-            {isNativeShareSupported && (
-                <Card asChild size="2">
-                    <InviteActionButton onClick={onCopyLink}>
-                        <Flex align="center" gap="3" p="4">
-                            <Avatar
-                                size="3"
-                                radius="medium"
-                                variant="soft"
-                                color="indigo"
-                                fallback={
-                                    isCopied
-                                        ? <LucideCheck size={16} />
-                                        : <LucideLink2 size={16} />
-                                }
-                            />
-                            <Flex direction="column" gap="1">
-                                <Text size="2" weight="medium">
-                                    {isCopied
-                                        ? t('common:copy.copied')
-                                        : t('group:page.settings.copyLinkTitle')}
-                                </Text>
-                            </Flex>
-                        </Flex>
-                    </InviteActionButton>
-                </Card>
-            )}
-
-            <GroupQRModal qrLink={inviteLink}>
-                <Card asChild size="2">
-                    <InviteActionButton>
-                        <Flex align="center" gap="3" p="4">
-                            <Avatar
-                                size="3"
-                                radius="medium"
-                                variant="soft"
-                                color="violet"
-                                fallback={<LucideQrCode size={16} />}
-                            />
-                            <Flex direction="column" gap="1">
-                                <Text size="2" weight="medium">
-                                    {t('group:page.settings.showQRTitle')}
-                                </Text>
-                                <Text size="1" color="gray">
-                                    {t('group:page.settings.showQRSubtitle')}
-                                </Text>
-                            </Flex>
-                        </Flex>
-                    </InviteActionButton>
-                </Card>
-            </GroupQRModal>
+            {isNativeShareSupported && copyInviteAction}
+            {qrInviteAction}
         </Flex>
     );
 };

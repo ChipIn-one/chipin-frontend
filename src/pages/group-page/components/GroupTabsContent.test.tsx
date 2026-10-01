@@ -243,6 +243,8 @@ test('renders invite onboarding instead of No expenses for a single-member group
 
     expect(screen.getByText('page.expenses.inviteTitle')).not.toBeNull();
     expect(screen.getByText('page.expenses.inviteDescription')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'page.expenses.inviteAction' })).not.toBeNull();
+    expect(screen.getByText('page.expenses.shareVia')).not.toBeNull();
     expect(screen.getByTestId('group-invite-actions').textContent).toBe(group.id);
     expect(screen.queryByText('page.expenses.emptyTitle')).toBeNull();
 });

@@ -185,8 +185,10 @@
         "expenses": {
             "emptyTitle": "No expenses yet",
             "emptyDescription": "Add the first expense to start tracking spending in this group.",
-            "inviteTitle": "Invite friends",
-            "inviteDescription": "You're the only member here. Invite friends to start sharing expenses."
+            "inviteTitle": "Invite your friends",
+            "inviteDescription": "Invite people to start sharing expenses.",
+            "inviteAction": "Invite friends",
+            "shareVia": "or share via"
         },
         "tabs": {
             "expenses": "Expenses",

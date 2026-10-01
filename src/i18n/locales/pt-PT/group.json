@@ -185,8 +185,10 @@
         "expenses": {
             "emptyTitle": "Nenhuma despesa ainda",
             "emptyDescription": "Adicione a primeira despesa para começar a acompanhar os gastos do grupo.",
-            "inviteTitle": "Convide amigos",
-            "inviteDescription": "É a única pessoa neste grupo. Convide amigos para começar a partilhar despesas."
+            "inviteTitle": "Convida os teus amigos",
+            "inviteDescription": "Convida pessoas para começares a partilhar despesas.",
+            "inviteAction": "Convidar amigos",
+            "shareVia": "ou partilha por"
         },
         "tabs": {
             "expenses": "Despesas",

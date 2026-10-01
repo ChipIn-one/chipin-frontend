@@ -186,7 +186,9 @@
             "emptyTitle": "Aún no hay gastos",
             "emptyDescription": "Agrega el primer gasto para empezar a rastrear los gastos del grupo.",
             "inviteTitle": "Invita a tus amigos",
-            "inviteDescription": "Eres la única persona en este grupo. Invita a tus amigos para empezar a compartir gastos."
+            "inviteDescription": "Invita a personas para empezar a compartir gastos.",
+            "inviteAction": "Invitar amigos",
+            "shareVia": "o comparte mediante"
         },
         "tabs": {
             "expenses": "Gastos",
