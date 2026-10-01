@@ -1,9 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import i18n from 'i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { ROUTES } from 'constants/routes';
+import { getAuthSessionVersion, isAuthSessionCurrent } from 'helpers/authSession';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { useUsersStore } from 'store/users-store';
 
@@ -11,17 +12,24 @@ const useFriendInviteLink = () => {
     const navigate = useNavigate();
     const { inviteToken } = useParams<{ inviteToken: string }>();
     const acceptFriendInvite = useUsersStore(state => state.acceptFriendInvite);
-    const startedToken = useRef<string | null>(null);
 
     useEffect(() => {
-        if (!inviteToken || startedToken.current === inviteToken) {
+        if (!inviteToken) {
             return;
         }
 
-        startedToken.current = inviteToken;
+        let isActive = true;
+        const authSessionVersion = getAuthSessionVersion();
+        const isCurrent = () => (
+            isActive && isAuthSessionCurrent(authSessionVersion)
+        );
 
         acceptFriendInvite({ inviteToken })
             .then(friend => {
+                if (!isCurrent()) {
+                    return;
+                }
+
                 const friendName = friend.displayName.trim();
 
                 toast.success(
@@ -32,11 +40,19 @@ const useFriendInviteLink = () => {
                 navigate(ROUTES.FRIENDS, { replace: true });
             })
             .catch((error: unknown) => {
+                if (!isCurrent()) {
+                    return;
+                }
+
                 toast.error(resolveApiErrorMessageFromError(
                     error,
                     i18n.t('toasts:friend.inviteJoinError'),
                 ));
             });
+
+        return () => {
+            isActive = false;
+        };
     }, [acceptFriendInvite, inviteToken, navigate]);
 };
 
