@@ -106,14 +106,14 @@ const GroupTabsContent = ({
                                     isShowSummary
                                     isNavigable
                                 >
-                                <>
-                                    {isGroupActivityNextPageLoading && (
+                                    <>
+                                        {isGroupActivityNextPageLoading && (
                                         <Flex justify="center" py="4">
                                             <Spinner size="3" />
                                         </Flex>
-                                    )}
+                                        )}
 
-                                    {isGroupActivityNextPageError && (
+                                        {isGroupActivityNextPageError && (
                                         <Flex justify="center" py="4">
                                             <Button
                                                 type="button"
@@ -125,9 +125,9 @@ const GroupTabsContent = ({
                                                 {t('activity:retryAction')}
                                             </Button>
                                         </Flex>
-                                    )}
+                                        )}
 
-                                    {isEndOfFeed && (
+                                        {isEndOfFeed && (
                                         <Flex justify="center" align="center" gap="2" py="4">
                                             <Text as="span" color="gray">
                                                 <LucideChevronsDown size={14} />
@@ -136,10 +136,10 @@ const GroupTabsContent = ({
                                                 {t('activity:endOfFeed')}
                                             </Text>
                                         </Flex>
-                                    )}
+                                        )}
 
-                                    <div ref={sentinelRef} />
-                                </>
+                                        <div ref={sentinelRef} />
+                                    </>
                                 </ActivityEventsList>
                             </>
                         )}
