@@ -2,6 +2,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
+import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
@@ -52,8 +53,10 @@ test.each([
     render(
         <MemoryRouter initialEntries={['/settings']}>
             <ThemeProvider theme={lightThemeStyled}>
-                <MobileNavBar />
-                <LocationPath />
+                <Theme>
+                    <MobileNavBar />
+                    <LocationPath />
+                </Theme>
             </ThemeProvider>
         </MemoryRouter>,
     );
@@ -70,7 +73,9 @@ test('lifts the mobile add-expense action without changing the nav item layout',
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
             <ThemeProvider theme={lightThemeStyled}>
-                <MobileNavBar />
+                <Theme>
+                    <MobileNavBar />
+                </Theme>
             </ThemeProvider>
         </MemoryRouter>,
     );
