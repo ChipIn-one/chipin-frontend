@@ -50,6 +50,11 @@ vi.mock('features/activity', () => ({
 }));
 
 vi.mock('./GroupBalancesTab', () => ({ default: () => null }));
+vi.mock('./GroupInviteActions', () => ({
+    default: ({ group }: { group: Group }) => (
+        <div data-testid="group-invite-actions">{group.id}</div>
+    ),
+}));
 vi.mock('./GroupSettingsTab', () => ({ default: () => null }));
 
 const creator = {
@@ -78,6 +83,22 @@ const group = {
     status: 'ACTIVE',
     lastUsedCurrency: null,
     recentActivities: { items: [], nextCursor: null },
+} satisfies Group;
+
+const secondMember = {
+    ...creator,
+    id: 'user-2',
+    email: 'bob@example.com',
+    displayName: 'Bob',
+    firstName: 'Bob',
+};
+
+const groupWithTwoMembers = {
+    ...group,
+    members: [
+        ...group.members,
+        { user: secondMember, balancesByCurrency: {} },
+    ],
 } satisfies Group;
 
 const activityItem = {
@@ -186,10 +207,27 @@ test('renders the group activity exhausted marker after the last page', () => {
     expect(screen.getByText('activity:endOfFeed')).not.toBeNull();
 });
 
-test('renders the group expenses empty state for an empty initial page', () => {
+test('renders invite onboarding instead of No expenses for a single-member group', () => {
     render(<GroupTabsContent group={group} {...defaultProps} />);
 
+    expect(screen.getByText('page.expenses.inviteTitle')).not.toBeNull();
+    expect(screen.getByText('page.expenses.inviteDescription')).not.toBeNull();
+    expect(screen.getByTestId('group-invite-actions').textContent).toBe(group.id);
+    expect(screen.queryByText('page.expenses.emptyTitle')).toBeNull();
+});
+
+test('renders the group expenses empty state once the group has another member', () => {
+    render(<GroupTabsContent group={groupWithTwoMembers} {...defaultProps} />);
+
     expect(screen.getByText('page.expenses.emptyTitle')).not.toBeNull();
+    expect(screen.queryByText('page.expenses.inviteTitle')).toBeNull();
+});
+
+test('does not render an empty-state prompt when the activity feed is populated', () => {
+    render(<GroupTabsContent group={groupWithActivity} {...defaultProps} />);
+
+    expect(screen.queryByText('page.expenses.inviteTitle')).toBeNull();
+    expect(screen.queryByText('page.expenses.emptyTitle')).toBeNull();
 });
 
 test('keeps the full skeleton for initial group loading', () => {

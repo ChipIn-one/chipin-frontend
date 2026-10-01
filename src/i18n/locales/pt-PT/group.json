@@ -184,7 +184,9 @@
         "activityStubDescription": "O histórico completo de atividades está disponível na página de Atividade.",
         "expenses": {
             "emptyTitle": "Nenhuma despesa ainda",
-            "emptyDescription": "Adicione a primeira despesa para começar a acompanhar os gastos do grupo."
+            "emptyDescription": "Adicione a primeira despesa para começar a acompanhar os gastos do grupo.",
+            "inviteTitle": "Convide amigos",
+            "inviteDescription": "É a única pessoa neste grupo. Convide amigos para começar a partilhar despesas."
         },
         "tabs": {
             "expenses": "Despesas",

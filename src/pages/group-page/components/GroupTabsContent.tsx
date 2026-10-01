@@ -18,6 +18,7 @@ import UsersRow from 'components/UsersRow';
 import { ActivityEventsList } from 'features/activity';
 
 import GroupBalancesTab from './GroupBalancesTab';
+import GroupInviteEmptyState from './GroupInviteEmptyState';
 import GroupSettingsTab from './GroupSettingsTab';
 
 interface Props {
@@ -39,6 +40,7 @@ const GroupTabsContent = ({
     const [activeTab, setActiveTab] = useState('expenses');
     const activityItems = group.recentActivities.items.map(item => item.lastEvent);
     const members = group.members.map(member => member.user);
+    const isSingleMemberGroup = group.members.length === 1;
     const hasMoreActivity = group.recentActivities.nextCursor !== null;
     const isEndOfFeed =
         !isGroupActivityNextPageLoading &&
@@ -88,7 +90,13 @@ const GroupTabsContent = ({
                         ) : (
                             <ActivityEventsList
                                 events={activityItems}
-                                emptyState={<NoGroupExpensesEmptyState />}
+                                emptyState={
+                                    isSingleMemberGroup ? (
+                                        <GroupInviteEmptyState group={group} />
+                                    ) : (
+                                        <NoGroupExpensesEmptyState />
+                                    )
+                                }
                                 isShowSummary
                                 isNavigable
                             >

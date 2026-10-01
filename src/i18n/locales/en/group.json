@@ -184,7 +184,9 @@
         "activityStubDescription": "Full activity history is available on the Activity page.",
         "expenses": {
             "emptyTitle": "No expenses yet",
-            "emptyDescription": "Add the first expense to start tracking spending in this group."
+            "emptyDescription": "Add the first expense to start tracking spending in this group.",
+            "inviteTitle": "Invite friends",
+            "inviteDescription": "You're the only member here. Invite friends to start sharing expenses."
         },
         "tabs": {
             "expenses": "Expenses",
