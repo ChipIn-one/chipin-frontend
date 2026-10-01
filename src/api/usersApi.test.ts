@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { apiInstance } from './chipin.instance';
 import type { SelfUser } from './chipin.types';
 import {
+    acceptKnownUserInvite,
     fetchKnownUsers,
     fetchUser,
     removeKnownUser,
@@ -14,6 +15,7 @@ vi.mock('./chipin.instance', () => ({
     apiInstance: {
         delete: vi.fn(),
         get: vi.fn(),
+        post: vi.fn(),
         patch: vi.fn(),
         put: vi.fn(),
     },
@@ -104,6 +106,25 @@ describe('usersApi', () => {
 
         return uploadPromise.then(result => {
             expect(result).toEqual(updatedUser);
+        });
+    });
+
+
+    test('accepts a personal invite token and returns the invited user', () => {
+        const friend = {
+            id: 'friend-1',
+            email: 'friend@example.com',
+            displayName: 'Friend',
+            createdAt: 1,
+            updatedAt: 1,
+        };
+        vi.mocked(apiInstance.post).mockResolvedValue({ data: friend });
+
+        return acceptKnownUserInvite({ inviteToken: 'friend-token' }).then(result => {
+            expect(apiInstance.post).toHaveBeenCalledWith(
+                '/users/invite/friend-token',
+            );
+            expect(result).toEqual(friend);
         });
     });
 
