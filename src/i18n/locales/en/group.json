@@ -29,7 +29,8 @@
     "qr": {
         "title": "Scan to join",
         "description": "Share this QR code to invite people to the group.",
-        "shareText": "Share this code to invite people to {{groupName}}"
+        "shareText": "Share this code to invite people to {{groupName}}",
+        "joinDescription": "Scan the QR code to join {{groupName}}."
     },
     "expenses": {
         "modal": {

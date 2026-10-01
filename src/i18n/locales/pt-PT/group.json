@@ -29,7 +29,8 @@
     "qr": {
         "title": "Leia para entrar",
         "description": "Partilhe este código QR para convidar pessoas ao grupo.",
-        "shareText": "Partilhe este código para convidar pessoas para {{groupName}}"
+        "shareText": "Partilhe este código para convidar pessoas para {{groupName}}",
+        "joinDescription": "Leia o código QR para entrar em {{groupName}}."
     },
     "expenses": {
         "modal": {

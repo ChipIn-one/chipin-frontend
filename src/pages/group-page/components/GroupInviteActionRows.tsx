@@ -119,7 +119,7 @@ const GroupInviteActionRows = ({ group }: Props) => {
                 </Card>
             )}
 
-            <GroupQRModal qrLink={inviteLink}>
+            <GroupQRModal qrLink={inviteLink} groupName={group.name}>
                 <Card asChild size="2">
                     <InviteActionButton type="button">
                         <Flex align="center" gap="3" p="4">
