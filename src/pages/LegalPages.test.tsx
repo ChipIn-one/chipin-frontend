@@ -2,6 +2,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
+import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
 
 import type { UserSettings } from 'api/chipin.types';
@@ -50,7 +51,9 @@ test.each([
     render(
         <MemoryRouter initialEntries={[route]}>
             <ThemeProvider theme={lightThemeStyled}>
-                <Page />
+                <Theme>
+                    <Page />
+                </Theme>
             </ThemeProvider>
         </MemoryRouter>,
     );
@@ -67,7 +70,9 @@ test.each([
     render(
         <MemoryRouter initialEntries={[route]}>
             <ThemeProvider theme={lightThemeStyled}>
-                <Page />
+                <Theme>
+                    <Page />
+                </Theme>
             </ThemeProvider>
         </MemoryRouter>,
     );
@@ -81,7 +86,9 @@ test('discloses Google user data use and a privacy contact on the privacy page',
     render(
         <MemoryRouter initialEntries={[ROUTES.PRIVACY]}>
             <ThemeProvider theme={lightThemeStyled}>
-                <PrivacyPage />
+                <Theme>
+                    <PrivacyPage />
+                </Theme>
             </ThemeProvider>
         </MemoryRouter>,
     );
