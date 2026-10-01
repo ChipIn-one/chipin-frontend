@@ -6,6 +6,7 @@ import userEvent from '@testing-library/user-event';
 
 import type { AppEvent } from 'api/activity.types';
 import type { Group } from 'api/chipin.types';
+import { ACTIVITY_ACTIONS } from 'constants/activity';
 
 import GroupTabsContent from './GroupTabsContent';
 
@@ -119,7 +120,7 @@ const groupCreatedEvent = {
     id: 'group-created',
     seq: 1,
     domain: 'GROUP',
-    action: 'GROUP_CREATED',
+    action: ACTIVITY_ACTIONS.GROUP_CREATED,
     actorUserId: creator.id,
     actorSnapshot: {
         displayName: creator.displayName,
@@ -134,7 +135,7 @@ const groupCreatedEvent = {
         groupName: group.name,
     },
     createdAt: 1,
-} as AppEvent;
+} satisfies AppEvent;
 
 const groupWithLifecycleActivity = {
     ...group,
