@@ -29,8 +29,9 @@
     "qr": {
         "title": "Escanea para unirte",
         "description": "Comparte este código QR para invitar personas al grupo.",
-        "shareText": "Comparte este código para invitar personas a {{groupName}}",
-        "joinDescription": "Escanea el código QR para unirte a {{groupName}}."
+        "shareText": "Únete a {{groupName}} en ChipIn para compartir gastos.",
+        "joinDescription": "Escanea el código QR para unirte a {{groupName}}.",
+        "shareTitle": "Únete a {{groupName}} en ChipIn"
     },
     "expenses": {
         "modal": {
