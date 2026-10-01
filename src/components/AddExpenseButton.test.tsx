@@ -4,6 +4,7 @@ import { beforeEach, expect, test } from 'vitest';
 
 import { Theme } from '@radix-ui/themes';
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import type { KnownUser } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
@@ -81,7 +82,7 @@ test('explains an unavailable dashboard action on click', async () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add expense' }));
 
-    expect((await screen.findAllByText('Add friends or group members')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('Add friends or group members to start')).length).toBeGreaterThan(0);
     expect(useExpenseModalStore.getState().isOpened).toBe(false);
 });
 
@@ -90,7 +91,7 @@ test('uses the friends-specific unavailable message', async () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add expense' }));
 
-    expect((await screen.findAllByText('Add a friend')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('Add a friend to start')).length).toBeGreaterThan(0);
 });
 
 test('uses the group-specific unavailable message', async () => {
@@ -98,7 +99,7 @@ test('uses the group-specific unavailable message', async () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add expense' }));
 
-    expect((await screen.findAllByText('Add group members')).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('Add group members to start')).length).toBeGreaterThan(0);
 });
 
 test('enables the add-expense action when a friend is available', () => {
@@ -111,7 +112,43 @@ test('enables the add-expense action when a friend is available', () => {
     ).toBeNull();
 });
 
-test('preserves loading behavior while availability is unresolved', () => {
+test('keeps unavailable mobile action interactive while the dashboard is loading', async () => {
+    const interaction = userEvent.setup();
+    useLoadingStore.getState().setLoading('dashboard', 'data', 'loading');
+
+    renderButton(ROUTES.DASHBOARD);
+
+    const button = screen.getByRole('button', { name: 'Add expense' });
+
+    expect(button).toHaveProperty('disabled', false);
+    expect(button.getAttribute('aria-disabled')).toBe('true');
+
+    await interaction.click(button);
+
+    expect(
+        (await screen.findAllByText('Add friends or group members to start')).length,
+    ).toBeGreaterThan(0);
+    expect(useExpenseModalStore.getState().isOpened).toBe(false);
+});
+
+test('shows the unavailable tooltip from the desktop sidebar', async () => {
+    const interaction = userEvent.setup();
+
+    renderButton(ROUTES.DASHBOARD, 'sidebar');
+
+    const button = screen.getByRole('button', { name: 'Add expense' });
+
+    expect(button).toHaveProperty('disabled', false);
+
+    await interaction.hover(button);
+
+    expect(
+        (await screen.findAllByText('Add friends or group members to start')).length,
+    ).toBeGreaterThan(0);
+});
+
+test('preserves loading behavior when an expense target is available', () => {
+    useUsersStore.setState({ friends: [friend] });
     useLoadingStore.getState().setLoading('dashboard', 'data', 'loading');
 
     renderButton(ROUTES.DASHBOARD);

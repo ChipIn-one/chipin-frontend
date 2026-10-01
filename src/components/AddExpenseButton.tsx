@@ -19,7 +19,11 @@ import { selectDashboardLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 import { selectCanAccessSolo, useUsersStore } from 'store/users-store';
 
-const ButtonMobile = styled(Button)<{ $isSoloMode: boolean; $isUnavailable: boolean }>`
+const AddExpenseAction = styled(Button)<{ $isUnavailable: boolean }>`
+    ${({ $isUnavailable }) => $isUnavailable && 'pointer-events: auto;'}
+`;
+
+const ButtonMobile = styled(AddExpenseAction)<{ $isSoloMode: boolean }>`
     width: var(--space-9);
     height: var(--space-9);
     padding: 0;
@@ -54,7 +58,8 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
         groupMemberCounts: groups.map(group => group.members.length),
         selectedGroupMemberCount: selectedGroup?.members.length ?? 0,
     });
-    const isUnavailable = !isDashboardLoading && !canAddExpense;
+    const isUnavailable = !canAddExpense;
+    const isButtonLoading = isDashboardLoading && canAddExpense;
     const unavailableMessage = unavailableReason
         ? t(`addExpenseUnavailable.${unavailableReason}`)
         : null;
@@ -100,7 +105,7 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
                 color={buttonColor}
                 aria-label={t('buttons.addExpense')}
                 aria-disabled={isUnavailable || undefined}
-                loading={isDashboardLoading}
+                loading={isButtonLoading}
                 onClick={onAddExpenseClick}
             >
                 <LucidePlus size={28} />
@@ -109,17 +114,18 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
     }
 
     const button = withUnavailableTooltip(
-        <Button
+        <AddExpenseAction
+            $isUnavailable={isUnavailable}
             size="3"
             radius="large"
             color={buttonColor}
             aria-disabled={isUnavailable || undefined}
-            loading={isDashboardLoading}
+            loading={isButtonLoading}
             onClick={onAddExpenseClick}
         >
             <LucideCirclePlus />
             {t('buttons.addExpense')}
-        </Button>,
+        </AddExpenseAction>,
     );
 
     if (type === 'sidebar') {

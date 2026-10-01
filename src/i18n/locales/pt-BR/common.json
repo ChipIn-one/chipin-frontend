@@ -173,8 +173,8 @@
         "notInteger": "O valor não é inteiro!"
     },
     "addExpenseUnavailable": {
-        "dashboard": "Adicione amigos ou membros",
-        "group": "Adicione membros",
-        "friends": "Adicione um amigo"
+        "dashboard": "Adicione amigos ou membros para começar",
+        "group": "Adicione membros para começar",
+        "friends": "Adicione um amigo para começar"
     }
 }

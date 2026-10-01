@@ -173,8 +173,8 @@
         "notInteger": "Value is not integer!"
     },
     "addExpenseUnavailable": {
-        "dashboard": "Add friends or group members",
-        "group": "Add group members",
-        "friends": "Add a friend"
+        "dashboard": "Add friends or group members to start",
+        "group": "Add group members to start",
+        "friends": "Add a friend to start"
     }
 }
