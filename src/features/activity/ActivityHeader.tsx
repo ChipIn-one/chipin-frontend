@@ -1,7 +1,7 @@
-import { LucideChartBar, LucideSlidersHorizontal } from 'lucide-react';
+import { LucideChartBar } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Avatar, Box, Flex, IconButton, Skeleton, Text } from '@radix-ui/themes';
+import { Avatar, Box, Flex, Skeleton, Text } from '@radix-ui/themes';
 
 import SegmentedControl from 'components/SegmentedControl';
 
@@ -24,34 +24,24 @@ const ActivityHeader = ({ isLoading, activeFilter, onFilterChange }: Props) => {
 
     return (
         <Box>
-            <Flex justify="between" align="center">
-                <Flex align="center" gap="4">
-                    <Skeleton loading={isLoading}>
-                        <Avatar
-                            size={{ initial: '4', sm: '5' }}
-                            color="cyan"
-                            fallback={<LucideChartBar size={32} />}
-                        />
-                    </Skeleton>
+            <Flex align="center" gap="4">
+                <Skeleton loading={isLoading}>
+                    <Avatar
+                        size={{ initial: '4', sm: '5' }}
+                        color="cyan"
+                        fallback={<LucideChartBar size={32} />}
+                    />
+                </Skeleton>
 
-                    <Flex direction="column">
-                        <Text size="4" weight="medium" mb="1">
-                            <Skeleton loading={isLoading}>{t('title')}</Skeleton>
-                        </Text>
+                <Flex direction="column">
+                    <Text size="4" weight="medium" mb="1">
+                        <Skeleton loading={isLoading}>{t('title')}</Skeleton>
+                    </Text>
 
-                        <Text size="2" color="gray">
-                            <Skeleton loading={isLoading}>{t('subtitle')}</Skeleton>
-                        </Text>
-                    </Flex>
+                    <Text size="2" color="gray">
+                        <Skeleton loading={isLoading}>{t('subtitle')}</Skeleton>
+                    </Text>
                 </Flex>
-
-                <IconButton
-                    variant="ghost"
-                    aria-label={t('filterSettingsAction')}
-                    disabled
-                >
-                    <LucideSlidersHorizontal size={20} />
-                </IconButton>
             </Flex>
 
             <Box mt="3">

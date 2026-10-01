@@ -26,7 +26,7 @@ const renderSection = () => render(
         </ThemeProvider>,
     );
 
-test('shows the business date field when creating an expense', () => {
+test('hides the business date field when creating an expense', () => {
     useExpenseModalStore.getState().initialize({
         context: 'friends',
         currentUser,
@@ -39,7 +39,7 @@ test('shows the business date field when creating an expense', () => {
 
     const view = renderSection();
 
-    expect(view.container.querySelector('input[type="datetime-local"]')).not.toBeNull();
+    expect(view.container.querySelector('input[type="datetime-local"]')).toBeNull();
 });
 
 test('hides the business date field when editing an expense', () => {

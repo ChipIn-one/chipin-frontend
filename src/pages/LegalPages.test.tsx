@@ -76,3 +76,19 @@ test.each([
 
     expect(getComputedStyle(legalPageFooter).paddingBottom).not.toBe('0px');
 });
+
+test('discloses Google user data use and a privacy contact on the privacy page', () => {
+    render(
+        <MemoryRouter initialEntries={[ROUTES.PRIVACY]}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <PrivacyPage />
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    const googleSignInHeading = screen.getByRole('heading', { name: 'Google Sign-In' });
+    const contactLink = screen.getByRole('link', { name: 'privacy@chipin.one' });
+
+    expect(googleSignInHeading).toBeTruthy();
+    expect(contactLink.getAttribute('href')).toBe('mailto:privacy@chipin.one');
+});
