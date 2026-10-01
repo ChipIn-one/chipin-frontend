@@ -83,7 +83,16 @@ test('hides the add-expense action on a group route without selected group membe
     expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
 });
 
-test('preserves the loading action while target availability is unresolved', () => {
+test('keeps an unavailable add-expense action hidden while the dashboard is loading', () => {
+    useLoadingStore.getState().setLoading('dashboard', 'data', 'loading');
+
+    renderButton(ROUTES.DASHBOARD);
+
+    expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
+});
+
+test('preserves loading behavior when the add-expense action is available', () => {
+    useUsersStore.setState({ friends: [friend] });
     useLoadingStore.getState().setLoading('dashboard', 'data', 'loading');
 
     renderButton(ROUTES.DASHBOARD);
