@@ -113,6 +113,9 @@ const GroupInviteActionRows = ({ group }: Props) => {
                                         ? t('common:copy.copied')
                                         : t('group:page.settings.copyLinkTitle')}
                                 </Text>
+                                <Text size="1" color="gray">
+                                    {t('group:page.shareWarning')}
+                                </Text>
                             </Flex>
                         </Flex>
                     </InviteActionButton>
