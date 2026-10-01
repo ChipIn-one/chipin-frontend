@@ -1,8 +1,9 @@
 export type ShareResult = 'shared' | 'copied' | 'cancelled' | 'unsupported';
 
-interface ShareOptions {
+export interface ShareOptions {
     url: string;
     title: string;
+    text: string;
 }
 
 /**
@@ -20,30 +21,38 @@ export const detectNativeShare = (): boolean => {
     return typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 };
 
+const copyShareUrl = (url: string): Promise<ShareResult> => {
+    if (!navigator.clipboard?.writeText) {
+        return Promise.resolve('unsupported');
+    }
+
+    return navigator.clipboard.writeText(url).then(
+        () => 'copied',
+        () => 'unsupported',
+    );
+};
+
 /**
  * Attempts to share via the Web Share API, falling back to clipboard copy.
- * Never throws — all errors are encoded as a ShareResult.
+ * Never rejects — all outcomes are encoded as a ShareResult.
  */
-export const shareGroupInvite = async (options: ShareOptions): Promise<ShareResult> => {
-    if (detectNativeShare()) {
-        try {
-            await navigator.share({ title: options.title, url: options.url });
+export const shareInvite = (options: ShareOptions): Promise<ShareResult> => {
+    if (!detectNativeShare()) {
+        return copyShareUrl(options.url);
+    }
 
-            return 'shared';
-        } catch (error) {
+    return navigator.share({
+        title: options.title,
+        text: options.text,
+        url: options.url,
+    }).then(
+        () => 'shared',
+        (error: unknown) => {
             if (error instanceof Error && error.name === 'AbortError') {
                 return 'cancelled';
             }
 
-            // Share failed for a non-abort reason — fall through to clipboard
-        }
-    }
-
-    try {
-        await navigator.clipboard.writeText(options.url);
-
-        return 'copied';
-    } catch {
-        return 'unsupported';
-    }
+            return copyShareUrl(options.url);
+        },
+    );
 };
