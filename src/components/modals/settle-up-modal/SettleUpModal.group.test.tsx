@@ -177,11 +177,15 @@ test('toggles group debts beyond the first three rows within their section', () 
 
     return user
         .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
-        .then(() =>
-            user.click(
-                screen.getByRole('button', { name: 'group:page.settleUp.showMore' }),
-            ),
-        )
+        .then(() => {
+            const showMoreButton = screen.getByRole('button', {
+                name: 'group:page.settleUp.showMore',
+            });
+
+            expect(getComputedStyle(showMoreButton).width).toBe('100%');
+
+            return user.click(showMoreButton);
+        })
         .then(() => {
             expect(screen.getByText('6 AFN')).toBeTruthy();
             expect(screen.getAllByRole('button', { name: /Debtor/ })).toHaveLength(4);
