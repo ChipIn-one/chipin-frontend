@@ -1,7 +1,7 @@
 import { toast } from 'sonner';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 
 import { ROUTES } from 'constants/routes';
 
@@ -9,6 +9,7 @@ import { useFriendInviteLink } from './useFriendInviteLink';
 
 const mocks = vi.hoisted(() => ({
     acceptFriendInvite: vi.fn(),
+    authSessionVersion: 1,
     inviteToken: 'friend-token',
     navigate: vi.fn(),
 }));
@@ -22,6 +23,12 @@ vi.mock('store/users-store', () => ({
     useUsersStore: (
         selector: (state: { acceptFriendInvite: typeof mocks.acceptFriendInvite }) => unknown,
     ) => selector({ acceptFriendInvite: mocks.acceptFriendInvite }),
+}));
+
+
+vi.mock('helpers/authSession', () => ({
+    getAuthSessionVersion: () => mocks.authSessionVersion,
+    isAuthSessionCurrent: (version: number) => version === mocks.authSessionVersion,
 }));
 
 vi.mock('helpers/errors', () => ({
@@ -47,6 +54,7 @@ vi.mock('sonner', () => ({
 
 beforeEach(() => {
     vi.clearAllMocks();
+    mocks.authSessionVersion = 1;
     mocks.inviteToken = 'friend-token';
 });
 
@@ -81,6 +89,57 @@ test('USR-003 keeps invite failures on the join route and shows an error', () =>
 
     return waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith('toasts:friend.inviteJoinError');
+        expect(mocks.navigate).not.toHaveBeenCalled();
+    });
+});
+
+test('ignores a successful invite completion after the join route unmounts', () => {
+    let resolveInvite: ((friend: {
+        id: string;
+        email: string;
+        displayName: string;
+        createdAt: number;
+        updatedAt: number;
+    }) => void) | undefined;
+    mocks.acceptFriendInvite.mockImplementation(() => new Promise(resolve => {
+        resolveInvite = resolve;
+    }));
+
+    const { unmount } = renderHook(() => useFriendInviteLink());
+    unmount();
+
+    return act(() => {
+        resolveInvite?.({
+            id: 'friend-1',
+            email: 'alex@example.com',
+            displayName: 'Alex',
+            createdAt: 1,
+            updatedAt: 1,
+        });
+
+        return Promise.resolve();
+    }).then(() => {
+        expect(toast.success).not.toHaveBeenCalled();
+        expect(toast.error).not.toHaveBeenCalled();
+        expect(mocks.navigate).not.toHaveBeenCalled();
+    });
+});
+
+test('ignores a failed invite completion after the auth session changes', () => {
+    let rejectInvite: ((error: unknown) => void) | undefined;
+    mocks.acceptFriendInvite.mockImplementation(() => new Promise((_resolve, reject) => {
+        rejectInvite = reject;
+    }));
+
+    renderHook(() => useFriendInviteLink());
+    mocks.authSessionVersion += 1;
+
+    return act(() => {
+        rejectInvite?.(new Error('stale failure'));
+
+        return Promise.resolve();
+    }).then(() => {
+        expect(toast.error).not.toHaveBeenCalled();
         expect(mocks.navigate).not.toHaveBeenCalled();
     });
 });
