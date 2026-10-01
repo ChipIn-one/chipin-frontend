@@ -5,7 +5,7 @@ import { beforeEach, expect, test } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import type { UserSettings } from 'api/chipin.types';
+import type { KnownUser, UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
@@ -33,6 +33,21 @@ const settings = {
     saveGroupExpensesToSolo: false,
     sex: 'male',
 } satisfies UserSettings;
+
+const friend = {
+    user: {
+        id: 'friend-1',
+        email: 'friend@example.com',
+        displayName: 'Friend',
+        firstName: 'Friend',
+        lastName: null,
+        picture: null,
+        createdAt: 1,
+        updatedAt: 1,
+    },
+    balances: [],
+    lastUsedCurrency: null,
+} satisfies KnownUser;
 
 beforeEach(() => {
     useUsersStore.setState({
@@ -66,6 +81,7 @@ test.each([
 test('lifts the mobile add-expense action without changing the nav item layout', () => {
     useAuthStore.setState({ status: 'authenticated' });
     useDashboardStore.setState({ appMode: APP_MODES.GROUP });
+    useUsersStore.setState({ friends: [friend] });
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
