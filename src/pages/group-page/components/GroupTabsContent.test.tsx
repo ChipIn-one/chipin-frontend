@@ -108,9 +108,39 @@ const activityItem = {
 
 const groupWithActivity = {
     ...group,
+    lastUsedCurrency: 'USD',
     recentActivities: {
         items: [activityItem],
         nextCursor: 20,
+    },
+} satisfies Group;
+
+const groupCreatedEvent = {
+    id: 'group-created',
+    seq: 1,
+    domain: 'GROUP',
+    action: 'GROUP_CREATED',
+    actorUserId: creator.id,
+    actorSnapshot: {
+        displayName: creator.displayName,
+        picture: creator.picture,
+    },
+    subjectType: 'group',
+    subjectId: group.id,
+    groupId: group.id,
+    metadata: {
+        type: 'group',
+        groupId: group.id,
+        groupName: group.name,
+    },
+    createdAt: 1,
+} as AppEvent;
+
+const groupWithLifecycleActivity = {
+    ...group,
+    recentActivities: {
+        items: [{ parent: groupCreatedEvent, lastEvent: groupCreatedEvent }],
+        nextCursor: null,
     },
 } satisfies Group;
 
@@ -209,6 +239,15 @@ test('renders the group activity exhausted marker after the last page', () => {
 
 test('renders invite onboarding instead of No expenses for a single-member group', () => {
     render(<GroupTabsContent group={group} {...defaultProps} />);
+
+    expect(screen.getByText('page.expenses.inviteTitle')).not.toBeNull();
+    expect(screen.getByText('page.expenses.inviteDescription')).not.toBeNull();
+    expect(screen.getByTestId('group-invite-actions').textContent).toBe(group.id);
+    expect(screen.queryByText('page.expenses.emptyTitle')).toBeNull();
+});
+
+test('renders invite onboarding when the feed only contains group lifecycle activity', () => {
+    render(<GroupTabsContent group={groupWithLifecycleActivity} {...defaultProps} />);
 
     expect(screen.getByText('page.expenses.inviteTitle')).not.toBeNull();
     expect(screen.getByText('page.expenses.inviteDescription')).not.toBeNull();
