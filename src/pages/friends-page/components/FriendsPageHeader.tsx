@@ -3,19 +3,40 @@ import { useTranslation } from 'react-i18next';
 
 import { Avatar, Box, Button, Flex, Heading, Skeleton, Text } from '@radix-ui/themes';
 
+import { useFriendInvite } from 'hooks/pwaHooks';
+import { useUsersStore } from 'store/users-store';
+
 interface Props {
     isLoading: boolean;
 }
 
 const FriendsPageHeader = ({ isLoading }: Props) => {
     const { t } = useTranslation(['friends', 'common']);
+    const user = useUsersStore(state => state.user);
+    const {
+        isNativeShareSupported,
+        onShare,
+        onCopyLink,
+    } = useFriendInvite(user?.inviteToken ?? '');
+    const shareContent = {
+        title: t('friends:invite.shareTitle'),
+        text: t('friends:invite.shareText'),
+    };
+
+    const onAddFriend = (): Promise<void> => {
+        if (isNativeShareSupported) {
+            return onShare(shareContent);
+        }
+
+        return onCopyLink();
+    };
 
     return (
         <Flex
             justify="between"
-            align={{ initial: 'center', lg: 'stretch' }}
-            direction={{ initial: 'row', lg: 'column' }}
-            gap={{ lg: '3' }}
+            align={{ initial: 'center', sm: 'stretch' }}
+            direction={{ initial: 'row', sm: 'column' }}
+            gap={{ sm: '3' }}
         >
             <Flex align="center" gap={{ initial: '3', sm: '4' }}>
                 <Skeleton loading={isLoading}>
@@ -36,7 +57,12 @@ const FriendsPageHeader = ({ isLoading }: Props) => {
                     </Text>
                 </Box>
             </Flex>
-            <Button variant="soft" loading={isLoading}>
+            <Button
+                variant="soft"
+                loading={isLoading}
+                disabled={!user?.inviteToken}
+                onClick={onAddFriend}
+            >
                 <LucideUserPlus size={16} />
                 <Box display={{ initial: 'none', sm: 'inline' }}>
                     <Text as="span">{t('common:buttons.addFriend')}</Text>
