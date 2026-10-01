@@ -1,28 +1,21 @@
+import { type ReactElement, useState } from 'react';
 import { LucideCirclePlus, LucidePlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import styled from 'styled-components';
-import { useShallow } from 'zustand/react/shallow';
 
-import { Box, Button } from '@radix-ui/themes';
+import { Box, Button, Tooltip } from '@radix-ui/themes';
 
 import { themeColor } from 'helpers/colors';
-import { getCanAddExpense } from 'helpers/expenses';
-import { selectIsLoggedIn } from 'store/authSelectors';
-import { useAuthStore } from 'store/authStore';
-import { selectIsSoloMode } from 'store/dashboardSelectors';
-import { useDashboardStore } from 'store/dashboardStore';
-import { useExpenseModalStore } from 'store/expenseModalStore';
-import { useGroupsStore } from 'store/groupsStore';
-import { selectDashboardLoading } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
-import { selectCanAccessSolo, useUsersStore } from 'store/users-store';
 
-const ButtonMobile = styled(Button)<{ $isSoloMode: boolean }>`
+import { useConnect } from './add-expense-button/internal/useConnect';
+
+const ButtonMobile = styled(Button)<{ $isSoloMode: boolean; $isMuted: boolean }>`
     width: var(--space-9);
     height: var(--space-9);
     padding: 0;
-    border: 6px solid ${({ $isSoloMode }) => themeColor($isSoloMode ? 'violet7' : 'grass7')};
+    border: 6px solid ${({ $isSoloMode, $isMuted }) =>
+        themeColor($isMuted ? 'gray7' : $isSoloMode ? 'violet7' : 'grass7')};
 `;
 
 interface Props {
@@ -32,60 +25,88 @@ interface Props {
 const AddExpenseButton = ({ type = 'desktop' }: Props) => {
     const { t } = useTranslation('common');
     const location = useLocation();
-    const isLoggedIn = useAuthStore(selectIsLoggedIn);
-    const isDashboardLoading = useLoadingStore(selectDashboardLoading);
-    const { groups, selectedGroup } = useGroupsStore(
-        useShallow(state => ({
-            groups: state.groups,
-            selectedGroup: state.selectedGroup,
-        })),
-    );
-    const friends = useUsersStore(state => state.friends);
-    const canAccessSolo = useUsersStore(selectCanAccessSolo);
-    const isSoloModeFromStore = useDashboardStore(selectIsSoloMode);
-    const isSoloMode = canAccessSolo && isSoloModeFromStore;
-    const openAddExpenseModal = useExpenseModalStore(state => state.open);
-    const hasAvailableGroup = groups.some(group => group.members.length > 0);
-    const canAddExpense = getCanAddExpense({
-        pathname: location.pathname,
-        hasFriends: friends.length > 0,
-        hasAvailableGroup,
-        hasSelectedGroupMembers: Boolean(selectedGroup?.members.length),
-    });
+    const [isUnavailableTooltipOpen, setIsUnavailableTooltipOpen] = useState(false);
+    const {
+        isLoggedIn,
+        isSoloMode,
+        isUnavailable,
+        isTargetLoadFailed,
+        isButtonLoading,
+        unavailableReason,
+        onAddExpense,
+    } = useConnect(location.pathname);
+    const unavailableMessage = unavailableReason
+        ? t(`addExpenseUnavailable.${unavailableReason}`)
+        : null;
 
     if (!isLoggedIn) {
         return null;
     }
 
-    if (type === 'mobile') {
+    const onClick = () => {
+        if (isButtonLoading || isTargetLoadFailed) {
+            return;
+        }
+
+        if (isUnavailable) {
+            setIsUnavailableTooltipOpen(true);
+            return;
+        }
+
+        onAddExpense();
+    };
+
+    const withUnavailableTooltip = (button: ReactElement) => {
+        if (!isUnavailable || !unavailableMessage) {
+            return button;
+        }
+
         return (
+            <Tooltip
+                content={unavailableMessage}
+                open={isUnavailableTooltipOpen}
+                onOpenChange={setIsUnavailableTooltipOpen}
+            >
+                {button}
+            </Tooltip>
+        );
+    };
+
+    const isMuted = isUnavailable || isTargetLoadFailed;
+    const buttonColor = isMuted ? 'gray' : isSoloMode ? 'violet' : 'grass';
+
+    if (type === 'mobile') {
+        return withUnavailableTooltip(
             <ButtonMobile
                 $isSoloMode={isSoloMode}
+                $isMuted={isMuted}
                 size="4"
                 radius="full"
-                color={isSoloMode ? 'violet' : 'grass'}
+                color={buttonColor}
                 aria-label={t('buttons.addExpense')}
-                loading={isDashboardLoading}
-                disabled={!canAddExpense}
-                onClick={() => openAddExpenseModal()}
+                aria-disabled={isUnavailable || undefined}
+                disabled={isTargetLoadFailed || undefined}
+                loading={isButtonLoading}
+                onClick={onClick}
             >
                 <LucidePlus size={28} />
-            </ButtonMobile>
+            </ButtonMobile>,
         );
     }
 
-    const button = (
+    const button = withUnavailableTooltip(
         <Button
             size="3"
             radius="large"
-            color={isSoloMode ? 'violet' : 'grass'}
-            loading={isDashboardLoading}
-            disabled={!canAddExpense}
-            onClick={() => openAddExpenseModal()}
+            color={buttonColor}
+            aria-disabled={isUnavailable || undefined}
+            disabled={isTargetLoadFailed || undefined}
+            loading={isButtonLoading}
+            onClick={onClick}
         >
             <LucideCirclePlus />
             {t('buttons.addExpense')}
-        </Button>
+        </Button>,
     );
 
     if (type === 'sidebar') {

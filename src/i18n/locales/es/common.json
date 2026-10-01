@@ -171,5 +171,10 @@
     "noDebtsDescription": "No le debes nada a nadie y nadie te debe a ti.",
     "amount": {
         "notInteger": "¡El valor no es entero!"
+    },
+    "addExpenseUnavailable": {
+        "dashboard": "Añade amigos o miembros para empezar",
+        "group": "Añade miembros para empezar",
+        "friends": "Añade un amigo para empezar"
     }
 }

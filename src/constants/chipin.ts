@@ -1,5 +1,7 @@
 export const PROJECT_NAME = 'Chipin';
 
+export const MIN_GROUP_EXPENSE_PARTICIPANTS = 2;
+
 export const EXPENSE_SPLIT_MODES = {
     EQUAL: 'equal',
     PERCENT: 'percent',

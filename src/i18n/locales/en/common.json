@@ -171,5 +171,10 @@
     "noDebtsDescription": "You don't owe anyone and no one owes you.",
     "amount": {
         "notInteger": "Value is not integer!"
+    },
+    "addExpenseUnavailable": {
+        "dashboard": "Add friends or group members to start",
+        "group": "Add group members to start",
+        "friends": "Add a friend to start"
     }
 }
