@@ -180,6 +180,23 @@ test('replaces share feedback timer and clears the pending timer on unmount', ()
         });
 });
 
+test('shows copied feedback when native sharing falls back to clipboard', () => {
+    hookMocks.shareInvite.mockResolvedValueOnce('copied');
+    const { result } = renderHook(() => useGroupInvite(group));
+
+    return Promise.resolve(
+        act(() => result.current.onShare({
+            title: 'Trip',
+            text: 'Share expenses',
+        })),
+    ).then(() => {
+        expect(result.current.isCopied).toBe(true);
+        expect(vi.mocked(toast.success)).toHaveBeenCalledWith(
+            'toasts:group.inviteLinkCopied',
+        );
+    });
+});
+
 test('shows copied feedback after a successful invite link copy', () => {
     const { result } = renderHook(() => useGroupInvite(group));
 
