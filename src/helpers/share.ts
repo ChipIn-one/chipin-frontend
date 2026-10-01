@@ -1,9 +1,12 @@
 export type ShareResult = 'shared' | 'copied' | 'cancelled' | 'unsupported';
 
-export interface ShareOptions {
-    url: string;
+export interface InviteShareContent {
     title: string;
     text: string;
+}
+
+export interface ShareOptions extends InviteShareContent {
+    url: string;
 }
 
 /**
