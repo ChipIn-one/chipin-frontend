@@ -1,12 +1,25 @@
 import { useTranslation } from 'react-i18next';
 
-import { Box, Container, Flex, Heading, Section, Text } from '@radix-ui/themes';
+import { Box, Container, Flex, Heading, Link, Section, Text } from '@radix-ui/themes';
 
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 
 import Footer from 'components/Footer';
 import { MobileNavBar } from 'components/nav-bars';
+
+const PRIVACY_CONTACT_EMAIL = 'privacy@chipin.one';
+
+const PRIVACY_SECTIONS = [
+    'account',
+    'googleSignIn',
+    'expenseData',
+    'sessions',
+    'sharing',
+    'operations',
+    'retention',
+    'updates',
+] as const;
 
 const PrivacyPage = () => {
     const { t } = useTranslation();
@@ -24,38 +37,30 @@ const PrivacyPage = () => {
                             <Text size="3" color="gray">
                                 {t('legal.privacy.intro')}
                             </Text>
+                            <Text size="2" color="gray">
+                                {t('legal.privacy.effectiveDate')}
+                            </Text>
                         </Flex>
 
                         <Flex direction="column" gap="5">
+                            {PRIVACY_SECTIONS.map((sectionKey) => (
+                                <Flex key={sectionKey} direction="column" gap="2">
+                                    <Heading as="h2" size="5">
+                                        {t(`legal.privacy.${sectionKey}.title`)}
+                                    </Heading>
+                                    <Text size="3">{t(`legal.privacy.${sectionKey}.body`)}</Text>
+                                </Flex>
+                            ))}
                             <Flex direction="column" gap="2">
                                 <Heading as="h2" size="5">
-                                    {t('legal.privacy.account.title')}
+                                    {t('legal.privacy.contact.title')}
                                 </Heading>
-                                <Text size="3">{t('legal.privacy.account.body')}</Text>
-                            </Flex>
-                            <Flex direction="column" gap="2">
-                                <Heading as="h2" size="5">
-                                    {t('legal.privacy.expenseData.title')}
-                                </Heading>
-                                <Text size="3">{t('legal.privacy.expenseData.body')}</Text>
-                            </Flex>
-                            <Flex direction="column" gap="2">
-                                <Heading as="h2" size="5">
-                                    {t('legal.privacy.sessions.title')}
-                                </Heading>
-                                <Text size="3">{t('legal.privacy.sessions.body')}</Text>
-                            </Flex>
-                            <Flex direction="column" gap="2">
-                                <Heading as="h2" size="5">
-                                    {t('legal.privacy.operations.title')}
-                                </Heading>
-                                <Text size="3">{t('legal.privacy.operations.body')}</Text>
-                            </Flex>
-                            <Flex direction="column" gap="2">
-                                <Heading as="h2" size="5">
-                                    {t('legal.privacy.updates.title')}
-                                </Heading>
-                                <Text size="3">{t('legal.privacy.updates.body')}</Text>
+                                <Text size="3">
+                                    {t('legal.privacy.contact.body')}{' '}
+                                    <Link href={`mailto:${PRIVACY_CONTACT_EMAIL}`}>
+                                        {PRIVACY_CONTACT_EMAIL}
+                                    </Link>
+                                </Text>
                             </Flex>
                         </Flex>
                     </Flex>

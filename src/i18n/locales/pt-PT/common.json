@@ -69,9 +69,14 @@
         "privacy": {
             "title": "Privacidade",
             "intro": "O ChipIn utiliza as informações que fornece para operar as funcionalidades de acompanhamento de despesas partilhadas e saldos.",
+            "effectiveDate": "Data de entrada em vigor: 30 de setembro de 2026",
             "account": {
                 "title": "Informações da conta",
                 "body": "Utilizamos os dados de conta e perfil que fornece, como o nome apresentado e o endereço de e-mail, para identificar a sua conta e mostrar o seu perfil onde o produto o faz."
+            },
+            "googleSignIn": {
+                "title": "Início de sessão com a Google",
+                "body": "Quando inicia sessão com a Google, o ChipIn recebe o ID da sua conta Google, o seu endereço de e-mail, o seu nome e o URL da sua fotografia de perfil (âmbitos: openid, email, profile). Utilizamos estes dados apenas para criar e identificar a sua conta ChipIn e para mostrar o seu nome, e-mail e fotografia de perfil aos membros dos grupos que partilha. Não vendemos dados de utilizadores Google nem os utilizamos para publicidade. A utilização e a transferência, pelo ChipIn, de informações recebidas das APIs da Google cumprem a Google API Services User Data Policy, incluindo os requisitos de utilização limitada (Limited Use)."
             },
             "expenseData": {
                 "title": "Grupos e despesas",
@@ -81,9 +86,21 @@
                 "title": "Autenticação e sessões",
                 "body": "As informações de autenticação e sessão são utilizadas para iniciar sessão e ajudar a manter a sua conta segura."
             },
+            "sharing": {
+                "title": "Partilha de dados",
+                "body": "Não vendemos os seus dados pessoais. O seu nome, o seu e-mail, a sua fotografia de perfil e as despesas que adiciona são visíveis para os membros dos grupos que partilha. Partilhamos dados com prestadores de serviços apenas na medida necessária para alojar, armazenar e monitorizar o ChipIn, como fornecedores de alojamento, armazenamento de ficheiros e monitorização de erros."
+            },
             "operations": {
                 "title": "Funcionamento do serviço",
                 "body": "Os dados operacionais e de erros ajudam-nos a operar, proteger e melhorar o ChipIn. A observabilidade de produção foi concebida para não expor intencionalmente dados sensíveis de autenticação nem corpos sensíveis de pedidos e respostas."
+            },
+            "retention": {
+                "title": "Conservação e eliminação de dados",
+                "body": "Conservamos os seus dados enquanto a sua conta estiver ativa. Para pedir a eliminação da sua conta e dos dados pessoais associados, contacte-nos através do endereço abaixo."
+            },
+            "contact": {
+                "title": "Contacto",
+                "body": "Questões sobre esta política ou os seus dados:"
             },
             "updates": {
                 "title": "Atualizações",
