@@ -42,12 +42,11 @@ test('shows the group join hint and closes from the footer action', () => {
                 'https://chipin.one/invite/group-1',
             );
 
-            const closeButtons = screen.getAllByRole('button', {
+            const closeButton = screen.getByRole('button', {
                 name: 'common:buttons.close',
             });
-            expect(closeButtons).toHaveLength(2);
 
-            return user.click(closeButtons[1]);
+            return user.click(closeButton);
         })
         .then(() =>
             waitFor(() => {
