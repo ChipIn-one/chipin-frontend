@@ -20,7 +20,7 @@ interface UsersStoreState {
 
 interface UsersStoreActions {
     acceptFriendInvite: (params: AcceptUserInviteParams) => Promise<User>;
-    fetchSetFriends: (force?: boolean) => Promise<void>;
+    fetchSetFriends: (force?: boolean, rejectOnError?: boolean) => Promise<void>;
     fetchSetPremiumPromoRemaining: () => Promise<void>;
     fetchSetUser: (force?: boolean) => Promise<SelfUser | null>;
     removeFriend: (params: RemoveKnownUserParams) => Promise<void>;
