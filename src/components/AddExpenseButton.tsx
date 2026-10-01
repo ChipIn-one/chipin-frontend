@@ -85,7 +85,7 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
                 color={buttonColor}
                 aria-label={t('buttons.addExpense')}
                 aria-disabled={isUnavailable || undefined}
-                disabled={isTargetLoadFailed}
+                disabled={isTargetLoadFailed || undefined}
                 loading={isButtonLoading}
                 onClick={onClick}
             >
@@ -100,7 +100,7 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
             radius="large"
             color={buttonColor}
             aria-disabled={isUnavailable || undefined}
-            disabled={isTargetLoadFailed}
+            disabled={isTargetLoadFailed || undefined}
             loading={isButtonLoading}
             onClick={onClick}
         >
