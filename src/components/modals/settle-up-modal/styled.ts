@@ -1,28 +1,7 @@
 import { AmountInput } from 'basics';
 import styled from 'styled-components';
 
-import { Button, Card, ScrollArea, Text } from '@radix-ui/themes';
-
-import { MEDIA_QUERIES } from 'constants/breakpoints';
-
-export const DebtSelectionScrollArea = styled(ScrollArea)`
-    height: auto;
-    max-height: min(60dvh, 640px);
-
-    & [data-radix-scroll-area-viewport] {
-        height: auto;
-        max-height: inherit;
-    }
-
-    & [data-radix-scroll-area-viewport] > div {
-        width: 100%;
-        min-width: 0 !important;
-    }
-
-    @media ${MEDIA_QUERIES.belowSm} {
-        max-height: none;
-    }
-`;
+import { Button, Card, Text } from '@radix-ui/themes';
 
 export const ModalSurface = styled.div`
     display: flex;
@@ -95,5 +74,6 @@ export const DebtButton = styled(Button)`
 `;
 
 export const ShowMoreButton = styled(Button)`
-    align-self: center;
+    width: 100%;
+    justify-content: center;
 `;
