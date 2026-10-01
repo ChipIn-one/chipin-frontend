@@ -77,9 +77,12 @@ test('renders the same three invite actions used in group settings', () => {
     expect(screen.getByRole('button', {
         name: /common:buttons\.invitePeople/,
     })).not.toBeNull();
-    expect(screen.getByRole('button', {
+    const copyInviteButton = screen.getByRole('button', {
         name: /group:page\.settings\.copyLinkTitle/,
-    })).not.toBeNull();
+    });
+
+    expect(copyInviteButton).not.toBeNull();
+    expect(copyInviteButton.textContent).toContain('group:page.shareWarning');
     expect(screen.getByRole('button', {
         name: /group:page\.settings\.showQRTitle/,
     })).not.toBeNull();
