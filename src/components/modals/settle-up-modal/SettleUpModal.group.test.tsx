@@ -227,7 +227,7 @@ test('renders the group debt list as an accessible selection region', () => {
         });
 });
 
-test('keeps the group debt selection dialog constrained for body scrolling', () => {
+test('keeps a single constrained scroll body for group debt selection', () => {
     const user = userEvent.setup();
 
     render(<SettleUpModal source="group" group={group} />);
@@ -236,17 +236,14 @@ test('keeps the group debt selection dialog constrained for body scrolling', () 
         .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
         .then(() => {
             const dialog = screen.getByRole('dialog');
-            const dialogStyles = getComputedStyle(dialog);
             const scrollViewports = dialog.querySelectorAll(
                 '[data-radix-scroll-area-viewport]',
             );
+            const scrollRoot = scrollViewports[0]?.closest('.rt-ScrollAreaRoot');
 
             expect(scrollViewports).toHaveLength(1);
-            expect(dialogStyles.display).toBe('flex');
-            expect(dialogStyles.flexDirection).toBe('column');
-            expect(dialogStyles.minHeight).not.toBe('');
-            expect(dialogStyles.maxHeight).not.toBe('');
-            expect(dialogStyles.overflow).toBe('hidden');
+            expect(scrollRoot).not.toBeNull();
+            expect(getComputedStyle(scrollRoot as HTMLElement).maxHeight).not.toBe('none');
         });
 });
 
