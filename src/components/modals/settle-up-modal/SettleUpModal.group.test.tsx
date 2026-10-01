@@ -235,10 +235,17 @@ test('keeps the group debt selection dialog constrained for body scrolling', () 
     return user
         .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
         .then(() => {
-            const dialogStyles = getComputedStyle(screen.getByRole('dialog'));
+            const dialog = screen.getByRole('dialog');
+            const dialogStyles = getComputedStyle(dialog);
+            const scrollViewports = dialog.querySelectorAll(
+                '[data-radix-scroll-area-viewport]',
+            );
 
+            expect(scrollViewports).toHaveLength(1);
             expect(dialogStyles.display).toBe('flex');
             expect(dialogStyles.flexDirection).toBe('column');
+            expect(dialogStyles.minHeight).not.toBe('');
+            expect(dialogStyles.maxHeight).not.toBe('');
             expect(dialogStyles.overflow).toBe('hidden');
         });
 });
