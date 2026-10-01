@@ -56,8 +56,8 @@ vi.mock('hooks/pwaHooks', () => ({
         isNativeShareSupported: false,
         isShareDone: false,
         isCopied: false,
-        handleShare: () => Promise.resolve(),
-        handleCopyLink: () => Promise.resolve(),
+        onShare: () => Promise.resolve(),
+        onCopyLink: () => Promise.resolve(),
     }),
 }));
 
