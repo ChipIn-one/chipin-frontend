@@ -74,5 +74,6 @@ export const DebtButton = styled(Button)`
 `;
 
 export const ShowMoreButton = styled(Button)`
-    align-self: center;
+    width: 100%;
+    justify-content: center;
 `;
