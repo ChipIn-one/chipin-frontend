@@ -8,7 +8,7 @@ import type { Group } from 'api/chipin.types';
 
 import GroupInviteIllustration from 'assets/group-invite-empty-state.png';
 
-import GroupInviteActions from './GroupInviteActions';
+import GroupInviteActionRows from './GroupInviteActionRows';
 
 const InviteCard = styled(Card)`
     overflow: hidden;
@@ -19,7 +19,7 @@ const InviteCard = styled(Card)`
 
 const InviteIllustration = styled.img`
     display: block;
-    width: min(100%, 32rem);
+    width: min(100%, 20rem);
     height: auto;
     margin: 0 auto;
 `;
@@ -85,7 +85,7 @@ const GroupInviteEmptyState = ({ group }: Props) => {
                 </Text>
             </ShareDivider>
 
-            <GroupInviteActions group={group} mode="onboarding" />
+            <GroupInviteActionRows group={group} />
         </Flex>
     );
 };

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import { Theme } from '@radix-ui/themes';
@@ -6,7 +7,7 @@ import userEvent from '@testing-library/user-event';
 
 import type { Group } from 'api/chipin.types';
 
-import GroupInviteActions from './GroupInviteActions';
+import GroupInviteActionRows from './GroupInviteActionRows';
 
 const mocks = vi.hoisted(() => ({
     onShare: vi.fn(() => Promise.resolve()),
@@ -31,7 +32,7 @@ vi.mock('hooks/pwaHooks', () => ({
 }));
 
 vi.mock('components/modals/group-qr-modal', () => ({
-    GroupQRModal: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    GroupQRModal: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
 const creator = {
@@ -66,45 +67,30 @@ beforeEach(() => {
     vi.clearAllMocks();
 });
 
-test('keeps onboarding invite row inert and leaves copy invite functional', () => {
-    const user = userEvent.setup();
-
+test('renders the same three invite actions used in group settings', () => {
     render(
         <Theme>
-            <GroupInviteActions group={group} mode="onboarding" />
+            <GroupInviteActionRows group={group} />
         </Theme>,
     );
 
-    const invitePeople = screen.getByRole('button', {
+    expect(screen.getByRole('button', {
         name: /common:buttons\.invitePeople/,
-    });
-    const copyInvite = screen.getByRole('button', {
+    })).not.toBeNull();
+    expect(screen.getByRole('button', {
         name: /group:page\.settings\.copyLinkTitle/,
-    });
-
+    })).not.toBeNull();
     expect(screen.getByRole('button', {
         name: /group:page\.settings\.showQRTitle/,
     })).not.toBeNull();
-
-    return user
-        .click(invitePeople)
-        .then(() => {
-            expect(mocks.onShare).not.toHaveBeenCalled();
-            expect(mocks.onCopyLink).not.toHaveBeenCalled();
-
-            return user.click(copyInvite);
-        })
-        .then(() => {
-            expect(mocks.onCopyLink).toHaveBeenCalledOnce();
-        });
 });
 
-test('preserves the existing native share action outside onboarding', () => {
+test('keeps share and copy behavior in the shared rows', () => {
     const user = userEvent.setup();
 
     render(
         <Theme>
-            <GroupInviteActions group={group} />
+            <GroupInviteActionRows group={group} />
         </Theme>,
     );
 
@@ -114,6 +100,12 @@ test('preserves the existing native share action outside onboarding', () => {
         }))
         .then(() => {
             expect(mocks.onShare).toHaveBeenCalledWith('group:qr.shareText');
-            expect(mocks.onCopyLink).not.toHaveBeenCalled();
+
+            return user.click(screen.getByRole('button', {
+                name: /group:page\.settings\.copyLinkTitle/,
+            }));
+        })
+        .then(() => {
+            expect(mocks.onCopyLink).toHaveBeenCalledOnce();
         });
 });

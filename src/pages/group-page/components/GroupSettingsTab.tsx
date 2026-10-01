@@ -16,7 +16,7 @@ import { KickGroupMemberAlertDialog } from 'components/modals/kick-group-member-
 import { LeaveGroupAlertDialog } from 'components/modals/leave-group-alert-dialog';
 import { RemoveGroupAlertDialog } from 'components/modals/remove-group-alert-dialog';
 
-import GroupInviteActions from './GroupInviteActions';
+import GroupInviteActionRows from './GroupInviteActionRows';
 import { useConnect } from './internal/group-settings';
 
 interface Props {
@@ -56,7 +56,7 @@ const GroupSettingsTab = ({ group }: Props) => {
                 <Text size="1" color="gray" weight="medium">
                     {t('group:page.settings.inviteSection')}
                 </Text>
-                <GroupInviteActions group={group} />
+                <GroupInviteActionRows group={group} />
             </Flex>
 
             {/* ── MEMBERS section ── */}

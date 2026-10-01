@@ -51,9 +51,9 @@ vi.mock('features/activity', () => ({
 }));
 
 vi.mock('./GroupBalancesTab', () => ({ default: () => null }));
-vi.mock('./GroupInviteActions', () => ({
+vi.mock('./GroupInviteActionRows', () => ({
     default: ({ group }: { group: Group }) => (
-        <div data-testid="group-invite-actions">{group.id}</div>
+        <div data-testid="group-invite-action-rows">{group.id}</div>
     ),
 }));
 vi.mock('./GroupSettingsTab', () => ({ default: () => null }));
@@ -245,7 +245,7 @@ test('renders invite onboarding instead of No expenses for a single-member group
     expect(screen.getByText('page.expenses.inviteDescription')).not.toBeNull();
     expect(screen.getByRole('button', { name: 'page.expenses.inviteAction' })).not.toBeNull();
     expect(screen.getByText('page.expenses.shareVia')).not.toBeNull();
-    expect(screen.getByTestId('group-invite-actions').textContent).toBe(group.id);
+    expect(screen.getByTestId('group-invite-action-rows').textContent).toBe(group.id);
     expect(screen.queryByText('page.expenses.emptyTitle')).toBeNull();
 });
 
@@ -254,7 +254,7 @@ test('renders invite onboarding when the feed only contains group lifecycle acti
 
     expect(screen.getByText('page.expenses.inviteTitle')).not.toBeNull();
     expect(screen.getByText('page.expenses.inviteDescription')).not.toBeNull();
-    expect(screen.getByTestId('group-invite-actions').textContent).toBe(group.id);
+    expect(screen.getByTestId('group-invite-action-rows').textContent).toBe(group.id);
     expect(screen.queryByText('page.expenses.emptyTitle')).toBeNull();
 });
 
