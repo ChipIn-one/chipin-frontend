@@ -16,18 +16,17 @@ import GroupInviteEmptyState from './GroupInviteEmptyState';
 
 interface Props {
     group: Group;
+    showInviteOnboarding: boolean;
 }
 
-const GroupBalancesTab = ({ group }: Props) => {
+const GroupBalancesTab = ({ group, showInviteOnboarding }: Props) => {
     const { t } = useTranslation('group');
     const user = useUsersStore(s => s.user);
 
     const otherMembers = group.members.filter(member => member.user.id !== user?.id);
     const inviteLink = buildGroupInviteLink({ inviteToken: group.inviteToken });
-    const shouldShowInviteOnboarding =
-        group.members.length === 1 && group.lastUsedCurrency === null;
 
-    if (shouldShowInviteOnboarding) {
+    if (showInviteOnboarding) {
         return <GroupInviteEmptyState group={group} />;
     }
 
