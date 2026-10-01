@@ -25,11 +25,11 @@ test('removes the settings action and keeps activity filters interactive', () =>
     );
 
     expect(screen.queryByRole('button', { name: 'filterSettingsAction' })).toBeNull();
-    expect(screen.getByText('filterAll')).toBeTruthy();
-    expect(screen.getByText('filterExpenses')).toBeTruthy();
-    expect(screen.getByText('filterSettlements')).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'filterAll' })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'filterExpenses' })).toBeTruthy();
+    expect(screen.getByRole('radio', { name: 'filterSettlements' })).toBeTruthy();
 
-    return user.click(screen.getByText('filterExpenses')).then(() => {
+    return user.click(screen.getByRole('radio', { name: 'filterExpenses' })).then(() => {
         expect(onFilterChange).toHaveBeenCalledWith('expenses');
     });
 });
