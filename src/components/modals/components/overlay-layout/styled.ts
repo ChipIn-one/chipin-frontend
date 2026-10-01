@@ -52,13 +52,16 @@ const Header = styled.div`
     padding-bottom: var(--space-4);
 `;
 
-const Body = styled(ScrollArea)<{ $fillHeight: boolean }>`
+const Body = styled(ScrollArea)<{ $fillHeight: boolean; $maxHeight?: string }>`
     min-width: 0;
     min-height: 0;
     flex: 1;
     height: auto;
+    max-height: ${({ $maxHeight }) => $maxHeight ?? 'none'};
 
     & [data-radix-scroll-area-viewport] {
+        height: ${({ $maxHeight }) => ($maxHeight ? 'auto' : '100%')};
+        max-height: ${({ $maxHeight }) => ($maxHeight ? 'inherit' : 'none')};
         overscroll-behavior: contain;
     }
 
@@ -66,6 +69,15 @@ const Body = styled(ScrollArea)<{ $fillHeight: boolean }>`
         width: 100%;
         min-width: 0 !important;
         height: ${({ $fillHeight }) => ($fillHeight ? '100%' : 'auto')};
+    }
+
+    @media ${MEDIA_QUERIES.belowSm} {
+        max-height: none;
+
+        & [data-radix-scroll-area-viewport] {
+            height: 100%;
+            max-height: none;
+        }
     }
 `;
 

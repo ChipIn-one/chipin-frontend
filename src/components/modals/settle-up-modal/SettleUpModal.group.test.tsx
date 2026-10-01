@@ -177,11 +177,15 @@ test('toggles group debts beyond the first three rows within their section', () 
 
     return user
         .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
-        .then(() =>
-            user.click(
-                screen.getByRole('button', { name: 'group:page.settleUp.showMore' }),
-            ),
-        )
+        .then(() => {
+            const showMoreButton = screen.getByRole('button', {
+                name: 'group:page.settleUp.showMore',
+            });
+
+            expect(getComputedStyle(showMoreButton).width).toBe('100%');
+
+            return user.click(showMoreButton);
+        })
         .then(() => {
             expect(screen.getByText('6 AFN')).toBeTruthy();
             expect(screen.getAllByRole('button', { name: /Debtor/ })).toHaveLength(4);
@@ -207,7 +211,7 @@ test('does not show an explanatory description above the group debt sections', (
         });
 });
 
-test('renders the group debt list inside a dedicated scroll area', () => {
+test('renders the group debt list as an accessible selection region', () => {
     const user = userEvent.setup();
 
     render(<SettleUpModal source="group" group={group} />);
@@ -220,6 +224,26 @@ test('renders the group debt list inside a dedicated scroll area', () => {
                     name: 'group:page.settleUp.chooseDebtTitle',
                 }),
             ).toBeTruthy();
+        });
+});
+
+test('keeps a single constrained scroll body for group debt selection', () => {
+    const user = userEvent.setup();
+
+    render(<SettleUpModal source="group" group={group} />);
+
+    return user
+        .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
+        .then(() => {
+            const dialog = screen.getByRole('dialog');
+            const scrollViewports = dialog.querySelectorAll(
+                '[data-radix-scroll-area-viewport]',
+            );
+            const scrollRoot = scrollViewports[0]?.closest('.rt-ScrollAreaRoot');
+
+            expect(scrollViewports).toHaveLength(1);
+            expect(scrollRoot).not.toBeNull();
+            expect(getComputedStyle(scrollRoot as HTMLElement).maxHeight).not.toBe('none');
         });
 });
 
