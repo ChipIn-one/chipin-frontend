@@ -13,12 +13,17 @@ test('removes query parameters and fragments from telemetry URLs', () => {
     ).toBe('https://chipin.one/oauth/callback');
 });
 
-test('redacts invite tokens from telemetry URLs', () => {
-    expect(
-        sanitizeTelemetryUrl(
-            'https://chipin.one/group/join/private-invite-token?source=share',
-        ),
-    ).toBe('https://chipin.one/group/join/:inviteToken');
+test.each([
+    [
+        'https://chipin.one/group/join/private-invite-token?source=share',
+        'https://chipin.one/group/join/:inviteToken',
+    ],
+    [
+        'https://chipin.one/friends/join/private-friend-token?source=share',
+        'https://chipin.one/friends/join/:inviteToken',
+    ],
+])('redacts invite tokens from telemetry URLs', (url, expected) => {
+    expect(sanitizeTelemetryUrl(url)).toBe(expected);
 });
 
 test('uses development telemetry on Vercel-generated domains', () => {
