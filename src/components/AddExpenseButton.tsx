@@ -10,12 +10,12 @@ import { themeColor } from 'helpers/colors';
 
 import { useConnect } from './add-expense-button/internal/useConnect';
 
-const ButtonMobile = styled(Button)<{ $isSoloMode: boolean; $isUnavailable: boolean }>`
+const ButtonMobile = styled(Button)<{ $isSoloMode: boolean; $isMuted: boolean }>`
     width: var(--space-9);
     height: var(--space-9);
     padding: 0;
-    border: 6px solid ${({ $isSoloMode, $isUnavailable }) =>
-        themeColor($isUnavailable ? 'gray7' : $isSoloMode ? 'violet7' : 'grass7')};
+    border: 6px solid ${({ $isSoloMode, $isMuted }) =>
+        themeColor($isMuted ? 'gray7' : $isSoloMode ? 'violet7' : 'grass7')};
 `;
 
 interface Props {
@@ -30,6 +30,7 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
         isLoggedIn,
         isSoloMode,
         isUnavailable,
+        isTargetLoadFailed,
         isButtonLoading,
         unavailableReason,
         onAddExpense,
@@ -43,7 +44,7 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
     }
 
     const onClick = () => {
-        if (isButtonLoading) {
+        if (isButtonLoading || isTargetLoadFailed) {
             return;
         }
 
@@ -71,18 +72,20 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
         );
     };
 
-    const buttonColor = isUnavailable ? 'gray' : isSoloMode ? 'violet' : 'grass';
+    const isMuted = isUnavailable || isTargetLoadFailed;
+    const buttonColor = isMuted ? 'gray' : isSoloMode ? 'violet' : 'grass';
 
     if (type === 'mobile') {
         return withUnavailableTooltip(
             <ButtonMobile
                 $isSoloMode={isSoloMode}
-                $isUnavailable={isUnavailable}
+                $isMuted={isMuted}
                 size="4"
                 radius="full"
                 color={buttonColor}
                 aria-label={t('buttons.addExpense')}
                 aria-disabled={isUnavailable || undefined}
+                disabled={isTargetLoadFailed}
                 loading={isButtonLoading}
                 onClick={onClick}
             >
@@ -97,6 +100,7 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
             radius="large"
             color={buttonColor}
             aria-disabled={isUnavailable || undefined}
+            disabled={isTargetLoadFailed}
             loading={isButtonLoading}
             onClick={onClick}
         >

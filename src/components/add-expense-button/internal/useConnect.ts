@@ -8,6 +8,7 @@ import { useAuthStore } from 'store/authStore';
 import { selectIsSoloMode } from 'store/dashboardSelectors';
 import { useDashboardStore } from 'store/dashboardStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
+import { useErrorsStore } from 'store/errorsStore';
 import { useGroupsStore } from 'store/groupsStore';
 import {
     selectDashboardLoading,
@@ -48,6 +49,17 @@ const useConnect = (pathname: string) => {
         })),
     );
     const {
+        hasFriendsLoadError,
+        hasGroupDataLoadError,
+        hasGroupListLoadError,
+    } = useErrorsStore(
+        useShallow(state => ({
+            hasFriendsLoadError: state.errors.users.friends !== null,
+            hasGroupDataLoadError: state.errors.group.data !== null,
+            hasGroupListLoadError: state.errors.group.list !== null,
+        })),
+    );
+    const {
         isDashboardLoading,
         isFriendsFetched,
         isGroupDataFetched,
@@ -63,37 +75,50 @@ const useConnect = (pathname: string) => {
 
     const isSoloMode = canAccessSolo && isSoloModeFromStore;
     const hasFriends = friends.length > 0;
+    const isFriendsResolved = isFriendsFetched && !hasFriendsLoadError;
+    const isGroupDataResolved = isGroupDataFetched && !hasGroupDataLoadError;
+    const isGroupListResolved = isGroupListFetched && !hasGroupListLoadError;
     let canAddExpense: boolean;
     let areTargetsResolved: boolean;
+    let hasTargetLoadError: boolean;
     let unavailableReason: AddExpenseUnavailableReason;
 
     if (isFriendsPage) {
         canAddExpense = hasFriends;
-        areTargetsResolved = hasFriends || isFriendsFetched;
+        hasTargetLoadError = !hasFriends && hasFriendsLoadError;
+        areTargetsResolved = hasFriends || isFriendsResolved;
         unavailableReason = 'friends';
     } else if (groupId) {
         canAddExpense =
             (routeGroup?.members.length ?? 0) >= MIN_GROUP_EXPENSE_PARTICIPANTS;
+        hasTargetLoadError =
+            !canAddExpense && (hasGroupListLoadError || hasGroupDataLoadError);
         areTargetsResolved =
             canAddExpense ||
-            routeGroup !== null ||
-            (isGroupListFetched && isGroupDataFetched);
+            (!hasTargetLoadError &&
+                (routeGroup !== null ||
+                    (isGroupListResolved && isGroupDataResolved)));
         unavailableReason = 'group';
     } else {
         canAddExpense = hasFriends || hasAvailableGroup;
+        hasTargetLoadError =
+            !canAddExpense && (hasFriendsLoadError || hasGroupListLoadError);
         areTargetsResolved =
-            canAddExpense || (isFriendsFetched && isGroupListFetched);
+            canAddExpense || (isFriendsResolved && isGroupListResolved);
         unavailableReason = 'dashboard';
     }
 
     const isUnavailable = areTargetsResolved && !canAddExpense;
+    const isTargetLoadFailed = hasTargetLoadError && !canAddExpense;
     const isButtonLoading =
-        !areTargetsResolved || (isDashboardLoading && canAddExpense);
+        (!areTargetsResolved && !isTargetLoadFailed) ||
+        (isDashboardLoading && canAddExpense);
 
     return {
         isLoggedIn,
         isSoloMode,
         isUnavailable,
+        isTargetLoadFailed,
         isButtonLoading,
         unavailableReason: isUnavailable ? unavailableReason : null,
         onAddExpense,

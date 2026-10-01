@@ -12,6 +12,7 @@ import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
+import { useErrorsStore } from 'store/errorsStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
@@ -57,6 +58,7 @@ beforeEach(() => {
     useDashboardStore.setState({ appMode: APP_MODES.GROUP });
     useExpenseModalStore.getState().reset();
     useGroupsStore.getState().setInitialGroupsStore();
+    useErrorsStore.getState().resetErrors();
     useUsersStore.setState({
         user: null,
         localUser: null,
@@ -126,6 +128,48 @@ test('keeps unresolved target availability loading during a cold sign-in', () =>
     expect(button).toHaveProperty('disabled', true);
     expect(button.getAttribute('aria-disabled')).toBeNull();
     expect(screen.queryByText('Add friends or group members to start')).toBeNull();
+});
+
+test('does not treat a failed friends load as an empty dashboard', () => {
+    useErrorsStore.getState().setError('users', 'friends', {
+        message: 'Friends unavailable',
+    });
+
+    renderButton(ROUTES.DASHBOARD);
+
+    const button = screen.getByRole('button', { name: 'Add expense' });
+
+    expect(button).toHaveProperty('disabled', true);
+    expect(button.getAttribute('aria-disabled')).toBeNull();
+    expect(screen.queryByText('Add friends or group members to start')).toBeNull();
+});
+
+test('does not treat a failed friends load as an empty Friends page', () => {
+    useErrorsStore.getState().setError('users', 'friends', {
+        message: 'Friends unavailable',
+    });
+
+    renderButton(ROUTES.FRIENDS);
+
+    const button = screen.getByRole('button', { name: 'Add expense' });
+
+    expect(button).toHaveProperty('disabled', true);
+    expect(button.getAttribute('aria-disabled')).toBeNull();
+    expect(screen.queryByText('Add a friend to start')).toBeNull();
+});
+
+test('does not treat a failed group load as an empty group', () => {
+    useErrorsStore.getState().setError('group', 'data', {
+        message: 'Group unavailable',
+    });
+
+    renderButton(`${ROUTES.GROUP}/group-1`);
+
+    const button = screen.getByRole('button', { name: 'Add expense' });
+
+    expect(button).toHaveProperty('disabled', true);
+    expect(button.getAttribute('aria-disabled')).toBeNull();
+    expect(screen.queryByText('Add group members to start')).toBeNull();
 });
 
 test('shows the unavailable mobile tooltip after target lists settle empty', async () => {
