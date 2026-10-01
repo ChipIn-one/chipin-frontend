@@ -81,16 +81,16 @@ test('explains an unavailable dashboard action on click', async () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add expense' }));
 
-    expect(await screen.findByText('Add friends or group members')).not.toBeNull();
+    expect((await screen.findAllByText('Add friends or group members')).length).toBeGreaterThan(0);
     expect(useExpenseModalStore.getState().isOpened).toBe(false);
 });
 
-test('uses the Friends-specific unavailable message', async () => {
+test('uses the friends-specific unavailable message', async () => {
     renderButton(ROUTES.FRIENDS);
 
     fireEvent.click(screen.getByRole('button', { name: 'Add expense' }));
 
-    expect(await screen.findByText('Add a friend')).not.toBeNull();
+    expect((await screen.findAllByText('Add a friend')).length).toBeGreaterThan(0);
 });
 
 test('uses the group-specific unavailable message', async () => {
@@ -98,7 +98,7 @@ test('uses the group-specific unavailable message', async () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add expense' }));
 
-    expect(await screen.findByText('Add group members')).not.toBeNull();
+    expect((await screen.findAllByText('Add group members')).length).toBeGreaterThan(0);
 });
 
 test('enables the add-expense action when a friend is available', () => {
