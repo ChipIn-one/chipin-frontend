@@ -32,14 +32,17 @@ vi.mock('hooks/pwaHooks', () => ({
         isNativeShareSupported: mocks.isNativeShareSupported,
         isShareDone: false,
         isCopied: false,
+        qr: {
+            title: 'friends:invite.qrTitle',
+            accessibleDescription: 'friends:invite.qrDescription',
+            description: 'friends:invite.qrJoinDescription',
+            subtitle: 'friends:invite.showQRSubtitle',
+        },
         onShare: mocks.onShare,
         onCopyLink: mocks.onCopyLink,
     }),
 }));
 
-vi.mock('./FriendInviteActionRows', () => ({
-    default: () => <div data-testid="friend-invite-actions" />,
-}));
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -57,7 +60,9 @@ test('reuses the group invite onboarding copy and personal invite behavior', () 
 
     expect(screen.getByText('group:page.expenses.inviteTitle')).toBeTruthy();
     expect(screen.getByText('group:page.expenses.inviteDescription')).toBeTruthy();
-    expect(screen.getByTestId('friend-invite-actions')).toBeTruthy();
+    expect(screen.getByRole('button', {
+        name: /group:page\.settings\.showQRTitle/,
+    })).toBeTruthy();
 
     return user
         .click(screen.getByRole('button', { name: 'group:page.expenses.inviteAction' }))
