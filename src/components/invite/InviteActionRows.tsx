@@ -4,11 +4,12 @@ import {
     LucideQrCode,
     LucideShare2,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 
-import type { InviteShareContent } from 'helpers/share';
+import type { UseInviteResult } from 'hooks/pwaHooks';
 
 import InviteQRModal from './InviteQRModal';
 
@@ -25,57 +26,38 @@ const InviteActionButton = styled.button`
 `;
 
 interface Props {
-    copiedLabel: string;
-    copyLabel: string;
-    inviteLink: string;
-    inviteLabel: string;
-    isCopied: boolean;
-    isNativeShareSupported: boolean;
-    isShareDone: boolean;
-    onCopyLink: () => Promise<void>;
-    onShare: (content: InviteShareContent) => Promise<void>;
-    qrAccessibleDescription: string;
-    qrDescription: string;
-    qrLabel: string;
-    qrSubtitle: string;
-    qrTitle: string;
-    shareContent: InviteShareContent;
-    sharedLabel: string;
-    shareWarning: string;
+    invite: UseInviteResult;
 }
 
-const InviteActionRows = ({
-    copiedLabel,
-    copyLabel,
-    inviteLabel,
-    inviteLink,
-    isCopied,
-    isNativeShareSupported,
-    isShareDone,
-    onCopyLink,
-    onShare,
-    qrAccessibleDescription,
-    qrDescription,
-    qrLabel,
-    qrSubtitle,
-    qrTitle,
-    shareContent,
-    sharedLabel,
-    shareWarning,
-}: Props) => {
+const InviteActionRows = ({ invite }: Props) => {
+    const { t } = useTranslation(['group', 'common']);
+    const {
+        inviteLink,
+        isNativeShareSupported,
+        isShareDone,
+        isCopied,
+        qr,
+        onShare,
+        onCopyLink,
+    } = invite;
+
     let primaryIcon = <LucideLink2 size={16} />;
-    let primaryLabel = isCopied ? copiedLabel : copyLabel;
+    let primaryLabel = isCopied
+        ? t('common:copy.copied')
+        : t('group:page.settings.copyLinkTitle');
 
     if (isNativeShareSupported) {
         primaryIcon = isShareDone
             ? <LucideCheck size={16} />
             : <LucideShare2 size={16} />;
-        primaryLabel = isShareDone ? sharedLabel : inviteLabel;
+        primaryLabel = isShareDone
+            ? t('common:copy.shared')
+            : t('common:buttons.invitePeople');
     }
 
     const onPrimaryInvite = (): Promise<void> => {
         if (isNativeShareSupported) {
-            return onShare(shareContent);
+            return onShare();
         }
 
         return onCopyLink();
@@ -98,7 +80,7 @@ const InviteActionRows = ({
                                 {primaryLabel}
                             </Text>
                             <Text size="1" color="gray">
-                                {shareWarning}
+                                {t('group:page.shareWarning')}
                             </Text>
                         </Flex>
                     </Flex>
@@ -122,10 +104,12 @@ const InviteActionRows = ({
                             />
                             <Flex direction="column" gap="1">
                                 <Text size="2" weight="medium">
-                                    {isCopied ? copiedLabel : copyLabel}
+                                    {isCopied
+                                        ? t('common:copy.copied')
+                                        : t('group:page.settings.copyLinkTitle')}
                                 </Text>
                                 <Text size="1" color="gray">
-                                    {shareWarning}
+                                    {t('group:page.shareWarning')}
                                 </Text>
                             </Flex>
                         </Flex>
@@ -133,13 +117,7 @@ const InviteActionRows = ({
                 </Card>
             )}
 
-            <InviteQRModal
-                qrLink={inviteLink}
-                title={qrTitle}
-                accessibleDescription={qrAccessibleDescription}
-                qrDescription={qrDescription}
-                triggerLabel={qrLabel}
-            >
+            <InviteQRModal qrLink={inviteLink} content={qr}>
                 <Card asChild size="2">
                     <InviteActionButton type="button">
                         <Flex align="center" gap="3" p="4">
@@ -152,10 +130,10 @@ const InviteActionRows = ({
                             />
                             <Flex direction="column" gap="1">
                                 <Text size="2" weight="medium">
-                                    {qrLabel}
+                                    {t('group:page.settings.showQRTitle')}
                                 </Text>
                                 <Text size="1" color="gray">
-                                    {qrSubtitle}
+                                    {qr.subtitle}
                                 </Text>
                             </Flex>
                         </Flex>
