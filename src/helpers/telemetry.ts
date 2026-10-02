@@ -1,5 +1,6 @@
 const FRIEND_INVITE_ROUTE_PATTERN = /\/friends\/join\/[^/]+/;
 const GROUP_INVITE_ROUTE_PATTERN = /\/group\/join\/[^/]+/;
+const USER_INVITE_API_PATTERN = /\/users\/invite\/[^/]+/;
 const VERCEL_DOMAIN_SUFFIX = '.vercel.app';
 
 export const resolveTelemetryEnvironment = (
@@ -19,5 +20,6 @@ export const sanitizeTelemetryUrl = (url: string): string => {
 
     return withoutQuery
         .replace(GROUP_INVITE_ROUTE_PATTERN, '/group/join/:inviteToken')
-        .replace(FRIEND_INVITE_ROUTE_PATTERN, '/friends/join/:inviteToken');
+        .replace(FRIEND_INVITE_ROUTE_PATTERN, '/friends/join/:inviteToken')
+        .replace(USER_INVITE_API_PATTERN, '/users/invite/:inviteToken');
 };
