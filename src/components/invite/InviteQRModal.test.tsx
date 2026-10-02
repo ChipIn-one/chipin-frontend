@@ -46,9 +46,7 @@ test('shows invite QR content and closes from the footer action', () => {
                 'https://chipin.one/friends/join/friend-token',
             );
 
-            return user.click(screen.getByRole('button', {
-                name: 'buttons.close',
-            }));
+            return user.click(screen.getByText('buttons.close'));
         })
         .then(() =>
             waitFor(() => {
