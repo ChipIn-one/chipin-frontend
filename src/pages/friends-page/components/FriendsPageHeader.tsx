@@ -12,23 +12,16 @@ interface Props {
 
 const FriendsPageHeader = ({ isLoading }: Props) => {
     const { t } = useTranslation(['friends', 'common']);
-    const user = useUsersStore(state => state.user);
-    const {
-        isNativeShareSupported,
-        onShare,
-        onCopyLink,
-    } = useFriendInvite(user?.inviteToken ?? '');
-    const shareContent = {
-        title: t('friends:invite.shareTitle'),
-        text: t('friends:invite.shareText'),
-    };
+    const inviteToken = useUsersStore(state => state.user?.inviteToken);
+    const invite = useFriendInvite(inviteToken ?? '');
+    const addFriendLabel = t('common:buttons.addFriend');
 
     const onAddFriend = (): Promise<void> => {
-        if (isNativeShareSupported) {
-            return onShare(shareContent);
+        if (invite.isNativeShareSupported) {
+            return invite.onShare();
         }
 
-        return onCopyLink();
+        return invite.onCopyLink();
     };
 
     return (
@@ -60,12 +53,13 @@ const FriendsPageHeader = ({ isLoading }: Props) => {
             <Button
                 variant="soft"
                 loading={isLoading}
-                disabled={!user?.inviteToken}
+                disabled={!inviteToken}
+                aria-label={addFriendLabel}
                 onClick={onAddFriend}
             >
                 <LucideUserPlus size={16} />
                 <Box display={{ initial: 'none', sm: 'inline' }}>
-                    <Text as="span">{t('common:buttons.addFriend')}</Text>
+                    <Text as="span">{addFriendLabel}</Text>
                 </Box>
             </Button>
         </Flex>
