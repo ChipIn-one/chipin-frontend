@@ -23,3 +23,20 @@ export const sanitizeTelemetryUrl = (url: string): string => {
         .replace(FRIEND_INVITE_ROUTE_PATTERN, '/friends/join/:inviteToken')
         .replace(USER_INVITE_API_PATTERN, '/users/invite/:inviteToken');
 };
+
+interface TelemetryEventWithUrl {
+    url: string;
+    route?: string;
+}
+
+export const sanitizeTelemetryEvent = <T extends TelemetryEventWithUrl>(
+    event: T,
+): T => {
+    return {
+        ...event,
+        url: sanitizeTelemetryUrl(event.url),
+        ...(typeof event.route === 'string' && {
+            route: sanitizeTelemetryUrl(event.route),
+        }),
+    };
+};
