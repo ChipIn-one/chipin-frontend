@@ -4,37 +4,29 @@ import { useTranslation } from 'react-i18next';
 
 import { Box, Button, Card, Dialog, Flex, Text } from '@radix-ui/themes';
 
+import type { InviteQrContent } from 'hooks/pwaHooks';
+
 import OfflineQRCode from 'components/OfflineQRCode';
 import { BaseModal, OverlayBody, OverlayFooter } from 'components/modals';
 
 interface Props {
-    accessibleDescription: string;
     children?: ReactNode;
-    qrDescription: string;
+    content: InviteQrContent;
     qrLink: string;
-    title: string;
-    triggerLabel: string;
 }
 
-const InviteQRModal = ({
-    accessibleDescription,
-    children,
-    qrDescription,
-    qrLink,
-    title,
-    triggerLabel,
-}: Props) => {
+const InviteQRModal = ({ children, content, qrLink }: Props) => {
     const { t } = useTranslation('common');
 
     return (
         <BaseModal
-            title={title}
-            accessibleDescription={accessibleDescription}
+            title={content.title}
+            accessibleDescription={content.accessibleDescription}
             triggerElement={children ?? (
                 <Box width="100%" asChild>
                     <Button variant="soft" size="3">
                         <LucideQrCode />
-                        {triggerLabel}
+                        {t('buttons.showQRCode')}
                     </Button>
                 </Box>
             )}
@@ -44,7 +36,7 @@ const InviteQRModal = ({
                         <Flex direction="column" gap="4">
                             <Card size="1" variant="surface">
                                 <Text size="2" color="gray">
-                                    {qrDescription}
+                                    {content.description}
                                 </Text>
                             </Card>
 
