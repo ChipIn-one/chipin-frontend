@@ -1,7 +1,9 @@
-const FRIEND_INVITE_ROUTE_PATTERN = /\/friends\/join\/[^/]+/;
-const GROUP_INVITE_ROUTE_PATTERN = /\/group\/join\/[^/]+/;
-const USER_INVITE_API_PATTERN = /\/users\/invite\/[^/]+/;
-const VERCEL_DOMAIN_SUFFIX = '.vercel.app';
+import {
+    FRIEND_INVITE_ROUTE_PATTERN,
+    GROUP_INVITE_ROUTE_PATTERN,
+    USER_INVITE_API_PATTERN,
+    VERCEL_DOMAIN_SUFFIX,
+} from 'constants/telemetry';
 
 export const resolveTelemetryEnvironment = (
     buildEnvironment: string,
