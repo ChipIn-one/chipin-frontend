@@ -8,7 +8,9 @@ interface Props {
 }
 
 const GroupInviteEmptyState = ({ group }: Props) => {
-    return <InviteEmptyState invite={useGroupInvite(group)} />;
+    const invite = useGroupInvite(group);
+
+    return <InviteEmptyState invite={invite} />;
 };
 
 export default GroupInviteEmptyState;
