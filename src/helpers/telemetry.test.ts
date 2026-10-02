@@ -2,6 +2,7 @@ import { expect, test } from 'vitest';
 
 import {
     resolveTelemetryEnvironment,
+    sanitizeTelemetryEvent,
     sanitizeTelemetryUrl,
 } from './telemetry';
 
@@ -32,6 +33,30 @@ test.each([
     ],
 ])('redacts invite tokens from telemetry URLs', (url, expected) => {
     expect(sanitizeTelemetryUrl(url)).toBe(expected);
+});
+
+test('redacts invite capabilities from Vercel telemetry events', () => {
+    expect(
+        sanitizeTelemetryEvent({
+            type: 'pageview' as const,
+            url: 'https://chipin.one/friends/join/private-friend-token?source=analytics',
+        }),
+    ).toEqual({
+        type: 'pageview',
+        url: 'https://chipin.one/friends/join/:inviteToken',
+    });
+
+    expect(
+        sanitizeTelemetryEvent({
+            type: 'vital' as const,
+            url: 'https://chipin.one/friends/join/private-friend-token',
+            route: '/friends/join/private-friend-token',
+        }),
+    ).toEqual({
+        type: 'vital',
+        url: 'https://chipin.one/friends/join/:inviteToken',
+        route: '/friends/join/:inviteToken',
+    });
 });
 
 test('uses development telemetry on Vercel-generated domains', () => {
