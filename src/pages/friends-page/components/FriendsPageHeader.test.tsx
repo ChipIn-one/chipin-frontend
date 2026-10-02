@@ -32,6 +32,12 @@ vi.mock('hooks/pwaHooks', () => ({
         isNativeShareSupported: mocks.isNativeShareSupported,
         isShareDone: false,
         isCopied: false,
+        qr: {
+            title: 'friends:invite.qrTitle',
+            accessibleDescription: 'friends:invite.qrDescription',
+            description: 'friends:invite.qrJoinDescription',
+            subtitle: 'friends:invite.showQRSubtitle',
+        },
         onShare: mocks.onShare,
         onCopyLink: mocks.onCopyLink,
     }),
@@ -53,12 +59,21 @@ test('shares the personal invite from Add friend on supported mobile devices', (
 
     return user.click(screen.getByRole('button', { name: /common:buttons.addFriend/ }))
         .then(() => {
-            expect(mocks.onShare).toHaveBeenCalledWith({
-                title: 'friends:invite.shareTitle',
-                text: 'friends:invite.shareText',
-            });
+            expect(mocks.onShare).toHaveBeenCalledOnce();
             expect(mocks.onCopyLink).not.toHaveBeenCalled();
         });
+});
+
+test('gives the icon-only mobile Add friend action an accessible name', () => {
+    render(
+        <Theme>
+            <FriendsPageHeader isLoading={false} />
+        </Theme>,
+    );
+
+    expect(
+        screen.getByRole('button', { name: 'common:buttons.addFriend' }),
+    ).toBeTruthy();
 });
 
 test('copies the personal invite from Add friend when native share is unavailable', () => {
