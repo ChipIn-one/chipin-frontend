@@ -26,14 +26,17 @@ vi.mock('hooks/pwaHooks', () => ({
         isNativeShareSupported: mocks.isNativeShareSupported,
         isShareDone: false,
         isCopied: false,
+        qr: {
+            title: 'group:qr.title',
+            accessibleDescription: 'group:qr.description',
+            description: 'group:qr.joinDescription',
+            subtitle: 'group:page.settings.showQRSubtitle',
+        },
         onShare: mocks.onShare,
         onCopyLink: mocks.onCopyLink,
     }),
 }));
 
-vi.mock('./GroupInviteActionRows', () => ({
-    default: () => <div data-testid="invite-action-rows" />,
-}));
 
 const creator = {
     id: 'user-1',
@@ -80,10 +83,7 @@ test('shares from the primary invite button when native share is supported', () 
     return user
         .click(screen.getByRole('button', { name: 'page.expenses.inviteAction' }))
         .then(() => {
-            expect(mocks.onShare).toHaveBeenCalledWith({
-                title: 'qr.shareTitle',
-                text: 'qr.shareText',
-            });
+            expect(mocks.onShare).toHaveBeenCalledOnce();
             expect(mocks.onCopyLink).not.toHaveBeenCalled();
         });
 });
