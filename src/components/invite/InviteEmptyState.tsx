@@ -1,12 +1,14 @@
 import { LucideUserPlus } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
 import { Button, Card, Flex, Heading, Text } from '@radix-ui/themes';
 
-import type { InviteShareContent } from 'helpers/share';
+import type { UseInviteResult } from 'hooks/pwaHooks';
 
 import InviteIllustrationAsset from 'assets/group-invite-empty-state.png';
+
+import InviteActionRows from './InviteActionRows';
 
 const InviteCard = styled(Card)`
     overflow: hidden;
@@ -39,34 +41,18 @@ const ShareDivider = styled(Flex)`
 `;
 
 interface Props {
-    actionLabel: string;
-    actionRows: ReactNode;
-    description: string;
-    isNativeShareSupported: boolean;
-    onCopyLink: () => Promise<void>;
-    onShare: (content: InviteShareContent) => Promise<void>;
-    shareContent: InviteShareContent;
-    shareViaLabel: string;
-    title: string;
+    invite: UseInviteResult;
 }
 
-const InviteEmptyState = ({
-    actionLabel,
-    actionRows,
-    description,
-    isNativeShareSupported,
-    onCopyLink,
-    onShare,
-    shareContent,
-    shareViaLabel,
-    title,
-}: Props) => {
+const InviteEmptyState = ({ invite }: Props) => {
+    const { t } = useTranslation('group');
+
     const onInviteFriends = (): Promise<void> => {
-        if (isNativeShareSupported) {
-            return onShare(shareContent);
+        if (invite.isNativeShareSupported) {
+            return invite.onShare();
         }
 
-        return onCopyLink();
+        return invite.onCopyLink();
     };
 
     return (
@@ -82,10 +68,10 @@ const InviteEmptyState = ({
 
                     <Flex direction="column" align="center" gap="1">
                         <Heading as="h3" size="5" align="center">
-                            {title}
+                            {t('page.expenses.inviteTitle')}
                         </Heading>
                         <Text size="2" color="gray" align="center">
-                            {description}
+                            {t('page.expenses.inviteDescription')}
                         </Text>
                     </Flex>
 
@@ -97,18 +83,18 @@ const InviteEmptyState = ({
                         onClick={onInviteFriends}
                     >
                         <LucideUserPlus size={18} />
-                        {actionLabel}
+                        {t('page.expenses.inviteAction')}
                     </InviteButton>
                 </Flex>
             </InviteCard>
 
             <ShareDivider align="center" gap="3">
                 <Text size="1" color="gray">
-                    {shareViaLabel}
+                    {t('page.expenses.shareVia')}
                 </Text>
             </ShareDivider>
 
-            {actionRows}
+            <InviteActionRows invite={invite} />
         </Flex>
     );
 };
