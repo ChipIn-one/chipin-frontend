@@ -163,7 +163,7 @@ test('replaces share feedback timer and clears the pending timer on unmount', ()
     const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
     const { result, unmount } = renderHook(() => useGroupInvite(group));
 
-    return Promise.resolve(act(() => result.current.onShare({ title: 'Trip', text: 'Share expenses' })))
+    return Promise.resolve(act(() => result.current.onShare()))
         .then(() => {
             expect(result.current.isShareDone).toBe(true);
             expect(setTimeoutSpy).toHaveBeenCalledWith(
@@ -171,7 +171,7 @@ test('replaces share feedback timer and clears the pending timer on unmount', ()
                 SECOND * 1.5,
             );
 
-            return Promise.resolve(act(() => result.current.onShare({ title: 'Trip', text: 'Share expenses' })));
+            return Promise.resolve(act(() => result.current.onShare()));
         })
         .then(() => {
             const clearedBeforeUnmount = clearTimeoutSpy.mock.calls.length;
@@ -183,15 +183,30 @@ test('replaces share feedback timer and clears the pending timer on unmount', ()
         });
 });
 
+test('uses the configured group share copy', () => {
+    const { result } = renderHook(() => useGroupInvite(group));
+
+    return Promise.resolve(act(() => result.current.onShare())).then(() => {
+        expect(hookMocks.shareInvite).toHaveBeenCalledWith({
+            url: expect.stringContaining(group.inviteToken),
+            title: 'group:qr.shareTitle',
+            text: 'group:qr.shareText',
+        });
+        expect(result.current.qr).toEqual({
+            title: 'group:qr.title',
+            accessibleDescription: 'group:qr.description',
+            description: 'group:qr.joinDescription',
+            subtitle: 'group:page.settings.showQRSubtitle',
+        });
+    });
+});
+
 test('shows copied feedback when native sharing falls back to clipboard', () => {
     hookMocks.shareInvite.mockResolvedValueOnce('copied');
     const { result } = renderHook(() => useGroupInvite(group));
 
     return Promise.resolve(
-        act(() => result.current.onShare({
-            title: 'Trip',
-            text: 'Share expenses',
-        })),
+        act(() => result.current.onShare()),
     ).then(() => {
         expect(result.current.isCopied).toBe(true);
         expect(vi.mocked(toast.success)).toHaveBeenCalledWith(
@@ -228,6 +243,24 @@ test('shows an error and keeps copied feedback off when invite link copy fails',
     });
 });
 
+
+test('uses friend-specific share and QR copy', () => {
+    const { result } = renderHook(() => useFriendInvite('friend-invite-token'));
+
+    return Promise.resolve(act(() => result.current.onShare())).then(() => {
+        expect(hookMocks.shareInvite).toHaveBeenCalledWith({
+            url: expect.stringContaining('/friends/join/friend-invite-token'),
+            title: 'friends:invite.shareTitle',
+            text: 'friends:invite.shareText',
+        });
+        expect(result.current.qr).toEqual({
+            title: 'friends:invite.qrTitle',
+            accessibleDescription: 'friends:invite.qrDescription',
+            description: 'friends:invite.qrJoinDescription',
+            subtitle: 'friends:invite.showQRSubtitle',
+        });
+    });
+});
 
 test('builds and copies the personal friend invite link', () => {
     const { result } = renderHook(() => useFriendInvite('friend-invite-token'));
