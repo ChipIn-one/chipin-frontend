@@ -56,14 +56,17 @@ vi.mock('hooks/pwaHooks', () => ({
         isNativeShareSupported: false,
         isShareDone: false,
         isCopied: false,
+        qr: {
+            title: 'group:qr.title',
+            accessibleDescription: 'group:qr.description',
+            description: 'group:qr.joinDescription',
+            subtitle: 'group:page.settings.showQRSubtitle',
+        },
         onShare: () => Promise.resolve(),
         onCopyLink: () => Promise.resolve(),
     }),
 }));
 
-vi.mock('components/modals/group-qr-modal', () => ({
-    GroupQRModal: ({ children }: { children?: ReactNode }) => children,
-}));
 
 vi.mock('components/modals/kick-group-member-alert-dialog', () => ({
     KickGroupMemberAlertDialog: ({ children }: { children?: ReactNode }) => children,
