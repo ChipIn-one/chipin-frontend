@@ -8,7 +8,9 @@ interface Props {
 }
 
 const GroupInviteActionRows = ({ group }: Props) => {
-    return <InviteActionRows invite={useGroupInvite(group)} />;
+    const invite = useGroupInvite(group);
+
+    return <InviteActionRows invite={invite} />;
 };
 
 export default GroupInviteActionRows;
