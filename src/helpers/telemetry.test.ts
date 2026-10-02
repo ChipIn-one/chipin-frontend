@@ -22,6 +22,14 @@ test.each([
         'https://chipin.one/friends/join/private-friend-token?source=share',
         'https://chipin.one/friends/join/:inviteToken',
     ],
+    [
+        'https://api.chipin.one/users/invite/private-friend-token',
+        'https://api.chipin.one/users/invite/:inviteToken',
+    ],
+    [
+        '/users/invite/private-friend-token?source=xhr',
+        '/users/invite/:inviteToken',
+    ],
 ])('redacts invite tokens from telemetry URLs', (url, expected) => {
     expect(sanitizeTelemetryUrl(url)).toBe(expected);
 });
