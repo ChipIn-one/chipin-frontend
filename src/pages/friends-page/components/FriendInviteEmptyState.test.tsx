@@ -58,14 +58,14 @@ test('reuses the group invite onboarding copy and personal invite behavior', () 
         </Theme>,
     );
 
-    expect(screen.getByText('group:page.expenses.inviteTitle')).toBeTruthy();
-    expect(screen.getByText('group:page.expenses.inviteDescription')).toBeTruthy();
+    expect(screen.getByText('page.expenses.inviteTitle')).toBeTruthy();
+    expect(screen.getByText('page.expenses.inviteDescription')).toBeTruthy();
     expect(screen.getByRole('button', {
         name: /group:page\.settings\.showQRTitle/,
     })).toBeTruthy();
 
     return user
-        .click(screen.getByRole('button', { name: 'group:page.expenses.inviteAction' }))
+        .click(screen.getByRole('button', { name: 'page.expenses.inviteAction' }))
         .then(() => {
             expect(mocks.onCopyLink).toHaveBeenCalledOnce();
         });
