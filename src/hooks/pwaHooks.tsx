@@ -84,12 +84,20 @@ export const useCheckPwa = () => {
     }, []);
 };
 
-interface UseInviteResult {
+export interface InviteQrContent {
+    title: string;
+    accessibleDescription: string;
+    description: string;
+    subtitle: string;
+}
+
+export interface UseInviteResult {
     inviteLink: string;
     isNativeShareSupported: boolean;
     isShareDone: boolean;
     isCopied: boolean;
-    onShare: (content: InviteShareContent) => Promise<void>;
+    qr: InviteQrContent;
+    onShare: () => Promise<void>;
     onCopyLink: () => Promise<void>;
 }
 
@@ -97,12 +105,16 @@ interface UseInviteParams {
     inviteLink: string;
     copySuccessMessage: string;
     copyErrorMessage: string;
+    shareContent: InviteShareContent;
+    qr: InviteQrContent;
 }
 
 const useInvite = ({
     inviteLink,
     copySuccessMessage,
     copyErrorMessage,
+    shareContent,
+    qr,
 }: UseInviteParams): UseInviteResult => {
     const [isShareDone, setIsShareDone] = useState(false);
     const [isCopied, setIsCopied] = useState(false);
@@ -143,11 +155,11 @@ const useInvite = ({
         }, INVITE_FEEDBACK_DELAY_MS);
     };
 
-    const onShare = (content: InviteShareContent): Promise<void> => {
+    const onShare = (): Promise<void> => {
         return shareInvite({
             url: inviteLink,
-            title: content.title,
-            text: content.text,
+            title: shareContent.title,
+            text: shareContent.text,
         }).then(result => {
             if (!isMounted.current) {
                 return;
@@ -200,6 +212,7 @@ const useInvite = ({
         isNativeShareSupported,
         isShareDone,
         isCopied,
+        qr,
         onShare,
         onCopyLink,
     };
@@ -210,6 +223,18 @@ export const useGroupInvite = (group: Group): UseInviteResult => {
         inviteLink: buildGroupInviteLink({ inviteToken: group.inviteToken }),
         copySuccessMessage: i18n.t('toasts:group.inviteLinkCopied'),
         copyErrorMessage: i18n.t('toasts:group.inviteLinkCopyError'),
+        shareContent: {
+            title: i18n.t('group:qr.shareTitle', { groupName: group.name }),
+            text: i18n.t('group:qr.shareText', { groupName: group.name }),
+        },
+        qr: {
+            title: i18n.t('group:qr.title'),
+            accessibleDescription: i18n.t('group:qr.description'),
+            description: i18n.t('group:qr.joinDescription', {
+                groupName: group.name,
+            }),
+            subtitle: i18n.t('group:page.settings.showQRSubtitle'),
+        },
     });
 };
 
@@ -218,5 +243,15 @@ export const useFriendInvite = (inviteToken: string): UseInviteResult => {
         inviteLink: buildFriendInviteLink({ inviteToken }),
         copySuccessMessage: i18n.t('toasts:friend.inviteLinkCopied'),
         copyErrorMessage: i18n.t('toasts:friend.inviteLinkCopyError'),
+        shareContent: {
+            title: i18n.t('friends:invite.shareTitle'),
+            text: i18n.t('friends:invite.shareText'),
+        },
+        qr: {
+            title: i18n.t('friends:invite.qrTitle'),
+            accessibleDescription: i18n.t('friends:invite.qrDescription'),
+            description: i18n.t('friends:invite.qrJoinDescription'),
+            subtitle: i18n.t('friends:invite.showQRSubtitle'),
+        },
     });
 };
