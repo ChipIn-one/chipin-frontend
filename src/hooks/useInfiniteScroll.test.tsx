@@ -38,7 +38,7 @@ test('loads the next page when the sentinel enters the viewport', () => {
     expect(onLoadMore).toHaveBeenCalledOnce();
 });
 
-test('does not load twice while the same intersection stays active', () => {
+test('re-arms pagination after a completed load while the sentinel stays visible', () => {
     const onLoadMore = vi.fn(() => Promise.resolve());
     let isLoading = false;
     const { rerender } = renderHook(() =>
@@ -52,19 +52,38 @@ test('does not load twice while the same intersection stays active', () => {
     isIntersecting = true;
     rerender();
 
+    expect(onLoadMore).toHaveBeenCalledOnce();
+
     isLoading = true;
     rerender();
     isLoading = false;
     rerender();
 
-    expect(onLoadMore).toHaveBeenCalledOnce();
+    expect(onLoadMore).toHaveBeenCalledTimes(2);
+});
 
-    isIntersecting = false;
-    rerender();
+test('does not re-arm pagination when the completed request removes eligibility', () => {
+    const onLoadMore = vi.fn(() => Promise.resolve());
+    let hasMore = true;
+    let isLoading = false;
+    const { rerender } = renderHook(() =>
+        useInfiniteScroll({
+            hasMore,
+            isLoading,
+            onLoadMore,
+        }),
+    );
+
     isIntersecting = true;
     rerender();
+    isLoading = true;
+    rerender();
 
-    expect(onLoadMore).toHaveBeenCalledTimes(2);
+    hasMore = false;
+    isLoading = false;
+    rerender();
+
+    expect(onLoadMore).toHaveBeenCalledOnce();
 });
 
 test.each([

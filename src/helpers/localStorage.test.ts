@@ -2,20 +2,22 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { LS_KEY_AUTH_SESSION_HINT } from 'constants/localstorage';
 
-import { hasAuthSessionHint, setAuthSessionHint } from './localStorage';
+import { getLocalUser, hasAuthSessionHint, setAuthSessionHint } from './localStorage';
 
 describe('auth session hint storage', () => {
     let values: Map<string, string>;
+    let getItem: ReturnType<typeof vi.fn>;
     let removeItem: ReturnType<typeof vi.fn>;
     let setItem: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
         values = new Map();
+        getItem = vi.fn((key: string) => values.get(key) ?? null);
         removeItem = vi.fn((key: string) => values.delete(key));
         setItem = vi.fn((key: string, value: string) => values.set(key, value));
         vi.stubGlobal('localStorage', {
             clear: vi.fn(() => values.clear()),
-            getItem: vi.fn((key: string) => values.get(key) ?? null),
+            getItem,
             removeItem,
             setItem,
         });
@@ -64,6 +66,17 @@ describe('auth session hint storage', () => {
 
         expect(setAuthSessionHint(false)).toBe(false);
         expect(values.get(LS_KEY_AUTH_SESSION_HINT)).toBe('true');
+    });
+
+    test('keeps fallback cleanup failures inside the storage guard', () => {
+        getItem.mockImplementation(() => {
+            throw new Error('read unavailable');
+        });
+        removeItem.mockImplementation(() => {
+            throw new Error('remove unavailable');
+        });
+
+        expect(getLocalUser()).toBeNull();
     });
 
 });
