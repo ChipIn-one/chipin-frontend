@@ -8,8 +8,8 @@ import {
     type ExpenseReversedAction,
     type ExpenseUpdatedAction,
 } from 'constants/activity';
-import { EXPENSE_CATEGORY_KEYS } from 'constants/category';
-import { EXPENSE_CATEGORY_UI } from 'constants/category-ui';
+
+import { getConfiguredExpenseIcon } from './helpers';
 
 interface Props {
     action: ExpenseCreatedAction | ExpenseUpdatedAction | ExpenseReversedAction;
@@ -18,41 +18,6 @@ interface Props {
     hasCurrentUser: boolean;
     isCurrentUserPayer: boolean;
 }
-
-const getOwnEntry = <Value,>(
-    record: Readonly<Record<string, Value>>,
-    key: string,
-): Value | undefined => {
-    if (!Object.hasOwn(record, key)) {
-        return undefined;
-    }
-
-    return record[key];
-};
-
-const getConfiguredExpenseIcon = (
-    subcategory?: string | null,
-    category?: string | null,
-) => {
-    if (subcategory) {
-        for (const categoryKey of EXPENSE_CATEGORY_KEYS) {
-            const subcategoryUi = getOwnEntry(
-                EXPENSE_CATEGORY_UI[categoryKey].subcategories,
-                subcategory,
-            );
-
-            if (subcategoryUi) {
-                return subcategoryUi;
-            }
-        }
-    }
-
-    if (category) {
-        return getOwnEntry(EXPENSE_CATEGORY_UI, category);
-    }
-
-    return undefined;
-};
 
 const getIconColor = (
     isReversed: boolean,
