@@ -10,6 +10,7 @@ export const ROUTES = {
     GROUP_JOIN: '/group/join',
     ACTIVITY: '/activity',
     FRIENDS: '/friends',
+    FRIENDS_JOIN: '/friends/join',
     SETTINGS: '/settings',
 };
 
@@ -79,6 +80,11 @@ export const ROUTE_META = [
         breadcrumb: {
             parentPath: ROUTES.ACTIVITY,
         },
+    },
+    {
+        path: `${ROUTES.FRIENDS_JOIN}/:inviteToken`,
+        titleKey: 'friends.title',
+        descriptionKey: 'friends.description',
     },
     {
         path: ROUTES.FRIENDS,

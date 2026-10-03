@@ -7,7 +7,7 @@ import type { Group } from 'api/chipin.types';
 import { SECOND } from 'constants/time';
 import { TOASTS_IDS } from 'constants/toasts';
 
-import { useCheckOnlineStatus, useGroupInvite } from './pwaHooks';
+import { useCheckOnlineStatus, useFriendInvite, useGroupInvite } from './pwaHooks';
 
 const networkState = vi.hoisted(() => ({
     online: true as boolean | undefined,
@@ -18,7 +18,10 @@ const hookMocks = vi.hoisted(() => ({
         (): Promise<'copied' | 'unsupported'> => Promise.resolve('copied'),
     ),
     detectNativeShare: vi.fn(() => false),
-    shareGroupInvite: vi.fn(() => Promise.resolve('shared' as const)),
+    shareInvite: vi.fn(
+        (): Promise<'shared' | 'copied' | 'cancelled' | 'unsupported'> =>
+            Promise.resolve('shared'),
+    ),
 }));
 
 vi.mock('@uidotdev/usehooks', () => ({
@@ -31,7 +34,7 @@ vi.mock('helpers/clipboard', () => ({
 
 vi.mock('helpers/share', () => ({
     detectNativeShare: hookMocks.detectNativeShare,
-    shareGroupInvite: hookMocks.shareGroupInvite,
+    shareInvite: hookMocks.shareInvite,
 }));
 
 vi.mock('i18next', () => ({
@@ -160,7 +163,7 @@ test('replaces share feedback timer and clears the pending timer on unmount', ()
     const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
     const { result, unmount } = renderHook(() => useGroupInvite(group));
 
-    return Promise.resolve(act(() => result.current.handleShare('Trip')))
+    return Promise.resolve(act(() => result.current.onShare()))
         .then(() => {
             expect(result.current.isShareDone).toBe(true);
             expect(setTimeoutSpy).toHaveBeenCalledWith(
@@ -168,7 +171,7 @@ test('replaces share feedback timer and clears the pending timer on unmount', ()
                 SECOND * 1.5,
             );
 
-            return Promise.resolve(act(() => result.current.handleShare('Trip')));
+            return Promise.resolve(act(() => result.current.onShare()));
         })
         .then(() => {
             const clearedBeforeUnmount = clearTimeoutSpy.mock.calls.length;
@@ -180,10 +183,42 @@ test('replaces share feedback timer and clears the pending timer on unmount', ()
         });
 });
 
+test('uses the configured group share copy', () => {
+    const { result } = renderHook(() => useGroupInvite(group));
+
+    return Promise.resolve(act(() => result.current.onShare())).then(() => {
+        expect(hookMocks.shareInvite).toHaveBeenCalledWith({
+            url: expect.stringContaining(group.inviteToken),
+            title: 'group:qr.shareTitle',
+            text: 'group:qr.shareText',
+        });
+        expect(result.current.qr).toEqual({
+            title: 'group:qr.title',
+            accessibleDescription: 'group:qr.description',
+            description: 'group:qr.joinDescription',
+            subtitle: 'group:page.settings.showQRSubtitle',
+        });
+    });
+});
+
+test('shows copied feedback when native sharing falls back to clipboard', () => {
+    hookMocks.shareInvite.mockResolvedValueOnce('copied');
+    const { result } = renderHook(() => useGroupInvite(group));
+
+    return Promise.resolve(
+        act(() => result.current.onShare()),
+    ).then(() => {
+        expect(result.current.isCopied).toBe(true);
+        expect(vi.mocked(toast.success)).toHaveBeenCalledWith(
+            'toasts:group.inviteLinkCopied',
+        );
+    });
+});
+
 test('shows copied feedback after a successful invite link copy', () => {
     const { result } = renderHook(() => useGroupInvite(group));
 
-    return Promise.resolve(act(() => result.current.handleCopyLink())).then(() => {
+    return Promise.resolve(act(() => result.current.onCopyLink())).then(() => {
         expect(hookMocks.copyTextToClipboard).toHaveBeenCalledWith(
             expect.stringContaining(group.inviteToken),
         );
@@ -199,7 +234,7 @@ test('shows an error and keeps copied feedback off when invite link copy fails',
     hookMocks.copyTextToClipboard.mockResolvedValueOnce('unsupported');
     const { result } = renderHook(() => useGroupInvite(group));
 
-    return Promise.resolve(act(() => result.current.handleCopyLink())).then(() => {
+    return Promise.resolve(act(() => result.current.onCopyLink())).then(() => {
         expect(result.current.isCopied).toBe(false);
         expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
             'toasts:group.inviteLinkCopyError',
@@ -208,12 +243,44 @@ test('shows an error and keeps copied feedback off when invite link copy fails',
     });
 });
 
+
+test('uses friend-specific share and QR copy', () => {
+    const { result } = renderHook(() => useFriendInvite('friend-invite-token'));
+
+    return Promise.resolve(act(() => result.current.onShare())).then(() => {
+        expect(hookMocks.shareInvite).toHaveBeenCalledWith({
+            url: expect.stringContaining('/friends/join/friend-invite-token'),
+            title: 'friends:invite.shareTitle',
+            text: 'friends:invite.shareText',
+        });
+        expect(result.current.qr).toEqual({
+            title: 'friends:invite.qrTitle',
+            accessibleDescription: 'friends:invite.qrDescription',
+            description: 'friends:invite.qrJoinDescription',
+            subtitle: 'friends:invite.showQRSubtitle',
+        });
+    });
+});
+
+test('builds and copies the personal friend invite link', () => {
+    const { result } = renderHook(() => useFriendInvite('friend-invite-token'));
+
+    return Promise.resolve(act(() => result.current.onCopyLink())).then(() => {
+        expect(hookMocks.copyTextToClipboard).toHaveBeenCalledWith(
+            expect.stringContaining('/friends/join/friend-invite-token'),
+        );
+        expect(vi.mocked(toast.success)).toHaveBeenCalledWith(
+            'toasts:friend.inviteLinkCopied',
+        );
+    });
+});
+
 test('clears the pending copy feedback timer on unmount', () => {
     const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
     const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
     const { result, unmount } = renderHook(() => useGroupInvite(group));
 
-    return Promise.resolve(act(() => result.current.handleCopyLink())).then(() => {
+    return Promise.resolve(act(() => result.current.onCopyLink())).then(() => {
         expect(result.current.isCopied).toBe(true);
         expect(setTimeoutSpy).toHaveBeenCalledWith(
             expect.any(Function),

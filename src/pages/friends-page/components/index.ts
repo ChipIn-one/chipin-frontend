@@ -1,5 +1,6 @@
 import CurrencyGroupCard from './CurrencyGroupCard';
 import FriendActionsDropdown from './FriendActionsDropdown';
+import FriendInviteEmptyState from './FriendInviteEmptyState';
 import FriendListItem from './FriendListItem';
 import FriendsFilterDropdown from './FriendsFilterDropdown';
 import FriendsList from './FriendsList';
@@ -11,6 +12,7 @@ import SettledUpCard from './SettledUpCard';
 export {
     CurrencyGroupCard,
     FriendActionsDropdown,
+    FriendInviteEmptyState,
     FriendListItem,
     FriendsFilterDropdown,
     FriendsList,

@@ -74,7 +74,7 @@ beforeEach(() => {
     useExpenseModalStore.getState().open();
 });
 
-test('explains why adding an expense is unavailable for a single-member group', () => {
+test('does not render a single-member notice in the modal', () => {
     render(
         <MemoryRouter initialEntries={['/group/group-1']}>
             <ThemeProvider theme={lightThemeStyled}>
@@ -83,29 +83,11 @@ test('explains why adding an expense is unavailable for a single-member group', 
         </MemoryRouter>,
     );
 
-    return screen.findByRole('status').then(callout => {
-        expect(callout.textContent).toContain(
-            "You're the only one in this group. Add friends to track expenses.",
-        );
-        expect(screen.getByRole('button', { name: 'Add expense' })).toHaveProperty(
-            'disabled',
-            true,
-        );
-    });
-});
-
-test.each(['USER', 'ADMIN'] as const)('does not offer the Solo entry point to a $role user', role => {
-    useUsersStore.setState({ user: { ...currentUser, role }, localUser: null, friends: [] });
-
-    render(
-        <MemoryRouter initialEntries={['/group/group-1']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <AddExpenseModal />
-            </ThemeProvider>
-        </MemoryRouter>,
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Add expense' })).toHaveProperty(
+        'disabled',
+        true,
     );
-
-    expect(screen.queryByRole('link', { name: 'Solo mode' })).toBeNull();
 });
 
 test('uses the edit title and Save action in edit mode', () => {

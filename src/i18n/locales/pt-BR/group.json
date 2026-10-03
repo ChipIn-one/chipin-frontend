@@ -29,7 +29,9 @@
     "qr": {
         "title": "Escaneie para entrar",
         "description": "Compartilhe este QR code para convidar pessoas ao grupo.",
-        "shareText": "Compartilhe este código para convidar pessoas para {{groupName}}"
+        "shareText": "Entre em {{groupName}} no ChipIn para compartilhar despesas.",
+        "joinDescription": "Escaneie o código QR para entrar em {{groupName}}.",
+        "shareTitle": "Entre em {{groupName}} no ChipIn"
     },
     "expenses": {
         "modal": {
@@ -37,8 +39,6 @@
             "titleEdit": "Editar despesa",
             "description": "Divida uma nova despesa com os membros do grupo.",
             "descriptionEdit": "Atualize esta despesa.",
-            "singleMemberNotice": "Você está sozinho no grupo. Adicione amigos para controlar as despesas. Ou use o <soloMode>modo Solo</soloMode>.",
-            "singleMemberNoticeNonAdmin": "Você está sozinho no grupo. Adicione amigos para controlar as despesas.",
             "scope": {
                 "group": "Despesa do grupo: {{groupName}}",
                 "friends": "Despesa P2P com {{users}}"
@@ -184,7 +184,11 @@
         "activityStubDescription": "O histórico completo de atividades está disponível na página de Atividade.",
         "expenses": {
             "emptyTitle": "Nenhuma despesa ainda",
-            "emptyDescription": "Adicione a primeira despesa para começar a rastrear os gastos do grupo."
+            "emptyDescription": "Adicione a primeira despesa para começar a rastrear os gastos do grupo.",
+            "inviteTitle": "Convide seus amigos",
+            "inviteDescription": "Convide pessoas para começar a dividir despesas.",
+            "inviteAction": "Convidar amigos",
+            "shareVia": "ou compartilhe por"
         },
         "tabs": {
             "expenses": "Despesas",

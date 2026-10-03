@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import type { AppEvent } from 'api/activity.types';
 import type { Group } from 'api/chipin.types';
+import { ACTIVITY_ACTIONS } from 'constants/activity';
 
 import GroupTabsContent from './GroupTabsContent';
 
@@ -25,6 +26,23 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('hooks/useInfiniteScroll', () => ({
     useInfiniteScroll: useInfiniteScrollMock,
+}));
+
+vi.mock('hooks/pwaHooks', () => ({
+    useGroupInvite: () => ({
+        inviteLink: 'https://chipin.one/invite/group-1',
+        isNativeShareSupported: true,
+        isShareDone: false,
+        isCopied: false,
+        qr: {
+            title: 'group:qr.title',
+            accessibleDescription: 'group:qr.description',
+            description: 'group:qr.joinDescription',
+            subtitle: 'group:page.settings.showQRSubtitle',
+        },
+        onShare: () => Promise.resolve(),
+        onCopyLink: () => Promise.resolve(),
+    }),
 }));
 
 vi.mock('components/modals/settle-up-modal', () => ({
@@ -80,6 +98,22 @@ const group = {
     recentActivities: { items: [], nextCursor: null },
 } satisfies Group;
 
+const secondMember = {
+    ...creator,
+    id: 'user-2',
+    email: 'bob@example.com',
+    displayName: 'Bob',
+    firstName: 'Bob',
+};
+
+const groupWithTwoMembers = {
+    ...group,
+    members: [
+        ...group.members,
+        { user: secondMember, balancesByCurrency: {} },
+    ],
+} satisfies Group;
+
 const activityItem = {
     parent: { id: 'parent-1' } as AppEvent,
     lastEvent: { id: 'event-1' } as AppEvent,
@@ -87,9 +121,39 @@ const activityItem = {
 
 const groupWithActivity = {
     ...group,
+    lastUsedCurrency: 'USD',
     recentActivities: {
         items: [activityItem],
         nextCursor: 20,
+    },
+} satisfies Group;
+
+const groupCreatedEvent = {
+    id: 'group-created',
+    seq: 1,
+    domain: 'GROUP',
+    action: ACTIVITY_ACTIONS.GROUP_CREATED,
+    actorUserId: creator.id,
+    actorSnapshot: {
+        displayName: creator.displayName,
+        picture: creator.picture,
+    },
+    subjectType: 'group',
+    subjectId: group.id,
+    groupId: group.id,
+    metadata: {
+        type: 'group',
+        groupId: group.id,
+        groupName: group.name,
+    },
+    createdAt: 1,
+} satisfies AppEvent;
+
+const groupWithLifecycleActivity = {
+    ...group,
+    recentActivities: {
+        items: [{ parent: groupCreatedEvent, lastEvent: groupCreatedEvent }],
+        nextCursor: null,
     },
 } satisfies Group;
 
@@ -110,9 +174,6 @@ test('renders member actions on the left and settle up on the right before tabs'
     const settleUp = screen.getByRole('button', {
         name: group.id,
     });
-    const invitePeople = screen.getByRole('button', {
-        name: 'common:buttons.invitePeople',
-    });
     const tabsNav = screen.getByRole('tablist');
     const actions = tabsNav.previousElementSibling;
     const memberActions = actions?.firstElementChild;
@@ -122,7 +183,16 @@ test('renders member actions on the left and settle up on the right before tabs'
     expect(memberActions?.firstElementChild?.children).toHaveLength(
         group.members.length,
     );
-    expect(memberActions?.contains(invitePeople)).toBe(true);
+
+    if (!(memberActions instanceof HTMLElement)) {
+        throw new Error('Member actions were not rendered');
+    }
+
+    expect(
+        within(memberActions).getByRole('button', {
+            name: 'common:buttons.invitePeople',
+        }),
+    ).toBeTruthy();
 });
 
 test('triggers group activity pagination from the active Expenses tab', () => {
@@ -186,10 +256,42 @@ test('renders the group activity exhausted marker after the last page', () => {
     expect(screen.getByText('activity:endOfFeed')).not.toBeNull();
 });
 
-test('renders the group expenses empty state for an empty initial page', () => {
+test('renders invite onboarding instead of No expenses for a single-member group', () => {
     render(<GroupTabsContent group={group} {...defaultProps} />);
 
+    expect(screen.getByText('page.expenses.inviteTitle')).not.toBeNull();
+    expect(screen.getByText('page.expenses.inviteDescription')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'page.expenses.inviteAction' })).not.toBeNull();
+    expect(screen.getByText('page.expenses.shareVia')).not.toBeNull();
+    expect(screen.getByRole('button', {
+        name: /group:page\.settings\.showQRTitle/,
+    })).not.toBeNull();
+    expect(screen.queryByText('page.expenses.emptyTitle')).toBeNull();
+});
+
+test('renders invite onboarding when the feed only contains group lifecycle activity', () => {
+    render(<GroupTabsContent group={groupWithLifecycleActivity} {...defaultProps} />);
+
+    expect(screen.getByText('page.expenses.inviteTitle')).not.toBeNull();
+    expect(screen.getByText('page.expenses.inviteDescription')).not.toBeNull();
+    expect(screen.getByRole('button', {
+        name: /group:page\.settings\.showQRTitle/,
+    })).not.toBeNull();
+    expect(screen.queryByText('page.expenses.emptyTitle')).toBeNull();
+});
+
+test('renders the group expenses empty state once the group has another member', () => {
+    render(<GroupTabsContent group={groupWithTwoMembers} {...defaultProps} />);
+
     expect(screen.getByText('page.expenses.emptyTitle')).not.toBeNull();
+    expect(screen.queryByText('page.expenses.inviteTitle')).toBeNull();
+});
+
+test('does not render an empty-state prompt when the activity feed is populated', () => {
+    render(<GroupTabsContent group={groupWithActivity} {...defaultProps} />);
+
+    expect(screen.queryByText('page.expenses.inviteTitle')).toBeNull();
+    expect(screen.queryByText('page.expenses.emptyTitle')).toBeNull();
 });
 
 test('keeps the full skeleton for initial group loading', () => {

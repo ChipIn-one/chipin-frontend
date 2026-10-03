@@ -12,16 +12,23 @@ import { NoGroupMembersEmptyState } from 'basics/empty-states';
 import GroupRoleBadge from 'basics/GroupRoleBadge';
 import { SettleUpModal } from 'components/modals/settle-up-modal';
 
+import GroupInviteEmptyState from './GroupInviteEmptyState';
+
 interface Props {
     group: Group;
+    showInviteOnboarding: boolean;
 }
 
-const GroupBalancesTab = ({ group }: Props) => {
+const GroupBalancesTab = ({ group, showInviteOnboarding }: Props) => {
     const { t } = useTranslation('group');
     const user = useUsersStore(s => s.user);
 
     const otherMembers = group.members.filter(member => member.user.id !== user?.id);
     const inviteLink = buildGroupInviteLink({ inviteToken: group.inviteToken });
+
+    if (showInviteOnboarding) {
+        return <GroupInviteEmptyState group={group} />;
+    }
 
     if (otherMembers.length === 0) {
         return (

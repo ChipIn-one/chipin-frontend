@@ -10,6 +10,7 @@ import HomeRouteGuard from './HomeRouteGuard';
 import { ProtectedRoute } from './ProtectedRoute';
 import SoloRouteGuard from './SoloRouteGuard';
 
+const FriendJoinPage = lazy(() => import('pages/FriendJoinPage'));
 const GroupJoinPage = lazy(() => import('pages/GroupJoinPage'));
 const OAuthCallbackPage = lazy(() =>
     import('pages/oauth-callback-page').then(module => ({
@@ -106,6 +107,14 @@ const AppRouter = () => {
                         <InternalRoute>
                             <ActivitySubeventsPage />
                         </InternalRoute>
+                    }
+                />
+                <Route
+                    path={`${ROUTES.FRIENDS_JOIN}/:inviteToken`}
+                    element={
+                        <ProtectedRoute>
+                            <FriendJoinPage />
+                        </ProtectedRoute>
                     }
                 />
                 <Route
