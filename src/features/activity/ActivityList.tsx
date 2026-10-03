@@ -66,42 +66,42 @@ const ActivityList = ({ activeFilter }: Props) => {
     }
 
     return (
-        <ActivityEventsList events={filteredItems} isFullActivityFeed>
-            <>
-                {isNextPageLoading && (
-                    <Flex justify="center" py="4">
-                        <Spinner size="3" />
-                    </Flex>
-                )}
+        <>
+            <ActivityEventsList events={filteredItems} isFullActivityFeed />
 
-                {isNextPageError && (
-                    <Flex justify="center" py="4">
-                        <Button
-                            type="button"
-                            size="1"
-                            variant="soft"
-                            onClick={onRetryNextPage}
-                        >
-                            <LucideRefreshCw size={14} />
-                            {t('retryAction')}
-                        </Button>
-                    </Flex>
-                )}
+            {isNextPageLoading && (
+                <Flex justify="center" py="4">
+                    <Spinner size="3" />
+                </Flex>
+            )}
 
-                {isEndOfFeed && (
-                    <Flex justify="center" align="center" gap="2" py="4">
-                        <Text as="span" color="gray">
-                            <LucideChevronsDown size={14} />
-                        </Text>
-                        <Text size="1" color="gray">
-                            {t('endOfFeed')}
-                        </Text>
-                    </Flex>
-                )}
+            {isNextPageError && (
+                <Flex justify="center" py="4">
+                    <Button
+                        type="button"
+                        size="1"
+                        variant="soft"
+                        onClick={onRetryNextPage}
+                    >
+                        <LucideRefreshCw size={14} />
+                        {t('retryAction')}
+                    </Button>
+                </Flex>
+            )}
 
-                <div ref={sentinelRef} />
-            </>
-        </ActivityEventsList>
+            {isEndOfFeed && (
+                <Flex justify="center" align="center" gap="2" py="4">
+                    <Text as="span" color="gray">
+                        <LucideChevronsDown size={14} />
+                    </Text>
+                    <Text size="1" color="gray">
+                        {t('endOfFeed')}
+                    </Text>
+                </Flex>
+            )}
+
+            <div ref={sentinelRef} />
+        </>
     );
 };
 

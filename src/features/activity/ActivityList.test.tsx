@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import { Theme } from '@radix-ui/themes';
@@ -79,9 +78,10 @@ vi.mock('components/skeletons', () => ({
 }));
 
 vi.mock('./components', () => ({
-    ActivityEventsList: ({ children }: { children?: ReactNode }) => (
-        <div>{children}</div>
-    ),
+    ActivityEventsList: ({ events }: { events: Array<{ action: string }> }) =>
+        events.length === 0
+            ? <div data-testid="empty-state" />
+            : <div data-testid="activity-list" />,
 }));
 
 beforeEach(() => {
@@ -92,16 +92,17 @@ beforeEach(() => {
     mocks.errorsState.isNextPageError = false;
 });
 
-test('blocks automatic pagination after an incremental error and allows a manual retry', () => {
+test('keeps pagination recovery available when the active filter has no loaded matches', () => {
     const user = userEvent.setup();
     mocks.errorsState.isNextPageError = true;
 
     render(
         <Theme>
-            <ActivityList activeFilter="all" />
+            <ActivityList activeFilter="settlements" />
         </Theme>,
     );
 
+    expect(screen.getByTestId('empty-state')).toBeTruthy();
     expect(mocks.useInfiniteScroll).toHaveBeenLastCalledWith({
         hasMore: false,
         isLoading: false,
