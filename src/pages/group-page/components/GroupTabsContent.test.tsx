@@ -10,6 +10,11 @@ import { ACTIVITY_ACTIONS } from 'constants/activity';
 
 import GroupTabsContent from './GroupTabsContent';
 
+const inviteMocks = vi.hoisted(() => ({
+    onShare: vi.fn(() => Promise.resolve()),
+    onCopyLink: vi.fn(() => Promise.resolve()),
+}));
+
 const useInfiniteScrollMock = vi.hoisted(() =>
     vi.fn<
         (params: {
@@ -40,8 +45,8 @@ vi.mock('hooks/pwaHooks', () => ({
             description: 'group:qr.joinDescription',
             subtitle: 'group:page.settings.showQRSubtitle',
         },
-        onShare: () => Promise.resolve(),
-        onCopyLink: () => Promise.resolve(),
+        onShare: inviteMocks.onShare,
+        onCopyLink: inviteMocks.onCopyLink,
     }),
 }));
 
@@ -193,6 +198,19 @@ test('renders member actions on the left and settle up on the right before tabs'
             name: 'common:buttons.invitePeople',
         }),
     ).toBeTruthy();
+});
+
+test('starts the existing invite flow from the member action button', () => {
+    const user = userEvent.setup();
+    render(<GroupTabsContent group={groupWithTwoMembers} {...defaultProps} />);
+
+    return user
+        .click(screen.getByRole('button', {
+            name: 'common:buttons.invitePeople',
+        }))
+        .then(() => {
+            expect(inviteMocks.onShare).toHaveBeenCalledOnce();
+        });
 });
 
 test('triggers group activity pagination from the active Expenses tab', () => {

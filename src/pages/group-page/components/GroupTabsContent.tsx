@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { Box, Button, Flex, IconButton, Spinner, Tabs, Text } from '@radix-ui/themes';
 
 import type { Group } from 'api/chipin.types';
+import { useGroupInvite } from 'hooks/pwaHooks';
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 
 import { NoGroupExpensesEmptyState } from 'basics/empty-states';
@@ -37,6 +38,7 @@ const GroupTabsContent = ({
     isGroupActivityNextPageError,
 }: Props) => {
     const { t } = useTranslation(['group', 'common', 'activity']);
+    const invite = useGroupInvite(group);
     const [activeTab, setActiveTab] = useState('expenses');
     const activityItems = group.recentActivities.items.map(item => item.lastEvent);
     const members = group.members.map(member => member.user);
@@ -51,6 +53,13 @@ const GroupTabsContent = ({
     const onLoadMore = useCallback(() => fetchMoreGroupActivity(), [fetchMoreGroupActivity]);
     const onRetryNextPage = () => {
         onLoadMore();
+    };
+    const onInvitePeople = (): Promise<void> => {
+        if (invite.isNativeShareSupported) {
+            return invite.onShare();
+        }
+
+        return invite.onCopyLink();
     };
     const sentinelRef = useInfiniteScroll({
         hasMore: activeTab === 'expenses' && hasMoreActivity && !isGroupActivityNextPageError,
@@ -70,6 +79,7 @@ const GroupTabsContent = ({
                             variant="outline"
                             radius="full"
                             aria-label={t('common:buttons.invitePeople')}
+                            onClick={onInvitePeople}
                         >
                             <LucidePlus size={18} />
                         </IconButton>

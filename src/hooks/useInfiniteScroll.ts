@@ -19,14 +19,26 @@ const useInfiniteScroll = ({
         threshold: 0,
     });
     const hasTriggeredRef = useRef(false);
+    const wasLoadingRef = useRef(false);
 
     useEffect(() => {
         if (!sentinelEntry?.isIntersecting) {
             hasTriggeredRef.current = false;
+            wasLoadingRef.current = false;
             return;
         }
 
-        if (!hasMore || isLoading || hasTriggeredRef.current) {
+        if (isLoading) {
+            wasLoadingRef.current = true;
+            return;
+        }
+
+        if (wasLoadingRef.current) {
+            wasLoadingRef.current = false;
+            hasTriggeredRef.current = false;
+        }
+
+        if (!hasMore || hasTriggeredRef.current) {
             return;
         }
 

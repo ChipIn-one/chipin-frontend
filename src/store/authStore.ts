@@ -22,6 +22,7 @@ import {
 } from './authConstants';
 import { useDashboardStore } from './dashboardStore';
 import { useErrorsStore } from './errorsStore';
+import { useExpenseModalStore } from './expenseModalStore';
 import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
 import { useUsersStore } from './users-store';
@@ -43,6 +44,7 @@ export interface AuthStore {
 const resetAuthScopedStores = () => {
     useActivityStore.getState().resetActivity();
     useDashboardStore.getState().setInitialDashboardStore();
+    useExpenseModalStore.getState().reset();
     useGroupsStore.getState().setInitialGroupsStore();
     useUsersStore.getState().setInitialUsersStore();
     useLoadingStore.getState().setInitialLoadingStore();
