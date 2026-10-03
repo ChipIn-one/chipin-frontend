@@ -16,7 +16,7 @@ import type { Group } from 'api/chipin.types';
 
 import { CreateUpdateGroupModal } from 'components/modals/create-update-group-modal';
 
-import { CoverGradient, CoverWrapper, GroupCoverImage } from './styled';
+import { CoverActions, CoverGradient, CoverWrapper, GroupCoverImage } from './styled';
 
 interface Props {
     group: Group | null;
@@ -75,7 +75,7 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
                 </Flex>
             </Flex>
 
-            <Flex
+            <CoverActions
                 position="absolute"
                 top="3"
                 right="3"
@@ -98,7 +98,7 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
                         </IconButton>
                     </CreateUpdateGroupModal>
                 </Box>
-            </Flex>
+            </CoverActions>
         </CoverWrapper>
     );
 };

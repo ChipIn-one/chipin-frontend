@@ -67,6 +67,29 @@ test('opens group editing from a pencil action', () => {
     expect(container.querySelector('svg.lucide-settings')).toBeNull();
 });
 
+test('keeps navigation and edit actions contrasted against the cover', () => {
+    render(
+        <ThemeProvider theme={lightThemeStyled}>
+            <MemoryRouter>
+                <GroupCoverSection group={group} isLoading={false} />
+            </MemoryRouter>
+        </ThemeProvider>,
+    );
+
+    const actionButtons = [
+        screen.getByRole('button', { name: 'buttons.back' }),
+        screen.getByRole('button', { name: 'modal.titleEdit' }),
+    ];
+
+    for (const actionButton of actionButtons) {
+        const styles = getComputedStyle(actionButton);
+
+        expect(styles.color).toBe('rgb(255, 255, 255)');
+        expect(styles.backgroundColor).toBe('rgba(0, 0, 0, 0.78)');
+        expect(styles.borderTopColor).toBe('rgba(255, 255, 255, 0.72)');
+    }
+});
+
 test('keeps the group title readable over a cover in the light theme', () => {
     render(
         <ThemeProvider theme={lightThemeStyled}>

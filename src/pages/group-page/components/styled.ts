@@ -24,6 +24,24 @@ const CoverWrapper = styled(Flex)<{ $hasCover: boolean }>`
     }
 `;
 
+const CoverActions = styled(Flex)`
+    && button {
+        color: ${themeColor('white')};
+        background-color: rgba(0, 0, 0, 0.78);
+        border: 1px solid rgba(255, 255, 255, 0.72);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.32);
+    }
+
+    && button:hover {
+        background-color: rgba(0, 0, 0, 0.88);
+    }
+
+    && button:focus-visible {
+        outline: 2px solid ${themeColor('white')};
+        outline-offset: 2px;
+    }
+`;
+
 const CoverBackground = styled(Box)`
     position: absolute;
     inset: 0;
@@ -50,4 +68,4 @@ const GroupCoverImage = styled(Image)`
     }
 `;
 
-export { CoverGradient, CoverWrapper, GroupCoverImage };
+export { CoverActions, CoverGradient, CoverWrapper, GroupCoverImage };
