@@ -5,6 +5,13 @@ import { ScrollArea, Separator } from '@radix-ui/themes';
 import { MEDIA_QUERIES } from 'constants/breakpoints';
 
 const ModalOverlayGlobalStyles = createGlobalStyle`
+    .modal-overlay-content {
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100dvh - (var(--space-4) * 2));
+        overflow: hidden;
+    }
+
     @media ${MEDIA_QUERIES.belowSm} {
         :has(> .modal-overlay-content) {
             padding: 0;
