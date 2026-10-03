@@ -8,7 +8,7 @@ const ModalOverlayGlobalStyles = createGlobalStyle`
     .modal-overlay-content {
         display: flex;
         flex-direction: column;
-        max-height: calc(100dvh - (var(--space-4) * 2));
+        max-height: calc(100dvh - var(--space-6) - max(var(--space-6), 6vh));
         overflow: hidden;
     }
 
