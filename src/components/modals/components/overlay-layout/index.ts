@@ -12,7 +12,9 @@ export {
     MODAL_SIZES,
     ModalOverlayGlobalStyles,
     type ModalSize,
+    OverlayAlertDialogContent,
     OverlayBody,
+    OverlayDialogContent,
     OverlayFooter,
     OverlayHeader,
 };
