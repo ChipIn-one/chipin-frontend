@@ -78,7 +78,7 @@ const getStorageValue = <T>(key: StorageKey): T | null => {
 
         return JSON.parse(raw) as T;
     } catch {
-        localStorage.removeItem(key);
+        LocalStorage.remove(key);
         return null;
     }
 };

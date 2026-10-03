@@ -183,7 +183,7 @@ const Header = () => {
                     )}
 
                     <Flex gap="4" align="center">
-                        {canShowDevMenu && <DevMenu />}
+                        {isLoggedIn && canShowDevMenu && <DevMenu />}
                         {isLoggedIn ? (
                             <Flex gap="4" align="center">
                                 <Box display={{ initial: 'none', sm: 'block' }}>
