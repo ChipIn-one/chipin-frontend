@@ -13,7 +13,11 @@ const getConfiguredExpenseIcon = (
                 categoryUi.subcategories,
             )) {
                 if (subcategoryKey === subcategory) {
-                    return subcategoryUi;
+                    return {
+                        icon: subcategoryUi.icon,
+                        color: subcategoryUi.color,
+                        labelKey: `expenses.modal.subcategories.${subcategoryKey}`,
+                    };
                 }
             }
         }
@@ -22,7 +26,13 @@ const getConfiguredExpenseIcon = (
     if (category) {
         for (const categoryKey of EXPENSE_CATEGORY_KEYS) {
             if (categoryKey === category) {
-                return EXPENSE_CATEGORY_UI[categoryKey];
+                const categoryUi = EXPENSE_CATEGORY_UI[categoryKey];
+
+                return {
+                    icon: categoryUi.icon,
+                    color: categoryUi.color,
+                    labelKey: `expenses.modal.categories.${categoryKey}`,
+                };
             }
         }
     }
