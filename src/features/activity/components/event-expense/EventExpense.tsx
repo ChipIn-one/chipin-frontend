@@ -53,7 +53,9 @@ const EventExpense = ({ event }: Props) => {
                     <Flex gap="3" align="center" minWidth="0">
                         <EventIcon event={event} isActorInText={isReversed}>
                             <ExpenseIcon
-                                isReversed={isReversed}
+                                action={event.action}
+                                category={event.metadata.category}
+                                subcategory={event.metadata.subcategory}
                                 hasCurrentUser={Boolean(user)}
                                 isCurrentUserPayer={isCurrentUserPayer}
                             />

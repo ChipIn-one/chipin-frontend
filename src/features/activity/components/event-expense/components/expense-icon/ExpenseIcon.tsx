@@ -1,9 +1,21 @@
 import { LucideBanknoteArrowDown, LucideBanknoteArrowUp, LucideTrash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@radix-ui/themes';
 
+import {
+    ACTIVITY_ACTIONS,
+    type ExpenseCreatedAction,
+    type ExpenseReversedAction,
+    type ExpenseUpdatedAction,
+} from 'constants/activity';
+
+import { getConfiguredExpenseIcon } from './helpers';
+
 interface Props {
-    isReversed: boolean;
+    action: ExpenseCreatedAction | ExpenseUpdatedAction | ExpenseReversedAction;
+    category?: string | null;
+    subcategory?: string | null;
     hasCurrentUser: boolean;
     isCurrentUserPayer: boolean;
 }
@@ -37,16 +49,39 @@ const getExpenseIcon = (isReversed: boolean, isCurrentUserPayer: boolean) => {
 };
 
 const ExpenseIcon = ({
-    isReversed,
+    action,
+    category,
+    subcategory,
     hasCurrentUser,
     isCurrentUserPayer,
-}: Props) => (
-    <Avatar
-        size="4"
-        variant="soft"
-        color={getIconColor(isReversed, hasCurrentUser, isCurrentUserPayer)}
-        fallback={getExpenseIcon(isReversed, isCurrentUserPayer)}
-    />
-);
+}: Props) => {
+    const { t } = useTranslation('group');
+    const isReversed = action === ACTIVITY_ACTIONS.EXPENSE_REVERSED;
+    const configuredIcon = isReversed
+        ? undefined
+        : getConfiguredExpenseIcon(subcategory, category);
+    const ConfiguredIcon = configuredIcon?.icon;
+    const accessibleLabel = configuredIcon ? t(configuredIcon.labelKey) : undefined;
+
+    return (
+        <Avatar
+            size="4"
+            variant="soft"
+            color={
+                configuredIcon?.color ??
+                getIconColor(isReversed, hasCurrentUser, isCurrentUserPayer)
+            }
+            role={accessibleLabel ? 'img' : undefined}
+            aria-label={accessibleLabel}
+            fallback={
+                ConfiguredIcon ? (
+                    <ConfiguredIcon size={24} />
+                ) : (
+                    getExpenseIcon(isReversed, isCurrentUserPayer)
+                )
+            }
+        />
+    );
+};
 
 export { ExpenseIcon };
