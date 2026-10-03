@@ -1,4 +1,5 @@
 import { LucideBanknoteArrowDown, LucideBanknoteArrowUp, LucideTrash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@radix-ui/themes';
 
@@ -54,11 +55,13 @@ const ExpenseIcon = ({
     hasCurrentUser,
     isCurrentUserPayer,
 }: Props) => {
+    const { t } = useTranslation('group');
     const isReversed = action === ACTIVITY_ACTIONS.EXPENSE_REVERSED;
     const configuredIcon = isReversed
         ? undefined
         : getConfiguredExpenseIcon(subcategory, category);
     const ConfiguredIcon = configuredIcon?.icon;
+    const accessibleLabel = configuredIcon ? t(configuredIcon.labelKey) : undefined;
 
     return (
         <Avatar
@@ -68,9 +71,11 @@ const ExpenseIcon = ({
                 configuredIcon?.color ??
                 getIconColor(isReversed, hasCurrentUser, isCurrentUserPayer)
             }
+            role={accessibleLabel ? 'img' : undefined}
+            aria-label={accessibleLabel}
             fallback={
                 ConfiguredIcon ? (
-                    <ConfiguredIcon size={28} />
+                    <ConfiguredIcon size={24} />
                 ) : (
                     getExpenseIcon(isReversed, isCurrentUserPayer)
                 )
