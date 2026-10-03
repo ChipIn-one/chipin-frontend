@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Dialog, IconButton, Text, VisuallyHidden } from '@radix-ui/themes';
 
-import { OverlayHeader } from '../components';
+import { OverlayDialogContent, OverlayHeader } from '../components';
 
 import { MODAL_SIZES, type ModalSize } from './constants';
 
@@ -35,11 +35,7 @@ const BaseModal = ({
         <Dialog.Root open={isOpened} onOpenChange={setIsOpened}>
             {triggerElement && <Dialog.Trigger>{triggerElement}</Dialog.Trigger>}
 
-            <Dialog.Content
-                maxWidth={maxWidth}
-                size={{ initial: '2', sm: '4' }}
-                className="modal-overlay-content"
-            >
+            <OverlayDialogContent maxWidth={maxWidth} size={{ initial: '2', sm: '4' }}>
                 <OverlayHeader
                     title={
                         <Dialog.Title size="6" mb="0">
@@ -63,7 +59,7 @@ const BaseModal = ({
                     <Dialog.Description>{accessibleDescription}</Dialog.Description>
                 </VisuallyHidden>
                 {content}
-            </Dialog.Content>
+            </OverlayDialogContent>
         </Dialog.Root>
     );
 };
