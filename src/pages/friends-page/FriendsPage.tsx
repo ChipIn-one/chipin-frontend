@@ -9,7 +9,7 @@ import {
     useUsersStore,
 } from 'store/users-store';
 
-import { InternalPageColumns } from 'components/internal-page-layout';
+import { InternalPageColumnsFromSm } from 'components/internal-page-layout';
 
 import {
     FriendsList,
@@ -33,7 +33,7 @@ const FriendsPage = () => {
 
     return (
         <Container size="4" pb={{ initial: '9', sm: '6' }}>
-            <InternalPageColumns
+            <InternalPageColumnsFromSm
                 sidePanel={
                     <FriendsSidebar
                         search={search}
@@ -51,7 +51,7 @@ const FriendsPage = () => {
                     isLoading={isSkeletonShown}
                     settledFriends={settledFriends}
                 />
-            </InternalPageColumns>
+            </InternalPageColumnsFromSm>
         </Container>
     );
 };

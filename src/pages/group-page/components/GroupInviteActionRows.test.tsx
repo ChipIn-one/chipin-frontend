@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import { Theme } from '@radix-ui/themes';
@@ -26,14 +25,17 @@ vi.mock('hooks/pwaHooks', () => ({
         isNativeShareSupported: true,
         isShareDone: false,
         isCopied: false,
-        handleShare: mocks.onShare,
-        handleCopyLink: mocks.onCopyLink,
+        qr: {
+            title: 'group:qr.title',
+            accessibleDescription: 'group:qr.description',
+            description: 'group:qr.joinDescription',
+            subtitle: 'group:page.settings.showQRSubtitle',
+        },
+        onShare: mocks.onShare,
+        onCopyLink: mocks.onCopyLink,
     }),
 }));
 
-vi.mock('components/modals/group-qr-modal', () => ({
-    GroupQRModal: ({ children }: { children: ReactNode }) => <>{children}</>,
-}));
 
 const creator = {
     id: 'user-1',
@@ -102,7 +104,7 @@ test('keeps share and copy behavior in the shared rows', () => {
             name: /common:buttons\.invitePeople/,
         }))
         .then(() => {
-            expect(mocks.onShare).toHaveBeenCalledWith('group:qr.shareText');
+            expect(mocks.onShare).toHaveBeenCalledOnce();
 
             return user.click(screen.getByRole('button', {
                 name: /group:page\.settings\.copyLinkTitle/,

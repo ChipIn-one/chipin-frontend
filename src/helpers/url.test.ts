@@ -2,7 +2,7 @@ import { beforeEach, expect, test } from 'vitest';
 
 import { ROUTES } from 'constants/routes';
 
-import { getSocialAuthUrl, resolveOAuthReturnTo } from './url';
+import { buildFriendInviteLink, getSocialAuthUrl, resolveOAuthReturnTo } from './url';
 
 const APP_ORIGIN = 'https://chipin.test';
 
@@ -25,6 +25,19 @@ test('preserves the exact protected route including search and hash', () => {
     window.history.replaceState({}, '', '/group/123?tab=members#balances');
 
     expect(getReturnToFromSocialAuthUrl()).toBe('/group/123?tab=members#balances');
+});
+
+
+test('builds personal friend invite links on the canonical route', () => {
+    expect(buildFriendInviteLink({ inviteToken: 'friend-token' })).toContain(
+        '/friends/join/friend-token',
+    );
+});
+
+test('preserves a friend invite route through OAuth sign in', () => {
+    window.history.replaceState({}, '', '/friends/join/friend-token');
+
+    expect(getReturnToFromSocialAuthUrl()).toBe('/friends/join/friend-token');
 });
 
 test('keeps a same-origin OAuth return route intact', () => {

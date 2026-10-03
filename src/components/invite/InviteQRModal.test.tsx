@@ -4,14 +4,13 @@ import { Theme } from '@radix-ui/themes';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import GroupQRModal from './GroupQRModal';
+import InviteQRModal from './InviteQRModal';
 
 const OPEN_QR_LABEL = 'Open QR';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
-        t: (key: string, params?: { groupName?: string }) =>
-            params?.groupName ? `${key}:${params.groupName}` : key,
+        t: (key: string) => key,
     }),
 }));
 
@@ -19,17 +18,22 @@ vi.mock('components/OfflineQRCode', () => ({
     default: ({ url }: { url: string }) => <div data-testid="qr-code">{url}</div>,
 }));
 
-test('shows the group join hint and closes from the footer action', () => {
+test('shows invite QR content and closes from the footer action', () => {
     const user = userEvent.setup();
 
     render(
         <Theme>
-            <GroupQRModal
-                qrLink="https://chipin.one/invite/group-1"
-                groupName="Vietnam"
+            <InviteQRModal
+                qrLink="https://chipin.one/friends/join/friend-token"
+                content={{
+                    title: 'Add me on ChipIn',
+                    accessibleDescription: 'Friend invite QR code',
+                    description: 'Scan to add me as a friend.',
+                    subtitle: 'Scan to add me',
+                }}
             >
                 <button type="button">{OPEN_QR_LABEL}</button>
-            </GroupQRModal>
+            </InviteQRModal>
         </Theme>,
     );
 
@@ -37,16 +41,12 @@ test('shows the group join hint and closes from the footer action', () => {
         .click(screen.getByRole('button', { name: OPEN_QR_LABEL }))
         .then(() => {
             expect(screen.getByRole('dialog')).not.toBeNull();
-            expect(screen.getByText('group:qr.joinDescription:Vietnam')).not.toBeNull();
+            expect(screen.getByText('Scan to add me as a friend.')).not.toBeNull();
             expect(screen.getByTestId('qr-code').textContent).toBe(
-                'https://chipin.one/invite/group-1',
+                'https://chipin.one/friends/join/friend-token',
             );
 
-            const closeButton = screen.getByRole('button', {
-                name: 'common:buttons.close',
-            });
-
-            return user.click(closeButton);
+            return user.click(screen.getByText('buttons.close'));
         })
         .then(() =>
             waitFor(() => {

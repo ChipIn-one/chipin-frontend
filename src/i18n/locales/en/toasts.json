@@ -27,7 +27,12 @@
     "inviteLinkCopyError": "Failed to copy link"
   },
   "friend": {
-    "removed": "\"{{name}}\" was removed from your friends."
+    "removed": "\"{{name}}\" was removed from your friends.",
+    "inviteLinkCopied": "Friend invite link copied",
+    "inviteLinkCopyError": "Failed to copy link",
+    "inviteAcceptedWithName": "You and {{name}} are now friends.",
+    "inviteAccepted": "Friend added.",
+    "inviteJoinError": "Failed to add friend. Check the invite link and try again."
   },
   "pwa": {
     "installing": "Installing application on your home screen...",

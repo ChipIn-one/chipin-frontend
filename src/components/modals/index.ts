@@ -1,10 +1,13 @@
 import { AuthModal } from './auth-modal';
 import { BaseAlertDialog } from './base-alert-dialog';
 import { BaseModal } from './base-modal';
-import { ModalOverlayGlobalStyles } from './components';
+import {
+    ModalOverlayGlobalStyles,
+    OverlayBody,
+    OverlayFooter,
+} from './components';
 import { CreateUpdateGroupModal } from './create-update-group-modal';
 import { EarlySupporterPromoModal } from './early-supporter-promo-modal';
-import { GroupQRModal } from './group-qr-modal';
 import { KickGroupMemberAlertDialog } from './kick-group-member-alert-dialog';
 import { LeaveGroupAlertDialog } from './leave-group-alert-dialog';
 import { RemoveFriendAlertDialog } from './remove-friend-alert-dialog';
@@ -19,10 +22,11 @@ export {
     BaseModal,
     CreateUpdateGroupModal,
     EarlySupporterPromoModal,
-    GroupQRModal,
     KickGroupMemberAlertDialog,
     LeaveGroupAlertDialog,
     ModalOverlayGlobalStyles,
+    OverlayBody,
+    OverlayFooter,
     RemoveFriendAlertDialog,
     RemoveGroupAlertDialog,
     RemoveLedgerEntryAlertDialog,

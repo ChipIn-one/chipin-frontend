@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import type { AppEvent } from 'api/activity.types';
@@ -34,8 +34,14 @@ vi.mock('hooks/pwaHooks', () => ({
         isNativeShareSupported: true,
         isShareDone: false,
         isCopied: false,
-        handleShare: () => Promise.resolve(),
-        handleCopyLink: () => Promise.resolve(),
+        qr: {
+            title: 'group:qr.title',
+            accessibleDescription: 'group:qr.description',
+            description: 'group:qr.joinDescription',
+            subtitle: 'group:page.settings.showQRSubtitle',
+        },
+        onShare: () => Promise.resolve(),
+        onCopyLink: () => Promise.resolve(),
     }),
 }));
 
@@ -62,11 +68,6 @@ vi.mock('features/activity', () => ({
 }));
 
 vi.mock('./GroupBalancesTab', () => ({ default: () => null }));
-vi.mock('./GroupInviteActionRows', () => ({
-    default: ({ group }: { group: Group }) => (
-        <div data-testid="group-invite-action-rows">{group.id}</div>
-    ),
-}));
 vi.mock('./GroupSettingsTab', () => ({ default: () => null }));
 
 const creator = {
@@ -173,9 +174,6 @@ test('renders member actions on the left and settle up on the right before tabs'
     const settleUp = screen.getByRole('button', {
         name: group.id,
     });
-    const invitePeople = screen.getByRole('button', {
-        name: 'common:buttons.invitePeople',
-    });
     const tabsNav = screen.getByRole('tablist');
     const actions = tabsNav.previousElementSibling;
     const memberActions = actions?.firstElementChild;
@@ -185,7 +183,16 @@ test('renders member actions on the left and settle up on the right before tabs'
     expect(memberActions?.firstElementChild?.children).toHaveLength(
         group.members.length,
     );
-    expect(memberActions?.contains(invitePeople)).toBe(true);
+
+    if (!(memberActions instanceof HTMLElement)) {
+        throw new Error('Member actions were not rendered');
+    }
+
+    expect(
+        within(memberActions).getByRole('button', {
+            name: 'common:buttons.invitePeople',
+        }),
+    ).toBeTruthy();
 });
 
 test('triggers group activity pagination from the active Expenses tab', () => {
@@ -256,7 +263,9 @@ test('renders invite onboarding instead of No expenses for a single-member group
     expect(screen.getByText('page.expenses.inviteDescription')).not.toBeNull();
     expect(screen.getByRole('button', { name: 'page.expenses.inviteAction' })).not.toBeNull();
     expect(screen.getByText('page.expenses.shareVia')).not.toBeNull();
-    expect(screen.getByTestId('group-invite-action-rows').textContent).toBe(group.id);
+    expect(screen.getByRole('button', {
+        name: /group:page\.settings\.showQRTitle/,
+    })).not.toBeNull();
     expect(screen.queryByText('page.expenses.emptyTitle')).toBeNull();
 });
 
@@ -265,7 +274,9 @@ test('renders invite onboarding when the feed only contains group lifecycle acti
 
     expect(screen.getByText('page.expenses.inviteTitle')).not.toBeNull();
     expect(screen.getByText('page.expenses.inviteDescription')).not.toBeNull();
-    expect(screen.getByTestId('group-invite-action-rows').textContent).toBe(group.id);
+    expect(screen.getByRole('button', {
+        name: /group:page\.settings\.showQRTitle/,
+    })).not.toBeNull();
     expect(screen.queryByText('page.expenses.emptyTitle')).toBeNull();
 });
 

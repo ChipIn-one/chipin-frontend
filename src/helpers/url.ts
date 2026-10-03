@@ -39,6 +39,9 @@ export const getSocialAuthUrl = (provider: AuthService) => {
     return `${apiUrl}auth/login/${provider}?redirect_to=${redirectTo}`;
 };
 
+export const buildFriendInviteLink = ({ inviteToken }: { inviteToken: string }) =>
+    `${getChipInAppUrl()}${ROUTES.FRIENDS_JOIN}/${inviteToken}`;
+
 export const buildGroupInviteLink = ({ inviteToken }: { inviteToken: string }) =>
     `${getChipInAppUrl()}${ROUTES.GROUP_JOIN}/${inviteToken}`;
 

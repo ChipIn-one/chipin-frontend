@@ -1,16 +1,14 @@
-import { LucideUserPlus } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
 
-import { Button, Flex } from '@radix-ui/themes';
+import { Flex } from '@radix-ui/themes';
 
 import type { KnownUser } from 'api/chipin.types';
 import type { FriendCurrencyGroup } from 'store/users-store';
 
-import { NoFriendsEmptyState } from 'basics/empty-states';
 import { FriendsPageSkeleton } from 'components/skeletons';
 
 import CurrencyGroupCard from './CurrencyGroupCard';
+import FriendInviteEmptyState from './FriendInviteEmptyState';
 import SettledUpCard from './SettledUpCard';
 
 interface Props {
@@ -21,22 +19,12 @@ interface Props {
 }
 
 const FriendsList = ({ currencyGroups, isEmpty, isLoading, settledFriends }: Props) => {
-    const { t } = useTranslation('common');
     let content: ReactNode;
 
     if (isLoading) {
         content = <FriendsPageSkeleton />;
     } else if (isEmpty) {
-        content = (
-            <NoFriendsEmptyState
-                action={
-                    <Button size="2" variant="soft">
-                        <LucideUserPlus size={14} />
-                        {t('buttons.addFriend')}
-                    </Button>
-                }
-            />
-        );
+        content = <FriendInviteEmptyState />;
     } else {
         content = (
             <>
