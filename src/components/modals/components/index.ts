@@ -15,7 +15,7 @@ export {
     type ModalSize,
     OverlayAlertDialogContent,
     OverlayBody,
-    OverlayDialogContent;
+    OverlayDialogContent,
     OverlayFooter,
     OverlayHeader,
 };
