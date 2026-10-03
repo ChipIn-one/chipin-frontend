@@ -12,7 +12,6 @@ const BackButton = () => {
         <IconButton
             variant="solid"
             color="gray"
-            highContrast
             size="2"
             aria-label={t('buttons.back')}
             onClick={() => navigate(-1)}

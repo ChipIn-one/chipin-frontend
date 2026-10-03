@@ -91,7 +91,6 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
                         <IconButton
                             variant="solid"
                             color="gray"
-                            highContrast
                             size="2"
                             aria-label={t('modal.titleEdit')}
                         >
