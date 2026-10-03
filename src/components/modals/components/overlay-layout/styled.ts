@@ -1,41 +1,50 @@
-import styled, { createGlobalStyle } from 'styled-components';
+import styled, { createGlobalStyle, css } from 'styled-components';
 
-import { ScrollArea, Separator } from '@radix-ui/themes';
+import { AlertDialog, Dialog, ScrollArea, Separator } from '@radix-ui/themes';
 
 import { MEDIA_QUERIES } from 'constants/breakpoints';
 
-const ModalOverlayGlobalStyles = createGlobalStyle`
-    .modal-overlay-content {
-        display: flex;
-        flex-direction: column;
-        max-height: calc(100dvh - var(--space-6) - max(var(--space-6), 6vh));
-        overflow: hidden;
-    }
+const modalContentStyles = css`
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100dvh - var(--space-6) - max(var(--space-6), 6vh));
+    overflow: hidden;
 
+    @media ${MEDIA_QUERIES.belowSm} {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        transform: none !important;
+        width: 100vw !important;
+        max-width: 100vw !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+`;
+
+const OverlayDialogContent = styled(Dialog.Content).attrs({
+    className: 'modal-overlay-content',
+})`
+    ${modalContentStyles}
+`;
+
+const OverlayAlertDialogContent = styled(AlertDialog.Content).attrs({
+    className: 'modal-overlay-content',
+})`
+    ${modalContentStyles}
+`;
+
+const ModalOverlayGlobalStyles = createGlobalStyle`
     @media ${MEDIA_QUERIES.belowSm} {
         :has(> .modal-overlay-content) {
             padding: 0;
             margin: 0;
             flex-grow: unset;
-        }
-
-        .modal-overlay-content {
-            position: fixed !important;
-            display: flex;
-            flex-direction: column;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            transform: none !important;
-            width: 100vw !important;
-            max-width: 100vw !important;
-            height: 100dvh !important;
-            max-height: 100dvh !important;
-            border-radius: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow: hidden;
         }
     }
 `;
@@ -152,4 +161,6 @@ export {
     Header,
     HeaderContainer,
     ModalOverlayGlobalStyles,
+    OverlayAlertDialogContent,
+    OverlayDialogContent,
 };
