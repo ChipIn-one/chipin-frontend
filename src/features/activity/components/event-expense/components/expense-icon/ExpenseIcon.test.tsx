@@ -11,14 +11,39 @@ vi.mock('@radix-ui/themes', () => ({
     Avatar: ({
         color,
         fallback,
+        role,
+        'aria-label': ariaLabel,
     }: {
         color?: string;
         fallback: ReactNode;
+        role?: string;
+        'aria-label'?: string;
     }) => (
-        <div data-testid="expense-icon" data-color={color}>
+        <div
+            data-testid="expense-icon"
+            data-color={color}
+            role={role}
+            aria-label={ariaLabel}
+        >
             {fallback}
         </div>
     ),
+}));
+
+vi.mock('react-i18next', () => ({
+    useTranslation: () => ({
+        t: (key: string) => {
+            if (key === 'expenses.modal.categories.food') {
+                return 'Food';
+            }
+
+            if (key === 'expenses.modal.subcategories.groceries') {
+                return 'Groceries';
+            }
+
+            return key;
+        },
+    }),
 }));
 
 vi.mock('constants/category', () => ({
@@ -28,11 +53,15 @@ vi.mock('constants/category', () => ({
 vi.mock('constants/category-ui', () => ({
     EXPENSE_CATEGORY_UI: {
         food: {
-            icon: () => <span data-testid="category-icon" />,
+            icon: ({ size }: { size?: number }) => (
+                <span data-testid="category-icon" data-size={size} />
+            ),
             color: 'orange',
             subcategories: {
                 groceries: {
-                    icon: () => <span data-testid="subcategory-icon" />,
+                    icon: ({ size }: { size?: number }) => (
+                        <span data-testid="subcategory-icon" data-size={size} />
+                    ),
                     color: 'green',
                 },
             },
@@ -75,14 +104,15 @@ const renderExpenseIcon = ({
     );
 };
 
-test('uses the configured subcategory icon and color', () => {
+test('uses the configured subcategory icon, color, and accessible name', () => {
     renderExpenseIcon({
         category: 'food',
         subcategory: 'groceries',
     });
 
-    expect(screen.getByTestId('subcategory-icon')).toBeTruthy();
+    expect(screen.getByTestId('subcategory-icon').dataset.size).toBe('24');
     expect(screen.getByTestId('expense-icon').dataset.color).toBe('green');
+    expect(screen.getByRole('img', { name: 'Groceries' })).toBeTruthy();
 });
 
 test('falls back to the configured category when the subcategory is not configured', () => {
@@ -91,8 +121,9 @@ test('falls back to the configured category when the subcategory is not configur
         subcategory: 'unknown-subcategory',
     });
 
-    expect(screen.getByTestId('category-icon')).toBeTruthy();
+    expect(screen.getByTestId('category-icon').dataset.size).toBe('24');
     expect(screen.getByTestId('expense-icon').dataset.color).toBe('orange');
+    expect(screen.getByRole('img', { name: 'Food' })).toBeTruthy();
 });
 
 test('keeps the generic expense fallback when category metadata is absent', () => {
@@ -122,6 +153,7 @@ test('uses category metadata for updated expenses', () => {
 
     expect(screen.getByTestId('subcategory-icon')).toBeTruthy();
     expect(screen.getByTestId('expense-icon').dataset.color).toBe('green');
+    expect(screen.getByRole('img', { name: 'Groceries' })).toBeTruthy();
 });
 
 test('keeps the red reversed expense icon even when category metadata is present', () => {
@@ -135,4 +167,5 @@ test('keeps the red reversed expense icon even when category metadata is present
     expect(screen.queryByTestId('subcategory-icon')).toBeNull();
     expect(screen.queryByTestId('category-icon')).toBeNull();
     expect(screen.getByTestId('expense-icon').dataset.color).toBe('red');
+    expect(screen.queryByRole('img', { name: 'Groceries' })).toBeNull();
 });
