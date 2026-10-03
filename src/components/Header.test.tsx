@@ -153,6 +153,24 @@ test('hides the mode badge on the landing page', () => {
     expect(screen.queryByText('Solo')).toBeNull();
 });
 
+test('hides the dev menu after authentication ends even with a cached admin role', () => {
+    useAuthStore.setState({ status: 'unauthenticated' });
+
+    render(
+        <MemoryRouter initialEntries={['/']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <Header />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    expect(
+        screen.queryByRole('button', { name: i18n.t('header.devMenu') }),
+    ).toBeNull();
+});
+
 
 test('changes and persists the landing page language', () => {
     const interaction = userEvent.setup();

@@ -6,6 +6,7 @@ import * as authSession from 'helpers/authSession';
 
 import { useAuthStore } from './authStore';
 import { APP_MODES, useDashboardStore } from './dashboardStore';
+import { useExpenseModalStore } from './expenseModalStore';
 import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
 import { useUsersStore } from './users-store';
@@ -70,6 +71,7 @@ describe('authStore', () => {
         authSessionMocks.clearExpiredAuthSession.mockResolvedValue(undefined);
         authSessionMocks.establishAuthSession.mockImplementation(() => undefined);
         authSessionMocks.startAuthLogout.mockResolvedValue(undefined);
+        useExpenseModalStore.getState().reset();
         useLoadingStore.getState().setInitialLoadingStore();
         useAuthStore.setState({
             isNewUser: null,
@@ -243,5 +245,41 @@ describe('authStore', () => {
                     unauthReason: 'expired',
                 });
             });
+    });
+
+    test('resets protected expense draft data when the session expires', () => {
+        useExpenseModalStore.setState({
+            isOpened: true,
+            groupId: 'private-group',
+            description: 'private expense',
+            includedParticipantIds: { 'user-1': true },
+        });
+
+        useAuthStore.getState().expireSession();
+
+        expect(useExpenseModalStore.getState()).toMatchObject({
+            isOpened: false,
+            groupId: '',
+            description: '',
+            includedParticipantIds: {},
+        });
+    });
+
+    test('resets protected expense draft data after sign out', () => {
+        useExpenseModalStore.setState({
+            isOpened: true,
+            groupId: 'private-group',
+            description: 'private expense',
+            includedParticipantIds: { 'user-1': true },
+        });
+
+        return useAuthStore.getState().signOut().then(() => {
+            expect(useExpenseModalStore.getState()).toMatchObject({
+                isOpened: false,
+                groupId: '',
+                description: '',
+                includedParticipantIds: {},
+            });
+        });
     });
 });
