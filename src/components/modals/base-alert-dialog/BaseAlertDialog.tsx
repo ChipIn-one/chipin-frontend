@@ -6,7 +6,6 @@ import { AlertDialog, Button, Flex, Text } from '@radix-ui/themes';
 import {
     MODAL_SIZES,
     type ModalSize,
-    OverlayAlertDialogContent,
     OverlayBody,
     OverlayFooter,
     OverlayHeader,
@@ -79,9 +78,10 @@ const BaseAlertDialog = ({
         <AlertDialog.Root open={isOpened} onOpenChange={onOpenChange}>
             {triggerElement && <AlertDialog.Trigger>{triggerElement}</AlertDialog.Trigger>}
 
-            <OverlayAlertDialogContent
+            <AlertDialog.Content
                 maxWidth={maxWidth}
                 size={{ initial: '2', sm: '4' }}
+                className="modal-overlay-content"
                 onEscapeKeyDown={event => event.preventDefault()}
             >
                 <OverlayHeader
@@ -127,7 +127,7 @@ const BaseAlertDialog = ({
                         </AlertDialog.Action>
                     }
                 />
-            </OverlayAlertDialogContent>
+            </AlertDialog.Content>
         </AlertDialog.Root>
     );
 };
