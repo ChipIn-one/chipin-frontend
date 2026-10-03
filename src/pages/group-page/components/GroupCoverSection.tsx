@@ -89,7 +89,7 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
                 <Box ml="auto">
                     <CreateUpdateGroupModal type="update">
                         <IconButton
-                            variant="soft"
+                            variant="solid"
                             color="gray"
                             size="2"
                             aria-label={t('modal.titleEdit')}

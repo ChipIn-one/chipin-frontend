@@ -11,6 +11,7 @@ import { LS_KEY_THEME } from 'constants/localstorage';
 import { APP_VERSION } from 'constants/version';
 import {
     resolveTelemetryEnvironment,
+    sanitizeTelemetryEvent,
     sanitizeTelemetryUrl,
 } from 'helpers/telemetry';
 import { resolveStoredTheme } from 'helpers/theme';
@@ -101,8 +102,8 @@ createRoot(document.getElementById('root')!).render(
             storageKey={LS_KEY_THEME}
             enableSystem
         >
-            <Analytics />
-            <SpeedInsights />
+            <Analytics beforeSend={sanitizeTelemetryEvent} />
+            <SpeedInsights beforeSend={sanitizeTelemetryEvent} />
             <Main />
         </ThemeProvider>
     </GlobalErrorBoundary>,

@@ -10,6 +10,7 @@ import { useErrorsStore } from '../errorsStore';
 import { useUsersStore } from './actions';
 
 vi.mock('api/usersApi', () => ({
+    acceptKnownUserInvite: vi.fn(),
     fetchKnownUsers: vi.fn(),
     fetchPremiumPromoRemaining: vi.fn(),
     fetchUser: vi.fn(),
@@ -47,6 +48,7 @@ const user = {
 beforeEach(() => {
     LocalStorage.clear();
     vi.clearAllMocks();
+    vi.mocked(usersApi.fetchKnownUsers).mockReset();
     useUsersStore.getState().setInitialUsersStore();
     useErrorsStore.getState().resetErrors();
     useLoadingStore.getState().setInitialLoadingStore();
@@ -99,6 +101,58 @@ test('resolves the premium promo counter with fallback state after a request err
             premiumPromoRemaining: null,
             isPremiumPromoResolved: true,
         });
+    });
+});
+
+
+test('accepts a friend invite and refreshes the canonical friends list', () => {
+    const friend = {
+        id: 'friend-1',
+        email: 'friend@example.com',
+        displayName: 'Friend',
+        createdAt: 1,
+        updatedAt: 1,
+    };
+    const knownFriend = {
+        user: friend,
+        balances: [],
+        lastUsedCurrency: null,
+    };
+    vi.mocked(usersApi.acceptKnownUserInvite).mockResolvedValue(friend);
+    vi.mocked(usersApi.fetchKnownUsers).mockResolvedValue({
+        friends: [knownFriend],
+    });
+
+    return useUsersStore.getState().acceptFriendInvite({ inviteToken: 'friend-token' }).then(result => {
+        expect(usersApi.acceptKnownUserInvite).toHaveBeenCalledWith({
+            inviteToken: 'friend-token',
+        });
+        expect(usersApi.fetchKnownUsers).toHaveBeenCalledOnce();
+        expect(useUsersStore.getState().friends).toEqual([knownFriend]);
+        expect(result).toEqual(friend);
+    });
+});
+
+test('rejects friend invite acceptance when the canonical friends refresh fails', () => {
+    const refreshError = new Error('friends refresh failed');
+    const friend = {
+        id: 'friend-1',
+        email: 'friend@example.com',
+        displayName: 'Friend',
+        createdAt: 1,
+        updatedAt: 1,
+    };
+    vi.mocked(usersApi.acceptKnownUserInvite).mockResolvedValue(friend);
+    vi.mocked(usersApi.fetchKnownUsers).mockRejectedValue(refreshError);
+
+    return expect(
+        useUsersStore.getState().acceptFriendInvite({ inviteToken: 'friend-token' }),
+    ).rejects.toThrow(refreshError.message).then(() => {
+        expect(usersApi.fetchKnownUsers).toHaveBeenCalledOnce();
+        expect(useErrorsStore.getState().errors.users.friends).toEqual(
+            expect.objectContaining({ message: expect.any(String) }),
+        );
+        expect(useLoadingStore.getState().users.friends).toBe('fetched');
     });
 });
 

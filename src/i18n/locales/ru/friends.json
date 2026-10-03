@@ -29,5 +29,13 @@
         "owedToYou": "{{name}} должен вам",
         "remainingDebt": "Остаток долга:",
         "debtWillBeSettled": "Долг будет погашен"
+    },
+    "invite": {
+        "shareTitle": "Добавь меня в друзья в ChipIn",
+        "shareText": "Добавь меня в друзья в ChipIn, чтобы вместе учитывать общие расходы.",
+        "showQRSubtitle": "Отсканируйте, чтобы добавить меня в друзья",
+        "qrTitle": "Добавить меня в ChipIn",
+        "qrDescription": "Поделитесь этим QR-кодом, чтобы вас добавили в друзья.",
+        "qrJoinDescription": "Отсканируйте QR-код, чтобы добавить меня в друзья в ChipIn."
     }
 }

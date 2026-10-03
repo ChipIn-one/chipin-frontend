@@ -1,4 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
+import type { ComponentProps } from 'react';
+
+import { Avatar } from '@radix-ui/themes';
 import {
     LucideArrowLeftRight,
     LucideAward,
@@ -75,14 +78,16 @@ import {
 
 import { EXPENSE_CATEGORIES, type ExpenseCategory } from './category';
 
+type ExpenseCategoryUiColor = NonNullable<ComponentProps<typeof Avatar>['color']>;
+
 type ExpenseCategoryUiConfig = {
     [Category in ExpenseCategory]: {
         icon: LucideIcon;
-        color: string;
+        color: ExpenseCategoryUiColor;
         subcategories: {
             [Subcategory in (typeof EXPENSE_CATEGORIES)[Category]['subcategories'][number]]: {
                 icon: LucideIcon;
-                color: string;
+                color: ExpenseCategoryUiColor;
             };
         };
     };

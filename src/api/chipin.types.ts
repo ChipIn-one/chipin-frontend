@@ -40,6 +40,7 @@ export type {
 
 // ─── Re-exports: call param types ─────────────────────────────────────────
 export type {
+    AcceptUserInviteParams,
     CreateGroupParams,
     CreateLedgerEntryParams,
     CreateSettlementParams,

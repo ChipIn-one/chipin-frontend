@@ -3,19 +3,33 @@ import { useTranslation } from 'react-i18next';
 
 import { Avatar, Box, Button, Flex, Heading, Skeleton, Text } from '@radix-ui/themes';
 
+import { useFriendInvite } from 'hooks/pwaHooks';
+import { useUsersStore } from 'store/users-store';
+
 interface Props {
     isLoading: boolean;
 }
 
 const FriendsPageHeader = ({ isLoading }: Props) => {
     const { t } = useTranslation(['friends', 'common']);
+    const inviteToken = useUsersStore(state => state.user?.inviteToken);
+    const invite = useFriendInvite(inviteToken ?? '');
+    const addFriendLabel = t('common:buttons.addFriend');
+
+    const onAddFriend = (): Promise<void> => {
+        if (invite.isNativeShareSupported) {
+            return invite.onShare();
+        }
+
+        return invite.onCopyLink();
+    };
 
     return (
         <Flex
             justify="between"
-            align={{ initial: 'center', lg: 'stretch' }}
-            direction={{ initial: 'row', lg: 'column' }}
-            gap={{ lg: '3' }}
+            align={{ initial: 'center', sm: 'stretch' }}
+            direction={{ initial: 'row', sm: 'column' }}
+            gap={{ sm: '3' }}
         >
             <Flex align="center" gap={{ initial: '3', sm: '4' }}>
                 <Skeleton loading={isLoading}>
@@ -36,10 +50,16 @@ const FriendsPageHeader = ({ isLoading }: Props) => {
                     </Text>
                 </Box>
             </Flex>
-            <Button variant="soft" loading={isLoading}>
+            <Button
+                variant="soft"
+                loading={isLoading}
+                disabled={!inviteToken}
+                aria-label={addFriendLabel}
+                onClick={onAddFriend}
+            >
                 <LucideUserPlus size={16} />
                 <Box display={{ initial: 'none', sm: 'inline' }}>
-                    <Text as="span">{t('common:buttons.addFriend')}</Text>
+                    <Text as="span">{addFriendLabel}</Text>
                 </Box>
             </Button>
         </Flex>

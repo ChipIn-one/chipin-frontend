@@ -27,7 +27,12 @@
         "inviteLinkCopyError": "Não foi possível copiar o link"
     },
     "friend": {
-        "removed": "\"{{name}}\" foi removido dos seus amigos."
+        "removed": "\"{{name}}\" foi removido dos seus amigos.",
+        "inviteLinkCopied": "Link de convite de amigo copiado",
+        "inviteLinkCopyError": "Não foi possível copiar o link",
+        "inviteAcceptedWithName": "Agora você e {{name}} são amigos.",
+        "inviteAccepted": "Amigo adicionado.",
+        "inviteJoinError": "Não foi possível adicionar o amigo. Verifique o link de convite e tente novamente."
     },
     "pwa": {
         "installing": "Instalando o aplicativo na sua tela inicial...",

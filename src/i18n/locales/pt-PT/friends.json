@@ -29,5 +29,13 @@
         "owedToYou": "{{name}} deve-lhe",
         "remainingDebt": "Dívida restante:",
         "debtWillBeSettled": "A dívida ficará liquidada"
+    },
+    "invite": {
+        "shareTitle": "Adiciona-me no ChipIn",
+        "shareText": "Adiciona-me como amigo no ChipIn para acompanharmos despesas partilhadas.",
+        "showQRSubtitle": "Digitalize para me adicionar como amigo",
+        "qrTitle": "Adiciona-me no ChipIn",
+        "qrDescription": "Partilhe este código QR para que alguém o adicione como amigo.",
+        "qrJoinDescription": "Digitalize este código QR para me adicionar como amigo no ChipIn."
     }
 }
