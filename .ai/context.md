@@ -4,7 +4,7 @@
 - Purpose: ChipIn frontend Vite/React/TypeScript PWA.
 - Repository-specific engineering invariants live in `AGENTS.md` and relevant `docs/codex/rules/*`.
 - Generic AI lifecycle and role semantics belong to canonical `syllik/ai-workflow`; model/provider does not define Planner/Architect/Executor/Reviewer/Auditor authority.
-- Integration branch: `dev`; production branch: `main`. Preserve an already assigned/published task branch; new branch naming follows the current canonical registry policy.
+- Integration branch: `dev`; production branch: `main`. Preserve published branch/history without rewrite. New Issue-backed branches follow the canonical registry pattern; repository helper compatibility for legacy names is limited by `AGENTS.md` and does not imply reopening every historical branch.
 - Canonical local completion gate: `npm run verify:full`.
 - Remote required `frontend-ci` is authoritative after publication; release flow remains `dev → main`.
 - Executor stops at `IMPLEMENTATION_COMPLETE` or `BLOCKED` and never inherits publication/review authority.
