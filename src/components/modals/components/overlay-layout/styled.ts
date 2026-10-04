@@ -5,6 +5,13 @@ import { ScrollArea, Separator } from '@radix-ui/themes';
 import { MEDIA_QUERIES } from 'constants/breakpoints';
 
 const ModalOverlayGlobalStyles = createGlobalStyle`
+    .modal-overlay-content {
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100dvh - var(--space-6) - max(var(--space-6), 6vh));
+        overflow: hidden;
+    }
+
     @media ${MEDIA_QUERIES.belowSm} {
         :has(> .modal-overlay-content) {
             padding: 0;
@@ -58,6 +65,7 @@ const Body = styled(ScrollArea)<{ $fillHeight: boolean; $maxHeight?: string }>`
     flex: 1;
     height: auto;
     max-height: ${({ $maxHeight }) => $maxHeight ?? 'none'};
+    padding-right: var(--space-4);
 
     & [data-radix-scroll-area-viewport] {
         height: ${({ $maxHeight }) => ($maxHeight ? 'auto' : '100%')};
@@ -73,6 +81,7 @@ const Body = styled(ScrollArea)<{ $fillHeight: boolean; $maxHeight?: string }>`
 
     @media ${MEDIA_QUERIES.belowSm} {
         max-height: none;
+        padding-right: 0;
 
         & [data-radix-scroll-area-viewport] {
             height: 100%;
