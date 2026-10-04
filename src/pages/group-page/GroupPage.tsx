@@ -5,7 +5,6 @@ import { useParams } from 'react-router-dom';
 import { Box, Card, Container, Flex, Grid, Text } from '@radix-ui/themes';
 
 import GroupsCards from 'components/GroupsCards';
-import GroupsSectionHeader from 'components/GroupsSectionHeader';
 
 import { GroupCoverSection, GroupSummary, GroupTabsContent } from './components';
 import { useConnect } from './internal';
@@ -69,7 +68,6 @@ const GroupPage = () => {
     return (
         <Container size="4" pb={{ initial: '9', sm: '4' }}>
             <Grid columns="3" gap="6">
-                {/* ── Right sidebar (desktop) ── */}
                 <Flex
                     direction="column"
                     gap="4"
@@ -79,14 +77,13 @@ const GroupPage = () => {
                     display={{ initial: 'none', sm: 'flex' }}
                 >
                     <GroupSummary isLoading={isGroupDataLoading} />
-                    <GroupsSectionHeader
+                    <GroupsCards
+                        groups={groups}
                         label={t('dashboard:groups.otherTitle')}
-                        isLoading={isGroupDataLoading}
+                        selectedGroupId={routeGroup.id}
                     />
-                    <GroupsCards groups={groups} selectedGroupId={routeGroup.id} />
                 </Flex>
 
-                {/* ── Main content column ── */}
                 <Box
                     gridColumn={{ initial: 'span 3', sm: '1 / span 2' }}
                     gridRow={{ sm: '1' }}
@@ -98,14 +95,10 @@ const GroupPage = () => {
                         />
                     </GroupCoverBox>
 
-                    <Box
-                        display={{ initial: 'block', sm: 'none' }}
-                        mb="4"
-                    >
+                    <Box display={{ initial: 'block', sm: 'none' }} mb="4">
                         <GroupSummary isLoading={isGroupDataLoading} />
                     </Box>
 
-                    {/* Tabs: Expenses / Balances / Members */}
                     <GroupTabsContent
                         group={routeGroup}
                         isGroupDataLoading={isGroupDataLoading}

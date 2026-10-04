@@ -1,22 +1,36 @@
 {
     "groups": {
-        "title": "Твои группы",
+        "title": "Группы",
         "otherTitle": "Другие группы",
         "subtitle": "Держи общие балансы, поездки и компании в одном месте.",
         "emptyTitle": "Пока нет групп",
         "emptyDescription": "Создай первую группу, чтобы начать делить расходы с друзьями, соседями или в поездках.",
         "filterAll": "Все",
         "filterSettled": "Рассчитано",
-        "showSettled": "Показать рассчитанные ({{count}})",
-        "hideSettled": "Скрыть рассчитанные",
+        "showSettled": "Показать",
+        "hideSettled": "Скрыть",
+        "settledCount": "Рассчитано ({{count}})",
+        "settledAutoHide": "Группы без долгов и активности более 15 дней скрываются автоматически.",
+        "searchLabel": "Поиск групп",
+        "searchPlaceholder": "Поиск групп",
+        "clearSearch": "Очистить поиск групп",
+        "filtersLabel": "Фильтры групп",
         "filterEmptyTitle": "Группы не найдены",
-        "filterEmptyDescription": "Нет групп, соответствующих выбранному фильтру."
+        "filterEmptyDescription": "Нет групп по этому фильтру.",
+        "searchActiveLabel": "Поиск групп, активный запрос: {{query}}",
+        "searchEmptyDescription": "Нет совпадений по вашему запросу."
     },
     "groupsCard": {
         "members_one": "{{count}} участник",
         "members_few": "{{count}} участника",
         "members_many": "{{count}} участников",
-        "members_other": "{{count}} участника"
+        "members_other": "{{count}} участника",
+        "settled": "Рассчитано",
+        "currencies_one": "{{count}} валюта",
+        "currencies_few": "{{count}} валюты",
+        "currencies_many": "{{count}} валют",
+        "currencies_other": "{{count}} валюты",
+        "unavailable": "Н/Д"
     },
     "summary": {
         "totalBalance": "Общий баланс",
