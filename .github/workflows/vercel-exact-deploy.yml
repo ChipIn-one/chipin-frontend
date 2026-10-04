@@ -1,32 +1,21 @@
 name: Vercel Exact Commit Deploy
 
 on:
-  workflow_dispatch:
-    inputs:
-      sha:
-        description: Full 40-character Git commit SHA to deploy
-        required: true
-        type: string
-      channel:
-        description: Deployment channel
-        required: true
-        default: development
-        type: choice
-        options:
-          - development
-          - production
+  repository_dispatch:
+    types:
+      - vercel-exact-deploy
 
 permissions:
   actions: read
   contents: read
 
 concurrency:
-  group: vercel-exact-${{ inputs.channel }}
+  group: vercel-exact-${{ github.event.client_payload.channel || 'invalid' }}
   cancel-in-progress: false
 
 jobs:
   deploy:
-    name: deploy-${{ inputs.channel }}
+    name: deploy-${{ github.event.client_payload.channel || 'invalid' }}
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -51,8 +40,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
-          SELECTED_SHA: ${{ inputs.sha }}
-          CHANNEL: ${{ inputs.channel }}
+          SELECTED_SHA: ${{ github.event.client_payload.sha }}
+          CHANNEL: ${{ github.event.client_payload.channel }}
         shell: bash
         run: |
           set -euo pipefail
@@ -128,9 +117,10 @@ jobs:
           CHIPIN_EXACT_PRODUCTION_ENABLED: ${{ vars.VERCEL_EXACT_PRODUCTION_ENABLED }}
           CHIPIN_REPOSITORY: ${{ github.repository }}
           CHIPIN_EVENT_NAME: ${{ github.event_name }}
+          CHIPIN_DISPATCH_TYPE: ${{ github.event.action }}
           CHIPIN_WORKFLOW_REF: ${{ github.ref }}
           CHIPIN_SELECTED_SHA: ${{ steps.evidence.outputs.selected_sha }}
-          CHIPIN_CHANNEL: ${{ inputs.channel }}
+          CHIPIN_CHANNEL: ${{ github.event.client_payload.channel }}
           CHIPIN_SOURCE_BRANCH: ${{ steps.evidence.outputs.source_branch }}
           CHIPIN_COMPARE_STATUS: ${{ steps.evidence.outputs.compare_status }}
           CHIPIN_FRONTEND_CI_CONCLUSION: ${{ steps.evidence.outputs.frontend_ci_conclusion }}

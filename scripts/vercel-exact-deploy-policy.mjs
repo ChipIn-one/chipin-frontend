@@ -3,6 +3,7 @@ import { pathToFileURL } from 'node:url';
 
 const EXPECTED_REPOSITORY = 'ChipIn-one/chipin-frontend';
 const TRUSTED_WORKFLOW_REF = 'refs/heads/main';
+const EXPECTED_DISPATCH_TYPE = 'vercel-exact-deploy';
 const SHA_PATTERN = /^[0-9a-f]{40}$/u;
 
 const CHANNELS = Object.freeze({
@@ -55,6 +56,7 @@ export const resolveExactDeploymentPlan = ({
     productionEnabled,
     repository,
     eventName,
+    dispatchType,
     workflowRef,
     selectedSha,
     channel,
@@ -74,8 +76,12 @@ export const resolveExactDeploymentPlan = ({
         throw new Error(`Unexpected repository: ${resolvedRepository}`);
     }
 
-    if (normalize(eventName) !== 'workflow_dispatch') {
-        throw new Error('Exact-commit deployment accepts only workflow_dispatch.');
+    if (normalize(eventName) !== 'repository_dispatch') {
+        throw new Error('Exact-commit deployment accepts only repository_dispatch.');
+    }
+
+    if (normalize(dispatchType) !== EXPECTED_DISPATCH_TYPE) {
+        throw new Error(`Unexpected repository dispatch type: ${normalize(dispatchType) || 'missing'}`);
     }
 
     if (normalize(workflowRef) !== TRUSTED_WORKFLOW_REF) {
@@ -142,6 +148,7 @@ if (isCli) {
             productionEnabled: process.env.CHIPIN_EXACT_PRODUCTION_ENABLED,
             repository: process.env.CHIPIN_REPOSITORY,
             eventName: process.env.CHIPIN_EVENT_NAME,
+            dispatchType: process.env.CHIPIN_DISPATCH_TYPE,
             workflowRef: process.env.CHIPIN_WORKFLOW_REF,
             selectedSha: process.env.CHIPIN_SELECTED_SHA,
             channel: process.env.CHIPIN_CHANNEL,

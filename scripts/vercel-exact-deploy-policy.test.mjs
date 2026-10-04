@@ -8,7 +8,8 @@ const makeInput = overrides => ({
     activationEnabled: 'true',
     productionEnabled: 'false',
     repository: 'ChipIn-one/chipin-frontend',
-    eventName: 'workflow_dispatch',
+    eventName: 'repository_dispatch',
+    dispatchType: 'vercel-exact-deploy',
     workflowRef: 'refs/heads/main',
     selectedSha: SHA,
     channel: 'development',
@@ -61,10 +62,16 @@ describe('exact Vercel deployment policy', () => {
         }))).toThrow('Unexpected repository');
     });
 
-    test('rejects non-manual events', () => {
+    test('rejects events that do not use the default-branch repository dispatch path', () => {
         expect(() => resolveExactDeploymentPlan(makeInput({
-            eventName: 'push',
-        }))).toThrow('workflow_dispatch');
+            eventName: 'workflow_dispatch',
+        }))).toThrow('repository_dispatch');
+    });
+
+    test('rejects an unexpected repository dispatch type', () => {
+        expect(() => resolveExactDeploymentPlan(makeInput({
+            dispatchType: 'other-deploy',
+        }))).toThrow('Unexpected repository dispatch type');
     });
 
     test('rejects execution from an untrusted workflow ref', () => {
