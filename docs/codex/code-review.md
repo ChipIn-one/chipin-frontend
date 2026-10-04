@@ -13,7 +13,7 @@ Generic reviewer roles and lifecycle semantics belong to the canonical
 - Reviewer findings stay separate from Executor state and return as one consolidated findings package.
 - A v2 handoff may pre-authorize 0–2 correction batches, so those authorized batches do not require another approval. Legacy v1/unspecified handoffs require explicit human authorization per batch.
 - Any correction that changes the PR head invalidates the previous review and requires the same green-CI gate followed by one fresh independent review.
-- Disputed findings, exhausted correction authority, or reviewer unavailability escalate to a human or an independently selected higher-capability reviewer by risk.
+- Disputed findings or exhausted correction authority escalate to a human. Reviewer unavailability may use a different independent reviewer selected by capability/risk, but does not bypass the human escalation required for disputes or exhausted correction authority.
 - Only a human merges.
 
 Executor does not perform independent review batches, judge merge readiness, commit,

@@ -69,7 +69,7 @@ The canonical lifecycle is:
 
 `Planner/Architect as risk requires → Executor implementation + local validation → IMPLEMENTATION_COMPLETE → Trusted Publisher one-batch publication → green required frontend-ci on current head → one independent Reviewer for that SHA → authorized bounded correction if needed → changed head repeats green CI + one fresh review → human merge`.
 
-Roles are provider-independent; stronger models are selected by risk/capability, not automatically by role. Executor never self-reviews or publishes. Reviewer is read-only and returns one consolidated findings package. Task contract v2 may pre-authorize 0–2 correction batches upfront; legacy v1/unspecified handoffs retain the existing human authorization gate per batch. After two batches or a disputed finding, escalate to a human. A changed head invalidates prior CI/review. Only a human merges.
+Roles are provider-independent; stronger models are selected by risk/capability, not automatically by role. Executor never self-reviews or publishes. Reviewer is read-only and returns one consolidated findings package. Task contract v2 may pre-authorize 0–2 correction batches upfront; legacy v1/unspecified handoffs retain the existing human authorization gate per batch. When the handoff's authorized correction limit is exhausted, or a finding is disputed, stop and escalate to a human. A changed head invalidates prior CI/review. Only a human merges.
 
 ## Code Review Rules
 
