@@ -18,6 +18,8 @@ interface GetNumberPrecisionData {
     isInteractive?: boolean;
 }
 
+const API_MONEY_PRECISION = 4;
+
 interface NumberData {
     numberValue: number;
     numberString: string;
@@ -110,6 +112,19 @@ const roundHalfUp = (value: number, precision: number): number => {
     );
 
     return sign * roundedValue;
+};
+
+export const normalizeApiMoneyAmount = (value: number): number => {
+    const normalizedValue = roundHalfUp(value, API_MONEY_PRECISION);
+    return Object.is(normalizedValue, -0) ? 0 : normalizedValue;
+};
+
+export const normalizeFloatingPointZero = (
+    value: number,
+    magnitude: number,
+): number => {
+    const tolerance = Number.EPSILON * Math.max(1, Math.abs(magnitude));
+    return Math.abs(value) <= tolerance ? 0 : value;
 };
 
 const getSplittedNumber = (formattedString: string) => {

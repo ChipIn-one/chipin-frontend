@@ -1,177 +1,285 @@
-import { useState } from 'react';
-import { LucideChevronDown, LucideChevronUp, LucideFilterX } from 'lucide-react';
+import { type FocusEvent, type KeyboardEvent, useEffect, useRef, useState } from 'react';
+import {
+    LucideChevronDown,
+    LucideChevronUp,
+    LucideCircleCheck,
+    LucideFilterX,
+    LucidePlus,
+    LucideSearch,
+    LucideX,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Button, Flex } from '@radix-ui/themes';
+import {
+    Button,
+    Flex,
+    IconButton,
+    Separator,
+    Text,
+    TextField,
+} from '@radix-ui/themes';
 
 import type { Group } from 'api/chipin.types';
-import { useDashboardStore } from 'store/dashboardStore';
 import {
-    type GroupBalances,
-    selectGroupBalances,
-    sortGroupBalances,
-} from 'store/groupsSelectors';
-import { selectDashboardFetched, selectGroupListFetched } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
+    GROUP_DEBT_FILTERS,
+    type GroupDebtFilter,
+} from 'constants/groups';
 
 import { EmptyState } from 'basics/empty-states';
-import { GroupsCardsSkeleton } from 'components/skeletons';
-
 import { GroupCard } from './group-card';
-
-type DebtFilter = 'all' | 'owed' | 'owes';
+import { useConnect } from './groups-cards/internal';
+import {
+    SearchButtonShell,
+    SearchFieldShell,
+    SearchIndicator,
+    SettledToggleButton,
+} from './groups-cards/styled';
+import { CreateUpdateGroupModal } from './modals';
+import { GroupsCardsSkeleton } from './skeletons';
 
 interface Props {
     groups: Group[];
+    label: string;
     selectedGroupId?: Group['id'];
 }
 
-interface GroupCardModel {
-    group: Group;
-    balances: GroupBalances;
-}
-
-interface FilterGroupsOptions {
-    filter: DebtFilter;
-    isSettledVisible: boolean;
-    selectedGroupId?: Group['id'];
-}
-
-interface FilterGroupsResult {
-    displayedGroups: GroupCardModel[];
-    hiddenSettledCount: number;
-}
-
-const filterGroups = (
-    groups: Group[],
-    { filter, isSettledVisible, selectedGroupId }: FilterGroupsOptions,
-): FilterGroupsResult => {
-    const activeGroups: GroupCardModel[] = [];
-    const settledGroups: GroupCardModel[] = [];
-    let selectedGroup: GroupCardModel | undefined;
-    let isSelectedGroupVisible = false;
-    let hiddenSettledCount = 0;
-
-    for (const group of groups) {
-        const { owedEntries, oweEntries } = selectGroupBalances(group);
-        const hasOwedBalance = owedEntries.length > 0;
-        const hasOweBalance = oweEntries.length > 0;
-        const isSettled = !hasOwedBalance && !hasOweBalance;
-        const isSelected = group.id === selectedGroupId;
-        const groupModel = { group, balances: { owedEntries, oweEntries } };
-        let matchesActiveFilter = false;
-
-        if (filter === 'all') {
-            matchesActiveFilter = !isSettled;
-        } else if (filter === 'owed') {
-            matchesActiveFilter = hasOwedBalance;
-        } else {
-            matchesActiveFilter = hasOweBalance;
-        }
-
-        if (isSettled) {
-            settledGroups.push(groupModel);
-
-            if (!isSelected) {
-                hiddenSettledCount += 1;
-            }
-        } else if (matchesActiveFilter) {
-            activeGroups.push(groupModel);
-        }
-
-        if (isSelected) {
-            selectedGroup = groupModel;
-            isSelectedGroupVisible = isSettled ? isSettledVisible : matchesActiveFilter;
-        }
-    }
-
-    const filteredGroups = isSettledVisible
-        ? [...activeGroups, ...settledGroups]
-        : activeGroups;
-    const displayedGroups =
-        selectedGroup && !isSelectedGroupVisible
-            ? [selectedGroup, ...filteredGroups]
-            : filteredGroups;
-
-    return { displayedGroups, hiddenSettledCount };
-};
-
-const GroupsCards = ({ groups, selectedGroupId }: Props) => {
-    const isGroupListFetched = useLoadingStore(selectGroupListFetched);
-    const isDashboardFetched = useLoadingStore(selectDashboardFetched);
-    const currencies = useDashboardStore(state => state.currencies);
-    const [activeFilter, setActiveFilter] = useState<DebtFilter>('all');
+const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
+    const [activeFilter, setActiveFilter] = useState<GroupDebtFilter>(
+        GROUP_DEBT_FILTERS.ALL,
+    );
     const [isSettledVisible, setIsSettledVisible] = useState(false);
+    const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const searchInputRef = useRef<HTMLInputElement>(null);
+    const searchButtonRef = useRef<HTMLButtonElement>(null);
+    const shouldRestoreSearchButtonFocusRef = useRef(false);
     const { t } = useTranslation('dashboard');
-
-    if (!isGroupListFetched || !isDashboardFetched) {
-        return <GroupsCardsSkeleton />;
-    }
-
-    const { displayedGroups, hiddenSettledCount } = filterGroups(groups, {
+    const {
+        displayedGroups,
+        hiddenSettledGroups,
+        settledCount,
+        isReady,
+    } = useConnect({
+        groups,
         filter: activeFilter,
-        isSettledVisible,
+        query: searchQuery,
         selectedGroupId,
     });
+    const hasSearchQuery = searchQuery.trim().length > 0;
+    const showSettledSection =
+        activeFilter === GROUP_DEBT_FILTERS.ALL &&
+        !hasSearchQuery &&
+        settledCount > 0;
+    const showEmptyState = displayedGroups.length === 0 && !showSettledSection;
+    const searchButtonLabel = hasSearchQuery
+        ? t('groups.searchActiveLabel', { query: searchQuery.trim() })
+        : t('groups.searchLabel');
+    const emptyStateDescription = hasSearchQuery
+        ? t('groups.searchEmptyDescription')
+        : t('groups.filterEmptyDescription');
 
-    const filterItems: { value: DebtFilter; label: string }[] = [
-        { value: 'all', label: t('groups.filterAll') },
-        { value: 'owed', label: t('summary.owedToYou') },
-        { value: 'owes', label: t('summary.youOwe') },
+    useEffect(() => {
+        if (!isSearchOpen && shouldRestoreSearchButtonFocusRef.current) {
+            shouldRestoreSearchButtonFocusRef.current = false;
+            searchButtonRef.current?.focus();
+        }
+    }, [isSearchOpen]);
+
+    if (!isReady) {
+        return <GroupsCardsSkeleton label={label} />;
+    }
+
+    const filterItems: { value: GroupDebtFilter; label: string }[] = [
+        { value: GROUP_DEBT_FILTERS.ALL, label: t('groups.filterAll') },
+        { value: GROUP_DEBT_FILTERS.OWED, label: t('summary.owedToYou') },
+        { value: GROUP_DEBT_FILTERS.OWES, label: t('summary.youOwe') },
     ];
 
+    const onSearchBlur = (event: FocusEvent<HTMLDivElement>) => {
+        const nextFocusedElement = event.relatedTarget;
+
+        if (
+            nextFocusedElement instanceof Node &&
+            event.currentTarget.contains(nextFocusedElement)
+        ) {
+            return;
+        }
+
+        setIsSearchOpen(false);
+    };
+
+    const onSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+        if (event.key === 'Escape') {
+            shouldRestoreSearchButtonFocusRef.current = true;
+            setIsSearchOpen(false);
+        }
+    };
+
+    const onClearSearch = () => {
+        searchInputRef.current?.focus();
+        setSearchQuery('');
+    };
+
     return (
-        <Flex direction="column" gap="4">
-            <Flex gap="2" wrap="wrap">
+        <Flex direction="column" gap="3">
+            <Flex align="center" justify="between" gap="2" minWidth="0">
+                <Flex align="center" flexGrow="1" minWidth="0">
+                    {isSearchOpen ? (
+                        <SearchFieldShell width="100%" onBlur={onSearchBlur}>
+                            <TextField.Root
+                                ref={searchInputRef}
+                                autoFocus
+                                value={searchQuery}
+                                onChange={event => setSearchQuery(event.target.value)}
+                                onKeyDown={onSearchKeyDown}
+                                placeholder={t('groups.searchPlaceholder')}
+                                aria-label={t('groups.searchLabel')}
+                                size="2"
+                            >
+                                <TextField.Slot side="left">
+                                    <LucideSearch size={16} />
+                                </TextField.Slot>
+                                {hasSearchQuery && (
+                                    <TextField.Slot side="right">
+                                        <IconButton
+                                            type="button"
+                                            size="1"
+                                            variant="ghost"
+                                            color="gray"
+                                            aria-label={t('groups.clearSearch')}
+                                            onMouseDown={event => event.preventDefault()}
+                                            onClick={onClearSearch}
+                                        >
+                                            <LucideX size={14} />
+                                        </IconButton>
+                                    </TextField.Slot>
+                                )}
+                            </TextField.Root>
+                        </SearchFieldShell>
+                    ) : (
+                        <Text size="3" weight="bold" truncate>
+                            {label}
+                        </Text>
+                    )}
+                </Flex>
+
+                <Flex align="center" gap="3" flexShrink="0">
+                    {!isSearchOpen && (
+                        <SearchButtonShell>
+                            <IconButton
+                                ref={searchButtonRef}
+                                type="button"
+                                size="2"
+                                variant="soft"
+                                color="gray"
+                                aria-label={searchButtonLabel}
+                                data-query-active={hasSearchQuery || undefined}
+                                onClick={() => setIsSearchOpen(true)}
+                            >
+                                <LucideSearch size={17} />
+                            </IconButton>
+                            {hasSearchQuery && <SearchIndicator aria-hidden />}
+                        </SearchButtonShell>
+                    )}
+                    <CreateUpdateGroupModal type="create">
+                        <IconButton
+                            type="button"
+                            size="2"
+                            variant="soft"
+                            aria-label={t('common:buttons.createGroup')}
+                        >
+                            <LucidePlus size={17} />
+                        </IconButton>
+                    </CreateUpdateGroupModal>
+                </Flex>
+            </Flex>
+
+            <Flex gap="2" wrap="wrap" role="group" aria-label={t('groups.filtersLabel')}>
                 {filterItems.map(item => (
                     <Button
                         key={item.value}
-                        size="2"
+                        size="3"
                         variant="soft"
                         color={activeFilter === item.value ? 'grass' : 'gray'}
+                        aria-pressed={activeFilter === item.value}
                         onClick={() => setActiveFilter(item.value)}
                     >
                         {item.label}
                     </Button>
                 ))}
             </Flex>
-            {displayedGroups.length === 0 && (
+
+            {showEmptyState && (
                 <EmptyState
                     icon={<LucideFilterX size={16} />}
                     title={t('groups.filterEmptyTitle')}
-                    description={t('groups.filterEmptyDescription')}
+                    description={emptyStateDescription}
                 />
             )}
 
-            {displayedGroups.map(({ group, balances }) => (
+            {displayedGroups.map(model => (
                 <GroupCard
-                    key={group.id}
-                    group={group}
-                    balances={sortGroupBalances(
-                        balances,
-                        currencies.rates,
-                        currencies.base,
-                    )}
-                    isSelected={group.id === selectedGroupId}
+                    key={model.group.id}
+                    model={model}
+                    isSelected={model.group.id === selectedGroupId}
                 />
             ))}
 
-            {hiddenSettledCount > 0 && (
-                <Button
-                    size="2"
-                    variant="soft"
-                    color="gray"
-                    onClick={() => setIsSettledVisible(isVisible => !isVisible)}
-                >
-                    {isSettledVisible ? (
-                        <LucideChevronUp size={14} />
-                    ) : (
-                        <LucideChevronDown size={14} />
-                    )}
-                    {isSettledVisible
-                        ? t('groups.hideSettled')
-                        : t('groups.showSettled', { count: hiddenSettledCount })}
-                </Button>
+            {showSettledSection && (
+                <Flex direction="column" gap="3" mt="1">
+                    <Separator size="4" />
+                    <Text size="1" color="gray" align="center">
+                        {t('groups.settledAutoHide')}
+                    </Text>
+                    <SettledToggleButton
+                        type="button"
+                        size="3"
+                        variant="soft"
+                        color="gray"
+                        aria-expanded={isSettledVisible}
+                        onClick={() =>
+                            setIsSettledVisible(isVisible => !isVisible)
+                        }
+                    >
+                        <Flex
+                            align="center"
+                            justify="between"
+                            gap="3"
+                            width="100%"
+                            minWidth="0"
+                        >
+                            <Flex align="center" gap="2" minWidth="0">
+                                <LucideCircleCheck size={16} />
+                                <Text size="2" weight="medium" truncate>
+                                    {t('groups.settledCount', {
+                                        count: settledCount,
+                                    })}
+                                </Text>
+                            </Flex>
+                            <Flex align="center" gap="1" flexShrink="0">
+                                <Text size="2">
+                                    {isSettledVisible
+                                        ? t('groups.hideSettled')
+                                        : t('groups.showSettled')}
+                                </Text>
+                                {isSettledVisible ? (
+                                    <LucideChevronUp size={18} />
+                                ) : (
+                                    <LucideChevronDown size={18} />
+                                )}
+                            </Flex>
+                        </Flex>
+                    </SettledToggleButton>
+
+                    {isSettledVisible &&
+                        hiddenSettledGroups.map(model => (
+                            <GroupCard
+                                key={model.group.id}
+                                model={model}
+                                isSelected={model.group.id === selectedGroupId}
+                            />
+                        ))}
+                </Flex>
             )}
         </Flex>
     );
