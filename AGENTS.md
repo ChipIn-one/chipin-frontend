@@ -48,48 +48,32 @@ content.
 - `npm run version:bump -- <none|patch|minor|major>` — apply the task's explicit SemVer impact before the final commit; `none` is a safe no-op.
 - `npm run version:check` — read-only validation that package and lockfile versions are valid and synchronized.
 - tracked Husky `pre-push` runs `npm run version:check` and `npm run verify:full`; both block a non-zero result and neither mutates repository files.
-- `npm run pr:create` — repository publication helper for trusted Sol/human-controlled publication with an explicit `dev` base; it is not a Luna execution responsibility.
+- `npm run pr:create` — repository publication helper for Trusted Publisher/human-controlled publication with explicit `dev` base; it is not Executor responsibility.
 - Every task prompt includes `Version impact: none | patch | minor | major`, selected from product/API meaning rather than file or LoC counts.
 - For `patch`, `minor`, or `major`, run the automatic `version:bump` before the final commit; `major` is rejected during the pre-1.0 period because `1.0.0` requires an explicit release decision.
 - Runtime labels are `<baseVersion>-dev-<shortTaskHeadSha>` for task/dev/preview builds and `<baseVersion>` for release builds from `main`. GitHub PR builds use the PR head SHA.
-- New task branches use `luna/<task-slug>`; `codex/fix-ci-development-flow` is a temporary exception only for open PR #109 and must not become a general `codex/*` allowance.
+- Preserve an already assigned/published task branch. New task branch naming follows the canonical registry pattern `<type>/issue-<number>-<slug>` when an Issue identity exists; do not rename published legacy `luna/*`/`codex/*` branches.
 - Executor work stays inside the prepared task branch/worktree and explicit task scope.
 - Publication targets `dev`; required `frontend-ci` remains the remote integration gate after publication.
 - Trusted task publication into `dev` may use `gh pr create --base dev --head
   <current-task-branch> ...` or `npm run pr:create`; never rely on the repository
-  default `main`, and do not treat publication as Luna execution.
+  default `main`, and do not treat publication as Executor work.
 - Reuse an existing open PR for the current head, retarget its base to `dev`
   when allowed, and return its real `/pull/<number>` URL.
-- Luna never pushes directly to `dev`/`main` and never merges; human performs
+- Executor never pushes directly to `dev`/`main` and never merges; human performs
   the merge after the remote gate is green.
 - `npm run build` — production build.
 - `npm run vercel-build` — Vercel pipeline.
 
 The canonical lifecycle is:
 
-`Sol 5.6 planning/architecture → Luna xhigh implementation + local validation → IMPLEMENTATION_COMPLETE → trusted Sol/human publication → green full frontend-ci on the current head → exactly one @codex review for that head → human-authorized correction cycle if needed → changed head repeats green frontend-ci plus one new @codex review → human merge`.
+`Planner/Architect as risk requires → Executor implementation + local validation → IMPLEMENTATION_COMPLETE → Trusted Publisher one-batch publication → green required frontend-ci on current head → one independent Reviewer for that SHA → authorized bounded correction if needed → changed head repeats green CI + one fresh review → human merge`.
 
-Luna is executor-only and stops at `IMPLEMENTATION_COMPLETE` or `BLOCKED`.
-Luna does not review her own task diff, perform independent review batches, judge
-merge readiness, commit, push, create or update PRs, merge, or enable auto-merge.
-The managed Codex GitHub Code Review is the routine/default independent reviewer.
-Automatic Codex review is disabled. After trusted publication, wait until required
-`frontend-ci` is green for the current PR head, then post exactly one `@codex review`
-for that head. Never request review while required CI is pending or failing, and do
-not post duplicate review requests for the same head. A review is current only when
-its reviewed commit SHA equals the current PR head; every changed head repeats the
-green-CI gate and receives one new review request. Reviewer findings remain separate
-from Luna execution state and return to Luna only after explicit human authorization.
-Sol 5.6 High is escalation/fallback only for architecture or high-risk review,
-ambiguous or disputed findings, Codex unavailability, or an explicit human request.
-Only a human merges.
+Roles are provider-independent; stronger models are selected by risk/capability, not automatically by role. Executor never self-reviews or publishes. Reviewer is read-only and returns one consolidated findings package. Task contract v2 may pre-authorize 0–2 correction batches upfront; legacy v1/unspecified handoffs retain the existing human authorization gate per batch. After two batches or a disputed finding, escalate to a human. A changed head invalidates prior CI/review. Only a human merges.
 
 ## Code Review Rules
 
-These are the self-contained repository-wide rules for managed Codex GitHub Code
-Review. Do not assume `.ai/context.md` or linked `docs/codex/rules/*` files are loaded
-automatically; those files remain implementation guidance and navigation, not an
-implicit review-instruction source.
+These are the self-contained repository-wide rules for any independent Reviewer. Do not assume `.ai/context.md` or linked `docs/codex/rules/*` files are loaded automatically; those files remain implementation guidance/navigation, not an implicit review-instruction source.
 
 - Flag auth/session/refresh-token changes that can leak credentials, restore a logged-out
   session, break refresh ordering, or bypass protected-route behavior.
@@ -135,11 +119,7 @@ These rules apply only to ChipIn frontend tasks.
 
 ## Git and execution
 
-Generic execution lifecycle and reviewer semantics are defined by canonical
-`syllik/ai-workflow`. Normal development is `luna/*` → `dev`; release is
-`dev` → `main`. Luna implements and validates the authorized scope, then stops
-at `IMPLEMENTATION_COMPLETE` or `BLOCKED`. Trusted publication, independent
-review, corrections, and release decisions remain outside Luna execution.
+Generic execution lifecycle and reviewer semantics are defined by canonical `syllik/ai-workflow`. Task work targets `dev`; release remains `dev` → `main`. Executor implements/validates the authorized scope and stops at `IMPLEMENTATION_COMPLETE` or `BLOCKED`. Trusted publication, independent review, corrections, and release decisions remain outside Executor authority.
 Preserve unrelated work and do not change backend or unrelated architecture.
 
 ## GATE — knowledge base
@@ -168,7 +148,7 @@ If the knowledge base is not checked out next to this repo, clone it there befor
 Canonical AI routing:
 1. Read the canonical workflow: https://github.com/syllik/ai-workflow/blob/HEAD/FLOW.md.
 2. Select one GitHub record from https://github.com/syllik/ai-workflow/blob/HEAD/workspace.yaml / https://github.com/syllik/ai-workflow/blob/HEAD/projects/index.md.
-3. Read role rules from https://github.com/syllik/ai-workflow/blob/HEAD/global/architect.md, https://github.com/syllik/ai-workflow/blob/HEAD/global/executor.md, or https://github.com/syllik/ai-workflow/blob/HEAD/global/reviewer.md.
+3. Read the role index https://github.com/syllik/ai-workflow/blob/HEAD/global/workflow.md, then only the selected role file.
 4. On that record's `integrationBranch`, read target `AGENTS.md`, then `.ai/context.md`.
 5. Read relevant `.ai/decisions.md`, task files, and required declared `contextDependencies`; block if required dependency context is unavailable.
 
