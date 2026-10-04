@@ -84,32 +84,23 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
 Generic lifecycle and reviewer definitions belong to canonical
 `syllik/ai-workflow`. ChipIn-specific integration policy is:
 
-- `npm run verify:full` is the local completion gate. Luna stops at `IMPLEMENTATION_COMPLETE` after local validation and does not commit, push, or publish.
+- `npm run verify:full` is the local completion gate. Executor stops at `IMPLEMENTATION_COMPLETE` after local validation and does not commit, push, or publish.
 - `npm run version:bump -- <none|patch|minor|major>` applies the task's explicit impact before the final commit;
   `none` is a deterministic no-op.
 - `npm run version:check` validates matching SemVer values in `package.json` and `package-lock.json` without writing.
 - Tracked Husky `pre-push` runs `npm run version:check` followed by `npm run verify:full`; a non-zero result blocks the push and the hook is read-only.
 - Runtime labels are `<baseVersion>-dev-<shortTaskHeadSha>` for task/dev/preview builds and `<baseVersion>` for `main` releases.
   Pull-request CI receives `github.event.pull_request.head.sha`; push CI receives `github.sha`.
-- Each Sol task prompt provides `Version impact: none | patch | minor | major` from product/API meaning.
+- Each Planner task handoff provides `Version impact: none | patch | minor | major` from product/API meaning.
   Automatic major bumps from `0.x.y` are rejected because `1.0.0` requires an explicit release decision.
-- New task branches use `luna/<task-slug>`. The existing `codex/fix-ci-development-flow` branch is grandfathered only for open PR #109.
+- New Issue-backed task branches use the canonical `<type>/issue-<number>-<slug>` pattern. Already assigned/published `luna/*` branches remain valid compatibility branches; `codex/fix-ci-development-flow` is grandfathered only for open PR #109.
 - `npm run pr:create` checks the current task branch, performs a cheap
   `gh auth status`, and creates/updates a PR with explicit `--base dev`; it
-  returns only a real `/pull/<number>` URL. This is a trusted Sol/human-controlled
-  publication helper, not a Luna responsibility.
-- Trusted publication into `dev` is separate from Luna execution. Remote
+  returns only a real `/pull/<number>` URL. It accepts the canonical Issue-backed pattern plus existing `luna/*` compatibility branches. This is a Trusted Publisher/human-controlled publication helper, not Executor responsibility.
+- Trusted publication into `dev` is separate from Executor execution. Remote
   `frontend-ci` remains authoritative for post-publication integration readiness.
-- Routine independent PR review is managed Codex GitHub Code Review. Automatic
-  Codex review is disabled. After required `frontend-ci` is green for the current
-  PR head, trusted Sol/human publication posts exactly one `@codex review` for that
-  head. Never request review while required CI is pending/failing, and do not post
-  a duplicate request for the same SHA. The reviewed SHA must match the current PR
-  head; every changed head invalidates the previous review and repeats the green-CI
-  gate before one fresh review request.
-- Reviewer findings remain separate from Luna execution state and return to Luna
-  only after explicit human authorization. Sol 5.6 High is escalation/fallback
-  only. Human performs the merge.
+- The independent Reviewer role is provider-neutral. The current GitHub reviewer trigger is `@codex review`: after required `frontend-ci` is green for the current PR head, Trusted Publisher/human posts it exactly once for that SHA. Never request review while required CI is pending/failing or duplicate a request for the same SHA. Every changed head invalidates the previous review and repeats the green-CI gate before one fresh review.
+- Reviewer findings remain separate from Executor state and are passed as one consolidated package. A v2 handoff may authorize 0–2 correction batches upfront; those batches do not require another human approval. Legacy v1/unspecified handoffs still require explicit human authorization per correction batch. Exhausted correction authority, disputed findings, or reviewer unavailability escalate to a human or an independently selected higher-capability reviewer by risk. Human performs the merge.
 
 Run targeted checks first. Full verification belongs only at integration/completion checkpoints, not after
 every mechanical edit. Documentation/config-only changes may skip tests when the handoff explains why no

@@ -7,7 +7,7 @@ const INTEGRATION_BRANCH = 'dev';
 const REMOTE_NAME = 'origin';
 const LEGACY_TASK_BRANCH = 'codex/fix-ci-development-flow';
 const LEGACY_PULL_REQUEST_NUMBER = 109;
-const TASK_BRANCH_PATTERN = /^luna\/[^/]+$/u;
+const TASK_BRANCH_PATTERN = /^(?:luna\/[^/]+|[^/]+\/issue-\d+-[^/]+)$/u;
 
 export const validateTaskBranch = branch => {
     if (branch.length === 0) {
@@ -19,7 +19,7 @@ export const validateTaskBranch = branch => {
     }
 
     if (!TASK_BRANCH_PATTERN.test(branch)) {
-        return 'Task branches must use the luna/<task-slug> format.';
+        return 'Task branches must use <type>/issue-<number>-<slug> or an existing luna/<task-slug> branch.';
     }
 
     return null;

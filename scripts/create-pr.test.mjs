@@ -8,7 +8,9 @@ import {
     validateTaskBranch,
 } from './create-pr.mjs';
 
-test('accepts a luna task branch', () => {
+test('accepts canonical and existing luna task branches', () => {
+    expect(validateTaskBranch('feat/issue-356-provider-neutral-roles')).toBeNull();
+    expect(validateTaskBranch('fix/issue-12-scroll')).toBeNull();
     expect(validateTaskBranch('luna/foo')).toBeNull();
 });
 
@@ -21,8 +23,9 @@ test('rejects detached HEAD as a task branch', () => {
     expect(validateTaskBranch('')).toContain('detached');
 });
 
-test('rejects arbitrary codex branches as new task branches', () => {
-    expect(validateTaskBranch('codex/foo')).toContain('luna');
+test('rejects arbitrary branches outside the canonical or legacy task formats', () => {
+    expect(validateTaskBranch('codex/foo')).toContain('issue-<number>');
+    expect(validateTaskBranch('feat/no-issue-prefix')).toContain('issue-<number>');
 });
 
 test('creates task PR commands with an explicit dev base', () => {
