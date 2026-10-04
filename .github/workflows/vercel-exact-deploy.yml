@@ -259,6 +259,41 @@ jobs:
             echo "- Vercel deployment URL: $DEPLOYMENT_URL"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Point development channel to the exact verified deployment
+        if: steps.policy.outputs.channel == 'development'
+        working-directory: source
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          DEPLOYMENT_URL: ${{ steps.vercel.outputs.deployment_url }}
+          DEPLOYMENT_ID: ${{ steps.deployment.outputs.deployment_id }}
+          DEVELOPMENT_ALIAS: dev.chipin.one
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes "vercel@$VERCEL_CLI_VERSION" alias set "$DEPLOYMENT_URL" "$DEVELOPMENT_ALIAS" --token "$VERCEL_TOKEN"
+
+          encoded_team="$(jq -rn --arg value "$VERCEL_ORG_ID" '$value|@uri')"
+          aliases_response="$(curl --fail-with-body --silent --show-error \
+            --header "Authorization: Bearer $VERCEL_TOKEN" \
+            "https://api.vercel.com/v2/deployments/$DEPLOYMENT_ID/aliases?teamId=$encoded_team")"
+
+          if ! jq -e --arg alias "$DEVELOPMENT_ALIAS" '
+            (.aliases // []) | any(
+              if type == "string" then . == $alias
+              else .alias == $alias
+              end
+            )
+          ' <<<"$aliases_response" >/dev/null; then
+            echo "Development alias does not point to the exact verified deployment."
+            exit 1
+          fi
+
+          {
+            echo "- development channel alias: $DEVELOPMENT_ALIAS"
+            echo "- development alias deployment ID: $DEPLOYMENT_ID"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Promote the exact staged production deployment
         if: steps.policy.outputs.promotes == 'true'
         working-directory: source
