@@ -52,7 +52,7 @@ content.
 - Every task prompt includes `Version impact: none | patch | minor | major`, selected from product/API meaning rather than file or LoC counts.
 - For `patch`, `minor`, or `major`, run the automatic `version:bump` before the final commit; `major` is rejected during the pre-1.0 period because `1.0.0` requires an explicit release decision.
 - Runtime labels are `<baseVersion>-dev-<shortTaskHeadSha>` for task/dev/preview builds and `<baseVersion>` for release builds from `main`. GitHub PR builds use the PR head SHA.
-- Preserve already assigned/published task history without renaming or rewriting it. New Issue-backed task branches use the canonical `<type>/issue-<number>-<slug>` pattern. `npm run pr:create` keeps compatibility for existing `luna/*` task branches and only the explicitly grandfathered `codex/fix-ci-development-flow` branch for open PR #109; other historical `codex/*` branches are preserved as history but are not eligible to create/reopen task PRs through this helper.
+- New Issue-backed task branches use the canonical `<type>/issue-<number>-<slug>` pattern. `npm run pr:create` accepts only that canonical pattern; historical/noncanonical branches and PRs are outside this helper.
 - Executor work stays inside the prepared task branch/worktree and explicit task scope.
 - Publication targets `dev`; required `frontend-ci` remains the remote integration gate after publication.
 - Trusted task publication into `dev` may use `gh pr create --base dev --head

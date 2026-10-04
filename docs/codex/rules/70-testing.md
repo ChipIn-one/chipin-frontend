@@ -93,10 +93,10 @@ Generic lifecycle and reviewer definitions belong to canonical
   Pull-request CI receives `github.event.pull_request.head.sha`; push CI receives `github.sha`.
 - Each Planner task handoff provides `Version impact: none | patch | minor | major` from product/API meaning.
   Automatic major bumps from `0.x.y` are rejected because `1.0.0` requires an explicit release decision.
-- New Issue-backed task branches use the canonical `<type>/issue-<number>-<slug>` pattern. Already assigned/published `luna/*` branches remain valid compatibility branches; `codex/fix-ci-development-flow` is grandfathered only for open PR #109.
+- New Issue-backed task branches use the canonical `<type>/issue-<number>-<slug>` pattern. The PR helper does not support historical/noncanonical branch formats.
 - `npm run pr:create` checks the current task branch, performs a cheap
   `gh auth status`, and creates/updates a PR with explicit `--base dev`; it
-  returns only a real `/pull/<number>` URL. It accepts the canonical Issue-backed pattern plus existing `luna/*` compatibility branches. This is a Trusted Publisher/human-controlled publication helper, not Executor responsibility.
+  returns only a real `/pull/<number>` URL. It accepts only the canonical Issue-backed branch pattern. This is a Trusted Publisher/human-controlled publication helper, not Executor responsibility.
 - Trusted publication into `dev` is separate from Executor execution. Remote
   `frontend-ci` remains authoritative for post-publication integration readiness.
 - The independent Reviewer role is provider-neutral. The current GitHub reviewer trigger is `@codex review`: after required `frontend-ci` is green for the current PR head, Trusted Publisher/human posts it exactly once for that SHA. Never request review while required CI is pending/failing or duplicate a request for the same SHA. Every changed head invalidates the previous review and repeats the green-CI gate before one fresh review.

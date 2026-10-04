@@ -4,15 +4,15 @@ import {
     buildCreatePullRequestArgs,
     extractPullRequestUrl,
     getOpenPullRequestAction,
-    isLegacyBranchForPullRequest,
     validateTaskBranch,
 } from './create-pr.mjs';
 
-test('accepts canonical task branches and rejects legacy names as new branches', () => {
+test('accepts only canonical Issue-backed task branches', () => {
     expect(validateTaskBranch('feat/issue-356-provider-neutral-roles')).toBeNull();
     expect(validateTaskBranch('fix/issue-12-scroll')).toBeNull();
     expect(validateTaskBranch('luna/foo')).toContain('issue-<number>');
     expect(validateTaskBranch('luna/issue-12-old-style')).toContain('issue-<number>');
+    expect(validateTaskBranch('codex/issue-999-old-style')).toContain('issue-<number>');
 });
 
 test('rejects dev and main as task branches', () => {
@@ -24,31 +24,22 @@ test('rejects detached HEAD as a task branch', () => {
     expect(validateTaskBranch('')).toContain('detached');
 });
 
-test('rejects arbitrary branches outside the canonical or legacy task formats', () => {
+test('rejects arbitrary branches outside the canonical task format', () => {
     expect(validateTaskBranch('codex/foo')).toContain('issue-<number>');
     expect(validateTaskBranch('codex/issue-999-reopen-old-task')).toContain('issue-<number>');
     expect(validateTaskBranch('feat/no-issue-prefix')).toContain('issue-<number>');
 });
 
 test('creates task PR commands with an explicit dev base', () => {
-    expect(buildCreatePullRequestArgs('luna/foo')).toEqual([
+    expect(buildCreatePullRequestArgs('feat/issue-356-provider-neutral-roles')).toEqual([
         'pr',
         'create',
         '--base',
         'dev',
         '--head',
-        'luna/foo',
+        'feat/issue-356-provider-neutral-roles',
         '--fill',
     ]);
-});
-
-test('recognizes only existing open PRs as legacy branch compatibility', () => {
-    expect(isLegacyBranchForPullRequest('codex/fix-ci-development-flow', [{ number: 109 }])).toBe(true);
-    expect(isLegacyBranchForPullRequest('codex/fix-ci-development-flow', [{ number: 110 }])).toBe(false);
-    expect(isLegacyBranchForPullRequest('codex/other-branch', [{ number: 109 }])).toBe(false);
-    expect(isLegacyBranchForPullRequest('luna/existing-task', [{ number: 355 }])).toBe(true);
-    expect(isLegacyBranchForPullRequest('luna/new-task', [])).toBe(false);
-    expect(isLegacyBranchForPullRequest('luna/ambiguous', [{ number: 1 }, { number: 2 }])).toBe(false);
 });
 
 test('reuses an existing PR and retargets it when its base is not dev', () => {
