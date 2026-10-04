@@ -25,6 +25,7 @@ test('rejects detached HEAD as a task branch', () => {
 
 test('rejects arbitrary branches outside the canonical or legacy task formats', () => {
     expect(validateTaskBranch('codex/foo')).toContain('issue-<number>');
+    expect(validateTaskBranch('codex/issue-999-reopen-old-task')).toContain('issue-<number>');
     expect(validateTaskBranch('feat/no-issue-prefix')).toContain('issue-<number>');
 });
 

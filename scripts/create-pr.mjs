@@ -7,7 +7,7 @@ const INTEGRATION_BRANCH = 'dev';
 const REMOTE_NAME = 'origin';
 const LEGACY_TASK_BRANCH = 'codex/fix-ci-development-flow';
 const LEGACY_PULL_REQUEST_NUMBER = 109;
-const TASK_BRANCH_PATTERN = /^(?:luna\/[^/]+|[^/]+\/issue-\d+-[^/]+)$/u;
+const TASK_BRANCH_PATTERN = /^(?:luna\/[^/]+|(?!codex\/)[^/]+\/issue-\d+-[^/]+)$/u;
 
 export const validateTaskBranch = branch => {
     if (branch.length === 0) {
