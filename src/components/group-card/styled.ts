@@ -18,7 +18,6 @@ const GroupNavButton = styled(NavButton)`
             focusColorToken: 'grassA8',
         },
     })}
-
 `;
 
 const GroupCardSurface = styled(Card)`
@@ -32,6 +31,7 @@ const GroupCardSurface = styled(Card)`
         outline-offset: -2px;
     }
 `;
+
 
 export {
     GroupCardSurface,
