@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 
 const INTEGRATION_BRANCH = 'dev';
 const REMOTE_NAME = 'origin';
-const TASK_BRANCH_PATTERN = /^(?!(?:codex|luna)\/)[^/]+\/issue-\d+-[^/]+$/u;
+const TASK_BRANCH_PATTERN = /^[a-z][a-z0-9-]*\/issue-\d+-[a-z0-9][a-z0-9-]*$/u;
 
 export const validateTaskBranch = branch => {
     if (branch.length === 0) {

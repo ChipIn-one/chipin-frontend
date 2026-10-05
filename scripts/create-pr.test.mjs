@@ -7,12 +7,10 @@ import {
     validateTaskBranch,
 } from './create-pr.mjs';
 
-test('accepts only canonical Issue-backed task branches', () => {
+test('accepts canonical vendor-neutral Issue-backed task branches', () => {
     expect(validateTaskBranch('feat/issue-356-provider-neutral-roles')).toBeNull();
     expect(validateTaskBranch('fix/issue-12-scroll')).toBeNull();
-    expect(validateTaskBranch('luna/foo')).toContain('issue-<number>');
-    expect(validateTaskBranch('luna/issue-12-old-style')).toContain('issue-<number>');
-    expect(validateTaskBranch('codex/issue-999-old-style')).toContain('issue-<number>');
+    expect(validateTaskBranch('policy/issue-357-role-contract')).toBeNull();
 });
 
 test('rejects dev and main as task branches', () => {
@@ -25,9 +23,10 @@ test('rejects detached HEAD as a task branch', () => {
 });
 
 test('rejects arbitrary branches outside the canonical task format', () => {
-    expect(validateTaskBranch('codex/foo')).toContain('issue-<number>');
-    expect(validateTaskBranch('codex/issue-999-reopen-old-task')).toContain('issue-<number>');
-    expect(validateTaskBranch('feat/no-issue-prefix')).toContain('issue-<number>');
+    expect(validateTaskBranch('feature/no-issue-prefix')).toContain('issue-<number>');
+    expect(validateTaskBranch('Feature/issue-12-uppercase-type')).toContain('issue-<number>');
+    expect(validateTaskBranch('feat/issue-12-bad_slug')).toContain('issue-<number>');
+    expect(validateTaskBranch('feat/issue-12-extra/path')).toContain('issue-<number>');
 });
 
 test('creates task PR commands with an explicit dev base', () => {
@@ -67,6 +66,6 @@ test('returns an existing dev PR without creating a duplicate', () => {
 
 test('rejects pull/new links as PR URLs', () => {
     expect(() => extractPullRequestUrl(
-        'https://github.com/ChipIn-one/chipin-frontend/pull/new/codex/fix-pr-flow',
+        'https://github.com/ChipIn-one/chipin-frontend/pull/new/feature/not-a-pr-url',
     )).toThrow('existing PR URL');
 });
