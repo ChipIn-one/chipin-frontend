@@ -41,10 +41,38 @@ jobs:
           HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
           THIS_REPOSITORY: ${{ github.repository }}
         run: node scripts/release-source-policy.mjs
+      - name: Resolve verification mode
+        id: gate
+        env:
+          CHIPIN_CI_WORKFLOW: frontend-ci
+          CHIPIN_TARGET_BRANCH: ${{ github.event_name == 'pull_request' && github.base_ref || github.ref_name }}
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "$CHIPIN_TARGET_BRANCH" = "main" ]; then
+            mode="$(printf '' | node scripts/ci-gate-policy.mjs)"
+          elif [[ ! "$BASE_SHA" =~ ^[0-9a-fA-F]{40}$ ]] || [[ "$BASE_SHA" =~ ^0+$ ]]; then
+            mode="full"
+          else
+            git fetch --no-tags --depth=1 origin "$BASE_SHA"
+            mode="$(git diff --no-renames --name-only -z "$BASE_SHA" "$HEAD_SHA" | node scripts/ci-gate-policy.mjs)"
+          fi
+
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
       - name: Install dependencies
+        if: steps.gate.outputs.mode == 'full'
         run: npm ci
       - name: Verify frontend
+        if: steps.gate.outputs.mode == 'full'
         env:
           CHIPIN_TASK_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           CHIPIN_TASK_BRANCH: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
         run: npm run verify:full
+      - name: Record cheap required-check path
+        if: steps.gate.outputs.mode != 'full'
+        env:
+          MODE: ${{ steps.gate.outputs.mode }}
+        run: echo "frontend-ci completed via $MODE path; verify:full was not required for this event."
