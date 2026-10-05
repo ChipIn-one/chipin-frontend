@@ -43,5 +43,30 @@
         "summaryTitle": "Resumo Solo",
         "activityTitle": "Atividade Solo",
         "inDevelopment": "Ainda está em desenvolvimento."
+    },
+    "onboarding": {
+        "newUser": {
+            "title": "Crie o seu primeiro grupo ou adicione amigos",
+            "description": "Acompanhe um saldo direto com um amigo ou mantenha um saldo partilhado separado em cada grupo. Quando tiver um amigo ou um grupo com participantes suficientes, poderá adicionar a primeira despesa."
+        },
+        "friendReady": {
+            "title": "Já pode adicionar uma despesa",
+            "description": "Já pode acompanhar um saldo direto com um amigo. Crie um grupo quando quiser um saldo partilhado separado para uma viagem, casa ou outro plano."
+        },
+        "groupReady": {
+            "title": "O seu grupo está pronto",
+            "description": "Já pode adicionar despesas no grupo. Convide um amigo para também acompanhar um saldo direto separado fora dos grupos."
+        },
+        "fullyReady": {
+            "title": "Já pode dividir despesas",
+            "description": "Adicione uma despesa com um amigo ou num dos seus grupos. Os saldos diretos com amigos e os saldos dos grupos ficam separados."
+        },
+        "groupNeedsPeople": {
+            "title": "Convide alguém para começar",
+            "description": "O seu grupo precisa de mais um participante antes de poder receber uma despesa partilhada. Convide um amigo ou crie outro grupo para um saldo partilhado diferente."
+        },
+        "actions": {
+            "inviteFriend": "Convidar amigo"
+        }
     }
 }

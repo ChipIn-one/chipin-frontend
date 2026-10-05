@@ -1,8 +1,9 @@
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
 
 import { Box, Flex } from '@radix-ui/themes';
 
 import { NavButton } from 'basics/buttons';
+import { themeColor } from 'helpers/colors';
 
 const MobileNavBarWrapper = styled(Box)`
     --mobile-nav-action-lift: var(--space-3);
@@ -13,13 +14,24 @@ const MobileNavBarWrapper = styled(Box)`
     overflow: visible;
 `;
 
-const MobileNavSurface = styled(Box)`
+const cutoutBackground = css`
+    background: radial-gradient(
+        circle var(--mobile-nav-cutout-radius) at 50% var(--mobile-nav-cutout-center-y),
+        transparent var(--mobile-nav-cutout-radius),
+        ${themeColor('grass3')} var(--mobile-nav-cutout-radius)
+    );
+`;
+
+const solidBackground = css`
+    background: ${themeColor('grass3')};
+`;
+
+const MobileNavSurface = styled(Box)<{ $hasCenterAction: boolean }>`
     --mobile-nav-cutout-radius: calc(var(--space-7) - var(--space-1));
 
     position: absolute;
     inset: 0;
-    background: ${({ theme }) =>
-        `radial-gradient(circle var(--mobile-nav-cutout-radius) at 50% var(--mobile-nav-cutout-center-y), transparent var(--mobile-nav-cutout-radius), ${theme.colors['grass3']} var(--mobile-nav-cutout-radius))`};
+    ${({ $hasCenterAction }) => ($hasCenterAction ? cutoutBackground : solidBackground)}
 `;
 
 const MobileNavContent = styled(Flex)`

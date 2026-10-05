@@ -1,5 +1,9 @@
 import { useCallback } from 'react';
-import { LucideChevronsDown, LucidePlus, LucideRefreshCw } from 'lucide-react';
+import {
+    LucideChevronsDown,
+    LucidePlus,
+    LucideRefreshCw,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Box, Button, Container, Flex, Spinner, Text } from '@radix-ui/themes';
@@ -7,6 +11,7 @@ import { Box, Button, Container, Flex, Spinner, Text } from '@radix-ui/themes';
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 
 import { NoGroupsEmptyState } from 'basics/empty-states';
+import { DashboardOnboarding } from 'components/dashboard-onboarding';
 import {
     DashboardHeader as DashboardGreeting,
     DashboardSummary as DashBoardSummary,
@@ -22,9 +27,11 @@ import { useConnect } from './internal/dashboard-page';
 const DashboardPage = () => {
     const { t } = useTranslation(['dashboard', 'activity']);
     const {
-        activityItems,
+        activityEvents,
         fetchMoreDashboardActivity,
         groups,
+        hasFriendTarget,
+        hasGroupTarget,
         hasGroups,
         hasMoreActivity,
         isDashboardFetched,
@@ -33,6 +40,7 @@ const DashboardPage = () => {
         isGroupListFetched,
         isNextPageError,
         isNextPageLoading,
+        isOnboardingVisible,
     } = useConnect();
 
     const onLoadMore = useCallback(() => {
@@ -49,46 +57,61 @@ const DashboardPage = () => {
         onLoadMore();
     };
 
+    const sidePanel = (
+        <Flex direction="column" gap="4">
+            <Box display={{ initial: 'block', lg: 'none' }}>
+                <DashboardGreeting />
+            </Box>
+
+            <Box display={{ initial: 'block' }}>
+                <DashBoardSummary
+                    isLoading={isDashboardLoading}
+                />
+            </Box>
+
+            <Flex gap="4" direction="column">
+                {!isDashboardFetched ||
+                !isGroupListFetched ||
+                hasGroups ? (
+                    <GroupsCards
+                        groups={groups}
+                        label={t('groups.title')}
+                    />
+                ) : (
+                    <NoGroupsEmptyState
+                        action={
+                            <CreateUpdateGroupModal type="create">
+                                <Button
+                                    size="2"
+                                    variant="soft"
+                                >
+                                    <LucidePlus size={14} />
+                                    {t(
+                                        'common:buttons.createGroup',
+                                    )}
+                                </Button>
+                            </CreateUpdateGroupModal>
+                        }
+                    />
+                )}
+            </Flex>
+        </Flex>
+    );
+
     return (
         <Container size="4" pb={{ initial: '9', sm: '6' }}>
-            <InternalPageColumnsFromSm
-                sidePanel={
-                    <Flex direction="column" gap="4">
-                        <Box display={{ initial: 'block', lg: 'none' }}>
-                            <DashboardGreeting />
-                        </Box>
-
-                        <Box display={{ initial: 'block' }}>
-                            <DashBoardSummary isLoading={isDashboardLoading} />
-                        </Box>
-
-                        <Flex gap="4" direction="column">
-                            {!isDashboardFetched || !isGroupListFetched || hasGroups ? (
-                                <GroupsCards
-                                    groups={groups}
-                                    label={t('groups.title')}
-                                />
-                            ) : (
-                                <NoGroupsEmptyState
-                                    action={
-                                        <CreateUpdateGroupModal type="create">
-                                            <Button size="2" variant="soft">
-                                                <LucidePlus size={14} />
-                                                {t('common:buttons.createGroup')}
-                                            </Button>
-                                        </CreateUpdateGroupModal>
-                                    }
-                                />
-                            )}
-                        </Flex>
-                    </Flex>
-                }
-            >
-                {!isDashboardFetched || isDashboardLoading ? (
+            <InternalPageColumnsFromSm sidePanel={sidePanel}>
+                {isOnboardingVisible ? (
+                    <DashboardOnboarding
+                        hasFriendTarget={hasFriendTarget}
+                        hasGroupTarget={hasGroupTarget}
+                        hasGroups={hasGroups}
+                    />
+                ) : !isDashboardFetched || isDashboardLoading ? (
                     <ActivityFeedSkeleton isShowSummary />
                 ) : (
                     <ActivityEventsList
-                        events={activityItems.map(item => item.lastEvent)}
+                        events={activityEvents}
                         isShowSummary
                         isNavigable
                     >
@@ -114,9 +137,16 @@ const DashboardPage = () => {
                             )}
 
                             {isEndOfFeed && (
-                                <Flex justify="center" align="center" gap="2" py="4">
+                                <Flex
+                                    justify="center"
+                                    align="center"
+                                    gap="2"
+                                    py="4"
+                                >
                                     <Text as="span" color="gray">
-                                        <LucideChevronsDown size={14} />
+                                        <LucideChevronsDown
+                                            size={14}
+                                        />
                                     </Text>
                                     <Text size="1" color="gray">
                                         {t('activity:endOfFeed')}

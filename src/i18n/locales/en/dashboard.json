@@ -43,5 +43,30 @@
         "summaryTitle": "Solo summary",
         "activityTitle": "Solo activity",
         "inDevelopment": "Still in development."
+    },
+    "onboarding": {
+        "newUser": {
+            "title": "Create your first group or add friends",
+            "description": "Track a balance directly with a friend, or keep a separate shared balance inside each group. Once you have a friend or a group with enough members, you can add your first expense."
+        },
+        "friendReady": {
+            "title": "You're ready to add an expense",
+            "description": "You can already track a direct balance with a friend. Create a group when you want a separate shared balance for a trip, home, or another plan."
+        },
+        "groupReady": {
+            "title": "Your group is ready",
+            "description": "You can add expenses in your group now. Invite a friend to also track a separate direct balance outside groups."
+        },
+        "fullyReady": {
+            "title": "You're ready to split expenses",
+            "description": "Add an expense with a friend or in one of your groups. Direct friend balances and group balances stay separate."
+        },
+        "groupNeedsPeople": {
+            "title": "Invite someone to get started",
+            "description": "Your group needs another participant before you can add a shared expense. Invite a friend, or create another group for a different shared balance."
+        },
+        "actions": {
+            "inviteFriend": "Invite friend"
+        }
     }
 }

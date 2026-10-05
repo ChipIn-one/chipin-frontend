@@ -87,6 +87,30 @@ test('stores dashboard balances as the canonical balance response', () => {
     });
 });
 
+test('keeps dashboard success separate from a currency-rates failure', () => {
+    vi.mocked(chipinApi.fetchApiDashboard).mockResolvedValue({
+        balances,
+        activity: { items: [], nextCursor: null },
+    });
+    vi.mocked(chipinApi.fetchApiCurrencyRates).mockRejectedValue(
+        new Error('Rates unavailable'),
+    );
+
+    return useDashboardStore.getState().fetchSetDashboardData().then(() => {
+        expect(useErrorsStore.getState().errors.dashboard.data).toBeNull();
+        expect(useErrorsStore.getState().errors.dashboard.rates).toEqual(
+            expect.objectContaining({ message: expect.any(String) }),
+        );
+        expect(useLoadingStore.getState().dashboard.data).toBe('fetched');
+        expect(useLoadingStore.getState().dashboard.rates).toBe('fetched');
+        expect(useDashboardStore.getState()).toMatchObject({
+            balances,
+            activityItems: [],
+            activityNextCursor: null,
+        });
+    });
+});
+
 test('preserves confirmed dashboard data when a refresh fails', () => {
     const confirmedBalances = balances;
     const requestError = new Error('Dashboard unavailable');

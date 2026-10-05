@@ -67,7 +67,9 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
 
     fetchSetDashboardData: () => {
         const { clearError, setError } = useErrorsStore.getState();
-        clearError('dashboard', 'data');
+        const { setLoading } = useLoadingStore.getState();
+        clearError('dashboard', 'rates');
+        setLoading('dashboard', 'rates', 'loading');
         const currenciesRequest = currencyRatesChannel.request(chipinApi.fetchApiCurrencyRates);
 
         return Promise.all([
@@ -80,7 +82,12 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
                 })
                 .catch((error: unknown) => {
                     if (currenciesRequest.isCurrent()) {
-                        setError('dashboard', 'data', normalizeApiError(error));
+                        setError('dashboard', 'rates', normalizeApiError(error));
+                    }
+                })
+                .finally(() => {
+                    if (currenciesRequest.isCurrent()) {
+                        setLoading('dashboard', 'rates', 'fetched');
                     }
                 }),
         ]).then(() => undefined);

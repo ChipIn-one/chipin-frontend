@@ -4,12 +4,25 @@ import {
     getBreadcrumbParentPath,
     getHasDesktopSidebar,
     getPreferredModeRoute,
+    isNavigationRouteActive,
 } from './routes';
 
 test('selects the Solo route when Solo Mode is the user default', () => {
     expect(getPreferredModeRoute(true)).toBe('/solo');
     expect(getPreferredModeRoute(false)).toBe('/dashboard');
 });
+
+test.each([
+    ['/dashboard', '/dashboard', true],
+    ['/dashboard/group', '/dashboard', true],
+    ['/activity/activity-1', '/activity', true],
+    ['/friends', '/activity', false],
+] as const)(
+    'resolves navigation route activity for %s against %s',
+    (pathname, href, expected) => {
+        expect(isNavigationRouteActive(pathname, href)).toBe(expected);
+    },
+);
 
 test.each([
     ['/dashboard', true],
