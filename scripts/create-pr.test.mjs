@@ -4,12 +4,13 @@ import {
     buildCreatePullRequestArgs,
     extractPullRequestUrl,
     getOpenPullRequestAction,
-    isLegacyBranchForPullRequest,
     validateTaskBranch,
 } from './create-pr.mjs';
 
-test('accepts a luna task branch', () => {
-    expect(validateTaskBranch('luna/foo')).toBeNull();
+test('accepts canonical vendor-neutral Issue-backed task branches', () => {
+    expect(validateTaskBranch('feat/issue-356-provider-neutral-roles')).toBeNull();
+    expect(validateTaskBranch('fix/issue-12-scroll')).toBeNull();
+    expect(validateTaskBranch('policy/issue-357-role-contract')).toBeNull();
 });
 
 test('rejects dev and main as task branches', () => {
@@ -21,26 +22,23 @@ test('rejects detached HEAD as a task branch', () => {
     expect(validateTaskBranch('')).toContain('detached');
 });
 
-test('rejects arbitrary codex branches as new task branches', () => {
-    expect(validateTaskBranch('codex/foo')).toContain('luna');
+test('rejects arbitrary branches outside the canonical task format', () => {
+    expect(validateTaskBranch('feature/no-issue-prefix')).toContain('issue-<number>');
+    expect(validateTaskBranch('Feature/issue-12-uppercase-type')).toContain('issue-<number>');
+    expect(validateTaskBranch('feat/issue-12-bad_slug')).toContain('issue-<number>');
+    expect(validateTaskBranch('feat/issue-12-extra/path')).toContain('issue-<number>');
 });
 
 test('creates task PR commands with an explicit dev base', () => {
-    expect(buildCreatePullRequestArgs('luna/foo')).toEqual([
+    expect(buildCreatePullRequestArgs('feat/issue-356-provider-neutral-roles')).toEqual([
         'pr',
         'create',
         '--base',
         'dev',
         '--head',
-        'luna/foo',
+        'feat/issue-356-provider-neutral-roles',
         '--fill',
     ]);
-});
-
-test('recognizes the current legacy branch only for open PR 109', () => {
-    expect(isLegacyBranchForPullRequest('codex/fix-ci-development-flow', [{ number: 109 }])).toBe(true);
-    expect(isLegacyBranchForPullRequest('codex/fix-ci-development-flow', [{ number: 110 }])).toBe(false);
-    expect(isLegacyBranchForPullRequest('codex/other-branch', [{ number: 109 }])).toBe(false);
 });
 
 test('reuses an existing PR and retargets it when its base is not dev', () => {
@@ -68,6 +66,6 @@ test('returns an existing dev PR without creating a duplicate', () => {
 
 test('rejects pull/new links as PR URLs', () => {
     expect(() => extractPullRequestUrl(
-        'https://github.com/ChipIn-one/chipin-frontend/pull/new/codex/fix-pr-flow',
+        'https://github.com/ChipIn-one/chipin-frontend/pull/new/feature/not-a-pr-url',
     )).toThrow('existing PR URL');
 });

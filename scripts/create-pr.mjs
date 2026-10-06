@@ -5,9 +5,7 @@ import { pathToFileURL } from 'node:url';
 
 const INTEGRATION_BRANCH = 'dev';
 const REMOTE_NAME = 'origin';
-const LEGACY_TASK_BRANCH = 'codex/fix-ci-development-flow';
-const LEGACY_PULL_REQUEST_NUMBER = 109;
-const TASK_BRANCH_PATTERN = /^luna\/[^/]+$/u;
+const TASK_BRANCH_PATTERN = /^[a-z][a-z0-9-]*\/issue-\d+-[a-z0-9][a-z0-9-]*$/u;
 
 export const validateTaskBranch = branch => {
     if (branch.length === 0) {
@@ -19,14 +17,11 @@ export const validateTaskBranch = branch => {
     }
 
     if (!TASK_BRANCH_PATTERN.test(branch)) {
-        return 'Task branches must use the luna/<task-slug> format.';
+        return 'Task branches must use <type>/issue-<number>-<slug>.';
     }
 
     return null;
 };
-
-export const isLegacyBranchForPullRequest = (branch, pullRequests) => branch === LEGACY_TASK_BRANCH
-    && pullRequests.some(pullRequest => pullRequest.number === LEGACY_PULL_REQUEST_NUMBER);
 
 export const buildCreatePullRequestArgs = branch => [
     'pr',
@@ -114,9 +109,8 @@ const main = () => {
 
     const branch = branchResult.stdout.trim();
     const branchError = validateTaskBranch(branch);
-    const isLegacyBranch = branch === LEGACY_TASK_BRANCH;
 
-    if (branchError && !isLegacyBranch) {
+    if (branchError) {
         console.error(`PR CREATION BLOCKED: ${branchError}`);
         return 1;
     }
@@ -167,11 +161,6 @@ const main = () => {
         pullRequests = parsePullRequests(listResult.stdout);
     } catch (error) {
         console.error(`PR CREATION FAILED: ${error instanceof Error ? error.message : String(error)}`);
-        return 1;
-    }
-
-    if (isLegacyBranch && !isLegacyBranchForPullRequest(branch, pullRequests)) {
-        console.error('PR CREATION BLOCKED: the legacy branch is allowed only for open PR #109.');
         return 1;
     }
 
