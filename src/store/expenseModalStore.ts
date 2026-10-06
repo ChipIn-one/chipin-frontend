@@ -2,7 +2,11 @@ import { create } from 'zustand';
 
 import type { User } from 'api/chipin.types';
 import { DEFAULT_EXPENSE_CATEGORY } from 'constants/category';
-import { EXPENSE_SPLIT_MODES, type ExpenseSplitMode } from 'constants/chipin';
+import {
+    EXPENSE_SPLIT_MODES,
+    MIN_GROUP_EXPENSE_PARTICIPANTS,
+    type ExpenseSplitMode,
+} from 'constants/chipin';
 import { parseAmountInput } from 'helpers/numbers';
 import { getUnixTimestampInSec } from 'helpers/time';
 
@@ -257,15 +261,36 @@ const getPercentShares = (
     );
 };
 
+const isEligibleExpenseGroup = (group: ExpenseModalGroup): boolean =>
+    group.members.length >= MIN_GROUP_EXPENSE_PARTICIPANTS;
+
+const getDefaultGroupId = (source: ExpenseModalSource): string => {
+    const requestedGroup = source.defaultGroupId
+        ? source.groups.find(
+              group =>
+                  group.id === source.defaultGroupId &&
+                  isEligibleExpenseGroup(group),
+          )
+        : undefined;
+
+    return (
+        requestedGroup?.id ??
+        source.groups.find(isEligibleExpenseGroup)?.id ??
+        ''
+    );
+};
+
 const getInitializedState = (
     source: ExpenseModalSource,
 ): ExpenseModalState => {
+    const groupId = getDefaultGroupId(source);
     const targetMode: ExpenseTargetMode =
         source.context === 'friends' ||
-        (!source.groups.length && source.knownFriends.length > 0)
+        (source.context === 'dashboard' &&
+            !groupId &&
+            source.knownFriends.length > 0)
             ? 'friends'
             : 'group';
-    const groupId = source.defaultGroupId ?? source.groups[0]?.id ?? '';
     const selectedFriendId = getDefaultFriendId(source);
     const state: ExpenseModalState = {
         ...INITIAL_EXPENSE_MODAL_STATE,
