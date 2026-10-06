@@ -573,10 +573,11 @@ test('uses search-specific and filter-specific empty-state descriptions', () => 
                 'groups.filterEmptyDescription',
             );
             const emptyCard = emptyDescription.closest(
-                '[data-empty-state-density="groupCard"]',
+                '[data-empty-state]',
             );
 
             expect(emptyCard).toBeTruthy();
+            expect(emptyCard?.className).toContain('rt-r-size-1');
             expect(
                 screen.queryByText('groups.searchEmptyDescription'),
             ).toBeNull();

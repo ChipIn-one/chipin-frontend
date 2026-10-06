@@ -214,7 +214,6 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
                     icon={<LucideFilterX size={20} />}
                     title={t('groups.filterEmptyTitle')}
                     description={emptyStateDescription}
-                    density="groupCard"
                 />
             )}
 

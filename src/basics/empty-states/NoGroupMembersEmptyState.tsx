@@ -13,7 +13,7 @@ const NoGroupMembersEmptyState = ({ action }: Props) => {
 
     return (
         <EmptyState
-            icon={<LucideUserPlus size={16} />}
+            icon={<LucideUserPlus size={20} />}
             iconColor="teal"
             title={t('page.balances.empty')}
             action={action}

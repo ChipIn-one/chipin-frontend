@@ -2,15 +2,12 @@ import { ComponentProps, ReactNode } from 'react';
 
 import { Avatar, Box, Card, Flex, Text } from '@radix-ui/themes';
 
-type EmptyStateDensity = 'default' | 'groupCard';
-
 interface Props {
     icon: NonNullable<ReactNode>;
     iconColor?: ComponentProps<typeof Avatar>['color'];
     title: string;
     description?: string;
     action?: ReactNode;
-    density?: EmptyStateDensity;
 }
 
 const EmptyState = ({
@@ -19,73 +16,36 @@ const EmptyState = ({
     title,
     description,
     action,
-    density = 'default',
 }: Props) => {
-    const isGroupCardDensity = density === 'groupCard';
-
     return (
-        <Card
-            size={isGroupCardDensity ? '1' : '2'}
-            data-empty-state-density={density}
-        >
-            <Flex
-                direction={isGroupCardDensity ? 'row' : 'column'}
-                align={isGroupCardDensity ? 'center' : undefined}
-                gap="3"
-            >
-                <Flex align="center" gap="3" minWidth="0" flexGrow="1">
-                    <Avatar
-                        size={isGroupCardDensity ? '4' : '3'}
-                        color={iconColor}
-                        variant="soft"
-                        fallback={icon}
-                    />
+        <Card size="1" data-empty-state>
+            <Flex align="center" gap="3" width="100%" minWidth="0">
+                <Avatar
+                    size="4"
+                    color={iconColor}
+                    variant="soft"
+                    fallback={icon}
+                />
 
-                    <Flex
-                        gap="3"
-                        justify="between"
-                        align="center"
-                        flexGrow="1"
-                        minWidth="0"
-                    >
-                        <Flex
-                            direction="column"
-                            gap="1"
-                            flexGrow="1"
-                            minWidth="0"
-                        >
-                            <Text
-                                size="3"
-                                weight={isGroupCardDensity ? 'bold' : 'medium'}
-                                as="p"
-                            >
-                                {title}
-                            </Text>
+                <Flex
+                    direction="column"
+                    gap="1"
+                    flexGrow="1"
+                    flexShrink="1"
+                    minWidth="0"
+                >
+                    <Text size="3" weight="bold" as="p">
+                        {title}
+                    </Text>
 
-                            {description && (
-                                <Text
-                                    size={isGroupCardDensity ? '1' : '2'}
-                                    color="gray"
-                                    as="p"
-                                >
-                                    {description}
-                                </Text>
-                            )}
-                        </Flex>
-
-                        {isGroupCardDensity && action && (
-                            <Box flexShrink="0">
-                                {action}
-                            </Box>
-                        )}
-                    </Flex>
+                    {description && (
+                        <Text size="1" color="gray" as="p">
+                            {description}
+                        </Text>
+                    )}
                 </Flex>
 
-                {!isGroupCardDensity && action && (
-                    <Box flexShrink="0" ml="8">
-                        {action}
-                    </Box>
-                )}
+                {action && <Box flexShrink="0">{action}</Box>}
             </Flex>
         </Card>
     );
