@@ -7,9 +7,13 @@ import { useConnect } from './internal';
 
 interface Props {
     isLoading?: boolean;
+    hasGroups?: boolean;
 }
 
-const DashBoardSummary = ({ isLoading = false }: Props) => {
+const DashBoardSummary = ({
+    isLoading = false,
+    hasGroups = false,
+}: Props) => {
     const {
         netTotalInBase,
         owedTotalInBase,
@@ -18,14 +22,30 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
         oweEntries,
         defaultCurrency,
     } = useConnect();
+    const hasDebtEntries =
+        owedEntries.length > 0 || oweEntries.length > 0;
+    const showTotalBalance =
+        isLoading ||
+        (netTotalInBase !== null && netTotalInBase !== 0);
+
+    if (
+        !isLoading &&
+        !showTotalBalance &&
+        !hasDebtEntries &&
+        !hasGroups
+    ) {
+        return null;
+    }
 
     return (
         <Flex direction="column" gap="4">
-            <TotalBalanceCard
-                isLoading={isLoading}
-                netTotalInBase={netTotalInBase}
-                defaultCurrency={defaultCurrency}
-            />
+            {showTotalBalance && (
+                <TotalBalanceCard
+                    isLoading={isLoading}
+                    netTotalInBase={netTotalInBase}
+                    defaultCurrency={defaultCurrency}
+                />
+            )}
 
             <SummaryDebtCards
                 isLoading={isLoading}
@@ -34,6 +54,7 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
                 owedEntries={owedEntries}
                 oweEntries={oweEntries}
                 defaultCurrency={defaultCurrency}
+                showSettledEmptyState={hasGroups}
             />
         </Flex>
     );

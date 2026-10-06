@@ -4,7 +4,7 @@
         "otherTitle": "Otros grupos",
         "subtitle": "Mantén balances compartidos y viajes organizados en un solo lugar.",
         "emptyTitle": "Aún no hay grupos",
-        "emptyDescription": "Crea tu primer grupo para empezar a dividir gastos con amigos, compañeros de cuarto o de viaje.",
+        "emptyDescription": "Aquí aparecerán los grupos que crees o a los que te unas.",
         "filterAll": "Todos",
         "filterSettled": "Liquidados",
         "showSettled": "Mostrar",
@@ -47,7 +47,7 @@
     "onboarding": {
         "newUser": {
             "title": "Crea tu primer grupo o añade amigos",
-            "description": "Lleva un saldo directo con un amigo o un saldo compartido independiente dentro de cada grupo. Cuando tengas un amigo o un grupo con suficientes miembros, podrás añadir tu primer gasto."
+            "description": "Lleva un saldo directo con un amigo o un saldo compartido independiente dentro de cada grupo. Cuando tengas un amigo o un grupo, podrás empezar a añadir gastos."
         },
         "friendReady": {
             "title": "Ya puedes añadir un gasto",
@@ -55,15 +55,11 @@
         },
         "groupReady": {
             "title": "Tu grupo está listo",
-            "description": "Ya puedes añadir gastos en tu grupo. Invita a un amigo para llevar también un saldo directo independiente fuera de los grupos."
+            "description": "Ya puedes empezar a añadir gastos en tu grupo. Invita a un amigo para llevar también un saldo directo independiente fuera de los grupos."
         },
         "fullyReady": {
             "title": "Ya puedes dividir gastos",
             "description": "Añade un gasto con un amigo o en uno de tus grupos. Los saldos directos con amigos y los saldos de grupos se mantienen separados."
-        },
-        "groupNeedsPeople": {
-            "title": "Invita a alguien para empezar",
-            "description": "Tu grupo necesita otro participante antes de poder añadir un gasto compartido. Invita a un amigo o crea otro grupo para un saldo compartido diferente."
         },
         "actions": {
             "inviteFriend": "Invitar a un amigo"

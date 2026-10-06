@@ -4,7 +4,6 @@ import type { User } from 'api/chipin.types';
 import { DEFAULT_EXPENSE_CATEGORY } from 'constants/category';
 import {
     EXPENSE_SPLIT_MODES,
-    MIN_GROUP_EXPENSE_PARTICIPANTS,
     type ExpenseSplitMode,
 } from 'constants/chipin';
 import { parseAmountInput } from 'helpers/numbers';
@@ -261,23 +260,14 @@ const getPercentShares = (
     );
 };
 
-const isEligibleExpenseGroup = (group: ExpenseModalGroup): boolean =>
-    group.members.length >= MIN_GROUP_EXPENSE_PARTICIPANTS;
-
 const getDefaultGroupId = (source: ExpenseModalSource): string => {
     const requestedGroup = source.defaultGroupId
         ? source.groups.find(
-              group =>
-                  group.id === source.defaultGroupId &&
-                  isEligibleExpenseGroup(group),
+              group => group.id === source.defaultGroupId,
           )
         : undefined;
 
-    return (
-        requestedGroup?.id ??
-        source.groups.find(isEligibleExpenseGroup)?.id ??
-        ''
-    );
+    return requestedGroup?.id ?? source.groups[0]?.id ?? '';
 };
 
 const getInitializedState = (

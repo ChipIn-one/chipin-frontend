@@ -26,10 +26,6 @@ vi.mock('react-i18next', () => ({
     }),
 }));
 
-vi.mock('basics/Image', () => ({
-    default: () => <div data-testid="onboarding-illustration" />,
-}));
-
 vi.mock('components/modals/create-update-group-modal', () => ({
     CreateUpdateGroupModal: ({
         children,
@@ -64,7 +60,6 @@ vi.mock('./internal/useConnect', () => ({
 const renderOnboarding = (props: {
     hasFriendTarget: boolean;
     hasGroupTarget: boolean;
-    hasGroups: boolean;
 }) => {
     return render(
         <ThemeProvider theme={lightThemeStyled}>
@@ -87,7 +82,6 @@ test.each([
         props: {
             hasFriendTarget: false,
             hasGroupTarget: false,
-            hasGroups: false,
         },
         actions: [
             'common:buttons.createGroup',
@@ -99,7 +93,6 @@ test.each([
         props: {
             hasFriendTarget: true,
             hasGroupTarget: false,
-            hasGroups: false,
         },
         actions: [
             'common:buttons.addExpense',
@@ -111,7 +104,6 @@ test.each([
         props: {
             hasFriendTarget: false,
             hasGroupTarget: true,
-            hasGroups: true,
         },
         actions: [
             'common:buttons.addExpense',
@@ -123,21 +115,8 @@ test.each([
         props: {
             hasFriendTarget: true,
             hasGroupTarget: true,
-            hasGroups: true,
         },
         actions: ['common:buttons.addExpense'],
-    },
-    {
-        variant: 'groupNeedsPeople',
-        props: {
-            hasFriendTarget: false,
-            hasGroupTarget: false,
-            hasGroups: true,
-        },
-        actions: [
-            'onboarding.actions.inviteFriend',
-            'common:buttons.createGroup',
-        ],
     },
 ])(
     'DSH-008/DSH-009 renders the $variant action matrix',
@@ -172,7 +151,6 @@ test('DSH-008 uses copy-link fallback when native share is unavailable', async (
     renderOnboarding({
         hasFriendTarget: false,
         hasGroupTarget: false,
-        hasGroups: false,
     });
 
     await interaction.click(
@@ -192,7 +170,6 @@ test('DSH-008 uses native share when it is available', async () => {
     renderOnboarding({
         hasFriendTarget: false,
         hasGroupTarget: true,
-        hasGroups: true,
     });
 
     await interaction.click(
@@ -205,13 +182,12 @@ test('DSH-008 uses native share when it is available', async () => {
     expect(inviteMocks.onCopyLink).not.toHaveBeenCalled();
 });
 
-test('DSH-009 opens Add Expense from an eligible onboarding state', async () => {
+test('DSH-009 opens Add Expense from a group-ready onboarding state', async () => {
     const interaction = userEvent.setup();
 
     renderOnboarding({
-        hasFriendTarget: true,
+        hasFriendTarget: false,
         hasGroupTarget: true,
-        hasGroups: true,
     });
 
     await interaction.click(

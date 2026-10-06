@@ -68,11 +68,13 @@ const useConnect = () => {
     const hasFriendTarget = friends.length > 0;
     const hasGroupTarget = hasGroupExpenseTarget(groups);
     const hasMoreActivity = activityNextCursor !== null;
-    const isOnboardingDataResolved =
+    const isOnboardingDataSettled =
         isDashboardFetched &&
         isGroupListFetched &&
         isFriendsFetched &&
-        isUserSelfFetched &&
+        isUserSelfFetched;
+    const isOnboardingDataResolved =
+        isOnboardingDataSettled &&
         dashboardError === null &&
         groupListError === null &&
         friendsError === null &&
@@ -95,8 +97,12 @@ const useConnect = () => {
         isGroupListFetched,
         isNextPageError: nextPageError !== null,
         isNextPageLoading,
+        isOnboardingStatePending:
+            activityItems.length === 0 &&
+            !isOnboardingDataSettled,
         isOnboardingVisible:
-            isOnboardingDataResolved && activityItems.length === 0,
+            isOnboardingDataResolved &&
+            activityItems.length === 0,
     };
 };
 

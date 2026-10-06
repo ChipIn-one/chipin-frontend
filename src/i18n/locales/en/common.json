@@ -168,7 +168,7 @@
         "settings": "Settings"
     },
     "noDebtsTitle": "All settled",
-    "noDebtsDescription": "You don't owe anyone and no one owes you.",
+    "noDebtsDescription": "Nothing to settle right now.",
     "amount": {
         "notInteger": "Value is not integer!"
     }

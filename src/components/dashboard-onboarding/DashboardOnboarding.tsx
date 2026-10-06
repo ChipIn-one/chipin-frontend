@@ -7,12 +7,11 @@ import {
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
-import { Box, Button, Flex, Heading, Text } from '@radix-ui/themes';
+import { Button, Flex, Heading, Text } from '@radix-ui/themes';
 
 import { useFriendInvite } from 'hooks/pwaHooks';
 
 import DashboardOnboardingIllustration from 'assets/dashboard-onboarding.png';
-import Image from 'basics/Image';
 import { CreateUpdateGroupModal } from 'components/modals/create-update-group-modal';
 
 import { useConnect } from './internal/useConnect';
@@ -21,13 +20,11 @@ type OnboardingVariant =
     | 'newUser'
     | 'friendReady'
     | 'groupReady'
-    | 'fullyReady'
-    | 'groupNeedsPeople';
+    | 'fullyReady';
 
 interface Props {
     hasFriendTarget: boolean;
     hasGroupTarget: boolean;
-    hasGroups: boolean;
 }
 
 const ActionButton = styled(Button)`
@@ -37,10 +34,16 @@ const ActionButton = styled(Button)`
     text-align: center;
 `;
 
+const OnboardingIllustration = styled.img`
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+`;
+
 const getVariant = ({
     hasFriendTarget,
     hasGroupTarget,
-    hasGroups,
 }: Props): OnboardingVariant => {
     if (hasFriendTarget && hasGroupTarget) {
         return 'fullyReady';
@@ -54,7 +57,7 @@ const getVariant = ({
         return 'groupReady';
     }
 
-    return hasGroups ? 'groupNeedsPeople' : 'newUser';
+    return 'newUser';
 };
 
 const DashboardOnboarding = (props: Props) => {
@@ -129,21 +132,6 @@ const DashboardOnboarding = (props: Props) => {
                 {inviteFriendAction}
             </>
         );
-    } else if (variant === 'groupNeedsPeople') {
-        actions = (
-            <>
-                <ActionButton
-                    type="button"
-                    size="3"
-                    disabled={!inviteToken}
-                    onClick={onInviteFriend}
-                >
-                    <LucideUserPlus size={18} />
-                    {t('onboarding.actions.inviteFriend')}
-                </ActionButton>
-                {createGroupAction}
-            </>
-        );
     } else {
         actions = (
             <>
@@ -169,20 +157,19 @@ const DashboardOnboarding = (props: Props) => {
             mx="auto"
             py={{ initial: '5', sm: '7' }}
         >
-            <Box
+            <Flex
                 width={{ initial: '100%', md: '16rem' }}
                 maxWidth="22rem"
                 flexShrink="0"
             >
-                <Image
+                <OnboardingIllustration
                     src={DashboardOnboardingIllustration}
                     alt=""
                     aria-hidden="true"
                     decoding="async"
-                    width="100%"
-                    height="auto"
+                    data-testid="onboarding-illustration"
                 />
-            </Box>
+            </Flex>
 
             <Flex
                 direction="column"

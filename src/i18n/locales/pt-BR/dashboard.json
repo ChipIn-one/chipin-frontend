@@ -4,7 +4,7 @@
         "otherTitle": "Outros grupos",
         "subtitle": "Mantenha saldos compartilhados e viagens organizados em um só lugar.",
         "emptyTitle": "Nenhum grupo ainda",
-        "emptyDescription": "Crie seu primeiro grupo para começar a dividir despesas com amigos, colegas de quarto ou de viagem.",
+        "emptyDescription": "Os grupos que você criar ou entrar aparecerão aqui.",
         "filterAll": "Todos",
         "filterSettled": "Acertados",
         "showSettled": "Mostrar",
@@ -47,7 +47,7 @@
     "onboarding": {
         "newUser": {
             "title": "Crie seu primeiro grupo ou adicione amigos",
-            "description": "Acompanhe um saldo direto com um amigo ou mantenha um saldo compartilhado separado em cada grupo. Quando houver um amigo ou um grupo com participantes suficientes, você poderá adicionar sua primeira despesa."
+            "description": "Acompanhe um saldo direto com um amigo ou mantenha um saldo compartilhado separado em cada grupo. Quando houver um amigo ou um grupo, você poderá começar a adicionar despesas."
         },
         "friendReady": {
             "title": "Você já pode adicionar uma despesa",
@@ -55,15 +55,11 @@
         },
         "groupReady": {
             "title": "Seu grupo está pronto",
-            "description": "Agora você pode adicionar despesas no grupo. Convide um amigo para também acompanhar um saldo direto separado fora dos grupos."
+            "description": "Você já pode começar a adicionar despesas no grupo. Convide um amigo para também acompanhar um saldo direto separado fora dos grupos."
         },
         "fullyReady": {
             "title": "Você já pode dividir despesas",
             "description": "Adicione uma despesa com um amigo ou em um dos seus grupos. Os saldos diretos com amigos e os saldos dos grupos ficam separados."
-        },
-        "groupNeedsPeople": {
-            "title": "Convide alguém para começar",
-            "description": "Seu grupo precisa de mais um participante antes de receber uma despesa compartilhada. Convide um amigo ou crie outro grupo para um saldo compartilhado diferente."
         },
         "actions": {
             "inviteFriend": "Convidar amigo"

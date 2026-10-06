@@ -91,7 +91,7 @@ test('initializes a group expense with equal split defaults', () => {
     expect(selectPayerId(state)).toBe(currentUser.id);
 });
 
-test('EXP-060 initializes dashboard expense in friends mode when groups are not eligible', () => {
+test('EXP-060 initializes dashboard expense on a one-member group target', () => {
     useExpenseModalStore.getState().initialize({
         context: 'dashboard',
         currentUser,
@@ -105,12 +105,11 @@ test('EXP-060 initializes dashboard expense in friends mode when groups are not 
 
     const state = useExpenseModalStore.getState();
 
-    expect(state.targetMode).toBe('friends');
-    expect(state.groupId).toBe('');
-    expect(state.selectedFriendId).toBe(friend.id);
+    expect(state.targetMode).toBe('group');
+    expect(state.groupId).toBe('group-1');
 });
 
-test('EXP-060 skips an ineligible default group when an eligible group exists', () => {
+test('EXP-060 honors a one-member default group when other groups exist', () => {
     useExpenseModalStore.getState().initialize({
         context: 'dashboard',
         currentUser,
@@ -131,7 +130,7 @@ test('EXP-060 skips an ineligible default group when an eligible group exists', 
     const state = useExpenseModalStore.getState();
 
     expect(state.targetMode).toBe('group');
-    expect(state.groupId).toBe('group-2');
+    expect(state.groupId).toBe('group-1');
 });
 
 test('builds a null category payload when category selection is skipped', () => {

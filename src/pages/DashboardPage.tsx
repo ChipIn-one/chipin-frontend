@@ -40,6 +40,7 @@ const DashboardPage = () => {
         isGroupListFetched,
         isNextPageError,
         isNextPageLoading,
+        isOnboardingStatePending,
         isOnboardingVisible,
     } = useConnect();
 
@@ -66,6 +67,7 @@ const DashboardPage = () => {
             <Box display={{ initial: 'block' }}>
                 <DashBoardSummary
                     isLoading={isDashboardLoading}
+                    hasGroups={hasGroups}
                 />
             </Box>
 
@@ -80,17 +82,20 @@ const DashboardPage = () => {
                 ) : (
                     <NoGroupsEmptyState
                         action={
-                            <CreateUpdateGroupModal type="create">
-                                <Button
-                                    size="2"
-                                    variant="soft"
-                                >
-                                    <LucidePlus size={14} />
-                                    {t(
-                                        'common:buttons.createGroup',
-                                    )}
-                                </Button>
-                            </CreateUpdateGroupModal>
+                            isOnboardingVisible ||
+                            isOnboardingStatePending ? undefined : (
+                                <CreateUpdateGroupModal type="create">
+                                    <Button
+                                        size="2"
+                                        variant="soft"
+                                    >
+                                        <LucidePlus size={14} />
+                                        {t(
+                                            'common:buttons.createGroup',
+                                        )}
+                                    </Button>
+                                </CreateUpdateGroupModal>
+                            )
                         }
                     />
                 )}
@@ -105,9 +110,10 @@ const DashboardPage = () => {
                     <DashboardOnboarding
                         hasFriendTarget={hasFriendTarget}
                         hasGroupTarget={hasGroupTarget}
-                        hasGroups={hasGroups}
                     />
-                ) : !isDashboardFetched || isDashboardLoading ? (
+                ) : !isDashboardFetched ||
+                  isDashboardLoading ||
+                  isOnboardingStatePending ? (
                     <ActivityFeedSkeleton isShowSummary />
                 ) : (
                     <ActivityEventsList

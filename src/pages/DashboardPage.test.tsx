@@ -35,7 +35,6 @@ vi.mock('components/dashboard-onboarding', () => ({
     DashboardOnboarding: (props: {
         hasFriendTarget: boolean;
         hasGroupTarget: boolean;
-        hasGroups: boolean;
     }) => (
         <div
             data-testid="dashboard-onboarding"
@@ -45,7 +44,6 @@ vi.mock('components/dashboard-onboarding', () => ({
             data-has-group-target={String(
                 props.hasGroupTarget,
             )}
-            data-has-groups={String(props.hasGroups)}
         />
     ),
 }));
@@ -93,6 +91,12 @@ vi.mock('components/modals/create-update-group-modal', () => ({
     }: {
         children: React.ReactNode;
     }) => children,
+}));
+
+vi.mock('components/skeletons', () => ({
+    ActivityFeedSkeleton: () => (
+        <div data-testid="activity-skeleton" />
+    ),
 }));
 
 vi.mock('features/activity', () => ({
@@ -192,13 +196,12 @@ test('DSH-007 renders onboarding in the main Dashboard column', () => {
     expect(onboarding.dataset.hasGroupTarget).toBe(
         'false',
     );
-    expect(onboarding.dataset.hasGroups).toBe('false');
     expect(
         within(main).queryByTestId('activity-list'),
     ).toBeNull();
 });
 
-test('DSH-007 keeps existing group cards in the Dashboard side panel', () => {
+test('DSH-009 treats an existing one-member group as group-ready', () => {
     resolveDashboardOnboardingData();
     useGroupsStore.setState({
         groups: [singleMemberGroup],
@@ -214,9 +217,8 @@ test('DSH-007 keeps existing group cards in the Dashboard side panel', () => {
         'dashboard-onboarding',
     );
 
-    expect(onboarding.dataset.hasGroups).toBe('true');
     expect(onboarding.dataset.hasGroupTarget).toBe(
-        'false',
+        'true',
     );
     expect(
         within(sidePanel).getByTestId('groups-cards')
@@ -288,7 +290,7 @@ test('DSH-007 ignores currency-rate failure when onboarding data is resolved', (
     ).toBeTruthy();
 });
 
-test('DSH-007 waits for current-user invite data before onboarding', () => {
+test('DSH-007 keeps loading instead of flashing No activity while onboarding inputs resolve', () => {
     useLoadingStore
         .getState()
         .setLoading('dashboard', 'data', 'fetched');
@@ -302,7 +304,13 @@ test('DSH-007 waits for current-user invite data before onboarding', () => {
     render(<DashboardPage />);
 
     expect(
+        screen.getByTestId('activity-skeleton'),
+    ).toBeTruthy();
+    expect(
         screen.queryByTestId('dashboard-onboarding'),
+    ).toBeNull();
+    expect(
+        screen.queryByTestId('activity-list'),
     ).toBeNull();
 });
 

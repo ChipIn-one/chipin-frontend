@@ -168,7 +168,7 @@
         "settings": "Definições"
     },
     "noDebtsTitle": "Tudo acertado",
-    "noDebtsDescription": "Não deve nada a ninguém e ninguém lhe deve.",
+    "noDebtsDescription": "Nada para acertar agora.",
     "amount": {
         "notInteger": "O valor não é inteiro!"
     }

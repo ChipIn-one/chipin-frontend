@@ -1,13 +1,8 @@
 import type { Group } from 'api/chipin.types';
-import { MIN_GROUP_EXPENSE_PARTICIPANTS } from 'constants/chipin';
 
 const isGroupExpenseTarget = (
     group: Group | null | undefined,
-): group is Group =>
-    Boolean(
-        group &&
-            group.members.length >= MIN_GROUP_EXPENSE_PARTICIPANTS,
-    );
+): group is Group => Boolean(group);
 
 const hasGroupExpenseTarget = (groups: Group[]): boolean =>
     groups.some(isGroupExpenseTarget);

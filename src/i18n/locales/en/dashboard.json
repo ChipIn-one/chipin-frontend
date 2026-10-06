@@ -4,7 +4,7 @@
         "otherTitle": "Other groups",
         "subtitle": "Keep shared balances and trips organized in one place.",
         "emptyTitle": "No groups yet",
-        "emptyDescription": "Create your first group to start splitting expenses with friends, roommates, or travel buddies.",
+        "emptyDescription": "Groups you create or join will appear here.",
         "filterAll": "All",
         "filterSettled": "Settled",
         "showSettled": "Show",
@@ -47,7 +47,7 @@
     "onboarding": {
         "newUser": {
             "title": "Create your first group or add friends",
-            "description": "Track a balance directly with a friend, or keep a separate shared balance inside each group. Once you have a friend or a group with enough members, you can add your first expense."
+            "description": "Track a balance directly with a friend, or keep a separate shared balance inside each group. Once you have a friend or a group, you can start adding expenses."
         },
         "friendReady": {
             "title": "You're ready to add an expense",
@@ -55,15 +55,11 @@
         },
         "groupReady": {
             "title": "Your group is ready",
-            "description": "You can add expenses in your group now. Invite a friend to also track a separate direct balance outside groups."
+            "description": "Start an expense in your group now. Invite a friend to also track a separate direct balance outside groups."
         },
         "fullyReady": {
             "title": "You're ready to split expenses",
             "description": "Add an expense with a friend or in one of your groups. Direct friend balances and group balances stay separate."
-        },
-        "groupNeedsPeople": {
-            "title": "Invite someone to get started",
-            "description": "Your group needs another participant before you can add a shared expense. Invite a friend, or create another group for a different shared balance."
         },
         "actions": {
             "inviteFriend": "Invite friend"

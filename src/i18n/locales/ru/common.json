@@ -168,7 +168,7 @@
         "settings": "Настройки"
     },
     "noDebtsTitle": "Всё рассчитано",
-    "noDebtsDescription": "Вы никому не должны, и вам никто не должен.",
+    "noDebtsDescription": "Сейчас нечего рассчитывать.",
     "amount": {
         "notInteger": "Значение не является целым числом!"
     }
