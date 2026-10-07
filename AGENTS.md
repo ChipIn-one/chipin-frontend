@@ -144,7 +144,6 @@ until every item below is done:
 
 If the knowledge base is not checked out next to this repo, clone it there before proceeding:
 `git clone https://github.com/ChipIn-one/chipin-knowledge-base.git ../chipin-knowledge-base`.
-
 <!-- ai-workflow:agents-routing:start -->
 Canonical AI routing:
 1. Read the canonical workflow: https://github.com/syllik/ai-workflow/blob/HEAD/FLOW.md.
