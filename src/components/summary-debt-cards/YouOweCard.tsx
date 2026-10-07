@@ -63,7 +63,9 @@ const YouOweCard: React.FC<Props> = ({ isLoading, total, defaultCurrency, entrie
                     </Text>
                 </Flex>
 
-                <BalanceBadges items={badgeItems} isLoading={isLoading} />
+                {(isLoading || badgeItems.length > 1) && (
+                    <BalanceBadges items={badgeItems} isLoading={isLoading} />
+                )}
             </Flex>
         </Card>
     );

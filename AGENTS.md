@@ -100,10 +100,11 @@ These rules apply only to ChipIn frontend tasks.
 
 - The canonical task identity is `ChipIn-one/<repository>#<issue-number>`.
 - The GitHub Issue title and body are the task specification and dependency record.
-- Organization Issue Fields are canonical structured metadata, including `Priority`, `Severity`, and `Release scope` where applicable.
-- ChipIn Development Project #5 `Status` is the canonical workflow state. Do not duplicate status in the Issue title or body.
+- Organization Issue Fields are canonical structured metadata for `Priority` and applicable `Severity`. Native repository Milestone is the optional concrete release target; missing Milestone is valid.
+- ChipIn Development Project #5 `Status` uses `Backlog`, `Todo`, `In Progress`, plus `Done` only as a derived mirror of an Issue already `closed/completed`. Native Issue state/reason remains terminal authority; `Done` must not authorize closure or duplicate completion logic.
 - Priority presentation is derived only from the canonical `Priority` field. If that field cannot be read, fail closed; do not substitute Issue labels or title/body encoding.
-- PRE-PROD semantics derive from the canonical `Release scope`; title encoding is not the source of truth.
+- Existing Milestone assignments are human-owned release intent. Do not infer, add, clear, or rename a Milestone from labels/title/body; Milestone membership never authorizes execution or completion.
+- For frontend code work, merge to `dev` is integration only. Close the Issue as completed only after the required implementation is merged to production branch `main`; close as not planned only for cancelled/abandoned work.
 - Historical Trello links may remain in `References` as read-only provenance/evidence; Trello must not participate in current task state, notifications as authority, admission, planning, or execution authorization.
 - Active agents and workflows must not create or update Trello cards; move Trello cards or lists; update Trello labels, status, or metadata; write comments or activity to Trello; or invoke or maintain Trello task-tracking integrations.
 - There is no bidirectional Trello-to-GitHub or GitHub-to-Trello synchronization.
@@ -143,7 +144,6 @@ until every item below is done:
 
 If the knowledge base is not checked out next to this repo, clone it there before proceeding:
 `git clone https://github.com/ChipIn-one/chipin-knowledge-base.git ../chipin-knowledge-base`.
-
 <!-- ai-workflow:agents-routing:start -->
 Canonical AI routing:
 1. Read the canonical workflow: https://github.com/syllik/ai-workflow/blob/HEAD/FLOW.md.
