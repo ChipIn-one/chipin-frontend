@@ -64,33 +64,31 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
             </Flex>
 
             <Flex align="center" gap="2" flexShrink="0">
-                {!isExpanded && (
-                    <Flex direction="column" gap="1" align="end">
-                        {hasOwed && (
-                            <Text color="grass" size="2" weight="bold">
-                                <VisuallyHidden>{t('summary.owedToYou')}</VisuallyHidden>
-                                <Amount
-                                    type="summary"
-                                    value={owedTotalInBase}
-                                    tokenCode={defaultCurrency}
-                                    precision={0}
-                                />
-                            </Text>
-                        )}
+                <Flex direction="column" gap="1" align="end">
+                    {hasOwed && (
+                        <Text color="grass" size="2" weight="bold">
+                            <VisuallyHidden>{t('summary.owedToYou')}</VisuallyHidden>
+                            <Amount
+                                type="summary"
+                                value={owedTotalInBase}
+                                tokenCode={defaultCurrency}
+                                precision={0}
+                            />
+                        </Text>
+                    )}
 
-                        {hasOwing && (
-                            <Text color="tomato" size="2" weight="bold">
-                                <VisuallyHidden>{t('summary.youOwe')}</VisuallyHidden>
-                                <Amount
-                                    type="summary"
-                                    value={owingTotalInBase}
-                                    tokenCode={defaultCurrency}
-                                    precision={0}
-                                />
-                            </Text>
-                        )}
-                    </Flex>
-                )}
+                    {hasOwing && (
+                        <Text color="tomato" size="2" weight="bold">
+                            <VisuallyHidden>{t('summary.youOwe')}</VisuallyHidden>
+                            <Amount
+                                type="summary"
+                                value={owingTotalInBase}
+                                tokenCode={defaultCurrency}
+                                precision={0}
+                            />
+                        </Text>
+                    )}
+                </Flex>
 
                 {hasDetails &&
                     (isExpanded ? (
@@ -137,24 +135,24 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
                     <Flex direction="column" gap="3">
                         <Flex
                             id={SUMMARY_DETAILS_ID}
-                            direction={{ initial: 'column', sm: 'row' }}
+                            direction="column"
                             gap="3"
                         >
-                            {hasOwed && (
-                                <Flex direction="column" gap="1" flexGrow="1" minWidth="0">
-                                    <Text color="grass" size="2" weight="medium">
-                                        {t('summary.owedToYou')}
-                                    </Text>
-                                    <BalanceBadges items={owedBadgeItems} />
-                                </Flex>
-                            )}
-
                             {hasOwing && (
-                                <Flex direction="column" gap="1" flexGrow="1" minWidth="0">
-                                    <Text color="tomato" size="2" weight="medium">
+                                <Flex direction="column" gap="1" minWidth="0">
+                                    <Text color="tomato" size="3" weight="bold">
                                         {t('summary.youOwe')}
                                     </Text>
                                     <BalanceBadges items={oweBadgeItems} />
+                                </Flex>
+                            )}
+
+                            {hasOwed && (
+                                <Flex direction="column" gap="1" minWidth="0">
+                                    <Text color="grass" size="3" weight="bold">
+                                        {t('summary.owedToYou')}
+                                    </Text>
+                                    <BalanceBadges items={owedBadgeItems} />
                                 </Flex>
                             )}
                         </Flex>
