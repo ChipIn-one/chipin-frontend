@@ -1,19 +1,15 @@
 import { useState } from 'react';
-import {
-    LucideChevronDown,
-    LucideChevronUp,
-    LucideTrendingDown,
-    LucideTrendingUp,
-} from 'lucide-react';
+import { LucideChevronDown, LucideChevronUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Button, Card, Flex, Separator, Skeleton, Text, VisuallyHidden } from '@radix-ui/themes';
+import { Flex, Separator, Skeleton, Text, VisuallyHidden } from '@radix-ui/themes';
 
 import { BalanceBadges } from 'basics';
 import DebtAmount from 'basics/DebtAmount';
 import { Amount } from 'basics/numbers';
 
 import { useConnect } from './internal';
+import { SummaryCard, SummaryToggle } from './styled';
 
 interface Props {
     isLoading?: boolean;
@@ -74,104 +70,85 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
             <Flex align="center" gap="2" flexShrink="0">
                 <Flex direction="column" gap="1" align="end">
                     {showOwed && (
-                        <Flex align="center" justify="end" gap="1">
-                            <Text
-                                as="span"
-                                color="grass"
-                                role="img"
-                                aria-label={t('summary.owedToYou')}
-                            >
-                                <Skeleton loading={isLoading}>
-                                    <LucideTrendingUp size={16} aria-hidden />
-                                </Skeleton>
-                            </Text>
-                            <Text color="grass" size="2" weight="bold">
-                                <Skeleton loading={isLoading}>
-                                    {isLoading ? (
-                                        tSkeletons('debtAmount.amount')
-                                    ) : (
+                        <Text color="grass" size="2" weight="bold">
+                            <Skeleton loading={isLoading}>
+                                {isLoading ? (
+                                    tSkeletons('debtAmount.amount')
+                                ) : (
+                                    <>
+                                        <VisuallyHidden>{t('summary.owedToYou')}: </VisuallyHidden>
                                         <Amount
                                             type="summary"
                                             value={owedTotalInBase}
                                             tokenCode={defaultCurrency}
                                             precision={0}
                                         />
-                                    )}
-                                </Skeleton>
-                            </Text>
-                        </Flex>
+                                    </>
+                                )}
+                            </Skeleton>
+                        </Text>
                     )}
 
                     {showOwing && (
-                        <Flex align="center" justify="end" gap="1">
-                            <Text
-                                as="span"
-                                color="tomato"
-                                role="img"
-                                aria-label={t('summary.youOwe')}
-                            >
-                                <Skeleton loading={isLoading}>
-                                    <LucideTrendingDown size={16} aria-hidden />
-                                </Skeleton>
-                            </Text>
-                            <Text color="tomato" size="2" weight="bold">
-                                <Skeleton loading={isLoading}>
-                                    {isLoading ? (
-                                        tSkeletons('debtAmount.amount')
-                                    ) : (
+                        <Text color="tomato" size="2" weight="bold">
+                            <Skeleton loading={isLoading}>
+                                {isLoading ? (
+                                    tSkeletons('debtAmount.amount')
+                                ) : (
+                                    <>
+                                        <VisuallyHidden>{t('summary.youOwe')}: </VisuallyHidden>
                                         <Amount
                                             type="summary"
                                             value={owingTotalInBase}
                                             tokenCode={defaultCurrency}
                                             precision={0}
                                         />
-                                    )}
-                                </Skeleton>
-                            </Text>
-                        </Flex>
+                                    </>
+                                )}
+                            </Skeleton>
+                        </Text>
                     )}
                 </Flex>
 
-                {hasDetails && !isLoading && (
-                    isExpanded ? (
+                {hasDetails &&
+                    !isLoading &&
+                    (isExpanded ? (
                         <LucideChevronUp size={18} aria-hidden />
                     ) : (
                         <LucideChevronDown size={18} aria-hidden />
-                    )
-                )}
+                    ))}
             </Flex>
         </Flex>
     );
 
-    return (
-        <Card size="1">
-            <Flex direction="column" gap="3">
-                {hasDetails && !isLoading ? (
-                    <Button
-                        type="button"
-                        size="2"
-                        variant="ghost"
-                        color="gray"
-                        style={{ width: '100%' }}
-                        aria-expanded={isExpanded}
-                        aria-controls={SUMMARY_DETAILS_ID}
-                        onClick={() => setIsExpanded(expanded => !expanded)}
-                    >
-                        {summaryContent}
-                        <VisuallyHidden>
-                            {t(
-                                isExpanded
-                                    ? 'summary.hideBalanceDetails'
-                                    : 'summary.showBalanceDetails',
-                            )}
-                        </VisuallyHidden>
-                    </Button>
-                ) : (
-                    summaryContent
-                )}
+    if (!hasDetails || isLoading) {
+        return <SummaryCard size="1">{summaryContent}</SummaryCard>;
+    }
 
-                {isExpanded && hasDetails && (
-                    <>
+    return (
+        <SummaryCard asChild size="1">
+            <details open={isExpanded}>
+                <SummaryToggle
+                    role="button"
+                    aria-expanded={isExpanded}
+                    aria-controls={SUMMARY_DETAILS_ID}
+                    onClick={event => {
+                        event.preventDefault();
+                        setIsExpanded(expanded => !expanded);
+                    }}
+                >
+                    {summaryContent}
+                    <VisuallyHidden>
+                        {t(
+                            isExpanded
+                                ? 'summary.hideBalanceDetails'
+                                : 'summary.showBalanceDetails',
+                        )}
+                    </VisuallyHidden>
+                </SummaryToggle>
+
+                {isExpanded && (
+                    <Flex direction="column" gap="3">
                         <Separator size="4" />
                         <Flex
                             id={SUMMARY_DETAILS_ID}
@@ -196,10 +173,10 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
                                 </Flex>
                             )}
                         </Flex>
-                    </>
+                    </Flex>
                 )}
-            </Flex>
-        </Card>
+            </details>
+        </SummaryCard>
     );
 };
 

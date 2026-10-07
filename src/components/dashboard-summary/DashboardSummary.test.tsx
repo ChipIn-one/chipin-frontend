@@ -81,9 +81,8 @@ test('keeps per-currency balances collapsed until the summary is expanded', () =
 
     const toggle = screen.getByRole('button', { name: /Show balance details/ });
 
-    expect(toggle.textContent).not.toContain('Owed to you');
-    expect(toggle.textContent).not.toContain('You owe');
-
+    expect(toggle.querySelector('.lucide-trending-up')).toBeNull();
+    expect(toggle.querySelector('.lucide-trending-down')).toBeNull();
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
 
     fireEvent.click(toggle);
