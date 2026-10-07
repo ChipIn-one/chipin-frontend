@@ -64,7 +64,7 @@ test('uses one outer skeleton for the whole summary card while loading', () => {
     const { container } = renderSummary(true);
 
     expect(container.querySelectorAll('.rt-Skeleton')).toHaveLength(1);
-    expect(container.querySelector('.rt-Skeleton[data-interactive-card]')).toBeTruthy();
+    expect(container.querySelector('.rt-Skeleton.rt-Card')).toBeTruthy();
 });
 
 test('keeps per-currency balances collapsed until the summary is expanded', () => {
@@ -90,13 +90,15 @@ test('keeps per-currency balances collapsed until the summary is expanded', () =
 
     expect(toggle.querySelector('.lucide-trending-up')).toBeNull();
     expect(toggle.querySelector('.lucide-trending-down')).toBeNull();
-    expect(toggle.querySelector('[data-interactive-card]')).toBeTruthy();
-    expect(toggle.querySelector('button')).toBeNull();
+    expect(toggle.classList.contains('rt-Card')).toBe(true);
+    expect(toggle.querySelector('.rt-Card')).toBeNull();
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
 
     fireEvent.click(toggle);
 
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(toggle.textContent).not.toContain('Owed to you');
+    expect(toggle.textContent).not.toContain('You owe');
     expect(screen.getByText('10 EUR')).toBeTruthy();
     expect(screen.getByRole('button', { name: /Hide balance details/ })).toBeTruthy();
 });
