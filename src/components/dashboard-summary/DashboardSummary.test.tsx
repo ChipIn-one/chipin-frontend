@@ -83,6 +83,8 @@ test('keeps per-currency balances collapsed until the summary is expanded', () =
 
     expect(toggle.querySelector('.lucide-trending-up')).toBeNull();
     expect(toggle.querySelector('.lucide-trending-down')).toBeNull();
+    expect(toggle.querySelector('[data-interactive-card]')).toBeTruthy();
+    expect(toggle.querySelector('button')).toBeNull();
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
 
     fireEvent.click(toggle);
