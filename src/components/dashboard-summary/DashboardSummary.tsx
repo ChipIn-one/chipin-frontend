@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { LucideChevronDown, LucideChevronUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Card, Flex, Separator, Skeleton, Text, VisuallyHidden } from '@radix-ui/themes';
+import { Card, Flex, Skeleton, Text, VisuallyHidden } from '@radix-ui/themes';
 
 import { BalanceBadges } from 'basics';
 import DebtAmount from 'basics/DebtAmount';
@@ -152,7 +152,6 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
             {isExpanded && (
                 <Card size="1">
                     <Flex direction="column" gap="3">
-                        <Separator size="4" />
                         <Flex
                             id={SUMMARY_DETAILS_ID}
                             direction={{ initial: 'column', sm: 'row' }}
