@@ -1,37 +1,32 @@
 import styled from 'styled-components';
 
-import { Card } from '@radix-ui/themes';
+import { Button, Card } from '@radix-ui/themes';
 
-import { themeColor } from 'helpers/colors';
+import { interactiveCardLinkStyles } from 'helpers/interactiveCardStyles';
 
-const SummaryCard = styled(Card)`
-    transition:
-        background-color 120ms ease,
-        box-shadow 120ms ease,
-        transform 120ms ease;
-
-    &:has(> summary:hover) {
-        background-color: ${themeColor('grayA3')};
-        box-shadow: inset 0 0 0 1px ${themeColor('grayA6')};
-        transform: translateY(-1px);
-    }
-
-    &:has(> summary:focus-visible) {
-        box-shadow:
-            inset 0 0 0 1px ${themeColor('grayA6')},
-            0 0 0 2px ${themeColor('grassA8')};
-    }
-`;
-
-const SummaryToggle = styled.summary`
+const SummaryToggleButton = styled(Button)`
+    all: unset;
     display: block;
-    list-style: none;
+    width: 100%;
     cursor: pointer;
-    outline: none;
+    box-sizing: border-box;
+    position: relative;
 
-    &::-webkit-details-marker {
-        display: none;
-    }
+    ${interactiveCardLinkStyles({
+        hover: {
+            backgroundColorToken: 'grayA3',
+            borderColorToken: 'grayA6',
+        },
+        focus: {
+            borderColorToken: 'grayA6',
+            focusColorToken: 'grassA8',
+        },
+    })}
 `;
 
-export { SummaryCard, SummaryToggle };
+const SummaryCardSurface = styled(Card)`
+    position: relative;
+    overflow: hidden;
+`;
+
+export { SummaryCardSurface, SummaryToggleButton };
