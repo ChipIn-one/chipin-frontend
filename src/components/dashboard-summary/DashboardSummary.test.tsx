@@ -97,8 +97,15 @@ test('keeps per-currency balances collapsed until the summary is expanded', () =
     fireEvent.click(toggle);
 
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
-    expect(toggle.textContent).not.toContain('Owed to you');
-    expect(toggle.textContent).not.toContain('You owe');
+    expect(toggle.textContent).toContain('Owed to you');
+    expect(toggle.textContent).toContain('You owe');
+
+    const details = document.getElementById('dashboard-balance-summary-details');
+
+    expect(details).toBeTruthy();
+    expect(details?.textContent?.indexOf('You owe')).toBeLessThan(
+        details?.textContent?.indexOf('Owed to you') ?? 0,
+    );
     expect(screen.getByText('10 EUR')).toBeTruthy();
     expect(screen.getByRole('button', { name: /Hide balance details/ })).toBeTruthy();
 });
