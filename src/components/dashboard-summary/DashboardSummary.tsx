@@ -152,7 +152,7 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
                         size="2"
                         variant="ghost"
                         color="gray"
-                        width="100%"
+                        style={{ width: '100%' }}
                         aria-expanded={isExpanded}
                         aria-controls={SUMMARY_DETAILS_ID}
                         onClick={() => setIsExpanded(expanded => !expanded)}
