@@ -24,25 +24,10 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
         netTotalInBase,
         owedTotalInBase,
         owingTotalInBase,
-        owedEntries,
-        oweEntries,
+        owedBadgeItems,
+        oweBadgeItems,
         defaultCurrency,
     } = useConnect();
-
-    const owedBadgeItems = owedEntries
-        .filter(entry => entry.netBalance > 0)
-        .map(entry => ({
-            tokenCode: entry.currency,
-            value: entry.netBalance,
-            color: 'grass' as const,
-        }));
-    const oweBadgeItems = oweEntries
-        .filter(entry => entry.netBalance < 0)
-        .map(entry => ({
-            tokenCode: entry.currency,
-            value: Math.abs(entry.netBalance),
-            color: 'tomato' as const,
-        }));
     const hasOwed = owedBadgeItems.length > 0;
     const hasOwing = oweBadgeItems.length > 0;
     const hasDetails = hasOwed || hasOwing;
