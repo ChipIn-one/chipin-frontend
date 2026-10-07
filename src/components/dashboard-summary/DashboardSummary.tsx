@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { LucideChevronDown, LucideChevronUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Flex, Separator, Skeleton, Text, VisuallyHidden } from '@radix-ui/themes';
+import { Card, Flex, Separator, Skeleton, Text, VisuallyHidden } from '@radix-ui/themes';
 
 import { BalanceBadges } from 'basics';
 import DebtAmount from 'basics/DebtAmount';
 import { Amount } from 'basics/numbers';
 
 import { useConnect } from './internal';
-import { SummaryCard, SummaryToggle } from './styled';
+import { SummaryCardSurface, SummaryToggleButton } from './styled';
 
 interface Props {
     isLoading?: boolean;
@@ -121,33 +121,36 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
         </Flex>
     );
 
+    const summaryCard = (
+        <SummaryCardSurface size="1" data-interactive-card>
+            {summaryContent}
+        </SummaryCardSurface>
+    );
+
     if (!hasDetails || isLoading) {
-        return <SummaryCard size="1">{summaryContent}</SummaryCard>;
+        return summaryCard;
     }
 
     return (
-        <SummaryCard asChild size="1">
-            <details open={isExpanded}>
-                <SummaryToggle
-                    role="button"
-                    aria-expanded={isExpanded}
-                    aria-controls={SUMMARY_DETAILS_ID}
-                    onClick={event => {
-                        event.preventDefault();
-                        setIsExpanded(expanded => !expanded);
-                    }}
-                >
-                    {summaryContent}
-                    <VisuallyHidden>
-                        {t(
-                            isExpanded
-                                ? 'summary.hideBalanceDetails'
-                                : 'summary.showBalanceDetails',
-                        )}
-                    </VisuallyHidden>
-                </SummaryToggle>
+        <Flex direction="column" gap="2">
+            <SummaryToggleButton
+                type="button"
+                aria-expanded={isExpanded}
+                aria-controls={SUMMARY_DETAILS_ID}
+                onClick={() => setIsExpanded(expanded => !expanded)}
+            >
+                {summaryCard}
+                <VisuallyHidden>
+                    {t(
+                        isExpanded
+                            ? 'summary.hideBalanceDetails'
+                            : 'summary.showBalanceDetails',
+                    )}
+                </VisuallyHidden>
+            </SummaryToggleButton>
 
-                {isExpanded && (
+            {isExpanded && (
+                <Card size="1">
                     <Flex direction="column" gap="3">
                         <Separator size="4" />
                         <Flex
@@ -174,9 +177,9 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
                             )}
                         </Flex>
                     </Flex>
-                )}
-            </details>
-        </SummaryCard>
+                </Card>
+            )}
+        </Flex>
     );
 };
 
