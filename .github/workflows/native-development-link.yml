@@ -1,0 +1,38 @@
+name: Native Development link
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+      - ready_for_review
+  workflow_dispatch:
+    inputs:
+      pull_request_number:
+        description: Pull request number to reconcile.
+        required: true
+        type: string
+      task_identity:
+        description: Optional canonical ChipIn task identity; must match any PR body marker.
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Reconcile native Issue ↔ PR Development relationship
+        uses: ChipIn-one/.github/automation/development-link-action@73752d416652ec1d38191feed8916abecd04aa74
+        with:
+          repository: ${{ github.repository }}
+          pull-request-number: ${{ github.event.pull_request.number || inputs.pull_request_number }}
+          task-identity: ${{ inputs.task_identity || '' }}
+          token: ${{ github.token }}
