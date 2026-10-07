@@ -76,7 +76,7 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
                                     tSkeletons('debtAmount.amount')
                                 ) : (
                                     <>
-                                        <VisuallyHidden>{t('summary.owedToYou')}: </VisuallyHidden>
+                                        <VisuallyHidden>{t('summary.owedToYou')}</VisuallyHidden>
                                         <Amount
                                             type="summary"
                                             value={owedTotalInBase}
@@ -96,7 +96,7 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
                                     tSkeletons('debtAmount.amount')
                                 ) : (
                                     <>
-                                        <VisuallyHidden>{t('summary.youOwe')}: </VisuallyHidden>
+                                        <VisuallyHidden>{t('summary.youOwe')}</VisuallyHidden>
                                         <Amount
                                             type="summary"
                                             value={owingTotalInBase}
