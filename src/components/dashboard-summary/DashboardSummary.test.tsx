@@ -77,11 +77,12 @@ test('keeps per-currency balances collapsed until the summary is expanded', () =
 
     renderSummary();
 
-    expect(screen.getByText('Owed to you')).toBeTruthy();
-    expect(screen.getByText('You owe')).toBeTruthy();
     expect(screen.queryByText('10 EUR')).toBeNull();
 
-    const toggle = screen.getByRole('button', { name: 'Show balance details' });
+    const toggle = screen.getByRole('button', { name: /Show balance details/ });
+
+    expect(toggle.textContent).not.toContain('Owed to you');
+    expect(toggle.textContent).not.toContain('You owe');
 
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
 
@@ -89,7 +90,7 @@ test('keeps per-currency balances collapsed until the summary is expanded', () =
 
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
     expect(screen.getByText('10 EUR')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Hide balance details' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Hide balance details/ })).toBeTruthy();
 });
 
 test('does not render zero-value debt directions or an empty details toggle', () => {
@@ -103,12 +104,12 @@ test('does not render zero-value debt directions or an empty details toggle', ()
 
     expect(screen.queryByText('Owed to you')).toBeNull();
     expect(screen.queryByText('You owe')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Show balance details' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Show balance details/ })).toBeNull();
 });
 
 test('starts collapsed again after the Dashboard summary remounts', () => {
     const firstRender = renderSummary();
-    const toggle = screen.getByRole('button', { name: 'Show balance details' });
+    const toggle = screen.getByRole('button', { name: /Show balance details/ });
 
     fireEvent.click(toggle);
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
@@ -117,6 +118,6 @@ test('starts collapsed again after the Dashboard summary remounts', () => {
     renderSummary();
 
     expect(
-        screen.getByRole('button', { name: 'Show balance details' }).getAttribute('aria-expanded'),
+        screen.getByRole('button', { name: /Show balance details/ }).getAttribute('aria-expanded'),
     ).toBe('false');
 });

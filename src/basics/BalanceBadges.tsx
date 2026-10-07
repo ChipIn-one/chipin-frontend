@@ -61,7 +61,9 @@ const BalanceBadges: React.FC<Props> = ({
                 <Button
                     color={overflowColor}
                     variant="soft"
-                    size="1"
+                    size="2"
+                    height="calc(var(--line-height-2) + var(--space-2))"
+                    px="calc(var(--space-2) * 1.25)"
                     onClick={() => setIsExpanded(true)}
                 >
                     +{hiddenCount}
@@ -72,7 +74,9 @@ const BalanceBadges: React.FC<Props> = ({
                 <Button
                     color={overflowColor}
                     variant="soft"
-                    size="1"
+                    size="2"
+                    height="calc(var(--line-height-2) + var(--space-2))"
+                    px="calc(var(--space-2) * 1.25)"
                     onClick={() => setIsExpanded(false)}
                 >
                     <LucideChevronLeft size={16} />
