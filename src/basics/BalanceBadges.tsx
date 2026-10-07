@@ -1,4 +1,5 @@
 import { ComponentProps, useState } from 'react';
+import styled from 'styled-components';
 import { LucideChevronLeft } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -13,6 +14,11 @@ export interface BadgeItem {
     value: number;
     color: ComponentProps<typeof Badge>['color'];
 }
+
+const BalanceBadgesButton = styled(Button)`
+    height: calc(var(--line-height-2) + var(--space-2));
+    padding-inline: calc(var(--space-2) * 1.25);
+`;
 
 const DEFAULT_MAX_VISIBLE = 3;
 
@@ -32,7 +38,7 @@ const BalanceBadges: React.FC<Props> = ({
     const { t } = useTranslation('common');
     const [isExpanded, setIsExpanded] = useState(false);
 
-    if (!isLoading && items.length <= 1) {
+    if (!isLoading && items.length === 0) {
         return null;
     }
 
@@ -52,26 +58,26 @@ const BalanceBadges: React.FC<Props> = ({
             ))}
 
             {!isExpanded && hiddenCount > 0 && (
-                <Button
+                <BalanceBadgesButton
                     color={overflowColor}
                     variant="soft"
-                    size="1"
+                    size="2"
                     onClick={() => setIsExpanded(true)}
                 >
                     +{hiddenCount}
-                </Button>
+                </BalanceBadgesButton>
             )}
 
             {isExpanded && (
-                <Button
+                <BalanceBadgesButton
                     color={overflowColor}
                     variant="soft"
-                    size="1"
+                    size="2"
                     onClick={() => setIsExpanded(false)}
                 >
                     <LucideChevronLeft size={16} />
                     {t('buttons.hide')}
-                </Button>
+                </BalanceBadgesButton>
             )}
         </Flex>
     );
