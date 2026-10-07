@@ -19,7 +19,6 @@ const SUMMARY_DETAILS_ID = 'dashboard-balance-summary-details';
 
 const DashBoardSummary = ({ isLoading = false }: Props) => {
     const { t } = useTranslation('dashboard');
-    const { t: tSkeletons } = useTranslation('skeletons');
     const [isExpanded, setIsExpanded] = useState(false);
     const {
         netTotalInBase,
@@ -47,19 +46,16 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
     const hasOwed = owedBadgeItems.length > 0;
     const hasOwing = oweBadgeItems.length > 0;
     const hasDetails = hasOwed || hasOwing;
-    const showOwed = isLoading || hasOwed;
-    const showOwing = isLoading || hasOwing;
 
     const summaryContent = (
         <Flex align="center" justify="between" gap="3" width="100%" minWidth="0">
             <Flex direction="column" gap="1" minWidth="0">
                 <Text size="4" weight="medium" color="gray" as="span">
-                    <Skeleton loading={isLoading}>{t('summary.totalBalance')}</Skeleton>
+                    {t('summary.totalBalance')}
                 </Text>
 
                 <DebtAmount
                     amountProps={{ type: 'summary' }}
-                    isLoading={isLoading}
                     amount={netTotalInBase ?? 0}
                     currency={defaultCurrency}
                     size="7"
@@ -69,49 +65,32 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
 
             <Flex align="center" gap="2" flexShrink="0">
                 <Flex direction="column" gap="1" align="end">
-                    {showOwed && (
+                    {hasOwed && (
                         <Text color="grass" size="2" weight="bold">
-                            <Skeleton loading={isLoading}>
-                                {isLoading ? (
-                                    tSkeletons('debtAmount.amount')
-                                ) : (
-                                    <>
-                                        <VisuallyHidden>{t('summary.owedToYou')}</VisuallyHidden>
-                                        <Amount
-                                            type="summary"
-                                            value={owedTotalInBase}
-                                            tokenCode={defaultCurrency}
-                                            precision={0}
-                                        />
-                                    </>
-                                )}
-                            </Skeleton>
+                            <VisuallyHidden>{t('summary.owedToYou')}</VisuallyHidden>
+                            <Amount
+                                type="summary"
+                                value={owedTotalInBase}
+                                tokenCode={defaultCurrency}
+                                precision={0}
+                            />
                         </Text>
                     )}
 
-                    {showOwing && (
+                    {hasOwing && (
                         <Text color="tomato" size="2" weight="bold">
-                            <Skeleton loading={isLoading}>
-                                {isLoading ? (
-                                    tSkeletons('debtAmount.amount')
-                                ) : (
-                                    <>
-                                        <VisuallyHidden>{t('summary.youOwe')}</VisuallyHidden>
-                                        <Amount
-                                            type="summary"
-                                            value={owingTotalInBase}
-                                            tokenCode={defaultCurrency}
-                                            precision={0}
-                                        />
-                                    </>
-                                )}
-                            </Skeleton>
+                            <VisuallyHidden>{t('summary.youOwe')}</VisuallyHidden>
+                            <Amount
+                                type="summary"
+                                value={owingTotalInBase}
+                                tokenCode={defaultCurrency}
+                                precision={0}
+                            />
                         </Text>
                     )}
                 </Flex>
 
                 {hasDetails &&
-                    !isLoading &&
                     (isExpanded ? (
                         <LucideChevronUp size={18} aria-hidden />
                     ) : (
@@ -127,7 +106,11 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
         </SummaryCardSurface>
     );
 
-    if (!hasDetails || isLoading) {
+    if (isLoading) {
+        return <Skeleton loading>{summaryCard}</Skeleton>;
+    }
+
+    if (!hasDetails) {
         return summaryCard;
     }
 
