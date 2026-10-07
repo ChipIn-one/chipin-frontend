@@ -1,13 +1,15 @@
 name: Native Development link
 
 on:
-  pull_request_target:
+  pull_request:
     types:
       - opened
       - edited
       - reopened
       - synchronize
       - ready_for_review
+    paths-ignore:
+      - .github/workflows/native-development-link.yml
   workflow_dispatch:
     inputs:
       pull_request_number:
@@ -31,7 +33,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Reconcile native Issue ↔ PR Development relationship
-        uses: ChipIn-one/.github/automation/development-link-action@7bca5de5ce24e4936cb5133101528d433aa0984e
+        uses: ChipIn-one/.github/automation/development-link-action@915be5ee0af05157f622ce1d71c440d18a76ddd1
         with:
           repository: ${{ github.repository }}
           pull-request-number: ${{ github.event.pull_request.number || inputs.pull_request_number }}
