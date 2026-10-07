@@ -26,11 +26,11 @@ const settings = {
     sex: 'male',
 } satisfies UserSettings;
 
-const renderSummary = () =>
+const renderSummary = (isLoading = false) =>
     render(
         <ThemeProvider theme={lightThemeStyled}>
             <Theme>
-                <DashboardSummary />
+                <DashboardSummary isLoading={isLoading} />
             </Theme>
         </ThemeProvider>,
     );
@@ -58,6 +58,13 @@ test('renders a confirmed summary without entering a store snapshot update loop'
     expect(() => {
         renderSummary();
     }).not.toThrow();
+});
+
+test('uses one outer skeleton for the whole summary card while loading', () => {
+    const { container } = renderSummary(true);
+
+    expect(container.querySelectorAll('.rt-Skeleton')).toHaveLength(1);
+    expect(container.querySelector('.rt-Skeleton[data-interactive-card]')).toBeTruthy();
 });
 
 test('keeps per-currency balances collapsed until the summary is expanded', () => {
