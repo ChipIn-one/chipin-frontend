@@ -2,7 +2,7 @@ import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
 import { Theme } from '@radix-ui/themes';
-import { render } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 import type { UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
@@ -26,6 +26,15 @@ const settings = {
     sex: 'male',
 } satisfies UserSettings;
 
+const renderSummary = () =>
+    render(
+        <ThemeProvider theme={lightThemeStyled}>
+            <Theme>
+                <DashboardSummary />
+            </Theme>
+        </ThemeProvider>,
+    );
+
 beforeEach(() => {
     useUsersStore.setState({
         user: null,
@@ -47,12 +56,67 @@ beforeEach(() => {
 
 test('renders a confirmed summary without entering a store snapshot update loop', () => {
     expect(() => {
-        render(
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <DashboardSummary />
-                </Theme>
-            </ThemeProvider>,
-        );
+        renderSummary();
     }).not.toThrow();
+});
+
+test('keeps per-currency balances collapsed until the summary is expanded', () => {
+    useDashboardStore.setState({
+        balances: {
+            USD: { currency: 'USD', netBalance: 25 },
+            EUR: { currency: 'EUR', netBalance: -10 },
+        },
+        currencies: {
+            base: 'USD',
+            timestamp: 1,
+            fetchedAt: 1,
+            stale: false,
+            rates: { USD: 1, EUR: 2 },
+        },
+    });
+
+    renderSummary();
+
+    expect(screen.getByText('Owed to you')).toBeTruthy();
+    expect(screen.getByText('You owe')).toBeTruthy();
+    expect(screen.queryByText('10 EUR')).toBeNull();
+
+    const toggle = screen.getByRole('button', { name: 'Show balance details' });
+
+    expect(toggle.getAttribute('aria-expanded')).toBe('false');
+
+    fireEvent.click(toggle);
+
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    expect(screen.getByText('10 EUR')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Hide balance details' })).toBeTruthy();
+});
+
+test('does not render zero-value debt directions or an empty details toggle', () => {
+    useDashboardStore.setState({
+        balances: {
+            USD: { currency: 'USD', netBalance: 0 },
+        },
+    });
+
+    renderSummary();
+
+    expect(screen.queryByText('Owed to you')).toBeNull();
+    expect(screen.queryByText('You owe')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Show balance details' })).toBeNull();
+});
+
+test('starts collapsed again after the Dashboard summary remounts', () => {
+    const firstRender = renderSummary();
+    const toggle = screen.getByRole('button', { name: 'Show balance details' });
+
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+
+    firstRender.unmount();
+    renderSummary();
+
+    expect(
+        screen.getByRole('button', { name: 'Show balance details' }).getAttribute('aria-expanded'),
+    ).toBe('false');
 });

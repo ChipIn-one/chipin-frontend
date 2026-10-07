@@ -21,6 +21,7 @@ interface Props {
     isLoading?: boolean;
     maxVisible?: number;
     overflowColor?: ComponentProps<typeof Badge>['color'];
+    showSingle?: boolean;
 }
 
 const BalanceBadges: React.FC<Props> = ({
@@ -28,11 +29,16 @@ const BalanceBadges: React.FC<Props> = ({
     isLoading = false,
     maxVisible = DEFAULT_MAX_VISIBLE,
     overflowColor = 'gray',
+    showSingle = false,
 }) => {
     const { t } = useTranslation('common');
     const [isExpanded, setIsExpanded] = useState(false);
 
-    if (!isLoading && items.length <= 1) {
+    if (!isLoading && items.length === 0) {
+        return null;
+    }
+
+    if (!isLoading && items.length === 1 && !showSingle) {
         return null;
     }
 

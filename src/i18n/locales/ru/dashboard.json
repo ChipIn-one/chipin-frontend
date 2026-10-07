@@ -36,7 +36,9 @@
         "totalBalance": "Общий баланс",
         "totalAcrossGroupsAndFriends": "По группам и друзьям",
         "owedToYou": "Вам должны",
-        "youOwe": "Вы должны"
+        "youOwe": "Вы должны",
+        "showBalanceDetails": "Показать детали баланса",
+        "hideBalanceDetails": "Скрыть детали баланса"
     },
     "header": {
         "greeting": "Привет, {{name}}",

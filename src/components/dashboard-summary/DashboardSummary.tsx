@@ -1,7 +1,12 @@
-import { Flex } from '@radix-ui/themes';
+import { useState } from 'react';
+import { LucideChevronDown, LucideChevronUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
-import SummaryDebtCards from '../summary-debt-cards/SummaryDebtCards';
-import TotalBalanceCard from '../summary-debt-cards/TotalBalanceCard';
+import { Card, Flex, IconButton, Separator, Skeleton, Text } from '@radix-ui/themes';
+
+import { BalanceBadges } from 'basics';
+import DebtAmount from 'basics/DebtAmount';
+import { Amount } from 'basics/numbers';
 
 import { useConnect } from './internal';
 
@@ -9,7 +14,12 @@ interface Props {
     isLoading?: boolean;
 }
 
+const SUMMARY_DETAILS_ID = 'dashboard-balance-summary-details';
+
 const DashBoardSummary = ({ isLoading = false }: Props) => {
+    const { t } = useTranslation('dashboard');
+    const { t: tSkeletons } = useTranslation('skeletons');
+    const [isExpanded, setIsExpanded] = useState(false);
     const {
         netTotalInBase,
         owedTotalInBase,
@@ -19,23 +29,151 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
         defaultCurrency,
     } = useConnect();
 
-    return (
-        <Flex direction="column" gap="4">
-            <TotalBalanceCard
-                isLoading={isLoading}
-                netTotalInBase={netTotalInBase}
-                defaultCurrency={defaultCurrency}
-            />
+    const owedBadgeItems = owedEntries
+        .filter(entry => entry.netBalance > 0)
+        .map(entry => ({
+            tokenCode: entry.currency,
+            value: entry.netBalance,
+            color: 'grass' as const,
+        }));
+    const oweBadgeItems = oweEntries
+        .filter(entry => entry.netBalance < 0)
+        .map(entry => ({
+            tokenCode: entry.currency,
+            value: Math.abs(entry.netBalance),
+            color: 'tomato' as const,
+        }));
+    const hasOwed = owedBadgeItems.length > 0;
+    const hasOwing = oweBadgeItems.length > 0;
+    const hasDetails = hasOwed || hasOwing;
+    const showOwed = isLoading || hasOwed;
+    const showOwing = isLoading || hasOwing;
 
-            <SummaryDebtCards
-                isLoading={isLoading}
-                owedToYouTotal={owedTotalInBase}
-                youOweTotal={owingTotalInBase}
-                owedEntries={owedEntries}
-                oweEntries={oweEntries}
-                defaultCurrency={defaultCurrency}
-            />
-        </Flex>
+    return (
+        <Card size="1">
+            <Flex direction="column" gap="3">
+                <Flex align="center" justify="between" gap="3" minWidth="0">
+                    <Flex direction="column" gap="1" minWidth="0">
+                        <Text size="4" weight="medium" color="gray" as="span">
+                            <Skeleton loading={isLoading}>{t('summary.totalBalance')}</Skeleton>
+                        </Text>
+
+                        <DebtAmount
+                            amountProps={{ type: 'summary' }}
+                            isLoading={isLoading}
+                            amount={netTotalInBase ?? 0}
+                            currency={defaultCurrency}
+                            size="7"
+                            weight="bold"
+                        />
+                    </Flex>
+
+                    <Flex align="center" gap="2" flexShrink="0">
+                        <Flex direction="column" gap="1" align="end">
+                            {showOwed && (
+                                <Flex align="baseline" justify="end" gap="2">
+                                    <Text color="grass" size="2" weight="medium">
+                                        <Skeleton loading={isLoading}>
+                                            {t('summary.owedToYou')}
+                                        </Skeleton>
+                                    </Text>
+                                    <Text color="grass" size="2" weight="bold">
+                                        <Skeleton loading={isLoading}>
+                                            {isLoading ? (
+                                                tSkeletons('debtAmount.amount')
+                                            ) : (
+                                                <Amount
+                                                    type="summary"
+                                                    value={owedTotalInBase}
+                                                    tokenCode={defaultCurrency}
+                                                    precision={0}
+                                                />
+                                            )}
+                                        </Skeleton>
+                                    </Text>
+                                </Flex>
+                            )}
+
+                            {showOwing && (
+                                <Flex align="baseline" justify="end" gap="2">
+                                    <Text color="tomato" size="2" weight="medium">
+                                        <Skeleton loading={isLoading}>
+                                            {t('summary.youOwe')}
+                                        </Skeleton>
+                                    </Text>
+                                    <Text color="tomato" size="2" weight="bold">
+                                        <Skeleton loading={isLoading}>
+                                            {isLoading ? (
+                                                tSkeletons('debtAmount.amount')
+                                            ) : (
+                                                <Amount
+                                                    type="summary"
+                                                    value={owingTotalInBase}
+                                                    tokenCode={defaultCurrency}
+                                                    precision={0}
+                                                />
+                                            )}
+                                        </Skeleton>
+                                    </Text>
+                                </Flex>
+                            )}
+                        </Flex>
+
+                        {hasDetails && !isLoading && (
+                            <IconButton
+                                type="button"
+                                size="2"
+                                variant="ghost"
+                                color="gray"
+                                aria-label={t(
+                                    isExpanded
+                                        ? 'summary.hideBalanceDetails'
+                                        : 'summary.showBalanceDetails',
+                                )}
+                                aria-expanded={isExpanded}
+                                aria-controls={SUMMARY_DETAILS_ID}
+                                onClick={() => setIsExpanded(expanded => !expanded)}
+                            >
+                                {isExpanded ? (
+                                    <LucideChevronUp size={18} aria-hidden />
+                                ) : (
+                                    <LucideChevronDown size={18} aria-hidden />
+                                )}
+                            </IconButton>
+                        )}
+                    </Flex>
+                </Flex>
+
+                {isExpanded && hasDetails && (
+                    <>
+                        <Separator size="4" />
+                        <Flex
+                            id={SUMMARY_DETAILS_ID}
+                            direction={{ initial: 'column', sm: 'row' }}
+                            gap="3"
+                        >
+                            {hasOwed && (
+                                <Flex direction="column" gap="1" flexGrow="1" minWidth="0">
+                                    <Text color="grass" size="2" weight="medium">
+                                        {t('summary.owedToYou')}
+                                    </Text>
+                                    <BalanceBadges items={owedBadgeItems} showSingle />
+                                </Flex>
+                            )}
+
+                            {hasOwing && (
+                                <Flex direction="column" gap="1" flexGrow="1" minWidth="0">
+                                    <Text color="tomato" size="2" weight="medium">
+                                        {t('summary.youOwe')}
+                                    </Text>
+                                    <BalanceBadges items={oweBadgeItems} showSingle />
+                                </Flex>
+                            )}
+                        </Flex>
+                    </>
+                )}
+            </Flex>
+        </Card>
     );
 };
 
