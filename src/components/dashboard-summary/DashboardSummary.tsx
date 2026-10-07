@@ -9,7 +9,7 @@ import DebtAmount from 'basics/DebtAmount';
 import { Amount } from 'basics/numbers';
 
 import { useConnect } from './internal';
-import { SummaryCardSurface, SummaryToggleButton } from './styled';
+import { SummaryCardButton } from './styled';
 
 interface Props {
     isLoading?: boolean;
@@ -64,31 +64,33 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
             </Flex>
 
             <Flex align="center" gap="2" flexShrink="0">
-                <Flex direction="column" gap="1" align="end">
-                    {hasOwed && (
-                        <Text color="grass" size="2" weight="bold">
-                            <VisuallyHidden>{t('summary.owedToYou')}</VisuallyHidden>
-                            <Amount
-                                type="summary"
-                                value={owedTotalInBase}
-                                tokenCode={defaultCurrency}
-                                precision={0}
-                            />
-                        </Text>
-                    )}
+                {!isExpanded && (
+                    <Flex direction="column" gap="1" align="end">
+                        {hasOwed && (
+                            <Text color="grass" size="2" weight="bold">
+                                <VisuallyHidden>{t('summary.owedToYou')}</VisuallyHidden>
+                                <Amount
+                                    type="summary"
+                                    value={owedTotalInBase}
+                                    tokenCode={defaultCurrency}
+                                    precision={0}
+                                />
+                            </Text>
+                        )}
 
-                    {hasOwing && (
-                        <Text color="tomato" size="2" weight="bold">
-                            <VisuallyHidden>{t('summary.youOwe')}</VisuallyHidden>
-                            <Amount
-                                type="summary"
-                                value={owingTotalInBase}
-                                tokenCode={defaultCurrency}
-                                precision={0}
-                            />
-                        </Text>
-                    )}
-                </Flex>
+                        {hasOwing && (
+                            <Text color="tomato" size="2" weight="bold">
+                                <VisuallyHidden>{t('summary.youOwe')}</VisuallyHidden>
+                                <Amount
+                                    type="summary"
+                                    value={owingTotalInBase}
+                                    tokenCode={defaultCurrency}
+                                    precision={0}
+                                />
+                            </Text>
+                        )}
+                    </Flex>
+                )}
 
                 {hasDetails &&
                     (isExpanded ? (
@@ -100,11 +102,7 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
         </Flex>
     );
 
-    const summaryCard = (
-        <SummaryCardSurface size="1" data-interactive-card>
-            {summaryContent}
-        </SummaryCardSurface>
-    );
+    const summaryCard = <Card size="1">{summaryContent}</Card>;
 
     if (isLoading) {
         return <Skeleton loading>{summaryCard}</Skeleton>;
@@ -116,21 +114,23 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
 
     return (
         <Flex direction="column" gap="2">
-            <SummaryToggleButton
-                type="button"
-                aria-expanded={isExpanded}
-                aria-controls={SUMMARY_DETAILS_ID}
-                onClick={() => setIsExpanded(expanded => !expanded)}
-            >
-                {summaryCard}
-                <VisuallyHidden>
-                    {t(
-                        isExpanded
-                            ? 'summary.hideBalanceDetails'
-                            : 'summary.showBalanceDetails',
-                    )}
-                </VisuallyHidden>
-            </SummaryToggleButton>
+            <Card asChild size="1">
+                <SummaryCardButton
+                    type="button"
+                    aria-expanded={isExpanded}
+                    aria-controls={SUMMARY_DETAILS_ID}
+                    onClick={() => setIsExpanded(expanded => !expanded)}
+                >
+                    {summaryContent}
+                    <VisuallyHidden>
+                        {t(
+                            isExpanded
+                                ? 'summary.hideBalanceDetails'
+                                : 'summary.showBalanceDetails',
+                        )}
+                    </VisuallyHidden>
+                </SummaryCardButton>
+            </Card>
 
             {isExpanded && (
                 <Card size="1">
@@ -145,7 +145,7 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
                                     <Text color="grass" size="2" weight="medium">
                                         {t('summary.owedToYou')}
                                     </Text>
-                                    <BalanceBadges items={owedBadgeItems} showSingle />
+                                    <BalanceBadges items={owedBadgeItems} />
                                 </Flex>
                             )}
 
@@ -154,7 +154,7 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
                                     <Text color="tomato" size="2" weight="medium">
                                         {t('summary.youOwe')}
                                     </Text>
-                                    <BalanceBadges items={oweBadgeItems} showSingle />
+                                    <BalanceBadges items={oweBadgeItems} />
                                 </Flex>
                             )}
                         </Flex>
