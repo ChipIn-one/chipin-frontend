@@ -101,7 +101,7 @@ These rules apply only to ChipIn frontend tasks.
 - The canonical task identity is `ChipIn-one/<repository>#<issue-number>`.
 - The GitHub Issue title and body are the task specification and dependency record.
 - Organization Issue Fields are canonical structured metadata for `Priority` and applicable `Severity`. Native repository Milestone is the optional concrete release target; missing Milestone is valid.
-- ChipIn Development Project #5 `Status` tracks active workflow position only: `Backlog`, `Todo`, `In Progress`. Native Issue state/reason is terminal authority; do not encode completion in Project Status or duplicate status in the Issue title/body.
+- ChipIn Development Project #5 `Status` uses `Backlog`, `Todo`, `In Progress`, plus `Done` only as a derived mirror of an Issue already `closed/completed`. Native Issue state/reason remains terminal authority; `Done` must not authorize closure or duplicate completion logic.
 - Priority presentation is derived only from the canonical `Priority` field. If that field cannot be read, fail closed; do not substitute Issue labels or title/body encoding.
 - Existing Milestone assignments are human-owned release intent. Do not infer, add, clear, or rename a Milestone from labels/title/body; Milestone membership never authorizes execution or completion.
 - For frontend code work, merge to `dev` is integration only. Close the Issue as completed only after the required implementation is merged to production branch `main`; close as not planned only for cancelled/abandoned work.
