@@ -31,6 +31,8 @@ jobs:
         with:
           node-version: 24.21.0
           package-manager-cache: false
+      - name: Verify milestone control policy
+        run: node --test scripts/create-milestone.node-test.mjs
       - name: Validate release source
         if: github.event_name == 'pull_request'
         env:
