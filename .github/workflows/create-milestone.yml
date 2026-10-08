@@ -14,8 +14,7 @@ permissions:
   contents: read
   issues: write
 
-# Serialize the read/create/write sequence. queue:max prevents newer requests
-# from silently evicting pending runs (the default queue is only one pending).
+# Serialize requests per target repository; do not evict queued runs.
 concurrency:
   group: chipin-create-milestone-${{ github.repository }}
   cancel-in-progress: false
@@ -27,17 +26,13 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - name: Checkout trusted default branch
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-        with:
-          persist-credentials: false
-      - name: Setup Node
+      - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 24.21.0
           package-manager-cache: false
-      - name: Process milestone control Issue
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          CONTROL_ISSUE_NUMBER: ${{ inputs.issue_number || '' }}
-        run: node scripts/create-milestone.mjs
+      - name: Process repository-local milestone control Issue
+        uses: ChipIn-one/.github/automation/create-milestone-action@84a5d26630ddf938e0974c36e383c5244b50a7ca
+        with:
+          issue-number: ${{ github.event.issue.number || inputs.issue_number }}
+          token: ${{ github.token }}

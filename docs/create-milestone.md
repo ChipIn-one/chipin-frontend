@@ -1,56 +1,40 @@
-# Create frontend Milestone via ChatGPT and GitHub Issues
+# Chat-driven native milestone creation
 
-This is a **repository-local control command**, not a normal product Issue.
-It only manages milestones in `ChipIn-one/chipin-frontend`. It does not
-change Issue assignments, release-target metadata, Project #5 membership,
-backend, or the knowledge base.
+This repository supports a local `[create-milestone]` Issue control command.
+The workflow uses the shared policy at
+[ChipIn-one/.github#51](https://github.com/ChipIn-one/.github/issues/51)
+via a SHA-pinned action and **only this repository's** `GITHUB_TOKEN`.
 
-After `.github/workflows/create-milestone.yml` reaches the repository's
-**default branch (`main`)**, use the connected GitHub `create_issue` action:
-
-Title: `[create-milestone] FRONTEND 1.2`
-
-Body (plain text, no Markdown fences):
+After the control workflow reaches the default branch (`main`), use
+ChatGPT's connected GitHub `create_issue` action in **`ChipIn-one/chipin-frontend`**:
 
 ```text
-Description: Frontend iteration 1.2
+Issue title: [create-milestone] PRODUCT 1.2
+Issue body:
+Description: Product release 1.2 work in this repository
 Due date: 2026-11-01
 ```
 
-`Description:` is mandatory, 1–1000 characters. `Due date:` is optional
-and must be valid UTC `YYYY-MM-DD`; it is recorded at 23:59:59Z.
-Milestone title after the prefix is 1–100 printable characters. Duplicate
-or unknown fields, invalid dates, multiline values and oversized bodies
-are rejected. The body is parsed as **data**, never executed or evaluated.
+In the actual Issue, the body contains just the `Description:` and
+optional `Due date:` lines. Description is mandatory (1–1000 characters),
+date is optional strict UTC `YYYY-MM-DD`. Plain data only, no executable
+commands or extra keys. The Issue author must have write/maintain/admin
+access. Normal Issues are ignored.
 
-Ordinary issues are ignored. The original request Issue author must have
-repository `write`, `maintain` or `admin` access. Manual dispatch does
-not bypass author authorization. Only the built-in `GITHUB_TOKEN` is used:
-`issues: write`, `contents: read`, with implicit Metadata read. No PAT.
+Workflow reads all existing milestones (open and closed), and returns the
+URL/number/state of the sole match. If absent, it creates and re-reads a
+new milestone. It never opens a closed one or mutates pre-existing due
+dates or Issue assignments. A single bot receipt is updated on retries;
+on success control Issue closes as completed, on errors it stays open.
 
-On success the workflow comments the milestone URL, **number** and state,
-then closes the control Issue as completed. The same title is looked up
-case-insensitively across both **open and closed** milestones. Existing
-milestones are never reopened, modified, duplicated, renamed or reassigned.
-If an existing milestone is closed it is returned as closed. Conflicting
-existing duplicates fail closed for manual reconciliation.
+To retry an open control Issue, edit it or manually dispatch Create
+milestone with its Issue number. To attach a future issue, pass the
+returned milestone `number` in the GitHub `create_issue` request's
+`milestone` field. Do not assume that milestone numbers are the same
+across repositories; identical product release names are a convention.
 
-GitHub Actions serializes control requests with `queue: max` (up to 100
-pending), preventing concurrent workflow jobs from racing. A competing
-milestone writer outside the workflow is not covered by this queue; on
-HTTP 422 a second list read returns the winner, if any, or fails closed.
-
-On error the bot creates/updates a single actionable receipt comment and
-leaves the Issue open. Correct the Issue and edit it to retry, or use
-Actions → Create milestone → Run workflow with its Issue number. A retry
-of a completed control Issue is a no-op. Partial-success retries reuse the
-already-created milestone instead of creating a second one.
-
-Use the returned milestone **number** later in GitHub `create_issue`'s
-`milestone` field or attach existing Issues manually. This command does
-not attach issues automatically.
-
-For harmless live acceptance, request a uniquely named test milestone;
-read back its URL/number, control Issue `closed/completed` and one bot
-receipt; issue the same request again and confirm the number is unchanged.
-Never use existing `POST RELEASE 1.1` as a creation canary.
+Live acceptance for `ChipIn-one/chipin-frontend#380`: after human merge, create
+a harmless uniquely named canary with no due date, verify a single bot
+receipt and Issue closure, then request that title again and verify the
+same milestone number. Do not use `POST RELEASE 1.1` as a canary, and
+do not modify older releases, Project memberships or assignments.
