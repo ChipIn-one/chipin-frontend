@@ -1,0 +1,38 @@
+name: Create milestone
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Existing [create-milestone] control Issue number to retry
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+# Serialize requests per target repository; do not evict queued runs.
+concurrency:
+  group: chipin-create-milestone-${{ github.repository }}
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  create:
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.issue.title, '[create-milestone]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.21.0
+          package-manager-cache: false
+      - name: Process repository-local milestone control Issue
+        uses: ChipIn-one/.github/automation/create-milestone-action@b803c45ae65681ea8e2f38af6f71c200a3e8a8f4
+        with:
+          issue-number: ${{ github.event.issue.number || inputs.issue_number }}
+          token: ${{ github.token }}
