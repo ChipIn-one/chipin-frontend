@@ -1,0 +1,51 @@
+name: Frontend PR metadata
+
+on:
+  pull_request:
+    branches: [dev, main]
+    types: [opened, reopened, edited, synchronize, ready_for_review]
+  workflow_run:
+    workflows: [Frontend CI]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Existing FE PR to reconcile
+        required: true
+        type: string
+      head_sha:
+        description: Exact current PR head SHA
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+  checks: read
+
+concurrency:
+  group: pr-metadata-${{ github.repository }}-${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || inputs.pr_number }}
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    if: >-
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.user.login != 'dependabot[bot]') ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'pull_request' &&
+       github.event.workflow_run.head_repository.full_name == github.repository &&
+       github.event.workflow_run.pull_requests[0].number != null)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Reconcile trusted PR metadata without checking out PR code
+        uses: ChipIn-one/.github/automation/pr-metadata-action@be7072aa66ca362d9f208d2625636358d2151ad4
+        with:
+          pull-request-number: ${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || inputs.pr_number }}
+          head-sha: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || inputs.head_sha }}
+          token: ${{ secrets.CHIPIN_PR_METADATA_TOKEN || github.token }}

@@ -2,6 +2,7 @@ import { expect, test } from 'vitest';
 
 import {
     buildCreatePullRequestArgs,
+    buildInitialPullRequestBody,
     extractPullRequestUrl,
     getOpenPullRequestAction,
     validateTaskBranch,
@@ -29,16 +30,19 @@ test('rejects arbitrary branches outside the canonical task format', () => {
     expect(validateTaskBranch('feat/issue-12-extra/path')).toContain('issue-<number>');
 });
 
-test('creates task PR commands with an explicit dev base', () => {
-    expect(buildCreatePullRequestArgs('feat/issue-356-provider-neutral-roles')).toEqual([
-        'pr',
-        'create',
-        '--base',
-        'dev',
-        '--head',
-        'feat/issue-356-provider-neutral-roles',
-        '--fill',
+test('new task PR creation generates explicit canonical identity and body headings', () => {
+    const branch = 'feat/issue-356-provider-neutral-roles';
+    const body = buildInitialPullRequestBody(branch);
+    expect(body).toContain('Task identity: ChipIn-one/chipin-frontend#356');
+    expect((body.match(/Task identity:/gu) || []).length).toBe(1);
+    expect(body).toContain('## Summary');
+    expect(body).toContain('## Tests');
+    expect(body).toContain('## Version impact');
+    expect(body).toContain('## Dependencies');
+    expect(buildCreatePullRequestArgs(branch)).toEqual([
+        'pr', 'create', '--base', 'dev', '--head', branch, '--fill', '--body', body,
     ]);
+    expect(() => buildInitialPullRequestBody('bad')).toThrow('issue-<number>');
 });
 
 test('reuses an existing PR and retargets it when its base is not dev', () => {

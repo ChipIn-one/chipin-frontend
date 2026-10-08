@@ -23,6 +23,20 @@ export const validateTaskBranch = branch => {
     return null;
 };
 
+// New PRs carry native Development identity; existing PRs are never rewritten.
+export const buildInitialPullRequestBody = branch => {
+    const error = validateTaskBranch(branch);
+    if (error) throw new Error(error);
+    const issueNumber = /\/issue-(\d+)-/u.exec(branch)[1];
+    return [
+        'Task identity: ChipIn-one/chipin-frontend#' + issueNumber,
+        '', '## Summary', '<!-- Describe verified change -->',
+        '', '## Tests', '<!-- Exact CI/local evidence and SHA -->',
+        '', '## Version impact', '<!-- none / patch / minor / major -->',
+        '', '## Dependencies', '<!-- none or explicit blockers; avoid closing keywords -->',
+    ].join('\n');
+};
+
 export const buildCreatePullRequestArgs = branch => [
     'pr',
     'create',
@@ -31,6 +45,8 @@ export const buildCreatePullRequestArgs = branch => [
     '--head',
     branch,
     '--fill',
+    '--body',
+    buildInitialPullRequestBody(branch),
 ];
 
 export const getOpenPullRequestAction = pullRequests => {
