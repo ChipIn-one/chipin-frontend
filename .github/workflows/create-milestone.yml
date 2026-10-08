@@ -32,7 +32,7 @@ jobs:
           node-version: 24.21.0
           package-manager-cache: false
       - name: Process repository-local milestone control Issue
-        uses: ChipIn-one/.github/automation/create-milestone-action@84a5d26630ddf938e0974c36e383c5244b50a7ca
+        uses: ChipIn-one/.github/automation/create-milestone-action@1c05c9ed5486acd9afdf3800386ba73422f3c357
         with:
           issue-number: ${{ github.event.issue.number || inputs.issue_number }}
           token: ${{ github.token }}

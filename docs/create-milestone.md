@@ -1,6 +1,7 @@
 # Chat-driven native milestone creation
 
 This repository supports a local `[create-milestone]` Issue control command.
+Product-release milestones are enabled in **FE and BE only**, not in KB.
 The workflow uses the shared policy at
 [ChipIn-one/.github#51](https://github.com/ChipIn-one/.github/issues/51)
 via a SHA-pinned action and **only this repository's** `GITHUB_TOKEN`.
