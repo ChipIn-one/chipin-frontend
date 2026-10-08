@@ -2,6 +2,7 @@ name: Main CI
 
 on:
   pull_request:
+    types: [opened, reopened, synchronize, ready_for_review, edited]
     branches:
       - main
   push:
@@ -38,6 +39,7 @@ jobs:
           HEAD_REF: ${{ github.head_ref }}
           HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
           THIS_REPOSITORY: ${{ github.repository }}
+          PR_BODY: ${{ github.event.pull_request.body || '' }}
         run: node scripts/release-source-policy.mjs
       - name: Resolve verification mode
         id: gate
