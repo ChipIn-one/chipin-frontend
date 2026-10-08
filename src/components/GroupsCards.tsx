@@ -157,7 +157,7 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
                             </TextField.Root>
                         </SearchFieldShell>
                     ) : (
-                        <Text size="3" weight="bold" truncate>
+                        <Text size="4" weight="bold" truncate>
                             {label}
                         </Text>
                     )}
