@@ -44,7 +44,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Reconcile trusted PR metadata without checking out PR code
-        uses: ChipIn-one/.github/automation/pr-metadata-action@2fbde0e05a224aac8d90ff054ef6376ceb57876b
+        uses: ChipIn-one/.github/automation/pr-metadata-action@ed042d9720d982df1478406ce3a9ccf90404111f
         with:
           pull-request-number: ${{ github.event.pull_request.number || github.event.workflow_run.pull_requests[0].number || inputs.pr_number }}
           head-sha: ${{ github.event.pull_request.head.sha || github.event.workflow_run.head_sha || inputs.head_sha }}
