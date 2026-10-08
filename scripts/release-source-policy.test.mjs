@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import { describe, expect, test } from 'vitest';
 
@@ -131,7 +132,7 @@ describe('release source policy', () => {
     });
 
     test.each(['frontend-ci.yml', 'main-ci.yml'])('CI %s validates body on edits', workflow => {
-        const text = readFileSync(new URL(`../.github/workflows/${workflow}`, import.meta.url), 'utf8');
+        const text = readFileSync(resolve('.github/workflows', workflow), 'utf8');
 
         expect(text).toContain('ready_for_review, edited');
         expect(text).toContain("PR_BODY: ${{ github.event.pull_request.body || '' }}");
@@ -142,7 +143,7 @@ describe('release source policy', () => {
         ['Close #376', 1],
         ['Includes #376', 0],
     ])('CLI exit code tracks release description policy: %s', (body, expectedStatus) => {
-        const run = spawnSync(process.execPath, [new URL('./release-source-policy.mjs', import.meta.url).pathname], {
+        const run = spawnSync(process.execPath, [resolve('scripts/release-source-policy.mjs')], {
             env: {
                 ...process.env,
                 BASE_REF: 'main',
@@ -167,7 +168,7 @@ describe('release source policy', () => {
         };
         delete env.PR_BODY;
 
-        const run = spawnSync(process.execPath, [new URL('./release-source-policy.mjs', import.meta.url).pathname], {
+        const run = spawnSync(process.execPath, [resolve('scripts/release-source-policy.mjs')], {
             env,
             encoding: 'utf8',
         });
