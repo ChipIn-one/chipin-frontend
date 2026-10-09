@@ -5,6 +5,7 @@ import {
     extractPullRequestUrl,
     getOpenPullRequestAction,
     validateTaskBranch,
+    validateTaskIdentity,
 } from './create-pr.mjs';
 
 test('accepts canonical vendor-neutral Issue-backed task branches', () => {
@@ -68,4 +69,12 @@ test('rejects pull/new links as PR URLs', () => {
     expect(() => extractPullRequestUrl(
         'https://github.com/ChipIn-one/chipin-frontend/pull/new/feature/not-a-pr-url',
     )).toThrow('existing PR URL');
+});
+
+
+test('requires explicit exact task identity before PR publication', () => {
+    expect(validateTaskIdentity('feat/issue-71-admission', 'ChipIn-one/chipin-frontend#71')).toBeNull();
+    expect(validateTaskIdentity('feat/issue-71-admission', '')).toContain('CHIPIN_TASK_IDENTITY');
+    expect(validateTaskIdentity('feat/issue-71-admission', 'ChipIn-one/chipin-frontend#72')).toContain('CHIPIN_TASK_IDENTITY');
+    expect(validateTaskIdentity('feat/issue-71-admission', 'ChipIn-one/chipin-backend#71')).toContain('CHIPIN_TASK_IDENTITY');
 });
