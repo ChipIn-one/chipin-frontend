@@ -19,8 +19,8 @@ const SettlementForm = ({
         <BaseModal
             isOpened={isOpened}
             setIsOpened={onOpenChange}
-            title={t('settleUp.recordPayment')}
-            accessibleDescription={t('settleUp.noMoneyMoves')}
+            title={t('friends:settleUp.recordPayment')}
+            accessibleDescription={t('friends:settleUp.noMoneyMoves')}
             maxWidth={MODAL_SIZES.default}
             content={
                 <SettlementFormContent
