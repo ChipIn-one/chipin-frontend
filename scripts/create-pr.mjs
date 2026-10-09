@@ -114,8 +114,13 @@ const parsePullRequests = output => {
 };
 
 // Use the immutable shared canonical reader, never a locally reimplemented metadata gate.
-const requireCurrentAdmission = (identity, token) => {
-    const directory = mkdtempSync(join(tmpdir(), 'chipin-issue-admission-'));
+export const requireCurrentAdmission = (identity, token, {
+    run = runCommand,
+    createDirectory = () => mkdtempSync(join(tmpdir(), 'chipin-issue-admission-')),
+    removeDirectory = directory => rmSync(directory, { recursive: true, force: true }),
+    environment = process.env,
+} = {}) => {
+    const directory = createDirectory();
     try {
         for (const args of [
             ['-C', directory, 'init', '-q'],
@@ -123,29 +128,35 @@ const requireCurrentAdmission = (identity, token) => {
             ['-C', directory, 'fetch', '--quiet', '--depth=1', 'origin', CANONICAL_ADMISSION_COMMIT],
             ['-C', directory, 'checkout', '--quiet', '--detach', 'FETCH_HEAD'],
         ]) {
-            const step = runCommand('git', args);
+            const step = run('git', args);
             if (step.status !== 0) throw new Error(`Could not load immutable admission reader: ${getCommandFailure(step)}`);
         }
-        const result = runCommand('node', [
+        const result = run('node', [
             join(directory, 'automation/issue-admission.mjs'),
             '--issue', identity,
             '--config', join(directory, 'automation/metadata-migration.config.json'),
-        ], { ...process.env, GITHUB_TOKEN: token });
+        ], { ...environment, GITHUB_TOKEN: token });
         if (result.status !== 0) throw new Error(`Canonical admission denied: ${getCommandFailure(result)}`);
         const receipt = JSON.parse(result.stdout);
-        if (receipt.status !== 'INTAKE_COMPLETE' || receipt.issue !== identity || !receipt.revision) {
+        if (receipt.contractVersion !== 'chipin-issue-admission/v1' ||
+            receipt.status !== 'INTAKE_COMPLETE' || receipt.issue !== identity ||
+            typeof receipt.revision !== 'string' || !/^[a-f0-9]{64}$/.test(receipt.revision) ||
+            !Number.isFinite(Date.parse(receipt.checkedAt)) ||
+            Date.now() - Date.parse(receipt.checkedAt) > 120_000 ||
+            Date.parse(receipt.checkedAt) > Date.now() || receipt.blockers?.length) {
             throw new Error('Canonical reader did not return exact current INTAKE_COMPLETE revision.');
         }
     } finally {
-        rmSync(directory, { recursive: true, force: true });
+        removeDirectory(directory);
     }
 };
 
-const main = () => {
-    const branchResult = runCommand('git', ['branch', '--show-current']);
+export const main = ({ run = runCommand, admission = requireCurrentAdmission,
+    env = process.env, log = console.log, logError = console.error } = {}) => {
+    const branchResult = run('git', ['branch', '--show-current']);
 
     if (branchResult.status !== 0) {
-        console.error(`PR CREATION BLOCKED: unable to read current branch. ${getCommandFailure(branchResult)}`);
+        logError(`PR CREATION BLOCKED: unable to read current branch. ${getCommandFailure(branchResult)}`);
         return 1;
     }
 
@@ -153,18 +164,18 @@ const main = () => {
     const branchError = validateTaskBranch(branch);
 
     if (branchError) {
-        console.error(`PR CREATION BLOCKED: ${branchError}`);
+        logError(`PR CREATION BLOCKED: ${branchError}`);
         return 1;
     }
 
-    const identity = process.env.CHIPIN_TASK_IDENTITY ?? '';
+    const identity = env.CHIPIN_TASK_IDENTITY ?? '';
     const identityError = validateTaskIdentity(branch, identity);
     if (identityError) {
-        console.error(`PR CREATION BLOCKED: ${identityError}`);
+        logError(`PR CREATION BLOCKED: ${identityError}`);
         return 1;
     }
 
-    const remoteBranchResult = runCommand('git', [
+    const remoteBranchResult = run('git', [
         'ls-remote',
         '--exit-code',
         '--heads',
@@ -173,34 +184,34 @@ const main = () => {
     ]);
 
     if (remoteBranchResult.status !== 0) {
-        console.error(
+        logError(
             `PR CREATION BLOCKED: task branch ${branch} is not available on ${REMOTE_NAME}. `
             + getCommandFailure(remoteBranchResult),
         );
         return 1;
     }
 
-    const authResult = runCommand('gh', ['auth', 'status']);
+    const authResult = run('gh', ['auth', 'status']);
 
     if (authResult.status !== 0) {
-        console.error('PR CREATION BLOCKED: GitHub authentication unavailable');
-        console.error(getCommandFailure(authResult));
+        logError('PR CREATION BLOCKED: GitHub authentication unavailable');
+        logError(getCommandFailure(authResult));
         return 1;
     }
 
-    const tokenResult = runCommand('gh', ['auth', 'token']);
+    const tokenResult = run('gh', ['auth', 'token']);
     if (tokenResult.status !== 0 || !tokenResult.stdout.trim()) {
-        console.error('PR CREATION BLOCKED: cannot obtain GitHub credential for admission.');
+        logError('PR CREATION BLOCKED: cannot obtain GitHub credential for admission.');
         return 1;
     }
     try {
-        requireCurrentAdmission(identity, tokenResult.stdout.trim());
+        admission(identity, tokenResult.stdout.trim());
     } catch (error) {
-        console.error(`PR CREATION BLOCKED: ${error instanceof Error ? error.message : String(error)}`);
+        logError(`PR CREATION BLOCKED: ${error instanceof Error ? error.message : String(error)}`);
         return 1;
     }
 
-    const listResult = runCommand('gh', [
+    const listResult = run('gh', [
         'pr',
         'list',
         '--state',
@@ -212,7 +223,7 @@ const main = () => {
     ]);
 
     if (listResult.status !== 0) {
-        console.error(`PR CREATION FAILED: unable to list open PRs. ${getCommandFailure(listResult)}`);
+        logError(`PR CREATION FAILED: unable to list open PRs. ${getCommandFailure(listResult)}`);
         return 1;
     }
 
@@ -221,7 +232,7 @@ const main = () => {
     try {
         pullRequests = parsePullRequests(listResult.stdout);
     } catch (error) {
-        console.error(`PR CREATION FAILED: ${error instanceof Error ? error.message : String(error)}`);
+        logError(`PR CREATION FAILED: ${error instanceof Error ? error.message : String(error)}`);
         return 1;
     }
 
@@ -230,17 +241,17 @@ const main = () => {
     try {
         action = getOpenPullRequestAction(pullRequests);
     } catch (error) {
-        console.error(`PR CREATION FAILED: ${error instanceof Error ? error.message : String(error)}`);
+        logError(`PR CREATION FAILED: ${error instanceof Error ? error.message : String(error)}`);
         return 1;
     }
 
     if (action.kind === 'existing') {
-        console.log(action.url);
+        log(action.url);
         return 0;
     }
 
     if (action.kind === 'retarget') {
-        const editResult = runCommand('gh', [
+        const editResult = run('gh', [
             'pr',
             'edit',
             String(action.number),
@@ -249,25 +260,25 @@ const main = () => {
         ]);
 
         if (editResult.status !== 0) {
-            console.error(`PR CREATION FAILED: unable to retarget PR ${action.number}. ${getCommandFailure(editResult)}`);
+            logError(`PR CREATION FAILED: unable to retarget PR ${action.number}. ${getCommandFailure(editResult)}`);
             return 1;
         }
 
-        console.log(action.url);
+        log(action.url);
         return 0;
     }
 
-    const createResult = runCommand('gh', buildCreatePullRequestArgs(branch));
+    const createResult = run('gh', buildCreatePullRequestArgs(branch));
 
     if (createResult.status !== 0) {
-        console.error(`PR CREATION FAILED: unable to create PR. ${getCommandFailure(createResult)}`);
+        logError(`PR CREATION FAILED: unable to create PR. ${getCommandFailure(createResult)}`);
         return 1;
     }
 
     try {
-        console.log(extractPullRequestUrl(createResult.stdout));
+        log(extractPullRequestUrl(createResult.stdout));
     } catch (error) {
-        console.error(`PR CREATION FAILED: ${error instanceof Error ? error.message : String(error)}`);
+        logError(`PR CREATION FAILED: ${error instanceof Error ? error.message : String(error)}`);
         return 1;
     }
 
