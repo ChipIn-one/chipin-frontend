@@ -82,6 +82,20 @@ test('frontend admission bypass is restricted to trusted Dependabot dev PRs', ()
     expect(workflow).toContain("github.event_name == 'pull_request' && !(");
 });
 
+
+test('dev-to-main release PRs retain fail-closed per-Issue admission, not a task-only exemption', () => {
+    const main = readFileSync(resolve(process.cwd(), '.github/workflows/main-ci.yml'), 'utf8');
+    const frontend = readFileSync(resolve(process.cwd(), '.github/workflows/frontend-ci.yml'), 'utf8');
+    for (const workflow of [main, frontend]) {
+        expect(workflow).toContain('Included Issues');
+        expect(workflow).toContain('ChipIn-one/.github/automation/issue-admission-action@');
+        expect(workflow).toContain('expected-head-sha: ${{ github.event.pull_request.head.sha }}');
+    }
+    expect(main).toContain("if: github.event_name == 'pull_request'");
+    expect(main).not.toContain("github.base_ref == 'dev' && github.event.pull_request.user.login");
+    expect(frontend).not.toContain("github.base_ref == 'main' &&");
+});
+
 test('requires explicit exact task identity before PR publication', () => {
     expect(validateTaskIdentity('feat/issue-71-admission', 'ChipIn-one/chipin-frontend#71')).toBeNull();
     expect(validateTaskIdentity('feat/issue-71-admission', '')).toContain('CHIPIN_TASK_IDENTITY');
