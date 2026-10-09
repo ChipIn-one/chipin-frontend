@@ -43,6 +43,13 @@ jobs:
           THIS_REPOSITORY: ${{ github.repository }}
           PR_BODY: ${{ github.event.pull_request.body || '' }}
         run: node scripts/release-source-policy.mjs
+      - name: Require canonical Issue admission for PR
+        if: github.event_name == 'pull_request'
+        uses: ChipIn-one/.github/automation/issue-admission-action@ebcca85589741e2e4dd8fccc78a40d62aa767427
+        with:
+          repository: ${{ github.repository }}
+          pull-request-number: ${{ github.event.pull_request.number }}
+          token: ${{ secrets.CHIPIN_DEV_READ_TOKEN }}
       - name: Resolve verification mode
         id: gate
         env:
