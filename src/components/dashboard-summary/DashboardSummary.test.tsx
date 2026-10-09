@@ -170,7 +170,7 @@ test('DSH-012 preserves debt detail when opposing balances net to zero', () => {
     useDashboardStore.setState({
         balances: {
             USD: { currency: 'USD', netBalance: 20 },
-            EUR: { currency: 'EUR', netBalance: -10 },
+            EUR: { currency: 'EUR', netBalance: -40 },
         },
         currencies: {
             base: 'USD',
