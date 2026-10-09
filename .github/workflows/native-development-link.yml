@@ -43,7 +43,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Reconcile native Issue ↔ PR Development relationship
-        uses: ChipIn-one/.github/automation/development-link-action@8d7a423f0cf64508b24dcf3790f1f29639c8a9d0
+        uses: ChipIn-one/.github/automation/development-link-action@bd1d22b544501ea7753d908497a22318e6bff5ed
         with:
           repository: ${{ github.repository }}
           pull-request-number: ${{ github.event.pull_request.number || inputs.pull_request_number }}
