@@ -46,7 +46,7 @@ jobs:
       - name: Require canonical Issue admission for PR
         # Only trusted Dependabot version-update PRs targeting dev are exempt;
         # task-authored PRs always require canonical Issue admission.
-        if: github.event_name == 'pull_request' && !(github.base_ref == 'dev' && github.event.pull_request.user.login == 'dependabot[bot]')
+        if: github.event_name == 'pull_request' && !(github.base_ref == 'dev' && github.event.pull_request.user.login == 'dependabot[bot]' && github.actor == 'dependabot[bot]')
         uses: ChipIn-one/.github/automation/issue-admission-action@15fe78a9700e7beeafab11fd3e51c3ce189e0883
         with:
           repository: ${{ github.repository }}

@@ -76,7 +76,7 @@ test('rejects pull/new links as PR URLs', () => {
 
 test('frontend admission bypass is restricted to trusted Dependabot dev PRs', () => {
     const workflow = readFileSync(resolve(process.cwd(), '.github/workflows/frontend-ci.yml'), 'utf8');
-    expect(workflow).toContain("github.base_ref == 'dev' && github.event.pull_request.user.login == 'dependabot[bot]'");
+    expect(workflow).toContain("github.base_ref == 'dev' && github.event.pull_request.user.login == 'dependabot[bot]' && github.actor == 'dependabot[bot]'");
     expect(workflow).toContain("github.event_name == 'pull_request' && !(");
 });
 
