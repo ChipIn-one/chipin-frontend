@@ -311,3 +311,51 @@ test('uses the selected group debt currency as the initial payment currency', ()
             });
         });
 });
+
+test('keeps the same dialog node while navigating to payment and back', () => {
+    const user = userEvent.setup();
+    render(<SettleUpModal source="group" group={group} />);
+
+    return user
+        .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
+        .then(() => {
+            const dialog = screen.getByRole('dialog');
+
+            return user.click(
+                screen.getByRole('button', { name: /Debtor Person Full.*823/ }),
+            ).then(() => {
+                expect(screen.getByRole('dialog')).toBe(dialog);
+                return user.click(screen.getByRole('button', { name: 'buttons.back' }));
+            }).then(() => {
+                expect(screen.getByRole('dialog')).toBe(dialog);
+                expect(screen.getByText('group:page.settleUp.youOwe')).toBeTruthy();
+                expect(screen.queryByRole('button', { name: 'buttons.back' })).toBeNull();
+            });
+        });
+});
+
+test('keeps the payment step when the selected debt disappears on balance refresh', () => {
+    const user = userEvent.setup();
+    const view = render(<SettleUpModal source="group" group={group} />);
+
+    return user
+        .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
+        .then(() => user.click(
+            screen.getByRole('button', { name: /Debtor Person Full.*823/ }),
+        ))
+        .then(() => {
+            const dialog = screen.getByRole('dialog');
+            const updatedGroup = {
+                ...group,
+                members: group.members.map(member => ({
+                    ...member,
+                    balancesByCurrency: {},
+                })),
+            };
+            view.rerender(<SettleUpModal source="group" group={updatedGroup} />);
+
+            expect(screen.getByRole('dialog')).toBe(dialog);
+            expect(screen.getByRole('heading', { name: 'friends:settleUp.recordPayment' })).toBeTruthy();
+            expect(screen.getByRole('textbox')).toBeTruthy();
+        });
+});
