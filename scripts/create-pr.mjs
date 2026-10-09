@@ -36,19 +36,22 @@ export const validateTaskIdentity = (branch, identity) => {
     return null;
 };
 
-export const buildCreatePullRequestArgs = (branch, identity, commitDescription = '') => [
-    'pr',
-    'create',
-    '--base',
-    INTEGRATION_BRANCH,
-    '--head',
-    branch,
-    '--fill',
-    // Set the identity on initial creation. A later edit can race required CI
-    // and native linking, while --fill alone cannot add this explicit marker.
-    '--body',
-    `Task identity: ${identity}\n\n${commitDescription.trim()}`.trim(),
-];
+export const buildCreatePullRequestArgs = (branch, identity, commitDescription = '') => {
+    const markers = [...commitDescription.matchAll(/^Task identity:\s*(\S+)\s*$/gmu)];
+    if (markers.some(([, value]) => value !== identity)) {
+        throw new Error('Commit description has a conflicting Task identity; refusing PR creation.');
+    }
+    const description = commitDescription.replace(/^Task identity:\s*\S+\s*$/gmu, '').trim();
+    return [
+        'pr', 'create',
+        '--base', INTEGRATION_BRANCH,
+        '--head', branch,
+        '--fill',
+        // --body takes precedence over --fill, so carry forward commit notes.
+        '--body',
+        `Task identity: ${identity}\n\n${description}`.trim(),
+    ];
+};
 
 export const getOpenPullRequestAction = pullRequests => {
     if (pullRequests.length === 0) {
@@ -281,7 +284,14 @@ export const main = ({ run = runCommand, admission = requireCurrentAdmission,
         logError(`PR CREATION BLOCKED: unable to read commit description. ${getCommandFailure(descriptionResult)}`);
         return 1;
     }
-    const createResult = run('gh', buildCreatePullRequestArgs(branch, identity, descriptionResult.stdout));
+    let createArgs;
+    try {
+        createArgs = buildCreatePullRequestArgs(branch, identity, descriptionResult.stdout);
+    } catch (error) {
+        logError(`PR CREATION BLOCKED: ${error instanceof Error ? error.message : String(error)}`);
+        return 1;
+    }
+    const createResult = run('gh', createArgs);
 
     if (createResult.status !== 0) {
         logError(`PR CREATION FAILED: unable to create PR. ${getCommandFailure(createResult)}`);
