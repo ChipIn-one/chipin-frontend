@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
     buildCreatePullRequestArgs,
     extractPullRequestUrl,
@@ -74,7 +75,7 @@ test('rejects pull/new links as PR URLs', () => {
 
 
 test('frontend admission bypass is restricted to trusted Dependabot dev PRs', () => {
-    const workflow = readFileSync(new URL('file://' + process.cwd() + '/.github/workflows/frontend-ci.yml'), 'utf8');
+    const workflow = readFileSync(resolve(process.cwd(), '.github/workflows/frontend-ci.yml'), 'utf8');
     expect(workflow).toContain("github.base_ref == 'dev' && github.event.pull_request.user.login == 'dependabot[bot]'");
     expect(workflow).toContain("github.event_name == 'pull_request' && !(");
 });
