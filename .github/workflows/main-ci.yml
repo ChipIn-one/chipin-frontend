@@ -43,7 +43,7 @@ jobs:
         run: node scripts/release-source-policy.mjs
       - name: Require canonical Issue admission for PR
         if: github.event_name == 'pull_request'
-        uses: ChipIn-one/.github/automation/issue-admission-action@45e7b9abaefce245f2f7af039ff80a4b10fd4971
+        uses: ChipIn-one/.github/automation/issue-admission-action@15fe78a9700e7beeafab11fd3e51c3ce189e0883
         with:
           repository: ${{ github.repository }}
           pull-request-number: ${{ github.event.pull_request.number }}
