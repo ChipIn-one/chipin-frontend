@@ -144,11 +144,11 @@ test('DSH-001 shows approximate marker only when conversion was used', () => {
 
     const amount = converted.container.querySelector('span[dir="ltr"]')?.parentElement;
 
-    expect(amount?.textContent).toBe('~ 12.5 USD');
+    expect(amount?.textContent).toBe('~12.5 USD');
     expect(getComputedStyle(amount as HTMLElement).whiteSpace).toBe('nowrap');
 });
 
-test('DSH-001 keeps approximate markers ahead of tiny converted amounts', () => {
+test('DSH-001 prioritizes the tiny-amount indicator over approximation', () => {
     const converted = renderCard(
         createModel({
             netAmount: 0.004,
@@ -158,7 +158,8 @@ test('DSH-001 keeps approximate markers ahead of tiny converted amounts', () => 
 
     const amount = converted.container.querySelector('span[dir="ltr"]')?.parentElement;
 
-    expect(amount?.textContent).toBe('~ < 0.01 USD');
+    expect(amount?.textContent).toBe('< 0.01 USD');
+    expect(amount?.textContent).not.toContain('~');
     expect(getComputedStyle(amount as HTMLElement).whiteSpace).toBe('nowrap');
 });
 

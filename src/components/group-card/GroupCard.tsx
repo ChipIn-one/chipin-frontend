@@ -138,7 +138,7 @@ const GroupCard = ({ model, isSelected = false }: Props) => {
                                                 customPrefix={
                                                     model.conversionState ===
                                                     GROUP_NET_CONVERSION_STATES.CONVERTED
-                                                        ? '~ '
+                                                        ? '~'
                                                         : undefined
                                                 }
                                                 tokenCode={model.netCurrency}
