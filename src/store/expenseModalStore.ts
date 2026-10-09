@@ -267,7 +267,17 @@ const getDefaultGroupId = (source: ExpenseModalSource): string => {
           )
         : undefined;
 
-    return requestedGroup?.id ?? source.groups[0]?.id ?? '';
+    if (source.context === 'group') {
+        return requestedGroup?.id ?? source.groups[0]?.id ?? '';
+    }
+
+    const usableGroup =
+        (requestedGroup && requestedGroup.members.length >= 2
+            ? requestedGroup
+            : undefined) ??
+        source.groups.find(group => group.members.length >= 2);
+
+    return usableGroup?.id ?? requestedGroup?.id ?? source.groups[0]?.id ?? '';
 };
 
 const getInitializedState = (
@@ -277,8 +287,8 @@ const getInitializedState = (
     const targetMode: ExpenseTargetMode =
         source.context === 'friends' ||
         (source.context === 'dashboard' &&
-            !groupId &&
-            source.knownFriends.length > 0)
+            source.knownFriends.length > 0 &&
+            !source.groups.some(group => group.members.length >= 2))
             ? 'friends'
             : 'group';
     const selectedFriendId = getDefaultFriendId(source);
