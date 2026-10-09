@@ -48,6 +48,17 @@ test('creates task PR commands with an explicit dev base', () => {
     ]);
 });
 
+test('commit notes cannot introduce a second or conflicting Task identity', () => {
+    const branch = 'feat/issue-71-test';
+    const canonical = 'ChipIn-one/chipin-frontend#71';
+    const args = buildCreatePullRequestArgs(branch, canonical,
+        'Task identity: ' + canonical + '\n\nHuman implementation notes');
+    expect(args[args.indexOf('--body') + 1].match(/Task identity:/gu)).toHaveLength(1);
+    expect(args[args.indexOf('--body') + 1]).toContain('Human implementation notes');
+    expect(() => buildCreatePullRequestArgs(branch, canonical,
+        'Task identity: ChipIn-one/chipin-frontend#72')).toThrow('conflicting Task identity');
+});
+
 test('reuses an existing PR and retargets it when its base is not dev', () => {
     expect(getOpenPullRequestAction([{
         number: 42,
