@@ -142,7 +142,24 @@ test('DSH-001 shows approximate marker only when conversion was used', () => {
         }),
     );
 
-    expect(converted.container.textContent).toContain('~');
+    const amount = converted.container.querySelector('span[dir="ltr"]')?.parentElement;
+
+    expect(amount?.textContent).toBe('~ 12.5 USD');
+    expect(getComputedStyle(amount as HTMLElement).whiteSpace).toBe('nowrap');
+});
+
+test('DSH-001 keeps approximate markers ahead of tiny converted amounts', () => {
+    const converted = renderCard(
+        createModel({
+            netAmount: 0.004,
+            conversionState: GROUP_NET_CONVERSION_STATES.CONVERTED,
+        }),
+    );
+
+    const amount = converted.container.querySelector('span[dir="ltr"]')?.parentElement;
+
+    expect(amount?.textContent).toBe('~ < 0.01 USD');
+    expect(getComputedStyle(amount as HTMLElement).whiteSpace).toBe('nowrap');
 });
 
 test('DSH-001 shows N/A when a required rate is unavailable', () => {
@@ -155,6 +172,7 @@ test('DSH-001 shows N/A when a required rate is unavailable', () => {
     );
 
     expect(screen.getByText('groupsCard.unavailable')).toBeTruthy();
+    expect(screen.getByRole('link').textContent).not.toContain('~');
 });
 
 test('DSH-001 announces source direction when conversion is unavailable', () => {

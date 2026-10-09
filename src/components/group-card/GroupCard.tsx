@@ -133,10 +133,14 @@ const GroupCard = ({ model, isSelected = false }: Props) => {
                                         </>
                                     ) : (
                                         <>
-                                            {model.conversionState ===
-                                                GROUP_NET_CONVERSION_STATES.CONVERTED && '~ '}
                                             <Amount
                                                 value={model.netAmount}
+                                                customPrefix={
+                                                    model.conversionState ===
+                                                    GROUP_NET_CONVERSION_STATES.CONVERTED
+                                                        ? '~ '
+                                                        : undefined
+                                                }
                                                 tokenCode={model.netCurrency}
                                                 precision={2}
                                                 type="summary"
