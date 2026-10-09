@@ -24,7 +24,7 @@ const SummaryDebtCards: React.FC<Props> = ({
     owedEntries,
     oweEntries,
     defaultCurrency,
-    showSettledEmptyState = false,
+    showSettledEmptyState = true,
 }) => {
     const hasDebtEntries =
         owedEntries.length > 0 || oweEntries.length > 0;
