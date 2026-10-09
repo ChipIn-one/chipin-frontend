@@ -9,7 +9,7 @@ import { pathToFileURL } from 'node:url';
 const INTEGRATION_BRANCH = 'dev';
 const REMOTE_NAME = 'origin';
 const TASK_BRANCH_PATTERN = /^[a-z][a-z0-9-]*\/issue-\d+-[a-z0-9][a-z0-9-]*$/u;
-const CANONICAL_ADMISSION_COMMIT = '955421108eac8584fa2f6a651159dc5a528b7b00';
+const CANONICAL_ADMISSION_COMMIT = '7793b4c46b1afcfc18e85d48fa4963d671725fbe';
 const CANONICAL_ADMISSION_REMOTE = 'https://github.com/ChipIn-one/.github.git';
 
 export const validateTaskBranch = branch => {
