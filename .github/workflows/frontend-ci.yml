@@ -43,6 +43,8 @@ jobs:
           THIS_REPOSITORY: ${{ github.repository }}
           PR_BODY: ${{ github.event.pull_request.body || '' }}
         run: node scripts/release-source-policy.mjs
+      # For main-target dev->main release PRs the shared reader validates each
+      # exact Included Issues entry, not a single implementation Task identity.
       - name: Require canonical Issue admission for PR
         # Only trusted Dependabot version-update PRs targeting dev are exempt;
         # task-authored PRs always require canonical Issue admission.
