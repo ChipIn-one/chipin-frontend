@@ -15,6 +15,7 @@ import {
     selectFriendsFetched,
     selectGroupDataFetched,
     selectGroupListFetched,
+    selectUserSelfFetched,
 } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 import { selectCanAccessSolo, useUsersStore } from 'store/users-store';
@@ -33,21 +34,24 @@ const useAddExpenseAvailability = (pathname: string) => {
             selectedGroup: state.selectedGroup,
         })),
     );
-    const { friends, canAccessSolo } = useUsersStore(
+    const { friends, canAccessSolo, currentUser } = useUsersStore(
         useShallow(state => ({
             friends: state.friends,
             canAccessSolo: selectCanAccessSolo(state),
+            currentUser: state.user,
         })),
     );
     const {
         isFriendsFetched,
         isGroupDataFetched,
         isGroupListFetched,
+        isUserSelfFetched,
     } = useLoadingStore(
         useShallow(state => ({
             isFriendsFetched: selectFriendsFetched(state),
             isGroupDataFetched: selectGroupDataFetched(state),
             isGroupListFetched: selectGroupListFetched(state),
+            isUserSelfFetched: selectUserSelfFetched(state),
         })),
     );
 
@@ -76,7 +80,11 @@ const useAddExpenseAvailability = (pathname: string) => {
 
     return {
         isSoloMode: canAccessSolo && isSoloModeFromStore,
-        isVisible: isLoggedIn && isTargetAvailable,
+        isVisible:
+            isLoggedIn &&
+            isUserSelfFetched &&
+            currentUser !== null &&
+            isTargetAvailable,
     };
 };
 
