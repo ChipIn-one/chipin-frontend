@@ -10,6 +10,11 @@ vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),
 }));
 
+const OPEN_FLOW = 'Open flow';
+const SELECT_DEBT = 'Select debt';
+const REVIEW_PAYMENT = 'Review payment';
+const EDIT_PAYMENT = 'Edit payment';
+
 const ModalRouterHarness = () => {
     const [isOpened, setIsOpened] = useState(false);
 
@@ -18,14 +23,14 @@ const ModalRouterHarness = () => {
             initialRoute="choose"
             isOpened={isOpened}
             onOpenChange={setIsOpened}
-            triggerElement={<button type="button">Open flow</button>}
+            triggerElement={<button type="button">{OPEN_FLOW}</button>}
             routes={{
                 choose: {
                     title: 'Choose debt',
                     accessibleDescription: 'Pick a debt',
                     render: navigation => (
                         <button type="button" onClick={() => navigation.push('payment')}>
-                            Select debt
+                            {SELECT_DEBT}
                         </button>
                     ),
                 },
@@ -34,7 +39,7 @@ const ModalRouterHarness = () => {
                     accessibleDescription: 'Enter payment',
                     render: navigation => (
                         <button type="button" onClick={() => navigation.push('review')}>
-                            Review payment
+                            {REVIEW_PAYMENT}
                         </button>
                     ),
                 },
@@ -43,7 +48,7 @@ const ModalRouterHarness = () => {
                     accessibleDescription: 'Confirm the payment',
                     render: navigation => (
                         <button type="button" onClick={() => navigation.replace('payment')}>
-                            Edit payment
+                            {EDIT_PAYMENT}
                         </button>
                     ),
                 },

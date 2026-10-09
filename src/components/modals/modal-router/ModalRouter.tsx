@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 
 import { BaseModal, type ModalSize } from '../base-modal';
@@ -53,13 +53,6 @@ const ModalRouter = <RouteId extends string,>({
         }
         onOpenChange(nextIsOpen);
     }, [onOpenChange, onReset]);
-
-    // Reset if a parent dismisses the dialog without invoking this router.
-    useEffect(() => {
-        if (!isOpened) {
-            onReset();
-        }
-    }, [isOpened, onReset]);
 
     const onPush = useCallback((route: RouteId) => {
         setNavigationState(state =>
