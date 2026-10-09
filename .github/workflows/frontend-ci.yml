@@ -43,6 +43,18 @@ jobs:
           THIS_REPOSITORY: ${{ github.repository }}
           PR_BODY: ${{ github.event.pull_request.body || '' }}
         run: node scripts/release-source-policy.mjs
+      # For main-target dev->main release PRs the shared reader validates each
+      # exact Included Issues entry, not a single implementation Task identity.
+      - name: Require canonical Issue admission for PR
+        # Only trusted Dependabot version-update PRs targeting dev are exempt;
+        # task-authored PRs always require canonical Issue admission.
+        if: github.event_name == 'pull_request' && !(github.base_ref == 'dev' && github.event.pull_request.user.login == 'dependabot[bot]' && github.actor == 'dependabot[bot]')
+        uses: ChipIn-one/.github/automation/issue-admission-action@ae17f444753d7630eefc1d55edb51aa0fc96d3dc
+        with:
+          repository: ${{ github.repository }}
+          pull-request-number: ${{ github.event.pull_request.number }}
+          expected-head-sha: ${{ github.event.pull_request.head.sha }}
+          token: ${{ secrets.CHIPIN_DEV_READ_TOKEN }}
       - name: Resolve verification mode
         id: gate
         env:
