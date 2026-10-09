@@ -132,11 +132,11 @@ test('canonical reader admits only exact, fresh versioned positive receipt', () 
 const publicationRunner = calls => (command, args) => {
     calls.push([command, ...args]);
     if (command === 'git' && args[0] === 'branch') {
-        return { status: 0, stdout: 'feat/issue-71-test\\n', stderr: '' };
+        return { status: 0, stdout: 'feat/issue-71-test', stderr: '' };
     }
     if (command === 'git' && args[0] === 'ls-remote') return { status: 0, stdout: 'remote', stderr: '' };
     if (command === 'gh' && args[0] === 'auth' && args[1] === 'status') return { status: 0, stdout: '', stderr: '' };
-    if (command === 'gh' && args[0] === 'auth' && args[1] === 'token') return { status: 0, stdout: 'test-token\\n', stderr: '' };
+    if (command === 'gh' && args[0] === 'auth' && args[1] === 'token') return { status: 0, stdout: 'test-token', stderr: '' };
     if (command === 'gh' && args[0] === 'pr' && args[1] === 'list') return { status: 0, stdout: '[]', stderr: '' };
     if (command === 'gh' && args[0] === 'pr' && args[1] === 'create') {
         return { status: 0, stdout: 'https://github.com/ChipIn-one/chipin-frontend/pull/900', stderr: '' };
