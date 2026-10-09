@@ -6,7 +6,7 @@ import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import type { KnownUser, SelfUser, UserSettings } from 'api/chipin.types';
+import type { Group, KnownUser, SelfUser, UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
@@ -68,6 +68,23 @@ const friend = {
     balances: [],
     lastUsedCurrency: null,
 } satisfies KnownUser;
+
+const soloGroup = {
+    id: 'group-1',
+    name: 'Solo group',
+    inviteToken: 'invite-token',
+    description: null,
+    creator: friend.user,
+    members: [{ user: friend.user, balancesByCurrency: {} }],
+    createdAt: 1,
+    updatedAt: 1,
+    coverUrl: null,
+    simplifyDebts: true,
+    role: 'OWNER',
+    status: 'ACTIVE',
+    lastUsedCurrency: null,
+    recentActivities: { items: [], nextCursor: null },
+} satisfies Group;
 
 const resolveGlobalTargets = () => {
     useLoadingStore
@@ -147,6 +164,26 @@ test('EXP-062 removes the center slot and leaves four navigation items', () => {
     expect(
         screen.queryByRole('button', { name: 'Add expense' }),
     ).toBeNull();
+    expect(screen.getAllByRole('link')).toHaveLength(4);
+});
+
+test('EXP-062 keeps four mobile items with only a one-member group', () => {
+    resolveGlobalTargets();
+    useUsersStore.setState({ user: currentUser });
+    useGroupsStore.setState({ groups: [soloGroup] });
+    useLoadingStore.getState().setLoading('users', 'self', 'fetched');
+
+    render(
+        <MemoryRouter initialEntries={['/dashboard']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <MobileNavBar />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
     expect(screen.getAllByRole('link')).toHaveLength(4);
 });
 

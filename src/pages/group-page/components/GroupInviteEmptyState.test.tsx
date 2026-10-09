@@ -81,7 +81,7 @@ test('shares from the primary invite button when native share is supported', () 
     );
 
     return user
-        .click(screen.getByRole('button', { name: 'page.expenses.inviteAction' }))
+        .click(screen.getByRole('button', { name: 'page.membersTab.invitePeople' }))
         .then(() => {
             expect(mocks.onShare).toHaveBeenCalledOnce();
             expect(mocks.onCopyLink).not.toHaveBeenCalled();
@@ -99,7 +99,7 @@ test('copies the invite link from the primary button when native share is unavai
     );
 
     return user
-        .click(screen.getByRole('button', { name: 'page.expenses.inviteAction' }))
+        .click(screen.getByRole('button', { name: 'page.membersTab.invitePeople' }))
         .then(() => {
             expect(mocks.onCopyLink).toHaveBeenCalledOnce();
             expect(mocks.onShare).not.toHaveBeenCalled();

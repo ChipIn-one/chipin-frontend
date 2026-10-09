@@ -47,24 +47,16 @@
         "inDevelopment": "Aún está en desarrollo."
     },
     "onboarding": {
-        "newUser": {
+        "welcome": {
             "title": "Crea tu primer grupo o añade amigos",
             "description": "Lleva un saldo directo con un amigo o un saldo compartido independiente dentro de cada grupo. Cuando tengas un amigo o un grupo, podrás empezar a añadir gastos."
-        },
-        "friendReady": {
-            "title": "Ya puedes añadir un gasto",
-            "description": "Ya puedes llevar un saldo directo con un amigo. Crea un grupo cuando quieras un saldo compartido independiente para un viaje, la casa u otro plan."
-        },
-        "groupReady": {
-            "title": "Tu grupo está listo",
-            "description": "Ya puedes empezar a añadir gastos en tu grupo. Invita a un amigo para llevar también un saldo directo independiente fuera de los grupos."
-        },
-        "fullyReady": {
-            "title": "Ya puedes dividir gastos",
-            "description": "Añade un gasto con un amigo o en uno de tus grupos. Los saldos directos con amigos y los saldos de grupos se mantienen separados."
         },
         "actions": {
             "inviteFriend": "Invitar a un amigo"
         }
+    },
+    "errors": {
+        "loadTitle": "No se pudo cargar el panel",
+        "loadDescription": "No pudimos cargar tus datos. Inténtalo de nuevo."
     }
 }

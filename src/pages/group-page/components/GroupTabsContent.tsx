@@ -46,8 +46,7 @@ const GroupTabsContent = ({
     );
     const members = group.members.map(member => member.user);
     const isSingleMemberGroup = group.members.length === 1;
-    const shouldShowInviteOnboarding =
-        isSingleMemberGroup && group.lastUsedCurrency === null;
+    const shouldShowInviteOnboarding = isSingleMemberGroup;
     const hasMoreActivity = group.recentActivities.nextCursor !== null;
     const isEndOfFeed =
         !isGroupActivityNextPageLoading &&

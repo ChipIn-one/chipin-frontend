@@ -11,7 +11,6 @@ import { DashboardOnboarding } from './DashboardOnboarding';
 
 const connectorMocks = vi.hoisted(() => ({
     inviteToken: 'friend-token',
-    openExpenseModal: vi.fn(),
 }));
 
 const inviteMocks = vi.hoisted(() => ({
@@ -57,18 +56,14 @@ vi.mock('./internal/useConnect', () => ({
     useConnect: () => connectorMocks,
 }));
 
-const renderOnboarding = (props: {
-    hasFriendTarget: boolean;
-    hasGroupTarget: boolean;
-}) => {
-    return render(
+const renderOnboarding = () =>
+    render(
         <ThemeProvider theme={lightThemeStyled}>
             <Theme>
-                <DashboardOnboarding {...props} />
+                <DashboardOnboarding />
             </Theme>
         </ThemeProvider>,
     );
-};
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -76,82 +71,19 @@ beforeEach(() => {
     inviteMocks.isNativeShareSupported = false;
 });
 
-test.each([
-    {
-        variant: 'newUser',
-        props: {
-            hasFriendTarget: false,
-            hasGroupTarget: false,
-        },
-        actions: [
-            'common:buttons.createGroup',
-            'onboarding.actions.inviteFriend',
-        ],
-    },
-    {
-        variant: 'friendReady',
-        props: {
-            hasFriendTarget: true,
-            hasGroupTarget: false,
-        },
-        actions: [
-            'common:buttons.addExpense',
-            'common:buttons.createGroup',
-        ],
-    },
-    {
-        variant: 'groupReady',
-        props: {
-            hasFriendTarget: false,
-            hasGroupTarget: true,
-        },
-        actions: [
-            'common:buttons.addExpense',
-            'onboarding.actions.inviteFriend',
-        ],
-    },
-    {
-        variant: 'fullyReady',
-        props: {
-            hasFriendTarget: true,
-            hasGroupTarget: true,
-        },
-        actions: ['common:buttons.addExpense'],
-    },
-])(
-    'DSH-008/DSH-009 renders the $variant action matrix',
-    ({ variant, props, actions }) => {
-        renderOnboarding(props);
-
-        expect(
-            screen.getByRole('heading', {
-                name: `onboarding.${variant}.title`,
-            }),
-        ).toBeTruthy();
-        expect(
-            screen.getByTestId('onboarding-illustration'),
-        ).toBeTruthy();
-        expect(screen.getAllByRole('button')).toHaveLength(
-            actions.length,
-        );
-
-        actions.forEach(action => {
-            expect(
-                screen.getByRole('button', {
-                    name: action,
-                }),
-            ).toBeTruthy();
-        });
-    },
-);
+test('DSH-008 shows the single welcome with two actions', () => {
+    renderOnboarding();
+    expect(screen.getByRole('heading', { name: 'onboarding.welcome.title' })).toBeTruthy();
+    expect(screen.getByTestId('onboarding-illustration')).toBeTruthy();
+    expect(screen.getAllByRole('button')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'common:buttons.createGroup' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'onboarding.actions.inviteFriend' })).toBeTruthy();
+});
 
 test('DSH-008 uses copy-link fallback when native share is unavailable', async () => {
     const interaction = userEvent.setup();
 
-    renderOnboarding({
-        hasFriendTarget: false,
-        hasGroupTarget: false,
-    });
+    renderOnboarding();
 
     await interaction.click(
         screen.getByRole('button', {
@@ -167,10 +99,7 @@ test('DSH-008 uses native share when it is available', async () => {
     const interaction = userEvent.setup();
     inviteMocks.isNativeShareSupported = true;
 
-    renderOnboarding({
-        hasFriendTarget: false,
-        hasGroupTarget: true,
-    });
+    renderOnboarding();
 
     await interaction.click(
         screen.getByRole('button', {
@@ -182,21 +111,3 @@ test('DSH-008 uses native share when it is available', async () => {
     expect(inviteMocks.onCopyLink).not.toHaveBeenCalled();
 });
 
-test('DSH-009 opens Add Expense from a group-ready onboarding state', async () => {
-    const interaction = userEvent.setup();
-
-    renderOnboarding({
-        hasFriendTarget: false,
-        hasGroupTarget: true,
-    });
-
-    await interaction.click(
-        screen.getByRole('button', {
-            name: 'common:buttons.addExpense',
-        }),
-    );
-
-    expect(
-        connectorMocks.openExpenseModal,
-    ).toHaveBeenCalledOnce();
-});

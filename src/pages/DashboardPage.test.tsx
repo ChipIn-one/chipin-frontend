@@ -2,7 +2,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 
 import { render, screen, within } from '@testing-library/react';
 
-import type { ActivityFeedItem, Group } from 'api/chipin.types';
+import type { ActivityFeedItem, Group, SelfUser } from 'api/chipin.types';
 import { useDashboardStore } from 'store/dashboardStore';
 import { useErrorsStore } from 'store/errorsStore';
 import { useGroupsStore } from 'store/groupsStore';
@@ -32,20 +32,7 @@ vi.mock('hooks/useInfiniteScroll', () => ({
 }));
 
 vi.mock('components/dashboard-onboarding', () => ({
-    DashboardOnboarding: (props: {
-        hasFriendTarget: boolean;
-        hasGroupTarget: boolean;
-    }) => (
-        <div
-            data-testid="dashboard-onboarding"
-            data-has-friend-target={String(
-                props.hasFriendTarget,
-            )}
-            data-has-group-target={String(
-                props.hasGroupTarget,
-            )}
-        />
-    ),
+    DashboardOnboarding: () => <div data-testid="dashboard-onboarding" />,
 }));
 
 vi.mock('components/dashboard-summary', () => ({
@@ -122,6 +109,30 @@ const creator = {
     updatedAt: 1,
 };
 
+const currentUser = {
+    id: creator.id,
+    email: creator.email,
+    displayName: creator.displayName,
+    picture: creator.picture,
+    role: 'USER',
+    subscriptionUntil: null,
+    inviteToken: 'self-invite',
+    settings: {
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        timeFormat: '24h',
+        language: 'en',
+        theme: 'system',
+        simplifyDebts: true,
+        skipCategory: false,
+        soloModeByDefault: false,
+        saveGroupExpensesToSolo: false,
+        sex: 'male',
+    },
+    createdAt: 1,
+    updatedAt: 1,
+} satisfies SelfUser;
+
 const singleMemberGroup = {
     id: 'group-1',
     name: 'Group',
@@ -175,102 +186,79 @@ beforeEach(() => {
     vi.clearAllMocks();
     useDashboardStore.getState().setInitialDashboardStore();
     useGroupsStore.getState().setInitialGroupsStore();
-    useUsersStore.setState({ friends: [] });
+    useUsersStore.setState({ user: currentUser, friends: [] });
     useLoadingStore.getState().setInitialLoadingStore();
     useErrorsStore.getState().resetErrors();
 });
 
-test('DSH-007 renders onboarding in the main Dashboard column', () => {
+test('DSH-007 renders welcome only for no friends and no groups', () => {
     resolveDashboardOnboardingData();
-
     render(<DashboardPage />);
 
     const main = screen.getByTestId('dashboard-main');
-    const onboarding = within(main).getByTestId(
-        'dashboard-onboarding',
-    );
-
-    expect(onboarding.dataset.hasFriendTarget).toBe(
-        'false',
-    );
-    expect(onboarding.dataset.hasGroupTarget).toBe(
-        'false',
-    );
-    expect(
-        within(main).queryByTestId('activity-list'),
-    ).toBeNull();
+    expect(within(main).getByTestId('dashboard-onboarding')).toBeTruthy();
+    expect(within(main).queryByTestId('activity-list')).toBeNull();
 });
 
-test('DSH-009 treats an existing one-member group as group-ready', () => {
+test('DSH-009 renders normal Dashboard for a one-member group with empty activity', () => {
     resolveDashboardOnboardingData();
-    useGroupsStore.setState({
-        groups: [singleMemberGroup],
+    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    render(<DashboardPage />);
+
+    const main = screen.getByTestId('dashboard-main');
+    const sidePanel = screen.getByTestId('dashboard-side-panel');
+    expect(within(main).queryByTestId('dashboard-onboarding')).toBeNull();
+    expect(within(main).getByTestId('activity-list')).toBeTruthy();
+    expect(within(sidePanel).getByTestId('groups-cards').dataset.count).toBe('1');
+});
+
+test('DSH-009 renders normal Dashboard for a connected friend with no activity', () => {
+    resolveDashboardOnboardingData();
+    useUsersStore.setState({ friends: [{ user: creator, balances: [], lastUsedCurrency: null }] });
+    render(<DashboardPage />);
+
+    expect(screen.queryByTestId('dashboard-onboarding')).toBeNull();
+    expect(screen.getByTestId('activity-list')).toBeTruthy();
+});
+
+test('DSH-010 keeps normal Dashboard with a connection and activity', () => {
+    resolveDashboardOnboardingData();
+    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    useDashboardStore.setState({ activityItems: [activityItem] });
+    render(<DashboardPage />);
+
+    expect(screen.queryByTestId('dashboard-onboarding')).toBeNull();
+    expect(screen.getByTestId('activity-list')).toBeTruthy();
+});
+
+test('DSH-007 never mistakes a load failure for new-user welcome', () => {
+    resolveDashboardOnboardingData();
+    useErrorsStore.getState().setError('users', 'friends', {
+        message: 'Friends unavailable',
     });
-
     render(<DashboardPage />);
 
-    const main = screen.getByTestId('dashboard-main');
-    const sidePanel = screen.getByTestId(
-        'dashboard-side-panel',
-    );
-    const onboarding = within(main).getByTestId(
-        'dashboard-onboarding',
-    );
-
-    expect(onboarding.dataset.hasGroupTarget).toBe(
-        'true',
-    );
-    expect(
-        within(sidePanel).getByTestId('groups-cards')
-            .dataset.count,
-    ).toBe('1');
-    expect(
-        within(main).queryByTestId('groups-cards'),
-    ).toBeNull();
+    expect(screen.queryByTestId('dashboard-onboarding')).toBeNull();
+    expect(screen.queryByTestId('activity-list')).toBeNull();
+    expect(screen.getByText('errors.loadTitle')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'activity:retryAction' })).toBeTruthy();
 });
 
-test('DSH-010 renders the regular Dashboard once activity exists', () => {
+test('DSH-007 requires a successfully resolved user before welcome', () => {
     resolveDashboardOnboardingData();
-    useDashboardStore.setState({
-        activityItems: [activityItem],
-    });
-
+    useUsersStore.setState({ user: null });
     render(<DashboardPage />);
 
-    const main = screen.getByTestId('dashboard-main');
-
-    expect(
-        within(main).queryByTestId(
-            'dashboard-onboarding',
-        ),
-    ).toBeNull();
-    expect(
-        within(main).getByTestId('activity-list'),
-    ).toBeTruthy();
+    expect(screen.queryByTestId('dashboard-onboarding')).toBeNull();
+    expect(screen.getByText('errors.loadTitle')).toBeTruthy();
 });
 
-test('DSH-007 does not turn a target-load failure into onboarding', () => {
+test('DSH-007 derives welcome from connections, not group lifecycle activity', () => {
     resolveDashboardOnboardingData();
-    useErrorsStore.getState().setError(
-        'users',
-        'friends',
-        {
-            message: 'Friends unavailable',
-        },
-    );
-
+    useDashboardStore.setState({ activityItems: [activityItem] });
     render(<DashboardPage />);
 
-    const main = screen.getByTestId('dashboard-main');
-
-    expect(
-        within(main).queryByTestId(
-            'dashboard-onboarding',
-        ),
-    ).toBeNull();
-    expect(
-        within(main).getByTestId('activity-list'),
-    ).toBeTruthy();
+    expect(screen.getByTestId('dashboard-onboarding')).toBeTruthy();
 });
 
 test('DSH-007 ignores currency-rate failure when onboarding data is resolved', () => {
@@ -290,7 +278,7 @@ test('DSH-007 ignores currency-rate failure when onboarding data is resolved', (
     ).toBeTruthy();
 });
 
-test('DSH-007 keeps loading instead of flashing No activity while onboarding inputs resolve', () => {
+test('DSH-007 keeps loading while connection inputs resolve', () => {
     useLoadingStore
         .getState()
         .setLoading('dashboard', 'data', 'fetched');
@@ -315,6 +303,7 @@ test('DSH-007 keeps loading instead of flashing No activity while onboarding inp
 });
 
 test('ACT-023 connects dashboard infinite scroll to the next activity preview page', () => {
+    useGroupsStore.setState({ groups: [singleMemberGroup] });
     const fetchMoreDashboardActivity = vi.fn(() =>
         Promise.resolve(),
     );

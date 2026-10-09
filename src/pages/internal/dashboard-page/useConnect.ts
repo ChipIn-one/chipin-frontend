@@ -1,7 +1,6 @@
 import { useShallow } from 'zustand/react/shallow';
 
 import { getActivityPreviewEvents } from 'helpers/activityEvent';
-import { hasGroupExpenseTarget } from 'helpers/expenseTargets';
 import { useDashboardStore } from 'store/dashboardStore';
 import { useErrorsStore } from 'store/errorsStore';
 import { useGroupsStore } from 'store/groupsStore';
@@ -29,7 +28,9 @@ const useConnect = () => {
         })),
     );
     const groups = useGroupsStore(state => state.groups);
-    const friends = useUsersStore(state => state.friends);
+    const { friends, currentUser } = useUsersStore(
+        useShallow(state => ({ friends: state.friends, currentUser: state.user })),
+    );
     const {
         isDashboardFetched,
         isDashboardLoading,
@@ -65,28 +66,43 @@ const useConnect = () => {
 
     const activityEvents = getActivityPreviewEvents(activityItems);
     const hasGroups = groups.length > 0;
-    const hasFriendTarget = friends.length > 0;
-    const hasGroupTarget = hasGroupExpenseTarget(groups);
+    const hasConnections = hasGroups || friends.length > 0;
+    const hasGroupExpenseHistory = groups.some(group => group.lastUsedCurrency !== null);
     const hasMoreActivity = activityNextCursor !== null;
     const isOnboardingDataSettled =
         isDashboardFetched &&
         isGroupListFetched &&
         isFriendsFetched &&
         isUserSelfFetched;
-    const isOnboardingDataResolved =
-        isOnboardingDataSettled &&
-        dashboardError === null &&
-        groupListError === null &&
-        friendsError === null &&
-        userSelfError === null;
+    const hasOnboardingDataError =
+        dashboardError !== null ||
+        groupListError !== null ||
+        friendsError !== null ||
+        userSelfError !== null ||
+        currentUser === null;
+    const dashboardView = !isOnboardingDataSettled
+        ? 'loading'
+        : hasOnboardingDataError
+            ? 'error'
+            : hasConnections
+                ? 'dashboard'
+                : 'welcome';
+    const onRetryLoad = () => {
+        Promise.all([
+            useDashboardStore.getState().fetchSetDashboard(true),
+            useGroupsStore.getState().fetchSetGroups(true),
+            useUsersStore.getState().fetchSetFriends(true),
+            useUsersStore.getState().fetchSetUser(true),
+        ]).catch(() => undefined);
+    };
 
     return {
         activityEvents,
         fetchMoreDashboardActivity,
         groups,
-        hasFriendTarget,
-        hasGroupTarget,
+        dashboardView,
         hasGroups,
+        hasGroupExpenseHistory,
         hasMoreActivity,
         isDashboardFetched,
         isDashboardLoading,
@@ -97,12 +113,7 @@ const useConnect = () => {
         isGroupListFetched,
         isNextPageError: nextPageError !== null,
         isNextPageLoading,
-        isOnboardingStatePending:
-            activityItems.length === 0 &&
-            !isOnboardingDataSettled,
-        isOnboardingVisible:
-            isOnboardingDataResolved &&
-            activityItems.length === 0,
+        onRetryLoad,
     };
 };
 

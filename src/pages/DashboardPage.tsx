@@ -10,7 +10,7 @@ import { Box, Button, Container, Flex, Spinner, Text } from '@radix-ui/themes';
 
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 
-import { NoGroupsEmptyState } from 'basics/empty-states';
+import { EmptyState, NoGroupsEmptyState } from 'basics/empty-states';
 import { DashboardOnboarding } from 'components/dashboard-onboarding';
 import {
     DashboardHeader as DashboardGreeting,
@@ -30,9 +30,9 @@ const DashboardPage = () => {
         activityEvents,
         fetchMoreDashboardActivity,
         groups,
-        hasFriendTarget,
-        hasGroupTarget,
+        dashboardView,
         hasGroups,
+        hasGroupExpenseHistory,
         hasMoreActivity,
         isDashboardFetched,
         isDashboardLoading,
@@ -40,8 +40,7 @@ const DashboardPage = () => {
         isGroupListFetched,
         isNextPageError,
         isNextPageLoading,
-        isOnboardingStatePending,
-        isOnboardingVisible,
+        onRetryLoad,
     } = useConnect();
 
     const onLoadMore = useCallback(() => {
@@ -58,7 +57,7 @@ const DashboardPage = () => {
         onLoadMore();
     };
 
-    const sidePanel = (
+    const sidePanel = dashboardView === 'error' ? null : (
         <Flex direction="column" gap="4">
             <Box display={{ initial: 'block', lg: 'none' }}>
                 <DashboardGreeting />
@@ -67,7 +66,7 @@ const DashboardPage = () => {
             <Box display={{ initial: 'block' }}>
                 <DashBoardSummary
                     isLoading={isDashboardLoading}
-                    hasGroups={hasGroups}
+                    hasGroups={hasGroupExpenseHistory}
                 />
             </Box>
 
@@ -82,8 +81,7 @@ const DashboardPage = () => {
                 ) : (
                     <NoGroupsEmptyState
                         action={
-                            isOnboardingVisible ||
-                            isOnboardingStatePending ? undefined : (
+                            dashboardView !== 'dashboard' ? undefined : (
                                 <CreateUpdateGroupModal type="create">
                                     <Button
                                         size="2"
@@ -106,15 +104,22 @@ const DashboardPage = () => {
     return (
         <Container size="4" pb={{ initial: '9', sm: '6' }}>
             <InternalPageColumnsFromSm sidePanel={sidePanel}>
-                {isOnboardingVisible ? (
-                    <DashboardOnboarding
-                        hasFriendTarget={hasFriendTarget}
-                        hasGroupTarget={hasGroupTarget}
-                    />
-                ) : !isDashboardFetched ||
-                  isDashboardLoading ||
-                  isOnboardingStatePending ? (
+                {dashboardView === 'welcome' ? (
+                    <DashboardOnboarding />
+                ) : dashboardView === 'loading' ? (
                     <ActivityFeedSkeleton isShowSummary />
+                ) : dashboardView === 'error' ? (
+                    <EmptyState
+                        icon={<LucideRefreshCw size={20} />}
+                        title={t('errors.loadTitle')}
+                        description={t('errors.loadDescription')}
+                        action={
+                            <Button type="button" variant="soft" onClick={onRetryLoad}>
+                                <LucideRefreshCw size={14} />
+                                {t('activity:retryAction')}
+                            </Button>
+                        }
+                    />
                 ) : (
                     <ActivityEventsList
                         events={activityEvents}

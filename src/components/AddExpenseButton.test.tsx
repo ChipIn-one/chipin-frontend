@@ -212,15 +212,13 @@ test.each([
     ROUTES.DASHBOARD,
     ROUTES.ACTIVITY,
     ROUTES.SETTINGS,
-])('EXP-060 uses a one-member group as a global target on %s', route => {
+])('EXP-060 excludes a one-member group from global targets on %s', route => {
     resolveGlobalTargets();
     useGroupsStore.setState({ groups: [singleMemberGroup] });
 
     renderButton(route);
 
-    expect(
-        screen.getByRole('button', { name: 'Add expense' }),
-    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
 });
 
 test('EXP-060 hides the global action when resolved targets are empty', () => {
@@ -233,9 +231,9 @@ test('EXP-060 hides the global action when resolved targets are empty', () => {
     ).toBeNull();
 });
 
-test('EXP-060 counts a single-member group as an Add Expense target', () => {
+test('EXP-060 shows Add Expense for a two-member group', () => {
     resolveGlobalTargets();
-    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    useGroupsStore.setState({ groups: [readyGroup] });
 
     renderButton(ROUTES.DASHBOARD);
 
@@ -268,7 +266,7 @@ test('EXP-060 Friends shows Add Expense when a friend is resolved', () => {
     ).toBeTruthy();
 });
 
-test('EXP-060 Group shows Add Expense with one member', () => {
+test('EXP-060 Group hides Add Expense with one member', () => {
     useGroupsStore.setState({ groups: [singleMemberGroup] });
     useLoadingStore
         .getState()
@@ -276,9 +274,7 @@ test('EXP-060 Group shows Add Expense with one member', () => {
 
     renderButton(`${ROUTES.GROUP}/group-1`);
 
-    expect(
-        screen.getByRole('button', { name: 'Add expense' }),
-    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
 });
 
 test('EXP-060 Group shows Add Expense with enough members', () => {
@@ -321,4 +317,24 @@ test('opens Add Expense when a valid target exists', () => {
     );
 
     expect(useExpenseModalStore.getState().isOpened).toBe(true);
+});
+
+test('EXP-060 keeps global Add Expense for a friend even if a one-member group exists', () => {
+    resolveGlobalTargets();
+    useUsersStore.setState({ friends: [friend] });
+    useGroupsStore.setState({ groups: [singleMemberGroup] });
+
+    renderButton(ROUTES.DASHBOARD);
+
+    expect(screen.getByRole('button', { name: 'Add expense' })).toBeTruthy();
+});
+
+test('EXP-060 excludes a one-member group on its own route even with a direct friend', () => {
+    resolveGlobalTargets();
+    useUsersStore.setState({ friends: [friend] });
+    useGroupsStore.setState({ groups: [singleMemberGroup] });
+
+    renderButton(`${ROUTES.GROUP}/group-1`);
+
+    expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
 });

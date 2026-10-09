@@ -1,6 +1,4 @@
-import type { ReactNode } from 'react';
 import {
-    LucideCirclePlus,
     LucideUserPlus,
     LucideUsersRound,
 } from 'lucide-react';
@@ -16,17 +14,6 @@ import { CreateUpdateGroupModal } from 'components/modals/create-update-group-mo
 
 import { useConnect } from './internal/useConnect';
 
-type OnboardingVariant =
-    | 'newUser'
-    | 'friendReady'
-    | 'groupReady'
-    | 'fullyReady';
-
-interface Props {
-    hasFriendTarget: boolean;
-    hasGroupTarget: boolean;
-}
-
 const ActionButton = styled(Button)`
     height: auto;
     min-height: var(--space-7);
@@ -41,110 +28,20 @@ const OnboardingIllustration = styled.img`
     object-fit: contain;
 `;
 
-const getVariant = ({
-    hasFriendTarget,
-    hasGroupTarget,
-}: Props): OnboardingVariant => {
-    if (hasFriendTarget && hasGroupTarget) {
-        return 'fullyReady';
-    }
-
-    if (hasFriendTarget) {
-        return 'friendReady';
-    }
-
-    if (hasGroupTarget) {
-        return 'groupReady';
-    }
-
-    return 'newUser';
-};
-
-const DashboardOnboarding = (props: Props) => {
+const DashboardOnboarding = () => {
     const { t } = useTranslation(['dashboard', 'common']);
-    const { inviteToken, openExpenseModal } = useConnect();
+    const { inviteToken } = useConnect();
     const invite = useFriendInvite(inviteToken ?? '');
-    const variant = getVariant(props);
 
     const onInviteFriend = (): Promise<void> => {
         if (!inviteToken) {
             return Promise.resolve();
         }
 
-        if (invite.isNativeShareSupported) {
-            return invite.onShare();
-        }
-
-        return invite.onCopyLink();
+        return invite.isNativeShareSupported
+            ? invite.onShare()
+            : invite.onCopyLink();
     };
-    const onClickAddExpense = () => {
-        openExpenseModal();
-    };
-
-    const createGroupAction = (
-        <CreateUpdateGroupModal type="create">
-            <ActionButton type="button" size="3" variant="soft">
-                <LucideUsersRound size={18} />
-                {t('common:buttons.createGroup')}
-            </ActionButton>
-        </CreateUpdateGroupModal>
-    );
-
-    const inviteFriendAction = (
-        <ActionButton
-            type="button"
-            size="3"
-            variant="soft"
-            disabled={!inviteToken}
-            onClick={onInviteFriend}
-        >
-            <LucideUserPlus size={18} />
-            {t('onboarding.actions.inviteFriend')}
-        </ActionButton>
-    );
-
-    const addExpenseAction = (
-        <ActionButton
-            type="button"
-            size="3"
-            onClick={onClickAddExpense}
-        >
-            <LucideCirclePlus size={18} />
-            {t('common:buttons.addExpense')}
-        </ActionButton>
-    );
-
-    let actions: ReactNode;
-
-    if (variant === 'fullyReady') {
-        actions = addExpenseAction;
-    } else if (variant === 'friendReady') {
-        actions = (
-            <>
-                {addExpenseAction}
-                {createGroupAction}
-            </>
-        );
-    } else if (variant === 'groupReady') {
-        actions = (
-            <>
-                {addExpenseAction}
-                {inviteFriendAction}
-            </>
-        );
-    } else {
-        actions = (
-            <>
-                <CreateUpdateGroupModal type="create">
-                    <ActionButton type="button" size="3">
-                        <LucideUsersRound size={18} />
-                        {t('common:buttons.createGroup')}
-                    </ActionButton>
-                </CreateUpdateGroupModal>
-                {inviteFriendAction}
-            </>
-        );
-    }
 
     return (
         <Flex
@@ -184,7 +81,7 @@ const DashboardOnboarding = (props: Props) => {
                         size={{ initial: '6', sm: '7' }}
                         align={{ initial: 'center', md: 'left' }}
                     >
-                        {t(`onboarding.${variant}.title`)}
+                        {t('onboarding.welcome.title')}
                     </Heading>
                     <Text
                         as="p"
@@ -192,7 +89,7 @@ const DashboardOnboarding = (props: Props) => {
                         color="gray"
                         align={{ initial: 'center', md: 'left' }}
                     >
-                        {t(`onboarding.${variant}.description`)}
+                        {t('onboarding.welcome.description')}
                     </Text>
                 </Flex>
 
@@ -202,7 +99,22 @@ const DashboardOnboarding = (props: Props) => {
                     gap="3"
                     width={{ initial: '100%', sm: 'auto' }}
                 >
-                    {actions}
+                    <CreateUpdateGroupModal type="create">
+                        <ActionButton type="button" size="3">
+                            <LucideUsersRound size={18} />
+                            {t('common:buttons.createGroup')}
+                        </ActionButton>
+                    </CreateUpdateGroupModal>
+                    <ActionButton
+                        type="button"
+                        size="3"
+                        variant="soft"
+                        disabled={!inviteToken}
+                        onClick={onInviteFriend}
+                    >
+                        <LucideUserPlus size={18} />
+                        {t('onboarding.actions.inviteFriend')}
+                    </ActionButton>
                 </Flex>
             </Flex>
         </Flex>

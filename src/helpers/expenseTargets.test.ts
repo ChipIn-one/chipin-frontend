@@ -38,13 +38,15 @@ const group = {
     },
 } satisfies Group;
 
-test('EXP-060 treats a resolved one-member group as an Add Expense target', () => {
-    expect(isGroupExpenseTarget(group)).toBe(true);
+test('EXP-060 excludes a one-member group from expense targets', () => {
+    expect(isGroupExpenseTarget(group)).toBe(false);
+    expect(isGroupExpenseTarget({ ...group, members: [...group.members, group.members[0]] })).toBe(true);
     expect(isGroupExpenseTarget(null)).toBe(false);
     expect(isGroupExpenseTarget(undefined)).toBe(false);
 });
 
-test('EXP-060 requires at least one resolved group for the global group target', () => {
+test('EXP-060 requires a group with two members for the global group target', () => {
     expect(hasGroupExpenseTarget([])).toBe(false);
-    expect(hasGroupExpenseTarget([group])).toBe(true);
+    expect(hasGroupExpenseTarget([group])).toBe(false);
+    expect(hasGroupExpenseTarget([{ ...group, members: [...group.members, group.members[0]] }])).toBe(true);
 });

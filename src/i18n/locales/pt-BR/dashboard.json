@@ -47,24 +47,16 @@
         "inDevelopment": "Ainda está em desenvolvimento."
     },
     "onboarding": {
-        "newUser": {
+        "welcome": {
             "title": "Crie seu primeiro grupo ou adicione amigos",
             "description": "Acompanhe um saldo direto com um amigo ou mantenha um saldo compartilhado separado em cada grupo. Quando houver um amigo ou um grupo, você poderá começar a adicionar despesas."
-        },
-        "friendReady": {
-            "title": "Você já pode adicionar uma despesa",
-            "description": "Você já pode acompanhar um saldo direto com um amigo. Crie um grupo quando quiser um saldo compartilhado separado para uma viagem, casa ou outro plano."
-        },
-        "groupReady": {
-            "title": "Seu grupo está pronto",
-            "description": "Você já pode começar a adicionar despesas no grupo. Convide um amigo para também acompanhar um saldo direto separado fora dos grupos."
-        },
-        "fullyReady": {
-            "title": "Você já pode dividir despesas",
-            "description": "Adicione uma despesa com um amigo ou em um dos seus grupos. Os saldos diretos com amigos e os saldos dos grupos ficam separados."
         },
         "actions": {
             "inviteFriend": "Convidar amigo"
         }
+    },
+    "errors": {
+        "loadTitle": "Não foi possível carregar o painel",
+        "loadDescription": "Não conseguimos carregar seus dados. Tente novamente."
     }
 }
