@@ -6,7 +6,7 @@ import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import type { KnownUser, UserSettings } from 'api/chipin.types';
+import type { KnownUser, SelfUser, UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
@@ -40,6 +40,19 @@ const settings = {
     saveGroupExpensesToSolo: false,
     sex: 'male',
 } satisfies UserSettings;
+
+const currentUser = {
+    id: 'current-user',
+    email: 'current@example.com',
+    displayName: 'Current user',
+    picture: null,
+    role: 'ADMIN',
+    subscriptionUntil: null,
+    inviteToken: 'invite-token',
+    settings,
+    createdAt: 1,
+    updatedAt: 1,
+} satisfies SelfUser;
 
 const friend = {
     user: {
@@ -139,7 +152,8 @@ test('EXP-062 removes the center slot and leaves four navigation items', () => {
 
 test('EXP-062 restores the lifted Add Expense slot for a valid target', () => {
     resolveGlobalTargets();
-    useUsersStore.setState({ friends: [friend] });
+    useUsersStore.setState({ user: currentUser, friends: [friend] });
+    useLoadingStore.getState().setLoading('users', 'self', 'fetched');
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
