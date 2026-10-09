@@ -35,7 +35,7 @@ test('rejects arbitrary branches outside the canonical task format', () => {
 });
 
 test('creates task PR commands with an explicit dev base', () => {
-    expect(buildCreatePullRequestArgs('feat/issue-356-provider-neutral-roles')).toEqual([
+    expect(buildCreatePullRequestArgs('feat/issue-356-provider-neutral-roles', 'ChipIn-one/chipin-frontend#356', 'Human commit description')).toEqual([
         'pr',
         'create',
         '--base',
@@ -43,6 +43,8 @@ test('creates task PR commands with an explicit dev base', () => {
         '--head',
         'feat/issue-356-provider-neutral-roles',
         '--fill',
+        '--body',
+        'Task identity: ChipIn-one/chipin-frontend#356\n\nHuman commit description',
     ]);
 });
 
@@ -149,6 +151,7 @@ const publicationRunner = calls => (command, args) => {
         return { status: 0, stdout: 'feat/issue-71-test', stderr: '' };
     }
     if (command === 'git' && args[0] === 'ls-remote') return { status: 0, stdout: 'remote', stderr: '' };
+    if (command === 'git' && args[0] === 'log') return { status: 0, stdout: 'A meaningful change\\n\\nDetailed human notes', stderr: '' };
     if (command === 'gh' && args[0] === 'auth' && args[1] === 'status') return { status: 0, stdout: '', stderr: '' };
     if (command === 'gh' && args[0] === 'auth' && args[1] === 'token') return { status: 0, stdout: 'test-token', stderr: '' };
     if (command === 'gh' && args[0] === 'pr' && args[1] === 'list') return { status: 0, stdout: '[]', stderr: '' };
@@ -196,4 +199,8 @@ test('publication invokes reader before creating one PR after positive admission
     expect(urls).toEqual(['https://github.com/ChipIn-one/chipin-frontend/pull/900']);
     expect(events.indexOf('ADMISSION_OK')).toBeLessThan(events.findIndex(x => x.startsWith('gh:pr create')));
     expect(calls.filter(row => row[0] === 'gh' && row[1] === 'pr' && row[2] === 'create')).toHaveLength(1);
+    const create = calls.find(row => row[0] === 'gh' && row[1] === 'pr' && row[2] === 'create');
+    expect(create).toContain('--body');
+    expect(create[create.indexOf('--body') + 1]).toContain('Task identity: ' + issue);
+    expect(create[create.indexOf('--body') + 1]).toContain('Detailed human notes');
 });
