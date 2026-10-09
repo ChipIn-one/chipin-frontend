@@ -49,7 +49,7 @@
     "onboarding": {
         "welcome": {
             "title": "Create your first group or add friends",
-            "description": "Track a balance directly with a friend, or keep a separate shared balance inside each group. Once you have a friend or a group, you can start adding expenses."
+            "description": "Track expenses directly with a friend or inside a group. Add a friend, or create a group and invite someone, to start splitting expenses."
         },
         "actions": {
             "inviteFriend": "Invite friend"

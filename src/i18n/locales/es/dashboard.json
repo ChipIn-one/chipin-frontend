@@ -49,7 +49,7 @@
     "onboarding": {
         "welcome": {
             "title": "Crea tu primer grupo o añade amigos",
-            "description": "Lleva un saldo directo con un amigo o un saldo compartido independiente dentro de cada grupo. Cuando tengas un amigo o un grupo, podrás empezar a añadir gastos."
+            "description": "Lleva los gastos directamente con un amigo o en un grupo. Añade a un amigo o crea un grupo e invita a alguien para empezar a dividir gastos."
         },
         "actions": {
             "inviteFriend": "Invitar a un amigo"
