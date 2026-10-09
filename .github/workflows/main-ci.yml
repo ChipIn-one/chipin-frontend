@@ -45,7 +45,7 @@ jobs:
       # Included Issues inventory (each Issue admitted separately). No release bypass.
       - name: Require canonical Issue admission for PR
         if: github.event_name == 'pull_request'
-        uses: ChipIn-one/.github/automation/issue-admission-action@bd1d22b544501ea7753d908497a22318e6bff5ed
+        uses: ChipIn-one/.github/automation/issue-admission-action@187f20cd8727029c9edf302a08d03f394d0764f9
         with:
           repository: ${{ github.repository }}
           pull-request-number: ${{ github.event.pull_request.number }}
