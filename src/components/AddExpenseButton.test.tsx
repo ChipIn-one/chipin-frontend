@@ -5,7 +5,7 @@ import { beforeEach, expect, test } from 'vitest';
 import { Theme } from '@radix-ui/themes';
 import { fireEvent, render, screen } from '@testing-library/react';
 
-import type { Group, KnownUser } from 'api/chipin.types';
+import type { Group, KnownUser, SelfUser } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
@@ -47,6 +47,30 @@ const groupCreator = {
     createdAt: 1,
     updatedAt: 1,
 };
+
+const selfUser = {
+    id: 'user-1',
+    email: 'owner@example.com',
+    displayName: 'Owner',
+    picture: null,
+    role: 'USER',
+    subscriptionUntil: null,
+    inviteToken: 'invite-token-user',
+    createdAt: 1,
+    updatedAt: 1,
+    settings: {
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        timeFormat: '24h',
+        language: 'en',
+        theme: 'system',
+        simplifyDebts: true,
+        skipCategory: false,
+        soloModeByDefault: false,
+        saveGroupExpensesToSolo: false,
+        sex: 'male',
+    },
+} satisfies SelfUser;
 
 const groupMember = {
     ...groupCreator,
@@ -115,11 +139,12 @@ beforeEach(() => {
     useGroupsStore.getState().setInitialGroupsStore();
     useErrorsStore.getState().resetErrors();
     useUsersStore.setState({
-        user: null,
+        user: selfUser,
         localUser: null,
         friends: [],
     });
     useLoadingStore.getState().setInitialLoadingStore();
+    useLoadingStore.getState().setLoading('users', 'self', 'fetched');
 });
 
 test.each(['mobile', 'desktop', 'sidebar'] as const)(
@@ -137,6 +162,29 @@ test.each(['mobile', 'desktop', 'sidebar'] as const)(
 
 test('EXP-061 hides a stale friend target while its data is unresolved', () => {
     useUsersStore.setState({ friends: [friend] });
+
+    renderButton(ROUTES.DASHBOARD);
+
+    expect(
+        screen.queryByRole('button', { name: 'Add expense' }),
+    ).toBeNull();
+});
+
+test('EXP-061 does not expose Add Expense before current user resolves', () => {
+    resolveGlobalTargets();
+    useUsersStore.setState({ friends: [friend] });
+    useLoadingStore.getState().setLoading('users', 'self', 'loading');
+
+    renderButton(ROUTES.DASHBOARD);
+
+    expect(
+        screen.queryByRole('button', { name: 'Add expense' }),
+    ).toBeNull();
+});
+
+test('EXP-061 does not expose Add Expense when self request resolves without a user', () => {
+    resolveGlobalTargets();
+    useUsersStore.setState({ user: null, friends: [friend] });
 
     renderButton(ROUTES.DASHBOARD);
 
