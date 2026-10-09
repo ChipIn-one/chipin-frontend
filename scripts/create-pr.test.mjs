@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
 
+import { readFileSync } from 'node:fs';
 import {
     buildCreatePullRequestArgs,
     extractPullRequestUrl,
@@ -71,6 +72,12 @@ test('rejects pull/new links as PR URLs', () => {
     )).toThrow('existing PR URL');
 });
 
+
+test('frontend admission bypass is restricted to trusted Dependabot dev PRs', () => {
+    const workflow = readFileSync(new URL('../.github/workflows/frontend-ci.yml', import.meta.url), 'utf8');
+    expect(workflow).toContain("github.base_ref == 'dev' && github.event.pull_request.user.login == 'dependabot[bot]'");
+    expect(workflow).toContain("github.event_name == 'pull_request' && !(");
+});
 
 test('requires explicit exact task identity before PR publication', () => {
     expect(validateTaskIdentity('feat/issue-71-admission', 'ChipIn-one/chipin-frontend#71')).toBeNull();

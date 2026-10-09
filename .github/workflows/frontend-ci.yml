@@ -44,8 +44,10 @@ jobs:
           PR_BODY: ${{ github.event.pull_request.body || '' }}
         run: node scripts/release-source-policy.mjs
       - name: Require canonical Issue admission for PR
-        if: github.event_name == 'pull_request'
-        uses: ChipIn-one/.github/automation/issue-admission-action@0e22b31f0e95ded3821bb0950214b0f0873379fb
+        # Only trusted Dependabot version-update PRs targeting dev are exempt;
+        # task-authored PRs always require canonical Issue admission.
+        if: github.event_name == 'pull_request' && !(github.base_ref == 'dev' && github.event.pull_request.user.login == 'dependabot[bot]')
+        uses: ChipIn-one/.github/automation/issue-admission-action@08e304e918e698d8b38d65f0770aa013a2c9d756
         with:
           repository: ${{ github.repository }}
           pull-request-number: ${{ github.event.pull_request.number }}
