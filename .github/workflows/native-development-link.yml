@@ -18,6 +18,10 @@ on:
         description: Pull request number to reconcile.
         required: true
         type: string
+      expected_head_sha:
+        description: Exact current PR head SHA for workflow_dispatch (no stale event bypass).
+        required: true
+        type: string
       task_identity:
         description: Optional canonical ChipIn task identity; must match any PR body marker.
         required: false
@@ -43,6 +47,7 @@ jobs:
         with:
           repository: ${{ github.repository }}
           pull-request-number: ${{ github.event.pull_request.number || inputs.pull_request_number }}
+          expected-head-sha: ${{ github.event.pull_request.head.sha || inputs.expected_head_sha }}
           task-identity: ${{ inputs.task_identity || '' }}
           admission-token: ${{ secrets.CHIPIN_DEV_READ_TOKEN }}
           token: ${{ github.token }}
