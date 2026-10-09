@@ -24,7 +24,7 @@ export const GroupsCardsSkeleton = ({ label }: Props) => {
     return (
         <Flex direction="column" gap="3">
             <Flex align="center" justify="between" gap="2">
-                <Text size="3" weight="bold">
+                <Text size="4" weight="bold">
                     <Skeleton>{label}</Skeleton>
                 </Text>
                 <Flex gap="3">

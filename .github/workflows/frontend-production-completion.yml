@@ -1,0 +1,26 @@
+name: Frontend production completion
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: frontend-production-completion
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    name: Close Issues completed in production
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Reconcile frontend production completion
+        uses: ChipIn-one/.github/automation/frontend-production-completion-action@32d5cd0f63efd99e92ee07bb2c6422da5b374478
+        with:
+          token: ${{ github.token }}

@@ -1,0 +1,47 @@
+name: Native Development link
+
+on:
+  pull_request:
+    branches:
+      - dev
+    types:
+      - opened
+      - edited
+      - reopened
+      - synchronize
+      - ready_for_review
+    paths-ignore:
+      - .github/workflows/native-development-link.yml
+  workflow_dispatch:
+    inputs:
+      pull_request_number:
+        description: Pull request number to reconcile.
+        required: true
+        type: string
+      task_identity:
+        description: Optional canonical ChipIn task identity; must match any PR body marker.
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+concurrency:
+  group: native-development-link-${{ github.repository }}-${{ github.event.pull_request.number || inputs.pull_request_number }}
+  cancel-in-progress: true
+
+jobs:
+  reconcile:
+    if: github.event_name == 'workflow_dispatch' || (github.event.pull_request.user.login != 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Reconcile native Issue ↔ PR Development relationship
+        uses: ChipIn-one/.github/automation/development-link-action@1d211c58574b8b7e1cb1ab8e2a65d144d0fbb5f8
+        with:
+          repository: ${{ github.repository }}
+          pull-request-number: ${{ github.event.pull_request.number || inputs.pull_request_number }}
+          task-identity: ${{ inputs.task_identity || '' }}
+          token: ${{ github.token }}

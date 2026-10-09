@@ -33,7 +33,9 @@
         "totalBalance": "Total balance",
         "totalAcrossGroupsAndFriends": "Across groups and friends",
         "owedToYou": "Owed to you",
-        "youOwe": "You owe"
+        "youOwe": "You owe",
+        "showBalanceDetails": "Show balance details",
+        "hideBalanceDetails": "Hide balance details"
     },
     "header": {
         "greeting": "Hi, {{name}}",

@@ -211,7 +211,7 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
 
             {showEmptyState && (
                 <EmptyState
-                    icon={<LucideFilterX size={20} />}
+                    icon={<LucideFilterX size={16} />}
                     title={t('groups.filterEmptyTitle')}
                     description={emptyStateDescription}
                 />
