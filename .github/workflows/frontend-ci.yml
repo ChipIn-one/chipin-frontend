@@ -49,6 +49,7 @@ jobs:
         with:
           repository: ${{ github.repository }}
           pull-request-number: ${{ github.event.pull_request.number }}
+          expected-head-sha: ${{ github.event.pull_request.head.sha }}
           token: ${{ secrets.CHIPIN_DEV_READ_TOKEN }}
       - name: Resolve verification mode
         id: gate
