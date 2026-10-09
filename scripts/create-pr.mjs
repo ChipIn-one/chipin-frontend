@@ -36,7 +36,7 @@ export const validateTaskIdentity = (branch, identity) => {
     return null;
 };
 
-export const buildCreatePullRequestArgs = branch => [
+export const buildCreatePullRequestArgs = (branch, identity, commitDescription = '') => [
     'pr',
     'create',
     '--base',
@@ -44,6 +44,10 @@ export const buildCreatePullRequestArgs = branch => [
     '--head',
     branch,
     '--fill',
+    // Set the identity on initial creation. A later edit can race required CI
+    // and native linking, while --fill alone cannot add this explicit marker.
+    '--body',
+    `Task identity: ${identity}\n\n${commitDescription.trim()}`.trim(),
 ];
 
 export const getOpenPullRequestAction = pullRequests => {
@@ -268,7 +272,16 @@ export const main = ({ run = runCommand, admission = requireCurrentAdmission,
         return 0;
     }
 
-    const createResult = run('gh', buildCreatePullRequestArgs(branch));
+    // Keep the human-written commit description that --fill would otherwise
+    // generate; an explicit --body takes precedence over gh's automatic fill.
+    const descriptionResult = run('git', [
+        'log', '--no-merges', '--format=%B', `${REMOTE_NAME}/${INTEGRATION_BRANCH}..HEAD`,
+    ]);
+    if (descriptionResult.status !== 0) {
+        logError(`PR CREATION BLOCKED: unable to read commit description. ${getCommandFailure(descriptionResult)}`);
+        return 1;
+    }
+    const createResult = run('gh', buildCreatePullRequestArgs(branch, identity, descriptionResult.stdout));
 
     if (createResult.status !== 0) {
         logError(`PR CREATION FAILED: unable to create PR. ${getCommandFailure(createResult)}`);
