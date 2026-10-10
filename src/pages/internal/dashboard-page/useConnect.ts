@@ -34,9 +34,8 @@ const useConnect = () => {
         useShallow(state => ({ friends: state.friends, currentUser: state.user })),
     );
     const {
-        isDashboardFetched: isDashboardFetched || hasConfirmedDashboardData,
-        isDashboardLoading: isDashboardLoading && !hasConfirmedDashboardData,
-        isDashboardRefreshError: dashboardError !== null && hasConfirmedDashboardData,
+        isDashboardFetched,
+        isDashboardLoading,
         isNextPageLoading,
         isGroupListFetched,
         isFriendsFetched,
@@ -109,8 +108,9 @@ const useConnect = () => {
         hasGroups,
         hasExpenseHistory,
         hasMoreActivity,
-        isDashboardFetched,
-        isDashboardLoading,
+        isDashboardFetched: isDashboardFetched || hasConfirmedDashboardData,
+        isDashboardLoading: isDashboardLoading && !hasConfirmedDashboardData,
+        isDashboardRefreshError: dashboardError !== null && hasConfirmedDashboardData,
         isEndOfFeed:
             !isNextPageLoading &&
             !hasMoreActivity &&
