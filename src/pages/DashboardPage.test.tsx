@@ -218,7 +218,7 @@ test('DSH-011 hides the redundant No groups empty state on mobile Welcome, not d
     const sidePanel = screen.getByTestId('dashboard-side-panel');
     expect(within(sidePanel).getByText('groups.emptyTitle')).toBeTruthy();
     expect(groupsSection.className).toContain('rt-r-display-none');
-    expect(groupsSection.className).toContain('rt-r-sm-display-flex');
+    expect(groupsSection.className).toContain('sm:rt-r-display-flex');
     expect(screen.getByTestId('dashboard-onboarding')).toBeTruthy();
 });
 
