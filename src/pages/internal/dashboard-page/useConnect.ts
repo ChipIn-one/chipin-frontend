@@ -62,6 +62,7 @@ const useConnect = () => {
     );
     const {
         dashboardError,
+        ratesError,
         nextPageError,
         groupListError,
         friendsError,
@@ -69,6 +70,7 @@ const useConnect = () => {
     } = useErrorsStore(
         useShallow(state => ({
             dashboardError: state.errors.dashboard.data,
+            ratesError: state.errors.dashboard.rates,
             nextPageError: state.errors.dashboard.nextPage,
             groupListError: state.errors.group.list,
             friendsError: state.errors.users.friends,
@@ -121,6 +123,7 @@ const useConnect = () => {
         isDashboardFetched: isDashboardFetched || hasConfirmedDashboardData,
         isDashboardLoading: isDashboardLoading && !hasConfirmedDashboardData,
         hasNonBlockingRefreshError:
+            ratesError !== null ||
             (dashboardError !== null && hasConfirmedDashboardData) ||
             (groupListError !== null && hasConfirmedGroups) ||
             (friendsError !== null && hasConfirmedFriends) ||

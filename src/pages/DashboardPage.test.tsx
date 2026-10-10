@@ -474,6 +474,40 @@ test('DSH-007 ignores currency-rate failure when onboarding data is resolved', (
     ).toBeTruthy();
 });
 
+test('DSH-007 surfaces a rates-only failure without hiding confirmed Dashboard content', () => {
+    resolveDashboardOnboardingData();
+    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    useDashboardStore.setState({ hasConfirmedDashboardData: true });
+    useErrorsStore.getState().setError('dashboard', 'rates', {
+        message: 'Currency rates unavailable',
+    });
+    const retry = vi.fn(() => Promise.resolve());
+    useDashboardStore.setState({ fetchSetDashboardData: retry });
+
+    render(<DashboardPage />);
+
+    expect(screen.getByTestId('activity-list')).toBeTruthy();
+    expect(screen.getByTestId('groups-cards')).toBeTruthy();
+    expect(screen.queryByText('errors.loadTitle')).toBeNull();
+    expect(screen.getByRole('alert')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'activity:retryAction' }));
+    expect(retry).toHaveBeenCalledOnce();
+});
+
+test('DSH-007 preserves Welcome with a rates-only failure and offers retry', () => {
+    resolveDashboardOnboardingData();
+    useErrorsStore.getState().setError('dashboard', 'rates', {
+        message: 'Currency rates unavailable',
+    });
+
+    render(<DashboardPage />);
+
+    expect(screen.getByTestId('dashboard-onboarding')).toBeTruthy();
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(screen.queryByText('errors.loadTitle')).toBeNull();
+});
+
 test('DSH-007 keeps loading while connection inputs resolve', () => {
     useLoadingStore
         .getState()
