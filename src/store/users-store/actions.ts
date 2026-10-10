@@ -91,7 +91,7 @@ const useUsersStore = create<UsersStore>((set, get) => ({
 
                 const nextLocalUser = toLocalUser(user);
                 saveLocalUser(nextLocalUser);
-                set({ user, localUser: nextLocalUser });
+                set({ user, localUser: nextLocalUser, hasConfirmedUser: true });
 
                 return user;
             })
@@ -139,7 +139,7 @@ const useUsersStore = create<UsersStore>((set, get) => ({
         return request.promise
             .then(({ friends }) => {
                 if (request.isCurrent()) {
-                    set({ friends });
+                    set({ friends, hasConfirmedFriends: true });
                 }
             })
             .catch((error: unknown) => {

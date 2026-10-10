@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Card, Flex, Skeleton, Text, VisuallyHidden } from '@radix-ui/themes';
 
 import { BalanceBadges } from 'basics';
+import { NoDebtsEmptyState } from 'basics/empty-states';
 import DebtAmount from 'basics/DebtAmount';
 import { Amount } from 'basics/numbers';
 
@@ -13,11 +14,12 @@ import { SummaryCardButton } from './styled';
 
 interface Props {
     isLoading?: boolean;
+    hasExpenseHistory?: boolean;
 }
 
 const SUMMARY_DETAILS_ID = 'dashboard-balance-summary-details';
 
-const DashBoardSummary = ({ isLoading = false }: Props) => {
+const DashBoardSummary = ({ isLoading = false, hasExpenseHistory = false }: Props) => {
     const { t } = useTranslation('dashboard');
     const [isExpanded, setIsExpanded] = useState(false);
     const {
@@ -85,10 +87,46 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
         </Flex>
     );
 
+    const detailsContent = (
+                    <Flex direction="column" gap="3">
+                        <Flex
+                            id={SUMMARY_DETAILS_ID}
+                            direction="column"
+                            gap="3"
+                        >
+                            {hasOwing && (
+                                <Flex direction="column" gap="1" minWidth="0">
+                                    <Text color="tomato" size="3" weight="bold">
+                                        {t('summary.youOwe')}
+                                    </Text>
+                                    <BalanceBadges items={oweBadgeItems} />
+                                </Flex>
+                            )}
+
+                            {hasOwed && (
+                                <Flex direction="column" gap="1" minWidth="0">
+                                    <Text color="grass" size="3" weight="bold">
+                                        {t('summary.owedToYou')}
+                                    </Text>
+                                    <BalanceBadges items={owedBadgeItems} />
+                                </Flex>
+                            )}
+                        </Flex>
+                    </Flex>
+    );
+
     const summaryCard = <Card size="1">{summaryContent}</Card>;
 
     if (isLoading) {
         return <Skeleton loading>{summaryCard}</Skeleton>;
+    }
+
+    if (netTotalInBase === 0) {
+        if (!hasDetails) {
+            return hasExpenseHistory ? <NoDebtsEmptyState /> : null;
+        }
+
+        return <Card size="1">{detailsContent}</Card>;
     }
 
     if (!hasDetails) {
@@ -116,33 +154,7 @@ const DashBoardSummary = ({ isLoading = false }: Props) => {
             </Card>
 
             {isExpanded && (
-                <Card size="1">
-                    <Flex direction="column" gap="3">
-                        <Flex
-                            id={SUMMARY_DETAILS_ID}
-                            direction="column"
-                            gap="3"
-                        >
-                            {hasOwing && (
-                                <Flex direction="column" gap="1" minWidth="0">
-                                    <Text color="tomato" size="3" weight="bold">
-                                        {t('summary.youOwe')}
-                                    </Text>
-                                    <BalanceBadges items={oweBadgeItems} />
-                                </Flex>
-                            )}
-
-                            {hasOwed && (
-                                <Flex direction="column" gap="1" minWidth="0">
-                                    <Text color="grass" size="3" weight="bold">
-                                        {t('summary.owedToYou')}
-                                    </Text>
-                                    <BalanceBadges items={owedBadgeItems} />
-                                </Flex>
-                            )}
-                        </Flex>
-                    </Flex>
-                </Card>
+                <Card size="1">{detailsContent}</Card>
             )}
         </Flex>
     );

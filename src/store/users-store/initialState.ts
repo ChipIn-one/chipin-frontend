@@ -7,8 +7,10 @@ const createInitialState = (): UsersStoreState => {
 
     return {
         user: null,
+        hasConfirmedUser: false,
         localUser,
         friends: [],
+        hasConfirmedFriends: false,
         premiumPromoRemaining: null,
         isPremiumPromoResolved: false,
     };

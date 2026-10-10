@@ -80,6 +80,12 @@ test('shares from the primary invite button when native share is supported', () 
         </Theme>,
     );
 
+    expect(screen.getByText('page.expenses.inviteTitle')).toBeTruthy();
+    expect(screen.getByText('page.expenses.shareVia')).toBeTruthy();
+    expect(screen.getByRole('button', {
+        name: /group:page\.settings\.showQRTitle/,
+    })).toBeTruthy();
+
     return user
         .click(screen.getByRole('button', { name: 'page.expenses.inviteAction' }))
         .then(() => {
@@ -104,4 +110,18 @@ test('copies the invite link from the primary button when native share is unavai
             expect(mocks.onCopyLink).toHaveBeenCalledOnce();
             expect(mocks.onShare).not.toHaveBeenCalled();
         });
+});
+
+test('uses the same illustrated invite layout as Friends with the group-specific link', () => {
+    render(
+        <Theme>
+            <GroupInviteEmptyState group={group} />
+        </Theme>,
+    );
+
+    const illustration = document.querySelector('img[aria-hidden="true"]');
+    expect(illustration).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'page.expenses.inviteAction' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /group:page\.settings\.showQRTitle/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /group:page\.settings\.copyLinkTitle/ })).toBeTruthy();
 });

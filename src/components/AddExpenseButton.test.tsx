@@ -3,10 +3,9 @@ import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
 import { Theme } from '@radix-ui/themes';
-import { act, fireEvent, render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { fireEvent, render, screen } from '@testing-library/react';
 
-import type { Group, KnownUser } from 'api/chipin.types';
+import type { Group, KnownUser, SelfUser } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
@@ -49,6 +48,38 @@ const groupCreator = {
     updatedAt: 1,
 };
 
+const selfUser = {
+    id: 'user-1',
+    email: 'owner@example.com',
+    displayName: 'Owner',
+    picture: null,
+    role: 'USER',
+    subscriptionUntil: null,
+    inviteToken: 'invite-token-user',
+    createdAt: 1,
+    updatedAt: 1,
+    settings: {
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        timeFormat: '24h',
+        language: 'en',
+        theme: 'system',
+        simplifyDebts: true,
+        skipCategory: false,
+        soloModeByDefault: false,
+        saveGroupExpensesToSolo: false,
+        sex: 'male',
+    },
+} satisfies SelfUser;
+
+const groupMember = {
+    ...groupCreator,
+    id: 'user-2',
+    email: 'member@example.com',
+    displayName: 'Member',
+    firstName: 'Member',
+};
+
 const singleMemberGroup = {
     id: 'group-1',
     name: 'Group',
@@ -69,6 +100,14 @@ const singleMemberGroup = {
     },
 } satisfies Group;
 
+const readyGroup = {
+    ...singleMemberGroup,
+    members: [
+        { user: groupCreator, balancesByCurrency: {} },
+        { user: groupMember, balancesByCurrency: {} },
+    ],
+} satisfies Group;
+
 const renderButton = (
     pathname: string,
     type: 'mobile' | 'desktop' | 'sidebar' = 'mobile',
@@ -84,6 +123,15 @@ const renderButton = (
     );
 };
 
+const resolveGlobalTargets = () => {
+    useLoadingStore
+        .getState()
+        .setLoading('group', 'list', 'fetched');
+    useLoadingStore
+        .getState()
+        .setLoading('users', 'friends', 'fetched');
+};
+
 beforeEach(() => {
     useAuthStore.setState({ status: 'authenticated' });
     useDashboardStore.setState({ appMode: APP_MODES.GROUP });
@@ -91,199 +139,269 @@ beforeEach(() => {
     useGroupsStore.getState().setInitialGroupsStore();
     useErrorsStore.getState().resetErrors();
     useUsersStore.setState({
-        user: null,
+        user: selfUser,
         localUser: null,
         friends: [],
+        hasConfirmedFriends: false,
+        hasConfirmedUser: false,
     });
     useLoadingStore.getState().setInitialLoadingStore();
-    useLoadingStore.getState().setLoading('dashboard', 'data', 'fetched');
-    useLoadingStore.getState().setLoading('group', 'list', 'fetched');
-    useLoadingStore.getState().setLoading('group', 'data', 'fetched');
-    useLoadingStore.getState().setLoading('users', 'friends', 'fetched');
+    useLoadingStore.getState().setLoading('users', 'self', 'fetched');
 });
 
 test.each(['mobile', 'desktop', 'sidebar'] as const)(
-    'keeps the unavailable %s add-expense action visible',
+    'EXP-061 hides the unresolved %s Add Expense action',
     type => {
         renderButton(ROUTES.DASHBOARD, type);
 
         expect(
-            screen.getByRole('button', { name: 'Add expense' }).getAttribute('aria-disabled'),
-        ).toBe('true');
+            screen.queryByRole('button', {
+                name: 'Add expense',
+            }),
+        ).toBeNull();
     },
 );
 
-test('explains an unavailable dashboard action on click', async () => {
+test('EXP-061 hides a stale friend target while its data is unresolved', () => {
+    useUsersStore.setState({ friends: [friend] });
+
     renderButton(ROUTES.DASHBOARD);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add expense' }));
-
-    expect((await screen.findAllByText('Add friends or group members to start')).length).toBeGreaterThan(0);
-    expect(useExpenseModalStore.getState().isOpened).toBe(false);
+    expect(
+        screen.queryByRole('button', { name: 'Add expense' }),
+    ).toBeNull();
 });
 
-test('uses the friends-specific unavailable message', async () => {
+test('EXP-061 does not expose Add Expense before current user resolves', () => {
+    resolveGlobalTargets();
+    useUsersStore.setState({ friends: [friend] });
+    useLoadingStore.getState().setLoading('users', 'self', 'loading');
+
+    renderButton(ROUTES.DASHBOARD);
+
+    expect(
+        screen.queryByRole('button', { name: 'Add expense' }),
+    ).toBeNull();
+});
+
+test('EXP-061 does not expose Add Expense when self request resolves without a user', () => {
+    resolveGlobalTargets();
+    useUsersStore.setState({ user: null, friends: [friend] });
+
+    renderButton(ROUTES.DASHBOARD);
+
+    expect(
+        screen.queryByRole('button', { name: 'Add expense' }),
+    ).toBeNull();
+});
+
+test.each([
+    ROUTES.DASHBOARD,
+    ROUTES.ACTIVITY,
+    ROUTES.SETTINGS,
+])('EXP-060 uses the global friend target rule on %s', route => {
+    resolveGlobalTargets();
+    useUsersStore.setState({ friends: [friend] });
+
+    renderButton(route);
+
+    expect(
+        screen.getByRole('button', { name: 'Add expense' }),
+    ).toBeTruthy();
+});
+
+test.each([
+    ROUTES.DASHBOARD,
+    ROUTES.ACTIVITY,
+    ROUTES.SETTINGS,
+])('EXP-060 excludes a one-member group from global targets on %s', route => {
+    resolveGlobalTargets();
+    useGroupsStore.setState({ groups: [singleMemberGroup] });
+
+    renderButton(route);
+
+    expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
+});
+
+test('EXP-060 hides the global action when resolved targets are empty', () => {
+    resolveGlobalTargets();
+
+    renderButton(ROUTES.DASHBOARD);
+
+    expect(
+        screen.queryByRole('button', { name: 'Add expense' }),
+    ).toBeNull();
+});
+
+test('EXP-060 shows Add Expense for a two-member group', () => {
+    resolveGlobalTargets();
+    useGroupsStore.setState({ groups: [readyGroup] });
+
+    renderButton(ROUTES.DASHBOARD);
+
+    expect(
+        screen.getByRole('button', { name: 'Add expense' }),
+    ).toBeTruthy();
+});
+
+test('EXP-060 Friends ignores a ready group when there is no friend', () => {
+    resolveGlobalTargets();
+    useGroupsStore.setState({ groups: [readyGroup] });
+
     renderButton(ROUTES.FRIENDS);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Add expense' }));
-
-    expect((await screen.findAllByText('Add a friend to start')).length).toBeGreaterThan(0);
+    expect(
+        screen.queryByRole('button', { name: 'Add expense' }),
+    ).toBeNull();
 });
 
-test('uses the group-specific unavailable message', async () => {
-    renderButton(`${ROUTES.GROUP}/group-1`);
-
-    fireEvent.click(screen.getByRole('button', { name: 'Add expense' }));
-
-    expect((await screen.findAllByText('Add group members to start')).length).toBeGreaterThan(0);
-});
-
-test('enables the add-expense action when a friend is available', () => {
+test('EXP-060 Friends shows Add Expense when a friend is resolved', () => {
+    useLoadingStore
+        .getState()
+        .setLoading('users', 'friends', 'fetched');
     useUsersStore.setState({ friends: [friend] });
 
     renderButton(ROUTES.FRIENDS);
 
     expect(
-        screen.getByRole('button', { name: 'Add expense' }).getAttribute('aria-disabled'),
-    ).toBeNull();
+        screen.getByRole('button', { name: 'Add expense' }),
+    ).toBeTruthy();
 });
 
-test('keeps unresolved target availability loading during a cold sign-in', () => {
-    useLoadingStore.getState().setLoading('group', 'list', 'loading');
-    useLoadingStore.getState().setLoading('users', 'friends', 'loading');
-
-    renderButton(ROUTES.DASHBOARD);
-
-    const button = screen.getByRole('button', { name: 'Add expense' });
-
-    expect(button).toHaveProperty('disabled', true);
-    expect(button.getAttribute('aria-disabled')).toBeNull();
-    expect(screen.queryByText('Add friends or group members to start')).toBeNull();
-});
-
-test('does not treat a failed friends load as an empty dashboard', () => {
-    useErrorsStore.getState().setError('users', 'friends', {
-        message: 'Friends unavailable',
-    });
-
-    renderButton(ROUTES.DASHBOARD);
-
-    const button = screen.getByRole('button', { name: 'Add expense' });
-
-    expect(button).toHaveProperty('disabled', true);
-    expect(button.getAttribute('aria-disabled')).toBeNull();
-    expect(screen.queryByText('Add friends or group members to start')).toBeNull();
-});
-
-test('does not treat a failed friends load as an empty Friends page', () => {
-    useErrorsStore.getState().setError('users', 'friends', {
-        message: 'Friends unavailable',
-    });
-
-    renderButton(ROUTES.FRIENDS);
-
-    const button = screen.getByRole('button', { name: 'Add expense' });
-
-    expect(button).toHaveProperty('disabled', true);
-    expect(button.getAttribute('aria-disabled')).toBeNull();
-    expect(screen.queryByText('Add a friend to start')).toBeNull();
-});
-
-test('does not treat a failed group load as an empty group', () => {
-    useErrorsStore.getState().setError('group', 'data', {
-        message: 'Group unavailable',
-    });
+test('EXP-060 Group hides Add Expense with one member', () => {
+    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    useLoadingStore
+        .getState()
+        .setLoading('group', 'list', 'fetched');
 
     renderButton(`${ROUTES.GROUP}/group-1`);
 
-    const button = screen.getByRole('button', { name: 'Add expense' });
-
-    expect(button).toHaveProperty('disabled', true);
-    expect(button.getAttribute('aria-disabled')).toBeNull();
-    expect(screen.queryByText('Add group members to start')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
 });
 
+test('EXP-060 Group shows Add Expense with enough members', () => {
+    useGroupsStore.setState({ groups: [readyGroup] });
+    useLoadingStore
+        .getState()
+        .setLoading('group', 'list', 'fetched');
 
-test('uses a resolved route group even when the group list request failed', async () => {
-    const interaction = userEvent.setup();
-    useGroupsStore.setState({ selectedGroup: singleMemberGroup });
+    renderButton(`${ROUTES.GROUP}/group-1`);
+
+    expect(
+        screen.getByRole('button', { name: 'Add expense' }),
+    ).toBeTruthy();
+});
+
+test('EXP-061 hides Add Expense after target-load failure without a valid target', () => {
+    resolveGlobalTargets();
+    useErrorsStore.getState().setError('users', 'friends', {
+        message: 'Friends unavailable',
+    });
     useErrorsStore.getState().setError('group', 'list', {
         message: 'Groups unavailable',
     });
 
+    renderButton(ROUTES.DASHBOARD);
+
+    expect(
+        screen.queryByRole('button', { name: 'Add expense' }),
+    ).toBeNull();
+});
+
+test.each([ROUTES.DASHBOARD, ROUTES.FRIENDS])(
+    'EXP-061 retains confirmed friend action while refreshing on %s',
+    route => {
+        useUsersStore.setState({
+            friends: [friend],
+            hasConfirmedFriends: true,
+        });
+        useLoadingStore.getState().setLoading('users', 'friends', 'loading');
+
+        renderButton(route);
+
+        expect(screen.getByRole('button', { name: 'Add expense' })).toBeTruthy();
+    },
+);
+
+test.each([ROUTES.DASHBOARD, `${ROUTES.GROUP}/group-1`])(
+    'EXP-061 retains confirmed group action while refreshing on %s',
+    route => {
+        useGroupsStore.setState({
+            groups: [readyGroup],
+            hasConfirmedGroups: true,
+        });
+        useLoadingStore.getState().setLoading('group', 'list', 'loading');
+
+        renderButton(route);
+
+        expect(screen.getByRole('button', { name: 'Add expense' })).toBeTruthy();
+    },
+);
+
+test('EXP-061 retains Add Expense during a confirmed user profile refresh', () => {
+    resolveGlobalTargets();
+    useUsersStore.setState({
+        user: selfUser,
+        friends: [friend],
+        hasConfirmedUser: true,
+    });
+    useLoadingStore.getState().setLoading('users', 'self', 'loading');
+
+    renderButton(ROUTES.DASHBOARD);
+
+    expect(screen.getByRole('button', { name: 'Add expense' })).toBeTruthy();
+});
+
+test('EXP-061 never trusts unconfirmed friend targets during initial loading', () => {
+    useUsersStore.setState({ friends: [friend], hasConfirmedFriends: false });
+    useLoadingStore.getState().setLoading('users', 'friends', 'loading');
+
+    renderButton(ROUTES.FRIENDS);
+
+    expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
+});
+
+test('EXP-061 never trusts unconfirmed groups during initial loading', () => {
+    useGroupsStore.setState({
+        groups: [readyGroup],
+        hasConfirmedGroups: false,
+    });
+    useLoadingStore.getState().setLoading('group', 'list', 'loading');
+
+    renderButton(ROUTES.DASHBOARD);
+
+    expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
+});
+
+test('opens Add Expense when a valid target exists', () => {
+    resolveGlobalTargets();
+    useUsersStore.setState({ friends: [friend] });
+
+    renderButton(ROUTES.DASHBOARD);
+
+    fireEvent.click(
+        screen.getByRole('button', { name: 'Add expense' }),
+    );
+
+    expect(useExpenseModalStore.getState().isOpened).toBe(true);
+});
+
+test('EXP-060 keeps global Add Expense for a friend even if a one-member group exists', () => {
+    resolveGlobalTargets();
+    useUsersStore.setState({ friends: [friend] });
+    useGroupsStore.setState({ groups: [singleMemberGroup] });
+
+    renderButton(ROUTES.DASHBOARD);
+
+    expect(screen.getByRole('button', { name: 'Add expense' })).toBeTruthy();
+});
+
+test('EXP-060 excludes a one-member group on its own route even with a direct friend', () => {
+    resolveGlobalTargets();
+    useUsersStore.setState({ friends: [friend] });
+    useGroupsStore.setState({ groups: [singleMemberGroup] });
+
     renderButton(`${ROUTES.GROUP}/group-1`);
 
-    const button = screen.getByRole('button', { name: 'Add expense' });
-
-    expect(button).toHaveProperty('disabled', false);
-    expect(button.getAttribute('aria-disabled')).toBe('true');
-
-    await interaction.click(button);
-
-    expect(
-        (await screen.findAllByText('Add group members to start')).length,
-    ).toBeGreaterThan(0);
-});
-
-test('shows the unavailable mobile tooltip after target lists settle empty', async () => {
-    const interaction = userEvent.setup();
-    useLoadingStore.getState().setLoading('dashboard', 'data', 'loading');
-
-    renderButton(ROUTES.DASHBOARD);
-
-    const button = screen.getByRole('button', { name: 'Add expense' });
-
-    expect(button).toHaveProperty('disabled', false);
-    expect(button.getAttribute('aria-disabled')).toBe('true');
-
-    await interaction.click(button);
-
-    expect(
-        (await screen.findAllByText('Add friends or group members to start')).length,
-    ).toBeGreaterThan(0);
-    expect(useExpenseModalStore.getState().isOpened).toBe(false);
-});
-
-test('shows the unavailable tooltip from the desktop sidebar', async () => {
-    const interaction = userEvent.setup();
-
-    renderButton(ROUTES.DASHBOARD, 'sidebar');
-
-    const button = screen.getByRole('button', { name: 'Add expense' });
-
-    expect(button).toHaveProperty('disabled', false);
-
-    await interaction.hover(button);
-
-    expect(
-        (await screen.findAllByText('Add friends or group members to start')).length,
-    ).toBeGreaterThan(0);
-});
-
-test('preserves loading behavior when an expense target is available', () => {
-    useUsersStore.setState({ friends: [friend] });
-    useLoadingStore.getState().setLoading('dashboard', 'data', 'loading');
-
-    renderButton(ROUTES.DASHBOARD);
-
-    const button = screen.getByRole('button', { name: 'Add expense' });
-
-    expect(button).toHaveProperty('disabled', true);
-    expect(button.getAttribute('aria-disabled')).toBeNull();
-});
-
-test('enables the add-expense action immediately after a valid target becomes available', () => {
-    renderButton(ROUTES.DASHBOARD);
-
-    expect(
-        screen.getByRole('button', { name: 'Add expense' }).getAttribute('aria-disabled'),
-    ).toBe('true');
-
-    act(() => {
-        useUsersStore.setState({ friends: [friend] });
-    });
-
-    expect(
-        screen.getByRole('button', { name: 'Add expense' }).getAttribute('aria-disabled'),
-    ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
 });

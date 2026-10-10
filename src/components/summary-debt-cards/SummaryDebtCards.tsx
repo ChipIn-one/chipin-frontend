@@ -14,6 +14,7 @@ interface Props {
     owedEntries: BalanceEntry[];
     oweEntries: BalanceEntry[];
     defaultCurrency: string;
+    showSettledEmptyState?: boolean;
 }
 
 const SummaryDebtCards: React.FC<Props> = ({
@@ -23,10 +24,18 @@ const SummaryDebtCards: React.FC<Props> = ({
     owedEntries,
     oweEntries,
     defaultCurrency,
+    showSettledEmptyState = true,
 }) => {
+    const hasDebtEntries =
+        owedEntries.length > 0 || oweEntries.length > 0;
+
     return (
         <Flex direction="column" gap="4">
-            {!owedEntries.length && !oweEntries.length && !isLoading && <NoDebtsEmptyState />}
+            {!hasDebtEntries &&
+                !isLoading &&
+                showSettledEmptyState && (
+                    <NoDebtsEmptyState />
+                )}
             <OwedToYouCard
                 isLoading={isLoading}
                 total={owedToYouTotal}

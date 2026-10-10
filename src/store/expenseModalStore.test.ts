@@ -91,6 +91,84 @@ test('initializes a group expense with equal split defaults', () => {
     expect(selectPayerId(state)).toBe(currentUser.id);
 });
 
+test('EXP-063 prefers a usable friend over an unspendable group on Dashboard', () => {
+    useExpenseModalStore.getState().initialize({
+        context: 'dashboard',
+        currentUser,
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
+        groups: [{ id: 'group-1', members: [currentUser] }],
+        knownFriends: [friend],
+        defaultGroupId: 'group-1',
+    });
+
+    const state = useExpenseModalStore.getState();
+
+    expect(state.targetMode).toBe('friends');
+    expect(state.selectedFriendId).toBe(friend.id);
+});
+
+test('EXP-063 prefers a multi-member group over a default single-member group on Dashboard', () => {
+    useExpenseModalStore.getState().initialize({
+        context: 'dashboard',
+        currentUser,
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
+        groups: [
+            { id: 'group-1', members: [currentUser] },
+            {
+                id: 'group-2',
+                members: [currentUser, groupMember],
+            },
+        ],
+        knownFriends: [friend],
+        defaultGroupId: 'group-1',
+    });
+
+    const state = useExpenseModalStore.getState();
+
+    expect(state.targetMode).toBe('group');
+    expect(state.groupId).toBe('group-2');
+});
+
+test('EXP-060 keeps a one-member group available in group context', () => {
+    useExpenseModalStore.getState().initialize({
+        context: 'group',
+        currentUser,
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
+        groups: [{ id: 'group-1', members: [currentUser] }],
+        knownFriends: [friend],
+        defaultGroupId: 'group-1',
+    });
+
+    const state = useExpenseModalStore.getState();
+
+    expect(state.targetMode).toBe('group');
+    expect(state.groupId).toBe('group-1');
+});
+
+test('EXP-060 defaults to a single-member group when no direct friend exists', () => {
+    useExpenseModalStore.getState().initialize({
+        context: 'dashboard',
+        currentUser,
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
+        groups: [{ id: 'group-1', members: [currentUser] }],
+        knownFriends: [],
+    });
+
+    const state = useExpenseModalStore.getState();
+
+    expect(state.targetMode).toBe('group');
+    expect(state.groupId).toBe('group-1');
+    expect(selectIsSubmitDisabled(state)).toBe(true);
+});
+
 test('builds a null category payload when category selection is skipped', () => {
     const store = useExpenseModalStore.getState();
 

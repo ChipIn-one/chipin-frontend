@@ -6,10 +6,12 @@ import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import type { UserSettings } from 'api/chipin.types';
+import type { Group, KnownUser, SelfUser, UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
+import { useGroupsStore } from 'store/groupsStore';
+import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
 
 import MobileNavBar from './MobileNavBar';
@@ -19,7 +21,11 @@ import 'i18n/index';
 const LocationPath = () => {
     const location = useLocation();
 
-    return <output aria-label="Current route">{location.pathname}</output>;
+    return (
+        <output aria-label="Current route">
+            {location.pathname}
+        </output>
+    );
 };
 
 const settings = {
@@ -35,40 +41,117 @@ const settings = {
     sex: 'male',
 } satisfies UserSettings;
 
+const currentUser = {
+    id: 'current-user',
+    email: 'current@example.com',
+    displayName: 'Current user',
+    picture: null,
+    role: 'ADMIN',
+    subscriptionUntil: null,
+    inviteToken: 'invite-token',
+    settings,
+    createdAt: 1,
+    updatedAt: 1,
+} satisfies SelfUser;
+
+const friend = {
+    user: {
+        id: 'friend-1',
+        email: 'friend@example.com',
+        displayName: 'Friend',
+        firstName: 'Friend',
+        lastName: null,
+        picture: null,
+        createdAt: 1,
+        updatedAt: 1,
+    },
+    balances: [],
+    lastUsedCurrency: null,
+} satisfies KnownUser;
+
+const soloGroup = {
+    id: 'group-1',
+    name: 'Solo group',
+    inviteToken: 'invite-token',
+    description: null,
+    creator: friend.user,
+    members: [{ user: friend.user, balancesByCurrency: {} }],
+    createdAt: 1,
+    updatedAt: 1,
+    coverUrl: null,
+    simplifyDebts: true,
+    role: 'OWNER',
+    status: 'ACTIVE',
+    lastUsedCurrency: null,
+    recentActivities: { items: [], nextCursor: null },
+} satisfies Group;
+
+const resolveGlobalTargets = () => {
+    useLoadingStore
+        .getState()
+        .setLoading('group', 'list', 'fetched');
+    useLoadingStore
+        .getState()
+        .setLoading('users', 'friends', 'fetched');
+};
+
 beforeEach(() => {
+    useAuthStore.setState({ status: 'authenticated' });
+    useDashboardStore.setState({ appMode: APP_MODES.GROUP });
+    useGroupsStore.getState().setInitialGroupsStore();
+    useLoadingStore.getState().setInitialLoadingStore();
     useUsersStore.setState({
         user: null,
         localUser: { role: 'ADMIN', settings },
         friends: [],
+        hasConfirmedFriends: false,
+        hasConfirmedUser: false,
     });
 });
 
 test.each([
-    { appMode: APP_MODES.SOLO, expectedRoute: '/dashboard' },
-    { appMode: APP_MODES.GROUP, expectedRoute: '/dashboard' },
-])('opens $expectedRoute from the home link in $appMode mode', ({ appMode, expectedRoute }) => {
-    const interaction = userEvent.setup();
-    useDashboardStore.setState({ appMode });
+    {
+        appMode: APP_MODES.SOLO,
+        expectedRoute: '/dashboard',
+    },
+    {
+        appMode: APP_MODES.GROUP,
+        expectedRoute: '/dashboard',
+    },
+])(
+    'opens $expectedRoute from the home link in $appMode mode',
+    ({ appMode, expectedRoute }) => {
+        const interaction = userEvent.setup();
+        useDashboardStore.setState({ appMode });
 
-    render(
-        <MemoryRouter initialEntries={['/settings']}>
-            <ThemeProvider theme={lightThemeStyled}>
-                <Theme>
-                    <MobileNavBar />
-                    <LocationPath />
-                </Theme>
-            </ThemeProvider>
-        </MemoryRouter>,
-    );
+        render(
+            <MemoryRouter initialEntries={['/settings']}>
+                <ThemeProvider theme={lightThemeStyled}>
+                    <Theme>
+                        <MobileNavBar />
+                        <LocationPath />
+                    </Theme>
+                </ThemeProvider>
+            </MemoryRouter>,
+        );
 
-    return interaction.click(screen.getByRole('link', { name: 'Dashboard' })).then(() => {
-        expect(screen.getByLabelText('Current route').textContent).toBe(expectedRoute);
-    });
-});
+        return interaction
+            .click(
+                screen.getByRole('link', {
+                    name: 'Dashboard',
+                }),
+            )
+            .then(() => {
+                expect(
+                    screen.getByLabelText('Current route')
+                        .textContent,
+                ).toBe(expectedRoute);
+            });
+    },
+);
 
-test('lifts the mobile add-expense action without changing the nav item layout', () => {
-    useAuthStore.setState({ status: 'authenticated' });
-    useDashboardStore.setState({ appMode: APP_MODES.GROUP });
+test('EXP-062 removes the center slot and leaves four navigation items', () => {
+    resolveGlobalTargets();
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
@@ -80,22 +163,103 @@ test('lifts the mobile add-expense action without changing the nav item layout',
         </MemoryRouter>,
     );
 
-    const addExpenseButton = screen.getByRole('button', { name: 'Add expense' });
-    const centerAction = addExpenseButton.parentElement as HTMLElement;
-    const navContent = centerAction.parentElement as HTMLElement;
-    const navWrapper = navContent.parentElement as HTMLElement;
-    const navSurface = navContent.previousElementSibling as HTMLElement;
+    expect(
+        screen.queryByRole('button', { name: 'Add expense' }),
+    ).toBeNull();
+    expect(screen.getAllByRole('link')).toHaveLength(4);
+});
 
-    expect(getComputedStyle(navWrapper).getPropertyValue('--mobile-nav-action-lift').trim()).toBe(
-        'var(--space-3)',
+test('EXP-062 keeps four mobile items with only a one-member group', () => {
+    resolveGlobalTargets();
+    useUsersStore.setState({ user: currentUser });
+    useGroupsStore.setState({ groups: [soloGroup] });
+    useLoadingStore.getState().setLoading('users', 'self', 'fetched');
+
+    render(
+        <MemoryRouter initialEntries={['/dashboard']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <MobileNavBar />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
     );
-    expect(getComputedStyle(navWrapper).getPropertyValue('--mobile-nav-cutout-center-y').trim()).toBe(
+
+    expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
+    expect(screen.getAllByRole('link')).toHaveLength(4);
+});
+
+test('EXP-062 keeps the center action during a confirmed friend refresh', () => {
+    useUsersStore.setState({
+        user: currentUser,
+        friends: [friend],
+        hasConfirmedFriends: true,
+        hasConfirmedUser: true,
+    });
+    useLoadingStore.getState().setLoading('users', 'friends', 'loading');
+    useLoadingStore.getState().setLoading('users', 'self', 'loading');
+
+    render(
+        <MemoryRouter initialEntries={['/dashboard']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <MobileNavBar />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Add expense' })).toBeTruthy();
+    expect(screen.getAllByRole('link')).toHaveLength(4);
+});
+
+test('EXP-062 restores the lifted Add Expense slot for a valid target', () => {
+    resolveGlobalTargets();
+    useUsersStore.setState({ user: currentUser, friends: [friend] });
+    useLoadingStore.getState().setLoading('users', 'self', 'fetched');
+
+    render(
+        <MemoryRouter initialEntries={['/dashboard']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <MobileNavBar />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    const addExpenseButton = screen.getByRole('button', {
+        name: 'Add expense',
+    });
+    const centerAction =
+        addExpenseButton.parentElement as HTMLElement;
+    const navContent =
+        centerAction.parentElement as HTMLElement;
+    const navWrapper =
+        navContent.parentElement as HTMLElement;
+    const navSurface =
+        navContent.previousElementSibling as HTMLElement;
+
+    expect(
+        getComputedStyle(navWrapper)
+            .getPropertyValue('--mobile-nav-action-lift')
+            .trim(),
+    ).toBe('var(--space-3)');
+    expect(
+        getComputedStyle(navWrapper)
+            .getPropertyValue('--mobile-nav-cutout-center-y')
+            .trim(),
+    ).toBe(
         'calc(0px - var(--mobile-nav-action-lift))',
     );
     expect(getComputedStyle(centerAction).transform).toBe(
         'translate(-50%, calc(-50% - var(--mobile-nav-action-lift)))',
     );
-    expect(getComputedStyle(navSurface).getPropertyValue('--mobile-nav-cutout-radius').trim()).toBe(
+    expect(
+        getComputedStyle(navSurface)
+            .getPropertyValue('--mobile-nav-cutout-radius')
+            .trim(),
+    ).toBe(
         'calc(var(--space-7) - var(--space-1))',
     );
 });

@@ -87,6 +87,49 @@ test('stores dashboard balances as the canonical balance response', () => {
     });
 });
 
+test('tracks a confirmed dashboard snapshot through failed refreshes and resets', async () => {
+    expect(useDashboardStore.getState().hasConfirmedDashboardData).toBe(false);
+    vi.mocked(chipinApi.fetchApiDashboard).mockResolvedValueOnce({
+        balances,
+        activity: { items: [], nextCursor: null },
+    });
+    await useDashboardStore.getState().fetchSetDashboard();
+    expect(useDashboardStore.getState().hasConfirmedDashboardData).toBe(true);
+
+    vi.mocked(chipinApi.fetchApiDashboard).mockRejectedValueOnce(
+        new Error('Background refresh failed'),
+    );
+    await useDashboardStore.getState().fetchSetDashboard(true);
+    expect(useDashboardStore.getState().hasConfirmedDashboardData).toBe(true);
+
+    useDashboardStore.getState().setInitialDashboardStore();
+    expect(useDashboardStore.getState().hasConfirmedDashboardData).toBe(false);
+});
+
+test('keeps dashboard success separate from a currency-rates failure', () => {
+    vi.mocked(chipinApi.fetchApiDashboard).mockResolvedValue({
+        balances,
+        activity: { items: [], nextCursor: null },
+    });
+    vi.mocked(chipinApi.fetchApiCurrencyRates).mockRejectedValue(
+        new Error('Rates unavailable'),
+    );
+
+    return useDashboardStore.getState().fetchSetDashboardData().then(() => {
+        expect(useErrorsStore.getState().errors.dashboard.data).toBeNull();
+        expect(useErrorsStore.getState().errors.dashboard.rates).toEqual(
+            expect.objectContaining({ message: expect.any(String) }),
+        );
+        expect(useLoadingStore.getState().dashboard.data).toBe('fetched');
+        expect(useLoadingStore.getState().dashboard.rates).toBe('fetched');
+        expect(useDashboardStore.getState()).toMatchObject({
+            balances,
+            activityItems: [],
+            activityNextCursor: null,
+        });
+    });
+});
+
 test('preserves confirmed dashboard data when a refresh fails', () => {
     const confirmedBalances = balances;
     const requestError = new Error('Dashboard unavailable');

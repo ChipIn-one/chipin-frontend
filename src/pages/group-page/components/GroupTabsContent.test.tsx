@@ -274,7 +274,7 @@ test('renders the group activity exhausted marker after the last page', () => {
     expect(screen.getByText('activity:endOfFeed')).not.toBeNull();
 });
 
-test('renders invite onboarding instead of No expenses for a single-member group', () => {
+test('renders shared illustrated invite onboarding instead of No expenses for a single-member group', () => {
     render(<GroupTabsContent group={group} {...defaultProps} />);
 
     expect(screen.getByText('page.expenses.inviteTitle')).not.toBeNull();
@@ -287,14 +287,12 @@ test('renders invite onboarding instead of No expenses for a single-member group
     expect(screen.queryByText('page.expenses.emptyTitle')).toBeNull();
 });
 
-test('renders invite onboarding when the feed only contains group lifecycle activity', () => {
+test('keeps shared invite onboarding when the feed only contains group lifecycle activity', () => {
     render(<GroupTabsContent group={groupWithLifecycleActivity} {...defaultProps} />);
 
     expect(screen.getByText('page.expenses.inviteTitle')).not.toBeNull();
     expect(screen.getByText('page.expenses.inviteDescription')).not.toBeNull();
-    expect(screen.getByRole('button', {
-        name: /group:page\.settings\.showQRTitle/,
-    })).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'page.expenses.inviteAction' })).not.toBeNull();
     expect(screen.queryByText('page.expenses.emptyTitle')).toBeNull();
 });
 
@@ -305,10 +303,10 @@ test('renders the group expenses empty state once the group has another member',
     expect(screen.queryByText('page.expenses.inviteTitle')).toBeNull();
 });
 
-test('does not render an empty-state prompt when the activity feed is populated', () => {
+test('keeps the invite hint in a single-member group with existing activity', () => {
     render(<GroupTabsContent group={groupWithActivity} {...defaultProps} />);
 
-    expect(screen.queryByText('page.expenses.inviteTitle')).toBeNull();
+    expect(screen.getByText('page.expenses.inviteTitle')).not.toBeNull();
     expect(screen.queryByText('page.expenses.emptyTitle')).toBeNull();
 });
 

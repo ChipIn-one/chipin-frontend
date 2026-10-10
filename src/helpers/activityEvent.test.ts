@@ -6,6 +6,7 @@ import { ACTIVITY_ACTIONS } from 'constants/activity';
 import {
     getActivityCategory,
     getActivityLedgerEntryId,
+    getActivityPreviewEvents,
     getActivitySubeventsView,
 } from './activityEvent';
 
@@ -73,6 +74,17 @@ describe('activity event helpers', () => {
     test('rejects activities that cannot own child events', () => {
         expect(getActivityCategory(expenseReversedEvent)).toBeUndefined();
         expect(getActivityLedgerEntryId(expenseReversedEvent)).toBeUndefined();
+    });
+
+    test('unwraps preview items to the latest event used by activity lists', () => {
+        expect(
+            getActivityPreviewEvents([
+                {
+                    parent: expenseCreatedEvent,
+                    lastEvent: settlementCreatedEvent,
+                },
+            ]),
+        ).toEqual([settlementCreatedEvent]);
     });
 
     test('uses the parent as current state when no children are loaded', () => {

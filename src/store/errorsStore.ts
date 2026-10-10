@@ -22,6 +22,7 @@ interface RequestErrors {
     };
     dashboard: {
         data: RequestError | null;
+        rates: RequestError | null;
         nextPage: RequestError | null;
     };
     landing: {
@@ -81,7 +82,7 @@ const initialErrors: RequestErrors = {
         kick: null,
         cover: null,
     },
-    dashboard: { data: null, nextPage: null },
+    dashboard: { data: null, rates: null, nextPage: null },
     landing: { stats: null },
     activity: {
         data: null,

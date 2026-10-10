@@ -1,7 +1,7 @@
 import { useFriendInvite } from 'hooks/pwaHooks';
 import { useUsersStore } from 'store/users-store';
 
-import { InviteEmptyState } from 'components/invite';
+import { InviteOnboarding } from 'components/invite-onboarding';
 
 const FriendInviteEmptyState = () => {
     const inviteToken = useUsersStore(state => state.user?.inviteToken);
@@ -11,7 +11,7 @@ const FriendInviteEmptyState = () => {
         return null;
     }
 
-    return <InviteEmptyState invite={invite} />;
+    return <InviteOnboarding invite={invite} />;
 };
 
 export default FriendInviteEmptyState;

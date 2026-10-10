@@ -81,6 +81,7 @@ export interface GroupsStore {
     selectedGroup: Group | null;
     groups: Group[];
     groupsNextCursor: string | null;
+    hasConfirmedGroups: boolean;
 
     setInitialGroupsStore: () => void;
     setSelectedGroup: (group: Group | null) => void;
@@ -100,6 +101,7 @@ const initialGroupsStore = {
     selectedGroup: null,
     groups: [],
     groupsNextCursor: null,
+    hasConfirmedGroups: false,
 };
 
 const refreshAfterGroupRemoval = (
@@ -174,6 +176,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
 
                 set({
                     groups,
+                    hasConfirmedGroups: true,
                     groupsNextCursor: response.nextCursor,
                     ...(selectedGroupId && { selectedGroup: selectedGroup ?? null }),
                 });

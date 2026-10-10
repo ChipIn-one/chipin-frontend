@@ -7,8 +7,7 @@ import { Button, Card, Flex, Heading, Text } from '@radix-ui/themes';
 import type { UseInviteResult } from 'hooks/pwaHooks';
 
 import InviteIllustrationAsset from 'assets/group-invite-empty-state.png';
-
-import InviteActionRows from './InviteActionRows';
+import { InviteActionRows } from 'components/invite';
 
 const InviteCard = styled(Card)`
     overflow: hidden;
@@ -44,7 +43,7 @@ interface Props {
     invite: UseInviteResult;
 }
 
-const InviteEmptyState = ({ invite }: Props) => {
+const InviteOnboarding = ({ invite }: Props) => {
     const { t } = useTranslation('group');
 
     const onInviteFriends = (): Promise<void> => {
@@ -99,4 +98,4 @@ const InviteEmptyState = ({ invite }: Props) => {
     );
 };
 
-export default InviteEmptyState;
+export default InviteOnboarding;

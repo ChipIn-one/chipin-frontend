@@ -4,7 +4,7 @@
         "otherTitle": "Outros grupos",
         "subtitle": "Mantenha saldos compartilhados e viagens organizados em um só lugar.",
         "emptyTitle": "Nenhum grupo ainda",
-        "emptyDescription": "Crie seu primeiro grupo para começar a dividir despesas com amigos, colegas de quarto ou de viagem.",
+        "emptyDescription": "Os grupos que você criar ou entrar aparecerão aqui.",
         "filterAll": "Todos",
         "filterSettled": "Acertados",
         "showSettled": "Mostrar",
@@ -45,5 +45,18 @@
         "summaryTitle": "Resumo Solo",
         "activityTitle": "Atividade Solo",
         "inDevelopment": "Ainda está em desenvolvimento."
+    },
+    "onboarding": {
+        "welcome": {
+            "title": "Crie seu primeiro grupo ou adicione amigos",
+            "description": "Acompanhe despesas diretamente com um amigo ou em grupo. Adicione um amigo ou crie um grupo e convide alguém para começar a dividir despesas."
+        },
+        "actions": {
+            "inviteFriend": "Convidar amigo"
+        }
+    },
+    "errors": {
+        "loadTitle": "Não foi possível carregar o painel",
+        "loadDescription": "Não conseguimos carregar seus dados. Tente novamente."
     }
 }

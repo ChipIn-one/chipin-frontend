@@ -13,7 +13,7 @@ const NoActivityEmptyState = ({ action }: Props) => {
 
     return (
         <EmptyState
-            icon={<LucideClipboardList size={16} />}
+            icon={<LucideClipboardList size={20} />}
             iconColor="gray"
             title={t('emptyTitle')}
             description={t('emptyDescription')}

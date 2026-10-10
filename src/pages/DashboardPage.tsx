@@ -1,12 +1,18 @@
 import { useCallback } from 'react';
-import { LucideChevronsDown, LucidePlus, LucideRefreshCw } from 'lucide-react';
+import {
+    LucideChevronsDown,
+    LucidePlus,
+    LucideRefreshCw,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import styled from 'styled-components';
 
 import { Box, Button, Container, Flex, Spinner, Text } from '@radix-ui/themes';
 
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 
-import { NoGroupsEmptyState } from 'basics/empty-states';
+import { EmptyState, NoGroupsEmptyState } from 'basics/empty-states';
+import { DashboardOnboarding } from 'components/dashboard-onboarding';
 import {
     DashboardHeader as DashboardGreeting,
     DashboardSummary as DashBoardSummary,
@@ -19,20 +25,28 @@ import { ActivityEventsList } from 'features/activity';
 
 import { useConnect } from './internal/dashboard-page';
 
+const FullWidthButton = styled(Button)`
+    width: 100%;
+`;
+
 const DashboardPage = () => {
     const { t } = useTranslation(['dashboard', 'activity']);
     const {
-        activityItems,
+        activityEvents,
         fetchMoreDashboardActivity,
         groups,
+        dashboardView,
         hasGroups,
+        hasExpenseHistory,
         hasMoreActivity,
         isDashboardFetched,
         isDashboardLoading,
+        hasNonBlockingRefreshError,
         isEndOfFeed,
         isGroupListFetched,
         isNextPageError,
         isNextPageLoading,
+        onRetryLoad,
     } = useConnect();
 
     const onLoadMore = useCallback(() => {
@@ -49,83 +63,130 @@ const DashboardPage = () => {
         onLoadMore();
     };
 
+    const sidePanel = dashboardView === 'error' ? null : (
+        <Flex direction="column" gap="4">
+            <Box display={{ initial: 'block', lg: 'none' }}>
+                <DashboardGreeting />
+            </Box>
+
+            <DashBoardSummary
+                isLoading={isDashboardLoading}
+                hasExpenseHistory={hasExpenseHistory}
+            />
+
+            <Flex
+                gap="4"
+                direction="column"
+                display={dashboardView === 'welcome' ? { initial: 'none', sm: 'flex' } : undefined}
+                data-testid="dashboard-groups-section"
+            >
+                {!isDashboardFetched ||
+                !isGroupListFetched ||
+                hasGroups ? (
+                    <GroupsCards
+                        groups={groups}
+                        label={t('groups.title')}
+                    />
+                ) : (
+                    <NoGroupsEmptyState
+                        action={
+                            dashboardView !== 'dashboard' ? undefined : (
+                                <CreateUpdateGroupModal type="create">
+                                    <FullWidthButton
+                                        size="2"
+                                        variant="soft"
+                                    >
+                                        <LucidePlus size={14} />
+                                        {t(
+                                            'common:buttons.createGroup',
+                                        )}
+                                    </FullWidthButton>
+                                </CreateUpdateGroupModal>
+                            )
+                        }
+                    />
+                )}
+            </Flex>
+        </Flex>
+    );
+
     return (
         <Container size="4" pb={{ initial: '9', sm: '6' }}>
-            <InternalPageColumnsFromSm
-                sidePanel={
-                    <Flex direction="column" gap="4">
-                        <Box display={{ initial: 'block', lg: 'none' }}>
-                            <DashboardGreeting />
-                        </Box>
-
-                        <Box display={{ initial: 'block' }}>
-                            <DashBoardSummary isLoading={isDashboardLoading} />
-                        </Box>
-
-                        <Flex gap="4" direction="column">
-                            {!isDashboardFetched || !isGroupListFetched || hasGroups ? (
-                                <GroupsCards
-                                    groups={groups}
-                                    label={t('groups.title')}
-                                />
-                            ) : (
-                                <NoGroupsEmptyState
-                                    action={
-                                        <CreateUpdateGroupModal type="create">
-                                            <Button size="2" variant="soft">
-                                                <LucidePlus size={14} />
-                                                {t('common:buttons.createGroup')}
-                                            </Button>
-                                        </CreateUpdateGroupModal>
-                                    }
-                                />
-                            )}
-                        </Flex>
+            <InternalPageColumnsFromSm sidePanel={sidePanel}>
+                {hasNonBlockingRefreshError && dashboardView !== 'loading' && dashboardView !== 'error' && (
+                    <Flex align="center" justify="between" gap="3" wrap="wrap" py="2" role="alert">
+                        <Text size="2" color="gray">
+                            {t('errors.loadDescription')}
+                        </Text>
+                        <Button type="button" size="1" variant="soft" onClick={onRetryLoad}>
+                            <LucideRefreshCw size={14} />
+                            {t('activity:retryAction')}
+                        </Button>
                     </Flex>
-                }
-            >
-                {!isDashboardFetched || isDashboardLoading ? (
+                )}
+                {dashboardView === 'welcome' ? (
+                    <DashboardOnboarding />
+                ) : dashboardView === 'loading' ? (
                     <ActivityFeedSkeleton isShowSummary />
+                ) : dashboardView === 'error' ? (
+                    <EmptyState
+                        icon={<LucideRefreshCw size={20} />}
+                        title={t('errors.loadTitle')}
+                        description={t('errors.loadDescription')}
+                        action={
+                            <Button type="button" variant="soft" onClick={onRetryLoad}>
+                                <LucideRefreshCw size={14} />
+                                {t('activity:retryAction')}
+                            </Button>
+                        }
+                    />
                 ) : (
                     <ActivityEventsList
-                        events={activityItems.map(item => item.lastEvent)}
-                        isShowSummary
-                        isNavigable
-                    >
-                        <>
-                            {isNextPageLoading && (
-                                <Flex justify="center" py="4">
-                                    <Spinner size="3" />
-                                </Flex>
-                            )}
+                            events={activityEvents}
+                            isShowSummary
+                            isNavigable
+                        >
+                            <>
+                                {isNextPageLoading && (
+                                    <Flex justify="center" py="4">
+                                        <Spinner size="3" />
+                                    </Flex>
+                                )}
 
-                            {isNextPageError && (
-                                <Flex justify="center" py="4">
-                                    <Button
-                                        type="button"
-                                        size="1"
-                                        variant="soft"
-                                        onClick={onRetryNextPage}
+                                {isNextPageError && (
+                                    <Flex justify="center" py="4">
+                                        <Button
+                                            type="button"
+                                            size="1"
+                                            variant="soft"
+                                            onClick={onRetryNextPage}
+                                        >
+                                            <LucideRefreshCw size={14} />
+                                            {t('activity:retryAction')}
+                                        </Button>
+                                    </Flex>
+                                )}
+
+                                {isEndOfFeed && (
+                                    <Flex
+                                        justify="center"
+                                        align="center"
+                                        gap="2"
+                                        py="4"
                                     >
-                                        <LucideRefreshCw size={14} />
-                                        {t('activity:retryAction')}
-                                    </Button>
-                                </Flex>
-                            )}
+                                        <Text as="span" color="gray">
+                                            <LucideChevronsDown
+                                                size={14}
+                                            />
+                                        </Text>
+                                        <Text size="1" color="gray">
+                                            {t('activity:endOfFeed')}
+                                        </Text>
+                                    </Flex>
+                                )}
 
-                            {isEndOfFeed && (
-                                <Flex justify="center" align="center" gap="2" py="4">
-                                    <Text as="span" color="gray">
-                                        <LucideChevronsDown size={14} />
-                                    </Text>
-                                    <Text size="1" color="gray">
-                                        {t('activity:endOfFeed')}
-                                    </Text>
-                                </Flex>
-                            )}
-
-                            <div ref={sentinelRef} />
-                        </>
+                                <div ref={sentinelRef} />
+                            </>
                     </ActivityEventsList>
                 )}
             </InternalPageColumnsFromSm>

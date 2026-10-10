@@ -168,13 +168,8 @@
         "settings": "Settings"
     },
     "noDebtsTitle": "All settled",
-    "noDebtsDescription": "You don't owe anyone and no one owes you.",
+    "noDebtsDescription": "Nothing to settle right now.",
     "amount": {
         "notInteger": "Value is not integer!"
-    },
-    "addExpenseUnavailable": {
-        "dashboard": "Add friends or group members to start",
-        "group": "Add group members to start",
-        "friends": "Add a friend to start"
     }
 }
