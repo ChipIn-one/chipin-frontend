@@ -45,7 +45,7 @@ test('stacks the optional action under the icon and description', () => {
                 icon={<LucideInfo size={20} />}
                 title={TITLE}
                 description={DESCRIPTION}
-                action={<Button width="100%">{ACTION_LABEL}</Button>}
+                action={<Button>{ACTION_LABEL}</Button>}
                 actionPosition="below"
             />
         </Theme>,
@@ -59,5 +59,5 @@ test('stacks the optional action under the icon and description', () => {
     expect(layout?.className).toContain('rt-r-fd-column');
     expect(layout?.lastElementChild).toBe(actionContainer);
     expect(actionContainer?.contains(action)).toBe(true);
-    expect(action.className).toContain('rt-r-w-100');
+    expect(window.getComputedStyle(actionContainer as HTMLElement).width).toBe('100%');
 });

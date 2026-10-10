@@ -123,5 +123,5 @@ test('uses the same illustrated invite layout as Friends with the group-specific
     expect(illustration).toBeTruthy();
     expect(screen.getByRole('button', { name: 'page.expenses.inviteAction' })).toBeTruthy();
     expect(screen.getByRole('button', { name: /group:page\.settings\.showQRTitle/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'group:page.settings.copyLinkTitle' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /group:page\.settings\.copyLinkTitle/ })).toBeTruthy();
 });

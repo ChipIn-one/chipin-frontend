@@ -215,7 +215,7 @@ test('DSH-013 puts the Create group action below No groups yet at full width', (
 
     expect(card?.querySelector('[data-empty-state-action]')?.contains(action)).toBe(true);
     expect(card?.firstElementChild?.className).toContain('rt-r-fd-column');
-    expect(action.className).toContain('rt-r-w-100');
+    expect(window.getComputedStyle(action).width).toBe('100%');
 });
 
 test('DSH-012 does not reserve vertical space when the Dashboard summary is empty', () => {

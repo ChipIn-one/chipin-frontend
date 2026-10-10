@@ -5,6 +5,7 @@ import {
     LucideRefreshCw,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import styled from 'styled-components';
 
 import { Box, Button, Container, Flex, Spinner, Text } from '@radix-ui/themes';
 
@@ -23,6 +24,10 @@ import { ActivityFeedSkeleton } from 'components/skeletons';
 import { ActivityEventsList } from 'features/activity';
 
 import { useConnect } from './internal/dashboard-page';
+
+const FullWidthButton = styled(Button)`
+    width: 100%;
+`;
 
 const DashboardPage = () => {
     const { t } = useTranslation(['dashboard', 'activity']);
@@ -81,16 +86,15 @@ const DashboardPage = () => {
                         action={
                             dashboardView !== 'dashboard' ? undefined : (
                                 <CreateUpdateGroupModal type="create">
-                                    <Button
+                                    <FullWidthButton
                                         size="2"
                                         variant="soft"
-                                        width="100%"
                                     >
                                         <LucidePlus size={14} />
                                         {t(
                                             'common:buttons.createGroup',
                                         )}
-                                    </Button>
+                                    </FullWidthButton>
                                 </CreateUpdateGroupModal>
                             )
                         }
