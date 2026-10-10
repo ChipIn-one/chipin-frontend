@@ -41,6 +41,7 @@ const DashboardPage = () => {
         hasMoreActivity,
         isDashboardFetched,
         isDashboardLoading,
+        isDashboardRefreshError,
         isEndOfFeed,
         isGroupListFetched,
         isNextPageError,
@@ -124,53 +125,66 @@ const DashboardPage = () => {
                         }
                     />
                 ) : (
-                    <ActivityEventsList
-                        events={activityEvents}
-                        isShowSummary
-                        isNavigable
-                    >
-                        <>
-                            {isNextPageLoading && (
-                                <Flex justify="center" py="4">
-                                    <Spinner size="3" />
-                                </Flex>
-                            )}
+                    <>
+                        {isDashboardRefreshError && (
+                            <Flex align="center" justify="between" gap="3" wrap="wrap" py="2" role="alert">
+                                <Text size="2" color="gray">
+                                    {t('errors.loadDescription')}
+                                </Text>
+                                <Button type="button" size="1" variant="soft" onClick={onRetryLoad}>
+                                    <LucideRefreshCw size={14} />
+                                    {t('activity:retryAction')}
+                                </Button>
+                            </Flex>
+                        )}
+                        <ActivityEventsList
+                            events={activityEvents}
+                            isShowSummary
+                            isNavigable
+                        >
+                            <>
+                                {isNextPageLoading && (
+                                    <Flex justify="center" py="4">
+                                        <Spinner size="3" />
+                                    </Flex>
+                                )}
 
-                            {isNextPageError && (
-                                <Flex justify="center" py="4">
-                                    <Button
-                                        type="button"
-                                        size="1"
-                                        variant="soft"
-                                        onClick={onRetryNextPage}
+                                {isNextPageError && (
+                                    <Flex justify="center" py="4">
+                                        <Button
+                                            type="button"
+                                            size="1"
+                                            variant="soft"
+                                            onClick={onRetryNextPage}
+                                        >
+                                            <LucideRefreshCw size={14} />
+                                            {t('activity:retryAction')}
+                                        </Button>
+                                    </Flex>
+                                )}
+
+                                {isEndOfFeed && (
+                                    <Flex
+                                        justify="center"
+                                        align="center"
+                                        gap="2"
+                                        py="4"
                                     >
-                                        <LucideRefreshCw size={14} />
-                                        {t('activity:retryAction')}
-                                    </Button>
-                                </Flex>
-                            )}
+                                        <Text as="span" color="gray">
+                                            <LucideChevronsDown
+                                                size={14}
+                                            />
+                                        </Text>
+                                        <Text size="1" color="gray">
+                                            {t('activity:endOfFeed')}
+                                        </Text>
+                                    </Flex>
+                                )}
 
-                            {isEndOfFeed && (
-                                <Flex
-                                    justify="center"
-                                    align="center"
-                                    gap="2"
-                                    py="4"
-                                >
-                                    <Text as="span" color="gray">
-                                        <LucideChevronsDown
-                                            size={14}
-                                        />
-                                    </Text>
-                                    <Text size="1" color="gray">
-                                        {t('activity:endOfFeed')}
-                                    </Text>
-                                </Flex>
-                            )}
-
-                            <div ref={sentinelRef} />
-                        </>
-                    </ActivityEventsList>
+                                <div ref={sentinelRef} />
+                            </>
+                            </ActivityEventsList>
+                    </>
                 )}
             </InternalPageColumnsFromSm>
         </Container>

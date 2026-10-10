@@ -1,6 +1,6 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 
 import type { ActivityFeedItem, Group, SelfUser } from 'api/chipin.types';
 import { useDashboardStore } from 'store/dashboardStore';
@@ -184,8 +184,15 @@ const resolveDashboardOnboardingData = () => {
         .setLoading('users', 'self', 'fetched');
 };
 
+const originalFetchSetDashboard = useDashboardStore.getState().fetchSetDashboard;
+const originalFetchSetDashboardData = useDashboardStore.getState().fetchSetDashboardData;
+
 beforeEach(() => {
     vi.clearAllMocks();
+    useDashboardStore.setState({
+        fetchSetDashboard: originalFetchSetDashboard,
+        fetchSetDashboardData: originalFetchSetDashboardData,
+    });
     useDashboardStore.getState().setInitialDashboardStore();
     useGroupsStore.getState().setInitialGroupsStore();
     useUsersStore.setState({ user: currentUser, friends: [] });
@@ -292,6 +299,64 @@ test('DSH-010 keeps normal Dashboard with a connection and activity', () => {
 
     expect(screen.queryByTestId('dashboard-onboarding')).toBeNull();
     expect(screen.getByTestId('activity-list')).toBeTruthy();
+});
+
+test('DSH-007 preserves an existing dashboard after a failed background refresh', () => {
+    resolveDashboardOnboardingData();
+    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    useDashboardStore.setState({
+        hasConfirmedDashboardData: true,
+        activityItems: [activityItem],
+    });
+    useErrorsStore.getState().setError('dashboard', 'data', {
+        message: 'Background refresh failed',
+    });
+    const refreshData = vi.fn(() => Promise.resolve());
+    useDashboardStore.setState({ fetchSetDashboardData: refreshData });
+
+    render(<DashboardPage />);
+
+    expect(screen.getByTestId('activity-list')).toBeTruthy();
+    expect(screen.getByTestId('groups-cards')).toBeTruthy();
+    expect(screen.queryByText('errors.loadTitle')).toBeNull();
+    expect(screen.getByRole('alert')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'activity:retryAction' }));
+    expect(refreshData).toHaveBeenCalledOnce();
+});
+
+test('DSH-007 preserves a confirmed dashboard during background refresh loading', () => {
+    resolveDashboardOnboardingData();
+    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    useDashboardStore.setState({ hasConfirmedDashboardData: true });
+    useLoadingStore.getState().setLoading('dashboard', 'data', 'loading');
+
+    render(<DashboardPage />);
+
+    expect(screen.getByTestId('activity-list')).toBeTruthy();
+    expect(screen.queryByTestId('activity-skeleton')).toBeNull();
+});
+
+test('DSH-007 Retry fetches both dashboard data and currency rates', () => {
+    resolveDashboardOnboardingData();
+    useErrorsStore.getState().setError('dashboard', 'data', {
+        message: 'Dashboard unavailable',
+    });
+    useErrorsStore.getState().setError('dashboard', 'rates', {
+        message: 'Rates unavailable',
+    });
+    const refreshData = vi.fn(() => Promise.resolve());
+    const refreshDashboardOnly = vi.fn(() => Promise.resolve());
+    useDashboardStore.setState({
+        fetchSetDashboardData: refreshData,
+        fetchSetDashboard: refreshDashboardOnly,
+    });
+
+    render(<DashboardPage />);
+    fireEvent.click(screen.getByRole('button', { name: 'activity:retryAction' }));
+
+    expect(refreshData).toHaveBeenCalledOnce();
+    expect(refreshDashboardOnly).not.toHaveBeenCalled();
 });
 
 test('DSH-007 never mistakes a load failure for new-user welcome', () => {

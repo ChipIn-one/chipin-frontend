@@ -19,11 +19,13 @@ const useConnect = () => {
     const {
         activityItems,
         activityNextCursor,
+        hasConfirmedDashboardData,
         fetchMoreDashboardActivity,
     } = useDashboardStore(
         useShallow(state => ({
             activityItems: state.activityItems,
             activityNextCursor: state.activityNextCursor,
+            hasConfirmedDashboardData: state.hasConfirmedDashboardData,
             fetchMoreDashboardActivity: state.fetchMoreDashboardActivity,
         })),
     );
@@ -32,8 +34,9 @@ const useConnect = () => {
         useShallow(state => ({ friends: state.friends, currentUser: state.user })),
     );
     const {
-        isDashboardFetched,
-        isDashboardLoading,
+        isDashboardFetched: isDashboardFetched || hasConfirmedDashboardData,
+        isDashboardLoading: isDashboardLoading && !hasConfirmedDashboardData,
+        isDashboardRefreshError: dashboardError !== null && hasConfirmedDashboardData,
         isNextPageLoading,
         isGroupListFetched,
         isFriendsFetched,
@@ -72,12 +75,12 @@ const useConnect = () => {
         friends.some(friend => friend.lastUsedCurrency !== null);
     const hasMoreActivity = activityNextCursor !== null;
     const isOnboardingDataSettled =
-        isDashboardFetched &&
+        (isDashboardFetched || hasConfirmedDashboardData) &&
         isGroupListFetched &&
         isFriendsFetched &&
         isUserSelfFetched;
     const hasOnboardingDataError =
-        dashboardError !== null ||
+        (dashboardError !== null && !hasConfirmedDashboardData) ||
         groupListError !== null ||
         friendsError !== null ||
         userSelfError !== null ||
@@ -91,7 +94,7 @@ const useConnect = () => {
                 : 'welcome';
     const onRetryLoad = () => {
         Promise.all([
-            useDashboardStore.getState().fetchSetDashboard(true),
+            useDashboardStore.getState().fetchSetDashboardData(),
             useGroupsStore.getState().fetchSetGroups(true),
             useUsersStore.getState().fetchSetFriends(true),
             useUsersStore.getState().fetchSetUser(true),

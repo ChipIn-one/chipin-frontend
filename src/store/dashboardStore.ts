@@ -28,6 +28,7 @@ interface DashboardStoreState {
     balances: Dashboard['balances'];
     activityItems: ActivityFeedItem[];
     activityNextCursor: number | null;
+    hasConfirmedDashboardData: boolean;
     currencies: ApiCurrencyRatesResponse;
 }
 
@@ -52,6 +53,7 @@ const createInitialDashboardState = (): DashboardStoreState => {
         balances: {},
         activityItems: [],
         activityNextCursor: null,
+        hasConfirmedDashboardData: false,
         currencies: {
             base: 'USD',
             timestamp: 0,
@@ -118,6 +120,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
                     balances: dashboard.balances,
                     activityItems: dashboard.activity.items,
                     activityNextCursor: dashboard.activity.nextCursor,
+                    hasConfirmedDashboardData: true,
                 });
             })
             .catch((error: unknown) => {
