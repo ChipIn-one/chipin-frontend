@@ -83,7 +83,7 @@ test('shares from the primary invite button when native share is supported', () 
     expect(screen.getByText('page.expenses.inviteTitle')).toBeTruthy();
     expect(screen.getByText('page.expenses.shareVia')).toBeTruthy();
     expect(screen.getByRole('button', {
-        name: /group:page\\.settings\\.showQRTitle/,
+        name: /group:page\.settings\.showQRTitle/,
     })).toBeTruthy();
 
     return user
@@ -122,6 +122,6 @@ test('uses the same illustrated invite layout as Friends with the group-specific
     const illustration = document.querySelector('img[aria-hidden="true"]');
     expect(illustration).toBeTruthy();
     expect(screen.getByRole('button', { name: 'page.expenses.inviteAction' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /group:page\\.settings\\.showQRTitle/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /group:page\.settings\.showQRTitle/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'group:page.settings.copyLinkTitle' })).toBeTruthy();
 });

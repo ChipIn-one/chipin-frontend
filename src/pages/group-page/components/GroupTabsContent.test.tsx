@@ -282,7 +282,7 @@ test('renders shared illustrated invite onboarding instead of No expenses for a 
     expect(screen.getByRole('button', { name: 'page.expenses.inviteAction' })).not.toBeNull();
     expect(screen.getByText('page.expenses.shareVia')).not.toBeNull();
     expect(screen.getByRole('button', {
-        name: /group:page\\.settings\\.showQRTitle/,
+        name: /group:page\.settings\.showQRTitle/,
     })).not.toBeNull();
     expect(screen.queryByText('page.expenses.emptyTitle')).toBeNull();
 });
