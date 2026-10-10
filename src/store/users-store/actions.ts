@@ -91,7 +91,7 @@ const useUsersStore = create<UsersStore>((set, get) => ({
 
                 const nextLocalUser = toLocalUser(user);
                 saveLocalUser(nextLocalUser);
-                set({ user, localUser: nextLocalUser });
+                set({ user, localUser: nextLocalUser, hasConfirmedUser: true });
 
                 return user;
             })

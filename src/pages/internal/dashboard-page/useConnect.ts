@@ -35,10 +35,11 @@ const useConnect = () => {
             hasConfirmedGroups: state.hasConfirmedGroups,
         })),
     );
-    const { friends, hasConfirmedFriends, currentUser } = useUsersStore(
+    const { friends, hasConfirmedFriends, hasConfirmedUser, currentUser } = useUsersStore(
         useShallow(state => ({
             friends: state.friends,
             hasConfirmedFriends: state.hasConfirmedFriends,
+            hasConfirmedUser: state.hasConfirmedUser,
             currentUser: state.user,
         })),
     );
@@ -86,12 +87,12 @@ const useConnect = () => {
         (isDashboardFetched || hasConfirmedDashboardData) &&
         (isGroupListFetched || hasConfirmedGroups) &&
         (isFriendsFetched || hasConfirmedFriends) &&
-        (isUserSelfFetched || currentUser !== null);
+        (isUserSelfFetched || hasConfirmedUser);
     const hasOnboardingDataError =
         (dashboardError !== null && !hasConfirmedDashboardData) ||
         (groupListError !== null && !hasConfirmedGroups) ||
         (friendsError !== null && !hasConfirmedFriends) ||
-        (userSelfError !== null && currentUser === null) ||
+        (userSelfError !== null && !hasConfirmedUser) ||
         currentUser === null;
     const dashboardView = !isOnboardingDataSettled
         ? 'loading'
@@ -123,7 +124,7 @@ const useConnect = () => {
             (dashboardError !== null && hasConfirmedDashboardData) ||
             (groupListError !== null && hasConfirmedGroups) ||
             (friendsError !== null && hasConfirmedFriends) ||
-            (userSelfError !== null && currentUser !== null),
+            (userSelfError !== null && hasConfirmedUser),
         isEndOfFeed:
             !isNextPageLoading &&
             !hasMoreActivity &&

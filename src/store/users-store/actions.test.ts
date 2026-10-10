@@ -88,6 +88,24 @@ test('marks an empty friends list confirmed and keeps it after a failed refresh'
     expect(useUsersStore.getState().hasConfirmedFriends).toBe(false);
 });
 
+test('records a confirmed user after success and retains it on failed refresh', async () => {
+    vi.mocked(usersApi.fetchUser)
+        .mockResolvedValueOnce(user)
+        .mockRejectedValueOnce(new Error('User refresh unavailable'));
+
+    expect(useUsersStore.getState().hasConfirmedUser).toBe(false);
+    await useUsersStore.getState().fetchSetUser();
+    expect(useUsersStore.getState()).toMatchObject({
+        user,
+        hasConfirmedUser: true,
+    });
+
+    await useUsersStore.getState().fetchSetUser(true);
+    expect(useUsersStore.getState().hasConfirmedUser).toBe(true);
+    useUsersStore.getState().setInitialUsersStore();
+    expect(useUsersStore.getState().hasConfirmedUser).toBe(false);
+});
+
 test('stores the premium promo remaining counter', () => {
     vi.mocked(usersApi.fetchPremiumPromoRemaining).mockResolvedValue({
         premiumPromoRemaining: 417,

@@ -12,6 +12,7 @@ import type { LocalUser } from 'helpers/localStorage';
 
 interface UsersStoreState {
     user: SelfUser | null;
+    hasConfirmedUser: boolean;
     localUser: LocalUser | null;
     friends: KnownUser[];
     hasConfirmedFriends: boolean;
