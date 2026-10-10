@@ -44,7 +44,7 @@ test('creates task PR commands with an explicit dev base', () => {
         'feat/issue-356-provider-neutral-roles',
         '--fill',
         '--body',
-        'Task identity: ChipIn-one/chipin-frontend#356\n\nHuman commit description',
+        expect.stringContaining('Task identity: ChipIn-one/chipin-frontend#356\n\n## Summary\nHuman commit description'),
     ]);
 });
 
@@ -214,4 +214,16 @@ test('publication invokes reader before creating one PR after positive admission
     expect(create).toContain('--body');
     expect(create[create.indexOf('--body') + 1]).toContain('Task identity: ' + issue);
     expect(create[create.indexOf('--body') + 1]).toContain('Detailed human notes');
+});
+
+test('new PR body keeps human notes with one exact identity and standard sections', () => {
+    const args = buildCreatePullRequestArgs('feat/issue-71-test', 'ChipIn-one/chipin-frontend#71',
+        'Human implementation notes\n\n## Tests\nCI run 123');
+    const body = args[args.indexOf('--body') + 1];
+    expect((body.match(/^Task identity:/gmu) || [])).toHaveLength(1);
+    for (const name of ['Summary', 'Tests', 'Version impact', 'Dependencies']) {
+        expect((body.match(new RegExp(`^## ${name}$`, 'gmu')) || [])).toHaveLength(1);
+    }
+    expect(body).toContain('Human implementation notes');
+    expect(body).toContain('CI run 123');
 });
