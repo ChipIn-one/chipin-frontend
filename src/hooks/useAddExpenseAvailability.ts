@@ -28,17 +28,26 @@ const useAddExpenseAvailability = (pathname: string) => {
     const isFriendsPage = pathname === ROUTES.FRIENDS;
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
     const isSoloModeFromStore = useDashboardStore(selectIsSoloMode);
-    const { groups, selectedGroup } = useGroupsStore(
+    const { groups, selectedGroup, hasConfirmedGroups } = useGroupsStore(
         useShallow(state => ({
             groups: state.groups,
             selectedGroup: state.selectedGroup,
+            hasConfirmedGroups: state.hasConfirmedGroups,
         })),
     );
-    const { friends, canAccessSolo, currentUser } = useUsersStore(
+    const {
+        friends,
+        canAccessSolo,
+        currentUser,
+        hasConfirmedFriends,
+        hasConfirmedUser,
+    } = useUsersStore(
         useShallow(state => ({
             friends: state.friends,
             canAccessSolo: selectCanAccessSolo(state),
             currentUser: state.user,
+            hasConfirmedFriends: state.hasConfirmedFriends,
+            hasConfirmedUser: state.hasConfirmedUser,
         })),
     );
     const {
@@ -56,9 +65,9 @@ const useAddExpenseAvailability = (pathname: string) => {
     );
 
     const hasResolvedFriendTarget =
-        isFriendsFetched && friends.length > 0;
+        (isFriendsFetched || hasConfirmedFriends) && friends.length > 0;
     const hasResolvedGroupTarget =
-        isGroupListFetched && hasGroupExpenseTarget(groups);
+        (isGroupListFetched || hasConfirmedGroups) && hasGroupExpenseTarget(groups);
     const routeGroup = groupId
         ? selectedGroup?.id === groupId
             ? selectedGroup
@@ -71,7 +80,7 @@ const useAddExpenseAvailability = (pathname: string) => {
         isTargetAvailable = hasResolvedFriendTarget;
     } else if (groupId) {
         isTargetAvailable =
-            (isGroupListFetched || isGroupDataFetched) &&
+            (isGroupListFetched || hasConfirmedGroups || isGroupDataFetched) &&
             isGroupExpenseTarget(routeGroup);
     } else {
         isTargetAvailable =
@@ -82,7 +91,7 @@ const useAddExpenseAvailability = (pathname: string) => {
         isSoloMode: canAccessSolo && isSoloModeFromStore,
         isVisible:
             isLoggedIn &&
-            isUserSelfFetched &&
+            (isUserSelfFetched || hasConfirmedUser) &&
             currentUser !== null &&
             isTargetAvailable,
     };

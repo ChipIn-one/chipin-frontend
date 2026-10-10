@@ -142,6 +142,8 @@ beforeEach(() => {
         user: selfUser,
         localUser: null,
         friends: [],
+        hasConfirmedFriends: false,
+        hasConfirmedUser: false,
     });
     useLoadingStore.getState().setInitialLoadingStore();
     useLoadingStore.getState().setLoading('users', 'self', 'fetched');
@@ -304,6 +306,71 @@ test('EXP-061 hides Add Expense after target-load failure without a valid target
     expect(
         screen.queryByRole('button', { name: 'Add expense' }),
     ).toBeNull();
+});
+
+test.each([ROUTES.DASHBOARD, ROUTES.FRIENDS])(
+    'EXP-061 retains confirmed friend action while refreshing on %s',
+    route => {
+        useUsersStore.setState({
+            friends: [friend],
+            hasConfirmedFriends: true,
+        });
+        useLoadingStore.getState().setLoading('users', 'friends', 'loading');
+
+        renderButton(route);
+
+        expect(screen.getByRole('button', { name: 'Add expense' })).toBeTruthy();
+    },
+);
+
+test.each([ROUTES.DASHBOARD, `${ROUTES.GROUP}/group-1`])(
+    'EXP-061 retains confirmed group action while refreshing on %s',
+    route => {
+        useGroupsStore.setState({
+            groups: [readyGroup],
+            hasConfirmedGroups: true,
+        });
+        useLoadingStore.getState().setLoading('group', 'list', 'loading');
+
+        renderButton(route);
+
+        expect(screen.getByRole('button', { name: 'Add expense' })).toBeTruthy();
+    },
+);
+
+test('EXP-061 retains Add Expense during a confirmed user profile refresh', () => {
+    resolveGlobalTargets();
+    useUsersStore.setState({
+        user: selfUser,
+        friends: [friend],
+        hasConfirmedUser: true,
+    });
+    useLoadingStore.getState().setLoading('users', 'self', 'loading');
+
+    renderButton(ROUTES.DASHBOARD);
+
+    expect(screen.getByRole('button', { name: 'Add expense' })).toBeTruthy();
+});
+
+test('EXP-061 never trusts unconfirmed friend targets during initial loading', () => {
+    useUsersStore.setState({ friends: [friend], hasConfirmedFriends: false });
+    useLoadingStore.getState().setLoading('users', 'friends', 'loading');
+
+    renderButton(ROUTES.FRIENDS);
+
+    expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
+});
+
+test('EXP-061 never trusts unconfirmed groups during initial loading', () => {
+    useGroupsStore.setState({
+        groups: [readyGroup],
+        hasConfirmedGroups: false,
+    });
+    useLoadingStore.getState().setLoading('group', 'list', 'loading');
+
+    renderButton(ROUTES.DASHBOARD);
+
+    expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
 });
 
 test('opens Add Expense when a valid target exists', () => {

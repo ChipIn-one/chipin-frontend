@@ -104,6 +104,8 @@ beforeEach(() => {
         user: null,
         localUser: { role: 'ADMIN', settings },
         friends: [],
+        hasConfirmedFriends: false,
+        hasConfirmedUser: false,
     });
 });
 
@@ -184,6 +186,30 @@ test('EXP-062 keeps four mobile items with only a one-member group', () => {
     );
 
     expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
+    expect(screen.getAllByRole('link')).toHaveLength(4);
+});
+
+test('EXP-062 keeps the center action during a confirmed friend refresh', () => {
+    useUsersStore.setState({
+        user: currentUser,
+        friends: [friend],
+        hasConfirmedFriends: true,
+        hasConfirmedUser: true,
+    });
+    useLoadingStore.getState().setLoading('users', 'friends', 'loading');
+    useLoadingStore.getState().setLoading('users', 'self', 'loading');
+
+    render(
+        <MemoryRouter initialEntries={['/dashboard']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <MobileNavBar />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Add expense' })).toBeTruthy();
     expect(screen.getAllByRole('link')).toHaveLength(4);
 });
 
