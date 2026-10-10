@@ -274,21 +274,25 @@ test('renders the group activity exhausted marker after the last page', () => {
     expect(screen.getByText('activity:endOfFeed')).not.toBeNull();
 });
 
-test('renders compact invite hint instead of No expenses for a single-member group', () => {
+test('renders shared illustrated invite onboarding instead of No expenses for a single-member group', () => {
     render(<GroupTabsContent group={group} {...defaultProps} />);
 
     expect(screen.getByText('page.expenses.inviteTitle')).not.toBeNull();
     expect(screen.getByText('page.expenses.inviteDescription')).not.toBeNull();
-    expect(screen.getByRole('button', { name: 'page.membersTab.invitePeople' })).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'page.expenses.inviteAction' })).not.toBeNull();
+    expect(screen.getByText('page.expenses.shareVia')).not.toBeNull();
+    expect(screen.getByRole('button', {
+        name: /group:page\\.settings\\.showQRTitle/,
+    })).not.toBeNull();
     expect(screen.queryByText('page.expenses.emptyTitle')).toBeNull();
 });
 
-test('keeps compact invite hint when the feed only contains group lifecycle activity', () => {
+test('keeps shared invite onboarding when the feed only contains group lifecycle activity', () => {
     render(<GroupTabsContent group={groupWithLifecycleActivity} {...defaultProps} />);
 
     expect(screen.getByText('page.expenses.inviteTitle')).not.toBeNull();
     expect(screen.getByText('page.expenses.inviteDescription')).not.toBeNull();
-    expect(screen.getByRole('button', { name: 'page.membersTab.invitePeople' })).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'page.expenses.inviteAction' })).not.toBeNull();
     expect(screen.queryByText('page.expenses.emptyTitle')).toBeNull();
 });
 

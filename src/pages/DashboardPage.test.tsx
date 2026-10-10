@@ -200,6 +200,36 @@ test('DSH-007 renders welcome only for no friends and no groups', () => {
     expect(within(main).queryByTestId('activity-list')).toBeNull();
 });
 
+test('DSH-013 puts the Create group action below No groups yet at full width', () => {
+    resolveDashboardOnboardingData();
+    useUsersStore.setState({ friends: [{ user: creator, balances: [], lastUsedCurrency: null }] });
+
+    render(<DashboardPage />);
+
+    const side = screen.getByTestId('dashboard-side-panel');
+    const label = within(side).getByText('groups.emptyTitle');
+    const card = label.closest('[data-empty-state]');
+    const action = within(side).getByRole('button', { name: 'common:buttons.createGroup' });
+
+    expect(card?.querySelector('[data-empty-state-action]')?.contains(action)).toBe(true);
+    expect(card?.firstElementChild?.className).toContain('rt-r-fd-column');
+    expect(action.className).toContain('rt-r-w-100');
+});
+
+test('DSH-012 does not reserve vertical space when the Dashboard summary is empty', () => {
+    resolveDashboardOnboardingData();
+    useGroupsStore.setState({ groups: [singleMemberGroup] });
+
+    render(<DashboardPage />);
+
+    const side = screen.getByTestId('dashboard-side-panel');
+    const groups = within(side).getByTestId('groups-cards');
+    const panelLayout = side.firstElementChild;
+
+    expect(panelLayout?.children).toHaveLength(2);
+    expect(panelLayout?.lastElementChild?.contains(groups)).toBe(true);
+});
+
 test('DSH-009 renders normal Dashboard for a one-member group with empty activity', () => {
     resolveDashboardOnboardingData();
     useGroupsStore.setState({ groups: [singleMemberGroup] });

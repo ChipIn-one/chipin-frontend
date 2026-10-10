@@ -37,3 +37,27 @@ test('uses the compact GroupCard-aligned visual contract', () => {
         screen.getByRole('button', { name: ACTION_LABEL }),
     ).toBeTruthy();
 });
+
+test('stacks the optional action under the icon and description', () => {
+    render(
+        <Theme>
+            <EmptyState
+                icon={<LucideInfo size={20} />}
+                title={TITLE}
+                description={DESCRIPTION}
+                action={<Button width="100%">{ACTION_LABEL}</Button>}
+                actionPosition="below"
+            />
+        </Theme>,
+    );
+
+    const card = screen.getByText(TITLE).closest('[data-empty-state]');
+    const layout = card?.firstElementChild;
+    const action = screen.getByRole('button', { name: ACTION_LABEL });
+    const actionContainer = card?.querySelector('[data-empty-state-action]');
+
+    expect(layout?.className).toContain('rt-r-fd-column');
+    expect(layout?.lastElementChild).toBe(actionContainer);
+    expect(actionContainer?.contains(action)).toBe(true);
+    expect(action.className).toContain('rt-r-w-100');
+});

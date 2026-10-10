@@ -63,12 +63,10 @@ const DashboardPage = () => {
                 <DashboardGreeting />
             </Box>
 
-            <Box display={{ initial: 'block' }}>
-                <DashBoardSummary
-                    isLoading={isDashboardLoading}
-                    hasGroups={hasGroupExpenseHistory}
-                />
-            </Box>
+            <DashBoardSummary
+                isLoading={isDashboardLoading}
+                hasGroups={hasGroupExpenseHistory}
+            />
 
             <Flex gap="4" direction="column">
                 {!isDashboardFetched ||
@@ -86,6 +84,7 @@ const DashboardPage = () => {
                                     <Button
                                         size="2"
                                         variant="soft"
+                                        width="100%"
                                     >
                                         <LucidePlus size={14} />
                                         {t(

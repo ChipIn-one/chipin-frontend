@@ -18,6 +18,7 @@ const NoGroupsEmptyState = ({ action }: Props) => {
             title={t('groups.emptyTitle')}
             description={t('groups.emptyDescription')}
             action={action}
+            actionPosition={action ? 'below' : 'inline'}
         />
     );
 };
