@@ -37,7 +37,9 @@ vi.mock('components/dashboard-onboarding', () => ({
 
 vi.mock('components/dashboard-summary', () => ({
     DashboardHeader: () => null,
-    DashboardSummary: () => null,
+    DashboardSummary: ({ hasExpenseHistory }: { hasExpenseHistory: boolean }) => (
+        hasExpenseHistory ? <div data-testid="dashboard-summary" /> : null
+    ),
 }));
 
 vi.mock('components/GroupsCards', () => ({
@@ -228,6 +230,37 @@ test('DSH-012 does not reserve vertical space when the Dashboard summary is empt
 
     expect(panelLayout?.children).toHaveLength(2);
     expect(panelLayout?.lastElementChild?.contains(groups)).toBe(true);
+});
+
+test('DSH-012 shows settled summary after direct-friend expense history', () => {
+    resolveDashboardOnboardingData();
+    useUsersStore.setState({
+        friends: [{
+            user: { ...creator, id: 'friend-1' },
+            balances: [],
+            lastUsedCurrency: 'USD',
+        }],
+    });
+
+    render(<DashboardPage />);
+
+    expect(screen.getByTestId('dashboard-summary')).toBeTruthy();
+    expect(screen.getByTestId('activity-list')).toBeTruthy();
+});
+
+test('DSH-012 hides settled summary without direct-friend or group history', () => {
+    resolveDashboardOnboardingData();
+    useUsersStore.setState({
+        friends: [{
+            user: { ...creator, id: 'friend-1' },
+            balances: [],
+            lastUsedCurrency: null,
+        }],
+    });
+
+    render(<DashboardPage />);
+
+    expect(screen.queryByTestId('dashboard-summary')).toBeNull();
 });
 
 test('DSH-009 renders normal Dashboard for a one-member group with empty activity', () => {

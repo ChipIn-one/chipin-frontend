@@ -26,11 +26,11 @@ const settings = {
     sex: 'male',
 } satisfies UserSettings;
 
-const renderSummary = (isLoading = false, hasGroups = false) =>
+const renderSummary = (isLoading = false, hasExpenseHistory = false) =>
     render(
         <ThemeProvider theme={lightThemeStyled}>
             <Theme>
-                <DashboardSummary isLoading={isLoading} hasGroups={hasGroups} />
+                <DashboardSummary isLoading={isLoading} hasExpenseHistory={hasExpenseHistory} />
             </Theme>
         </ThemeProvider>,
     );

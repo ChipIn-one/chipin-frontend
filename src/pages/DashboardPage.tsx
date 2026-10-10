@@ -31,8 +31,8 @@ const DashboardPage = () => {
         fetchMoreDashboardActivity,
         groups,
         dashboardView,
-        hasGroups,
-        hasGroupExpenseHistory,
+        hasExpenseHistory,
+        hasExpenseHistory,
         hasMoreActivity,
         isDashboardFetched,
         isDashboardLoading,
@@ -65,13 +65,13 @@ const DashboardPage = () => {
 
             <DashBoardSummary
                 isLoading={isDashboardLoading}
-                hasGroups={hasGroupExpenseHistory}
+                hasExpenseHistory={hasExpenseHistory}
             />
 
             <Flex gap="4" direction="column">
                 {!isDashboardFetched ||
                 !isGroupListFetched ||
-                hasGroups ? (
+                hasExpenseHistory ? (
                     <GroupsCards
                         groups={groups}
                         label={t('groups.title')}

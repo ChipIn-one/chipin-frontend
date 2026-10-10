@@ -67,7 +67,9 @@ const useConnect = () => {
     const activityEvents = getActivityPreviewEvents(activityItems);
     const hasGroups = groups.length > 0;
     const hasConnections = hasGroups || friends.length > 0;
-    const hasGroupExpenseHistory = groups.some(group => group.lastUsedCurrency !== null);
+    const hasExpenseHistory =
+        groups.some(group => group.lastUsedCurrency !== null) ||
+        friends.some(friend => friend.lastUsedCurrency !== null);
     const hasMoreActivity = activityNextCursor !== null;
     const isOnboardingDataSettled =
         isDashboardFetched &&
@@ -102,7 +104,7 @@ const useConnect = () => {
         groups,
         dashboardView,
         hasGroups,
-        hasGroupExpenseHistory,
+        hasExpenseHistory,
         hasMoreActivity,
         isDashboardFetched,
         isDashboardLoading,

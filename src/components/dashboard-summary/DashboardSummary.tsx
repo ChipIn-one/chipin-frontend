@@ -14,12 +14,12 @@ import { SummaryCardButton } from './styled';
 
 interface Props {
     isLoading?: boolean;
-    hasGroups?: boolean;
+    hasExpenseHistory?: boolean;
 }
 
 const SUMMARY_DETAILS_ID = 'dashboard-balance-summary-details';
 
-const DashBoardSummary = ({ isLoading = false, hasGroups = false }: Props) => {
+const DashBoardSummary = ({ isLoading = false, hasExpenseHistory = false }: Props) => {
     const { t } = useTranslation('dashboard');
     const [isExpanded, setIsExpanded] = useState(false);
     const {
@@ -123,7 +123,7 @@ const DashBoardSummary = ({ isLoading = false, hasGroups = false }: Props) => {
 
     if (netTotalInBase === 0) {
         if (!hasDetails) {
-            return hasGroups ? <NoDebtsEmptyState /> : null;
+            return hasExpenseHistory ? <NoDebtsEmptyState /> : null;
         }
 
         return <Card size="1">{detailsContent}</Card>;
