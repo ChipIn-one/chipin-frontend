@@ -59,5 +59,5 @@ test('stacks the optional action under the icon and description', () => {
     expect(layout?.className).toContain('rt-r-fd-column');
     expect(layout?.lastElementChild).toBe(actionContainer);
     expect(actionContainer?.contains(action)).toBe(true);
-    expect(window.getComputedStyle(actionContainer as HTMLElement).width).toBe('100%');
+    expect(layout?.className).toContain('rt-r-ai-stretch');
 });
