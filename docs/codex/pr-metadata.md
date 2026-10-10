@@ -1,6 +1,6 @@
 # Frontend PR metadata (#381)
 
-Contract: https://github.com/ChipIn-one/.github/blob/feat/issue-381-pr-metadata/automation/pr-metadata.md
+Contract: https://github.com/ChipIn-one/.github/blob/master/automation/pr-metadata.md
 
 FE-only caller invokes pinned shared action, which reuses GitHubClient and native Development link read-back. New `scripts/create-pr.mjs` PRs receive one explicit Task identity and concise metadata headings; human authors must replace the prompts with actual verified evidence. Existing PRs are preserved.
 
