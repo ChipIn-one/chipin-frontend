@@ -1,28 +1,9 @@
-import { useId, useState } from 'react';
-import { LucideArrowLeft, LucideInfo } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
-
-import { Button, Callout, Flex } from '@radix-ui/themes';
-
-import { resolveApiErrorMessageFromError } from 'helpers/errors';
-
-import type { SelectItem } from 'components/Select';
 
 import { BaseModal, MODAL_SIZES } from '../../base-modal';
-import { OverlayBody, OverlayFooter } from '../../components';
-import {
-    getSettlementAmount,
-    getSettlementViewModel,
-    selectSettlementBalance,
-    type SettlementFormProps,
-    useConnect,
-} from '../internal';
-import { ModalSurface } from '../styled';
+import type { SettlementFormProps } from '../internal';
 
-import SettlementAmountField from './SettlementAmountField';
-import SettlementDebtSummary from './SettlementDebtSummary';
-import SettlementStatus from './SettlementStatus';
+import SettlementFormContent from './SettlementFormContent';
 
 const SettlementForm = ({
     isOpened,
@@ -31,50 +12,8 @@ const SettlementForm = ({
     balances,
     initialCurrency,
     onSubmit,
-    onBack,
 }: SettlementFormProps) => {
-    const { t } = useTranslation(['common', 'friends', 'toasts']);
-    const { user, isSubmitting } = useConnect();
-    const amountInputId = useId();
-    const [currency, setCurrency] = useState(initialCurrency);
-    const selectedBalance = selectSettlementBalance(balances, currency);
-    const [amount, setAmount] = useState(() => getSettlementAmount(selectedBalance));
-    const currencyItems: SelectItem[] = balances.map(balance => ({
-        value: balance.currency,
-        label: balance.currency,
-    }));
-
-    if (!user) {
-        return null;
-    }
-
-    const settlement = getSettlementViewModel({
-        user,
-        friend,
-        balance: selectedBalance,
-        amount,
-    });
-
-    const onCurrencyChange = (nextCurrency: string) => {
-        const nextBalance = selectSettlementBalance(balances, nextCurrency);
-
-        setCurrency(nextCurrency);
-        setAmount(getSettlementAmount(nextBalance));
-    };
-
-    const onFormSubmit = () => {
-        onSubmit(settlement.params)
-            .then(() => {
-                onOpenChange(false);
-                toast.success(t('toasts:settlement.created'));
-            })
-            .catch(error => {
-                toast.error(resolveApiErrorMessageFromError(
-                    error,
-                    t('toasts:common.requestFailed'),
-                ));
-            });
-    };
+    const { t } = useTranslation('friends');
 
     return (
         <BaseModal
@@ -84,85 +23,13 @@ const SettlementForm = ({
             accessibleDescription={t('friends:settleUp.noMoneyMoves')}
             maxWidth={MODAL_SIZES.default}
             content={
-                <>
-                    <OverlayBody>
-                        <ModalSurface>
-                            {onBack && (
-                                <Flex>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        color="gray"
-                                        onClick={onBack}
-                                    >
-                                        <LucideArrowLeft size={16} />
-                                        {t('common:buttons.back')}
-                                    </Button>
-                                </Flex>
-                            )}
-
-                            <SettlementDebtSummary
-                                friend={friend}
-                                summaryUser={settlement.summaryUser}
-                                isFriendPayer={settlement.isFriendPayer}
-                                amount={settlement.maxAmount}
-                                currency={currency}
-                                color={settlement.debtColor}
-                            />
-
-                            <SettlementAmountField
-                                inputId={amountInputId}
-                                amount={amount}
-                                currency={currency}
-                                currencyItems={currencyItems}
-                                onAmountChange={setAmount}
-                                onCurrencyChange={onCurrencyChange}
-                            />
-
-                            <SettlementStatus
-                                isDebtSettled={settlement.isDebtSettled}
-                                remainingAmount={settlement.remainingAmount}
-                                currency={currency}
-                                color={settlement.debtColor}
-                            />
-
-                            <Callout.Root color="grass" size="2">
-                                <Callout.Icon>
-                                    <LucideInfo size={18} />
-                                </Callout.Icon>
-                                <Callout.Text>
-                                    {t('friends:settleUp.noMoneyMoves')}
-                                </Callout.Text>
-                            </Callout.Root>
-                        </ModalSurface>
-                    </OverlayBody>
-
-                    <OverlayFooter
-                        cancelAction={
-                            <Button
-                                type="button"
-                                size="4"
-                                variant="soft"
-                                color="gray"
-                                onClick={() => onOpenChange(false)}
-                            >
-                                {t('common:buttons.cancel')}
-                            </Button>
-                        }
-                        primaryAction={
-                            <Button
-                                type="button"
-                                size="4"
-                                color="grass"
-                                disabled={settlement.isSubmitDisabled}
-                                loading={isSubmitting}
-                                onClick={onFormSubmit}
-                            >
-                                {t('friends:settleUp.recordPayment')}
-                            </Button>
-                        }
-                    />
-                </>
+                <SettlementFormContent
+                    friend={friend}
+                    balances={balances}
+                    initialCurrency={initialCurrency}
+                    onSubmit={onSubmit}
+                    onClose={() => onOpenChange(false)}
+                />
             }
         />
     );

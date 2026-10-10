@@ -1,5 +1,5 @@
-import { LucideX } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { LucideArrowLeft, LucideX } from 'lucide-react';
+import type { ReactNode, Ref } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Dialog, IconButton, Text, VisuallyHidden } from '@radix-ui/themes';
@@ -17,6 +17,9 @@ interface Props {
     isOpened?: boolean;
     setIsOpened?: (isOpen: boolean) => void;
     isCloseDisabled?: boolean;
+    onBack?: () => void;
+    isBackDisabled?: boolean;
+    titleRef?: Ref<HTMLHeadingElement>;
 }
 
 const BaseModal = ({
@@ -28,6 +31,9 @@ const BaseModal = ({
     isOpened,
     setIsOpened,
     isCloseDisabled = false,
+    onBack,
+    isBackDisabled = false,
+    titleRef,
 }: Props) => {
     const { t } = useTranslation('common');
 
@@ -41,8 +47,22 @@ const BaseModal = ({
                 className="modal-overlay-content"
             >
                 <OverlayHeader
+                    backControl={
+                        onBack ? (
+                            <IconButton
+                                type="button"
+                                variant="ghost"
+                                color="gray"
+                                aria-label={t('buttons.back')}
+                                disabled={isBackDisabled}
+                                onClick={onBack}
+                            >
+                                <LucideArrowLeft width={20} />
+                            </IconButton>
+                        ) : undefined
+                    }
                     title={
-                        <Dialog.Title size="6" mb="0">
+                        <Dialog.Title ref={titleRef} tabIndex={titleRef ? -1 : undefined} size="6" mb="0">
                             <Text color="gray">{title}</Text>
                         </Dialog.Title>
                     }
