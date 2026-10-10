@@ -195,7 +195,7 @@ beforeEach(() => {
     });
     useDashboardStore.getState().setInitialDashboardStore();
     useGroupsStore.getState().setInitialGroupsStore();
-    useUsersStore.setState({ user: currentUser, friends: [] });
+    useUsersStore.setState({ user: currentUser, friends: [], hasConfirmedFriends: false });
     useLoadingStore.getState().setInitialLoadingStore();
     useErrorsStore.getState().resetErrors();
 });
@@ -335,6 +335,74 @@ test('DSH-007 preserves a confirmed dashboard during background refresh loading'
 
     expect(screen.getByTestId('activity-list')).toBeTruthy();
     expect(screen.queryByTestId('activity-skeleton')).toBeNull();
+});
+
+test('DSH-007 keeps confirmed group snapshot visible after list refresh fails', () => {
+    resolveDashboardOnboardingData();
+    useGroupsStore.setState({
+        groups: [singleMemberGroup],
+        hasConfirmedGroups: true,
+    });
+    useLoadingStore.getState().setLoading('group', 'list', 'loading');
+    useErrorsStore.getState().setError('group', 'list', {
+        message: 'Group refresh unavailable',
+    });
+
+    render(<DashboardPage />);
+
+    expect(screen.getByTestId('groups-cards')).toBeTruthy();
+    expect(screen.getByTestId('activity-list')).toBeTruthy();
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(screen.queryByText('errors.loadTitle')).toBeNull();
+});
+
+test('DSH-007 keeps confirmed friend snapshot visible after friends refresh fails', () => {
+    resolveDashboardOnboardingData();
+    useUsersStore.setState({
+        hasConfirmedFriends: true,
+        friends: [{
+            user: { ...creator, id: 'friend-1' },
+            balances: [],
+            lastUsedCurrency: null,
+        }],
+    });
+    useLoadingStore.getState().setLoading('users', 'friends', 'loading');
+    useErrorsStore.getState().setError('users', 'friends', {
+        message: 'Friends refresh unavailable',
+    });
+
+    render(<DashboardPage />);
+
+    expect(screen.getByTestId('activity-list')).toBeTruthy();
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(screen.queryByText('errors.loadTitle')).toBeNull();
+});
+
+test('DSH-007 preserves a confirmed empty connection list without inventing a new-user state from failure', () => {
+    resolveDashboardOnboardingData();
+    useUsersStore.setState({ hasConfirmedFriends: true, friends: [] });
+    useGroupsStore.setState({ hasConfirmedGroups: true, groups: [] });
+    useErrorsStore.getState().setError('users', 'friends', {
+        message: 'Friends refresh unavailable',
+    });
+
+    render(<DashboardPage />);
+
+    expect(screen.getByTestId('dashboard-onboarding')).toBeTruthy();
+    expect(screen.getByRole('alert')).toBeTruthy();
+    expect(screen.queryByText('errors.loadTitle')).toBeNull();
+});
+
+test('DSH-007 treats an initial group failure without confirmed data as blocking', () => {
+    resolveDashboardOnboardingData();
+    useErrorsStore.getState().setError('group', 'list', {
+        message: 'No group snapshot',
+    });
+
+    render(<DashboardPage />);
+
+    expect(screen.queryByTestId('activity-list')).toBeNull();
+    expect(screen.getByText('errors.loadTitle')).toBeTruthy();
 });
 
 test('DSH-007 Retry fetches both dashboard data and currency rates', () => {

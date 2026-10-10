@@ -14,6 +14,7 @@ interface UsersStoreState {
     user: SelfUser | null;
     localUser: LocalUser | null;
     friends: KnownUser[];
+    hasConfirmedFriends: boolean;
     premiumPromoRemaining: number | null;
     isPremiumPromoResolved: boolean;
 }

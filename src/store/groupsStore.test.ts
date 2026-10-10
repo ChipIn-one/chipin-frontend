@@ -106,6 +106,23 @@ describe('groupsStore', () => {
         });
     });
 
+    test('marks a successful empty group response confirmed and retains it after a failed refresh', async () => {
+        vi.mocked(chipinApi.fetchApiUserGroups)
+            .mockResolvedValueOnce({ items: [], nextCursor: null })
+            .mockRejectedValueOnce(new Error('Group refresh failed'));
+
+        expect(useGroupsStore.getState().hasConfirmedGroups).toBe(false);
+        await useGroupsStore.getState().fetchSetGroups();
+        expect(useGroupsStore.getState()).toMatchObject({
+            groups: [],
+            hasConfirmedGroups: true,
+        });
+        await useGroupsStore.getState().fetchSetGroups(true);
+        expect(useGroupsStore.getState().hasConfirmedGroups).toBe(true);
+        useGroupsStore.getState().setInitialGroupsStore();
+        expect(useGroupsStore.getState().hasConfirmedGroups).toBe(false);
+    });
+
     test('replaces the matching cached and selected group after a cover upload', () => {
         const file = new File(['cover'], 'cover.webp', { type: 'image/webp' });
         const updatedGroup = {

@@ -29,9 +29,18 @@ const useConnect = () => {
             fetchMoreDashboardActivity: state.fetchMoreDashboardActivity,
         })),
     );
-    const groups = useGroupsStore(state => state.groups);
-    const { friends, currentUser } = useUsersStore(
-        useShallow(state => ({ friends: state.friends, currentUser: state.user })),
+    const { groups, hasConfirmedGroups } = useGroupsStore(
+        useShallow(state => ({
+            groups: state.groups,
+            hasConfirmedGroups: state.hasConfirmedGroups,
+        })),
+    );
+    const { friends, hasConfirmedFriends, currentUser } = useUsersStore(
+        useShallow(state => ({
+            friends: state.friends,
+            hasConfirmedFriends: state.hasConfirmedFriends,
+            currentUser: state.user,
+        })),
     );
     const {
         isDashboardFetched,
@@ -75,14 +84,14 @@ const useConnect = () => {
     const hasMoreActivity = activityNextCursor !== null;
     const isOnboardingDataSettled =
         (isDashboardFetched || hasConfirmedDashboardData) &&
-        isGroupListFetched &&
-        isFriendsFetched &&
-        isUserSelfFetched;
+        (isGroupListFetched || hasConfirmedGroups) &&
+        (isFriendsFetched || hasConfirmedFriends) &&
+        (isUserSelfFetched || currentUser !== null);
     const hasOnboardingDataError =
         (dashboardError !== null && !hasConfirmedDashboardData) ||
-        groupListError !== null ||
-        friendsError !== null ||
-        userSelfError !== null ||
+        (groupListError !== null && !hasConfirmedGroups) ||
+        (friendsError !== null && !hasConfirmedFriends) ||
+        (userSelfError !== null && currentUser === null) ||
         currentUser === null;
     const dashboardView = !isOnboardingDataSettled
         ? 'loading'
@@ -110,12 +119,16 @@ const useConnect = () => {
         hasMoreActivity,
         isDashboardFetched: isDashboardFetched || hasConfirmedDashboardData,
         isDashboardLoading: isDashboardLoading && !hasConfirmedDashboardData,
-        isDashboardRefreshError: dashboardError !== null && hasConfirmedDashboardData,
+        hasNonBlockingRefreshError:
+            (dashboardError !== null && hasConfirmedDashboardData) ||
+            (groupListError !== null && hasConfirmedGroups) ||
+            (friendsError !== null && hasConfirmedFriends) ||
+            (userSelfError !== null && currentUser !== null),
         isEndOfFeed:
             !isNextPageLoading &&
             !hasMoreActivity &&
             activityItems.length > 0,
-        isGroupListFetched,
+        isGroupListFetched: isGroupListFetched || hasConfirmedGroups,
         isNextPageError: nextPageError !== null,
         isNextPageLoading,
         onRetryLoad,

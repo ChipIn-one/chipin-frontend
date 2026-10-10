@@ -71,6 +71,23 @@ test('returns the fetched user after updating the store', () => {
     });
 });
 
+test('marks an empty friends list confirmed and keeps it after a failed refresh', async () => {
+    vi.mocked(usersApi.fetchKnownUsers)
+        .mockResolvedValueOnce({ friends: [] })
+        .mockRejectedValueOnce(new Error('Friends refresh failed'));
+
+    expect(useUsersStore.getState().hasConfirmedFriends).toBe(false);
+    await useUsersStore.getState().fetchSetFriends();
+    expect(useUsersStore.getState()).toMatchObject({
+        friends: [],
+        hasConfirmedFriends: true,
+    });
+    await useUsersStore.getState().fetchSetFriends(true);
+    expect(useUsersStore.getState().hasConfirmedFriends).toBe(true);
+    useUsersStore.getState().setInitialUsersStore();
+    expect(useUsersStore.getState().hasConfirmedFriends).toBe(false);
+});
+
 test('stores the premium promo remaining counter', () => {
     vi.mocked(usersApi.fetchPremiumPromoRemaining).mockResolvedValue({
         premiumPromoRemaining: 417,

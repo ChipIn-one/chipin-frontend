@@ -9,6 +9,7 @@ const createInitialState = (): UsersStoreState => {
         user: null,
         localUser,
         friends: [],
+        hasConfirmedFriends: false,
         premiumPromoRemaining: null,
         isPremiumPromoResolved: false,
     };

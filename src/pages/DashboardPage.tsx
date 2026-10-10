@@ -41,7 +41,7 @@ const DashboardPage = () => {
         hasMoreActivity,
         isDashboardFetched,
         isDashboardLoading,
-        isDashboardRefreshError,
+        hasNonBlockingRefreshError,
         isEndOfFeed,
         isGroupListFetched,
         isNextPageError,
@@ -108,6 +108,17 @@ const DashboardPage = () => {
     return (
         <Container size="4" pb={{ initial: '9', sm: '6' }}>
             <InternalPageColumnsFromSm sidePanel={sidePanel}>
+                {hasNonBlockingRefreshError && dashboardView !== 'loading' && dashboardView !== 'error' && (
+                    <Flex align="center" justify="between" gap="3" wrap="wrap" py="2" role="alert">
+                        <Text size="2" color="gray">
+                            {t('errors.loadDescription')}
+                        </Text>
+                        <Button type="button" size="1" variant="soft" onClick={onRetryLoad}>
+                            <LucideRefreshCw size={14} />
+                            {t('activity:retryAction')}
+                        </Button>
+                    </Flex>
+                )}
                 {dashboardView === 'welcome' ? (
                     <DashboardOnboarding />
                 ) : dashboardView === 'loading' ? (
@@ -125,19 +136,7 @@ const DashboardPage = () => {
                         }
                     />
                 ) : (
-                    <>
-                        {isDashboardRefreshError && (
-                            <Flex align="center" justify="between" gap="3" wrap="wrap" py="2" role="alert">
-                                <Text size="2" color="gray">
-                                    {t('errors.loadDescription')}
-                                </Text>
-                                <Button type="button" size="1" variant="soft" onClick={onRetryLoad}>
-                                    <LucideRefreshCw size={14} />
-                                    {t('activity:retryAction')}
-                                </Button>
-                            </Flex>
-                        )}
-                        <ActivityEventsList
+                    <ActivityEventsList
                             events={activityEvents}
                             isShowSummary
                             isNavigable
@@ -183,8 +182,7 @@ const DashboardPage = () => {
 
                                 <div ref={sentinelRef} />
                             </>
-                            </ActivityEventsList>
-                    </>
+                    </ActivityEventsList>
                 )}
             </InternalPageColumnsFromSm>
         </Container>
