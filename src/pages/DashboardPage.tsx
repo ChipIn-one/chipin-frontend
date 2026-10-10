@@ -31,7 +31,7 @@ const DashboardPage = () => {
         fetchMoreDashboardActivity,
         groups,
         dashboardView,
-        hasExpenseHistory,
+        hasGroups,
         hasExpenseHistory,
         hasMoreActivity,
         isDashboardFetched,
@@ -71,7 +71,7 @@ const DashboardPage = () => {
             <Flex gap="4" direction="column">
                 {!isDashboardFetched ||
                 !isGroupListFetched ||
-                hasExpenseHistory ? (
+                hasGroups ? (
                     <GroupsCards
                         groups={groups}
                         label={t('groups.title')}
