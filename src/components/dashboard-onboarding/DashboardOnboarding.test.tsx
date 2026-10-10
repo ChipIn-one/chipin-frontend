@@ -74,7 +74,10 @@ beforeEach(() => {
 test('DSH-008 shows the single welcome with two actions', () => {
     renderOnboarding();
     expect(screen.getByRole('heading', { name: 'onboarding.welcome.title' })).toBeTruthy();
-    expect(screen.getByTestId('onboarding-illustration')).toBeTruthy();
+    const card = screen.getByTestId('dashboard-onboarding-card');
+    expect(card.className).toContain('rt-Card');
+    expect(card.contains(screen.getByTestId('onboarding-illustration'))).toBe(true);
+    expect(card.contains(screen.getByRole('heading', { name: 'onboarding.welcome.title' }))).toBe(true);
     expect(screen.getAllByRole('button')).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'common:buttons.createGroup' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'onboarding.actions.inviteFriend' })).toBeTruthy();

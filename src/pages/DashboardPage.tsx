@@ -74,7 +74,12 @@ const DashboardPage = () => {
                 hasExpenseHistory={hasExpenseHistory}
             />
 
-            <Flex gap="4" direction="column">
+            <Flex
+                gap="4"
+                direction="column"
+                display={dashboardView === 'welcome' ? { initial: 'none', sm: 'flex' } : undefined}
+                data-testid="dashboard-groups-section"
+            >
                 {!isDashboardFetched ||
                 !isGroupListFetched ||
                 hasGroups ? (

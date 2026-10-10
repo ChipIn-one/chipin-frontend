@@ -209,6 +209,33 @@ test('DSH-007 renders welcome only for no friends and no groups', () => {
     expect(within(main).queryByTestId('activity-list')).toBeNull();
 });
 
+test('DSH-011 hides the redundant No groups empty state on mobile Welcome, not desktop', () => {
+    resolveDashboardOnboardingData();
+
+    render(<DashboardPage />);
+
+    const groupsSection = screen.getByTestId('dashboard-groups-section');
+    const sidePanel = screen.getByTestId('dashboard-side-panel');
+    expect(within(sidePanel).getByText('groups.emptyTitle')).toBeTruthy();
+    expect(groupsSection.className).toContain('rt-r-display-none');
+    expect(groupsSection.className).toContain('rt-r-sm-display-flex');
+    expect(screen.getByTestId('dashboard-onboarding')).toBeTruthy();
+});
+
+test('DSH-011 keeps No groups visible on mobile once a friend exists', () => {
+    resolveDashboardOnboardingData();
+    useUsersStore.setState({
+        friends: [{ user: creator, balances: [], lastUsedCurrency: null }],
+    });
+
+    render(<DashboardPage />);
+
+    const groupsSection = screen.getByTestId('dashboard-groups-section');
+    expect(groupsSection.className).not.toContain('rt-r-display-none');
+    expect(screen.getByText('groups.emptyTitle')).toBeTruthy();
+    expect(screen.queryByTestId('dashboard-onboarding')).toBeNull();
+});
+
 test('DSH-013 puts the Create group action below No groups yet at full width', () => {
     resolveDashboardOnboardingData();
     useUsersStore.setState({ friends: [{ user: creator, balances: [], lastUsedCurrency: null }] });
