@@ -42,6 +42,15 @@ export const buildCreatePullRequestArgs = (branch, identity, commitDescription =
         throw new Error('Commit description has a conflicting Task identity; refusing PR creation.');
     }
     const description = commitDescription.replace(/^Task identity:\s*\S+\s*$/gmu, '').trim();
+    // Preserve human commit notes and ensure each standard heading appears once.
+    let body = `Task identity: ${identity}\n\n`
+        + (/^## Summary\s*$/mu.test(description) ? description
+            : `## Summary\n${description || '<!-- Describe verified change -->'}`);
+    for (const heading of ['Tests', 'Version impact', 'Dependencies']) {
+        if (!new RegExp(`^## ${heading}\\s*$`, 'mu').test(body)) {
+            body += `\n\n## ${heading}\n<!-- Add verified evidence or explicitly say none -->`;
+        }
+    }
     return [
         'pr', 'create',
         '--base', INTEGRATION_BRANCH,
@@ -49,7 +58,7 @@ export const buildCreatePullRequestArgs = (branch, identity, commitDescription =
         '--fill',
         // --body takes precedence over --fill, so carry forward commit notes.
         '--body',
-        `Task identity: ${identity}\n\n${description}`.trim(),
+        body.trim(),
     ];
 };
 
