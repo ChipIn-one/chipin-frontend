@@ -7,7 +7,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
-import { Box, Button, Container, Flex, Spinner, Text } from '@radix-ui/themes';
+import { Button, Container, Flex, Spinner, Text } from '@radix-ui/themes';
 
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 
@@ -65,9 +65,7 @@ const DashboardPage = () => {
 
     const sidePanel = dashboardView === 'error' ? null : (
         <Flex direction="column" gap="4">
-            <Box display={{ initial: 'block', lg: 'none' }}>
-                <DashboardHeader />
-            </Box>
+            <DashboardHeader />
 
             <DashboardSummary
                 isLoading={isDashboardLoading}

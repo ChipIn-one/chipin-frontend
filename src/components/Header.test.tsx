@@ -196,3 +196,18 @@ test('changes and persists the landing page language', () => {
             }),
         );
 });
+
+test('does not show a separate authenticated avatar shortcut in the global header', () => {
+    render(
+        <MemoryRouter initialEntries={['/dashboard']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <Header />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    // Brand link and the four normal navigation items, without an extra avatar link.
+    expect(screen.getAllByRole('link')).toHaveLength(5);
+});
