@@ -29,6 +29,7 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
     const currentUser = useUsersStore(state => state.user);
     const [isOpened, setIsOpened] = useState(false);
     const [selectedDebt, setSelectedDebt] = useState<DebtOption | null>(null);
+    const [isSettlementPending, setIsSettlementPending] = useState(false);
     const [isYouOweExpanded, setIsYouOweExpanded] = useState(false);
     const [isOwedToYouExpanded, setIsOwedToYouExpanded] = useState(false);
     const groupSettlementOptions = currentUser
@@ -48,13 +49,16 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
     const owedToYou = getDebtOptions(settlementOptions.owedToYou);
     const debts = [...youOwe, ...owedToYou];
     const isSettledMember = Boolean(memberId) && debts.length === 0;
-    // Retain the selected debt if a successful mutation refreshes balances before closing.
+    // Prevent submitting stale debt data. Retain the snapshot only while
+    // this modal's already-started settlement request is completing.
     const selectedOption = selectedDebt
-        ? (debts.find(
-              debt =>
-                  debt.user.id === selectedDebt.user.id &&
-                  debt.balance.currency === selectedDebt.balance.currency,
-          ) ?? selectedDebt)
+        ? (
+              debts.find(
+                  debt =>
+                      debt.user.id === selectedDebt.user.id &&
+                      debt.balance.currency === selectedDebt.balance.currency,
+              ) ?? (isSettlementPending ? selectedDebt : undefined)
+          )
         : undefined;
 
     const onOpenChange = (isOpen: boolean) => {
@@ -118,9 +122,14 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
                         friend={selectedOption.user}
                         balances={selectedOption.balances}
                         initialCurrency={selectedOption.balance.currency}
-                        onSubmit={params => useActivityStore
-                            .getState()
-                            .createSettlement({ ...params, groupId: group.id })}
+                        onSubmit={params => {
+                            setIsSettlementPending(true);
+
+                            return useActivityStore
+                                .getState()
+                                .createSettlement({ ...params, groupId: group.id })
+                                .finally(() => setIsSettlementPending(false));
+                        }}
                         onClose={navigation.close}
                     />
                 ) : (

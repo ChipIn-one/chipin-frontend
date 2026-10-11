@@ -22,7 +22,8 @@ Issue: ChipIn-one/chipin-frontend#314. Integration target: `dev`.
 - Route `choose` renders the debt selection; `payment` renders the selected settlement form.
 - Selecting a debt navigates forward without closing the Dialog.Root. Back returns to `choose` and leaves the dialog open.
 - On successful settlement, the whole flow closes. API errors retain the payment step and its editable state, with a toast.
-- The selected debt is kept temporarily if the balance list refreshes and removes that entry while the settlement completes. A new opening resets selection.
+- If a debt disappears before submission, the payment form becomes unavailable; the stale debt cannot be submitted. The selected snapshot is kept temporarily only during an already-started settlement request to prevent a transient blank form as balances refresh. A new opening resets selection.
+- URL-backed modal routing and browser history are intentionally **out of scope** for this PR. Follow-up: #412.
 
 ## Validation gate
 
