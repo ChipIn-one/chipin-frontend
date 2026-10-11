@@ -1,7 +1,7 @@
 import type { Group } from 'api/chipin.types';
 import { useGroupInvite } from 'hooks/pwaHooks';
 
-import { InviteEmptyState } from 'components/invite';
+import { InviteOnboarding } from 'components/invite-onboarding';
 
 interface Props {
     group: Group;
@@ -10,7 +10,7 @@ interface Props {
 const GroupInviteEmptyState = ({ group }: Props) => {
     const invite = useGroupInvite(group);
 
-    return <InviteEmptyState invite={invite} />;
+    return <InviteOnboarding invite={invite} />;
 };
 
 export default GroupInviteEmptyState;

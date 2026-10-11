@@ -569,8 +569,18 @@ test('uses search-specific and filter-specific empty-state descriptions', () => 
     return user
         .click(screen.getByRole('button', { name: 'summary.youOwe' }))
         .then(() => {
-            expect(screen.getByText('groups.filterEmptyDescription')).toBeTruthy();
-            expect(screen.queryByText('groups.searchEmptyDescription')).toBeNull();
+            const emptyDescription = screen.getByText(
+                'groups.filterEmptyDescription',
+            );
+            const emptyCard = emptyDescription.closest(
+                '[data-empty-state]',
+            );
+
+            expect(emptyCard).toBeTruthy();
+            expect(emptyCard?.className).toContain('rt-r-size-1');
+            expect(
+                screen.queryByText('groups.searchEmptyDescription'),
+            ).toBeNull();
 
             return user.click(
                 screen.getByRole('button', { name: 'groups.searchLabel' }),

@@ -13,7 +13,7 @@ const NoGroupExpensesEmptyState = ({ action }: Props) => {
 
     return (
         <EmptyState
-            icon={<LucideReceipt size={16} />}
+            icon={<LucideReceipt size={20} />}
             iconColor="jade"
             title={t('page.expenses.emptyTitle')}
             description={t('page.expenses.emptyDescription')}

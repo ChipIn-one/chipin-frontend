@@ -4,7 +4,7 @@
         "otherTitle": "Other groups",
         "subtitle": "Keep shared balances and trips organized in one place.",
         "emptyTitle": "No groups yet",
-        "emptyDescription": "Create your first group to start splitting expenses with friends, roommates, or travel buddies.",
+        "emptyDescription": "Groups you create or join will appear here.",
         "filterAll": "All",
         "filterSettled": "Settled",
         "showSettled": "Show",
@@ -45,5 +45,18 @@
         "summaryTitle": "Solo summary",
         "activityTitle": "Solo activity",
         "inDevelopment": "Still in development."
+    },
+    "onboarding": {
+        "welcome": {
+            "title": "Create your first group or add friends",
+            "description": "Track expenses directly with a friend or inside a group. Add a friend, or create a group and invite someone, to start splitting expenses."
+        },
+        "actions": {
+            "inviteFriend": "Invite friend"
+        }
+    },
+    "errors": {
+        "loadTitle": "Unable to load Dashboard",
+        "loadDescription": "We couldn't load your data. Try again."
     }
 }

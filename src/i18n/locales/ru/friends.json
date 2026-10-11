@@ -25,6 +25,7 @@
         "paidAmountTo": "заплатил(а) {{amount}} {{currency}}",
         "noMoneyMoves": "Записывает внешний платеж. Деньги не переводятся.",
         "recordPayment": "Записать платеж",
+        "useFullAmount": "Подставить полную сумму долга",
         "youOwe": "Вы должны {{name}}",
         "owedToYou": "{{name}} должен вам",
         "remainingDebt": "Остаток долга:",

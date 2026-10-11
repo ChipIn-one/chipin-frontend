@@ -25,6 +25,7 @@
         "paidAmountTo": "paid {{amount}} {{currency}} to",
         "noMoneyMoves": "Records an outside payment. No money moves.",
         "recordPayment": "Record payment",
+        "useFullAmount": "Use full debt amount",
         "youOwe": "You owe {{name}}",
         "owedToYou": "{{name}} owes you",
         "remainingDebt": "Remaining debt:",

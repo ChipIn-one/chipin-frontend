@@ -1,4 +1,5 @@
 import type { AppEvent } from 'api/activity.types';
+import type { ActivityFeedItem } from 'api/chipin.types';
 import {
     ACTIVITY_ACTIONS,
     ACTIVITY_CATEGORIES,
@@ -40,6 +41,10 @@ export const getActivityLedgerEntryId = (event?: AppEvent): string | undefined =
 
     return undefined;
 };
+
+export const getActivityPreviewEvents = (
+    items: readonly ActivityFeedItem[],
+): AppEvent[] => items.map(item => item.lastEvent);
 
 export const getActivitySubeventsView = (
     parentEvent: AppEvent | null | undefined,

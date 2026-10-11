@@ -5,6 +5,12 @@ import { ROUTE_META, ROUTES } from 'constants/routes';
 const getPreferredModeRoute = (isSoloModeByDefault: boolean): string =>
     isSoloModeByDefault ? ROUTES.SOLO : ROUTES.DASHBOARD;
 
+const isNavigationRouteActive = (
+    pathname: string,
+    href: string,
+): boolean =>
+    pathname === href || pathname.startsWith(`${href}/`);
+
 const getHasDesktopSidebar = (pathname: string): boolean => {
     if (
         matchPath({ path: ROUTES.DASHBOARD, end: true }, pathname) ||
@@ -39,4 +45,9 @@ const getBreadcrumbParentPath = (pathname: string): string | null => {
     return null;
 };
 
-export { getBreadcrumbParentPath, getHasDesktopSidebar, getPreferredModeRoute };
+export {
+    getBreadcrumbParentPath,
+    getHasDesktopSidebar,
+    getPreferredModeRoute,
+    isNavigationRouteActive,
+};
