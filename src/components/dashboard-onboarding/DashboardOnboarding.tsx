@@ -39,7 +39,6 @@ const DashboardOnboarding = () => {
     return (
         <Card
             size={{ initial: '2', md: '3' }}
-            width="100%"
             data-testid="dashboard-onboarding-card"
         >
             <Flex
