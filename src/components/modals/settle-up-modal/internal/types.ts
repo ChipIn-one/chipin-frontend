@@ -8,6 +8,4 @@ export interface DebtOption {
     balances: FriendBalance[];
 }
 
-export interface SettlementFormProps extends Omit<FriendSettleUpProps, 'source'> {
-    onBack?: () => void;
-}
+export type SettlementFormProps = Omit<FriendSettleUpProps, 'source'>;

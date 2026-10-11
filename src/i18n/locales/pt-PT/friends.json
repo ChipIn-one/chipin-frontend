@@ -25,6 +25,7 @@
         "paidAmountTo": "pagou {{amount}} {{currency}} a",
         "noMoneyMoves": "Regista um pagamento externo. Nenhum dinheiro é movimentado.",
         "recordPayment": "Registar pagamento",
+        "useFullAmount": "Usar o valor total da dívida",
         "youOwe": "Deve a {{name}}",
         "owedToYou": "{{name}} deve-lhe",
         "remainingDebt": "Dívida restante:",

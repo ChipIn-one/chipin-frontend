@@ -1,6 +1,6 @@
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import type { Group, SelfUser } from 'api/chipin.types';
@@ -311,3 +311,126 @@ test('uses the selected group debt currency as the initial payment currency', ()
             });
         });
 });
+
+test('keeps the same dialog node while navigating to payment and back', () => {
+    const user = userEvent.setup();
+    render(<SettleUpModal source="group" group={group} />);
+
+    return user
+        .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
+        .then(() => {
+            const dialog = screen.getByRole('dialog');
+
+            return user.click(
+                screen.getByRole('button', { name: /Debtor Person Full.*823/ }),
+            ).then(() => {
+                expect(screen.getByRole('dialog')).toBe(dialog);
+                return user.click(screen.getByRole('button', { name: 'buttons.back' }));
+            }).then(() => {
+                expect(screen.getByRole('dialog')).toBe(dialog);
+                expect(screen.getByText('group:page.settleUp.youOwe')).toBeTruthy();
+                expect(screen.queryByRole('button', { name: 'buttons.back' })).toBeNull();
+            });
+        });
+});
+
+test('prevents submitting a group debt that disappears before payment starts', () => {
+    const user = userEvent.setup();
+    const view = render(<SettleUpModal source="group" group={group} />);
+
+    return user
+        .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
+        .then(() => user.click(
+            screen.getByRole('button', { name: /Debtor Person Full.*823/ }),
+        ))
+        .then(() => {
+            const dialog = screen.getByRole('dialog');
+            const updatedGroup = {
+                ...group,
+                members: group.members.map(member => ({
+                    ...member,
+                    balancesByCurrency: {},
+                })),
+            };
+            view.rerender(<SettleUpModal source="group" group={updatedGroup} />);
+
+            expect(screen.getByRole('dialog')).toBe(dialog);
+            expect(screen.queryByRole('textbox')).toBeNull();
+            expect(screen.queryByRole('button', {
+                name: 'friends:settleUp.recordPayment',
+            })).toBeNull();
+            expect(screen.getByText('group:page.balances.settled')).toBeTruthy();
+        });
+});
+
+
+test('restores the exact selected group debt when the summary amount is clicked', () => {
+    const user = userEvent.setup();
+
+    render(<SettleUpModal source="group" group={group} />);
+
+    return user
+        .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
+        .then(() => user.click(screen.getByRole('button', {
+            name: /Debtor Person Full.*30.12 EUR/,
+        })))
+        .then(() => {
+            const input = screen.getByRole('textbox');
+            return user
+                .clear(input)
+                .then(() => user.type(input, '10'))
+                .then(() => user.click(screen.getByRole('button', {
+                    name: 'friends:settleUp.useFullAmount',
+                })))
+                .then(() => {
+                    expect(input).toHaveProperty('value', '30.1234');
+                });
+        });
+});
+
+test('keeps payment content while its already-started settlement request refreshes balances', () => {
+    let onResolve: (() => void) | undefined;
+    const pendingRequest = new Promise<void>(resolve => {
+        onResolve = resolve;
+    });
+    const createSettlement = vi.fn().mockReturnValue(pendingRequest);
+    const user = userEvent.setup();
+
+    useActivityStore.setState({ createSettlement });
+
+    const view = render(<SettleUpModal source="group" group={group} />);
+
+    return user
+        .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
+        .then(() => user.click(screen.getByRole('button', {
+            name: /Debtor Person Full.*823/,
+        })))
+        .then(() => user.click(screen.getByRole('button', {
+            name: 'friends:settleUp.recordPayment',
+        })))
+        .then(() => {
+            expect(createSettlement).toHaveBeenCalledOnce();
+            const dialog = screen.getByRole('dialog');
+            const updatedGroup = {
+                ...group,
+                members: group.members.map(member => ({
+                    ...member,
+                    balancesByCurrency: {},
+                })),
+            };
+
+            view.rerender(<SettleUpModal source="group" group={updatedGroup} />);
+
+            expect(screen.getByRole('dialog')).toBe(dialog);
+            expect(screen.getByRole('textbox')).toBeTruthy();
+            expect(screen.getByRole('button', {
+                name: 'friends:settleUp.recordPayment',
+            })).toHaveProperty('disabled', true);
+
+            onResolve?.();
+            return waitFor(() => {
+                expect(screen.queryByRole('dialog')).toBeNull();
+            });
+        });
+});
+

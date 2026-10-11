@@ -5,7 +5,7 @@ import { Card, Flex } from '@radix-ui/themes';
 
 import type { FriendUser } from 'api/chipin.types';
 
-import { DebtAmount, ParticipantName } from '../styled';
+import { DebtAmount, DebtAmountAction, ParticipantName } from '../styled';
 import type { SettlementUser } from '../types';
 
 interface Props {
@@ -15,6 +15,7 @@ interface Props {
     amount: number;
     currency: string;
     color: 'green' | 'red';
+    onUseFullAmount: () => void;
 }
 
 const SettlementDebtSummary = ({
@@ -24,6 +25,7 @@ const SettlementDebtSummary = ({
     amount,
     currency,
     color,
+    onUseFullAmount,
 }: Props) => {
     const { t } = useTranslation('friends');
 
@@ -42,12 +44,18 @@ const SettlementDebtSummary = ({
                     </ParticipantName>
                 </Flex>
                 <DebtAmount size="3" weight="bold" color={color}>
-                    <Amount
-                        value={amount}
-                        tokenCode={currency}
-                        precision={2}
-                        type="summary"
-                    />
+                    <DebtAmountAction
+                        type="button"
+                        onClick={onUseFullAmount}
+                        aria-label={t('friends:settleUp.useFullAmount')}
+                    >
+                        <Amount
+                            value={amount}
+                            tokenCode={currency}
+                            precision={2}
+                            type="summary"
+                        />
+                    </DebtAmountAction>
                 </DebtAmount>
             </Flex>
         </Card>
