@@ -4,7 +4,7 @@
         "otherTitle": "Otros grupos",
         "subtitle": "Mantén balances compartidos y viajes organizados en un solo lugar.",
         "emptyTitle": "Aún no hay grupos",
-        "emptyDescription": "Crea tu primer grupo para empezar a dividir gastos con amigos, compañeros de cuarto o de viaje.",
+        "emptyDescription": "Aquí aparecerán los grupos que crees o a los que te unas.",
         "filterAll": "Todos",
         "filterSettled": "Liquidados",
         "showSettled": "Mostrar",
@@ -45,5 +45,18 @@
         "summaryTitle": "Resumen de Solo",
         "activityTitle": "Actividad de Solo",
         "inDevelopment": "Aún está en desarrollo."
+    },
+    "onboarding": {
+        "welcome": {
+            "title": "Crea tu primer grupo o añade amigos",
+            "description": "Lleva los gastos directamente con un amigo o en un grupo. Añade a un amigo o crea un grupo e invita a alguien para empezar a dividir gastos."
+        },
+        "actions": {
+            "inviteFriend": "Invitar a un amigo"
+        }
+    },
+    "errors": {
+        "loadTitle": "No se pudo cargar el panel",
+        "loadDescription": "No pudimos cargar tus datos. Inténtalo de nuevo."
     }
 }

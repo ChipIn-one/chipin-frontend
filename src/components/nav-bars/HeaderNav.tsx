@@ -3,7 +3,10 @@ import { useLocation } from 'react-router-dom';
 
 import { Box, Flex, Text } from '@radix-ui/themes';
 
-import { getPreferredModeRoute } from 'helpers/routes';
+import {
+    getPreferredModeRoute,
+    isNavigationRouteActive,
+} from 'helpers/routes';
 import { selectIsSoloMode } from 'store/dashboardSelectors';
 import { useDashboardStore } from 'store/dashboardStore';
 import { selectCanAccessSolo, useUsersStore } from 'store/users-store';
@@ -27,8 +30,10 @@ const HeaderNav = () => {
         <Box display={{ initial: 'none', sm: 'block' }}>
             <Flex justify="between" align="center" gap="5">
                 {navElements.map(({ href, labelKey, Icon }) => {
-                    const isActive =
-                        location.pathname === href || location.pathname.startsWith(`${href}/`);
+                    const isActive = isNavigationRouteActive(
+                        location.pathname,
+                        href,
+                    );
 
                     return (
                         <NavButton

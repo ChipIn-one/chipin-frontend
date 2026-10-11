@@ -26,11 +26,11 @@ const settings = {
     sex: 'male',
 } satisfies UserSettings;
 
-const renderSummary = (isLoading = false) =>
+const renderSummary = (isLoading = false, hasExpenseHistory = false) =>
     render(
         <ThemeProvider theme={lightThemeStyled}>
             <Theme>
-                <DashboardSummary isLoading={isLoading} />
+                <DashboardSummary isLoading={isLoading} hasExpenseHistory={hasExpenseHistory} />
             </Theme>
         </ThemeProvider>,
     );
@@ -137,4 +137,53 @@ test('starts collapsed again after the Dashboard summary remounts', () => {
     expect(
         screen.getByRole('button', { name: /Show balance details/ }).getAttribute('aria-expanded'),
     ).toBe('false');
+});
+
+test('DSH-012 hides a resolved zero Total balance without groups', () => {
+    useDashboardStore.setState({
+        balances: {
+            USD: { currency: 'USD', netBalance: 0 },
+        },
+    });
+
+    renderSummary();
+
+    expect(screen.queryByText('Total balance')).toBeNull();
+    expect(screen.queryByText('All settled')).toBeNull();
+});
+
+test('DSH-012 shows All settled for a zero balance when groups exist', () => {
+    useDashboardStore.setState({
+        balances: {
+            USD: { currency: 'USD', netBalance: 0 },
+        },
+    });
+
+    renderSummary(false, true);
+
+    expect(screen.queryByText('Total balance')).toBeNull();
+    expect(screen.getByText('All settled')).toBeTruthy();
+    expect(screen.getByText('Nothing to settle right now.')).toBeTruthy();
+});
+
+test('DSH-012 preserves debt detail when opposing balances net to zero', () => {
+    useDashboardStore.setState({
+        balances: {
+            USD: { currency: 'USD', netBalance: 20 },
+            EUR: { currency: 'EUR', netBalance: -40 },
+        },
+        currencies: {
+            base: 'USD',
+            timestamp: 1,
+            fetchedAt: 1,
+            stale: false,
+            rates: { USD: 1, EUR: 2 },
+        },
+    });
+
+    renderSummary();
+
+    expect(screen.queryByText('Total balance')).toBeNull();
+    expect(screen.getByText('You owe')).toBeTruthy();
+    expect(screen.getByText('Owed to you')).toBeTruthy();
 });

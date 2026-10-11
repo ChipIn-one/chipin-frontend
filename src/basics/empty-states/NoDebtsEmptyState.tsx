@@ -13,7 +13,7 @@ const NoDebtsEmptyState = ({ action }: Props) => {
 
     return (
         <EmptyState
-            icon={<LucideBanknoteX size={16} />}
+            icon={<LucideBanknoteX size={20} />}
             iconColor="gray"
             title={t('noDebtsTitle')}
             description={t('noDebtsDescription')}

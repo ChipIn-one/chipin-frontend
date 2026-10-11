@@ -97,7 +97,7 @@ const ActivitySubeventsFeed = ({
     if (isLoadError) {
         return (
             <EmptyState
-                icon={<LucideCircleAlert size={16} />}
+                icon={<LucideCircleAlert size={20} />}
                 iconColor="red"
                 title={t('subeventsLoadErrorTitle')}
                 description={t('subeventsLoadErrorDescription')}
@@ -125,7 +125,7 @@ const ActivitySubeventsFeed = ({
             events={subevents}
             emptyState={
                 <EmptyState
-                    icon={<LucideListTree size={16} />}
+                    icon={<LucideListTree size={20} />}
                     iconColor="gray"
                     title={t('subeventsEmptyTitle')}
                     description={t('subeventsEmptyDescription')}

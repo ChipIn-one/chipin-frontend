@@ -1,21 +1,20 @@
-import { type ReactElement, useState } from 'react';
 import { LucideCirclePlus, LucidePlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 
-import { Box, Button, Tooltip } from '@radix-ui/themes';
+import { Box, Button } from '@radix-ui/themes';
 
 import { themeColor } from 'helpers/colors';
 
 import { useConnect } from './add-expense-button/internal/useConnect';
 
-const ButtonMobile = styled(Button)<{ $isSoloMode: boolean; $isMuted: boolean }>`
+const ButtonMobile = styled(Button)<{ $isSoloMode: boolean }>`
     width: var(--space-9);
     height: var(--space-9);
     padding: 0;
-    border: 6px solid ${({ $isSoloMode, $isMuted }) =>
-        themeColor($isMuted ? 'gray7' : $isSoloMode ? 'violet7' : 'grass7')};
+    border: 6px solid ${({ $isSoloMode }) =>
+        themeColor($isSoloMode ? 'violet7' : 'grass7')};
 `;
 
 interface Props {
@@ -25,98 +24,55 @@ interface Props {
 const AddExpenseButton = ({ type = 'desktop' }: Props) => {
     const { t } = useTranslation('common');
     const location = useLocation();
-    const [isUnavailableTooltipOpen, setIsUnavailableTooltipOpen] = useState(false);
-    const {
-        isLoggedIn,
-        isSoloMode,
-        isUnavailable,
-        isTargetLoadFailed,
-        isButtonLoading,
-        unavailableReason,
-        onAddExpense,
-    } = useConnect(location.pathname);
-    const unavailableMessage = unavailableReason
-        ? t(`addExpenseUnavailable.${unavailableReason}`)
-        : null;
+    const { isSoloMode, isVisible, openExpenseModal } =
+        useConnect(location.pathname);
 
-    if (!isLoggedIn) {
+    if (!isVisible) {
         return null;
     }
 
-    const onClick = () => {
-        if (isButtonLoading || isTargetLoadFailed) {
-            return;
-        }
-
-        if (isUnavailable) {
-            setIsUnavailableTooltipOpen(true);
-            return;
-        }
-
-        onAddExpense();
+    const buttonColor = isSoloMode ? 'violet' : 'grass';
+    const onClickAddExpense = () => {
+        openExpenseModal();
     };
-
-    const withUnavailableTooltip = (button: ReactElement) => {
-        if (!isUnavailable || !unavailableMessage) {
-            return button;
-        }
-
-        return (
-            <Tooltip
-                content={unavailableMessage}
-                open={isUnavailableTooltipOpen}
-                onOpenChange={setIsUnavailableTooltipOpen}
-            >
-                {button}
-            </Tooltip>
-        );
-    };
-
-    const isMuted = isUnavailable || isTargetLoadFailed;
-    const buttonColor = isMuted ? 'gray' : isSoloMode ? 'violet' : 'grass';
 
     if (type === 'mobile') {
-        return withUnavailableTooltip(
+        return (
             <ButtonMobile
                 $isSoloMode={isSoloMode}
-                $isMuted={isMuted}
+                type="button"
                 size="4"
                 radius="full"
                 color={buttonColor}
                 aria-label={t('buttons.addExpense')}
-                aria-disabled={isUnavailable || undefined}
-                disabled={isTargetLoadFailed || undefined}
-                loading={isButtonLoading}
-                onClick={onClick}
+                onClick={onClickAddExpense}
             >
                 <LucidePlus size={28} />
-            </ButtonMobile>,
+            </ButtonMobile>
         );
     }
 
-    const button = withUnavailableTooltip(
+    const addExpenseButton = (
         <Button
+            type="button"
             size="3"
             radius="large"
             color={buttonColor}
-            aria-disabled={isUnavailable || undefined}
-            disabled={isTargetLoadFailed || undefined}
-            loading={isButtonLoading}
-            onClick={onClick}
+            onClick={onClickAddExpense}
         >
             <LucideCirclePlus />
             {t('buttons.addExpense')}
-        </Button>,
+        </Button>
     );
 
     if (type === 'sidebar') {
-        return button;
+        return addExpenseButton;
     }
 
     return (
         <Box display={{ initial: 'none', sm: 'block', lg: 'none' }}>
             <Box position="fixed" bottom="6" right="6">
-                {button}
+                {addExpenseButton}
             </Box>
         </Box>
     );

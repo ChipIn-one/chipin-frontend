@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { Box, Button, Flex, IconButton, Spinner, Tabs, Text } from '@radix-ui/themes';
 
 import type { Group } from 'api/chipin.types';
+import { getActivityPreviewEvents } from 'helpers/activityEvent';
 import { useGroupInvite } from 'hooks/pwaHooks';
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 
@@ -40,11 +41,12 @@ const GroupTabsContent = ({
     const { t } = useTranslation(['group', 'common', 'activity']);
     const invite = useGroupInvite(group);
     const [activeTab, setActiveTab] = useState('expenses');
-    const activityItems = group.recentActivities.items.map(item => item.lastEvent);
+    const activityItems = getActivityPreviewEvents(
+        group.recentActivities.items,
+    );
     const members = group.members.map(member => member.user);
     const isSingleMemberGroup = group.members.length === 1;
-    const shouldShowInviteOnboarding =
-        isSingleMemberGroup && group.lastUsedCurrency === null;
+    const shouldShowInviteOnboarding = isSingleMemberGroup;
     const hasMoreActivity = group.recentActivities.nextCursor !== null;
     const isEndOfFeed =
         !isGroupActivityNextPageLoading &&

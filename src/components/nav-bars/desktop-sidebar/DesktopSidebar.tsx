@@ -4,7 +4,10 @@ import { useLocation } from 'react-router-dom';
 import { Box, Flex, Separator, Text } from '@radix-ui/themes';
 
 import { PROJECT_NAME } from 'constants/chipin';
-import { getPreferredModeRoute } from 'helpers/routes';
+import {
+    getPreferredModeRoute,
+    isNavigationRouteActive,
+} from 'helpers/routes';
 import { selectIsSoloMode } from 'store/dashboardSelectors';
 import { useDashboardStore } from 'store/dashboardStore';
 import { selectCanAccessSolo, selectIsUserAdmin, useUsersStore } from 'store/users-store';
@@ -52,9 +55,10 @@ const DesktopSidebar = () => {
                         <nav>
                             <Flex direction="column" gap="4">
                                 {navElements.map(({ href, labelKey, Icon }) => {
-                                    const isActive =
-                                        location.pathname === href ||
-                                        location.pathname.startsWith(`${href}/`);
+                                    const isActive = isNavigationRouteActive(
+                                        location.pathname,
+                                        href,
+                                    );
 
                                     return (
                                         <SidebarNavButton
