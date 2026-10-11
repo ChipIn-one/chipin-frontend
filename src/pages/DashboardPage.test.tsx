@@ -36,7 +36,7 @@ vi.mock('components/dashboard-onboarding', () => ({
 }));
 
 vi.mock('components/dashboard-summary', () => ({
-    DashboardHeader: () => null,
+    DashboardHeader: () => <div data-testid="dashboard-header" />,
     DashboardSummary: ({ hasExpenseHistory }: { hasExpenseHistory: boolean }) => (
         hasExpenseHistory ? <div data-testid="dashboard-summary" /> : null
     ),
@@ -596,4 +596,14 @@ test('ACT-023 connects dashboard infinite scroll to the next activity preview pa
             fetchMoreDashboardActivity,
         ).toHaveBeenCalledOnce();
     });
+});
+
+test('renders the shared profile greeting directly in the dashboard side panel at all breakpoints', () => {
+    resolveDashboardOnboardingData();
+    render(<DashboardPage />);
+
+    const sidePanel = screen.getByTestId('dashboard-side-panel');
+    const greeting = within(sidePanel).getByTestId('dashboard-header');
+
+    expect(greeting.parentElement).toBe(sidePanel.firstElementChild);
 });
