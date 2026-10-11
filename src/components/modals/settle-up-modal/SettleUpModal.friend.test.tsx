@@ -343,3 +343,120 @@ test('keeps the modal open when the provided action rejects', () => {
             expect(toast.error).toHaveBeenCalledWith('toasts:common.requestFailed');
         });
 });
+
+
+test('fills the exact full debt amount when its underlined summary is clicked', () => {
+    const user = userEvent.setup();
+
+    render(
+        <SettleUpModal
+            source="friend"
+            isOpened
+            onOpenChange={vi.fn()}
+            friend={friend}
+            balances={[{ currency: 'BZD', netAmount: -24.5678 }]}
+            initialCurrency="BZD"
+            onSubmit={vi.fn()}
+        />,
+    );
+
+    const input = screen.getByRole('textbox', { name: 'common:fields.amount' });
+    const amountButton = screen.getByRole('button', {
+        name: 'friends:settleUp.useFullAmount',
+    });
+
+    expect(amountButton.textContent).toContain('24.57 BZD');
+    expect(getComputedStyle(amountButton).textDecorationLine).toBe('underline');
+
+    return user
+        .clear(input)
+        .then(() => user.type(input, '4'))
+        .then(() => user.click(amountButton))
+        .then(() => {
+            expect(input).toHaveProperty('value', '24.5678');
+            expect(screen.getByText('friends:settleUp.debtWillBeSettled')).toBeTruthy();
+        });
+});
+
+test('submits only once while an earlier settlement request is pending', () => {
+    let onResolve: (() => void) | undefined;
+    const pendingRequest = new Promise<void>(resolve => {
+        onResolve = resolve;
+    });
+    const onSubmit = vi.fn<(params: CreateSettlementParams) => Promise<void>>()
+        .mockReturnValue(pendingRequest);
+    const onOpenChange = vi.fn<(isOpen: boolean) => void>();
+    const user = userEvent.setup();
+
+    render(
+        <SettleUpModal
+            source="friend"
+            isOpened
+            onOpenChange={onOpenChange}
+            friend={friend}
+            balances={[{ currency: 'USD', netAmount: -100 }]}
+            initialCurrency="USD"
+            onSubmit={onSubmit}
+        />,
+    );
+
+    const submit = screen.getByRole('button', { name: 'friends:settleUp.recordPayment' });
+
+    return user
+        .click(submit)
+        .then(() => {
+            expect(submit).toHaveProperty('disabled', true);
+            expect(onSubmit).toHaveBeenCalledOnce();
+            return user.click(submit);
+        })
+        .then(() => {
+            expect(onSubmit).toHaveBeenCalledOnce();
+            expect(onOpenChange).not.toHaveBeenCalledWith(false);
+            onResolve?.();
+            return pendingRequest;
+        })
+        .then(() => {
+            expect(onOpenChange).toHaveBeenCalledWith(false);
+        });
+});
+
+test('re-enables payment after rejection so the user can retry', () => {
+    let onReject: ((reason: Error) => void) | undefined;
+    const pendingRequest = new Promise<void>((_resolve, reject) => {
+        onReject = reject;
+    });
+    const onSubmit = vi.fn<(params: CreateSettlementParams) => Promise<void>>()
+        .mockReturnValueOnce(pendingRequest)
+        .mockResolvedValueOnce(undefined);
+    const user = userEvent.setup();
+
+    render(
+        <SettleUpModal
+            source="friend"
+            isOpened
+            onOpenChange={vi.fn()}
+            friend={friend}
+            balances={[{ currency: 'USD', netAmount: -100 }]}
+            initialCurrency="USD"
+            onSubmit={onSubmit}
+        />,
+    );
+
+    const submit = screen.getByRole('button', { name: 'friends:settleUp.recordPayment' });
+
+    return user
+        .click(submit)
+        .then(() => {
+            expect(submit).toHaveProperty('disabled', true);
+            onReject?.(new Error('Request failed'));
+            return Promise.resolve();
+        })
+        .then(() => Promise.resolve())
+        .then(() => {
+            expect(submit).toHaveProperty('disabled', false);
+            return user.click(submit);
+        })
+        .then(() => {
+            expect(onSubmit).toHaveBeenCalledTimes(2);
+        });
+});

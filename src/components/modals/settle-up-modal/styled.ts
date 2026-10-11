@@ -65,6 +65,26 @@ export const DebtAmount = styled(Text)`
     flex-shrink: 0;
 `;
 
+export const DebtAmountAction = styled.button`
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: right;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+
+    &:hover {
+        text-decoration-thickness: 2px;
+    }
+
+    &:focus-visible {
+        outline-offset: 3px;
+    }
+`;
+
 export const DebtButton = styled(Button)`
     width: 100%;
     height: auto;

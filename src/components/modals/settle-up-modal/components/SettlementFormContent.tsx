@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { LucideInfo } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -41,6 +41,8 @@ const SettlementFormContent = ({
     const { user, isSubmitting } = useConnect();
     const amountInputId = useId();
     const [currency, setCurrency] = useState(initialCurrency);
+    const isSubmitInFlight = useRef(false);
+    const [isSubmitPending, setIsSubmitPending] = useState(false);
     const selectedBalance = selectSettlementBalance(balances, currency);
     const [amount, setAmount] = useState(() => getSettlementAmount(selectedBalance));
     const currencyItems: SelectItem[] = balances.map(balance => ({
@@ -67,6 +69,14 @@ const SettlementFormContent = ({
     };
 
     const onFormSubmit = () => {
+        if (isSubmitInFlight.current || isSubmitting || settlement.isSubmitDisabled) {
+            return;
+        }
+
+        // A ref also prevents a second click before React flushes the loading state.
+        isSubmitInFlight.current = true;
+        setIsSubmitPending(true);
+
         onSubmit(settlement.params)
             .then(() => {
                 onClose();
@@ -77,6 +87,10 @@ const SettlementFormContent = ({
                     error,
                     t('toasts:common.requestFailed'),
                 ));
+            })
+            .finally(() => {
+                isSubmitInFlight.current = false;
+                setIsSubmitPending(false);
             });
     };
 
@@ -91,6 +105,7 @@ const SettlementFormContent = ({
                         amount={settlement.maxAmount}
                         currency={currency}
                         color={settlement.debtColor}
+                        onUseFullAmount={() => setAmount(getSettlementAmount(selectedBalance))}
                     />
 
                     <SettlementAmountField
@@ -137,8 +152,8 @@ const SettlementFormContent = ({
                         type="button"
                         size="4"
                         color="grass"
-                        disabled={settlement.isSubmitDisabled}
-                        loading={isSubmitting}
+                        disabled={settlement.isSubmitDisabled || isSubmitting || isSubmitPending}
+                        loading={isSubmitting || isSubmitPending}
                         onClick={onFormSubmit}
                     >
                         {t('friends:settleUp.recordPayment')}

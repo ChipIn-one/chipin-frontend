@@ -359,3 +359,28 @@ test('keeps the payment step when the selected debt disappears on balance refres
             expect(screen.getByRole('textbox')).toBeTruthy();
         });
 });
+
+
+test('restores the exact selected group debt when the summary amount is clicked', () => {
+    const user = userEvent.setup();
+
+    render(<SettleUpModal source="group" group={group} />);
+
+    return user
+        .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
+        .then(() => user.click(screen.getByRole('button', {
+            name: /Debtor Person Full.*30.12 EUR/,
+        })))
+        .then(() => {
+            const input = screen.getByRole('textbox');
+            return user
+                .clear(input)
+                .then(() => user.type(input, '10'))
+                .then(() => user.click(screen.getByRole('button', {
+                    name: 'friends:settleUp.useFullAmount',
+                })))
+                .then(() => {
+                    expect(input).toHaveProperty('value', '30.1234');
+                });
+        });
+});
