@@ -195,7 +195,7 @@ beforeEach(() => {
     });
     useDashboardStore.getState().setInitialDashboardStore();
     useGroupsStore.getState().setInitialGroupsStore();
-    useUsersStore.setState({ user: currentUser, friends: [], hasConfirmedFriends: false });
+    useUsersStore.setState({ user: currentUser, friends: [], hasFriendsSnapshot: false });
     useLoadingStore.getState().setInitialLoadingStore();
     useErrorsStore.getState().resetErrors();
 });
@@ -249,7 +249,7 @@ test('DSH-013 puts the Create group action below No groups yet at full width', (
 
     expect(card?.querySelector('[data-empty-state-action]')?.contains(action)).toBe(true);
     expect(card?.firstElementChild?.className).toContain('rt-r-fd-column');
-    expect(window.getComputedStyle(action).width).toBe('100%');
+    expect(action.className).toContain('rt-r-w-100');
 });
 
 test('DSH-012 does not reserve vertical space when the Dashboard summary is empty', () => {
@@ -386,7 +386,7 @@ test('DSH-007 keeps confirmed group snapshot visible after list refresh fails', 
 test('DSH-007 keeps confirmed friend snapshot visible after friends refresh fails', () => {
     resolveDashboardOnboardingData();
     useUsersStore.setState({
-        hasConfirmedFriends: true,
+        hasFriendsSnapshot: true,
         friends: [{
             user: { ...creator, id: 'friend-1' },
             balances: [],
@@ -407,7 +407,7 @@ test('DSH-007 keeps confirmed friend snapshot visible after friends refresh fail
 
 test('DSH-007 preserves a confirmed empty connection list without inventing a new-user state from failure', () => {
     resolveDashboardOnboardingData();
-    useUsersStore.setState({ hasConfirmedFriends: true, friends: [] });
+    useUsersStore.setState({ hasFriendsSnapshot: true, friends: [] });
     useGroupsStore.setState({ hasConfirmedGroups: true, groups: [] });
     useErrorsStore.getState().setError('users', 'friends', {
         message: 'Friends refresh unavailable',

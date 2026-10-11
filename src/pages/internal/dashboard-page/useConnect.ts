@@ -35,10 +35,10 @@ const useConnect = () => {
             hasConfirmedGroups: state.hasConfirmedGroups,
         })),
     );
-    const { friends, hasConfirmedFriends, hasConfirmedUser, currentUser } = useUsersStore(
+    const { friends, hasFriendsSnapshot, hasConfirmedUser, currentUser } = useUsersStore(
         useShallow(state => ({
             friends: state.friends,
-            hasConfirmedFriends: state.hasConfirmedFriends,
+            hasFriendsSnapshot: state.hasFriendsSnapshot,
             hasConfirmedUser: state.hasConfirmedUser,
             currentUser: state.user,
         })),
@@ -85,17 +85,37 @@ const useConnect = () => {
         groups.some(group => group.lastUsedCurrency !== null) ||
         friends.some(friend => friend.lastUsedCurrency !== null);
     const hasMoreActivity = activityNextCursor !== null;
-    const isOnboardingDataSettled =
-        (isDashboardFetched || hasConfirmedDashboardData) &&
-        (isGroupListFetched || hasConfirmedGroups) &&
-        (isFriendsFetched || hasConfirmedFriends) &&
-        (isUserSelfFetched || hasConfirmedUser);
+    const resources = [
+        {
+            fetched: isDashboardFetched,
+            snapshot: hasConfirmedDashboardData,
+            error: dashboardError !== null,
+        },
+        {
+            fetched: isGroupListFetched,
+            snapshot: hasConfirmedGroups,
+            error: groupListError !== null,
+        },
+        {
+            fetched: isFriendsFetched,
+            snapshot: hasFriendsSnapshot,
+            error: friendsError !== null,
+        },
+        {
+            fetched: isUserSelfFetched,
+            snapshot: hasConfirmedUser,
+            error: userSelfError !== null,
+        },
+    ];
+    const isOnboardingDataSettled = resources.every(
+        ({ fetched, snapshot }) => fetched || snapshot,
+    );
     const hasOnboardingDataError =
-        (dashboardError !== null && !hasConfirmedDashboardData) ||
-        (groupListError !== null && !hasConfirmedGroups) ||
-        (friendsError !== null && !hasConfirmedFriends) ||
-        (userSelfError !== null && !hasConfirmedUser) ||
-        currentUser === null;
+        currentUser === null ||
+        resources.some(({ error, snapshot }) => error && !snapshot);
+    const hasNonBlockingRefreshError =
+        ratesError !== null ||
+        resources.some(({ error, snapshot }) => error && snapshot);
     const dashboardView = !isOnboardingDataSettled
         ? 'loading'
         : hasOnboardingDataError
@@ -122,12 +142,7 @@ const useConnect = () => {
         hasMoreActivity,
         isDashboardFetched: isDashboardFetched || hasConfirmedDashboardData,
         isDashboardLoading: isDashboardLoading && !hasConfirmedDashboardData,
-        hasNonBlockingRefreshError:
-            ratesError !== null ||
-            (dashboardError !== null && hasConfirmedDashboardData) ||
-            (groupListError !== null && hasConfirmedGroups) ||
-            (friendsError !== null && hasConfirmedFriends) ||
-            (userSelfError !== null && hasConfirmedUser),
+        hasNonBlockingRefreshError,
         isEndOfFeed:
             !isNextPageLoading &&
             !hasMoreActivity &&

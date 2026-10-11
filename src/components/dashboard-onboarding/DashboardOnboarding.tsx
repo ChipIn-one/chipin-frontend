@@ -5,7 +5,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
-import { Button, Card, Flex, Heading, Text } from '@radix-ui/themes';
+import { Box, Button, Card, Flex, Heading, Text } from '@radix-ui/themes';
 
 import { useFriendInvite } from 'hooks/pwaHooks';
 
@@ -19,19 +19,6 @@ const ActionButton = styled(Button)`
     min-height: var(--space-7);
     white-space: normal;
     text-align: center;
-`;
-
-const OnboardingCard = styled(Card)`
-    width: 100%;
-    max-width: 44rem;
-    margin-inline: auto;
-`;
-
-const OnboardingIllustration = styled.img`
-    display: block;
-    width: 100%;
-    height: auto;
-    object-fit: contain;
 `;
 
 const DashboardOnboarding = () => {
@@ -50,8 +37,9 @@ const DashboardOnboarding = () => {
     };
 
     return (
-        <OnboardingCard
+        <Card
             size={{ initial: '2', md: '3' }}
+            width="100%"
             data-testid="dashboard-onboarding-card"
         >
             <Flex
@@ -64,15 +52,18 @@ const DashboardOnboarding = () => {
                 <Flex
                     width={{ initial: '100%', md: '16rem' }}
                     maxWidth="22rem"
-                    flexShrink="0"
+                    flexShrink="1"
+                    minWidth="0"
                 >
-                    <OnboardingIllustration
-                        src={DashboardOnboardingIllustration}
-                        alt=""
-                        aria-hidden="true"
-                        decoding="async"
-                        data-testid="onboarding-illustration"
-                    />
+                    <Box asChild width="100%">
+                        <img
+                            src={DashboardOnboardingIllustration}
+                            alt=""
+                            aria-hidden="true"
+                            decoding="async"
+                            data-testid="onboarding-illustration"
+                        />
+                    </Box>
                 </Flex>
 
                 <Flex
@@ -81,6 +72,8 @@ const DashboardOnboarding = () => {
                     gap="4"
                     width="100%"
                     maxWidth="24rem"
+                    minWidth="0"
+                    flexShrink="1"
                 >
                     <Flex direction="column" gap="2">
                         <Heading
@@ -125,7 +118,7 @@ const DashboardOnboarding = () => {
                     </Flex>
                 </Flex>
             </Flex>
-        </OnboardingCard>
+        </Card>
     );
 };
 

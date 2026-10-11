@@ -142,7 +142,7 @@ beforeEach(() => {
         user: selfUser,
         localUser: null,
         friends: [],
-        hasConfirmedFriends: false,
+        hasFriendsSnapshot: false,
         hasConfirmedUser: false,
     });
     useLoadingStore.getState().setInitialLoadingStore();
@@ -313,7 +313,7 @@ test.each([ROUTES.DASHBOARD, ROUTES.FRIENDS])(
     route => {
         useUsersStore.setState({
             friends: [friend],
-            hasConfirmedFriends: true,
+            hasFriendsSnapshot: true,
         });
         useLoadingStore.getState().setLoading('users', 'friends', 'loading');
 
@@ -353,7 +353,7 @@ test('EXP-061 retains Add Expense during a confirmed user profile refresh', () =
 });
 
 test('EXP-061 never trusts unconfirmed friend targets during initial loading', () => {
-    useUsersStore.setState({ friends: [friend], hasConfirmedFriends: false });
+    useUsersStore.setState({ friends: [friend], hasFriendsSnapshot: false });
     useLoadingStore.getState().setLoading('users', 'friends', 'loading');
 
     renderButton(ROUTES.FRIENDS);

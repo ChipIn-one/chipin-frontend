@@ -39,14 +39,14 @@ const useAddExpenseAvailability = (pathname: string) => {
         friends,
         canAccessSolo,
         currentUser,
-        hasConfirmedFriends,
+        hasFriendsSnapshot,
         hasConfirmedUser,
     } = useUsersStore(
         useShallow(state => ({
             friends: state.friends,
             canAccessSolo: selectCanAccessSolo(state),
             currentUser: state.user,
-            hasConfirmedFriends: state.hasConfirmedFriends,
+            hasFriendsSnapshot: state.hasFriendsSnapshot,
             hasConfirmedUser: state.hasConfirmedUser,
         })),
     );
@@ -65,7 +65,7 @@ const useAddExpenseAvailability = (pathname: string) => {
     );
 
     const hasResolvedFriendTarget =
-        (isFriendsFetched || hasConfirmedFriends) && friends.length > 0;
+        (isFriendsFetched || hasFriendsSnapshot) && friends.length > 0;
     const hasResolvedGroupTarget =
         (isGroupListFetched || hasConfirmedGroups) && hasGroupExpenseTarget(groups);
     const routeGroup = groupId

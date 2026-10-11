@@ -139,7 +139,7 @@ const useUsersStore = create<UsersStore>((set, get) => ({
         return request.promise
             .then(({ friends }) => {
                 if (request.isCurrent()) {
-                    set({ friends, hasConfirmedFriends: true });
+                    set({ friends, hasFriendsSnapshot: true });
                 }
             })
             .catch((error: unknown) => {

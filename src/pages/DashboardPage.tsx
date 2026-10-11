@@ -5,7 +5,6 @@ import {
     LucideRefreshCw,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import styled from 'styled-components';
 
 import { Box, Button, Container, Flex, Spinner, Text } from '@radix-ui/themes';
 
@@ -14,8 +13,8 @@ import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 import { EmptyState, NoGroupsEmptyState } from 'basics/empty-states';
 import { DashboardOnboarding } from 'components/dashboard-onboarding';
 import {
-    DashboardHeader as DashboardGreeting,
-    DashboardSummary as DashBoardSummary,
+    DashboardHeader,
+    DashboardSummary,
 } from 'components/dashboard-summary';
 import GroupsCards from 'components/GroupsCards';
 import { InternalPageColumnsFromSm } from 'components/internal-page-layout';
@@ -24,10 +23,6 @@ import { ActivityFeedSkeleton } from 'components/skeletons';
 import { ActivityEventsList } from 'features/activity';
 
 import { useConnect } from './internal/dashboard-page';
-
-const FullWidthButton = styled(Button)`
-    width: 100%;
-`;
 
 const DashboardPage = () => {
     const { t } = useTranslation(['dashboard', 'activity']);
@@ -66,10 +61,10 @@ const DashboardPage = () => {
     const sidePanel = dashboardView === 'error' ? null : (
         <Flex direction="column" gap="4">
             <Box display={{ initial: 'block', lg: 'none' }}>
-                <DashboardGreeting />
+                <DashboardHeader />
             </Box>
 
-            <DashBoardSummary
+            <DashboardSummary
                 isLoading={isDashboardLoading}
                 hasExpenseHistory={hasExpenseHistory}
             />
@@ -92,15 +87,12 @@ const DashboardPage = () => {
                         action={
                             dashboardView !== 'dashboard' ? undefined : (
                                 <CreateUpdateGroupModal type="create">
-                                    <FullWidthButton
-                                        size="2"
-                                        variant="soft"
-                                    >
-                                        <LucidePlus size={14} />
-                                        {t(
-                                            'common:buttons.createGroup',
-                                        )}
-                                    </FullWidthButton>
+                                    <Box asChild width="100%">
+                                        <Button size="2" variant="soft">
+                                            <LucidePlus size={14} />
+                                            {t('common:buttons.createGroup')}
+                                        </Button>
+                                    </Box>
                                 </CreateUpdateGroupModal>
                             )
                         }

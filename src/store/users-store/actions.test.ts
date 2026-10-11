@@ -76,16 +76,16 @@ test('marks an empty friends list confirmed and keeps it after a failed refresh'
         .mockResolvedValueOnce({ friends: [] })
         .mockRejectedValueOnce(new Error('Friends refresh failed'));
 
-    expect(useUsersStore.getState().hasConfirmedFriends).toBe(false);
+    expect(useUsersStore.getState().hasFriendsSnapshot).toBe(false);
     await useUsersStore.getState().fetchSetFriends();
     expect(useUsersStore.getState()).toMatchObject({
         friends: [],
-        hasConfirmedFriends: true,
+        hasFriendsSnapshot: true,
     });
     await useUsersStore.getState().fetchSetFriends(true);
-    expect(useUsersStore.getState().hasConfirmedFriends).toBe(true);
+    expect(useUsersStore.getState().hasFriendsSnapshot).toBe(true);
     useUsersStore.getState().setInitialUsersStore();
-    expect(useUsersStore.getState().hasConfirmedFriends).toBe(false);
+    expect(useUsersStore.getState().hasFriendsSnapshot).toBe(false);
 });
 
 test('records a confirmed user after success and retains it on failed refresh', async () => {

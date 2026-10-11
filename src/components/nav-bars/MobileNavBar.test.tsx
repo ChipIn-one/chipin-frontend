@@ -104,7 +104,7 @@ beforeEach(() => {
         user: null,
         localUser: { role: 'ADMIN', settings },
         friends: [],
-        hasConfirmedFriends: false,
+        hasFriendsSnapshot: false,
         hasConfirmedUser: false,
     });
 });
@@ -193,7 +193,7 @@ test('EXP-062 keeps the center action during a confirmed friend refresh', () => 
     useUsersStore.setState({
         user: currentUser,
         friends: [friend],
-        hasConfirmedFriends: true,
+        hasFriendsSnapshot: true,
         hasConfirmedUser: true,
     });
     useLoadingStore.getState().setLoading('users', 'friends', 'loading');
