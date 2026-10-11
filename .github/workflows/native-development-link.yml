@@ -18,6 +18,10 @@ on:
         description: Pull request number to reconcile.
         required: true
         type: string
+      expected_head_sha:
+        description: Exact current PR head SHA for workflow_dispatch (no stale event bypass).
+        required: true
+        type: string
       task_identity:
         description: Optional canonical ChipIn task identity; must match any PR body marker.
         required: false
@@ -39,9 +43,11 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Reconcile native Issue ↔ PR Development relationship
-        uses: ChipIn-one/.github/automation/development-link-action@1d211c58574b8b7e1cb1ab8e2a65d144d0fbb5f8
+        uses: ChipIn-one/.github/automation/development-link-action@ae17f444753d7630eefc1d55edb51aa0fc96d3dc
         with:
           repository: ${{ github.repository }}
           pull-request-number: ${{ github.event.pull_request.number || inputs.pull_request_number }}
+          expected-head-sha: ${{ github.event.pull_request.head.sha || inputs.expected_head_sha }}
           task-identity: ${{ inputs.task_identity || '' }}
+          admission-token: ${{ secrets.CHIPIN_DEV_READ_TOKEN }}
           token: ${{ github.token }}

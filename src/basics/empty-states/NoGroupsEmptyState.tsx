@@ -13,11 +13,12 @@ const NoGroupsEmptyState = ({ action }: Props) => {
 
     return (
         <EmptyState
-            icon={<LucideUsers size={16} />}
+            icon={<LucideUsers size={20} />}
             iconColor="indigo"
             title={t('groups.emptyTitle')}
             description={t('groups.emptyDescription')}
             action={action}
+            actionPosition={action ? 'below' : 'inline'}
         />
     );
 };

@@ -25,7 +25,7 @@ const ActivitySubeventsHeader = ({
         return (
             <Box mb="4">
                 <EmptyState
-                    icon={<LucideInfo size={16} />}
+                    icon={<LucideInfo size={20} />}
                     iconColor="gray"
                     title={t('subeventsParentUnavailableTitle')}
                     description={t('subeventsParentUnavailableDescription')}

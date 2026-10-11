@@ -155,3 +155,7 @@ Canonical AI routing:
 GitHub Issue/PR entry never bypasses this route; use GitHub records only, no auto-discovery; legacy contexts are migration-only.
 Canonical root: ~/Desktop/WORK
 <!-- ai-workflow:agents-routing:end -->
+
+## Mandatory ChipIn Issue admission
+
+Before task execution, creating a task branch, publishing/retargeting an implementation PR, or agent handoff, require a fresh `INTAKE_COMPLETE` read-only receipt from `ChipIn-one/.github/automation/issue-admission.mjs` for the exact `ChipIn-one/chipin-frontend#number` and current revision. The native Issue must contain substantive Problem/Outcome/Acceptance, Type, Priority and Bug Severity, **syllik** as an actual GitHub assignee, and exactly one readable Project #5 Status. A raw Issue URL, bridge `QUEUED`, text marker, optional Milestone, stale receipt or a successful local test is not admission. Use the canonical `issue-intake.mjs` writer/bridge to repair newly authorized tasks; never invent or overwrite human classification or bulk-repair historical Issues. Incomplete read-back stops publication. Workflow preflight uses the pinned shared action and `CHIPIN_DEV_READ_TOKEN`; if missing Project/org access, fail closed. A green check is still not execution authority or human merge approval. See [org contract](https://github.com/ChipIn-one/.github/blob/master/automation/issue-intake.md).

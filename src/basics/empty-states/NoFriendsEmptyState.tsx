@@ -13,7 +13,7 @@ const NoFriendsEmptyState = ({ action }: Props) => {
 
     return (
         <EmptyState
-            icon={<LucideUserPlus size={16} />}
+            icon={<LucideUserPlus size={20} />}
             iconColor="cyan"
             title={t('emptyTitle')}
             description={t('emptyDescription')}

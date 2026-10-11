@@ -1,4 +1,3 @@
-import { UserAvatar } from 'basics';
 import { LucideArrowRight, LucideLogIn, LucideMenu } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
@@ -119,9 +118,8 @@ const LandingMobileMenu = ({ value, onChange }: LandingLanguageProps) => {
 const Header = () => {
     const isAuthResolved = useAuthStore(selectIsAuthResolved);
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
-    const { user, canAccessSolo, canShowDevMenu } = useUsersStore(
+    const { canAccessSolo, canShowDevMenu } = useUsersStore(
         useShallow(state => ({
-            user: state.user,
             canAccessSolo: selectCanAccessSolo(state),
             canShowDevMenu: selectIsUserAdmin(state),
         })),
@@ -184,15 +182,7 @@ const Header = () => {
 
                     <Flex gap="4" align="center">
                         {isLoggedIn && canShowDevMenu && <DevMenu />}
-                        {isLoggedIn ? (
-                            <Flex gap="4" align="center">
-                                <Box display={{ initial: 'none', sm: 'block' }}>
-                                    <NavButton to={ROUTES.SETTINGS} variant="ghost" radius="full">
-                                        <UserAvatar size="3" user={user ?? undefined} />
-                                    </NavButton>
-                                </Box>
-                            </Flex>
-                        ) : isLandingPage ? (
+                        {!isLoggedIn && isLandingPage && (
                             <Flex align="center" gap="2">
                                 <AuthModal>
                                     <Button size="2" variant="soft" color="green" radius="full">
@@ -207,7 +197,8 @@ const Header = () => {
                                     />
                                 </Box>
                             </Flex>
-                        ) : (
+                        )}
+                        {!isLoggedIn && !isLandingPage && (
                             <AuthModal>
                                 <Button
                                     size={{
