@@ -35,6 +35,18 @@ const ModalRouter = <RouteId extends string,>({
         route: initialRoute,
         history: [],
     });
+    const [previousIsOpened, setPreviousIsOpened] = useState(isOpened);
+
+    // A parent may close the controlled dialog without triggering onOpenChange.
+    // Reset on the prop transition so reopening cannot restore a stale step.
+    if (previousIsOpened !== isOpened) {
+        setPreviousIsOpened(isOpened);
+
+        if (!isOpened) {
+            setNavigationState({ route: initialRoute, history: [] });
+        }
+    }
+
     const titleRef = useRef<HTMLHeadingElement>(null);
     const previousRouteRef = useRef(initialRoute);
 

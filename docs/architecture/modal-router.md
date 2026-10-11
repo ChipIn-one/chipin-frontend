@@ -12,7 +12,7 @@ Issue: ChipIn-one/chipin-frontend#314. Integration target: `dev`.
 ## Lifecycle and accessibility
 
 - Back appears only if history is non-empty, and returns to the previous step without closing the dialog.
-- Close, X, outside interaction (where permitted) and Escape close the complete flow and reset history.
+- Close, X, outside interaction (where permitted), Escape, and parent-driven controlled `isOpened=false` transitions close the complete flow and reset history.
 - The active route supplies a translated title and accessible description; after a route change, focus moves synchronously to the new title before paint.
 - No CSS hiding tricks, timers, multiple overlapping Dialog.Root instances, custom global z-index scales or global scroll-lock state.
 - A single-step BaseModal remains supported unchanged. Standalone Friend Settle Up uses a BaseModal wrapping SettlementFormContent.
