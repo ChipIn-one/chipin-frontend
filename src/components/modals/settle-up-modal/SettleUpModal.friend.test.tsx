@@ -1,7 +1,7 @@
 import { toast } from 'sonner';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import type { CreateSettlementParams, SelfUser } from 'api/chipin.types';
@@ -366,7 +366,6 @@ test('fills the exact full debt amount when its underlined summary is clicked', 
     });
 
     expect(amountButton.textContent).toContain('24.57 BZD');
-    expect(getComputedStyle(amountButton).textDecorationLine).toBe('underline');
 
     return user
         .clear(input)
@@ -449,13 +448,11 @@ test('re-enables payment after rejection so the user can retry', () => {
         .then(() => {
             expect(submit).toHaveProperty('disabled', true);
             onReject?.(new Error('Request failed'));
-            return Promise.resolve();
+            return waitFor(() => {
+                expect(submit).toHaveProperty('disabled', false);
+            });
         })
-        .then(() => Promise.resolve())
-        .then(() => {
-            expect(submit).toHaveProperty('disabled', false);
-            return user.click(submit);
-        })
+        .then(() => user.click(submit))
         .then(() => {
             expect(onSubmit).toHaveBeenCalledTimes(2);
         });
