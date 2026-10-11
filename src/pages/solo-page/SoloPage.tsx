@@ -1,7 +1,7 @@
 import { LucideList, LucideWalletCards } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Box, Container, Flex } from '@radix-ui/themes';
+import { Container, Flex } from '@radix-ui/themes';
 
 import { EmptyState } from 'basics/empty-states';
 import { DashboardHeader } from 'components/dashboard-summary';
@@ -15,9 +15,7 @@ const SoloPage = () => {
             <InternalPageColumnsFromSm
                 sidePanel={
                     <Flex direction="column" gap="4">
-                        <Box display={{ initial: 'block', lg: 'none' }}>
-                            <DashboardHeader />
-                        </Box>
+                        <DashboardHeader />
 
                         <EmptyState
                             icon={<LucideWalletCards size={20} />}
