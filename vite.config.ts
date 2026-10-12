@@ -1,5 +1,3 @@
-import { fileURLToPath } from 'node:url';
-
 import { defineConfig, loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import svgr from 'vite-plugin-svgr';
@@ -235,10 +233,7 @@ export default defineConfig(({ mode }) => {
         build: {
             sourcemap: 'hidden',
             rolldownOptions: {
-                input: {
-                    main: fileURLToPath(new URL('./index.html', import.meta.url)),
-                    app: fileURLToPath(new URL('./app.html', import.meta.url)),
-                },
+                input: ['index.html', 'app.html'],
                 output: {
                     // Keep long-lived framework dependencies cacheable here.
                     // Application areas are split by route/modal dynamic imports instead of
