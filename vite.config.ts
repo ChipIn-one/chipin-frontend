@@ -186,6 +186,8 @@ export default defineConfig(({ mode }) => {
 
                 workbox: {
                     globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+                    // Serve the noindex SPA shell for service-worker navigation fallback.
+                    navigateFallback: 'app.html',
                     navigateFallbackDenylist: [/^\/api\//],
                     sourcemap: false,
                     cleanupOutdatedCaches: true,
@@ -233,6 +235,7 @@ export default defineConfig(({ mode }) => {
         build: {
             sourcemap: 'hidden',
             rolldownOptions: {
+                input: ['index.html', 'app.html'],
                 output: {
                     // Keep long-lived framework dependencies cacheable here.
                     // Application areas are split by route/modal dynamic imports instead of
