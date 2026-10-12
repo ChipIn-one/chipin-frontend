@@ -17,8 +17,8 @@ const MetadataNavigation = () => {
 
     return (
         <nav>
-            <Link to="/">Home</Link>
-            <Link to="/dashboard">Dashboard</Link>
+            <Link to="/">{'Home'}</Link>
+            <Link to="/dashboard">{'Dashboard'}</Link>
         </nav>
     );
 };
