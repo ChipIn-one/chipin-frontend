@@ -12,13 +12,16 @@ vi.mock('store/groupsStore', () => ({
     useGroupsStore: () => undefined,
 }));
 
+const HOME_LABEL = 'Home';
+const DASHBOARD_LABEL = 'Dashboard';
+
 const MetadataNavigation = () => {
     useRoutesMeta();
 
     return (
         <nav>
-            <Link to="/">{'Home'}</Link>
-            <Link to="/dashboard">{'Dashboard'}</Link>
+            <Link to="/">{HOME_LABEL}</Link>
+            <Link to="/dashboard">{DASHBOARD_LABEL}</Link>
         </nav>
     );
 };
@@ -47,14 +50,14 @@ test('keeps homepage SEO tags only on the home route during SPA navigation', () 
     expect(document.querySelector('meta[name="robots"]')).toBeNull();
 
     return user
-        .click(screen.getByRole('link', { name: 'Dashboard' }))
+        .click(screen.getByRole('link', { name: DASHBOARD_LABEL }))
         .then(() => {
             expect(document.querySelector('link[rel="canonical"]')).toBeNull();
             expect(document.querySelector('meta[property^="og:"]')).toBeNull();
             expect(document.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe(
                 'noindex, nofollow',
             );
-            return user.click(screen.getByRole('link', { name: 'Home' }));
+            return user.click(screen.getByRole('link', { name: HOME_LABEL }));
         })
         .then(() => {
             expect(document.querySelector('meta[name="robots"]')).toBeNull();
