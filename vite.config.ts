@@ -186,6 +186,8 @@ export default defineConfig(({ mode }) => {
 
                 workbox: {
                     globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+                    // Serve the noindex SPA shell for service-worker navigation fallback.
+                    navigateFallback: 'app.html',
                     navigateFallbackDenylist: [/^\/api\//],
                     sourcemap: false,
                     cleanupOutdatedCaches: true,
