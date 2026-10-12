@@ -6,6 +6,8 @@ import { ROUTE_META } from 'constants/routes';
 import { selectSelectedGroup } from 'store/groupsSelectors';
 import { useGroupsStore } from 'store/groupsStore';
 
+import { updateSeoMetadata } from './seoMetadata';
+
 export const useRoutesMeta = () => {
     const location = useLocation();
     const selectedGroup = useGroupsStore(selectSelectedGroup);
@@ -36,7 +38,9 @@ export const useRoutesMeta = () => {
                 : routeMeta?.descriptionKey || 'notFound.description';
         const options = hasSelectedGroupMeta ? { groupName } : undefined;
 
-        document.title = t(titleKey, options);
+        const title = t(titleKey, options);
+        const description = t(descriptionKey, options);
+        document.title = title;
 
         let element = document.querySelector<HTMLMetaElement>('meta[name="description"]');
 
@@ -46,6 +50,8 @@ export const useRoutesMeta = () => {
             document.head.appendChild(element);
         }
 
-        element.setAttribute('content', t(descriptionKey, options));
+        element.setAttribute('content', description);
+
+        updateSeoMetadata(location.pathname, title, description);
     }, [i18n.resolvedLanguage, location.pathname, selectedGroup, t]);
 };
