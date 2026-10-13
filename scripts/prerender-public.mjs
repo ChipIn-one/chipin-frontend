@@ -36,6 +36,12 @@ const main = () => createServer({
     configFile: false,
     root: process.cwd(),
     plugins: [svgr(), react(), tsconfigPaths()],
+    // styled-components' CJS default export is not callable under the external SSR loader.
+    // Transform its ESM entry in Vite's server pipeline, matching the browser build.
+    ssr: { noExternal: ['styled-components'] },
+    // Only the explicit entry is rendered; scanning the SPA would attempt to resolve
+    // virtual:pwa-register without the PWA plugin in this build-only server.
+    optimizeDeps: { noDiscovery: true },
     server: { middlewareMode: true },
     appType: 'custom',
     logLevel: 'warn',
