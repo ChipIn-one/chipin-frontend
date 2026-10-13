@@ -27,7 +27,7 @@ const groupsChannel = createRequestChannel();
 const groupDetailChannel = createRequestChannel();
 const groupActivityPageChannel = createRequestChannel();
 let groupsMutationGeneration = 0;
-const successfulJoinsByGroup = new Map<string, number>();
+let successfulJoinVersion = 0;
 let activeGroupUpdate: {
     groupId: string;
     isCurrent: () => boolean;
@@ -66,41 +66,23 @@ const appendUniqueActivityPreviews = (
     return uniqueItems;
 };
 
-const deduplicateGroups = (groups: Group[]): Group[] => {
+const uniqueGroups = (groups: Group[], incoming?: Group): Group[] => {
     const seen = new Set<string>();
-    return groups.filter(group => {
-        if (seen.has(group.id)) {
-            return false;
-        }
-        seen.add(group.id);
-        return true;
-    });
-};
-
-const upsertGroup = (groups: Group[], incoming: Group): Group[] => {
-    const updatedGroups: Group[] = [];
-    const seen = new Set<string>();
-    let found = false;
+    const result: Group[] = [];
 
     for (const group of groups) {
         if (seen.has(group.id)) {
             continue;
         }
-
         seen.add(group.id);
-        if (group.id === incoming.id) {
-            updatedGroups.push(incoming);
-            found = true;
-        } else {
-            updatedGroups.push(group);
-        }
+        result.push(incoming?.id === group.id ? incoming : group);
     }
 
-    if (!found) {
-        updatedGroups.push(incoming);
+    if (incoming && !seen.has(incoming.id)) {
+        result.push(incoming);
     }
 
-    return updatedGroups;
+    return result;
 };
 
 const createGroupsMutationGuard = () => {
@@ -173,7 +155,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         groupDetailChannel.abort();
         resetGroupActivityPagination();
         groupsMutationGeneration += 1;
-        successfulJoinsByGroup.clear();
+        successfulJoinVersion = 0;
         activeGroupUpdate = undefined;
         set(initialGroupsStore);
         useErrorsStore.getState().resetErrors();
@@ -201,7 +183,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     return get().groups;
                 }
 
-                const groups = deduplicateGroups(response.items);
+                const groups = uniqueGroups(response.items);
 
                 set({
                     groups,
@@ -363,7 +345,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 if (isCurrent()) {
                     resetGroupActivityPagination();
                     set(state => ({
-                        groups: upsertGroup(state.groups, newGroup),
+                        groups: uniqueGroups(state.groups, newGroup),
                         selectedGroup: newGroup,
                     }));
                 }
@@ -512,7 +494,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             });
     },
     leaveGroup: ({ groupId, newOwnerId }) => {
-        const joinVersionAtStart = successfulJoinsByGroup.get(groupId) ?? 0;
+        const joinVersionAtStart = successfulJoinVersion;
         const { setLoading } = useLoadingStore.getState();
         const { clearError, setError } = useErrorsStore.getState();
         const isCurrent = createGroupsMutationGuard();
@@ -534,7 +516,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
 
                 if (
                     get().selectedGroup?.id === groupId &&
-                    (successfulJoinsByGroup.get(groupId) ?? 0) === joinVersionAtStart
+                    successfulJoinVersion === joinVersionAtStart
                 ) {
                     get().setSelectedGroup(null);
                 }
@@ -583,12 +565,9 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             .then(joinedGroup => {
                 if (isCurrent()) {
                     resetGroupActivityPagination();
-                    successfulJoinsByGroup.set(
-                        joinedGroup.id,
-                        (successfulJoinsByGroup.get(joinedGroup.id) ?? 0) + 1,
-                    );
+                    successfulJoinVersion += 1;
                     set(state => ({
-                        groups: upsertGroup(state.groups, joinedGroup),
+                        groups: uniqueGroups(state.groups, joinedGroup),
                         selectedGroup: joinedGroup,
                     }));
                 }
