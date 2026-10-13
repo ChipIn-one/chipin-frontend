@@ -346,3 +346,55 @@ test('also confirms a likely outage from the public API path', () => {
             expect(useBackendAvailabilityStore.getState().isUnavailable).toBe(true);
         });
 });
+
+test('rejects a stale successful protected response after logout', () => {
+    let finish: (() => void) | undefined;
+    let onStarted: (() => void) | undefined;
+    const started = new Promise<void>(resolve => {
+        onStarted = resolve;
+    });
+    const request = apiInstance.get('/dashboard', {
+        adapter: config => new Promise(resolve => {
+            finish = () => resolve({
+                config,
+                data: { protected: true },
+                headers: {},
+                status: 200,
+                statusText: 'OK',
+            });
+            onStarted?.();
+        }),
+    });
+
+    return started.then(() => {
+        authSessionMocks.currentVersion = 2;
+        finish?.();
+        return expect(request).rejects.toThrow('Auth request cancelled');
+    });
+});
+
+test('does not send or expire the new session when an old request resumes', () => {
+    let resolveToken: ((token: string) => void) | undefined;
+    let onPrepare: (() => void) | undefined;
+    const prepareStarted = new Promise<void>(resolve => {
+        onPrepare = resolve;
+    });
+    const pendingToken = new Promise<string>(resolve => {
+        resolveToken = resolve;
+    });
+    authSessionMocks.prepareAuthRequest.mockImplementation(() => {
+        onPrepare?.();
+        return pendingToken;
+    });
+    const adapter = vi.fn();
+    const request = apiInstance.get('/dashboard', { adapter });
+
+    return prepareStarted.then(() => {
+        authSessionMocks.currentVersion = 2;
+        resolveToken?.('old-token');
+        return expect(request).rejects.toThrow('Auth request cancelled');
+    }).then(() => {
+        expect(adapter).not.toHaveBeenCalled();
+        expect(onUnauthorizedSession).not.toHaveBeenCalled();
+    });
+});

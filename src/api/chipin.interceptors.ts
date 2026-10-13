@@ -27,7 +27,7 @@ let onUnauthorizedSession: (() => void) | undefined;
 const requestAuthSessionVersions = new WeakMap<object, number>();
 
 class AuthRequestCancelledError extends Error {
-    constructor() {
+    constructor(readonly isStaleSession = false) {
         super(AUTH_REQUEST_CANCELLED_MESSAGE);
     }
 }
@@ -89,7 +89,7 @@ const processBackendAvailabilityError = (error: unknown): Promise<never> => {
 
 const processApiResponseError = (error: unknown) => {
     if (error instanceof AuthRequestCancelledError) {
-        if (!isAuthSessionSignedOut()) {
+        if (!error.isStaleSession && !isAuthSessionSignedOut()) {
             onUnauthorizedSession?.();
         }
 
@@ -189,6 +189,9 @@ export const initChipInApiInterceptors = (
         const authSessionVersion = getAuthSessionVersion();
 
         return prepareAuthRequest(config.url).then(currentAccessToken => {
+            if (!isAuthSessionCurrent(authSessionVersion)) {
+                return Promise.reject(new AuthRequestCancelledError(true));
+            }
             requestAuthSessionVersions.set(config, authSessionVersion);
 
             if (currentAccessToken === null) {
@@ -203,7 +206,13 @@ export const initChipInApiInterceptors = (
         });
     });
 
-    apiInstance.interceptors.response.use(response => response, processApiResponseError);
+    apiInstance.interceptors.response.use(response => {
+        const requestVersion = requestAuthSessionVersions.get(response.config);
+        if (requestVersion !== undefined && !isAuthSessionCurrent(requestVersion)) {
+            return Promise.reject(new AuthRequestCancelledError(true));
+        }
+        return response;
+    }, processApiResponseError);
     publicApiInstance.interceptors.response.use(
         response => response,
         processPublicApiResponseError,

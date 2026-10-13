@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
 import { ROUTES } from 'constants/routes';
+import { markAuthSessionSignedOut, subscribeToRemoteAuthLogout } from 'helpers/authSession';
 import { hasAuthSessionHint } from 'helpers/localStorage';
 import { selectAuthStatus } from 'store/authSelectors';
 import { AUTH_STATUS, UNAUTH_REASON } from 'store/authConstants';
@@ -35,6 +36,21 @@ export const useCheckSignIn = () => {
     const setAuthenticated = useAuthStore(s => s.setAuthenticated);
     const setUnauthenticated = useAuthStore(s => s.setUnauthenticated);
     const refreshAuthTokens = useAuthStore(s => s.refreshAuthTokens);
+
+    useEffect(() => {
+        return subscribeToRemoteAuthLogout(() => {
+            const current = useAuthStore.getState();
+            if (
+                current.status === AUTH_STATUS.UNAUTHENTICATED &&
+                current.unauthReason === UNAUTH_REASON.SIGNED_OUT
+            ) {
+                return;
+            }
+
+            markAuthSessionSignedOut();
+            current.setUnauthenticated(UNAUTH_REASON.SIGNED_OUT);
+        });
+    }, []);
 
     useEffect(() => {
         if (
