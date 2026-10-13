@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 
 import { Container } from '@radix-ui/themes';
 
-import { InternalPageColumns } from 'components/internal-page-layout';
+import { InternalPageColumnsFromSm } from 'components/internal-page-layout';
 import {
     type ActivityFilter,
     ActivityList,
@@ -23,8 +23,7 @@ const ActivityPage = () => {
 
     return (
         <Container size="4" pb={{ initial: '9', sm: '6' }}>
-            <InternalPageColumns
-                gap={{ initial: '3', lg: '6' }}
+            <InternalPageColumnsFromSm
                 sidePanel={
                     <ActivitySidebar
                         activeFilter={activeFilter}
@@ -33,7 +32,7 @@ const ActivityPage = () => {
                 }
             >
                 <ActivityList activeFilter={activeFilter} />
-            </InternalPageColumns>
+            </InternalPageColumnsFromSm>
         </Container>
     );
 };
