@@ -18,6 +18,7 @@ import {
 import { resolveStoredTheme } from 'helpers/theme';
 import { useAuthStore } from 'store/authStore';
 
+import PWABadge from 'basics/PWABadge';
 import { GlobalErrorBoundary } from 'components/global-error-boundary';
 
 import '@radix-ui/themes/styles.css';
@@ -134,6 +135,8 @@ if (prerenderedRoute) {
                 <GlobalErrorBoundary>
                     <PublicApp route={prerenderedRoute} i18nInstance={i18n} />
                     <PublicTelemetry />
+                    {/* Public SSG entry must register the same service worker as the SPA. */}
+                    <PWABadge />
                 </GlobalErrorBoundary>,
             )))
         .catch(error => Sentry.captureException(error));
