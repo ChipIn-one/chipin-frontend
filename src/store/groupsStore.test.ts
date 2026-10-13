@@ -434,7 +434,8 @@ describe('groupsStore', () => {
         });
         const otherGroup = { ...group, id: 'other-group' } satisfies Group;
         useGroupsStore.setState({ groups: [group, otherGroup], selectedGroup: group });
-        vi.mocked(chipinApi.fetchApiUserGroups).mockReturnValue(listRequest);
+        vi.mocked(chipinApi.fetchApiUserGroups).mockImplementationOnce(() => listRequest)
+            .mockResolvedValue({ items: [group, otherGroup], nextCursor: null });
         vi.mocked(chipinApi.fetchApiUserGroupById).mockRejectedValue({
             isAxiosError: true,
             response: { status: 404 },
@@ -449,7 +450,45 @@ describe('groupsStore', () => {
             .then(() => {
                 expect(useGroupsStore.getState().groups).toEqual([otherGroup]);
                 expect(useGroupsStore.getState().selectedGroup).toBeNull();
-                expect(useGroupsStore.getState().hasConfirmedGroups).toBe(true);
+                expect(useGroupsStore.getState().hasConfirmedGroups).toBe(false);
+                expect(useLoadingStore.getState().group.list).toBe('fetched');
+
+                return useGroupsStore.getState().fetchSetGroups().then(() => {
+                    expect(useGroupsStore.getState().groups).toEqual([group, otherGroup]);
+                    expect(useGroupsStore.getState().hasConfirmedGroups).toBe(true);
+                });
+            });
+    });
+
+    test('a fresh list can restore a previously inaccessible group without another detail read', () => {
+        const otherGroup = { ...group, id: 'other-group' } satisfies Group;
+        useGroupsStore.setState({ groups: [group, otherGroup], selectedGroup: group });
+        vi.mocked(chipinApi.fetchApiUserGroupById).mockRejectedValueOnce({
+            isAxiosError: true,
+            response: { status: 403 },
+        });
+        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValueOnce({
+            items: [otherGroup],
+            nextCursor: null,
+        }).mockResolvedValueOnce({
+            items: [otherGroup, group],
+            nextCursor: null,
+        });
+
+        return useGroupsStore.getState().fetchSetGroupById(group.id, true)
+            .then(() => {
+                expect(useGroupsStore.getState().selectedGroup).toBeNull();
+                expect(useGroupsStore.getState().groups).toEqual([otherGroup]);
+                return useGroupsStore.getState().fetchSetGroups();
+            })
+            .then(() => {
+                expect(useGroupsStore.getState().groups).toEqual([otherGroup]);
+                return useGroupsStore.getState().fetchSetGroups(true);
+            })
+            .then(() => {
+                expect(useGroupsStore.getState().groups).toEqual([otherGroup, group]);
+                expect(useGroupsStore.getState().selectedGroup).toBeNull();
+                expect(chipinApi.fetchApiUserGroups).toHaveBeenCalledTimes(2);
             });
     });
 
