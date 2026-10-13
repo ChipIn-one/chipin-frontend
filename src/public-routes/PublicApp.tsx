@@ -88,7 +88,9 @@ const PublicEffects = ({ route }: { route: PublicRoute }) => {
 
         // The root response stays English and indexable; only the anonymous
         // hydrated browser is eligible for locale preference navigation.
-        if (window.location.pathname !== '/') return;
+        if (window.location.pathname !== '/') {
+            return;
+        }
         const params = new URLSearchParams(window.location.search);
         const stored = LocalStorage.get(LS_KEY_LOCALE, '');
         const browserLanguages = navigator.languages?.length
@@ -98,7 +100,9 @@ const PublicEffects = ({ route }: { route: PublicRoute }) => {
         const destination = getRootLocaleRedirect(
             locale, window.location.search, window.location.hash,
         );
-        if (destination) window.location.replace(destination);
+        if (destination) {
+            window.location.replace(destination);
+        }
     }, [
         canAccessSolo, isAuthResolved, isLoggedIn, isUserFetched,
         route.locale, route.page, settings?.soloModeByDefault,

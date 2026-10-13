@@ -139,7 +139,9 @@ const Header = () => {
                 saveLocalePreference(locale);
                 if (currentPublicRoute) {
                     const nextPath = getPublicPath(currentPublicRoute.page, locale);
-                    if (location.pathname !== nextPath) window.location.assign(nextPath);
+                    if (location.pathname !== nextPath) {
+                        window.location.assign(nextPath);
+                    }
                 }
             })
             .catch((error: unknown) => {

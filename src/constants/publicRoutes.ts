@@ -57,15 +57,21 @@ const selectRootLocale = (
 ): PublicLocale => {
     if (override !== null) {
         const selected = matchLocale(override);
-        if (selected) return selected;
+        if (selected) {
+            return selected;
+        }
     }
     if (persisted !== null) {
         const selected = matchLocale(persisted);
-        if (selected) return selected;
+        if (selected) {
+            return selected;
+        }
     }
     for (const language of browserLanguages) {
         const selected = matchLocale(language);
-        if (selected) return selected;
+        if (selected) {
+            return selected;
+        }
     }
     return 'en';
 };
@@ -78,7 +84,9 @@ const getRootLocaleRedirect = (
     originalSearch: string,
     originalHash: string,
 ): string | null => {
-    if (locale === 'en') return null;
+    if (locale === 'en') {
+        return null;
+    }
 
     const params = new URLSearchParams(originalSearch);
     const allowed = new URLSearchParams();
