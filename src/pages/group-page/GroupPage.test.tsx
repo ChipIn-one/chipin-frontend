@@ -145,7 +145,7 @@ test('renders confirmed current detail when groups list is not fetched', () => {
 
     render(<GroupPage />);
 
-    expect(screen.getByTestId('group-tabs')).toHaveAttribute('data-group-id', group.id);
+    expect(screen.getByTestId('group-tabs').dataset.groupId).toBe(group.id);
 });
 
 test('does not overwrite selected detail after cached groups change', () => {
