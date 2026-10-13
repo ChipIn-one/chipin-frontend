@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { Box } from '@radix-ui/themes';
@@ -16,7 +16,17 @@ import TermsPage from 'pages/TermsPage';
 import { PublicEffects } from './PublicEffects';
 import { PublicLanguageLinks } from './PublicLanguageLinks';
 
+// Both SSR and the initial hydration render skip browser-only auth/network effects.
+const subscribeToHydration = () => () => undefined;
+const getClientHydration = () => true;
+const getServerHydration = () => false;
+
 const PublicContent = ({ initialRoute }: { initialRoute: PublicRoute }) => {
+    const isHydrated = useSyncExternalStore(
+        subscribeToHydration,
+        getClientHydration,
+        getServerHydration,
+    );
     const location = useLocation();
     const route = getPublicRoute(location.pathname) ?? initialRoute;
 
@@ -35,7 +45,7 @@ const PublicContent = ({ initialRoute }: { initialRoute: PublicRoute }) => {
 
     return (
         <>
-            <PublicEffects route={route} />
+            {isHydrated && <PublicEffects route={route} />}
             <BackendUnavailableGate>
                 <BackgroundBox>
                     <Header />
