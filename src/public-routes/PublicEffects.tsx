@@ -8,14 +8,18 @@ import { LocalStorage } from 'helpers/localStorage';
 import { getPreferredModeRoute } from 'helpers/routes';
 import { getRootLocaleRedirect, selectRootLocale } from 'helpers/publicRoutes';
 import { useCheckOnlineStatus, useCheckPwa } from 'hooks/pwaHooks';
+import { useAuthToasts } from 'hooks/useAuthToasts';
 import { updateSeoMetadata } from 'hooks/seoMetadata';
 import { useCheckSignIn } from 'hooks/useCheckSignIn';
+import { useScrollToTop } from 'hooks/useScrollToTop';
 import type { PublicRoute } from 'types/publicRoutes';
 
 import { useConnect } from './internal/useConnect';
 
 const PublicEffects = ({ route }: { route: PublicRoute }) => {
     useCheckSignIn();
+    useAuthToasts();
+    useScrollToTop();
     useCheckPwa();
     useCheckOnlineStatus();
 
