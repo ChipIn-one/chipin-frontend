@@ -282,4 +282,37 @@ describe('authStore', () => {
             });
         });
     });
+
+    test('hides protected data immediately and deduplicates repeated sign-out', () => {
+        let finish: (() => void) | undefined;
+        const pending = new Promise<void>(resolve => {
+            finish = resolve;
+        });
+        authSessionMocks.startAuthLogout.mockReturnValue(pending);
+        useExpenseModalStore.setState({
+            isOpened: true,
+            groupId: 'private-group',
+            description: 'private expense',
+        });
+
+        const first = useAuthStore.getState().signOut();
+        const second = useAuthStore.getState().signOut();
+        expect(second).toBe(first);
+        expect(authSession.startAuthLogout).toHaveBeenCalledOnce();
+        expect(useAuthStore.getState()).toMatchObject({
+            status: 'unauthenticated',
+            unauthReason: 'signed_out',
+        });
+        expect(useExpenseModalStore.getState()).toMatchObject({
+            isOpened: false,
+            groupId: '',
+            description: '',
+        });
+
+        finish?.();
+        return Promise.all([first, second]).then(() => {
+            expect(authSession.startAuthLogout).toHaveBeenCalledOnce();
+        });
+    });
+
 });

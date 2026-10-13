@@ -41,6 +41,8 @@ export interface AuthStore {
     signOut: () => Promise<void>;
 }
 
+let signOutPromise: Promise<void> | null = null;
+
 const resetAuthScopedStores = () => {
     useActivityStore.getState().resetActivity();
     useDashboardStore.getState().setInitialDashboardStore();
@@ -160,22 +162,22 @@ export const useAuthStore = create<AuthStore>(set => ({
     },
 
     signOut: () => {
-        const { setLoading } = useLoadingStore.getState();
-        const { clearError, setError } = useErrorsStore.getState();
+        if (signOutPromise) {
+            return signOutPromise;
+        }
 
-        clearError('auth', 'signOut');
-        setLoading('auth', 'signOut', 'loading');
+        // Start the best-effort server logout, but leave protected UI immediately.
+        const logoutRequest = startAuthLogout();
+        resetAuthScopedStores();
+        set({
+            status: AUTH_STATUS.UNAUTHENTICATED,
+            unauthReason: UNAUTH_REASON.SIGNED_OUT,
+            isNewUser: null,
+        });
 
-        return startAuthLogout()
-            .then(() => {
-                setLoading('auth', 'signOut', 'fetched');
-                resetAuthScopedStores();
-                set({ status: AUTH_STATUS.UNAUTHENTICATED, unauthReason: UNAUTH_REASON.SIGNED_OUT, isNewUser: null });
-            })
-            .catch(error => {
-                setLoading('auth', 'signOut', 'fetched');
-                setError('auth', 'signOut', normalizeApiError(error));
-                throw error;
-            });
+        signOutPromise = logoutRequest.finally(() => {
+            signOutPromise = null;
+        });
+        return signOutPromise;
     },
 }));
