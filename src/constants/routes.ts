@@ -27,7 +27,7 @@ export interface RouteMeta {
     };
 }
 
-export const ROUTE_META = [
+export const ROUTE_META: RouteMeta[] = [
     ...PUBLIC_ROUTE_ENTRIES.map(route => ({
         path: route.path,
         titleKey: route.metaKey + '.title',
@@ -93,4 +93,4 @@ export const ROUTE_META = [
         titleKey: 'notFound.title',
         descriptionKey: 'notFound.description',
     },
-] satisfies RouteMeta[];
+];

@@ -14,7 +14,7 @@ const renderPublicRoute = (route: PublicRoute): { html: string; styles: string }
         lng: route.locale,
         fallbackLng: 'en',
         defaultNS: 'common',
-        initImmediate: false,
+        initAsync: false,
         interpolation: { escapeValue: false },
     });
 
