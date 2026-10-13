@@ -27,6 +27,11 @@ const replaceHead = (template, route, meta) => {
         .replace(/<meta property="og:url"[^>]*>/, `<meta property="og:url" content="${canonical}" />`);
 };
 
+// Rendering is request-free, but legacy API modules resolve their environment at import time.
+if (!process.env.VITE_CHIPIN_ENV) {
+    process.env.VITE_CHIPIN_ENV = 'dev';
+}
+
 const main = () => createServer({
     configFile: false,
     root: process.cwd(),

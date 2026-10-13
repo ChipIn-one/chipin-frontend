@@ -25,7 +25,7 @@ const MEDIA_LINKS = [
 
 const Footer = () => {
     const { t, i18n } = useTranslation();
-    const locale = matchLocale(i18n.resolvedLanguage ?? i18n.language) ?? 'en';
+    const locale = matchLocale(i18n?.resolvedLanguage ?? i18n?.language ?? 'en') ?? 'en';
 
     return (
         <Box py={{ initial: '4', md: '6' }}>
