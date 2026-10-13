@@ -27,8 +27,11 @@ let onUnauthorizedSession: (() => void) | undefined;
 const requestAuthSessionVersions = new WeakMap<object, number>();
 
 class AuthRequestCancelledError extends Error {
-    constructor(readonly isStaleSession = false) {
+    readonly isStaleSession: boolean;
+
+    constructor(isStaleSession = false) {
         super(AUTH_REQUEST_CANCELLED_MESSAGE);
+        this.isStaleSession = isStaleSession;
     }
 }
 
