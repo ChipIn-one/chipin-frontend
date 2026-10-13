@@ -518,17 +518,19 @@ describe('groupsStore', () => {
         return useGroupsStore.getState().fetchSetGroupById(group.id, true)
             .then(() => useGroupsStore.getState().joinGroup({ inviteToken: group.inviteToken }))
             .then(() => {
-                resolveList?.({ items: [{ ...group, name: 'Stale' }], nextCursor: null });
+                const otherGroup = { ...group, id: 'other-group' } satisfies Group;
+                resolveList?.({ items: [{ ...group, name: 'Stale' }, otherGroup], nextCursor: null });
                 return oldList;
             })
             .then(() => {
+                const otherGroup = { ...group, id: 'other-group' } satisfies Group;
                 expect(useGroupsStore.getState().selectedGroup).toBe(joined);
-                expect(useGroupsStore.getState().groups).toEqual([joined]);
+                expect(useGroupsStore.getState().groups).toEqual([joined, otherGroup]);
                 expect(useLoadingStore.getState().group.list).toBe('fetched');
             });
     });
 
-    test('ignores stale list after canonical detail recovery', () => {
+    test('reconciles stale list with canonical detail recovery', () => {
         let resolveList: ((data: { items: Group[]; nextCursor: null }) => void) | undefined;
         vi.mocked(chipinApi.fetchApiUserGroups).mockImplementationOnce(() =>
             new Promise(resolve => { resolveList = resolve; }),
@@ -548,7 +550,56 @@ describe('groupsStore', () => {
             })
             .then(() => {
                 expect(useGroupsStore.getState().selectedGroup).toBe(recovered);
-                expect(useGroupsStore.getState().groups).toEqual([]);
+                expect(useGroupsStore.getState().groups).toEqual([recovered]);
+                expect(useGroupsStore.getState().hasConfirmedGroups).toBe(true);
+            });
+    });
+
+    test('loads the rest of the groups after direct-route detail wins the initial request', () => {
+        let resolveList: ((data: { items: Group[]; nextCursor: null }) => void) | undefined;
+        vi.mocked(chipinApi.fetchApiUserGroups).mockImplementationOnce(() =>
+            new Promise(resolve => { resolveList = resolve; }),
+        );
+        const otherGroup = { ...group, id: 'other-group', name: 'Other group' } satisfies Group;
+        const canonical = { ...group, name: 'Canonical detail' } satisfies Group;
+        vi.mocked(chipinApi.fetchApiUserGroupById).mockResolvedValueOnce(canonical);
+
+        const oldList = useGroupsStore.getState().fetchSetGroups();
+        return useGroupsStore.getState().fetchSetGroupById(group.id, true)
+            .then(() => {
+                resolveList?.({
+                    items: [{ ...group, name: 'Outdated list item' }, otherGroup],
+                    nextCursor: null,
+                });
+                return oldList;
+            })
+            .then(() => {
+                expect(useGroupsStore.getState().selectedGroup).toBe(canonical);
+                expect(useGroupsStore.getState().groups).toEqual([canonical, otherGroup]);
+                expect(useGroupsStore.getState().hasConfirmedGroups).toBe(true);
+                expect(chipinApi.fetchApiUserGroups).toHaveBeenCalledOnce();
+            });
+    });
+
+    test('reconciles an old list with a newer group edit while retaining other groups', () => {
+        let resolveList: ((data: { items: Group[]; nextCursor: null }) => void) | undefined;
+        vi.mocked(chipinApi.fetchApiUserGroups).mockImplementationOnce(() =>
+            new Promise(resolve => { resolveList = resolve; }),
+        );
+        const otherGroup = { ...group, id: 'other-group' } satisfies Group;
+        const updated = { ...group, name: 'Updated group' } satisfies Group;
+        vi.mocked(groupsApi.updateGroup).mockResolvedValue(updated);
+        useGroupsStore.setState({ groups: [group], selectedGroup: group });
+
+        const oldList = useGroupsStore.getState().fetchSetGroups();
+        return useGroupsStore.getState().updateGroup({ groupName: updated.name })
+            .then(() => {
+                resolveList?.({ items: [{ ...group, name: 'Old name' }, otherGroup], nextCursor: null });
+                return oldList;
+            })
+            .then(() => {
+                expect(useGroupsStore.getState().selectedGroup).toBe(updated);
+                expect(useGroupsStore.getState().groups).toEqual([updated, otherGroup]);
             });
     });
 

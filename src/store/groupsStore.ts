@@ -90,8 +90,8 @@ const uniqueGroups = (groups: Group[], incoming?: Group): Group[] => {
 
 // Prevent reads started before a confirmed write from overwriting its canonical state.
 const recordCanonicalGroupWrite = (groupId: string): void => {
-    canonicalWriteVersions[groupId] = (canonicalWriteVersions[groupId] ?? 0) + 1;
     groupsListRevision += 1;
+    canonicalWriteVersions[groupId] = groupsListRevision;
 };
 
 const createGroupsMutationGuard = () => {
@@ -195,13 +195,32 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
 
         return request.promise
             .then(response => {
-                if (!request.isCurrent() || groupsListRevision !== revisionAtStart) {
+                if (!request.isCurrent()) {
                     return get().groups;
                 }
 
-                const groups = uniqueGroups(response.items.filter(group =>
+                let groups = uniqueGroups(response.items.filter(group =>
                     !inaccessibleGroupIds.has(group.id),
                 ));
+
+                if (groupsListRevision !== revisionAtStart) {
+                    const { groups: cachedGroups, selectedGroup } = get();
+
+                    for (const cachedGroup of cachedGroups) {
+                        if ((canonicalWriteVersions[cachedGroup.id] ?? 0) > revisionAtStart) {
+                            groups = uniqueGroups(groups, cachedGroup);
+                        }
+                    }
+
+                    if (
+                        selectedGroup &&
+                        (canonicalWriteVersions[selectedGroup.id] ?? 0) > revisionAtStart
+                    ) {
+                        groups = groups.map(group =>
+                            group.id === selectedGroup.id ? selectedGroup : group,
+                        );
+                    }
+                }
 
                 set({
                     groups,
