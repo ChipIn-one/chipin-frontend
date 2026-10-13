@@ -375,18 +375,101 @@ describe('groupsStore', () => {
         });
     });
 
-    test('clears only matching current group after a forced detail 404', () => {
+    test.each([403, 404])('evicts an inaccessible group from the list on detail %i', status => {
+        const otherGroup = { ...group, id: 'other-group' } satisfies Group;
         const denied = {
             isAxiosError: true,
-            response: { status: 404, data: { code: 'GROUP_NOT_FOUND' } },
+            response: { status, data: { code: 'GROUP_NOT_FOUND' } },
         };
+        useGroupsStore.setState({ groups: [group, otherGroup] });
         useGroupsStore.getState().setSelectedGroup(group);
         vi.mocked(chipinApi.fetchApiUserGroupById).mockRejectedValue(denied);
 
         return useGroupsStore.getState().fetchSetGroupById(group.id, true).then(() => {
             expect(useGroupsStore.getState().selectedGroup).toBeNull();
+            expect(useGroupsStore.getState().groups).toEqual([otherGroup]);
             expect(useErrorsStore.getState().errors.group.data).not.toBeNull();
         });
+    });
+
+    test('evicts denied group while preserving another selected group', () => {
+        const otherGroup = { ...group, id: 'other-group' } satisfies Group;
+        useGroupsStore.setState({ groups: [group, otherGroup], selectedGroup: otherGroup });
+        vi.mocked(chipinApi.fetchApiUserGroupById).mockRejectedValue({
+            isAxiosError: true,
+            response: { status: 403 },
+        });
+
+        return useGroupsStore.getState().fetchSetGroupById(group.id, true).then(() => {
+            expect(useGroupsStore.getState().groups).toEqual([otherGroup]);
+            expect(useGroupsStore.getState().selectedGroup).toBeNull();
+        });
+    });
+
+    test('does not restore an inaccessible group from an older in-flight list response', () => {
+        let resolveList: ((value: { items: Group[]; nextCursor: null }) => void) | undefined;
+        const listRequest = new Promise<{ items: Group[]; nextCursor: null }>(resolve => {
+            resolveList = resolve;
+        });
+        const otherGroup = { ...group, id: 'other-group' } satisfies Group;
+        useGroupsStore.setState({ groups: [group, otherGroup], selectedGroup: group });
+        vi.mocked(chipinApi.fetchApiUserGroups).mockReturnValue(listRequest);
+        vi.mocked(chipinApi.fetchApiUserGroupById).mockRejectedValue({
+            isAxiosError: true,
+            response: { status: 404 },
+        });
+
+        const pendingList = useGroupsStore.getState().fetchSetGroups();
+        return useGroupsStore.getState().fetchSetGroupById(group.id, true)
+            .then(() => {
+                resolveList?.({ items: [group, otherGroup], nextCursor: null });
+                return pendingList;
+            })
+            .then(() => {
+                expect(useGroupsStore.getState().groups).toEqual([otherGroup]);
+                expect(useGroupsStore.getState().selectedGroup).toBeNull();
+                expect(useGroupsStore.getState().hasConfirmedGroups).toBe(true);
+            });
+    });
+
+    test('a successful rejoin restores the group after a definitive detail denial', () => {
+        useGroupsStore.setState({ groups: [group], selectedGroup: group });
+        vi.mocked(chipinApi.fetchApiUserGroupById).mockRejectedValue({
+            isAxiosError: true,
+            response: { status: 403 },
+        });
+        const rejoined = { ...group, role: 'MEMBER' } satisfies Group;
+        vi.mocked(chipinApi.inviteApiUserToGroup).mockResolvedValue(rejoined);
+
+        return useGroupsStore.getState().fetchSetGroupById(group.id, true)
+            .then(() => useGroupsStore.getState().joinGroup({ inviteToken: group.inviteToken }))
+            .then(() => {
+                expect(useGroupsStore.getState().groups).toEqual([rejoined]);
+                expect(useGroupsStore.getState().selectedGroup).toBe(rejoined);
+            });
+    });
+
+    test('ignores an old detail denial after a successful rejoin of the same group', () => {
+        let rejectDetail: ((reason: unknown) => void) | undefined;
+        vi.mocked(chipinApi.fetchApiUserGroupById).mockImplementationOnce(() =>
+            new Promise((_resolve, reject) => {
+                rejectDetail = reject;
+            }),
+        );
+        const rejoined = { ...group, role: 'MEMBER' } satisfies Group;
+        vi.mocked(chipinApi.inviteApiUserToGroup).mockResolvedValue(rejoined);
+        useGroupsStore.setState({ groups: [group], selectedGroup: group });
+
+        const oldDetail = useGroupsStore.getState().fetchSetGroupById(group.id, true);
+        return useGroupsStore.getState().joinGroup({ inviteToken: group.inviteToken })
+            .then(() => {
+                rejectDetail?.({ isAxiosError: true, response: { status: 404 } });
+                return oldDetail;
+            })
+            .then(() => {
+                expect(useGroupsStore.getState().groups).toEqual([rejoined]);
+                expect(useGroupsStore.getState().selectedGroup).toBe(rejoined);
+            });
     });
 
     test('preserves last-confirmed group on transient detail failure', () => {

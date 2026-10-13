@@ -26,6 +26,7 @@ import { useUsersStore } from './users-store';
 const groupsChannel = createRequestChannel();
 const groupDetailChannel = createRequestChannel();
 const groupActivityPageChannel = createRequestChannel();
+const inaccessibleGroupIds = new Set<string>();
 let groupsMutationGeneration = 0;
 let successfulJoinVersions: Record<string, number> = Object.create(null) as Record<string, number>;
 let activeGroupUpdate: {
@@ -155,6 +156,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         groupDetailChannel.abort();
         resetGroupActivityPagination();
         groupsMutationGeneration += 1;
+        inaccessibleGroupIds.clear();
         successfulJoinVersions = Object.create(null) as Record<string, number>;
         activeGroupUpdate = undefined;
         set(initialGroupsStore);
@@ -183,7 +185,9 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     return get().groups;
                 }
 
-                const groups = uniqueGroups(response.items);
+                const groups = uniqueGroups(response.items.filter(group =>
+                    !inaccessibleGroupIds.has(group.id),
+                ));
 
                 set({
                     groups,
@@ -207,6 +211,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
     },
     fetchSetGroupById: (groupId, force = false) => {
         const { groups, selectedGroup } = get();
+        const joinVersionAtStart = successfulJoinVersions[groupId] ?? 0;
 
         if (force || selectedGroup?.id !== groupId) {
             resetGroupActivityPagination();
@@ -241,6 +246,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     return get().selectedGroup;
                 }
 
+                inaccessibleGroupIds.delete(group.id);
                 set(state => ({
                     groups: state.groups.map(cachedGroup =>
                         cachedGroup.id === group.id ? group : cachedGroup,
@@ -250,13 +256,21 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 return group;
             })
             .catch((error: unknown) => {
-                if (request.isCurrent()) {
+                if (request.isCurrent() && (successfulJoinVersions[groupId] ?? 0) === joinVersionAtStart) {
                     setError('group', 'data', normalizeApiError(error));
                     const status = getApiErrorStatus(error);
 
-                    if ((status === 403 || status === 404) && get().selectedGroup?.id === groupId) {
-                        resetGroupActivityPagination();
-                        set({ selectedGroup: null });
+                    if (status === 403 || status === 404) {
+                        inaccessibleGroupIds.add(groupId);
+                        if (get().selectedGroup?.id === groupId) {
+                            resetGroupActivityPagination();
+                        }
+                        set(state => ({
+                            groups: state.groups.filter(group => group.id !== groupId),
+                            selectedGroup: state.selectedGroup?.id === groupId
+                                ? null
+                                : state.selectedGroup,
+                        }));
                     }
                 }
                 return get().selectedGroup?.id === groupId ? get().selectedGroup : null;
@@ -567,6 +581,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     resetGroupActivityPagination();
                     successfulJoinVersions[joinedGroup.id] =
                         (successfulJoinVersions[joinedGroup.id] ?? 0) + 1;
+                    inaccessibleGroupIds.delete(joinedGroup.id);
                     set(state => ({
                         groups: uniqueGroups(state.groups, joinedGroup),
                         selectedGroup: joinedGroup,
