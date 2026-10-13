@@ -450,8 +450,7 @@ describe('groupsStore', () => {
             .then(() => {
                 expect(useGroupsStore.getState().groups).toEqual([otherGroup]);
                 expect(useGroupsStore.getState().selectedGroup).toBeNull();
-                expect(useGroupsStore.getState().hasConfirmedGroups).toBe(false);
-                expect(useLoadingStore.getState().group.list).toBe('fetched');
+                expect(useGroupsStore.getState().hasConfirmedGroups).toBe(true);
 
                 return useGroupsStore.getState().fetchSetGroups().then(() => {
                     expect(useGroupsStore.getState().groups).toEqual([group, otherGroup]);

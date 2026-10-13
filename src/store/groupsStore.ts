@@ -26,6 +26,7 @@ import { useUsersStore } from './users-store';
 const groupsChannel = createRequestChannel();
 const groupDetailChannel = createRequestChannel();
 const groupActivityPageChannel = createRequestChannel();
+const inaccessibleGroupIds = new Set<string>();
 let groupsMutationGeneration = 0;
 let successfulJoinVersions: Record<string, number> = Object.create(null) as Record<string, number>;
 let activeGroupUpdate: {
@@ -155,6 +156,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         groupDetailChannel.abort();
         resetGroupActivityPagination();
         groupsMutationGeneration += 1;
+        inaccessibleGroupIds.clear();
         successfulJoinVersions = Object.create(null) as Record<string, number>;
         activeGroupUpdate = undefined;
         set(initialGroupsStore);
@@ -174,6 +176,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         const { clearError, setError } = useErrorsStore.getState();
         clearError('group', 'list');
         const selectedAtStart = get().selectedGroup;
+        const deniedAtStart = new Set(inaccessibleGroupIds);
 
         const request = groupsChannel.request(chipinApi.fetchApiUserGroups, { force });
         setLoading('group', 'list', 'loading');
@@ -184,7 +187,13 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     return get().groups;
                 }
 
-                let groups = uniqueGroups(response.items);
+                let groups = uniqueGroups(response.items.filter(group =>
+                    !inaccessibleGroupIds.has(group.id) || deniedAtStart.has(group.id),
+                ));
+
+                for (const group of groups) {
+                    inaccessibleGroupIds.delete(group.id);
+                }
 
                 const selectedGroup = get().selectedGroup;
 
@@ -247,6 +256,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 if (!request.isCurrent()) {
                     return get().selectedGroup;
                 }
+                inaccessibleGroupIds.delete(group.id);
                 set(state => ({
                     groups: uniqueGroups(state.groups, group),
                     selectedGroup: group,
@@ -259,10 +269,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     const status = getApiErrorStatus(error);
 
                     if (status === 403 || status === 404) {
-                        groupsChannel.abort();
-                        if (useLoadingStore.getState().group.list === 'loading') {
-                            useLoadingStore.getState().setLoading('group', 'list', 'fetched');
-                        }
+                        inaccessibleGroupIds.add(groupId);
                         if (get().selectedGroup?.id === groupId) {
                             resetGroupActivityPagination();
                         }
@@ -618,6 +625,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 setLoading('group', 'data', 'fetched');
                 successfulJoinVersions[joinedGroup.id] =
                     (successfulJoinVersions[joinedGroup.id] ?? 0) + 1;
+                inaccessibleGroupIds.delete(joinedGroup.id);
                 set(state => ({
                     groups: uniqueGroups(state.groups, joinedGroup),
                     selectedGroup: joinedGroup,
