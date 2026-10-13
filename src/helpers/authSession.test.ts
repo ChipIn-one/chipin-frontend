@@ -14,6 +14,7 @@ import {
     isAuthSessionSignedOut,
     logoutOtherDevicesSession,
     startAuthLogout,
+    subscribeToRemoteAuthLogout,
     validateAuthSession,
 } from './authSession';
 
@@ -340,4 +341,76 @@ describe('authSession', () => {
             expect(authApi.logoutOtherDevices).toHaveBeenCalledOnce();
         });
     });
+
+    test('uses single-flight logout and blocks refresh before cookie revocation finishes', () => {
+        establishAuthSession(createAccessToken(Date.now() / 1000 + 3_600));
+        let finish: (() => void) | undefined;
+        const pending = new Promise<void>(resolve => {
+            finish = resolve;
+        });
+        vi.mocked(chipinApi.logoutApiAuthTokens).mockReturnValue(pending);
+
+        const first = startAuthLogout();
+        const second = startAuthLogout();
+        expect(second).toBe(first);
+        expect(chipinApi.logoutApiAuthTokens).toHaveBeenCalledOnce();
+
+        return validateAuthSession().then(token => {
+            expect(token).toBeNull();
+            finish?.();
+            return Promise.all([first, second]);
+        }).then(() => {
+            expect(chipinApi.refreshApiAuthTokens).not.toHaveBeenCalled();
+        });
+    });
+
+    test('broadcasts logout without tokens or refresh persistence details', () => {
+        const postMessage = vi.fn();
+        const close = vi.fn();
+        vi.stubGlobal('BroadcastChannel', class {
+            postMessage = postMessage;
+            close = close;
+        });
+        establishAuthSession(createAccessToken(Date.now() / 1000 + 3_600));
+        vi.mocked(chipinApi.logoutApiAuthTokens).mockResolvedValue(undefined);
+
+        return startAuthLogout().then(() => {
+            expect(postMessage).toHaveBeenCalledWith({
+                type: 'logout',
+                source: expect.any(String),
+            });
+            expect(close).toHaveBeenCalledOnce();
+        });
+    });
+
+    test('validates untrusted remote logout payloads before invalidating a tab', () => {
+        const receiver: { onMessage: ((event: MessageEvent<unknown>) => void) | null } = {
+            onMessage: null,
+        };
+        const close = vi.fn();
+
+        vi.stubGlobal('BroadcastChannel', class {
+            set onmessage(callback: ((event: MessageEvent<unknown>) => void) | null) {
+                receiver.onMessage = callback;
+            }
+            close = close;
+        });
+
+        const onLogout = vi.fn();
+        const unsubscribe = subscribeToRemoteAuthLogout(onLogout);
+
+        [null, [], 'logout', { type: 'logout' }, { type: 'logout', source: 1 }].forEach(data => {
+            receiver.onMessage?.(new MessageEvent('message', { data }));
+        });
+        expect(onLogout).not.toHaveBeenCalled();
+
+        receiver.onMessage?.(new MessageEvent('message', {
+            data: { type: 'logout', source: 'another-tab' },
+        }));
+        expect(onLogout).toHaveBeenCalledOnce();
+
+        unsubscribe();
+        expect(close).toHaveBeenCalledOnce();
+    });
+
 });
