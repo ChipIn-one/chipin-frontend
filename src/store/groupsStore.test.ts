@@ -598,6 +598,10 @@ describe('groupsStore', () => {
         const otherGroup = { ...group, id: 'other-group' } satisfies Group;
         const updated = { ...group, name: 'Updated group' } satisfies Group;
         vi.mocked(groupsApi.updateGroup).mockResolvedValue(updated);
+        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValueOnce({
+            items: [{ ...group, name: 'Old name' }, otherGroup],
+            nextCursor: null,
+        });
         useGroupsStore.setState({ groups: [group], selectedGroup: group });
 
         const oldList = useGroupsStore.getState().fetchSetGroups();
@@ -610,6 +614,64 @@ describe('groupsStore', () => {
                 expect(useGroupsStore.getState().selectedGroup).toBe(updated);
                 expect(useGroupsStore.getState().groups).toEqual([updated, otherGroup]);
             });
+    });
+
+
+    test('keeps an edited group after navigating away while an old list request is pending', () => {
+        let resolveUpdate: ((value: Group) => void) | undefined;
+        const otherGroup = { ...group, id: 'group-2' } satisfies Group;
+        const updated = { ...group, name: 'Canonical update' } satisfies Group;
+        vi.mocked(chipinApi.fetchApiUserGroups)
+            .mockImplementationOnce(() => new Promise(() => undefined))
+            .mockResolvedValueOnce({
+                items: [{ ...group, name: 'Outdated list copy' }, otherGroup],
+                nextCursor: null,
+            });
+        vi.mocked(groupsApi.updateGroup).mockImplementationOnce(() =>
+            new Promise(resolve => { resolveUpdate = resolve; }),
+        );
+        useGroupsStore.setState({ groups: [group, otherGroup], selectedGroup: group });
+
+        const staleList = useGroupsStore.getState().fetchSetGroups();
+        const pendingUpdate = useGroupsStore.getState().updateGroup({ groupName: updated.name });
+        useGroupsStore.getState().setSelectedGroup(otherGroup);
+        resolveUpdate?.(updated);
+
+        return Promise.all([staleList, pendingUpdate]).then(() => {
+            expect(chipinApi.fetchApiUserGroups).toHaveBeenCalledTimes(2);
+            expect(useGroupsStore.getState().selectedGroup).toBe(otherGroup);
+            expect(useGroupsStore.getState().groups).toEqual([updated, otherGroup]);
+        });
+    });
+
+    test('keeps an uploaded cover after navigating away while a list request is pending', () => {
+        let resolveCover: ((value: Group) => void) | undefined;
+        const otherGroup = { ...group, id: 'group-2' } satisfies Group;
+        const updated = { ...group, coverUrl: 'https://cdn.example.com/new.webp' } satisfies Group;
+        vi.mocked(chipinApi.fetchApiUserGroups)
+            .mockImplementationOnce(() => new Promise(() => undefined))
+            .mockResolvedValueOnce({
+                items: [group, otherGroup],
+                nextCursor: null,
+            });
+        vi.mocked(groupsApi.uploadGroupCover).mockImplementationOnce(() =>
+            new Promise(resolve => { resolveCover = resolve; }),
+        );
+        useGroupsStore.setState({ groups: [group, otherGroup], selectedGroup: group });
+
+        const staleList = useGroupsStore.getState().fetchSetGroups();
+        const pendingCover = useGroupsStore.getState().uploadGroupCover({
+            groupId: group.id,
+            file: new File(['cover'], 'cover.webp', { type: 'image/webp' }),
+        });
+        useGroupsStore.getState().setSelectedGroup(otherGroup);
+        resolveCover?.(updated);
+
+        return Promise.all([staleList, pendingCover]).then(() => {
+            expect(chipinApi.fetchApiUserGroups).toHaveBeenCalledTimes(2);
+            expect(useGroupsStore.getState().selectedGroup).toBe(otherGroup);
+            expect(useGroupsStore.getState().groups).toEqual([updated, otherGroup]);
+        });
     });
 
     test('keeps a successful edit over an older in-flight group detail GET', () => {

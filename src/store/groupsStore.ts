@@ -423,7 +423,18 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                                 : state.selectedGroup,
                     }));
                 }
-                return updatedGroup;
+                if (!isCurrent()) {
+                    return updatedGroup;
+                }
+
+                return get().fetchSetGroups(true).then(() => {
+                    if (isCurrent()) {
+                        set(state => ({
+                            groups: uniqueGroups(state.groups, updatedGroup),
+                        }));
+                    }
+                    return updatedGroup;
+                });
             })
             .catch((error: unknown) => {
                 if (isCurrent()) {
@@ -473,7 +484,18 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                                 : state.selectedGroup,
                     }));
                 }
-                return updatedGroup;
+                if (!isCurrent()) {
+                    return updatedGroup;
+                }
+
+                return get().fetchSetGroups(true).then(() => {
+                    if (isCurrent()) {
+                        set(state => ({
+                            groups: uniqueGroups(state.groups, updatedGroup),
+                        }));
+                    }
+                    return updatedGroup;
+                });
             })
             .catch((error: unknown) => {
                 if (isCurrent()) {
