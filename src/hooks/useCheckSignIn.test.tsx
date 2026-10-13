@@ -1,15 +1,16 @@
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { act, render, waitFor } from '@testing-library/react';
 
 import type { SelfUser } from 'api/chipin.types';
 import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
-import { invalidateAuthSession } from 'helpers/authSession';
+import { invalidateAuthSession, isAuthSessionSignedOut } from 'helpers/authSession';
 import * as localStorageHelpers from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
 import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
+import { useExpenseModalStore } from 'store/expenseModalStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useUsersStore } from 'store/users-store';
 
@@ -76,6 +77,10 @@ beforeEach(() => {
         status: 'unknown',
         unauthReason: undefined,
     });
+});
+
+afterEach(() => {
+    vi.unstubAllGlobals();
 });
 
 test('keeps a signed-out cold start unauthenticated and skips refresh', () => {
@@ -256,4 +261,49 @@ test('does not overwrite a newer authenticated session after stale validation fa
         .then(() => {
             expect(useAuthStore.getState().status).toBe('authenticated');
         });
+});
+
+test('remote tab logout clears protected data without a second server logout', () => {
+    const receiver: {
+        name: string;
+        onMessage: ((event: MessageEvent<unknown>) => void) | null;
+    } = { name: '', onMessage: null };
+    class MockBroadcastChannel {
+        set onmessage(callback: ((event: MessageEvent<unknown>) => void) | null) {
+            receiver.onMessage = callback;
+        }
+        constructor(name: string) {
+            receiver.name = name;
+        }
+        close(): void {}
+        postMessage(): void {}
+    }
+    vi.stubGlobal('BroadcastChannel', MockBroadcastChannel);
+    useAuthStore.setState({ status: 'authenticated' });
+    const signOut = vi.spyOn(useAuthStore.getState(), 'signOut');
+    useExpenseModalStore.setState({
+        isOpened: true,
+        groupId: 'private-group',
+        description: 'private expense',
+    });
+    renderHook();
+
+    expect(receiver.name).toBe('chipin-auth-logout');
+    act(() => {
+        receiver.onMessage?.(new MessageEvent('message', {
+            data: { type: 'logout', source: 'other-tab' },
+        }));
+    });
+
+    expect(useAuthStore.getState()).toMatchObject({
+        status: 'unauthenticated',
+        unauthReason: 'signed_out',
+    });
+    expect(useExpenseModalStore.getState()).toMatchObject({
+        isOpened: false,
+        groupId: '',
+        description: '',
+    });
+    expect(isAuthSessionSignedOut()).toBe(true);
+    expect(signOut).not.toHaveBeenCalled();
 });
