@@ -1,5 +1,8 @@
 import { expect, test } from 'vitest';
 
+import { DEFAULT_LOCALE } from 'constants/locales';
+import { HOME_CANONICAL_URL } from 'constants/seo';
+
 import {
     getPublicCanonical,
     getPublicPath,
@@ -50,4 +53,13 @@ test('redirect strips private and unknown query fields; does not bounce for Engl
         '#features',
     )).toBe('/ru/?utm_source=google&utm_campaign=ok#features');
     expect(getRootLocaleRedirect('es', '?utm_source=%2Fsecret', '#invalid/fragment')).toBe('/es/');
+});
+
+test('canonical home URL and locale fallback reuse shared policy constants', () => {
+    expect(DEFAULT_LOCALE).toBe('en');
+    expect(getPublicCanonical(getPublicRoute('/')!)).toBe(HOME_CANONICAL_URL);
+    expect(selectRootLocale(null, null, [])).toBe(DEFAULT_LOCALE);
+    expect(PUBLIC_ROUTE_ENTRIES.map(route => getPublicCanonical(route))).toEqual(
+        PUBLIC_ROUTE_ENTRIES.map(route => HOME_CANONICAL_URL.slice(0, -1) + route.path),
+    );
 });

@@ -1,3 +1,4 @@
+import { useContext } from 'react';
 import { LucideSend } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
@@ -5,7 +6,9 @@ import styled from 'styled-components';
 import { Avatar, Box, Container, Flex, Link, Separator, Text } from '@radix-ui/themes';
 
 import { PROJECT_NAME } from 'constants/chipin';
-import { getPublicPath } from 'constants/publicRoutes';
+import { getPublicPath } from 'helpers/publicRoutes';
+import { DEFAULT_LOCALE } from 'constants/locales';
+import { PublicBuildYearContext } from 'public-routes/PublicBuildYearContext';
 import { matchLocale } from 'helpers/locale';
 
 import Logotype from 'assets/logo.svg?react';
@@ -25,7 +28,9 @@ const MEDIA_LINKS = [
 
 const Footer = () => {
     const { t, i18n } = useTranslation();
-    const locale = matchLocale(i18n?.resolvedLanguage ?? i18n?.language ?? 'en') ?? 'en';
+    const locale = matchLocale(i18n?.resolvedLanguage ?? i18n?.language ?? DEFAULT_LOCALE) ?? DEFAULT_LOCALE;
+    const publicBuildYear = useContext(PublicBuildYearContext);
+    const copyrightYear = publicBuildYear ?? new Date().getFullYear();
 
     return (
         <Box py={{ initial: '4', md: '6' }}>
@@ -48,7 +53,7 @@ const Footer = () => {
                         </Flex>
                         <Text size="1" color="gray" as="span">
                             {t('footer.copyright', {
-                                year: new Date().getFullYear(),
+                                year: copyrightYear,
                             })}
                         </Text>
                     </Flex>

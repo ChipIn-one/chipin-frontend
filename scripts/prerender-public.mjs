@@ -76,7 +76,7 @@ const main = () => createServer({
                 .replace('</head>', rendered.styles + '\n</head>')
                 .replace(
                     '<div id="root"></div>',
-                    `<div id="root" data-public-ssg="true" data-public-locale="${escapeHtml(route.locale)}">${rendered.html}</div>`,
+                    `<div id="root" data-public-ssg="true" data-public-locale="${escapeHtml(route.locale)}" data-public-build-year="${rendered.buildYear}">${rendered.html}</div>`,
                 );
             const destination = route.page === 'home' && route.locale === 'en'
                 ? 'dist/index.html'
