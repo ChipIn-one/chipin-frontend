@@ -48,7 +48,7 @@ const GroupPage = () => {
     }
 
     if (!routeGroup) {
-        if (requestedRouteId.current !== groupId || !isGroupDataFetched || isGroupDataLoading) {
+        if (!isGroupDataFetched || isGroupDataLoading) {
             return null;
         }
 
