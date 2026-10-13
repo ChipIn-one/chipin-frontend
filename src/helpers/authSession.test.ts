@@ -14,6 +14,7 @@ import {
     isAuthSessionSignedOut,
     logoutOtherDevicesSession,
     startAuthLogout,
+    subscribeToRemoteAuthLogout,
     validateAuthSession,
 } from './authSession';
 
@@ -380,6 +381,36 @@ describe('authSession', () => {
             });
             expect(close).toHaveBeenCalledOnce();
         });
+    });
+
+    test('validates untrusted remote logout payloads before invalidating a tab', () => {
+        const receiver: { onMessage: ((event: MessageEvent<unknown>) => void) | null } = {
+            onMessage: null,
+        };
+        const close = vi.fn();
+
+        vi.stubGlobal('BroadcastChannel', class {
+            set onmessage(callback: ((event: MessageEvent<unknown>) => void) | null) {
+                receiver.onMessage = callback;
+            }
+            close = close;
+        });
+
+        const onLogout = vi.fn();
+        const unsubscribe = subscribeToRemoteAuthLogout(onLogout);
+
+        [null, [], 'logout', { type: 'logout' }, { type: 'logout', source: 1 }].forEach(data => {
+            receiver.onMessage?.(new MessageEvent('message', { data }));
+        });
+        expect(onLogout).not.toHaveBeenCalled();
+
+        receiver.onMessage?.(new MessageEvent('message', {
+            data: { type: 'logout', source: 'another-tab' },
+        }));
+        expect(onLogout).toHaveBeenCalledOnce();
+
+        unsubscribe();
+        expect(close).toHaveBeenCalledOnce();
     });
 
 });

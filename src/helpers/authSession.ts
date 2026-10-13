@@ -8,7 +8,8 @@ const ACCESS_TOKEN_REFRESH_BUFFER_SECONDS = 60;
 const AUTH_REFRESH_LOCK_NAME = 'chipin-auth-refresh';
 const AUTH_LOGOUT_CHANNEL = 'chipin-auth-logout';
 const AUTH_LOGOUT_EVENT = 'logout';
-const sourceTab = `${Date.now()}-${Math.random()}`;
+// The sender uses a separate BroadcastChannel, so its own listening tab can see the event.
+const sourceTabId = `${Date.now()}-${Math.random()}`;
 let accessToken: string | null = null;
 let refreshPromise: Promise<string | null> | null = null;
 let logoutPromise: Promise<void> | null = null;
@@ -59,15 +60,19 @@ export const markAuthSessionSignedOut = (): void => {
 
 export const isAuthSessionSignedOut = (): boolean => isSessionExplicitlySignedOut;
 
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+};
+
 interface LogoutMessage {
     type: typeof AUTH_LOGOUT_EVENT;
     source: string;
 }
 
 const isLogoutMessage = (value: unknown): value is LogoutMessage => {
-    return value !== null && typeof value === 'object' &&
-        'type' in value && value.type === AUTH_LOGOUT_EVENT &&
-        'source' in value && typeof value.source === 'string';
+    return isRecord(value) &&
+        value.type === AUTH_LOGOUT_EVENT &&
+        typeof value.source === 'string';
 };
 
 export const subscribeToRemoteAuthLogout = (onLogout: () => void): (() => void) => {
@@ -78,7 +83,7 @@ export const subscribeToRemoteAuthLogout = (onLogout: () => void): (() => void) 
     try {
         const channel = new BroadcastChannel(AUTH_LOGOUT_CHANNEL);
         channel.onmessage = (event: MessageEvent<unknown>) => {
-            if (isLogoutMessage(event.data) && event.data.source !== sourceTab) {
+            if (isLogoutMessage(event.data) && event.data.source !== sourceTabId) {
                 onLogout();
             }
         };
@@ -96,7 +101,7 @@ const broadcastAuthLogout = (): void => {
 
     try {
         const channel = new BroadcastChannel(AUTH_LOGOUT_CHANNEL);
-        channel.postMessage({ type: AUTH_LOGOUT_EVENT, source: sourceTab } satisfies LogoutMessage);
+        channel.postMessage({ type: AUTH_LOGOUT_EVENT, source: sourceTabId } satisfies LogoutMessage);
         channel.close();
     } catch {
         // Local invalidation must work without BroadcastChannel.
@@ -144,7 +149,7 @@ const decodeJwtPayload = (token: string): unknown => {
 const getJwtExpiration = (token: string): number | null => {
     const payload = decodeJwtPayload(token);
 
-    if (!payload || typeof payload !== 'object' || !('exp' in payload)) {
+    if (!isRecord(payload) || !('exp' in payload)) {
         return null;
     }
 
