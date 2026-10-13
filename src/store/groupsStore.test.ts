@@ -502,6 +502,122 @@ describe('groupsStore', () => {
             });
     });
 
+    test('keeps a successful rejoin when a pre-recovery list response completes later', () => {
+        let resolveList: ((data: { items: Group[]; nextCursor: null }) => void) | undefined;
+        vi.mocked(chipinApi.fetchApiUserGroups).mockImplementationOnce(() =>
+            new Promise(resolve => { resolveList = resolve; }),
+        );
+        const joined = { ...group, name: 'Canonical rejoin' } satisfies Group;
+        vi.mocked(chipinApi.fetchApiUserGroupById).mockRejectedValueOnce({
+            isAxiosError: true, response: { status: 404 },
+        });
+        vi.mocked(chipinApi.inviteApiUserToGroup).mockResolvedValue(joined);
+        useGroupsStore.setState({ groups: [group], selectedGroup: group });
+
+        const oldList = useGroupsStore.getState().fetchSetGroups();
+        return useGroupsStore.getState().fetchSetGroupById(group.id, true)
+            .then(() => useGroupsStore.getState().joinGroup({ inviteToken: group.inviteToken }))
+            .then(() => {
+                resolveList?.({ items: [{ ...group, name: 'Stale' }], nextCursor: null });
+                return oldList;
+            })
+            .then(() => {
+                expect(useGroupsStore.getState().selectedGroup).toBe(joined);
+                expect(useGroupsStore.getState().groups).toEqual([joined]);
+                expect(useLoadingStore.getState().group.list).toBe('fetched');
+            });
+    });
+
+    test('ignores stale list after canonical detail recovery', () => {
+        let resolveList: ((data: { items: Group[]; nextCursor: null }) => void) | undefined;
+        vi.mocked(chipinApi.fetchApiUserGroups).mockImplementationOnce(() =>
+            new Promise(resolve => { resolveList = resolve; }),
+        );
+        const recovered = { ...group, name: 'Recovered' } satisfies Group;
+        vi.mocked(chipinApi.fetchApiUserGroupById)
+            .mockRejectedValueOnce({ isAxiosError: true, response: { status: 403 } })
+            .mockResolvedValueOnce(recovered);
+        useGroupsStore.setState({ groups: [group], selectedGroup: group });
+
+        const oldList = useGroupsStore.getState().fetchSetGroups();
+        return useGroupsStore.getState().fetchSetGroupById(group.id, true)
+            .then(() => useGroupsStore.getState().fetchSetGroupById(group.id, true))
+            .then(() => {
+                resolveList?.({ items: [{ ...group, name: 'Outdated' }], nextCursor: null });
+                return oldList;
+            })
+            .then(() => {
+                expect(useGroupsStore.getState().selectedGroup).toBe(recovered);
+                expect(useGroupsStore.getState().groups).toEqual([]);
+            });
+    });
+
+    test('keeps a successful edit over an older in-flight group detail GET', () => {
+        let resolveDetail: ((group: Group) => void) | undefined;
+        vi.mocked(chipinApi.fetchApiUserGroupById).mockImplementationOnce(() =>
+            new Promise(resolve => { resolveDetail = resolve; }),
+        );
+        const updated = { ...group, name: 'Edited' } satisfies Group;
+        vi.mocked(groupsApi.updateGroup).mockResolvedValue(updated);
+        useGroupsStore.setState({ groups: [group], selectedGroup: group });
+
+        const oldDetail = useGroupsStore.getState().fetchSetGroupById(group.id, true);
+        return useGroupsStore.getState().updateGroup({ groupName: updated.name })
+            .then(() => {
+                resolveDetail?.({ ...group, name: 'Old' });
+                return oldDetail;
+            })
+            .then(() => {
+                expect(useGroupsStore.getState().groups).toEqual([updated]);
+                expect(useGroupsStore.getState().selectedGroup).toBe(updated);
+                expect(useLoadingStore.getState().group.data).toBe('fetched');
+            });
+    });
+
+    test('keeps a successful cover upload over an older in-flight group detail GET', () => {
+        let resolveDetail: ((group: Group) => void) | undefined;
+        vi.mocked(chipinApi.fetchApiUserGroupById).mockImplementationOnce(() =>
+            new Promise(resolve => { resolveDetail = resolve; }),
+        );
+        const updated = { ...group, coverUrl: 'https://cdn.example.com/edited.webp' } satisfies Group;
+        vi.mocked(groupsApi.uploadGroupCover).mockResolvedValue(updated);
+        useGroupsStore.setState({ groups: [group], selectedGroup: group });
+
+        const oldDetail = useGroupsStore.getState().fetchSetGroupById(group.id, true);
+        return useGroupsStore.getState().uploadGroupCover({
+            groupId: group.id,
+            file: new File(['cover'], 'cover.webp', { type: 'image/webp' }),
+        }).then(() => {
+            resolveDetail?.(group);
+            return oldDetail;
+        }).then(() => {
+            expect(useGroupsStore.getState().groups).toEqual([updated]);
+            expect(useGroupsStore.getState().selectedGroup).toBe(updated);
+        });
+    });
+
+    test('ignores a late detail 404 after successful group edit', () => {
+        let rejectDetail: ((error: unknown) => void) | undefined;
+        vi.mocked(chipinApi.fetchApiUserGroupById).mockImplementationOnce(() =>
+            new Promise((_resolve, reject) => { rejectDetail = reject; }),
+        );
+        const updated = { ...group, name: 'Edited' } satisfies Group;
+        vi.mocked(groupsApi.updateGroup).mockResolvedValue(updated);
+        useGroupsStore.setState({ groups: [group], selectedGroup: group });
+
+        const oldDetail = useGroupsStore.getState().fetchSetGroupById(group.id, true);
+        return useGroupsStore.getState().updateGroup({ groupName: updated.name })
+            .then(() => {
+                rejectDetail?.({ isAxiosError: true, response: { status: 404 } });
+                return oldDetail;
+            })
+            .then(() => {
+                expect(useGroupsStore.getState().groups).toEqual([updated]);
+                expect(useGroupsStore.getState().selectedGroup).toBe(updated);
+                expect(useErrorsStore.getState().errors.group.data).toBeNull();
+            });
+    });
+
     test('preserves last-confirmed group on transient detail failure', () => {
         useGroupsStore.getState().setSelectedGroup(group);
         vi.mocked(chipinApi.fetchApiUserGroupById).mockRejectedValue(new Error('Temporary failure'));
