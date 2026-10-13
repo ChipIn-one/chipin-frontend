@@ -264,11 +264,16 @@ test('does not overwrite a newer authenticated session after stale validation fa
 });
 
 test('remote tab logout clears protected data without a second server logout', () => {
-    let receiver: MockBroadcastChannel | undefined;
+    const receiver: {
+        name: string;
+        onMessage: ((event: MessageEvent<unknown>) => void) | null;
+    } = { name: '', onMessage: null };
     class MockBroadcastChannel {
-        onmessage: ((event: MessageEvent<unknown>) => void) | null = null;
-        constructor(readonly name: string) {
-            receiver = this;
+        set onmessage(callback: ((event: MessageEvent<unknown>) => void) | null) {
+            receiver.onMessage = callback;
+        }
+        constructor(name: string) {
+            receiver.name = name;
         }
         close(): void {}
         postMessage(): void {}
@@ -283,9 +288,9 @@ test('remote tab logout clears protected data without a second server logout', (
     });
     renderHook();
 
-    expect(receiver?.name).toBe('chipin-auth-logout');
+    expect(receiver.name).toBe('chipin-auth-logout');
     act(() => {
-        receiver?.onmessage?.(new MessageEvent('message', {
+        receiver.onMessage?.(new MessageEvent('message', {
             data: { type: 'logout', source: 'other-tab' },
         }));
     });
