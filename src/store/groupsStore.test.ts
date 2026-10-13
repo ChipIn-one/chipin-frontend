@@ -392,17 +392,24 @@ describe('groupsStore', () => {
         });
     });
 
-    test('evicts denied group while preserving another selected group', () => {
+    test('ignores a stale detail denial after switching to another group', () => {
+        let rejectDetail: ((error: unknown) => void) | undefined;
         const otherGroup = { ...group, id: 'other-group' } satisfies Group;
-        useGroupsStore.setState({ groups: [group, otherGroup], selectedGroup: otherGroup });
-        vi.mocked(chipinApi.fetchApiUserGroupById).mockRejectedValue({
-            isAxiosError: true,
-            response: { status: 403 },
-        });
+        useGroupsStore.setState({ groups: [group, otherGroup], selectedGroup: group });
+        vi.mocked(chipinApi.fetchApiUserGroupById).mockImplementationOnce(() =>
+            new Promise((_resolve, reject) => {
+                rejectDetail = reject;
+            }),
+        );
 
-        return useGroupsStore.getState().fetchSetGroupById(group.id, true).then(() => {
-            expect(useGroupsStore.getState().groups).toEqual([otherGroup]);
-            expect(useGroupsStore.getState().selectedGroup).toBeNull();
+        const pending = useGroupsStore.getState().fetchSetGroupById(group.id, true);
+        useGroupsStore.getState().setSelectedGroup(otherGroup);
+        rejectDetail?.({ isAxiosError: true, response: { status: 404 } });
+
+        return pending.then(() => {
+            expect(useGroupsStore.getState().selectedGroup).toBe(otherGroup);
+            expect(useGroupsStore.getState().groups).toEqual([group, otherGroup]);
+            expect(useErrorsStore.getState().errors.group.data).toBeNull();
         });
     });
 
@@ -443,6 +450,29 @@ describe('groupsStore', () => {
 
         return useGroupsStore.getState().fetchSetGroupById(group.id, true)
             .then(() => useGroupsStore.getState().joinGroup({ inviteToken: group.inviteToken }))
+            .then(() => {
+                expect(useGroupsStore.getState().groups).toEqual([rejoined]);
+                expect(useGroupsStore.getState().selectedGroup).toBe(rejoined);
+            });
+    });
+
+    test('ignores an old detail success after a newer canonical rejoin', () => {
+        let resolveDetail: ((result: Group) => void) | undefined;
+        vi.mocked(chipinApi.fetchApiUserGroupById).mockImplementationOnce(() =>
+            new Promise(resolve => {
+                resolveDetail = resolve;
+            }),
+        );
+        const rejoined = { ...group, role: 'MEMBER', name: 'Joined again' } satisfies Group;
+        vi.mocked(chipinApi.inviteApiUserToGroup).mockResolvedValue(rejoined);
+        useGroupsStore.setState({ groups: [group], selectedGroup: group });
+
+        const oldDetail = useGroupsStore.getState().fetchSetGroupById(group.id, true);
+        return useGroupsStore.getState().joinGroup({ inviteToken: group.inviteToken })
+            .then(() => {
+                resolveDetail?.({ ...group, name: 'Outdated detail' });
+                return oldDetail;
+            })
             .then(() => {
                 expect(useGroupsStore.getState().groups).toEqual([rejoined]);
                 expect(useGroupsStore.getState().selectedGroup).toBe(rejoined);

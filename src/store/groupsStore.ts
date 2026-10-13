@@ -242,7 +242,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
 
         return request.promise
             .then(group => {
-                if (!request.isCurrent()) {
+                if (!request.isCurrent() || (successfulJoinVersions[groupId] ?? 0) !== joinVersionAtStart) {
                     return get().selectedGroup;
                 }
 
