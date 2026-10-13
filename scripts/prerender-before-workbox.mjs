@@ -22,3 +22,32 @@ const runPrerenderPublic = () =>
     });
 
 export { runPrerenderPublic };
+
+// Workbox's default directoryIndex only matches URLs ending in '/'.
+// Duplicate public directory-index entries under extensionless URL keys,
+// preserving revisions so canonical offline requests have exact precache hits.
+const addPublicDirectoryAliases = entries => {
+    const knownUrls = new Set(entries.map(entry => entry.url));
+    const aliases = [];
+
+    for (const entry of entries) {
+        if (!entry.url.endsWith('/index.html')) {
+            continue;
+        }
+
+        const canonicalUrl = entry.url.slice(0, -'/index.html'.length);
+        if (!canonicalUrl || knownUrls.has(canonicalUrl)) {
+            continue;
+        }
+
+        aliases.push({ ...entry, url: canonicalUrl });
+        knownUrls.add(canonicalUrl);
+    }
+
+    return Promise.resolve({
+        manifest: [...entries, ...aliases],
+        warnings: [],
+    });
+};
+
+export { addPublicDirectoryAliases };

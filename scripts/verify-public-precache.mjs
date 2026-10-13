@@ -35,6 +35,19 @@ const verifyPublicPrecache = () => {
                 if (!serviceWorker.includes(expectedRevision)) {
                     throw new Error('Stale Workbox precache revision for: ' + htmlPath);
                 }
+
+                if (relativePath) {
+                    // Workbox's directoryIndex does not match slashless URLs.
+                    // Verify a URL entry, not a substring of /index.html.
+                    const acceptedKeys = [
+                        'url:"' + relativePath + '"',
+                        '"url":"' + relativePath + '"',
+                        "url:'" + relativePath + "'",
+                    ];
+                    if (!acceptedKeys.some(key => serviceWorker.includes(key))) {
+                        throw new Error('Missing canonical offline precache URL: ' + relativePath);
+                    }
+                }
             });
         }));
     }).then(() => {

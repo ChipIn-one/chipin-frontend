@@ -1,5 +1,6 @@
 import { ThemeProvider } from 'next-themes';
 import { useSyncExternalStore } from 'react';
+import { Toaster } from 'sonner';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 
 import * as Sentry from '@sentry/react';
@@ -117,6 +118,15 @@ const PublicTelemetry = () => {
         <>
             <Analytics beforeSend={sanitizeTelemetryEvent} />
             <SpeedInsights beforeSend={sanitizeTelemetryEvent} />
+            {/* Public routes use the same Sonner host needed by PWA updates. */}
+            <Toaster
+                theme="light"
+                richColors
+                closeButton
+                position="bottom-left"
+                offset={16}
+                mobileOffset={12}
+            />
         </>
     );
 };
