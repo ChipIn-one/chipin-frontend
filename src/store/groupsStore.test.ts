@@ -167,6 +167,11 @@ describe('groupsStore', () => {
         useGroupsStore.getState().setSelectedGroup(group);
         vi.mocked(groupsApi.uploadGroupCover).mockResolvedValue(updatedGroup);
 
+        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({
+            items: [group, otherGroup],
+            nextCursor: null,
+        });
+
         const request = useGroupsStore.getState().uploadGroupCover({
             groupId: group.id,
             file,
@@ -292,6 +297,11 @@ describe('groupsStore', () => {
         useGroupsStore.setState({ groups: [group, otherGroup] });
         useGroupsStore.getState().setSelectedGroup(group);
         vi.mocked(groupsApi.updateGroup).mockReturnValue(request);
+
+        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({
+            items: [group, otherGroup],
+            nextCursor: null,
+        });
 
         const updateRequest = useGroupsStore.getState().updateGroup({ simplifyDebts: false });
         useGroupsStore.getState().setSelectedGroup(otherGroup);
