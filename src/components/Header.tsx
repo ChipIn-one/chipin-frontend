@@ -9,6 +9,7 @@ import { Box, Button, Container, Flex, IconButton, Link } from '@radix-ui/themes
 
 import { PROJECT_NAME } from 'constants/chipin';
 import { ROUTES } from 'constants/routes';
+import { getPublicPath, getPublicRoute } from 'constants/publicRoutes';
 import { themeColor } from 'helpers/colors';
 import {
     matchLocale,
@@ -130,11 +131,16 @@ const Header = () => {
     const { t, i18n } = useTranslation();
     const landingLocale = matchLocale(i18n.resolvedLanguage ?? i18n.language) ?? 'en';
 
+    const currentPublicRoute = getPublicRoute(location.pathname);
     const onLandingLanguageChange = (locale: SupportedLocale) => {
         return i18n
             .changeLanguage(locale)
             .then(() => {
                 saveLocalePreference(locale);
+                if (currentPublicRoute) {
+                    const nextPath = getPublicPath(currentPublicRoute.page, locale);
+                    if (location.pathname !== nextPath) window.location.assign(nextPath);
+                }
             })
             .catch((error: unknown) => {
                 Sentry.captureException(error);
@@ -145,11 +151,13 @@ const Header = () => {
         return null;
     }
 
-    const isLandingPage = !isLoggedIn && location.pathname === ROUTES.HOME;
+    const isLandingPage = !isLoggedIn && currentPublicRoute?.page === 'home';
     const hasDesktopSidebar = isLoggedIn && getHasDesktopSidebar(location.pathname);
     const logoRoute = isLoggedIn
         ? getPreferredModeRoute(isSoloMode)
-        : ROUTES.HOME;
+        : currentPublicRoute
+            ? getPublicPath('home', currentPublicRoute.locale)
+            : ROUTES.HOME;
 
     return (
         <StickyBox

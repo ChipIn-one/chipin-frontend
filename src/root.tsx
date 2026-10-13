@@ -1,6 +1,5 @@
-import Main from 'main';
 import { ThemeProvider } from 'next-themes';
-import { createRoot } from 'react-dom/client';
+import { createRoot, hydrateRoot } from 'react-dom/client';
 
 import * as Sentry from '@sentry/react';
 import { Analytics } from '@vercel/analytics/react';
@@ -8,6 +7,7 @@ import { SpeedInsights } from '@vercel/speed-insights/react';
 
 import { initChipInApiInterceptors } from 'api/chipin.interceptors';
 import { LS_KEY_THEME } from 'constants/localstorage';
+import { getPublicRoute } from 'constants/publicRoutes';
 import { APP_VERSION } from 'constants/version';
 import {
     resolveTelemetryEnvironment,
@@ -22,7 +22,7 @@ import { GlobalErrorBoundary } from 'components/global-error-boundary';
 import '@radix-ui/themes/styles.css';
 import 'styles/radixStylesOverwrite.css';
 
-import 'i18n';
+import i18n from 'i18n';
 
 const sentryDsn = import.meta.env.VITE_SENTRY_DSN?.trim() || undefined;
 const sentryEnvironment = resolveTelemetryEnvironment(
@@ -94,17 +94,39 @@ initChipInApiInterceptors(() => {
     useAuthStore.getState().expireSession();
 });
 
-createRoot(document.getElementById('root')!).render(
-    <GlobalErrorBoundary>
-        <ThemeProvider
-            attribute="class"
-            defaultTheme={resolveStoredTheme()}
-            storageKey={LS_KEY_THEME}
-            enableSystem
-        >
-            <Analytics beforeSend={sanitizeTelemetryEvent} />
-            <SpeedInsights beforeSend={sanitizeTelemetryEvent} />
-            <Main />
-        </ThemeProvider>
-    </GlobalErrorBoundary>,
-);
+const rootElement = document.getElementById('root')!;
+const prerenderedRoute = rootElement.dataset.publicSsg === 'true'
+    ? getPublicRoute(window.location.pathname)
+    : null;
+
+if (prerenderedRoute) {
+    // Hydration preserves static, indexable React markup from the build.
+    import('public-routes')
+        .then(({ PublicApp }) => i18n.changeLanguage(prerenderedRoute.locale)
+            .then(() => hydrateRoot(
+                rootElement,
+                <GlobalErrorBoundary>
+                    <PublicApp route={prerenderedRoute} i18nInstance={i18n} />
+                </GlobalErrorBoundary>,
+            )))
+        .catch(error => Sentry.captureException(error));
+} else {
+    import('main')
+        .then(({ default: Main }) => {
+            createRoot(rootElement).render(
+                <GlobalErrorBoundary>
+                    <ThemeProvider
+                        attribute="class"
+                        defaultTheme={resolveStoredTheme()}
+                        storageKey={LS_KEY_THEME}
+                        enableSystem
+                    >
+                        <Analytics beforeSend={sanitizeTelemetryEvent} />
+                        <SpeedInsights beforeSend={sanitizeTelemetryEvent} />
+                        <Main />
+                    </ThemeProvider>
+                </GlobalErrorBoundary>,
+            );
+        })
+        .catch(error => Sentry.captureException(error));
+}

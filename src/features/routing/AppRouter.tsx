@@ -2,6 +2,7 @@ import { lazy, type ReactNode, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { ROUTES } from 'constants/routes';
+import { PUBLIC_ROUTE_ENTRIES, type PublicPage } from 'constants/publicRoutes';
 
 import PageLoader from 'basics/PageLoader';
 import { InternalPageLayout } from 'components/internal-page-layout';
@@ -44,19 +45,18 @@ const InternalRoute = ({ children }: { children: ReactNode }) => (
 );
 
 const AppRouter = () => {
+    const publicElements: Record<PublicPage, ReactNode> = {
+        home: <HomeRouteGuard><HomePage /></HomeRouteGuard>,
+        privacy: <PrivacyPage />,
+        terms: <TermsPage />,
+    };
+
     return (
         <Suspense fallback={<PageLoader />}>
             <Routes>
-                <Route
-                    path={ROUTES.HOME}
-                    element={
-                        <HomeRouteGuard>
-                            <HomePage />
-                        </HomeRouteGuard>
-                    }
-                />
-                <Route path={ROUTES.PRIVACY} element={<PrivacyPage />} />
-                <Route path={ROUTES.TERMS} element={<TermsPage />} />
+                {PUBLIC_ROUTE_ENTRIES.map(route => (
+                    <Route key={route.path} path={route.path} element={publicElements[route.page]} />
+                ))}
                 <Route path={ROUTES.OAUTH_CALLBACK} element={<OAuthCallbackPage />} />
                 <Route
                     path={ROUTES.DASHBOARD}

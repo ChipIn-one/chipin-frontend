@@ -1,3 +1,5 @@
+import { PUBLIC_ROUTE_ENTRIES } from './publicRoutes';
+
 export const ROUTES = {
     HOME: '/',
     NOT_FOUND_404: '/not-found',
@@ -26,21 +28,11 @@ export interface RouteMeta {
 }
 
 export const ROUTE_META = [
-    {
-        path: ROUTES.HOME,
-        titleKey: 'home.title',
-        descriptionKey: 'home.description',
-    },
-    {
-        path: ROUTES.PRIVACY,
-        titleKey: 'privacy.title',
-        descriptionKey: 'privacy.description',
-    },
-    {
-        path: ROUTES.TERMS,
-        titleKey: 'terms.title',
-        descriptionKey: 'terms.description',
-    },
+    ...PUBLIC_ROUTE_ENTRIES.map(route => ({
+        path: route.path,
+        titleKey: route.metaKey + '.title',
+        descriptionKey: route.metaKey + '.description',
+    })),
     {
         path: ROUTES.OAUTH_CALLBACK,
         titleKey: 'oauthCallback.title',

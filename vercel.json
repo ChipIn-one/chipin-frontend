@@ -45,7 +45,35 @@
             "destination": "/.well-known/assetlinks.json"
         },
         {
-            "source": "/(.*)",
+            "source": "/dashboard/:path*",
+            "destination": "/app.html"
+        },
+        {
+            "source": "/solo/:path*",
+            "destination": "/app.html"
+        },
+        {
+            "source": "/group/:path*",
+            "destination": "/app.html"
+        },
+        {
+            "source": "/activity/:path*",
+            "destination": "/app.html"
+        },
+        {
+            "source": "/friends/:path*",
+            "destination": "/app.html"
+        },
+        {
+            "source": "/settings/:path*",
+            "destination": "/app.html"
+        },
+        {
+            "source": "/oauth/:path*",
+            "destination": "/app.html"
+        },
+        {
+            "source": "/not-found",
             "destination": "/app.html"
         }
     ],
