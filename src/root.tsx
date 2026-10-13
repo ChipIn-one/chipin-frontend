@@ -1,5 +1,5 @@
 import { ThemeProvider } from 'next-themes';
-import { useEffect, useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 
 import * as Sentry from '@sentry/react';
@@ -95,14 +95,18 @@ initChipInApiInterceptors(() => {
     useAuthStore.getState().expireSession();
 });
 
-// Vercel telemetry is client-only. The first hydration tree must exactly
-// match the SSG HTML; only mount scripts once hydration has committed.
-const PublicTelemetry = () => {
-    const [isHydrated, setIsHydrated] = useState(false);
+// Vercel telemetry is client-only. useSyncExternalStore returns false during
+// hydration, matching the static SSG HTML, and true for subsequent client renders.
+const subscribeToHydration = () => () => undefined;
+const getClientHydration = () => true;
+const getServerHydration = () => false;
 
-    useEffect(() => {
-        setIsHydrated(true);
-    }, []);
+const PublicTelemetry = () => {
+    const isHydrated = useSyncExternalStore(
+        subscribeToHydration,
+        getClientHydration,
+        getServerHydration,
+    );
 
     if (!isHydrated) {
         return null;
