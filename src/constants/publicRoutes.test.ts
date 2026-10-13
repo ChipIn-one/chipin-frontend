@@ -20,6 +20,20 @@ test('public manifest is the unique, indexable set of three pages in five locale
     expect(getPublicCanonical(getPublicRoute('/es/')!)).toBe('https://chipin.one/es/');
 });
 
+test('equivalent trailing-slash forms hydrate the same canonical public route', () => {
+    expect(getPublicRoute('/ru')?.path).toBe('/ru/');
+    expect(getPublicRoute('/es')?.path).toBe('/es/');
+    expect(getPublicRoute('/pt-br')?.path).toBe('/pt-br/');
+    expect(getPublicRoute('/pt-pt')?.path).toBe('/pt-pt/');
+    expect(getPublicRoute('/ru/privacy/')?.path).toBe('/ru/privacy');
+    expect(getPublicRoute('/privacy/')?.path).toBe('/privacy');
+    expect(getPublicRoute('/terms/')?.path).toBe('/terms');
+
+    expect(getPublicRoute('/ru//')).toBeNull();
+    expect(getPublicRoute('/unknown')).toBeNull();
+    expect(getPublicRoute('/dashboard/')).toBeNull();
+});
+
 test('explicit URL, manual locale, browser and English fallback are deterministic', () => {
     expect(selectRootLocale('en', 'ru', ['pt-PT'])).toBe('en');
     expect(selectRootLocale('es-MX', 'ru', ['pt-PT'])).toBe('es');

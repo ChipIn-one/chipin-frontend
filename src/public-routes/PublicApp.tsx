@@ -74,9 +74,10 @@ const PublicEffects = ({ route }: { route: PublicRoute }) => {
     }, [i18n.resolvedLanguage, route.metaKey, route.path, t]);
 
     useEffect(() => {
-        if (!isAuthResolved || route.page !== 'home' || route.locale !== 'en') {
+        if (!isAuthResolved || route.page !== 'home') {
             return;
         }
+        // Authenticated visitors must enter their app from *any* localized home.
         if (isLoggedIn) {
             if (isUserFetched) {
                 window.location.replace(

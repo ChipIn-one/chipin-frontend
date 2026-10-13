@@ -44,7 +44,15 @@ const PUBLIC_ROUTE_ENTRIES = SUPPORTED_LOCALES.flatMap(locale =>
 type PublicRoute = (typeof PUBLIC_ROUTE_ENTRIES)[number];
 
 const getPublicRoute = (pathname: string): PublicRoute | null => {
-    return PUBLIC_ROUTE_ENTRIES.find(route => route.path === pathname) ?? null;
+    const canonicalRoute = PUBLIC_ROUTE_ENTRIES.find(route => route.path === pathname);
+    if (canonicalRoute) {
+        return canonicalRoute;
+    }
+
+    // Vercel serves both path forms; always return the single canonical route.
+    // Only one optional trailing slash is accepted, never arbitrary path rewrites.
+    const alternatePath = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname + '/';
+    return PUBLIC_ROUTE_ENTRIES.find(route => route.path === alternatePath) ?? null;
 };
 
 const getPublicCanonical = (route: PublicRoute): string =>

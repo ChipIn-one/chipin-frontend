@@ -1,4 +1,5 @@
 import { ThemeProvider } from 'next-themes';
+import { useEffect, useState } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 
 import * as Sentry from '@sentry/react';
@@ -94,6 +95,27 @@ initChipInApiInterceptors(() => {
     useAuthStore.getState().expireSession();
 });
 
+// Vercel telemetry is client-only. The first hydration tree must exactly
+// match the SSG HTML; only mount scripts once hydration has committed.
+const PublicTelemetry = () => {
+    const [isHydrated, setIsHydrated] = useState(false);
+
+    useEffect(() => {
+        setIsHydrated(true);
+    }, []);
+
+    if (!isHydrated) {
+        return null;
+    }
+
+    return (
+        <>
+            <Analytics beforeSend={sanitizeTelemetryEvent} />
+            <SpeedInsights beforeSend={sanitizeTelemetryEvent} />
+        </>
+    );
+};
+
 const rootElement = document.getElementById('root')!;
 const prerenderedRoute = rootElement.dataset.publicSsg === 'true'
     ? getPublicRoute(window.location.pathname)
@@ -107,6 +129,7 @@ if (prerenderedRoute) {
                 rootElement,
                 <GlobalErrorBoundary>
                     <PublicApp route={prerenderedRoute} i18nInstance={i18n} />
+                    <PublicTelemetry />
                 </GlobalErrorBoundary>,
             )))
         .catch(error => Sentry.captureException(error));
