@@ -129,6 +129,14 @@ export default defineConfig(({ mode }) => {
             react(),
             tsconfigPaths(),
             VitePWA({
+                // Run SSG after Vite writes client assets, before Workbox scans dist.
+                // This prevents missing localized pages and stale root HTML revisions.
+                integration: {
+                    beforeBuildServiceWorker: () =>
+                        import('./scripts/prerender-public.mjs').then(module =>
+                            module.prerenderPublic(),
+                        ),
+                },
                 registerType: 'prompt', // or autoUpdate
                 injectRegister: false,
 

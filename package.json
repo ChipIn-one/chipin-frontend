@@ -5,7 +5,7 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "npm run create-pwa-icons && tsc -b && vite build && npm run prerender:public",
+        "build": "npm run create-pwa-icons && tsc -b && vite build && npm run verify:public-precache",
         "lint": "eslint .",
         "test": "vitest",
         "test:run": "vitest run",
@@ -14,7 +14,7 @@
         "typecheck": "tsc -b",
         "verify": "npm run lint -- --quiet && npm run typecheck",
         "verify:full": "npm run lint && npm run test:full && npm run build",
-        "vercel-build": "npm run create-pwa-icons && vite build && npm run prerender:public",
+        "vercel-build": "npm run create-pwa-icons && vite build && npm run verify:public-precache",
         "prepare": "husky",
         "pr:create": "node scripts/create-pr.mjs",
         "version:bump": "node scripts/version-bump.mjs",
@@ -24,7 +24,8 @@
         "test:contract": "vitest run --config vitest.contract.config.ts",
         "test:contract:smoke": "vitest run --config vitest.contract.config.ts contract-tests/auth-session.contract.ts",
         "test:contract:full": "vitest run --config vitest.contract.config.ts contract-tests/core-api.contract.ts",
-        "prerender:public": "node scripts/prerender-public.mjs"
+        "prerender:public": "node scripts/prerender-public.mjs",
+        "verify:public-precache": "node scripts/verify-public-precache.mjs"
     },
     "dependencies": {
         "@radix-ui/themes": "^3.3.0",

@@ -1,6 +1,7 @@
 // Static, deterministic React HTML generation for explicitly indexable public routes.
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import react from '@vitejs/plugin-react-swc';
 import svgr from 'vite-plugin-svgr';
@@ -32,7 +33,7 @@ if (!process.env.VITE_CHIPIN_ENV) {
     process.env.VITE_CHIPIN_ENV = 'dev';
 }
 
-const main = () => createServer({
+const prerenderPublic = () => createServer({
     configFile: false,
     root: process.cwd(),
     plugins: [svgr(), react(), tsconfigPaths()],
@@ -102,7 +103,12 @@ const main = () => createServer({
     }).finally(() => server.close());
 });
 
-main().catch(error => {
-    console.error(error);
-    process.exitCode = 1;
-});
+// Also keep the standalone script for explicit local troubleshooting.
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+    prerenderPublic().catch(error => {
+        console.error(error);
+        process.exitCode = 1;
+    });
+}
+
+export { prerenderPublic };
