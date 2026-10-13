@@ -45,7 +45,9 @@ const PublicEffects = ({ route }: { route: PublicRoute }) => {
     }, [i18n.resolvedLanguage, route.metaKey, route.path, t]);
 
     useEffect(() => {
-        if (!isAuthResolved || route.page !== 'home') return;
+        if (!isAuthResolved || route.page !== 'home') {
+            return;
+        }
         if (isLoggedIn) {
             if (isUserFetched) {
                 window.location.replace(
@@ -55,7 +57,9 @@ const PublicEffects = ({ route }: { route: PublicRoute }) => {
             return;
         }
         // Locale preference navigation is client-only and applies solely to anonymous exact root.
-        if (window.location.pathname !== '/') return;
+        if (window.location.pathname !== '/') {
+            return;
+        }
         const params = new URLSearchParams(window.location.search);
         const stored = LocalStorage.get(LS_KEY_LOCALE, '');
         const browserLanguages = navigator.languages?.length
@@ -65,7 +69,9 @@ const PublicEffects = ({ route }: { route: PublicRoute }) => {
         const destination = getRootLocaleRedirect(
             locale, window.location.search, window.location.hash,
         );
-        if (destination) window.location.replace(destination);
+        if (destination) {
+            window.location.replace(destination);
+        }
     }, [
         canAccessSolo, isAuthResolved, isLoggedIn, isUserFetched,
         route.locale, route.page, settings?.soloModeByDefault,

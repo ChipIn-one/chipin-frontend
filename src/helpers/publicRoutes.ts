@@ -19,9 +19,13 @@ const getPublicPath = (page: PublicPage, locale: PublicLocale): string => {
 };
 
 const getPublicRoute = (pathname: string): PublicRoute | null => {
-    if (pathname.includes('//')) return null;
+    if (pathname.includes('//')) {
+        return null;
+    }
     const exact = PUBLIC_ROUTE_ENTRIES.find(route => route.path === pathname);
-    if (exact) return exact;
+    if (exact) {
+        return exact;
+    }
     // Vercel serves both single-trailing-slash forms. Never guess unknown URLs.
     const alternate = pathname.endsWith('/') ? pathname.slice(0, -1) : pathname + '/';
     return PUBLIC_ROUTE_ENTRIES.find(route => route.path === alternate) ?? null;
@@ -37,15 +41,21 @@ const selectRootLocale = (
 ): PublicLocale => {
     if (override !== null) {
         const selected = matchLocale(override);
-        if (selected) return selected;
+        if (selected) {
+            return selected;
+        }
     }
     if (persisted !== null) {
         const selected = matchLocale(persisted);
-        if (selected) return selected;
+        if (selected) {
+            return selected;
+        }
     }
     for (const language of browserLanguages) {
         const selected = matchLocale(language);
-        if (selected) return selected;
+        if (selected) {
+            return selected;
+        }
     }
     return DEFAULT_LOCALE;
 };
@@ -58,11 +68,13 @@ const getRootLocaleRedirect = (
     originalSearch: string,
     originalHash: string,
 ): string | null => {
-    if (locale === DEFAULT_LOCALE) return null;
+    if (locale === DEFAULT_LOCALE) {
+        return null;
+    }
     const params = new URLSearchParams(originalSearch);
     const allowed = new URLSearchParams();
     for (const [key, value] of params) {
-        if (ROOT_QUERY_KEYS.has(key) && /^[a-zA-Z0-9_\\-.]{1,80}$/.test(value)) {
+        if (ROOT_QUERY_KEYS.has(key) && /^[a-zA-Z0-9_.-]{1,80}$/.test(value)) {
             allowed.set(key, value);
         }
     }
