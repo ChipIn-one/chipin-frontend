@@ -1,6 +1,3 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-
 import { defineConfig, loadEnv } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import svgr from 'vite-plugin-svgr';
@@ -9,6 +6,7 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import react from '@vitejs/plugin-react-swc';
 
+import { runPrerenderPublic } from './scripts/prerender-before-workbox.mjs';
 import { resolveAppVersion } from './scripts/version-resolver.mjs';
 
 // https://vite.dev/config/
@@ -101,22 +99,6 @@ const resolveSentryUploadConfig = (
 
 const appVersion = resolveAppVersion();
 
-// Keep prerender SSR in its own Node process: Vite's active build and the SSR
-// React transformer must not share a module loader or JSX runtime.
-const execFileAsync = promisify(execFile);
-const prerenderPublicBeforeWorkbox = () =>
-    execFileAsync(process.execPath, ['scripts/prerender-public.mjs'], {
-        cwd: process.cwd(),
-        maxBuffer: 8 * 1024 * 1024,
-    }).then(({ stdout, stderr }) => {
-        if (stdout) {
-            process.stdout.write(stdout);
-        }
-        if (stderr) {
-            process.stderr.write(stderr);
-        }
-    });
-
 export default defineConfig(({ mode }) => {
     const buildEnvironment = loadEnv(mode, '.', '');
     const pwaAppName = buildEnvironment.VITE_CHIPIN_ENV === 'dev' ? 'ChipIn DEV' : 'ChipIn';
@@ -151,7 +133,7 @@ export default defineConfig(({ mode }) => {
                 // Run SSG after Vite writes client assets, before Workbox scans dist.
                 // This prevents missing localized pages and stale root HTML revisions.
                 integration: {
-                    beforeBuildServiceWorker: prerenderPublicBeforeWorkbox,
+                    beforeBuildServiceWorker: runPrerenderPublic,
                 },
                 registerType: 'prompt', // or autoUpdate
                 injectRegister: false,
