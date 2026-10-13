@@ -44,6 +44,10 @@ const PUBLIC_ROUTE_ENTRIES = SUPPORTED_LOCALES.flatMap(locale =>
 type PublicRoute = (typeof PUBLIC_ROUTE_ENTRIES)[number];
 
 const getPublicRoute = (pathname: string): PublicRoute | null => {
+    if (pathname.includes('//')) {
+        return null;
+    }
+
     const canonicalRoute = PUBLIC_ROUTE_ENTRIES.find(route => route.path === pathname);
     if (canonicalRoute) {
         return canonicalRoute;
