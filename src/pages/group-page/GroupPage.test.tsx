@@ -131,15 +131,32 @@ test('delegates group details and actions to the responsive cover hero', () => {
     ).toBeNull();
 });
 
-test('selects the route group from the loaded group list', () => {
-    useGroupsStore.setState({ selectedGroup: null });
-    useLoadingStore.setState(state => ({
-        group: { ...state.group, list: 'fetched' },
-    }));
+test('fetches direct route detail independently of the cached list', () => {
+    const fetchSetGroupById = vi.fn(() => Promise.resolve(group));
+    useGroupsStore.setState({ selectedGroup: null, fetchSetGroupById });
 
     render(<GroupPage />);
 
-    expect(useGroupsStore.getState().selectedGroup).toEqual(group);
+    expect(fetchSetGroupById).toHaveBeenCalledWith(group.id, true);
+});
+
+test('renders confirmed current detail when groups list is not fetched', () => {
+    useGroupsStore.setState({ groups: [] });
+
+    render(<GroupPage />);
+
+    expect(screen.getByTestId('group-tabs')).toHaveAttribute('data-group-id', group.id);
+});
+
+test('does not overwrite selected detail after cached groups change', () => {
+    const detail = { ...group, name: 'Canonical detail' } satisfies Group;
+    useGroupsStore.setState({ groups: [group], selectedGroup: detail });
+
+    const { rerender } = render(<GroupPage />);
+    useGroupsStore.setState({ groups: [{ ...group, name: 'Stale list' }] });
+    rerender(<GroupPage />);
+
+    expect(useGroupsStore.getState().selectedGroup).toBe(detail);
 });
 
 test('does not render a previously selected group for a different route', () => {
