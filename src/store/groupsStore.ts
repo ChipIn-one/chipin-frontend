@@ -27,7 +27,7 @@ const groupsChannel = createRequestChannel();
 const groupDetailChannel = createRequestChannel();
 const groupActivityPageChannel = createRequestChannel();
 let groupsMutationGeneration = 0;
-let successfulJoinVersion = 0;
+let successfulJoinVersions: Record<string, number> = Object.create(null) as Record<string, number>;
 let activeGroupUpdate: {
     groupId: string;
     isCurrent: () => boolean;
@@ -155,7 +155,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         groupDetailChannel.abort();
         resetGroupActivityPagination();
         groupsMutationGeneration += 1;
-        successfulJoinVersion = 0;
+        successfulJoinVersions = Object.create(null) as Record<string, number>;
         activeGroupUpdate = undefined;
         set(initialGroupsStore);
         useErrorsStore.getState().resetErrors();
@@ -494,7 +494,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             });
     },
     leaveGroup: ({ groupId, newOwnerId }) => {
-        const joinVersionAtStart = successfulJoinVersion;
+        const joinVersionAtStart = successfulJoinVersions[groupId] ?? 0;
         const { setLoading } = useLoadingStore.getState();
         const { clearError, setError } = useErrorsStore.getState();
         const isCurrent = createGroupsMutationGuard();
@@ -516,7 +516,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
 
                 if (
                     get().selectedGroup?.id === groupId &&
-                    successfulJoinVersion === joinVersionAtStart
+                    (successfulJoinVersions[groupId] ?? 0) === joinVersionAtStart
                 ) {
                     get().setSelectedGroup(null);
                 }
@@ -565,7 +565,8 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             .then(joinedGroup => {
                 if (isCurrent()) {
                     resetGroupActivityPagination();
-                    successfulJoinVersion += 1;
+                    successfulJoinVersions[joinedGroup.id] =
+                        (successfulJoinVersions[joinedGroup.id] ?? 0) + 1;
                     set(state => ({
                         groups: uniqueGroups(state.groups, joinedGroup),
                         selectedGroup: joinedGroup,

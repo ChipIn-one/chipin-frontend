@@ -768,6 +768,33 @@ describe('groupsStore', () => {
             });
     });
 
+    test('clears group A after unrelated group B joins while leave A is pending', () => {
+        let resolveLeave: (() => void) | undefined;
+        vi.mocked(chipinApi.leaveApiGroup).mockImplementation(() => new Promise(resolve => {
+            resolveLeave = resolve;
+        }));
+        const otherGroup = { ...group, id: 'group-2', name: 'Other group' } satisfies Group;
+        vi.mocked(chipinApi.inviteApiUserToGroup).mockResolvedValue(otherGroup);
+        useGroupsStore.getState().setSelectedGroup(group);
+        useGroupsStore.setState({ fetchSetGroups: vi.fn().mockResolvedValue([otherGroup]) });
+        useUsersStore.setState({ fetchSetFriends: vi.fn().mockResolvedValue(undefined) });
+        useDashboardStore.setState({ fetchSetDashboard: vi.fn().mockResolvedValue(undefined) });
+        useActivityStore.setState({ fetchSetActivity: vi.fn().mockResolvedValue(undefined) });
+
+        const leaveRequest = useGroupsStore.getState().leaveGroup({ groupId: group.id });
+
+        return useGroupsStore.getState().joinGroup({ inviteToken: otherGroup.inviteToken })
+            .then(() => {
+                expect(useGroupsStore.getState().selectedGroup).toBe(otherGroup);
+                useGroupsStore.getState().setSelectedGroup(group);
+                resolveLeave?.();
+                return leaveRequest;
+            })
+            .then(() => {
+                expect(useGroupsStore.getState().selectedGroup).toBeNull();
+            });
+    });
+
     test('still invalidates a successfully left group after an intervening detail refresh', () => {
         let resolveLeave: (() => void) | undefined;
         vi.mocked(chipinApi.leaveApiGroup).mockImplementation(() => new Promise(resolve => {
