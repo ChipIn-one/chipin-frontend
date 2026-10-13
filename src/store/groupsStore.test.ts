@@ -741,6 +741,54 @@ describe('groupsStore', () => {
         });
     });
 
+    test('keeps a newer successful rejoin selected when an older leave response arrives late', () => {
+        let resolveLeave: (() => void) | undefined;
+        vi.mocked(chipinApi.leaveApiGroup).mockImplementation(() => new Promise(resolve => {
+            resolveLeave = resolve;
+        }));
+        const rejoined = { ...group, role: 'MEMBER', name: 'Rejoined group' } satisfies Group;
+        vi.mocked(chipinApi.inviteApiUserToGroup).mockResolvedValue(rejoined);
+        useGroupsStore.getState().setSelectedGroup(group);
+        useGroupsStore.setState({ fetchSetGroups: vi.fn().mockResolvedValue([rejoined]) });
+        useUsersStore.setState({ fetchSetFriends: vi.fn().mockResolvedValue(undefined) });
+        useDashboardStore.setState({ fetchSetDashboard: vi.fn().mockResolvedValue(undefined) });
+        useActivityStore.setState({ fetchSetActivity: vi.fn().mockResolvedValue(undefined) });
+
+        const leaveRequest = useGroupsStore.getState().leaveGroup({ groupId: group.id });
+
+        return useGroupsStore.getState().joinGroup({ inviteToken: group.inviteToken })
+            .then(() => {
+                expect(useGroupsStore.getState().selectedGroup).toBe(rejoined);
+                resolveLeave?.();
+                return leaveRequest;
+            })
+            .then(() => {
+                expect(useGroupsStore.getState().selectedGroup).toBe(rejoined);
+                expect(useGroupsStore.getState().groups).toEqual([rejoined]);
+            });
+    });
+
+    test('still invalidates a successfully left group after an intervening detail refresh', () => {
+        let resolveLeave: (() => void) | undefined;
+        vi.mocked(chipinApi.leaveApiGroup).mockImplementation(() => new Promise(resolve => {
+            resolveLeave = resolve;
+        }));
+        const refreshed = { ...group, name: 'New detail snapshot' } satisfies Group;
+        useGroupsStore.getState().setSelectedGroup(group);
+        useGroupsStore.setState({ fetchSetGroups: vi.fn().mockResolvedValue([]) });
+        useUsersStore.setState({ fetchSetFriends: vi.fn().mockResolvedValue(undefined) });
+        useDashboardStore.setState({ fetchSetDashboard: vi.fn().mockResolvedValue(undefined) });
+        useActivityStore.setState({ fetchSetActivity: vi.fn().mockResolvedValue(undefined) });
+
+        const leaveRequest = useGroupsStore.getState().leaveGroup({ groupId: group.id });
+        useGroupsStore.getState().setSelectedGroup(refreshed);
+        resolveLeave?.();
+
+        return leaveRequest.then(() => {
+            expect(useGroupsStore.getState().selectedGroup).toBeNull();
+        });
+    });
+
     test('leaves a group before refetching backend state', () => {
         vi.mocked(chipinApi.leaveApiGroup).mockResolvedValue(undefined);
         useActivityStore.setState({

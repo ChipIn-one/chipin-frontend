@@ -102,6 +102,7 @@ beforeEach(() => {
     useGroupsStore.getState().setInitialGroupsStore();
     useGroupsStore.setState({ groups: [group] });
     useGroupsStore.getState().setSelectedGroup(group);
+    useGroupsStore.setState({ fetchSetGroupById: vi.fn(() => Promise.resolve(group)) });
     useLoadingStore.getState().setInitialLoadingStore();
     useUsersStore.setState({ user: currentUser });
 });
@@ -129,6 +130,16 @@ test('delegates group details and actions to the responsive cover hero', () => {
     expect(
         screen.queryByRole('button', { name: 'common:buttons.addExpense' }),
     ).toBeNull();
+});
+
+test('revalidates a preselected list group through the canonical detail endpoint', () => {
+    const fetchSetGroupById = vi.fn(() => Promise.resolve(group));
+    useGroupsStore.setState({ fetchSetGroupById });
+
+    render(<GroupPage />);
+
+    expect(fetchSetGroupById).toHaveBeenCalledTimes(1);
+    expect(fetchSetGroupById).toHaveBeenCalledWith(group.id, true);
 });
 
 test('fetches direct route detail independently of the cached list', () => {

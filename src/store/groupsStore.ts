@@ -27,6 +27,7 @@ const groupsChannel = createRequestChannel();
 const groupDetailChannel = createRequestChannel();
 const groupActivityPageChannel = createRequestChannel();
 let groupsMutationGeneration = 0;
+const successfulJoinsByGroup = new Map<string, number>();
 let activeGroupUpdate: {
     groupId: string;
     isCurrent: () => boolean;
@@ -172,6 +173,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         groupDetailChannel.abort();
         resetGroupActivityPagination();
         groupsMutationGeneration += 1;
+        successfulJoinsByGroup.clear();
         activeGroupUpdate = undefined;
         set(initialGroupsStore);
         useErrorsStore.getState().resetErrors();
@@ -510,6 +512,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             });
     },
     leaveGroup: ({ groupId, newOwnerId }) => {
+        const joinVersionAtStart = successfulJoinsByGroup.get(groupId) ?? 0;
         const { setLoading } = useLoadingStore.getState();
         const { clearError, setError } = useErrorsStore.getState();
         const isCurrent = createGroupsMutationGuard();
@@ -529,7 +532,10 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     return;
                 }
 
-                if (get().selectedGroup?.id === groupId) {
+                if (
+                    get().selectedGroup?.id === groupId &&
+                    (successfulJoinsByGroup.get(groupId) ?? 0) === joinVersionAtStart
+                ) {
                     get().setSelectedGroup(null);
                 }
                 return refreshAfterGroupRemoval(get().fetchSetGroups);
@@ -577,6 +583,10 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             .then(joinedGroup => {
                 if (isCurrent()) {
                     resetGroupActivityPagination();
+                    successfulJoinsByGroup.set(
+                        joinedGroup.id,
+                        (successfulJoinsByGroup.get(joinedGroup.id) ?? 0) + 1,
+                    );
                     set(state => ({
                         groups: upsertGroup(state.groups, joinedGroup),
                         selectedGroup: joinedGroup,
