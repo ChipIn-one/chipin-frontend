@@ -81,6 +81,10 @@ const createGroupWithActivity = (
 describe('groupsStore', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.mocked(chipinApi.fetchApiUserGroups).mockReset().mockResolvedValue({
+            items: [group],
+            nextCursor: null,
+        });
         useErrorsStore.getState().resetErrors();
         useGroupsStore.getState().setInitialGroupsStore();
         useLoadingStore.getState().setInitialLoadingStore();
@@ -508,6 +512,11 @@ describe('groupsStore', () => {
             new Promise(resolve => { resolveList = resolve; }),
         );
         const joined = { ...group, name: 'Canonical rejoin' } satisfies Group;
+        const otherGroup = { ...group, id: 'other-group' } satisfies Group;
+        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValueOnce({
+            items: [joined, otherGroup],
+            nextCursor: null,
+        });
         vi.mocked(chipinApi.fetchApiUserGroupById).mockRejectedValueOnce({
             isAxiosError: true, response: { status: 404 },
         });
@@ -518,24 +527,24 @@ describe('groupsStore', () => {
         return useGroupsStore.getState().fetchSetGroupById(group.id, true)
             .then(() => useGroupsStore.getState().joinGroup({ inviteToken: group.inviteToken }))
             .then(() => {
-                const otherGroup = { ...group, id: 'other-group' } satisfies Group;
-                resolveList?.({ items: [{ ...group, name: 'Stale' }, otherGroup], nextCursor: null });
+                resolveList?.({ items: [{ ...group, name: 'Stale' }], nextCursor: null });
                 return oldList;
             })
             .then(() => {
-                const otherGroup = { ...group, id: 'other-group' } satisfies Group;
+                expect(chipinApi.fetchApiUserGroups).toHaveBeenCalledTimes(2);
                 expect(useGroupsStore.getState().selectedGroup).toBe(joined);
                 expect(useGroupsStore.getState().groups).toEqual([joined, otherGroup]);
                 expect(useLoadingStore.getState().group.list).toBe('fetched');
             });
     });
 
-    test('reconciles stale list with canonical detail recovery', () => {
+    test('restores a recovered detail omitted from a pre-recovery list', () => {
         let resolveList: ((data: { items: Group[]; nextCursor: null }) => void) | undefined;
         vi.mocked(chipinApi.fetchApiUserGroups).mockImplementationOnce(() =>
             new Promise(resolve => { resolveList = resolve; }),
         );
         const recovered = { ...group, name: 'Recovered' } satisfies Group;
+        const otherGroup = { ...group, id: 'other-group' } satisfies Group;
         vi.mocked(chipinApi.fetchApiUserGroupById)
             .mockRejectedValueOnce({ isAxiosError: true, response: { status: 403 } })
             .mockResolvedValueOnce(recovered);
@@ -545,12 +554,12 @@ describe('groupsStore', () => {
         return useGroupsStore.getState().fetchSetGroupById(group.id, true)
             .then(() => useGroupsStore.getState().fetchSetGroupById(group.id, true))
             .then(() => {
-                resolveList?.({ items: [{ ...group, name: 'Outdated' }], nextCursor: null });
+                resolveList?.({ items: [otherGroup], nextCursor: null });
                 return oldList;
             })
             .then(() => {
                 expect(useGroupsStore.getState().selectedGroup).toBe(recovered);
-                expect(useGroupsStore.getState().groups).toEqual([recovered]);
+                expect(useGroupsStore.getState().groups).toEqual([otherGroup, recovered]);
                 expect(useGroupsStore.getState().hasConfirmedGroups).toBe(true);
             });
     });
