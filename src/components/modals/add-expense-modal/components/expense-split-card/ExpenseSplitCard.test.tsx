@@ -56,7 +56,7 @@ test('shows the self-only Callout near shares when Skip category hides the payer
 
     act(() => {
         const store = useExpenseModalStore.getState();
-        store.setSplitValue(friend.id, '0');
+        store.setSplitValue(currentUser.id, '0');
         store.setPaidById(friend.id);
     });
     expect(screen.getByRole('alert').textContent).toContain('creates no debt');
