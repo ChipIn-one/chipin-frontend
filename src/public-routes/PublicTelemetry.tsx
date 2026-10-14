@@ -1,5 +1,4 @@
 import { useSyncExternalStore } from 'react';
-import { Toaster } from 'sonner';
 
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
@@ -27,15 +26,6 @@ const PublicTelemetry = () => {
         <>
             <Analytics beforeSend={sanitizeTelemetryEvent} />
             <SpeedInsights beforeSend={sanitizeTelemetryEvent} />
-            {/* Public routes use the same Sonner host needed by PWA updates. */}
-            <Toaster
-                theme="system"
-                richColors
-                closeButton
-                position="bottom-left"
-                offset={16}
-                mobileOffset={12}
-            />
         </>
     );
 };

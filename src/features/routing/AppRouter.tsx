@@ -8,6 +8,7 @@ import PageLoader from 'basics/PageLoader';
 import { InternalPageLayout } from 'components/internal-page-layout';
 
 import HomeRouteGuard from './HomeRouteGuard';
+import { PublicLocaleRoute } from './PublicLocaleRoute';
 import { ProtectedRoute } from './ProtectedRoute';
 import SoloRouteGuard from './SoloRouteGuard';
 
@@ -55,7 +56,15 @@ const AppRouter = () => {
         <Suspense fallback={<PageLoader />}>
             <Routes>
                 {PUBLIC_ROUTE_ENTRIES.map(route => (
-                    <Route key={route.path} path={route.path} element={publicElements[route.page]} />
+                    <Route
+                        key={route.path}
+                        path={route.path}
+                        element={
+                            <PublicLocaleRoute locale={route.locale}>
+                                {publicElements[route.page]}
+                            </PublicLocaleRoute>
+                        }
+                    />
                 ))}
                 <Route path={ROUTES.OAUTH_CALLBACK} element={<OAuthCallbackPage />} />
                 <Route

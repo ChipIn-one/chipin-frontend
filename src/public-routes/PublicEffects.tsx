@@ -1,14 +1,17 @@
 import { useEffect } from 'react';
-import { toast } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
 import * as Sentry from '@sentry/react';
 
 import { DEFAULT_LOCALE } from 'constants/locales';
 import { resolveBrowserLocale } from 'helpers/locale';
-import { isPublicLocaleSuggestionSuppressed, suppressPublicLocaleSuggestion } from 'helpers/publicLocaleSuggestion';
+import {
+    getPublicLocaleSuggestionTarget,
+    isPublicLocaleSuggestionSuppressed,
+    suppressPublicLocaleSuggestion,
+} from 'helpers/publicLocaleSuggestion';
 import { getPreferredModeRoute } from 'helpers/routes';
-import { getPublicPath } from 'helpers/publicRoutes';
 import { useCheckOnlineStatus, useCheckPwa } from 'hooks/pwaHooks';
 import { useAuthToasts } from 'hooks/useAuthToasts';
 import { updateSeoMetadata } from 'hooks/seoMetadata';
@@ -78,14 +81,29 @@ const PublicEffects = ({ route }: { route: PublicRoute }) => {
                 label: translate('public.languageSuggestionAction'),
                 onClick: () => {
                     suppressPublicLocaleSuggestion();
-                    window.location.assign(getPublicPath(route.page, suggestedLocale));
+                    const destination = getPublicLocaleSuggestionTarget(
+                        window.location.pathname,
+                        suggestedLocale,
+                    );
+                    if (destination) {
+                        window.location.assign(destination);
+                    }
                 },
             },
             onDismiss: suppressPublicLocaleSuggestion,
         });
     }, [i18n, isAuthResolved, isLoggedIn, route.locale, route.page]);
 
-    return null;
+    return (
+        <Toaster
+            theme="system"
+            richColors
+            closeButton
+            position="bottom-left"
+            offset={16}
+            mobileOffset={12}
+        />
+    );
 };
 
 export { PublicEffects };
