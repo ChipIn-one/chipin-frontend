@@ -101,6 +101,6 @@ test('a localized public URL wins over the previous SPA language', () => {
     renderRouter('/ru/privacy');
     return waitFor(() => {
         expect(i18n.resolvedLanguage).toBe('ru');
-        expect(screen.getByRole('heading')).toBeTruthy();
+        expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
     });
 });
