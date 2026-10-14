@@ -5,6 +5,7 @@ import { act, render, screen } from '@testing-library/react';
 
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
 import { lightThemeStyled } from 'constants/styled-themes';
+import i18n from 'i18n/index';
 import type {
     ExpenseModalEditInitialization,
     ExpenseParticipant,
@@ -13,7 +14,6 @@ import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import ExpenseTargetSection from './ExpenseTargetSection';
 
-import 'i18n/index';
 
 const currentUser = {
     id: 'user-1',
@@ -136,7 +136,9 @@ test('shows the self-only Radix Callout below payer only for a self-paid direct 
         store.setSplitValue(friend.id, '0');
     });
 
-    expect(screen.getByRole('alert').textContent).toContain("You can't pay yourself");
+    expect(screen.getByRole('alert').textContent).toContain(
+        i18n.t('group:expenses.modal.directSelfOnlyWarning'),
+    );
     expect(screen.getByRole('alert').parentElement?.textContent).toContain('Paid by');
 
     act(() => {

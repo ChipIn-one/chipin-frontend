@@ -5,11 +5,11 @@ import { act, render, screen } from '@testing-library/react';
 
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
 import { lightThemeStyled } from 'constants/styled-themes';
+import i18n from 'i18n/index';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import ExpenseSplitCard from './ExpenseSplitCard';
 
-import 'i18n/index';
 
 const currentUser = { id: 'user-1', displayName: 'You', picture: null };
 const friend = { id: 'user-2', displayName: 'Friend', picture: null };
@@ -47,7 +47,9 @@ test('shows the self-only Callout near shares when Skip category hides the payer
     initializeDirectExpense(true);
     renderSplitCard();
 
-    expect(screen.getByRole('alert').textContent).toContain("You can't pay yourself");
+    expect(screen.getByRole('alert').textContent).toContain(
+        i18n.t('group:expenses.modal.directSelfOnlyWarning'),
+    );
 
     act(() => {
         useExpenseModalStore.getState().setSplitValue(friend.id, '1');
