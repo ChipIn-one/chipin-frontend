@@ -143,7 +143,7 @@
                 "pet_items": "Artigos para animais"
             },
             "currentUser": "Eu",
-            "directSelfOnlyWarning": "Não podes pagar a ti próprio numa despesa direta. Atribui parte do valor ao teu amigo.",
+            "directSelfOnlyWarning": "Atribui uma parte ao teu amigo.",
             "directZeroDebtWarning": "Esta despesa não cria dívida. Atribui um valor positivo a quem não pagou.",
             "splitHint": "Dividido igualmente entre os membros do grupo.",
             "noMembers": "O grupo ainda não tem membros.",
