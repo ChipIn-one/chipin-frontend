@@ -457,7 +457,7 @@ test.each([
 
     expect(selectIsSubmitDisabled(useExpenseModalStore.getState())).toBe(false);
     expect(selectShouldShowSelfOnlyCallout(useExpenseModalStore.getState())).toBe(false);
-    expect(selectExpensePayload(useExpenseModalStore.getState())?.sharingMode.type).toBe(wire);
+    expect(selectExpensePayload(useExpenseModalStore.getState())?.sharingMode?.type).toBe(wire);
 });
 
 test('rejects zero non-payer share when the friend paid, without showing the self-only Callout', () => {
@@ -497,7 +497,7 @@ test('rounds tiny direct Shares allocations at four decimal places', () => {
 test('keeps equal direct splits and group expenses with zero-share members valid', () => {
     initializeDirectZeroDebtTest();
     expect(selectIsSubmitDisabled(useExpenseModalStore.getState())).toBe(false);
-    expect(selectExpensePayload(useExpenseModalStore.getState())?.sharingMode.type).toBe('AUTO');
+    expect(selectExpensePayload(useExpenseModalStore.getState())?.sharingMode?.type).toBe('AUTO');
 
     const store = useExpenseModalStore.getState();
     store.initialize({
