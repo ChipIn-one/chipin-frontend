@@ -143,6 +143,8 @@
                 "pet_items": "Artículos para mascotas"
             },
             "currentUser": "Tú",
+            "directSelfOnlyWarning": "Asigna una parte a tu amigo.",
+            "directZeroDebtWarning": "Este gasto no genera una deuda. Asigna un importe positivo a quien no pagó.",
             "splitHint": "Dividido equitativamente entre los miembros del grupo.",
             "noMembers": "Aún no hay miembros en el grupo.",
             "tabs": {
