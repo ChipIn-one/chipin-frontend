@@ -76,15 +76,27 @@ describe('activity event helpers', () => {
         expect(getActivityLedgerEntryId(expenseReversedEvent)).toBeUndefined();
     });
 
-    test('unwraps preview items to the latest event used by activity lists', () => {
-        expect(
-            getActivityPreviewEvents([
-                {
-                    parent: expenseCreatedEvent,
-                    lastEvent: settlementCreatedEvent,
-                },
-            ]),
-        ).toEqual([settlementCreatedEvent]);
+    test('ACT-021 preserves preview parent chronology and latest event', () => {
+        const updated = {
+            ...expenseCreatedEvent,
+            id: 'updated-activity',
+            action: ACTIVITY_ACTIONS.EXPENSE_UPDATED,
+            createdAt: 10,
+            parentActivityId: expenseCreatedEvent.id,
+        } satisfies AppEvent;
+        const item = { parent: expenseCreatedEvent, lastEvent: updated };
+
+        expect(getActivityPreviewEvents([item])).toEqual([item]);
+    });
+
+    test('ACT-022 excludes reversed chains and de-duplicates repeated parent previews', () => {
+        const repeated = { parent: expenseCreatedEvent, lastEvent: expenseCreatedEvent };
+        const reversed = {
+            parent: { ...expenseCreatedEvent, id: 'second-parent' },
+            lastEvent: expenseReversedEvent,
+        };
+
+        expect(getActivityPreviewEvents([repeated, reversed, repeated])).toEqual([repeated]);
     });
 
     test('uses the parent as current state when no children are loaded', () => {

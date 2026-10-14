@@ -42,9 +42,32 @@ export const getActivityLedgerEntryId = (event?: AppEvent): string | undefined =
     return undefined;
 };
 
+export type ActivityListItem = AppEvent | ActivityFeedItem;
+
+export const isActivityPreview = (item: ActivityListItem): item is ActivityFeedItem =>
+    'parent' in item && 'lastEvent' in item;
+
 export const getActivityPreviewEvents = (
     items: readonly ActivityFeedItem[],
-): AppEvent[] => items.map(item => item.lastEvent);
+): ActivityFeedItem[] => {
+    const seenParents = new Set<string>();
+    const previews: ActivityFeedItem[] = [];
+
+    for (const item of items) {
+        if (
+            seenParents.has(item.parent.id) ||
+            item.lastEvent.action === ACTIVITY_ACTIONS.EXPENSE_REVERSED ||
+            item.lastEvent.action === ACTIVITY_ACTIONS.SETTLEMENT_REVERSED
+        ) {
+            continue;
+        }
+
+        seenParents.add(item.parent.id);
+        previews.push(item);
+    }
+
+    return previews;
+};
 
 export const getActivitySubeventsView = (
     parentEvent: AppEvent | null | undefined,

@@ -1,6 +1,7 @@
-import type { AppEvent } from 'api/activity.types';
+import type { AppEvent, ExpenseActivityMetadata } from 'api/activity.types';
 import type { BalanceEntry } from 'api/chipin.raw.types';
-import { ACTIVITY_ACTIONS, type ExpenseCreatedAction } from 'constants/activity';
+import { ACTIVITY_ACTIONS } from 'constants/activity';
+import { isActivityPreview, type ActivityListItem } from 'helpers/activityEvent';
 import { getActivityDateKey } from 'helpers/time';
 
 interface DailyBalance extends BalanceEntry {
@@ -8,32 +9,48 @@ interface DailyBalance extends BalanceEntry {
 }
 
 const getUserExpenseBalanceChange = (
-    event: Extract<AppEvent, { action: ExpenseCreatedAction }>,
+    metadata: ExpenseActivityMetadata,
     userId: string,
 ): number => {
     const userShareAmount =
-        event.metadata?.shares?.find(share => share.userId === userId)?.shareAmount ?? 0;
+        metadata.shares?.find(share => share.userId === userId)?.shareAmount ?? 0;
 
-    if (event.metadata.payerId === userId) {
-        return event.metadata.amount - userShareAmount;
+    if (metadata.payerId === userId) {
+        return metadata.amount - userShareAmount;
     }
 
     return userShareAmount * -1;
 };
 
 export const getDailyExpenseSummary = (
-    events: AppEvent[],
+    events: readonly ActivityListItem[],
     userId?: string,
 ): Record<string, BalanceEntry[]> => {
     const summaries: Record<string, BalanceEntry[]> = {};
     const balances = new Map<string, DailyBalance>();
+    const seenPreviewParents = new Set<string>();
 
     if (!userId) {
         return summaries;
     }
 
-    for (const event of events) {
-        if (event.action !== ACTIVITY_ACTIONS.EXPENSE_CREATED) {
+    for (const item of events) {
+        const isPreview = isActivityPreview(item);
+        const event: AppEvent = isPreview ? item.lastEvent : item;
+
+        if (isPreview) {
+            if (seenPreviewParents.has(item.parent.id)) {
+                continue;
+            }
+
+            seenPreviewParents.add(item.parent.id);
+        }
+
+        // Flat history remains event-based; only previews represent the current chain state.
+        if (
+            event.action !== ACTIVITY_ACTIONS.EXPENSE_CREATED &&
+            !(isPreview && event.action === ACTIVITY_ACTIONS.EXPENSE_UPDATED)
+        ) {
             continue;
         }
 
@@ -41,13 +58,13 @@ export const getDailyExpenseSummary = (
             continue;
         }
 
-        const netBalance = getUserExpenseBalanceChange(event, userId);
+        const netBalance = getUserExpenseBalanceChange(event.metadata, userId);
 
         if (!netBalance) {
             continue;
         }
 
-        const dateKey = getActivityDateKey(event.createdAt);
+        const dateKey = getActivityDateKey(isPreview ? item.parent.createdAt : event.createdAt);
         const { currency } = event.metadata;
         const balanceKey = `${dateKey}:${currency}`;
         const existingBalance = balances.get(balanceKey);

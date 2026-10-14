@@ -2,7 +2,7 @@ import { Fragment, type ReactNode, useMemo } from 'react';
 
 import { Flex } from '@radix-ui/themes';
 
-import type { AppEvent } from 'api/activity.types';
+import { isActivityPreview, type ActivityListItem } from 'helpers/activityEvent';
 import { getActivityDateKey } from 'helpers/time';
 import { useUsersStore } from 'store/users-store';
 
@@ -13,7 +13,7 @@ import { ActivityEvent, FullActivityFeedContext } from '../activity-event';
 import ActivityDateDivider from '../ActivityDateDivider';
 
 interface Props {
-    events: AppEvent[];
+    events: ActivityListItem[];
     emptyState?: ReactNode;
     children?: ReactNode;
     isShowSummary?: boolean;
@@ -42,22 +42,32 @@ const ActivityEventsList = ({
     return (
         <FullActivityFeedContext.Provider value={isFullActivityFeed}>
             <Flex direction="column" gap="2">
-                {events.map((event, index) => {
-                    const dateKey = getActivityDateKey(event.createdAt);
-                    const previousEvent = events[index - 1];
+                {events.map((item, index) => {
+                    const isPreview = isActivityPreview(item);
+                    const originalEvent = isPreview ? item.parent : item;
+                    const event = isPreview ? item.lastEvent : item;
+                    const dateKey = getActivityDateKey(originalEvent.createdAt);
+                    const previousItem = events[index - 1];
+                    const previousEvent = previousItem && (
+                        isActivityPreview(previousItem) ? previousItem.parent : previousItem
+                    );
                     const shouldRenderDivider =
                         previousEvent === undefined ||
                         dateKey !== getActivityDateKey(previousEvent.createdAt);
 
                     return (
-                        <Fragment key={event.id}>
+                        <Fragment key={originalEvent.id}>
                             {shouldRenderDivider && (
                                 <ActivityDateDivider
-                                    createdAt={event.createdAt}
+                                    createdAt={originalEvent.createdAt}
                                     summary={dailyExpenseSummaries[dateKey] ?? []}
                                 />
                             )}
-                            <ActivityEvent event={event} isNavigable={isNavigable} />
+                            <ActivityEvent
+                                event={event}
+                                parentActivityId={isPreview ? originalEvent.id : undefined}
+                                isNavigable={isNavigable}
+                            />
                         </Fragment>
                     );
                 })}

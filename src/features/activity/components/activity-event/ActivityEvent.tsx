@@ -18,9 +18,10 @@ import { ActivityEventLink } from './styled';
 interface Props {
     event: AppEvent;
     isNavigable?: boolean;
+    parentActivityId?: string;
 }
 
-const ActivityEvent = ({ event, isNavigable = true }: Props) => {
+const ActivityEvent = ({ event, isNavigable = true, parentActivityId }: Props) => {
     if (!event.metadata) {
         return <EventUnknown event={event} />;
     }
@@ -30,7 +31,7 @@ const ActivityEvent = ({ event, isNavigable = true }: Props) => {
         case ACTIVITY_ACTIONS.EXPENSE_UPDATED:
         case ACTIVITY_ACTIONS.EXPENSE_REVERSED: {
             const expenseCard = <EventExpense event={event} />;
-            const activityId = event.parentActivityId ?? event.id;
+            const activityId = parentActivityId ?? event.parentActivityId ?? event.id;
 
             return isNavigable &&
                 (event.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ||
@@ -55,7 +56,7 @@ const ActivityEvent = ({ event, isNavigable = true }: Props) => {
             return isNavigable &&
                 event.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED ? (
                 <ActivityEventLink
-                    to={buildActivitySubeventsRoute(event.id)}
+                    to={buildActivitySubeventsRoute(parentActivityId ?? event.id)}
                     unsetStyles
                 >
                     {settlementCard}
