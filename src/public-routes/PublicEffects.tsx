@@ -1,12 +1,14 @@
 import { useEffect } from 'react';
+import { Toaster, toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
 import * as Sentry from '@sentry/react';
 
-import { LS_KEY_LOCALE } from 'constants/localstorage';
-import { LocalStorage } from 'helpers/localStorage';
+import { DEFAULT_LOCALE } from 'constants/locales';
+import { resolveBrowserLocale } from 'helpers/locale';
+import { isPublicLocaleSuggestionSuppressed, suppressPublicLocaleSuggestion } from 'helpers/publicLocaleSuggestion';
 import { getPreferredModeRoute } from 'helpers/routes';
-import { getRootLocaleRedirect, selectRootLocale } from 'helpers/publicRoutes';
+import { getPublicPath } from 'helpers/publicRoutes';
 import { useCheckOnlineStatus, useCheckPwa } from 'hooks/pwaHooks';
 import { useAuthToasts } from 'hooks/useAuthToasts';
 import { updateSeoMetadata } from 'hooks/seoMetadata';
@@ -49,38 +51,41 @@ const PublicEffects = ({ route }: { route: PublicRoute }) => {
     }, [i18n.resolvedLanguage, route.metaKey, route.path, t]);
 
     useEffect(() => {
-        if (!isAuthResolved || route.page !== 'home') {
+        if (isAuthResolved && isLoggedIn && isUserFetched && route.page === 'home') {
+            // Existing authenticated app routing remains unchanged.
+            window.location.replace(
+                getPreferredModeRoute(canAccessSolo && (settings?.soloModeByDefault ?? false)),
+            );
+        }
+    }, [canAccessSolo, isAuthResolved, isLoggedIn, isUserFetched, route.page, settings?.soloModeByDefault]);
+
+    useEffect(() => {
+        if (!isAuthResolved || isLoggedIn || route.locale !== DEFAULT_LOCALE) {
             return;
         }
-        if (isLoggedIn) {
-            if (isUserFetched) {
-                window.location.replace(
-                    getPreferredModeRoute(canAccessSolo && (settings?.soloModeByDefault ?? false)),
-                );
-            }
+        const suggestedLocale = resolveBrowserLocale();
+        if (suggestedLocale === DEFAULT_LOCALE || isPublicLocaleSuggestionSuppressed()) {
             return;
         }
-        // Locale preference navigation is client-only and applies solely to anonymous exact root.
-        if (window.location.pathname !== '/') {
-            return;
-        }
-        const params = new URLSearchParams(window.location.search);
-        const stored = LocalStorage.get(LS_KEY_LOCALE, '');
-        const browserLanguages = navigator.languages?.length
-            ? navigator.languages
-            : [navigator.language];
-        const locale = selectRootLocale(params.get('lang'), stored || null, browserLanguages);
-        const destination = getRootLocaleRedirect(
-            locale, window.location.search, window.location.hash,
-        );
-        if (destination) {
-            window.location.replace(destination);
-        }
-    }, [
-        canAccessSolo, isAuthResolved, isLoggedIn, isUserFetched,
-        route.locale, route.page, settings?.soloModeByDefault,
-    ]);
-    return null;
+        // Suppress before emitting: revisiting any English page must never re-offer.
+        suppressPublicLocaleSuggestion();
+        const translate = i18n.getFixedT(suggestedLocale, 'toasts');
+        toast.message(translate('public.languageSuggestion'), {
+            id: 'public-locale-suggestion',
+            duration: Infinity,
+            dismissible: true,
+            action: {
+                label: translate('public.languageSuggestionAction'),
+                onClick: () => {
+                    suppressPublicLocaleSuggestion();
+                    window.location.assign(getPublicPath(route.page, suggestedLocale));
+                },
+            },
+            onDismiss: suppressPublicLocaleSuggestion,
+        });
+    }, [i18n, isAuthResolved, isLoggedIn, route.locale, route.page]);
+
+    return <Toaster closeButton richColors theme="system" position="bottom-left" />;
 };
 
 export { PublicEffects };

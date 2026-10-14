@@ -4,6 +4,7 @@ import { Flex, Link } from '@radix-ui/themes';
 
 import { PUBLIC_ROUTE_ENTRIES } from 'constants/publicRouteManifest';
 import { getPublicPath } from 'helpers/publicRoutes';
+import { suppressPublicLocaleSuggestion } from 'helpers/publicLocaleSuggestion';
 import type { PublicRoute } from 'types/publicRoutes';
 
 const PublicLanguageLinks = ({ route }: { route: PublicRoute }) => {
@@ -15,6 +16,7 @@ const PublicLanguageLinks = ({ route }: { route: PublicRoute }) => {
                 .map(item => (
                     <Link
                         href={getPublicPath(item.page, item.locale)}
+                        onClick={suppressPublicLocaleSuggestion}
                         key={item.locale}
                         lang={item.locale}
                         size="2"

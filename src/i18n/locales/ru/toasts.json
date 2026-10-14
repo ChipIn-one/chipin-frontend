@@ -55,5 +55,9 @@
   },
   "settlement": {
     "created": "Платеж успешно записан!"
+  },
+  "public": {
+      "languageSuggestion": "ChipIn доступен на русском языке",
+      "languageSuggestionAction": "Перейти на русский"
   }
 }

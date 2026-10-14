@@ -7,9 +7,8 @@ import {
     getPublicCanonical,
     getPublicPath,
     getPublicRoute,
-    getRootLocaleRedirect,
     PUBLIC_ROUTE_ENTRIES,
-    selectRootLocale,
+    resolveRegistrationLocale,
 } from './publicRoutes';
 
 test('public manifest is the unique, indexable set of three pages in five locales', () => {
@@ -37,28 +36,20 @@ test('equivalent trailing-slash forms hydrate the same canonical public route', 
     expect(getPublicRoute('/dashboard/')).toBeNull();
 });
 
-test('explicit URL, manual locale, browser and English fallback are deterministic', () => {
-    expect(selectRootLocale('en', 'ru', ['pt-PT'])).toBe('en');
-    expect(selectRootLocale('es-MX', 'ru', ['pt-PT'])).toBe('es');
-    expect(selectRootLocale(null, 'pt-PT', ['ru'])).toBe('pt-PT');
-    expect(selectRootLocale(null, null, ['ja-JP', 'pt-AO'])).toBe('pt-BR');
-    expect(selectRootLocale(null, null, ['ja-JP'])).toBe('en');
-});
-
-test('redirect strips private and unknown query fields; does not bounce for English', () => {
-    expect(getRootLocaleRedirect('en', '?lang=ru', '')).toBeNull();
-    expect(getRootLocaleRedirect(
-        'ru',
-        '?lang=ru&code=oauth-secret&inviteToken=secret&utm_source=google&utm_campaign=ok',
-        '#features',
-    )).toBe('/ru/?utm_source=google&utm_campaign=ok#features');
-    expect(getRootLocaleRedirect('es', '?utm_source=%2Fsecret', '#invalid/fragment')).toBe('/es/');
+test('registration language is selected from localized URL, then browser, then English', () => {
+    expect(resolveRegistrationLocale('/ru/privacy', ['en-US'])).toBe('ru');
+    expect(resolveRegistrationLocale('/pt-pt/', ['ru-RU'])).toBe('pt-PT');
+    expect(resolveRegistrationLocale('/es/', ['pt-BR'])).toBe('es');
+    expect(resolveRegistrationLocale('/', ['ru-RU'])).toBe('ru');
+    expect(resolveRegistrationLocale('/privacy', ['pt-BR'])).toBe('pt-BR');
+    expect(resolveRegistrationLocale('/', ['ja-JP'])).toBe('en');
+    expect(resolveRegistrationLocale('/dashboard', ['es-ES'])).toBe('es');
 });
 
 test('canonical home URL and locale fallback reuse shared policy constants', () => {
     expect(DEFAULT_LOCALE).toBe('en');
     expect(getPublicCanonical(getPublicRoute('/')!)).toBe(HOME_CANONICAL_URL);
-    expect(selectRootLocale(null, null, [])).toBe(DEFAULT_LOCALE);
+    expect(resolveRegistrationLocale('/', [])).toBe(DEFAULT_LOCALE);
     expect(PUBLIC_ROUTE_ENTRIES.map(route => getPublicCanonical(route))).toEqual(
         PUBLIC_ROUTE_ENTRIES.map(route => HOME_CANONICAL_URL.slice(0, -1) + route.path),
     );

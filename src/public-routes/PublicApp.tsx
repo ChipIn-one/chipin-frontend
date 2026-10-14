@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from 'react';
 import { I18nextProvider } from 'react-i18next';
 import { BrowserRouter, MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
@@ -5,7 +6,7 @@ import type { i18n as I18nInstance } from 'i18next';
 
 import { Theme } from '@radix-ui/themes';
 
-import { lightThemeStyled } from 'constants/styled-themes';
+import { darkThemeStyled, lightThemeStyled } from 'constants/styled-themes';
 import type { PublicRoute } from 'types/publicRoutes';
 
 import { ModalOverlayGlobalStyles } from 'components/modals/components';
@@ -18,7 +19,24 @@ interface PublicAppProps {
     server?: boolean;
 }
 
+const getSystemDark = (): boolean =>
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+const subscribeToSystemTheme = (onChange: () => void): (() => void) => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+        return () => undefined;
+    }
+    const preference = window.matchMedia('(prefers-color-scheme: dark)');
+    preference.addEventListener('change', onChange);
+    return () => preference.removeEventListener('change', onChange);
+};
+
+// The server snapshot matches the first hydration render; OS preference takes
+// effect immediately after hydration, without changing authenticated theme state.
 const PublicApp = ({ route, i18nInstance, server = false }: PublicAppProps) => {
+    const isDark = useSyncExternalStore(subscribeToSystemTheme, getSystemDark, () => false);
     const routerContent = server ? (
         <MemoryRouter initialEntries={[route.path]}>
             <PublicContent initialRoute={route} />
@@ -31,10 +49,10 @@ const PublicApp = ({ route, i18nInstance, server = false }: PublicAppProps) => {
 
     return (
         <I18nextProvider i18n={i18nInstance}>
-            <ThemeProvider theme={lightThemeStyled}>
+            <ThemeProvider theme={isDark ? darkThemeStyled : lightThemeStyled}>
                 <ModalOverlayGlobalStyles />
                 <Theme
-                    appearance="light"
+                    appearance={isDark ? 'dark' : 'light'}
                     accentColor="grass"
                     grayColor="olive"
                     radius="large"

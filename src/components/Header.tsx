@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 
-import * as Sentry from '@sentry/react';
 import { Box, Button, Container, Flex } from '@radix-ui/themes';
 
 import { PROJECT_NAME } from 'constants/chipin';
@@ -12,7 +11,8 @@ import { PUBLIC_HOME_PAGE } from 'constants/publicRouteManifest';
 import { ROUTES } from 'constants/routes';
 import { getPublicPath, getPublicRoute } from 'helpers/publicRoutes';
 import { themeColor } from 'helpers/colors';
-import { matchLocale, saveLocalePreference, type SupportedLocale } from 'helpers/locale';
+import { matchLocale, type SupportedLocale } from 'helpers/locale';
+import { suppressPublicLocaleSuggestion } from 'helpers/publicLocaleSuggestion';
 import { getHasDesktopSidebar, getPreferredModeRoute } from 'helpers/routes';
 
 import { NavButton } from 'basics/buttons';
@@ -43,20 +43,14 @@ const Header = () => {
 
     const currentPublicRoute = getPublicRoute(location.pathname);
     const onLandingLanguageChange = (locale: SupportedLocale) => {
-        return i18n
-            .changeLanguage(locale)
-            .then(() => {
-                saveLocalePreference(locale);
-                if (currentPublicRoute) {
-                    const nextPath = getPublicPath(currentPublicRoute.page, locale);
-                    if (location.pathname !== nextPath) {
-                        window.location.assign(nextPath);
-                    }
-                }
-            })
-            .catch((error: unknown) => {
-                Sentry.captureException(error);
-            });
+        if (!currentPublicRoute) {
+            return;
+        }
+        suppressPublicLocaleSuggestion();
+        const nextPath = getPublicPath(currentPublicRoute.page, locale);
+        if (location.pathname !== nextPath) {
+            window.location.assign(nextPath);
+        }
     };
 
     if (!isAuthResolved) {
