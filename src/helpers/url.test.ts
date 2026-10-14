@@ -28,7 +28,6 @@ test('preserves the exact protected route including search and hash', () => {
     expect(getReturnToFromSocialAuthUrl()).toBe('/group/123?tab=members#balances');
 });
 
-
 test('builds personal friend invite links on the canonical route', () => {
     expect(buildFriendInviteLink({ inviteToken: 'friend-token' })).toContain(
         '/friends/join/friend-token',

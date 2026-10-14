@@ -3,7 +3,7 @@ import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import { Theme } from '@radix-ui/themes';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import type { UserSettings } from 'api/chipin.types';
@@ -11,6 +11,7 @@ import { PROJECT_NAME } from 'constants/chipin';
 import { LS_KEY_LOCALE } from 'constants/localstorage';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { LocalStorage } from 'helpers/localStorage';
+import { isPublicLocaleSuggestionSuppressed } from 'helpers/publicLocaleSuggestion';
 import i18n from 'i18n';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
@@ -52,6 +53,7 @@ beforeEach(() => {
     });
     useDashboardStore.setState({ appMode: APP_MODES.SOLO });
     LocalStorage.remove(LS_KEY_LOCALE);
+    window.sessionStorage.clear();
 
     return i18n.changeLanguage('en');
 });
@@ -172,7 +174,7 @@ test('hides the dev menu after authentication ends even with a cached admin role
 });
 
 
-test('changes and persists the landing page language', () => {
+test('manual public language selection does not change SSG content or persist language', () => {
     const interaction = userEvent.setup();
     useAuthStore.setState({ status: 'unauthenticated' });
 
@@ -189,12 +191,11 @@ test('changes and persists the landing page language', () => {
     return interaction
         .click(screen.getByRole('button', { name: 'Interface language' }))
         .then(() => interaction.click(screen.getByRole('button', { name: 'Russian' })))
-        .then(() =>
-            waitFor(() => {
-                expect(screen.getByText('Возможности')).toBeTruthy();
-                expect(LocalStorage.get(LS_KEY_LOCALE, '')).toBe('ru');
-            }),
-        );
+        .then(() => {
+            expect(LocalStorage.get(LS_KEY_LOCALE, '')).toBe('');
+            expect(i18n.language).toBe('en');
+            expect(isPublicLocaleSuggestionSuppressed()).toBe(true);
+        });
 });
 
 test('does not show a separate authenticated avatar shortcut in the global header', () => {

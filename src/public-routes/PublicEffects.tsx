@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Toaster, toast } from 'sonner';
+import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 
 import * as Sentry from '@sentry/react';
@@ -85,7 +85,7 @@ const PublicEffects = ({ route }: { route: PublicRoute }) => {
         });
     }, [i18n, isAuthResolved, isLoggedIn, route.locale, route.page]);
 
-    return <Toaster closeButton richColors theme="system" position="bottom-left" />;
+    return null;
 };
 
 export { PublicEffects };

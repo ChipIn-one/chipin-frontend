@@ -1,9 +1,9 @@
+import { DEFAULT_LOCALE } from 'constants/locales';
 import {
     LOCALE_PREFIX,
     PUBLIC_PAGES,
     PUBLIC_ROUTE_ENTRIES,
 } from 'constants/publicRouteManifest';
-import { DEFAULT_LOCALE } from 'constants/locales';
 import { HOME_CANONICAL_URL } from 'constants/seo';
 import { resolveBrowserLocale } from 'helpers/locale';
 import type { PublicLocale, PublicPage, PublicRoute } from 'types/publicRoutes';

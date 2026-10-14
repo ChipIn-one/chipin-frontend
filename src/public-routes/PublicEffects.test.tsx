@@ -9,7 +9,7 @@ import { useScrollToTop } from 'hooks/useScrollToTop';
 
 import { PublicEffects } from './PublicEffects';
 
-vi.mock('sonner', () => ({ Toaster: () => null, toast: { message: vi.fn() } }));
+vi.mock('sonner', () => ({ toast: { message: vi.fn() } }));
 vi.mock('hooks/useAuthToasts', () => ({ useAuthToasts: vi.fn() }));
 vi.mock('hooks/useScrollToTop', () => ({ useScrollToTop: vi.fn() }));
 vi.mock('hooks/useCheckSignIn', () => ({ useCheckSignIn: vi.fn() }));

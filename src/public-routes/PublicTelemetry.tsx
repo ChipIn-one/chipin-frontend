@@ -29,7 +29,7 @@ const PublicTelemetry = () => {
             <SpeedInsights beforeSend={sanitizeTelemetryEvent} />
             {/* Public routes use the same Sonner host needed by PWA updates. */}
             <Toaster
-                theme="light"
+                theme="system"
                 richColors
                 closeButton
                 position="bottom-left"
