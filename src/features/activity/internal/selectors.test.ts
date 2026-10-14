@@ -166,6 +166,10 @@ test('ACT-021 uses original activity date rather than later edit or expense busi
         id: 'later-edit', amount: 75, payerId: 'friend', shareAmount: 75,
         action: ACTIVITY_ACTIONS.EXPENSE_UPDATED, createdAt: editDate,
     });
+    if (updated.action !== ACTIVITY_ACTIONS.EXPENSE_UPDATED || !updated.metadata) {
+        throw new Error('Test requires current edited expense metadata');
+    }
+
     const withBusinessDate = {
         ...updated,
         metadata: {
@@ -261,6 +265,10 @@ test('ACT-007 handles missing metadata and missing shares without inventing debt
         ...expense,
         metadata: null,
     } satisfies AppEvent;
+    if (expense.action !== ACTIVITY_ACTIONS.EXPENSE_CREATED || !expense.metadata) {
+        throw new Error('Test requires a created expense with metadata');
+    }
+
     const noShares = {
         ...expense,
         id: 'no-shares',
