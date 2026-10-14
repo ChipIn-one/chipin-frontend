@@ -11,9 +11,14 @@ interface DailyBalance extends BalanceEntry {
 const getUserExpenseBalanceChange = (
     metadata: ExpenseActivityMetadata,
     userId: string,
-): number => {
+): number | undefined => {
+    // A missing share snapshot cannot establish how much the payer funded for others.
+    if (!metadata.shares) {
+        return undefined;
+    }
+
     const userShareAmount =
-        metadata.shares?.find(share => share.userId === userId)?.shareAmount ?? 0;
+        metadata.shares.find(share => share.userId === userId)?.shareAmount ?? 0;
 
     if (metadata.payerId === userId) {
         return metadata.amount - userShareAmount;

@@ -122,3 +122,26 @@ test('ACT-020 still renders individual flat activity events on their own dates',
         .toBe(String(DAY_B));
     expect(screen.getByText('flat-edit').getAttribute('data-parent-id')).toBeNull();
 });
+
+test('ACT-022/023 keeps pagination controls mounted after an all-reversed preview page', () => {
+    const created = expense('reversed-parent', 50);
+    const reversed = {
+        ...created,
+        id: 'reversed-child',
+        action: ACTIVITY_ACTIONS.EXPENSE_REVERSED,
+    } satisfies AppEvent;
+    const items = getActivityPreviewEvents([{ parent: created, lastEvent: reversed }]);
+
+    expect(items).toHaveLength(0);
+    render(
+        <ActivityEventsList
+            events={items}
+            emptyState={<div data-testid="empty-preview-state" />}
+        >
+            <div data-testid="pagination-sentinel" />
+        </ActivityEventsList>,
+    );
+
+    expect(screen.getByTestId('empty-preview-state')).not.toBeNull();
+    expect(screen.getByTestId('pagination-sentinel')).not.toBeNull();
+});

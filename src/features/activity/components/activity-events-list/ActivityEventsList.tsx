@@ -36,7 +36,8 @@ const ActivityEventsList = ({
     );
 
     if (events.length === 0) {
-        return emptyState;
+        // Pagination/retry controls must remain mounted when a preview page filters to empty.
+        return <>{emptyState}{children}</>;
     }
 
     return (

@@ -319,3 +319,31 @@ test('ACT-020 leaves flat history event semantics intact', () => {
         [getActivityDateKey(CREATED_AT)]: [{ currency: 'USD', netBalance: -10 }],
     });
 });
+
+test('ACT-007 does not count a missing edited payer share snapshot as full money lent', () => {
+    const parent = createExpenseEvent({
+        id: 'original-payer', amount: 6000, payerId: CURRENT_USER_ID, shareAmount: 2000,
+    });
+    const updated = createExpenseEvent({
+        id: 'edited-payer', amount: 6000, payerId: CURRENT_USER_ID, shareAmount: 2000,
+        action: ACTIVITY_ACTIONS.EXPENSE_UPDATED,
+    });
+    if (updated.action !== ACTIVITY_ACTIONS.EXPENSE_UPDATED || !updated.metadata) {
+        throw new Error('Test requires edited expense metadata');
+    }
+
+    const missingShares = {
+        ...updated,
+        metadata: { ...updated.metadata, shares: undefined },
+    } satisfies AppEvent;
+    const unchangedDebt = createExpenseEvent({
+        id: 'unchanged-debt', amount: 1000, payerId: 'friend', shareAmount: 1000,
+    });
+
+    expect(getDailyExpenseSummary([
+        createPreview(parent, missingShares),
+        createPreview(unchangedDebt),
+    ], CURRENT_USER_ID)).toEqual({
+        [getActivityDateKey(CREATED_AT)]: [{ currency: 'USD', netBalance: -1000 }],
+    });
+});
