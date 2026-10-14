@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 
@@ -17,29 +17,23 @@ const GroupPage = () => {
         selectedGroup,
         fetchSetGroupById,
         fetchMoreGroupActivity,
-        setSelectedGroup,
         isGroupDataLoading,
         isGroupActivityNextPageLoading,
         isGroupActivityNextPageError,
-        isGroupListFetched,
+        isGroupDataFetched,
     } = useConnect();
     const { groupId } = useParams<{ groupId: string }>();
     const routeGroup = selectedGroup?.id === groupId ? selectedGroup : null;
+    const requestedRouteId = useRef<string | null>(null);
 
     useEffect(() => {
-        if (!groupId) {
+        if (!groupId || requestedRouteId.current === groupId) {
             return;
         }
 
-        const cachedGroup = groups.find(group => group.id === groupId);
-
-        if (cachedGroup) {
-            setSelectedGroup(cachedGroup);
-            return;
-        }
-
-        fetchSetGroupById(groupId);
-    }, [fetchSetGroupById, groupId, groups, setSelectedGroup]);
+        requestedRouteId.current = groupId;
+        fetchSetGroupById(groupId, true);
+    }, [fetchSetGroupById, groupId]);
 
     if (!groupId) {
         return (
@@ -52,7 +46,7 @@ const GroupPage = () => {
     }
 
     if (!routeGroup) {
-        if (!isGroupListFetched || isGroupDataLoading) {
+        if (!isGroupDataFetched || isGroupDataLoading) {
             return null;
         }
 

@@ -143,6 +143,8 @@
                 "pet_items": "Pet Items"
             },
             "currentUser": "You",
+            "directSelfOnlyWarning": "Assign a share to your friend.",
+            "directZeroDebtWarning": "This expense creates no debt. Assign a positive amount to the person who did not pay.",
             "splitHint": "Split equally among the group.",
             "noMembers": "No group members available yet.",
             "tabs": {

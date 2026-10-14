@@ -4,9 +4,9 @@ import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupNextPageError } from 'store/errorsSelectors';
 import { useErrorsStore } from 'store/errorsStore';
 import {
+    selectGroupDataFetched,
     selectGroupDataLoading,
     selectGroupNextPageLoading,
-    selectGroupListFetched,
 } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
@@ -17,14 +17,13 @@ const useConnect = () => {
             selectedGroup: state.selectedGroup,
             fetchSetGroupById: state.fetchSetGroupById,
             fetchMoreGroupActivity: state.fetchMoreGroupActivity,
-            setSelectedGroup: state.setSelectedGroup,
         })),
     );
     const loadingState = useLoadingStore(
         useShallow(state => ({
             isGroupDataLoading: selectGroupDataLoading(state),
             isGroupActivityNextPageLoading: selectGroupNextPageLoading(state),
-            isGroupListFetched: selectGroupListFetched(state),
+            isGroupDataFetched: selectGroupDataFetched(state),
         })),
     );
     const errorsState = useErrorsStore(
