@@ -292,13 +292,93 @@ const isDirectExpenseValid = (
     );
 };
 
+
+/**
+ * Mirrors the backend's largest-remainder allocation at four decimal places.
+ * In a two-participant split, equal remainders go to the first participant.
+ */
+const getDirectNonPayerUnits = (
+    state: ExpenseModalStore,
+    split: ReturnType<typeof getSplit>,
+    payerId: string,
+): number | null => {
+    if (
+        state.targetMode !== 'friends' ||
+        split.totalAmount <= 0 ||
+        !split.isValid ||
+        !isDirectExpenseValid(state, split, payerId)
+    ) {
+        return null;
+    }
+
+    const [first, second] = split.includedUsers;
+
+    if (!first || !second) {
+        return null;
+    }
+
+    const nonPayerId = payerId === first.id ? second.id : first.id;
+
+    if (state.splitMode === EXPENSE_SPLIT_MODES.AMOUNTS) {
+        const amount = Number(state.amountShares[nonPayerId] ?? 0);
+        return Number.isFinite(amount) && amount >= 0
+            ? Math.round(amount * 10_000)
+            : null;
+    }
+
+    const getWeight = (userId: string): number => {
+        switch (state.splitMode) {
+            case EXPENSE_SPLIT_MODES.EQUAL:
+                return 1;
+            case EXPENSE_SPLIT_MODES.PERCENT:
+                return Number(state.percentShares[userId] ?? 0);
+            case EXPENSE_SPLIT_MODES.SHARES:
+                return Number(state.shareWeights[userId] ?? 0);
+            default:
+                return 0;
+        }
+    };
+
+    const firstWeight = getWeight(first.id);
+    const secondWeight = getWeight(second.id);
+    const totalWeight = firstWeight + secondWeight;
+    const totalUnits = Math.round(split.totalAmount * 10_000);
+
+    if (
+        !Number.isSafeInteger(totalUnits) ||
+        !Number.isFinite(totalWeight) ||
+        !Number.isFinite(firstWeight) ||
+        !Number.isFinite(secondWeight) ||
+        firstWeight < 0 ||
+        secondWeight < 0 ||
+        totalWeight <= 0
+    ) {
+        return null;
+    }
+
+    const firstRawUnits = (totalUnits * firstWeight) / totalWeight;
+    const secondRawUnits = (totalUnits * secondWeight) / totalWeight;
+    const firstFloor = Math.floor(firstRawUnits);
+    const secondFloor = Math.floor(secondRawUnits);
+    const leftover = totalUnits - firstFloor - secondFloor;
+    const firstUnits =
+        firstFloor +
+        (leftover > 0 && firstRawUnits - firstFloor >= secondRawUnits - secondFloor
+            ? 1
+            : 0);
+
+    return payerId === first.id ? totalUnits - firstUnits : firstUnits;
+};
+
 const getSubmitState = (state: ExpenseModalStore) => {
     const split = getSplit(state);
     const payerId = getPayerId(
         state,
         state.targetMode === 'friends' ? split.includedUsers : split.users,
     );
+    const hasNoDebt = getDirectNonPayerUnits(state, split, payerId) === 0;
     const isDisabled =
+        hasNoDebt ||
         split.totalAmount <= 0 ||
         !payerId ||
         (state.targetMode === 'group' && !state.groupId) ||
@@ -308,7 +388,17 @@ const getSubmitState = (state: ExpenseModalStore) => {
         split.includedUsers.length === 0 ||
         !split.isValid;
 
-    return { isDisabled, payerId, split };
+    return { isDisabled, hasNoDebt, payerId, split };
+};
+
+export const selectShouldShowSelfOnlyCallout = (state: ExpenseModalStore): boolean => {
+    const { hasNoDebt, payerId } = getSubmitState(state);
+    return hasNoDebt && payerId === state.source.currentUser?.id;
+};
+
+export const selectShouldShowOtherDirectZeroDebtWarning = (state: ExpenseModalStore): boolean => {
+    const { hasNoDebt, payerId } = getSubmitState(state);
+    return hasNoDebt && payerId !== state.source.currentUser?.id;
 };
 
 export const selectIsSubmitDisabled = (state: ExpenseModalStore) => {

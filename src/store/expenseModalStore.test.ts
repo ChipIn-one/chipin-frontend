@@ -6,6 +6,8 @@ import {
     selectExpensePayload,
     selectIncludedUsers,
     selectIsSubmitDisabled,
+    selectShouldShowSelfOnlyCallout,
+    selectShouldShowOtherDirectZeroDebtWarning,
     selectIsUserLocked,
     selectPayerId,
     selectSplitSummary,
@@ -419,4 +421,100 @@ test('disables Save for an unchanged valid edit', () => {
     });
 
     expect(selectIsSubmitDisabled(useExpenseModalStore.getState())).toBe(true);
+});
+
+const initializeDirectZeroDebtTest = () => {
+    useExpenseModalStore.getState().initialize({
+        context: 'friends',
+        currentUser,
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
+        groups: [],
+        knownFriends: [friend],
+        preferredFriendId: friend.id,
+    });
+    useExpenseModalStore.getState().setAmount('10');
+};
+
+test.each([
+    { mode: EXPENSE_SPLIT_MODES.SHARES, payer: '1', other: '0', validPayer: '0', validOther: '1', wire: 'SHARES' },
+    { mode: EXPENSE_SPLIT_MODES.PERCENT, payer: '100', other: '0', validPayer: '0', validOther: '100', wire: 'PERCENTAGE' },
+    { mode: EXPENSE_SPLIT_MODES.AMOUNTS, payer: '10', other: '0', validPayer: '0', validOther: '10', wire: 'EXACT' },
+])('rejects self-paid zero-debt direct $wire splits and accepts positive counterparty amounts', ({ mode, payer, other, validPayer, validOther, wire }) => {
+    initializeDirectZeroDebtTest();
+    const store = useExpenseModalStore.getState();
+    store.setSplitMode(mode);
+    store.setSplitValue(currentUser.id, payer);
+    store.setSplitValue(friend.id, other);
+
+    expect(selectIsSubmitDisabled(useExpenseModalStore.getState())).toBe(true);
+    expect(selectExpensePayload(useExpenseModalStore.getState())).toBeNull();
+    expect(selectShouldShowSelfOnlyCallout(useExpenseModalStore.getState())).toBe(true);
+
+    store.setSplitValue(currentUser.id, validPayer);
+    store.setSplitValue(friend.id, validOther);
+
+    expect(selectIsSubmitDisabled(useExpenseModalStore.getState())).toBe(false);
+    expect(selectShouldShowSelfOnlyCallout(useExpenseModalStore.getState())).toBe(false);
+    expect(selectExpensePayload(useExpenseModalStore.getState())?.sharingMode.type).toBe(wire);
+});
+
+test('rejects zero non-payer share when the friend paid, without showing the self-only Callout', () => {
+    initializeDirectZeroDebtTest();
+    const store = useExpenseModalStore.getState();
+    store.setPaidById(friend.id);
+    store.setSplitMode(EXPENSE_SPLIT_MODES.SHARES);
+    store.setSplitValue(currentUser.id, '0');
+    store.setSplitValue(friend.id, '1');
+
+    expect(selectIsSubmitDisabled(useExpenseModalStore.getState())).toBe(true);
+    expect(selectShouldShowSelfOnlyCallout(useExpenseModalStore.getState())).toBe(false);
+    expect(selectShouldShowOtherDirectZeroDebtWarning(useExpenseModalStore.getState())).toBe(true);
+
+    store.setSplitValue(currentUser.id, '1');
+    store.setSplitValue(friend.id, '0');
+
+    expect(selectIsSubmitDisabled(useExpenseModalStore.getState())).toBe(false);
+    expect(selectShouldShowOtherDirectZeroDebtWarning(useExpenseModalStore.getState())).toBe(false);
+});
+
+test('rounds tiny direct Shares allocations at four decimal places', () => {
+    initializeDirectZeroDebtTest();
+    const store = useExpenseModalStore.getState();
+    store.setAmount('0.0001');
+    store.setSplitMode(EXPENSE_SPLIT_MODES.SHARES);
+    store.setSplitValue(currentUser.id, '1000');
+    store.setSplitValue(friend.id, '1');
+
+    expect(selectIsSubmitDisabled(useExpenseModalStore.getState())).toBe(true);
+    expect(selectShouldShowSelfOnlyCallout(useExpenseModalStore.getState())).toBe(true);
+
+    store.setSplitValue(currentUser.id, '0');
+    expect(selectIsSubmitDisabled(useExpenseModalStore.getState())).toBe(false);
+});
+
+test('keeps equal direct splits and group expenses with zero-share members valid', () => {
+    initializeDirectZeroDebtTest();
+    expect(selectIsSubmitDisabled(useExpenseModalStore.getState())).toBe(false);
+    expect(selectExpensePayload(useExpenseModalStore.getState())?.sharingMode.type).toBe('AUTO');
+
+    const store = useExpenseModalStore.getState();
+    store.initialize({
+        context: 'group',
+        currentUser,
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        skipCategory: false,
+        groups: [{ id: 'group-1', members: [currentUser, groupMember] }],
+        knownFriends: [],
+        defaultGroupId: 'group-1',
+    });
+    store.setAmount('10');
+    store.setSplitMode(EXPENSE_SPLIT_MODES.SHARES);
+    store.setSplitValue(currentUser.id, '1');
+    store.setSplitValue(groupMember.id, '0');
+
+    expect(selectIsSubmitDisabled(useExpenseModalStore.getState())).toBe(false);
+    expect(selectShouldShowSelfOnlyCallout(useExpenseModalStore.getState())).toBe(false);
 });

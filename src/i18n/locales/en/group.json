@@ -143,6 +143,8 @@
                 "pet_items": "Pet Items"
             },
             "currentUser": "You",
+            "directSelfOnlyWarning": "You can't pay yourself for a direct expense. Assign part of the amount to your friend.",
+            "directZeroDebtWarning": "This expense creates no debt. Assign a positive amount to the person who did not pay.",
             "splitHint": "Split equally among the group.",
             "noMembers": "No group members available yet.",
             "tabs": {

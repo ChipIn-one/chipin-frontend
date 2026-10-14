@@ -1,7 +1,7 @@
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
 import { lightThemeStyled } from 'constants/styled-themes';
@@ -121,4 +121,47 @@ test('shows immutable P2P participants and keeps payer editing in edit mode', ()
     expect(screen.getByText('Paid by')).not.toBeNull();
     expect(screen.queryByText('Friends', { selector: '[data-state]' })).toBeNull();
     expect(screen.queryByText('Group', { selector: '[data-state]' })).toBeNull();
+});
+
+test('shows the self-only Radix Callout below payer only for a self-paid direct expense', () => {
+    useExpenseModalStore.getState().initializeEdit(getEditInitialization('friends'));
+    renderTargetSection();
+
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    act(() => {
+        const store = useExpenseModalStore.getState();
+        store.setSplitMode(EXPENSE_SPLIT_MODES.SHARES);
+        store.setSplitValue(currentUser.id, '1');
+        store.setSplitValue(friend.id, '0');
+    });
+
+    expect(screen.getByRole('alert').textContent).toContain("You can't pay yourself");
+    expect(screen.getByRole('alert').parentElement?.textContent).toContain('Paid by');
+
+    act(() => {
+        useExpenseModalStore.getState().setPaidById(friend.id);
+    });
+
+    expect(screen.queryByRole('alert')).toBeNull();
+
+    act(() => {
+        useExpenseModalStore.getState().setPaidById(currentUser.id);
+        useExpenseModalStore.getState().setSplitValue(friend.id, '1');
+    });
+
+    expect(screen.queryByRole('alert')).toBeNull();
+});
+
+test('never shows the self-only Callout for a group expense', () => {
+    useExpenseModalStore.getState().initializeEdit(getEditInitialization('group'));
+    act(() => {
+        const store = useExpenseModalStore.getState();
+        store.setSplitMode(EXPENSE_SPLIT_MODES.SHARES);
+        store.setSplitValue(currentUser.id, '1');
+        store.setSplitValue(groupMember.id, '0');
+    });
+    renderTargetSection();
+
+    expect(screen.queryByRole('alert')).toBeNull();
 });
