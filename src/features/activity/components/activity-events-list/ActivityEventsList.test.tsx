@@ -125,6 +125,10 @@ test('ACT-020 still renders individual flat activity events on their own dates',
 
 test('ACT-022/023 keeps pagination controls mounted after an all-reversed preview page', () => {
     const created = expense('reversed-parent', 50);
+    if (created.action !== ACTIVITY_ACTIONS.EXPENSE_CREATED || !created.metadata) {
+        throw new Error('Test requires created expense metadata');
+    }
+
     const reversed = {
         ...created,
         id: 'reversed-child',
