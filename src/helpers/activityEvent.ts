@@ -50,19 +50,26 @@ export const isActivityPreview = (item: ActivityListItem): item is ActivityFeedI
 export const getActivityPreviewEvents = (
     items: readonly ActivityFeedItem[],
 ): ActivityFeedItem[] => {
-    const seenParents = new Set<string>();
-    const previews: ActivityFeedItem[] = [];
+    const latestByParent = new Map<string, ActivityFeedItem>();
 
     for (const item of items) {
+        const existing = latestByParent.get(item.parent.id);
+        // Parent insertion order is immutable; the highest event seq is current state.
+        if (!existing || item.lastEvent.seq > existing.lastEvent.seq) {
+            latestByParent.set(item.parent.id, item);
+        }
+    }
+
+    const previews: ActivityFeedItem[] = [];
+
+    for (const item of latestByParent.values()) {
         if (
-            seenParents.has(item.parent.id) ||
             item.lastEvent.action === ACTIVITY_ACTIONS.EXPENSE_REVERSED ||
             item.lastEvent.action === ACTIVITY_ACTIONS.SETTLEMENT_REVERSED
         ) {
             continue;
         }
 
-        seenParents.add(item.parent.id);
         previews.push(item);
     }
 

@@ -347,3 +347,28 @@ test('ACT-007 does not count a missing edited payer share snapshot as full money
         [getActivityDateKey(CREATED_AT)]: [{ currency: 'USD', netBalance: -1000 }],
     });
 });
+
+test('ACT-022 removes a previously loaded debt when an overlapping page returns its reversal', () => {
+    const parent = createExpenseEvent({
+        id: 'stale-active-parent', amount: 6000, payerId: 'friend', shareAmount: 6000,
+    });
+    const reversal = createExpenseEvent({
+        id: 'reversal-child', amount: 6000, payerId: 'friend', shareAmount: 6000,
+        action: ACTIVITY_ACTIONS.EXPENSE_REVERSED,
+    });
+    reversal.seq = parent.seq + 1;
+    const unaffected = createExpenseEvent({
+        id: 'unaffected-debt', amount: 1000, payerId: 'friend', shareAmount: 1000,
+    });
+    const loaded = [
+        createPreview(parent),
+        createPreview(unaffected),
+        createPreview(parent, reversal),
+    ];
+    const currentPreviews = getActivityPreviewEvents(loaded);
+
+    expect(currentPreviews).toEqual([createPreview(unaffected)]);
+    expect(getDailyExpenseSummary(currentPreviews, CURRENT_USER_ID)).toEqual({
+        [getActivityDateKey(CREATED_AT)]: [{ currency: 'USD', netBalance: -1000 }],
+    });
+});

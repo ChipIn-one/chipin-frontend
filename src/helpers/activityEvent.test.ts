@@ -140,3 +140,49 @@ describe('activity event helpers', () => {
         });
     });
 });
+
+    test('ACT-022 suppresses an earlier active duplicate when a later page contains its reversal', () => {
+        const parent = expenseCreatedEvent;
+        const reversedChild = {
+            ...expenseReversedEvent,
+            id: 'reversed-child',
+            seq: 5,
+            parentActivityId: parent.id,
+        } satisfies AppEvent;
+        const another = {
+            ...settlementCreatedEvent,
+            id: 'unrelated-parent',
+        } satisfies AppEvent;
+        const original = { parent, lastEvent: parent };
+        const reversed = { parent, lastEvent: reversedChild };
+        const unrelated = { parent: another, lastEvent: another };
+
+        expect(getActivityPreviewEvents([original, unrelated, reversed]))
+            .toEqual([unrelated]);
+        expect(getActivityPreviewEvents([reversed, unrelated, original]))
+            .toEqual([unrelated]);
+    });
+
+    test('ACT-021 keeps parent ordering while selecting the latest duplicate edit', () => {
+        const parent = expenseCreatedEvent;
+        const edited = {
+            ...expenseCreatedEvent,
+            id: 'edited-child',
+            action: ACTIVITY_ACTIONS.EXPENSE_UPDATED,
+            seq: 4,
+            parentActivityId: parent.id,
+        } satisfies AppEvent;
+        const other = {
+            ...settlementCreatedEvent,
+            id: 'other-parent',
+        } satisfies AppEvent;
+
+        expect(getActivityPreviewEvents([
+            { parent, lastEvent: parent },
+            { parent: other, lastEvent: other },
+            { parent, lastEvent: edited },
+        ])).toEqual([
+            { parent, lastEvent: edited },
+            { parent: other, lastEvent: other },
+        ]);
+    });
