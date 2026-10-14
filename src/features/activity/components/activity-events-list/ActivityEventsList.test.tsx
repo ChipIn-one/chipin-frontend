@@ -16,7 +16,7 @@ vi.mock('store/users-store', () => ({
 }));
 
 vi.mock('basics/empty-states', () => ({
-    NoActivityEmptyState: () => <div data-testid="empty-state" />,
+    NoActivityEmptyState: () => null,
 }));
 
 vi.mock('../activity-event', () => ({
