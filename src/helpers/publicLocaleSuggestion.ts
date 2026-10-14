@@ -5,12 +5,29 @@ import type { PublicLocale } from 'types/publicRoutes';
 // This flag suppresses a toast; it does not store a public language preference.
 const SESSION_KEY = 'chipin.publicLanguageSuggestionShown';
 
-const isPublicLocaleSuggestionSuppressed = (): boolean =>
-    typeof window === 'undefined' || window.sessionStorage.getItem(SESSION_KEY) === '1';
+// A blocked or full sessionStorage must not break page navigation. Fall back
+// to document-local suppression only when persistence is unavailable.
+let isSuppressedWithoutStorage = false;
+
+const isPublicLocaleSuggestionSuppressed = (): boolean => {
+    if (typeof window === 'undefined') {
+        return true;
+    }
+    try {
+        return window.sessionStorage.getItem(SESSION_KEY) === '1';
+    } catch {
+        return isSuppressedWithoutStorage;
+    }
+};
 
 const suppressPublicLocaleSuggestion = (): void => {
-    if (typeof window !== 'undefined') {
+    if (typeof window === 'undefined') {
+        return;
+    }
+    try {
         window.sessionStorage.setItem(SESSION_KEY, '1');
+    } catch {
+        isSuppressedWithoutStorage = true;
     }
 };
 

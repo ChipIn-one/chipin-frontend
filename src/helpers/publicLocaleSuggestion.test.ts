@@ -1,4 +1,4 @@
-import { beforeEach, expect, test } from 'vitest';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 import {
     getPublicLocaleSuggestionTarget,
@@ -24,4 +24,22 @@ test('persistent toast action follows the current English public path', () => {
     expect(getPublicLocaleSuggestionTarget('/terms', 'pt-PT')).toBe('/pt-pt/terms');
     expect(getPublicLocaleSuggestionTarget('/es/privacy', 'ru')).toBeNull();
     expect(getPublicLocaleSuggestionTarget('/dashboard', 'ru')).toBeNull();
+});
+
+test('unavailable sessionStorage does not break manual language switching', () => {
+    const inaccessibleStorage = {
+        getItem: () => { throw new DOMException('Blocked', 'SecurityError'); },
+        setItem: () => { throw new DOMException('Blocked', 'SecurityError'); },
+    };
+    const storage = vi.spyOn(window, 'sessionStorage', 'get').mockReturnValue(
+        inaccessibleStorage as Storage,
+    );
+    try {
+        expect(() => isPublicLocaleSuggestionSuppressed()).not.toThrow();
+        expect(() => suppressPublicLocaleSuggestion()).not.toThrow();
+        expect(isPublicLocaleSuggestionSuppressed()).toBe(true);
+        expect(getPublicLocaleSuggestionTarget('/privacy', 'ru')).toBe('/ru/privacy');
+    } finally {
+        storage.mockRestore();
+    }
 });
