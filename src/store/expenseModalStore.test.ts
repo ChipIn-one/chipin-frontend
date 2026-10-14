@@ -518,3 +518,32 @@ test('keeps equal direct splits and group expenses with zero-share members valid
     expect(selectIsSubmitDisabled(useExpenseModalStore.getState())).toBe(false);
     expect(selectShouldShowSelfOnlyCallout(useExpenseModalStore.getState())).toBe(false);
 });
+
+test.each([
+    { mode: EXPENSE_SPLIT_MODES.SHARES, all: '1', positive: '1' },
+    { mode: EXPENSE_SPLIT_MODES.PERCENT, all: '100', positive: '50' },
+])('rejects an explicit zero counterparty $mode share for amounts above safe monetary units', ({ mode, all, positive }) => {
+    initializeDirectZeroDebtTest();
+    const store = useExpenseModalStore.getState();
+    store.setAmount('900800000000');
+    store.setSplitMode(mode);
+    store.setSplitValue(currentUser.id, all);
+    store.setSplitValue(friend.id, '0');
+
+    expect(selectIsSubmitDisabled(useExpenseModalStore.getState())).toBe(true);
+    expect(selectExpensePayload(useExpenseModalStore.getState())).toBeNull();
+    expect(selectShouldShowSelfOnlyCallout(useExpenseModalStore.getState())).toBe(true);
+
+    store.setPaidById(friend.id);
+    store.setSplitValue(currentUser.id, '0');
+    store.setSplitValue(friend.id, all);
+    expect(selectIsSubmitDisabled(useExpenseModalStore.getState())).toBe(true);
+    expect(selectShouldShowSelfOnlyCallout(useExpenseModalStore.getState())).toBe(false);
+    expect(selectShouldShowOtherDirectZeroDebtWarning(useExpenseModalStore.getState())).toBe(true);
+
+    store.setSplitValue(currentUser.id, positive);
+    store.setSplitValue(friend.id, positive);
+    expect(selectIsSubmitDisabled(useExpenseModalStore.getState())).toBe(false);
+    expect(selectShouldShowOtherDirectZeroDebtWarning(useExpenseModalStore.getState())).toBe(false);
+    expect(selectExpensePayload(useExpenseModalStore.getState())).not.toBeNull();
+});

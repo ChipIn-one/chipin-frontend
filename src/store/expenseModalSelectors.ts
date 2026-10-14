@@ -342,10 +342,8 @@ const getDirectNonPayerUnits = (
     const firstWeight = getWeight(first.id);
     const secondWeight = getWeight(second.id);
     const totalWeight = firstWeight + secondWeight;
-    const totalUnits = Math.round(split.totalAmount * 10_000);
 
     if (
-        !Number.isSafeInteger(totalUnits) ||
         !Number.isFinite(totalWeight) ||
         !Number.isFinite(firstWeight) ||
         !Number.isFinite(secondWeight) ||
@@ -353,6 +351,20 @@ const getDirectNonPayerUnits = (
         secondWeight < 0 ||
         totalWeight <= 0
     ) {
+        return null;
+    }
+
+    // A zero counterparty weight creates no debt regardless of total magnitude.
+    // In particular, do not skip this check when amount * 10_000 is unsafe.
+    const nonPayerWeight = nonPayerId === first.id ? firstWeight : secondWeight;
+
+    if (nonPayerWeight === 0) {
+        return 0;
+    }
+
+    const totalUnits = Math.round(split.totalAmount * 10_000);
+
+    if (!Number.isSafeInteger(totalUnits)) {
         return null;
     }
 
