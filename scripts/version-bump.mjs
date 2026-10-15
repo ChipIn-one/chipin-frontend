@@ -84,28 +84,118 @@ const readManifestVersions = ({
     };
 };
 
-const writeJson = (filePath, value, indentation) => {
-    writeFileSync(filePath, `${JSON.stringify(value, null, indentation)}\n`, 'utf8');
+// Locate JSON members by their structural path, not by global text matching.
+// This allows preserving every byte outside the intended string values.
+const skipWhitespace = (source, offset) => {
+    while (/\s/u.test(source[offset] ?? '')) offset += 1;
+    return offset;
 };
 
-const updatePackageVersion = (filePath, version) => {
-    const source = readFileSync(filePath, 'utf8');
-    const packageJson = JSON.parse(source);
-
-    if (typeof packageJson.version !== 'string') {
-        throw new Error('package.json must contain a version string.');
+const readStringToken = (source, offset) => {
+    if (source[offset] !== '"') throw new Error('Expected a JSON string token.');
+    const start = offset;
+    offset += 1;
+    while (offset < source.length) {
+        if (source[offset] === '\\') { offset += 2; continue; }
+        if (source[offset] === '"') {
+            const end = offset + 1;
+            return { start, end, value: JSON.parse(source.slice(start, end)) };
+        }
+        offset += 1;
     }
+    throw new Error('Unterminated JSON string.');
+};
 
-    const updatedSource = source.replace(
-        /("version"\s*:\s*")[^"]+(")/u,
-        `$1${version}$2`,
-    );
-
-    if (updatedSource === source || JSON.parse(updatedSource).version !== version) {
-        throw new Error('package.json version could not be updated safely.');
+const skipValue = (source, offset) => {
+    if (source[offset] === '"') return readStringToken(source, offset).end;
+    if (source[offset] === '{' || source[offset] === '[') {
+        const closers = [source[offset] === '{' ? '}' : ']'];
+        offset += 1;
+        while (closers.length && offset < source.length) {
+            if (source[offset] === '"') { offset = readStringToken(source, offset).end; continue; }
+            if (source[offset] === '{' || source[offset] === '[') {
+                closers.push(source[offset] === '{' ? '}' : ']');
+            } else if (source[offset] === closers[closers.length - 1]) {
+                closers.pop();
+            }
+            offset += 1;
+        }
+        return offset;
     }
+    while (offset < source.length && !/[\s,}\]]/u.test(source[offset])) offset += 1;
+    return offset;
+};
 
-    writeFileSync(filePath, updatedSource, 'utf8');
+const findMember = (source, objectStart, member) => {
+    let offset = skipWhitespace(source, objectStart);
+    if (source[offset] !== '{') throw new Error('Expected an object containing ' + JSON.stringify(member) + '.');
+    offset += 1;
+    let found = null;
+    while (true) {
+        offset = skipWhitespace(source, offset);
+        if (source[offset] === '}') return found;
+        const key = readStringToken(source, offset);
+        offset = skipWhitespace(source, key.end);
+        if (source[offset] !== ':') throw new Error('Invalid JSON member.');
+        offset = skipWhitespace(source, offset + 1);
+        const end = skipValue(source, offset);
+        if (key.value === member) {
+            if (found) throw new Error('Duplicate JSON member: ' + member + '.');
+            found = { start: offset, end };
+        }
+        offset = skipWhitespace(source, end);
+        if (source[offset] === '}') return found;
+        if (source[offset] !== ',') throw new Error('Invalid JSON object separator.');
+        offset += 1;
+    }
+};
+
+const locateMember = (source, path, label) => {
+    let range = { start: skipWhitespace(source, 0) };
+    for (const key of path) {
+        range = findMember(source, range.start, key);
+        if (!range) throw new Error(label + ' must contain ' + JSON.stringify(key) + '.');
+    }
+    return range;
+};
+
+const replaceStringValues = (source, replacements, version) => {
+    const token = JSON.stringify(version);
+    return replacements
+        .sort((left, right) => right.start - left.start)
+        .reduce((text, range) => text.slice(0, range.start) + token + text.slice(range.end), source);
+};
+
+const updatePackageVersionSource = (source, version) => {
+    const manifest = JSON.parse(source);
+    if (typeof manifest.version !== 'string') throw new Error('package.json must contain a version string.');
+    const range = locateMember(source, ['version'], 'package.json');
+    if (JSON.parse(source.slice(range.start, range.end)) !== manifest.version) {
+        throw new Error('package.json root version could not be located safely.');
+    }
+    const updated = replaceStringValues(source, [range], version);
+    if (JSON.parse(updated).version !== version) throw new Error('package.json version could not be updated safely.');
+    return updated;
+};
+
+const updateLockVersionSource = (source, version) => {
+    const manifest = JSON.parse(source);
+    if (typeof manifest.version !== 'string') throw new Error('package-lock.json must contain a root version string.');
+    if (typeof manifest.packages?.['']?.version !== 'string') {
+        throw new Error('package-lock.json must contain packages[""].version.');
+    }
+    const root = locateMember(source, ['version'], 'package-lock.json');
+    const nested = locateMember(source, ['packages', '', 'version'], 'package-lock.json packages[""]');
+    if (JSON.parse(source.slice(root.start, root.end)) !== manifest.version ||
+        JSON.parse(source.slice(nested.start, nested.end)) !== manifest.packages[''].version) {
+        throw new Error('package-lock.json version fields could not be located safely.');
+    }
+    const updated = replaceStringValues(source, [root, nested], version);
+    const parsed = JSON.parse(updated);
+    if (parsed.version !== version || parsed.packages[''].version !== version) {
+        throw new Error('package-lock.json versions could not be updated safely.');
+    }
+    return updated;
 };
 
 export const updateManifestVersions = (version, {
@@ -113,18 +203,13 @@ export const updateManifestVersions = (version, {
     lockfilePath = LOCKFILE_PATH,
 } = {}) => {
     parseSemVer(version);
-
-    const lockJson = readJson(lockfilePath);
-
-    if (typeof lockJson.version !== 'string' || !lockJson.packages?.['']) {
-        throw new Error('package-lock.json must contain packages[""].');
-    }
-
-    lockJson.version = version;
-    lockJson.packages[''].version = version;
-
-    updatePackageVersion(packagePath, version);
-    writeJson(lockfilePath, lockJson, 2);
+    // Fully validate and prepare both files before writing either one.
+    const packageSource = readFileSync(packagePath, 'utf8');
+    const lockSource = readFileSync(lockfilePath, 'utf8');
+    const nextPackage = updatePackageVersionSource(packageSource, version);
+    const nextLock = updateLockVersionSource(lockSource, version);
+    writeFileSync(packagePath, nextPackage, 'utf8');
+    writeFileSync(lockfilePath, nextLock, 'utf8');
 };
 
 export const runVersionBump = (impact, {

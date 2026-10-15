@@ -1,8 +1,14 @@
 import { UserAvatar } from 'basics';
+import { LucideAlertTriangle } from 'lucide-react';
+
+import { Callout, Flex } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
-import { selectPayerUsers } from 'store/expenseModalSelectors';
+import {
+    selectPayerUsers,
+    selectShouldShowSelfOnlyCallout,
+} from 'store/expenseModalSelectors';
 import type { ExpenseParticipant } from 'store/expenseModalStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
@@ -13,6 +19,7 @@ import { ExpenseSearchSelectContent } from '../expense-search-select-content';
 const ExpensePayerSearchSelect = () => {
     const { t } = useTranslation('group');
     const members = useExpenseModalStore(useShallow(selectPayerUsers));
+    const showSelfOnlyCallout = useExpenseModalStore(selectShouldShowSelfOnlyCallout);
 
     const { paidById, targetMode, currentUserId, setPaidById } = useExpenseModalStore(
         useShallow(state => ({
@@ -59,20 +66,30 @@ const ExpensePayerSearchSelect = () => {
             : (resolvedMember?.displayName ?? t('expenses.modal.currentUser'));
 
     return (
-        <SearchSelect
-            items={items}
-            value={selectedPayer}
-            searchPlaceholder={t('expenses.modal.payerSearchPlaceholder')}
-            emptyText={t('expenses.modal.noMembers')}
-            triggerElement={
-                <ExpenseSearchSelectContent
-                    icon={resolvedMember ? <UserAvatar size="2" user={resolvedMember} /> : null}
-                    title={t('common:fields.paidBy')}
-                    value={selectedLabel}
-                />
-            }
-            onChange={setPaidById}
-        />
+        <Flex direction="column" gap="2">
+            <SearchSelect
+                items={items}
+                value={selectedPayer}
+                searchPlaceholder={t('expenses.modal.payerSearchPlaceholder')}
+                emptyText={t('expenses.modal.noMembers')}
+                triggerElement={
+                    <ExpenseSearchSelectContent
+                        icon={resolvedMember ? <UserAvatar size="2" user={resolvedMember} /> : null}
+                        title={t('common:fields.paidBy')}
+                        value={selectedLabel}
+                    />
+                }
+                onChange={setPaidById}
+            />
+            {showSelfOnlyCallout && (
+                <Callout.Root color="amber" size="2" role="alert">
+                    <Callout.Icon>
+                        <LucideAlertTriangle size={18} />
+                    </Callout.Icon>
+                    <Callout.Text>{t('expenses.modal.directSelfOnlyWarning')}</Callout.Text>
+                </Callout.Root>
+            )}
+        </Flex>
     );
 };
 
