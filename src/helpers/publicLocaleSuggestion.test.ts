@@ -27,12 +27,16 @@ test('persistent toast action follows the current English public path', () => {
 });
 
 test('unavailable sessionStorage does not break manual language switching', () => {
-    const inaccessibleStorage = {
+    const inaccessibleStorage: Storage = {
+        length: 0,
+        clear: () => undefined,
         getItem: () => { throw new DOMException('Blocked', 'SecurityError'); },
+        key: () => null,
+        removeItem: () => undefined,
         setItem: () => { throw new DOMException('Blocked', 'SecurityError'); },
     };
     const storage = vi.spyOn(window, 'sessionStorage', 'get').mockReturnValue(
-        inaccessibleStorage as Storage,
+        inaccessibleStorage,
     );
     try {
         expect(() => isPublicLocaleSuggestionSuppressed()).not.toThrow();
