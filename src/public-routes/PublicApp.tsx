@@ -49,11 +49,11 @@ const PublicApp = ({ route, i18nInstance, server = false }: PublicAppProps) => {
     const isDark = useSyncExternalStore(subscribeToPreferredTheme, getPreferredDark, () => false);
     const routerContent = server ? (
         <MemoryRouter initialEntries={[route.path]}>
-            <PublicContent initialRoute={route} />
+            <PublicContent initialRoute={route} isDark={isDark} />
         </MemoryRouter>
     ) : (
         <BrowserRouter>
-            <PublicContent initialRoute={route} />
+            <PublicContent initialRoute={route} isDark={isDark} />
         </BrowserRouter>
     );
 

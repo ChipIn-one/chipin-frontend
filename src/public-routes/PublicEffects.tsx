@@ -21,7 +21,7 @@ import type { PublicRoute } from 'types/publicRoutes';
 
 import { useConnect } from './internal/useConnect';
 
-const PublicEffects = ({ route }: { route: PublicRoute }) => {
+const PublicEffects = ({ route, isDark }: { route: PublicRoute; isDark: boolean }) => {
     useCheckSignIn();
     useAuthToasts();
     useScrollToTop();
@@ -96,7 +96,7 @@ const PublicEffects = ({ route }: { route: PublicRoute }) => {
 
     return (
         <Toaster
-            theme="system"
+            theme={isDark ? 'dark' : 'light'}
             richColors
             closeButton
             position="bottom-left"
