@@ -232,3 +232,23 @@ test('public legal pages expose equivalent language URLs in the search dropdown'
         expect(screen.getByRole('link', { name: 'Russian' }).getAttribute('href')).toBe('/ru/privacy');
     });
 });
+
+test('signed-in visitors retain the public legal language selector', () => {
+    const interaction = userEvent.setup();
+    useAuthStore.setState({ status: 'authenticated' });
+
+    render(
+        <MemoryRouter initialEntries={['/ru/terms']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <Header />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    return interaction.click(screen.getByRole('button', { name: 'Interface language' })).then(() => {
+        expect(screen.getByRole('link', { name: 'English' }).getAttribute('href')).toBe('/terms');
+        expect(screen.getByRole('link', { name: 'Russian' }).getAttribute('href')).toBe('/ru/terms');
+    });
+});

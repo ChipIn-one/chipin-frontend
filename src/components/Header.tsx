@@ -61,6 +61,7 @@ const Header = () => {
     }
 
     const isLandingPage = !isLoggedIn && currentPublicRoute?.page === 'home';
+    const isPublicLegalPage = currentPublicRoute && currentPublicRoute.page !== 'home';
     const hasDesktopSidebar = isLoggedIn && getHasDesktopSidebar(location.pathname);
     const logoRoute = isLoggedIn
         ? getPreferredModeRoute(isSoloMode)
@@ -71,7 +72,7 @@ const Header = () => {
     return (
         <StickyBox
             display={
-                isLoggedIn
+                isLoggedIn && !isPublicLegalPage
                     ? {
                           initial: 'none',
                           sm: 'block',
@@ -116,7 +117,7 @@ const Header = () => {
                                 </Box>
                             </Flex>
                         )}
-                        {!isLoggedIn && !isLandingPage && currentPublicRoute && (
+                        {isPublicLegalPage && (
                             <LanguageSelector
                                 value={landingLocale}
                                 variant="compact"
