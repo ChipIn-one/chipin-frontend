@@ -126,6 +126,42 @@ const SearchSelect = ({
                             {filteredItems.length > 0 ? (
                                 filteredItems.map(item => {
                                     const isSelected = item.value === value;
+                                    const contents = (
+                                        <Flex
+                                            align="center"
+                                            gap="2"
+                                            width="100%"
+                                            minWidth="0"
+                                            pl={item.isIndented ? '4' : undefined}
+                                        >
+                                            {item.icon}
+                                            <Text as="span" size="2" truncate>
+                                                {item.label}
+                                            </Text>
+                                        </Flex>
+                                    );
+
+                                    if (item.href) {
+                                        return (
+                                            <OptionButton
+                                                key={item.value}
+                                                asChild
+                                                size="3"
+                                                variant="soft"
+                                                color={isSelected ? 'blue' : 'gray'}
+                                                highContrast={isSelected}
+                                            >
+                                                <a
+                                                    href={item.href}
+                                                    lang={item.lang}
+                                                    aria-current={isSelected ? 'page' : undefined}
+                                                    onClick={item.onNavigate}
+                                                >
+                                                    {contents}
+                                                </a>
+                                            </OptionButton>
+                                        );
+                                    }
 
                                     return (
                                         <OptionButton
@@ -140,18 +176,7 @@ const SearchSelect = ({
                                             }
                                             onClick={() => onValueChange(item.value)}
                                         >
-                                            <Flex
-                                                align="center"
-                                                gap="2"
-                                                width="100%"
-                                                minWidth="0"
-                                                pl={item.isIndented ? '4' : undefined}
-                                            >
-                                                {item.icon}
-                                                <Text as="span" size="2" truncate>
-                                                    {item.label}
-                                                </Text>
-                                            </Flex>
+                                            {contents}
                                         </OptionButton>
                                     );
                                 })

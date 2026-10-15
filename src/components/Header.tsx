@@ -16,6 +16,7 @@ import { suppressPublicLocaleSuggestion } from 'helpers/publicLocaleSuggestion';
 import { getHasDesktopSidebar, getPreferredModeRoute } from 'helpers/routes';
 
 import { NavButton } from 'basics/buttons';
+import LanguageSelector from 'components/LanguageSelector';
 import { ModeLogotype } from 'components/mode-logotype';
 
 import HeaderNav from './nav-bars/HeaderNav';
@@ -42,6 +43,8 @@ const Header = () => {
     const landingLocale = matchLocale(i18n.resolvedLanguage ?? i18n.language) ?? DEFAULT_LOCALE;
 
     const currentPublicRoute = getPublicRoute(location.pathname);
+    const getPublicLanguageHref = (locale: SupportedLocale) =>
+        currentPublicRoute ? getPublicPath(currentPublicRoute.page, locale) : ROUTES.HOME;
     const onLandingLanguageChange = (locale: SupportedLocale) => {
         if (!currentPublicRoute) {
             return;
@@ -91,6 +94,7 @@ const Header = () => {
                         <LandingNav
                             value={landingLocale}
                             onChange={onLandingLanguageChange}
+                            getHref={getPublicLanguageHref}
                         />
                     )}
 
@@ -111,6 +115,14 @@ const Header = () => {
                                     />
                                 </Box>
                             </Flex>
+                        )}
+                        {!isLoggedIn && !isLandingPage && currentPublicRoute && (
+                            <LanguageSelector
+                                value={landingLocale}
+                                variant="compact"
+                                getHref={getPublicLanguageHref}
+                                onChange={onLandingLanguageChange}
+                            />
                         )}
                         {!isLoggedIn && !isLandingPage && (
                             <AuthModal>

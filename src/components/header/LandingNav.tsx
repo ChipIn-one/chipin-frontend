@@ -7,7 +7,7 @@ import LanguageSelector from 'components/LanguageSelector';
 import { LANDING_NAV_LINKS } from './internal/constants';
 import type { LandingLanguageProps } from './internal/types';
 
-const LandingNav = ({ value, onChange }: LandingLanguageProps) => {
+const LandingNav = ({ value, onChange, getHref }: LandingLanguageProps) => {
     const { t } = useTranslation('landing');
 
     return (
@@ -20,7 +20,7 @@ const LandingNav = ({ value, onChange }: LandingLanguageProps) => {
                         </Link>
                     </Button>
                 ))}
-                <LanguageSelector value={value} variant="compact" onChange={onChange} />
+                <LanguageSelector value={value} variant="compact" onChange={onChange} getHref={getHref} />
             </Flex>
         </Box>
     );

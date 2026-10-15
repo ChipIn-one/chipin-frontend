@@ -49,7 +49,7 @@ const PublicContent = ({ initialRoute }: { initialRoute: PublicRoute }) => {
             <BackendUnavailableGate>
                 <BackgroundBox>
                     <Header />
-                    <PublicLanguageLinks route={route} />
+                    {!isHydrated && <PublicLanguageLinks route={route} />}
                     <Box px="4"><Page /></Box>
                 </BackgroundBox>
             </BackendUnavailableGate>

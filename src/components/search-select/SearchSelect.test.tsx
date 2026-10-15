@@ -90,3 +90,25 @@ test('exposes the selected option with pressed semantics', () => {
         ).toBeTruthy();
     });
 });
+
+test('searchable dropdown renders public language options as actual links', () => {
+    const interaction = userEvent.setup();
+    renderSelect({
+        items: [
+            { value: 'en', label: 'English', href: '/privacy', lang: 'en' },
+            { value: 'ru', label: 'Russian', href: '/ru/privacy', lang: 'ru' },
+        ],
+        value: 'en',
+    });
+
+    return interaction.click(screen.getByRole('button', { name: 'One' })).then(() => {
+        const russianLink = screen.getByRole('link', { name: 'Russian' });
+        expect(russianLink.getAttribute('href')).toBe('/ru/privacy');
+        expect(russianLink.getAttribute('lang')).toBe('ru');
+        expect(screen.getByRole('link', { name: 'English' }).getAttribute('aria-current')).toBe('page');
+        return interaction.type(screen.getByRole('textbox', { name: 'Search' }), 'Russian').then(() => {
+            expect(screen.getByRole('link', { name: 'Russian' })).toBeTruthy();
+            expect(screen.queryByRole('link', { name: 'English' })).toBeNull();
+        });
+    });
+});

@@ -190,7 +190,7 @@ test('manual public language selection does not change SSG content or persist la
 
     return interaction
         .click(screen.getByRole('button', { name: 'Interface language' }))
-        .then(() => interaction.click(screen.getByRole('button', { name: 'Russian' })))
+        .then(() => interaction.click(screen.getByRole('link', { name: 'Russian' })))
         .then(() => {
             expect(LocalStorage.get(LS_KEY_LOCALE, '')).toBe('');
             expect(i18n.language).toBe('en');
@@ -211,4 +211,24 @@ test('does not show a separate authenticated avatar shortcut in the global heade
 
     // Brand link and the four normal navigation items, without an extra avatar link.
     expect(screen.getAllByRole('link')).toHaveLength(5);
+});
+
+test('public legal pages expose equivalent language URLs in the search dropdown', () => {
+    const interaction = userEvent.setup();
+    useAuthStore.setState({ status: 'unauthenticated' });
+
+    render(
+        <MemoryRouter initialEntries={['/privacy']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <Header />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
+
+    return interaction.click(screen.getByRole('button', { name: 'Interface language' })).then(() => {
+        expect(screen.getByRole('link', { name: 'English' }).getAttribute('href')).toBe('/privacy');
+        expect(screen.getByRole('link', { name: 'Russian' }).getAttribute('href')).toBe('/ru/privacy');
+    });
 });
