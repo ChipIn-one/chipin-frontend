@@ -46,7 +46,7 @@ const appendUniqueActivityPreviews = (
     incomingItems: ActivityFeedItem[],
 ): ActivityFeedItem[] => {
     const uniqueItems: ActivityFeedItem[] = [];
-    const parentIds = new Set<string>();
+    const parentIndexes = new Map<string, number>();
     const confirmedItemCount = confirmedItems.length;
     const totalItemCount = confirmedItemCount + incomingItems.length;
 
@@ -55,12 +55,17 @@ const appendUniqueActivityPreviews = (
             ? confirmedItems[index]
             : incomingItems[index - confirmedItemCount];
         const parentId = item.parent.id;
+        const existingIndex = parentIndexes.get(parentId);
 
-        if (parentIds.has(parentId)) {
+        if (existingIndex !== undefined) {
+            // Keep a newer edit or reversal, including reversals needed as tombstones.
+            if (item.lastEvent.seq > uniqueItems[existingIndex].lastEvent.seq) {
+                uniqueItems[existingIndex] = item;
+            }
             continue;
         }
 
-        parentIds.add(parentId);
+        parentIndexes.set(parentId, uniqueItems.length);
         uniqueItems.push(item);
     }
 
