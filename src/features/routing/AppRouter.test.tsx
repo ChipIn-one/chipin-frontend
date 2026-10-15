@@ -31,13 +31,14 @@ vi.mock('pages/GroupJoinPage', () => ({
 }));
 
 beforeEach(() => {
+    document.documentElement.lang = 'en';
     useAuthStore.setState({ status: 'authenticated' });
     useDashboardStore.setState({ appMode: APP_MODES.GROUP });
     return i18n.changeLanguage('en');
 });
 
 const renderRouter = (route: string) => {
-    render(
+    return render(
         <MemoryRouter initialEntries={[route]}>
             <ThemeProvider theme={lightThemeStyled}>
                 <Theme>
@@ -102,5 +103,18 @@ test('a localized public URL wins over the previous SPA language', () => {
     return waitFor(() => {
         expect(i18n.resolvedLanguage).toBe('ru');
         expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
+    });
+});
+
+test('SPA public URL updates html lang and restores it after leaving', () => {
+    useAuthStore.setState({ status: 'unauthenticated' });
+    const mounted = renderRouter('/ru/privacy');
+
+    return waitFor(() => {
+        expect(i18n.resolvedLanguage).toBe('ru');
+        expect(document.documentElement.lang).toBe('ru');
+    }).then(() => {
+        mounted.unmount();
+        expect(document.documentElement.lang).toBe('en');
     });
 });

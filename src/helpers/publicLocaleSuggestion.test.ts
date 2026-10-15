@@ -26,6 +26,25 @@ test('persistent toast action follows the current English public path', () => {
     expect(getPublicLocaleSuggestionTarget('/dashboard', 'ru')).toBeNull();
 });
 
+test('a storage quota write failure still suppresses repeated suggestions', () => {
+    const quotaStorage: Storage = {
+        length: 0,
+        clear: () => undefined,
+        getItem: () => null,
+        key: () => null,
+        removeItem: () => undefined,
+        setItem: () => { throw new DOMException('Full', 'QuotaExceededError'); },
+    };
+    const storage = vi.spyOn(window, 'sessionStorage', 'get').mockReturnValue(quotaStorage);
+    try {
+        expect(isPublicLocaleSuggestionSuppressed()).toBe(false);
+        suppressPublicLocaleSuggestion();
+        expect(isPublicLocaleSuggestionSuppressed()).toBe(true);
+    } finally {
+        storage.mockRestore();
+    }
+});
+
 test('unavailable sessionStorage does not break manual language switching', () => {
     const inaccessibleStorage: Storage = {
         length: 0,

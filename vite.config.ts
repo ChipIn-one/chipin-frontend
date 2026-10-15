@@ -10,6 +10,7 @@ import {
     addPublicDirectoryAliases,
     runPrerenderPublic,
 } from './scripts/prerender-before-workbox.mjs';
+import { PRIVATE_SPA_NAVIGATION_ALLOWLIST } from './scripts/private-spa-navigation';
 import { resolveAppVersion } from './scripts/version-resolver.mjs';
 
 // https://vite.dev/config/
@@ -200,11 +201,9 @@ export default defineConfig(({ mode }) => {
                     manifestTransforms: [addPublicDirectoryAliases],
                     // Serve the noindex SPA shell for service-worker navigation fallback.
                     navigateFallback: 'app.html',
-                    navigateFallbackDenylist: [
-                        /^\/api\//,
-                        /^\/(?:ru|es|pt-br|pt-pt)(?:\/|$)/,
-                        /^\/(?:privacy|terms)(?:\/|$)/,
-                    ],
+                    // Only explicitly private SPA paths may use offline app.html.
+                    // All public URLs use exact precache entries, and unknown URLs retain 404.
+                    navigateFallbackAllowlist: PRIVATE_SPA_NAVIGATION_ALLOWLIST,
                     sourcemap: false,
                     cleanupOutdatedCaches: true,
                     clientsClaim: true,

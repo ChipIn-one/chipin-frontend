@@ -26,6 +26,8 @@ const PublicLocaleRoute = ({
     const savedLanguage = useUsersStore(selectUserSettings)?.language;
 
     useEffect(() => {
+        const previousDocumentLanguage = document.documentElement.lang;
+        document.documentElement.lang = locale;
         if (i18n.resolvedLanguage !== locale) {
             i18n.changeLanguage(locale).catch((error: unknown) => {
                 Sentry.captureException(error);
@@ -33,10 +35,8 @@ const PublicLocaleRoute = ({
         }
 
         return () => {
-            if (!isLoggedIn) {
-                return;
-            }
-            const userLocale = matchLocale(savedLanguage ?? '');
+            const userLocale = isLoggedIn ? matchLocale(savedLanguage ?? '') : null;
+            document.documentElement.lang = userLocale ?? previousDocumentLanguage;
             if (userLocale && i18n.resolvedLanguage !== userLocale) {
                 i18n.changeLanguage(userLocale).catch((error: unknown) => {
                     Sentry.captureException(error);

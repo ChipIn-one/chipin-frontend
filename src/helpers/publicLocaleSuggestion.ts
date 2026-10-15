@@ -10,7 +10,7 @@ const SESSION_KEY = 'chipin.publicLanguageSuggestionShown';
 let isSuppressedWithoutStorage = false;
 
 const isPublicLocaleSuggestionSuppressed = (): boolean => {
-    if (typeof window === 'undefined') {
+    if (typeof window === 'undefined' || isSuppressedWithoutStorage) {
         return true;
     }
     try {
