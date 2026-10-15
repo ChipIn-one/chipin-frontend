@@ -1,5 +1,6 @@
 import type { AuthService } from 'constants/auth.types';
 import { ROUTES } from 'constants/routes';
+import { resolveRegistrationLocale } from 'helpers/publicRoutes';
 
 import { getChipInApiUrl, getChipInAppUrl } from './env';
 
@@ -34,9 +35,12 @@ export const getSocialAuthUrl = (provider: AuthService) => {
     const callbackUrl = new URL(ROUTES.OAUTH_CALLBACK, origin);
     callbackUrl.searchParams.set('returnTo', returnTo);
 
-    const redirectTo = encodeURIComponent(callbackUrl.toString());
+    const query = new URLSearchParams({ redirect_to: callbackUrl.toString() });
+    if (provider === 'google') {
+        query.set('locale', resolveRegistrationLocale(pathname));
+    }
 
-    return `${apiUrl}auth/login/${provider}?redirect_to=${redirectTo}`;
+    return `${apiUrl}auth/login/${provider}?${query.toString()}`;
 };
 
 export const buildFriendInviteLink = ({ inviteToken }: { inviteToken: string }) =>

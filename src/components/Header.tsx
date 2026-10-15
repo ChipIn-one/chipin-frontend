@@ -1,27 +1,19 @@
-import { LucideArrowRight, LucideLogIn, LucideMenu } from 'lucide-react';
+import { LucideArrowRight, LucideLogIn } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import styled from 'styled-components';
-import { useShallow } from 'zustand/react/shallow';
 
-import * as Sentry from '@sentry/react';
-import { Box, Button, Container, Flex, IconButton, Link } from '@radix-ui/themes';
+import { Box, Button, Container, Flex } from '@radix-ui/themes';
 
 import { PROJECT_NAME } from 'constants/chipin';
+import { DEFAULT_LOCALE } from 'constants/locales';
+import { PUBLIC_HOME_PAGE } from 'constants/publicRouteManifest';
 import { ROUTES } from 'constants/routes';
+import { getPublicPath, getPublicRoute } from 'helpers/publicRoutes';
 import { themeColor } from 'helpers/colors';
-import {
-    matchLocale,
-    saveLocalePreference,
-    SUPPORTED_LOCALES,
-    type SupportedLocale,
-} from 'helpers/locale';
+import { matchLocale, type SupportedLocale } from 'helpers/locale';
+import { suppressPublicLocaleSuggestion } from 'helpers/publicLocaleSuggestion';
 import { getHasDesktopSidebar, getPreferredModeRoute } from 'helpers/routes';
-import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
-import { useAuthStore } from 'store/authStore';
-import { selectIsSoloMode } from 'store/dashboardSelectors';
-import { useDashboardStore } from 'store/dashboardStore';
-import { selectCanAccessSolo, selectIsUserAdmin, useUsersStore } from 'store/users-store';
 
 import { NavButton } from 'basics/buttons';
 import LanguageSelector from 'components/LanguageSelector';
@@ -29,8 +21,10 @@ import { ModeLogotype } from 'components/mode-logotype';
 
 import HeaderNav from './nav-bars/HeaderNav';
 import DevMenu from './DevMenu';
-import Dropdown from './Dropdown';
 import { AuthModal } from './modals';
+import { LandingNav } from './header/LandingNav';
+import { LandingMobileMenu } from './header/LandingMobileMenu';
+import { useConnect } from './header/internal/useConnect';
 
 const StickyBox = styled(Box)`
     position: sticky;
@@ -42,119 +36,43 @@ const StickyBox = styled(Box)`
     backdrop-filter: blur(10px);
 `;
 
-const LANDING_NAV_LINKS = [
-    { labelKey: 'nav.features', href: '#features' },
-    { labelKey: 'nav.howItWorks', href: '#how-it-works' },
-    { labelKey: 'nav.pricing', href: '#pricing' },
-] as const;
-
-interface LandingLanguageProps {
-    value: SupportedLocale;
-    onChange: (locale: SupportedLocale) => void;
-}
-
-const LandingNav = ({ value, onChange }: LandingLanguageProps) => {
-    const { t } = useTranslation('landing');
-
-    return (
-        <Box display={{ initial: 'none', md: 'block' }}>
-            <Flex align="center" gap="6">
-                {LANDING_NAV_LINKS.map(({ labelKey, href }) => (
-                    <Button key={href} variant="ghost" color="gray" size="3" asChild>
-                        <Link href={href} color="gray" underline="none">
-                            {t(labelKey)}
-                        </Link>
-                    </Button>
-                ))}
-                <LanguageSelector value={value} variant="compact" onChange={onChange} />
-            </Flex>
-        </Box>
-    );
-};
-
-const LandingMobileMenu = ({ value, onChange }: LandingLanguageProps) => {
-    const { t } = useTranslation('landing');
-    const { t: tSettings } = useTranslation('settings');
-
-    const navItems = LANDING_NAV_LINKS.map(({ labelKey, href }) => ({
-        value: href,
-        label: t(labelKey),
-        onSelect: () => {
-            window.location.href = href;
-        },
-    }));
-    const languageItems = SUPPORTED_LOCALES.map(locale => ({
-        value: locale,
-        label: tSettings(`language.options.${locale}`),
-    }));
-
-    return (
-        <Dropdown
-            sections={[
-                { items: navItems },
-                {
-                    label: tSettings('common:fields.interfaceLanguage'),
-                    items: languageItems,
-                    value,
-                    onValueChange: nextValue => {
-                        const locale = matchLocale(nextValue);
-
-                        if (locale) {
-                            onChange(locale);
-                        }
-                    },
-                },
-            ]}
-            trigger={
-                <IconButton variant="ghost" color="gray" size="2">
-                    <LucideMenu />
-                </IconButton>
-            }
-            align="end"
-        />
-    );
-};
-
 const Header = () => {
-    const isAuthResolved = useAuthStore(selectIsAuthResolved);
-    const isLoggedIn = useAuthStore(selectIsLoggedIn);
-    const { canAccessSolo, canShowDevMenu } = useUsersStore(
-        useShallow(state => ({
-            canAccessSolo: selectCanAccessSolo(state),
-            canShowDevMenu: selectIsUserAdmin(state),
-        })),
-    );
-    const isSoloModeFromStore = useDashboardStore(selectIsSoloMode);
-    const isSoloMode = canAccessSolo && isSoloModeFromStore;
+    const { isAuthResolved, isLoggedIn, canShowDevMenu, isSoloMode } = useConnect();
     const location = useLocation();
     const { t, i18n } = useTranslation();
-    const landingLocale = matchLocale(i18n.resolvedLanguage ?? i18n.language) ?? 'en';
+    const landingLocale = matchLocale(i18n.resolvedLanguage ?? i18n.language) ?? DEFAULT_LOCALE;
 
+    const currentPublicRoute = getPublicRoute(location.pathname);
+    const getPublicLanguageHref = (locale: SupportedLocale) =>
+        currentPublicRoute ? getPublicPath(currentPublicRoute.page, locale) : ROUTES.HOME;
     const onLandingLanguageChange = (locale: SupportedLocale) => {
-        return i18n
-            .changeLanguage(locale)
-            .then(() => {
-                saveLocalePreference(locale);
-            })
-            .catch((error: unknown) => {
-                Sentry.captureException(error);
-            });
+        if (!currentPublicRoute) {
+            return;
+        }
+        suppressPublicLocaleSuggestion();
+        const nextPath = getPublicPath(currentPublicRoute.page, locale);
+        if (location.pathname !== nextPath) {
+            window.location.assign(nextPath);
+        }
     };
 
     if (!isAuthResolved) {
         return null;
     }
 
-    const isLandingPage = !isLoggedIn && location.pathname === ROUTES.HOME;
+    const isLandingPage = !isLoggedIn && currentPublicRoute?.page === 'home';
+    const isPublicLegalPage = currentPublicRoute && currentPublicRoute.page !== 'home';
     const hasDesktopSidebar = isLoggedIn && getHasDesktopSidebar(location.pathname);
     const logoRoute = isLoggedIn
         ? getPreferredModeRoute(isSoloMode)
-        : ROUTES.HOME;
+        : currentPublicRoute
+            ? getPublicPath(PUBLIC_HOME_PAGE, currentPublicRoute.locale)
+            : ROUTES.HOME;
 
     return (
         <StickyBox
             display={
-                isLoggedIn
+                isLoggedIn && !isPublicLegalPage
                     ? {
                           initial: 'none',
                           sm: 'block',
@@ -177,6 +95,7 @@ const Header = () => {
                         <LandingNav
                             value={landingLocale}
                             onChange={onLandingLanguageChange}
+                            getHref={getPublicLanguageHref}
                         />
                     )}
 
@@ -197,6 +116,14 @@ const Header = () => {
                                     />
                                 </Box>
                             </Flex>
+                        )}
+                        {isPublicLegalPage && (
+                            <LanguageSelector
+                                value={landingLocale}
+                                variant="compact"
+                                getHref={getPublicLanguageHref}
+                                onChange={onLandingLanguageChange}
+                            />
                         )}
                         {!isLoggedIn && !isLandingPage && (
                             <AuthModal>

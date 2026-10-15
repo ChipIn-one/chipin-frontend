@@ -9,6 +9,8 @@ import {
     type SupportedLocale,
 } from 'helpers/locale';
 
+import { suppressPublicLocaleSuggestion } from 'helpers/publicLocaleSuggestion';
+
 import { SearchSelect } from 'components/search-select';
 
 type LanguageSelectorVariant = 'compact' | 'full';
@@ -18,6 +20,7 @@ interface Props {
     onChange: (locale: SupportedLocale) => void;
     variant?: LanguageSelectorVariant;
     isLoading?: boolean;
+    getHref?: (locale: SupportedLocale) => string;
 }
 
 const LanguageSelector = ({
@@ -25,6 +28,7 @@ const LanguageSelector = ({
     onChange,
     variant = 'full',
     isLoading = false,
+    getHref,
 }: Props) => {
     const { t } = useTranslation('settings');
 
@@ -32,6 +36,9 @@ const LanguageSelector = ({
         value: locale,
         label: t(`language.options.${locale}`),
         searchFields: [locale, t(`language.options.${locale}`)],
+        href: getHref?.(locale),
+        lang: locale,
+        onNavigate: getHref ? suppressPublicLocaleSuggestion : undefined,
     }));
 
     const onValueChange = (nextValue: string) => {

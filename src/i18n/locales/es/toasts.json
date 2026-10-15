@@ -55,5 +55,9 @@
     },
     "settlement": {
         "created": "¡Pago registrado exitosamente!"
+    },
+    "public": {
+        "languageSuggestion": "ChipIn está disponible en español",
+        "languageSuggestionAction": "Cambiar a español"
     }
 }

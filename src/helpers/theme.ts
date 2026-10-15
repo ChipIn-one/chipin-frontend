@@ -14,5 +14,18 @@ const resolveStoredTheme = (): ThemeName => {
 
 const isThemeDark = (themeName?: string | null) => themeName === 'dark';
 
-export { isThemeDark, resolveStoredTheme };
+// On public pages the last account's saved theme overrides the device setting.
+// Missing or unrecognized values follow the OS, without restoring authentication.
+const isPreferredPublicThemeDark = (systemIsDark: boolean): boolean => {
+    const savedTheme = resolveStoredTheme();
+    if (savedTheme === 'light') {
+        return false;
+    }
+    if (savedTheme === 'dark') {
+        return true;
+    }
+    return systemIsDark;
+};
+
+export { isPreferredPublicThemeDark, isThemeDark, resolveStoredTheme };
 export type { ThemeName };

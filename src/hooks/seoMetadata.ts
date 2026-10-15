@@ -1,5 +1,5 @@
-import { ROUTES } from 'constants/routes';
-import { HOME_CANONICAL_URL, HOME_OPEN_GRAPH } from 'constants/seo';
+import { getPublicCanonical, getPublicRoute } from 'constants/publicRoutes';
+import { HOME_OPEN_GRAPH } from 'constants/seo';
 
 const getOrCreateMeta = (attribute: 'name' | 'property', key: string): HTMLMetaElement => {
     let meta = document.querySelector<HTMLMetaElement>(`meta[${attribute}="${key}"]`);
@@ -16,7 +16,8 @@ const getOrCreateMeta = (attribute: 'name' | 'property', key: string): HTMLMetaE
 export const updateSeoMetadata = (pathname: string, title: string, description: string): void => {
     let canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
 
-    if (pathname !== ROUTES.HOME) {
+    const publicRoute = getPublicRoute(pathname);
+    if (!publicRoute) {
         canonical?.remove();
 
         document.querySelectorAll<HTMLMetaElement>('meta[property^="og:"]').forEach(meta => {
@@ -34,10 +35,12 @@ export const updateSeoMetadata = (pathname: string, title: string, description: 
         canonical.setAttribute('rel', 'canonical');
         document.head.appendChild(canonical);
     }
-    canonical.setAttribute('href', HOME_CANONICAL_URL);
+    const canonicalUrl = getPublicCanonical(publicRoute);
+    canonical.setAttribute('href', canonicalUrl);
 
     const homepageOpenGraph = {
         ...HOME_OPEN_GRAPH,
+        'og:url': canonicalUrl,
         'og:title': title,
         'og:description': description,
     };

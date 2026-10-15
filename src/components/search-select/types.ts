@@ -6,6 +6,9 @@ interface SearchSelectItem {
     icon?: ReactNode;
     isIndented?: boolean;
     searchFields?: string[];
+    href?: string;
+    lang?: string;
+    onNavigate?: () => void;
 }
 
 export type { SearchSelectItem };
