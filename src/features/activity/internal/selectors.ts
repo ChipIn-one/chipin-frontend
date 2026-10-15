@@ -1,6 +1,8 @@
-import type { AppEvent } from 'api/activity.types';
+import type { AppEvent, ExpenseActivityMetadata } from 'api/activity.types';
 import type { BalanceEntry } from 'api/chipin.raw.types';
-import { ACTIVITY_ACTIONS, type ExpenseCreatedAction } from 'constants/activity';
+import { ACTIVITY_ACTIONS } from 'constants/activity';
+import { isActivityPreview, type ActivityListItem } from 'helpers/activityEvent';
+import { normalizeApiMoneyAmount } from 'helpers/numbers';
 import { getActivityDateKey } from 'helpers/time';
 
 interface DailyBalance extends BalanceEntry {
@@ -8,21 +10,26 @@ interface DailyBalance extends BalanceEntry {
 }
 
 const getUserExpenseBalanceChange = (
-    event: Extract<AppEvent, { action: ExpenseCreatedAction }>,
+    metadata: ExpenseActivityMetadata,
     userId: string,
-): number => {
-    const userShareAmount =
-        event.metadata?.shares?.find(share => share.userId === userId)?.shareAmount ?? 0;
+): number | undefined => {
+    // A missing share snapshot cannot establish how much the payer funded for others.
+    if (!metadata.shares) {
+        return undefined;
+    }
 
-    if (event.metadata.payerId === userId) {
-        return event.metadata.amount - userShareAmount;
+    const userShareAmount =
+        metadata.shares.find(share => share.userId === userId)?.shareAmount ?? 0;
+
+    if (metadata.payerId === userId) {
+        return metadata.amount - userShareAmount;
     }
 
     return userShareAmount * -1;
 };
 
 export const getDailyExpenseSummary = (
-    events: AppEvent[],
+    events: readonly ActivityListItem[],
     userId?: string,
 ): Record<string, BalanceEntry[]> => {
     const summaries: Record<string, BalanceEntry[]> = {};
@@ -32,8 +39,15 @@ export const getDailyExpenseSummary = (
         return summaries;
     }
 
-    for (const event of events) {
-        if (event.action !== ACTIVITY_ACTIONS.EXPENSE_CREATED) {
+    for (const item of events) {
+        const isPreview = isActivityPreview(item);
+        const event: AppEvent = isPreview ? item.lastEvent : item;
+
+        // Flat history remains event-based; only previews represent the current chain state.
+        if (
+            event.action !== ACTIVITY_ACTIONS.EXPENSE_CREATED &&
+            !(isPreview && event.action === ACTIVITY_ACTIONS.EXPENSE_UPDATED)
+        ) {
             continue;
         }
 
@@ -41,13 +55,13 @@ export const getDailyExpenseSummary = (
             continue;
         }
 
-        const netBalance = getUserExpenseBalanceChange(event, userId);
+        const netBalance = getUserExpenseBalanceChange(event.metadata, userId);
 
         if (!netBalance) {
             continue;
         }
 
-        const dateKey = getActivityDateKey(event.createdAt);
+        const dateKey = getActivityDateKey(isPreview ? item.parent.createdAt : event.createdAt);
         const { currency } = event.metadata;
         const balanceKey = `${dateKey}:${currency}`;
         const existingBalance = balances.get(balanceKey);
@@ -61,9 +75,11 @@ export const getDailyExpenseSummary = (
 
     for (const { dateKey, currency, netBalance } of balances.values()) {
         const dateSummary = summaries[dateKey] ?? [];
+        // Normalize only the final UI sum, not each individual financial contribution.
+        const normalizedBalance = normalizeApiMoneyAmount(netBalance);
 
-        if (netBalance) {
-            dateSummary.push({ currency, netBalance });
+        if (normalizedBalance) {
+            dateSummary.push({ currency, netBalance: normalizedBalance });
         }
 
         summaries[dateKey] = dateSummary;

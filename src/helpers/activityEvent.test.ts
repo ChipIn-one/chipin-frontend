@@ -76,15 +76,27 @@ describe('activity event helpers', () => {
         expect(getActivityLedgerEntryId(expenseReversedEvent)).toBeUndefined();
     });
 
-    test('unwraps preview items to the latest event used by activity lists', () => {
-        expect(
-            getActivityPreviewEvents([
-                {
-                    parent: expenseCreatedEvent,
-                    lastEvent: settlementCreatedEvent,
-                },
-            ]),
-        ).toEqual([settlementCreatedEvent]);
+    test('ACT-021 preserves preview parent chronology and latest event', () => {
+        const updated = {
+            ...expenseCreatedEvent,
+            id: 'updated-activity',
+            action: ACTIVITY_ACTIONS.EXPENSE_UPDATED,
+            createdAt: 10,
+            parentActivityId: expenseCreatedEvent.id,
+        } satisfies AppEvent;
+        const item = { parent: expenseCreatedEvent, lastEvent: updated };
+
+        expect(getActivityPreviewEvents([item])).toEqual([item]);
+    });
+
+    test('ACT-022 excludes reversed chains and de-duplicates repeated parent previews', () => {
+        const repeated = { parent: expenseCreatedEvent, lastEvent: expenseCreatedEvent };
+        const reversed = {
+            parent: { ...expenseCreatedEvent, id: 'second-parent' },
+            lastEvent: expenseReversedEvent,
+        };
+
+        expect(getActivityPreviewEvents([repeated, reversed, repeated])).toEqual([repeated]);
     });
 
     test('uses the parent as current state when no children are loaded', () => {
@@ -128,3 +140,49 @@ describe('activity event helpers', () => {
         });
     });
 });
+
+    test('ACT-022 suppresses an earlier active duplicate when a later page contains its reversal', () => {
+        const parent = expenseCreatedEvent;
+        const reversedChild = {
+            ...expenseReversedEvent,
+            id: 'reversed-child',
+            seq: 5,
+            parentActivityId: parent.id,
+        } satisfies AppEvent;
+        const another = {
+            ...settlementCreatedEvent,
+            id: 'unrelated-parent',
+        } satisfies AppEvent;
+        const original = { parent, lastEvent: parent };
+        const reversed = { parent, lastEvent: reversedChild };
+        const unrelated = { parent: another, lastEvent: another };
+
+        expect(getActivityPreviewEvents([original, unrelated, reversed]))
+            .toEqual([unrelated]);
+        expect(getActivityPreviewEvents([reversed, unrelated, original]))
+            .toEqual([unrelated]);
+    });
+
+    test('ACT-021 keeps parent ordering while selecting the latest duplicate edit', () => {
+        const parent = expenseCreatedEvent;
+        const edited = {
+            ...expenseCreatedEvent,
+            id: 'edited-child',
+            action: ACTIVITY_ACTIONS.EXPENSE_UPDATED,
+            seq: 4,
+            parentActivityId: parent.id,
+        } satisfies AppEvent;
+        const other = {
+            ...settlementCreatedEvent,
+            id: 'other-parent',
+        } satisfies AppEvent;
+
+        expect(getActivityPreviewEvents([
+            { parent, lastEvent: parent },
+            { parent: other, lastEvent: other },
+            { parent, lastEvent: edited },
+        ])).toEqual([
+            { parent, lastEvent: edited },
+            { parent: other, lastEvent: other },
+        ]);
+    });

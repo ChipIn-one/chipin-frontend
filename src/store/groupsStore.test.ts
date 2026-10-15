@@ -4,6 +4,8 @@ import * as activityApi from 'api/activityApi';
 import * as chipinApi from 'api/chipin';
 import type { ActivityFeedItem, Group } from 'api/chipin.types';
 import * as groupsApi from 'api/groupsApi';
+import { ACTIVITY_ACTIONS } from 'constants/activity';
+import { getActivityPreviewEvents } from 'helpers/activityEvent';
 
 import { useActivityStore } from './activity-store';
 import { useDashboardStore } from './dashboardStore';
@@ -67,7 +69,7 @@ const group = {
 
 const createActivityItem = (parentId: string): ActivityFeedItem => ({
     parent: { id: parentId } as ActivityFeedItem['parent'],
-    lastEvent: { id: `event-${parentId}` } as ActivityFeedItem['lastEvent'],
+    lastEvent: { id: `event-${parentId}`, seq: 1, action: ACTIVITY_ACTIONS.EXPENSE_CREATED } as ActivityFeedItem['lastEvent'],
 });
 
 const createGroupWithActivity = (
@@ -883,6 +885,68 @@ describe('groupsStore', () => {
             ).toEqual(['parent-1', 'parent-2', 'parent-3', 'parent-4']);
             expect(useGroupsStore.getState().selectedGroup?.recentActivities.nextCursor).toBe(40);
         });
+    });
+
+    test('ACT-021 uses the highest-sequence edited preview from a later overlapping group page', () => {
+        const first = createActivityItem('parent-1');
+        const second = createActivityItem('parent-2');
+        const newer = {
+            parent: first.parent,
+            lastEvent: {
+                ...first.lastEvent,
+                id: 'newest-edit',
+                seq: 3,
+                action: ACTIVITY_ACTIONS.EXPENSE_UPDATED,
+            } as ActivityFeedItem['lastEvent'],
+        } satisfies ActivityFeedItem;
+        useGroupsStore.getState().setSelectedGroup(createGroupWithActivity([first, second], 20));
+        vi.mocked(activityApi.fetchGroupActivityPreviews).mockResolvedValue({
+            items: [newer],
+            nextCursor: null,
+        });
+
+        return useGroupsStore.getState().fetchMoreGroupActivity().then(() => {
+            expect(useGroupsStore.getState().selectedGroup?.recentActivities.items).toEqual([
+                newer,
+                second,
+            ]);
+            expect(useGroupsStore.getState().selectedGroup?.recentActivities.nextCursor).toBeNull();
+        });
+    });
+
+    test('ACT-022 keeps a later group reversal as a tombstone across older overlapping pages', () => {
+        const active = createActivityItem('parent-1');
+        const unaffected = createActivityItem('parent-2');
+        const reversed = {
+            parent: active.parent,
+            lastEvent: {
+                ...active.lastEvent,
+                id: 'reversed-child',
+                seq: 5,
+                action: ACTIVITY_ACTIONS.EXPENSE_REVERSED,
+            } as ActivityFeedItem['lastEvent'],
+        } satisfies ActivityFeedItem;
+        useGroupsStore.getState().setSelectedGroup(
+            createGroupWithActivity([active, unaffected], 20),
+        );
+        vi.mocked(activityApi.fetchGroupActivityPreviews)
+            .mockResolvedValueOnce({ items: [reversed], nextCursor: 40 })
+            .mockResolvedValueOnce({ items: [active], nextCursor: null });
+
+        return useGroupsStore.getState().fetchMoreGroupActivity()
+            .then(() => {
+                const firstPage = useGroupsStore.getState().selectedGroup?.recentActivities;
+                expect(firstPage?.items).toEqual([reversed, unaffected]);
+                expect(firstPage?.nextCursor).toBe(40);
+                expect(getActivityPreviewEvents(firstPage?.items ?? [])).toEqual([unaffected]);
+                return useGroupsStore.getState().fetchMoreGroupActivity();
+            })
+            .then(() => {
+                const finalPage = useGroupsStore.getState().selectedGroup?.recentActivities;
+                expect(finalPage?.items).toEqual([reversed, unaffected]);
+                expect(finalPage?.nextCursor).toBeNull();
+                expect(getActivityPreviewEvents(finalPage?.items ?? [])).toEqual([unaffected]);
+            });
     });
 
     test('does not issue a duplicate request while the same group cursor is loading', () => {
