@@ -2,6 +2,7 @@ import type { AppEvent, ExpenseActivityMetadata } from 'api/activity.types';
 import type { BalanceEntry } from 'api/chipin.raw.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { isActivityPreview, type ActivityListItem } from 'helpers/activityEvent';
+import { normalizeApiMoneyAmount } from 'helpers/numbers';
 import { getActivityDateKey } from 'helpers/time';
 
 interface DailyBalance extends BalanceEntry {
@@ -33,7 +34,6 @@ export const getDailyExpenseSummary = (
 ): Record<string, BalanceEntry[]> => {
     const summaries: Record<string, BalanceEntry[]> = {};
     const balances = new Map<string, DailyBalance>();
-    const seenPreviewParents = new Set<string>();
 
     if (!userId) {
         return summaries;
@@ -42,14 +42,6 @@ export const getDailyExpenseSummary = (
     for (const item of events) {
         const isPreview = isActivityPreview(item);
         const event: AppEvent = isPreview ? item.lastEvent : item;
-
-        if (isPreview) {
-            if (seenPreviewParents.has(item.parent.id)) {
-                continue;
-            }
-
-            seenPreviewParents.add(item.parent.id);
-        }
 
         // Flat history remains event-based; only previews represent the current chain state.
         if (
@@ -83,9 +75,11 @@ export const getDailyExpenseSummary = (
 
     for (const { dateKey, currency, netBalance } of balances.values()) {
         const dateSummary = summaries[dateKey] ?? [];
+        // Normalize only the final UI sum, not each individual financial contribution.
+        const normalizedBalance = normalizeApiMoneyAmount(netBalance);
 
-        if (netBalance) {
-            dateSummary.push({ currency, netBalance });
+        if (normalizedBalance) {
+            dateSummary.push({ currency, netBalance: normalizedBalance });
         }
 
         summaries[dateKey] = dateSummary;

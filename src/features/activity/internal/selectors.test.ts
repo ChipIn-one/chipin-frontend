@@ -207,7 +207,7 @@ test('ACT-021 includes changed group expense once, including duplicated paginati
         shareAmount: 10, groupId: 'group-one',
     }));
 
-    expect(getDailyExpenseSummary([item, another, item], CURRENT_USER_ID)).toEqual({
+    expect(getDailyExpenseSummary(getActivityPreviewEvents([item, another, item]), CURRENT_USER_ID)).toEqual({
         [getActivityDateKey(CREATED_AT)]: [{ currency: 'USD', netBalance: -60 }],
     });
 });
@@ -301,8 +301,43 @@ test('ACT-023 recomputes deterministic daily totals when another preview page ar
     expect(getDailyExpenseSummary([first], CURRENT_USER_ID)).toEqual({
         [day]: [{ currency: 'USD', netBalance: -10 }],
     });
-    expect(getDailyExpenseSummary([first, second, second], CURRENT_USER_ID)).toEqual({
+    expect(getDailyExpenseSummary(getActivityPreviewEvents([first, second, second]), CURRENT_USER_ID)).toEqual({
         [day]: [{ currency: 'USD', netBalance: -15 }],
+    });
+});
+
+test('ACT-021 normalizes fractional preview totals only after aggregating', () => {
+    const paid = createExpenseEvent({
+        id: 'fractional-parent', amount: 0.30, payerId: CURRENT_USER_ID, shareAmount: 0.10,
+    });
+    const edited = createExpenseEvent({
+        id: 'fractional-edit', amount: 0.30, payerId: CURRENT_USER_ID, shareAmount: 0.10,
+        action: ACTIVITY_ACTIONS.EXPENSE_UPDATED,
+    });
+    const borrowed = createExpenseEvent({
+        id: 'fractional-borrowed', amount: 0.20, payerId: 'friend', shareAmount: 0.20,
+    });
+    const dateKey = getActivityDateKey(CREATED_AT);
+
+    expect(getDailyExpenseSummary(
+        [createPreview(paid, edited)],
+        CURRENT_USER_ID,
+    )).toEqual({ [dateKey]: [{ currency: 'USD', netBalance: 0.20 }] });
+    expect(getDailyExpenseSummary(
+        [createPreview(paid, edited), createPreview(borrowed)],
+        CURRENT_USER_ID,
+    )).toEqual({ [dateKey]: [] });
+});
+
+test('ACT-021 preserves supported 4-decimal micro amounts after final normalization', () => {
+    const small = createExpenseEvent({
+        id: 'fractional-micro', amount: 0.0001, payerId: 'friend', shareAmount: 0.0001,
+    });
+    expect(getDailyExpenseSummary(
+        [createPreview(small)],
+        CURRENT_USER_ID,
+    )).toEqual({
+        [getActivityDateKey(CREATED_AT)]: [{ currency: 'USD', netBalance: -0.0001 }],
     });
 });
 
