@@ -4,6 +4,8 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { LS_KEY_USER } from 'constants/localstorage';
+import { getLocalUser, LocalStorage } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
 
 import { ProtectedRoute } from './ProtectedRoute';
@@ -38,6 +40,7 @@ const CurrentRoute = () => {
 };
 
 beforeEach(() => {
+    LocalStorage.remove(LS_KEY_USER);
     useAuthStore.setState({
         isNewUser: null,
         status: 'authenticated',
@@ -121,5 +124,49 @@ test('redirects an explicit sign out to the landing page instead of showing auth
         expect(currentRoute.textContent).toBe('/');
         expect(screen.queryByTestId('auth-modal')).toBeNull();
         expect(screen.queryByTestId('settings-content')).toBeNull();
+    });
+});
+
+// A signed-out user inherits only the last account's local appearance/locale,
+// never the auth session. The English public root stays unchanged.
+test.each([
+    ['ru', '/ru/'],
+    ['es', '/es/'],
+    ['pt-BR', '/pt-br/'],
+    ['pt-PT', '/pt-pt/'],
+    ['en', '/'],
+    ['unreleased-locale', '/'],
+])('explicit sign-out uses cached locale %s and navigates to %s', (language, expectedPath) => {
+    LocalStorage.set(LS_KEY_USER, {
+        role: 'USER',
+        settings: {
+            defaultCurrency: 'USD',
+            defaultCategory: 'food',
+            timeFormat: '24h',
+            language,
+            theme: 'light',
+            simplifyDebts: true,
+            skipCategory: false,
+            soloModeByDefault: false,
+            saveGroupExpensesToSolo: false,
+            sex: 'male',
+        },
+    });
+    useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'signed_out' });
+
+    render(
+        <MemoryRouter initialEntries={['/settings']}>
+            <ProtectedRoute>
+                <div data-testid="settings-content" />
+            </ProtectedRoute>
+            <CurrentRoute />
+        </MemoryRouter>,
+    );
+
+    return screen.findByLabelText('Current route').then(currentRoute => {
+        expect(currentRoute.textContent).toBe(expectedPath);
+        expect(screen.queryByTestId('auth-modal')).toBeNull();
+        expect(getLocalUser()?.settings.language).toBe(language);
+        expect(getLocalUser()?.settings.theme).toBe('light');
     });
 });

@@ -5,8 +5,7 @@ import {
     LocalStorage,
 } from 'helpers/localStorage';
 
-const SUPPORTED_LOCALES = ['en', 'ru', 'es', 'pt-BR', 'pt-PT'] as const;
-type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from 'constants/locales';
 
 // Set for O(1) lookup — avoids repeated Array.includes casts.
 const SUPPORTED_LOCALES_SET: ReadonlySet<SupportedLocale> = new Set(SUPPORTED_LOCALES);
@@ -173,7 +172,7 @@ const resolveBrowserLocale = (
         }
     }
 
-    return 'en';
+    return DEFAULT_LOCALE;
 };
 
 /**
@@ -201,6 +200,7 @@ const resolveLocale = (): SupportedLocale => {
 };
 
 export {
+    DEFAULT_LOCALE,
     matchLocale,
     normalizeLocale,
     resolveBrowserLocale,

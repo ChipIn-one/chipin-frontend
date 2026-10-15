@@ -55,5 +55,9 @@
     },
     "settlement": {
         "created": "Pagamento registado com sucesso!"
+    },
+    "public": {
+        "languageSuggestion": "O ChipIn está disponível em português de Portugal",
+        "languageSuggestionAction": "Mudar para português (Portugal)"
     }
 }

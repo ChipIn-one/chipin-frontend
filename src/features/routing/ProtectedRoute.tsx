@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { Box } from '@radix-ui/themes';
 
 import { ROUTES } from 'constants/routes';
+import { getLastAccountLandingPath } from 'helpers/publicRoutes';
 import { UNAUTH_REASON } from 'store/authConstants';
 
 import PageLoader from 'basics/PageLoader';
@@ -24,7 +25,7 @@ export const ProtectedRoute = ({ children }: Props) => {
 
     if (!isLoggedIn) {
         if (unauthReason === UNAUTH_REASON.SIGNED_OUT) {
-            return <Navigate to={ROUTES.HOME} replace />;
+            return <Navigate to={getLastAccountLandingPath()} replace />;
         }
 
         return (

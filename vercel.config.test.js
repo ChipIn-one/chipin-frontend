@@ -66,18 +66,28 @@ describe('Vercel API proxy routing', () => {
         expect(apiRewrites.every(rewrite => rewrite.has?.length > 0)).toBe(true);
     });
 
-    test('keeps API rewrites ahead of the SPA fallback', () => {
-        const spaFallbackIndex = config.rewrites.findIndex(
-            rewrite => rewrite.source === '/(.*)',
-        );
+    test('keeps API rewrites before private SPA routes without capturing public SSG HTML', () => {
         const lastApiRewriteIndex = config.rewrites.reduce(
             (lastIndex, rewrite, index) =>
                 rewrite.source === API_SOURCE ? index : lastIndex,
             -1,
         );
+        const appRewrites = config.rewrites
+            .map((rewrite, index) => ({ ...rewrite, index }))
+            .filter(rewrite => rewrite.destination === '/app.html');
 
         expect(lastApiRewriteIndex).toBeGreaterThanOrEqual(0);
-        expect(lastApiRewriteIndex).toBeLessThan(spaFallbackIndex);
+        expect(appRewrites.length).toBeGreaterThan(0);
+        expect(appRewrites.every(rewrite => rewrite.index > lastApiRewriteIndex)).toBe(true);
+        expect(appRewrites.every(rewrite => rewrite.source !== '/(.*)')).toBe(true);
+        expect(appRewrites.map(rewrite => rewrite.source)).toEqual(
+            expect.arrayContaining([
+                '/dashboard/:path*',
+                '/group/:path*',
+                '/friends/:path*',
+                '/oauth/:path*',
+            ]),
+        );
     });
 
     test('disables browser and CDN caching for proxied API responses', () => {

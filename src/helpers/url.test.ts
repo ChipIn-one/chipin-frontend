@@ -1,4 +1,4 @@
-import { beforeEach, expect, test } from 'vitest';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 import { ROUTES } from 'constants/routes';
 
@@ -14,6 +14,7 @@ const getReturnToFromSocialAuthUrl = () => {
 };
 
 beforeEach(() => {
+    vi.restoreAllMocks();
     window.history.replaceState({}, '', '/');
 });
 
@@ -26,7 +27,6 @@ test('preserves the exact protected route including search and hash', () => {
 
     expect(getReturnToFromSocialAuthUrl()).toBe('/group/123?tab=members#balances');
 });
-
 
 test('builds personal friend invite links on the canonical route', () => {
     expect(buildFriendInviteLink({ inviteToken: 'friend-token' })).toContain(
@@ -56,4 +56,20 @@ test.each([
     `${ROUTES.OAUTH_CALLBACK}?code=loop`,
 ])('prevents OAuth callback redirect loops for %s', returnTo => {
     expect(resolveOAuthReturnTo(returnTo, APP_ORIGIN)).toBe(ROUTES.HOME);
+});
+
+test('Google OAuth uses a prefixed URL before conflicting browser language', () => {
+    window.history.replaceState({}, '', '/pt-pt/privacy');
+    vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['ru-RU']);
+    expect(new URL(getSocialAuthUrl('google')).searchParams.get('locale')).toBe('pt-PT');
+});
+
+test('English SSG homepage uses supported browser language for signup', () => {
+    vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['ja-JP', 'ru-RU']);
+    expect(new URL(getSocialAuthUrl('google')).searchParams.get('locale')).toBe('ru');
+});
+
+test('unsupported browser language defaults new signup to English', () => {
+    vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['ja-JP']);
+    expect(new URL(getSocialAuthUrl('google')).searchParams.get('locale')).toBe('en');
 });

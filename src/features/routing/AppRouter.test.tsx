@@ -3,15 +3,15 @@ import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import { Theme } from '@radix-ui/themes';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 
 import { lightThemeStyled } from 'constants/styled-themes';
+import i18n from 'i18n';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 
 import AppRouter from './AppRouter';
 
-import 'i18n/index';
 
 const { ACTIVITY_ROUTE_CONTENT, JOIN_ROUTE_CONTENT } = vi.hoisted(() => ({
     ACTIVITY_ROUTE_CONTENT: 'Activity route content',
@@ -31,12 +31,14 @@ vi.mock('pages/GroupJoinPage', () => ({
 }));
 
 beforeEach(() => {
+    document.documentElement.lang = 'en';
     useAuthStore.setState({ status: 'authenticated' });
     useDashboardStore.setState({ appMode: APP_MODES.GROUP });
+    return i18n.changeLanguage('en');
 });
 
 const renderRouter = (route: string) => {
-    render(
+    return render(
         <MemoryRouter initialEntries={[route]}>
             <ThemeProvider theme={lightThemeStyled}>
                 <Theme>
@@ -83,4 +85,36 @@ test('reaches the public Terms page without authentication', () => {
     renderRouter('/terms');
 
     return screen.findByRole('heading', { name: 'Terms of service' });
+});
+
+test('an English public URL corrects a stale Russian SPA language before rendering', () => {
+    useAuthStore.setState({ status: 'unauthenticated' });
+    return i18n.changeLanguage('ru').then(() => {
+        renderRouter('/privacy');
+        return screen.findByRole('heading', { name: 'Privacy' }).then(() => {
+            expect(i18n.resolvedLanguage).toBe('en');
+        });
+    });
+});
+
+test('a localized public URL wins over the previous SPA language', () => {
+    useAuthStore.setState({ status: 'unauthenticated' });
+    renderRouter('/ru/privacy');
+    return waitFor(() => {
+        expect(i18n.resolvedLanguage).toBe('ru');
+        expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
+    });
+});
+
+test('SPA public URL updates html lang and restores it after leaving', () => {
+    useAuthStore.setState({ status: 'unauthenticated' });
+    const mounted = renderRouter('/ru/privacy');
+
+    return waitFor(() => {
+        expect(i18n.resolvedLanguage).toBe('ru');
+        expect(document.documentElement.lang).toBe('ru');
+    }).then(() => {
+        mounted.unmount();
+        expect(document.documentElement.lang).toBe('en');
+    });
 });

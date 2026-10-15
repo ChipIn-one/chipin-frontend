@@ -55,5 +55,9 @@
   },
   "settlement": {
     "created": "Payment recorded successfully!"
+  },
+  "public": {
+      "languageSuggestion": "ChipIn is available in English",
+      "languageSuggestionAction": "Switch to English"
   }
 }

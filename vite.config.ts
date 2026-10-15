@@ -6,6 +6,11 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import react from '@vitejs/plugin-react-swc';
 
+import {
+    addPublicDirectoryAliases,
+    runPrerenderPublic,
+} from './scripts/prerender-before-workbox.mjs';
+import { PRIVATE_SPA_NAVIGATION_ALLOWLIST } from './scripts/private-spa-navigation';
 import { resolveAppVersion } from './scripts/version-resolver.mjs';
 
 // https://vite.dev/config/
@@ -129,6 +134,11 @@ export default defineConfig(({ mode }) => {
             react(),
             tsconfigPaths(),
             VitePWA({
+                // Run SSG after Vite writes client assets, before Workbox scans dist.
+                // This prevents missing localized pages and stale root HTML revisions.
+                integration: {
+                    beforeBuildServiceWorker: runPrerenderPublic,
+                },
                 registerType: 'prompt', // or autoUpdate
                 injectRegister: false,
 
@@ -186,9 +196,14 @@ export default defineConfig(({ mode }) => {
 
                 workbox: {
                     globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+                    // Canonical public URLs omit index.html and often the slash.
+                    // Precache both URL variants so offline navigation resolves.
+                    manifestTransforms: [addPublicDirectoryAliases],
                     // Serve the noindex SPA shell for service-worker navigation fallback.
                     navigateFallback: 'app.html',
-                    navigateFallbackDenylist: [/^\/api\//],
+                    // Only explicitly private SPA paths may use offline app.html.
+                    // All public URLs use exact precache entries, and unknown URLs retain 404.
+                    navigateFallbackAllowlist: PRIVATE_SPA_NAVIGATION_ALLOWLIST,
                     sourcemap: false,
                     cleanupOutdatedCaches: true,
                     clientsClaim: true,
