@@ -1,11 +1,13 @@
 import { DEFAULT_LOCALE } from 'constants/locales';
 import {
     LOCALE_PREFIX,
+    PUBLIC_HOME_PAGE,
     PUBLIC_PAGES,
     PUBLIC_ROUTE_ENTRIES,
 } from 'constants/publicRouteManifest';
 import { HOME_CANONICAL_URL } from 'constants/seo';
-import { resolveBrowserLocale } from 'helpers/locale';
+import { matchLocale, resolveBrowserLocale } from 'helpers/locale';
+import { getLocalUser } from 'helpers/localStorage';
 import type { PublicLocale, PublicPage, PublicRoute } from 'types/publicRoutes';
 
 const getPublicPath = (page: PublicPage, locale: PublicLocale): string => {
@@ -30,6 +32,13 @@ const getPublicRoute = (pathname: string): PublicRoute | null => {
     return PUBLIC_ROUTE_ENTRIES.find(route => route.path === alternate) ?? null;
 };
 
+// Explicit sign-out uses the previous account's local-only language setting.
+// Direct public visits still resolve their content exclusively from the URL.
+const getLastAccountLandingPath = (): string => {
+    const locale = matchLocale(getLocalUser()?.settings.language ?? '') ?? DEFAULT_LOCALE;
+    return getPublicPath(PUBLIC_HOME_PAGE, locale);
+};
+
 const getPublicCanonical = (route: PublicRoute): string =>
     HOME_CANONICAL_URL.slice(0, -1) + route.path;
 
@@ -45,4 +54,4 @@ const resolveRegistrationLocale = (
     return resolveBrowserLocale(browserLanguages);
 };
 
-export { getPublicCanonical, getPublicPath, getPublicRoute, resolveRegistrationLocale };
+export { getLastAccountLandingPath, getPublicCanonical, getPublicPath, getPublicRoute, resolveRegistrationLocale };

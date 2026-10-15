@@ -7,6 +7,7 @@ import type { i18n as I18nInstance } from 'i18next';
 import { Theme } from '@radix-ui/themes';
 
 import { darkThemeStyled, lightThemeStyled } from 'constants/styled-themes';
+import { isPreferredPublicThemeDark } from 'helpers/theme';
 import type { PublicRoute } from 'types/publicRoutes';
 
 import { ModalOverlayGlobalStyles } from 'components/modals/components';
@@ -24,19 +25,28 @@ const getSystemDark = (): boolean =>
     typeof window.matchMedia === 'function' &&
     window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-const subscribeToSystemTheme = (onChange: () => void): (() => void) => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+const getPreferredDark = (): boolean => isPreferredPublicThemeDark(getSystemDark());
+
+const subscribeToPreferredTheme = (onChange: () => void): (() => void) => {
+    if (typeof window === 'undefined') {
         return () => undefined;
+    }
+    window.addEventListener('storage', onChange);
+    if (typeof window.matchMedia !== 'function') {
+        return () => window.removeEventListener('storage', onChange);
     }
     const preference = window.matchMedia('(prefers-color-scheme: dark)');
     preference.addEventListener('change', onChange);
-    return () => preference.removeEventListener('change', onChange);
+    return () => {
+        preference.removeEventListener('change', onChange);
+        window.removeEventListener('storage', onChange);
+    };
 };
 
-// The server snapshot matches the first hydration render; OS preference takes
-// effect immediately after hydration, without changing authenticated theme state.
+// The server snapshot matches the first hydration render. After hydration,
+// cached last-account appearance wins over system preference when available.
 const PublicApp = ({ route, i18nInstance, server = false }: PublicAppProps) => {
-    const isDark = useSyncExternalStore(subscribeToSystemTheme, getSystemDark, () => false);
+    const isDark = useSyncExternalStore(subscribeToPreferredTheme, getPreferredDark, () => false);
     const routerContent = server ? (
         <MemoryRouter initialEntries={[route.path]}>
             <PublicContent initialRoute={route} />
