@@ -14,7 +14,7 @@ const isSafeDocumentationPath = path => {
         return false;
     }
 
-    if (path.startsWith('docs/codex/rules/')) {
+    if (path.startsWith('docs/engineering/rules/')) {
         return false;
     }
 

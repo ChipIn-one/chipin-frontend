@@ -7,7 +7,7 @@ describe('CI gate policy', () => {
         expect(isDocsOnlyChange([
             'README.md',
             'docs/api-notes/activity.md',
-            'docs/codex/review-instruction-loading.md',
+            'docs/engineering/code-review.md',
         ])).toBe(true);
     });
 
@@ -18,7 +18,7 @@ describe('CI gate policy', () => {
 
     test('does not fast-path repository rules, security policy, AI context, or workflow changes', () => {
         for (const path of [
-            'docs/codex/rules/00-foundation.md',
+            'docs/engineering/rules/00-foundation.md',
             'docs/dependabot-security-updates.md',
             'AGENTS.md',
             '.ai/context.md',
