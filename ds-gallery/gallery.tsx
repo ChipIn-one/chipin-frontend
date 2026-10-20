@@ -198,7 +198,7 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
                             <Button color="red" variant="soft"><LucideTrash2 size={16} />{t('common:buttons.delete')}</Button>
                         </Specimen>
                         <Specimen name="IconButton / Button sizes">
-                            <IconButton size="3" radius="full"><LucidePlus /></IconButton>
+                            <IconButton size="3" radius="full" aria-label={t('common:buttons.addExpense')}><LucidePlus /></IconButton>
                             {(['1', '2', '3'] as const).map(s => <Button key={s} size={s}>{t('samples.size', { size: s })}</Button>)}
                         </Specimen>
                         <Specimen name="basics/CopyButton">
