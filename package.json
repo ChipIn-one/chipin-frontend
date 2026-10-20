@@ -13,7 +13,7 @@
         "test:full": "vitest run",
         "typecheck": "tsc -b",
         "verify": "npm run lint -- --quiet && npm run typecheck",
-        "verify:full": "npm run lint && npm run test:full && npm run build",
+        "verify:full": "npm run lint && npm run test:full && npm run build && npm run build:ds-gallery",
         "vercel-build": "npm run create-pwa-icons && vite build && npm run verify:public-precache",
         "prepare": "husky",
         "pr:create": "node scripts/create-pr.mjs",
@@ -25,7 +25,8 @@
         "test:contract:smoke": "vitest run --config vitest.contract.config.ts contract-tests/auth-session.contract.ts",
         "test:contract:full": "vitest run --config vitest.contract.config.ts contract-tests/core-api.contract.ts",
         "prerender:public": "node scripts/prerender-public.mjs",
-        "verify:public-precache": "node scripts/verify-public-precache.mjs"
+        "verify:public-precache": "node scripts/verify-public-precache.mjs",
+        "build:ds-gallery": "tsc -b ds-gallery && vite build --config ds-gallery/vite.config.ts && node ds-gallery/build-html.mjs"
     },
     "dependencies": {
         "@radix-ui/themes": "^3.3.0",
