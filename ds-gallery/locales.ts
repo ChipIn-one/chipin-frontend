@@ -4,6 +4,7 @@ import type { SupportedLocale } from 'constants/locales';
 
 const en = {
     title: 'Chipin Design System',
+    documentTitle: 'Chipin Components',
     intro: 'Live components from <code>ChipIn-one/chipin-frontend</code> — Radix Themes (accent grass, gray olive, radius large) with styled-components tokens. Everything below is the real code, rendered with mock data.',
     controls: { locale: 'Locale', toggleTheme: 'Toggle theme', decrease: 'Decrease', increase: 'Increase' },
     nav: {
@@ -40,6 +41,8 @@ const en = {
         value: 'value:',
         invite: 'Invite',
         copyCode: 'Copy code',
+        copyWhatLink: 'link',
+        copyWhatCode: 'code',
         groupActions: 'Group actions',
         inviteMembers: 'Invite members',
         groupNameHint: 'Visible to all members',
@@ -64,6 +67,7 @@ type GalleryStrings = typeof en;
 
 const ru: GalleryStrings = {
     title: 'Дизайн-система Chipin',
+    documentTitle: 'Компоненты Chipin',
     intro: 'Живые компоненты из <code>ChipIn-one/chipin-frontend</code> — Radix Themes (акцент grass, серый olive, радиус large) с токенами styled-components. Всё ниже — настоящий код с моковыми данными.',
     controls: { locale: 'Язык', toggleTheme: 'Переключить тему', decrease: 'Уменьшить', increase: 'Увеличить' },
     nav: {
@@ -100,6 +104,8 @@ const ru: GalleryStrings = {
         value: 'значение:',
         invite: 'Пригласить',
         copyCode: 'Скопировать код',
+        copyWhatLink: 'ссылку',
+        copyWhatCode: 'код',
         groupActions: 'Действия с группой',
         inviteMembers: 'Пригласить участников',
         groupNameHint: 'Видно всем участникам',
@@ -122,6 +128,7 @@ const ru: GalleryStrings = {
 
 const es: GalleryStrings = {
     title: 'Sistema de diseño de Chipin',
+    documentTitle: 'Componentes de Chipin',
     intro: 'Componentes reales de <code>ChipIn-one/chipin-frontend</code>: Radix Themes (acento grass, gris olive, radio large) con tokens de styled-components. Todo lo de abajo es el código real, renderizado con datos de prueba.',
     controls: { locale: 'Idioma', toggleTheme: 'Cambiar tema', decrease: 'Disminuir', increase: 'Aumentar' },
     nav: {
@@ -158,6 +165,8 @@ const es: GalleryStrings = {
         value: 'valor:',
         invite: 'Invitar',
         copyCode: 'Copiar código',
+        copyWhatLink: 'enlace',
+        copyWhatCode: 'código',
         groupActions: 'Acciones del grupo',
         inviteMembers: 'Invitar miembros',
         groupNameHint: 'Visible para todos los miembros',
@@ -180,6 +189,7 @@ const es: GalleryStrings = {
 
 const ptBR: GalleryStrings = {
     title: 'Design system do Chipin',
+    documentTitle: 'Componentes do Chipin',
     intro: 'Componentes reais de <code>ChipIn-one/chipin-frontend</code>: Radix Themes (destaque grass, cinza olive, raio large) com tokens de styled-components. Tudo abaixo é o código real, renderizado com dados fictícios.',
     controls: { locale: 'Idioma', toggleTheme: 'Alternar tema', decrease: 'Diminuir', increase: 'Aumentar' },
     nav: {
@@ -216,6 +226,8 @@ const ptBR: GalleryStrings = {
         value: 'valor:',
         invite: 'Convidar',
         copyCode: 'Copiar código',
+        copyWhatLink: 'link',
+        copyWhatCode: 'código',
         groupActions: 'Ações do grupo',
         inviteMembers: 'Convidar membros',
         groupNameHint: 'Visível para todos os membros',
@@ -252,6 +264,7 @@ const ptPT: GalleryStrings = {
         groupNameHint: 'Visível para todos os membros',
         includeMe: 'Incluir-me',
         byShares: 'Por quotas',
+        copyWhatLink: 'ligação',
     },
 };
 

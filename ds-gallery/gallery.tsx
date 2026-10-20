@@ -132,7 +132,8 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
 
     useEffect(() => {
         document.documentElement.lang = locale;
-    }, [locale]);
+        document.title = t('documentTitle');
+    }, [locale, t]);
 
     const onLocaleChange = (next: string) => {
         i18n.changeLanguage(next).then(() => setLocale(next)).catch(() => undefined);
@@ -202,8 +203,8 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
                             {(['1', '2', '3'] as const).map(s => <Button key={s} size={s}>{t('samples.size', { size: s })}</Button>)}
                         </Specimen>
                         <Specimen name="basics/CopyButton">
-                            <CopyButton value="https://chipin.one/invite/abc" what="link">{t('group:page.settings.copyLinkTitle')}</CopyButton>
-                            <CopyButton value="ABC123" what="code" variant="soft" size="2">{t('samples.copyCode')}</CopyButton>
+                            <CopyButton value="https://chipin.one/invite/abc" what={t('samples.copyWhatLink')}>{t('group:page.settings.copyLinkTitle')}</CopyButton>
+                            <CopyButton value="ABC123" what={t('samples.copyWhatCode')} variant="soft" size="2">{t('samples.copyCode')}</CopyButton>
                         </Specimen>
                         <Specimen name="components/Dropdown">
                             <Dropdown
@@ -237,7 +238,7 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
                             </Box>
                         </Specimen>
                         <Specimen name="basics/AmountInput">
-                            <AmountInput value={amount} onChange={setAmount} size="3" />
+                            <AmountInput aria-label={t('common:fields.amount')} value={amount} onChange={setAmount} size="3" />
                             <Text size="2" color="gray">{t('samples.value')} <Code>{amount || EMPTY_VALUE}</Code></Text>
                         </Specimen>
                         <Specimen name="components/Select">
