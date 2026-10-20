@@ -15,7 +15,6 @@ dev-dist
 *.local
 
 # Editor directories and files
-.codex/*
 .superpowers/*
 .vscode/*
 !.vscode/extensions.json
@@ -30,9 +29,9 @@ dev-dist
 # Sentry Config File
 .env.sentry-build-plugin
 
-# Local Codex and Superpowers working artifacts
+# Local Superpowers working artifacts
 /.superpowers/
 /docs/superpowers/plans/
 /docs/superpowers/specs/
-/docs/codex/plans/
-/docs/codex/specs/
+/docs/engineering/plans/
+/docs/engineering/specs/

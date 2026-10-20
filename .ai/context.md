@@ -2,7 +2,7 @@
 
 - Repository: `ChipIn-one/chipin-frontend`
 - Purpose: ChipIn frontend Vite/React/TypeScript PWA.
-- Repository-specific engineering invariants live in `AGENTS.md` and relevant `docs/codex/rules/*`.
+- Repository-specific engineering invariants live in `AGENTS.md` and relevant `docs/engineering/rules/*`.
 - Generic AI lifecycle and role semantics belong to canonical `syllik/ai-workflow`; model/provider does not define Planner/Architect/Executor/Reviewer/Auditor authority.
 - Integration branch: `dev`; production branch: `main`. New Issue-backed branches follow the canonical registry pattern, and `npm run pr:create` accepts only that pattern. Historical/noncanonical branches and PRs are not handled by the helper.
 - Canonical local completion gate: `npm run verify:full`.

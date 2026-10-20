@@ -18,7 +18,7 @@ contracts remain unchanged unless explicitly requested.
 - User-facing text, accessibility labels, and toast content use i18n.
 - Preserve money, offline, persistence, concurrency, API/data-shape, and accessibility invariants.
 - For dynamic collections, avoid unnecessary repeated traversals and allocations; follow the detailed
-  exceptions in `docs/codex/rules/00-foundation.md`.
+  exceptions in `docs/engineering/rules/00-foundation.md`.
 
 ## Landing previews
 
@@ -29,8 +29,8 @@ composition.
 
 ## Local rules and commands
 
-Read `docs/codex/rules/00-foundation.md` and only relevant chapters before
-code changes. Testing guidance is in `docs/codex/rules/70-testing.md`.
+Read `docs/engineering/rules/00-foundation.md` and only relevant chapters before
+code changes. Testing guidance is in `docs/engineering/rules/70-testing.md`.
 The generic AI lifecycle, publication, and reviewer roles are owned by the
 canonical `syllik/ai-workflow`; this file contains only ChipIn-specific
 commands and repository policy.
@@ -73,7 +73,7 @@ Roles are provider-independent; stronger models are selected by risk/capability,
 
 ## Code Review Rules
 
-These are the self-contained repository-wide rules for any independent Reviewer. Do not assume `.ai/context.md` or linked `docs/codex/rules/*` files are loaded automatically; those files remain implementation guidance/navigation, not an implicit review-instruction source.
+These are the self-contained repository-wide rules for any independent Reviewer. Do not assume `.ai/context.md` or linked `docs/engineering/rules/*` files are loaded automatically; those files remain implementation guidance/navigation, not an implicit review-instruction source.
 
 - Flag auth/session/refresh-token changes that can leak credentials, restore a logged-out
   session, break refresh ordering, or bypass protected-route behavior.
@@ -90,9 +90,6 @@ These are the self-contained repository-wide rules for any independent Reviewer.
 - Require meaningful regression tests for materially changed logic when a practical seam
   exists. Do not report formatting, import ordering, or other deterministic style checks
   already enforced by CI unless they cause a concrete correctness problem.
-
-Evidence and the repository decision for instruction loading are recorded in
-`docs/codex/review-instruction-loading.md`.
 
 ## GitHub task authority
 

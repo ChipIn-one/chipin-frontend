@@ -127,4 +127,4 @@ export const fetchGroups = (signal?: AbortSignal): Promise<GroupResponse[]> => {
 
 For activity feed/event wire handling, read
 [`docs/api-notes/activity.md`](../../api-notes/activity.md). The link is repository navigation;
-managed Codex Review must not be assumed to load linked documentation automatically.
+an independent Reviewer must not be assumed to load linked documentation automatically.
