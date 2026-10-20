@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components -- dev-only design-system gallery entry, never shipped in the app bundle */
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import i18n from 'i18n';
 import { LucideMinus, LucideMoon, LucidePlus, LucideSun, LucideTrash2, LucideUsers } from 'lucide-react';
 import { createRoot } from 'react-dom/client';
@@ -129,6 +129,10 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
     const [radio, setRadio] = useState('equal');
     const [isSolo, setIsSolo] = useState(false);
     const [progress, setProgress] = useState(64);
+
+    useEffect(() => {
+        document.documentElement.lang = locale;
+    }, [locale]);
 
     const onLocaleChange = (next: string) => {
         i18n.changeLanguage(next).then(() => setLocale(next)).catch(() => undefined);

@@ -9,6 +9,6 @@ const js = readFileSync(resolve(out, 'gallery.js'), 'utf8').replaceAll('</script
 
 writeFileSync(
     resolve(here, 'standalone.html'),
-    `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chipin Components</title><style>${css}</style></head><body><div id="root"></div><script>${js}</script></body></html>`,
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chipin Components</title><style>${css}</style></head><body><div id="root"></div><script>${js}</script></body></html>`,
 );
 console.log('ds-gallery/standalone.html written');
