@@ -7,7 +7,7 @@ Generic reviewer roles and lifecycle semantics belong to the canonical
 
 - Executor is implementation-only and does not review its own task diff.
 - After `IMPLEMENTATION_COMPLETE`, Trusted Publisher/human publication happens before review.
-- Reviewer is an independent provider-neutral, read-only role selected by capability/risk. The current GitHub implementation is triggered with `@codex review`.
+- Reviewer is an independent provider-neutral, read-only role selected by capability/risk.
 - After publication, wait for required `frontend-ci` to be green on the current PR head, then request exactly one review for that SHA; never request while CI is pending/failing or duplicate a current/running review.
 - A review is current only when its reviewed commit SHA matches the current PR head.
 - Reviewer findings stay separate from Executor state and return as one consolidated findings package.
