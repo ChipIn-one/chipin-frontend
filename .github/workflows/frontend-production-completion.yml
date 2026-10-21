@@ -21,6 +21,6 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Reconcile frontend production completion
-        uses: ChipIn-one/.github/automation/frontend-production-completion-action@32d5cd0f63efd99e92ee07bb2c6422da5b374478
+        uses: ChipIn-one/.github/automation/frontend-production-completion-action@e003166dd1e0342ebec5dd25e42397e04621fdd6 # v1.0.0
         with:
           token: ${{ github.token }}
