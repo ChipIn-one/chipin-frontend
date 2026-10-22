@@ -51,32 +51,38 @@ Hook or Vercel token secrets
 | Merge (push) to `master` | `frontend-ci` on the push | Git integration Preview build of the exact `master` commit (dev env vars); `dev.chipin.one` follows it |
 | Release | none in GitHub | the owner runs **Promote to Production** on a chosen `master` deployment |
 
-- `master` builds are Preview deployments: the Vercel Production Branch points
-  to a branch that does not exist, so no commit reaches production by itself.
+- `master` builds are Preview deployments: the Vercel Production Branch stays
+  `main` (Vercel rejects a non-existent branch), and `vercel.json` disables Git
+  deployments for `main`, so no push creates a production build.
   `dev.chipin.one` is attached to `master` and serves the Preview build with
   development environment variables.
 - Production is always an exact `master` commit that was already built and
   served on `dev.chipin.one`. The owner opens that commit's deployment and runs
   **Promote to Production**; Vercel rebuilds the same commit with production
   environment variables and assigns `chipin.one`. Nothing in GitHub triggers it.
-- Vercel is expected to record that production deployment as a GitHub Deployment,
+- Vercel records that production deployment as a GitHub Deployment,
   environment `Production`, creator `vercel[bot]`, with the commit SHA and a
-  `success` status, written at Promote. That record is the production evidence
-  for Issue completion (strategy `deployment-receipt`). The timing is verified
-  at cutover step 7 of #497. FE completion is manual (registry
-  `capabilities.completion: manual`) until ChipIn-one/.github#217, which adds
-  the `deployment-receipt` completion caller to this repository; until then no
-  Issue closes automatically on `master`, and FE Issues are still never closed
-  by hand.
+  `success` status, written at Promote. Preview builds of `master` create only
+  GitHub Deployments `Preview`. Verified at cutover step 7 of #497: Promote
+  created Deployment `Production` 7254813070 by `vercel[bot]` on `e6d2f2e`
+  (2026-10-22T14:24:47Z). That record is the production evidence for Issue
+  completion (strategy `deployment-receipt`).
+- The repository has no completion caller. The ChipIn-one/.github org sweep
+  (`frontend-production-completion.yml`, every 15 minutes) runs
+  `deployment-receipt` for the frontend once ChipIn-one/.github#217 sets
+  registry `capabilities.completion: automatic`: PR merged into `master` →
+  Issue `Awaiting release` → owner Promote → the Issue closes within about
+  15 minutes. FE Issues are never closed by hand; GitHub auto-close is off.
 - `vercel.json` keeps `git.deploymentEnabled` off for the retired `dev` and
-  `main` branches.
+  `main` branches. `main` is a frozen rollback ref until 2026-11-05.
 
 ### Vercel configuration
 
 The Vercel project remains connected to `ChipIn-one/chipin-frontend`.
 
-- The Production Branch points to a non-existent branch, so every `master`
-  commit is a Preview build and production changes only through Promote.
+- The Production Branch stays `main` with Git deployments disabled for it, so
+  every `master` commit is a Preview build and production changes only through
+  Promote.
 - `dev.chipin.one` is attached to `master`.
 - Preview (every `master` build, and PR branch builds) uses `VITE_CHIPIN_ENV=dev`.
 - Production (the rebuild created by Promote to Production) uses
