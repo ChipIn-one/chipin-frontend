@@ -10,10 +10,15 @@ completion lifecycle. Canonical tasks: [Issue #385](https://github.com/ChipIn-on
 A fresh Issue must remain open while its native Development-linked implementation
 PR is merged into `master`. The merge alone must not close it: GitHub's
 "Auto-close issues with merged linked pull requests" is disabled for this
-repository. The `Completion` workflow (`.github/workflows/completion.yml`) and
-its `.github` sweep fallback are the only allowed source of the
-`closed/completed` transition, and only after the merge commit is contained in
-a Vercel production deployment.
+repository. The `deployment-receipt` completion caller and its `.github` sweep
+fallback are the only allowed source of the `closed/completed` transition, and
+only after the merge commit is contained in a Vercel production deployment.
+
+FE completion is manual (registry `capabilities.completion: manual`) until
+ChipIn-one/.github#217, which adds the `deployment-receipt` caller
+(`Completion` workflow) to this repository. Until then no Issue closes
+automatically on `master`, FE Issues are still never closed by hand, and this
+canary cannot run.
 
 ## Release flow
 
@@ -27,10 +32,7 @@ a Vercel production deployment.
    variables and assigns `chipin.one`. Vercel is expected to record that
    production deployment as a GitHub Deployment,
    environment `Production`, creator `vercel[bot]`, with the exact commit SHA
-   and a `success` status. This is verified at cutover step 7 of #497; until
-   then FE completion stays manual (registry `capabilities.completion: manual`),
-   and the `Completion` caller is repinned to the `.github` release tag before
-   it is merged.
+   and a `success` status. This is verified at cutover step 7 of #497.
 4. The completion engine treats that Deployment as the production receipt and
    closes every Issue whose linked PR merge commits it contains.
 

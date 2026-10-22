@@ -62,11 +62,12 @@ Hook or Vercel token secrets
 - Vercel is expected to record that production deployment as a GitHub Deployment,
   environment `Production`, creator `vercel[bot]`, with the commit SHA and a
   `success` status, written at Promote. That record is the production evidence
-  for Issue completion (`.github/workflows/completion.yml`, strategy
-  `deployment-receipt`). The timing is verified at cutover step 7 of #497;
-  until then FE completion stays manual (registry
-  `capabilities.completion: manual`). The completion caller's action pin is
-  moved to the `.github` release tag before it is merged.
+  for Issue completion (strategy `deployment-receipt`). The timing is verified
+  at cutover step 7 of #497. FE completion is manual (registry
+  `capabilities.completion: manual`) until ChipIn-one/.github#217, which adds
+  the `deployment-receipt` completion caller to this repository; until then no
+  Issue closes automatically on `master`, and FE Issues are still never closed
+  by hand.
 - `vercel.json` keeps `git.deploymentEnabled` off for the retired `dev` and
   `main` branches.
 
