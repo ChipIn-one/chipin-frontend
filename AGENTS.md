@@ -48,20 +48,29 @@ content.
 - `npm run version:bump -- <none|patch|minor|major>` — apply the task's explicit SemVer impact before the final commit; `none` is a safe no-op.
 - `npm run version:check` — read-only validation that package and lockfile versions are valid and synchronized.
 - tracked Husky `pre-push` runs `npm run version:check` and `npm run verify:full`; both block a non-zero result and neither mutates repository files.
-- `npm run pr:create` — repository publication helper for Trusted Publisher/human-controlled publication with explicit `dev` base; it is not Executor responsibility.
+- `npm run pr:create` — repository publication helper for Trusted Publisher/human-controlled publication with explicit `master` base; it is not Executor responsibility.
 - Every task prompt includes `Version impact: none | patch | minor | major`, selected from product/API meaning rather than file or LoC counts.
 - For `patch`, `minor`, or `major`, run the automatic `version:bump` before the final commit; `major` is rejected during the pre-1.0 period because `1.0.0` requires an explicit release decision.
-- Runtime labels are `<baseVersion>-dev-<shortTaskHeadSha>` for task/dev/preview builds and `<baseVersion>` for release builds from `main`. GitHub PR builds use the PR head SHA.
+- Runtime labels are `<baseVersion>-dev-<shortTaskHeadSha>` for task/dev/preview builds and `<baseVersion>` for release builds from `main`. GitHub PR builds use the PR head SHA. Release labelling moves to tags in ChipIn-one/.github#172; until then every `master` build, including the promoted one, is labelled `<baseVersion>-dev-<shortSha>`.
 - New Issue-backed task branches use the canonical `<type>/issue-<number>-<slug>` pattern. `npm run pr:create` accepts only that canonical pattern; historical/noncanonical branches and PRs are outside this helper.
 - Executor work stays inside the prepared task branch/worktree and explicit task scope.
-- Publication targets `dev`; required `frontend-ci` remains the remote integration gate after publication.
-- Trusted task publication into `dev` may use `gh pr create --base dev --head
-  <current-task-branch> ...` or `npm run pr:create`; never rely on the repository
-  default `main`, and do not treat publication as Executor work.
-- Reuse an existing open PR for the current head, retarget its base to `dev`
+- `master` is the only long-lived branch and the repository default. Publication
+  targets `master`; required `frontend-ci` remains the remote integration gate
+  after publication. PRs are squash-merged with the PR title as the subject.
+- Trusted task publication into `master` may use `gh pr create --base master --head
+  <current-task-branch> ...` or `npm run pr:create`; do not treat publication as
+  Executor work.
+- Reuse an existing open PR for the current head, retarget its base to `master`
   when allowed, and return its real `/pull/<number>` URL.
-- Executor never pushes directly to `dev`/`main` and never merges; human performs
+- Executor never pushes directly to `master` and never merges; human performs
   the merge after the remote gate is green.
+- Delivery is Vercel's: the Vercel Git integration builds every `master` commit
+  as a Preview with development environment variables, and `dev.chipin.one` is
+  attached to `master`. The Vercel Production Branch points to a non-existent
+  branch, so nothing reaches production by itself; the owner releases by
+  **Promote to Production** of an exact `master` deployment, which Vercel
+  rebuilds with production environment variables and assigns to `chipin.one`.
+  The repository has no deploy workflow.
 - `npm run build` — production build.
 - `npm run vercel-build` — Vercel pipeline.
 
@@ -101,8 +110,8 @@ These rules apply only to ChipIn frontend tasks.
 - ChipIn Development Project #5 `Status` uses `Backlog`, `Todo`, `In Progress`, `Awaiting release` (written only by the `.github` completion automation), plus `Done` only as a derived mirror of an Issue already `closed/completed`. Native Issue state/reason remains terminal authority; `Done` must not authorize closure or duplicate completion logic.
 - Priority presentation is derived only from the canonical `Priority` field. If that field cannot be read, fail closed; do not substitute Issue labels or title/body encoding.
 - Existing Milestone assignments are human-owned release intent. Do not infer, add, clear, or rename a Milestone from labels/title/body; Milestone membership never authorizes execution or completion.
-- For frontend code work, merge to `dev` is integration only. Close the Issue as completed only after the required implementation is merged to production branch `main`; close as not planned only for cancelled/abandoned work.
-- Do not close a frontend code Issue by hand after its merge to `dev`; it stays open in `Awaiting release` and the `dev -> main` release merge closes it automatically. Issues without implementation evidence (decisions, research, gates) are still closed by hand. See `docs/engineering/frontend-production-completion-canary.md#issue-lifecycle-after-the-merge-to-dev`.
+- For frontend code work, merge to `master` is integration only. An Issue is completed only when the merge commit of every linked PR is contained in a Vercel production deployment (GitHub Deployment `Production` by `vercel[bot]`, expected to be written when the owner promotes a `master` deployment; verified at cutover step 7 of #497); close as not planned only for cancelled/abandoned work.
+- Never close a frontend code Issue by hand. After its merge to `master` it stays open in `Awaiting release`, and the completion automation (strategy `deployment-receipt`) closes it once the promoted production deployment contains the merge. FE completion is manual until ChipIn-one/.github#217, which adds the `deployment-receipt` caller (registry `capabilities.completion: manual`); until then no Issue closes automatically on `master`, and FE Issues are still never closed by hand. Issues without implementation evidence (decisions, research, gates) are still closed by hand. See `docs/engineering/frontend-production-completion-canary.md#issue-lifecycle-after-the-merge-to-master`.
 - Historical Trello links may remain in `References` as read-only provenance/evidence; Trello must not participate in current task state, notifications as authority, admission, planning, or execution authorization.
 - Active agents and workflows must not create or update Trello cards; move Trello cards or lists; update Trello labels, status, or metadata; write comments or activity to Trello; or invoke or maintain Trello task-tracking integrations.
 - There is no bidirectional Trello-to-GitHub or GitHub-to-Trello synchronization.
@@ -118,7 +127,7 @@ These rules apply only to ChipIn frontend tasks.
 
 ## Git and execution
 
-Generic execution lifecycle and reviewer semantics are defined by canonical `syllik/ai-workflow`. Task work targets `dev`; release remains `dev` → `main`. Executor implements/validates the authorized scope and stops at `IMPLEMENTATION_COMPLETE` or `BLOCKED`. Trusted publication, independent review, corrections, and release decisions remain outside Executor authority.
+Generic execution lifecycle and reviewer semantics are defined by canonical `syllik/ai-workflow`. Task work targets `master`; release is an owner Promote of an exact `master` deployment in Vercel. Executor implements/validates the authorized scope and stops at `IMPLEMENTATION_COMPLETE` or `BLOCKED`. Trusted publication, independent review, corrections, and release decisions remain outside Executor authority.
 Preserve unrelated work and do not change backend or unrelated architecture.
 
 ## GATE — knowledge base

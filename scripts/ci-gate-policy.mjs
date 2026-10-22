@@ -2,8 +2,8 @@ import fs from 'node:fs';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
-const WORKFLOWS = new Set(['frontend-ci', 'main-ci']);
-const BRANCHES = new Set(['dev', 'main']);
+const WORKFLOWS = new Set(['frontend-ci']);
+const BRANCHES = new Set(['master']);
 
 const isSafeDocumentationPath = path => {
     if (path === 'README.md') {
@@ -31,14 +31,6 @@ export const resolveCiGateMode = ({ workflow, targetBranch, changedFiles }) => {
 
     if (!BRANCHES.has(targetBranch)) {
         throw new Error(`Unsupported CI target branch: ${targetBranch || 'missing'}`);
-    }
-
-    if (workflow === 'frontend-ci' && targetBranch === 'main') {
-        return 'compatibility';
-    }
-
-    if (workflow === 'main-ci' && targetBranch !== 'main') {
-        throw new Error('main-ci may only validate main.');
     }
 
     return isDocsOnlyChange(changedFiles) ? 'docs-only' : 'full';

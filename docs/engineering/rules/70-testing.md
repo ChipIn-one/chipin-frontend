@@ -90,14 +90,15 @@ Generic lifecycle and reviewer definitions belong to canonical
 - `npm run version:check` validates matching SemVer values in `package.json` and `package-lock.json` without writing.
 - Tracked Husky `pre-push` runs `npm run version:check` followed by `npm run verify:full`; a non-zero result blocks the push and the hook is read-only.
 - Runtime labels are `<baseVersion>-dev-<shortTaskHeadSha>` for task/dev/preview builds and `<baseVersion>` for `main` releases.
+  Release labelling moves to tags in ChipIn-one/.github#172; until then every `master` build is labelled `<baseVersion>-dev-<shortTaskHeadSha>`.
   Pull-request CI receives `github.event.pull_request.head.sha`; push CI receives `github.sha`.
 - Each Planner task handoff provides `Version impact: none | patch | minor | major` from product/API meaning.
   Automatic major bumps from `0.x.y` are rejected because `1.0.0` requires an explicit release decision.
 - New Issue-backed task branches use the canonical `<type>/issue-<number>-<slug>` pattern. The PR helper does not support historical/noncanonical branch formats.
 - `npm run pr:create` checks the current task branch, performs a cheap
-  `gh auth status`, and creates/updates a PR with explicit `--base dev`; it
+  `gh auth status`, and creates/updates a PR with explicit `--base master`; it
   returns only a real `/pull/<number>` URL. It accepts only the canonical Issue-backed branch pattern. This is a Trusted Publisher/human-controlled publication helper, not Executor responsibility.
-- Trusted publication into `dev` is separate from Executor execution. Remote
+- Trusted publication into `master` is separate from Executor execution. Remote
   `frontend-ci` remains authoritative for post-publication integration readiness.
 - The independent Reviewer role is provider-neutral. After required `frontend-ci` is green for the current PR head, Trusted Publisher/human requests exactly one review for that SHA. Never request review while required CI is pending/failing or duplicate a request for the same SHA. Every changed head invalidates the previous review and repeats the green-CI gate before one fresh review.
 - Reviewer findings remain separate from Executor state and are passed as one consolidated package. A v2 handoff may authorize 0–2 correction batches upfront; those batches do not require another human approval. Legacy v1/unspecified handoffs still require explicit human authorization per correction batch. Exhausted correction authority or disputed findings escalate to a human. Reviewer unavailability may use a different independent reviewer selected by capability/risk, but does not bypass human escalation for disputes or exhausted correction authority. Human performs the merge.

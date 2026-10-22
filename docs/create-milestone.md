@@ -6,7 +6,7 @@ The workflow uses the shared policy at
 [ChipIn-one/.github#51](https://github.com/ChipIn-one/.github/issues/51)
 via a SHA-pinned action and **only this repository's** `GITHUB_TOKEN`.
 
-After the control workflow reaches the default branch (`main`), use
+After the control workflow reaches the default branch (`master`), use
 ChatGPT's connected GitHub `create_issue` action in **`ChipIn-one/chipin-frontend`**:
 
 ```text
