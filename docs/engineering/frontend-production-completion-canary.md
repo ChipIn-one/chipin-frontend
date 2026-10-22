@@ -10,6 +10,19 @@ PR reaches `dev`. A human-only `dev → main` release merge must not auto-close
 the Issue from release PR prose. The existing `Frontend production completion`
 workflow is the only allowed source of its `closed/completed` transition.
 
+## Issue lifecycle after the merge to `dev`
+
+- After the last implementation PR merges into `dev`, the Issue stays open.
+- The `.github` completion sweep sets Project #5 Status `Awaiting release`
+  within about 15 minutes. The Status is display only and never closes an Issue.
+- Do not close the Issue by hand after the merge to `dev`. The completion policy
+  tolerates an early manual close that is later reopened, but it is noise.
+- The `dev -> main` release merge closes the Issue as completed automatically
+  (`Frontend production completion`, with the `.github` fallback).
+- Issues without implementation evidence (decisions, research, gates) are closed
+  by hand as before.
+- Contract: [`docs/workflow/completion.md`](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/completion.md).
+
 ## Controlled sequence
 
 1. Open one Issue-backed docs-only implementation PR against `dev`; let the

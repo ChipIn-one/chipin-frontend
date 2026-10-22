@@ -98,10 +98,11 @@ These rules apply only to ChipIn frontend tasks.
 - The canonical task identity is `ChipIn-one/<repository>#<issue-number>`.
 - The GitHub Issue title and body are the task specification and dependency record.
 - Organization Issue Fields are canonical structured metadata for `Priority` and applicable `Severity`. Native repository Milestone is the optional concrete release target; missing Milestone is valid.
-- ChipIn Development Project #5 `Status` uses `Backlog`, `Todo`, `In Progress`, plus `Done` only as a derived mirror of an Issue already `closed/completed`. Native Issue state/reason remains terminal authority; `Done` must not authorize closure or duplicate completion logic.
+- ChipIn Development Project #5 `Status` uses `Backlog`, `Todo`, `In Progress`, `Awaiting release` (written only by the `.github` completion automation), plus `Done` only as a derived mirror of an Issue already `closed/completed`. Native Issue state/reason remains terminal authority; `Done` must not authorize closure or duplicate completion logic.
 - Priority presentation is derived only from the canonical `Priority` field. If that field cannot be read, fail closed; do not substitute Issue labels or title/body encoding.
 - Existing Milestone assignments are human-owned release intent. Do not infer, add, clear, or rename a Milestone from labels/title/body; Milestone membership never authorizes execution or completion.
 - For frontend code work, merge to `dev` is integration only. Close the Issue as completed only after the required implementation is merged to production branch `main`; close as not planned only for cancelled/abandoned work.
+- Do not close a frontend code Issue by hand after its merge to `dev`; it stays open in `Awaiting release` and the `dev -> main` release merge closes it automatically. Issues without implementation evidence (decisions, research, gates) are still closed by hand. See `docs/engineering/frontend-production-completion-canary.md#issue-lifecycle-after-the-merge-to-dev`.
 - Historical Trello links may remain in `References` as read-only provenance/evidence; Trello must not participate in current task state, notifications as authority, admission, planning, or execution authorization.
 - Active agents and workflows must not create or update Trello cards; move Trello cards or lists; update Trello labels, status, or metadata; write comments or activity to Trello; or invoke or maintain Trello task-tracking integrations.
 - There is no bidirectional Trello-to-GitHub or GitHub-to-Trello synchronization.
