@@ -2,10 +2,10 @@ name: Frontend PR metadata
 
 on:
   pull_request:
-    branches: [dev, main]
+    branches: [master]
     types: [opened, reopened, edited, synchronize, ready_for_review]
   workflow_run:
-    workflows: [Frontend CI, Main CI]
+    workflows: [Frontend CI]
     types: [completed]
   workflow_dispatch:
     inputs:

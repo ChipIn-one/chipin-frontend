@@ -18,9 +18,10 @@ test('accepts canonical vendor-neutral Issue-backed task branches', () => {
     expect(validateTaskBranch('policy/issue-357-role-contract')).toBeNull();
 });
 
-test('rejects dev and main as task branches', () => {
-    expect(validateTaskBranch('dev')).toContain('dev');
-    expect(validateTaskBranch('main')).toContain('main');
+test('rejects master and the retired dev/main branches as task branches', () => {
+    expect(validateTaskBranch('master')).toContain('protected branch master');
+    expect(validateTaskBranch('dev')).toContain('issue-<number>');
+    expect(validateTaskBranch('main')).toContain('issue-<number>');
 });
 
 test('rejects detached HEAD as a task branch', () => {
@@ -34,12 +35,12 @@ test('rejects arbitrary branches outside the canonical task format', () => {
     expect(validateTaskBranch('feat/issue-12-extra/path')).toContain('issue-<number>');
 });
 
-test('creates task PR commands with an explicit dev base', () => {
+test('creates task PR commands with an explicit master base', () => {
     expect(buildCreatePullRequestArgs('feat/issue-356-provider-neutral-roles', 'ChipIn-one/chipin-frontend#356', 'Human commit description')).toEqual([
         'pr',
         'create',
         '--base',
-        'dev',
+        'master',
         '--head',
         'feat/issue-356-provider-neutral-roles',
         '--fill',
@@ -59,11 +60,11 @@ test('commit notes cannot introduce a second or conflicting Task identity', () =
         'Task identity: ChipIn-one/chipin-frontend#72')).toThrow('conflicting Task identity');
 });
 
-test('reuses an existing PR and retargets it when its base is not dev', () => {
+test('reuses an existing PR and retargets it when its base is not master', () => {
     expect(getOpenPullRequestAction([{
         number: 42,
         url: 'https://github.com/ChipIn-one/chipin-frontend/pull/42',
-        baseRefName: 'main',
+        baseRefName: 'dev',
     }])).toEqual({
         kind: 'retarget',
         number: 42,
@@ -71,11 +72,11 @@ test('reuses an existing PR and retargets it when its base is not dev', () => {
     });
 });
 
-test('returns an existing dev PR without creating a duplicate', () => {
+test('returns an existing master PR without creating a duplicate', () => {
     expect(getOpenPullRequestAction([{
         number: 43,
         url: 'https://github.com/ChipIn-one/chipin-frontend/pull/43',
-        baseRefName: 'dev',
+        baseRefName: 'master',
     }])).toEqual({
         kind: 'existing',
         url: 'https://github.com/ChipIn-one/chipin-frontend/pull/43',
@@ -89,24 +90,21 @@ test('rejects pull/new links as PR URLs', () => {
 });
 
 
-test('frontend admission bypass is restricted to trusted Dependabot dev PRs', () => {
+test('frontend admission bypass is restricted to trusted Dependabot master PRs', () => {
     const workflow = readFileSync(resolve(process.cwd(), '.github/workflows/frontend-ci.yml'), 'utf8');
-    expect(workflow).toContain("github.base_ref == 'dev' && github.event.pull_request.user.login == 'dependabot[bot]' && github.actor == 'dependabot[bot]'");
+    expect(workflow).toContain("github.base_ref == 'master' && github.event.pull_request.user.login == 'dependabot[bot]' && github.actor == 'dependabot[bot]'");
     expect(workflow).toContain("github.event_name == 'pull_request' && !(");
 });
 
-
-test('dev-to-main release PRs retain fail-closed per-Issue admission, not a task-only exemption', () => {
-    const main = readFileSync(resolve(process.cwd(), '.github/workflows/main-ci.yml'), 'utf8');
+test('frontend-ci keeps fail-closed Issue admission for every task PR into master', () => {
     const frontend = readFileSync(resolve(process.cwd(), '.github/workflows/frontend-ci.yml'), 'utf8');
-    for (const workflow of [main, frontend]) {
-        expect(workflow).toContain('Included Issues');
-        expect(workflow).toContain('ChipIn-one/.github/automation/issue-admission-action@');
-        expect(workflow).toContain('expected-head-sha: ${{ github.event.pull_request.head.sha }}');
-    }
-    expect(main).toContain("if: github.event_name == 'pull_request'");
-    expect(main).not.toContain("github.base_ref == 'dev' && github.event.pull_request.user.login");
-    expect(frontend).not.toContain("github.base_ref == 'main' &&");
+    expect(frontend).toContain('ChipIn-one/.github/automation/issue-admission-action@');
+    expect(frontend).toContain('expected-head-sha: ${{ github.event.pull_request.head.sha }}');
+    const branchLists = [...frontend.matchAll(/^ {4}branches:\n((?: {6}- .+\n)+)/gmu)].map(match => match[1]);
+    expect(branchLists).toEqual(['      - master\n', '      - master\n']);
+    const admissionIf = frontend.match(/^ {8}if: github\.event_name == 'pull_request' && !\(.+$/mu)?.[0];
+    expect(admissionIf).toContain("github.base_ref == 'master'");
+    expect(admissionIf).not.toMatch(/\b(?:dev|main)\b/u);
 });
 
 test('requires explicit exact task identity before PR publication', () => {

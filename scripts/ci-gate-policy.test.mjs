@@ -28,55 +28,34 @@ describe('CI gate policy', () => {
         }
     });
 
-    test('keeps frontend-ci as the heavy gate for code changes targeting dev', () => {
+    test('keeps frontend-ci as the heavy gate for code changes targeting master', () => {
         expect(resolveCiGateMode({
             workflow: 'frontend-ci',
-            targetBranch: 'dev',
+            targetBranch: 'master',
             changedFiles: ['src/main.tsx'],
         })).toBe('full');
     });
 
-    test('uses a cheap successful frontend-ci compatibility wrapper for main', () => {
+    test('fast-paths docs-only master events without dropping the required check', () => {
         expect(resolveCiGateMode({
             workflow: 'frontend-ci',
-            targetBranch: 'main',
-            changedFiles: ['src/main.tsx'],
-        })).toBe('compatibility');
-    });
-
-    test('keeps main-ci as the only heavy main gate for code changes', () => {
-        expect(resolveCiGateMode({
-            workflow: 'main-ci',
-            targetBranch: 'main',
-            changedFiles: ['src/main.tsx'],
-        })).toBe('full');
-    });
-
-    test('fast-paths docs-only dev and main events without dropping the required check', () => {
-        const changedFiles = ['docs/api-notes/activity.md'];
-
-        expect(resolveCiGateMode({
-            workflow: 'frontend-ci',
-            targetBranch: 'dev',
-            changedFiles,
-        })).toBe('docs-only');
-        expect(resolveCiGateMode({
-            workflow: 'main-ci',
-            targetBranch: 'main',
-            changedFiles,
+            targetBranch: 'master',
+            changedFiles: ['docs/api-notes/activity.md'],
         })).toBe('docs-only');
     });
 
-    test('rejects unsupported workflow and branch combinations', () => {
+    test('rejects unsupported workflows and the retired dev/main branches', () => {
         expect(() => resolveCiGateMode({
-            workflow: 'other',
-            targetBranch: 'dev',
+            workflow: 'main-ci',
+            targetBranch: 'master',
             changedFiles: ['src/main.tsx'],
         })).toThrow('Unsupported CI workflow');
-        expect(() => resolveCiGateMode({
-            workflow: 'main-ci',
-            targetBranch: 'dev',
-            changedFiles: ['src/main.tsx'],
-        })).toThrow('main-ci may only validate main');
+        for (const targetBranch of ['dev', 'main']) {
+            expect(() => resolveCiGateMode({
+                workflow: 'frontend-ci',
+                targetBranch,
+                changedFiles: ['src/main.tsx'],
+            })).toThrow('Unsupported CI target branch');
+        }
     });
 });

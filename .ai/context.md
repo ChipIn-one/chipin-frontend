@@ -4,9 +4,9 @@
 - Purpose: ChipIn frontend Vite/React/TypeScript PWA.
 - Repository-specific engineering invariants live in `AGENTS.md` and relevant `docs/engineering/rules/*`.
 - Generic AI lifecycle and role semantics belong to canonical `syllik/ai-workflow`; model/provider does not define Planner/Architect/Executor/Reviewer/Auditor authority.
-- Integration branch: `dev`; production branch: `main`. New Issue-backed branches follow the canonical registry pattern, and `npm run pr:create` accepts only that pattern. Historical/noncanonical branches and PRs are not handled by the helper.
+- Canonical branch: `master` (the only long-lived branch, default, squash-only). New Issue-backed branches follow the canonical registry pattern, and `npm run pr:create` accepts only that pattern. Historical/noncanonical branches and PRs are not handled by the helper.
 - Canonical local completion gate: `npm run verify:full`.
-- Remote required `frontend-ci` is authoritative after publication; release flow remains `dev → main`.
+- Remote required `frontend-ci` is authoritative after publication. Vercel builds every `master` commit as a Preview with dev env vars (`dev.chipin.one` is attached to `master`; the Production Branch points to a non-existent branch); the owner releases by Promote to Production of an exact `master` deployment, which Vercel rebuilds with production env vars for `chipin.one`, and completion strategy `deployment-receipt` closes the Issue from that production deployment (`Awaiting release` in between).
 - Executor stops at `IMPLEMENTATION_COMPLETE` or `BLOCKED` and never inherits publication/review authority.
 - Trusted Publisher handles one final commit + one push per completed revision only when the task contract explicitly permits publication; published history is not rewritten.
 - Required `frontend-ci` must be green for the exact current PR head before one independent Reviewer runs for that SHA. A changed head invalidates prior CI/review; Reviewer is read-only and returns one consolidated findings package.

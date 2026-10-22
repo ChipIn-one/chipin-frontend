@@ -98,7 +98,7 @@ Failure messages may identify the HTTP method, path, expected/actual status, and
 
 Pull-request CI remains credential-free. `frontend-ci.yml` runs `npm run verify:full`, which includes the pure contract-helper unit tests but excludes live `*.contract.ts` tests.
 
-`.github/workflows/contract-smoke.yml` runs only on a push to `dev`, after code has been human-reviewed and merged into the trusted integration branch. It has two ordered jobs:
+`.github/workflows/contract-smoke.yml` runs only on a push to `master`, after code has been human-reviewed and merged into the trusted canonical branch. It has two ordered jobs:
 
 1. `contract-smoke` runs the fast auth/session gate;
 2. `contract-full` runs the broader matrix only after the smoke passes.
@@ -108,4 +108,4 @@ Both jobs use GitHub-hosted runners and these repository or organization secrets
 - `CHIPIN_CONTRACT_SWAGGER_USER`
 - `CHIPIN_CONTRACT_SWAGGER_PASSWORD`
 
-The workflow has no `pull_request` or `workflow_dispatch` trigger, so staging credentials are not exposed to untrusted PR code. A PR can validate the pure helpers and TypeScript through normal frontend CI; the credentialed live matrix intentionally runs only after a human merges to `dev`.
+The workflow has no `pull_request` or `workflow_dispatch` trigger, so staging credentials are not exposed to untrusted PR code. A PR can validate the pure helpers and TypeScript through normal frontend CI; the credentialed live matrix intentionally runs only after a human merges to `master`.

@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
-const INTEGRATION_BRANCH = 'dev';
+const INTEGRATION_BRANCH = 'master';
 const REMOTE_NAME = 'origin';
 const TASK_BRANCH_PATTERN = /^[a-z][a-z0-9-]*\/issue-\d+-[a-z0-9][a-z0-9-]*$/u;
 const CANONICAL_ADMISSION_COMMIT = 'e003166dd1e0342ebec5dd25e42397e04621fdd6'; // ChipIn-one/.github v1.0.0
@@ -17,7 +17,7 @@ export const validateTaskBranch = branch => {
         return 'Cannot create a task PR from detached HEAD.';
     }
 
-    if (branch === INTEGRATION_BRANCH || branch === 'main') {
+    if (branch === INTEGRATION_BRANCH) {
         return `Cannot create a task PR from protected branch ${branch}.`;
     }
 
