@@ -36,7 +36,7 @@ jobs:
         # Only trusted Dependabot PRs targeting master are exempt;
         # task-authored PRs always require canonical Issue admission.
         if: github.event_name == 'pull_request' && !(github.base_ref == 'master' && github.event.pull_request.user.login == 'dependabot[bot]' && github.actor == 'dependabot[bot]')
-        uses: ChipIn-one/.github/automation/issue-admission-action@e003166dd1e0342ebec5dd25e42397e04621fdd6 # v1.0.0
+        uses: ChipIn-one/.github/automation/issue-admission-action@e318d2b4feb49ce1bbd0615a6543d4c40e41404d # v1.6.0
         with:
           repository: ${{ github.repository }}
           pull-request-number: ${{ github.event.pull_request.number }}
