@@ -18,12 +18,13 @@ export class GitHubApi {
         this.fetchImpl = fetchImpl;
     }
 
-    request(path, { method = 'GET', body } = {}) {
+    request(path, { method = 'GET', body, allow404 = false } = {}) {
         return this.fetchImpl(`${API}${path}`, {
             method,
             headers: { ...API_HEADERS, Authorization: `Bearer ${this.token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
             ...(body ? { body: JSON.stringify(body) } : {}),
         }).then(response => {
+            if (allow404 && response.status === 404) return null;
             if (!response.ok) throw new Error(`GitHub ${method} ${path} returned HTTP ${response.status}.`);
             return response.status === 204 ? null : response.json();
         });
@@ -154,9 +155,6 @@ function pullIssues(api, pull) {
 function readIncludedWork(api, compared) {
     const commits = compared.commits.map(item => item.sha);
     const files = compared.files.flatMap(item => item.previous_filename ? [item.filename, item.previous_filename] : [item.filename]);
-    if (files.every(file => /^docs\/[^\s]+\.md$/.test(file) || file === 'README.md')) {
-        return Promise.resolve(buildChecklist({ files, commits, pulls: [], issues: [] }));
-    }
     const pullMap = new Map();
     const nextCommit = index => {
         if (index === commits.length) return Promise.resolve();
@@ -181,7 +179,8 @@ function readIncludedWork(api, compared) {
                 const names = file.previous_filename ? [file.filename, file.previous_filename] : [file.filename];
                 return names.every(name => /^docs\/[^\s]+\.md$/.test(name) || name === 'README.md');
             });
-            return { ...pull, issues: [number], docsOnly };
+            const paths = changed.flatMap(file => file.previous_filename ? [file.filename, file.previous_filename] : [file.filename]);
+            return { ...pull, issues: [number], docsOnly, files: paths };
         })));
     }).then(pulls => {
         const issueNumbers = [...new Set(pulls.map(pull => pull.issues[0]))];
@@ -220,7 +219,8 @@ function readCi(api, sha) {
         activeCiRule(api),
         api.listObject(`${REPO_PATH}/commits/${sha}/check-runs`, 'check_runs'),
         api.listObject(`${REPO_PATH}/actions/workflows/frontend-ci.yml/runs?head_sha=${sha}&event=push`, 'workflow_runs'),
-    ]).then(([rule, checks, runs]) => verifyCi(rule, checks, runs, sha));
+        api.list(`${REPO_PATH}/commits/${sha}/statuses`).then(statuses => statuses.map(status => ({ ...status, sha }))),
+    ]).then(([rule, checks, runs, statuses]) => verifyCi(rule, checks, runs, sha, statuses));
 }
 
 function loadShared(root) {
@@ -310,7 +310,7 @@ export function prepareReleaseQa({ env, readApi, writeApi, sharedRoot, post = po
         });
     }).then(included => {
         plan = included;
-        if (plan.kind === 'none') return { outcome: 'NO_MANUAL_QA_REQUIRED', sha, baseline, evidence: plan.evidence };
+        if (plan.kind === 'none') return { outcome: 'NO_MANUAL_QA_REQUIRED', sha, baseline, evidence: plan.evidence, included: plan.included };
         const { slackId } = assertConfiguration(env, qaLogin);
         if (!writeApi) throw new Error('CHIPIN_ISSUE_WRITE_TOKEN transport is required.');
         return Promise.all([
@@ -336,17 +336,32 @@ export function prepareReleaseQa({ env, readApi, writeApi, sharedRoot, post = po
 }
 
 export function validateResultEvent({ event, api }) {
-    if (event?.action !== 'created' || event.repository?.full_name !== REPOSITORY
+    if (!['created', 'edited', 'deleted'].includes(event?.action) || event.repository?.full_name !== REPOSITORY
         || event.issue?.pull_request || !Number.isInteger(event.comment?.id) || !Number.isInteger(event.issue?.number)) {
         return Promise.resolve({ outcome: 'IGNORED' });
     }
-    if (!/^QA RESULT:/.test(event.comment.body ?? '')) return Promise.resolve({ outcome: 'IGNORED' });
+    if (event.action === 'created' && !/^QA RESULT:/.test(event.comment.body ?? '')) return Promise.resolve({ outcome: 'IGNORED' });
     return Promise.all([
         api.request(`${REPO_PATH}/issues/${event.issue.number}`),
-        api.request(`${REPO_PATH}/issues/comments/${event.comment.id}`),
+        api.request(`${REPO_PATH}/issues/comments/${event.comment.id}`, { allow404: event.action === 'deleted' }),
     ]).then(([issue, comment]) => {
-        if (comment.id !== event.comment.id || comment.issue_url !== `${API}${REPO_PATH}/issues/${issue.number}`
-            || !issue.body?.includes('<!-- chipin-release-qa:v1 repo=')) throw new Error('Comment/QA Issue identity mismatch.');
+        const marker = [...(issue.body ?? '').matchAll(/<!-- chipin-release-qa:v1 repo=ChipIn-one\/chipin-frontend sha=([0-9a-f]{40}) deployment=([1-9]\d*) -->/g)];
+        if (marker.length !== 1) throw new Error('Comment/QA Issue identity mismatch.');
+        if (comment && (comment.id !== event.comment.id || comment.issue_url !== `${API}${REPO_PATH}/issues/${issue.number}`)) {
+            throw new Error('Comment/QA Issue identity mismatch.');
+        }
+        const currentQa = (issue.assignees ?? []).filter(user => user.login?.toLowerCase() !== 'syllik');
+        if (event.action !== 'created') {
+            const previousWasResult = /^QA RESULT:/.test(event.changes?.body?.from ?? '')
+                || /^QA RESULT:/.test(event.comment.body ?? '') || /^QA RESULT:/.test(comment?.body ?? '');
+            if (!previousWasResult && event.action !== 'deleted') return { outcome: 'IGNORED' };
+            return { outcome: 'QA_RESULT_INVALIDATED', issue: issue.html_url, sha: marker[0][1],
+                reason: event.action === 'deleted' || !comment
+                    ? 'QA result comment was deleted; prior validation is historical.'
+                    : 'QA result comment was edited; submit a new unedited result comment.',
+                currentQa: currentQa.length === 1 ? currentQa[0].login : null };
+        }
+        if (!comment) throw new Error('QA result comment is unreadable.');
         const sha = /^SHA:\s*([0-9a-f]{40})\s*$/m.exec(comment.body ?? '')?.[1];
         if (!sha || Date.parse(comment.created_at) < Date.parse(issue.created_at)) throw new Error('QA result has stale or missing candidate SHA.');
         const result = parseQaResult(comment, issue, sha);

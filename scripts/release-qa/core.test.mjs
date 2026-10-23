@@ -31,11 +31,40 @@ describe('release evidence', () => {
     test('requires exact-SHA successful required CI from trusted app and push run', () => {
         const rule = { required_status_checks: [{ context: 'frontend-ci', integration_id: 15368 }] };
         const checks = [{ name: 'frontend-ci', head_sha: SHA, conclusion: 'success', status: 'completed', app: { id: 15368, slug: 'github-actions' } }];
-        const runs = [{ head_sha: SHA, conclusion: 'success', status: 'completed', event: 'push', path: '.github/workflows/frontend-ci.yml' }];
+        const runs = [{ head_sha: SHA, head_branch: 'master', conclusion: 'success', status: 'completed', event: 'push', path: '.github/workflows/frontend-ci.yml' }];
         expect(verifyCi(rule, checks, runs, SHA)).toBe(true);
         expect(() => verifyCi(rule, [{ ...checks[0], head_sha: BASE }], runs, SHA)).toThrow(/exact SHA/);
         expect(() => verifyCi(rule, checks, [{ ...runs[0], conclusion: 'failure' }], SHA)).toThrow(/workflow/);
+        expect(() => verifyCi(rule, checks, [{ ...runs[0], head_branch: 'chore/issue-438-release-qa' }], SHA)).toThrow(/workflow/);
         expect(() => verifyCi({ required_status_checks: [] }, checks, runs, SHA)).toThrow(/policy/);
+    });
+
+    test('requires every active context at exact SHA and rejects stale earlier success', () => {
+        const rule = { required_status_checks: [
+            { context: 'frontend-ci', integration_id: 15368 },
+            { context: 'security-scan', integration_id: 88 },
+        ] };
+        const frontend = { id: 10, name: 'frontend-ci', head_sha: SHA, conclusion: 'success', status: 'completed', app: { id: 15368, slug: 'github-actions' } };
+        const scan = { id: 11, name: 'security-scan', head_sha: SHA, conclusion: 'success', status: 'completed', app: { id: 88, slug: 'scanner' } };
+        const runs = [{ head_sha: SHA, head_branch: 'master', conclusion: 'success', status: 'completed', event: 'push', path: '.github/workflows/frontend-ci.yml' }];
+        expect(verifyCi(rule, [frontend, scan], runs, SHA)).toBe(true);
+        expect(() => verifyCi(rule, [frontend], runs, SHA)).toThrow(/security-scan/);
+        expect(() => verifyCi(rule, [frontend, { ...scan, conclusion: 'failure' }], runs, SHA)).toThrow(/security-scan/);
+        expect(() => verifyCi(rule, [frontend, { ...scan, app: { id: 99, slug: 'other' } }], runs, SHA)).toThrow(/security-scan/);
+        expect(() => verifyCi(rule, [frontend, scan, { ...scan, id: 12, conclusion: 'failure' }], runs, SHA)).toThrow(/security-scan/);
+        expect(() => verifyCi(rule, [frontend, scan], [{ ...runs[0], id: 20 }, { ...runs[0], id: 21, conclusion: 'failure' }], SHA)).toThrow(/workflow/);
+    });
+
+    test('required commit-status context uses newest exact-SHA status when no integration ID is specified', () => {
+        const rule = { required_status_checks: [
+            { context: 'frontend-ci', integration_id: 15368 },
+            { context: 'external-policy', integration_id: null },
+        ] };
+        const frontend = { id: 10, name: 'frontend-ci', head_sha: SHA, conclusion: 'success', status: 'completed', app: { id: 15368, slug: 'github-actions' } };
+        const runs = [{ head_sha: SHA, head_branch: 'master', conclusion: 'success', status: 'completed', event: 'push', path: '.github/workflows/frontend-ci.yml' }];
+        const status = { id: 40, context: 'external-policy', sha: SHA, state: 'success' };
+        expect(verifyCi(rule, [frontend], runs, SHA, [status])).toBe(true);
+        expect(() => verifyCi(rule, [frontend], runs, SHA, [status, { ...status, id: 41, state: 'failure' }])).toThrow(/external-policy/);
     });
 });
 
@@ -56,8 +85,10 @@ describe('scope and canonical QA identity', () => {
         expect(() => buildChecklist({ files: ['src/App.tsx'], commits: [SHA], pulls: [pull], issues: [{ ...issue, body: '## Acceptance\n- [ ] Works' }] })).toThrow(/explicit QA/);
     });
 
-    test('allows proven docs-only changes without inventing PASS or an Issue', () => {
-        expect(buildChecklist({ files: ['docs/help.md'], commits: [SHA], pulls: [pull], issues: [issue] })).toMatchObject({ kind: 'none', reason: 'NO_MANUAL_QA_REQUIRED' });
+    test('docs-only requires linked commit and canonical Issue evidence before no-manual result', () => {
+        expect(() => buildChecklist({ files: ['docs/help.md'], commits: [SHA], pulls: [], issues: [] })).toThrow(/unlinked/);
+        expect(buildChecklist({ files: ['docs/help.md'], commits: [SHA], pulls: [{ ...pull, commits: [SHA], docsOnly: true }], issues: [issue] }))
+            .toMatchObject({ kind: 'none', reason: 'NO_MANUAL_QA_REQUIRED', included: [{ issue: 12, pulls: [20] }] });
     });
 
     test('mixed candidate omits manual checks for a proven docs-only PR', () => {
@@ -73,6 +104,43 @@ describe('scope and canonical QA identity', () => {
         const result = buildChecklist({ files: ['src/App.tsx'], commits: [SHA], pulls: [{ ...pull, commits: [SHA] }],
             issues: [{ ...issue, body: '## Acceptance\n- [ ] When a member opens settings, then the settings page appears' }] });
         expect(result.checks).toEqual([{ issue: 12, step: 'a member opens settings', expected: 'the settings page appears' }]);
+    });
+
+    test('auth/session impact rule adds one targeted sourced regression per Issue after primary acceptance', () => {
+        const result = buildChecklist({
+            files: ['src/store/authStore.ts', 'src/helpers/authSession.ts'], commits: [SHA],
+            pulls: [{ ...pull, commits: [SHA], files: ['src/store/authStore.ts', 'src/helpers/authSession.ts'] }], issues: [issue],
+        });
+        expect(result.checks).toHaveLength(2);
+        expect(result.checks[1]).toMatchObject({ issue: 12, source: 'AUTH-041',
+            sourceUrl: 'https://github.com/ChipIn-one/chipin-knowledge-base/blob/681d392140f33d4a47e3059eb53f77a2ee2c72c8/common/specs/auth.md' });
+        expect(result.checks[1].step).toMatch(/Log out.*reload.*protected page/i);
+        expect(result.checks[1].expected).toMatch(/no restored browser session/i);
+        expect(result.checks[1].expected).not.toMatch(/access.token.*revok/i);
+    });
+
+    test('unrelated paths add no impact regression and impact rules never replace missing primary acceptance', () => {
+        const unrelated = buildChecklist({ files: ['src/App.tsx'], commits: [SHA], pulls: [{ ...pull, commits: [SHA], files: ['src/App.tsx'] }], issues: [issue] });
+        expect(unrelated.checks).toHaveLength(1);
+        expect(() => buildChecklist({ files: ['src/store/authStore.ts'], commits: [SHA],
+            pulls: [{ ...pull, commits: [SHA], files: ['src/store/authStore.ts'] }],
+            issues: [{ ...issue, body: '## Acceptance\n- [ ] Works' }] })).toThrow(/explicit QA/);
+    });
+
+    test('repeated matching auth paths on one Issue append a single sourced impact check', () => {
+        const result = buildChecklist({
+            files: ['src/store/authStore.ts', 'src/features/routing/ProtectedRoute.tsx'],
+            commits: [SHA, BASE],
+            pulls: [
+                { ...pull, commits: [SHA], files: ['src/store/authStore.ts'] },
+                { number: 21, issues: [12], commits: [BASE], files: ['src/features/routing/ProtectedRoute.tsx'] },
+            ],
+            issues: [issue],
+        });
+        const impact = result.checks.filter(item => item.source === 'AUTH-041');
+        expect(impact).toHaveLength(1);
+        expect(impact[0]).toMatchObject({ issue: 12, source: 'AUTH-041' });
+        expect(result.included).toEqual([{ issue: 12, pulls: [20, 21] }]);
     });
 
     test('reuses exact repository/SHA marker but rejects conflicting deployment identity', () => {

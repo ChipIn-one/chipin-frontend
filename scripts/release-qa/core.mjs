@@ -1,3 +1,5 @@
+import { impactChecks } from './impact-rules.mjs';
+
 export const REPOSITORY = 'ChipIn-one/chipin-frontend';
 const FULL_SHA = /^[0-9a-f]{40}$/;
 const QA_MARKER = /<!-- chipin-release-qa:v1 repo=ChipIn-one\/chipin-frontend sha=([0-9a-f]{40}) deployment=([1-9]\d*) -->/g;
@@ -45,19 +47,51 @@ export function validateDeployment(deployment, status, environment, expectedSha 
     return { id: deployment.id, sha, url: url.href.replace(/\/$/, ''), statusId: status.id ?? null };
 }
 
-export function verifyCi(rule, checks, runs, sha) {
+function latestEvidence(values, label) {
+    if (values.length === 0) return null;
+    let latest = values[0];
+    for (const value of values.slice(1)) {
+        if (!Number.isInteger(value.id) || !Number.isInteger(latest.id) || value.id === latest.id) {
+            throw new Error(`Required context ${label} has ambiguous duplicate evidence.`);
+        }
+        if (value.id > latest.id) latest = value;
+    }
+    return latest;
+}
+
+export function verifyCi(rule, checks, runs, sha, statuses = []) {
     assertFullSha(sha);
     const required = rule?.required_status_checks;
     if (!Array.isArray(required) || required.length === 0) throw new Error('Active master ruleset has no readable required-check policy.');
     const checkRule = required.find(item => item.context === 'frontend-ci');
     if (!checkRule || !Number.isInteger(checkRule.integration_id)) throw new Error('Active policy does not require trusted frontend-ci.');
-    const check = checks.find(item => item.name === 'frontend-ci' && item.head_sha === sha
-        && item.app?.id === checkRule.integration_id && item.app?.slug === 'github-actions'
-        && item.status === 'completed' && item.conclusion === 'success');
-    if (!check) throw new Error('No successful trusted frontend-ci check for exact SHA.');
-    const run = runs.find(item => item.head_sha === sha && item.path === '.github/workflows/frontend-ci.yml'
-        && item.event === 'push' && item.status === 'completed' && item.conclusion === 'success');
-    if (!run) throw new Error('No successful master push frontend-ci workflow run for exact SHA.');
+    for (const entry of required) {
+        if (!entry?.context || (entry.integration_id != null && !Number.isInteger(entry.integration_id))) {
+            throw new Error('Active required-check policy contains unreadable context/integration.');
+        }
+        const contextChecks = checks.filter(item => item.name === entry.context && item.head_sha === sha);
+        const latestCheck = latestEvidence(contextChecks, entry.context);
+        const latestStatus = entry.integration_id == null
+            ? latestEvidence(statuses.filter(item => item.context === entry.context && item.sha === sha), entry.context)
+            : null;
+        if (latestCheck && latestStatus) throw new Error(`Required context ${entry.context} has ambiguous Check and commit-status producers.`);
+        if (latestCheck) {
+            if (latestCheck.status !== 'completed' || latestCheck.conclusion !== 'success'
+                || (entry.integration_id != null && latestCheck.app?.id !== entry.integration_id)
+                || (entry.context === 'frontend-ci' && latestCheck.app?.slug !== 'github-actions')) {
+                throw new Error(`Required context ${entry.context} is not successful at exact SHA from the required producer.`);
+            }
+            continue;
+        }
+        if (!latestStatus || latestStatus.state !== 'success') {
+            throw new Error(`Required context ${entry.context} has no current successful exact SHA evidence.`);
+        }
+    }
+    const run = latestEvidence(runs.filter(item => item.head_sha === sha && item.head_branch === 'master'
+        && item.path === '.github/workflows/frontend-ci.yml' && item.event === 'push'), 'frontend-ci workflow');
+    if (!run || run.status !== 'completed' || run.conclusion !== 'success') {
+        throw new Error('No current successful master push frontend-ci workflow run for exact SHA.');
+    }
     return true;
 }
 
@@ -76,9 +110,7 @@ export function buildChecklist({ files, commits, pulls, issues }) {
     if (!Array.isArray(files) || files.length === 0 || !Array.isArray(commits) || commits.length === 0) {
         throw new Error('Complete compare files and commits are required.');
     }
-    if (files.every(file => /^docs\/[^\s]+\.md$/.test(file) || file === 'README.md')) {
-        return { kind: 'none', reason: 'NO_MANUAL_QA_REQUIRED', evidence: files };
-    }
+    const docsOnly = files.every(file => /^docs\/[^\s]+\.md$/.test(file) || file === 'README.md');
     const byIssue = new Map(issues.map(issue => [issue.number, issue]));
     const included = new Map();
     const seenCommits = new Set();
@@ -88,14 +120,15 @@ export function buildChecklist({ files, commits, pulls, issues }) {
         }
         const issueNumber = pull.issues[0];
         if (!byIssue.has(issueNumber)) throw new Error(`Canonical Issue #${issueNumber} is unreadable.`);
-        const linked = included.get(issueNumber) ?? { pulls: new Set(), needsManualQa: false };
+        const linked = included.get(issueNumber) ?? { pulls: new Set(), needsManualQa: false, paths: new Set() };
         linked.pulls.add(pull.number);
         if (!pull.docsOnly) linked.needsManualQa = true;
+        for (const path of pull.files ?? []) linked.paths.add(path);
         included.set(issueNumber, linked);
         for (const commit of pull.commits ?? []) seenCommits.add(commit);
     }
     for (const commit of commits) {
-        if (!seenCommits.has(commit)) throw new Error(`Candidate contains unlinked user-facing commit ${commit}.`);
+        if (!seenCommits.has(commit)) throw new Error(`Candidate contains unlinked commit ${commit}.`);
     }
     const checks = [];
     const includedList = [];
@@ -104,11 +137,16 @@ export function buildChecklist({ files, commits, pulls, issues }) {
             const steps = qaSteps(byIssue.get(issueNumber).body, issueNumber);
             if (steps.length === 0) throw new Error(`Issue #${issueNumber} lacks explicit QA step => expected notes.`);
             checks.push(...steps);
+            checks.push(...impactChecks([...linked.paths], issueNumber));
         }
         includedList.push({ issue: issueNumber, pulls: [...linked.pulls].sort((a, b) => a - b) });
     }
-    if (checks.length === 0) throw new Error('User-facing work has no justified manual checks.');
     includedList.sort((a, b) => a.issue - b.issue);
+    if (docsOnly) {
+        if ([...included.values()].some(item => item.needsManualQa)) throw new Error('Docs-only compare conflicts with PR file evidence.');
+        return { kind: 'none', reason: 'NO_MANUAL_QA_REQUIRED', evidence: files, included: includedList };
+    }
+    if (checks.length === 0) throw new Error('User-facing work has no justified manual checks.');
     return { kind: 'checks', checks, included: includedList };
 }
 
@@ -118,7 +156,7 @@ export function buildIssueBody({ sha, baselineSha, deploymentId, url, plan }) {
     if (plan.kind !== 'checks') throw new Error('A QA Issue requires explicit checks.');
     const marker = `<!-- chipin-release-qa:v1 repo=${REPOSITORY} sha=${sha} deployment=${deploymentId} -->`;
     const included = plan.included.map(item => `- #${item.issue} via ${item.pulls.map(number => `PR #${number}`).join(', ')}`).join('\n');
-    const checks = plan.checks.map(item => `- [ ] #${item.issue}: ${item.step} → ${item.expected}`).join('\n');
+    const checks = plan.checks.map(item => `- [ ] #${item.issue}: ${item.step} → ${item.expected}${item.source ? ` ([${item.source}](${item.sourceUrl}))` : ''}`).join('\n');
     return `${marker}\n## Problem\nRelease candidate ${sha} needs manual frontend QA.\n\n## Outcome\nOwner reviews this Issue before deciding whether to manually Promote the selected deployment.\n\n## Acceptance\n- Candidate SHA: ${sha}\n- Previous verified Production SHA: ${baselineSha}\n- Preview deployment: ${deploymentId}\n- Immutable Preview URL: ${url}\n\n### Included work\n${included}\n\n### Checks (step → expected)\n${checks}\n\n### QA result\nThe currently assigned QA comments using the documented SHA-bound format. Checkboxes alone are not acceptance.\n\n### Defects and retest\n- Defect links: add canonical Bug Issues here.\n- Approximate total time: report once in the result comment.\n\n## Dependencies\n- Manual owner Promote only after owner review.\n\n## References\n- https://github.com/${REPOSITORY}/issues/438\n`;
 }
 

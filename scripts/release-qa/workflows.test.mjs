@@ -18,7 +18,8 @@ test('candidate preparation can only start manually from owner-controlled master
 
 test('result reader has no Issue-write or deployment authority', () => {
     expect(Object.keys(result.on)).toEqual(['issue_comment']);
-    expect(result.on.issue_comment.types).toEqual(['created']);
+    expect(result.on.issue_comment.types).toEqual(['created', 'edited', 'deleted']);
+    expect(result.jobs['read-result'].if).not.toContain('startsWith');
     expect(result.permissions).toEqual({ contents: 'read', issues: 'read' });
     expect(result.jobs['read-result'].steps[0].with.ref).toBe('${{ github.sha }}');
 });
