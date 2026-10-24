@@ -24,6 +24,15 @@ describe('release evidence', () => {
         expect(() => validateDeployment({ ...preview, creator: { login: 'syllik' } }, status, 'Preview', SHA)).toThrow(/vercel/);
     });
 
+    test('unique deployment host passes and git or master aliases throw', () => {
+        const unique = 'https://chipin-frontend-lzaemftpe-sylliks-projects.vercel.app';
+        expect(validateDeployment(preview, { ...status, environment_url: unique }, 'Preview', SHA).url).toBe(unique);
+        expect(() => validateDeployment(preview, { ...status, environment_url: 'https://chipin-frontend-git-master-sylliks-projects.vercel.app' }, 'Preview', SHA)).toThrow(/alias/);
+        expect(() => validateDeployment(preview, { ...status, environment_url: 'https://chipin-frontend-master-sylliks-projects.vercel.app' }, 'Preview', SHA)).toThrow(/alias/);
+        expect(() => validateDeployment(preview, { ...status, environment_url: 'https://chipin-frontend-sylliks-projects.vercel.app' }, 'Preview', SHA)).toThrow(/alias/);
+        expect(() => validateDeployment(preview, { ...status, environment_url: 'https://dev.chipin.one' }, 'Preview', SHA)).toThrow(/alias/);
+    });
+
     test('accepts verified Production deployment at the production domain as baseline evidence', () => {
         expect(validateDeployment({ ...preview, environment: 'Production' }, { state: 'success', environment_url: 'https://chipin.one' }, 'Production').sha).toBe(SHA);
     });

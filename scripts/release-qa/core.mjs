@@ -37,8 +37,8 @@ export function validateDeployment(deployment, status, environment, expectedSha 
     const rawUrl = status.environment_url;
     let url;
     try { url = new URL(rawUrl); } catch { throw new Error('Deployment has no valid immutable public URL.'); }
-    const isPreviewBuild = /^chipin-frontend-[a-z0-9-]+-sylliks-projects\.vercel\.app$/.test(url.hostname)
-        && url.hostname !== 'chipin-frontend-sylliks-projects.vercel.app';
+    const previewSlug = /^chipin-frontend-([a-z0-9]+)-sylliks-projects\.vercel\.app$/.exec(url.hostname)?.[1];
+    const isPreviewBuild = Boolean(previewSlug) && previewSlug !== 'master';
     if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash
         || (environment === 'Preview' && !isPreviewBuild)
         || (environment === 'Production' && url.hostname !== 'chipin.one' && !isPreviewBuild)) {

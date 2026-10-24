@@ -70,11 +70,21 @@ export function assertAncestry(candidateToMaster, baselineToCandidate, candidate
     return true;
 }
 
+function priorRunMayHaveStartedCreate(run) {
+    if (run?.create_started === true) return true;
+    if (run?.conclusion === 'success') return true;
+    if (run?.status === 'in_progress' || run?.status === 'queued') return true;
+    return false;
+}
+
 export function assertRetrySafe(runs, currentRunId, sha, existingIssue) {
     assertFullSha(sha);
     if (existingIssue) return true;
     if (!Number.isInteger(currentRunId) || currentRunId <= 0) throw new Error('Current GitHub run ID is required for create safety.');
-    if (runs.some(run => run.id !== currentRunId && run.display_title === `QA prepare ${sha}`)) {
+    const ambiguous = runs.some(run => run.id !== currentRunId
+        && run.display_title === `QA prepare ${sha}`
+        && priorRunMayHaveStartedCreate(run));
+    if (ambiguous) {
         throw new Error('Earlier same-SHA QA preparation has ambiguous create outcome; locate its Issue/checkpoint manually before retrying.');
     }
     return true;
@@ -346,15 +356,17 @@ export function validateResultEvent({ event, api }) {
         api.request(`${REPO_PATH}/issues/comments/${event.comment.id}`, { allow404: event.action === 'deleted' }),
     ]).then(([issue, comment]) => {
         const marker = [...(issue.body ?? '').matchAll(/<!-- chipin-release-qa:v1 repo=ChipIn-one\/chipin-frontend sha=([0-9a-f]{40}) deployment=([1-9]\d*) -->/g)];
-        if (marker.length !== 1) throw new Error('Comment/QA Issue identity mismatch.');
+        if (marker.length !== 1) return { outcome: 'IGNORED' };
         if (comment && (comment.id !== event.comment.id || comment.issue_url !== `${API}${REPO_PATH}/issues/${issue.number}`)) {
             throw new Error('Comment/QA Issue identity mismatch.');
         }
         const currentQa = (issue.assignees ?? []).filter(user => user.login?.toLowerCase() !== 'syllik');
         if (event.action !== 'created') {
-            const previousWasResult = /^QA RESULT:/.test(event.changes?.body?.from ?? '')
-                || /^QA RESULT:/.test(event.comment.body ?? '') || /^QA RESULT:/.test(comment?.body ?? '');
-            if (!previousWasResult && event.action !== 'deleted') return { outcome: 'IGNORED' };
+            const isQaResult = value => /^QA RESULT:/.test(value ?? '');
+            const eventBody = event.comment?.body;
+            const wasResult = isQaResult(event.changes?.body?.from) || isQaResult(eventBody) || isQaResult(comment?.body);
+            const deletedBodyMissing = event.action === 'deleted' && !comment && eventBody == null;
+            if (!wasResult && !deletedBodyMissing) return { outcome: 'IGNORED' };
             return { outcome: 'QA_RESULT_INVALIDATED', issue: issue.html_url, sha: marker[0][1],
                 reason: event.action === 'deleted' || !comment
                     ? 'QA result comment was deleted; prior validation is historical.'

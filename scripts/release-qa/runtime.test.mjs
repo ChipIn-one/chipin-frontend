@@ -21,10 +21,27 @@ test('candidate must be an ancestor of current master and ahead of Production', 
     expect(() => assertAncestry({ status: 'ahead' }, { status: 'behind', total_commits: 0 }, SHA, BASE)).toThrow(/Production baseline/);
 });
 
-test('earlier same-SHA run with no Issue blocks an ambiguous create retry', () => {
-    expect(assertRetrySafe([{ id: 100, display_title: `QA prepare ${SHA}` }], 100, SHA, null)).toBe(true);
-    expect(() => assertRetrySafe([{ id: 99, display_title: `QA prepare ${SHA}` }], 101, SHA, null)).toThrow(/ambiguous/);
-    expect(assertRetrySafe([{ id: 99, display_title: `QA prepare ${SHA}` }], 101, SHA, { number: 50 })).toBe(true);
+test('pre-create failure, cancellation, or timeout can retry the same SHA when no Issue exists', () => {
+    for (const conclusion of ['failure', 'cancelled', 'timed_out']) {
+        expect(assertRetrySafe([
+            { id: 99, display_title: `QA prepare ${SHA}`, status: 'completed', conclusion },
+        ], 101, SHA, null)).toBe(true);
+    }
+});
+
+test('in-progress, queued, successful, or create-started same-SHA run without an Issue stays ambiguous', () => {
+    const prior = (status, conclusion, extra = {}) => ({ id: 99, display_title: `QA prepare ${SHA}`, status, conclusion, ...extra });
+    expect(() => assertRetrySafe([prior('in_progress', null)], 101, SHA, null)).toThrow(/ambiguous/);
+    expect(() => assertRetrySafe([prior('queued', null)], 101, SHA, null)).toThrow(/ambiguous/);
+    expect(() => assertRetrySafe([prior('completed', 'success')], 101, SHA, null)).toThrow(/ambiguous/);
+    expect(() => assertRetrySafe([prior('completed', 'failure', { create_started: true })], 101, SHA, null)).toThrow(/ambiguous/);
+    expect(assertRetrySafe([{ id: 100, display_title: `QA prepare ${SHA}`, status: 'in_progress' }], 100, SHA, null)).toBe(true);
+});
+
+test('visible same-SHA Issue is reused even when an earlier preparation succeeded', () => {
+    expect(assertRetrySafe([
+        { id: 99, display_title: `QA prepare ${SHA}`, status: 'completed', conclusion: 'success' },
+    ], 101, SHA, { number: 50 })).toBe(true);
 });
 
 test('Slack failure leaves admitted Issue intact and reports retryable delivery', () => {
@@ -73,6 +90,56 @@ test('edited-to-PASS, edited-away and deleted QA results invalidate earlier vali
         expect(deletedWithBody.outcome).toMatch(/INVALIDATED|REVOKED/);
         expect(deletedWithBody).not.toMatchObject({ outcome: 'VALID_QA_RESULT' });
         expect(deletedWithBody).not.toHaveProperty('result');
+    });
+});
+
+test('comment on an Issue without exactly one QA marker is ignored', () => {
+    const comment = { id: 8, issue_url: 'https://api.github.com/repos/ChipIn-one/chipin-frontend/issues/50', user: { login: 'SoRawSteak', type: 'User' }, body: 'Please look', created_at: '2026-10-23T11:00:00Z', updated_at: '2026-10-23T11:00:00Z' };
+    const plain = { number: 50, body: 'Not a QA issue', html_url: 'https://github.com/ChipIn-one/chipin-frontend/issues/50' };
+    const doubled = { ...plain, body: `<!-- chipin-release-qa:v1 repo=ChipIn-one/chipin-frontend sha=${SHA} deployment=42 -->\n<!-- chipin-release-qa:v1 repo=ChipIn-one/chipin-frontend sha=${SHA} deployment=42 -->` };
+    const apiFor = issue => ({ request: path => Promise.resolve(path.endsWith('/comments/8') ? comment : issue) });
+    const edited = { action: 'edited', repository: { full_name: 'ChipIn-one/chipin-frontend' }, issue: { number: 50 }, comment: { id: 8, body: comment.body }, changes: { body: { from: 'Earlier note' } } };
+    return validateResultEvent({ event: edited, api: apiFor(plain) }).then(value => {
+        expect(value).toEqual({ outcome: 'IGNORED' });
+        return validateResultEvent({ event: { ...edited, action: 'deleted' }, api: apiFor(plain) });
+    }).then(deleted => {
+        expect(deleted).toEqual({ outcome: 'IGNORED' });
+        return validateResultEvent({ event: edited, api: apiFor(doubled) });
+    }).then(ambiguous => {
+        expect(ambiguous).toEqual({ outcome: 'IGNORED' });
+        const created = { action: 'created', repository: { full_name: 'ChipIn-one/chipin-frontend' }, issue: { number: 50 }, comment: { id: 8, body: `QA RESULT: PASS\nSHA: ${SHA}\nTOTAL TIME: 30m` } };
+        const passComment = { ...comment, body: created.comment.body };
+        return validateResultEvent({ event: created, api: { request: path => Promise.resolve(path.endsWith('/comments/8') ? passComment : plain) } });
+    }).then(created => {
+        expect(created).toEqual({ outcome: 'IGNORED' });
+        expect(created).not.toMatchObject({ outcome: 'VALID_QA_RESULT' });
+    });
+});
+
+test('deleting a non-result comment on a QA Issue is ignored when its body is readable', () => {
+    const issue = { number: 50, body: `<!-- chipin-release-qa:v1 repo=ChipIn-one/chipin-frontend sha=${SHA} deployment=42 -->`,
+        created_at: '2026-10-23T10:00:00Z', html_url: 'https://github.com/ChipIn-one/chipin-frontend/issues/50', assignees: [{ login: 'SoRawSteak' }] };
+    const note = 'Checking the preview now';
+    const event = { action: 'deleted', repository: { full_name: 'ChipIn-one/chipin-frontend' }, issue: { number: 50 }, comment: { id: 8, body: note } };
+    const readable = { request: path => Promise.resolve(path.endsWith('/comments/8')
+        ? { id: 8, issue_url: 'https://api.github.com/repos/ChipIn-one/chipin-frontend/issues/50', body: note }
+        : issue) };
+    return validateResultEvent({ event, api: readable }).then(value => {
+        expect(value).toEqual({ outcome: 'IGNORED' });
+        return validateResultEvent({
+            event: { ...event, comment: { id: 8, body: 'Not a result' } },
+            api: { request: path => Promise.resolve(path.endsWith('/comments/8') ? null : issue) },
+        });
+    }).then(missingComment => {
+        expect(missingComment).toEqual({ outcome: 'IGNORED' });
+        return validateResultEvent({
+            event: { ...event, comment: { id: 8 } },
+            api: { request: path => Promise.resolve(path.endsWith('/comments/8') ? null : issue) },
+        });
+    }).then(missingBoth => {
+        expect(missingBoth.outcome).toBe('QA_RESULT_INVALIDATED');
+        expect(missingBoth).not.toHaveProperty('result');
+        expect(missingBoth).not.toMatchObject({ outcome: 'VALID_QA_RESULT' });
     });
 });
 
