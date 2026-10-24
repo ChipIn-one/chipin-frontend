@@ -1,0 +1,77 @@
+name: Prepare frontend release QA
+run-name: QA prepare ${{ inputs.candidate_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: Full source SHA of the selected master Preview deployment
+        required: true
+        type: string
+      deployment_id:
+        description: GitHub Preview deployment ID for that exact SHA
+        required: true
+        type: string
+      priority:
+        description: Explicit canonical Priority for the QA Task
+        required: true
+        type: choice
+        options: [P0, P1, P2, P3]
+      qa_login:
+        description: Configured GitHub QA assignee
+        required: true
+        default: SoRawSteak
+        type: string
+      reassign_qa:
+        description: Owner explicitly moves an existing same-SHA QA Issue to qa_login
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  actions: read
+  checks: read
+  deployments: read
+  issues: read
+
+concurrency:
+  group: release-qa-${{ github.repository }}-${{ inputs.candidate_sha }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    if: github.actor == 'syllik' && github.triggering_actor == 'syllik' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Checkout trusted master workflow code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Checkout pinned canonical Issue Intake
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ChipIn-one/.github
+          ref: 7dbcfb2b72fca2d477c14f4d242261d72a103dbd
+          token: ${{ secrets.CHIPIN_DEV_READ_TOKEN }}
+          path: .qa-shared
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.21.0
+          package-manager-cache: false
+      - name: Prepare canonical QA Issue and handoff
+        env:
+          CHIPIN_DEV_READ_TOKEN: ${{ secrets.CHIPIN_DEV_READ_TOKEN }}
+          CHIPIN_ISSUE_WRITE_TOKEN: ${{ secrets.CHIPIN_ISSUE_WRITE_TOKEN }}
+          SLACK_WEBHOOK_CI: ${{ secrets.SLACK_WEBHOOK_CI }}
+          SLACK_USER_MAP: ${{ vars.SLACK_USER_MAP }}
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          PREVIEW_DEPLOYMENT_ID: ${{ inputs.deployment_id }}
+          QA_PRIORITY: ${{ inputs.priority }}
+          QA_LOGIN: ${{ inputs.qa_login }}
+          QA_REASSIGN: ${{ inputs.reassign_qa }}
+        run: node scripts/release-qa-prepare.mjs
