@@ -16,17 +16,17 @@ the `closed/completed` transition, and only after the merge commit is contained
 in a Vercel production deployment.
 
 This repository has no completion caller (owner decision 2026-10-22). The sweep
-completes frontend Issues once ChipIn-one/.github#217 sets registry
-`capabilities.completion: automatic`; until then this canary cannot run. FE
-Issues are never closed by hand.
+completes frontend Issues since ChipIn-one/.github#217 set registry
+`capabilities.completion: automatic` (released in v1.7.0). FE Issues are never
+closed by hand.
 
 ## Release flow
 
 1. A PR merges into `master` (squash).
 2. The Vercel Git integration builds that `master` commit as a Preview with
    development environment variables; `dev.chipin.one` is attached to
-   `master`. The Vercel Production Branch stays `main` (a frozen rollback ref
-   until 2026-11-05) and `vercel.json` disables Git deployments for it, so no
+   `master`. The Vercel Production Branch stays `main` (a placeholder
+   that receives no pushes) and `vercel.json` disables Git deployments for it, so no
    push creates a production build. Preview builds of `master` create only
    GitHub Deployments `Preview`.
 3. The owner opens the chosen commit's deployment and runs **Promote to
