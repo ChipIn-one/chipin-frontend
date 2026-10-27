@@ -66,8 +66,8 @@ content.
   the merge after the remote gate is green.
 - Delivery is Vercel's: the Vercel Git integration builds every `master` commit
   as a Preview with development environment variables, and `dev.chipin.one` is
-  attached to `master`. The Vercel Production Branch stays `main`, a frozen
-  rollback ref until 2026-11-05, and `vercel.json` disables Git deployments for
+  attached to `master`. The Vercel Production Branch stays `main`, a
+  placeholder that receives no pushes, and `vercel.json` disables Git deployments for
   `main` and `dev`, so no push creates a production build; the owner releases
   by **Promote to Production** of an exact `master` deployment, which Vercel
   rebuilds with production environment variables and assigns to `chipin.one`.
@@ -112,7 +112,7 @@ These rules apply only to ChipIn frontend tasks.
 - Priority presentation is derived only from the canonical `Priority` field. If that field cannot be read, fail closed; do not substitute Issue labels or title/body encoding.
 - Existing Milestone assignments are human-owned release intent. Do not infer, add, clear, or rename a Milestone from labels/title/body; Milestone membership never authorizes execution or completion.
 - For frontend code work, merge to `master` is integration only. An Issue is completed only when the merge commit of every linked PR is contained in a Vercel production deployment (GitHub Deployment `Production` by `vercel[bot]`, expected to be written when the owner promotes a `master` deployment; verified at cutover step 7 of #497); close as not planned only for cancelled/abandoned work.
-- Never close a frontend code Issue by hand. After its merge to `master` it stays open in `Awaiting release`, and the completion automation (strategy `deployment-receipt`) closes it once the promoted production deployment contains the merge. The repository has no completion caller: the ChipIn-one/.github org sweep (`frontend-production-completion.yml`, every 15 minutes) runs it for the frontend once ChipIn-one/.github#217 sets registry `capabilities.completion: automatic`, so the Issue closes within about 15 minutes of the Promote. GitHub auto-close of linked Issues is off. Issues without implementation evidence (decisions, research, gates) are still closed by hand. See `docs/engineering/frontend-production-completion-canary.md#issue-lifecycle-after-the-merge-to-master`.
+- Never close a frontend code Issue by hand. After its merge to `master` it stays open in `Awaiting release`, and the completion automation (strategy `deployment-receipt`) closes it once the promoted production deployment contains the merge. The repository has no completion caller: the ChipIn-one/.github org sweep (`frontend-production-completion.yml`, every 15 minutes) runs it for the frontend (registry `capabilities.completion: automatic` since ChipIn-one/.github#217), so the Issue closes within about 15 minutes of the Promote. GitHub auto-close of linked Issues is off. Issues without implementation evidence (decisions, research, gates) are still closed by hand. See `docs/engineering/frontend-production-completion-canary.md#issue-lifecycle-after-the-merge-to-master`.
 - Historical Trello links may remain in `References` as read-only provenance/evidence; Trello must not participate in current task state, notifications as authority, admission, planning, or execution authorization.
 - Active agents and workflows must not create or update Trello cards; move Trello cards or lists; update Trello labels, status, or metadata; write comments or activity to Trello; or invoke or maintain Trello task-tracking integrations.
 - There is no bidirectional Trello-to-GitHub or GitHub-to-Trello synchronization.

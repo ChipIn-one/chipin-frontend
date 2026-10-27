@@ -69,12 +69,21 @@ Hook or Vercel token secrets
   completion (strategy `deployment-receipt`).
 - The repository has no completion caller. The ChipIn-one/.github org sweep
   (`frontend-production-completion.yml`, every 15 minutes) runs
-  `deployment-receipt` for the frontend once ChipIn-one/.github#217 sets
-  registry `capabilities.completion: automatic`: PR merged into `master` →
+  `deployment-receipt` for the frontend (registry
+  `capabilities.completion: automatic` since ChipIn-one/.github#217): PR merged into `master` →
   Issue `Awaiting release` → owner Promote → the Issue closes within about
   15 minutes. FE Issues are never closed by hand; GitHub auto-close is off.
 - `vercel.json` keeps `git.deploymentEnabled` off for the retired `dev` and
-  `main` branches. `main` is a frozen rollback ref until 2026-11-05.
+  `main` branches. `dev` was deleted on 2026-10-22 (the owner cancelled the
+  rollback window); `main` stays only as the Vercel Production Branch
+  placeholder and receives no pushes. The Vercel Deploy Hooks and their
+  secrets were removed.
+- Preview access (QA of #497, 2026-10-27): the Preview deployment of `master`
+  `39ee2dc` (Deployment 7310123775,
+  `chipin-frontend-crscznela-sylliks-projects.vercel.app`), `dev.chipin.one` and
+  `chipin.one` all answer an unauthenticated request with HTTP 200 and the
+  ChipIn landing page, so Vercel Deployment Protection puts no login wall in
+  front of QA on a selected Preview URL.
 
 ### Vercel configuration
 
