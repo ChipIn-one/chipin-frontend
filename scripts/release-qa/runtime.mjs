@@ -3,12 +3,15 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
-    REPOSITORY, assertConfiguration, assertFullSha, buildChecklist,
-    buildIssueBody, findQaIssue, parseQaResult, validateDeployment, verifyCi,
+    REPOSITORY, assertConfiguration, assertFullSha, buildChecklist, buildIssueBody, findQaIssue,
+    formatResultLine, hasGreenFrontendCiRun, isSlackWebhook, parseQaResult, resultOutcome, validateDeployment, verifyCi,
 } from './core.mjs';
 
 const API = 'https://api.github.com';
 const REPO_PATH = `/repos/${REPOSITORY}`;
+const AUTO_RUN_TITLE = 'QA prepare auto';
+// How many recent master commits the zero-input resolver inspects before failing closed.
+const RESOLVE_DEPTH = 20;
 const API_HEADERS = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2026-03-10' };
 
 export class GitHubApi {
@@ -81,9 +84,11 @@ export function assertRetrySafe(runs, currentRunId, sha, existingIssue) {
     assertFullSha(sha);
     if (existingIssue) return true;
     if (!Number.isInteger(currentRunId) || currentRunId <= 0) throw new Error('Current GitHub run ID is required for create safety.');
-    const ambiguous = runs.some(run => run.id !== currentRunId
-        && run.display_title === `QA prepare ${sha}`
-        && priorRunMayHaveStartedCreate(run));
+    // A zero-input run's title carries no SHA. Treat it as same-SHA while it is still running, or when it
+    // was dispatched on this SHA as master head (its usual resolution).
+    const ambiguous = runs.some(run => run.id !== currentRunId && priorRunMayHaveStartedCreate(run)
+        && (run.display_title === `QA prepare ${sha}`
+            || (run.display_title === AUTO_RUN_TITLE && (run.head_sha === sha || run.status !== 'completed'))));
     if (ambiguous) {
         throw new Error('Earlier same-SHA QA preparation has ambiguous create outcome; locate its Issue/checkpoint manually before retrying.');
     }
@@ -104,11 +109,21 @@ export function chooseProductionBaseline(deployments, statusesFor) {
     return next(0);
 }
 
-export function sendHandoff({ post, webhook, slackId, issue, sha, url }) {
-    const payload = { text: `<@${slackId}> Frontend QA candidate ${sha}\n${url}\nCanonical QA Issue: ${issue.html_url}` };
+export function sendHandoff({ post, webhook, slackId, issue, sha, url, missingSteps = [] }) {
+    const missing = missingSteps.length
+        ? `\nMissing QA steps: ${missingSteps.map(number => `#${number}`).join(', ')} (check against their Acceptance)` : '';
+    const payload = { text: `<@${slackId}> Frontend QA candidate ${sha}\n${url}\nCanonical QA Issue: ${issue.html_url}${missing}` };
     return post(webhook, payload).then(() => ({ delivered: true })).catch(() => ({
         delivered: false,
         reason: 'Slack delivery failed; retry the same SHA after checking webhook/channel.',
+    }));
+}
+
+// Posts one presentation-only line. A missing webhook or a failed delivery is reported, never thrown.
+function postLine({ post, webhook, text }) {
+    if (!isSlackWebhook(webhook)) return Promise.resolve({ delivered: false, reason: 'SLACK_WEBHOOK_CI is not configured; nothing was posted.' });
+    return post(webhook, { text }).then(() => ({ delivered: true })).catch(() => ({
+        delivered: false, reason: 'Slack delivery failed; check the webhook and channel.',
     }));
 }
 
@@ -149,55 +164,68 @@ function compare(api, base, head, full = false) {
     });
 }
 
+function changedPaths(files) {
+    return files.flatMap(item => item.previous_filename ? [item.filename, item.previous_filename] : [item.filename]);
+}
+
+// Returns this repository's native closing Issues of a merged master PR. Anything other than exactly one
+// is "unlinked": it blocks only when the PR touches UI-affecting paths (decided in buildChecklist).
 function pullIssues(api, pull) {
-    if (!pull.node_id || !pull.merged_at || pull.base?.ref !== 'master') throw new Error(`PR #${pull.number} is not a verified merged master PR.`);
     const query = `query($id: ID!) { node(id: $id) { ... on PullRequest { closingIssuesReferences(first: 100) { totalCount nodes { number repository { nameWithOwner } } } } } }`;
     return api.graphql(query, { id: pull.node_id }).then(data => {
         const refs = data?.node?.closingIssuesReferences;
-        if (!refs || refs.totalCount !== refs.nodes?.length || refs.totalCount !== 1
-            || refs.nodes[0].repository?.nameWithOwner !== REPOSITORY) {
-            throw new Error(`PR #${pull.number} lacks one unambiguous native closing Issue link.`);
+        if (!refs || !Array.isArray(refs.nodes) || refs.totalCount !== refs.nodes.length) {
+            throw new Error(`PR #${pull.number} closing Issue links are unreadable.`);
         }
-        return refs.nodes[0].number;
+        if (refs.nodes.some(node => node.repository?.nameWithOwner !== REPOSITORY)) return [];
+        return refs.nodes.map(node => node.number);
+    });
+}
+
+function readCommitFiles(api, sha) {
+    return api.request(`${REPO_PATH}/commits/${sha}`).then(commit => {
+        if (!Array.isArray(commit?.files) || commit.files.length >= 300) {
+            throw new Error(`Commit ${sha} files are unreadable or exceed complete evidence bounds.`);
+        }
+        return changedPaths(commit.files);
     });
 }
 
 function readIncludedWork(api, compared) {
     const commits = compared.commits.map(item => item.sha);
-    const files = compared.files.flatMap(item => item.previous_filename ? [item.filename, item.previous_filename] : [item.filename]);
+    const files = changedPaths(compared.files);
     const pullMap = new Map();
+    const commitFiles = {};
     const nextCommit = index => {
         if (index === commits.length) return Promise.resolve();
         const sha = commits[index];
         return api.list(`${REPO_PATH}/commits/${sha}/pulls`).then(pulls => {
-            if (pulls.length !== 1) throw new Error(`Commit ${sha} has missing or ambiguous PR evidence.`);
-            const pull = pulls[0];
+            const merged = pulls.filter(pull => pull.node_id && pull.merged_at && pull.base?.ref === 'master');
+            if (merged.length !== 1) {
+                return readCommitFiles(api, sha).then(paths => { commitFiles[sha] = paths; });
+            }
+            const pull = merged[0];
             const current = pullMap.get(pull.number) ?? { ...pull, commits: [] };
             current.commits.push(sha);
             pullMap.set(pull.number, current);
-            return nextCommit(index + 1);
-        });
+            return undefined;
+        }).then(() => nextCommit(index + 1));
     };
     return nextCommit(0).then(() => {
         const pulls = [...pullMap.values()];
         return Promise.all(pulls.map(pull => Promise.all([
             pullIssues(api, pull),
             api.list(`${REPO_PATH}/pulls/${pull.number}/files`),
-        ]).then(([number, changed]) => {
-            if (changed.length === 0) throw new Error(`PR #${pull.number} files are unreadable.`);
-            const docsOnly = changed.every(file => {
-                const names = file.previous_filename ? [file.filename, file.previous_filename] : [file.filename];
-                return names.every(name => /^docs\/[^\s]+\.md$/.test(name) || name === 'README.md');
-            });
-            const paths = changed.flatMap(file => file.previous_filename ? [file.filename, file.previous_filename] : [file.filename]);
-            return { ...pull, issues: [number], docsOnly, files: paths };
+        ]).then(([issues, changed]) => {
+            if (changed.length === 0 || changed.length >= 3000) throw new Error(`PR #${pull.number} files are unreadable.`);
+            return { ...pull, issues, files: changedPaths(changed) };
         })));
     }).then(pulls => {
-        const issueNumbers = [...new Set(pulls.map(pull => pull.issues[0]))];
+        const issueNumbers = [...new Set(pulls.filter(pull => pull.issues.length === 1).map(pull => pull.issues[0]))];
         return Promise.all(issueNumbers.map(number => api.request(`${REPO_PATH}/issues/${number}`).then(issue => {
             if (issue.pull_request || issue.repository_url !== `${API}${REPO_PATH}`) throw new Error(`Issue #${number} is not a canonical frontend Issue.`);
             return issue;
-        }))).then(issues => buildChecklist({ files, commits, pulls, issues }));
+        }))).then(issues => buildChecklist({ files, commits, pulls, issues, commitFiles }));
     });
 }
 
@@ -209,6 +237,78 @@ function activeCiRule(api) {
             if (rule.type === 'required_status_checks') values.push(...(rule.parameters?.required_status_checks ?? []));
         }
         return { required_status_checks: values };
+    });
+}
+
+function newestTrustedPreview(api, sha) {
+    return api.list(`${REPO_PATH}/deployments?environment=Preview&sha=${sha}`).then(deployments => {
+        const trusted = deployments.filter(item => item.sha === sha && item.environment === 'Preview' && item.creator?.login === 'vercel[bot]')
+            .sort((a, b) => b.id - a.id);
+        const next = index => {
+            if (index >= trusted.length) return Promise.resolve(null);
+            return api.list(`${REPO_PATH}/deployments/${trusted[index].id}/statuses`).then(statuses => {
+                try {
+                    return validateDeployment(trusted[index], statuses[0], 'Preview', sha);
+                } catch {
+                    return next(index + 1);
+                }
+            });
+        };
+        return next(0);
+    });
+}
+
+function readDeploymentSha(api, deploymentId) {
+    return api.request(`${REPO_PATH}/deployments/${deploymentId}`).then(deployment => assertFullSha(deployment?.sha, 'Deployment SHA'));
+}
+
+function parseDeploymentId(value) {
+    const id = Number(value);
+    if (!Number.isSafeInteger(id) || id <= 0) throw new Error('PREVIEW_DEPLOYMENT_ID must be a positive integer.');
+    return id;
+}
+
+// Zero-input dispatch: walk master from its head and take the newest SHA that has a successful trusted
+// vercel[bot] Preview with an immutable URL and a green frontend-ci push run. Explicit inputs override.
+// Every trust check still runs on the result in prepareReleaseQa.
+export function resolveCandidate({ api, sha = '', deploymentId = '' }) {
+    if (sha && deploymentId) {
+        return Promise.resolve().then(() => ({ sha: assertFullSha(sha, 'Candidate SHA'), deploymentId: parseDeploymentId(deploymentId), fallback: false, skipped: [] }));
+    }
+    if (deploymentId) {
+        return Promise.resolve().then(() => parseDeploymentId(deploymentId))
+            .then(id => readDeploymentSha(api, id).then(resolved => ({ sha: resolved, deploymentId: id, fallback: false, skipped: [] })));
+    }
+    if (sha) {
+        return Promise.resolve().then(() => assertFullSha(sha, 'Candidate SHA')).then(selected => newestTrustedPreview(api, selected).then(preview => {
+            if (!preview) throw new Error(`No eligible successful vercel[bot] Preview with an immutable URL exists for ${selected}.`);
+            return { sha: selected, deploymentId: preview.id, url: preview.url, fallback: false, skipped: [] };
+        }));
+    }
+    return api.request(`${REPO_PATH}/commits?sha=master&per_page=${RESOLVE_DEPTH}`).then(commits => {
+        if (!Array.isArray(commits) || commits.length === 0) throw new Error('Current master commits are unreadable.');
+        const shas = commits.map(commit => assertFullSha(commit.sha, 'Master commit SHA'));
+        const skipped = [];
+        const next = index => {
+            if (index >= shas.length) {
+                throw new Error(`No eligible successful vercel[bot] Preview with green frontend-ci in the last ${shas.length} master commits.`);
+            }
+            const candidate = shas[index];
+            return newestTrustedPreview(api, candidate).then(preview => {
+                if (!preview) {
+                    skipped.push({ sha: candidate, reason: 'No successful vercel[bot] Preview with an immutable URL.' });
+                    return next(index + 1);
+                }
+                return api.listObject(`${REPO_PATH}/actions/workflows/frontend-ci.yml/runs?head_sha=${candidate}&event=push`, 'workflow_runs').then(runs => {
+                    if (!hasGreenFrontendCiRun(runs, candidate)) {
+                        skipped.push({ sha: candidate, reason: 'No green frontend-ci push run yet.' });
+                        return next(index + 1);
+                    }
+                    return { sha: candidate, deploymentId: preview.id, url: preview.url, head: shas[0], fallback: index > 0, skipped };
+                });
+            });
+        };
+        return next(0);
     });
 }
 
@@ -292,35 +392,48 @@ function createCanonicalIssue(shared, env, body, sha, priority) {
     });
 }
 
+function runUrl(env) {
+    return env.GITHUB_SERVER_URL && env.GITHUB_REPOSITORY && env.GITHUB_RUN_ID
+        ? `${env.GITHUB_SERVER_URL}/${env.GITHUB_REPOSITORY}/actions/runs/${env.GITHUB_RUN_ID}` : 'the workflow run';
+}
+
 export function prepareReleaseQa({ env, readApi, writeApi, sharedRoot, post = postSlack, probe = probePublicPreview }) {
-    const sha = assertFullSha(env.CANDIDATE_SHA, 'Candidate SHA');
-    const deploymentId = Number(env.PREVIEW_DEPLOYMENT_ID);
     const qaLogin = env.QA_LOGIN || 'SoRawSteak';
-    const priority = env.QA_PRIORITY;
-    if (!Number.isSafeInteger(deploymentId) || deploymentId <= 0) throw new Error('PREVIEW_DEPLOYMENT_ID must be a positive integer.');
-    if (!['P0', 'P1', 'P2', 'P3'].includes(priority)) throw new Error('QA_PRIORITY must explicitly be P0, P1, P2, or P3.');
+    const priority = env.QA_PRIORITY || 'P2';
+    if (!['P0', 'P1', 'P2', 'P3'].includes(priority)) throw new Error('QA_PRIORITY must be P0, P1, P2, or P3.');
     if (env.GITHUB_ACTOR !== 'syllik' || env.GITHUB_TRIGGERING_ACTOR !== 'syllik' || env.GITHUB_REF !== 'refs/heads/master') {
         throw new Error('Only release owner syllik may select a candidate from trusted master workflow code.');
     }
     const currentRunId = Number(env.GITHUB_RUN_ID);
-    let preview, baseline, plan;
-    return Promise.all([
-        readCandidate(readApi, deploymentId, sha, probe),
-        readCi(readApi, sha),
-        readApi.list(`${REPO_PATH}/deployments?environment=Production`).then(deployments => chooseProductionBaseline(
-            deployments, id => readApi.list(`${REPO_PATH}/deployments/${id}/statuses`),
-        )),
-        compare(readApi, sha, 'master'),
-    ]).then(([selected, , production, candidateToMaster]) => {
+    let sha, deploymentId, candidate, preview, baseline, plan;
+    return resolveCandidate({ api: readApi, sha: env.CANDIDATE_SHA ?? '', deploymentId: env.PREVIEW_DEPLOYMENT_ID ?? '' }).then(resolved => {
+        candidate = resolved;
+        sha = resolved.sha;
+        deploymentId = resolved.deploymentId;
+        return Promise.all([
+            readCandidate(readApi, deploymentId, sha, probe),
+            readCi(readApi, sha),
+            readApi.list(`${REPO_PATH}/deployments?environment=Production`).then(deployments => chooseProductionBaseline(
+                deployments, id => readApi.list(`${REPO_PATH}/deployments/${id}/statuses`),
+            )),
+            compare(readApi, sha, 'master'),
+        ]);
+    }).then(([selected, , production, candidateToMaster]) => {
         preview = selected;
         baseline = production;
+        candidate = { ...candidate, url: preview.url };
         return compare(readApi, baseline.sha, sha, true).then(scope => {
             assertAncestry(candidateToMaster, scope, sha, baseline.sha);
             return readIncludedWork(readApi, scope);
         });
     }).then(included => {
         plan = included;
-        if (plan.kind === 'none') return { outcome: 'NO_MANUAL_QA_REQUIRED', sha, baseline, evidence: plan.evidence, included: plan.included };
+        if (plan.kind === 'none') {
+            const text = `Frontend release QA: No manual QA needed for ${sha} (${plan.evidence.length} changed files, none UI-affecting). ${runUrl(env)}`;
+            return postLine({ post, webhook: env.SLACK_WEBHOOK_CI, text }).then(slack => ({
+                outcome: 'NO_MANUAL_QA_REQUIRED', sha, candidate, baseline, evidence: plan.evidence, included: plan.included, noQa: plan.noQa, slack,
+            }));
+        }
         const { slackId } = assertConfiguration(env, qaLogin);
         if (!writeApi) throw new Error('CHIPIN_ISSUE_WRITE_TOKEN transport is required.');
         return Promise.all([
@@ -338,8 +451,9 @@ export function prepareReleaseQa({ env, readApi, writeApi, sharedRoot, post = po
                 return admitQaIssue(shared, env.CHIPIN_ISSUE_WRITE_TOKEN, issue.number)
                     .then(() => assignQa(readApi, writeApi, issue, qaLogin, env.QA_REASSIGN === 'true'))
                     .then(assigned => admitQaIssue(shared, env.CHIPIN_ISSUE_WRITE_TOKEN, assigned.number)
-                        .then(() => sendHandoff({ post, webhook: env.SLACK_WEBHOOK_CI, slackId, issue: assigned, sha, url: preview.url })
-                            .then(slack => ({ outcome: 'QA_ISSUE_READY', issue: assigned.html_url, sha, baseline, preview, slack }))));
+                        .then(() => sendHandoff({ post, webhook: env.SLACK_WEBHOOK_CI, slackId, issue: assigned, sha, url: preview.url, missingSteps: plan.missingSteps })
+                            .then(slack => ({ outcome: 'QA_ISSUE_READY', issue: assigned.html_url, sha, candidate, baseline, preview,
+                                missingSteps: plan.missingSteps, noQa: plan.noQa, smoke: plan.smoke, slack }))));
             });
         }));
     });
@@ -350,7 +464,7 @@ export function validateResultEvent({ event, api }) {
         || event.issue?.pull_request || !Number.isInteger(event.comment?.id) || !Number.isInteger(event.issue?.number)) {
         return Promise.resolve({ outcome: 'IGNORED' });
     }
-    if (event.action === 'created' && !/^QA RESULT:/.test(event.comment.body ?? '')) return Promise.resolve({ outcome: 'IGNORED' });
+    if (event.action === 'created' && !resultOutcome(event.comment.body)) return Promise.resolve({ outcome: 'IGNORED' });
     return Promise.all([
         api.request(`${REPO_PATH}/issues/${event.issue.number}`),
         api.request(`${REPO_PATH}/issues/comments/${event.comment.id}`, { allow404: event.action === 'deleted' }),
@@ -362,7 +476,7 @@ export function validateResultEvent({ event, api }) {
         }
         const currentQa = (issue.assignees ?? []).filter(user => user.login?.toLowerCase() !== 'syllik');
         if (event.action !== 'created') {
-            const isQaResult = value => /^QA RESULT:/.test(value ?? '');
+            const isQaResult = value => resultOutcome(value) !== null;
             const eventBody = event.comment?.body;
             const wasResult = isQaResult(event.changes?.body?.from) || isQaResult(eventBody) || isQaResult(comment?.body);
             const deletedBodyMissing = event.action === 'deleted' && !comment && eventBody == null;
@@ -374,9 +488,18 @@ export function validateResultEvent({ event, api }) {
                 currentQa: currentQa.length === 1 ? currentQa[0].login : null };
         }
         if (!comment) throw new Error('QA result comment is unreadable.');
-        const sha = /^SHA:\s*([0-9a-f]{40})\s*$/m.exec(comment.body ?? '')?.[1];
-        if (!sha || Date.parse(comment.created_at) < Date.parse(issue.created_at)) throw new Error('QA result has stale or missing candidate SHA.');
-        const result = parseQaResult(comment, issue, sha);
+        if (Date.parse(comment.created_at) < Date.parse(issue.created_at)) throw new Error('QA result comment predates the QA Issue.');
+        const result = parseQaResult(comment, issue);
         return { outcome: 'VALID_QA_RESULT', issue: issue.html_url, result };
+    });
+}
+
+// Slack is called only after the comment is validated as a result from the sole assigned QA, and the
+// line is built from validated fields only. Slack failure is reported and never changes the outcome.
+export function readResultAndNotify({ event, api, env, post = postSlack }) {
+    return validateResultEvent({ event, api }).then(value => {
+        if (value.outcome !== 'VALID_QA_RESULT') return value;
+        const text = formatResultLine({ result: value.result, issueUrl: value.issue, userMap: env.SLACK_USER_MAP });
+        return postLine({ post, webhook: env.SLACK_WEBHOOK_CI, text }).then(slack => ({ ...value, slack }));
     });
 }

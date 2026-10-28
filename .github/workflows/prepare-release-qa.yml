@@ -1,30 +1,33 @@
 name: Prepare frontend release QA
-run-name: QA prepare ${{ inputs.candidate_sha }}
+run-name: QA prepare ${{ inputs.candidate_sha || 'auto' }}
 
 on:
   workflow_dispatch:
     inputs:
       candidate_sha:
-        description: Full source SHA of the selected master Preview deployment
-        required: true
+        description: Optional full source SHA; empty resolves the newest master Preview with green frontend-ci
+        required: false
+        default: ''
         type: string
       deployment_id:
-        description: GitHub Preview deployment ID for that exact SHA
-        required: true
+        description: Optional GitHub Preview deployment ID; empty resolves it from the candidate SHA
+        required: false
+        default: ''
         type: string
       priority:
-        description: Explicit canonical Priority for the QA Task
-        required: true
+        description: Canonical Priority for the QA Task
+        required: false
+        default: P2
         type: choice
         options: [P0, P1, P2, P3]
       qa_login:
-        description: Configured GitHub QA assignee
-        required: true
+        description: GitHub QA assignee
+        required: false
         default: SoRawSteak
         type: string
       reassign_qa:
         description: Owner explicitly moves an existing same-SHA QA Issue to qa_login
-        required: true
+        required: false
         default: false
         type: boolean
 
@@ -35,8 +38,9 @@ permissions:
   deployments: read
   issues: read
 
+# One preparation at a time: a zero-input run learns its SHA only after it starts.
 concurrency:
-  group: release-qa-${{ github.repository }}-${{ inputs.candidate_sha }}
+  group: release-qa-${{ github.repository }}
   cancel-in-progress: false
 
 jobs:

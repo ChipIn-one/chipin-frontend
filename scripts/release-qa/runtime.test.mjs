@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { assertAncestry, assertRetrySafe, chooseProductionBaseline, prepareReleaseQa, sendHandoff, validateResultEvent } from './runtime.mjs';
+import { assertAncestry, assertRetrySafe, chooseProductionBaseline, prepareReleaseQa, readResultAndNotify, resolveCandidate, sendHandoff, validateResultEvent } from './runtime.mjs';
 
 const SHA = 'a'.repeat(40);
 const BASE = 'b'.repeat(40);
@@ -54,11 +54,11 @@ test('Slack failure leaves admitted Issue intact and reports retryable delivery'
 test('comment event re-reads Issue and comment before accepting current assigned QA result', () => {
     const body = `<!-- chipin-release-qa:v1 repo=ChipIn-one/chipin-frontend sha=${SHA} deployment=42 -->`;
     const issue = { number: 50, body, created_at: '2026-10-23T10:00:00Z', html_url: 'https://github.com/ChipIn-one/chipin-frontend/issues/50', assignees: [{ login: 'syllik' }, { login: 'SoRawSteak' }] };
-    const comment = { id: 8, issue_url: 'https://api.github.com/repos/ChipIn-one/chipin-frontend/issues/50', user: { login: 'SoRawSteak', type: 'User' }, body: `QA RESULT: PASS\nSHA: ${SHA}\nTOTAL TIME: 30m`, created_at: '2026-10-23T11:00:00Z', updated_at: '2026-10-23T11:00:00Z' };
+    const comment = { id: 8, issue_url: 'https://api.github.com/repos/ChipIn-one/chipin-frontend/issues/50', user: { login: 'SoRawSteak', type: 'User' }, body: 'QA PASS', created_at: '2026-10-23T11:00:00Z', updated_at: '2026-10-23T11:00:00Z' };
     const event = { action: 'created', repository: { full_name: 'ChipIn-one/chipin-frontend' }, issue: { number: 50 }, comment: { id: 8, body: comment.body } };
     const api = { request: path => Promise.resolve(path.endsWith('/comments/8') ? comment : issue) };
     return validateResultEvent({ event, api }).then(value => {
-        expect(value).toMatchObject({ outcome: 'VALID_QA_RESULT', result: { sha: SHA, qa: 'SoRawSteak' } });
+        expect(value).toMatchObject({ outcome: 'VALID_QA_RESULT', result: { outcome: 'PASS', sha: SHA, qa: 'SoRawSteak' } });
         return validateResultEvent({ event, api: { request: path => Promise.resolve(path.endsWith('/comments/8') ? { ...comment, updated_at: '2026-10-23T11:01:00Z' } : issue) } });
     }).then(() => { throw new Error('Edited result was accepted.'); }, error => {
         expect(error.message).toMatch(/edited/);
@@ -68,9 +68,9 @@ test('comment event re-reads Issue and comment before accepting current assigned
 test('edited-to-PASS, edited-away and deleted QA results invalidate earlier validation', () => {
     const issue = { number: 50, body: `<!-- chipin-release-qa:v1 repo=ChipIn-one/chipin-frontend sha=${SHA} deployment=42 -->`,
         created_at: '2026-10-23T10:00:00Z', html_url: 'https://github.com/ChipIn-one/chipin-frontend/issues/50', assignees: [{ login: 'syllik' }, { login: 'SoRawSteak' }] };
-    const original = `QA RESULT: FAIL\nSHA: ${SHA}\nTOTAL TIME: 30m`;
+    const original = 'QA FAIL\nLogin is broken';
     const comment = { id: 8, issue_url: 'https://api.github.com/repos/ChipIn-one/chipin-frontend/issues/50', user: { login: 'SoRawSteak', type: 'User' },
-        body: `QA RESULT: PASS\nSHA: ${SHA}\nTOTAL TIME: 30m`, created_at: '2026-10-23T11:00:00Z', updated_at: '2026-10-23T11:01:00Z' };
+        body: 'QA PASS', created_at: '2026-10-23T11:00:00Z', updated_at: '2026-10-23T11:01:00Z' };
     const base = { repository: { full_name: 'ChipIn-one/chipin-frontend' }, issue: { number: 50 }, comment: { id: 8, body: comment.body, user: comment.user } };
     const apiFor = current => ({ request: path => Promise.resolve(path.endsWith('/comments/8') ? current : issue) });
     return validateResultEvent({ event: { ...base, action: 'edited', changes: { body: { from: original } } }, api: apiFor(comment) }).then(edited => {
@@ -107,7 +107,7 @@ test('comment on an Issue without exactly one QA marker is ignored', () => {
         return validateResultEvent({ event: edited, api: apiFor(doubled) });
     }).then(ambiguous => {
         expect(ambiguous).toEqual({ outcome: 'IGNORED' });
-        const created = { action: 'created', repository: { full_name: 'ChipIn-one/chipin-frontend' }, issue: { number: 50 }, comment: { id: 8, body: `QA RESULT: PASS\nSHA: ${SHA}\nTOTAL TIME: 30m` } };
+        const created = { action: 'created', repository: { full_name: 'ChipIn-one/chipin-frontend' }, issue: { number: 50 }, comment: { id: 8, body: 'QA PASS' } };
         const passComment = { ...comment, body: created.comment.body };
         return validateResultEvent({ event: created, api: { request: path => Promise.resolve(path.endsWith('/comments/8') ? passComment : plain) } });
     }).then(created => {
@@ -147,48 +147,231 @@ test('unauthorized QA result event cannot become a validated PASS', () => {
     const issue = { number: 50, body: `<!-- chipin-release-qa:v1 repo=ChipIn-one/chipin-frontend sha=${SHA} deployment=42 -->`,
         created_at: '2026-10-23T10:00:00Z', assignees: [{ login: 'syllik' }, { login: 'SoRawSteak' }] };
     const comment = { id: 8, issue_url: 'https://api.github.com/repos/ChipIn-one/chipin-frontend/issues/50', user: { login: 'syllik', type: 'User' },
-        body: `QA RESULT: PASS\nSHA: ${SHA}\nTOTAL TIME: 30m`, created_at: '2026-10-23T11:00:00Z', updated_at: '2026-10-23T11:00:00Z' };
+        body: 'QA PASS', created_at: '2026-10-23T11:00:00Z', updated_at: '2026-10-23T11:00:00Z' };
     const event = { action: 'created', repository: { full_name: 'ChipIn-one/chipin-frontend' }, issue: { number: 50 }, comment: { id: 8, body: comment.body } };
     return validateResultEvent({ event, api: { request: path => Promise.resolve(path.endsWith('/comments/8') ? comment : issue) } })
         .then(() => { throw new Error('Unauthorized result was accepted.'); }, error => expect(error.message).toMatch(/assigned QA/));
 });
 
-function docsEvidenceApi(linked) {
-    const readApi = {
+const OLD = 'c'.repeat(40);
+const PREVIEW_URL = 'https://chipin-frontend-abc-sylliks-projects.vercel.app';
+const WEBHOOK = 'https://hooks.slack.com/services/T0/B0/secret';
+const greenRun = sha => ({ id: 1, head_sha: sha, head_branch: 'master', conclusion: 'success', status: 'completed', event: 'push', path: '.github/workflows/frontend-ci.yml' });
+const previewFor = (id, sha) => ({ id, sha, ref: 'master', environment: 'Preview', creator: { login: 'vercel[bot]' } });
+const ok = url => [{ state: 'success', environment_url: url }];
+
+function resolverApi({ head = [SHA, OLD], previews = {}, statuses = {}, runs = {}, deployments = {} }) {
+    return {
         request: path => {
+            if (path.includes('/commits?sha=master')) return Promise.resolve(head.map(sha => ({ sha })));
+            const single = /\/deployments\/(\d+)$/.exec(path);
+            if (single && deployments[single[1]]) return Promise.resolve(deployments[single[1]]);
+            throw new Error(`Unexpected request ${path}`);
+        },
+        list: path => {
+            const preview = /\/deployments\?environment=Preview&sha=([0-9a-f]{40})$/.exec(path);
+            if (preview) return Promise.resolve(previews[preview[1]] ?? []);
+            const status = /\/deployments\/(\d+)\/statuses$/.exec(path);
+            if (status) return Promise.resolve(statuses[status[1]] ?? []);
+            throw new Error(`Unexpected list ${path}`);
+        },
+        listObject: path => Promise.resolve(runs[/head_sha=([0-9a-f]{40})/.exec(path)?.[1]] ?? []),
+    };
+}
+
+test('zero-input resolver picks the newest successful vercel[bot] Preview of the master head with green frontend-ci', () => {
+    const api = resolverApi({ previews: { [SHA]: [previewFor(41, SHA), previewFor(42, SHA)] },
+        statuses: { 41: ok('https://chipin-frontend-old-sylliks-projects.vercel.app'), 42: ok(PREVIEW_URL) }, runs: { [SHA]: [greenRun(SHA)] } });
+    return resolveCandidate({ api }).then(value => {
+        expect(value).toMatchObject({ sha: SHA, deploymentId: 42, url: PREVIEW_URL, head: SHA, fallback: false, skipped: [] });
+    });
+});
+
+test('zero-input resolver falls back to the newest master SHA with a successful Preview and green frontend-ci', () => {
+    const api = resolverApi({ head: [SHA, BASE, OLD],
+        previews: { [BASE]: [previewFor(43, BASE)], [OLD]: [previewFor(44, OLD)] },
+        statuses: { 43: ok('https://chipin-frontend-mid-sylliks-projects.vercel.app'), 44: ok(PREVIEW_URL) },
+        runs: { [BASE]: [{ ...greenRun(BASE), status: 'in_progress', conclusion: null }], [OLD]: [greenRun(OLD)] } });
+    return resolveCandidate({ api }).then(value => {
+        expect(value).toMatchObject({ sha: OLD, deploymentId: 44, head: SHA, fallback: true });
+        expect(value.skipped.map(item => item.sha)).toEqual([SHA, BASE]);
+        expect(value.skipped[0].reason).toMatch(/Preview/);
+        expect(value.skipped[1].reason).toMatch(/frontend-ci/);
+    });
+});
+
+test('zero-input resolver ignores a Preview for a non-head SHA, untrusted creators, failed statuses and moving aliases', () => {
+    const api = resolverApi({ head: [SHA],
+        previews: { [SHA]: [previewFor(45, OLD), { ...previewFor(46, SHA), creator: { login: 'syllik' } }, previewFor(47, SHA), previewFor(48, SHA)] },
+        statuses: { 45: ok(PREVIEW_URL), 46: ok(PREVIEW_URL), 47: [{ state: 'failure', environment_url: PREVIEW_URL }],
+            48: ok('https://chipin-frontend-git-master-sylliks-projects.vercel.app') },
+        runs: { [SHA]: [greenRun(SHA)] } });
+    return resolveCandidate({ api }).then(() => { throw new Error('Untrusted Preview was resolved.'); },
+        error => expect(error.message).toMatch(/No eligible/));
+});
+
+test('zero-input resolver fails closed when no master SHA has an eligible Preview', () => {
+    return resolveCandidate({ api: resolverApi({}) }).then(() => { throw new Error('Resolved without a Preview.'); },
+        error => expect(error.message).toMatch(/No eligible.*Preview/));
+});
+
+test('explicit overrides: SHA only resolves its Preview, deployment ID only takes its SHA, both pass through', () => {
+    const api = resolverApi({ previews: { [OLD]: [previewFor(44, OLD)] }, statuses: { 44: ok(PREVIEW_URL) },
+        deployments: { 44: previewFor(44, OLD) } });
+    return resolveCandidate({ api, sha: OLD }).then(bySha => {
+        expect(bySha).toMatchObject({ sha: OLD, deploymentId: 44, fallback: false });
+        return resolveCandidate({ api, deploymentId: '44' });
+    }).then(byId => {
+        expect(byId).toMatchObject({ sha: OLD, deploymentId: 44 });
+        return resolveCandidate({ api, sha: SHA, deploymentId: '42' });
+    }).then(both => {
+        expect(both).toMatchObject({ sha: SHA, deploymentId: 42 });
+        return resolveCandidate({ api, sha: 'abc' });
+    }).then(() => { throw new Error('Short SHA accepted.'); }, error => expect(error.message).toMatch(/40-character/));
+});
+
+test('zero-input runs: an auto run in progress or a successful auto run for the same head SHA stays ambiguous', () => {
+    const auto = (status, conclusion, headSha) => ({ id: 99, display_title: 'QA prepare auto', status, conclusion, head_sha: headSha });
+    expect(() => assertRetrySafe([auto('in_progress', null, OLD)], 101, SHA, null)).toThrow(/ambiguous/);
+    expect(() => assertRetrySafe([auto('completed', 'success', SHA)], 101, SHA, null)).toThrow(/ambiguous/);
+    expect(assertRetrySafe([auto('completed', 'success', OLD)], 101, SHA, null)).toBe(true);
+    expect(assertRetrySafe([auto('completed', 'failure', SHA)], 101, SHA, null)).toBe(true);
+});
+
+test('handoff mentions included UI Issues that have no QA steps', () => {
+    const posted = [];
+    const issue = { number: 50, html_url: 'https://github.com/ChipIn-one/chipin-frontend/issues/50' };
+    return sendHandoff({ post: (url, payload) => { posted.push(payload.text); return Promise.resolve(true); }, webhook: WEBHOOK,
+        slackId: 'U0C9X8T4R2Q', issue, sha: SHA, url: PREVIEW_URL, missingSteps: [13, 14] }).then(value => {
+        expect(value).toEqual({ delivered: true });
+        expect(posted[0]).toMatch(/Missing QA steps: #13, #14/);
+    });
+});
+
+function evidenceApi({ files = ['docs/help.md'], pulls = 'linked', prFiles = ['docs/help.md'], commitFiles = files } = {}) {
+    const merged = { number: 20, node_id: 'PR_20', merged_at: '2026-10-23T10:00:00Z', base: { ref: 'master' } };
+    return {
+        request: path => {
+            if (path.includes('/commits?sha=master')) return Promise.resolve([{ sha: SHA }]);
             if (path.endsWith('/deployments/42')) return Promise.resolve({ id: 42, sha: SHA, ref: SHA, environment: 'Preview', creator: { login: 'vercel[bot]' } });
             if (path.includes('/rules/branches/master')) return Promise.resolve([{ type: 'required_status_checks', parameters: { required_status_checks: [{ context: 'frontend-ci', integration_id: 15368 }] } }]);
             if (path.includes(`/compare/${SHA}...master`)) return Promise.resolve({ status: 'identical' });
-            if (path.includes(`/compare/${BASE}...${SHA}`)) return Promise.resolve({ status: 'ahead', total_commits: 1, commits: [{ sha: SHA }], files: [{ filename: 'docs/help.md' }] });
+            if (path.includes(`/compare/${BASE}...${SHA}`)) return Promise.resolve({ status: 'ahead', total_commits: 1, commits: [{ sha: SHA }], files: files.map(filename => ({ filename })) });
+            if (path.endsWith(`/commits/${SHA}`)) return Promise.resolve({ sha: SHA, files: commitFiles.map(filename => ({ filename })) });
             if (path.endsWith('/issues/12')) return Promise.resolve({ number: 12, repository_url: 'https://api.github.com/repos/ChipIn-one/chipin-frontend', body: '## Acceptance\n- [ ] Documentation updated' });
             throw new Error(`Unexpected request ${path}`);
         },
         list: path => {
-            if (path.endsWith('/deployments/42/statuses')) return Promise.resolve([{ state: 'success', environment_url: 'https://chipin-frontend-abc-sylliks-projects.vercel.app' }]);
+            if (path.endsWith(`/deployments?environment=Preview&sha=${SHA}`)) return Promise.resolve([previewFor(42, SHA)]);
+            if (path.endsWith('/deployments/42/statuses')) return Promise.resolve(ok(PREVIEW_URL));
             if (path.endsWith('/deployments?environment=Production')) return Promise.resolve([{ id: 7, sha: BASE, ref: BASE, environment: 'Production', creator: { login: 'vercel[bot]' } }]);
             if (path.endsWith('/deployments/7/statuses')) return Promise.resolve([{ state: 'success', environment_url: 'https://chipin.one' }]);
             if (path.endsWith(`/commits/${SHA}/statuses`)) return Promise.resolve([]);
-            if (path.endsWith(`/commits/${SHA}/pulls`)) return Promise.resolve(linked ? [{ number: 20, node_id: 'PR_20', merged_at: '2026-10-23T10:00:00Z', base: { ref: 'master' } }] : []);
-            if (path.endsWith('/pulls/20/files')) return Promise.resolve([{ filename: 'docs/help.md' }]);
+            if (path.endsWith(`/commits/${SHA}/pulls`)) return Promise.resolve(pulls ? [merged] : []);
+            if (path.endsWith('/pulls/20/files')) return Promise.resolve(prFiles.map(filename => ({ filename })));
             throw new Error(`Unexpected list ${path}`);
         },
         listObject: (path, key) => Promise.resolve(key === 'check_runs'
             ? [{ name: 'frontend-ci', head_sha: SHA, conclusion: 'success', status: 'completed', app: { id: 15368, slug: 'github-actions' } }]
-            : [{ head_sha: SHA, head_branch: 'master', conclusion: 'success', status: 'completed', event: 'push', path: '.github/workflows/frontend-ci.yml' }]),
-        graphql: () => Promise.resolve({ node: { closingIssuesReferences: { totalCount: 1, nodes: [{ number: 12, repository: { nameWithOwner: 'ChipIn-one/chipin-frontend' } }] } } }),
+            : [greenRun(SHA)]),
+        graphql: () => Promise.resolve({ node: { closingIssuesReferences: pulls === 'dependabot'
+            ? { totalCount: 0, nodes: [] }
+            : { totalCount: 1, nodes: [{ number: 12, repository: { nameWithOwner: 'ChipIn-one/chipin-frontend' } }] } } }),
     };
-    return readApi;
 }
 
-test('proven linked docs-only candidate records no manual QA without Issue-write or Slack credentials', () => {
-    const env = { CHIPIN_DEV_READ_TOKEN: 'read', CANDIDATE_SHA: SHA, PREVIEW_DEPLOYMENT_ID: '42', QA_PRIORITY: 'P2', GITHUB_ACTOR: 'syllik', GITHUB_TRIGGERING_ACTOR: 'syllik', GITHUB_REF: 'refs/heads/master' };
-    return prepareReleaseQa({ env, readApi: docsEvidenceApi(true), writeApi: null, probe: () => Promise.resolve() }).then(value => {
-        expect(value).toMatchObject({ outcome: 'NO_MANUAL_QA_REQUIRED', sha: SHA, evidence: ['docs/help.md'], included: [{ issue: 12, pulls: [20] }] });
+const ownerEnv = { CHIPIN_DEV_READ_TOKEN: 'read', GITHUB_ACTOR: 'syllik', GITHUB_TRIGGERING_ACTOR: 'syllik', GITHUB_REF: 'refs/heads/master',
+    GITHUB_SERVER_URL: 'https://github.com', GITHUB_REPOSITORY: 'ChipIn-one/chipin-frontend', GITHUB_RUN_ID: '777' };
+
+test('zero-input dispatch on a non-UI compare resolves the candidate, records no manual QA and posts one Slack line', () => {
+    const posted = [];
+    const post = (url, payload) => { posted.push({ url, text: payload.text }); return Promise.resolve(true); };
+    const env = { ...ownerEnv, CANDIDATE_SHA: '', PREVIEW_DEPLOYMENT_ID: '', QA_PRIORITY: '', SLACK_WEBHOOK_CI: WEBHOOK };
+    return prepareReleaseQa({ env, readApi: evidenceApi(), writeApi: null, post, probe: () => Promise.resolve() }).then(value => {
+        expect(value).toMatchObject({ outcome: 'NO_MANUAL_QA_REQUIRED', sha: SHA, evidence: ['docs/help.md'], included: [{ issue: 12, pulls: [20] }],
+            candidate: { sha: SHA, deploymentId: 42, url: PREVIEW_URL, fallback: false }, slack: { delivered: true } });
+        expect(posted).toHaveLength(1);
+        expect(posted[0].url).toBe(WEBHOOK);
+        expect(posted[0].text).not.toContain('\n');
+        expect(posted[0].text).toMatch(new RegExp(`No manual QA needed for ${SHA}.*actions/runs/777`));
     });
 });
 
-test('unlinked docs-only candidate is blocked before NO_MANUAL_QA_REQUIRED', () => {
-    const env = { CHIPIN_DEV_READ_TOKEN: 'read', CANDIDATE_SHA: SHA, PREVIEW_DEPLOYMENT_ID: '42', QA_PRIORITY: 'P2', GITHUB_ACTOR: 'syllik', GITHUB_TRIGGERING_ACTOR: 'syllik', GITHUB_REF: 'refs/heads/master' };
-    return prepareReleaseQa({ env, readApi: docsEvidenceApi(false), writeApi: null, probe: () => Promise.resolve() })
-        .then(() => { throw new Error('Unlinked docs were accepted.'); }, error => expect(error.message).toMatch(/missing or ambiguous PR|unlinked/));
+test('an unlinked docs-only commit and a Dependabot PR without an Issue no longer block', () => {
+    const env = { ...ownerEnv, CANDIDATE_SHA: SHA, PREVIEW_DEPLOYMENT_ID: '42', QA_PRIORITY: 'P2' };
+    return prepareReleaseQa({ env, readApi: evidenceApi({ pulls: null }), writeApi: null, probe: () => Promise.resolve() }).then(value => {
+        expect(value).toMatchObject({ outcome: 'NO_MANUAL_QA_REQUIRED', noQa: [{ commit: SHA }], slack: { delivered: false } });
+        expect(value.slack.reason).toMatch(/SLACK_WEBHOOK_CI/);
+        const dependabot = evidenceApi({ pulls: 'dependabot', files: ['package.json', 'package-lock.json'], prFiles: ['package.json', 'package-lock.json'] });
+        return prepareReleaseQa({ env, readApi: dependabot, writeApi: null, probe: () => Promise.resolve() });
+    }).then(value => {
+        expect(value).toMatchObject({ outcome: 'NO_MANUAL_QA_REQUIRED', noQa: [{ pull: 20, commits: [SHA] }] });
+    });
+});
+
+test('an unlinked commit under src/ still blocks the handoff', () => {
+    const env = { ...ownerEnv, CANDIDATE_SHA: SHA, PREVIEW_DEPLOYMENT_ID: '42', QA_PRIORITY: 'P2' };
+    return prepareReleaseQa({ env, readApi: evidenceApi({ pulls: null, files: ['src/App.tsx'] }), writeApi: null, probe: () => Promise.resolve() })
+        .then(() => { throw new Error('Unlinked UI commit was accepted.'); }, error => expect(error.message).toMatch(/unlinked commit.*UI-affecting/));
+});
+
+test('a Slack failure on the no-QA line does not change the outcome', () => {
+    const env = { ...ownerEnv, CANDIDATE_SHA: SHA, PREVIEW_DEPLOYMENT_ID: '42', QA_PRIORITY: 'P2', SLACK_WEBHOOK_CI: WEBHOOK };
+    return prepareReleaseQa({ env, readApi: evidenceApi(), writeApi: null, post: () => Promise.reject(new Error('down')), probe: () => Promise.resolve() })
+        .then(value => expect(value).toMatchObject({ outcome: 'NO_MANUAL_QA_REQUIRED', slack: { delivered: false } }));
+});
+
+test('dispatch outside the owner or with an invalid explicit priority is rejected before any read', () => {
+    const env = { ...ownerEnv, CANDIDATE_SHA: '', PREVIEW_DEPLOYMENT_ID: '', QA_PRIORITY: 'P9' };
+    expect(() => prepareReleaseQa({ env, readApi: evidenceApi(), writeApi: null })).toThrow(/QA_PRIORITY/);
+    expect(() => prepareReleaseQa({ env: { ...env, QA_PRIORITY: '', GITHUB_ACTOR: 'someone' }, readApi: evidenceApi(), writeApi: null })).toThrow(/syllik/);
+});
+
+function resultFixture({ body = 'QA PASS', user = { login: 'SoRawSteak', type: 'User' }, updatedAt = '2026-10-23T11:00:00Z' } = {}) {
+    const issue = { number: 50, body: `<!-- chipin-release-qa:v1 repo=ChipIn-one/chipin-frontend sha=${SHA} deployment=42 -->`, created_at: '2026-10-23T10:00:00Z',
+        html_url: 'https://github.com/ChipIn-one/chipin-frontend/issues/50', assignees: [{ login: 'syllik' }, { login: 'SoRawSteak' }] };
+    const comment = { id: 8, issue_url: 'https://api.github.com/repos/ChipIn-one/chipin-frontend/issues/50', user, body, created_at: '2026-10-23T11:00:00Z', updated_at: updatedAt };
+    const event = { action: 'created', repository: { full_name: 'ChipIn-one/chipin-frontend' }, issue: { number: 50 }, comment: { id: 8, body } };
+    return { event, api: { request: path => Promise.resolve(path.endsWith('/comments/8') ? comment : issue) } };
+}
+
+test('a valid result with a leading space and notes posts one Slack line mentioning the mapped owner', () => {
+    const posted = [];
+    const { event, api } = resultFixture({ body: ' qa pass \nAll checks done' });
+    const env = { SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{"syllik":"U0OWNER123"}' };
+    return readResultAndNotify({ event, api, env, post: (url, payload) => { posted.push(payload.text); return Promise.resolve(true); } }).then(value => {
+        expect(value).toMatchObject({ outcome: 'VALID_QA_RESULT', result: { outcome: 'PASS', sha: SHA, qa: 'SoRawSteak' }, slack: { delivered: true } });
+        expect(posted).toEqual([`<@U0OWNER123> Frontend QA PASS by SoRawSteak for ${SHA}: https://github.com/ChipIn-one/chipin-frontend/issues/50`]);
+        expect(posted[0]).not.toContain('All checks done');
+    });
+});
+
+test('a Slack failure is reported and does not change a valid result', () => {
+    const { event, api } = resultFixture({ body: 'QA FAIL\nSettle up is broken' });
+    return readResultAndNotify({ event, api, env: { SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{}' }, post: () => Promise.reject(new Error('down')) }).then(value => {
+        expect(value).toMatchObject({ outcome: 'VALID_QA_RESULT', result: { outcome: 'FAIL' }, slack: { delivered: false } });
+        expect(value.slack.reason).toMatch(/Slack/);
+    });
+});
+
+test('owner, non-assigned, bot and edited results are rejected and never reach Slack; other comments are ignored', () => {
+    let posts = 0;
+    const post = () => { posts += 1; return Promise.resolve(true); };
+    const env = { SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{}' };
+    const rejected = [
+        resultFixture({ user: { login: 'syllik', type: 'User' } }),
+        resultFixture({ user: { login: 'stranger', type: 'User' } }),
+        resultFixture({ user: { login: 'github-actions[bot]', type: 'Bot' } }),
+        resultFixture({ updatedAt: '2026-10-23T11:05:00Z' }),
+    ];
+    const next = index => {
+        if (index === rejected.length) return Promise.resolve();
+        return readResultAndNotify({ ...rejected[index], env, post })
+            .then(() => { throw new Error(`Rejected case ${index} was accepted.`); }, error => expect(error.message).toMatch(/assigned QA|human|edited/))
+            .then(() => next(index + 1));
+    };
+    return next(0).then(() => readResultAndNotify({ ...resultFixture({ body: 'Starting now, QA PASS later' }), env, post })).then(value => {
+        expect(value).toEqual({ outcome: 'IGNORED' });
+        expect(posts).toBe(0);
+    });
 });
