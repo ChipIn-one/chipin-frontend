@@ -149,7 +149,7 @@
 2. Создать корневой `package.json` (§1.2) и `apps/app/package.json`; перенести в корень `tsconfig.base.json` (из 02-C5) и tooling-конфиги спеки 02 (`prettier.config.js`, `config/eslint/`, `.husky/`) и перегенерировать lockfile. Версии зависимостей не меняются: `npm ci` должен дать тот же набор пакетов (сравнить `npm ls --all --json`).
 3. Поправить пути: импорт `./scripts/version-resolver.mjs` в `vite.config.ts` → `../../scripts/…`; в `scripts/version-{resolver,check,bump}.mjs` корень от `import.meta.dirname` и нормализация prod-версии (§1.2, A-01/A-09); `root` в `ds-gallery/vite.config.ts` (он считается от `__dirname`, поэтому не меняется), `readFileSync('vercel.json')` в `vercel.config.test.js` → путь от `import.meta.dirname`, пути в `prerender-before-workbox.mjs`, глобы в `eslint.config.js`.
 4. `.github/workflows/*`: `node scripts/<repo-level>.mjs` остаются как есть. Ссылки на app-скрипты и `dist/` получают префикс `apps/app/`. `paths-ignore` в `native-development-link.yml` не меняется.
-5. `.husky/pre-push` не меняется, потому что корневые прокси-скрипты сохраняют имена.
+5. `.husky/pre-commit` не меняется, потому что корневые прокси-скрипты сохраняют имена (pre-push удалён в 02-C10, спека 02 §Д0).
 6. Документы: `AGENTS.md`, `CLAUDE.md`, `docs/**`, `DEPLOYMENT.md` — замена `src/` → `apps/app/src/` в путях.
 7. Vercel: Root Directory → `apps/app` выставить **в момент merge** (владелец, Settings). Порядок действий — в «Фазы». После смены Root Directory preview открытых PR со старой раскладкой не собираются (нет `apps/app`): до merge 04-0a авторы открытых PR делают rebase или ждут; в окне merge открытых feature-PR нет.
 

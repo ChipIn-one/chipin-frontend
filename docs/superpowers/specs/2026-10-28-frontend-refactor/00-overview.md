@@ -6,7 +6,7 @@
 ## Цель
 
 Главная цель — **предсказуемость для AI-агентов** (Claude/Codex пишут большую часть кода): одно место для правил, один способ на каждую задачу (данные, деньги, роутинг, стили, тема), каждое правило проверяет машина. Вторичная — надёжность: безопасность инвайтов, деньги без float, офлайн-PWA.
-Режим — **инкрементальный**: без feature freeze, PR ≤ ~400 строк диффа, каждый релизится независимо. Исключения — механические PR (Prettier, codemod'ы, rename монорепо): ревью = повторить команду.
+Режим — **инкрементальный**: без feature freeze, каждый PR релизится независимо. Размер PR — ориентир, не правило: один PR = одна задача, ревью за один проход; ~400 строк диффа как ориентир; механические PR (Prettier, codemod'ы, rename монорепо) без лимита — ревью = повторить команду.
 
 ## Схема идентификаторов
 
@@ -17,13 +17,13 @@
 
 **01 — Хотфикс (D1, часть D16).** Три PR до рефакторинга: `01-1` helper `apiPath` (кодирование 14 path-сегментов, запрет `.`/`..`), `isInviteToken`, санитайзер `/groups/invite/<token>` в Sentry, CSP/Permissions-Policy, `.gitignore .env*`, удаление `role` из localStorage при выходе; `01-2` экран подтверждения перед вступлением в группу/дружбу; `01-3` единое `roundHalfUp`, «ноль = рассчитались» в 6 местах, фикс зависания `PublicLocaleRoute`. Три backend-issue (PKCE, encoded dot-segments, валидация токена + preview).
 
-**02 — Свод правил и tooling (D9, D11–D13, D15, D16).** `AGENTS.md` = 15 инвариантов + ссылки; полный свод только `docs/engineering/rules/`; каждое правило — LINT/CI/REVIEW/DELETE. Удаление мёртвых зависимостей и vendor-regex (`02-B1`, единственный владелец), Prettier, `--max-warnings 0`, type-aware ESLint, jsx-a11y, boundaries (с заранее описанными `src/app`, `src/entities`, `src/shared`), husky/lint-staged, CI-политика версии, `tsconfig.base.json`, codemod'ы named exports и barrel'ов (после `04-0`).
+**02 — Свод правил и tooling (D9, D11–D13, D15, D16).** `AGENTS.md` = 15 инвариантов + ссылки; полный свод только `docs/engineering/rules/`; каждое правило — LINT/CI/REVIEW/DELETE; lint/format-правило либо автоисправляется (`fix` на сохранении и в pre-commit), либо проверяет корректность/границы с подсказкой, как чинить, иначе удаляется (02 §Д0 «Без трения для агентов»). Удаление мёртвых зависимостей и vendor-regex (`02-B1`, единственный владелец), Prettier, `--max-warnings 0` (уровни только error/off), type-aware ESLint (только правила промисов и `any`), 6 правил jsx-a11y, boundaries (с заранее описанными `src/app`, `src/entities`, `src/shared`), husky/lint-staged (pre-commit только `--fix`, не блокирует; блокирует только CI), CI-политика версии, `tsconfig.base.json`, codemod'ы named exports и barrel'ов (после `04-0`).
 
 **03 — Data layer и офлайн (D2–D5, D19, D21, D12).** TanStack Query (offlineFirst, IDB-персистер по `userId`), outbox на paused-мутациях с отдельным персистом, конфликты 409 через `version`/`If-Match`, модуль `src/shared/money/` (`Money { minor: bigint }` scale 4, `split` = backend `distributeAmount`; провод навсегда JSON-число scale 4, конверсия в обёртке API — D21), типы из OpenAPI (axios + `openapi-typescript` + обёртка `api()`), миграция 11 сторов по одному, удаление `useConnect` (единственный владелец). Семь backend-issue (BE-03-3 снят по D21); до включения outbox обязателен BE-03-5 (D19).
 
 **04 — Монорепо, роутинг, сайт (D6–D8, D18, D22, ADR FE#498).** npm workspaces (`apps/app`, `apps/site`, `packages/tokens`, `packages/i18n-content`), первый PR — механический перенос (04-0a скриптом, 04-0b — docs); версия — только в корневом `package.json`. RR7 data router из одного манифеста; генерация `vercel.json` и SW-allowlist с тестом синхронизации; lazy-load локалей и `setAppLanguage` (единственный владелец); одна регистрация SW со scope `/app/` + kill-switch `/sw.js` (единственный владелец). изоляция провайдера (всё Vercel-специфичное — только сгенерированные `vercel.json` из нейтрального `hosting.base.json`, `@vercel/*` в одном модуле, D18). Astro-сайт со статичными страницами, `/join/group|friend/<token>`, release-модель сайта «только Promote»; подготовка cutover в 04-2f/04-2g, цель отката 04-3d, cutover 04-4 — только переключения (обратимые redirect'ы 302 на окно отката, затем 301). Отклонения от D8 (catch-all rewrite, тип инвайта в пути) приняты владельцем (D20).
 
-**05 — Стили и токены (D14, D16, D17, D23).** `packages/tokens` (DTCG `tokens.json` → `tokens.css`/`tokens.ts`/`manifest-colors.json`, единственный владелец; манифест PWA, `theme-color` и сайт берут цвет из одного токена `brand.primary` = grass-9; hex/rgb вне `packages/tokens` запрещены lint/stylelint), одна тёмная тема (`appearanceStore` → класс `<html>` → `<Theme>`, без FOUC, CSP-хеш), удаление `next-themes`, кодмод `themeColor()` → `var(--cp-*)` (gray → olive), styled-components заморожен allowlist'ом + правило касания, stylelint, граница `basics`/`components`, Radix CSS по частям, WebP. ds-gallery остаётся в `apps/app/ds-gallery/` и получает токены как приложение.
+**05 — Стили и токены (D14, D16, D17, D23).** `packages/tokens` (DTCG `tokens.json` → `tokens.css`/`tokens.ts`/`manifest-colors.json`, единственный владелец; манифест PWA, `theme-color` и сайт берут цвет из одного токена `brand.primary` = grass-9; hex/rgb вне `packages/tokens` запрещены lint/stylelint), один механизм переключения темы (light/dark/system: `appearanceStore` → класс `<html>` → `<Theme>`, без FOUC, CSP-хеш), удаление `next-themes`, кодмод `themeColor()` → `var(--cp-*)` (gray → olive), styled-components заморожен allowlist'ом + правило касания, stylelint, граница `basics`/`components`, Radix CSS по частям, WebP. ds-gallery остаётся в `apps/app/ds-gallery/` и получает токены как приложение.
 
 ## Кто владеет пересекающимися темами (решено, во всех спеках согласовано)
 
@@ -55,7 +55,7 @@
 01-1 ──> 01-2 ──────────────┐            01-3 ──> 03-1 ──> 03-2, 03-3 ;  01-1 ──> 03-4
   └─────────────────────────┼──> 04-0a (монорепо-перенос; владелец ставит Root Directory) ─> 04-0b
 02-A0 ─> 02-A1 ─> 02-A2     │      │
-02-C1 ─> 02-C2a-c ─> 02-C3 ─> 02-C4 ──┬─> 02-C8, 02-C9, 02-C10, 02-C12 ─> 02-D1
+02-C1 ─> 02-C2a-c ─> 02-C3 ─> 02-C4 ──┬─> 02-C8, 02-C9, 02-C10, 02-C12
                                       └─> 02-C6 <─ 02-C5 ; 02-C6 ─> 02-C7a/b, 02-C11
                               02-C4 + 04-0a ─> 02-D2a-e ─> 02-D3a-e
 04-0a ─> 04-1a ─> 04-2a1 ─> 04-2a2 ─> 04-2a3 ─> 04-2a4 ─> 04-2f, 04-2g, 04-2e(+03-5, 03-8…03-12)
@@ -102,7 +102,7 @@ src/store/expenseModal*:  01-3 ─> 02-C2 ─> 03-2 ─> 03-13 ─> 03-14 ─> 0
 - роутер: `04-2a1` → `04-2a2` → `04-2a3` → `04-2a4`; `04-2b`, `04-2c`, `04-2d`, `04-2e`; подготовка cutover `04-2f`, `04-2g`;
 - сайт: `04-3a` → `04-3b`, `04-3c`;
 - цель отката: `04-3d` — последний Promote app-проекта перед cutover;
-- tooling: `02-C6` → `02-C7a/b`, `02-C11`; `02-C8`, `02-C9`, `02-C10`, `02-C12` → `02-D1`;
+- tooling: `02-C6` → `02-C7a/b`, `02-C11`; `02-C8`, `02-C9`, `02-C10`, `02-C12`;
 - стили: `05-3`, `05-6`.
 Завершение фазы — `04-4` cutover (только переключения флагов/констант; проверка на preview до merge; 48 ч без Promote после него).
 
@@ -141,7 +141,7 @@ src/store/expenseModal*:  01-3 ─> 02-C2 ─> 03-2 ─> 03-13 ─> 03-14 ─> 0
 9. Release-ветка `chore/issue-<n>-release-vX-Y-Z` проходит `pr:create`/admission, один Issue на релиз, CI `version-check` (02) — **да, подтверждено владельцем 2026-10-28** (решено в 02 Д7).
 10. Поле `Version impact` в Issue убрать, бамп выбирает владелец (02) — **да, подтверждено владельцем 2026-10-28**.
 11. Удалить override `sharp`; вернуть с комментарием, если `icons:generate` упадёт (02) — **да, подтверждено владельцем 2026-10-28**.
-12. Если jsx-a11y baseline > ~80 нарушений — делить 02-C8 по слоям (02) — **да**.
+12. Если jsx-a11y baseline > ~80 нарушений — делить 02-C8 по слоям (02) — **да** (с 6 правилами вместо `recommended` маловероятно).
 13. Ничьи остатка в `distributeAmount` — по порядку `participantIds` запроса (03) — **да, проверить в BE-03-7**.
 14. Refresh-токен — httpOnly cookie через same-origin `/api` rewrite (03) — **да (по аудиту)**.
 15. Лимиты outbox: 50 операций, 14 дней до `stale`, persist кэша 14 дней (03) — **да, подтверждено владельцем 2026-10-28 (D20)**.
@@ -170,11 +170,11 @@ src/store/expenseModal*:  01-3 ─> 02-C2 ─> 03-2 ─> 03-13 ─> 03-14 ─> 0
 | Спека | PR | Примечание |
 |---|---|---|
 | 01 | 3 | ~820 строк всего |
-| 02 | 32 (31 FE + 02-A0 в ai-workflow) | 02-C2a–c и 02-D2/D3 — механические |
+| 02 | 31 (30 FE + 02-A0 в ai-workflow; 02-D1 снят — правило `React.FC` удалено, 02 §Д0) | 02-C2a–c и 02-D2/D3 — механические |
 | 03 | 20 (03-19 снят по D21; +03-21 settle-up) | 03-17/20 ждут backend |
 | 04 | 21 (было 14: 04-0 → 0a/0b, 04-2a → 2a1–a4, +04-2f, 04-2g, 04-3d) | 04-0a — скрипт переноса, ревью = перезапуск + просмотр не-rename правок |
 | 05 | 7 | 05-4 — единственный «пиксельный» PR |
-| **Итого** | **83** + 14 backend-issue | ≈ 76 PR по ≤ 400 строк (≈ 15–20 тыс. строк ручного диффа) + 6–12 механических |
+| **Итого** | **82** + 14 backend-issue | ≈ 75 PR по ориентиру ~400 строк (≈ 15–20 тыс. строк ручного диффа) + 6–12 механических |
 
 ## GitHub-issues во frontend-репо (при создании: Type, Priority, assignee, Project 5)
 
@@ -185,7 +185,7 @@ src/store/expenseModal*:  01-3 ─> 02-C2 ─> 03-2 ─> 03-13 ─> 03-14 ─> 0
 - `02-A Single rulebook: AGENTS.md invariants, rules 00–70 cleanup, remove .ai duplicates`
 - `02-B Remove dead dependencies, fix vendor-react chunk, stop icon regeneration`
 - `02-C Tooling: Prettier, zero warnings, type-aware ESLint, a11y, boundaries, hooks, version policy, TS strictness`
-- `02-D Codemods: no React.FC, named exports, no nested barrels`
+- `02-D Codemods: named exports, no nested barrels`
 - `03-A Money module src/shared/money and balance entities`
 - `03-B OpenAPI-generated API types and typed client`
 - `03-C TanStack Query core: client, persister, connectivity, session expiry`
@@ -199,7 +199,7 @@ src/store/expenseModal*:  01-3 ─> 02-C2 ─> 03-2 ─> 03-13 ─> 03-14 ─> 0
 - `04-E Remove PublicApp, prerender and public routes from the app`
 - `05-A Radix CSS split and asset optimization`
 - `05-B packages/tokens: DTCG tokens and generator`
-- `05-C Single dark-mode mechanism without FOUC, remove next-themes`
+- `05-C Single theme-switching mechanism (light/dark/system) without FOUC, remove next-themes`
 - `05-D Retire styled-themes: themeColor codemod, styled allowlist, stylelint, CSS Modules`
 - `05-E basics/components boundary and Radix wrappers cleanup`
 - `05-F ds-gallery on app tokens and theme`
@@ -216,7 +216,7 @@ src/store/expenseModal*:  01-3 ─> 02-C2 ─> 03-2 ─> 03-13 ─> 03-14 ─> 0
 | 4 | Outbox теряет или дублирует операции | запись офлайн за флагом до BE-03-1/2, отдельный персист, msw-тесты reload/вкладок, лимиты 50/14 дней |
 | 5 | Регрессия денег (округление, знак, деление) | snapshot до/после, векторы BE-03-7, money-PR изолированы, единые lint-правила 03 §4.3 |
 | 6 | Backend-зависимости затягиваются | money без backend-изменений (D21), флаги, 24-часовое обновление SW; фронт не блокируется кроме 03-17/20 |
-| 7 | Переходный период «старое + новое» путает агентов | текст `L:`-правила меняется в том же PR, что и lint (02-A2 — только DEL/RW без lint); один граф слоёв; примеры кода без `await`; baseline только уменьшается; один владелец на тему (таблица выше) |
+| 7 | Переходный период «старое + новое» путает агентов; lint/format-правила заставляют агентов делать лишние круги | правила без автофикса и не про корректность удалены (02 §Д0), pre-commit только чинит, проверка на агентах перед merge 02-C (0 повторов из-за автофиксимых правил); текст `L:`-правила меняется в том же PR, что и lint (02-A2 — только DEL/RW без lint); один граф слоёв; примеры кода без `await`; baseline только уменьшается; один владелец на тему (таблица выше) |
 | 8 | Ошибка конфигурации Vercel (Root Directory, файлы вне root, версия из cwd) при 04-0a; лимиты Hobby на два проекта | действие владельца в момент merge, smoke-чеклист §1.6, сравнение состава `dist`, version-скрипты от `import.meta.dirname`; Ignored Build Step по `VERCEL_GIT_PREVIOUS_SHA`, замер CI/деплоев после 02-C6 и 04-3a (04 §1.5) |
 | 9 | Визуальный сдвиг gray → olive и токены | изолированный 05-4, 10 пар скриншотов, подтверждение владельца |
 | 10 | IndexedDB недоступен/квота (Safari private), незашифрованные финансовые данные | fallback без персиста + Sentry, `clearUserData` при logout и смене аккаунта |
@@ -228,6 +228,7 @@ src/store/expenseModal*:  01-3 ─> 02-C2 ─> 03-2 ─> 03-13 ─> 03-14 ─> 0
 - Settle-up/платежи офлайн; локальный пересчёт балансов; Background Sync; фейковые события в activity-кэшах; API в SW `runtimeCaching`.
 - zod на ответах API; замена axios на fetch/`openapi-fetch`.
 - Biome/oxlint, `exactOptionalPropertyTypes`, `import-x/no-cycle` в pre-commit; перевод свода правил на русский.
+- Стилевые lint-правила без автофикса (`handle*`, `React.FC`, PascalCase типов, вложенные тернарники, `no-multi-comp`, имена файлов/папок, `toMatchSnapshot`, полный `jsx-a11y/recommended`) и блокирующий pre-commit/pre-push — 02 §Д0.
 - Deploy-workflow'ы, перенос домена/DNS, переименование app-проекта Vercel.
 - Миграция хостинга с Vercel (и замена Analytics) — отдельное исследование, в работе (D18); спеки только изолируют провайдера (04 §1.5a).
 - Префикс локали в URL приложения; изменения `ModalRouter`; превью группы на `/join/*` до BE-01-3 и решения владельца.

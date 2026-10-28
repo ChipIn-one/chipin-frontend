@@ -11,7 +11,7 @@
 ## Цель
 
 1. Один источник токенов для app, Astro-сайта и ds-gallery: `packages/tokens/tokens.json` (DTCG). Из него генератор строит `tokens.css` и `tokens.ts`.
-2. Один механизм тёмной темы.
+2. Один механизм переключения темы (light/dark/system); обе темы остаются.
    - Сейчас их 4. Нужен один: значение в store → класс на `<html>` → `<Theme appearance>`.
    - Без мигания при загрузке (FOUC).
 3. Вывести `styled-themes.ts` и `themeColor()`.
@@ -135,7 +135,7 @@ packages/tokens/
 - Обратный выбор (`grayColor="gray"`) изменил бы весь интерфейс.
 - Флаг для владельца: см. «Открытые вопросы».
 
-### 2. Тёмная тема: один механизм
+### 2. Тема (light/dark/system): один механизм переключения
 
 - **Store.** `src/store/ui-prefs/appearanceStore.ts` (Zustand, UI-состояние по D3; путь закреплён спекой 03 §6: UI-сторы живут в `src/store/ui-prefs/`):
   - `preference: 'light' | 'dark' | 'system'`, `resolved: 'light' | 'dark'`, `setPreference(p)`;

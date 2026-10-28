@@ -73,3 +73,9 @@ PR ids in spec 04 changed; update issue bodies when the coordinator/owner syncs 
 - 02-C (#519): 02-C9 depends on 02-C4; Prettier ignores `AGENTS.md`, `CLAUDE.md`, `.github/**`. 02-D (#520): codemods skip `src/store/expenseModal*` until 03-14.
 - 05-D (#535): 05-5 owns `no-raw-colors` (`no-restricted-syntax`), not the `restrictedImports()` helper (02-C4). 05-4 skips `expenseModal*` until 03-14.
 - Totals: 83 PRs (04: 21; 03: 20 with 03-21).
+
+## Scope notes after owner review of PR #542 (2026-10-28)
+
+- 02-C (#519) and 02-D (#520) Scope/Acceptance synced to spec 02 §Д0 «Без трения для агентов»: each lint/format rule is (a) auto-fixable, (b) correctness/boundary with a fix hint, or (c) deleted; 6 jsx-a11y rules; pre-commit `--fix` only and never blocks; pre-push removed; `npm run fix`, `npm run baseline:update`; agent check before 02-C merges.
+- 02-D1 (`React.FC` ×9) dropped: the ban is not auto-fixable. #520 title → `Codemods: named exports, no nested barrels`. 05-C (#534) title → single theme-switching mechanism (light/dark/system).
+- Totals: 82 PRs (02: 31).
