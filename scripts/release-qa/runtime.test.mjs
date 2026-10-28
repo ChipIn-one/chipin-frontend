@@ -458,10 +458,10 @@ test('a fallback candidate is labelled as not the master head on the handoff lin
     });
 });
 
-function editedFixture({ action = 'edited', user = { login: 'SoRawSteak', type: 'User' } } = {}) {
-    const { api } = resultFixture({ updatedAt: '2026-10-23T11:05:00Z', body: 'QA FAIL', user });
+function editedFixture({ action = 'edited', user = { login: 'SoRawSteak', type: 'User' }, from = 'QA PASS', to = 'QA FAIL' } = {}) {
+    const { api } = resultFixture({ updatedAt: '2026-10-23T11:05:00Z', body: to, user });
     const event = { action, repository: { full_name: 'ChipIn-one/chipin-frontend' }, issue: { number: 50 },
-        comment: { id: 8, body: action === 'deleted' ? 'QA PASS' : 'QA FAIL', user }, changes: action === 'edited' ? { body: { from: 'QA PASS' } } : undefined };
+        comment: { id: 8, body: action === 'deleted' ? from : to, user }, changes: action === 'edited' ? { body: { from } } : undefined };
     if (action === 'deleted') return { event, api: { request: path => (path.endsWith('/comments/8') ? Promise.resolve(null) : api.request(path)) } };
     return { event, api };
 }
@@ -520,5 +520,35 @@ test('a marker in a closed Issue or in an Issue with another title is not accept
     ]).then(values => {
         expect(values).toEqual([{ outcome: 'IGNORED' }, { outcome: 'IGNORED' }, { outcome: 'IGNORED' }, { outcome: 'IGNORED' }]);
         expect(posts).toBe(0);
+    });
+});
+
+test('the "no longer valid" line is sent only when the previous body was a valid result', () => {
+    const posted = [];
+    const post = (url, payload) => { posted.push(payload.text); return Promise.resolve(true); };
+    const env = { SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{}' };
+    return readResultAndNotify({ ...editedFixture({ from: 'QA PASSED', to: 'QA PASS' }), env, post }).then(nearMissFixed => {
+        expect(nearMissFixed.outcome).toBe('QA_RESULT_INVALIDATED');
+        expect(nearMissFixed).not.toHaveProperty('slack');
+        return readResultAndNotify({ ...editedFixture({ from: 'Checking now', to: 'QA PASS' }), env, post });
+    }).then(noteToResult => {
+        expect(noteToResult).not.toHaveProperty('slack');
+        return readResultAndNotify({ ...editedFixture({ action: 'deleted', from: 'QA PASSED' }), env, post });
+    }).then(deletedNearMiss => {
+        expect(deletedNearMiss).toEqual({ outcome: 'IGNORED' });
+        const missing = editedFixture({ action: 'deleted' });
+        return readResultAndNotify({ event: { ...missing.event, comment: { id: 8, user: missing.event.comment.user } }, api: missing.api, env, post });
+    }).then(deletedUnknownBody => {
+        expect(deletedUnknownBody.outcome).toBe('QA_RESULT_INVALIDATED');
+        expect(deletedUnknownBody).not.toHaveProperty('slack');
+        expect(posted).toEqual([]);
+        return readResultAndNotify({ ...editedFixture({ from: ' qa pass \nnotes', to: 'QA PASSED' }), env, post });
+    }).then(resultToNearMiss => {
+        expect(resultToNearMiss).toMatchObject({ outcome: 'QA_RESULT_INVALIDATED', slack: { delivered: true } });
+        expect(posted).toHaveLength(1);
+        return readResultAndNotify({ ...editedFixture({ action: 'deleted', from: 'QA BLOCKED' }), env, post });
+    }).then(deletedResult => {
+        expect(deletedResult).toMatchObject({ outcome: 'QA_RESULT_INVALIDATED', slack: { delivered: true } });
+        expect(posted).toHaveLength(2);
     });
 });

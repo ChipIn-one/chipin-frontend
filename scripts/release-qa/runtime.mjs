@@ -525,8 +525,10 @@ export function validateResultEvent({ event, api }) {
             const deletedBodyMissing = event.action === 'deleted' && !comment && eventBody == null;
             if (!wasResult && !deletedBodyMissing) return { outcome: 'IGNORED' };
             const author = (comment?.user?.login ?? event.comment?.user?.login ?? '').toLowerCase();
-            const byCurrentQa = currentQa.length === 1 && author === currentQa[0].login.toLowerCase();
-            return { outcome: 'QA_RESULT_INVALIDATED', issue: issue.html_url, sha: marker[0][1], byCurrentQa,
+            // Only a previously valid result can be withdrawn: the body before an edit, or the deleted body.
+            const previousBody = event.action === 'edited' ? event.changes?.body?.from : eventBody;
+            const withdrewResult = isQaResult(previousBody) && currentQa.length === 1 && author === currentQa[0].login.toLowerCase();
+            return { outcome: 'QA_RESULT_INVALIDATED', issue: issue.html_url, sha: marker[0][1], withdrewResult,
                 reason: event.action === 'deleted' || !comment
                     ? 'QA result comment was deleted; prior validation is historical.'
                     : 'QA result comment was edited; submit a new unedited result comment.',
@@ -551,7 +553,7 @@ export function validateResultEvent({ event, api }) {
 // a result. Lines are built from validated fields only. Slack failure is reported, never changes the outcome.
 export function readResultAndNotify({ event, api, env, post = postSlack }) {
     return validateResultEvent({ event, api }).then(value => {
-        if (value.outcome === 'QA_RESULT_INVALIDATED' && value.byCurrentQa) {
+        if (value.outcome === 'QA_RESULT_INVALIDATED' && value.withdrewResult) {
             const text = formatInvalidationLine({ sha: value.sha, issueUrl: value.issue, userMap: env.SLACK_USER_MAP });
             return postLine({ post, webhook: env.SLACK_WEBHOOK_CI, text }).then(slack => ({ ...value, slack }));
         }
