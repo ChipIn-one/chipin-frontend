@@ -1167,7 +1167,7 @@ outbox в ключе кэша запросов; не делаем big-bang ми�
 | 03-15c | несколько вкладок: Web Lock лидер, `BroadcastChannel` (`state`/`command`/`ack`/`heartbeat`), IDB-inbox, `steal` при замороженном лидере, фенсинг `epoch`. Тесты двух вкладок и замороженного лидера | 03-15b |
 | 03-16a | `OutboxSheet`, `<OnlineOnly>` + `ONLINE_ONLY_ACTIONS` (включая `settlement.delete`/`edit`), подпись у балансов, confirm `signOut` при непустом outbox и outbox-часть диалога смены аккаунта, баннеры `outboxUnavailable`/`storageNotPersisted`, i18n ×5 | 03-15c |
 | 03-16b | `ConflictDialog` (§2.6), i18n ×5 | 03-16a |
-| 03-17 | включить флаг для expenses | BE-03-1, BE-03-2, BE-03-5, 03-16b, 03-20 |
+| 03-17 | включить флаг для expenses | BE-03-1, BE-03-2, BE-03-5, 03-16b, 03-20, 04-4 (в prod: outbox старого origin `chipin.one` на `app.chipin.one` не переезжает, спека 04 §4.1) |
 | 03-18 | удалить `loadingStore`, `errorsStore`, их селекторы; остатки `useConnect` | 03-14 |
 | ~~03-19~~ | снят по D21 (провод остаётся числом) | — |
 | 03-21 | settle-up на `Money`: `resolveSettleAmount`, prefill `roundToMinor`, «< 0.01», подпись «погашено полностью», `toSettleUpWire` (§4.5) | 03-3, 03-4b |
