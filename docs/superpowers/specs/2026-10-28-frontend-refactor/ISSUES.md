@@ -100,4 +100,4 @@ PR ids in spec 03 changed (sync FE issue bodies when the owner syncs GitHub): 03
 - #530 (04-D): title, Problem/Outcome/Scope/Acceptance/Depends on rewritten for D26 (`gh issue edit --body-file`).
 - #528 (04-B), #529 (04-C), #531 (04-E): Scope lines edited minimally (no `cutover` flag / `offline-root.html`; site prod domain via 04-4; 04-5a removes legacy hosts and compat redirects).
 - chipin-backend#207 (BE-04-2): now adds `https://app.chipin.one` / `https://app-dev.chipin.one` to `OAUTH_ALLOWED_REDIRECT_ORIGINS`, required before 04-2g in prod; title and body updated.
-- chipin-backend#206 (BE-04-1): dropped in spec (OpenAPI example already `https://app.chipin.one/oauth/callback`); body updated, issue left open for the coordinator to close as not planned.
+- chipin-backend#206 (BE-04-1): dropped in spec (OpenAPI example already `https://app.chipin.one/oauth/callback`); body updated, issue left open for the coordinator to close as not planned; after that, active backend issues: 12.
