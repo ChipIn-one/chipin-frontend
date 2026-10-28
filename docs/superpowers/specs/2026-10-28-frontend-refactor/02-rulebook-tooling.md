@@ -69,7 +69,7 @@
 | денежные селекторы (спека 03 §4.3) | b | деньги |
 | `no-raw-colors` (спека 05, 05-5) | b | токены |
 | `eslint-comments/require-description` | b | исключение без причины |
-| `no-restricted-syntax` `AwaitExpression`/async (инв. 7) | b* | по принципу это (c) — автофикса нет; оставлено как давнее правило владельца, решение — «Открытые вопросы» п. 4 |
+| ~~`no-restricted-syntax` `AwaitExpression`/async~~ (бывш. инв. 7) | — | удалено по решению владельца 2026-10-28 (D24); текущее правило репозитория и `docs/engineering/rules` (запрет async/await) удаляется в 02-A |
 | `@typescript-eslint/naming-convention` `handle*` | c | автофикса нет (rename руками) |
 | `naming-convention` `typeLike` PascalCase | c | автофикса нет |
 | `no-restricted-syntax` `React.FC` | c | фиксер `react/function-component-definition` пропускает переменные с типом (`function-component-definition.js:190`) |
@@ -177,7 +177,7 @@
 4. Сервер — источник истины для финансов: не патчим балансы/долги локально, не ретраим мутации автоматически, устаревший ответ не перезаписывает более новое состояние.
 5. Офлайн: создание/правка/удаление расходов — только через outbox с client UUID; settle-up и платежи офлайн запрещены.
 6. Типы: без `any`, `as any`, `@ts-ignore`, неоправданных `as` и `!`; type-only импорты — `import type`. Данные из IndexedDB, outbox и localStorage проверяются zod при чтении.
-7. Промисы: цепочки `.then/.catch/.finally`, без `async/await` — везде, включая RR-loaders, guard'ы и node-скрипты. Каждый промис возвращается или явно помечается `void`; ошибки не глотаются. Проверяют `no-floating-promises` и `no-misused-promises`.
+7. Промисы не теряются: каждый промис возвращается, `await`-ится или явно помечается `void`; ошибки не глотаются. Стиль `await` или `.then` свободный (запрет async/await снят владельцем 2026-10-28, D24). Проверяют `no-floating-promises` и `no-misused-promises` (оба `error`).
 8. Только именованные экспорты; не больше одного `index.ts` на слайс, без `export *`.
 9. Zustand — только UI-состояние. Одно значение читается селектором, несколько — одним объектным селектором с `useShallow`; `useStore()` без селектора и новые `useConnect` запрещены.
 10. Перед коммитом — `npm run fix` (Prettier + `eslint --fix`). Ошибки lint после него — только корректность и границы; их сообщение говорит, как чинить. Стилевых правил без автофикса нет; `eslint-disable` — только с причиной.
@@ -210,12 +210,12 @@
 | 00.Naming.5 | без boolean-отрицаний | DEL |
 | 00.Naming.6 | `on*`, без `handle*` | DEL (§Д0: rename руками, автофикса нет) |
 | 00.Naming.7–8 | имена по бизнес-смыслу, описательные итераторы | DEL |
-| 00.Promises.1 | без async/await | `L:no-restricted-syntax` (error), класс b* — «Открытые вопросы» п. 4 |
+| 00.Promises.1 | без async/await | DEL (решение владельца 2026-10-28, D24); текущее правило репозитория удалить в 02-A |
 | 00.Promises.2 | async action возвращает `Promise<T>` | DEL (`promise-function-async: off`) |
 | 00.Promises.3 | плоские цепочки | DEL |
 | 00.Promises.4 | не глотать ошибки | `L:no-floating-promises`; семантика — R (инв. 7) |
 | 00.Promises.5 | read-actions резолвятся, «без `void`-обёрток» | **RW**: «намеренно не ожидаемый промис помечается `void`» — иначе конфликт с `no-floating-promises` |
-| 00.Promises.6–9 | `.finally` для cleanup, `Promise.all`, без `new Promise`, не смешивать стили | DEL (6, 7); `L:no-async-promise-executor` для 8; 9 покрывает запрет await |
+| 00.Promises.6–9 | `.finally` для cleanup, `Promise.all`, без `new Promise`, не смешивать стили | DEL (6, 7); `L:no-async-promise-executor` для 8; 9 — DEL (стиль свободный, D24) |
 | 00.Collections.* (8 пунктов) | один проход, `for...of`, без spread в reduce, `Map` для lookup | RW → сжать до 3 строк, без lint (§Д0); остальное DEL |
 | 00.Modules.1 | именованные экспорты | `L:import-x/no-default-export` (исключения в Д5) |
 | 00.Modules.2 | формат `index.ts` | RW (D11): один barrel на слайс, `export { … } from` разрешён, `export *` запрещён — `L:no-restricted-syntax ExportAllDeclaration` + `CI:scripts/check-file-layout.mjs` (новый, ≈40 строк; только: index.ts глубже слайса запрещён, новые `useConnect.ts` запрещены) |
@@ -302,7 +302,7 @@
 | 60.Helpers.* (6) | чистые хелперы | `L:boundaries` (helpers без store/api) + R |
 | 60.Storage.1 | localStorage только через helper | `L:no-restricted-globals` (+ `sessionStorage`) |
 | 60.Storage.2–8 | схема ключей, guard, try/catch | RW (D4): zod-схема на чтение; `localStorage.clear()` — `L:no-restricted-syntax` |
-| 70.Stack, When, Shape, Priority | стек тестов | оставить; async/await в тестах — тот же запрет; `toMatchSnapshot` — DEL (§Д0) |
+| 70.Stack, When, Shape, Priority | стек тестов | оставить; async/await в тестах разрешён (D24); `toMatchSnapshot` — DEL (§Д0) |
 | 70.Commands | команды | RW: актуальный список скриптов (Д7) |
 | 70.Integration (12 пунктов) | lifecycle, version:bump, `@codex review` | **DEL целиком** (дубль ai-workflow; P1–P4) |
 | 70.Legacy.* (4) | baseline, «warn → error после нуля» | RW: «уровни только error/off, baseline в `config/eslint/baseline.js` только сокращается и обновляется командой `npm run baseline:update`» |
@@ -349,7 +349,7 @@ config/eslint/baseline.js // список известных нарушений:
 | ignores | `dist`, `dev-dist`, `coverage`, `node_modules/.cache`, `.claude/**`, `public/**`, `ds-gallery/standalone.html` |
 | языки | `src/**` и `ds-gallery/**` — browser globals; `scripts/**`, `*.config.*`, `contract-tests/**`, `ds-gallery/build-html.mjs` — node globals |
 | type-aware | явный список из §Д0 (`no-floating-promises`, `no-misused-promises`, `no-unsafe-*`, `no-unnecessary-type-assertion`), не весь `recommendedTypeChecked`; `parserOptions.projectService: true`, `tsconfigRootDir: import.meta.dirname`; для `**/*.{js,mjs}` — `disableTypeChecked` |
-| promises (инв. 7 — и для loaders/скриптов; примеры кода в спеках пишутся без `await`, A-11) | `no-floating-promises` (`ignoreVoid: true`), `no-misused-promises` (`checksVoidReturn: { attributes: false }` — допускает `onClick={() => promise}` в JSX, и это осознанно), `promise-function-async: off`, `require-await: off` (await запрещён) |
+| promises (инв. 7 — и для loaders/скриптов; стиль `await`/`.then` свободный, D24) | `no-floating-promises` (`ignoreVoid: true`), `no-misused-promises` (`checksVoidReturn: { attributes: false }` — допускает `onClick={() => promise}` в JSX, и это осознанно), `promise-function-async: off`, `require-await: off` |
 | tests override | `**/*.test.{ts,tsx}`: `unbound-method: off`, `no-unsafe-assignment: off`, `no-unsafe-member-access: off` (vi.fn/expect-паттерны); `unbound-method` не включается вовсе |
 | типы | `consistent-type-imports` (`fixStyle: 'inline-type-imports'`), `no-import-type-side-effects`, `no-unnecessary-type-assertion`, `no-non-null-assertion` |
 | unused | `@typescript-eslint/no-unused-vars: off` (убирает двойной репорт, 03:46), `unused-imports/no-unused-imports` (autofix); неиспользуемые переменные ловит только tsc `noUnused*` |
@@ -362,7 +362,7 @@ config/eslint/baseline.js // список известных нарушений:
 | a11y | без `recommended`; только `alt-text`, `anchor-is-valid`, `aria-props`, `aria-role`, `role-has-required-aria-props`, `no-static-element-interactions` (§Д0); `no-autofocus` не включается (модалки) |
 | i18n | `react/jsx-no-literals`: `noStrings: true`, `ignoreProps: true`, `noAttributeStrings: false`, `allowedStrings: [' ','-','+','/','~','·']` — ловит текст в JSX-детях. Пользовательские атрибуты ловит `no-restricted-syntax` на `JSXAttribute[name.name=/^(aria-label\|aria-description\|placeholder\|title\|alt)$/] > Literal[value=/\\w/]` (A-38: `elementOverrides` работает по элементу, а не по атрибуту). `ds-gallery/**` исключён (демо-литералы) |
 | naming | нет (§Д0: `naming-convention` без автофикса удалён, включая текущий селектор `handle*`) |
-| project | `no-restricted-syntax`: AwaitExpression, `ForOfStatement[await=true]`, async-функции (как сейчас), `ExportAllDeclaration`, `<img>`, `localStorage.clear`, `CancelToken`, объектный литерал в `use*Store(...)` без `useShallow`, `use*Store()` без аргумента; у каждого селектора `message` с готовым исправлением. Денежные селекторы — спека 03 §4.3, цветовые — спека 05 (05-5); все блоки `no-restricted-syntax`/`no-restricted-imports` собираются хелперами `restrictedSyntax()`/`restrictedImports()` из `config/eslint/project.js` (вводит 02-C4), потому что в flat config более поздний блок заменяет опции правила целиком |
+| project | `no-restricted-syntax`: `ExportAllDeclaration`, `<img>`, `localStorage.clear`, `CancelToken`, объектный литерал в `use*Store(...)` без `useShallow`, `use*Store()` без аргумента; у каждого селектора `message` с готовым исправлением. Денежные селекторы — спека 03 §4.3, цветовые — спека 05 (05-5); все блоки `no-restricted-syntax`/`no-restricted-imports` собираются хелперами `restrictedSyntax()`/`restrictedImports()` из `config/eslint/project.js` (вводит 02-C4), потому что в flat config более поздний блок заменяет опции правила целиком |
 | globals | `no-restricted-globals`: `localStorage`, `sessionStorage` (кроме `helpers/localStorage.ts`) |
 | imports | `no-restricted-imports`: `axios` (кроме `src/api/chipin.{instance,interceptors}.ts`, после 03-4 — `src/shared/api/http.ts`), runtime `api/` из UI (как сейчас, `allowTypeImports`), UI-библиотеки (30.Radix.4). Мёртвый override `authSession` (03:58) удалить |
 | eslint-comments | `require-description`; лишние disable — `linterOptions.reportUnusedDisableDirectives: 'error'` (autofix) |
@@ -499,7 +499,7 @@ Deploy (D15): workflow'ов нет и новых не будет; источни
 |---|---|---|---|
 | `simple-import-sort/imports`+`exports` | 62 | autofix после T2 и новых групп | 02-C3 |
 | `no-multiple-empty-lines` | 27 | правило удаляется, чинит Prettier | 02-C2 |
-| async/await | 18 (14 в тестах) | вручную, по образцу 70.Shape | 02-C4 |
+| async/await | 18 (14 в тестах) | не мигрируется: запрет снят (D24); правило удаляется в 02-A | 02-A |
 | `handle*`, `react-refresh`, `React.FC` | 4 / 1 / 9 | правила удаляются (§Д0), код не трогаем | 02-C4 |
 | Prettier-формат | 317 файлов | `prettier --write`, механически | 02-C2a–c |
 | `consistent-type-imports` | 34 | autofix | 02-C6 |
@@ -513,7 +513,7 @@ Deploy (D15): workflow'ов нет и новых не будет; источни
 | деньги `Number(`/`parseFloat(` | 21 в 5 файлах | после появления `src/shared/money/` (D21); правило и миграция — спека 03 §4.3–4.4 | 03-1, 03-3 |
 | `noUncheckedIndexedAccess` | 39 | вручную | 02-C11 |
 
-Порядок `--max-warnings 0`: он включается в 02-C4, когда строки import-sort, `no-multiple-empty-lines` и async/await обнулены, а правила класса c выключены. Всё, что добавляется позже, входит сразу как `error` + baseline.
+Порядок `--max-warnings 0`: он включается в 02-C4, когда строки import-sort и `no-multiple-empty-lines` обнулены, а правила класса c выключены. Всё, что добавляется позже, входит сразу как `error` + baseline.
 
 ## Ньюансы и подводные камни
 
@@ -560,7 +560,7 @@ Deploy (D15): workflow'ов нет и новых не будет; источни
 | **02-C1** | Prettier + eslint-config-prettier + `format`/`format:check` (ещё не в `verify`) + `prettier.config.js` | — |
 | **02-C2a–c** | `prettier --write` по `src/components` / `src/{pages,features}` / остальное; затем `format:check` в `verify`; `.git-blame-ignore-revs` | 02-C1 |
 | **02-C3** | T2 (paths без baseUrl, ds-gallery alias) + `config/eslint/aliases.js` + import-sort autofix | 02-C2 |
-| **02-C4** | async/await 18; выключить правила класса c (§Д0: `handle*`-селектор, react-refresh и др.); **`--max-warnings 0`**; удалить мёртвый override authSession; хелперы `restrictedSyntax()`/`restrictedImports()` (единственный владелец; 03-1 и 05-5 только добавляют свои блоки); разбить `eslint.config.js` на `config/eslint/*` | 02-C3 |
+| **02-C4** | выключить правила класса c (§Д0: `handle*`-селектор, react-refresh и др.); **`--max-warnings 0`**; удалить мёртвый override authSession; хелперы `restrictedSyntax()`/`restrictedImports()` (единственный владелец; 03-1 и 05-5 только добавляют свои блоки); разбить `eslint.config.js` на `config/eslint/*` | 02-C3 |
 | **02-C5** | T1 (typecheck ds-gallery + конфиги), `tsconfig.base.json` | — |
 | **02-C6** | type-aware preset + `consistent-type-imports` autofix + T3 `verbatimModuleSyntax` | 02-C4, 02-C5 |
 | **02-C7a/b** | `no-floating-promises`/`no-misused-promises`: фикс store/helpers/hooks (a), UI (b); правка 00.Promises.5 и 20.Effects.5 | 02-C6 |
@@ -596,4 +596,4 @@ Deploy (D15): workflow'ов нет и новых не будет; источни
 1. ~~Release-ветка~~ — решено (подтверждено владельцем 2026-10-28): один release-Issue на релиз, ветка `chore/issue-<n>-release-vX-Y-Z` через `pr:create`/admission, CI `version-check` по имени ветки (Д7).
 2. ~~`Version impact`~~ — решено (подтверждено владельцем 2026-10-28): поле удаляется, бамп выбирает владелец.
 3. jsx-a11y baseline неизвестен до установки плагина. Если нарушений больше ~80, 02-C8 делится по слоям (с 6 правилами маловероятно).
-4. Запрет `async/await` (инв. 7) по принципу §Д0 — класс c (автофикса нет, агенты пишут `await` по умолчанию). Оставлен как давнее правило владельца с сообщением «перепиши на `.then/.catch`». Владелец решает: оставить (b*) или удалить вместе с инв. 7.
+4. ~~Запрет `async/await` (инв. 7)~~ — решено (владелец 2026-10-28, D24): запрет снят; стиль свободный, гарды — `no-floating-promises`/`no-misused-promises`.

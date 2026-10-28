@@ -44,3 +44,4 @@ D20. Confirmation screen for friend invites: yes. Outbox limits 50/14d: yes. Sho
 D21. Money unification: backend is source of truth and uses JSON numbers scale 4; NO backend issue to switch wire to strings. Frontend converts number→bigint scale 4 at the API boundary (generated types + wrapper), domain type Money{minor: bigint scale4, currency}, never arithmetic on float. D10 "wire strings" is withdrawn.
 D22. Subdomains for site project only if Vercel Hobby allows custom domains for free (it does); otherwise use *.vercel.app internal hostnames.
 D23. Colors: everything through Radix palette, no raw hex anywhere incl. PWA theme-color and manifest; generator emits manifest/theme-color from tokens.json (grass-9); styled gray→olive mapping so main colors never differ between styled, Radix and site.
+D24. async/await ban lifted (2026-10-28); style free, no-floating-promises/no-misused-promises are the guard.

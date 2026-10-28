@@ -123,7 +123,7 @@ export const createQueryClient = (): QueryClient => {
 Правила, которые из этого следуют (проверяются ревью и тестом §8):
 - Компоненты рендерят `data`, если она есть; ошибку показывают **только** при `data === undefined`
   (паттерн `const { data, error } = useXQuery(); if (data) … else if (error) …`). `isError` без проверки `data` запрещён.
-- Loaders (спека 04): `restoreReady.then(…)` (§1.6, без `await` — инвариант 7 спеки 02), внутри
+- Loaders (спека 04): `restoreReady.then(…)` (§1.6; стиль `await`/`.then` свободный, D24), внутри
   `void queryClient.prefetchQuery(opts)` — не блокирует. Вернуть из цепочки `queryClient.ensureQueryData(opts)`
   разрешено только если `onlineManager.isOnline()` **и** `queryClient.getQueryData(opts.queryKey) === undefined`;
   иначе — `getQueryData` + prefetch. Причина: ожидание paused-запроса (offline) вешает навигацию до reconnect.
@@ -232,7 +232,7 @@ export const persistOptions = (userId: string) => ({
 - Restore выполняется **до** создания роутера, вне React: `shared/offline/restore.ts` экспортирует
   `restoreReady: Promise<void>` (`persistQueryClientRestore` + `restoreOutbox`). Промис резолвится и при таймауте 3 с,
   и при ошибке IDB (Sentry `offline.restore_timeout` / `offline.persist_failed`) — никогда не reject. Все loaders
-  (спека 04) возвращают цепочку `restoreReady.then(…)` (без `await`, инвариант 7 спеки 02); data router запускает начальные loaders при `createBrowserRouter`,
+  (спека 04) возвращают цепочку `restoreReady.then(…)` (стиль свободный, D24); data router запускает начальные loaders при `createBrowserRouter`,
   до первого рендера, поэтому React-гейт `useIsRestoring()` один не спасает.
 - После таймаута restore **отменяется**: флаг `restoreAborted = true`, поздний результат IDB игнорируется (не делает
   `hydrate`), иначе он перезапишет данные, загруженные после старта.
@@ -373,7 +373,7 @@ Activity — серверная проекция событий (`api/activity.t
   восстанавливают `blocked` при restore; решение «можно ли отправлять» никогда не читается из IDB.
 
 ```ts
-// Без async/await (инвариант 7 спеки 02): повтор = рекурсивный вызов из .catch, не цикл.
+// Стиль свободный (D24); здесь: повтор = рекурсивный вызов из .catch, не цикл.
 function runOutboxOp(op: OutboxOp, opts?: { ignore?: GateReason[] }, attempt = 0): Promise<OutboxResult> {
   const retry = (): Promise<OutboxResult> => runOutboxOp(op, opts, attempt + 1);
   return outboxGate.whenOpen(opts)                    // auth / outdated / blocked
