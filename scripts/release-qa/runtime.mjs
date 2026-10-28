@@ -4,8 +4,10 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
     REPOSITORY, assertConfiguration, assertFullSha, buildChecklist, buildIssueBody, findQaIssue,
-    formatResultLine, hasGreenFrontendCiRun, isSlackWebhook, parseQaResult, resultOutcome, validateDeployment, verifyCi,
+    formatInvalidationLine, formatResultLine, hasGreenFrontendCiRun, isNearMissResult, isSlackWebhook, parseQaResult, resultOutcome,
+    validateDeployment, verifyCi,
 } from './core.mjs';
+import { hasPackageFiles, packageBuildChanges } from './ui-paths.mjs';
 
 const API = 'https://api.github.com';
 const REPO_PATH = `/repos/${REPOSITORY}`;
@@ -55,6 +57,17 @@ export class GitHubApi {
             return next(page + 1);
         });
         return next(1);
+    }
+
+    // Raw file contents at a ref; null when the file does not exist there.
+    raw(path) {
+        return this.fetchImpl(`${API}${path}`, {
+            headers: { ...API_HEADERS, Accept: 'application/vnd.github.raw+json', Authorization: `Bearer ${this.token}` },
+        }).then(response => {
+            if (response.status === 404) return null;
+            if (!response.ok) throw new Error(`GitHub GET ${path} returned HTTP ${response.status}.`);
+            return response.text();
+        });
     }
 
     graphql(query, variables) {
@@ -109,10 +122,10 @@ export function chooseProductionBaseline(deployments, statusesFor) {
     return next(0);
 }
 
-export function sendHandoff({ post, webhook, slackId, issue, sha, url, missingSteps = [] }) {
+export function sendHandoff({ post, webhook, slackId, issue, sha, url, missingSteps = [], fallbackNote = '' }) {
     const missing = missingSteps.length
         ? `\nMissing QA steps: ${missingSteps.map(number => `#${number}`).join(', ')} (check against their Acceptance)` : '';
-    const payload = { text: `<@${slackId}> Frontend QA candidate ${sha}\n${url}\nCanonical QA Issue: ${issue.html_url}${missing}` };
+    const payload = { text: `<@${slackId}> Frontend QA candidate ${sha}${fallbackNote}\n${url}\nCanonical QA Issue: ${issue.html_url}${missing}` };
     return post(webhook, payload).then(() => ({ delivered: true })).catch(() => ({
         delivered: false,
         reason: 'Slack delivery failed; retry the same SHA after checking webhook/channel.',
@@ -191,7 +204,25 @@ function readCommitFiles(api, sha) {
     });
 }
 
-function readIncludedWork(api, compared) {
+const UNREADABLE_PACKAGES = 'package.json/package-lock.json evidence is unreadable; treated as build-affecting';
+
+function readJsonAt(api, file, ref) {
+    return api.raw(`${REPO_PATH}/contents/${file}?ref=${ref}`).then(text => (text == null ? null : JSON.parse(text)));
+}
+
+// Reads package.json and package-lock.json at the Production baseline and the candidate. Unreadable
+// evidence is treated as build-affecting (a QA round), never as a block.
+export function readPackageBuildChanges(api, files, baseSha, headSha) {
+    if (!hasPackageFiles(files)) return Promise.resolve([]);
+    return Promise.resolve().then(() => Promise.all([
+        readJsonAt(api, 'package.json', baseSha), readJsonAt(api, 'package-lock.json', baseSha),
+        readJsonAt(api, 'package.json', headSha), readJsonAt(api, 'package-lock.json', headSha),
+    ])).then(([basePkg, baseLock, headPkg, headLock]) => packageBuildChanges({
+        files, base: { pkg: basePkg, lock: baseLock }, head: { pkg: headPkg, lock: headLock },
+    })).catch(() => [UNREADABLE_PACKAGES]);
+}
+
+function readIncludedWork(api, compared, baseSha, headSha) {
     const commits = compared.commits.map(item => item.sha);
     const files = changedPaths(compared.files);
     const pullMap = new Map();
@@ -225,7 +256,8 @@ function readIncludedWork(api, compared) {
         return Promise.all(issueNumbers.map(number => api.request(`${REPO_PATH}/issues/${number}`).then(issue => {
             if (issue.pull_request || issue.repository_url !== `${API}${REPO_PATH}`) throw new Error(`Issue #${number} is not a canonical frontend Issue.`);
             return issue;
-        }))).then(issues => buildChecklist({ files, commits, pulls, issues, commitFiles }));
+        }))).then(issues => readPackageBuildChanges(api, files, baseSha, headSha)
+            .then(buildChanges => buildChecklist({ files, commits, pulls, issues, commitFiles, buildChanges })));
     });
 }
 
@@ -392,6 +424,14 @@ function createCanonicalIssue(shared, env, body, sha, priority) {
     });
 }
 
+// Labels a zero-input candidate that is not the master head, naming what the head is still missing.
+export function fallbackNote(candidate) {
+    if (!candidate?.fallback || !candidate.head) return '';
+    const headSkip = candidate.skipped?.find(item => item.sha === candidate.head);
+    const missing = headSkip?.reason?.includes('frontend-ci') ? 'CI pending' : 'Preview pending';
+    return ` (not master head ${candidate.head.slice(0, 7)}: ${missing})`;
+}
+
 function runUrl(env) {
     return env.GITHUB_SERVER_URL && env.GITHUB_REPOSITORY && env.GITHUB_RUN_ID
         ? `${env.GITHUB_SERVER_URL}/${env.GITHUB_REPOSITORY}/actions/runs/${env.GITHUB_RUN_ID}` : 'the workflow run';
@@ -424,12 +464,12 @@ export function prepareReleaseQa({ env, readApi, writeApi, sharedRoot, post = po
         candidate = { ...candidate, url: preview.url };
         return compare(readApi, baseline.sha, sha, true).then(scope => {
             assertAncestry(candidateToMaster, scope, sha, baseline.sha);
-            return readIncludedWork(readApi, scope);
+            return readIncludedWork(readApi, scope, baseline.sha, sha);
         });
     }).then(included => {
         plan = included;
         if (plan.kind === 'none') {
-            const text = `Frontend release QA: No manual QA needed for ${sha} (${plan.evidence.length} changed files, none UI-affecting). ${runUrl(env)}`;
+            const text = `Frontend release QA: No manual QA needed for ${sha}${fallbackNote(candidate)} (${plan.evidence.length} changed files, none UI-affecting). ${runUrl(env)}`;
             return postLine({ post, webhook: env.SLACK_WEBHOOK_CI, text }).then(slack => ({
                 outcome: 'NO_MANUAL_QA_REQUIRED', sha, candidate, baseline, evidence: plan.evidence, included: plan.included, noQa: plan.noQa, slack,
             }));
@@ -451,7 +491,7 @@ export function prepareReleaseQa({ env, readApi, writeApi, sharedRoot, post = po
                 return admitQaIssue(shared, env.CHIPIN_ISSUE_WRITE_TOKEN, issue.number)
                     .then(() => assignQa(readApi, writeApi, issue, qaLogin, env.QA_REASSIGN === 'true'))
                     .then(assigned => admitQaIssue(shared, env.CHIPIN_ISSUE_WRITE_TOKEN, assigned.number)
-                        .then(() => sendHandoff({ post, webhook: env.SLACK_WEBHOOK_CI, slackId, issue: assigned, sha, url: preview.url, missingSteps: plan.missingSteps })
+                        .then(() => sendHandoff({ post, webhook: env.SLACK_WEBHOOK_CI, slackId, issue: assigned, sha, url: preview.url, missingSteps: plan.missingSteps, fallbackNote: fallbackNote(candidate) })
                             .then(slack => ({ outcome: 'QA_ISSUE_READY', issue: assigned.html_url, sha, candidate, baseline, preview,
                                 missingSteps: plan.missingSteps, noQa: plan.noQa, smoke: plan.smoke, slack }))));
             });
@@ -464,13 +504,16 @@ export function validateResultEvent({ event, api }) {
         || event.issue?.pull_request || !Number.isInteger(event.comment?.id) || !Number.isInteger(event.issue?.number)) {
         return Promise.resolve({ outcome: 'IGNORED' });
     }
-    if (event.action === 'created' && !resultOutcome(event.comment.body)) return Promise.resolve({ outcome: 'IGNORED' });
+    if (event.action === 'created' && !resultOutcome(event.comment.body) && !isNearMissResult(event.comment.body)) {
+        return Promise.resolve({ outcome: 'IGNORED' });
+    }
     return Promise.all([
         api.request(`${REPO_PATH}/issues/${event.issue.number}`),
         api.request(`${REPO_PATH}/issues/comments/${event.comment.id}`, { allow404: event.action === 'deleted' }),
     ]).then(([issue, comment]) => {
         const marker = [...(issue.body ?? '').matchAll(/<!-- chipin-release-qa:v1 repo=ChipIn-one\/chipin-frontend sha=([0-9a-f]{40}) deployment=([1-9]\d*) -->/g)];
-        if (marker.length !== 1) return { outcome: 'IGNORED' };
+        // Only an open Issue with the canonical title and a single marker is a QA Issue.
+        if (marker.length !== 1 || issue.state !== 'open' || issue.title !== `Release QA ${marker[0][1]}`) return { outcome: 'IGNORED' };
         if (comment && (comment.id !== event.comment.id || comment.issue_url !== `${API}${REPO_PATH}/issues/${issue.number}`)) {
             throw new Error('Comment/QA Issue identity mismatch.');
         }
@@ -481,23 +524,37 @@ export function validateResultEvent({ event, api }) {
             const wasResult = isQaResult(event.changes?.body?.from) || isQaResult(eventBody) || isQaResult(comment?.body);
             const deletedBodyMissing = event.action === 'deleted' && !comment && eventBody == null;
             if (!wasResult && !deletedBodyMissing) return { outcome: 'IGNORED' };
-            return { outcome: 'QA_RESULT_INVALIDATED', issue: issue.html_url, sha: marker[0][1],
+            const author = (comment?.user?.login ?? event.comment?.user?.login ?? '').toLowerCase();
+            const byCurrentQa = currentQa.length === 1 && author === currentQa[0].login.toLowerCase();
+            return { outcome: 'QA_RESULT_INVALIDATED', issue: issue.html_url, sha: marker[0][1], byCurrentQa,
                 reason: event.action === 'deleted' || !comment
                     ? 'QA result comment was deleted; prior validation is historical.'
                     : 'QA result comment was edited; submit a new unedited result comment.',
                 currentQa: currentQa.length === 1 ? currentQa[0].login : null };
         }
         if (!comment) throw new Error('QA result comment is unreadable.');
+        if (!resultOutcome(comment.body)) {
+            const login = comment.user?.login?.toLowerCase() ?? '';
+            const isSoleQa = currentQa.length === 1 && login !== 'syllik' && login === currentQa[0].login.toLowerCase();
+            if (isSoleQa && isNearMissResult(comment.body)) {
+                throw new Error('QA result first line must be exactly QA PASS, QA FAIL or QA BLOCKED.');
+            }
+            return { outcome: 'IGNORED' };
+        }
         if (Date.parse(comment.created_at) < Date.parse(issue.created_at)) throw new Error('QA result comment predates the QA Issue.');
         const result = parseQaResult(comment, issue);
         return { outcome: 'VALID_QA_RESULT', issue: issue.html_url, result };
     });
 }
 
-// Slack is called only after the comment is validated as a result from the sole assigned QA, and the
-// line is built from validated fields only. Slack failure is reported and never changes the outcome.
+// Slack is called only for a validated result from the sole assigned QA, or when that QA edits or deletes
+// a result. Lines are built from validated fields only. Slack failure is reported, never changes the outcome.
 export function readResultAndNotify({ event, api, env, post = postSlack }) {
     return validateResultEvent({ event, api }).then(value => {
+        if (value.outcome === 'QA_RESULT_INVALIDATED' && value.byCurrentQa) {
+            const text = formatInvalidationLine({ sha: value.sha, issueUrl: value.issue, userMap: env.SLACK_USER_MAP });
+            return postLine({ post, webhook: env.SLACK_WEBHOOK_CI, text }).then(slack => ({ ...value, slack }));
+        }
         if (value.outcome !== 'VALID_QA_RESULT') return value;
         const text = formatResultLine({ result: value.result, issueUrl: value.issue, userMap: env.SLACK_USER_MAP });
         return postLine({ post, webhook: env.SLACK_WEBHOOK_CI, text }).then(slack => ({ ...value, slack }));
