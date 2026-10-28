@@ -23,3 +23,21 @@ test('result reader has no Issue-write or deployment authority', () => {
     expect(result.permissions).toEqual({ contents: 'read', issues: 'read' });
     expect(result.jobs['read-result'].steps[0].with.ref).toBe('${{ github.sha }}');
 });
+
+test('preparation dispatches with zero required inputs and documented defaults', () => {
+    const inputs = prepare.on.workflow_dispatch.inputs;
+    for (const [name, input] of Object.entries(inputs)) expect(input.required, name).toBe(false);
+    expect(inputs.priority).toMatchObject({ type: 'choice', default: 'P2', options: ['P0', 'P1', 'P2', 'P3'] });
+    expect(inputs.qa_login.default).toBe('SoRawSteak');
+    expect(inputs.reassign_qa).toMatchObject({ type: 'boolean', default: false });
+    expect(prepare['run-name']).toBe("QA prepare ${{ inputs.candidate_sha || 'auto' }}");
+    expect(prepare.concurrency.group).not.toContain('inputs.');
+});
+
+test('result reader posts to Slack only through env and never interpolates comment text into shell', () => {
+    const steps = result.jobs['read-result'].steps;
+    const validate = steps.find(step => step.run?.includes('release-qa-result.mjs'));
+    expect(validate.env).toMatchObject({ SLACK_WEBHOOK_CI: '${{ secrets.SLACK_WEBHOOK_CI }}', SLACK_USER_MAP: '${{ vars.SLACK_USER_MAP }}' });
+    for (const step of steps) expect(step.run ?? '').not.toContain('${{');
+    expect(JSON.stringify(result)).not.toContain('github.event.comment.body');
+});

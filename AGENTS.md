@@ -124,6 +124,7 @@ These rules apply only to ChipIn frontend tasks.
 - A blocker belongs in `Dependencies`.
 - Canonical descriptions use only the relevant durable subset of `Problem`, `Outcome`, `Acceptance`, `Dependencies`, and `References`.
 - Do not add `[TASK DESCRIPTION]`, generic AGENT INSTRUCTIONS, execution journals, runner state, mutable status/history, raw verification logs, or duplicated labels/status/tracker metadata.
+- A UI-affecting Issue carries 1–3 lines `- [ ] QA: <step> => <expected result>` (see `docs/engineering/release-qa.md`).
 - Durable PR, Issue, documentation, or historical Trello links belong in `References` when useful. Transient CI/execution evidence belongs in the separate authorized publication result or execution record, not in mutable task metadata.
 
 ## Git and execution

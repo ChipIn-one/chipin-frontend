@@ -28,7 +28,10 @@ jobs:
         with:
           node-version: 24.21.0
           package-manager-cache: false
-      - name: Validate current Issue and comment
+      # Slack is posted by the script only after validating a result from the sole assigned QA.
+      - name: Validate current Issue and comment, then ping Slack
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          SLACK_WEBHOOK_CI: ${{ secrets.SLACK_WEBHOOK_CI }}
+          SLACK_USER_MAP: ${{ vars.SLACK_USER_MAP }}
         run: node scripts/release-qa-result.mjs

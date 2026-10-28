@@ -8,7 +8,10 @@ export function main(env = process.env) {
 }
 
 if (process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url) {
-    main().then(result => process.stdout.write(`${JSON.stringify(result)}\n`)).catch(error => {
+    Promise.resolve().then(() => main()).then(result => {
+        process.stdout.write(`${JSON.stringify(result)}\n`);
+        if (result.slack && !result.slack.delivered) process.stdout.write(`::warning::${result.slack.reason}\n`);
+    }).catch(error => {
         process.stderr.write(`${error instanceof Error ? error.message : 'Release QA preparation failed.'}\n`);
         process.exitCode = 1;
     });

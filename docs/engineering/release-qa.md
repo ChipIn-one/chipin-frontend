@@ -1,44 +1,55 @@
 # Frontend release QA
 
-The release owner chooses one concrete Vercel Preview deployment built from `master`. The manual **Prepare frontend release QA** workflow validates that deployment, exact source SHA, current `frontend-ci`, and previous verified Production deployment. It then creates or reuses one canonical QA Issue for `ChipIn-one/chipin-frontend` plus the full candidate SHA. The owner reviews the QA result and decides whether to manually **Promote** that exact deployment in Vercel. QA preparation does not gate CI, merge, or deployment.
+Manual QA checks one exact Vercel Preview built from `master` before the owner **Promotes** it. Only UI changes need a tester. QA never gates CI, merge or deployment; the owner makes the release decision.
 
-## Activate and select a candidate
+**Rule for every UI-affecting Issue:** carry 1–3 lines `- [ ] QA: <step> => <expected result>` (a `- [ ] When <action>, then <expected result>` line also works).
 
-The workflow must run from `master` as release owner `syllik`. Configure these GitHub Actions values before use:
+## One-time setup
 
 | Name | Kind | Purpose |
 | --- | --- | --- |
 | `CHIPIN_DEV_READ_TOKEN` | Secret | Read deployments, ruleset, checks, PRs, Issues and the pinned `.github` checkout. |
-| `CHIPIN_ISSUE_WRITE_TOKEN` | Secret | Canonical `.github` Issue Intake apply, FE Issue creation and QA assignment. It must read Organization Issue Fields and Issue Types, write the approved frontend Issue, and read/write Project #5. Its absence blocks the handoff before any ready status. |
-| `SLACK_WEBHOOK_CI` | Secret | Dedicated Incoming Webhook for `#chipin-ci`. Keep its URL secret. |
-| `SLACK_USER_MAP` | Repository variable | JSON map of GitHub login to Slack user ID, for example `{"SoRawSteak":"U0C9X8T4R2Q"}`. |
+| `CHIPIN_ISSUE_WRITE_TOKEN` | Secret | Canonical Issue Intake (pinned `.github@7dbcfb2b72fca2d477c14f4d242261d72a103dbd`), QA Issue creation, Project #5 and QA assignment. Without it a UI candidate is blocked before any handoff. |
+| `SLACK_WEBHOOK_CI` | Secret | Incoming Webhook for `#chipin-ci`. Keep it secret. |
+| `SLACK_USER_MAP` | Repository variable | JSON map of GitHub login to Slack user ID, for example `{"SoRawSteak":"U0C9X8T4R2Q","syllik":"U0OWNER123"}`. The QA login must be mapped for a handoff; `syllik` is mentioned on results when mapped, otherwise the plain login is written. |
 
-No token is provisioned by this repository. The owner or an authorized administrator must configure and verify the write token's narrowest working permissions. The workflow uses the canonical Issue Intake implementation pinned to `.github@7dbcfb2b72fca2d477c14f4d242261d72a103dbd`; do not replace it with a local schema writer.
+## Owner: start a QA round
 
-1. After `master` Preview and its required `frontend-ci` complete, open the Vercel deployment and copy its full source SHA and the matching **GitHub Preview Deployment ID**. The workflow input is the GitHub Deployment ID, not a URL or mutable branch alias.
-2. Dispatch **Prepare frontend release QA** on `master` with that full 40-character SHA, deployment ID, and explicit canonical Priority `P0`–`P3`. The QA login defaults to `SoRawSteak`. An owner changing the current QA on an existing Issue sets `reassign_qa=true` and provides the new assignable login; the Slack map must contain it.
-3. Read the workflow result. A ready handoff requires a trusted `vercel[bot]` Preview success for that SHA, an immutable public build URL, candidate ancestry in current `master`, every active required check successful at the exact SHA from its required producer, a successful `frontend-ci` push run on `master`, and a verified previous Production SHA. The Preview host must be `chipin-frontend-<id>-sylliks-projects.vercel.app`, where `<id>` is one alphanumeric deployment slug. A `git-` branch alias, the `master` alias, `dev.chipin.one`, and the bare project host are rejected. Production evidence may still use `https://chipin.one`. Missing or inconsistent GitHub/Vercel evidence blocks the handoff for operator investigation. A Preview that requires Vercel login is not public and cannot be handed to QA.
-4. The included-work checklist uses the verified Production-to-candidate compare, merged PR evidence, one native closing Issue per PR, and explicit Issue lines of the form `- [ ] QA: <step> => <expected result>` or `- [ ] When <action>, then <expected result>`. Unlinked commits and ambiguous links block even a docs-only candidate. User-facing work without explicit steps and outcomes also blocks; clarify the canonical Issue/PR record and dispatch again. A fully linked docs-only compare records `NO_MANUAL_QA_REQUIRED` with file and Issue/PR evidence in the run output and creates no QA Issue or false PASS. That path needs read access but no Issue-write token or Slack configuration.
-5. For work requiring manual QA, confirm the resulting Issue has Type `Task`, the selected Priority, Project #5 Status, `syllik` and one QA assignee. The workflow reads back canonical admission and assignment before posting the `#chipin-ci` handoff with the mapped Slack mention. Slack failure is reported in the run output; the admitted Issue remains intact, and rerunning the same SHA can retry the handoff.
+1. Wait until the newest `master` commit has its Vercel Preview and a green `frontend-ci`.
+2. Run **Prepare frontend release QA** on `master` (as `syllik`) with no inputs. Optional overrides: `candidate_sha`, `deployment_id`, `priority` (default `P2`), `qa_login` (default `SoRawSteak`), and `reassign_qa=true` to move an existing same-SHA QA Issue to a new tester.
+3. With no inputs the workflow walks the last 20 `master` commits from the head and picks the newest one that has a successful `vercel[bot]` Preview with an immutable URL and a green `frontend-ci` push run. The run output lists skipped SHAs and whether it fell back from the head.
+4. Every trust check still runs on that candidate: the Preview host must be `chipin-frontend-<id>-sylliks-projects.vercel.app` (no `git-` or `master` alias, no `dev.chipin.one`) and publicly reachable, the SHA must be in current `master` and contain the previous verified Production SHA, and every required check must be green at that SHA. Any failure stops the run.
+5. The workflow compares Production to the candidate:
+   - **No UI-affecting file** → `NO_MANUAL_QA_REQUIRED` with the file list in the run output, no QA Issue, one line in `#chipin-ci`. You can Promote.
+   - **UI-affecting files** → it creates (or reuses) one QA Issue, assigns `syllik` plus the tester and posts the handoff in `#chipin-ci`.
+6. A run is blocked only when a commit without a linked Issue touches UI-affecting files, or when GitHub/Vercel evidence is missing or inconsistent. Fix the record and run it again.
 
-The QA Issue pins the full SHA, GitHub Deployment ID, immutable Preview URL, previous Production SHA, included Issue/PR links and checklist. Its hidden `chipin-release-qa:v1` repository/SHA marker is the retry key. A retry of the same SHA keeps the body, checkboxes, comments, defects and time entries; a different SHA creates a separate Issue. If a same-SHA Issue has conflicting deployment ID or URL, stop and resolve the identity with the owner. A visible matching Issue is reused. If no Issue is readable, creation blocks when an earlier same-SHA preparation succeeded, is still queued or in progress, or the run record explicitly shows that Issue creation started. A prior run that finished as failure, cancelled, or timed out without a visible Issue can be dispatched again. There is no separate checkpoint artifact. Check the canonical Issue and prior run before manual recovery of an ambiguous create.
+UI-affecting paths are maintained in `scripts/release-qa/ui-paths.mjs`: `src/**` except `*.test.*` and `src/test/**` (this includes the `src/i18n/locales/**` translations), `public/**`, `index.html`, `app.html`, `vercel.json`, `vite.config.ts`, `pwa-assets.config.ts`, and the service-worker build inputs `scripts/prerender-before-workbox.mjs`, `scripts/prerender-public.mjs` and `scripts/private-spa-navigation.ts`.
 
-The maintained impact rule in `scripts/release-qa/impact-rules.mjs` adds one adjacent check per included Issue when its PR changes `src/store/authStore.ts`, `src/helpers/authSession.ts`, or `src/features/routing/ProtectedRoute.tsx`. Its source is [AUTH-041 at the pinned knowledge-base commit](https://github.com/ChipIn-one/chipin-knowledge-base/blob/681d392140f33d4a47e3059eb53f77a2ee2c72c8/common/specs/auth.md): log out, then reload a protected page in the same browser; no logged-out browser session should be restored. It does not assert immediate access-token revocation. Other paths add no impact check. The source Issue still needs explicit primary acceptance steps; the impact rule cannot fill a missing primary checklist.
+What goes into the QA Issue:
 
-## Tester result and defects
+- the explicit QA lines of every included Issue whose PR touched UI-affecting files;
+- for such an Issue without QA lines: `- [ ] #N: check against the Acceptance of #N => <issue link>`; the Slack handoff names those Issues;
+- commits and PRs without a linked Issue that touch no UI-affecting file (Dependabot, docs, CI) are listed as "No QA needed";
+- **SMOKE-SHORT** (`scripts/release-qa/impact-rules.mjs`) when the compare touches routing, auth/session, `src/api/**`, store bootstrap, service worker/PWA, theme switching or `vercel.json`. Five checks are appended once: Google sign-in opens Dashboard; a group expense split equally is listed and changes the balance; the other participant sees the matching balance in Balances/Settle up; switching language and theme applies without a flash and survives reload; log out, then reload a protected page (fresh login required, [AUTH-041](https://github.com/ChipIn-one/chipin-knowledge-base/blob/681d392140f33d4a47e3059eb53f77a2ee2c72c8/common/specs/auth.md)). Without SMOKE-SHORT, the AUTH-041 rule alone adds that last check for changes to the auth store, auth session or protected route. It is never added twice.
 
-The currently assigned QA checks the relevant steps and posts **one new, unedited** result comment in the QA Issue. Use this exact format, replacing values:
+## Tester: check and report
 
-```text
-QA RESULT: PASS
-SHA: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-TOTAL TIME: 45m
-```
+1. Open the immutable Preview URL from the QA Issue and go through the checks.
+2. Post **one new comment** in the QA Issue. Its first non-empty line is `QA PASS`, `QA FAIL` or `QA BLOCKED` (case and surrounding spaces do not matter). Notes may follow on the next lines.
+3. For a defect, create a canonical Bug Issue through Issue Intake (steps, expected and actual result, Preview SHA/URL, link to the QA Issue) and link it in the QA Issue's defect list.
 
-Use `FAIL` or `BLOCKED` in place of `PASS` as appropriate. `TOTAL TIME` is one approximate total in whole minutes. The result workflow reads the current Issue and comment again, then checks the full SHA, human author, sole current QA assignment, comment identity and original timestamp. Checkboxes, owner comments, edited comments, bot comments, Slack messages and results for an old SHA are not acceptance. Editing or deleting a result triggers a new workflow run reporting invalidation, including edits that remove `QA RESULT:`. An old green validation run is historical evidence only: the owner reads the **current comment and latest validation run** before deciding. A revised result must be a new unedited comment. The workflow only reports validation; the Issue comment remains the result authority and the owner makes the release decision.
+Only the sole current QA assignee counts. Owner comments, bot comments, other users and edited comments are not results; checkboxes and Slack messages are not acceptance. Editing or deleting a result invalidates it; post a new comment instead.
 
-When a defect appears, create a separate **canonical Bug Issue** through the normal Issue Intake path. Record reproduction steps, expected and actual behavior, Preview SHA/URL and a link back to the originating QA Issue. Add the Bug link to the QA Issue's defect list. After a correction, use the corrected deployment's new full SHA and its own QA Issue; retest the fixed flow and adjacent risks justified by the Bug. Do not carry a prior PASS across SHAs. The owner reviews the final Issue result and manually chooses whether to Promote the tested Vercel deployment. Existing implementation-Issue production completion still waits for the Production deployment receipt.
+## Owner: read the result and release
 
-## Disable or recover
+1. **Read frontend release QA result** validates every new comment. After a valid result it posts one line to `#chipin-ci` with the outcome, tester, SHA and QA Issue link. A Slack failure is a warning in that run and does not change the validation.
+2. Read the current result comment and the latest validation run. Then decide whether to **Promote** that exact deployment in Vercel.
+3. After a fix, run a new round: a new SHA gets its own QA Issue. Never carry a PASS across SHAs.
 
-To stop new handoffs, disable **Prepare frontend release QA** in GitHub Actions or remove its required write-token secret. This does not alter existing QA Issues, CI or Vercel. Restore the workflow and all required configuration before another owner dispatch. A failed Slack delivery needs only a same-SHA retry after repairing the webhook or map; it never justifies resetting or duplicating the QA Issue. A pre-create failure, cancellation, or timeout with no visible QA Issue is dispatched again for the same SHA. An ambiguous create outcome (a prior success, a still-running preparation, or an explicit create-started signal with no readable Issue), duplicate marker, conflicting deployment, unavailable canonical intake read-back, or missing permissions requires human reconciliation before retry. The historical release-PR flow, `qa-approved` label, QA Check and production notification work in #484 are outside this procedure.
+## Retries and recovery
+
+- The hidden `chipin-release-qa:v1` marker (repository + SHA + deployment) is the retry key. Rerunning the same SHA reuses its Issue, checkboxes and comments; a conflicting deployment ID or URL for the same SHA stops the run.
+- Preparations run one at a time. When no Issue is visible, creation is blocked while an earlier same-SHA run succeeded or is still running (a zero-input run counts as same-SHA while running or when it was dispatched on that SHA as `master` head). A failed, cancelled or timed-out run without an Issue can simply be run again.
+- A failed Slack handoff needs only a same-SHA rerun after fixing the webhook or map.
+- To stop handoffs, disable **Prepare frontend release QA** or remove the write-token secret. Existing QA Issues, CI and Vercel are untouched.
