@@ -1,0 +1,38 @@
+# Forwards a successful vercel[bot] Production deployment (written by Vercel at Promote to Production) to the org
+# completion sweep ChipIn-one/.github frontend-production-completion.yml as repository_dispatch
+# `frontend-production-deployed` (chipin-frontend#559, ChipIn-one/.github#228), so FE Issues close within minutes of
+# the Promote instead of at the next throttled schedule run. The payload (deployment id, SHA) is only a hint: the
+# sweep re-reads the Production receipt itself. No completion logic and no Issue writes here.
+# Missing CHIPIN_COMPLETION_DISPATCH_TOKEN or a failed POST: warning, green run; the sweep schedule is the fallback.
+# Event fields reach the script only through the event file, never through `run:`.
+name: Forward Production deployment to completion
+
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+
+jobs:
+  forward:
+    if: >-
+      github.event.deployment.environment == 'Production' &&
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.creator.login == 'vercel[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout deployed commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.21.0
+          package-manager-cache: false
+      - name: Send repository_dispatch to ChipIn-one/.github
+        env:
+          CHIPIN_COMPLETION_DISPATCH_TOKEN: ${{ secrets.CHIPIN_COMPLETION_DISPATCH_TOKEN }}
+        run: node scripts/forward-production-deployment.mjs
