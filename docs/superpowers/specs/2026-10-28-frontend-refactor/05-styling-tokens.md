@@ -111,7 +111,7 @@ packages/tokens/
 @import './radixStylesOverwrite.css';
 ```
 
-`<Theme>` настраивается ровно в одном месте: `apps/app/src/design-system/AppTheme.tsx`. Это `<Theme {...RADIX_THEME} appearance={resolved} hasBackground>`. Его используют `main.tsx` и ds-gallery. `PublicApp.tsx` использует `RADIX_THEME` до своего удаления в spec 04.
+`<Theme>` настраивается ровно в одном месте: `apps/app/src/design-system/AppTheme.tsx`. Это `<Theme {...RADIX_THEME} appearance={appearance} hasBackground>`; `appearance` приходит пропом (store читает вызывающий), поэтому `design-system/` — уровень `basics` в графе слоёв (спека 02 Д5). Его используют `main.tsx` и ds-gallery. `PublicApp.tsx` использует `RADIX_THEME` до своего удаления в spec 04.
 
 **Подключение в Astro** (`apps/site`, spec 04): в базовом layout
 
@@ -183,11 +183,11 @@ packages/tokens/
 
 - `config/eslint/styled-components-allowlist.json` генерируется один раз скриптом `scripts/generate-styled-allowlist.mjs` из текущих импортёров (55 не-тестовых файлов + тесты, которые импортируют `styled-components`).
 - `no-restricted-imports` для `styled-components` действует на `src/**`, `ds-gallery/**`, а для файлов из allowlist выключен.
-- Ловушка flat config: одноимённое правило в более позднем блоке **заменяет** опции, а не объединяет их. Поэтому все блоки `no-restricted-imports` строятся через общий хелпер `restrictedImports(extraPaths, extraPatterns)` в `eslint.config.js`, иначе пропадут ограничения на axios и api (`eslint.config.js:143-210`). Рефакторинг конфига и хелпер `restrictedImports()` — спека 02 (PR 02-C4); 05-5 от него зависит и только добавляет свои пути.
+- Ловушка flat config: одноимённое правило в более позднем блоке **заменяет** опции, а не объединяет их. Поэтому все блоки `no-restricted-imports` строятся через общий хелпер `restrictedImports(extraPaths, extraPatterns)` из `config/eslint/project.js`, иначе пропадут ограничения на axios и api (`eslint.config.js:143-210`). Рефакторинг конфига и хелпер `restrictedImports()` — спека 02 (PR 02-C4); 05-5 от него зависит и только добавляет свои пути.
 - `scripts/check-styled-allowlist.mjs` (в `lint`, около 60 строк):
   1. каждая запись существует и всё ещё импортирует `styled-components`, иначе ошибка «удали запись»;
-  2. число записей ≤ числа в `git show origin/master:config/eslint/styled-components-allowlist.json` (только уменьшение);
-  3. правило касания: если в PR изменён файл из allowlist и это `**/styled.ts` либо в добавленных строках есть `styled[.(]`, `` css` ``, `` keyframes` ``, `createGlobalStyle`, то файл обязан уйти из allowlist, то есть быть переведён на CSS Modules;
+  2. число записей ≤ числа в `git show $BASE_SHA:config/eslint/styled-components-allowlist.json` (только уменьшение). Скрипт принимает `--base "$BASE_SHA"` (CI экспортирует его в шаге «Resolve verification mode»; ref `origin/master` в CI нет); локально по умолчанию `git merge-base HEAD origin/master` (A-19);
+  3. правило касания: если в PR изменён файл из allowlist и это `**/styled.ts` либо в добавленных строках есть `styled[.(]`, `` css` ``, `` keyframes` ``, `createGlobalStyle`, то файл обязан уйти из allowlist, то есть быть переведён на CSS Modules. Не считается касанием diff, в котором все изменённые строки — `import …`/`export … from …` (codemod'ы 02-D2/02-D3 меняют импорты в 31 `styled.ts`, A-18);
   4. исключение — запись в `config/eslint/styled-touch-exempt.json` (`{path, reason, issue}`) в том же PR. Записи без `issue` — ошибка.
 
 **Конвенции CSS Modules.**
@@ -223,9 +223,9 @@ packages/tokens/
 - `selector-disallowed-list: ['/\\.rt-/']`, исключение — `radixStylesOverwrite.css` через `overrides`;
 - `reportDescriptionlessDisables: true`.
 
-Исключение файлом: `components/global-error-boundary/styles.css`. Он намеренно использует системные цвета и fallback-hex, потому что обязан отрисоваться даже без загруженного CSS приложения. Его `.light`/`.dark` продолжают работать от класса на `<html>`.
+Исключения из D23 «нет raw hex» (A-29; записываются как дополнение к D23 и выносятся владельцу в `00-overview.md` п. 30): `brand.loader #80c837` и `media-on/scrim #fff/#000` живут только в `tokens.json` (вне его hex нет), и файл `components/global-error-boundary/styles.css`. Исключение файлом: `components/global-error-boundary/styles.css`. Он намеренно использует системные цвета и fallback-hex, потому что обязан отрисоваться даже без загруженного CSS приложения. Его `.light`/`.dark` продолжают работать от класса на `<html>`.
 
-Для TS/TSX (все файлы, включая замороженные styled и `vite.config.ts`) и frontmatter `*.astro` действует ESLint `no-raw-colors` из DS v1 (rule 1): hex/rgb/hsl и `var(--<palette>-N)` — ошибка; `packages/tokens/**` исключён. Stylelint для `.astro` — через `postcss-html` (`customSyntax`). `no-palette-theme-keys` не нужен (см. «Изменения»).
+Для TS/TSX (все файлы, включая замороженные styled и `vite.config.ts`) и frontmatter `*.astro` действует ESLint `no-raw-colors` из DS v1 (rule 1): hex/rgb/hsl и `var(--<palette>-N)` — ошибка; `packages/tokens/**` исключён. Реализация (A-17) — без своего плагина: блок `no-restricted-syntax` в `config/eslint/project.js` (через хелпер `restrictedSyntax()` из 02-C4) с двумя селекторами по одному regex `RAW_COLOR = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?)\(|var\(--(?!cp-|_)[a-z]+-a?\d+\)/`: `Literal[value=RAW_COLOR]` и `TemplateElement[value.raw=RAW_COLOR]` (styled-шаблоны), сообщение «use var(--cp-*) from @chipin/tokens». Фикстуры: `'#fff'`, `` `color: rgb(0 0 0)` ``, `'var(--gray-11)'` — 3 ошибки; `'var(--cp-text-primary)'` — 0. Для CSS и `<style>` в `.astro` — stylelint ниже (`color-no-hex`, `function-disallowed-list`, `declaration-property-value-disallowed-list`). Оба вводит 05-5. Stylelint для `.astro` — через `postcss-html` (`customSyntax`). `no-palette-theme-keys` не нужен (см. «Изменения»).
 
 ### 4. Граница `basics` и `components`
 
@@ -294,11 +294,11 @@ packages/tokens/
 - `logo.svg` и `favicon.svg` переносятся в `packages/tokens/assets/`.
   - App импортирует `@chipin/tokens/assets/logo.svg?react` (svgr).
   - Astro импортирует SVG-компонентом.
-  - Откуда раздаётся `/favicon.svg` на общем домене, решает спека 04 (§2.1, §4.1). Источник для `pwa-assets.config.ts:8` — `packages/tokens/assets/favicon.svg`.
+  - Раздача на общем домене (спека 04 §3.6): сайт ставит `<link rel="icon">` на `@chipin/tokens/assets/favicon.svg?url`, иконки манифеста PWA — `/app/…` из app-проекта (A-28). Источник для `pwa-assets.config.ts:8` — `packages/tokens/assets/favicon.svg`.
 - Иконки PWA больше не пересоздаются на каждой сборке: `create-pwa-icons` убирается из `build`/`vercel-build`, запуск вручную — спека 02 (02-B1, `icons:generate`). Здесь только меняется путь к исходнику.
-- `theme_color: '#3e9b4f'` (`vite.config.ts:149`) не совпадает ни с одной ступенью Radix.
+- `theme_color: '#3e9b4f'` (`vite.config.ts:149`) — это ровно `grass-10` Radix (`@radix-ui/themes/tokens/colors/grass.css`: `--grass-10: #3e9b4f`; A-24, прежний текст «не совпадает ни с одной ступенью» неверен).
   - D23 (принято владельцем 2026-10-28): `manifest` в `vite-plugin-pwa` (`theme_color`, `background_color`) и `<meta name="theme-color">` в `app.html` (через тот же `transformIndexHtml`-плагин, что theme-init) читаются из `@chipin/tokens/generated/manifest-colors.json`; Astro-сайт (`BaseLayout`) читает тот же файл. Литералов цвета в `vite.config.ts`, `app.html` и `.astro` нет.
-  - Видимое изменение: цвет статус-бара PWA на Android (`#3e9b4f` → grass-9 `#46a758`) — принято.
+  - Видимое изменение: цвет статус-бара PWA на Android (`#3e9b4f` → grass-9 `#46a758`) — принято в D23, но на ложной посылке. Флаг владельцу (`00-overview.md` п. 26): `brand.primary` = алиас `grass.10` сохраняет нынешний цвет без видимого изменения; по умолчанию остаётся grass-9 (D23, совпадает с `accent-solid`).
   - Главный цвет бренда одинаков в styled-коде (`var(--cp-*)`), Radix `<Theme accentColor>` (`RADIX_THEME`), PWA-манифесте/`theme-color` и на сайте, потому что все четыре выводятся из одного токена `brand.primary` в `tokens.json`; расхождение ловит `tokens:check` (п. 5 «Проверок»).
 - Иконки: все UI-иконки берутся из `lucide-react` именованным импортом (размер задаётся пропом `size`, цвет — `currentColor`). svgr используется только для бренд-марок и логотипов третьих сторон: `logo.svg` и `google-icon.svg`.
   - ESLint: `no-restricted-imports` с паттерном `regex: '\\.svg\\?react$'` и allowlist из 3 файлов (`Footer.tsx`, `mode-logotype/styled.ts` или его будущий модуль, `AuthButtons.tsx`).
@@ -358,7 +358,7 @@ packages/tokens/
 
 - Кастомное свойство на `:root` с `var(--accent-9)` невалидно (accent объявлен только внутри `.radix-themes`). Поэтому в генераторе ссылки только на конкретные шкалы.
 - Класс на `<html>` — главный. Если `<Theme appearance>` с ним разойдётся, `--cp-*` (вычисленные на `:root`) и компоненты Radix покажут разные режимы. Оба значения берутся из одного `resolved`. Тест store проверяет, что класс html и `resolved` совпадают после каждого `setPreference`.
-- Скрипт против FOUC вставляется только в `app.html` (после 04-5 он переименован в `index.html`; плагин ищет единственный html-entry). Публичный `index.html` (SSG) не трогаем до спеки 04: там своя логика в `PublicApp`, и двойное управление классом даст мигание.
+- Скрипт против FOUC вставляется только в `app.html` (после 04-5a он переименован в `index.html`; плагин ищет единственный html-entry). Публичный `index.html` (SSG) не трогаем до спеки 04: там своя логика в `PublicApp`, и двойное управление классом даст мигание.
 - Кодмод — единственный PR, который меняет пиксели (gray → olive). Он изолирован от прочих изменений, чтобы скриншотный дифф объяснялся одной причиной.
 - Тесты, которые мокают `next-themes` (`DevMenu.test.tsx`, `ThemeSwitcherDev.test.tsx`, `useSyncUserSettings.test.tsx`), переходят на реальный `appearanceStore` с `resetStore` в `beforeEach`.
 - В jsdom нет `matchMedia`. Store обязан работать без него (fallback `light`), так же как текущий `PublicApp.tsx:24-27`.
@@ -381,7 +381,7 @@ packages/tokens/
 - Big-bang перевод 55 styled-файлов. Переводим только при касании.
 - Обёртки над всеми примитивами Radix.
 - Автоматический visual regression, Storybook, облачные сервисы.
-- Ленивые локали (04-2c), регистрацию SW/precache (04-2d; кроме строки `webp` в 05-1), регенерацию иконок (02-B1), удаление `PublicApp` (04-5), реструктуризацию ESLint-конфига (02-C4), vendor-regex (02-B1), алиасы ds-gallery (02-C3).
+- Ленивые локали (04-2c), регистрацию SW/precache (04-2d; кроме строки `webp` в 05-1), регенерацию иконок (02-B1), удаление `PublicApp` (04-5a/b), реструктуризацию ESLint-конфига (02-C4), vendor-regex (02-B1), алиасы ds-gallery (02-C3).
 - Форк `base.css` ради accent-маппинга.
 
 ## Изменения относительно DS v1
@@ -402,8 +402,8 @@ packages/tokens/
 | 05-1 | Импорт Radix CSS по частям (временно в новом `src/styles/index.css`, 22 шкалы), WebP ×2 + `webp` в `globPatterns`, `basics/Image` в onboarding, удаление `apple-icon.svg` | 8 | — | всё, включая 02/03/04 |
 | 05-2 | `packages/tokens`: tokens.json, генератор, `generated/*`, `radix-colors.css` (переезд из 05-1), `tokens:check` + unit-тесты генератора, перенос logo/favicon, подключение в app, `manifest-colors.json` → манифест VitePWA и `<meta name="theme-color">` (D23) | 14 | 04-0 (npm workspaces) | 02, 03, 04-1a |
 | 05-3 | `appearanceStore`, `AppTheme`, `theme-init` + Vite-плагин + CSP-хеш + тест, удаление next-themes (4 файла + 3 теста), `RADIX_THEME` в `main`/`PublicApp`/gallery | 16 | 05-2; хеш кладётся в `apps/app/hosting.base.json`, если 04-2b влит, иначе в `apps/app/vercel.json` (тест проверяет итоговый `vercel.json`) | 03 |
-| 05-4 | Кодмод `themeColor` → `--cp-*` (21 файл + `interactiveCardStyles`), `--space/--radius` → `--cp-*` в styled-файлах, удаление `styled-themes.ts`, `colors.ts`, `styled.d.ts`, трёх `ThemeProvider`; запрет `@radix-ui/colors` | 30 (мелкие диффы, ≈350 строк) | 05-2 | 05-3 (разные файлы, кроме `main.tsx`: 05-4 вливается вторым) |
-| 05-5 | stylelint + конфиг, `lint:css`, styled allowlist + `check-styled-allowlist.mjs`, хелпер `restrictedImports`, правило `style`, svgr-правило, `css.modules` в Vite, `helpers/cx.ts`, эталонный перевод `mode-logotype/styled.ts` на CSS Module, 6 inline-style | 14 | 05-4, 02-C4 | 02 (кроме 02-C4) |
+| 05-4 | Кодмод `themeColor` → `--cp-*` (21 файл + `interactiveCardStyles`; файлы `src/store/expenseModal*` и их styled пропускаются, пока не влит 03-14 — цепочка владения в `00-overview.md`), `--space/--radius` → `--cp-*` в styled-файлах, удаление `styled-themes.ts`, `colors.ts`, `styled.d.ts`, трёх `ThemeProvider`; запрет `@radix-ui/colors` | 30 (мелкие диффы, ≈350 строк) | 05-2 | 05-3 (разные файлы, кроме `main.tsx`: 05-4 вливается вторым) |
+| 05-5 | stylelint + конфиг, `lint:css`, `no-raw-colors` (`no-restricted-syntax`, §3) + фикстуры, styled allowlist + `check-styled-allowlist.mjs --base`, правило `style`, svgr-правило (блоки через хелперы 02-C4), `css.modules` в Vite, `helpers/cx.ts`, эталонный перевод `mode-logotype/styled.ts` на CSS Module, 6 inline-style | 14 | 05-4, 02-C4 | 02 (кроме 02-C4) |
 | 05-6 | Граница basics: перенос RelativeTime, BalanceBadgesSkeleton (PWABadge — нет, см. 04-2d); удаление Checkbox/RadioGroup; перенос SegmentedControl/Select/Dropdown/ProgressBar в basics с named exports; a11y-проверка 3 кнопок | 26 (импорты) | — (boundaries-правило включает 02-C9) | 05-2…05-5 |
 | 05-7 | ds-gallery: `AppTheme` + store, раздел Tokens (алиасы удаляет 02-C3) | 4 | 05-3, 05-4 | 05-5, 05-6 |
 

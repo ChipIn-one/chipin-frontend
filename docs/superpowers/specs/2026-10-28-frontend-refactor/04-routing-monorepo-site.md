@@ -2,7 +2,7 @@
 
 Статус: черновик для владельца, 2026-10-28. Репо: `ChipIn-one/chipin-frontend`. Проверено read-only на ветке `chore/issue-456-ds-gallery` @ `3d0086e`; пути пересверены с `origin/master` `522973a` (там уже нет deploy-workflow'ов — delivery = Vercel Git integration + Promote; правила в `docs/engineering/rules/`). Backend проверен на `chipin-backend` (ветка `develop`).
 
-Идентификаторы PR — `04-<n>` (глобальная схема, `00-overview.md`); «фаза N» в тексте = PR `04-N`. Backend-issue — `BE-04-<n>`.
+Идентификаторы PR — `04-<n>` (глобальная схема, `00-overview.md`); «фаза N» в тексте = PR `04-N`. После review A: `04-0` → `04-0a`/`04-0b`, `04-2a` → `04-2a1…04-2a4`, новые `04-2f`, `04-2g`, `04-3d`. Backend-issue — `BE-04-<n>`.
 
 Отклонение от DECISIONS: (1) D8 перечисляет rewrites `/`, `/<locale>/*`, `/help/*`, `/blog/*` → сайт; здесь — catch-all на сайт последним правилом (надмножество, без пятого ручного списка, §4.1). (2) D8 «invite landing `/join/<token>`» → `/join/group/<token>` и `/join/friend/<token>`: токены группы и друга — разные сущности backend (§3.5). (3) D15 «one deploy workflow» — на master deploy-workflow'ов нет, единственный путь — Vercel Git integration + Promote; для двух проектов это и остаётся (§1.4).
 
@@ -34,7 +34,7 @@
 ## Решение (кратко)
 
 - npm workspaces без Turborepo. React, react-dom, TypeScript и Vite закреплены в корне. Сначала отдельный PR с механическим переносом `src/` → `apps/app/src/`.
-- Домен `chipin.one` остаётся на **текущем** Vercel-проекте. Его Root Directory = `apps/app`, он отдаёт `/app/*`, `/api/*`, `/.well-known/*`, `/sw.js`, а **всё остальное** внешним rewrite проксирует в новый проект `chipin-site` (Root Directory `apps/site`). Откат — один флаг генератора, который выключает catch-all rewrite на сайт.
+- Домен `chipin.one` остаётся на **текущем** Vercel-проекте. Его Root Directory = `apps/app`, он отдаёт `/app/*`, `/api/*`, `/.well-known/*`, `/sw.js`, а **всё остальное** внешним rewrite проксирует в новый проект `chipin-site` (Root Directory `apps/site`). Откат — Instant Rollback на заранее выпущенный совместимый деплой 04-3d (раздел «Откат cutover» в «Фазах»).
 - В приложении `basename: '/app'`, Vite `base: '/app/'`, SW `/app/sw.js` со scope `/app/`. Старый `/sw.js` заменяется самоуничтожающимся воркером.
 - Один манифест маршрутов (чистые данные) и типизированная карта lazy-модулей. Guard реализован как layout route, `errorElement` есть на корне и на layout. Loaders прогревают TanStack Query (спека 03) и не блокируют навигацию.
 - Сайт — Astro static: встроенный i18n с прежними URL (`/`, `/ru/`, `/pt-br/privacy`…), content collections, hreflang, sitemap, только tokens CSS, без SW. Лендинг приглашения — `/join/group/<token>` и `/join/friend/<token>` с явной кнопкой в приложение.
@@ -61,20 +61,22 @@
     app/                  @chipin/app — нынешний SPA
       package.json  vite.config.ts  vitest.config.ts  vitest.contract.config.ts
       tsconfig.json tsconfig.app.json tsconfig.node.json  pwa-assets.config.ts  vercel.json
-      index.html          (бывший app.html после фазы 3; в фазе 0 — оба html как есть)
+      index.html          (бывший app.html после 04-5a; в 04-0a — оба html как есть)
       src/  public/  contract-tests/  ds-gallery/
       scripts/            prerender*, verify-public-precache, private-spa-navigation, run-task-tests,
                           taskTestArgs (пока живы), затем generate-routing-artifacts
     site/                 @chipin/site — Astro
       package.json astro.config.ts tsconfig.json vercel.json src/ public/
   packages/
-    tokens/               @chipin/tokens — tokens.css, fonts/, logo.svg (наполнение по D14)
+    tokens/               @chipin/tokens — раскладка и наполнение задаёт спека 05 §1 (generated/, assets/, src/)
     i18n-content/         @chipin/i18n-content — locales.ts, common/<locale>.json
 ```
 
 #### 1.2 Корневой `package.json`
 
-- `"private": true`, `"workspaces": ["apps/*", "packages/*"]`, `"engines": { "node": "24.21.0" }`. Поле `version` остаётся здесь, это единая версия продукта (D15). `scripts/version-*.mjs` продолжают читать корневой файл. `apps/app/vite.config.ts` импортирует `../../scripts/version-resolver.mjs`.
+- `"private": true`, `"workspaces": ["apps/*", "packages/*"]`, `"engines": { "node": "24.21.0" }`. Поле `version` остаётся здесь, это единая версия продукта (D15, спека 02 Д9). **Единственный источник версии — корневой `package.json`**; в `apps/*/package.json` и `packages/*/package.json` поля `version` нет.
+- Корень репо в version-скриптах (A-01). Сейчас `scripts/version-resolver.mjs:9` (`REPOSITORY_ROOT = resolve(process.cwd())`) и `scripts/version-check.mjs:8-9` берут путь от `process.cwd()`. После переноса Vite запускается с cwd = `apps/app` (Vercel Root Directory, `npm run -w`), и `readPackageVersion` падает «package.json must contain a version string». Поэтому в 04-0a `version-resolver.mjs`, `version-check.mjs` и `version-bump.mjs` считают корень от своего файла: `const REPOSITORY_ROOT = resolve(import.meta.dirname, '..')`, от него же `PACKAGE_PATH` и `LOCKFILE_PATH`; `process.cwd()` в этих скриптах не используется. `apps/app/vite.config.ts` импортирует `../../scripts/version-resolver.mjs`. Тест в `version-resolver.test.mjs`: после `process.chdir('apps/app')` `resolveAppVersion()` возвращает версию корня.
+- Нормализация версии (A-09). Prod собирается Promote'ом коммита `master` (`VERCEL_GIT_COMMIT_REF=master`), а `MAIN_BRANCH = 'main'` (`version-resolver.mjs:6`), поэтому сейчас prod отдаёт `1.0.8-dev-<sha>`. В 04-0a резолвер возвращает чистую `x.y.z`, если `VERCEL_ENV === 'production'` или ветка `main`; иначе `x.y.z-dev-<sha7>`. Тест: `{ VERCEL_ENV: 'production', VERCEL_GIT_COMMIT_REF: 'master' }` → `1.0.8`. Правило для всех потребителей `APP_VERSION` (заголовок `X-Client-Version`, сравнение с `X-Min-Client-Version` в 03-20, Sentry release): сравнивается только semver-ядро `major.minor.patch`, суффикс после `-` отбрасывается до сравнения (контракт для 03-20, см. `00-overview.md` «Кросс-правки для 03»).
 - `devDependencies` в корне: `typescript ~5.9.3`, `eslint` и плагины, `prettier`, `husky`, `vitest`, `vite`. Версии для всех workspaces одни.
 - `dependencies` в корне: `react`, `react-dom` в точной версии (`19.3.0` без `^`), а также `overrides`: `{ "react": "$react", "react-dom": "$react-dom" }`. Так Astro-интеграция `@astrojs/react` и приложение получают один экземпляр React.
 - Прокси-скрипты, чтобы CI и husky не менялись: `"verify:full": "npm run verify:full -w @chipin/app && npm run build -w @chipin/site --if-present"`, `"lint": "eslint ."`, `"test:full": "npm run test:full -w @chipin/app"`, `"build": "npm run build -w @chipin/app"`, `"vercel-build"` не нужен в корне (Vercel собирает в Root Directory), `"version:check"` и `"version:bump"` без изменений.
@@ -86,13 +88,15 @@
 - `tsconfig.base.json` (создаёт 02-C5; если он ещё не влит — создаётся здесь по составу 02 Д8) содержит только `compilerOptions` без `baseUrl`, `paths`, `include` и `tsBuildInfoFile`. В 04-0 он переезжает в корень. `apps/app/tsconfig.app.json` делает `extends: "../../tsconfig.base.json"` и сам задаёт `paths` **без `baseUrl`** (формат 02-C3: `"api/*": ["./src/api/*"]`) и `include: ["src", "ds-gallery"]` (02-C5). `apps/site/tsconfig.json` расширяет `astro/tsconfigs/strict` и повторяет строгие флаги из base.
 - `eslint.config.js` в корне. Если 02-C4 влит — он импортирует `config/eslint/*` и задаёт `APP_DIR = 'apps/app'` (02 Д9), иначе нынешние блоки получают `files: ['apps/app/src/**/*.{ts,tsx}']`, правило про axios/api (`eslint.config.js:167-193`) переносится как есть. Для `apps/site` отдельный блок с `eslint-plugin-astro`, для `packages/**` — блок без React-правил. Type-aware lint (D13) использует `parserOptions.projectService: true`.
 - Prettier и lint-staged подключаются один раз в корне (D13).
+- Typecheck всех TS-файлов (A-21): у `packages/tokens` и `packages/i18n-content` свой `tsconfig.json` (`extends: "../../tsconfig.base.json"`, `include: ["src", "*.ts"]`); корневой `tsconfig.json` — solution-файл с `references` на `apps/app`, `packages/*`. `apps/app/scripts/**/*.ts` входят в `apps/app/tsconfig.node.json`. ESLint `projectService.allowDefaultProject` — только для корневых `*.config.js`. Сайт проверяется `astro check` (шаг site в CI, §1.4), потому что `astro build` типы не проверяет.
 
 #### 1.4 CI
 
-- `frontend-ci.yml` (единственный CI-workflow на master) получает два job'а с фильтрами путей. Фильтр делается шагом `dorny/paths-filter` по SHA, а не `on.paths`, иначе обязательный check не появится и PR заблокируется.
-  - `app`: `apps/app/**`, `packages/**`, `package-lock.json`, `tsconfig.base.json`, `eslint.config.js`.
-  - `site`: `apps/site/**`, `packages/**`, `package-lock.json`, `tsconfig.base.json`, `eslint.config.js`.
-  - Обязательный агрегирующий job `ci-ok` зелёный, если пропущенные job'ы `skipped` или `success`.
+- `frontend-ci.yml` (единственный CI-workflow на master) остаётся **одним job'ом `frontend-ci`** — это имя обязательного check'а в ruleset, менять его нельзя (A-20). Второго механизма фильтрации (`dorny/paths-filter`, сторонние actions, job `ci-ok`) нет. Выбор режима делает существующий шаг «Resolve verification mode» через `scripts/ci-gate-policy.mjs`, который расширяется: вместо `docs-only|full` он выдаёт `docs-only|app|site|full`.
+  - `app`: изменены только `apps/app/**`;
+  - `site`: изменены только `apps/site/**`;
+  - `full`: любое изменение в `packages/**`, `package-lock.json`, корневом `package.json`, `tsconfig.base.json`, `eslint.config.js`, `config/**`, `scripts/**`, `.github/**`, а также сочетание app + site;
+  - шаги job'а выполняются условно по `steps.mode.outputs.mode`: app → `npm run verify:full -w @chipin/app`; site → `npm run lint` по `apps/site`, `astro check`, `astro build`; full → оба. Шаг admission не дублируется и не пропускается. Новые режимы покрываются кейсами в `scripts/ci-gate-policy.test.mjs`.
 - `npm ci` выполняется один раз в корне. Кэш `actions/setup-node` с ключом по корневому `package-lock.json`.
 - Пути артефактов: `dist/` → `apps/app/dist/`, `apps/site/dist/`.
 - Deploy-workflow'ов нет и не добавляется (D15, спека 02 Д7): оба Vercel-проекта собираются Vercel Git integration из `master`, prod — ручной Promote (`DEPLOYMENT.md` §«Vercel delivery from master»). Release-QA workflow'ы (`prepare-release-qa.yml`, `release-qa-result.yml`) получают префикс `apps/app/` в путях к артефактам.
@@ -106,31 +110,52 @@
 
 - В обоих проектах включить «Include source files outside of the Root Directory», иначе не найдутся корневой lockfile и `packages/*`.
 - Домен переносить не нужно, поэтому откат не требует DNS. Хост сайта прячется за rewrite (§4.1).
-- Включить «Ignored Build Step» по путям, чтобы проект не пересобирался на чужие изменения: `git diff --quiet HEAD^ HEAD -- ../../packages . ../../package-lock.json`.
+- Включить «Ignored Build Step» по путям, чтобы проект не пересобирался на чужие изменения (A-30): `[ -n "$VERCEL_GIT_PREVIOUS_SHA" ] && git diff --quiet "$VERCEL_GIT_PREVIOUS_SHA" HEAD -- . ../../packages ../../package-lock.json ../../package.json ../../tsconfig.base.json ../../scripts`. Без `VERCEL_GIT_PREVIOUS_SHA` (первый деплой ветки) или при ошибке git команда даёт ненулевой код, и проект собирается. `HEAD^` не используется: при push из нескольких коммитов он видит только последний.
 - Custom-домены на Vercel Hobby бесплатны (D22), поэтому `site.chipin.one` / `site-dev.chipin.one` остаются; запасной вариант `*.vercel.app` не нужен.
+- Лимиты Hobby (A-31): 1 одновременная сборка на аккаунт и дневной лимит деплоев (на 2026-10 — 100/день; сверить со страницей Limits перед 04-3a). Пропущенные Ignored Build Step деплои тоже создаются (как cancelled). Два проекта × push каждого PR удваивают очередь. Действие: после 02-C6 и после 04-3a замерить длительность CI (`timeout-minutes: 20`) и число деплоев за неделю; если CI > 15 мин или деплоев > 60/день — вынести `import-x/no-cycle` в nightly и включить Ignored Build Step для preview всех веток, кроме PR с `apps/site/**`.
+
+**Модель релиза двух проектов (A-08).** Сайт выпускается так же, как приложение (`DEPLOYMENT.md:42-66`): только ручной Promote.
+- В `chipin-site`: Production Branch = `main`, `git.deploymentEnabled.main: false` (через `vercel.passthrough`, §1.5a), домен `site-dev.chipin.one` привязан к ветке `master`, `site.chipin.one` — к Production. Merge в `master` даёт только dev/preview, prod сайта меняется только Promote'ом. Настройку делает владелец при создании проекта (04-3a).
+- Порядок Promote после cutover: сначала app, затем site, оба из одного SHA `master`. Причина: страницы сайта (`/join/*`, кнопки входа) ссылаются на маршруты приложения, а не наоборот. До cutover (04-4) сайт на `chipin.one` не виден, порядок не важен.
+- Release-QA и completion: GitHub Deployment `Production` создают оба проекта; Issue закрывает только деплой app-проекта (environment `Production – <имя app-проекта>`). В `docs/engineering/release-qa.md` добавляется раздел «Два проекта» с этими тремя правилами. Если org-sweep в `ChipIn-one/.github` фильтрует только по `environment == 'Production'`, нужна правка фильтра там (owner-issue в `.github`, создаётся в 04-3a; без него site-деплой может закрыть Issue раньше app).
 
 #### 1.5a Изоляция провайдера (D18)
 
 Владелец планирует уйти с Vercel (отдельное исследование hosting + аналитики, в работе), поэтому спека не углубляет lock-in:
 - Всё Vercel-специфичное живёт только в `apps/app/vercel.json`, `apps/site/vercel.json` и в генераторе (`generate-routing-artifacts.ts`, для сайта — `seoGuard`). Оба `vercel.json` — сгенерированные файлы, руками не правятся.
-- Таблица rewrites/redirects/headers хранится в провайдер-нейтральном JSON: `apps/app/hosting.base.json` и `apps/site/hosting.base.json` (`{ headers: [{ source, set }], redirects: [{ from, to, status }], rewrites: [{ from, to, env? }], siteCutover }`, без Vercel-полей). Генератор манифеста маршрутов эмитит из него `vercel.json` (`emitters/vercel.ts`); переезд на Cloudflare/Netlify/nginx = новый emitter (`_redirects`/`_headers`, `nginx.conf`), манифест и таблица не меняются.
+- Таблица rewrites/redirects/headers хранится в провайдер-нейтральном JSON: `apps/app/hosting.base.json` и `apps/site/hosting.base.json`. Генератор манифеста маршрутов эмитит из него `vercel.json` (`emitters/vercel.ts`); переезд на Cloudflare/Netlify/nginx = новый emitter (`_redirects`/`_headers`, `nginx.conf`), манифест и таблица не меняются.
+- Схема `hosting.base.json` (A-07):
+  ```jsonc
+  {
+    "cutover": false,                       // один флаг для всех групп правил, §2.9
+    "env": { "prod": "chipin.one", "dev": "dev.chipin.one", "preview": "*.vercel.app" },
+    "headers":   [{ "source": "/app/(.*)", "set": { "X-Robots-Tag": "noindex, nofollow" } }],
+    "redirects": [{ "from": "/sitemap.xml", "to": "/sitemap-index.xml", "status": 301 }],
+    "rewrites":  [{ "from": "/api/:path*", "to": "https://api.chipin.one/:path*", "env": "prod" }],
+    "vercel":    { "passthrough": { "$schema": "…", "buildCommand": "…", "git": { "deploymentEnabled": { "dev": false, "main": false } } } }
+  }
+  ```
+  - `env` у правила — `'prod' | 'dev' | 'preview'` (без поля — для всех). Таблица `env` → хост — единственная; emitter Vercel превращает `env` в `has: [{ type: 'host', value: … }]` (для `preview` — `{ "suf": ".vercel.app" }`, как сейчас в `vercel.json`).
+  - `vercel.passthrough` emitter копирует в корень `vercel.json` дословно; это единственное место для Vercel-полей без нейтрального аналога (`$schema`, `buildCommand`, `git`). Другой emitter его игнорирует.
+  - Тест генератора: при `cutover: false` сгенерированный `apps/app/vercel.json` семантически равен нынешнему `vercel.json` (порядок и состав rewrites, redirects, headers, `has`, `git`).
 - `@vercel/*` в коде — только в одном модуле `apps/app/src/app/telemetry/vercelAnalytics.ts` (bootstrap Analytics + Speed Insights), который удаляется целиком (перенос импортов туда — в PR 04-2b); на сайте — одна строка `<script>` в `BaseLayout` (§3.6). Lint `no-restricted-imports` запрещает `@vercel/*` везде, кроме этого файла. Vercel-only API (Edge Config, KV, Functions, `@vercel/og`) не используются.
 - Analytics и Speed Insights пока остаются (D18).
 
-#### 1.6 PR механического переноса (фаза 0) — без изменения поведения
+#### 1.6 PR механического переноса (04-0a и 04-0b) — без изменения поведения
 
-Состав, одним PR. Почти весь diff — rename, их ревьюят по `git diff -M --stat`.
+Два PR (A-40). **04-0a** — пункты 1–5 и 7: rename и конфиги; команды переноса лежат в закоммиченном `scripts/move-to-workspace.sh`, ревью = перезапустить скрипт на base и сравнить дерево (`git diff --stat` пуст), плюс ручной просмотр не-rename правок (корневой и app `package.json`, lockfile, пути в version-скриптах, workflows). **04-0b** — пункт 6 (замена путей в документации), сразу после 04-0a. Ссылки «04-0» в других спеках означают 04-0a.
 
 1. `git mv` в `apps/app/`: `src`, `public`, `index.html`, `app.html`, `contract-tests`, `ds-gallery`, `vite.config.ts`, `vitest.config.ts`, `vitest.contract.config.ts`, `tsconfig.json`, `tsconfig.app.json`, `tsconfig.node.json`, `pwa-assets.config.ts`, `vercel.json`, `vercel.config.test.js`, а также app-скрипты (`prerender-public.mjs`, `prerender-before-workbox.*`, `verify-public-precache.mjs`, `private-spa-navigation.*`, `run-task-tests.mjs`, `taskTestArgs.*`).
 2. Создать корневой `package.json` (§1.2) и `apps/app/package.json`; перенести в корень `tsconfig.base.json` (из 02-C5) и tooling-конфиги спеки 02 (`prettier.config.js`, `config/eslint/`, `.husky/`) и перегенерировать lockfile. Версии зависимостей не меняются: `npm ci` должен дать тот же набор пакетов (сравнить `npm ls --all --json`).
-3. Поправить пути: импорт `./scripts/version-resolver.mjs` в `vite.config.ts` → `../../scripts/…`, `root` в `ds-gallery/vite.config.ts` (он считается от `__dirname`, поэтому не меняется), `readFileSync('vercel.json')` в `vercel.config.test.js` → путь от `import.meta.dirname`, пути в `prerender-before-workbox.mjs`, глобы в `eslint.config.js`.
+3. Поправить пути: импорт `./scripts/version-resolver.mjs` в `vite.config.ts` → `../../scripts/…`; в `scripts/version-{resolver,check,bump}.mjs` корень от `import.meta.dirname` и нормализация prod-версии (§1.2, A-01/A-09); `root` в `ds-gallery/vite.config.ts` (он считается от `__dirname`, поэтому не меняется), `readFileSync('vercel.json')` в `vercel.config.test.js` → путь от `import.meta.dirname`, пути в `prerender-before-workbox.mjs`, глобы в `eslint.config.js`.
 4. `.github/workflows/*`: `node scripts/<repo-level>.mjs` остаются как есть. Ссылки на app-скрипты и `dist/` получают префикс `apps/app/`. `paths-ignore` в `native-development-link.yml` не меняется.
 5. `.husky/pre-push` не меняется, потому что корневые прокси-скрипты сохраняют имена.
 6. Документы: `AGENTS.md`, `CLAUDE.md`, `docs/**`, `DEPLOYMENT.md` — замена `src/` → `apps/app/src/` в путях.
-7. Vercel: Root Directory → `apps/app` выставить **в момент merge** (владелец, Settings). Порядок действий — в «Фазы».
+7. Vercel: Root Directory → `apps/app` выставить **в момент merge** (владелец, Settings). Порядок действий — в «Фазы». После смены Root Directory preview открытых PR со старой раскладкой не собираются (нет `apps/app`): до merge 04-0a авторы открытых PR делают rebase или ждут; в окне merge открытых feature-PR нет.
 
 Критерии «нет изменения поведения»:
 - Число тестов и их результат те же (сейчас 1230/1230).
+- Из корня `npm run build -w @chipin/app` и из `apps/app` `npx vite build` дают одну и ту же `APP_VERSION` = версии корневого `package.json` (с суффиксом `-dev-<sha>` вне prod); `npm run version:check` из корня и из `apps/app` проходит.
 - Набор файлов в `apps/app/dist` совпадает с прежним `dist` с точностью до хешей. Prerender-HTML совпадает побайтно после нормализации хешей в именах ассетов. Число записей precache в `sw.js` то же.
 - Preview-деплой: smoke по `/`, `/ru/`, `/dashboard`, `/group/join/<test>`, `/oauth/callback`, `/api/health` с `200` и тем же содержимым.
 
@@ -138,9 +163,10 @@
 
 #### 2.1 Базовый путь
 
-- `createBrowserRouter(routes, { basename: '/app' })`. Константы `ROUTES` остаются относительными к basename (`'/dashboard'`), поэтому `navigate`, `<Link>` и `matchPath` по `useLocation().pathname` не меняются.
-- Код, который читает `window.location.pathname` в обход роутера, переводится на хелпер `getRouterPathname()`, который снимает префикс `/app`. Таких мест три: `src/helpers/url.ts:31-35` (`getSocialAuthUrl`), `src/i18n/index.ts:12`, `src/helpers/telemetry.ts:24-25` (паттерны маршрутов). Lint-правило `no-restricted-properties` запрещает `window.location.pathname` вне этого хелпера.
-- Vite `base: '/app/'`, `build.outDir: 'dist/app'`. Vercel Output остаётся `dist`, так что файлы физически лежат в `/app/…`, а root-файлы (`/sw.js` kill-switch, `/.well-known/assetlinks.json`) лежат в `dist/`.
+- `createBrowserRouter(routes, { basename: APP_BASE })`. `APP_BASE` — одна константа в `apps/app/src/app/router/appBase.ts` (`''` до cutover, `'/app'` в 04-4); Vite `base`, `outDir`, scope SW и manifest читают её же через `apps/app/app-base.config.ts`. Так 04-4 меняет одно значение, а не код (A-10). Константы `ROUTES` остаются относительными к basename (`'/dashboard'`), поэтому `navigate`, `<Link>` и `matchPath` по `useLocation().pathname` не меняются.
+- Код, который читает `window.location.pathname` в обход роутера, переводится на хелпер `getRouterPathname()`, который снимает префикс `APP_BASE` (до cutover — no-op). Места (A-26, `grep window.location src` на master): `src/helpers/url.ts:31-35` (`getSocialAuthUrl`), `src/i18n/index.ts:12`, `src/root.tsx:31` (уходит в 04-5a), `src/components/Header.tsx:55` и `src/components/header/LandingMobileMenu.tsx:21` (`window.location.assign/href` на публичные пути → `SITE_PATHS`). Паттерны маскировки токенов лежат в `src/constants/telemetry.ts` (не в `helpers/telemetry.ts`) и получают обе формы путей в 04-2g. Lint-правило `no-restricted-properties` запрещает `window.location.pathname` вне хелпера.
+- Ссылки из приложения на сайт (A-16). `ROUTES.HOME`, `ROUTES.PRIVACY`, `ROUTES.TERMS` удаляются из `ROUTES` в 04-2f и заменяются `SITE_PATHS` (`apps/app/src/app/router/sitePaths.ts`: `home: '/'`, `privacy: '/privacy'`, `terms: '/terms'`, `localeHome(l)`), которые используются только как `<a href>` или `window.location.assign`, никогда в `navigate`/`<Link>` (под basename `'/'` превратился бы в `/app/`). Потребители: `Page404.tsx:18`, `Header.tsx:47,70`, `resolveOAuthReturnTo` (`url.ts:9-34`). Lint: `no-restricted-syntax` на `MemberExpression[object.name='ROUTES'][property.name=/^(HOME|PRIVACY|TERMS)$/]`. До cutover `SITE_PATHS` ведут на те же URL, что и сейчас, поведение не меняется.
+- Vite `base: '/app/'`, `build.outDir: 'dist/app'`. Vercel Output остаётся `dist`, так что файлы физически лежат в `/app/…`. Root-файлы (A-05): Vite копирует `publicDir` в `outDir`, то есть в `dist/app`, поэтому `/sw.js` (kill-switch) и `/.well-known/assetlinks.json` туда не попадут сами. Они лежат в `apps/app/public-root/` и копируются шагом `apps/app/scripts/copy-root-files.mjs` (`public-root/**` → `dist/`), который вызывают `build` и `vercel-build` после `vite build`. `/.well-known` Vercel зарезервирован и не переписывается, поэтому файл обязан физически лежать в `dist/.well-known`; no-op rewrite `.well-known` из `hosting.base.json` удаляется. Тест сборки: `dist/sw.js` и `dist/.well-known/assetlinks.json` есть, `dist/app/.well-known` нет.
 
 #### 2.2 Манифест маршрутов
 
@@ -210,16 +236,18 @@ RootLayout            errorElement=RootErrorBoundary; провайдеры UI, T
 ```
 
 - `AuthLayout` заменяет `ProtectedRoute`, `InternalRoute` (8 обёрток) и отступы, вшитые в guard (`ProtectedRoute.tsx:43-47`, они уходят в `InternalLayout`).
-- `requireSession` (loader): `await authReady()`. Это промис первичной проверки сессии, который выносится из `useCheckSignIn` в `src/app/auth/session.ts`. Если статус `UNAUTHENTICATED` и причина `signedOut` или `noSession` → `redirect('/login?returnTo=' + encodeURIComponent(pathname + search))`.
+- `requireSession` (loader) возвращает цепочку промисов без `await` (инвариант 7, спека 02 Д2): `({ request }) => { const url = new URL(request.url); const returnTo = stripAppBase(url.pathname) + url.search; return restoreReady.then(() => authReady()).then(session => (isSignedOut(session) ? redirect('/login?returnTo=' + encodeURIComponent(returnTo)) : null)); }` (`stripAppBase` снимает `APP_BASE`, §2.1). `authReady()` — промис первичной проверки сессии, который выносится из `useCheckSignIn` в `src/app/auth/session.ts`. `isSignedOut` = статус `UNAUTHENTICATED` и причина `signedOut` или `noSession`.
+- Начальная загрузка (A-27): корневой маршрут задаёт `hydrateFallbackElement` = нынешний спиннер загрузчика, чтобы экран не был пустым, пока `authReady()` ждёт refresh. `authReady()` резолвится не позже чем через 5 с (`Promise.race` с таймером); по таймауту статус = `UNKNOWN_OFFLINE`, и он обрабатывается как `navigator.onLine === false` в offline-ветке ниже (lie-fi при `navigator.onLine === true`).
 - Offline (D2): если есть session hint (`LS_KEY_AUTH_SESSION_HINT`) и `navigator.onLine === false`, loader **не** редиректит, а пропускает на кэшированные данные. Детали в спеке 03.
 - Сессия истекла во время работы: `AuthLayout` показывает `AuthModal` поверх `<Outlet/>` и не размонтирует страницу. Черновик расхода не теряется, но только при условии, что спека 03 убирает сброс `expenseModalStore` из `expireSession` (аудит 02, находка 11).
 - Явный sign-out — полная навигация `window.location.assign(getLastAccountLandingPath())` на сайт.
-- `SoloGuardLayout` — loader `ensureQueryData(selfUserQuery)` и `redirect('/dashboard')`, если `!canAccessSolo`. Заменяет `SoloRouteGuard.tsx:14-27`.
+- `SoloGuardLayout` — loader `restoreReady.then(() => cachedOrEnsure(selfUserQuery)).then(user => (canAccessSolo(user) ? null : redirect('/dashboard')))`, где `cachedOrEnsure` берёт кэш и вызывает `ensureQueryData` только online при пустом кэше (§2.4); офлайн без кэша — пропуск без redirect. Заменяет `SoloRouteGuard.tsx:14-27`.
 
 #### 2.4 Loaders и TanStack Query
 
 - Loader получает `queryClient` через замыкание `createAppRouter(queryClient)`. Query options берутся только из фабрик спеки 03 (`entities/<x>/api/queries.ts`). Свои `queryFn` в loader запрещены.
-- Правило: loader **не ждёт сеть**. Он вызывает `void queryClient.ensureQueryData({ ...opts, revalidateIfStale: true })` для каждого запроса маршрута. Компонент читает те же данные через `useQuery` и показывает существующие скелетоны. Из-за этого навигация не блокируется offline или на медленной сети (D2, `networkMode: 'offlineFirst'`).
+- Каждый loader начинается с гейта гидрации персистера из спеки 03: `restoreReady` (промис восстановления кэша из IndexedDB), без `await` (инвариант 7): `() => restoreReady.then(() => { … })`. Иначе первый loader увидит пустой кэш и уйдёт в сеть до восстановления офлайн-данных.
+- Правило: loader **не ждёт сеть**. Он вызывает `void queryClient.prefetchQuery(opts)` для каждого запроса маршрута. Ждать данные (`return queryClient.ensureQueryData(opts)` внутри `.then`) loader может только если данные нужны для решения о redirect/404, `navigator.onLine === true` **и** кэш пуст (`queryClient.getQueryData(opts.queryKey) === undefined`); иначе он берёт кэш. Это касается и `SoloGuardLayout`. Компонент читает те же данные через `useQuery` и показывает существующие скелетоны. Из-за этого навигация не блокируется offline или на медленной сети (D2, `networkMode: 'offlineFirst'`).
 - Исключения — loader может бросить ошибку или сделать redirect:
   - Невалидный параметр (`groupId`/`parentActivityId` не UUID) → `throw data(null, { status: 404 })`. Невалидный `inviteToken` (формат `isInviteToken` из 01-1) **не** даёт 404: страница join показывает состояние `invalid` экрана подтверждения 01-2.
   - Redirect'ы guard'ов (§2.3).
@@ -256,10 +284,11 @@ RootLayout            errorElement=RootErrorBoundary; провайдеры UI, T
 
 Скрипт `apps/app/scripts/generate-routing-artifacts.ts` (запуск `node apps/app/scripts/…` без флагов, на Node 24 type stripping включён) читает `routeManifest.ts` и `apps/app/hosting.base.json`, а пишет:
 
-1. `apps/app/vercel.json` — `hosting.base.json` (headers, `/api` rewrites, `.well-known`) плюс сгенерированное:
-   - `redirects`: 301 для каждого `legacyPaths` → `/app/<path>` и фиксированные redirect'ы приглашений (§4.2);
-   - `rewrites` приложения: для каждого первого сегмента маршрута `/app/<segment>` и `/app/<segment>/:path*` → `/app/index.html`, плюс `/app` и `/app/` → `/app/index.html`;
-   - `rewrites` на сайт (catch-all `/:path*` → хост сайта по окружению, §4.1), **последним**, только если в `hosting.base.json` стоит `"siteCutover": true`. Поле вырезается из результата.
+1. `apps/app/vercel.json` — `hosting.base.json` (headers, `/api` rewrites, `vercel.passthrough`) плюс сгенерированное. **Один флаг `cutover` управляет всеми тремя группами** (A-06), поле вырезается из результата:
+   - `cutover: false` (04-2b … 04-3d): генератор выдаёт нынешние rewrites из `path` манифеста (`/dashboard/:path*` → `/app.html` и т. д.), без legacy-redirect'ов и без catch-all. Тест: результат семантически равен нынешнему `vercel.json` (§1.5a);
+   - `cutover: true` (04-4): `redirects` для каждого `legacyPaths` → `/app/<path>` и фиксированные redirect'ы приглашений (§4.2); `rewrites` приложения: для каждого первого сегмента маршрута `/app/<segment>` и `/app/<segment>/:path*` → `/app/index.html`, плюс `/app/` → `/app/index.html` и redirect `/app` → `/app/` (308; `/app` без слеша вне scope SW `/app/`, A-41); catch-all на сайт (`/:path*` → хост сайта по окружению, §4.1) **последним**. Кэш внешнего rewrite (A-34): app-проект создан до 2026-04-06, поэтому Vercel его по умолчанию не включает; эмиттер добавляет header-блок `x-vercel-enable-rewrite-caching: 1` на тот же `source`, что у catch-all. Это единственное разрешённое исключение из правила «нет app-headers на проксируемых путях» (служебный заголовок, CSP и прочие не затрагивает). Проверка на preview PR 04-4: повторный `curl -sI /` даёт `x-vercel-cache: HIT`; если нет — сайт считается некэшируемым через proxy, и это фиксируется в `DEPLOYMENT.md`;
+   - статус обратимых redirect'ов (legacy-пути, `/group/join`, `/friends/join`, `/oauth/callback`; §4.2) задаёт поле `legacyRedirectStatus`: `302` в 04-4 на время окна отката (браузеры кэшируют 301 бессрочно, и после отката на 04-3d кэшированный 301 `/dashboard` → `/app/dashboard` вместе с redirect'ом 04-3d `/app/*` → `/*` дал бы цикл), `301` — в 04-5a после окна отката.
+   - headers приложения (A-02): каждый header-блок `hosting.base.json` имеет `source` из списка `/app/(.*)`, `/api/(.*)`, `/sw.js`, `/.well-known/(.*)`, `/manifest.webmanifest`; `source: "/(.*)"` запрещён. До cutover (`cutover: false`) приложение отдаёт и публичные страницы, поэтому эмиттер добавляет к нынешним путям приложения и публичным путям те же headers, что сейчас (семантическое равенство с текущим файлом). После cutover проксируемые на сайт пути не получают ни одного header'а app-проекта: CSP, `Referrer-Policy` и `X-Frame-Options` для них задаёт только site-проект (§3.6).
 2. `apps/app/src/app/router/routing.generated.ts` — `PRIVATE_SPA_NAVIGATION_ALLOWLIST` вида `/^\/app(?:\/(?:dashboard|solo|group|activity|friends|settings|oauth|login|not-found)(?:\/|$)|\/?$)/`. Его импортирует `vite.config.ts` (заменяет `scripts/private-spa-navigation.ts`).
 3. Скрипт `npm run routes:generate -w @chipin/app` и шаг `routes:check` в `verify:full`.
 
@@ -268,30 +297,32 @@ RootLayout            errorElement=RootErrorBoundary; провайдеры UI, T
 - каждый `path` манифеста (с подставленными тестовыми параметрами) матчится SW-allowlist **и** хотя бы одним rewrite;
 - каждый `legacyPaths` имеет redirect, и ни один redirect не указывает на путь вне манифеста или сайта;
 - `vercel.config.test.js` (проверки `/api`) остаётся и работает на сгенерированном файле;
-- каждый ключ `ROUTE_MODULES` есть в манифесте и наоборот (это проверяет и TS, тест дублирует для понятного сообщения).
+- каждый ключ `ROUTE_MODULES` есть в манифесте и наоборот (это проверяет и TS, тест дублирует для понятного сообщения);
+- при `cutover: true` ни один header в `apps/app/vercel.json` не имеет `source`, который матчит `/`, `/ru/`, `/privacy`, `/join/group/x` (A-02);
+- при `cutover: false` результат семантически равен нынешнему `vercel.json`, legacy-redirect'ов и catch-all нет (A-06).
 
 Перечисленные rewrites, а не один `/app/:path*`, нужны, чтобы неизвестный `/app/foo` получал настоящий 404 (через catch-all на 404 сайта) и чтобы SW не отдавал на него offline-оболочку. Это поведение совпадает с нынешним (`private-spa-navigation.ts:1-2`).
 
 #### 2.10 i18n в приложении
 
 - В URL приложения префикса локали нет.
-- Ленивая загрузка: `i18next-resources-to-backend` с `(lng, ns) => import(`./locales/${lng}/${ns}.json`)`. Неймспейс `common` берётся из `@chipin/i18n-content/common/${lng}.json`. В entry ничего из JSON не попадает. `src/i18n/resources.ts` удаляется.
+- Ленивая загрузка: `i18next-resources-to-backend` с `(lng, ns) => ns === 'common' ? loadCommon(lng) : import(`./locales/${lng}/${ns}.json`)` (относительный шаблон `./` Vite бандлит через dynamic-import-vars). Неймспейс `common` берётся из `@chipin/i18n-content`: bare-специфайер с переменной (`import(`@chipin/i18n-content/common/${lng}.json`)`) Vite **не** бандлит и оставляет runtime-импортом с 404 (A-13). Поэтому пакет экспортирует `loadCommon(lng: SupportedLocale): Promise<Record<string, unknown>>` из `packages/i18n-content/src/loadCommon.ts`, построенный на `import.meta.glob('../common/*.json', { import: 'default' })` (ключ `../common/${lng}.json`; неизвестная локаль → reject). `package.json` пакета: `exports` `".": "./src/index.ts"`, `"./common/*": "./common/*"`. В entry ничего из JSON не попадает. `src/i18n/resources.ts` удаляется. Тест сборки: в `dist/app/assets` ровно 5 чанков `common`.
 - `SUPPORTED_LOCALES` и `DEFAULT_LOCALE` импортируются из `@chipin/i18n-content`, а `src/constants/locales.ts` становится реэкспортом.
-- Язык меняется **в одном месте**: `src/app/i18n/setAppLanguage.ts` вызывает `await i18n.loadLanguages(lng)`, затем `i18n.changeLanguage(lng)`, `document.documentElement.lang = lng` и `LocalStorage.set(locale)`. `i18n.changeLanguage` вне этого файла запрещён lint-правилом `no-restricted-syntax`.
+- Язык меняется **в одном месте**: `src/app/i18n/setAppLanguage.ts` возвращает цепочку без `await` (инвариант 7): `i18n.loadLanguages(lng).then(() => i18n.changeLanguage(lng)).then(() => { document.documentElement.lang = lng; LocalStorage.set(LS_KEY_LOCALE, lng); })`. `i18n.changeLanguage` вне этого файла запрещён lint-правилом `no-restricted-syntax`.
 - Начальный язык выбирается один раз при init, в таком порядке: `?locale=` на `/app/login` (приходит с сайта) → `LocalUser.settings.language` → сохранённая `locale` → `navigator.languages` → `en`. После загрузки профиля `useSyncUserSettings` вызывает `setAppLanguage` только если язык сервера отличается от текущего.
 - Пока язык грузится, работает `Suspense` в `RootLayout`. `PublicLocaleRoute` удаляется, вместе с ним уходит и баг с зависшим спиннером (D1).
 - В CI добавляется тест паритета ключей по всем локалям (аудит 02 §5).
 
 #### 2.11 Service worker
 
-- Регистрация одна: `useRegisterSW` из `virtual:pwa-register/react` в `src/app/pwa/ServiceWorkerManager.tsx`. `src/helpers/swUpdates.tsx` и ручной `register('/sw.js')` удаляются, `src/basics/PWABadge.tsx` (спека 05 его не переносит) переименовывается в `ServiceWorkerManager` (TODO в `PWABadge.tsx:6`). `workbox-window` удалён раньше в 02-B1 (в коде не используется). Это единственный PR, который меняет регистрацию SW.
+- Регистрация одна: `useRegisterSW` из `virtual:pwa-register/react` в `src/app/pwa/ServiceWorkerManager.tsx`. `src/helpers/swUpdates.tsx` и ручной `register('/sw.js')` удаляются; второй путь обновления `src/helpers/serviceWorkerRecovery.ts` (`SKIP_WAITING` postMessage, `:107-128`) тоже удаляется, а `GlobalErrorFallback.tsx:19` вызывает `updateServiceWorker(true)` из `ServiceWorkerManager` (A-26), `src/basics/PWABadge.tsx` (спека 05 его не переносит) переименовывается в `ServiceWorkerManager` (TODO в `PWABadge.tsx:6`). `workbox-window` удалён раньше в 02-B1 (в коде не используется). Это единственный PR, который меняет регистрацию SW.
 - Конфиг VitePWA: `scope: '/app/'`, `base: '/app/'`, манифест `start_url: '/app/'`, `scope: '/app/'`, **`id: '/'` не менять**: id задаёт идентичность установленного PWA, и при смене id пользователь получит второе приложение. `navigateFallback: '/app/index.html'`, allowlist из `routing.generated.ts`. `globPatterns` без `html` сайта (его в `dist/app` нет); `webp` в паттерне уже добавлен в 05-1. `registerType: 'prompt'`, `skipWaiting: false`, `clientsClaim: true`, `runtimeCaching` нет (кэш API — дело TanStack persister, спека 03).
 - Политика обновления:
   1. Обнаружение: при старте, на `visibilitychange → visible` (`registration.update()`), и раз в час, если online.
   2. Prompt: тост «Доступно обновление» с кнопками «Обновить» и «Позже». «Позже» скрывает тост до следующего `visible` после 4 ч.
   3. Принудительно: если ожидающий воркер висит **больше 24 ч** с первого обнаружения (время в `localStorage`), обновление применяется само в ближайшей безопасной точке. Безопасная точка — смена маршрута или `visible`, при этом нет открытой модалки с грязным черновиком. Outbox хранится в IndexedDB и переживает reload (спека 03).
-  4. Минимальная версия: экран «Нужно обновить приложение» (блокирующий, одна кнопка `updateServiceWorker(true)` или reload) и функция `showUpdateRequired()` живут здесь (04-2d, за флагом). Детект — спека 03 (03-20): ответ 426 `CLIENT.OUTDATED` или заголовок `X-Min-Client-Version` больше `APP_VERSION` (semver), контракт BE-03-5. Сейчас (D19, вариант A) работает только п. 3. До включения outbox (03-17) обязательны BE-03-5 (новый заголовок `X-Client-Version` + `MIN_CLIENT_VERSION` → 426) и 03-20 (заголовок одной строкой в axios-interceptor из `APP_VERSION`, `src/constants/version.ts`, Vite `define`); экран п. 4 тогда включается. Правило 72 ч: `MIN_CLIENT_VERSION` поднимается только после ≥ 72 ч новой FE-версии в prod (спека 03 §7).
-- Миграция со старого SW (scope `/`): по пути `/sw.js` (`apps/app/public-root/sw.js` → `dist/sw.js`) отдаётся kill-switch воркер. Он делает `skipWaiting()`, на `activate` удаляет все caches с префиксом `workbox-precache`, выполняет `self.registration.unregister()` и перезагружает свои клиенты `client.navigate(client.url)`. Хранить не меньше 6 месяцев после cutover. Заголовок `Cache-Control: no-cache` для `/sw.js` и `/app/sw.js`.
+  4. Минимальная версия: экран «Нужно обновить приложение» (блокирующий, одна кнопка `updateServiceWorker(true)` или reload) и функция `showUpdateRequired()` живут здесь (04-2d, за флагом). Экран показывается, когда гейт outbox из спеки 03 в состоянии `outdated` (replay остановлен до обновления); `showUpdateRequired()` переводит гейт в это состояние, outbox не удаляется. Детект — спека 03 (03-20): ответ 426 `CLIENT.OUTDATED` или заголовок `X-Min-Client-Version` больше semver-ядра `APP_VERSION` (сравнение только `major.minor.patch`, суффикс `-dev-<sha>` отбрасывается, §1.2), контракт BE-03-5. Сейчас (D19, вариант A) работает только п. 3. До включения outbox (03-17) обязательны BE-03-5 (новый заголовок `X-Client-Version` + `MIN_CLIENT_VERSION` → 426) и 03-20 (заголовок одной строкой в axios-interceptor из `APP_VERSION`, `src/constants/version.ts`, Vite `define`); экран п. 4 тогда включается. Правило 72 ч: `MIN_CLIENT_VERSION` поднимается только после ≥ 72 ч новой FE-версии в prod (спека 03 §7).
+- Миграция со старого SW (scope `/`): по пути `/sw.js` (`apps/app/public-root/sw.js` → `dist/sw.js`) отдаётся kill-switch воркер. Он делает `skipWaiting()`, на `activate` удаляет **только caches старой регистрации**: имена из `caches.keys()`, которые оканчиваются на `-${self.registration.scope}` (то есть ровно `-https://chipin.one/`; Workbox включает scope в имя: `workbox-precache-v2-<scope>`). Cache Storage общий для origin, поэтому удаление по префиксу `workbox-precache` стёрло бы precache нового SW (`workbox-precache-v2-https://chipin.one/app/`) и офлайн (D2) (A-04). Затем выполняет `self.registration.unregister()` и перезагружает свои клиенты `client.navigate(client.url)`. Хранить не меньше 6 месяцев после cutover. Заголовок `Cache-Control: no-cache` для `/sw.js` и `/app/sw.js`.
 
 ### 3. Сайт (Astro, D8)
 
@@ -304,7 +335,8 @@ src/
   i18n/                   ui.ts (t(locale, key)), locales/<locale>/{landing,meta,join}.json
   layouts/BaseLayout.astro  <head>: title, description, canonical, hreflang, OG, tokens.css
   components/             Header.astro, Footer.astro, LanguageLinks.astro, Hero.astro, ...
-  content/                config.ts + legal/, help/, blog/ (md/MDX)
+  content.config.ts       схемы коллекций (Astro 7: `src/content.config.ts`, не `src/content/config.ts`)
+  content/                legal/, help/, blog/ (md/MDX)
   pages/
     index.astro                         en home
     [locale]/index.astro                ru/es/pt-br/pt-pt home (getStaticPaths из locales)
@@ -320,16 +352,20 @@ public/                   robots.txt, favicon.*, og/*.png
 
 - `@chipin/i18n-content/locales.ts` экспортирует `SUPPORTED_LOCALES`, `DEFAULT_LOCALE` и `LOCALE_PATH: { en: '', ru: 'ru', es: 'es', 'pt-BR': 'pt-br', 'pt-PT': 'pt-pt' }`. Значения совпадают с `LOCALE_PREFIX` (`publicRouteManifest.ts:11-13`).
 - `astro.config.ts`: `i18n: { defaultLocale: 'en', locales: ['en', 'ru', 'es', { path: 'pt-br', codes: ['pt-BR'] }, { path: 'pt-pt', codes: ['pt-PT'] }], routing: { prefixDefaultLocale: false, redirectToDefaultLocale: false } }`. Список строится из `LOCALE_PATH`, а не пишется руками.
-- URL не меняются: `/`, `/privacy`, `/terms`, `/ru/`, `/ru/privacy` … `/pt-pt/terms` (15 URL). Redirect'ы для публичных страниц не нужны.
+- URL не меняются: `/`, `/privacy`, `/terms`, `/ru/`, `/ru/privacy` … `/pt-pt/terms` (15 URL; домашние страницы локалей — со слешем, остальные — без, как в `publicRouteManifest.ts:14-19`). Дубли по слешу (A-33): `trailingSlash: 'ignore'` отдаёт и `/privacy`, и `/privacy/` с 200, поэтому `apps/site/hosting.base.json` получает сгенерированные из `LOCALE_PATH` × страницы redirect'ы 301: `/<page>/` → `/<page>` для не-домашних и `/<locale>` → `/<locale>/` для домашних локалей. Одна форма URL = canonical.
 - hreflang в `BaseLayout`: для каждой страницы `<link rel="alternate" hreflang="<code>">` на все локали, у которых есть перевод (`getRelativeLocaleUrl`), плюс `x-default` → en. Canonical — абсолютный `https://chipin.one/...` (`site` в конфиге). Хост `site.chipin.one` никогда не попадает в canonical.
 - `@astrojs/sitemap` с `i18n: { defaultLocale: 'en', locales: { en: 'en', ru: 'ru', … 'pt-br': 'pt-BR' } }` пишет `sitemap-index.xml`. `robots.txt` указывает `Sitemap: https://chipin.one/sitemap-index.xml`. `/sitemap.xml` получает 301 на `/sitemap-index.xml`.
-- Проверка сборки (перенос `prerender-public.mjs:55-70`): у каждой страницы есть title и description во всех локалях, в HTML нет строк, похожих на токены. Реализуется интеграцией `astro:build:done` в `apps/site/integrations/seoGuard.ts`, которая валит сборку.
+- Проверка сборки (перенос `prerender-public.mjs:55-70`): у каждой страницы есть title и description во всех локалях, в HTML нет строк, похожих на токены. Реализуется интеграцией `astro:build:done` в `apps/site/integrations/seoGuard.ts`, которая валит сборку. Паритет ключей сайта (A-32): тест `apps/site/src/i18n/parity.test.ts` сверяет ключи всех `apps/site/src/i18n/locales/<locale>/*.json`, включая `join.json`, с `en`; запускается в site-шаге CI.
 
 #### 3.3 Content collections
 
-`src/content/config.ts`:
+`src/content.config.ts` (A-14: в astro 7.4 конфиг коллекций — `src/content.config.ts`; файл `src/content/config.ts` молча игнорируется; `z` импортируется из `astro/zod`). В 04-3a — `astro@^7.4`.
 
 ```ts
+import { defineCollection } from 'astro:content';
+import { glob } from 'astro/loaders';
+import { z } from 'astro/zod';
+
 const base = z.object({
     title: z.string().min(1),
     description: z.string().min(50).max(160),
@@ -347,7 +383,7 @@ export const collections = {
 };
 ```
 
-Файлы лежат как `<collection>/<locale>/<slug>.md(x)`. `draft: true` не попадает в сборку и в sitemap. Страницы без перевода не генерируются, и hreflang на них не ставится (на английский не подменяются).
+Файлы лежат как `<collection>/<locale-path>/<slug>.md(x)`, папка локали — в форме пути (`en`, `ru`, `es`, `pt-br`, `pt-pt`, значения `LOCALE_PATH`), поле `locale` во frontmatter — код (`pt-BR`) (A-32). Критерий 04-3a: фикстура с невалидным frontmatter валит `astro build`. `draft: true` не попадает в сборку и в sitemap. Страницы без перевода не генерируются, и hreflang на них не ставится (на английский не подменяются).
 
 #### 3.4 Какие страницы переезжают
 
@@ -369,20 +405,21 @@ export const collections = {
 - Страница `noindex` (`<meta name="robots" content="noindex">`), не попадает в sitemap, `Referrer-Policy: no-referrer`, чтобы токен не утёк в Referer.
 - Inline-скрипт:
   1. Достаёт token из `location.pathname` и проверяет его тем же regex, что хотфикс D1. Формат токена — доменная константа, ей не место ни в `packages/tokens`, ни в `packages/i18n-content`, поэтому regex копируется в `apps/site/src/lib/inviteToken.ts`. Тест в `apps/app` импортирует оба regex и падает при расхождении.
-  2. Если токен валиден, кнопка «Открыть приглашение» получает href из явной таблицы `{ group: '/app/group/join/', friend: '/app/friends/join/' }[kind] + encodeURIComponent(token)`. Если невалиден, страница показывает «Ссылка повреждена» и ссылку на `/`.
-  3. Язык: страница содержит строки всех 5 локалей (≈6 строк × 5) и выбирает по `navigator.languages`. Префиксных `/ru/join/...` нет, потому что ссылки строит приложение без локали.
+  2. Если токен валиден, кнопка «Открыть приглашение» получает href `PUBLIC_APP_ORIGIN` (§4.4) + явная таблица `{ group: '/app/group/join/', friend: '/app/friends/join/' }[kind] + encodeURIComponent(token)`. Если невалиден, страница показывает «Ссылка повреждена» и ссылку на `/`.
+  3. Язык: страница содержит строки всех 5 локалей (≈6 строк × 5) из `apps/site/src/i18n/locales/<locale>/join.json` (те же JSON, что у остального сайта, проверяются тестом паритета §3.2; inline-строк в `.astro` нет) и выбирает по `navigator.languages`. Префиксных `/ru/join/...` нет, потому что ссылки строит приложение без локали.
 - Автоматического перехода в приложение **нет**, только явная кнопка. Приложение на `/app/group/join/:token` показывает экран подтверждения из спеки 01 (PR 01-2: generic-текст и кнопка «Вступить»; имя группы — только после BE-01-3) и только после клика вызывает `joinGroup`. Неавторизованный пользователь проходит `/app/login?returnTo=…` и возвращается на экран подтверждения.
 - В приложении `buildGroupInviteLink` и `buildFriendInviteLink` (`src/helpers/url.ts:46-50`) меняются на `${origin}/join/group/${encodeURIComponent(t)}` и `/join/friend/…`.
 
 #### 3.6 Стили, islands, SW, 404, аналитика
 
-- Стили: только `@chipin/tokens/tokens.css` (CSS-переменные, шрифты из `packages/tokens/fonts`, `@font-face` self-hosted) и scoped `<style>` в `.astro`. Radix Themes, styled-components и Tailwind не используются. Тёмная тема — тот же механизм, что в приложении: `THEME_INIT_SCRIPT` из `@chipin/tokens/theme-init` (спека 05, PR 05-3) inline в `<head>` ставит `html.light|dark` по ключу `Chipin_theme` и `prefers-color-scheme`.
+- Стили: только `@chipin/tokens/radix-colors.css` + `@chipin/tokens/tokens.css` (раскладка пакета — спека 05 §1; шрифт системный, webfont нет) и scoped `<style>` в `.astro`. Favicon (A-28): `BaseLayout` ставит `<link rel="icon" href={faviconUrl}>`, где `faviconUrl` — `import faviconUrl from '@chipin/tokens/assets/favicon.svg?url'` (Astro выпускает хешированный файл в `/_astro/`); `/favicon.*` на домене отдаёт сайт через catch-all, иконки манифеста PWA — `/app/…` из app-проекта. Radix Themes, styled-components и Tailwind не используются. Тёмная тема — тот же механизм, что в приложении: `THEME_INIT_SCRIPT` из `@chipin/tokens/theme-init` (спека 05, PR 05-3) inline в `<head>` ставит `html.light|dark` по ключу `Chipin_theme` и `prefers-color-scheme`.
 - React-islands — только для виджета, которому нужно состояние и которого нельзя сделать на `<script>` до ~50 строк. Каждое добавление island'а — отдельный PR с обоснованием. Директивы только `client:visible` или `client:idle`, `client:load` запрещён. Бюджет JS на страницу сайта ≤ 30 KB gz (проверка в `seoGuard`). Сейчас island'ов **ноль**.
-- Залогиненный на `/` и `/<locale>/`: inline-скрипт в `<head>` главной проверяет `localStorage` `Chipin_authSessionHint` (`src/constants/localstorage.ts:7`) и делает `location.replace('/app/')`. Это повторяет `HomeRouteGuard`. Страница при этом отдаётся всем одинаково, для краулеров ничего не меняется.
+- Залогиненный на `/` и `/<locale>/`: inline-скрипт в `<head>` главной проверяет `localStorage` `Chipin_authSessionHint` (`src/constants/localstorage.ts:7`) и делает `location.replace('/app/')`. То же при `matchMedia('(display-mode: standalone)').matches` (A-41): iOS не обновляет манифест установленного PWA, и разлогиненный пользователь в standalone иначе попадёт на маркетинговый сайт; `/app/` сам отправит на `/app/login`. Это повторяет `HomeRouteGuard`. Страница при этом отдаётся всем одинаково, для краулеров ничего не меняется.
 - SW нет. Сайт не регистрирует воркер. Kill-switch `/sw.js` отдаёт проект приложения (§2.11).
 - 404: `src/pages/404.astro` с текстом на en и ссылками на локали. Vercel отдаёт его со статусом 404 для любого неизвестного пути, который пришёл через catch-all.
 - Аналитика (D18, оставлена пока): сайт подключает только `<script defer src="/_vercel/insights/script.js">`. Путь `/_vercel/*` обслуживает проект, который держит домен (app), поэтому статистика сайта и приложения в одном проекте. Speed Insights на сайте — тем же способом. Sentry на сайте не ставится.
-- CSP сайта задаётся отдельно в `apps/site/vercel.json`: базовые директивы те же, что у приложения после 01-1 (`object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`, без Google Fonts), плюс `script-src 'self' 'sha256-…'` для **всех** inline-скриптов (theme-init из 05-3, редирект залогиненного, `/join/*`); хеши считает `seoGuard` и пишет в `vercel.json` при сборке, проверка «закоммиченное = посчитанное». CSP приложения после 04-2b живёт в `apps/app/hosting.base.json` (туда же 05-3 кладёт хеш theme-init).
+- Токен инвайта не уходит в аналитику (A-15, D1): `BaseLayout` подключает скрипты analytics/speed-insights только при `includeAnalytics !== false`, а `join/group.astro` и `join/friend.astro` передают `includeAnalytics={false}`. Дополнительно (review B M13) на всех страницах сайта перед скриптом аналитики стоит inline-скрипт `window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); }; window.va('beforeSend', e => ({ ...e, url: e.url.replace(/\/join\/(group|friend)\/[^/?#]+/, '/join/$1/[token]') }));` — его sha256 входит в CSP сайта (`seoGuard`, §3.6). Тест `apps/site/src/lib/analyticsRedact.test.ts`: `/join/group/abc?x=1` → `/join/group/[token]?x=1`. `seoGuard` валит сборку, если HTML под `join/` содержит `_vercel/insights` или `_vercel/speed-insights`. Спекам 01 и 03 ничего менять не нужно: app-санитайзер `sanitizeTelemetryEvent` остаётся как есть.
+- CSP сайта — **только** в site-проекте (`apps/site/hosting.base.json` → `apps/site/vercel.json`); после cutover app-проект не ставит на проксируемые пути ни одного header'а (§2.9, A-02), поэтому браузер видит ровно одну CSP. Site-проект задаёт для своих путей CSP, `Referrer-Policy: strict-origin-when-cross-origin` (для `/join/(.*)` — `no-referrer`), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`. Базовые директивы те же, что у приложения после 01-1 (`object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`, без Google Fonts), плюс `script-src 'self' 'sha256-…'` для **всех** inline-скриптов (theme-init из 05-3, редирект залогиненного, `/join/*`); хеши считает `seoGuard` и пишет в `vercel.json` при сборке, проверка «закоммиченное = посчитанное». CSP приложения после 04-2b живёт в `apps/app/hosting.base.json` (туда же 05-3 кладёт хеш theme-init).
 
 ### 4. Маршрутизация домена
 
@@ -390,7 +427,8 @@ export const collections = {
 
 Vercel сначала проверяет файлы проекта, потом `redirects`, потом `rewrites` по порядку.
 
-1. Файлы app-проекта: `/app/**` (ассеты, `index.html`, `sw.js`, manifest), `/sw.js` (kill-switch), `/.well-known/assetlinks.json`.
+1. Файлы app-проекта: `/app/**` (ассеты, `index.html`, `sw.js`, manifest), `/sw.js` (kill-switch), `/.well-known/assetlinks.json` (оба корневых файла кладёт `copy-root-files.mjs`, §2.1).
+   Headers app-проекта действуют только на эти пути и на `/api/(.*)` (§2.9); проксируемые на сайт ответы несут только headers сайта.
 2. `redirects` (301), §4.2.
 3. `rewrites`:
    - `/api/:path*` → backend по хосту (как сейчас, 3 правила);
@@ -415,22 +453,25 @@ Catch-all вместо перечисления `/`, `/<locale>/*`, `/help/*`, `
 | `/not-found` | `/404` | фиксированное |
 | `/sitemap.xml` | `/sitemap-index.xml` | фиксированное |
 | `/manifest.webmanifest` | `/app/manifest.webmanifest` | фиксированное |
+| `/index.html`, `/app.html` | `/`, `/app/` | фиксированное (A-33: индексированные варианты нынешних html-entry) |
+| `/app` | `/app/` (308) | фиксированное (A-41: `/app` вне scope SW) |
 | `/`, `/privacy`, `/terms`, `/ru/…`, `/es/…`, `/pt-br/…`, `/pt-pt/…` | **без изменений** (200 с сайта) | — |
 
-301 вместо 308: все исходные запросы — GET-навигации, а 301 лучше понимают старые краулеры. В Vercel это `"statusCode": 301`.
+301 вместо 308: все исходные запросы — GET-навигации, а 301 лучше понимают старые краулеры. В Vercel это `"statusCode": 301`. Исключение — окно отката: в 04-4 все redirect'ы, у которых в 04-3d есть обратное правило (строки «manifest», `/group/join`, `/friends/join`, `/oauth/callback`), отдаются с `302` (`legacyRedirectStatus`, §2.9), в 04-5a переключаются на `301`. Причина: браузер кэширует 301 бессрочно, и после отката на 04-3d пара «кэшированный 301 `/group/join/<t>` → `/join/group/<t>`» + «redirect 04-3d `/join/group/<t>` → `/group/join/<t>`» дала бы цикл. `/sitemap.xml`, `/manifest.webmanifest`, `/index.html`, `/app.html`, `/not-found` обратных правил не имеют и сразу 301.
 
 #### 4.3 Индексация
 
 - `apps/app/vercel.json` headers: `/app/(.*)` → `X-Robots-Tag: noindex, nofollow`.
 - `robots.txt` сайта: `Disallow: /app/`, `Disallow: /api/`, `Disallow: /join/`, а старые `Disallow` на `/dashboard` и т. п. убираются, потому что там теперь 301.
 - Проверка в критериях: на prod `curl -I` по `/app/dashboard` показывает `X-Robots-Tag`, по `/ru/` — `200` без noindex.
+- Прямой хост `site.chipin.one` — дубль `chipin.one`; защищает canonical на `https://chipin.one/...` (§3.2). `X-Robots-Tag: noindex` по хосту `site*` **отложен** (A-33): при внешнем rewrite запрос к сайту приходит с Host `site.chipin.one`, и такой заголовок закрыл бы от индексации и основной сайт; условие по `x-forwarded-host` не проверено на Hobby. Пересмотреть, если Search Console покажет `site.chipin.one` в индексе.
 
 #### 4.4 OAuth
 
 - Новый `redirect_to`: `<origin>/app/oauth/callback?returnTo=<router-path>`. `returnTo` хранится **без** `/app` (это путь роутера). `resolveOAuthReturnTo` (`src/helpers/url.ts:7-26`) принимает обе формы и снимает префикс `/app`, а callback-путь сравнивает в обеих формах.
 - Backend: allowlist проверяет только origin (`OAuthRedirectValidator.kt:21-27`). Смена пути **не требует** изменений в `OAUTH_ALLOWED_REDIRECT_ORIGINS`, origin `chipin.one` и `dev.chipin.one` остаются. `OAUTH_ALLOWED_VERCEL_PREVIEW_PROJECTS` привязан к имени Vercel-проекта, поэтому app-проект **не переименовывать**. Google Console не затрагивается: в Google зарегистрирован callback backend'а, а не фронта (`OAuthPlugin.kt:28-36`).
 - Логины в процессе cutover: backend вернёт пользователя на старый `/oauth/callback?code=…`, 301 отправит на `/app/oauth/callback?code=…`, `code` сохранится.
-- С сайта кнопка «Войти/Начать» — обычная ссылка `/app/login?locale=<locale>`. Там приложение вызывает `getSocialAuthUrl` с `locale` для регистрации (`url.ts:39-41`, `resolveRegistrationLocale` читает `?locale` вместо публичного пути).
+- С сайта кнопка «Войти/Начать» — ссылка `${PUBLIC_APP_ORIGIN}/app/login?locale=<locale>` (A-42). `PUBLIC_APP_ORIGIN` — env site-проекта: prod `https://chipin.one`, dev и preview `https://dev.chipin.one`; без него вход с `site*.chipin.one` или preview сайта давал бы 404 (в site-проекте приложения нет). Тот же origin используют кнопка `/join/*` и редирект залогиненного. Там приложение вызывает `getSocialAuthUrl` с `locale` для регистрации (`url.ts:39-41`, `resolveRegistrationLocale` читает `?locale` вместо публичного пути).
 
 #### 4.5 Ссылки, которые живут вне приложения
 
@@ -462,11 +503,11 @@ Catch-all вместо перечисления `/`, `/<locale>/*`, `/help/*`, `
 - **`base: '/app/'` и абсолютные пути.** Всё, что ссылается на `/pwa-*.png`, `/favicon.*` и прочее из `public/`, должно идти через `import.meta.env.BASE_URL`. Правило lint: строковый литерал, начинающийся с `/` и оканчивающийся на `.png|.svg|.ico|.webp`, запрещён в `apps/app/src`.
 - **Session hint на сайте** — это только подсказка. Если сессия протухла, `/app/` отправит на `/app/login`, цикла нет: `/app/login` с сайта не редиректит.
 - **Порядок redirect'ов**: `/group/join/:token` должен стоять раньше `/group/:path*`. Тест генератора проверяет порядок.
-- **Внешний rewrite** добавляет к запросам сайта hop через edge. Статика кэшируется на CDN app-проекта по заголовкам сайта: сайт отдаёт `Cache-Control: public, max-age=0, must-revalidate` для HTML и `immutable` для `/_astro/*`.
+- **Внешний rewrite** добавляет к запросам сайта hop через edge. Кэш на CDN app-проекта включается явно (`x-vercel-enable-rewrite-caching`, §2.9; проект создан до 2026-04-06, A-34) и работает по заголовкам сайта: сайт отдаёт `Cache-Control: public, max-age=0, must-revalidate` для HTML и `immutable` для `/_astro/*`.
 - **Preview-деплой app** проксирует сайт на `site-dev.chipin.one`, то есть на dev-сборку сайта, а не на preview той же ветки. Для PR, которые меняют оба приложения, сайт проверяется на собственном preview-URL.
-- **Telemetry/Sentry**: шаблоны в `helpers/telemetry.ts:24-25` маскируют токены по старым путям. Их нужно обновить на `/app/group/join/:inviteToken` и `/join/group/:token` в том же PR, иначе токены утекут (связь с D1).
+- **Telemetry/Sentry**: шаблоны в `src/constants/telemetry.ts` маскируют токены по старым путям. В 04-2g (до cutover) они получают обе формы — старые и `/app/group/join/:inviteToken`, `/app/friends/join/:inviteToken`, `/join/group/:token`, `/join/friend/:token`, иначе после 04-4 токены утекут (связь с D1); старые формы удаляются в 04-5a.
 - **`vi.mock('…')` по строковым путям** при переносе в `src/app/router` ломаются. Переносить вместе с тестами в одном PR.
-- **Хотфикс D1** (стоп-спиннер `PublicLocaleRoute`, PR 01-3) делается на текущем коде **до** этой спеки. Его тест удаляется вместе с `PublicLocaleRoute` в фазе 5.
+- **Хотфикс D1** (стоп-спиннер `PublicLocaleRoute`, PR 01-3) делается на текущем коде **до** этой спеки. Его тест удаляется вместе с `PublicLocaleRoute` в 04-5a.
 
 ## Расширение в будущем
 
@@ -489,33 +530,42 @@ Catch-all вместо перечисления `/`, `/<locale>/*`, `/help/*`, `
 
 ## Фазы / PR
 
-Зависимости: фаза 0 после merge FE#497 (оба меняют `.github/workflows`) и после хотфикса D1. PR ≤ ~400 строк diff'а, rename считается как 0.
+Зависимости: 04-0a после merge FE#497 (оба меняют `.github/workflows`) и после хотфикса D1. PR ≤ ~400 строк diff'а, rename и сгенерированные файлы (`vercel.json`, `routing.generated.ts`) считаются как 0. Группа `04-2a1–a4` в других спеках упоминается как «04-2a» (завершение группы = 04-2a4); «04-0» = 04-0a.
 
 | PR | Содержание | Зависит | Параллельно с |
 |---|---|---|---|
-| 04-0 | Механический перенос в `apps/app` + корневой workspace (§1.6). Владелец в момент merge ставит Root Directory = `apps/app` | FE#497 (cutover на master выполнен, `e6d2f2e`), 01-1…01-3; рекомендуемо 02-C2c и 02-C5 | — (замораживает пути на час: открытые PR rebase'ятся, git сам распознаёт rename) |
-| 04-1a | `packages/i18n-content` (locales + common). `packages/tokens` здесь **не** создаётся — его целиком делает 05-2 | 04-0 | 02, 03, 05-2 |
-| 04-1b | CI: path filters, `ci-ok`, пути артефактов release-QA (§1.4) | 04-0 | 04-1a |
-| 04-2a | Манифест + `routeModules` + `route.ts` по страницам + `createAppRouter` с layout-guard'ами, `errorElement`, `ScrollRestoration`, `useDocumentTitle`. **Пока без** `basename` (пути старые), публичные маршруты временно в манифесте как `access: 'public'` через `PublicLocaleRoute` | 04-1a | спека 03 (loaders пока без prefetch) |
-| 04-2b | Генератор артефактов + тест синхронизации; `vercel.json` и allowlist становятся сгенерированными (содержимое то же, CSP переезжает в `hosting.base.json`) | 04-2a | 04-3a |
-| 04-2c | Lazy i18n + `setAppLanguage` + паритет ключей (единственный владелец lazy-load локалей) | 04-1a | 04-2b, 04-3a |
-| 04-2d | Единая регистрация SW + политика обновления (п. 1–3; экран п. 4 за флагом до BE-03-5) | 04-2a | 04-2c |
-| 04-2e | Loaders с prefetch по фабрикам спеки 03 | 04-2a, 03-5 и PR миграции соответствующих сторов (03-8…03-12) | — |
-| 04-3a | `apps/site`: каркас Astro, i18n, BaseLayout, 404, robots, sitemap, seoGuard; деплой на `site-dev.chipin.one`/`site.chipin.one` | 04-1a, 04-1b, 05-2 | 04-2* |
+| 04-0a | Механический перенос в `apps/app` + корневой workspace (§1.6 п. 1–5, 7) скриптом `scripts/move-to-workspace.sh`; version-скрипты считают корень от `import.meta.dirname`, prod-версия = чистая `x.y.z` (§1.2). Владелец в момент merge ставит Root Directory = `apps/app` | FE#497 (cutover на master выполнен, `e6d2f2e`), 01-1…01-3; рекомендуемо 02-C2c и 02-C5 | — (замораживает пути на час: открытые PR rebase'ятся, git сам распознаёт rename) |
+| 04-0b | Замена путей `src/` → `apps/app/src/` в `AGENTS.md`, `CLAUDE.md`, `docs/**`, `DEPLOYMENT.md` (§1.6 п. 6) | 04-0a | 04-1a, 04-1b |
+| 04-1a | `packages/i18n-content` (locales + common + `loadCommon`, §2.10) + `tsconfig.json` пакета. `packages/tokens` здесь **не** создаётся — его целиком делает 05-2 | 04-0a | 02, 03, 05-2 |
+| 04-1b | CI: режимы `docs-only\|app\|site\|full` в `ci-gate-policy.mjs` + тесты, условные шаги в job `frontend-ci`, пути артефактов release-QA (§1.4) | 04-0a | 04-1a |
+| 04-2a1 | Манифест `routeManifest.ts` + `routeModules.ts` + `route.ts` по страницам (named `Component`); роутер ещё старый, `route.ts` пока никем не импортируется, кроме теста «каждый id имеет модуль» | 04-1a | спека 03 |
+| 04-2a2 | `createAppRouter` + `RootLayout`/`AuthLayout`/`InternalLayout`/`SoloGuardLayout`, `session.ts` из `useCheckSignIn` (`authReady` с таймаутом 5 с), `hydrateFallbackElement`, `main.tsx` на `RouterProvider` без `BrowserRouter`. **Без** `basename` (пути старые); неавторизованный — как сейчас на лендинг (на `/login` переключает 04-2f); публичные маршруты временно в манифесте как `access: 'public'` через `PublicLocaleRoute`; перенос тестов guard'ов | 04-2a1 | спека 03 (loaders пока без prefetch) |
+| 04-2a3 | `RouteErrorView` + `errorElement` на корне и `InternalLayout`, `ScrollRestoration`, `handle.meta` + `useDocumentTitle` вместо `useRoutesMeta` для маршрутов приложения | 04-2a2 | 04-2c |
+| 04-2a4 | Удаление старого роутера: `AppRouter`, `ProtectedRoute`, `HomeRouteGuard`, `SoloRouteGuard`, `internal/useConnect.ts` и их тесты (`PublicLocaleRoute` живёт до 04-5a) | 04-2a3 | 04-2b |
+| 04-2b | Генератор артефактов + тест синхронизации; `vercel.json` и allowlist становятся сгенерированными из `hosting.base.json` (схема §1.5a, `cutover: false`, scoped headers §2.9; содержимое семантически то же) | 04-2a1 | 04-3a |
+| 04-2c | Lazy i18n (`loadCommon`) + `setAppLanguage` + паритет ключей (единственный владелец lazy-load локалей) | 04-1a | 04-2b, 04-3a |
+| 04-2d | Единая регистрация SW + политика обновления (п. 1–3; экран п. 4 за флагом до BE-03-5); удаление `serviceWorkerRecovery.ts` | 04-2a2 | 04-2c |
+| 04-2e | Loaders с prefetch по фабрикам спеки 03 | 04-2a4, 03-5 и PR миграции соответствующих сторов (03-8…03-12) | — |
+| 04-2f | Подготовка cutover, часть 1 (путь-агностично): экран `login` на `/login` (`?returnTo`, `?locale`), `requireSession` → `/login`; `SITE_PATHS` вместо `ROUTES.HOME/PRIVACY/TERMS` + lint (§2.1) | 04-2a4 | 04-2g |
+| 04-2g | Подготовка cutover, часть 2: `APP_BASE = ''` + `app-base.config.ts`, `getRouterPathname`/`stripAppBase` (no-op) + lint `window.location.pathname`; telemetry-шаблоны в обеих формах; `BASE_URL` для ассетов + lint литералов `/…png\|svg\|ico\|webp`; `resolveOAuthReturnTo` в обеих формах; `public-root/` + `copy-root-files.mjs` (переезд `.well-known`) | 04-2a4 | 04-2f |
+| 04-3a | `apps/site`: каркас Astro (`astro@^7.4`, `content.config.ts`), i18n + тест паритета, BaseLayout, 404, robots, sitemap, seoGuard, `astro check`; создание `chipin-site` с релизной моделью §1.5 (владелец); деплой на `site-dev.chipin.one`/`site.chipin.one` | 04-1a, 04-1b, 05-2 | 04-2* |
 | 04-3b | Сайт: главная (5 локалей) + legal-коллекция (privacy/terms) — паритет текстов с текущими страницами; theme-init из 05-3 | 04-3a, 05-3 | 04-2* |
-| 04-3c | Сайт: `/join/group`, `/join/friend` + тест равенства regex токена | 04-3a, 01-2 | 04-3b |
-| 04-4 | **Cutover**: `basename '/app'`, `base '/app/'`, scope `/app/`, `/app/login`, kill-switch `/sw.js`, redirect'ы §4.2, `siteCutover: true`, новые invite-ссылки, OAuth `redirect_to`, telemetry-шаблоны | 04-2b, 04-2d, 04-3b, 04-3c | — |
-| 04-5a/b | Удаление (§5) — двумя PR: (a) public-routes + prerender + scripts; (b) landing/legal страницы, store, дубли | 04-4 + 7 дней без отката | спеки 02, 05 |
+| 04-3c | Сайт: `/join/group`, `/join/friend` (без аналитики + `beforeSend`-редакция в `BaseLayout`, `PUBLIC_APP_ORIGIN`) + тест равенства regex токена | 04-3a, 01-2 | 04-3b |
+| 04-3d | **Цель отката** (старая раскладка, `cutover: false`): группа `preCutoverCompat` в `hosting.base.json`, которую генератор выдаёт только при `cutover: false` — `/join/group/:t` → `/group/join/:t`, `/join/friend/:t` → `/friends/join/:t`, `/app/oauth/callback` → `/oauth/callback` (query сохраняется), `/app/:path*` → `/:path*` (все 302); `public-root/app/sw.js` = kill-switch для scope `/app/` (удаляет только caches с суффиксом `-https://chipin.one/app/`). Promote в prod **последним** перед 04-4 | 04-2b, 04-2g | 04-3b, 04-3c |
+| 04-4 | **Cutover — только переключения**: `APP_BASE = '/app'`, `cutover: true` + `routes:generate`, `legacyRedirectStatus: 302`, kill-switch `public-root/sw.js`, удаление `public-root/app/sw.js` (иначе он перезапишет настоящий `/app/sw.js`), новые invite-ссылки (`url.ts:46-50`), OAuth `redirect_to` на `/app/oauth/callback`. Проверка на preview до merge (критерий 9) | 04-2b, 04-2d, 04-2f, 04-2g, 04-3b, 04-3c, 04-3d (в prod), BE-04-2 | — |
+| 04-5a/b | Удаление (§5) — двумя PR: (a) public-routes + prerender + scripts, старые формы telemetry-шаблонов, `legacyRedirectStatus: 301`, удаление группы `preCutoverCompat`; (b) landing/legal страницы, store, дубли | 04-4 + 7 дней без отката | спеки 02, 05 |
 
-Откат cutover (фаза 4):
-- **Быстрый (минуты):** в Vercel «Instant Rollback» app-проекта на деплой до фазы 4. Старый деплой ещё содержит prerender-страницы и старый SW, домен и `/api` не менялись. Пользователи, которые уже получили kill-switch, просто зарегистрируют старый `/sw.js` заново.
-- **Точечный (PR):** `siteCutover: false` в `hosting.base.json` → `routes:generate` → публичные URL снова отдаёт app. Это возможно только до фазы 5, поэтому фаза 5 ждёт 7 дней.
-- Redirect'ы старых приватных URL при откате на старый деплой исчезают вместе с ним. Это безопасно, потому что старые пути там рабочие.
+Откат cutover (A-03):
+- **Цель отката — prod-деплой 04-3d.** На Vercel Hobby Instant Rollback возможен только на непосредственно предыдущий production-деплой. Поэтому: 04-3d — последний Promote перед 04-4; после Promote 04-4 app-проект **не промоутится**, пока не закрыто окно решения об откате (48 ч мониторинга по критерию ниже). Любой Promote в окне (в т. ч. hotfix поверх 04-4) лишает Instant Rollback цели 04-3d; после него откат = revert-PR 04-4 + Promote.
+- **Быстрый (минуты):** Instant Rollback app-проекта на 04-3d. Что получают пользователи: `/app/*` → 302 на старые пути; новые invite-ссылки `/join/group|friend/<t>` → 302 на `/group/join/<t>`, `/friends/join/<t>`; логины в процессе `/app/oauth/callback?code=…` → `/oauth/callback?code=…`; SW со scope `/app/` при проверке обновления получает kill-switch `/app/sw.js` и снимается; корневой `/sw.js` 04-3d — прежний настоящий SW, он регистрируется заново. Кэшированных 301 нет: обратимые redirect'ы 04-4 отдаются с 302 (§4.2).
+- После Instant Rollback Vercel выключает auto-assign production-доменов. Возврат: «Undo Rollback» в Vercel либо Promote нового деплоя. Это правило и запрет Promote в окне записываются в `DEPLOYMENT.md` (раздел «Rollback», в PR 04-4).
+- **Плановый (PR):** revert-PR 04-4 → merge → Promote. Revert возвращает `APP_BASE = ''`, `cutover: false`, группу `preCutoverCompat` и `public-root/app/sw.js`, то есть собирает эквивалент 04-3d. Отдельного «точечного» флага нет: после 04-4 приложение собрано с `base: '/app/'`, и одним флагом публичные страницы не вернуть.
+- Site-проект не откатывается: без catch-all он на `chipin.one` не виден.
 - Критерий отката: рост 404 или 5xx на `/app/*` или `/join/*` > 1 % за час, ошибка OAuth-логина, сайт недоступен через proxy.
 
 ## Тесты / критерии приёмки
 
-1. Фаза 0: всё из §1.6 (тесты 1230/1230, тот же состав `dist`, smoke на preview).
+1. 04-0a: всё из §1.6 (тесты 1230/1230, тот же состав `dist`, одна `APP_VERSION` из корня и из `apps/app`, smoke на preview). Тест резолвера: prod-сборка из `master` (`VERCEL_ENV=production`) даёт `x.y.z` без суффикса.
 2. `generate-routing-artifacts.test.ts` зелёный. Ручное изменение `vercel.json` без генератора валит CI.
 3. Unit (RTL с `createMemoryRouter` поверх манифеста):
    - неавторизованный на `/dashboard` → `/login?returnTo=%2Fdashboard`;
@@ -527,10 +577,13 @@ Catch-all вместо перечисления `/`, `/<locale>/*`, `/help/*`, `
    - открытая глобальная модалка закрывается при смене маршрута (как сейчас);
    - `resolveOAuthReturnTo` принимает `/app/x` и `/x` и отклоняет callback в обеих формах.
 4. i18n: в entry-чанке нет JSON локалей (проверка размера: entry ≤ текущего минус 200 KB raw). `changeLanguage` вне `setAppLanguage` валит lint. Тест паритета ключей зелёный.
-5. SW: в собранном `dist/app/sw.js` scope `/app/`, allowlist совпадает со сгенерированным, в precache нет HTML сайта. `dist/sw.js` — kill-switch. E2E (Playwright, один сценарий): установить старый SW → задеплоить новый → на `/` получить HTML сайта, а в `navigator.serviceWorker.getRegistrations()` остаётся только scope `/app/`.
-6. Сайт: `astro build` с `seoGuard` зелёный. 15 публичных URL отдают 200 с тем же `<title>` и description, что сейчас (снапшот до/после). hreflang на каждой странице указывает на 5 локалей и `x-default`. В sitemap 15 URL. JS на странице ≤ 30 KB gz.
+5. SW: в собранном `dist/app/sw.js` scope `/app/`, allowlist совпадает со сгенерированным, в precache нет HTML сайта. `dist/sw.js` — kill-switch, `dist/.well-known/assetlinks.json` есть, `dist/app/.well-known` и `dist/app/sw.js` из `public-root` нет (`copy-root-files.mjs` падает при коллизии с файлом сборки Vite). E2E (Playwright): (a) установить старый SW → задеплоить новый → на `/` получить HTML сайта, а в `navigator.serviceWorker.getRegistrations()` остаётся только scope `/app/`; (b) обе регистрации одновременно (открыт `/app/…`, затем старый `/` обновляется до kill-switch) → после этого офлайн-reload `/app/dashboard` отдаёт оболочку из precache `/app/` (A-04).
+6. Сайт: `astro build` с `seoGuard` зелёный. 15 публичных URL отдают 200 с тем же `<title>` и description, что сейчас (снапшот до/после). hreflang на каждой странице указывает на все существующие переводы этой страницы (сейчас 5) и `x-default`. В sitemap 15 URL. JS на странице ≤ 30 KB gz.
 7. Prod после cutover: каждая строка §4.2 проверена `curl -sI` (статус и `Location`). Логин Google проходит с сайта и со старого `/oauth/callback`. Старая invite-ссылка `/group/join/<t>` → лендинг → кнопка → экран подтверждения → вступление.
 8. Lighthouse SEO и производительность главной не хуже базовой линии FE#498 (числа прикладываются в FE#496).
+9. Preview PR 04-4 до merge (A-02): `curl -sI <preview>/join/group/x` показывает ровно один заголовок `Content-Security-Policy`, и в нём хеши сайта; `/` и `/ru/` — HTML сайта без `X-Robots-Tag`; `/app/dashboard` — `X-Robots-Tag: noindex, nofollow`; inline-скрипты theme-init, редиректа и `/join/*` выполняются (нет CSP-ошибок в консоли); вход Google на preview проходит. То же повторяется на `dev.chipin.one` после merge, до Promote.
+10. 04-3d в prod (до 04-4): `curl -sI https://chipin.one/app/dashboard` → 302 `Location: /dashboard`; `/join/group/x` → 302 `/group/join/x`; `/app/oauth/callback?code=c` → 302 `/oauth/callback?code=c`; `/app/sw.js` — kill-switch. Это и есть проверка цели отката.
+11. Сайт: `seoGuard` валит сборку, если HTML под `join/` содержит `_vercel/insights` или `_vercel/speed-insights` (A-15); фикстура с невалидным frontmatter валит `astro build` (A-14).
 
 ## Требования к backend
 
@@ -557,7 +610,7 @@ Catch-all вместо перечисления `/`, `/<locale>/*`, `/help/*`, `
 | Контент (md/MDX) | нет, тексты в i18n JSON | через MDX-плагины | вручную | встроено, со схемой |
 | PWA/offline | работает, но SW делит scope с публичными страницами | App Router и SW-offline для приватного приложения конфликтуют (RSC, серверные запросы); `next-pwa` не поддерживается | SPA-режим возможен, но prerender и SW снова в одном билде | не затронуты: SW только `/app/` |
 | Стоимость миграции | 0 | высокая: переписать роутинг, data-слой, auth (in-memory токен + Web Locks), стили (styled-components SSR), все тесты | средняя: перенос на `routes.ts` и route modules, тот же клубок prerender+SW | средняя: только 3 страницы × 5 локалей и раздел; приложение меняется в роутере (D6 нужен в любом варианте) |
-| Риск | растёт с каждой SEO-страницей | высокий, big-bang, конфликт с D2/D3 | средний | низкий: сайт выкатывается рядом, откат одним флагом |
+| Риск | растёт с каждой SEO-страницей | высокий, big-bang, конфликт с D2/D3 | средний | низкий: сайт выкатывается рядом, откат на подготовленный деплой 04-3d |
 | CI/деплой | как сейчас | один проект, но серверный runtime и функции | один проект | два Vercel-проекта, path filters, один домен через rewrite |
 | Поддержка | высокая (кастомный пайплайн, который знает один человек) | средняя, частые мажорные изменения | средняя | низкая: два стандартных инструмента с документацией |
 | Предсказуемость для агентов | низкая (два дерева) | средняя | средняя | высокая: «маркетинг = `apps/site`, продукт = `apps/app`» |

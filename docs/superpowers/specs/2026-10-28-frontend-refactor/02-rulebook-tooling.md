@@ -96,13 +96,13 @@
 ```markdown
 ## Инварианты
 
-1. Слои импортируются только вниз: app → pages → features → entities → store → shared (shared/*, components, basics, hooks, helpers, api-типы, constants, i18n, types). Граф и исключения — `docs/engineering/rules/10-architecture.md`; проверяет `boundaries/dependencies`.
+1. Слои импортируются только вниз по одному графу: app → pages → features → components → hooks → store → entities → helpers → shared → api → base (constants, types, i18n, styles, assets); basics — между components и helpers. Единственный источник графа — `config/eslint/layers.js` (таблица в спеке 02 Д5), `docs/engineering/rules/10-architecture.md` генерируется из него; проверяет `boundaries/dependencies`.
 2. UI (pages, features, components, basics) не вызывает runtime-API и `axios`; серверные данные приходят через store/query-слой. Проверяет lint.
 3. Деньги в коде — `Money { minor: bigint }` (ledger units scale 4); на проводе — JSON-число scale 4 (D21). Провод ↔ домен — только `moneyFromWire`/`moneyToWire` в обёртке API; парсинг, округление, суммы и форматирование — только `src/shared/money/`; `parseFloat`/`Number()` на денежных полях вне него запрещены (lint, спека 03 §4.3). Отображение — только `basics/numbers/amount/Amount.tsx`.
 4. Сервер — источник истины для финансов: не патчим балансы/долги локально, не ретраим мутации автоматически, устаревший ответ не перезаписывает более новое состояние.
 5. Офлайн: создание/правка/удаление расходов — только через outbox с client UUID; settle-up и платежи офлайн запрещены.
 6. Типы: без `any`, `as any`, `@ts-ignore`, неоправданных `as` и `!`; type-only импорты — `import type`. Данные из IndexedDB, outbox и localStorage проверяются zod при чтении.
-7. Промисы: цепочки `.then/.catch/.finally`, без `async/await`. Каждый промис возвращается или явно помечается `void`; ошибки не глотаются. Проверяют `no-floating-promises` и `no-misused-promises`.
+7. Промисы: цепочки `.then/.catch/.finally`, без `async/await` — везде, включая RR-loaders, guard'ы и node-скрипты. Каждый промис возвращается или явно помечается `void`; ошибки не глотаются. Проверяют `no-floating-promises` и `no-misused-promises`.
 8. Только именованные экспорты; тип `Props` объявлен в файле компонента; без `React.FC`; не больше одного `index.ts` на слайс, без `export *`.
 9. Zustand — только UI-состояние. Одно значение читается селектором, несколько — одним объектным селектором с `useShallow`; `useStore()` без селектора и новые `useConnect` запрещены.
 10. Обработчики и колбэк-пропсы называются `on*`, `handle*` запрещён (lint).
@@ -163,7 +163,7 @@
 | 10.InternalExports | хелперы именованно, `import * as helpers` запрещён | `L:no-restricted-syntax ImportNamespaceSpecifier` (кроме `api/*`, `constants`, `selectors`) |
 | 10.Tests.* | co-location, без `__tests__` | `CI:check-file-layout` |
 | 10.Adoption | правила для нового/тронутого кода | RW → 70 §Legacy |
-| 10.StoreLayout.* | `<domain>-store/{actions,types,…}` | RW (D3): действует для UI-сторов. Серверные сторы удаляются миграцией TanStack, отдельный layout для них не вводим |
+| 10.StoreLayout.* | `<domain>-store/{actions,types,…}` | RW (D3): UI-сторы живут в `store/ui-prefs/<name>Store.ts` (спека 03 §6, спека 05 `appearanceStore`); серверные сторы удаляются миграцией TanStack, отдельный layout для них не вводим (A-35) |
 | 10.CrossStore.* | без записи в чужой store, оркестратор | R (инв. 4); после D3 правило отпадает |
 | 10.ChangeScope | не менять поведение попутно | DEL (общий принцип ai-workflow) |
 | 20.Components.1 | чистый render | `L:react-hooks` (compiler rules, уже есть) |
@@ -187,12 +187,12 @@
 | 30.ZIndex.* (5) | без глобальной z-index шкалы | DEL (3 использования, вкусовое) |
 | 30.Responsive.1–5 | responsive props Radix | DEL, кроме п.6 |
 | 30.Responsive.6 | без хардкода `767px` в media | `L:no-restricted-syntax` по `TemplateElement[value.raw=/@media[^{]*\d+px/]` |
-| 30.Colors.1–4 | `themeColor()`, без hex | RW по D14 (`var(--cp-*)`); lint — `no-raw-colors` (hex/rgb/hsl и `var(--<palette>-N)` в TS) и stylelint для CSS вводит **спека 05 (05-5)**; здесь только ссылка |
+| 30.Colors.1–4 | `themeColor()`, без hex | RW по D14 (`var(--cp-*)`); lint вводит **05-5** (A-17): `no-raw-colors` — не плагин, а блок `no-restricted-syntax` в `config/eslint/project.js` для `**/*.{ts,tsx}` и frontmatter `*.astro` с селекторами `Literal[value=/#[0-9a-fA-F]{3,8}\b\|\b(rgba?\|hsla?)\(\|var\(--(?!cp-\|_)[a-z]+-a?\d+\)/]` и `TemplateElement[value.raw=/…тот же regex…/]`, `packages/tokens/**` исключён, фикстуры в 05-5; для CSS/`<style>` — stylelint `color-no-hex`, `function-disallowed-list`, `declaration-property-value-disallowed-list` (спека 05 §3). Текст правила меняется в 05-5 |
 | 30.Colors.5 | transient `$prop` | DEL |
 | 30.ClassName.* | без className/style | `style` с обычными свойствами запрещён, кастомные свойства (`--x`) разрешены — селектор из спеки 05 §3 (05-5); className — DEL (CSS Modules по D14 его требуют) |
 | 30.A11y.1–6 | семантика, имена, label, dialog title | `L:jsx-a11y/recommended` + R (инв. 11) |
 | 30.Images.* | `basics/Image` вместо `<img>` | `L:no-restricted-syntax JSXOpeningElement[name.name='img']` вне `basics/Image.tsx`; `styled.img` — тот же селектор по `MemberExpression` |
-| 30.i18n.1 | весь текст через i18n | `L:react/jsx-no-literals` с `ignoreProps:false` + allowlist атрибутов (Д5) |
+| 30.i18n.1 | весь текст через i18n | `L:react/jsx-no-literals` (дети JSX) + `no-restricted-syntax` по пользовательским атрибутам (Д5) |
 | 30.i18n.2 | ключи во всех локалях | `CI:` тест паритета ключей локалей — вводит 04-2c (единственный владелец); здесь только ссылка |
 | 30.Money.1–2 | Amount, AmountInput | R (инв. 3) + денежные `L:no-restricted-syntax` из спеки 03 §4.3 (`toFixed`/`Intl.NumberFormat` вне `src/shared/money/**` и `src/shared/lib/formatNumber.ts`) |
 | 30.Split.* (2) | стабильные размеры split-строк | DEL из свода → в спеку 03 §6 (03-13/03-14) |
@@ -230,7 +230,7 @@
 | 70.Stack, When, Shape, Priority | стек тестов | оставить; `L:no-restricted-syntax` для `toMatchSnapshot`; async/await в тестах — тот же запрет |
 | 70.Commands | команды | RW: актуальный список скриптов (Д7) |
 | 70.Integration (12 пунктов) | lifecycle, version:bump, `@codex review` | **DEL целиком** (дубль ai-workflow; P1–P4) |
-| 70.Legacy.* (4) | baseline, «warn → error после нуля» | RW: «уровни только error/off, baseline в `eslint.baseline.js` только сокращается» |
+| 70.Legacy.* (4) | baseline, «warn → error после нуля» | RW: «уровни только error/off, baseline в `config/eslint/baseline.js` только сокращается» |
 
 ### Д4. Как разрешаются конфликты из матрицы аудита (03-tooling-rules.md §5)
 
@@ -245,7 +245,7 @@
 | P8 планы/спеки: `docs/specs/` не существует, `.gitignore` игнорирует tracked-файлы | Утверждённые design-спеки коммитятся в `docs/superpowers/specs/<YYYY-MM-DD>-<slug>.md`. Планы не коммитятся (`docs/superpowers/plans/` остаётся в ignore). Implementation-инварианты — в соответствующую главу `docs/engineering/rules/`. `.gitignore`: удалить `docs/superpowers/*`, `/docs/superpowers/specs/`, `/docs/engineering/plans/`, `/docs/engineering/specs/`; оставить `/docs/superpowers/plans/` и `/.superpowers/` |
 | P4 `@codex review` | На master уже удалено; проверить grep'ом в 02-A2 |
 | P10 «формат проверяет CI» | Становится правдой после 02-C1…02-C3 (Prettier + `format:check` в `verify`) |
-| P11/P12/P13 Vite 7, Trello, локальный `Canonical root` | Vite 8 в шапке; Trello — одна строка в ai-workflow, из AGENTS.md удалить; путь `Canonical root` сидит внутри routing-блока ai-workflow → issue в ai-workflow |
+| P11/P12/P13 Vite 7, Trello, локальный абсолютный путь `Canonical root` | Vite 8 в шапке; Trello — одна строка в ai-workflow, из AGENTS.md удалить; путь `Canonical root` сидит внутри routing-блока ai-workflow → issue в ai-workflow |
 | T2/T3 что делает verify:full / vercel-build | Описание из Д7 — единственное, в 70 §Commands и README |
 
 ### Д5. ESLint: целевой инвентарь
@@ -274,7 +274,7 @@ config/eslint/baseline.js // список известных нарушений:
 | ignores | `dist`, `dev-dist`, `coverage`, `node_modules/.cache`, `.claude/**`, `public/**`, `ds-gallery/standalone.html` |
 | языки | `src/**` и `ds-gallery/**` — browser globals; `scripts/**`, `*.config.*`, `contract-tests/**`, `ds-gallery/build-html.mjs` — node globals |
 | type-aware | `tseslint.configs.recommendedTypeChecked` + `parserOptions.projectService: true`, `tsconfigRootDir: import.meta.dirname`; для `**/*.{js,mjs}` — `disableTypeChecked` |
-| promises | `no-floating-promises` (`ignoreVoid: true`), `no-misused-promises` (`checksVoidReturn: { attributes: false }` — допускает `onClick={() => promise}` в JSX, и это осознанно), `promise-function-async: off`, `require-await: off` (await запрещён) |
+| promises (инв. 7 — и для loaders/скриптов; примеры кода в спеках пишутся без `await`, A-11) | `no-floating-promises` (`ignoreVoid: true`), `no-misused-promises` (`checksVoidReturn: { attributes: false }` — допускает `onClick={() => promise}` в JSX, и это осознанно), `promise-function-async: off`, `require-await: off` (await запрещён) |
 | tests override | `**/*.test.{ts,tsx}`: `unbound-method: off`, `no-unsafe-assignment: off`, `no-unsafe-member-access: off` (vi.fn/expect-паттерны) |
 | типы | `consistent-type-imports` (`fixStyle: 'inline-type-imports'`), `no-import-type-side-effects`, `no-unnecessary-type-assertion`, `no-non-null-assertion`, `explicit-module-boundary-types` (только `src/{store,helpers,api,shared,entities}/**`) |
 | unused | `@typescript-eslint/no-unused-vars: off` (убирает двойной репорт, 03:46), `unused-imports/no-unused-imports`, `unused-imports/no-unused-vars` (error, `^_`) |
@@ -285,24 +285,24 @@ config/eslint/baseline.js // список известных нарушений:
 | react | `react.configs.flat.recommended` + `jsx-runtime`; `react/no-multi-comp`, `react/no-unstable-nested-components`, `react/jsx-boolean-value: never`, `react/prop-types: off` |
 | react-hooks | `recommended` (v7); `exhaustive-deps: error` |
 | a11y | `jsx-a11y.flatConfigs.recommended`; `jsx-a11y/no-autofocus: off` (модалки) |
-| i18n | `react/jsx-no-literals`: `noStrings: true`, `ignoreProps: false`, `allowedStrings: [' ','-','+','/','~','·']`, `noAttributeStrings: true` при разрешённых технических атрибутах через `elementOverrides` (`data-testid`, `type`, `role`, `variant`, `size`, `color`, `as`, `href`, `to`, `rel`, `target`, `autoComplete`, `inputMode`). Проверить на версии плагина; если `elementOverrides` не покрывает атрибуты, i18n для `aria-label`/`placeholder`/`title` ловит `no-restricted-syntax` на `JSXAttribute[name.name=/^(aria-label\|placeholder\|title\|alt)$/] > Literal[value=/\\w/]` |
+| i18n | `react/jsx-no-literals`: `noStrings: true`, `ignoreProps: true`, `noAttributeStrings: false`, `allowedStrings: [' ','-','+','/','~','·']` — ловит текст в JSX-детях. Пользовательские атрибуты ловит `no-restricted-syntax` на `JSXAttribute[name.name=/^(aria-label\|aria-description\|placeholder\|title\|alt)$/] > Literal[value=/\\w/]` (A-38: `elementOverrides` работает по элементу, а не по атрибуту). `ds-gallery/**` исключён (демо-литералы) |
 | naming | `@typescript-eslint/naming-convention`: `{ selector: ['variable','function','parameter','classProperty','objectLiteralProperty','typeProperty','method'], format: null, custom: { regex: '^handle[A-Z0-9_]', match: false } }` + `{ selector: 'typeLike', format: ['PascalCase'] }` |
 | project | `no-restricted-syntax`: AwaitExpression, `ForOfStatement[await=true]`, async-функции (как сейчас), `React.FC`/`FC`, `ExportAllDeclaration`, `<img>`, `localStorage.clear`, `CancelToken`, `toMatchSnapshot`, объектный литерал в `use*Store(...)` без `useShallow`, `use*Store()` без аргумента, `no-nested-ternary`. Денежные селекторы — спека 03 §4.3, цветовые — спека 05 (05-5); все блоки `no-restricted-syntax`/`no-restricted-imports` собираются хелперами `restrictedSyntax()`/`restrictedImports()` из `config/eslint/project.js` (вводит 02-C4), потому что в flat config более поздний блок заменяет опции правила целиком |
 | globals | `no-restricted-globals`: `localStorage`, `sessionStorage` (кроме `helpers/localStorage.ts`) |
 | imports | `no-restricted-imports`: `axios` (кроме `src/api/chipin.{instance,interceptors}.ts`, после 03-4 — `src/shared/api/http.ts`), runtime `api/` из UI (как сейчас, `allowTypeImports`), UI-библиотеки (30.Radix.4). Мёртвый override `authSession` (03:58) удалить |
 | eslint-comments | `require-description`, `no-unused-disable`, `disable-enable-pair` |
 
-Граф слоёв (`config/eslint/layers.js`, `boundaries/elements` описывают **текущие** папки, код не двигается):
+Граф слоёв (`config/eslint/layers.js`, `boundaries/elements` описывают **текущие** папки, код не двигается; у каждого элемента явный `mode`: `file` для отдельных файлов, `folder` для остальных; A-35):
 
 | element type | pattern (от `src/`) |
 |---|---|
-| `app` | `main.tsx`, `root.tsx`, `app/**` (создают 03-5 и 04-2a), `bootstrap/**`, `features/routing/**`, `pages/GlobalHooks.tsx`, `public-routes/**` (до удаления спекой 04) |
+| `app` | `main.tsx`, `root.tsx`, `pages/GlobalHooks.tsx` (`mode: 'file'`); `app/**` (создают 03-5 и 04-2a; включает `app/pwa`, `app/i18n`, `app/router`), `bootstrap/**`, `features/routing/**`, `public-routes/**` (до удаления спекой 04) (`mode: 'folder'`) |
 | `pages` | `pages/*` |
 | `features` | `features/*` |
 | `entities` | `entities/**` (создаёт спека 03: queries, мапперы, доменные модели) |
 | `store` | `store/**` (оставшиеся UI-сторы, спека 03 §6) |
 | `components` | `components/**` |
-| `basics` | `basics/**` |
+| `basics` | `basics/**`, `design-system/**` (спека 05: `AppTheme` получает `appearance` пропом и store не читает) |
 | `hooks` | `hooks/**` |
 | `helpers` | `helpers/**` |
 | `shared` | `shared/**` (создаёт спека 03: `shared/money`, `shared/api`, `shared/offline`, `shared/lib`) |
@@ -314,26 +314,29 @@ config/eslint/baseline.js // список известных нарушений:
 | from | allow to |
 |---|---|
 | app | всё |
-| pages | features, entities, store, components, basics, hooks, helpers, shared, api, base |
-| features | features (только чужой `index.ts`), entities, store, components, basics, hooks, helpers, shared, api, base |
-| entities | entities (только чужой `index.ts`), store, helpers, shared, api, base |
-| store | store, entities, shared, api, helpers, base |
-| components | components, basics, hooks, entities, store, helpers, shared, api, base |
-| hooks | hooks, entities, store, helpers, shared, api, base |
+| pages | features, components, basics, hooks, store, entities, helpers, shared, api, base |
+| features | features (только чужой `index.ts`), components, basics, hooks, store, entities, helpers, shared, api, base |
+| components | components, basics, hooks, store, entities, helpers, shared, api, base |
+| hooks | hooks, store, entities, helpers, shared, api, base |
+| store | store, entities, helpers, shared, api, base |
+| entities | entities (только чужой `index.ts`), helpers, shared, api, base |
 | basics | basics, helpers, shared, base |
 | helpers | helpers, shared, api, base |
 | shared | shared, api, base |
 | api | api, base |
 | base | base |
 
+Это единственный граф (A-12): он ацикличен (`entities → store` запрещён, `store → entities` разрешён) и совпадает с инвариантом 1, который на него только ссылается. `docs/engineering/rules/10-architecture.md` содержит таблицу, сгенерированную из `layers.js` скриптом `scripts/generate-layers-doc.mjs` (02-C9); тест сверяет закоммиченный текст с генерацией.
+
 `api` в UI-слоях разрешён только через типы. Это обеспечивает существующий `no-restricted-imports` с `allowTypeImports`, а не boundaries. Резолвер — `eslint-import-resolver-typescript` с `project: tsconfig.app.json`. Известные ~30 нарушений (01-architecture.md:49-56: routing→pages 14 — они уходят в `app`; basics→components/store/hooks 4; helpers→store; components↔public-routes) получают поштучные записи в `baseline.js`.
 
-Быстрый режим: `eslint.config.js` читает `process.env.CHIPIN_ESLINT_FAST === '1'`. В этом режиме отключаются type-aware правила и `import-x/no-cycle` — для pre-commit. CI и pre-push всегда работают в полном режиме.
+Быстрый режим: `eslint.config.js` читает `process.env.CHIPIN_ESLINT_FAST === '1'`. В этом режиме ко всем файлам применяется `tseslint.configs.disableTypeChecked` и `parserOptions.projectService: false` (иначе программа TS всё равно строится и < 5 с недостижимо, A-36), `import-x/no-cycle` выключен — для pre-commit. CI и pre-push всегда работают в полном режиме. `--cache` в `lint` не используется: с type-aware правилами кэш даёт устаревший результат по зависимым файлам.
 
 ### Д6. Prettier, editorconfig, VSCode
 
 - `prettier.config.js` (ESM, заменяет `.prettierrc.cjs`): `{ printWidth: 100, tabWidth: 4, useTabs: false, semi: true, singleQuote: true, jsxSingleQuote: false, trailingComma: 'all', arrowParens: 'avoid', bracketSpacing: true, bracketSameLine: false, endOfLine: 'lf', overrides: [{ files: ['*.json','*.yml','*.yaml'], options: { tabWidth: 2 } }] }`. Значения текущего конфига сохраняются (`arrowParens: 'avoid'` даёт меньший diff, 317 файлов против 387 при `always`); `jsxBracketSameLine` заменён на `bracketSameLine`.
-- `.prettierignore`: `dist`, `dev-dist`, `coverage`, `node_modules`, `package-lock.json`, `public`, `LICENSE`, `THIRD_PARTY_NOTICES.txt`, `ds-gallery/standalone.html`, `src/i18n/locales/**` (переформатирование JSON локалей не нужно), `docs/superpowers/**`.
+- `.prettierignore`: `dist`, `dev-dist`, `coverage`, `node_modules`, `package-lock.json`, `public`, `LICENSE`, `THIRD_PARTY_NOTICES.txt`, `ds-gallery/standalone.html`, `src/i18n/locales/**` (переформатирование JSON локалей не нужно), `docs/superpowers/**`, `AGENTS.md`, `CLAUDE.md` (sync-блоки ai-workflow), `.github/**` (A-23: иначе sync ai-workflow и Prettier перезаписывают друг друга). Override `*.md` → `{ tabWidth: 2, proseWrap: 'preserve' }` (иначе списки в `docs/**` станут `-   item`).
+- Объём: «317 из 737» — только `src`. Точное число файлов для 02-C2a–c считается в 02-C1 командой `npx prettier --list-different . | wc -l` (с этим `.prettierignore`) и записывается в описания 02-C2a–c; разбиение a/b/c — по папкам так, чтобы каждый PR был выводом одной команды.
 - `.editorconfig`: `root=true`; `[*] indent_style=space, indent_size=4, end_of_line=lf, charset=utf-8, insert_final_newline=true, trim_trailing_whitespace=true`; `[*.{json,yml,yaml}] indent_size=2`; `[*.md] trim_trailing_whitespace=false`.
 - `.vscode/extensions.json`: `dbaeumer.vscode-eslint`, `esbenp.prettier-vscode`; `.vscode/settings.json` в git не кладём.
 - `.git-blame-ignore-revs` — SHA форматирующих PR.
@@ -345,7 +348,7 @@ config/eslint/baseline.js // список известных нарушений:
 ```json
 "build": "tsc -b && vite build && npm run verify:public-precache",
 "vercel-build": "vite build && npm run verify:public-precache",
-"lint": "eslint . --max-warnings 0 --cache --cache-location node_modules/.cache/eslint/",
+"lint": "eslint . --max-warnings 0",
 "format": "prettier --write .",
 "format:check": "prettier --check .",
 "typecheck": "tsc -b",
@@ -378,7 +381,9 @@ node scripts/version-check.mjs --base "$BASE_SHA" --head-branch "$GITHUB_HEAD_RE
 
 Правило проверки: если `version` в `package.json` отличается от base, ветка должна совпадать с `^chore/issue-\d+-release-v(\d+)-(\d+)-(\d+)$`, а новая версия — равняться версии из имени ветки и быть больше base. Иначе exit 1 с текстом «version changes only in a release PR». Решено (подтверждено владельцем 2026-10-28): на каждый релиз — ровно один release-Issue, ветка `chore/issue-<n>-release-vX-Y-Z` проходит обычный `pr:create`/admission; поле `Version impact` из шаблона Issue удаляется, бамп выбирает владелец. Расширение `version-check.mjs` — около 40 строк + тест. Dependabot-PR покрыты: они версию не меняют.
 
-`ci-gate-policy.mjs` не меняется (`AGENTS.md` и конфиги и так дают mode `full`).
+`ci-gate-policy.mjs` в этой спеке не меняется (`AGENTS.md` и конфиги и так дают mode `full`); режимы `app|site` добавляет 04-1b (спека 04 §1.4).
+
+Формат версии (A-09, D15). Версию производит только `scripts/version-resolver.mjs` из корневого `package.json`: prod (`VERCEL_ENV=production`) — чистая `x.y.z`, остальные сборки — `x.y.z-dev-<sha7>` (спека 04 §1.2, 04-0a). Любое сравнение версий (min-client-version 03-20, `version-check`) берёт только semver-ядро `major.minor.patch`.
 
 Deploy (D15): workflow'ов нет и новых не будет; источник — `DEPLOYMENT.md` §«Vercel delivery from master». Порядок релиза записывается в `docs/engineering/release-qa.md` одним разделом:
 1. release-PR с бампом;
@@ -408,7 +413,7 @@ Deploy (D15): workflow'ов нет и новых не будет; источни
 - `config/eslint/*`, `prettier.config.js`, `.editorconfig`, `.prettierignore`, `lint-staged`, `.husky/` переезжают в корень монорепо без правок; `eslint.config.js` в корне импортирует пресеты и задаёт `APP_DIR` для каждого workspace.
 - `tsconfig.base.json` переезжает в корень; `apps/app/tsconfig.*.json` меняет только путь в `extends`.
 - Алиасы живут только в `paths` tsconfig приложения; ESLint (`aliases.js`) и Vite (`vite-tsconfig-paths`) читают их оттуда.
-- Скрипты `verify`/`verify:full` в корне станут прокси на `-w @chipin/app` (+ сборка сайта), как в спеке 04 §1.2; `version:check` (D15) остаётся корневым, версия продукта — в **корневом** `package.json` (решение спеки 04 §1.2; в `apps/app/package.json` поля `version` нет).
+- Скрипты `verify`/`verify:full` в корне станут прокси на `-w @chipin/app` (+ сборка сайта), как в спеке 04 §1.2; `version:check` (D15) остаётся корневым, версия продукта — в **корневом** `package.json` (решение спеки 04 §1.2; в `apps/app/package.json` поля `version` нет). `scripts/version-*.mjs` находят корень через `resolve(import.meta.dirname, '..')`, а не `process.cwd()` (A-01), поэтому работают и из `apps/app` (cwd Vite/Vercel).
 
 ## Миграция 112 warnings и нарушений правил
 
@@ -423,7 +428,7 @@ Deploy (D15): workflow'ов нет и новых не будет; источни
 | `consistent-type-imports` | 34 | autofix | 02-C6 |
 | floating/misused promises | 35 / 28 (52 в prod) | вручную: `void` у намеренных, `return`/`.catch` у остальных | 02-C7a, 02-C7b |
 | `jsx-a11y` | неизвестно (плагин не стоит) | новые правила сразу error; все текущие нарушения — в `baseline.js`, фикс по слайсам | 02-C8 + поштучные PR по слайсам |
-| boundaries | ~30 | baseline; фикс — 04-2a (routing → `src/app/router`), 05-6 (basics → components/store), 04-5 (public-routes) | 02-C9 |
+| boundaries | ~30 | baseline; фикс — 04-2a (routing → `src/app/router`), 05-6 (basics → components/store), 04-5a (public-routes) | 02-C9 |
 | `React.FC` | 9 | вручную | 02-D1 |
 | default exports | 172 файла, 314 импортов, 14 lazy, 25 `vi.mock` | codemod `scripts/codemods/named-exports.mjs` (ts-morph, временный devDep): `export default X` → `export { X }`, `import X from` → `import { X } from`, lazy → `.then(m => ({ default: m.X }))`. `vi.mock` с `default` — вручную | 02-D2a basics(24), 02-D2b–c components(80), 02-D2d features(24), 02-D2e pages(42)+i18n+main |
 | вложенные barrel'ы | 103 + 4 корневых (`basics/index.ts`, `store/index.ts`, `i18n/index.ts`, `public-routes/index.ts`) | codemod `scripts/codemods/inline-barrels.mjs`: импорт через вложенный index → импорт файла; удалить index. `vi.mock('<barrel>')` разбивается вручную на моки файлов | 02-D3a–02-D3e по слоям |
@@ -436,11 +441,11 @@ Deploy (D15): workflow'ов нет и новых не будет; источни
 
 ## Ньюансы и подводные камни
 
-- **`void` vs текущий текст правил.** 00.Promises.5 запрещает `void`-обёртки, а `no-floating-promises` их требует. Правило переписывается в 02-C7 одновременно с включением lint, иначе агенты получат противоречие.
+- **`void` vs текущий текст правил.** 00.Promises.5 запрещает `void`-обёртки, а `no-floating-promises` их требует. Правило переписывается в 02-C7a/b одновременно с включением lint, иначе агенты получат противоречие.
 - **Prettier-PR конфликтуют со всеми открытыми PR.** 02-C2a–c мержатся подряд в один день, в окно без открытых feature-PR; после merge авторы делают `npm run format`. SHA попадают в `.git-blame-ignore-revs`. Это исключение из лимита «≤400 строк»: PR = вывод одной команды, ревью = повторить команду и сравнить.
 - **Codemod default→named и barrel'ы ломают строковые `vi.mock`** (477 вызовов). Мок barrel'а и мок файла — разные модули. Codemod печатает список затронутых `vi.mock`, их правят вручную в том же PR. Критерий — 1230 тестов зелёные.
 - **`no-misused-promises` в JSX.** `checksVoidReturn.attributes: false` осознанно: `onClick={() => action()}` с отклоняемым промисом ловит уже `no-floating-promises`, если колбэк — блок.
-- **jsx-no-literals `ignoreProps:false`** даст много срабатываний на технических атрибутах. Allowlist атрибутов обязателен, иначе агенты начнут писать `{'primary'}`.
+- **Атрибуты и i18n.** Технические атрибуты (`variant`, `size`, `type`…) не проверяются: селектор Д5 перечисляет только пользовательские (`aria-label`, `placeholder`, `title`, `alt`), иначе агенты начнут писать `{'primary'}`.
 - **boundaries + алиасы.** Без `eslint-import-resolver-typescript` плагин не распознаёт `components/...` и молча ничего не проверяет. Критерий приёмки 02-C9 — тестовый файл-нарушитель должен давать ошибку.
 - **Type-aware lint и lint-staged.** projectService строит программу целиком; поэтому pre-commit работает в FAST-режиме, а полную проверку делают pre-push и CI.
 - **`unbound-method` в тестах** (70 срабатываний) — шум от `expect(store.action)`; отключён для `*.test.*`.
@@ -471,25 +476,25 @@ Deploy (D15): workflow'ов нет и новых не будет; источни
 |---|---|---|
 | **02-A0** (ai-workflow) | routing-блок: `.ai/context.md` и `.ai/decisions.md` читаются «если существуют»; `Canonical root` убрать из публичного блока | — |
 | **02-A1** | новый AGENTS.md (Д2); удалить `.ai/context.md`, `.ai/decisions.md`, `docs/engineering/code-review.md`; README команды | 02-A0 |
-| **02-A2** | правки глав 00–70 по Д3/Д4 (только текст; lint-ссылки пишутся с пометкой «включается в PR 02-Cx») | 02-A1 |
+| **02-A2** | правки глав 00–70 по Д3/Д4 — **только** строки `DEL` и `RW`/`R`, которым lint не нужен. Текст каждого `L:`-правила меняется в том PR 02-C*/03-*/05-*, который включает его lint (A-22); пометок «включается в PR …» в своде нет | 02-A1 |
 | **02-A3** | `.gitignore`: `.claude/`, дубли, docs-пути (Д4 P8) (`.env*` уже сделан в 01-1); `.editorconfig`; `.vscode/extensions.json` | — |
 | **02-B1** | **единственный владелец** удаления dexie/workbox/sharp и фикса vendor-regex (спеки 03, 04, 05 только ссылаются). Удалить `dexie`, `dexie-react-hooks`, `sharp`, `sharp-ico`, `workbox-core`, `workbox-window`, override; regex `vendor-react` → `/node_modules[\\/](?:react\|react-dom\|react-router\|react-router-dom\|scheduler)[\\/]/`; `vendor-misc` без dexie; `build`/`vercel-build` без генерации иконок, `icons:generate`; удалить `test:run`; THIRD_PARTY_NOTICES | — |
 | **02-B2** | заменить `@uidotdev/usehooks`: `useCopyToClipboard` → `helpers/clipboard.ts`, `useNetworkState` → `hooks/useOnlineStatus.ts` (`useSyncExternalStore` + `online/offline`), `useIntersectionObserver` → `hooks/useIntersectionObserver.ts`; удалить закомментированный вызов `pages/GlobalHooks.tsx:19`; обновить 2 мока | — |
 | **02-C1** | Prettier + eslint-config-prettier + `format`/`format:check` (ещё не в `verify`) + `prettier.config.js` | — |
 | **02-C2a–c** | `prettier --write` по `src/components` / `src/{pages,features}` / остальное; затем `format:check` в `verify`; `.git-blame-ignore-revs` | 02-C1 |
 | **02-C3** | T2 (paths без baseUrl, ds-gallery alias) + `config/eslint/aliases.js` + import-sort autofix | 02-C2 |
-| **02-C4** | async/await 18, `handle*` 8, react-refresh 1, расширенный naming-селектор; **`--max-warnings 0`**; удалить мёртвый override authSession; хелперы `restrictedSyntax()`/`restrictedImports()`; разбить `eslint.config.js` на `config/eslint/*` | 02-C3 |
+| **02-C4** | async/await 18, `handle*` 8, react-refresh 1, расширенный naming-селектор; **`--max-warnings 0`**; удалить мёртвый override authSession; хелперы `restrictedSyntax()`/`restrictedImports()` (единственный владелец; 03-1 и 05-5 только добавляют свои блоки); разбить `eslint.config.js` на `config/eslint/*` | 02-C3 |
 | **02-C5** | T1 (typecheck ds-gallery + конфиги), `tsconfig.base.json` | — |
 | **02-C6** | type-aware preset + `consistent-type-imports` autofix + T3 `verbatimModuleSyntax` | 02-C4, 02-C5 |
 | **02-C7a/b** | `no-floating-promises`/`no-misused-promises`: фикс store/helpers/hooks (a), UI (b); правка 00.Promises.5 и 20.Effects.5 | 02-C6 |
-| **02-C8** | jsx-a11y + `jsx-no-literals ignoreProps:false` + baseline | 02-C4 |
-| **02-C9** | boundaries + resolver + baseline (~30) | 02-C3 |
+| **02-C8** | jsx-a11y + `jsx-no-literals` + селектор атрибутов i18n (Д5) + baseline | 02-C4 |
+| **02-C9** | boundaries + resolver + baseline (~30) + `generate-layers-doc.mjs` | 02-C4 (`config/eslint/layers.js` появляется при разбиении конфига, A-39) |
 | **02-C10** | husky pre-commit + lint-staged + FAST-режим; CI-шаг version-policy; расширение `version-check.mjs`; раздел релиза в release-qa.md | 02-C4 |
 | **02-C11** | T4 `noUncheckedIndexedAccess` (39) | 02-C6 |
 | **02-C12** | project-правила: `<img>`, `React.FC`, `useStore()`/`useShallow`, `check-file-layout.mjs` с baseline (в т.ч. запрет новых `useConnect.ts`). Денежные правила сюда **не входят** — их вводит 03-1 (§4.3 спеки 03) | 02-C4 |
 | **02-D1** | `React.FC` ×9 | 02-C12 |
-| **02-D2a–e** | default → named (codemod). Выполняется **после** 04-0 (монорепо-перенос), чтобы не конфликтовать с rename | 02-C4, 04-0 |
-| **02-D3a–e** | вложенные barrel'ы (codemod) | 02-D2 соответствующего слоя |
+| **02-D2a–e** | default → named (codemod). Выполняется **после** 04-0 (монорепо-перенос), чтобы не конфликтовать с rename. Файлы `src/store/expenseModal*` codemod пропускает (`--exclude`), пока не влит 03-14 (цепочка владения 01-3 → 02-C2 → 03-2 → 03-13 → 03-14, `00-overview.md`) | 02-C4, 04-0 |
+| **02-D3a–e** | вложенные barrel'ы (codemod); `src/store/expenseModal*` — как в 02-D2, после 03-14 | 02-D2 соответствующего слоя |
 
 ## Тесты / критерии приёмки
 
@@ -500,8 +505,8 @@ Deploy (D15): workflow'ов нет и новых не будет; источни
 5. После 02-C9: фикстура `basics/__boundary_probe.ts` с `import 'store/users-store'` даёт `boundaries/dependencies` error (проверяется в PR и удаляется).
 6. После 02-C10: PR, меняющий `version` из ветки не-release, получает красный `frontend-ci`. Release-ветка с совпадающей версией — зелёный. Есть unit-тест в `scripts/version-check.test.mjs`.
 7. После 02-A1/02-A2: `grep -rn "useConnect\|@codex\|Vite 7\|pre-1.0\|docs/specs/\|JavaScript \`Number\`" AGENTS.md docs/engineering` пуст (кроме таблиц миграции); `wc -l AGENTS.md` ≤ 90; в AGENTS.md ровно 15 инвариантов.
-8. После 02-B1: `npm ls dexie sharp-ico workbox-window` пуст; `npm run build` не вызывает `pwa-assets-generator`; в `dist` нет анонимного чанка с react-router core (он в `vendor-react-*.js`).
-9. `config/eslint/baseline.js`: каждый следующий PR не добавляет записей (CI-скрипт сравнивает число записей с base; рост — fail).
+8. После 02-B1: в `dependencies`/`devDependencies` корневого `package.json` нет `dexie`, `sharp-ico`, `workbox-window` (транзитивный `workbox-window` из `vite-plugin-pwa` остаётся, A-25); `npm run build` не вызывает `pwa-assets-generator`; в `dist` нет анонимного чанка с react-router core (он в `vendor-react-*.js`).
+9. `config/eslint/baseline.js`: каждый следующий PR не добавляет записей (CI-скрипт `scripts/check-baseline.mjs --base "$BASE_SHA"` читает base через `git show $BASE_SHA:config/eslint/baseline.js`; `BASE_SHA` уже экспортирует шаг «Resolve verification mode», `origin/master` в CI нет; локально по умолчанию `git merge-base HEAD origin/master`; рост — fail, A-19).
 10. Pre-commit на изменении одного файла < 5 с (замер на машине владельца, M-серия).
 
 ## Требования к backend
