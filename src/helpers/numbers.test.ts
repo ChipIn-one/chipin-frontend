@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import { getNumberData } from './numbers';
+import { getNumberData, MONEY_INPUT_PRECISION, roundHalfUp } from './numbers';
 
 test('formats zero as a valid number', () => {
     expect(getNumberData({ value: 0, precision: 2 }).numberFormatted).toBe('0');
@@ -98,4 +98,30 @@ test('preserves trailing zeros in zero-aware formatting', () => {
 
 test('rounds integer mode to zero decimal places', () => {
     expect(getNumberData({ value: 12.9, isInteger: true }).numberFormatted).toBe('13');
+});
+
+test.each([
+    [1.005, 1.01],
+    [-1.005, -1.01],
+    [2.675, 2.68],
+    [-2.675, -2.68],
+    [3.015, 3.02],
+    [0.125, 0.13],
+    [1.004, 1],
+    [0, 0],
+] as const)('rounds money input %s half-up away from zero to %s', (value, expected) => {
+    expect(roundHalfUp(value, MONEY_INPUT_PRECISION)).toBe(expected);
+});
+
+test('differs from Math.round only on half-way float values', () => {
+    const legacyRoundMoney = (value: number) => Math.round(value * 100) / 100;
+
+    expect(legacyRoundMoney(1.005)).toBe(1);
+    expect(roundHalfUp(1.005, 2)).toBe(1.01);
+    expect(legacyRoundMoney(-1.005)).toBe(-1);
+    expect(roundHalfUp(-1.005, 2)).toBe(-1.01);
+
+    for (const value of [12.34, 33.333333, 66.666667, 0.1 + 0.2, 99.994, -7.126]) {
+        expect(roundHalfUp(value, MONEY_INPUT_PRECISION)).toBe(legacyRoundMoney(value));
+    }
 });

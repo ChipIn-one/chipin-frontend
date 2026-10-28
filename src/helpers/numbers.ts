@@ -92,7 +92,9 @@ const incrementDigits = (digits: string) => {
     return `1${incrementedDigits.join('')}`;
 };
 
-const roundHalfUp = (value: number, precision: number): number => {
+export const MONEY_INPUT_PRECISION = 2;
+
+export const roundHalfUp = (value: number, precision: number): number => {
     const sign = value < 0 ? -1 : 1;
     const { integerPart, fractionalPart } = getExpandedDecimalParts(Math.abs(value));
     const roundedFractionalPart = fractionalPart.slice(0, precision).padEnd(precision, '0');

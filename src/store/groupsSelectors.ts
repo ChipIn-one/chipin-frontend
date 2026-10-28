@@ -11,6 +11,7 @@ import {
 } from 'constants/groups';
 import {
     convertCurrencyAmount,
+    getBalanceDirection,
     getBalanceEntriesSummary,
     sortBalancesByCurrency,
 } from 'helpers/currencies';
@@ -49,11 +50,11 @@ export const selectGroupSettlementOptions = (
         const balancesOwedToYou: BalanceEntry[] = [];
 
         Object.values(member.balancesByCurrency).forEach(balance => {
-            if (balance.netBalance < 0) {
-                balancesYouOwe.push(balance);
-            }
+            const direction = getBalanceDirection(balance.netBalance);
 
-            if (balance.netBalance > 0) {
+            if (direction === 'owe') {
+                balancesYouOwe.push(balance);
+            } else if (direction === 'owed') {
                 balancesOwedToYou.push(balance);
             }
         });
@@ -87,15 +88,20 @@ export const selectGroupBalances = (group: Group): GroupBalances => {
         owing: BalancesMap;
     }>((groupBalances, member) => {
         Object.values(member.balancesByCurrency).forEach(balance => {
-            if (balance.netBalance === 0) {
+            const balanceDirection = getBalanceDirection(balance.netBalance);
+
+            if (balanceDirection === 'settled') {
                 return;
             }
 
-            const direction = balance.netBalance > 0 ? groupBalances.owed : groupBalances.owing;
+            const direction =
+                balanceDirection === 'owed' ? groupBalances.owed : groupBalances.owing;
             const existingBalance = direction[balance.currency];
             direction[balance.currency] = {
                 currency: balance.currency,
-                netBalance: (existingBalance?.netBalance ?? 0) + balance.netBalance,
+                netBalance: normalizeApiMoneyAmount(
+                    (existingBalance?.netBalance ?? 0) + balance.netBalance,
+                ),
             };
         });
 

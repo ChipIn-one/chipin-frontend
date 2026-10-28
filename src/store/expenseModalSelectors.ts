@@ -5,13 +5,12 @@ import {
     MIN_GROUP_EXPENSE_PARTICIPANTS,
     type ExpenseSplitStatus,
 } from 'constants/chipin';
+import { MONEY_INPUT_PRECISION, roundHalfUp } from 'helpers/numbers';
 
 import type { ExpenseModalState, ExpenseModalStore, ExpenseParticipant } from './expenseModalStore';
 import { buildExpenseUpdateParams } from './expenseModalUpdate';
 
 type ShareColor = 'gray' | 'jade' | 'red';
-
-const roundMoney = (value: number) => Math.round(value * 100) / 100;
 
 const putCurrentUserFirst = (users: ExpenseParticipant[], currentUserId?: string) => {
     const otherUsers: ExpenseParticipant[] = [];
@@ -103,15 +102,19 @@ const getUserAmount = (
 
     switch (state.splitMode) {
         case EXPENSE_SPLIT_MODES.EQUAL:
-            return roundMoney(totalAmount / includedUserCount);
+            return roundHalfUp(totalAmount / includedUserCount, MONEY_INPUT_PRECISION);
         case EXPENSE_SPLIT_MODES.PERCENT:
-            return roundMoney((totalAmount * (Number(state.percentShares[userId]) || 0)) / 100);
+            return roundHalfUp(
+                (totalAmount * (Number(state.percentShares[userId]) || 0)) / 100,
+                MONEY_INPUT_PRECISION,
+            );
         case EXPENSE_SPLIT_MODES.AMOUNTS:
-            return roundMoney(Number(state.amountShares[userId]) || 0);
+            return roundHalfUp(Number(state.amountShares[userId]) || 0, MONEY_INPUT_PRECISION);
         case EXPENSE_SPLIT_MODES.SHARES:
             return totalShares > 0
-                ? roundMoney(
+                ? roundHalfUp(
                       (totalAmount * (Number(state.shareWeights[userId]) || 0)) / totalShares,
+                      MONEY_INPUT_PRECISION,
                   )
                 : 0;
     }
@@ -169,9 +172,9 @@ const calculateSplit = (state: ExpenseModalStore) => {
     } else if (state.splitMode === EXPENSE_SPLIT_MODES.EQUAL) {
         assignedAmount = includedUsers.length > 0 ? totalAmount : 0;
     } else if (state.splitMode === EXPENSE_SPLIT_MODES.PERCENT) {
-        assignedAmount = roundMoney((totalAmount * totalPercent) / 100);
+        assignedAmount = roundHalfUp((totalAmount * totalPercent) / 100, MONEY_INPUT_PRECISION);
     } else if (state.splitMode === EXPENSE_SPLIT_MODES.AMOUNTS) {
-        assignedAmount = roundMoney(totalCustomAmount);
+        assignedAmount = roundHalfUp(totalCustomAmount, MONEY_INPUT_PRECISION);
     } else if (state.splitMode === EXPENSE_SPLIT_MODES.SHARES) {
         assignedAmount = totalShares > 0 ? totalAmount : 0;
     }

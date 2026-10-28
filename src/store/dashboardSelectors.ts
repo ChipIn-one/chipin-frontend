@@ -1,4 +1,4 @@
-import { sortBalancesByCurrency } from 'helpers/currencies';
+import { getBalanceDirection, sortBalancesByCurrency } from 'helpers/currencies';
 
 import { calcBalancesSummary } from './commonSelectors';
 import type { DashboardStore } from './dashboardStore';
@@ -18,9 +18,11 @@ export const selectDashboardSummary = (
     const oweEntries = [];
 
     for (const entry of entries) {
-        if (entry.netBalance > 0) {
+        const direction = getBalanceDirection(entry.netBalance);
+
+        if (direction === 'owed') {
             owedEntries.push(entry);
-        } else if (entry.netBalance < 0) {
+        } else if (direction === 'owe') {
             oweEntries.push(entry);
         }
     }

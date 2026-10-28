@@ -5,6 +5,7 @@ import type {
 } from 'api/chipin.types';
 import { DEFAULT_EXPENSE_CATEGORY } from 'constants/category';
 import { DEFAULT_CURRENCY_CODE } from 'constants/currencies';
+import { normalizeApiMoneyAmount } from 'helpers/numbers';
 import { getFilterFunction } from 'helpers/text';
 
 import type { FriendCurrencyGroup, FriendsView, UsersStore } from './types';
@@ -77,6 +78,10 @@ export const getFriendsView = (
             group.friends.push({ friend, balance });
             groups.set(balance.currency, group);
         }
+    }
+
+    for (const group of groups.values()) {
+        group.netBalance = normalizeApiMoneyAmount(group.netBalance);
     }
 
     return {

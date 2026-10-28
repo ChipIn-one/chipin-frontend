@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 
 import { Skeleton, Text, VisuallyHidden } from '@radix-ui/themes';
 
+import { getBalanceDirection } from 'helpers/currencies';
+
 import { Amount } from 'basics/numbers';
 
 interface Props {
@@ -29,8 +31,9 @@ const DebtAmount = ({
 }: Props) => {
     const { t } = useTranslation('skeletons');
     const { t: tCommon } = useTranslation('common');
-    const isOwed = amount > 0;
-    const isZero = amount === 0;
+    const direction = getBalanceDirection(amount);
+    const isOwed = direction === 'owed';
+    const isZero = direction === 'settled';
     const color = isZero ? 'gray' : isOwed ? 'green' : 'red';
     const directionLabel = isZero
         ? tCommon('balances.settledUp')
