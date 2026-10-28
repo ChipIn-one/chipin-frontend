@@ -62,7 +62,7 @@ Admission: bodies restructured 2026-10-28 to `## Problem` / `## Outcome` / `## A
 - Overlap for the owner to decide: #533 (05-B) vs #487 (DS v1 1/8); #535 (05-D) vs #488 (2/8) and #492 (6/8). The spec changes those tasks' scope; DS v1 issues left untouched.
 - Count: spec 00 lists 24 FE issues (01:3, 02:4, 03:6, 04:5, 05:6), not 25; all 24 + 4 follow-ups created.
 
-## Scope notes after review A (2026-10-28, specs only; GitHub bodies NOT edited yet)
+## Scope notes after review A (2026-10-28; Scope/Depends on synced to GitHub for #519 #520 #521 #524 #527–#531 #533 #535, preflight INTAKE_COMPLETE)
 
 PR ids in spec 04 changed; update issue bodies when the coordinator/owner syncs GitHub:
 - 04-A (#527): 04-0 → **04-0a** (scripted move, version scripts root from `import.meta.dirname`, prod version = plain `x.y.z`) + **04-0b** (docs paths); 04-1a (+ `loadCommon`, package tsconfig); 04-1b now = `ci-gate-policy.mjs` modes `docs-only|app|site|full` in the single `frontend-ci` job (no `dorny/paths-filter`, no `ci-ok`).
