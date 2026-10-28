@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
-    REPOSITORY, assertConfiguration, assertFullSha, buildChecklist, buildIssueBody, findQaIssue,
+    REPOSITORY, TESTER_GUIDE_URL, assertConfiguration, assertFullSha, buildChecklist, buildIssueBody, findQaIssue,
     formatInvalidationLine, formatResultLine, hasGreenFrontendCiRun, isNearMissResult, isSlackWebhook, parseQaResult, resultOutcome,
     validateDeployment, verifyCi,
 } from './core.mjs';
@@ -125,7 +125,7 @@ export function chooseProductionBaseline(deployments, statusesFor) {
 export function sendHandoff({ post, webhook, slackId, issue, sha, url, missingSteps = [], fallbackNote = '' }) {
     const missing = missingSteps.length
         ? `\nMissing QA steps: ${missingSteps.map(number => `#${number}`).join(', ')} (check against their Acceptance)` : '';
-    const payload = { text: `<@${slackId}> Frontend QA candidate ${sha}${fallbackNote}\n${url}\nCanonical QA Issue: ${issue.html_url}${missing}` };
+    const payload = { text: `<@${slackId}> Frontend QA candidate ${sha}${fallbackNote}\n${url}\nCanonical QA Issue: ${issue.html_url}\nTester guide: ${TESTER_GUIDE_URL}${missing}` };
     return post(webhook, payload).then(() => ({ delivered: true })).catch(() => ({
         delivered: false,
         reason: 'Slack delivery failed; retry the same SHA after checking webhook/channel.',

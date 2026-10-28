@@ -44,6 +44,8 @@ What goes into the QA Issue:
 
 ## Tester: check and report
 
+Tester guide in Russian: [`docs/qa/README.md`](../qa/README.md). Every new QA Issue and the `#chipin-ci` handoff link to it on `master`.
+
 1. Open the immutable Preview URL from the QA Issue and go through the checks.
 2. Post **one new comment** in the QA Issue. Its first non-empty line is `QA PASS`, `QA FAIL` or `QA BLOCKED` (case and surrounding spaces do not matter). Notes may follow on the next lines. A first line that starts with `qa` but is not exactly one of those (for example `QA PASSED`, `**QA PASS**`, `QA PASS.`) fails the result run with the allowed lines; post a new comment.
 3. For a defect, create a canonical Bug Issue through Issue Intake (steps, expected and actual result, Preview SHA/URL, link to the QA Issue) and link it in the QA Issue's defect list.
