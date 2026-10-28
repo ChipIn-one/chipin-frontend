@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
     assertConfiguration, buildChecklist, buildIssueBody, findQaIssue, formatResultLine, hasGreenFrontendCiRun,
-    parseQaResult, resultOutcome, validateDeployment, verifyCi,
+    isNearMissResult, parseQaResult, resultOutcome, validateDeployment, verifyCi,
 } from './core.mjs';
 
 const SHA = 'a'.repeat(40);
@@ -192,6 +192,41 @@ describe('scope and canonical QA identity', () => {
         expect(plain.checks).toEqual([primary]);
     });
 
+    test('a dependencies-only bump from an unlinked commit is build-affecting: QA Issue with SMOKE-SHORT once, no block', () => {
+        const files = ['package.json', 'package-lock.json'];
+        const result = buildChecklist({ files, commits: [SHA], pulls: [], issues: [], commitFiles: { [SHA]: files },
+            buildChanges: ['package.json dependencies: i18next', 'package-lock.json: i18next'] });
+        expect(result).toMatchObject({ kind: 'checks', smoke: true, noQa: [{ commit: SHA }], included: [],
+            buildAffecting: ['package.json dependencies: i18next', 'package-lock.json: i18next'] });
+        expect(result.checks).toHaveLength(5);
+        expect(result.checks.every(item => item.smoke)).toBe(true);
+        const body = buildIssueBody({ sha: SHA, baselineSha: BASE, deploymentId: 42, url: status.environment_url, plan: result });
+        expect(body).toContain('### Build-affecting changes\n- package.json dependencies: i18next\n- package-lock.json: i18next');
+        expect((body.match(/- \[ \] SMOKE-SHORT: /g) ?? [])).toHaveLength(5);
+    });
+
+    test('a lint/test devDependency bump with no build change stays NO_MANUAL_QA_REQUIRED', () => {
+        const files = ['package.json', 'package-lock.json'];
+        expect(buildChecklist({ files, commits: [SHA], pulls: [], issues: [], commitFiles: { [SHA]: files }, buildChanges: [] }))
+            .toMatchObject({ kind: 'none', reason: 'NO_MANUAL_QA_REQUIRED' });
+    });
+
+    test('tsconfig.app.json and scripts/version-resolver.mjs are build-affecting by path', () => {
+        for (const file of ['tsconfig.app.json', 'scripts/version-resolver.mjs']) {
+            const result = buildChecklist({ files: [file], commits: [SHA], pulls: [], issues: [], commitFiles: { [SHA]: [file] } });
+            expect(result, file).toMatchObject({ kind: 'checks', smoke: true, buildAffecting: [file] });
+        }
+    });
+
+    test('a build-affecting change forces SMOKE-SHORT next to plain UI work, once, without AUTH-041 duplicates', () => {
+        const result = buildChecklist({ files: ['src/App.tsx', 'tsconfig.app.json'], commits: [SHA, BASE],
+            pulls: [{ ...pull, commits: [SHA] }], issues: [issue], commitFiles: { [BASE]: ['tsconfig.app.json'] } });
+        expect(result.smoke).toBe(true);
+        expect(result.checks[0]).toEqual(primary);
+        expect(result.checks.filter(item => item.smoke)).toHaveLength(5);
+        expect(result.checks.filter(item => item.source === 'AUTH-041')).toHaveLength(1);
+    });
+
     test('the QA Issue renders primary, missing-steps and smoke lines with => separators', () => {
         const plan = buildChecklist({ files: ['src/App.tsx', 'vercel.json'], commits: [SHA, BASE],
             pulls: [{ ...pull, commits: [SHA] }, { number: 21, issues: [13], commits: [BASE], files: ['vercel.json'] }],
@@ -227,6 +262,11 @@ describe('authorized QA result', () => {
         expect(resultOutcome('QA RESULT: PASS')).toBeNull();
         expect(resultOutcome('')).toBeNull();
         expect(resultOutcome(undefined)).toBeNull();
+    });
+
+    test('a first line that starts with qa but is not an allowed result is a near miss', () => {
+        for (const body of ['QA PASSED', '**QA PASS**', 'QA PASS.', '  qa: pass', '> QA fail', 'qa']) expect(isNearMissResult(body), body).toBe(true);
+        for (const body of ['QA PASS', ' qa blocked \nnotes', 'Looks good, QA PASS', 'Starting now', '', undefined]) expect(isNearMissResult(body), String(body)).toBe(false);
     });
 
     test('accepts only the sole assigned human QA in a new unedited comment and pins the marker SHA', () => {

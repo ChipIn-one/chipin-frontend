@@ -1,10 +1,12 @@
 import { impactChecks, smokeChecks, touchesSmokePath } from './impact-rules.mjs';
-import { isUiAffecting, uiAffectingFiles } from './ui-paths.mjs';
+import { buildAffectingFiles, isUiAffecting, uiAffectingFiles } from './ui-paths.mjs';
 
 export const REPOSITORY = 'ChipIn-one/chipin-frontend';
 const FULL_SHA = /^[0-9a-f]{40}$/;
 const QA_MARKER = /<!-- chipin-release-qa:v1 repo=ChipIn-one\/chipin-frontend sha=([0-9a-f]{40}) deployment=([1-9]\d*) -->/g;
 const RESULT_LINE = /^qa\s+(pass|fail|blocked)$/i;
+// Leading Markdown decoration a tester may type before a result, such as ** or >.
+const LEADING_MARKUP = /^[\s*_#>`~-]+/;
 const SLACK_USER_ID = /^U[A-Z0-9]{8,}$/;
 export const RELEASE_OWNER = 'syllik';
 
@@ -134,7 +136,7 @@ function issueUrl(issue) {
 // The Production-to-candidate compare decides whether manual QA is needed at all: only UI-affecting
 // paths (scripts/release-qa/ui-paths.mjs) do. Work without one canonical Issue link blocks only when
 // it touches those paths; an included UI Issue without QA lines gets a check-against-Acceptance line.
-export function buildChecklist({ files, commits, pulls, issues, commitFiles = {} }) {
+export function buildChecklist({ files, commits, pulls, issues, commitFiles = {}, buildChanges = [] }) {
     if (!Array.isArray(files) || files.length === 0 || !Array.isArray(commits) || commits.length === 0) {
         throw new Error('Complete compare files and commits are required.');
     }
@@ -173,10 +175,12 @@ export function buildChecklist({ files, commits, pulls, issues, commitFiles = {}
         includedList.push({ issue: issueNumber, pulls: [...linked.pulls].sort((a, b) => a - b) });
     }
     includedList.sort((a, b) => a.issue - b.issue);
-    if (uiAffectingFiles(files).length === 0) {
+    // Build-affecting changes (ui-paths.mjs) never block; they only force a QA round with SMOKE-SHORT.
+    const buildAffecting = [...buildAffectingFiles(files), ...buildChanges];
+    if (uiAffectingFiles(files).length === 0 && buildAffecting.length === 0) {
         return { kind: 'none', reason: 'NO_MANUAL_QA_REQUIRED', evidence: files, included: includedList, noQa };
     }
-    const smoke = touchesSmokePath(files);
+    const smoke = buildAffecting.length > 0 || touchesSmokePath(files);
     const checks = [];
     const missingSteps = [];
     for (const [issueNumber, linked] of included) {
@@ -195,7 +199,7 @@ export function buildChecklist({ files, commits, pulls, issues, commitFiles = {}
     if (smoke) checks.push(...smokeChecks());
     if (checks.length === 0) throw new Error('UI-affecting compare has no included UI Issue or smoke checks.');
     missingSteps.sort((a, b) => a - b);
-    return { kind: 'checks', checks, included: includedList, missingSteps, noQa, smoke };
+    return { kind: 'checks', checks, included: includedList, missingSteps, noQa, smoke, buildAffecting };
 }
 
 function renderCheck(item) {
@@ -219,7 +223,9 @@ export function buildIssueBody({ sha, baselineSha, deploymentId, url, plan }) {
         ? `\n\n### Missing QA steps\n${plan.missingSteps.map(number => `- #${number} has no \`- [ ] QA:\` lines; check it against its Acceptance.`).join('\n')}`
         : '';
     const noQa = plan.noQa?.length ? `\n\n### No QA needed\n${plan.noQa.map(renderNoQa).join('\n')}` : '';
-    return `${marker}\n## Problem\nRelease candidate ${sha} needs manual frontend QA.\n\n## Outcome\nOwner reviews this Issue before deciding whether to manually Promote the selected deployment.\n\n## Acceptance\n- Candidate SHA: ${sha}\n- Previous verified Production SHA: ${baselineSha}\n- Preview deployment: ${deploymentId}\n- Immutable Preview URL: ${url}\n\n### Included work\n${included}\n\n### Checks (step => expected)\n${checks}${missing}${noQa}\n\n### QA result\nPost a new comment whose first line is \`QA PASS\`, \`QA FAIL\` or \`QA BLOCKED\`; notes may follow on the next lines. Only the assigned QA counts. Checkboxes alone are not acceptance.\n\n### Defects and retest\n- Defect links: add canonical Bug Issues here.\n\n## Dependencies\n- Manual owner Promote only after owner review.\n\n## References\n- https://github.com/${REPOSITORY}/blob/master/docs/engineering/release-qa.md\n`;
+    const build = plan.buildAffecting?.length
+        ? `\n\n### Build-affecting changes\n${plan.buildAffecting.map(reason => `- ${reason}`).join('\n')}` : '';
+    return `${marker}\n## Problem\nRelease candidate ${sha} needs manual frontend QA.\n\n## Outcome\nOwner reviews this Issue before deciding whether to manually Promote the selected deployment.\n\n## Acceptance\n- Candidate SHA: ${sha}\n- Previous verified Production SHA: ${baselineSha}\n- Preview deployment: ${deploymentId}\n- Immutable Preview URL: ${url}\n\n### Included work\n${included}\n\n### Checks (step => expected)\n${checks}${missing}${build}${noQa}\n\n### QA result\nPost a new comment whose first line is \`QA PASS\`, \`QA FAIL\` or \`QA BLOCKED\`; notes may follow on the next lines. Only the assigned QA counts. Checkboxes alone are not acceptance.\n\n### Defects and retest\n- Defect links: add canonical Bug Issues here.\n\n## Dependencies\n- Manual owner Promote only after owner review.\n\n## References\n- https://github.com/${REPOSITORY}/blob/master/docs/engineering/release-qa.md\n`;
 }
 
 export function findQaIssue(issues, sha, deploymentId, url) {
@@ -250,6 +256,17 @@ export function resultOutcome(body) {
     return null;
 }
 
+// A first line that starts with "qa" (after Markdown decoration) but is not an allowed result line.
+export function isNearMissResult(body) {
+    if (typeof body !== 'string' || resultOutcome(body) !== null) return false;
+    for (const line of body.split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        return /^qa/i.test(trimmed.replace(LEADING_MARKUP, ''));
+    }
+    return false;
+}
+
 export function parseQaResult(comment, issue) {
     const markers = [...(issue?.body ?? '').matchAll(QA_MARKER)];
     if (markers.length !== 1) throw new Error('QA Issue has no single candidate SHA marker.');
@@ -266,11 +283,18 @@ export function parseQaResult(comment, issue) {
     return { outcome, sha: markers[0][1], qa: login };
 }
 
-// Builds the Slack line from validated values only; comment text never reaches Slack.
-export function formatResultLine({ result, issueUrl, userMap }) {
+function ownerMention(userMap) {
     let map = null;
     try { map = JSON.parse(userMap ?? ''); } catch { map = null; }
     const ownerId = map?.[RELEASE_OWNER];
-    const mention = typeof ownerId === 'string' && SLACK_USER_ID.test(ownerId) ? `<@${ownerId}>` : RELEASE_OWNER;
-    return `${mention} Frontend QA ${result.outcome} by ${result.qa} for ${result.sha}: ${issueUrl}`;
+    return typeof ownerId === 'string' && SLACK_USER_ID.test(ownerId) ? `<@${ownerId}>` : RELEASE_OWNER;
+}
+
+// Slack lines are built from validated values only; comment text never reaches Slack.
+export function formatResultLine({ result, issueUrl, userMap }) {
+    return `${ownerMention(userMap)} Frontend QA ${result.outcome} by ${result.qa} for ${result.sha}: ${issueUrl}`;
+}
+
+export function formatInvalidationLine({ sha, issueUrl, userMap }) {
+    return `${ownerMention(userMap)} Frontend QA result for ${assertFullSha(sha)} was edited or deleted and is no longer valid: ${issueUrl}`;
 }
