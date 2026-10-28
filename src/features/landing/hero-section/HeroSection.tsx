@@ -31,7 +31,7 @@ const HeroSection = () => {
             <Container size="3">
                 <Flex direction="column" align="center" gap="5">
                     <Badge
-                        size={{ initial: '1', sm: '2' }}
+                        size="3"
                         color="green"
                         variant="surface"
                         radius="full"
@@ -56,7 +56,7 @@ const HeroSection = () => {
                             align="center"
                             color="gray"
                             as="p"
-                            size={{ initial: '3', sm: '4', md: '5' }}
+                            size={{ initial: '4', md: '5' }}
                         >
                             {t('heroDescription')}
                         </Text>

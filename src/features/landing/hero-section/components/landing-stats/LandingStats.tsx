@@ -67,7 +67,7 @@ const LandingStats = () => {
                                         )}
                                     </Flex>
                                 </Text>
-                                <Text size="2" color="gray">
+                                <Text size="3" color="gray" align="center">
                                     {label}
                                 </Text>
                             </>

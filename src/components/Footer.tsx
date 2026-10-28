@@ -51,7 +51,7 @@ const Footer = () => {
                                 {PROJECT_NAME}
                             </Text>
                         </Flex>
-                        <Text size="1" color="gray" as="span">
+                        <Text size="2" color="gray" as="span">
                             {t('footer.copyright', {
                                 year: copyrightYear,
                             })}

@@ -17,7 +17,12 @@ const CtaSection = () => {
     const callPWAInstall = usePwaStore(state => state.callPWAInstall);
 
     const secondaryAction = !isPwaInstalled && pwaInstallPrompt !== null && (
-        <Button size="4" variant="soft" color="gray" onClick={callPWAInstall}>
+        <Button
+            size={{ initial: '3', sm: '4' }}
+            variant="soft"
+            color="gray"
+            onClick={callPWAInstall}
+        >
             {t('common:buttons.installApp')}
             <LucideDownload />
         </Button>
@@ -26,9 +31,9 @@ const CtaSection = () => {
     return (
         <Section id="pricing" py="8">
             <Container size="2">
-                <CtaCard size="4">
+                <CtaCard size={{ initial: '3', sm: '5' }}>
                     <Flex direction="column" align="center" gap="5">
-                        <Badge color="green" variant="surface" radius="full">
+                        <Badge color="green" variant="surface" radius="full" size="3">
                             {t('cta.badge')}
                         </Badge>
 
@@ -49,7 +54,7 @@ const CtaSection = () => {
 
                         <Flex direction={{ initial: 'column', sm: 'row' }} gap="3" justify="center">
                             <AuthModal>
-                                <Button size="4" variant="solid" color="green">
+                                <Button size={{ initial: '3', sm: '4' }} variant="solid" color="green">
                                     {t('cta.getStartedFree')}
                                     <LucideArrowRight />
                                 </Button>
@@ -60,10 +65,10 @@ const CtaSection = () => {
                         <Flex wrap="wrap" gap="4" justify="center">
                             {CTA_BULLET_KEYS.map(bulletKey => (
                                 <Flex key={bulletKey} align="center" gap="1">
-                                    <Text color="green" size="2">
-                                        <LucideCheckCircle size={14} />
+                                    <Text color="green" size="3">
+                                        <LucideCheckCircle size={16} />
                                     </Text>
-                                    <Text size="2" color="gray">
+                                    <Text size="3" color="gray">
                                         {t(`cta.bullets.${bulletKey}`)}
                                     </Text>
                                 </Flex>

@@ -10,7 +10,6 @@ const CtaCard = styled(Card)`
         ${themeColor('green5')} 0%,
         ${themeColor('green2')} 55%
     );
-    padding: var(--space-8);
     overflow: hidden;
 `;
 
