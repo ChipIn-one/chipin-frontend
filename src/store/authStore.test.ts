@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { exchangeApiGoogleOAuthCode } from 'api/chipin';
 import type { SelfUser } from 'api/chipin.types';
 import * as authSession from 'helpers/authSession';
+import { getLocalUser, saveLocalUser } from 'helpers/localStorage';
 
+import { selectIsUserAdmin } from './users-store/selectors';
 import { useAuthStore } from './authStore';
 import { APP_MODES, useDashboardStore } from './dashboardStore';
 import { useExpenseModalStore } from './expenseModalStore';
@@ -315,4 +317,15 @@ describe('authStore', () => {
         });
     });
 
+    test.each([
+        ['signOut', () => useAuthStore.getState().signOut()],
+        ['expireSession', () => useAuthStore.getState().expireSession()],
+    ])('%s drops the cached role but keeps cached settings', (_name, onReset) => {
+        saveLocalUser({ role: 'ADMIN', settings: user.settings });
+
+        onReset();
+
+        expect(getLocalUser()).toEqual({ settings: user.settings });
+        expect(selectIsUserAdmin(useUsersStore.getState())).toBe(false);
+    });
 });

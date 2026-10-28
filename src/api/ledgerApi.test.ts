@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
+import { InvalidPathSegmentError } from './apiPath';
 import { apiInstance } from './chipin.instance';
 import {
     createExpense,
@@ -116,4 +117,22 @@ describe('ledgerApi', () => {
         });
     });
 
+});
+
+describe('ledgerApi path segment guard', () => {
+    test.each([
+        ['removeLedgerEntry', () => removeLedgerEntry({ entryId: 'a/b' })],
+        ['fetchLedgerEntry', () => fetchLedgerEntry({ entryId: 'a/b' })],
+        ['updateExpense', () => updateExpense({
+            entryId: 'a/b',
+            entry: { type: 'EXPENSE', expense: { description: 'x' } },
+        })],
+    ])('%s rejects a "/" in a path parameter without calling the API', (_name, onCall) => {
+        return expect(onCall()).rejects.toBeInstanceOf(InvalidPathSegmentError)
+            .then(() => {
+                expect(apiInstance.delete).not.toHaveBeenCalled();
+                expect(apiInstance.get).not.toHaveBeenCalled();
+                expect(apiInstance.patch).not.toHaveBeenCalled();
+            });
+    });
 });

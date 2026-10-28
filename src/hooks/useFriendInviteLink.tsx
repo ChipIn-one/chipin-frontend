@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { ROUTES } from 'constants/routes';
 import { getAuthSessionVersion, isAuthSessionCurrent } from 'helpers/authSession';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
+import { isInviteToken } from 'helpers/inviteToken';
 import { useUsersStore } from 'store/users-store';
 
 const useFriendInviteLink = () => {
@@ -15,6 +16,12 @@ const useFriendInviteLink = () => {
 
     useEffect(() => {
         if (!inviteToken) {
+            return;
+        }
+
+        if (!isInviteToken(inviteToken)) {
+            toast.error(i18n.t('toasts:friend.inviteJoinError'));
+            navigate(ROUTES.DASHBOARD, { replace: true });
             return;
         }
 

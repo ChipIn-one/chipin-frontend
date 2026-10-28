@@ -8,6 +8,7 @@ import {
     fetchActivityPreviews,
     fetchGroupActivityPreviews,
 } from './activityApi';
+import { InvalidPathSegmentError } from './apiPath';
 import { apiInstance } from './chipin.instance';
 
 vi.mock('./chipin.instance', () => ({
@@ -93,5 +94,17 @@ describe('activityApi', () => {
             });
             expect(result).toEqual(response);
         });
+    });
+});
+
+describe('activityApi path segment guard', () => {
+    test.each([
+        ['fetchActivityChildren', () => fetchActivityChildren({ parentActivityId: 'a/b' })],
+        ['fetchGroupActivityPreviews', () => fetchGroupActivityPreviews({ groupId: 'a/b' })],
+    ])('%s rejects a "/" in a path parameter without calling the API', (_name, onCall) => {
+        return expect(onCall()).rejects.toBeInstanceOf(InvalidPathSegmentError)
+            .then(() => {
+                expect(apiInstance.get).not.toHaveBeenCalled();
+            });
     });
 });

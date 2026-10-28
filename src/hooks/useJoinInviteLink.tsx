@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 
 import { ROUTES } from 'constants/routes';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
+import { isInviteToken } from 'helpers/inviteToken';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { useGroupsStore } from 'store/groupsStore';
@@ -17,6 +18,12 @@ export const useJoinInviteLink = () => {
 
     useEffect(() => {
         if (!inviteToken) {
+            return;
+        }
+
+        if (!isInviteToken(inviteToken)) {
+            toast.error(i18n.t('toasts:group.inviteJoinError'));
+            navigate(ROUTES.DASHBOARD, { replace: true });
             return;
         }
 

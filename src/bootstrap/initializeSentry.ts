@@ -1,7 +1,11 @@
 import * as Sentry from '@sentry/react';
 
 import { APP_VERSION } from 'constants/version';
-import { resolveTelemetryEnvironment, sanitizeTelemetryUrl } from 'helpers/telemetry';
+import {
+    resolveTelemetryEnvironment,
+    sanitizeStringValues,
+    sanitizeTelemetryUrl,
+} from 'helpers/telemetry';
 
 const initializeSentry = () => {
     const sentryDsn = import.meta.env.VITE_SENTRY_DSN?.trim() || undefined;
@@ -22,23 +26,12 @@ const initializeSentry = () => {
                 return null;
             }
     
-            if (!breadcrumb.data) {
-                return breadcrumb;
-            }
-    
-            const data = { ...breadcrumb.data };
-    
-            for (const key of ['url', 'from', 'to']) {
-                const value = data[key];
-    
-                if (typeof value === 'string') {
-                    data[key] = sanitizeTelemetryUrl(value);
-                }
-            }
-    
             return {
                 ...breadcrumb,
-                data,
+                ...(typeof breadcrumb.message === 'string' && {
+                    message: sanitizeTelemetryUrl(breadcrumb.message),
+                }),
+                ...(breadcrumb.data && { data: sanitizeStringValues(breadcrumb.data) }),
             };
         },
         beforeSend: event => {
@@ -51,7 +44,7 @@ const initializeSentry = () => {
                               : undefined,
                   }
                 : undefined;
-            const extra = event.extra ? { ...event.extra } : undefined;
+            const extra = event.extra ? sanitizeStringValues(event.extra) : undefined;
     
             if (extra) {
                 delete extra.__serialized__;
@@ -61,6 +54,7 @@ const initializeSentry = () => {
                 ...event,
                 extra,
                 request,
+                ...(event.tags && { tags: sanitizeStringValues(event.tags) }),
                 transaction:
                     typeof event.transaction === 'string'
                         ? sanitizeTelemetryUrl(event.transaction)

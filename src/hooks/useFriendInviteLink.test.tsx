@@ -1,4 +1,5 @@
 import { toast } from 'sonner';
+import { TEST_INVITE_TOKEN } from 'test/fixtures/inviteToken';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import { act, renderHook, waitFor } from '@testing-library/react';
@@ -10,7 +11,7 @@ import { useFriendInviteLink } from './useFriendInviteLink';
 const mocks = vi.hoisted(() => ({
     acceptFriendInvite: vi.fn(),
     authSessionVersion: 1,
-    inviteToken: 'friend-token',
+    inviteToken: 'AbCdEfGhIjKlMnOpQrStUvWxYz012345',
     navigate: vi.fn(),
 }));
 
@@ -55,8 +56,21 @@ vi.mock('sonner', () => ({
 beforeEach(() => {
     vi.clearAllMocks();
     mocks.authSessionVersion = 1;
-    mocks.inviteToken = 'friend-token';
+    mocks.inviteToken = TEST_INVITE_TOKEN;
 });
+
+test.each(['short', '..%2Fx', '../g/members/u/kick', 'a'.repeat(65)])(
+    'rejects malformed invite token %s without calling the API',
+    inviteToken => {
+        mocks.inviteToken = inviteToken;
+
+        renderHook(() => useFriendInviteLink());
+
+        expect(mocks.acceptFriendInvite).not.toHaveBeenCalled();
+        expect(toast.error).toHaveBeenCalledWith('toasts:friend.inviteJoinError');
+        expect(mocks.navigate).toHaveBeenCalledWith(ROUTES.DASHBOARD, { replace: true });
+    },
+);
 
 test('USR-003 accepts the invite, shows the friend name and redirects to Friends', () => {
     mocks.acceptFriendInvite.mockResolvedValue({
@@ -71,7 +85,7 @@ test('USR-003 accepts the invite, shows the friend name and redirects to Friends
 
     return waitFor(() => {
         expect(mocks.acceptFriendInvite).toHaveBeenCalledWith({
-            inviteToken: 'friend-token',
+            inviteToken: TEST_INVITE_TOKEN,
         });
         expect(toast.success).toHaveBeenCalledWith(
             'toasts:friend.inviteAcceptedWithName:Alex',

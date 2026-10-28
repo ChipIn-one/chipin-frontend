@@ -1,3 +1,4 @@
+import { apiPath } from './apiPath';
 import { apiInstance } from './chipin.instance';
 import type {
     ApiCreateLedgerResponse,
@@ -64,14 +65,16 @@ export const createSettlement = ({
 export const removeLedgerEntry = ({
     entryId,
 }: RemoveLedgerEntryParams): Promise<void> => {
-    return apiInstance.delete<void>(`/ledger/entries/${entryId}`).then(() => undefined);
+    return Promise.resolve()
+        .then(() => apiInstance.delete<void>(apiPath`/ledger/entries/${entryId}`))
+        .then(() => undefined);
 };
 
 export const fetchLedgerEntry = ({
     entryId,
 }: FetchLedgerEntryParams): Promise<ApiCreateLedgerResponse> => {
-    return apiInstance
-        .get<ApiCreateLedgerResponse>(`/ledger/entries/${entryId}`)
+    return Promise.resolve()
+        .then(() => apiInstance.get<ApiCreateLedgerResponse>(apiPath`/ledger/entries/${entryId}`))
         .then(response => response.data);
 };
 
@@ -82,7 +85,7 @@ export const updateExpense = ({
     entryId: string;
     entry: UpdateLedgerExpenseParams;
 }): Promise<ApiCreateLedgerResponse> => {
-    return apiInstance
-        .patch<ApiCreateLedgerResponse>(`/ledger/entries/${entryId}`, entry)
+    return Promise.resolve()
+        .then(() => apiInstance.patch<ApiCreateLedgerResponse>(apiPath`/ledger/entries/${entryId}`, entry))
         .then(response => response.data);
 };

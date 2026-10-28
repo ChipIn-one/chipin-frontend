@@ -125,9 +125,27 @@ describe('Vercel production security headers', () => {
                 }),
         );
 
-        expect(directives['script-src']).toBe("'self' blob:");
+        expect(directives['script-src']).toBe("'self'");
         expect(directives['script-src']).not.toContain("'unsafe-inline'");
         expect(directives['connect-src']).toBe("'self' https://*.sentry.io");
+        expect(directives['object-src']).toBe("'none'");
+        expect(directives['base-uri']).toBe("'self'");
+        expect(directives['form-action']).toBe("'self'");
+        expect(directives['frame-ancestors']).toBe("'none'");
+        expect(directives['worker-src']).toBe("'self' blob:");
+        expect(headers['Content-Security-Policy']).not.toContain('googleapis');
+        expect(headers['Content-Security-Policy']).not.toContain('gstatic');
         expect(headers['X-Frame-Options']).toBe('DENY');
+    });
+
+    test('denies camera, microphone, geolocation, payment and usb via Permissions-Policy', () => {
+        const appHeadersRule = config.headers.find(rule => rule.source === '/(.*)');
+        const headers = Object.fromEntries(
+            appHeadersRule.headers.map(header => [header.key, header.value]),
+        );
+
+        expect(headers['Permissions-Policy']).toBe(
+            'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+        );
     });
 });

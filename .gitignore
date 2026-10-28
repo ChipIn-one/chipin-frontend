@@ -26,8 +26,9 @@ dev-dist
 *.sln
 *.sw?
 
-# Sentry Config File
-.env.sentry-build-plugin
+# Env files (secrets)
+.env*
+!.env.example
 
 # Local Superpowers working artifacts
 /.superpowers/
