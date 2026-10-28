@@ -1,5 +1,6 @@
 import {
     getDebtOptions,
+    getHalfSettlementAmount,
     getSettlementAmount,
     getSettlementViewModel,
     selectSettlementBalance,
@@ -10,6 +11,7 @@ import { useConnect } from './useConnect';
 export {
     type DebtOption,
     getDebtOptions,
+    getHalfSettlementAmount,
     getSettlementAmount,
     getSettlementViewModel,
     selectSettlementBalance,

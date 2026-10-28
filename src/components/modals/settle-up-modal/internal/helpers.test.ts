@@ -4,6 +4,7 @@ import type { SelfUser } from 'api/chipin.types';
 
 import {
     getDebtOptions,
+    getHalfSettlementAmount,
     getSettlementViewModel,
     selectSettlementBalance,
 } from './helpers';
@@ -146,3 +147,18 @@ test.each(['', '0', '-1', '100.01', 'invalid'])(
         expect(model.isSubmitDisabled).toBe(true);
     },
 );
+
+test.each([
+    [-100, '50'],
+    [25, '12.5'],
+    [-30.1234, '15.0617'],
+    [-24.5678, '12.2839'],
+    [-0.0003, '0.0002'],
+    [-0.0001, '0.0001'],
+])('takes half of a %s debt within the API money precision', (netAmount, expected) => {
+    const half = getHalfSettlementAmount({ currency: 'USD', netAmount });
+
+    expect(half).toBe(expected);
+    expect(Number(half)).toBeGreaterThan(0);
+    expect(Number(half)).toBeLessThanOrEqual(Math.abs(netAmount));
+});
