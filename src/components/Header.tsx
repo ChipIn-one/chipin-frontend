@@ -104,7 +104,7 @@ const Header = () => {
                         {!isLoggedIn && isLandingPage && (
                             <Flex align="center" gap="2">
                                 <AuthModal>
-                                    <Button size="2" variant="soft" color="green" radius="full">
+                                    <Button size="3" variant="soft" color="green" radius="full">
                                         {t('header.signIn')}
                                         <LucideArrowRight size={16} />
                                     </Button>

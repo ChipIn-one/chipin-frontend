@@ -59,7 +59,7 @@ const FeaturesSection = () => {
         <Section id="features" py="8">
             <Container size="4">
                 <Flex direction="column" align="center" gap="3" mb="8">
-                    <Text size={{ initial: '2', md: '3' }} color="green" weight="medium">
+                    <Text size="3" color="green" weight="medium">
                         {t('features.eyebrow')}
                     </Text>
                     <Heading align="center" size={{ initial: '7', md: '8' }}>

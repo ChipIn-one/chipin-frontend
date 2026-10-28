@@ -12,7 +12,7 @@ const HowItWorksSection = () => {
         <Section id="how-it-works" py="8">
             <Container size="2">
                 <Flex direction="column" align="center" gap="3" mb="9">
-                    <Text size="2" color="green" weight="medium">
+                    <Text size="3" color="green" weight="medium">
                         {t('howItWorks.eyebrow')}
                     </Text>
                     <Heading align="center" size={{ initial: '7', md: '9' }}>
