@@ -45,3 +45,4 @@ D21. Money unification: backend is source of truth and uses JSON numbers scale 4
 D22. Subdomains for site project only if Vercel Hobby allows custom domains for free (it does); otherwise use *.vercel.app internal hostnames.
 D23. Colors: everything through Radix palette, no raw hex anywhere incl. PWA theme-color and manifest; generator emits manifest/theme-color from tokens.json (grass-9); styled gray→olive mapping so main colors never differ between styled, Radix and site.
 D24. async/await ban lifted (2026-10-28); style free, no-floating-promises/no-misused-promises are the guard.
+D25. C3-01 = (b): accept one-time offline loss for pre-cutover installs; SW scope /app/ + kill-switch; owner 2026-10-28.

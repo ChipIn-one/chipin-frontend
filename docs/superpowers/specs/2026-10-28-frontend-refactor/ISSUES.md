@@ -90,5 +90,6 @@ PR ids in spec 03 changed (sync FE issue bodies when the owner syncs GitHub): 03
 
 - Scope/Depends on synced to spec ids (03-4a/b, 03-7a/b, 03-15a–c, 03-16a/b, 04-2a2b, 04-2h, 04-3b1/b2, 05-2a/b) with `gh issue edit --body-file`, Problem/Outcome/Acceptance kept: #521 #522 #523 #524 #525 #528 #529 #530 #533 #534 #535; preflight INTAKE_COMPLETE for all 11.
 - #529 no longer depends on chipin-backend#208; #530 Scope drops the kill-switch (SW `/sw.js` scope `/` permanent, C3-01). #530 Acceptance line «только SW со scope `/app/`» is stale and left for the owner (Acceptance not edited in this pass).
+- 2026-10-28, C3-01 resolved as (b) (D25): #530 Acceptance updated to SW `/app/sw.js` scope `/app/` + kill-switch `/sw.js` + one-time reinstall banner (preflight INTAKE_COMPLETE); #530 Scope line 04-3d «kill-switch не нужен» and title «kill-switch SW» not edited (Scope still stale for 04-3d); chipin-backend#208 stays closed (BE-04-3 was dropped for C3-24, unrelated to SW).
 - chipin-backend#208 (BE-04-3) closed as not planned. Backend issues: 13 active.
 - Programme total: 91 PRs (01=3, 02=31, 03=25, 04=24, 05=8).
