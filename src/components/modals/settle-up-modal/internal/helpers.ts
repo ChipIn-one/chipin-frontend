@@ -1,4 +1,5 @@
 import type { CreateSettlementParams, FriendBalance, FriendUser } from 'api/chipin.types';
+import { normalizeApiMoneyAmount } from 'helpers/numbers';
 import type { GroupSettlementOption } from 'store/groupsSelectors';
 
 import type { SettlementUser } from '../types';
@@ -30,6 +31,12 @@ export const selectSettlementBalance = (
 
 export const getSettlementAmount = (balance: FriendBalance): string =>
     String(Math.abs(balance.netAmount));
+
+const HALF_DEBT_DIVISOR = 2;
+
+// Half is rounded to the API money precision so it stays a valid, positive amount within the debt.
+export const getHalfSettlementAmount = (balance: FriendBalance): string =>
+    String(normalizeApiMoneyAmount(Math.abs(balance.netAmount) / HALF_DEBT_DIVISOR));
 
 export const getDebtOptions = (options: GroupSettlementOption[]): DebtOption[] =>
     options.flatMap(option => {

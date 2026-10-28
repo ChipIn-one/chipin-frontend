@@ -11,13 +11,14 @@ import type { SelectItem } from 'components/Select';
 
 import { OverlayBody, OverlayFooter } from '../../components';
 import {
+    getHalfSettlementAmount,
     getSettlementAmount,
     getSettlementViewModel,
     selectSettlementBalance,
     useConnect,
 } from '../internal';
-import type { FriendSettleUpProps } from '../types';
 import { ModalSurface } from '../styled';
+import type { FriendSettleUpProps } from '../types';
 
 import SettlementAmountField from './SettlementAmountField';
 import SettlementDebtSummary from './SettlementDebtSummary';
@@ -105,7 +106,6 @@ const SettlementFormContent = ({
                         amount={settlement.maxAmount}
                         currency={currency}
                         color={settlement.debtColor}
-                        onUseFullAmount={() => setAmount(getSettlementAmount(selectedBalance))}
                     />
 
                     <SettlementAmountField
@@ -115,6 +115,8 @@ const SettlementFormContent = ({
                         currencyItems={currencyItems}
                         onAmountChange={setAmount}
                         onCurrencyChange={onCurrencyChange}
+                        onUseFullDebt={() => setAmount(getSettlementAmount(selectedBalance))}
+                        onUseHalfDebt={() => setAmount(getHalfSettlementAmount(selectedBalance))}
                     />
 
                     <SettlementStatus

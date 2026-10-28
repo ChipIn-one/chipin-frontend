@@ -99,7 +99,7 @@ test('renders non-input amounts with two-digit precision and keeps the input exa
         />,
     );
 
-    const amountInput = screen.getByRole('textbox', { name: 'common:fields.amount' });
+    const amountInput = screen.getByRole('textbox', { name: 'friends:settleUp.paymentAmount' });
 
     expect(amountInput).toHaveProperty('value', '24.5678');
     expect(screen.getByText('24.57 BZD')).toBeTruthy();
@@ -127,11 +127,15 @@ test('allows editing a prefilled amount with more than two decimal places', () =
         />,
     );
 
-    const amountInput = screen.getByRole('textbox', { name: 'common:fields.amount' });
+    const amountInput = screen.getByRole('textbox', { name: 'friends:settleUp.paymentAmount' });
 
-    return user.type(amountInput, '{backspace}').then(() => {
-        expect(amountInput).toHaveProperty('value', '30.123');
-    });
+    return user
+        .click(amountInput)
+        .then(() => user.click(amountInput))
+        .then(() => user.keyboard('{End}{Backspace}'))
+        .then(() => {
+            expect(amountInput).toHaveProperty('value', '30.123');
+        });
 });
 
 test('SET-003 prevents submitting more than the selected backend balance', () => {
@@ -344,36 +348,167 @@ test('keeps the modal open when the provided action rejects', () => {
         });
 });
 
-
-test('fills the exact full debt amount when its underlined summary is clicked', () => {
-    const user = userEvent.setup();
-
+const renderFriendSettleUp = (
+    onSubmit = vi.fn<(params: CreateSettlementParams) => Promise<void>>(),
+    balances = [{ currency: 'BZD', netAmount: -24.5678 }],
+) =>
     render(
         <SettleUpModal
             source="friend"
             isOpened
             onOpenChange={vi.fn()}
             friend={friend}
-            balances={[{ currency: 'BZD', netAmount: -24.5678 }]}
-            initialCurrency="BZD"
-            onSubmit={vi.fn()}
+            balances={balances}
+            initialCurrency={balances[0].currency}
+            onSubmit={onSubmit}
         />,
     );
 
-    const input = screen.getByRole('textbox', { name: 'common:fields.amount' });
-    const amountButton = screen.getByRole('button', {
-        name: 'friends:settleUp.useFullAmount',
-    });
+test('labels the amount as an editable payment amount field', () => {
+    renderFriendSettleUp();
 
-    expect(amountButton.textContent).toContain('24.57 BZD');
+    const input = screen.getByRole('textbox', { name: 'friends:settleUp.paymentAmount' });
+
+    expect(input).toHaveProperty('value', '24.5678');
+    expect(screen.getByRole('button', { name: 'friends:settleUp.fullDebt' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'friends:settleUp.half' })).toBeTruthy();
+});
+
+test('selects the amount on tap so typing replaces it', () => {
+    const user = userEvent.setup();
+
+    renderFriendSettleUp();
+
+    const input = screen.getByRole('textbox', { name: 'friends:settleUp.paymentAmount' });
 
     return user
-        .clear(input)
-        .then(() => user.type(input, '4'))
-        .then(() => user.click(amountButton))
+        .click(input)
+        .then(() => {
+            expect(input).toHaveProperty('selectionStart', 0);
+            expect(input).toHaveProperty('selectionEnd', '24.5678'.length);
+            return user.keyboard('5');
+        })
+        .then(() => {
+            expect(input).toHaveProperty('value', '5');
+        });
+});
+
+test('selects the amount again when the field regains focus', () => {
+    const user = userEvent.setup();
+
+    renderFriendSettleUp();
+
+    const input = screen.getByRole('textbox', { name: 'friends:settleUp.paymentAmount' });
+
+    return user
+        .click(screen.getByRole('button', { name: 'friends:settleUp.half' }))
+        .then(() => user.click(input))
+        .then(() => user.keyboard('7'))
+        .then(() => {
+            expect(input).toHaveProperty('value', '7');
+        });
+});
+
+test('keeps the debt summary amount as plain text', () => {
+    renderFriendSettleUp();
+
+    const debtSummary = screen.getByText(
+        'friends:settleUp.youOwe:Bob Builder',
+    ).parentElement?.parentElement;
+
+    expect(debtSummary?.textContent).toContain('24.57 BZD');
+    expect(debtSummary?.querySelector('button')).toBeNull();
+    expect(screen.queryByRole('button', { name: /24.57 BZD/ })).toBeNull();
+});
+
+test('restores the exact full debt with the Full debt quick pick', () => {
+    const user = userEvent.setup();
+
+    renderFriendSettleUp();
+
+    const input = screen.getByRole('textbox', { name: 'friends:settleUp.paymentAmount' });
+
+    return user
+        .click(input)
+        .then(() => user.keyboard('4'))
+        .then(() => {
+            expect(input).toHaveProperty('value', '4');
+            return user.click(screen.getByRole('button', { name: 'friends:settleUp.fullDebt' }));
+        })
         .then(() => {
             expect(input).toHaveProperty('value', '24.5678');
             expect(screen.getByText('friends:settleUp.debtWillBeSettled')).toBeTruthy();
+        });
+});
+
+test('submits half of the debt with the Half quick pick and shows the remaining debt', () => {
+    const onSubmit = vi
+        .fn<(params: CreateSettlementParams) => Promise<void>>()
+        .mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    renderFriendSettleUp(onSubmit, [{ currency: 'USD', netAmount: -100 }]);
+
+    const input = screen.getByRole('textbox', { name: 'friends:settleUp.paymentAmount' });
+
+    return user
+        .click(screen.getByRole('button', { name: 'friends:settleUp.half' }))
+        .then(() => {
+            expect(input).toHaveProperty('value', '50');
+            expect(
+                screen.getByText('friends:settleUp.remainingDebt').nextElementSibling?.textContent,
+            ).toContain('50 USD');
+            return user.click(
+                screen.getByRole('button', { name: 'friends:settleUp.recordPayment' }),
+            );
+        })
+        .then(() => {
+            expect(onSubmit).toHaveBeenCalledWith({
+                fromUserId: currentUser.id,
+                toUserId: friend.id,
+                amount: 50,
+                currency: 'USD',
+            });
+        });
+});
+
+test('keeps Half within the API money precision and the debt', () => {
+    const user = userEvent.setup();
+
+    renderFriendSettleUp(undefined, [{ currency: 'BZD', netAmount: -0.0003 }]);
+
+    const input = screen.getByRole('textbox', { name: 'friends:settleUp.paymentAmount' });
+
+    return user
+        .click(screen.getByRole('button', { name: 'friends:settleUp.half' }))
+        .then(() => {
+            expect(input).toHaveProperty('value', '0.0002');
+            expect(
+                screen.getByRole('button', { name: 'friends:settleUp.recordPayment' }),
+            ).toHaveProperty('disabled', false);
+        });
+});
+
+test('resets a quick-picked amount to the full debt when the currency changes', () => {
+    const user = userEvent.setup();
+
+    renderFriendSettleUp(undefined, [
+        { currency: 'USD', netAmount: -100 },
+        { currency: 'EUR', netAmount: -30 },
+    ]);
+
+    const input = screen.getByRole('textbox', { name: 'friends:settleUp.paymentAmount' });
+
+    return user
+        .click(screen.getByRole('button', { name: 'friends:settleUp.half' }))
+        .then(() => {
+            expect(input).toHaveProperty('value', '50');
+            return user.click(screen.getByRole('combobox'));
+        })
+        .then(() => user.click(screen.getByRole('option', { name: 'EUR' })))
+        .then(() => user.click(screen.getByRole('button', { name: 'friends:settleUp.half' })))
+        .then(() => {
+            expect(input).toHaveProperty('value', '15');
         });
 });
 

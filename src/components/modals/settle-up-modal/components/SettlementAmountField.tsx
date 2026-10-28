@@ -1,6 +1,8 @@
+import { useRef } from 'react';
+import { LucidePencil } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Flex, Text } from '@radix-ui/themes';
+import { Button, Flex, Text, TextField } from '@radix-ui/themes';
 
 import Select, { type SelectItem } from 'components/Select';
 
@@ -18,6 +20,8 @@ interface Props {
     currencyItems: SelectItem[];
     onAmountChange: (amount: string) => void;
     onCurrencyChange: (currency: string) => void;
+    onUseFullDebt: () => void;
+    onUseHalfDebt: () => void;
 }
 
 const SettlementAmountField = ({
@@ -27,13 +31,31 @@ const SettlementAmountField = ({
     currencyItems,
     onAmountChange,
     onCurrencyChange,
+    onUseFullDebt,
+    onUseHalfDebt,
 }: Props) => {
-    const { t } = useTranslation('common');
+    const { t } = useTranslation('friends');
+    // The first click after focus would otherwise move the caret and drop the focus selection.
+    const isSelectOnClickPending = useRef(false);
+
+    const onAmountFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+        isSelectOnClickPending.current = true;
+        event.currentTarget.select();
+    };
+
+    const onAmountClick = (event: React.MouseEvent<HTMLInputElement>) => {
+        if (!isSelectOnClickPending.current) {
+            return;
+        }
+
+        isSelectOnClickPending.current = false;
+        event.currentTarget.select();
+    };
 
     return (
         <Flex direction="column" gap="2">
-            <Text as="label" htmlFor={inputId} size="3" weight="bold" color="gray">
-                {t('common:fields.amount')}
+            <Text as="label" htmlFor={inputId} size="3" weight="bold">
+                {t('friends:settleUp.paymentAmount')}
             </Text>
 
             <Flex align="stretch" gap="2">
@@ -42,11 +64,18 @@ const SettlementAmountField = ({
                         id={inputId}
                         value={amount}
                         onChange={onAmountChange}
+                        onFocus={onAmountFocus}
+                        onClick={onAmountClick}
                         maxFractionDigits={null}
                         color="jade"
                         size="3"
+                        variant="surface"
                         autoFocus
-                    />
+                    >
+                        <TextField.Slot side="right" color="gray">
+                            <LucidePencil size={18} aria-hidden />
+                        </TextField.Slot>
+                    </LargeAmountInput>
                 </AmountField>
 
                 {currencyItems.length > 1 ? (
@@ -66,6 +95,15 @@ const SettlementAmountField = ({
                         </Text>
                     </StaticCurrencyField>
                 )}
+            </Flex>
+
+            <Flex gap="2">
+                <Button type="button" size="2" variant="soft" color="gray" onClick={onUseFullDebt}>
+                    {t('friends:settleUp.fullDebt')}
+                </Button>
+                <Button type="button" size="2" variant="soft" color="gray" onClick={onUseHalfDebt}>
+                    {t('friends:settleUp.half')}
+                </Button>
             </Flex>
         </Flex>
     );

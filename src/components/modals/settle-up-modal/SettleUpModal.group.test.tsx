@@ -363,8 +363,7 @@ test('prevents submitting a group debt that disappears before payment starts', (
         });
 });
 
-
-test('restores the exact selected group debt when the summary amount is clicked', () => {
+test('sets the selected group debt with the Full debt and Half quick picks', () => {
     const user = userEvent.setup();
 
     render(<SettleUpModal source="group" group={group} />);
@@ -375,16 +374,58 @@ test('restores the exact selected group debt when the summary amount is clicked'
             name: /Debtor Person Full.*30.12 EUR/,
         })))
         .then(() => {
-            const input = screen.getByRole('textbox');
+            const input = screen.getByRole('textbox', {
+                name: 'friends:settleUp.paymentAmount',
+            });
+
+            expect(screen.queryByRole('button', { name: /30.12 EUR/ })).toBeNull();
+
             return user
-                .clear(input)
-                .then(() => user.type(input, '10'))
-                .then(() => user.click(screen.getByRole('button', {
-                    name: 'friends:settleUp.useFullAmount',
-                })))
+                .click(screen.getByRole('button', { name: 'friends:settleUp.half' }))
+                .then(() => {
+                    expect(input).toHaveProperty('value', '15.0617');
+                    expect(screen.getByText('friends:settleUp.remainingDebt')).toBeTruthy();
+                    return user.click(input);
+                })
+                .then(() => user.keyboard('10'))
+                .then(() => {
+                    expect(input).toHaveProperty('value', '10');
+                    return user.click(screen.getByRole('button', {
+                        name: 'friends:settleUp.fullDebt',
+                    }));
+                })
                 .then(() => {
                     expect(input).toHaveProperty('value', '30.1234');
+                    expect(screen.getByText('friends:settleUp.debtWillBeSettled')).toBeTruthy();
                 });
+        });
+});
+
+test('submits half of the selected group debt', () => {
+    const createSettlement = vi.fn().mockResolvedValue(true);
+    const user = userEvent.setup();
+
+    useActivityStore.setState({ createSettlement });
+
+    render(<SettleUpModal source="group" group={group} />);
+
+    return user
+        .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
+        .then(() => user.click(screen.getByRole('button', {
+            name: /Debtor Person Full.*90 BDT/,
+        })))
+        .then(() => user.click(screen.getByRole('button', { name: 'friends:settleUp.half' })))
+        .then(() => user.click(screen.getByRole('button', {
+            name: 'friends:settleUp.recordPayment',
+        })))
+        .then(() => {
+            expect(createSettlement).toHaveBeenCalledWith({
+                fromUserId: currentUser.id,
+                toUserId: 'user-3',
+                amount: 45,
+                currency: 'BDT',
+                groupId: group.id,
+            });
         });
 });
 
@@ -433,4 +474,3 @@ test('keeps payment content while its already-started settlement request refresh
             });
         });
 });
-
