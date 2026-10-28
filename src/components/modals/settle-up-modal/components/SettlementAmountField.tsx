@@ -43,6 +43,15 @@ const SettlementAmountField = ({
         event.currentTarget.select();
     };
 
+    // Once the user edits or leaves the field, a later click must place the caret, not select all.
+    const onAmountKeyDown = () => {
+        isSelectOnClickPending.current = false;
+    };
+
+    const onAmountBlur = () => {
+        isSelectOnClickPending.current = false;
+    };
+
     const onAmountClick = (event: React.MouseEvent<HTMLInputElement>) => {
         if (!isSelectOnClickPending.current) {
             return;
@@ -66,6 +75,8 @@ const SettlementAmountField = ({
                         onChange={onAmountChange}
                         onFocus={onAmountFocus}
                         onClick={onAmountClick}
+                        onKeyDown={onAmountKeyDown}
+                        onBlur={onAmountBlur}
                         maxFractionDigits={null}
                         color="jade"
                         size="3"

@@ -393,6 +393,27 @@ test('selects the amount on tap so typing replaces it', () => {
         });
 });
 
+test('keeps the caret after the user has typed into the autofocused amount', () => {
+    const user = userEvent.setup();
+
+    renderFriendSettleUp();
+
+    const input = screen.getByRole('textbox', { name: 'friends:settleUp.paymentAmount' });
+
+    expect(document.activeElement).toBe(input);
+
+    return user
+        .keyboard('40')
+        .then(() => {
+            expect(input).toHaveProperty('value', '40');
+            return user.click(input);
+        })
+        .then(() => user.keyboard('5'))
+        .then(() => {
+            expect(input).toHaveProperty('value', '405');
+        });
+});
+
 test('selects the amount again when the field regains focus', () => {
     const user = userEvent.setup();
 
