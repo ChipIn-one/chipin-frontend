@@ -245,6 +245,13 @@ test('handoff mentions included UI Issues that have no QA steps', () => {
         slackId: 'U0C9X8T4R2Q', issue, sha: SHA, url: PREVIEW_URL, missingSteps: [13, 14] }).then(value => {
         expect(value).toEqual({ delivered: true });
         expect(posted[0]).toMatch(/Missing QA steps: #13, #14/);
+        expect(posted[0].split('\n')).toEqual([
+            `<@U0C9X8T4R2Q> Frontend QA candidate ${SHA}`,
+            PREVIEW_URL,
+            'Canonical QA Issue: https://github.com/ChipIn-one/chipin-frontend/issues/50',
+            'Tester guide: https://github.com/ChipIn-one/chipin-frontend/blob/master/docs/qa/README.md',
+            'Missing QA steps: #13, #14 (check against their Acceptance)',
+        ]);
     });
 });
 

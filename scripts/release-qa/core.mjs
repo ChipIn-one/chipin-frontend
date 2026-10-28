@@ -9,6 +9,8 @@ const RESULT_LINE = /^qa\s+(pass|fail|blocked)$/i;
 const LEADING_MARKUP = /^[\s*_#>`~-]+/;
 const SLACK_USER_ID = /^U[A-Z0-9]{8,}$/;
 export const RELEASE_OWNER = 'syllik';
+// Russian tester guide on master, linked from every new QA Issue and the #chipin-ci handoff.
+export const TESTER_GUIDE_URL = `https://github.com/${REPOSITORY}/blob/master/docs/qa/README.md`;
 
 export function assertFullSha(value, label = 'SHA') {
     if (!FULL_SHA.test(value ?? '')) throw new Error(`${label} must be a full lowercase 40-character SHA.`);
@@ -225,7 +227,7 @@ export function buildIssueBody({ sha, baselineSha, deploymentId, url, plan }) {
     const noQa = plan.noQa?.length ? `\n\n### No QA needed\n${plan.noQa.map(renderNoQa).join('\n')}` : '';
     const build = plan.buildAffecting?.length
         ? `\n\n### Build-affecting changes\n${plan.buildAffecting.map(reason => `- ${reason}`).join('\n')}` : '';
-    return `${marker}\n## Problem\nRelease candidate ${sha} needs manual frontend QA.\n\n## Outcome\nOwner reviews this Issue before deciding whether to manually Promote the selected deployment.\n\n## Acceptance\n- Candidate SHA: ${sha}\n- Previous verified Production SHA: ${baselineSha}\n- Preview deployment: ${deploymentId}\n- Immutable Preview URL: ${url}\n\n### Included work\n${included}\n\n### Checks (step => expected)\n${checks}${missing}${build}${noQa}\n\n### QA result\nPost a new comment whose first line is \`QA PASS\`, \`QA FAIL\` or \`QA BLOCKED\`; notes may follow on the next lines. Only the assigned QA counts. Checkboxes alone are not acceptance.\n\n### Defects and retest\n- Defect links: add canonical Bug Issues here.\n\n## Dependencies\n- Manual owner Promote only after owner review.\n\n## References\n- https://github.com/${REPOSITORY}/blob/master/docs/engineering/release-qa.md\n`;
+    return `${marker}\n## Problem\nRelease candidate ${sha} needs manual frontend QA.\n\n## Outcome\nOwner reviews this Issue before deciding whether to manually Promote the selected deployment.\n\n## Acceptance\n- Candidate SHA: ${sha}\n- Previous verified Production SHA: ${baselineSha}\n- Preview deployment: ${deploymentId}\n- Immutable Preview URL: ${url}\n\n### Included work\n${included}\n\n### Checks (step => expected)\n${checks}${missing}${build}${noQa}\n\n### QA result\nPost a new comment whose first line is \`QA PASS\`, \`QA FAIL\` or \`QA BLOCKED\`; notes may follow on the next lines. Only the assigned QA counts. Checkboxes alone are not acceptance.\nTester guide (Russian): ${TESTER_GUIDE_URL}\n\n### Defects and retest\n- Defect links: add canonical Bug Issues here.\n\n## Dependencies\n- Manual owner Promote only after owner review.\n\n## References\n- ${TESTER_GUIDE_URL}\n- https://github.com/${REPOSITORY}/blob/master/docs/engineering/release-qa.md\n`;
 }
 
 export function findQaIssue(issues, sha, deploymentId, url) {

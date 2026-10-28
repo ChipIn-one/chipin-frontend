@@ -238,6 +238,14 @@ describe('scope and canonical QA identity', () => {
         expect(body).toMatch(/QA PASS/);
     });
 
+    test('the QA Issue links the Russian tester guide on master next to the QA result section', () => {
+        const body = buildIssueBody({ sha: SHA, baselineSha: BASE, deploymentId: 42, url: status.environment_url, plan: buildChecklist({ files: ['src/App.tsx'], commits: [SHA, BASE], pulls: [pull], issues: [issue] }) });
+        const guide = 'https://github.com/ChipIn-one/chipin-frontend/blob/master/docs/qa/README.md';
+        const resultSection = body.slice(body.indexOf('### QA result'), body.indexOf('### Defects and retest'));
+        expect(resultSection).toContain(`Tester guide (Russian): ${guide}`);
+        expect(body).toContain(`## References\n- ${guide}\n`);
+    });
+
     test('reuses exact repository/SHA marker but rejects conflicting deployment identity', () => {
         const body = buildIssueBody({ sha: SHA, baselineSha: BASE, deploymentId: 42, url: status.environment_url, plan: buildChecklist({ files: ['src/App.tsx'], commits: [SHA, BASE], pulls: [pull], issues: [issue] }) });
         expect(body).toContain(`chipin-release-qa:v1 repo=ChipIn-one/chipin-frontend sha=${SHA} deployment=42`);
