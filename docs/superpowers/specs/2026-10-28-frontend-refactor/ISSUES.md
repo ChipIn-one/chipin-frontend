@@ -47,7 +47,7 @@ Type: org has no `Epic` type → epic is `Task`. Severity set for Bugs (01-1 Cri
 | BE-03-8 | chipin-backend#205 | https://github.com/ChipIn-one/chipin-backend/issues/205 | ✓ Task | ✓ P3 | ✓ | ✓ Backlog | ✓ olegbal | ✓ INTAKE_COMPLETE |
 | BE-04-1 | chipin-backend#206 | https://github.com/ChipIn-one/chipin-backend/issues/206 | ✓ Task | ✓ P3 | ✓ | ✓ Backlog | ✓ olegbal | ✓ INTAKE_COMPLETE |
 | BE-04-2 | chipin-backend#207 | https://github.com/ChipIn-one/chipin-backend/issues/207 | ✓ Task | ✓ P1 | ✓ | ✓ Backlog | ✓ olegbal | ✓ INTAKE_COMPLETE |
-| BE-04-3 | chipin-backend#208 | https://github.com/ChipIn-one/chipin-backend/issues/208 | ✓ Task | ✓ P3 | ✓ | ✓ Backlog | ✓ olegbal | ✓ INTAKE_COMPLETE |
+| ~~BE-04-3~~ | chipin-backend#208 | https://github.com/ChipIn-one/chipin-backend/issues/208 | ✓ Task | ✓ P3 | ✓ | closed (not planned, 2026-10-28) | ✓ olegbal | n/a (closed: BE-04-3 dropped, C3-24) |
 | BE-00-1 | chipin-backend#209 | https://github.com/ChipIn-one/chipin-backend/issues/209 | ✓ Task | ✓ P1 | ✓ | ✓ Backlog | ✓ olegbal | ✓ INTAKE_COMPLETE |
 | 02-A0 | syllik/ai-workflow#88 | https://github.com/syllik/ai-workflow/issues/88 | n/a (personal repo) | n/a (personal repo) | n/a (personal repo) | n/a (personal repo) | ✓ syllik | n/a (not in admission registry; body restructured) |
 
@@ -74,8 +74,21 @@ PR ids in spec 04 changed; update issue bodies when the coordinator/owner syncs 
 - 05-D (#535): 05-5 owns `no-raw-colors` (`no-restricted-syntax`), not the `restrictedImports()` helper (02-C4). 05-4 skips `expenseModal*` until 03-14.
 - Totals: 83 PRs (04: 21; 03: 20 with 03-21).
 
-## Scope notes after owner review of PR #542 (2026-10-28)
+## Contract sync after review C (2026-10-28; spec 03 §7 rewritten, BE bodies edited with `gh issue edit --body-file`, headings kept)
 
-- 02-C (#519) and 02-D (#520) Scope/Acceptance synced to spec 02 §Д0 «Без трения для агентов»: each lint/format rule is (a) auto-fixable, (b) correctness/boundary with a fix hint, or (c) deleted; 6 jsx-a11y rules; pre-commit `--fix` only and never blocks; pre-push removed; `npm run fix`, `npm run baseline:update`; agent check before 02-C merges.
-- 02-D1 (`React.FC` ×9) dropped: the ban is not auto-fixable. #520 title → `Codemods: named exports, no nested barrels`. 05-C (#534) title → single theme-switching mechanism (light/dark/system).
-- Totals: 82 PRs (02: 31).
+- BE-03-1 (#199): `version` is an opaque **string** (seq of last event), not `Long`; `X-Client-Op-Id` on PATCH/DELETE, checked **before** `If-Match`; DELETE of a deleted entry = 204 regardless of `If-Match`; separate `LedgerConflictResponse` 409 schema; `/health.capabilities` += `ledger.entryVersion`.
+- BE-03-2 (#200): same id + same author → 200 **regardless of payload** (the old "other payload → 409" removed); `/health.capabilities` += `ledger.clientEntryId`.
+- BE-03-4 (#201): no release tags exist → artifact `openapi-documentation` per `develop` SHA, FE `BACKEND_VERSION` = prod deployment SHA; `x-chipin-money` / `x-chipin-decimal` extensions + `multipleOf` snapshot test.
+- BE-03-5 (#202): 426 body = `ErrorResponse { code, details.minVersion }`; semver-core compare; `/health.capabilities` += `client.minVersion`.
+- BE-03-6 (#203): acceptance now includes DELETE-of-deleted with stale `If-Match` → 204 after #199.
+- `/health` gets `capabilities: string[]` (always present) from whichever of #199/#200/#202 lands first.
+- No new BE issue for an amount cap (C3-13): FE parses money losslessly up to `decimal(19,4)`. REVOKED vs EXPIRED (C3-09) — owner question in 00, issue only after confirmation.
+
+PR ids in spec 03 changed (sync FE issue bodies when the owner syncs GitHub): 03-B (#522) 03-4 → **03-4a + 03-4b**; 03-C (#523) 03-7 → **03-7a + 03-7b**; 03-E (#525) 03-15 → **03-15a + 03-15b + 03-15c**, 03-16 → **03-16a + 03-16b**. Spec 03 now has 25 PRs (was 20); programme total 83 → 88 before any changes in 00/02/04/05.
+
+## Final sync after review C (2026-10-28)
+
+- Scope/Depends on synced to spec ids (03-4a/b, 03-7a/b, 03-15a–c, 03-16a/b, 04-2a2b, 04-2h, 04-3b1/b2, 05-2a/b) with `gh issue edit --body-file`, Problem/Outcome/Acceptance kept: #521 #522 #523 #524 #525 #528 #529 #530 #533 #534 #535; preflight INTAKE_COMPLETE for all 11.
+- #529 no longer depends on chipin-backend#208; #530 Scope drops the kill-switch (SW `/sw.js` scope `/` permanent, C3-01). #530 Acceptance line «только SW со scope `/app/`» is stale and left for the owner (Acceptance not edited in this pass).
+- chipin-backend#208 (BE-04-3) closed as not planned. Backend issues: 13 active.
+- Programme total: 91 PRs (01=3, 02=31, 03=25, 04=24, 05=8).

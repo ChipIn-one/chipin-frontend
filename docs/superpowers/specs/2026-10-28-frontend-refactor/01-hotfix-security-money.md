@@ -4,6 +4,7 @@
 Пути и строки проверены на коммите `3d0086e` (ветка `chore/issue-456-ds-gallery`); пути `src/**`, `vercel.json`, `.gitignore` пересверены с `origin/master` `522973a` (код `src/` совпадает); backend — `origin/develop` `0901ebb`.
 Идентификаторы PR — глобальная схема `<спека>-<n>` (см. `00-overview.md`): здесь `01-1`, `01-2`, `01-3`; backend-issue — `BE-01-<n>`.
 Порядок: все три PR мержатся **до** массового форматирования (02-C2) и до монорепо-переноса (04-0); пути ниже — `src/…` текущего корня.
+Ревизия 2026-10-28 по review C1/C2/C3 (`review-C*.md`, колонка Resolution): C2-20 (состояние `error` + session guard), Minor C1-26/27, C2-21…24, C3-16/17/28/29. Хотфикс можно мержить.
 
 ## Цель
 
@@ -82,7 +83,7 @@ export const encodePathSegment = (segment: string): string => {
 ```
 
 - Почему allowlist, а не только кодирование: (1) `encodeURIComponent('..') === '..'` — одно кодирование не спасает от dot-segment (`/groups/..` → `/`); (2) `%2F` может быть декодирован Vercel-прокси до backend (Контекст). Allowlist исключает `.`, `..`, `''`, `/`, `%`, `\` — защита не зависит ни от браузера, ни от прокси, ни от Ktor.
-- Все API-функции, которые зовут `apiPath`, объявляются `async` (или строят путь внутри `.then`), чтобы `InvalidPathSegmentError` стал **rejected Promise**, а не синхронным throw: route-параметр `%2E` (RR декодирует в `.`) иначе бросит внутри store-экшена из `useEffect` и уронит error boundary (review B, m1).
+- Все API-функции, которые зовут `apiPath`, строят путь **внутри `.then`** — одна форма, без `async`: `` Promise.resolve().then(() => apiInstance.post(apiPath`/groups/invite/${inviteToken}`)) ``. Так `InvalidPathSegmentError` становится **rejected Promise**, а не синхронным throw: route-параметр `%2E` (RR декодирует в `.`) иначе бросит внутри store-экшена из `useEffect` и уронит error boundary (review B, m1). `async` не используем: до 02-C4 в `eslint.config.js:99-122` действует warn-селектор «async без await» (его удаление — PR 02-C4, спека 02).
 - Текст ошибки не содержит значение сегмента (не утекает в Sentry).
 - Все 14 call sites переписываются на `` apiPath`/groups/${groupId}` `` и т.д.; `usersApi.ts:67` — тоже (убрать ручной `encodeURIComponent`, иначе будет двойное кодирование).
 - Валидацию UUID для `groupId`/`entryId`/`parentActivityId` в API-слой **не** добавляем: тестовые фикстуры используют `group-1`, `activity-parent` (оба проходят allowlist), а backend и так делает `asValidUuid`. Все 14 мест — id/токены (проверено grep), других символов в легитимных сегментах нет; фикстура, не проходящая allowlist, заменяется на валидную. Валидация route-параметров переезжает в loaders (D6, спека 04, PR 04-2e).
@@ -122,7 +123,7 @@ export const isInviteToken = (value: string | undefined): value is string =>
    !.env.example
    ```
    В репо нет трекаемых `.env*` файлов (`git ls-files` пуст), `.env.sentry-build-plugin` остаётся покрыт.
-4. Роль в localStorage: удалять **только `role`**, не весь `chipin_user`. Весь объект удалять нельзя — `settings.language/theme` из него читают `helpers/publicRoutes.ts:38` (локаль лендинга после выхода), `helpers/theme.ts:6`, `helpers/locale.ts:115`, `store/dashboardStore.ts:49`. Изменения:
+4. Роль в localStorage: удалять **только `role`**, не весь объект под ключом `LS_KEY_USER` (`'Chipin_user'`, `src/constants/localstorage.ts:3`; в коде и тестах — только константа). Весь объект удалять нельзя — `settings.language/theme` из него читают `helpers/publicRoutes.ts:38` (локаль лендинга после выхода), `helpers/theme.ts:6`, `helpers/locale.ts:115`, `store/dashboardStore.ts:49`. Изменения:
    - `src/helpers/localStorage.ts:10-13`: `role?: UserRole`.
    - новая функция `clearLocalUserRole()` в том же файле: читает `getLocalUser()`, если есть — `saveLocalUser({ settings: localUser.settings })`.
    - вызов в `resetAuthScopedStores` (`src/store/authStore.ts:46`) **первой строкой** — до `useUsersStore.getState().setInitialUsersStore()`, который перечитывает localStorage (`users-store/initialState.ts:6`).
@@ -132,14 +133,16 @@ export const isInviteToken = (value: string | undefined): value is string =>
 
 ### 01-2 Экран подтверждения
 
-- `src/pages/GroupJoinPage.tsx` и `src/pages/FriendJoinPage.tsx` перестают быть «хук + `PageLoader`». Хуки `useJoinInviteLink`/`useFriendInviteLink` больше не вызывают POST в `useEffect`; они возвращают `{ status: 'invalid' | 'ready' | 'joining', confirm: () => void, cancel: () => void }`.
+- `src/pages/GroupJoinPage.tsx` и `src/pages/FriendJoinPage.tsx` перестают быть «хук + `PageLoader`». Хуки `useJoinInviteLink`/`useFriendInviteLink` больше не вызывают POST в `useEffect`; они возвращают `{ status: 'invalid' | 'ready' | 'joining' | 'error', errorMessage?: string, confirm: () => void, cancel: () => void }`.
+- `confirm()` сохраняет guard текущего `useFriendInviteLink.tsx:21-25` (`getAuthSessionVersion()` + `isAuthSessionCurrent()` + флаг `isActive` при размонтировании) в **обоих** хуках: ответ, пришедший после выхода/смены сессии или ухода со страницы, не меняет состояние и не навигирует.
 - Состояния экрана:
   - `invalid` (`!isInviteToken`): текст «Ссылка-приглашение недействительна», кнопка «На главную».
   - `ready`: заголовок «Вступить в группу по приглашению?» / «Добавить пользователя в друзья?», пояснение «Участники группы увидят ваше имя и аватар», кнопки «Вступить»/«Принять» (primary) и «Отмена». Отмена → `navigate(ROUTES.DASHBOARD, { replace: true })`.
   - `joining`: primary-кнопка в loading, повторный клик игнорируется.
+  - `error` (reject join): 404 (неизвестный/отозванный токен, `GroupRoutes.kt:113-114`) → состояние `invalid`; любая другая ошибка (403, 409 `GROUP.ALREADY_MEMBER`, сеть, 5xx) → `error`: текст `resolveApiErrorMessageFromError(error, <inviteJoinError>)`, кнопки «Повторить» (снова `confirm()`, ровно один запрос) и «На главную». Toast при ошибке не показывается (экран и так её показывает).
   - Фокус при открытии — на «Отмена» (или ни на чём); у primary-кнопки **нет** `autoFocus`, чтобы Enter/двойной тап сразу после открытия не вступал без чтения экрана (review B, m11).
   - После успеха — текущее поведение (navigate в группу / toast + `ROUTES.FRIENDS`).
-- Неавторизованный пользователь: поведение `ProtectedRoute` не меняется (AuthModal), после входа он видит `ready`, а не автоматический join.
+- Неавторизованный пользователь: `ProtectedRoute` в хотфиксе не меняется. Известное поведение (`ProtectedRoute.tsx:26-38`): причина `signed_out` → redirect на лендинг, токен приглашения теряется; остальные причины → AuthModal, после входа пользователь видит `ready`, а не автоматический join. Сохранение токена для `signed_out` — PR 04-2f (`/login?returnTo`, спека 04); RTL-тест 01-2 фиксирует оба пути, чтобы 04-2f менял поведение осознанно.
 - Превью группы (имя, обложка, число участников) — **нет эндпоинта**, поэтому экран generic. После backend-issue BE-01-3 превью добавляется отдельным PR (не в хотфикс).
 - i18n: новый блок `join` в `group.json` и `friends.json` во всех 5 локалях (`en, es, pt-BR, pt-PT, ru`): `title`, `description`, `confirm`, `cancel`, `invalidTitle`, `goHome`. Тексты en/ru пишет исполнитель, es/pt-BR/pt-PT — машинный перевод с ревью владельца.
 - Компоненты — Radix `Card`, `Button`, `Flex`, `Text` (как в текущих страницах), без новых styled-components.
@@ -201,7 +204,7 @@ export const getBalanceDirection = (netBalance: number): BalanceDirection => {
 
 ## Ньюансы и подводные камни
 
-- `apiPath` сам бросает синхронно, но вызывается только внутри `async` API-функций → наружу выходит rejected Promise, который store-экшены обрабатывают как любую ошибку запроса (loading-флаг сбрасывается). Тест фиксирует именно rejection, а не синхронный throw.
+- `apiPath` сам бросает синхронно, но вызывается только внутри `.then` (01-1.1) → наружу выходит rejected Promise, который store-экшены обрабатывают как любую ошибку запроса (loading-флаг сбрасывается). Тест фиксирует именно rejection, а не синхронный throw.
 - Двойное кодирование: после перевода `usersApi.ts:67` на `apiPath` ручной `encodeURIComponent` обязательно убрать.
 - Валидные токены не меняются при `encodeURIComponent` (алфавит base64url безопасен) — для легитимных ссылок URL идентичен текущему.
 - Смена `roundMoney` → `roundHalfUp` меняет результат только на «половинных» float-значениях (1.005, 2.675, −1.005). Отрицательные округляются от нуля (как `roundHalfUp` сейчас), `Math.round` — к +∞. Сумма долей EQUAL по-прежнему может отличаться от total на 0.01 — это не регрессия, распределение остатка — D10.
@@ -238,19 +241,20 @@ export const getBalanceDirection = (netBalance: number): BalanceDirection => {
 ## Тесты/критерии приёмки
 
 01-1:
-- `src/api/apiPath.test.ts`: (a) UUID, `TEST_INVITE_TOKEN`, `group-1`, `activity-parent` → без изменений; (b) `..`, `.`, `''`, `'a/b'`, `'../x'`, `'a%2Fb'`, `'a.b'`, `'a\b'`, пробел → `InvalidPathSegmentError`; (c) сообщение ошибки не содержит значение сегмента; (d) API-функция с `'..'` в параметре возвращает rejected Promise (`return expect(...).rejects…`, без `await` — инвариант 7 спеки 02), синхронно не бросает.
+- `src/api/apiPath.test.ts`: (a) UUID, `TEST_INVITE_TOKEN`, `group-1`, `activity-parent` → без изменений; (b) `..`, `.`, `''`, `'a/b'`, `'../x'`, `'a%2Fb'`, `'a.b'`, `'a\b'`, пробел → `InvalidPathSegmentError`; (c) сообщение ошибки не содержит значение сегмента; (d) API-функция с `'..'` в параметре возвращает rejected Promise (`return expect(...).rejects…`; стиль `await` свободный, D24), синхронно не бросает.
 - `src/api/chipin.test.ts`, `groupsApi.test.ts`, `ledgerApi.test.ts`, `activityApi.test.ts`, `usersApi.test.ts`: по одному кейсу на функцию с `/` в параметре — промис rejected `InvalidPathSegmentError`, mock `apiInstance` не вызван.
-- **E2E-ish traversal** `src/features/routing/inviteTraversal.integration.test.tsx`: реальный `apiInstance` с custom axios `adapter`, который записывает `new URL(axios.getUri(config)).pathname` и отвечает 200; `MemoryRouter` с `initialEntries={['/group/join/..%2F11111111-1111-1111-1111-111111111111%2Fmembers%2F22222222-2222-2222-2222-222222222222%2Fkick']}` и маршрутом из `AppRouter`; авторизованный auth store. Ожидания: адаптер не вызван ни разу; показан toast `inviteJoinError`; ни один записанный pathname не матчит `/\/kick$/`. Второй кейс того же файла: прямой вызов `inviteApiUserToGroup({ inviteToken: '../g/members/u/kick' })` → rejected `InvalidPathSegmentError`, адаптер не вызван.
+- **E2E-ish traversal** `src/features/routing/inviteTraversal.integration.test.tsx`: реальный `apiInstance` с custom axios `adapter`, который записывает `new URL(axios.getUri(config), 'https://chipin.one').pathname` (с `baseURL: '/api'` `getUri` относительный — без base `new URL` бросает) и отвечает 200; `MemoryRouter` с `initialEntries={['/group/join/..%2F11111111-1111-1111-1111-111111111111%2Fmembers%2F22222222-2222-2222-2222-222222222222%2Fkick']}` и маршрутом из `AppRouter`; авторизованный auth store. Ожидания: адаптер не вызван ни разу; показан toast `inviteJoinError`; ни один записанный pathname не матчит `/\/kick$/`. Второй кейс того же файла: прямой вызов `inviteApiUserToGroup({ inviteToken: '../g/members/u/kick' })` → rejected `InvalidPathSegmentError`, адаптер не вызван.
 - Preview-deploy check (ручной, чек-лист PR): `curl -i https://<preview>/api/groups/..%2Fhealth` не возвращает тело `/health` (`{"status":"UP"}`); результат (декодирует ли Vercel `%2F`) записать в BE-01-2.
 - `src/helpers/inviteToken.test.ts`: валиден `TEST_INVITE_TOKEN`; невалидны `''`, `'abc'` (короткий), 65 символов, `'../x'`, `'a%2Fb'`, `'a.b'`, пробел.
 - `useJoinInviteLink`/`useFriendInviteLink` тесты: невалидный токен → API не вызван, navigate на dashboard.
 - `src/helpers/telemetry.test.ts`: `https://chipin.one/api/groups/invite/AbC…?x=1` → `https://chipin.one/api/groups/invite/:inviteToken`; существующие кейсы зелёные. `initializeSentry` тест: breadcrumb с токеном в `message` и в произвольном ключе `data`, событие с токеном в `extra` и `tags` — санитизированы.
 - `vercel.config.test.js`: новые ассерты CSP/Permissions-Policy.
-- `src/helpers/localStorage.test.ts` + `authStore` тест: после `signOut()`/`expireSession()` в `chipin_user` нет `role`, `settings` сохранены; `selectIsUserAdmin` на свежем store = `false`.
+- `src/helpers/localStorage.test.ts` + `authStore` тест: после `signOut()`/`expireSession()` в значении `LS_KEY_USER` нет `role`, `settings` сохранены; `selectIsUserAdmin` на свежем store = `false`. (Спека 03, PR 03-7b, сохраняет это поведение: при expiry удаляется только `role`.)
 
 01-2:
-- RTL-тесты `GroupJoinPage.test.tsx`, `FriendJoinPage.test.tsx`: при монтировании API не вызывается; primary-кнопка не в фокусе после mount, Enter сразу после mount не вызывает API; клик «Вступить» → ровно один вызов; повторный клик во время `joining` не даёт второго; «Отмена» → navigate на dashboard без вызова; невалидный токен → экран `invalid`.
-- i18n parity: ключи `join.*` есть во всех 5 локалях (существующий/новый тест на совпадение ключей).
+- RTL-тесты `GroupJoinPage.test.tsx`, `FriendJoinPage.test.tsx`: при монтировании API не вызывается; primary-кнопка не в фокусе после mount, Enter сразу после mount не вызывает API; клик «Вступить» → ровно один вызов; повторный клик во время `joining` не даёт второго; «Отмена» → navigate на dashboard без вызова; невалидный токен → экран `invalid`; API reject 404 → `invalid`; reject 409/сеть → `error`, «Повторить» → ровно один новый вызов; ответ после размонтирования/смены сессии не навигирует; неавторизованный с `signed_out` → лендинг, с `expired` → AuthModal, затем `ready`.
+- 01-2 обновляет `inviteTraversal.integration.test.tsx` из 01-1: вместо toast `inviteJoinError` ожидается экран `invalid` (адаптер по-прежнему не вызван).
+- i18n parity: локальный тест 01-2 — ключи `join.*` есть во всех 5 локалях `group.json`/`friends.json`. Общий тест паритета всех namespace — PR 04-2c (единственный владелец).
 
 01-3:
 - `src/helpers/numbers.test.ts`: `roundHalfUp(1.005, 2) === 1.01`, `(2.675, 2) === 2.68`, `(-1.005, 2) === -1.01`, `(10/3, 2) === 3.33`.
@@ -265,7 +269,7 @@ export const getBalanceDirection = (netBalance: number): BalanceDirection => {
 
 Создать 3 issue в `chipin-backend` (Type, Priority, assignee, Project 5 — при создании):
 
-- **BE-01-1 (P1) OAuth: привязка кода к браузеру (PKCE).** `/auth/login/google` принимает `code_challenge` (S256) и сохраняет вместе с одноразовым кодом; `/auth/oauth/exchange` требует `code_verifier`, иначе 400. Альтернатива — короткоживущая `__Host-chipin_oauth_tx` cookie (HttpOnly, SameSite=Lax, 10 мин), проверяемая на exchange. Контекст: `OAuthTokenExchangeService.kt:44-75` принимает только `code` (`04-security.md` F3). FE-часть (генерация verifier в `sessionStorage`) — отдельный FE-issue после BE-01-1.
+- **BE-01-1 (P1) OAuth: привязка кода к браузеру (PKCE).** `/auth/login/google` принимает `code_challenge` (S256) и сохраняет вместе с одноразовым кодом; `/auth/oauth/exchange` требует `code_verifier`, иначе 400. Альтернатива — короткоживущая `__Host-chipin_oauth_tx` cookie (HttpOnly, SameSite=Lax, 10 мин), проверяемая на exchange. Контекст: `OAuthTokenExchangeService.kt:44-75` принимает только `code` (`04-security.md` F3). FE-часть — отдельный FE-issue (#540) после BE-01-1. Предпочтительна cookie-вариант: установленный iOS-PWA (standalone) может вернуть OAuth-редирект в другом browsing context, и verifier из `sessionStorage` потеряется; вход идёт same-origin через `/api` (`src/constants/env.ts:3`), поэтому `__Host-` cookie работает. Если выбран PKCE — в приёмку #540 входит проверка входа из iOS standalone.
 - **BE-01-2 (P3) Отклонять закодированные dot-segments/слэши в path-параметрах.** Глобальный interceptor/plugin: если сырой путь содержит `%2F`, `%2E%2E`, `%5C` (без учёта регистра) — 400. Integration-тесты: `POST /groups/invite/..%2Fx%2Fkick` → 400, не роутится. Явно указать в issue: literal `..` нормализует браузер, это защита только от закодированных вариантов и от не-браузерных клиентов. В issue записать результат preview-check из 01-1 (декодирует ли Vercel `%2F` при rewrite): если декодирует, backend-проверка сырого пути `%2F` бесполезна для трафика через прокси, и защита держится на FE-allowlist + `asValidUuid`.
 - **BE-01-3 (P2) Валидация invite-токена + preview-эндпоинт.** (a) `POST /groups/invite/{inviteToken}` и `POST /users/invite/{inviteToken}`: `inviteToken` проверяется по `^[A-Za-z0-9_-]{16,64}$` до обращения к БД, иначе 400 с кодом `INVALID_INVITE_TOKEN`; (b) `GET /groups/invite/{inviteToken}` (требует auth, rate-limited) → `{ groupId, name, coverUrl, memberCount, isAlreadyMember }` без списка участников; 404 на неизвестный токен. Описать в OpenAPI (`GroupOpenApi`).
 

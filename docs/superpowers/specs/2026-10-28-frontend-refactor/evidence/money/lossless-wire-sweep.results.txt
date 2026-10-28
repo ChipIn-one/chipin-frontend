@@ -1,0 +1,9 @@
+# node v24.21.0, lossless-json 4.3.1 (script pins 4.3.3)
+pipeline sweep { n: 400000, wrong: 0, rej: 0 }
+stringify {"amount":899999999999.9997,"n":1}  JSON.stringify(1e-7)= 1e-7  JSON.stringify(1e21)= 1e+21
+1e3 -> REJECT MoneyWireError
+1.23456 -> REJECT MoneyWireError
+1234567890123456.0000 -> REJECT MoneyWireError
+-0.0000 -> 0n
+payload 4.13 MB: JSON.parse 18.3 ms, parseWire 69.0 ms
+string-embedded key untouched: Dinner "amount":5
