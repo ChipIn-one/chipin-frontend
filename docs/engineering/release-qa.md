@@ -48,7 +48,7 @@ Tester guide in Russian: [`docs/qa/README.md`](../qa/README.md). Every new QA Is
 
 1. Open the immutable Preview URL from the QA Issue and go through the checks.
 2. Post **one new comment** in the QA Issue. Its first non-empty line is `QA PASS`, `QA FAIL` or `QA BLOCKED` (case and surrounding spaces do not matter). Notes may follow on the next lines. A first line that starts with `qa` but is not exactly one of those (for example `QA PASSED`, `**QA PASS**`, `QA PASS.`) fails the result run with the allowed lines; post a new comment.
-3. For a defect, create a canonical Bug Issue through Issue Intake (steps, expected and actual result, Preview SHA/URL, link to the QA Issue) and link it in the QA Issue's defect list.
+3. For a defect, open the **QA bug** form (`https://github.com/ChipIn-one/chipin-frontend/issues/new?template=qa-bug.yml`, org form from `ChipIn-one/.github`). It asks for steps and what was seen, device, Preview URL, expected result, a `QA:` retest line and the QA Issue link, and presets Type `Bug`, label `Frontend` and assignee `syllik`; Priority and Severity are set afterwards by the owner or an agent. Link the bug in the QA Issue's defect list and post `QA FAIL`.
 
 Only the sole current QA assignee counts. Owner comments, bot comments, other users and edited comments are not results; checkboxes and Slack messages are not acceptance. Results count only in an open Issue titled `Release QA <sha>` with the canonical marker. Editing or deleting a result invalidates it; post a new comment instead.
 
