@@ -1,3 +1,4 @@
+import { apiPath } from './apiPath';
 import { apiInstance } from './chipin.instance';
 import type { Group, UpdateGroupParams, UploadGroupCoverParams } from './chipin.types';
 
@@ -21,8 +22,8 @@ const updateGroup = ({
         ...(simplifyDebts !== undefined && { simplifyDebts }),
     };
 
-    return apiInstance
-        .patch<Group>(`/groups/${groupId}`, payload)
+    return Promise.resolve()
+        .then(() => apiInstance.patch<Group>(apiPath`/groups/${groupId}`, payload))
         .then(response => {
             if (!hasSupportedGroupResponse(response.data)) {
                 throw new Error('Unsupported group simplifyDebts response');
@@ -40,8 +41,8 @@ const uploadGroupCover = ({
     const formData = new FormData();
     formData.append('file', file);
 
-    return apiInstance
-        .put<Group>(`/groups/${groupId}/cover`, formData, {
+    return Promise.resolve()
+        .then(() => apiInstance.put<Group>(apiPath`/groups/${groupId}/cover`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' },
             onUploadProgress: event => {
                 if (!event.total) {
@@ -51,7 +52,7 @@ const uploadGroupCover = ({
                 const progress = Math.round((event.loaded * 100) / event.total);
                 onProgress?.(Math.min(Math.max(progress, 0), 100));
             },
-        })
+        }))
         .then(response => response.data);
 };
 

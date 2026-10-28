@@ -1,3 +1,4 @@
+import { apiPath } from './apiPath';
 import { apiInstance } from './chipin.instance';
 import type {
     ApiFriendsResponse,
@@ -63,13 +64,15 @@ const fetchKnownUsers = (signal?: AbortSignal): Promise<ApiFriendsResponse> => {
 const acceptKnownUserInvite = ({
     inviteToken,
 }: AcceptUserInviteParams): Promise<ApiUserResponse> => {
-    return apiInstance
-        .post<ApiUserResponse>(`/users/invite/${encodeURIComponent(inviteToken)}`)
+    return Promise.resolve()
+        .then(() => apiInstance.post<ApiUserResponse>(apiPath`/users/invite/${inviteToken}`))
         .then(response => response.data);
 };
 
 const removeKnownUser = ({ userId }: RemoveKnownUserParams): Promise<void> => {
-    return apiInstance.delete<void>(`/users/known-users/${userId}`).then(() => undefined);
+    return Promise.resolve()
+        .then(() => apiInstance.delete<void>(apiPath`/users/known-users/${userId}`))
+        .then(() => undefined);
 };
 
 export {

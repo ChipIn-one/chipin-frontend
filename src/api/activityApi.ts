@@ -1,5 +1,6 @@
 import type { ActivityCategory } from 'constants/activity';
 
+import { apiPath } from './apiPath';
 import { apiInstance } from './chipin.instance';
 import type {
     ApiActivityChildrenResponse,
@@ -42,11 +43,11 @@ export const fetchActivityChildren = ({
         ...(category !== undefined && { category }),
     };
 
-    return apiInstance
-        .get<ApiActivityChildrenResponse>(`/users/self/activities/${parentActivityId}/children`, {
-            params,
-            signal,
-        })
+    return Promise.resolve()
+        .then(() => apiInstance.get<ApiActivityChildrenResponse>(
+            apiPath`/users/self/activities/${parentActivityId}/children`,
+            { params, signal },
+        ))
         .then(response => response.data);
 };
 
@@ -67,10 +68,10 @@ export const fetchGroupActivityPreviews = ({
     limit,
     cursor,
 }: FetchGroupActivityPreviewsParams, signal?: AbortSignal): Promise<ApiActivityFeedResponse> => {
-    return apiInstance
-        .get<ApiActivityFeedResponse>(`/groups/${groupId}/activity-previews`, {
+    return Promise.resolve()
+        .then(() => apiInstance.get<ApiActivityFeedResponse>(apiPath`/groups/${groupId}/activity-previews`, {
             params: getPaginationParams({ limit, cursor }),
             signal,
-        })
+        }))
         .then(response => response.data);
 };

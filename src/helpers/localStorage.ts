@@ -8,7 +8,7 @@ import {
 } from 'constants/localstorage';
 
 export interface LocalUser {
-    role: UserRole;
+    role?: UserRole;
     settings: UserSettings;
 }
 
@@ -98,6 +98,15 @@ const saveLocalUser = (user: LocalUser) => {
     LocalStorage.set(LS_KEY_USER, user);
 };
 
+// Drop only the cached role; settings (language/theme) must survive sign-out.
+const clearLocalUserRole = () => {
+    const localUser = getLocalUser();
+
+    if (localUser) {
+        saveLocalUser({ settings: localUser.settings });
+    }
+};
+
 const hasAuthSessionHint = (): boolean => {
     return LocalStorage.get(LS_KEY_AUTH_SESSION_HINT, false);
 };
@@ -130,6 +139,7 @@ const setAuthSessionHint = (hasSession: boolean): boolean => {
 };
 
 export {
+    clearLocalUserRole,
     getLocalUser,
     hasAuthSessionHint,
     LocalStorage,

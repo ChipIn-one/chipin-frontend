@@ -2,6 +2,7 @@ import { expect, test } from 'vitest';
 
 import {
     resolveTelemetryEnvironment,
+    sanitizeStringValues,
     sanitizeTelemetryEvent,
     sanitizeTelemetryUrl,
 } from './telemetry';
@@ -30,6 +31,14 @@ test.each([
     [
         '/users/invite/private-friend-token?source=xhr',
         '/users/invite/:inviteToken',
+    ],
+    [
+        'https://chipin.one/api/groups/invite/AbCdEfGhIjKlMnOpQrStUvWxYz012345?x=1',
+        'https://chipin.one/api/groups/invite/:inviteToken',
+    ],
+    [
+        '/groups/invite/AbCdEfGhIjKlMnOpQrStUvWxYz012345',
+        '/groups/invite/:inviteToken',
     ],
 ])('redacts invite tokens from telemetry URLs', (url, expected) => {
     expect(sanitizeTelemetryUrl(url)).toBe(expected);
@@ -72,4 +81,20 @@ test('uses development telemetry on Vercel-generated domains', () => {
     expect(resolveTelemetryEnvironment('production', 'chipin.one')).toBe(
         'production',
     );
+});
+
+test('sanitizes every string value of a telemetry record and keeps other values', () => {
+    expect(
+        sanitizeStringValues({
+            endpoint: '/api/groups/invite/AbCdEfGhIjKlMnOpQrStUvWxYz012345',
+            route: '/group/join/private-invite-token',
+            status: 500,
+            ok: false,
+        }),
+    ).toEqual({
+        endpoint: '/api/groups/invite/:inviteToken',
+        route: '/group/join/:inviteToken',
+        status: 500,
+        ok: false,
+    });
 });

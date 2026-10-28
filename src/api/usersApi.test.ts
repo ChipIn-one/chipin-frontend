@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
+import { InvalidPathSegmentError } from './apiPath';
 import { apiInstance } from './chipin.instance';
 import type { SelfUser } from './chipin.types';
 import {
@@ -145,6 +146,19 @@ describe('usersApi', () => {
                 expect(apiInstance.delete).toHaveBeenCalledWith(
                     '/users/known-users/friend-1',
                 );
+            });
+    });
+});
+
+describe('usersApi path segment guard', () => {
+    test.each([
+        ['acceptKnownUserInvite', () => acceptKnownUserInvite({ inviteToken: 'a/b' })],
+        ['removeKnownUser', () => removeKnownUser({ userId: 'a/b' })],
+    ])('%s rejects a "/" in a path parameter without calling the API', (_name, onCall) => {
+        return expect(onCall()).rejects.toBeInstanceOf(InvalidPathSegmentError)
+            .then(() => {
+                expect(apiInstance.delete).not.toHaveBeenCalled();
+                expect(apiInstance.post).not.toHaveBeenCalled();
             });
     });
 });

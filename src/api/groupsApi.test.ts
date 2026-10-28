@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
+import { InvalidPathSegmentError } from './apiPath';
 import { apiInstance } from './chipin.instance';
 import type { Group } from './chipin.types';
 import { updateGroup, uploadGroupCover } from './groupsApi';
@@ -78,48 +79,60 @@ describe('groupsApi', () => {
 
         vi.mocked(apiInstance.put).mockResolvedValue({ data: group });
 
-        const uploadPromise = uploadGroupCover({ groupId: group.id, file, onProgress });
-        const [path, body, config] = vi.mocked(apiInstance.put).mock.calls[0];
-
-        expect(path).toBe('/groups/group-1/cover');
-        expect(body).toBeInstanceOf(FormData);
-
-        if (!(body instanceof FormData)) {
-            throw new Error('Expected group cover upload body to be FormData');
-        }
-
-        expect(body.get('file')).toBe(file);
-        expect(config).toMatchObject({
-            headers: { 'Content-Type': 'multipart/form-data' },
-        });
-
-        config?.onUploadProgress?.({
-            loaded: 3,
-            total: 4,
-            bytes: 3,
-            lengthComputable: true,
-            upload: true,
-        });
-        config?.onUploadProgress?.({
-            loaded: 5,
-            total: 4,
-            bytes: 2,
-            lengthComputable: true,
-            upload: true,
-        });
-        config?.onUploadProgress?.({
-            loaded: 1,
-            bytes: 1,
-            lengthComputable: false,
-            upload: true,
-        });
-
-        expect(onProgress).toHaveBeenNthCalledWith(1, 75);
-        expect(onProgress).toHaveBeenNthCalledWith(2, 100);
-        expect(onProgress).toHaveBeenCalledTimes(2);
-
-        return uploadPromise.then(result => {
+        return uploadGroupCover({ groupId: group.id, file, onProgress }).then(result => {
             expect(result).toEqual(group);
+
+            const [path, body, config] = vi.mocked(apiInstance.put).mock.calls[0];
+
+            expect(path).toBe('/groups/group-1/cover');
+            expect(body).toBeInstanceOf(FormData);
+
+            if (!(body instanceof FormData)) {
+                throw new Error('Expected group cover upload body to be FormData');
+            }
+
+            expect(body.get('file')).toBe(file);
+            expect(config).toMatchObject({
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+
+            config?.onUploadProgress?.({
+                loaded: 3,
+                total: 4,
+                bytes: 3,
+                lengthComputable: true,
+                upload: true,
+            });
+            config?.onUploadProgress?.({
+                loaded: 5,
+                total: 4,
+                bytes: 2,
+                lengthComputable: true,
+                upload: true,
+            });
+            config?.onUploadProgress?.({
+                loaded: 1,
+                bytes: 1,
+                lengthComputable: false,
+                upload: true,
+            });
+
+            expect(onProgress).toHaveBeenNthCalledWith(1, 75);
+            expect(onProgress).toHaveBeenNthCalledWith(2, 100);
+            expect(onProgress).toHaveBeenCalledTimes(2);
         });
+    });
+});
+
+describe('groupsApi path segment guard', () => {
+    test.each([
+        ['updateGroup', () => updateGroup({ groupId: 'a/b', groupName: 'Trip' })],
+        ['uploadGroupCover', () => uploadGroupCover({ groupId: 'a/b', file: new File(['x'], 'x.webp') })],
+    ])('%s rejects a "/" in a path parameter without calling the API', (_name, onCall) => {
+        return expect(onCall()).rejects.toBeInstanceOf(InvalidPathSegmentError)
+            .then(() => {
+                expect(apiInstance.patch).not.toHaveBeenCalled();
+                expect(apiInstance.put).not.toHaveBeenCalled();
+            });
     });
 });

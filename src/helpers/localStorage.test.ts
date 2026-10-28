@@ -1,8 +1,16 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { LS_KEY_AUTH_SESSION_HINT } from 'constants/localstorage';
+import type { UserSettings } from 'api/chipin.types';
+import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
 
-import { getLocalUser, hasAuthSessionHint, setAuthSessionHint } from './localStorage';
+import {
+    clearLocalUserRole,
+    getLocalUser,
+    hasAuthSessionHint,
+    LocalStorage,
+    saveLocalUser,
+    setAuthSessionHint,
+} from './localStorage';
 
 describe('auth session hint storage', () => {
     let values: Map<string, string>;
@@ -79,4 +87,38 @@ describe('auth session hint storage', () => {
         expect(getLocalUser()).toBeNull();
     });
 
+});
+
+describe('clearLocalUserRole', () => {
+    const settings = {
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        timeFormat: '24h',
+        language: 'ru',
+        theme: 'dark',
+        simplifyDebts: true,
+        skipCategory: false,
+        soloModeByDefault: false,
+        saveGroupExpensesToSolo: false,
+        sex: 'male',
+    } satisfies UserSettings;
+
+    beforeEach(() => {
+        vi.unstubAllGlobals();
+        LocalStorage.remove(LS_KEY_USER);
+    });
+
+    test('removes only the cached role and keeps settings', () => {
+        saveLocalUser({ role: 'ADMIN', settings });
+
+        clearLocalUserRole();
+
+        expect(getLocalUser()).toEqual({ settings });
+    });
+
+    test('does nothing when no user is cached', () => {
+        clearLocalUserRole();
+
+        expect(getLocalUser()).toBeNull();
+    });
 });

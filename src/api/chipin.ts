@@ -1,3 +1,4 @@
+import { apiPath } from './apiPath';
 import { AUTH_API_PATH, AUTH_CSRF_HEADERS } from './auth.constants';
 import { apiInstance } from './chipin.instance';
 import type {
@@ -48,8 +49,8 @@ export const fetchApiUserGroupById = (
     groupId: string,
     signal?: AbortSignal,
 ): Promise<Group> => {
-    return apiInstance
-        .get<Group>(`/groups/${groupId}`, { signal })
+    return Promise.resolve()
+        .then(() => apiInstance.get<Group>(apiPath`/groups/${groupId}`, { signal }))
         .then(result => result.data);
 };
 
@@ -66,25 +67,29 @@ export const createApiGroup = ({
 };
 
 export const removeApiGroup = ({ groupId }: RemoveGroupParams): Promise<void> => {
-    return apiInstance.delete<void>(`/groups/${groupId}`).then(() => undefined);
+    return Promise.resolve()
+        .then(() => apiInstance.delete<void>(apiPath`/groups/${groupId}`))
+        .then(() => undefined);
 };
 
 export const leaveApiGroup = ({ groupId, newOwnerId }: LeaveGroupParams): Promise<void> => {
-    return apiInstance
-        .post<void>(`/groups/${groupId}/leave`, {
+    return Promise.resolve()
+        .then(() => apiInstance.post<void>(apiPath`/groups/${groupId}/leave`, {
             ...(newOwnerId && { newOwnerId }),
-        })
+        }))
         .then(() => undefined);
 };
 
 export const kickApiGroupMember = ({ groupId, userId }: KickGroupMemberParams): Promise<void> => {
-    return apiInstance
-        .post<void>(`/groups/${groupId}/members/${userId}/kick`)
+    return Promise.resolve()
+        .then(() => apiInstance.post<void>(apiPath`/groups/${groupId}/members/${userId}/kick`))
         .then(() => undefined);
 };
 
 export const inviteApiUserToGroup = ({ inviteToken }: InviteToGroupParams): Promise<Group> => {
-    return apiInstance.post<Group>(`/groups/invite/${inviteToken}`).then(response => response.data);
+    return Promise.resolve()
+        .then(() => apiInstance.post<Group>(apiPath`/groups/invite/${inviteToken}`))
+        .then(response => response.data);
 };
 
 export const fetchApiDashboard = (signal?: AbortSignal): Promise<Dashboard> => {

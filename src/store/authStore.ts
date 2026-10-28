@@ -12,6 +12,7 @@ import {
     validateAuthSession,
 } from 'helpers/authSession';
 import { isUnauthorizedApiError, normalizeApiError } from 'helpers/errors';
+import { clearLocalUserRole } from 'helpers/localStorage';
 
 import { useActivityStore } from './activity-store';
 import {
@@ -44,6 +45,8 @@ export interface AuthStore {
 let signOutPromise: Promise<void> | null = null;
 
 const resetAuthScopedStores = () => {
+    // Before setInitialUsersStore(), which re-reads the cached user from localStorage.
+    clearLocalUserRole();
     useActivityStore.getState().resetActivity();
     useDashboardStore.getState().setInitialDashboardStore();
     useExpenseModalStore.getState().reset();

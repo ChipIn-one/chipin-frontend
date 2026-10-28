@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 
+import { InvalidPathSegmentError } from './apiPath';
 import {
     createApiGroup,
     fetchApiCurrencyRates,
@@ -7,6 +8,8 @@ import {
     fetchApiUserGroupById,
     fetchApiUserGroups,
     inviteApiUserToGroup,
+    kickApiGroupMember,
+    leaveApiGroup,
     logoutApiAuthTokens,
     refreshApiAuthTokens,
     removeApiGroup,
@@ -248,5 +251,23 @@ describe('cookie-backed auth transport', () => {
             );
             expect(result).toBeUndefined();
         });
+    });
+});
+
+describe('chipin path segment guard', () => {
+    test.each([
+        ['fetchApiUserGroupById', () => fetchApiUserGroupById('a/b')],
+        ['removeApiGroup', () => removeApiGroup({ groupId: 'a/b' })],
+        ['leaveApiGroup', () => leaveApiGroup({ groupId: 'a/b' })],
+        ['kickApiGroupMember groupId', () => kickApiGroupMember({ groupId: 'a/b', userId: 'user-1' })],
+        ['kickApiGroupMember userId', () => kickApiGroupMember({ groupId: 'group-1', userId: 'a/b' })],
+        ['inviteApiUserToGroup', () => inviteApiUserToGroup({ inviteToken: '../g/members/u/kick' })],
+    ])('%s rejects a "/" in a path parameter without calling the API', (_name, onCall) => {
+        return expect(onCall()).rejects.toBeInstanceOf(InvalidPathSegmentError)
+            .then(() => {
+                expect(apiInstance.delete).not.toHaveBeenCalled();
+                expect(apiInstance.get).not.toHaveBeenCalled();
+                expect(apiInstance.post).not.toHaveBeenCalled();
+            });
     });
 });
