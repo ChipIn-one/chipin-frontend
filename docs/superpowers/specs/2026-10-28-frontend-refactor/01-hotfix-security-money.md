@@ -216,7 +216,7 @@ export const getBalanceDirection = (netBalance: number): BalanceDirection => {
 
 - `apiPath` становится единственным способом строить путь до перехода на сгенерированный клиент (D4, спека 03 PR 03-4: обёртка `api()` подставляет `{param}` через тот же `encodePathSegment` — allowlist и dot-segment правило не теряются; файл переезжает в `shared/api/pathSegment.ts`); lint-правило `no-restricted-syntax` на template literal внутри `apiInstance.*(…)` — спека 02 (PR 02-C12).
 - `getBalanceDirection` заменяется в PR 03-3 на `partitionBalances`/`displaySign` (`src/shared/money`, `src/entities/balance`). Порог «ноль» остаётся scale 4 (`0.0040 USD` ≠ «в расчёте»), поведение хотфикса сохраняется.
-- Экран подтверждения получает превью группы после BE-01-3; на Astro-сайте (D8) лендинги `/join/group/<token>` и `/join/friend/<token>` (спека 04 §3.5) ведут кнопкой на этот же экран (`/app/group/join/<token>`, `/app/friends/join/<token>` после cutover 04-4).
+- Экран подтверждения получает превью группы после BE-01-3; на Astro-сайте (D8) лендинги `/join/group/<token>` и `/join/friend/<token>` (спека 04 §3.5) ведут кнопкой на этот же экран (`app.chipin.one/group/join/<token>`, `app.chipin.one/friends/join/<token>`; путь в приложении не меняется, меняется только хост, D26).
 
 ## Что НЕ делаем
 

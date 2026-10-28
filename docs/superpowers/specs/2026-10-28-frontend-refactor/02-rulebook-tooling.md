@@ -74,10 +74,10 @@
 | `no-restricted-imports` `zustand` только в `src/store/**`, `src/app/**`; `zustand/react/shallow` разрешён везде (спека 03 §6; C1-18) | b | граница UI-состояния |
 | `no-restricted-properties` `navigator.onLine` вне `src/shared/offline/**` (03-5) | b | один онлайн-предикат `isNetworkUsable()` (спека 04 §2.3) |
 | `no-restricted-imports` `@vercel/*` кроме `app/telemetry/vercelAnalytics.ts` (04-2b) | b | изоляция провайдера (D18) |
-| `no-restricted-properties` `window.location.pathname` кроме `getRouterPathname` (04-2g) | b | basename (спека 04 §2.1); сообщение: `getRouterPathname()` |
+| ~~`no-restricted-properties` `window.location.pathname` кроме `getRouterPathname` (04-2g)~~ — снято D26 | — | базового пути `/app/` нет (спека 04 §2.1) |
 | `no-restricted-syntax` `ROUTES.HOME\|PRIVACY\|TERMS` (04-2f) | b | ссылки на сайт — `SITE_PATHS` |
 | `no-restricted-syntax` `i18n.changeLanguage` вне `setAppLanguage.ts` (04-2c) | b | язык меняется в одном месте |
-| `no-restricted-syntax` строковый литерал `/…(png\|svg\|ico\|webp)` в `apps/app/src` (04-2g) | b | ассеты через `import.meta.env.BASE_URL` |
+| ~~`no-restricted-syntax` строковый литерал `/…(png\|svg\|ico\|webp)` в `apps/app/src` (04-2g)~~ — снято D26 | — | Vite `base` остаётся `/` (спека 04 §2.1) |
 | `no-raw-colors` (спека 05 §3, 05-5; regex с якорями) | b | токены |
 | `no-restricted-syntax` `style` с обычными свойствами (05-5) | b | стили — пропсы Radix или CSS Module; кастомные `--x` разрешены |
 | `no-restricted-imports` `styled-components` вне allowlist (05-5), `@radix-ui/colors` (05-4), `\.svg\?react$` вне allowlist (05-5) | b | заморозка styled, токены, иконки — lucide |
