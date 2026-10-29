@@ -1,5 +1,5 @@
 import i18n from 'i18n';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { TEST_INVITE_TOKEN } from 'test/fixtures/inviteToken';
 import { beforeEach, expect, test, vi } from 'vitest';
@@ -53,6 +53,19 @@ const CurrentRoute = () => {
     return <output aria-label="Current route">{location.pathname}</output>;
 };
 
+const OPEN_OTHER_INVITE_LABEL = 'Open other invite';
+const OTHER_INVITE_TOKEN = 'ZyXwVuTsRqPoNmLkJiHgFeDcBa987654';
+
+const OpenOtherInvite = () => {
+    const navigate = useNavigate();
+
+    return (
+        <button type="button" onClick={() => navigate(`${ROUTES.FRIENDS_JOIN}/${OTHER_INVITE_TOKEN}`)}>
+            {OPEN_OTHER_INVITE_LABEL}
+        </button>
+    );
+};
+
 const renderPage = (inviteToken = TEST_INVITE_TOKEN, isProtected = false) => render(
     <MemoryRouter initialEntries={[`${ROUTES.FRIENDS_JOIN}/${inviteToken}`]}>
         <Theme>
@@ -66,6 +79,7 @@ const renderPage = (inviteToken = TEST_INVITE_TOKEN, isProtected = false) => ren
                 <Route path="*" element={null} />
             </Routes>
             <CurrentRoute />
+            <OpenOtherInvite />
         </Theme>
     </MemoryRouter>,
 );
@@ -181,7 +195,7 @@ test.each([
         });
 });
 
-test('ignores a join response after the auth session changes', () => {
+test('releases the loading state but does not navigate after the auth session changes', () => {
     const user = userEvent.setup();
     let resolveInvite: ((friend: typeof FRIEND) => void) | undefined;
     mocks.acceptFriendInvite.mockImplementation(() => new Promise(resolve => {
@@ -201,6 +215,26 @@ test('ignores a join response after the auth session changes', () => {
         })
         .then(() => {
             expect(currentRoute()).toBe(`${ROUTES.FRIENDS_JOIN}/${TEST_INVITE_TOKEN}`);
+            expect(joinButton().hasAttribute('disabled')).toBe(false);
+        });
+});
+
+test('opening another invite on the same page starts from the ready screen', () => {
+    const user = userEvent.setup();
+    mocks.acceptFriendInvite.mockRejectedValue(apiError(404));
+
+    renderPage();
+
+    return user.click(joinButton())
+        .then(() => {
+            expect(screen.getByRole('heading', { name: i18n.t('friends:join.invalidTitle') })).toBeTruthy();
+
+            return user.click(screen.getByRole('button', { name: OPEN_OTHER_INVITE_LABEL }));
+        })
+        .then(() => {
+            expect(currentRoute()).toBe(`${ROUTES.FRIENDS_JOIN}/${OTHER_INVITE_TOKEN}`);
+            expect(screen.getByRole('heading', { name: i18n.t('friends:join.title') })).toBeTruthy();
+            expect(joinButton().hasAttribute('disabled')).toBe(false);
         });
 });
 

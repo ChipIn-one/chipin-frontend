@@ -168,7 +168,7 @@ test('accepts a friend invite and refreshes the canonical friends list', () => {
     });
 });
 
-test('rejects friend invite acceptance when the canonical friends refresh fails', () => {
+test('resolves friend invite acceptance when the canonical friends refresh fails', () => {
     const refreshError = new Error('friends refresh failed');
     const friend = {
         id: 'friend-1',
@@ -180,9 +180,9 @@ test('rejects friend invite acceptance when the canonical friends refresh fails'
     vi.mocked(usersApi.acceptKnownUserInvite).mockResolvedValue(friend);
     vi.mocked(usersApi.fetchKnownUsers).mockRejectedValue(refreshError);
 
-    return expect(
-        useUsersStore.getState().acceptFriendInvite({ inviteToken: 'friend-token' }),
-    ).rejects.toThrow(refreshError.message).then(() => {
+    return useUsersStore.getState().acceptFriendInvite({ inviteToken: 'friend-token' }).then(result => {
+        expect(result).toEqual(friend);
+        expect(usersApi.acceptKnownUserInvite).toHaveBeenCalledOnce();
         expect(usersApi.fetchKnownUsers).toHaveBeenCalledOnce();
         expect(useErrorsStore.getState().errors.users.friends).toEqual(
             expect.objectContaining({ message: expect.any(String) }),

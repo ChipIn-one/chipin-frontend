@@ -22,9 +22,10 @@ interface Params<TResult> {
     onAccepted: (result: TResult) => void;
 }
 
-type RequestState =
+type RequestState = { inviteToken: string } & (
     | { status: 'ready' | 'joining' | 'invalid' }
-    | { status: 'error'; errorMessage: string };
+    | { status: 'error'; errorMessage: string }
+);
 
 export const useInviteConfirmation = <TResult>({
     inviteToken,
@@ -33,8 +34,9 @@ export const useInviteConfirmation = <TResult>({
     onAccepted,
 }: Params<TResult>): InviteConfirmationState => {
     const navigate = useNavigate();
-    const [requestState, setRequestState] = useState<RequestState>({ status: 'ready' });
-    const isRequestInFlight = useRef(false);
+    const [requestState, setRequestState] = useState<RequestState | null>(null);
+    const inFlightToken = useRef<string | null>(null);
+    const currentToken = useRef(inviteToken);
     const isMounted = useRef(true);
 
     useEffect(() => {
@@ -45,41 +47,60 @@ export const useInviteConfirmation = <TResult>({
         };
     }, []);
 
-    const isTokenValid = isInviteToken(inviteToken);
+    useEffect(() => {
+        currentToken.current = inviteToken;
+    }, [inviteToken]);
 
     const confirm = useCallback(() => {
-        if (!isInviteToken(inviteToken) || isRequestInFlight.current) {
+        if (!isInviteToken(inviteToken) || inFlightToken.current === inviteToken) {
             return;
         }
 
-        isRequestInFlight.current = true;
+        const token = inviteToken;
+        inFlightToken.current = token;
         const authSessionVersion = getAuthSessionVersion();
-        const isCurrent = () => isMounted.current && isAuthSessionCurrent(authSessionVersion);
+        // A response for another invite (SPA navigation to a new token) or after unmount is dropped;
+        // a response from a previous auth session only releases the loading state, never navigates.
+        const isForCurrentPage = () => isMounted.current && currentToken.current === token;
+        const isSessionCurrent = () => isAuthSessionCurrent(authSessionVersion);
 
-        setRequestState({ status: 'joining' });
+        setRequestState({ inviteToken: token, status: 'joining' });
 
-        onAccept(inviteToken)
+        onAccept(token)
             .then(result => {
-                if (!isCurrent()) {
+                if (!isForCurrentPage()) {
+                    return;
+                }
+
+                if (!isSessionCurrent()) {
+                    setRequestState({ inviteToken: token, status: 'ready' });
                     return;
                 }
 
                 onAccepted(result);
             })
             .catch((error: unknown) => {
-                if (!isCurrent()) {
+                if (!isForCurrentPage()) {
+                    return;
+                }
+
+                if (!isSessionCurrent()) {
+                    setRequestState({ inviteToken: token, status: 'ready' });
                     return;
                 }
 
                 setRequestState(getApiErrorStatus(error) === 404
-                    ? { status: 'invalid' }
+                    ? { inviteToken: token, status: 'invalid' }
                     : {
+                        inviteToken: token,
                         status: 'error',
                         errorMessage: resolveApiErrorMessageFromError(error, errorFallbackMessage),
                     });
             })
             .finally(() => {
-                isRequestInFlight.current = false;
+                if (inFlightToken.current === token) {
+                    inFlightToken.current = null;
+                }
             });
     }, [errorFallbackMessage, inviteToken, onAccept, onAccepted]);
 
@@ -87,8 +108,13 @@ export const useInviteConfirmation = <TResult>({
         navigate(ROUTES.DASHBOARD, { replace: true });
     }, [navigate]);
 
-    if (!isTokenValid) {
+    if (!isInviteToken(inviteToken)) {
         return { status: 'invalid', confirm, cancel };
+    }
+
+    // State recorded for a previous token does not leak into a newly opened invite.
+    if (!requestState || requestState.inviteToken !== inviteToken) {
+        return { status: 'ready', confirm, cancel };
     }
 
     return requestState.status === 'error'
