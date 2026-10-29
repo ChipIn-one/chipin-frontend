@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
-    assertConfiguration, buildChecklist, buildIssueBody, findQaIssue, formatResultLine, hasGreenFrontendCiRun,
-    isNearMissResult, parseQaResult, resultOutcome, validateDeployment, verifyCi,
+    assertConfiguration, buildChecklist, buildIssueBody, commitUrl, currentQaLogins, findQaIssue, formatInvalidationLine, formatResultLine,
+    hasGreenFrontendCiRun, isNearMissResult, parseQaResult, resultOutcome, slackLink, validateDeployment, verifyCi,
 } from './core.mjs';
 
 const SHA = 'a'.repeat(40);
@@ -291,15 +291,61 @@ describe('authorized QA result', () => {
     test('formats one Slack result line with the owner mention or plain login', () => {
         const result = { outcome: 'PASS', sha: SHA, qa: 'SoRawSteak' };
         const issueUrl = 'https://github.com/ChipIn-one/chipin-frontend/issues/50';
-        expect(formatResultLine({ result, issueUrl, userMap: '{"syllik":"U0OWNER123"}' }))
-            .toBe(`<@U0OWNER123> Frontend QA PASS by SoRawSteak for ${SHA}: ${issueUrl}`);
-        expect(formatResultLine({ result, issueUrl, userMap: '{}' })).toBe(`syllik Frontend QA PASS by SoRawSteak for ${SHA}: ${issueUrl}`);
-        expect(formatResultLine({ result, issueUrl, userMap: 'not json' })).toMatch(/^syllik /);
-        expect(formatResultLine({ result, issueUrl, userMap: '{"syllik":"<!channel>"}' })).toMatch(/^syllik /);
+        const tail = `QA PASS по <https://github.com/ChipIn-one/chipin-frontend/commit/${SHA}|aaaaaaa> — <${issueUrl}|QA Issue #50> (QA: SoRawSteak)`;
+        expect(formatResultLine({ result, issueUrl, issueNumber: 50, userMap: '{"syllik":"U0OWNER123"}' })).toBe(`<@U0OWNER123> ${tail}`);
+        expect(formatResultLine({ result, issueUrl, issueNumber: 50, userMap: '{}' })).toBe(`syllik ${tail}`);
+        expect(formatResultLine({ result, issueUrl, issueNumber: 50, userMap: 'not json' })).toMatch(/^syllik /);
+        expect(formatResultLine({ result, issueUrl, issueNumber: 50, userMap: '{"syllik":"<!channel>"}' })).toMatch(/^syllik /);
+        expect(formatResultLine({ result: { ...result, outcome: 'BLOCKED' }, issueUrl, issueNumber: 50, userMap: '{}' })).toMatch(/^syllik QA BLOCKED по /);
+        expect(formatResultLine({ result: { ...result, qa: 'syllik' }, issueUrl, issueNumber: 50, userMap: '{}' })).toMatch(/\(QA: syllik\)$/);
+        expect(() => formatResultLine({ result: { ...result, qa: '<!channel>' }, issueUrl, issueNumber: 50, userMap: '{}' })).toThrow(/login/);
+        expect(formatResultLine({ result, issueUrl, issueNumber: 50, userMap: '{}' })).not.toMatch(/(^|[^<])https:\/\//);
+    });
+
+    test('formats the withdrawn result line with Slack links only', () => {
+        const issueUrl = 'https://github.com/ChipIn-one/chipin-frontend/issues/50';
+        expect(formatInvalidationLine({ sha: SHA, issueUrl, issueNumber: 50, userMap: '{"syllik":"U0OWNER123"}' }))
+            .toBe(`<@U0OWNER123> Результат QA по <https://github.com/ChipIn-one/chipin-frontend/commit/${SHA}|aaaaaaa> отозван — <${issueUrl}|QA Issue #50>`);
+        expect(() => formatInvalidationLine({ sha: 'abc', issueUrl, issueNumber: 50, userMap: '{}' })).toThrow(/40-character/);
+    });
+
+    test('Slack links escape & and reject <, > and | in interpolated values', () => {
+        expect(commitUrl(SHA)).toBe(`https://github.com/ChipIn-one/chipin-frontend/commit/${SHA}`);
+        expect(slackLink('https://example.test/a?b=1&c=2', 'A & B')).toBe('<https://example.test/a?b=1&amp;c=2|A &amp; B>');
+        expect(() => slackLink('https://example.test/<x>', 'ok')).toThrow(/Slack link/);
+        expect(() => slackLink('https://example.test/a|b', 'ok')).toThrow(/Slack link/);
+        expect(() => slackLink('https://example.test/', 'a|b')).toThrow(/Slack link/);
+        expect(() => slackLink('https://example.test/', '<@U1>')).toThrow(/Slack link/);
+        expect(() => slackLink('javascript:alert(1)', 'ok')).toThrow(/Slack link/);
+        expect(() => slackLink('https://example.test/a b', 'ok')).toThrow(/Slack link/);
+    });
+
+    test('the owner is the QA only when he is the sole assignee', () => {
+        expect(currentQaLogins([{ login: 'syllik' }])).toEqual(['syllik']);
+        expect(currentQaLogins([{ login: 'syllik' }, { login: 'SoRawSteak' }])).toEqual(['SoRawSteak']);
+        expect(currentQaLogins([{ login: 'SoRawSteak' }])).toEqual(['SoRawSteak']);
+        expect(currentQaLogins([])).toEqual([]);
+        expect(currentQaLogins(undefined)).toEqual([]);
+    });
+
+    test('accepts the owner result only when the owner is the sole assignee', () => {
+        const ownerIssue = { ...issue, assignees: [{ login: 'syllik' }] };
+        const ownerComment = { ...comment, user: { login: 'syllik', type: 'User' } };
+        expect(parseQaResult(ownerComment, ownerIssue)).toEqual({ outcome: 'PASS', sha: SHA, qa: 'syllik' });
+        expect(parseQaResult({ ...ownerComment, body: 'QA BLOCKED\nPreview 404' }, ownerIssue)).toMatchObject({ outcome: 'BLOCKED', qa: 'syllik' });
+        expect(() => parseQaResult(ownerComment, issue)).toThrow(/assigned QA/);
+        expect(() => parseQaResult(comment, ownerIssue)).toThrow(/assigned QA/);
+        expect(() => parseQaResult({ ...ownerComment, updated_at: '2026-10-23T11:01:00Z' }, ownerIssue)).toThrow(/edited/);
+        expect(() => parseQaResult({ ...ownerComment, user: { login: 'syllik', type: 'Bot' } }, ownerIssue)).toThrow(/human/);
     });
 
     test('requires write token and an explicit identity map before handoff', () => {
         expect(() => assertConfiguration({ CHIPIN_DEV_READ_TOKEN: 'read', SLACK_WEBHOOK_CI: 'https://hooks.slack.com/services/a/b/c', SLACK_USER_MAP: '{"SoRawSteak":"U0C9X8T4R2Q"}' }, 'SoRawSteak')).toThrow(/CHIPIN_ISSUE_WRITE_TOKEN/);
         expect(() => assertConfiguration({ CHIPIN_DEV_READ_TOKEN: 'read', CHIPIN_ISSUE_WRITE_TOKEN: 'write', SLACK_WEBHOOK_CI: 'https://hooks.slack.com/services/a/b/c', SLACK_USER_MAP: '{}' }, 'SoRawSteak')).toThrow(/SLACK_USER_MAP/);
+        const full = { CHIPIN_DEV_READ_TOKEN: 'read', CHIPIN_ISSUE_WRITE_TOKEN: 'write', SLACK_WEBHOOK_CI: 'https://hooks.slack.com/services/a/b/c' };
+        expect(assertConfiguration({ ...full, SLACK_USER_MAP: '{"SoRawSteak":"U0C9X8T4R2Q"}' }, 'SoRawSteak')).toEqual({ slackId: 'U0C9X8T4R2Q' });
+        // The owner as QA gets no mention, so his Slack ID is not required; the map must still be JSON.
+        expect(assertConfiguration({ ...full, SLACK_USER_MAP: '{}' }, 'syllik')).toEqual({ slackId: null });
+        expect(() => assertConfiguration({ ...full, SLACK_USER_MAP: 'nope' }, 'syllik')).toThrow(/JSON/);
     });
 });

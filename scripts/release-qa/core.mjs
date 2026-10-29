@@ -17,6 +17,47 @@ export function assertFullSha(value, label = 'SHA') {
     return value;
 }
 
+export function isOwnerLogin(login) {
+    return typeof login === 'string' && login.toLowerCase() === RELEASE_OWNER;
+}
+
+// The owner is the QA only when he is the sole assignee; otherwise the QA is every non-owner assignee.
+export function currentQaLogins(assignees) {
+    const logins = (assignees ?? []).map(user => user?.login).filter(login => typeof login === 'string');
+    if (logins.length === 1 && isOwnerLogin(logins[0])) return [logins[0]];
+    return logins.filter(login => !isOwnerLogin(login));
+}
+
+export function commitUrl(sha) {
+    return `https://github.com/${REPOSITORY}/commit/${assertFullSha(sha)}`;
+}
+
+const escapeSlack = value => value.replace(/&/g, '&amp;');
+
+// Slack mrkdwn link <url|text>. Values are validated fields; anything that could break the link is rejected.
+export function slackLink(url, text) {
+    if (typeof url !== 'string' || !/^https:\/\/[^\s<>|]+$/.test(url) || typeof text !== 'string' || !text || /[<>|\n]/.test(text)) {
+        throw new Error('Slack link value contains characters that cannot be linked safely.');
+    }
+    return `<${escapeSlack(url)}|${escapeSlack(text)}>`;
+}
+
+export function slackCommitLink(sha) {
+    return slackLink(commitUrl(sha), sha.slice(0, 7));
+}
+
+export function slackIssueLink(issueUrl, issueNumber) {
+    if (!Number.isInteger(issueNumber) || issueNumber <= 0) throw new Error('QA Issue number is required for a Slack link.');
+    return slackLink(issueUrl, `QA Issue #${issueNumber}`);
+}
+
+const GITHUB_LOGIN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
+
+function slackLogin(login) {
+    if (typeof login !== 'string' || !GITHUB_LOGIN.test(login)) throw new Error('QA login is not a valid GitHub login.');
+    return login;
+}
+
 export function isSlackWebhook(value) {
     return typeof value === 'string' && /^https:\/\/hooks\.slack\.com\/services\/[^\s]+$/.test(value);
 }
@@ -30,6 +71,8 @@ export function assertConfiguration(env, qaLogin) {
     }
     let map;
     try { map = JSON.parse(env.SLACK_USER_MAP); } catch { throw new Error('SLACK_USER_MAP must be JSON.'); }
+    // The owner as QA dispatched the run himself; his handoff mentions nobody.
+    if (isOwnerLogin(qaLogin)) return { slackId: null };
     const slackId = map?.[qaLogin];
     if (typeof slackId !== 'string' || !SLACK_USER_ID.test(slackId)) {
         throw new Error(`SLACK_USER_MAP must map ${qaLogin} to an explicit Slack user ID.`);
@@ -275,9 +318,9 @@ export function parseQaResult(comment, issue) {
     if (!comment?.created_at || comment.updated_at !== comment.created_at) throw new Error('QA result comment was edited or has ambiguous timestamps.');
     const login = comment.user?.login ?? '';
     if (comment.user?.type !== 'User' || /\[bot\]$/i.test(login)) throw new Error('QA result author must be a human user.');
-    const assignees = (issue.assignees ?? []).map(item => item.login).filter(name => name.toLowerCase() !== RELEASE_OWNER);
+    const assignees = currentQaLogins(issue.assignees);
     if (assignees.length !== 1) throw new Error('QA Issue has no sole currently assigned QA.');
-    if (login.toLowerCase() === RELEASE_OWNER || login.toLowerCase() !== assignees[0].toLowerCase()) {
+    if (login.toLowerCase() !== assignees[0].toLowerCase()) {
         throw new Error('QA result author is not the sole currently assigned QA.');
     }
     const outcome = resultOutcome(comment.body);
@@ -293,10 +336,11 @@ function ownerMention(userMap) {
 }
 
 // Slack lines are built from validated values only; comment text never reaches Slack.
-export function formatResultLine({ result, issueUrl, userMap }) {
-    return `${ownerMention(userMap)} Frontend QA ${result.outcome} by ${result.qa} for ${result.sha}: ${issueUrl}`;
+export function formatResultLine({ result, issueUrl, issueNumber, userMap }) {
+    if (!['PASS', 'FAIL', 'BLOCKED'].includes(result.outcome)) throw new Error('QA result outcome is invalid.');
+    return `${ownerMention(userMap)} QA ${result.outcome} по ${slackCommitLink(result.sha)} — ${slackIssueLink(issueUrl, issueNumber)} (QA: ${slackLogin(result.qa)})`;
 }
 
-export function formatInvalidationLine({ sha, issueUrl, userMap }) {
-    return `${ownerMention(userMap)} Frontend QA result for ${assertFullSha(sha)} was edited or deleted and is no longer valid: ${issueUrl}`;
+export function formatInvalidationLine({ sha, issueUrl, issueNumber, userMap }) {
+    return `${ownerMention(userMap)} Результат QA по ${slackCommitLink(assertFullSha(sha))} отозван — ${slackIssueLink(issueUrl, issueNumber)}`;
 }

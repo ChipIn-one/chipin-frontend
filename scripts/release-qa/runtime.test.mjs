@@ -1,5 +1,7 @@
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { expect, test } from 'vitest';
-import { assertAncestry, assertRetrySafe, chooseProductionBaseline, prepareReleaseQa, readPackageBuildChanges, readResultAndNotify, resolveCandidate, sendHandoff, validateResultEvent } from './runtime.mjs';
+import { assertAncestry, assertRetrySafe, assignQa, chooseProductionBaseline, prepareReleaseQa, readPackageBuildChanges, readResultAndNotify, resolveCandidate, sendHandoff, validateResultEvent } from './runtime.mjs';
 
 const SHA = 'a'.repeat(40);
 const BASE = 'b'.repeat(40);
@@ -238,20 +240,36 @@ test('zero-input runs: an auto run in progress or a successful auto run for the 
     expect(assertRetrySafe([auto('completed', 'failure', SHA)], 101, SHA, null)).toBe(true);
 });
 
-test('handoff mentions included UI Issues that have no QA steps', () => {
+const COMMIT_LINK = `<https://github.com/ChipIn-one/chipin-frontend/commit/${SHA}|aaaaaaa>`;
+const LINK_LINES = [
+    `<${'https://chipin-frontend-abc-sylliks-projects.vercel.app'}|QA Build>`,
+    '<https://github.com/ChipIn-one/chipin-frontend/issues/50|QA Issue #50>',
+    '<https://github.com/ChipIn-one/chipin-frontend/blob/master/docs/qa/README.md|QA Guide>',
+];
+// No bare URL: every https:// must open a Slack link.
+const noBareUrl = text => expect(text.replace(/<https:\/\/[^<>|\s]+\|[^<>|]+>/g, '')).not.toContain('https://');
+
+test('handoff mentions the QA with Slack links and no "Missing QA steps" line', () => {
     const posted = [];
     const issue = { number: 50, html_url: 'https://github.com/ChipIn-one/chipin-frontend/issues/50' };
     return sendHandoff({ post: (url, payload) => { posted.push(payload.text); return Promise.resolve(true); }, webhook: WEBHOOK,
         slackId: 'U0C9X8T4R2Q', issue, sha: SHA, url: PREVIEW_URL, missingSteps: [13, 14] }).then(value => {
         expect(value).toEqual({ delivered: true });
-        expect(posted[0]).toMatch(/Missing QA steps: #13, #14/);
-        expect(posted[0].split('\n')).toEqual([
-            `<@U0C9X8T4R2Q> Frontend QA candidate ${SHA}`,
-            PREVIEW_URL,
-            'Canonical QA Issue: https://github.com/ChipIn-one/chipin-frontend/issues/50',
-            'Tester guide: https://github.com/ChipIn-one/chipin-frontend/blob/master/docs/qa/README.md',
-            'Missing QA steps: #13, #14 (check against their Acceptance)',
-        ]);
+        expect(posted[0]).not.toMatch(/Missing QA steps/);
+        expect(posted[0]).toBe([`<@U0C9X8T4R2Q> Релиз-кандидат ${COMMIT_LINK} — нужна проверка`, ...LINK_LINES].join('\n'));
+        noBareUrl(posted[0]);
+    });
+});
+
+test('handoff for the owner as QA says the owner checks and mentions nobody', () => {
+    const posted = [];
+    const issue = { number: 50, html_url: 'https://github.com/ChipIn-one/chipin-frontend/issues/50' };
+    return sendHandoff({ post: (url, payload) => { posted.push(payload.text); return Promise.resolve(true); }, webhook: WEBHOOK,
+        slackId: null, issue, sha: SHA, url: PREVIEW_URL }).then(value => {
+        expect(value).toEqual({ delivered: true });
+        expect(posted[0]).toBe([`Релиз-кандидат ${COMMIT_LINK} — проверяет владелец`, ...LINK_LINES].join('\n'));
+        expect(posted[0]).not.toContain('<@');
+        noBareUrl(posted[0]);
     });
 });
 
@@ -305,8 +323,8 @@ test('zero-input dispatch on a non-UI compare resolves the candidate, records no
             candidate: { sha: SHA, deploymentId: 42, url: PREVIEW_URL, fallback: false }, slack: { delivered: true } });
         expect(posted).toHaveLength(1);
         expect(posted[0].url).toBe(WEBHOOK);
-        expect(posted[0].text).not.toContain('\n');
-        expect(posted[0].text).toMatch(new RegExp(`No manual QA needed for ${SHA}.*actions/runs/777`));
+        expect(posted[0].text).toBe(`Релиз-кандидат ${COMMIT_LINK} — QA не нужен, UI не менялся\n<${PREVIEW_URL}|Build>`);
+        noBareUrl(posted[0].text);
     });
 });
 
@@ -341,9 +359,13 @@ test('dispatch outside the owner or with an invalid explicit priority is rejecte
     expect(() => prepareReleaseQa({ env: { ...env, QA_PRIORITY: '', GITHUB_ACTOR: 'someone' }, readApi: evidenceApi(), writeApi: null })).toThrow(/syllik/);
 });
 
-function resultFixture({ body = 'QA PASS', user = { login: 'SoRawSteak', type: 'User' }, updatedAt = '2026-10-23T11:00:00Z', state = 'open', title = `Release QA ${SHA}` } = {}) {
+const DEN_ASSIGNED = [{ login: 'syllik' }, { login: 'SoRawSteak' }];
+const OWNER_ONLY = [{ login: 'syllik' }];
+const OWNER = { login: 'syllik', type: 'User' };
+
+function resultFixture({ body = 'QA PASS', user = { login: 'SoRawSteak', type: 'User' }, updatedAt = '2026-10-23T11:00:00Z', state = 'open', title = `Release QA ${SHA}`, assignees = DEN_ASSIGNED } = {}) {
     const issue = { number: 50, state, title, body: `<!-- chipin-release-qa:v1 repo=ChipIn-one/chipin-frontend sha=${SHA} deployment=42 -->`, created_at: '2026-10-23T10:00:00Z',
-        html_url: 'https://github.com/ChipIn-one/chipin-frontend/issues/50', assignees: [{ login: 'syllik' }, { login: 'SoRawSteak' }] };
+        html_url: 'https://github.com/ChipIn-one/chipin-frontend/issues/50', assignees };
     const comment = { id: 8, issue_url: 'https://api.github.com/repos/ChipIn-one/chipin-frontend/issues/50', user, body, created_at: '2026-10-23T11:00:00Z', updated_at: updatedAt };
     const event = { action: 'created', repository: { full_name: 'ChipIn-one/chipin-frontend' }, issue: { number: 50 }, comment: { id: 8, body } };
     return { event, api: { request: path => Promise.resolve(path.endsWith('/comments/8') ? comment : issue) } };
@@ -355,7 +377,8 @@ test('a valid result with a leading space and notes posts one Slack line mention
     const env = { SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{"syllik":"U0OWNER123"}' };
     return readResultAndNotify({ event, api, env, post: (url, payload) => { posted.push(payload.text); return Promise.resolve(true); } }).then(value => {
         expect(value).toMatchObject({ outcome: 'VALID_QA_RESULT', result: { outcome: 'PASS', sha: SHA, qa: 'SoRawSteak' }, slack: { delivered: true } });
-        expect(posted).toEqual([`<@U0OWNER123> Frontend QA PASS by SoRawSteak for ${SHA}: https://github.com/ChipIn-one/chipin-frontend/issues/50`]);
+        expect(posted).toEqual([`<@U0OWNER123> QA PASS по ${COMMIT_LINK} — <https://github.com/ChipIn-one/chipin-frontend/issues/50|QA Issue #50> (QA: SoRawSteak)`]);
+        noBareUrl(posted[0]);
         expect(posted[0]).not.toContain('All checks done');
     });
 });
@@ -446,27 +469,27 @@ test('a fallback candidate is labelled as not the master head on the no-QA line'
     const env = { ...ownerEnv, CANDIDATE_SHA: '', PREVIEW_DEPLOYMENT_ID: '', SLACK_WEBHOOK_CI: WEBHOOK };
     return prepareReleaseQa({ env, readApi: evidenceApi({ head: { sha: HEAD, preview: true } }), writeApi: null, post, probe: () => Promise.resolve() }).then(value => {
         expect(value.candidate).toMatchObject({ sha: SHA, head: HEAD, fallback: true });
-        expect(posted[0]).toContain(`(not master head ${HEAD.slice(0, 7)}: CI pending)`);
+        expect(posted[0].split('\n')[0]).toBe(`Релиз-кандидат ${COMMIT_LINK} — QA не нужен, UI не менялся (не последний коммит master ${HEAD.slice(0, 7)}: ждёт CI)`);
         posted.length = 0;
         return prepareReleaseQa({ env, readApi: evidenceApi({ head: { sha: HEAD, preview: false } }), writeApi: null, post, probe: () => Promise.resolve() });
     }).then(() => {
-        expect(posted[0]).toContain(`(not master head ${HEAD.slice(0, 7)}: Preview pending)`);
+        expect(posted[0]).toContain(`(не последний коммит master ${HEAD.slice(0, 7)}: ждёт Preview)`);
         posted.length = 0;
         return prepareReleaseQa({ env, readApi: evidenceApi(), writeApi: null, post, probe: () => Promise.resolve() });
-    }).then(() => expect(posted[0]).not.toContain('not master head'));
+    }).then(() => expect(posted[0]).not.toContain('не последний коммит'));
 });
 
 test('a fallback candidate is labelled as not the master head on the handoff line', () => {
     const posted = [];
     const issue = { number: 50, html_url: 'https://github.com/ChipIn-one/chipin-frontend/issues/50' };
     return sendHandoff({ post: (url, payload) => { posted.push(payload.text); return Promise.resolve(true); }, webhook: WEBHOOK, slackId: 'U0C9X8T4R2Q',
-        issue, sha: SHA, url: PREVIEW_URL, fallbackNote: ` (not master head ${HEAD.slice(0, 7)}: CI pending)` }).then(() => {
-        expect(posted[0].split('\n')[0]).toBe(`<@U0C9X8T4R2Q> Frontend QA candidate ${SHA} (not master head ddddddd: CI pending)`);
+        issue, sha: SHA, url: PREVIEW_URL, fallbackNote: ` (не последний коммит master ${HEAD.slice(0, 7)}: ждёт CI)` }).then(() => {
+        expect(posted[0].split('\n')[0]).toBe(`<@U0C9X8T4R2Q> Релиз-кандидат ${COMMIT_LINK} — нужна проверка (не последний коммит master ddddddd: ждёт CI)`);
     });
 });
 
-function editedFixture({ action = 'edited', user = { login: 'SoRawSteak', type: 'User' }, from = 'QA PASS', to = 'QA FAIL' } = {}) {
-    const { api } = resultFixture({ updatedAt: '2026-10-23T11:05:00Z', body: to, user });
+function editedFixture({ action = 'edited', user = { login: 'SoRawSteak', type: 'User' }, from = 'QA PASS', to = 'QA FAIL', assignees = DEN_ASSIGNED } = {}) {
+    const { api } = resultFixture({ updatedAt: '2026-10-23T11:05:00Z', body: to, user, assignees });
     const event = { action, repository: { full_name: 'ChipIn-one/chipin-frontend' }, issue: { number: 50 },
         comment: { id: 8, body: action === 'deleted' ? from : to, user }, changes: action === 'edited' ? { body: { from } } : undefined };
     if (action === 'deleted') return { event, api: { request: path => (path.endsWith('/comments/8') ? Promise.resolve(null) : api.request(path)) } };
@@ -479,7 +502,8 @@ test('editing or deleting a result from the assigned QA posts one "no longer val
     const env = { SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{"syllik":"U0OWNER123"}' };
     return readResultAndNotify({ ...editedFixture(), env, post }).then(value => {
         expect(value).toMatchObject({ outcome: 'QA_RESULT_INVALIDATED', slack: { delivered: true } });
-        expect(posted).toEqual([`<@U0OWNER123> Frontend QA result for ${SHA} was edited or deleted and is no longer valid: https://github.com/ChipIn-one/chipin-frontend/issues/50`]);
+        expect(posted).toEqual([`<@U0OWNER123> Результат QA по ${COMMIT_LINK} отозван — <https://github.com/ChipIn-one/chipin-frontend/issues/50|QA Issue #50>`]);
+        noBareUrl(posted[0]);
         return readResultAndNotify({ ...editedFixture({ action: 'deleted' }), env, post });
     }).then(value => {
         expect(value).toMatchObject({ outcome: 'QA_RESULT_INVALIDATED', slack: { delivered: true } });
@@ -558,4 +582,176 @@ test('the "no longer valid" line is sent only when the previous body was a valid
         expect(deletedResult).toMatchObject({ outcome: 'QA_RESULT_INVALIDATED', slack: { delivered: true } });
         expect(posted).toHaveLength(2);
     });
+});
+
+test('with the owner as sole QA, a new owner QA PASS is valid and posts the result line', () => {
+    const posted = [];
+    const post = (url, payload) => { posted.push(payload.text); return Promise.resolve(true); };
+    const env = { SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{"syllik":"U0OWNER123"}' };
+    return readResultAndNotify({ ...resultFixture({ user: OWNER, assignees: OWNER_ONLY }), env, post }).then(value => {
+        expect(value).toMatchObject({ outcome: 'VALID_QA_RESULT', issueNumber: 50, result: { outcome: 'PASS', sha: SHA, qa: 'syllik' }, slack: { delivered: true } });
+        expect(posted).toEqual([`<@U0OWNER123> QA PASS по ${COMMIT_LINK} — <https://github.com/ChipIn-one/chipin-frontend/issues/50|QA Issue #50> (QA: syllik)`]);
+        return readResultAndNotify({ ...resultFixture({ body: 'QA FAIL\nBroken', user: OWNER, assignees: OWNER_ONLY }), env, post });
+    }).then(value => {
+        expect(value).toMatchObject({ outcome: 'VALID_QA_RESULT', result: { outcome: 'FAIL', qa: 'syllik' } });
+        expect(posted[1]).toMatch(/ QA FAIL по /);
+    });
+});
+
+test('with Den as QA, an owner QA PASS is still ignored as a result; with the owner as sole QA, others are rejected', () => {
+    let posts = 0;
+    const post = () => { posts += 1; return Promise.resolve(true); };
+    const env = { SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{}' };
+    const cases = [
+        resultFixture({ user: OWNER, assignees: DEN_ASSIGNED }),
+        resultFixture({ user: { login: 'SoRawSteak', type: 'User' }, assignees: OWNER_ONLY }),
+        resultFixture({ user: OWNER, assignees: [] }),
+        resultFixture({ user: OWNER, assignees: OWNER_ONLY, updatedAt: '2026-10-23T11:05:00Z' }),
+        resultFixture({ user: { login: 'syllik', type: 'Bot' }, assignees: OWNER_ONLY }),
+    ];
+    const next = index => {
+        if (index === cases.length) return Promise.resolve();
+        return readResultAndNotify({ ...cases[index], env, post })
+            .then(() => { throw new Error(`Owner case ${index} was accepted.`); }, error => expect(error.message).toMatch(/assigned QA|human|edited/))
+            .then(() => next(index + 1));
+    };
+    return next(0).then(() => Promise.all([
+        readResultAndNotify({ ...resultFixture({ user: OWNER, assignees: OWNER_ONLY, state: 'closed' }), env, post }),
+        readResultAndNotify({ ...resultFixture({ user: OWNER, assignees: OWNER_ONLY, title: 'Owner notes' }), env, post }),
+    ])).then(values => {
+        expect(values).toEqual([{ outcome: 'IGNORED' }, { outcome: 'IGNORED' }]);
+        expect(posts).toBe(0);
+    });
+});
+
+test('near-miss rules apply to the owner as sole QA; with Den as QA the owner near-miss stays ignored', () => {
+    const env = { SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{}' };
+    const post = () => Promise.resolve(true);
+    return readResultAndNotify({ ...resultFixture({ body: 'QA PASSED', user: OWNER, assignees: OWNER_ONLY }), env, post })
+        .then(() => { throw new Error('Owner near miss passed.'); },
+            error => expect(error.message).toBe('QA result first line must be exactly QA PASS, QA FAIL or QA BLOCKED.'))
+        .then(() => readResultAndNotify({ ...resultFixture({ body: 'QA PASSED', user: OWNER, assignees: DEN_ASSIGNED }), env, post }))
+        .then(value => expect(value).toEqual({ outcome: 'IGNORED' }));
+});
+
+test('editing or deleting an owner result withdraws it only when the owner is the sole QA', () => {
+    const posted = [];
+    const post = (url, payload) => { posted.push(payload.text); return Promise.resolve(true); };
+    const env = { SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{"syllik":"U0OWNER123"}' };
+    const withdrawn = `<@U0OWNER123> Результат QA по ${COMMIT_LINK} отозван — <https://github.com/ChipIn-one/chipin-frontend/issues/50|QA Issue #50>`;
+    return readResultAndNotify({ ...editedFixture({ user: OWNER, assignees: OWNER_ONLY }), env, post }).then(value => {
+        expect(value).toMatchObject({ outcome: 'QA_RESULT_INVALIDATED', withdrewResult: true, currentQa: 'syllik', slack: { delivered: true } });
+        return readResultAndNotify({ ...editedFixture({ action: 'deleted', user: OWNER, assignees: OWNER_ONLY }), env, post });
+    }).then(value => {
+        expect(value).toMatchObject({ outcome: 'QA_RESULT_INVALIDATED', withdrewResult: true });
+        expect(posted).toEqual([withdrawn, withdrawn]);
+        return readResultAndNotify({ ...editedFixture({ user: OWNER, assignees: DEN_ASSIGNED }), env, post });
+    }).then(value => {
+        expect(value).toMatchObject({ outcome: 'QA_RESULT_INVALIDATED', withdrewResult: false, currentQa: 'SoRawSteak' });
+        expect(value).not.toHaveProperty('slack');
+        expect(posted).toHaveLength(2);
+    });
+});
+
+function assignmentApi(initial) {
+    let assignees = initial.map(login => ({ login }));
+    const writes = [];
+    const issue = () => ({ number: 50, html_url: 'https://github.com/ChipIn-one/chipin-frontend/issues/50', assignees: [...assignees] });
+    const readApi = {
+        request: path => {
+            if (/\/assignees\/[^/]+$/.test(path)) return Promise.resolve(null);
+            if (path.endsWith('/issues/50')) return Promise.resolve(issue());
+            throw new Error(`Unexpected request ${path}`);
+        },
+    };
+    const writeApi = {
+        request: (path, { method, body }) => {
+            writes.push({ method, assignees: body.assignees });
+            if (method === 'DELETE') assignees = assignees.filter(user => !body.assignees.includes(user.login));
+            if (method === 'POST') assignees = [...assignees, ...body.assignees.map(login => ({ login }))];
+            return Promise.resolve(issue());
+        },
+    };
+    return { readApi, writeApi, writes, issue, set: next => { assignees = next.map(login => ({ login })); } };
+}
+
+test('assignment read-back accepts owner plus one QA, or the owner alone only when qa_login is the owner', () => {
+    const fresh = assignmentApi(['syllik']);
+    return assignQa(fresh.readApi, fresh.writeApi, fresh.issue(), 'SoRawSteak', false).then(value => {
+        expect(value.assignees.map(user => user.login)).toEqual(['syllik', 'SoRawSteak']);
+        expect(fresh.writes).toEqual([{ method: 'POST', assignees: ['SoRawSteak'] }]);
+        const owner = assignmentApi(['syllik']);
+        return assignQa(owner.readApi, owner.writeApi, owner.issue(), 'syllik', false).then(result => {
+            expect(result.assignees.map(user => user.login)).toEqual(['syllik']);
+            expect(owner.writes).toEqual([]);
+        });
+    }).then(() => {
+        const moved = assignmentApi(['syllik', 'SoRawSteak']);
+        return assignQa(moved.readApi, moved.writeApi, moved.issue(), 'syllik', false)
+            .then(() => { throw new Error('Owner took over without reassign.'); }, error => expect(error.message).toMatch(/reassignment/))
+            .then(() => assignQa(moved.readApi, moved.writeApi, moved.issue(), 'syllik', true))
+            .then(result => {
+                expect(result.assignees.map(user => user.login)).toEqual(['syllik']);
+                expect(moved.writes).toEqual([{ method: 'DELETE', assignees: ['SoRawSteak'] }]);
+            });
+    }).then(() => {
+        // Read-back that leaves the owner alone is not accepted for another QA.
+        const lost = assignmentApi(['syllik']);
+        const writeApi = { request: () => Promise.resolve(null) };
+        return assignQa(lost.readApi, writeApi, lost.issue(), 'SoRawSteak', false)
+            .then(() => { throw new Error('Owner-only read-back accepted for SoRawSteak.'); }, error => expect(error.message).toMatch(/read-back/));
+    }).then(() => {
+        // Read-back that still has another QA is not accepted for the owner as QA.
+        const kept = assignmentApi(['syllik', 'SoRawSteak']);
+        const writeApi = { request: () => Promise.resolve(null) };
+        return assignQa(kept.readApi, writeApi, kept.issue(), 'syllik', true)
+            .then(() => { throw new Error('Two-assignee read-back accepted for the owner as QA.'); }, error => expect(error.message).toMatch(/read-back/));
+    }).then(() => {
+        const ownerless = assignmentApi(['SoRawSteak']);
+        return assignQa(ownerless.readApi, ownerless.writeApi, ownerless.issue(), 'syllik', true)
+            .then(() => { throw new Error('Issue without owner accepted.'); }, error => expect(error.message).toMatch(/owner syllik/));
+    });
+});
+
+// Fake shared org modules. Kept inside the project: the test runner cannot import modules from the OS temp dir.
+function sharedRoot() {
+    const parent = join(process.cwd(), 'node_modules', '.cache');
+    return mkdir(parent, { recursive: true }).then(() => mkdtemp(join(parent, 'release-qa-shared-'))).then(root => {
+        const dir = join(root, 'automation');
+        return mkdir(dir).then(() => Promise.all([
+            writeFile(join(dir, 'issue-intake.mjs'), "export function run() { throw new Error('create must not run'); }\n"),
+            writeFile(join(dir, 'issue-admission.mjs'), 'export function readAdmission() { return Promise.resolve({ receipt: {} }); }\nexport function assertFreshReceipt() { return true; }\n'),
+            writeFile(join(dir, 'github-metadata.mjs'), 'export class GitHubClient {}\n'),
+            writeFile(join(dir, 'metadata-migration.config.json'), '{}'),
+        ])).then(() => root);
+    });
+}
+
+test('dispatch with qa_login=syllik and reassign_qa moves an existing QA Issue to the owner alone and mentions nobody', () => {
+    const body = `<!-- chipin-release-qa:v1 repo=ChipIn-one/chipin-frontend sha=${SHA} deployment=42 -->\n- Immutable Preview URL: ${PREVIEW_URL}\n`;
+    const assignment = assignmentApi(['syllik', 'SoRawSteak']);
+    const evidence = evidenceApi({ files: ['src/App.tsx'], prFiles: ['src/App.tsx'] });
+    const readApi = {
+        ...evidence,
+        request: path => {
+            if (path.endsWith('/issues/12')) return Promise.resolve({ number: 12, repository_url: 'https://api.github.com/repos/ChipIn-one/chipin-frontend', body: '## Acceptance\n- [ ] QA: open the app => it loads' });
+            if (path.endsWith('/issues/50') || /\/assignees\/[^/]+$/.test(path)) return assignment.readApi.request(path);
+            return evidence.request(path);
+        },
+        list: path => (path.includes('/issues?state=all')
+            ? Promise.resolve([{ ...assignment.issue(), body, title: `Release QA ${SHA}`, state: 'open' }]) : evidence.list(path)),
+    };
+    const posted = [];
+    const post = (url, payload) => { posted.push(payload.text); return Promise.resolve(true); };
+    const env = { ...ownerEnv, CANDIDATE_SHA: SHA, PREVIEW_DEPLOYMENT_ID: '42', QA_PRIORITY: 'P2', QA_LOGIN: 'syllik', QA_REASSIGN: 'true',
+        CHIPIN_ISSUE_WRITE_TOKEN: 'write', SLACK_WEBHOOK_CI: WEBHOOK, SLACK_USER_MAP: '{"SoRawSteak":"U0C9X8T4R2Q"}' };
+    let root = null;
+    return sharedRoot().then(dir => { root = dir; return prepareReleaseQa({ env, readApi, writeApi: assignment.writeApi, sharedRoot: dir, post, probe: () => Promise.resolve() }); })
+        .finally(() => (root ? rm(root, { recursive: true, force: true }) : undefined))
+        .then(value => {
+            expect(value).toMatchObject({ outcome: 'QA_ISSUE_READY', issue: 'https://github.com/ChipIn-one/chipin-frontend/issues/50', slack: { delivered: true } });
+            expect(assignment.writes).toEqual([{ method: 'DELETE', assignees: ['SoRawSteak'] }]);
+            expect(assignment.issue().assignees).toEqual([{ login: 'syllik' }]);
+            expect(posted).toEqual([[`Релиз-кандидат ${COMMIT_LINK} — проверяет владелец`, ...LINK_LINES].join('\n')]);
+        });
 });
