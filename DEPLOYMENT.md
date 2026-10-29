@@ -68,11 +68,14 @@ Hook or Vercel token secrets
   (2026-10-22T14:24:47Z). That record is the production evidence for Issue
   completion (strategy `deployment-receipt`).
 - The repository has no completion caller. The ChipIn-one/.github org sweep
-  (`frontend-production-completion.yml`, every 15 minutes) runs
-  `deployment-receipt` for the frontend (registry
-  `capabilities.completion: automatic` since ChipIn-one/.github#217): PR merged into `master` →
-  Issue `Awaiting release` → owner Promote → the Issue closes within about
-  15 minutes. FE Issues are never closed by hand; GitHub auto-close is off.
+  (`frontend-production-completion.yml`) runs `deployment-receipt` for the
+  frontend (registry `capabilities.completion: automatic` since
+  ChipIn-one/.github#217): PR merged into `master` → Issue `Awaiting release`
+  → owner Promote → `forward-production-deployment.yml` sends the sweep a
+  `repository_dispatch` (#559) and the Issue closes within minutes. If that
+  dispatch is missing or fails, the next sweep run on a `.github` push or its
+  GitHub-throttled schedule (observed every ~5–6 hours) closes it. FE Issues
+  are never closed by hand; GitHub auto-close is off.
 - `vercel.json` keeps `git.deploymentEnabled` off for the retired `dev` and
   `main` branches. `dev` was deleted on 2026-10-22 (the owner cancelled the
   rollback window); `main` stays only as the Vercel Production Branch
