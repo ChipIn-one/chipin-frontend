@@ -7,7 +7,7 @@ import { ThemeProvider } from 'styled-components';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { Theme } from '@radix-ui/themes';
-import { render, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 
 import { InvalidPathSegmentError } from 'api/apiPath';
 import { inviteApiUserToGroup } from 'api/chipin';
@@ -71,9 +71,8 @@ test('a crafted group invite link never reaches the API and never hits /kick', (
         </MemoryRouter>,
     );
 
-    return waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith(i18n.t('toasts:group.inviteJoinError'));
-    }).then(() => {
+    return screen.findByRole('heading', { name: i18n.t('group:join.invalidTitle') }).then(() => {
+        expect(toast.error).not.toHaveBeenCalled();
         expect(recordingAdapter).not.toHaveBeenCalled();
         expect(recordedPathnames.some(pathname => /\/kick$/.test(pathname))).toBe(false);
     });

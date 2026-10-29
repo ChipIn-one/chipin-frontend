@@ -1,46 +1,29 @@
-import { useEffect } from 'react';
+import { useCallback } from 'react';
 import i18n from 'i18next';
 import { useNavigate, useParams } from 'react-router-dom';
-import { toast } from 'sonner';
 
 import { ROUTES } from 'constants/routes';
-import { resolveApiErrorMessageFromError } from 'helpers/errors';
-import { isInviteToken } from 'helpers/inviteToken';
-import { selectIsLoggedIn } from 'store/authSelectors';
-import { useAuthStore } from 'store/authStore';
 import { useGroupsStore } from 'store/groupsStore';
 
-export const useJoinInviteLink = () => {
+import { type InviteConfirmationState, useInviteConfirmation } from './useInviteConfirmation';
+
+export const useJoinInviteLink = (): InviteConfirmationState => {
     const navigate = useNavigate();
-    const isLoggedIn = useAuthStore(selectIsLoggedIn);
     const { joinGroup } = useGroupsStore();
     const { inviteToken } = useParams<{ inviteToken: string }>();
 
-    useEffect(() => {
-        if (!inviteToken) {
-            return;
-        }
+    const onAccept = useCallback(
+        (token: string) => joinGroup({ inviteToken: token }),
+        [joinGroup],
+    );
+    const onAccepted = useCallback(({ id }: { id: string }) => {
+        navigate(`${ROUTES.GROUP}/${id}`, { replace: true });
+    }, [navigate]);
 
-        if (!isInviteToken(inviteToken)) {
-            toast.error(i18n.t('toasts:group.inviteJoinError'));
-            navigate(ROUTES.DASHBOARD, { replace: true });
-            return;
-        }
-
-        if (!isLoggedIn) {
-            toast.warning(i18n.t('toasts:group.inviteJoinWarning'));
-            return;
-        }
-
-        joinGroup({ inviteToken })
-            .then(({ id }) => {
-                navigate(`${ROUTES.GROUP}/${id}`, { replace: true });
-            })
-            .catch((error: unknown) => {
-                toast.error(resolveApiErrorMessageFromError(
-                    error,
-                    i18n.t('toasts:group.inviteJoinError'),
-                ));
-            });
-    }, [inviteToken, isLoggedIn, joinGroup, navigate]);
+    return useInviteConfirmation({
+        inviteToken,
+        errorFallbackMessage: i18n.t('toasts:group.inviteJoinError'),
+        onAccept,
+        onAccepted,
+    });
 };

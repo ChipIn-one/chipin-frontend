@@ -40,5 +40,14 @@
         "qrTitle": "Add me on ChipIn",
         "qrDescription": "Share this QR code to invite someone to become your friend.",
         "qrJoinDescription": "Scan this QR code to add me as a friend on ChipIn."
+    },
+    "join": {
+        "title": "Add this person as a friend?",
+        "description": "They will see your name and avatar, and you will be able to share expenses.",
+        "confirm": "Accept",
+        "cancel": "Cancel",
+        "retry": "Try again",
+        "invalidTitle": "This invite link is not valid",
+        "goHome": "Go to home"
     }
 }

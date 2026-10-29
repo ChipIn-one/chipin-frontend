@@ -245,5 +245,14 @@
         "title": "Kick member",
         "confirm": "Are you sure you want to kick {{name}} from this group?",
         "transferExpensesWarning": "If this user has unsettled expenses, they will be moved to friends expenses."
+    },
+    "join": {
+        "title": "Join this group by invite?",
+        "description": "Group members will see your name and avatar.",
+        "confirm": "Join",
+        "cancel": "Cancel",
+        "retry": "Try again",
+        "invalidTitle": "This invite link is not valid",
+        "goHome": "Go to home"
     }
 }

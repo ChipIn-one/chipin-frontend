@@ -126,7 +126,9 @@ const useUsersStore = create<UsersStore>((set, get) => ({
     acceptFriendInvite: ({ inviteToken }) => {
         return usersApi
             .acceptKnownUserInvite({ inviteToken })
-            .then(friend => get().fetchSetFriends(true, true).then(() => friend));
+            // The invite is already accepted once the POST succeeds: a failed friends
+            // refresh is recorded in the errors store but must not turn into a retry.
+            .then(friend => get().fetchSetFriends(true).then(() => friend));
     },
     fetchSetFriends: (force = false, rejectOnError = false) => {
         const { setLoading } = useLoadingStore.getState();

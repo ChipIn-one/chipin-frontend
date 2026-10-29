@@ -510,6 +510,18 @@ describe('groupsStore', () => {
             });
     });
 
+    test('resolves a successful join when the groups refresh after it fails', () => {
+        const joined = { ...group, role: 'MEMBER' } satisfies Group;
+        vi.mocked(chipinApi.inviteApiUserToGroup).mockResolvedValue(joined);
+        vi.mocked(chipinApi.fetchApiUserGroups).mockRejectedValueOnce(new Error('list failed'));
+
+        return useGroupsStore.getState().joinGroup({ inviteToken: group.inviteToken })
+            .then(result => {
+                expect(result).toBe(joined);
+                expect(useGroupsStore.getState().groups).toContainEqual(joined);
+            });
+    });
+
     test('ignores an old detail success after a newer canonical rejoin', () => {
         let resolveDetail: ((result: Group) => void) | undefined;
         vi.mocked(chipinApi.fetchApiUserGroupById).mockImplementationOnce(() =>
