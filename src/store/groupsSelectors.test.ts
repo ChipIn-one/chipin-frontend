@@ -259,3 +259,65 @@ test('groups settlement options by direction and splits mixed member balances', 
         ],
     });
 });
+
+test('keeps non-zero group balances and skips float-noise zero balances', () => {
+    const user = {
+        id: 'user-1',
+        email: 'alice@example.com',
+        displayName: 'Alice',
+        firstName: 'Alice',
+        lastName: null,
+        picture: null,
+        createdAt: 1,
+        updatedAt: 1,
+    };
+    const group: Group = {
+        id: 'group-1',
+        name: 'Weekend Trip',
+        inviteToken: 'invite-token',
+        description: null,
+        creator: user,
+        members: [
+            {
+                user,
+                balancesByCurrency: {
+                    USD: { currency: 'USD', netBalance: 0.1 },
+                    GBP: { currency: 'GBP', netBalance: 5.5e-17 },
+                },
+            },
+            {
+                user: { ...user, id: 'user-2' },
+                balancesByCurrency: {
+                    USD: { currency: 'USD', netBalance: 0.2 },
+                    EUR: { currency: 'EUR', netBalance: -10 },
+                    GBP: { currency: 'GBP', netBalance: -0.00004 },
+                },
+            },
+        ],
+        createdAt: 1,
+        updatedAt: 1,
+        coverUrl: null,
+        simplifyDebts: true,
+        role: 'OWNER',
+        status: 'ACTIVE',
+        lastUsedCurrency: null,
+        recentActivities: {
+            items: [],
+            nextCursor: null,
+        },
+    };
+
+    expect(selectGroupBalances(group)).toEqual({
+        owedEntries: [{ currency: 'USD', netBalance: 0.3 }],
+        oweEntries: [{ currency: 'EUR', netBalance: -10 }],
+    });
+
+    const settlementOptions = selectGroupSettlementOptions(group, 'user-1');
+
+    expect(settlementOptions.owedToYou).toEqual([
+        { user: group.members[1].user, balances: [{ currency: 'USD', netBalance: 0.2 }] },
+    ]);
+    expect(settlementOptions.youOwe).toEqual([
+        { user: group.members[1].user, balances: [{ currency: 'EUR', netBalance: -10 }] },
+    ]);
+});

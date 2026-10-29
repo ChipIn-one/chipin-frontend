@@ -123,3 +123,27 @@ test('builds the friends page view in one coordinated derivation', () => {
         settledFriends: [friends[1]],
     });
 });
+
+test('normalizes float noise in friends currency group totals', () => {
+    const createFriend = (id: string, balances: KnownUser['balances']): KnownUser => ({
+        user: {
+            id,
+            email: `${id}@example.com`,
+            displayName: id,
+            firstName: null,
+            lastName: null,
+            picture: null,
+            createdAt: 1,
+            updatedAt: 1,
+        },
+        balances,
+        lastUsedCurrency: null,
+    });
+    const friends = [
+        createFriend('friend-1', [{ currency: 'USD', netAmount: 0.1 }]),
+        createFriend('friend-2', [{ currency: 'USD', netAmount: 0.2 }]),
+        createFriend('friend-3', [{ currency: 'USD', netAmount: -0.3 }]),
+    ];
+
+    expect(getFriendsView(friends, '', 'all').currencyGroups[0].netBalance).toBe(0);
+});

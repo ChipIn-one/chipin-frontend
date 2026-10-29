@@ -6,7 +6,7 @@ import {
     EXPENSE_SPLIT_MODES,
     type ExpenseSplitMode,
 } from 'constants/chipin';
-import { parseAmountInput } from 'helpers/numbers';
+import { MONEY_INPUT_PRECISION, parseAmountInput, roundHalfUp } from 'helpers/numbers';
 import { getUnixTimestampInSec } from 'helpers/time';
 
 import {
@@ -157,8 +157,6 @@ const INITIAL_EXPENSE_MODAL_STATE: ExpenseModalState = {
     isPercentManuallyEdited: false,
     editContext: null,
 };
-
-const roundMoney = (value: number) => Math.round(value * 100) / 100;
 
 const getDefaultFriendId = (source: ExpenseModalSource) => {
     if (
@@ -571,7 +569,7 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
         const nextValue = Math.max(0, currentValue + delta);
         const formattedValue =
             state.splitMode === EXPENSE_SPLIT_MODES.AMOUNTS
-                ? roundMoney(nextValue).toFixed(2)
+                ? roundHalfUp(nextValue, MONEY_INPUT_PRECISION).toFixed(MONEY_INPUT_PRECISION)
                 : String(nextValue);
 
         state.setSplitValue(participantId, formattedValue);

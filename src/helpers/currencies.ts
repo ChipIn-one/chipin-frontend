@@ -1,5 +1,23 @@
 import type { BalanceEntry, CurrenciesRates } from 'api/chipin.raw.types';
 
+import { normalizeApiMoneyAmount } from './numbers';
+
+export type BalanceDirection = 'owed' | 'owe' | 'settled';
+
+export const getBalanceDirection = (netBalance: number): BalanceDirection => {
+    const normalized = normalizeApiMoneyAmount(netBalance);
+
+    if (normalized > 0) {
+        return 'owed';
+    }
+
+    if (normalized < 0) {
+        return 'owe';
+    }
+
+    return 'settled';
+};
+
 export const convertCurrencyAmount = (
     amount: number,
     sourceCurrency: string,

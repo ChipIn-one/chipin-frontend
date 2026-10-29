@@ -6,6 +6,7 @@ import styled from 'styled-components';
 import { Flex, Text } from '@radix-ui/themes';
 
 import type { BalanceEntry } from 'api/chipin.raw.types';
+import { getBalanceDirection } from 'helpers/currencies';
 
 import { Amount } from './numbers';
 
@@ -26,9 +27,11 @@ const BalanceSummaryText = ({ entries, size, align = 'left' }: Props) => {
     const oweEntries: BalanceEntry[] = [];
 
     for (const entry of entries) {
-        if (entry.netBalance > 0) {
+        const direction = getBalanceDirection(entry.netBalance);
+
+        if (direction === 'owed') {
             owedEntries.push(entry);
-        } else if (entry.netBalance < 0) {
+        } else if (direction === 'owe') {
             oweEntries.push(entry);
         }
     }
