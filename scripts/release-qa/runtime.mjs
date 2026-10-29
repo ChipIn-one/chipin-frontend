@@ -3,9 +3,9 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
-    REPOSITORY, TESTER_GUIDE_URL, assertConfiguration, assertFullSha, buildChecklist, buildIssueBody, findQaIssue,
-    formatInvalidationLine, formatResultLine, hasGreenFrontendCiRun, isNearMissResult, isSlackWebhook, parseQaResult, resultOutcome,
-    validateDeployment, verifyCi,
+    RELEASE_OWNER, REPOSITORY, TESTER_GUIDE_URL, assertConfiguration, assertFullSha, buildChecklist, buildIssueBody, currentQaLogins,
+    findQaIssue, formatInvalidationLine, formatResultLine, hasGreenFrontendCiRun, isNearMissResult, isOwnerLogin, isSlackWebhook,
+    parseQaResult, resultOutcome, slackCommitLink, slackIssueLink, slackLink, validateDeployment, verifyCi,
 } from './core.mjs';
 import { hasPackageFiles, packageBuildChanges } from './ui-paths.mjs';
 
@@ -122,10 +122,22 @@ export function chooseProductionBaseline(deployments, statusesFor) {
     return next(0);
 }
 
-export function sendHandoff({ post, webhook, slackId, issue, sha, url, missingSteps = [], fallbackNote = '' }) {
-    const missing = missingSteps.length
-        ? `\nMissing QA steps: ${missingSteps.map(number => `#${number}`).join(', ')} (check against their Acceptance)` : '';
-    const payload = { text: `<@${slackId}> Frontend QA candidate ${sha}${fallbackNote}\n${url}\nCanonical QA Issue: ${issue.html_url}\nTester guide: ${TESTER_GUIDE_URL}${missing}` };
+// Handoff for a QA (slackId) or for the owner as QA (slackId null: nobody is mentioned). The QA Issue lists
+// Issues without QA steps, so Slack does not repeat them.
+export function formatHandoff({ slackId, issue, sha, url, fallbackNote = '' }) {
+    const headline = slackId
+        ? `<@${slackId}> Релиз-кандидат ${slackCommitLink(sha)} — нужна проверка`
+        : `Релиз-кандидат ${slackCommitLink(sha)} — проверяет владелец`;
+    return [`${headline}${fallbackNote}`, slackLink(url, 'QA Build'), slackIssueLink(issue.html_url, issue.number),
+        slackLink(TESTER_GUIDE_URL, 'QA Guide')].join('\n');
+}
+
+export function formatNoQaLine({ sha, url, fallbackNote = '' }) {
+    return `Релиз-кандидат ${slackCommitLink(sha)} — QA не нужен, UI не менялся${fallbackNote}\n${slackLink(url, 'Build')}`;
+}
+
+export function sendHandoff({ post, webhook, slackId, issue, sha, url, fallbackNote = '' }) {
+    const payload = { text: formatHandoff({ slackId, issue, sha, url, fallbackNote }) };
     return post(webhook, payload).then(() => ({ delivered: true })).catch(() => ({
         delivered: false,
         reason: 'Slack delivery failed; retry the same SHA after checking webhook/channel.',
@@ -385,19 +397,25 @@ function admitQaIssue(shared, token, issueNumber) {
     });
 }
 
-function assignQa(readApi, writeApi, issue, qaLogin, reassign) {
+// Two valid shapes: owner plus one other QA, or the owner alone when qa_login is the owner.
+export function assignQa(readApi, writeApi, issue, qaLogin, reassign) {
+    const ownerQa = isOwnerLogin(qaLogin);
     return readApi.request(`${REPO_PATH}/assignees/${encodeURIComponent(qaLogin)}`).then(() => {
         const current = (issue.assignees ?? []).map(user => user.login);
-        if (!current.includes('syllik')) throw new Error('Canonical QA Issue is missing required owner syllik.');
-        const other = current.filter(login => login !== 'syllik' && login.toLowerCase() !== qaLogin.toLowerCase());
+        if (!current.includes(RELEASE_OWNER)) throw new Error('Canonical QA Issue is missing required owner syllik.');
+        const other = current.filter(login => login !== RELEASE_OWNER && login.toLowerCase() !== qaLogin.toLowerCase());
         if (other.length && !reassign) throw new Error('QA assignment changed; explicit owner reassignment is required.');
         const remove = other.length ? writeApi.request(`${REPO_PATH}/issues/${issue.number}/assignees`, { method: 'DELETE', body: { assignees: other } }) : Promise.resolve();
         return remove.then(() => current.some(login => login.toLowerCase() === qaLogin.toLowerCase())
             ? null : writeApi.request(`${REPO_PATH}/issues/${issue.number}/assignees`, { method: 'POST', body: { assignees: [qaLogin] } }));
     }).then(() => readApi.request(`${REPO_PATH}/issues/${issue.number}`)).then(fresh => {
         const names = (fresh.assignees ?? []).map(user => user.login.toLowerCase());
-        if (!names.includes('syllik') || names.filter(name => name !== 'syllik').length !== 1 || !names.includes(qaLogin.toLowerCase())) {
-            throw new Error('QA assignment read-back did not confirm owner and one configured QA.');
+        const confirmed = ownerQa
+            ? names.length === 1 && names[0] === RELEASE_OWNER
+            : names.includes(RELEASE_OWNER) && names.filter(name => name !== RELEASE_OWNER).length === 1 && names.includes(qaLogin.toLowerCase());
+        if (!confirmed) {
+            throw new Error(ownerQa ? 'QA assignment read-back did not confirm the owner as the only assignee.'
+                : 'QA assignment read-back did not confirm owner and one configured QA.');
         }
         return fresh;
     });
@@ -428,17 +446,12 @@ function createCanonicalIssue(shared, env, body, sha, priority) {
 export function fallbackNote(candidate) {
     if (!candidate?.fallback || !candidate.head) return '';
     const headSkip = candidate.skipped?.find(item => item.sha === candidate.head);
-    const missing = headSkip?.reason?.includes('frontend-ci') ? 'CI pending' : 'Preview pending';
-    return ` (not master head ${candidate.head.slice(0, 7)}: ${missing})`;
-}
-
-function runUrl(env) {
-    return env.GITHUB_SERVER_URL && env.GITHUB_REPOSITORY && env.GITHUB_RUN_ID
-        ? `${env.GITHUB_SERVER_URL}/${env.GITHUB_REPOSITORY}/actions/runs/${env.GITHUB_RUN_ID}` : 'the workflow run';
+    const missing = headSkip?.reason?.includes('frontend-ci') ? 'CI' : 'Preview';
+    return ` (не последний коммит master ${assertFullSha(candidate.head, 'Master head SHA').slice(0, 7)}: ждёт ${missing})`;
 }
 
 export function prepareReleaseQa({ env, readApi, writeApi, sharedRoot, post = postSlack, probe = probePublicPreview }) {
-    const qaLogin = env.QA_LOGIN || 'SoRawSteak';
+    const qaLogin = isOwnerLogin(env.QA_LOGIN) ? RELEASE_OWNER : env.QA_LOGIN || 'SoRawSteak';
     const priority = env.QA_PRIORITY || 'P2';
     if (!['P0', 'P1', 'P2', 'P3'].includes(priority)) throw new Error('QA_PRIORITY must be P0, P1, P2, or P3.');
     if (env.GITHUB_ACTOR !== 'syllik' || env.GITHUB_TRIGGERING_ACTOR !== 'syllik' || env.GITHUB_REF !== 'refs/heads/master') {
@@ -469,7 +482,7 @@ export function prepareReleaseQa({ env, readApi, writeApi, sharedRoot, post = po
     }).then(included => {
         plan = included;
         if (plan.kind === 'none') {
-            const text = `Frontend release QA: No manual QA needed for ${sha}${fallbackNote(candidate)} (${plan.evidence.length} changed files, none UI-affecting). ${runUrl(env)}`;
+            const text = formatNoQaLine({ sha, url: preview.url, fallbackNote: fallbackNote(candidate) });
             return postLine({ post, webhook: env.SLACK_WEBHOOK_CI, text }).then(slack => ({
                 outcome: 'NO_MANUAL_QA_REQUIRED', sha, candidate, baseline, evidence: plan.evidence, included: plan.included, noQa: plan.noQa, slack,
             }));
@@ -491,7 +504,7 @@ export function prepareReleaseQa({ env, readApi, writeApi, sharedRoot, post = po
                 return admitQaIssue(shared, env.CHIPIN_ISSUE_WRITE_TOKEN, issue.number)
                     .then(() => assignQa(readApi, writeApi, issue, qaLogin, env.QA_REASSIGN === 'true'))
                     .then(assigned => admitQaIssue(shared, env.CHIPIN_ISSUE_WRITE_TOKEN, assigned.number)
-                        .then(() => sendHandoff({ post, webhook: env.SLACK_WEBHOOK_CI, slackId, issue: assigned, sha, url: preview.url, missingSteps: plan.missingSteps, fallbackNote: fallbackNote(candidate) })
+                        .then(() => sendHandoff({ post, webhook: env.SLACK_WEBHOOK_CI, slackId, issue: assigned, sha, url: preview.url, fallbackNote: fallbackNote(candidate) })
                             .then(slack => ({ outcome: 'QA_ISSUE_READY', issue: assigned.html_url, sha, candidate, baseline, preview,
                                 missingSteps: plan.missingSteps, noQa: plan.noQa, smoke: plan.smoke, slack }))));
             });
@@ -517,7 +530,8 @@ export function validateResultEvent({ event, api }) {
         if (comment && (comment.id !== event.comment.id || comment.issue_url !== `${API}${REPO_PATH}/issues/${issue.number}`)) {
             throw new Error('Comment/QA Issue identity mismatch.');
         }
-        const currentQa = (issue.assignees ?? []).filter(user => user.login?.toLowerCase() !== 'syllik');
+        // The owner counts as the QA only when he is the sole assignee.
+        const currentQa = currentQaLogins(issue.assignees);
         if (event.action !== 'created') {
             const isQaResult = value => resultOutcome(value) !== null;
             const eventBody = event.comment?.body;
@@ -527,17 +541,17 @@ export function validateResultEvent({ event, api }) {
             const author = (comment?.user?.login ?? event.comment?.user?.login ?? '').toLowerCase();
             // Only a previously valid result can be withdrawn: the body before an edit, or the deleted body.
             const previousBody = event.action === 'edited' ? event.changes?.body?.from : eventBody;
-            const withdrewResult = isQaResult(previousBody) && currentQa.length === 1 && author === currentQa[0].login.toLowerCase();
-            return { outcome: 'QA_RESULT_INVALIDATED', issue: issue.html_url, sha: marker[0][1], withdrewResult,
+            const withdrewResult = isQaResult(previousBody) && currentQa.length === 1 && author === currentQa[0].toLowerCase();
+            return { outcome: 'QA_RESULT_INVALIDATED', issue: issue.html_url, issueNumber: issue.number, sha: marker[0][1], withdrewResult,
                 reason: event.action === 'deleted' || !comment
                     ? 'QA result comment was deleted; prior validation is historical.'
                     : 'QA result comment was edited; submit a new unedited result comment.',
-                currentQa: currentQa.length === 1 ? currentQa[0].login : null };
+                currentQa: currentQa.length === 1 ? currentQa[0] : null };
         }
         if (!comment) throw new Error('QA result comment is unreadable.');
         if (!resultOutcome(comment.body)) {
             const login = comment.user?.login?.toLowerCase() ?? '';
-            const isSoleQa = currentQa.length === 1 && login !== 'syllik' && login === currentQa[0].login.toLowerCase();
+            const isSoleQa = currentQa.length === 1 && login === currentQa[0].toLowerCase();
             if (isSoleQa && isNearMissResult(comment.body)) {
                 throw new Error('QA result first line must be exactly QA PASS, QA FAIL or QA BLOCKED.');
             }
@@ -545,20 +559,21 @@ export function validateResultEvent({ event, api }) {
         }
         if (Date.parse(comment.created_at) < Date.parse(issue.created_at)) throw new Error('QA result comment predates the QA Issue.');
         const result = parseQaResult(comment, issue);
-        return { outcome: 'VALID_QA_RESULT', issue: issue.html_url, result };
+        return { outcome: 'VALID_QA_RESULT', issue: issue.html_url, issueNumber: issue.number, result };
     });
 }
 
-// Slack is called only for a validated result from the sole assigned QA, or when that QA edits or deletes
+// Slack is called only for a validated result from the sole assigned QA (the owner only when he is the sole
+// assignee), or when that QA edits or deletes
 // a result. Lines are built from validated fields only. Slack failure is reported, never changes the outcome.
 export function readResultAndNotify({ event, api, env, post = postSlack }) {
     return validateResultEvent({ event, api }).then(value => {
         if (value.outcome === 'QA_RESULT_INVALIDATED' && value.withdrewResult) {
-            const text = formatInvalidationLine({ sha: value.sha, issueUrl: value.issue, userMap: env.SLACK_USER_MAP });
+            const text = formatInvalidationLine({ sha: value.sha, issueUrl: value.issue, issueNumber: value.issueNumber, userMap: env.SLACK_USER_MAP });
             return postLine({ post, webhook: env.SLACK_WEBHOOK_CI, text }).then(slack => ({ ...value, slack }));
         }
         if (value.outcome !== 'VALID_QA_RESULT') return value;
-        const text = formatResultLine({ result: value.result, issueUrl: value.issue, userMap: env.SLACK_USER_MAP });
+        const text = formatResultLine({ result: value.result, issueUrl: value.issue, issueNumber: value.issueNumber, userMap: env.SLACK_USER_MAP });
         return postLine({ post, webhook: env.SLACK_WEBHOOK_CI, text }).then(slack => ({ ...value, slack }));
     });
 }

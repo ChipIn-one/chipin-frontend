@@ -21,7 +21,7 @@ on:
         type: choice
         options: [P0, P1, P2, P3]
       qa_login:
-        description: GitHub QA assignee
+        description: GitHub QA assignee; syllik makes the owner the only QA
         required: false
         default: SoRawSteak
         type: string
