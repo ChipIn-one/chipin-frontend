@@ -93,3 +93,11 @@ PR ids in spec 03 changed (sync FE issue bodies when the owner syncs GitHub): 03
 - 2026-10-28, C3-01 resolved as (b) (D25): #530 Acceptance updated to SW `/app/sw.js` scope `/app/` + kill-switch `/sw.js` + one-time reinstall banner (preflight INTAKE_COMPLETE); #530 Scope line 04-3d «kill-switch не нужен» and title «kill-switch SW» not edited (Scope still stale for 04-3d); chipin-backend#208 stays closed (BE-04-3 was dropped for C3-24, unrelated to SW).
 - chipin-backend#208 (BE-04-3) closed as not planned. Backend issues: 13 active.
 - Programme total: 91 PRs (01=3, 02=31, 03=25, 04=24, 05=8).
+
+## Sync after D26 (2026-10-29: app on `app.chipin.one`, site on `chipin.one`)
+
+- Spec 04 reworked (§2.1, §2.9, §2.11, §3.5–3.6, §4, phases): no `/app/` base, no `CUTOVER`/`APP_BASE`, no SW scope change, no reinstall banner, no freeze window; cutover = domain move with rollback by moving back. PR ids kept, none removed; 04-2g/04-3d/04-4 rewritten. DECISIONS: D26 added, D25 marked simplified, D8/D20/D22 annotated.
+- #530 (04-D): title, Problem/Outcome/Scope/Acceptance/Depends on rewritten for D26 (`gh issue edit --body-file`).
+- #528 (04-B), #529 (04-C), #531 (04-E): Scope lines edited minimally (no `cutover` flag / `offline-root.html`; site prod domain via 04-4; 04-5a removes legacy hosts and compat redirects).
+- chipin-backend#207 (BE-04-2): now adds `https://app.chipin.one` / `https://app-dev.chipin.one` to `OAUTH_ALLOWED_REDIRECT_ORIGINS`, required before 04-2g in prod; title and body updated.
+- chipin-backend#206 (BE-04-1): dropped in spec (OpenAPI example already `https://app.chipin.one/oauth/callback`); body updated, issue left open for the coordinator to close as not planned; after that, active backend issues: 12.

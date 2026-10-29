@@ -296,7 +296,7 @@ packages/tokens/
 - `logo.svg` и `favicon.svg` переносятся в `packages/tokens/assets/`.
   - App импортирует `@chipin/tokens/assets/logo.svg?react` (svgr).
   - Astro импортирует SVG-компонентом.
-  - Раздача на общем домене (спека 04 §3.6): сайт ставит `<link rel="icon">` на `@chipin/tokens/assets/favicon.svg?url`, иконки манифеста PWA — `/app/…` из app-проекта (A-28). Источник для `pwa-assets.config.ts:8` — `packages/tokens/assets/favicon.svg`.
+  - Раздача по хостам (спека 04 §3.6, D26): сайт на `chipin.one` ставит `<link rel="icon">` на `@chipin/tokens/assets/favicon.svg?url`, иконки манифеста PWA отдаёт app-проект на `app.chipin.one` по прежним путям `/pwa-*.png` (A-28). Источник для `pwa-assets.config.ts:8` — `packages/tokens/assets/favicon.svg`.
 - Иконки PWA больше не пересоздаются на каждой сборке: `create-pwa-icons` убирается из `build`/`vercel-build`, запуск вручную — спека 02 (02-B1, `icons:generate`). Здесь только меняется путь к исходнику.
 - `theme_color: '#3e9b4f'` (`vite.config.ts:149`) — это ровно `grass-10` Radix (`@radix-ui/themes/tokens/colors/grass.css`: `--grass-10: #3e9b4f`; A-24, прежний текст «не совпадает ни с одной ступенью» неверен).
   - D23 (принято владельцем 2026-10-28): `manifest` в `vite-plugin-pwa` (`theme_color`, `background_color`; после 04-2d — внутри `buildPwaOptions()` в `apps/app/pwa.config.ts`, спека 04 §2.11) и `<meta name="theme-color">` в `app.html` (через тот же `transformIndexHtml`-плагин, что theme-init) читаются из `@chipin/tokens/generated/manifest-colors.json`; Astro-сайт (`BaseLayout`) читает тот же файл. Литералов цвета в `vite.config.ts`, `app.html` и `.astro` нет.
