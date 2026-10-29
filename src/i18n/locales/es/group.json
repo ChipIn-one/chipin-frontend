@@ -245,5 +245,14 @@
         "title": "Expulsar miembro",
         "confirm": "¿Estás seguro de que quieres expulsar a {{name}} del grupo?",
         "transferExpensesWarning": "Si este usuario tiene gastos no liquidados, serán transferidos a gastos de amigos."
+    },
+    "join": {
+        "title": "¿Unirte a este grupo por invitación?",
+        "description": "Los miembros del grupo verán tu nombre y tu avatar.",
+        "confirm": "Unirme",
+        "cancel": "Cancelar",
+        "retry": "Reintentar",
+        "invalidTitle": "Este enlace de invitación no es válido",
+        "goHome": "Ir al inicio"
     }
 }

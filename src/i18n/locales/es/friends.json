@@ -40,5 +40,14 @@
         "qrTitle": "Añádeme en ChipIn",
         "qrDescription": "Comparte este código QR para que te añadan como amigo.",
         "qrJoinDescription": "Escanea este código QR para añadirme como amigo en ChipIn."
+    },
+    "join": {
+        "title": "¿Agregar a esta persona como amigo?",
+        "description": "Verá tu nombre y tu avatar, y podrán compartir gastos.",
+        "confirm": "Aceptar",
+        "cancel": "Cancelar",
+        "retry": "Reintentar",
+        "invalidTitle": "Este enlace de invitación no es válido",
+        "goHome": "Ir al inicio"
     }
 }

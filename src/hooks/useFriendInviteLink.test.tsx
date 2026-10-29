@@ -26,13 +26,13 @@ vi.mock('store/users-store', () => ({
     ) => selector({ acceptFriendInvite: mocks.acceptFriendInvite }),
 }));
 
-
 vi.mock('helpers/authSession', () => ({
     getAuthSessionVersion: () => mocks.authSessionVersion,
     isAuthSessionCurrent: (version: number) => version === mocks.authSessionVersion,
 }));
 
 vi.mock('helpers/errors', () => ({
+    getApiErrorStatus: () => undefined,
     resolveApiErrorMessageFromError: (
         _error: unknown,
         fallbackMessage: string,
@@ -60,15 +60,18 @@ beforeEach(() => {
 });
 
 test.each(['short', '..%2Fx', '../g/members/u/kick', 'a'.repeat(65)])(
-    'rejects malformed invite token %s without calling the API',
+    'reports malformed invite token %s as invalid without calling the API',
     inviteToken => {
         mocks.inviteToken = inviteToken;
 
-        renderHook(() => useFriendInviteLink());
+        const { result } = renderHook(() => useFriendInviteLink());
 
+        act(() => {
+            result.current.confirm();
+        });
+
+        expect(result.current.status).toBe('invalid');
         expect(mocks.acceptFriendInvite).not.toHaveBeenCalled();
-        expect(toast.error).toHaveBeenCalledWith('toasts:friend.inviteJoinError');
-        expect(mocks.navigate).toHaveBeenCalledWith(ROUTES.DASHBOARD, { replace: true });
     },
 );
 
@@ -81,7 +84,11 @@ test('USR-003 accepts the invite, shows the friend name and redirects to Friends
         updatedAt: 1,
     });
 
-    renderHook(() => useFriendInviteLink());
+    const { result } = renderHook(() => useFriendInviteLink());
+    expect(mocks.acceptFriendInvite).not.toHaveBeenCalled();
+    act(() => {
+        result.current.confirm();
+    });
 
     return waitFor(() => {
         expect(mocks.acceptFriendInvite).toHaveBeenCalledWith({
@@ -96,13 +103,19 @@ test('USR-003 accepts the invite, shows the friend name and redirects to Friends
     });
 });
 
-test('USR-003 keeps invite failures on the join route and shows an error', () => {
+test('USR-003 keeps invite failures on the join route and shows the error state', () => {
     mocks.acceptFriendInvite.mockRejectedValue(new Error('invalid invite'));
 
-    renderHook(() => useFriendInviteLink());
+    const { result } = renderHook(() => useFriendInviteLink());
+    expect(mocks.acceptFriendInvite).not.toHaveBeenCalled();
+    act(() => {
+        result.current.confirm();
+    });
 
     return waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('toasts:friend.inviteJoinError');
+        expect(result.current.status).toBe('error');
+        expect(result.current.errorMessage).toBe('toasts:friend.inviteJoinError');
+        expect(toast.error).not.toHaveBeenCalled();
         expect(mocks.navigate).not.toHaveBeenCalled();
     });
 });
@@ -119,7 +132,10 @@ test('ignores a successful invite completion after the join route unmounts', () 
         resolveInvite = resolve;
     }));
 
-    const { unmount } = renderHook(() => useFriendInviteLink());
+    const { result, unmount } = renderHook(() => useFriendInviteLink());
+    act(() => {
+        result.current.confirm();
+    });
     unmount();
 
     return act(() => {
@@ -145,7 +161,11 @@ test('ignores a failed invite completion after the auth session changes', () => 
         rejectInvite = reject;
     }));
 
-    renderHook(() => useFriendInviteLink());
+    const { result } = renderHook(() => useFriendInviteLink());
+    expect(mocks.acceptFriendInvite).not.toHaveBeenCalled();
+    act(() => {
+        result.current.confirm();
+    });
     mocks.authSessionVersion += 1;
 
     return act(() => {

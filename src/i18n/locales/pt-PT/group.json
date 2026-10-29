@@ -245,5 +245,14 @@
         "title": "Remover membro",
         "confirm": "Tem a certeza de que quer remover {{name}} do grupo?",
         "transferExpensesWarning": "Se este utilizador tiver despesas não acertadas, estas serão transferidas para despesas de amigos."
+    },
+    "join": {
+        "title": "Entrar neste grupo por convite?",
+        "description": "Os membros do grupo verão o seu nome e o seu avatar.",
+        "confirm": "Entrar",
+        "cancel": "Cancelar",
+        "retry": "Tentar novamente",
+        "invalidTitle": "Esta ligação de convite não é válida",
+        "goHome": "Ir para o início"
     }
 }

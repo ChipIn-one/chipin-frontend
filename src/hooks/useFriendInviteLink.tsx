@@ -1,66 +1,39 @@
-import { useEffect } from 'react';
+import { useCallback } from 'react';
 import i18n from 'i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { ROUTES } from 'constants/routes';
-import { getAuthSessionVersion, isAuthSessionCurrent } from 'helpers/authSession';
-import { resolveApiErrorMessageFromError } from 'helpers/errors';
-import { isInviteToken } from 'helpers/inviteToken';
 import { useUsersStore } from 'store/users-store';
 
-const useFriendInviteLink = () => {
+import { type InviteConfirmationState, useInviteConfirmation } from './useInviteConfirmation';
+
+const useFriendInviteLink = (): InviteConfirmationState => {
     const navigate = useNavigate();
     const { inviteToken } = useParams<{ inviteToken: string }>();
     const acceptFriendInvite = useUsersStore(state => state.acceptFriendInvite);
 
-    useEffect(() => {
-        if (!inviteToken) {
-            return;
-        }
+    const onAccept = useCallback(
+        (token: string) => acceptFriendInvite({ inviteToken: token }),
+        [acceptFriendInvite],
+    );
+    const onAccepted = useCallback(({ displayName }: { displayName: string }) => {
+        const friendName = displayName.trim();
 
-        if (!isInviteToken(inviteToken)) {
-            toast.error(i18n.t('toasts:friend.inviteJoinError'));
-            navigate(ROUTES.DASHBOARD, { replace: true });
-            return;
-        }
-
-        let isActive = true;
-        const authSessionVersion = getAuthSessionVersion();
-        const isCurrent = () => (
-            isActive && isAuthSessionCurrent(authSessionVersion)
+        toast.success(
+            friendName
+                ? i18n.t('toasts:friend.inviteAcceptedWithName', { name: friendName })
+                : i18n.t('toasts:friend.inviteAccepted'),
         );
+        navigate(ROUTES.FRIENDS, { replace: true });
+    }, [navigate]);
 
-        acceptFriendInvite({ inviteToken })
-            .then(friend => {
-                if (!isCurrent()) {
-                    return;
-                }
-
-                const friendName = friend.displayName.trim();
-
-                toast.success(
-                    friendName
-                        ? i18n.t('toasts:friend.inviteAcceptedWithName', { name: friendName })
-                        : i18n.t('toasts:friend.inviteAccepted'),
-                );
-                navigate(ROUTES.FRIENDS, { replace: true });
-            })
-            .catch((error: unknown) => {
-                if (!isCurrent()) {
-                    return;
-                }
-
-                toast.error(resolveApiErrorMessageFromError(
-                    error,
-                    i18n.t('toasts:friend.inviteJoinError'),
-                ));
-            });
-
-        return () => {
-            isActive = false;
-        };
-    }, [acceptFriendInvite, inviteToken, navigate]);
+    return useInviteConfirmation({
+        inviteToken,
+        errorFallbackMessage: i18n.t('toasts:friend.inviteJoinError'),
+        onAccept,
+        onAccepted,
+    });
 };
 
 export { useFriendInviteLink };
