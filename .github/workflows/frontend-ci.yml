@@ -28,7 +28,7 @@ jobs:
           ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
       - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
           node-version: 24.21.0
           package-manager-cache: false
@@ -36,7 +36,7 @@ jobs:
         # Only trusted Dependabot PRs targeting master are exempt;
         # task-authored PRs always require canonical Issue admission.
         if: github.event_name == 'pull_request' && !(github.base_ref == 'master' && github.event.pull_request.user.login == 'dependabot[bot]' && github.actor == 'dependabot[bot]')
-        uses: ChipIn-one/.github/automation/issue-admission-action@e318d2b4feb49ce1bbd0615a6543d4c40e41404d # v1.6.0
+        uses: ChipIn-one/.github/automation/issue-admission-action@8aa9092e5787349a7b9077c31f3a0e7f199d3bf6 # v1.7.2
         with:
           repository: ${{ github.repository }}
           pull-request-number: ${{ github.event.pull_request.number }}
