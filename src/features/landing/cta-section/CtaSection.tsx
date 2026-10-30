@@ -1,4 +1,4 @@
-import { LucideArrowRight, LucideCheckCircle, LucideDownload } from 'lucide-react';
+import { ArrowRightIcon, CheckCircleIcon, DownloadIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge, Box, Button, Container, Flex, Heading, Section, Text } from '@radix-ui/themes';
@@ -24,7 +24,7 @@ const CtaSection = () => {
             onClick={callPWAInstall}
         >
             {t('common:buttons.installApp')}
-            <LucideDownload />
+            <DownloadIcon />
         </Button>
     );
 
@@ -56,7 +56,7 @@ const CtaSection = () => {
                             <AuthModal>
                                 <Button size={{ initial: '3', sm: '4' }} variant="solid" color="green">
                                     {t('cta.getStartedFree')}
-                                    <LucideArrowRight />
+                                    <ArrowRightIcon />
                                 </Button>
                             </AuthModal>
                             {secondaryAction}
@@ -66,7 +66,7 @@ const CtaSection = () => {
                             {CTA_BULLET_KEYS.map(bulletKey => (
                                 <Flex key={bulletKey} align="center" gap="1">
                                     <Text color="green" size="3">
-                                        <LucideCheckCircle size={16} />
+                                        <CheckCircleIcon size={16} />
                                     </Text>
                                     <Text size="3" color="gray">
                                         {t(`cta.bullets.${bulletKey}`)}

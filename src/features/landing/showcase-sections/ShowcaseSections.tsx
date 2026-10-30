@@ -1,4 +1,4 @@
-import { LucideUsers } from 'lucide-react';
+import { UsersIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Container, Section } from '@radix-ui/themes';
@@ -18,7 +18,7 @@ const ShowcaseSections = () => {
                 <Container size="4">
                     <ShowcaseSection
                         badge={t('sections.groups.badge')}
-                        badgeIcon={<LucideUsers size={14} />}
+                        badgeIcon={<UsersIcon size={14} />}
                         bullets={groupsBullets}
                         color="green"
                         description={t('sections.groups.description')}

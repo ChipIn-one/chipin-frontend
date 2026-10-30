@@ -1,5 +1,5 @@
 import { BackButton } from 'basics';
-import { LucidePencil } from 'lucide-react';
+import { PencilIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -94,7 +94,7 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
                             size="2"
                             aria-label={t('modal.titleEdit')}
                         >
-                            <LucidePencil size={16} />
+                            <PencilIcon size={16} />
                         </IconButton>
                     </CreateUpdateGroupModal>
                 </Box>

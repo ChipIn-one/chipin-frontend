@@ -1,4 +1,4 @@
-import { LucideChevronDown } from 'lucide-react';
+import { ChevronDownIcon } from 'lucide-react';
 import styled from 'styled-components';
 
 import { Button } from '@radix-ui/themes';
@@ -12,7 +12,7 @@ const ProfileButton = styled(Button)`
     text-align: left;
 `;
 
-const ProfileChevron = styled(LucideChevronDown)<{ $isExpanded: boolean }>`
+const ProfileChevron = styled(ChevronDownIcon)<{ $isExpanded: boolean }>`
     flex-shrink: 0;
     transform: rotate(${({ $isExpanded }) => ($isExpanded ? '180deg' : '0deg')});
     transition: transform 160ms ease;

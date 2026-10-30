@@ -1,4 +1,4 @@
-import { LucideReceiptText } from 'lucide-react';
+import { ReceiptTextIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -72,7 +72,7 @@ const ExpensePreferencesSection = ({ isLoading }: Props) => {
                             variant="soft"
                             size="3"
                             color="mint"
-                            fallback={<LucideReceiptText size={20} />}
+                            fallback={<ReceiptTextIcon size={20} />}
                         />
                     </Skeleton>
                     <Flex direction="column">

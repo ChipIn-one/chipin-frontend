@@ -1,4 +1,4 @@
-import { LucideChevronDown } from 'lucide-react';
+import { ChevronDownIcon } from 'lucide-react';
 import styled from 'styled-components';
 
 import { Card, Flex, Text } from '@radix-ui/themes';
@@ -8,7 +8,7 @@ const DetailsCard = styled(Card)`
     top: calc(var(--space-6) + var(--space-4));
 `;
 
-const DisclosureChevron = styled(LucideChevronDown)`
+const DisclosureChevron = styled(ChevronDownIcon)`
     flex: 0 0 auto;
 `;
 

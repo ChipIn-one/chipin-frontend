@@ -1,5 +1,5 @@
 import { RelativeTime } from 'basics';
-import { LucideUserPen } from 'lucide-react';
+import { UserPenIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
@@ -25,7 +25,7 @@ const EventGroupUpdated = ({ event }: Props) => {
                             size="4"
                             variant="soft"
                             color="blue"
-                            fallback={<LucideUserPen size={20} />}
+                            fallback={<UserPenIcon size={20} />}
                         />
                     </EventIcon>
                     <Flex gap="2" align="center" minWidth="0">

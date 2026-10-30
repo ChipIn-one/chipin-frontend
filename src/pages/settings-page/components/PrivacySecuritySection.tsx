@@ -1,4 +1,4 @@
-import { LucideLogOut, LucideShield } from 'lucide-react';
+import { LogOutIcon, ShieldIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -51,7 +51,7 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                             variant="soft"
                             size="3"
                             color="mint"
-                            fallback={<LucideShield size={20} />}
+                            fallback={<ShieldIcon size={20} />}
                         />
                     </Skeleton>
                     <Flex direction="column">
@@ -77,7 +77,7 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                                 aria-busy={isLoggingOutOtherDevices}
                             >
                                 <Flex gap="3" align="start">
-                                    <LucideLogOut size={20} />
+                                    <LogOutIcon size={20} />
                                     <Box>
                                         <Text weight="medium" as="p">
                                             {t('security.logoutOtherDevicesTitle')}
@@ -116,7 +116,7 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                             color="gray"
                             loading={isSigningOut}
                         >
-                            <LucideLogOut size={16} />
+                            <LogOutIcon size={16} />
                             {t('common:buttons.signOut')}
                         </Button>
                     </Skeleton>

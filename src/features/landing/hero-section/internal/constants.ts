@@ -1,25 +1,25 @@
-import { LucideHandCoins, LucideReceipt, LucideUserCheck, LucideUsers2 } from 'lucide-react';
+import { HandCoinsIcon, ReceiptIcon, UserCheckIcon, Users2Icon } from 'lucide-react';
 
 const LANDING_STATISTICS = [
     {
         field: 'usersCount',
         labelKey: 'totalUsers',
-        Icon: LucideUserCheck,
+        Icon: UserCheckIcon,
     },
     {
         field: 'expensesCount',
         labelKey: 'expensesTracked',
-        Icon: LucideReceipt,
+        Icon: ReceiptIcon,
     },
     {
         field: 'groupsCount',
         labelKey: 'groupsCreated',
-        Icon: LucideUsers2,
+        Icon: Users2Icon,
     },
     {
         field: 'settlementsCount',
         labelKey: 'settlementsRecorded',
-        Icon: LucideHandCoins,
+        Icon: HandCoinsIcon,
     },
 ] as const;
 

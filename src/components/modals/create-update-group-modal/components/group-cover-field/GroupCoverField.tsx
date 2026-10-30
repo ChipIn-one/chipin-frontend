@@ -1,4 +1,4 @@
-import { LucideCircleAlert } from 'lucide-react';
+import { CircleAlertIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -48,7 +48,7 @@ const GroupCoverField = ({
             {coverValidationError && (
                 <Callout.Root color="red" role="alert" size="1">
                     <Callout.Icon>
-                        <LucideCircleAlert />
+                        <CircleAlertIcon />
                     </Callout.Icon>
                     <Callout.Text>
                         {t(`modal.cover.errors.${coverValidationError}`)}

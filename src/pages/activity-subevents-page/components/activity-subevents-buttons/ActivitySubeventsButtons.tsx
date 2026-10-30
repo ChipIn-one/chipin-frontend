@@ -1,4 +1,4 @@
-import { LucidePencil, LucideTrash2 } from 'lucide-react';
+import { PencilIcon, Trash2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -92,14 +92,14 @@ const ActivitySubeventsButtons = ({
             <Flex align="center" gap="2" wrap="wrap">
                 <Skeleton>
                     <Button size="1" variant="soft">
-                        <LucidePencil size={14} />
+                        <PencilIcon size={14} />
                         {t('subeventsUpdateAction')}
                     </Button>
                 </Skeleton>
 
                 <Skeleton>
                     <Button size="1" variant="soft" color="red">
-                        <LucideTrash2 size={14} />
+                        <Trash2Icon size={14} />
                         {t('subeventsDeleteAction')}
                     </Button>
                 </Skeleton>
@@ -119,7 +119,7 @@ const ActivitySubeventsButtons = ({
                 disabled={!parentEntryId || !isExpense}
                 onClick={onEdit}
             >
-                <LucidePencil size={14} />
+                <PencilIcon size={14} />
                 {t('subeventsUpdateAction')}
             </Button>
 
@@ -133,7 +133,7 @@ const ActivitySubeventsButtons = ({
                     color="red"
                     disabled={!parentEntryId || isRemoving}
                 >
-                    <LucideTrash2 size={14} />
+                    <Trash2Icon size={14} />
                     {t('subeventsDeleteAction')}
                 </Button>
             </RemoveLedgerEntryAlertDialog>

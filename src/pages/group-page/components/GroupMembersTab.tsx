@@ -1,4 +1,4 @@
-import { LucideUserPlus } from 'lucide-react';
+import { UserPlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar, Badge, Button, Card, Flex, Text } from '@radix-ui/themes';
@@ -60,7 +60,7 @@ const GroupMembersTab = ({ group }: Props) => {
             {inviteLink && (
                 <Button variant="ghost" color="gray" size="2" mt="2" asChild>
                     <a href={inviteLink} target="_blank" rel="noreferrer">
-                        <LucideUserPlus size={16} />
+                        <UserPlusIcon size={16} />
                         {t('page.membersTab.invitePeople')}
                     </a>
                 </Button>

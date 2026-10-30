@@ -1,4 +1,4 @@
-import { LucideUsers } from 'lucide-react';
+import { UsersIcon } from 'lucide-react';
 
 import { Avatar } from '@radix-ui/themes';
 
@@ -19,7 +19,7 @@ const GroupAvatar = ({ group, variant = 'soft', size = '4', color = 'green' }: P
             src={group.coverUrl ?? undefined}
             alt={group.name}
             color={color}
-            fallback={<LucideUsers />}
+            fallback={<UsersIcon />}
         />
     );
 };

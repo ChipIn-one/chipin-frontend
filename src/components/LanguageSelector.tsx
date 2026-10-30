@@ -1,4 +1,4 @@
-import { LucideChevronDown, LucideGlobe } from 'lucide-react';
+import { ChevronDownIcon, GlobeIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Flex, IconButton, Text } from '@radix-ui/themes';
@@ -8,7 +8,6 @@ import {
     SUPPORTED_LOCALES,
     type SupportedLocale,
 } from 'helpers/locale';
-
 import { suppressPublicLocaleSuggestion } from 'helpers/publicLocaleSuggestion';
 
 import { SearchSelect } from 'components/search-select';
@@ -58,7 +57,7 @@ const LanguageSelector = ({
             size="2"
             aria-label={t('common:fields.interfaceLanguage')}
         >
-            <LucideGlobe size={18} />
+            <GlobeIcon size={18} />
         </IconButton>
     ) : (
         <Button
@@ -71,7 +70,7 @@ const LanguageSelector = ({
         >
             <Flex align="center" justify="between" gap="2" width="100%">
                 <Text truncate>{t(`language.options.${value}`)}</Text>
-                <LucideChevronDown size={16} />
+                <ChevronDownIcon size={16} />
             </Flex>
         </Button>
     );

@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { LucideUsers } from 'lucide-react';
+import { UsersIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import EmptyState from './EmptyState';
@@ -13,7 +13,7 @@ const NoGroupsEmptyState = ({ action }: Props) => {
 
     return (
         <EmptyState
-            icon={<LucideUsers size={20} />}
+            icon={<UsersIcon size={20} />}
             iconColor="indigo"
             title={t('groups.emptyTitle')}
             description={t('groups.emptyDescription')}

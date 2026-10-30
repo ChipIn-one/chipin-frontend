@@ -1,4 +1,4 @@
-import { LucideChevronLeft } from 'lucide-react';
+import { ChevronLeftIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
@@ -33,7 +33,7 @@ const PageBreadcrumb = ({ title, subtitle, action }: Props) => {
                     aria-label={t('buttons.back')}
                 >
                     <RouterLink to={parentPath}>
-                        <LucideChevronLeft size={18} />
+                        <ChevronLeftIcon size={18} />
                     </RouterLink>
                 </IconButton>
             </Box>

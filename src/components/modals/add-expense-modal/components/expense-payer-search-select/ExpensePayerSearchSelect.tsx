@@ -1,9 +1,9 @@
 import { UserAvatar } from 'basics';
-import { LucideAlertTriangle } from 'lucide-react';
-
-import { Callout, Flex } from '@radix-ui/themes';
+import { AlertTriangleIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
+
+import { Callout, Flex } from '@radix-ui/themes';
 
 import {
     selectPayerUsers,
@@ -84,7 +84,7 @@ const ExpensePayerSearchSelect = () => {
             {showSelfOnlyCallout && (
                 <Callout.Root color="amber" size="2" role="alert">
                     <Callout.Icon>
-                        <LucideAlertTriangle size={18} />
+                        <AlertTriangleIcon size={18} />
                     </Callout.Icon>
                     <Callout.Text>{t('expenses.modal.directSelfOnlyWarning')}</Callout.Text>
                 </Callout.Root>

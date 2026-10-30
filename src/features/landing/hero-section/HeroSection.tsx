@@ -1,4 +1,4 @@
-import { LucideArrowRight, LucideDownload } from 'lucide-react';
+import { ArrowRightIcon, DownloadIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge, Box, Button, Container, Flex, Heading, Section, Text } from '@radix-ui/themes';
@@ -22,7 +22,7 @@ const HeroSection = () => {
             onClick={callPWAInstall}
         >
             {t('common:buttons.installApp')}
-            <LucideDownload />
+            <DownloadIcon />
         </Button>
     );
 
@@ -66,7 +66,7 @@ const HeroSection = () => {
                         <AuthModal>
                             <Button size={{ initial: '3', sm: '4' }} variant="solid" color="green">
                                 {t('common:buttons.getStarted')}
-                                <LucideArrowRight />
+                                <ArrowRightIcon />
                             </Button>
                         </AuthModal>
 

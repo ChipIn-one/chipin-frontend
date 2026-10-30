@@ -1,4 +1,4 @@
-import { LucideSearch } from 'lucide-react';
+import { SearchIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Box, Flex, Skeleton, TextField } from '@radix-ui/themes';
@@ -35,7 +35,7 @@ const FriendsSearchBar = ({
                         size="3"
                     >
                         <TextField.Slot>
-                            <LucideSearch size={16} />
+                            <SearchIcon size={16} />
                         </TextField.Slot>
                     </TextField.Root>
                 </Box>

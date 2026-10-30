@@ -1,10 +1,10 @@
 import { Amount, UserAvatar } from 'basics';
 import {
-    LucideArrowDownLeft,
-    LucideArrowUpRight,
-    LucideChevronDown,
-    LucideChevronRight,
-    LucideChevronUp,
+    ArrowDownLeftIcon,
+    ArrowUpRightIcon,
+    ChevronDownIcon,
+    ChevronRightIcon,
+    ChevronUpIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -34,7 +34,7 @@ const DebtSection = ({ debts, isExpanded, isUserOwing, onToggle, onSelect }: Pro
     const hiddenDebtCount = debts.length - visibleDebts.length;
     const hasCollapsibleDebts = debts.length > COLLAPSED_DEBT_COUNT;
     const color = isUserOwing ? 'red' : 'green';
-    const DirectionIcon = isUserOwing ? LucideArrowUpRight : LucideArrowDownLeft;
+    const DirectionIcon = isUserOwing ? ArrowUpRightIcon : ArrowDownLeftIcon;
 
     return (
         <Flex direction="column" gap="2">
@@ -77,7 +77,7 @@ const DebtSection = ({ debts, isExpanded, isUserOwing, onToggle, onSelect }: Pro
                                     type="summary"
                                 />
                             </Text>
-                            <LucideChevronRight size={18} />
+                            <ChevronRightIcon size={18} />
                         </Flex>
                     </Flex>
                 </DebtButton>
@@ -95,9 +95,9 @@ const DebtSection = ({ debts, isExpanded, isUserOwing, onToggle, onSelect }: Pro
                         ? t('group:page.settleUp.showLess')
                         : t('group:page.settleUp.showMore', { count: hiddenDebtCount })}
                     {isExpanded ? (
-                        <LucideChevronUp size={18} />
+                        <ChevronUpIcon size={18} />
                     ) : (
-                        <LucideChevronDown size={18} />
+                        <ChevronDownIcon size={18} />
                     )}
                 </ShowMoreButton>
             )}

@@ -1,4 +1,4 @@
-import { LucideList, LucideWalletCards } from 'lucide-react';
+import { ListIcon, WalletCardsIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Flex } from '@radix-ui/themes';
@@ -15,13 +15,13 @@ const SoloPagePreview = () => {
         <LandingPreviewCard label={t('sections.expenses.preview.label')}>
             <Flex direction="column" gap="4" p="4">
                 <EmptyState
-                    icon={<LucideWalletCards size={20} />}
+                    icon={<WalletCardsIcon size={20} />}
                     iconColor="violet"
                     title={tDashboard('solo.summaryTitle')}
                     description={tDashboard('solo.inDevelopment')}
                 />
                 <EmptyState
-                    icon={<LucideList size={20} />}
+                    icon={<ListIcon size={20} />}
                     iconColor="violet"
                     title={tDashboard('solo.activityTitle')}
                     description={tDashboard('solo.inDevelopment')}

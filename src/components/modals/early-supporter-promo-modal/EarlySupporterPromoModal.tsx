@@ -1,5 +1,5 @@
-import { LucideClock3, LucideCrown, LucideSparkles } from 'lucide-react';
 import { useState } from 'react';
+import { Clock3Icon, CrownIcon, SparklesIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar, Badge, Button, Flex, Heading, Text } from '@radix-ui/themes';
@@ -79,17 +79,17 @@ const EarlySupporterPromoModal = () => {
                 >
                     <Flex align="center" justify="center" gap="3">
                         <Text color="amber">
-                            <LucideSparkles size={20} />
+                            <SparklesIcon size={20} />
                         </Text>
                         <Avatar
                             size="8"
                             color="amber"
                             variant="soft"
                             radius="full"
-                            fallback={<LucideCrown size={36} />}
+                            fallback={<CrownIcon size={36} />}
                         />
                         <Text color="amber">
-                            <LucideSparkles size={22} />
+                            <SparklesIcon size={22} />
                         </Text>
                     </Flex>
 
@@ -123,7 +123,7 @@ const EarlySupporterPromoModal = () => {
 
                     <Badge size="3" color="gray" variant="surface" radius="full">
                         <Flex align="center" gap="2">
-                            <LucideClock3 size={16} />
+                            <Clock3Icon size={16} />
                             {t('promo.expires', { date: expiryDate })}
                         </Flex>
                     </Badge>

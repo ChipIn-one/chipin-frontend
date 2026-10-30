@@ -1,5 +1,5 @@
 import { UserAvatar } from 'basics';
-import { LucideHeartCrack } from 'lucide-react';
+import { HeartCrackIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -71,7 +71,7 @@ const RemoveFriendAlertDialog = ({ friend, isOpened, setIsOpened }: Props) => {
                                 radius="medium"
                                 variant="soft"
                                 color="red"
-                                fallback={<LucideHeartCrack size={20} />}
+                                fallback={<HeartCrackIcon size={20} />}
                             />
                         </Flex>
                     </Card>

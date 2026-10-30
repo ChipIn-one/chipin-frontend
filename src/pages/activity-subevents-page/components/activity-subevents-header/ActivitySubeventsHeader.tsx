@@ -1,9 +1,10 @@
-import { LucideInfo } from 'lucide-react';
+import { InfoIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Box } from '@radix-ui/themes';
 
 import type { AppEvent } from 'api/activity.types';
+
 import { EmptyState } from 'basics/empty-states';
 import { ActivityEventSkeleton } from 'components/skeletons/activity-event-skeleton';
 import { ActivityEvent } from 'features/activity';
@@ -25,7 +26,7 @@ const ActivitySubeventsHeader = ({
         return (
             <Box mb="4">
                 <EmptyState
-                    icon={<LucideInfo size={20} />}
+                    icon={<InfoIcon size={20} />}
                     iconColor="gray"
                     title={t('subeventsParentUnavailableTitle')}
                     description={t('subeventsParentUnavailableDescription')}

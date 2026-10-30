@@ -1,5 +1,5 @@
 import { RelativeTime } from 'basics';
-import { LucideUserRoundCheck } from 'lucide-react';
+import { UserRoundCheckIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
@@ -25,7 +25,7 @@ const EventGroupCreated = ({ event }: Props) => {
                             size="4"
                             variant="soft"
                             color="green"
-                            fallback={<LucideUserRoundCheck size={20} />}
+                            fallback={<UserRoundCheckIcon size={20} />}
                         />
                     </EventIcon>
                     <Flex gap="2" align="center" minWidth="0">

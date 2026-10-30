@@ -1,5 +1,5 @@
 import { ComponentProps, useState } from 'react';
-import { LucideCheck, LucideCopy } from 'lucide-react';
+import { CheckIcon, CopyIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Tooltip } from '@radix-ui/themes';
@@ -43,7 +43,7 @@ const CopyButton = ({ value, what, children, size = '3', variant = 'solid', disa
                 onClick={handleCopy}
                 disabled={disabled || !value}
             >
-                {isCopied ? <LucideCheck size={16} /> : <LucideCopy size={16} />}
+                {isCopied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
                 {isCopied ? t('copy.copied') : children}
             </Button>
         </Tooltip>

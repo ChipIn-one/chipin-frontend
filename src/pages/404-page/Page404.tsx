@@ -1,4 +1,4 @@
-import { LucideChartPie, LucideHome, LucideLayoutList, LucideSearch } from 'lucide-react';
+import { ChartPieIcon, HomeIcon, LayoutListIcon, SearchIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Box, Container, Flex, Heading, Separator, Text } from '@radix-ui/themes';
@@ -17,7 +17,7 @@ const Page404 = () => {
 
     const buttonRoute = isLoggedIn ? ROUTES.DASHBOARD : ROUTES.HOME;
     const buttonKey = isLoggedIn ? 'page404.backToDashboard' : 'page404.goHome';
-    const buttonIcon = isLoggedIn ? <LucideChartPie size={24} /> : <LucideHome size={24} />;
+    const buttonIcon = isLoggedIn ? <ChartPieIcon size={24} /> : <HomeIcon size={24} />;
 
     return (
         <Container size="2">
@@ -43,7 +43,7 @@ const Page404 = () => {
                     </Text>
                     <Flex direction={{ initial: 'column', sm: 'row' }} align="start" gap="4">
                         <HintCard
-                            icon={<LucideSearch size={36} strokeWidth={2} />}
+                            icon={<SearchIcon size={36} strokeWidth={2} />}
                             title={t('page404.checkUrl.title')}
                             description={t('page404.checkUrl.description')}
                         />
@@ -54,7 +54,7 @@ const Page404 = () => {
                             <Separator orientation="vertical" size="4" />
                         </Box>
                         <HintCard
-                            icon={<LucideHome size={36} strokeWidth={2} />}
+                            icon={<HomeIcon size={36} strokeWidth={2} />}
                             title={t('page404.goDashboard.title')}
                             description={t('page404.goDashboard.description')}
                         />
@@ -65,7 +65,7 @@ const Page404 = () => {
                             <Separator orientation="vertical" size="4" />
                         </Box>
                         <HintCard
-                            icon={<LucideLayoutList size={36} strokeWidth={2} />}
+                            icon={<LayoutListIcon size={36} strokeWidth={2} />}
                             title={t('page404.explore.title')}
                             description={t('page404.explore.description')}
                         />

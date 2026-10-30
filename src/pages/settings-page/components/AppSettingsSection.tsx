@@ -1,9 +1,9 @@
 import {
-    LucideMonitor,
-    LucideMoon,
-    LucideRefreshCw,
-    LucideSettings2,
-    LucideSun,
+    MonitorIcon,
+    MoonIcon,
+    RefreshCwIcon,
+    Settings2Icon,
+    SunIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
@@ -56,7 +56,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                             variant="soft"
                             size="3"
                             color="mint"
-                            fallback={<LucideSettings2 size={20} />}
+                            fallback={<Settings2Icon size={20} />}
                         />
                     </Skeleton>
                     <Flex direction="column">
@@ -94,7 +94,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                                     value: 'dark',
                                     label: (
                                         <Flex align="center" gap="1">
-                                            <LucideMoon size={14} />
+                                            <MoonIcon size={14} />
                                             {t('app.themeOptions.dark')}
                                         </Flex>
                                     ),
@@ -103,7 +103,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                                     value: 'light',
                                     label: (
                                         <Flex align="center" gap="1">
-                                            <LucideSun size={14} />
+                                            <SunIcon size={14} />
                                             {t('app.themeOptions.light')}
                                         </Flex>
                                     ),
@@ -112,7 +112,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                                     value: 'system',
                                     label: (
                                         <Flex align="center" gap="1">
-                                            <LucideMonitor size={14} />
+                                            <MonitorIcon size={14} />
                                             {t('app.themeOptions.system')}
                                         </Flex>
                                     ),
@@ -148,7 +148,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                                 size="2"
                                 onClick={applySwUpdate}
                             >
-                                <LucideRefreshCw size={12} />
+                                <RefreshCwIcon size={12} />
                                 {t('app.updateButton')}
                             </Button>
                         )}

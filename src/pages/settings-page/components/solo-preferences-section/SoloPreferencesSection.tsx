@@ -1,4 +1,4 @@
-import { LucideCircleUserRound } from 'lucide-react';
+import { CircleUserRoundIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -41,7 +41,7 @@ const SoloPreferencesSection = ({ isLoading }: Props) => {
                             variant="soft"
                             size="3"
                             color="violet"
-                            fallback={<LucideCircleUserRound size={20} />}
+                            fallback={<CircleUserRoundIcon size={20} />}
                         />
                     </Skeleton>
                     <Flex direction="column">

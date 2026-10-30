@@ -1,4 +1,4 @@
-import { LucideQrCode } from 'lucide-react';
+import { QrCodeIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -6,8 +6,8 @@ import { Box, Button, Card, Dialog, Flex, Text } from '@radix-ui/themes';
 
 import type { InviteQrContent } from 'hooks/pwaHooks';
 
-import OfflineQRCode from 'components/OfflineQRCode';
 import { BaseModal, OverlayBody, OverlayFooter } from 'components/modals';
+import OfflineQRCode from 'components/OfflineQRCode';
 
 interface Props {
     children?: ReactNode;
@@ -25,7 +25,7 @@ const InviteQRModal = ({ children, content, qrLink }: Props) => {
             triggerElement={children ?? (
                 <Box width="100%" asChild>
                     <Button variant="soft" size="3">
-                        <LucideQrCode />
+                        <QrCodeIcon />
                         {t('buttons.showQRCode')}
                     </Button>
                 </Box>

@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { LucideReceipt } from 'lucide-react';
+import { ReceiptIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import EmptyState from './EmptyState';
@@ -13,7 +13,7 @@ const NoGroupExpensesEmptyState = ({ action }: Props) => {
 
     return (
         <EmptyState
-            icon={<LucideReceipt size={20} />}
+            icon={<ReceiptIcon size={20} />}
             iconColor="jade"
             title={t('page.expenses.emptyTitle')}
             description={t('page.expenses.emptyDescription')}

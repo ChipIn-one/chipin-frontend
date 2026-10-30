@@ -1,4 +1,4 @@
-import { LucideCircleCheck } from 'lucide-react';
+import { CircleCheckIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Card, Flex, Separator, Text } from '@radix-ui/themes';
@@ -19,7 +19,7 @@ const SettledUpCard = ({ friends }: Props) => {
     return (
         <Card>
             <Flex align="center" gap="2" mb="3">
-                <LucideCircleCheck size={24} />
+                <CircleCheckIcon size={24} />
                 <Text weight="bold" as="span" size="3" color="gray">
                     {t('balances.settledUp')}
                 </Text>

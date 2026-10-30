@@ -1,4 +1,4 @@
-import { LucideList, LucideWalletCards } from 'lucide-react';
+import { ListIcon, WalletCardsIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Container, Flex } from '@radix-ui/themes';
@@ -18,7 +18,7 @@ const SoloPage = () => {
                         <DashboardHeader />
 
                         <EmptyState
-                            icon={<LucideWalletCards size={20} />}
+                            icon={<WalletCardsIcon size={20} />}
                             iconColor="violet"
                             title={t('solo.summaryTitle')}
                             description={t('solo.inDevelopment')}
@@ -27,7 +27,7 @@ const SoloPage = () => {
                 }
             >
                 <EmptyState
-                    icon={<LucideList size={20} />}
+                    icon={<ListIcon size={20} />}
                     iconColor="violet"
                     title={t('solo.activityTitle')}
                     description={t('solo.inDevelopment')}

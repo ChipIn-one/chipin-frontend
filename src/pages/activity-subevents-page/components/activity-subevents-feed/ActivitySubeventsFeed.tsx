@@ -1,9 +1,9 @@
 import { useCallback, useEffect } from 'react';
 import {
-    LucideChevronsDown,
-    LucideCircleAlert,
-    LucideListTree,
-    LucideRefreshCw,
+    ChevronsDownIcon,
+    CircleAlertIcon,
+    ListTreeIcon,
+    RefreshCwIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -97,7 +97,7 @@ const ActivitySubeventsFeed = ({
     if (isLoadError) {
         return (
             <EmptyState
-                icon={<LucideCircleAlert size={20} />}
+                icon={<CircleAlertIcon size={20} />}
                 iconColor="red"
                 title={t('subeventsLoadErrorTitle')}
                 description={t('subeventsLoadErrorDescription')}
@@ -108,7 +108,7 @@ const ActivitySubeventsFeed = ({
                         variant="soft"
                         onClick={onRetry}
                     >
-                        <LucideRefreshCw size={14} />
+                        <RefreshCwIcon size={14} />
                         {t('retryAction')}
                     </Button>
                 }
@@ -125,7 +125,7 @@ const ActivitySubeventsFeed = ({
             events={subevents}
             emptyState={
                 <EmptyState
-                    icon={<LucideListTree size={20} />}
+                    icon={<ListTreeIcon size={20} />}
                     iconColor="gray"
                     title={t('subeventsEmptyTitle')}
                     description={t('subeventsEmptyDescription')}
@@ -147,7 +147,7 @@ const ActivitySubeventsFeed = ({
                             variant="soft"
                             onClick={onRetryNextPage}
                         >
-                            <LucideRefreshCw size={14} />
+                            <RefreshCwIcon size={14} />
                             {t('retryAction')}
                         </Button>
                     </Flex>
@@ -156,7 +156,7 @@ const ActivitySubeventsFeed = ({
                 {isEndOfFeed && (
                     <Flex justify="center" align="center" gap="2" py="4">
                         <Text as="span" color="gray">
-                            <LucideChevronsDown size={14} />
+                            <ChevronsDownIcon size={14} />
                         </Text>
                         <Text size="1" color="gray">
                             {t('endOfFeed')}

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { LucideChevronDown } from 'lucide-react';
+import { ChevronDownIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -68,7 +68,7 @@ const CurrencySelect = ({
                 <Text as="span" size="2" weight="medium" truncate>
                     {selectedCurrencyLabel}
                 </Text>
-                <LucideChevronDown size={16} />
+                <ChevronDownIcon size={16} />
             </Flex>
         </Button>
     );

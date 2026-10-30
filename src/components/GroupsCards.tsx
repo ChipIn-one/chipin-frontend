@@ -1,12 +1,12 @@
 import { type FocusEvent, type KeyboardEvent, useEffect, useRef, useState } from 'react';
 import {
-    LucideChevronDown,
-    LucideChevronUp,
-    LucideCircleCheck,
-    LucideFilterX,
-    LucidePlus,
-    LucideSearch,
-    LucideX,
+    ChevronDownIcon,
+    ChevronUpIcon,
+    CircleCheckIcon,
+    FilterXIcon,
+    PlusIcon,
+    SearchIcon,
+    XIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -26,7 +26,7 @@ import {
 } from 'constants/groups';
 
 import { EmptyState } from 'basics/empty-states';
-import { GroupCard } from './group-card';
+
 import { useConnect } from './groups-cards/internal';
 import {
     SearchButtonShell,
@@ -34,6 +34,7 @@ import {
     SearchIndicator,
     SettledToggleButton,
 } from './groups-cards/styled';
+import { GroupCard } from './group-card';
 import { CreateUpdateGroupModal } from './modals';
 import { GroupsCardsSkeleton } from './skeletons';
 
@@ -137,7 +138,7 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
                                 size="2"
                             >
                                 <TextField.Slot side="left">
-                                    <LucideSearch size={16} />
+                                    <SearchIcon size={16} />
                                 </TextField.Slot>
                                 {hasSearchQuery && (
                                     <TextField.Slot side="right">
@@ -150,7 +151,7 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
                                             onMouseDown={event => event.preventDefault()}
                                             onClick={onClearSearch}
                                         >
-                                            <LucideX size={14} />
+                                            <XIcon size={14} />
                                         </IconButton>
                                     </TextField.Slot>
                                 )}
@@ -176,7 +177,7 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
                                 data-query-active={hasSearchQuery || undefined}
                                 onClick={() => setIsSearchOpen(true)}
                             >
-                                <LucideSearch size={17} />
+                                <SearchIcon size={17} />
                             </IconButton>
                             {hasSearchQuery && <SearchIndicator aria-hidden />}
                         </SearchButtonShell>
@@ -188,7 +189,7 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
                             variant="soft"
                             aria-label={t('common:buttons.createGroup')}
                         >
-                            <LucidePlus size={17} />
+                            <PlusIcon size={17} />
                         </IconButton>
                     </CreateUpdateGroupModal>
                 </Flex>
@@ -211,7 +212,7 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
 
             {showEmptyState && (
                 <EmptyState
-                    icon={<LucideFilterX size={16} />}
+                    icon={<FilterXIcon size={16} />}
                     title={t('groups.filterEmptyTitle')}
                     description={emptyStateDescription}
                 />
@@ -249,7 +250,7 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
                             minWidth="0"
                         >
                             <Flex align="center" gap="2" minWidth="0">
-                                <LucideCircleCheck size={16} />
+                                <CircleCheckIcon size={16} />
                                 <Text size="2" weight="medium" truncate>
                                     {t('groups.settledCount', {
                                         count: settledCount,
@@ -263,9 +264,9 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
                                         : t('groups.showSettled')}
                                 </Text>
                                 {isSettledVisible ? (
-                                    <LucideChevronUp size={18} />
+                                    <ChevronUpIcon size={18} />
                                 ) : (
-                                    <LucideChevronDown size={18} />
+                                    <ChevronDownIcon size={18} />
                                 )}
                             </Flex>
                         </Flex>

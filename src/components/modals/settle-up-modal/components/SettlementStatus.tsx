@@ -1,5 +1,5 @@
 import { Amount } from 'basics';
-import { LucideCircleCheck } from 'lucide-react';
+import { CircleCheckIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Card, Flex, Text } from '@radix-ui/themes';
@@ -25,7 +25,7 @@ const SettlementStatus = ({
                 {isDebtSettled ? (
                     <>
                         <Text color="green" asChild>
-                            <LucideCircleCheck size={18} />
+                            <CircleCheckIcon size={18} />
                         </Text>
                         <Text size="3" weight="medium" color="green">
                             {t('friends:settleUp.debtWillBeSettled')}

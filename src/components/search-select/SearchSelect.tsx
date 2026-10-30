@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { LucideSearch } from 'lucide-react';
+import { SearchIcon } from 'lucide-react';
 import type { ComponentProps } from 'react';
 
 import { Box, Flex, Popover, Text, TextField } from '@radix-ui/themes';
@@ -116,7 +116,7 @@ const SearchSelect = ({
                             aria-label={searchPlaceholder}
                         >
                             <TextField.Slot side="left">
-                                <LucideSearch size={16} />
+                                <SearchIcon size={16} />
                             </TextField.Slot>
                         </TextField.Root>
                     </Box>

@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { LucideUserPlus } from 'lucide-react';
+import { UserPlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import EmptyState from './EmptyState';
@@ -13,7 +13,7 @@ const NoFriendsEmptyState = ({ action }: Props) => {
 
     return (
         <EmptyState
-            icon={<LucideUserPlus size={20} />}
+            icon={<UserPlusIcon size={20} />}
             iconColor="cyan"
             title={t('emptyTitle')}
             description={t('emptyDescription')}

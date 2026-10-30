@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import {
-    LucideBug,
-    LucideCalendarPlus,
-    LucideFlaskConical,
-    LucideMoon,
-    LucideSun,
+    BugIcon,
+    CalendarPlusIcon,
+    FlaskConicalIcon,
+    MoonIcon,
+    SunIcon,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
@@ -14,8 +14,8 @@ import { useShallow } from 'zustand/react/shallow';
 import { Button, IconButton } from '@radix-ui/themes';
 
 import { isThemeDark } from 'helpers/theme';
-import { selectAuthStatus } from 'store/authSelectors';
 import { AUTH_STATUS } from 'store/authConstants';
+import { selectAuthStatus } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { useUsersStore } from 'store/users-store';
 
@@ -62,25 +62,25 @@ const DevMenu = ({ isShowLabel = false }: Props) => {
         {
             value: 'switchTheme',
             label: t('header.switchTheme'),
-            icon: isDark ? <LucideSun size={16} /> : <LucideMoon size={16} />,
+            icon: isDark ? <SunIcon size={16} /> : <MoonIcon size={16} />,
             onSelect: onSwitchTheme,
         },
         {
             value: 'extendSubscription',
             label: t('header.addSubscriptionDay'),
-            icon: <LucideCalendarPlus size={16} />,
+            icon: <CalendarPlusIcon size={16} />,
             onSelect: extendUserSubscriptionByDay,
         },
         {
             value: 'testError',
             label: t('header.testError'),
-            icon: <LucideBug size={16} />,
+            icon: <BugIcon size={16} />,
             onSelect: () => setShouldCrash(true),
         },
     ];
     const trigger = isShowLabel ? (
         <LabeledTrigger size="3" variant="outline" color="gray">
-            <LucideFlaskConical />
+            <FlaskConicalIcon />
             {t('header.devMenu')}
         </LabeledTrigger>
     ) : (
@@ -93,7 +93,7 @@ const DevMenu = ({ isShowLabel = false }: Props) => {
             color="gray"
             aria-label={t('header.devMenu')}
         >
-            <LucideFlaskConical />
+            <FlaskConicalIcon />
         </IconButton>
     );
 

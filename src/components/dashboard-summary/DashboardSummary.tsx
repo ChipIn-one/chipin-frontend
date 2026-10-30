@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { LucideChevronDown, LucideChevronUp } from 'lucide-react';
+import { BalanceBadges } from 'basics';
+import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Card, Flex, Skeleton, Text, VisuallyHidden } from '@radix-ui/themes';
 
-import { BalanceBadges } from 'basics';
-import { NoDebtsEmptyState } from 'basics/empty-states';
 import DebtAmount from 'basics/DebtAmount';
+import { NoDebtsEmptyState } from 'basics/empty-states';
 import { Amount } from 'basics/numbers';
 
 import { useConnect } from './internal';
@@ -79,9 +79,9 @@ const DashBoardSummary = ({ isLoading = false, hasExpenseHistory = false }: Prop
 
                 {hasDetails &&
                     (isExpanded ? (
-                        <LucideChevronUp size={18} aria-hidden />
+                        <ChevronUpIcon size={18} aria-hidden />
                     ) : (
-                        <LucideChevronDown size={18} aria-hidden />
+                        <ChevronDownIcon size={18} aria-hidden />
                     ))}
             </Flex>
         </Flex>

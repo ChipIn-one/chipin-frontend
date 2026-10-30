@@ -1,4 +1,4 @@
-import { LucideArrowLeft, LucideX } from 'lucide-react';
+import { ArrowLeftIcon, XIcon } from 'lucide-react';
 import type { ReactNode, Ref } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -57,7 +57,7 @@ const BaseModal = ({
                                 disabled={isBackDisabled}
                                 onClick={onBack}
                             >
-                                <LucideArrowLeft width={20} />
+                                <ArrowLeftIcon width={20} />
                             </IconButton>
                         ) : undefined
                     }
@@ -74,7 +74,7 @@ const BaseModal = ({
                                 aria-label={t('buttons.close')}
                                 disabled={isCloseDisabled}
                             >
-                                <LucideX width={24} />
+                                <XIcon width={24} />
                             </IconButton>
                         </Dialog.Close>
                     }

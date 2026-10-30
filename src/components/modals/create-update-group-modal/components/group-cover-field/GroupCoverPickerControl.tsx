@@ -1,4 +1,4 @@
-import { LucideImageUp } from 'lucide-react';
+import { ImageUpIcon } from 'lucide-react';
 import type { ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -33,7 +33,7 @@ const GroupCoverPickerControl = ({
                 $isOverlay={isOverlay}
                 title={t('modal.cover.action')}
             >
-                <LucideImageUp size={20} aria-hidden />
+                <ImageUpIcon size={20} aria-hidden />
                 <HiddenFileInput
                     type="file"
                     accept={IMAGE_FILE_ACCEPT}

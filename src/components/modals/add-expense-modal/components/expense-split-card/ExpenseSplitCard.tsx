@@ -1,4 +1,4 @@
-import { LucideAlertTriangle } from 'lucide-react';
+import { AlertTriangleIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Callout, Card, Flex, Text } from '@radix-ui/themes';
@@ -33,7 +33,7 @@ const ExpenseSplitCard = () => {
                 {showSkippedPayerCallout && (
                     <Callout.Root color="amber" size="2" role="alert">
                         <Callout.Icon>
-                            <LucideAlertTriangle size={18} />
+                            <AlertTriangleIcon size={18} />
                         </Callout.Icon>
                         <Callout.Text>
                             {t('expenses.modal.directSelfOnlyWarning')}

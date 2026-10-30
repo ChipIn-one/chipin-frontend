@@ -1,8 +1,8 @@
 import {
-    LucideCheck,
-    LucideLink2,
-    LucideQrCode,
-    LucideShare2,
+    CheckIcon,
+    Link2Icon,
+    QrCodeIcon,
+    Share2Icon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
@@ -41,15 +41,15 @@ const InviteActionRows = ({ invite }: Props) => {
         onCopyLink,
     } = invite;
 
-    let primaryIcon = <LucideLink2 size={16} />;
+    let primaryIcon = <Link2Icon size={16} />;
     let primaryLabel = isCopied
         ? t('common:copy.copied')
         : t('group:page.settings.copyLinkTitle');
 
     if (isNativeShareSupported) {
         primaryIcon = isShareDone
-            ? <LucideCheck size={16} />
-            : <LucideShare2 size={16} />;
+            ? <CheckIcon size={16} />
+            : <Share2Icon size={16} />;
         primaryLabel = isShareDone
             ? t('common:copy.shared')
             : t('common:buttons.invitePeople');
@@ -98,8 +98,8 @@ const InviteActionRows = ({ invite }: Props) => {
                                 color="indigo"
                                 fallback={
                                     isCopied
-                                        ? <LucideCheck size={16} />
-                                        : <LucideLink2 size={16} />
+                                        ? <CheckIcon size={16} />
+                                        : <Link2Icon size={16} />
                                 }
                             />
                             <Flex direction="column" gap="1">
@@ -126,7 +126,7 @@ const InviteActionRows = ({ invite }: Props) => {
                                 radius="medium"
                                 variant="soft"
                                 color="violet"
-                                fallback={<LucideQrCode size={16} />}
+                                fallback={<QrCodeIcon size={16} />}
                             />
                             <Flex direction="column" gap="1">
                                 <Text size="2" weight="medium">

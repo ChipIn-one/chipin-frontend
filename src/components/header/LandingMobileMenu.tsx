@@ -1,4 +1,4 @@
-import { LucideMenu } from 'lucide-react';
+import { MenuIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { IconButton } from '@radix-ui/themes';
@@ -45,7 +45,7 @@ const LandingMobileMenu = ({ value, onChange }: LandingLanguageProps) => {
             ]}
             trigger={
                 <IconButton variant="ghost" color="gray" size="2">
-                    <LucideMenu />
+                    <MenuIcon />
                 </IconButton>
             }
             align="end"

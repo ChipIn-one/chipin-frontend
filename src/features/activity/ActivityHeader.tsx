@@ -1,4 +1,4 @@
-import { LucideChartBar } from 'lucide-react';
+import { ChartBarIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar, Box, Flex, Skeleton, Text } from '@radix-ui/themes';
@@ -29,7 +29,7 @@ const ActivityHeader = ({ isLoading, activeFilter, onFilterChange }: Props) => {
                     <Avatar
                         size={{ initial: '4', sm: '5' }}
                         color="cyan"
-                        fallback={<LucideChartBar size={32} />}
+                        fallback={<ChartBarIcon size={32} />}
                     />
                 </Skeleton>
 

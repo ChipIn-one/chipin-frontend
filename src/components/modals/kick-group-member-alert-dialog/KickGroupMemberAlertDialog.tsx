@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from 'react';
-import { LucideTriangleAlert } from 'lucide-react';
+import { TriangleAlertIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -59,7 +59,7 @@ const KickGroupMemberAlertDialog = ({ children, member }: Props) => {
             content={
                 <Callout.Root color="amber" size="2">
                     <Callout.Icon>
-                        <LucideTriangleAlert size={18} />
+                        <TriangleAlertIcon size={18} />
                     </Callout.Icon>
                     <Callout.Text>
                         {t('group:kickModal.transferExpensesWarning')}

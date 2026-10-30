@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import {
-    LucideArrowLeftRight,
-    LucideBell,
-    LucideMoreVertical,
-    LucidePlusCircle,
-    LucideUserX,
+    ArrowLeftRightIcon,
+    BellIcon,
+    MoreVerticalIcon,
+    PlusCircleIcon,
+    UserXIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -35,7 +35,7 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
             {
                 value: 'addExpense',
                 label: t('common:buttons.addExpense'),
-                icon: <LucidePlusCircle size={16} />,
+                icon: <PlusCircleIcon size={16} />,
                 onSelect: () => {
                     openAddExpenseModal({
                         context: 'friends',
@@ -46,7 +46,7 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
             {
                 value: 'remind',
                 label: t('friends:actions.remind'),
-                icon: <LucideBell size={16} />,
+                icon: <BellIcon size={16} />,
                 isDisabled: true,
                 onSelect: () => {
                     /* todo */
@@ -57,7 +57,7 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                       {
                           value: 'settleUp',
                           label: t('common:buttons.settleUp'),
-                          icon: <LucideArrowLeftRight size={16} />,
+                          icon: <ArrowLeftRightIcon size={16} />,
                           color: 'green' as const,
                           onSelect: () => {
                               setIsSettleUpOpened(true);
@@ -68,7 +68,7 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
             {
                 value: 'removeFriend',
                 label: t('friends:actions.removeFriend'),
-                icon: <LucideUserX size={16} />,
+                icon: <UserXIcon size={16} />,
                 color: 'red' as const,
                 isDisabled: hasOutstandingDebt,
                 onSelect: () => {
@@ -85,7 +85,7 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                 items={actions}
                 trigger={
                     <IconButton variant="ghost" size="2" color="gray">
-                        <LucideMoreVertical size={16} />
+                        <MoreVerticalIcon size={16} />
                     </IconButton>
                 }
                 align="end"

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { TextArea, TextInput } from 'basics';
-import { LucideChevronDown } from 'lucide-react';
+import { ChevronDownIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -66,7 +66,7 @@ const GroupDetailsFields = ({
                         onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
                     >
                         <DescriptionToggleIcon $isExpanded={isDescriptionExpanded}>
-                            <LucideChevronDown size={16} aria-hidden />
+                            <ChevronDownIcon size={16} aria-hidden />
                         </DescriptionToggleIcon>
                         {t('modal.fields.addDescription')}
                     </DescriptionToggleButton>

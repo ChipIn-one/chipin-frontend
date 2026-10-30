@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { LucideChartBar, LucideChartPie, LucideSettings, LucideUsers } from 'lucide-react';
+import { ChartBarIcon, ChartPieIcon, SettingsIcon, UsersIcon } from 'lucide-react';
 
 import { ROUTES } from 'constants/routes';
 
@@ -13,22 +13,22 @@ const getNavElements = (homeRoute: string): NavElement[] => [
     {
         labelKey: 'nav.dashboard',
         href: homeRoute,
-        Icon: LucideChartPie,
+        Icon: ChartPieIcon,
     },
     {
         labelKey: 'nav.activity',
         href: ROUTES.ACTIVITY,
-        Icon: LucideChartBar,
+        Icon: ChartBarIcon,
     },
     {
         labelKey: 'nav.friends',
         href: ROUTES.FRIENDS,
-        Icon: LucideUsers,
+        Icon: UsersIcon,
     },
     {
         labelKey: 'nav.settings',
         href: ROUTES.SETTINGS,
-        Icon: LucideSettings,
+        Icon: SettingsIcon,
     },
 ];
 
