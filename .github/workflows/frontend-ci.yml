@@ -66,6 +66,8 @@ jobs:
         run: npm ci
       - name: Verify frontend
         if: steps.gate.outputs.mode == 'full'
+        # Step timeout (not only the job's) so a hang counts as a failure and notifies #chipin-ci.
+        timeout-minutes: 18
         env:
           CHIPIN_TASK_HEAD_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
           CHIPIN_TASK_BRANCH: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
@@ -75,3 +77,35 @@ jobs:
         env:
           MODE: ${{ steps.gate.outputs.mode }}
         run: echo "frontend-ci completed via $MODE path; verify:full was not required for this event."
+
+  notify-master-failure:
+    # Separate job: the Slack webhook never shares a runner with npm install scripts.
+    name: Notify #chipin-ci on master failure
+    needs: frontend-ci
+    if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 1
+    permissions: {}
+    steps:
+      - name: Post to Slack
+        continue-on-error: true
+        env:
+          SLACK_WEBHOOK_CI: ${{ secrets.SLACK_WEBHOOK_CI }}
+          WORKFLOW: ${{ github.workflow }}
+          BRANCH: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$SLACK_WEBHOOK_CI" ]; then
+            echo "SLACK_WEBHOOK_CI is not set; skipping the Slack notification."
+            exit 0
+          fi
+          payload="$(jq -n \
+            --arg workflow "$WORKFLOW" --arg branch "$BRANCH" --arg sha "${SHA:0:7}" \
+            --arg actor "$ACTOR" --arg commit "$COMMIT_URL" --arg run "$RUN_URL" \
+            'def e: gsub("&";"&amp;") | gsub("<";"&lt;") | gsub(">";"&gt;");
+             {text: ":red_circle: \($workflow|e) failed on `\($branch|e)` at <\($commit)|\($sha)> by \($actor|e) - <\($run)|run>"}')"
+          curl -sS --fail --max-time 10 -o /dev/null -H 'Content-Type: application/json' \
+            --data "$payload" "$SLACK_WEBHOOK_CI"
