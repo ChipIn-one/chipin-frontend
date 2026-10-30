@@ -1,5 +1,5 @@
 import { RelativeTime } from 'basics';
-import { LucideUserRoundX } from 'lucide-react';
+import { UserRoundXIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
@@ -27,7 +27,7 @@ const EventMemberKicked = ({ event }: Props) => {
                             size="4"
                             variant="soft"
                             color="red"
-                            fallback={<LucideUserRoundX size={28} />}
+                            fallback={<UserRoundXIcon size={28} />}
                         />
                     </EventIcon>
                     <Flex gap="2" align="center" minWidth="0">

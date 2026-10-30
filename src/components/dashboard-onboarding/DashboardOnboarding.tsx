@@ -1,6 +1,6 @@
 import {
-    LucideUserPlus,
-    LucideUsersRound,
+    UserPlusIcon,
+    UsersRoundIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
@@ -9,8 +9,9 @@ import { Box, Button, Card, Flex, Heading, Text } from '@radix-ui/themes';
 
 import { useFriendInvite } from 'hooks/pwaHooks';
 
-import DashboardOnboardingIllustration from 'assets/dashboard-onboarding.png';
 import { CreateUpdateGroupModal } from 'components/modals/create-update-group-modal';
+
+import DashboardOnboardingIllustration from 'assets/dashboard-onboarding.png';
 
 import { useConnect } from './internal/useConnect';
 
@@ -100,7 +101,7 @@ const DashboardOnboarding = () => {
                     >
                         <CreateUpdateGroupModal type="create">
                             <ActionButton type="button" size="3">
-                                <LucideUsersRound size={18} />
+                                <UsersRoundIcon size={18} />
                                 {t('common:buttons.createGroup')}
                             </ActionButton>
                         </CreateUpdateGroupModal>
@@ -111,7 +112,7 @@ const DashboardOnboarding = () => {
                             disabled={!inviteToken}
                             onClick={onInviteFriend}
                         >
-                            <LucideUserPlus size={18} />
+                            <UserPlusIcon size={18} />
                             {t('onboarding.actions.inviteFriend')}
                         </ActionButton>
                     </Flex>

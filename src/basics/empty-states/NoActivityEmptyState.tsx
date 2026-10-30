@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { LucideClipboardList } from 'lucide-react';
+import { ClipboardListIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import EmptyState from './EmptyState';
@@ -13,7 +13,7 @@ const NoActivityEmptyState = ({ action }: Props) => {
 
     return (
         <EmptyState
-            icon={<LucideClipboardList size={20} />}
+            icon={<ClipboardListIcon size={20} />}
             iconColor="gray"
             title={t('emptyTitle')}
             description={t('emptyDescription')}

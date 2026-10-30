@@ -1,4 +1,4 @@
-import { LucideUserPlus, LucideUsers } from 'lucide-react';
+import { UserPlusIcon, UsersIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar, Box, Button, Flex, Heading, Skeleton, Text } from '@radix-ui/themes';
@@ -36,7 +36,7 @@ const FriendsPageHeader = ({ isLoading }: Props) => {
                     <Avatar
                         size={{ initial: '4', sm: '5' }}
                         color="cyan"
-                        fallback={<LucideUsers size={32} />}
+                        fallback={<UsersIcon size={32} />}
                     />
                 </Skeleton>
                 <Box>
@@ -57,7 +57,7 @@ const FriendsPageHeader = ({ isLoading }: Props) => {
                 aria-label={addFriendLabel}
                 onClick={onAddFriend}
             >
-                <LucideUserPlus size={16} />
+                <UserPlusIcon size={16} />
                 <Box display={{ initial: 'none', sm: 'inline' }}>
                     <Text as="span">{addFriendLabel}</Text>
                 </Box>

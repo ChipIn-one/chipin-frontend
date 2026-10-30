@@ -1,5 +1,5 @@
 import { Amount } from 'basics';
-import { LucideCheck, LucideX } from 'lucide-react';
+import { CheckIcon, XIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -36,7 +36,7 @@ const SplitTypeHeader = () => {
         ? t('expenses.modal.split.deselectAll')
         : t('expenses.modal.split.selectAll');
     const yourShareTitle = `${t('expenses.modal.split.yourShare')}:`;
-    const Icon = isAllSelected ? LucideX : LucideCheck;
+    const Icon = isAllSelected ? XIcon : CheckIcon;
 
     return (
         <Flex justify="between" align="center" gap="3">

@@ -1,14 +1,14 @@
-import { LucideGlobe } from 'lucide-react';
+import { GlobeIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
+import type { PublicRoute } from 'types/publicRoutes';
 
 import { Link } from '@radix-ui/themes';
 
 import { PUBLIC_ROUTE_ENTRIES } from 'constants/publicRouteManifest';
 import { themeColor } from 'helpers/colors';
-import { getPublicPath } from 'helpers/publicRoutes';
 import { suppressPublicLocaleSuggestion } from 'helpers/publicLocaleSuggestion';
-import type { PublicRoute } from 'types/publicRoutes';
+import { getPublicPath } from 'helpers/publicRoutes';
 
 // Native details with real links preserve no-JS navigation on SSG pages.
 // After hydration the header's searchable selector replaces this fallback.
@@ -53,7 +53,7 @@ const PublicLanguageLinks = ({ route }: { route: PublicRoute }) => {
     return (
         <LanguageMenu>
             <LanguageTrigger>
-                <LucideGlobe size={18} aria-hidden />
+                <GlobeIcon size={18} aria-hidden />
                 {t('common:fields.interfaceLanguage')}
             </LanguageTrigger>
             <LanguageOptions aria-label={t('common:fields.interfaceLanguage')}>

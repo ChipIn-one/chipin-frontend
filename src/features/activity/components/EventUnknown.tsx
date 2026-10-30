@@ -1,5 +1,5 @@
 import { RelativeTime } from 'basics';
-import { LucideAlertTriangle } from 'lucide-react';
+import { AlertTriangleIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
@@ -25,7 +25,7 @@ const EventUnknown = ({ event }: EventUnknownProps) => {
                             size="4"
                             variant="soft"
                             color="amber"
-                            fallback={<LucideAlertTriangle size={20} />}
+                            fallback={<AlertTriangleIcon size={20} />}
                         />
                     </EventIcon>
                     <Flex gap="1" direction="column">

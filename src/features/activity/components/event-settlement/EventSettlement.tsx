@@ -1,5 +1,5 @@
 import { Amount, LedgerScopeBadge } from 'basics';
-import { LucideArrowLeftRight } from 'lucide-react';
+import { ArrowLeftRightIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
@@ -13,6 +13,7 @@ import {
 import { useUsersStore } from 'store/users-store';
 
 import { EventIcon } from '../activity-event';
+
 import { SettlementParticipants } from './components';
 import { AmountText } from './styled';
 
@@ -44,7 +45,7 @@ const EventSettlement = ({ event }: Props) => {
                             size="4"
                             variant="soft"
                             color="green"
-                            fallback={<LucideArrowLeftRight size={28} />}
+                            fallback={<ArrowLeftRightIcon size={28} />}
                         />
                     </EventIcon>
                     <Flex direction="column" align="start" gap="1" minWidth="0">

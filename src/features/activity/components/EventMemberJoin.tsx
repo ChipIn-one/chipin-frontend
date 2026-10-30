@@ -1,5 +1,5 @@
 import { RelativeTime } from 'basics';
-import { LucideUserPlus } from 'lucide-react';
+import { UserPlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
@@ -29,7 +29,7 @@ const EventMemberJoin = ({ event }: EventMemberJoinProps) => {
                             size="4"
                             variant="soft"
                             color="cyan"
-                            fallback={<LucideUserPlus size={20} />}
+                            fallback={<UserPlusIcon size={20} />}
                         />
                     </EventIcon>
                     <Flex gap="2" align="center" minWidth="0">

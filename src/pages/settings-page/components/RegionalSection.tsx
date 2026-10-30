@@ -1,4 +1,4 @@
-import { LucideGlobe, LucideRotateCcw } from 'lucide-react';
+import { GlobeIcon, RotateCcwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -72,7 +72,7 @@ const RegionalSection = ({ isLoading }: Props) => {
                             variant="soft"
                             size="3"
                             color="mint"
-                            fallback={<LucideGlobe size={20} />}
+                            fallback={<GlobeIcon size={20} />}
                         />
                     </Skeleton>
                     <Flex direction="column">
@@ -183,7 +183,7 @@ const RegionalSection = ({ isLoading }: Props) => {
                                 disabled={isLoading}
                                 onClick={onUseSystemLanguage}
                             >
-                                <LucideRotateCcw size={16} />
+                                <RotateCcwIcon size={16} />
                                 {t('regional.resetLanguage')}
                             </Button>
                         </Flex>

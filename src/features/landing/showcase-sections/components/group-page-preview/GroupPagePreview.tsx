@@ -1,5 +1,5 @@
 import { Amount, BalanceSummaryText } from 'basics';
-import { LucidePlus } from 'lucide-react';
+import { PlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -87,7 +87,7 @@ const GroupPagePreview = () => {
                             radius="full"
                             aria-label={t('common:buttons.invitePeople')}
                         >
-                            <LucidePlus size={18} />
+                            <PlusIcon size={18} />
                         </IconButton>
                     </Flex>
                     <Button size="2" variant="soft">

@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { LucideChevronDown } from 'lucide-react';
+import { ChevronDownIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Flex, Text } from '@radix-ui/themes';
@@ -110,7 +110,7 @@ const CategorySearchSelect = ({
                         {selectedItem?.label ?? t('common:fields.category')}
                     </Text>
                 </Flex>
-                <LucideChevronDown size={16} />
+                <ChevronDownIcon size={16} />
             </Flex>
         </Button>
     );

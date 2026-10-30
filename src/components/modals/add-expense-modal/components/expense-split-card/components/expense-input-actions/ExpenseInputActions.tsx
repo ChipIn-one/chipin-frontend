@@ -1,4 +1,4 @@
-import { LucideMinus, LucidePlus } from 'lucide-react';
+import { MinusIcon, PlusIcon } from 'lucide-react';
 import type { ChangeEvent } from 'react';
 
 import { Flex, IconButton } from '@radix-ui/themes';
@@ -42,7 +42,7 @@ const ExpenseInputActions = ({
                 onClick={() => onStep(-1)}
                 aria-label={decrementLabel}
             >
-                <LucideMinus size={16} />
+                <MinusIcon size={16} />
             </IconButton>
             <InputRoot
                 value={value}
@@ -59,7 +59,7 @@ const ExpenseInputActions = ({
                 onClick={() => onStep(1)}
                 aria-label={incrementLabel}
             >
-                <LucidePlus size={16} />
+                <PlusIcon size={16} />
             </IconButton>
         </Flex>
     );

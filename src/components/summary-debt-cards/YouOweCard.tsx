@@ -1,5 +1,5 @@
 import { BalanceBadges } from 'basics';
-import { LucideTrendingDown } from 'lucide-react';
+import { TrendingDownIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar, Card, Flex, Skeleton, Text } from '@radix-ui/themes';
@@ -38,7 +38,7 @@ const YouOweCard: React.FC<Props> = ({ isLoading, total, defaultCurrency, entrie
                             <Avatar
                                 size="2"
                                 color="tomato"
-                                fallback={<LucideTrendingDown size={16} />}
+                                fallback={<TrendingDownIcon size={16} />}
                             />
                         </Skeleton>
 

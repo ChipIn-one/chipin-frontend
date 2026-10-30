@@ -1,5 +1,5 @@
 import { RelativeTime } from 'basics';
-import { LucideUserMinus } from 'lucide-react';
+import { UserMinusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
@@ -29,7 +29,7 @@ const EventMemberLeft = ({ event }: Props) => {
                             size="4"
                             variant="soft"
                             color="orange"
-                            fallback={<LucideUserMinus size={20} />}
+                            fallback={<UserMinusIcon size={20} />}
                         />
                     </EventIcon>
                     <Flex gap="2" align="center" minWidth="0">

@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { LucideBanknoteX } from 'lucide-react';
+import { BanknoteXIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import EmptyState from './EmptyState';
@@ -13,7 +13,7 @@ const NoDebtsEmptyState = ({ action }: Props) => {
 
     return (
         <EmptyState
-            icon={<LucideBanknoteX size={20} />}
+            icon={<BanknoteXIcon size={20} />}
             iconColor="gray"
             title={t('noDebtsTitle')}
             description={t('noDebtsDescription')}

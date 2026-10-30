@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { LucidePencil } from 'lucide-react';
+import { PencilIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Flex, Text, TextField } from '@radix-ui/themes';
@@ -84,7 +84,7 @@ const SettlementAmountField = ({
                         autoFocus
                     >
                         <TextField.Slot side="right" color="gray">
-                            <LucidePencil size={18} aria-hidden />
+                            <PencilIcon size={18} aria-hidden />
                         </TextField.Slot>
                     </LargeAmountInput>
                 </AmountField>

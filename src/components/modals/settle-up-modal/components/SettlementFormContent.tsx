@@ -1,5 +1,5 @@
 import { useId, useRef, useState } from 'react';
-import { LucideInfo } from 'lucide-react';
+import { InfoIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -128,7 +128,7 @@ const SettlementFormContent = ({
 
                     <Callout.Root color="grass" size="2">
                         <Callout.Icon>
-                            <LucideInfo size={18} />
+                            <InfoIcon size={18} />
                         </Callout.Icon>
                         <Callout.Text>
                             {t('friends:settleUp.noMoneyMoves')}

@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from 'react';
-import { LucideOctagonAlert } from 'lucide-react';
+import { OctagonAlertIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -61,7 +61,7 @@ const RemoveGroupAlertDialog = ({ children }: Props) => {
             content={
                 <Callout.Root color="red" size="2">
                     <Callout.Icon>
-                        <LucideOctagonAlert size={20} />
+                        <OctagonAlertIcon size={20} />
                     </Callout.Icon>
                     <Callout.Text>{t('group:removeModal.warning')}</Callout.Text>
                 </Callout.Root>

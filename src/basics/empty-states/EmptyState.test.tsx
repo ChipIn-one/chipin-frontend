@@ -1,4 +1,4 @@
-import { LucideInfo } from 'lucide-react';
+import { InfoIcon } from 'lucide-react';
 import { expect, test } from 'vitest';
 
 import { Button, Theme } from '@radix-ui/themes';
@@ -14,7 +14,7 @@ test('uses the compact GroupCard-aligned visual contract', () => {
     render(
         <Theme>
             <EmptyState
-                icon={<LucideInfo size={20} />}
+                icon={<InfoIcon size={20} />}
                 title={TITLE}
                 description={DESCRIPTION}
                 action={<Button>{ACTION_LABEL}</Button>}
@@ -42,7 +42,7 @@ test('stacks the optional action under the icon and description', () => {
     render(
         <Theme>
             <EmptyState
-                icon={<LucideInfo size={20} />}
+                icon={<InfoIcon size={20} />}
                 title={TITLE}
                 description={DESCRIPTION}
                 action={<Button>{ACTION_LABEL}</Button>}

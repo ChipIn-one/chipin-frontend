@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import i18n from 'i18n';
 import {
-    LucideDownload,
-    LucideHouse,
-    LucideRefreshCw,
-    LucideTriangleAlert,
+    DownloadIcon,
+    HouseIcon,
+    RefreshCwIcon,
+    TriangleAlertIcon,
 } from 'lucide-react';
 import type { MouseEvent } from 'react';
 
@@ -125,7 +125,7 @@ const GlobalErrorFallback = ({ timestamp }: GlobalErrorFallbackProps) => {
             <main className="global-error" role="alert" aria-labelledby="global-error-title">
                 <section className="global-error__panel">
                     <div className="global-error__icon" aria-hidden="true">
-                        <LucideTriangleAlert size={34} strokeWidth={2} />
+                        <TriangleAlertIcon size={34} strokeWidth={2} />
                     </div>
 
                     <p className="global-error__eyebrow">
@@ -140,7 +140,7 @@ const GlobalErrorFallback = ({ timestamp }: GlobalErrorFallbackProps) => {
                             disabled={isActionPending}
                             onClick={onTryAgain}
                         >
-                            <LucideRefreshCw size={19} aria-hidden="true" />
+                            <RefreshCwIcon size={19} aria-hidden="true" />
                             {i18n.t('errorBoundary.tryAgain')}
                         </button>
 
@@ -150,7 +150,7 @@ const GlobalErrorFallback = ({ timestamp }: GlobalErrorFallbackProps) => {
                             aria-disabled={isActionPending}
                             onClick={onDashboard}
                         >
-                            <LucideHouse size={19} aria-hidden="true" />
+                            <HouseIcon size={19} aria-hidden="true" />
                             {i18n.t('errorBoundary.goToDashboard')}
                         </a>
                     </div>
@@ -166,7 +166,7 @@ const GlobalErrorFallback = ({ timestamp }: GlobalErrorFallbackProps) => {
                                 disabled={isActionPending}
                                 onClick={onUpdate}
                             >
-                                <LucideDownload size={19} aria-hidden="true" />
+                                <DownloadIcon size={19} aria-hidden="true" />
                                 {isUpdating
                                     ? i18n.t('errorBoundary.updatingApp')
                                     : i18n.t('errorBoundary.updateApp')}

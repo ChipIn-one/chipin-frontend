@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LucideArrowLeftRight } from 'lucide-react';
+import { ArrowLeftRightIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Text } from '@radix-ui/themes';
@@ -10,7 +10,7 @@ import { useUsersStore } from 'store/users-store';
 
 import { MODAL_SIZES } from '../../base-modal';
 import { OverlayBody, OverlayFooter } from '../../components';
-import { ModalRouter, type ModalRoute } from '../../modal-router';
+import { type ModalRoute,ModalRouter } from '../../modal-router';
 import { type DebtOption, getDebtOptions } from '../internal';
 import type { GroupSettleUpProps } from '../types';
 
@@ -154,7 +154,7 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
                     variant={memberId ? 'soft' : 'solid'}
                     disabled={debts.length === 0}
                 >
-                    <LucideArrowLeftRight size={15} />
+                    <ArrowLeftRightIcon size={15} />
                     {t(
                         isSettledMember
                             ? 'group:page.balances.settled'

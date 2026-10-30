@@ -70,9 +70,9 @@ vi.mock('constants/category-ui', () => ({
 }));
 
 vi.mock('lucide-react', () => ({
-    LucideBanknoteArrowDown: () => <span data-testid="generic-down-icon" />,
-    LucideBanknoteArrowUp: () => <span data-testid="generic-up-icon" />,
-    LucideTrash2: () => <span data-testid="reversed-icon" />,
+    BanknoteArrowDownIcon: () => <span data-testid="generic-down-icon" />,
+    BanknoteArrowUpIcon: () => <span data-testid="generic-up-icon" />,
+    Trash2Icon: () => <span data-testid="reversed-icon" />,
 }));
 
 type ExpenseAction =

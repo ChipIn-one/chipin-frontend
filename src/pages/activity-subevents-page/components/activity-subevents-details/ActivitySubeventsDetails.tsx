@@ -1,7 +1,7 @@
-import { LucideArrowRight } from 'lucide-react';
+import { Amount, LedgerScopeBadge } from 'basics';
+import { ArrowRightIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Amount, LedgerScopeBadge } from 'basics';
 import { Card, Flex, Heading, Skeleton, Text } from '@radix-ui/themes';
 
 import type { AppEvent, ExpenseActivityMetadata } from 'api/activity.types';
@@ -13,10 +13,10 @@ import {
     type SettlementCreatedAction,
     type SettlementReversedAction,
 } from 'constants/activity';
+import type { ActivitySubeventsView } from 'helpers/activityEvent';
 import { formatActivityAbsoluteDate } from 'helpers/time';
 
 import { ActivitySubeventsButtons } from '../activity-subevents-buttons';
-import type { ActivitySubeventsView } from 'helpers/activityEvent';
 
 import {
     DetailLabel,
@@ -270,7 +270,7 @@ const ActivitySubeventsDetails = ({ view, isLoading }: Props) => {
             <Flex justify="between" align="center" gap="3">
                 <Text size="2" weight="medium">
                     {settlementEvent?.metadata.fromDisplayName}
-                    <LucideArrowRight size={14} aria-hidden="true" />
+                    <ArrowRightIcon size={14} aria-hidden="true" />
                     {settlementEvent?.metadata.toDisplayName}
                 </Text>
                 <Text size="3" weight="bold">

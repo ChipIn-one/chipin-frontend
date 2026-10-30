@@ -4,7 +4,7 @@ import {
     forwardRef,
     type ReactNode,
 } from 'react';
-import { LucideChevronDown } from 'lucide-react';
+import { ChevronDownIcon } from 'lucide-react';
 
 import { Button, Flex, Text } from '@radix-ui/themes';
 
@@ -42,7 +42,7 @@ const ExpenseSearchSelectContent = forwardRef<ComponentRef<typeof Button>, Props
                         </Text>
                     </Flex>
 
-                    <LucideChevronDown size={18} />
+                    <ChevronDownIcon size={18} />
                 </Flex>
             </TriggerButton>
         );

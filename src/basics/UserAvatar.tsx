@@ -1,4 +1,4 @@
-import { LucideUser } from 'lucide-react';
+import { UserIcon } from 'lucide-react';
 import type { ComponentProps } from 'react';
 
 import { Avatar, Skeleton } from '@radix-ui/themes';
@@ -31,7 +31,7 @@ const UserAvatar = ({
             color={color}
             radius={radius}
             src={src}
-            fallback={user?.displayName.charAt(0) || <LucideUser size={20} />}
+            fallback={user?.displayName.charAt(0) || <UserIcon size={20} />}
         />
     );
 

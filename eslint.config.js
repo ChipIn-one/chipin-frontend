@@ -8,6 +8,15 @@ import tseslint from 'typescript-eslint';
 
 import js from '@eslint/js';
 
+// lucide-react icons are imported only by their `<Name>Icon` export (no `Lucide<Name>` aliases,
+// no bare names, no namespace import). Repeated in every `no-restricted-imports` block below,
+// because a later block's options replace an earlier block's for the files it matches.
+const lucideIconImports = {
+    regex: '^lucide-react$',
+    allowImportNamePattern: '^(?:(?!Lucide)[A-Z][A-Za-z0-9]*Icon|LucideIcon|LucideProps)$',
+    message: 'Import lucide-react icons by their `<Name>Icon` export (e.g. `UsersIcon`).',
+};
+
 export default tseslint.config(
     { ignores: ['dist'] },
     {
@@ -149,6 +158,7 @@ export default tseslint.config(
                             message: 'Use the configured Axios instance from src/api.',
                         },
                     ],
+                    patterns: [lucideIconImports],
                 },
             ],
         },
@@ -187,6 +197,7 @@ export default tseslint.config(
                             allowTypeImports: true,
                             message: 'UI must call a store action instead of a runtime API module.',
                         },
+                        lucideIconImports,
                     ],
                 },
             ],
@@ -210,6 +221,7 @@ export default tseslint.config(
                             allowTypeImports: true,
                             message: 'The number layer cannot call runtime API modules.',
                         },
+                        lucideIconImports,
                     ],
                 },
             ],

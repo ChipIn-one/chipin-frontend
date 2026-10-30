@@ -1,9 +1,9 @@
 import {
-    LucideArrowLeftRight,
-    LucideCalculator,
-    LucideGlobe,
-    LucideUsers,
-    LucideZap,
+    ArrowLeftRightIcon,
+    CalculatorIcon,
+    GlobeIcon,
+    UsersIcon,
+    ZapIcon,
 } from 'lucide-react';
 import type { ComponentPropsWithoutRef, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -26,31 +26,31 @@ const FeaturesSection = () => {
         {
             title: t('features.smartGroups.title'),
             description: t('features.smartGroups.description'),
-            icon: <LucideUsers />,
+            icon: <UsersIcon />,
             color: 'green',
         },
         {
             title: t('features.quickExpense.title'),
             description: t('features.quickExpense.description'),
-            icon: <LucideZap />,
+            icon: <ZapIcon />,
             color: 'blue',
         },
         {
             title: t('features.autoCalc.title'),
             description: t('features.autoCalc.description'),
-            icon: <LucideCalculator />,
+            icon: <CalculatorIcon />,
             color: 'violet',
         },
         {
             title: t('features.multiCurrency.title'),
             description: t('features.multiCurrency.description'),
-            icon: <LucideGlobe />,
+            icon: <GlobeIcon />,
             color: 'cyan',
         },
         {
             title: t('features.settleUp.title'),
             description: t('features.settleUp.description'),
-            icon: <LucideArrowLeftRight />,
+            icon: <ArrowLeftRightIcon />,
             color: 'crimson',
         },
     ];

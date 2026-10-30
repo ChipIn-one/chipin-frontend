@@ -1,4 +1,4 @@
-import { LucideChevronDown, LucideFilter } from 'lucide-react';
+import { ChevronDownIcon, FilterIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Box, Button } from '@radix-ui/themes';
@@ -41,10 +41,10 @@ const FriendsFilterDropdown = ({ currencies, filterKey, onFilterChange }: Props)
             align="end"
             trigger={
                 <Button variant="soft" color="gray" size="3">
-                    <LucideFilter size={16} />
+                    <FilterIcon size={16} />
                     <Box display={{ initial: 'none', sm: 'contents' }}>{label}</Box>
                     <Box display={{ initial: 'none', sm: 'contents' }}>
-                        <LucideChevronDown size={16} />
+                        <ChevronDownIcon size={16} />
                     </Box>
                 </Button>
             }

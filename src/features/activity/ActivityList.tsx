@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { LucideChevronsDown, LucideRefreshCw } from 'lucide-react';
+import { ChevronsDownIcon, RefreshCwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -83,7 +83,7 @@ const ActivityList = ({ activeFilter }: Props) => {
                         variant="soft"
                         onClick={onRetryNextPage}
                     >
-                        <LucideRefreshCw size={14} />
+                        <RefreshCwIcon size={14} />
                         {t('retryAction')}
                     </Button>
                 </Flex>
@@ -92,7 +92,7 @@ const ActivityList = ({ activeFilter }: Props) => {
             {isEndOfFeed && (
                 <Flex justify="center" align="center" gap="2" py="4">
                     <Text as="span" color="gray">
-                        <LucideChevronsDown size={14} />
+                        <ChevronsDownIcon size={14} />
                     </Text>
                     <Text size="1" color="gray">
                         {t('endOfFeed')}

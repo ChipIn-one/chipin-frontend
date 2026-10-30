@@ -1,4 +1,4 @@
-import { LucideBanknoteArrowDown, LucideBanknoteArrowUp, LucideTrash2 } from 'lucide-react';
+import { BanknoteArrowDownIcon, BanknoteArrowUpIcon, Trash2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar } from '@radix-ui/themes';
@@ -38,14 +38,14 @@ const getIconColor = (
 
 const getExpenseIcon = (isReversed: boolean, isCurrentUserPayer: boolean) => {
     if (isReversed) {
-        return <LucideTrash2 size={28} />;
+        return <Trash2Icon size={28} />;
     }
 
     if (isCurrentUserPayer) {
-        return <LucideBanknoteArrowUp size={28} />;
+        return <BanknoteArrowUpIcon size={28} />;
     }
 
-    return <LucideBanknoteArrowDown size={28} />;
+    return <BanknoteArrowDownIcon size={28} />;
 };
 
 const ExpenseIcon = ({

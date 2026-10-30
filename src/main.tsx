@@ -1,4 +1,4 @@
-import { LucideCircleCheck, LucideCircleX, LucideInfo, LucideTriangleAlert } from 'lucide-react';
+import { CircleCheckIcon, CircleXIcon, InfoIcon, TriangleAlertIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
@@ -21,10 +21,10 @@ import { EarlySupporterPromoModal } from 'components/modals/early-supporter-prom
 import AppRouter from 'features/routing';
 import GlobalHooks from 'pages/GlobalHooks';
 
-const ToastSuccessIcon = () => <LucideCircleCheck size={20} />;
-const ToastInfoIcon = () => <LucideInfo size={20} />;
-const ToastWarningIcon = () => <LucideTriangleAlert size={20} />;
-const ToastErrorIcon = () => <LucideCircleX size={20} />;
+const ToastSuccessIcon = () => <CircleCheckIcon size={20} />;
+const ToastInfoIcon = () => <InfoIcon size={20} />;
+const ToastWarningIcon = () => <TriangleAlertIcon size={20} />;
+const ToastErrorIcon = () => <CircleXIcon size={20} />;
 const ToastLoadingIcon = () => <Spinner size="2" />;
 
 const Main = () => {

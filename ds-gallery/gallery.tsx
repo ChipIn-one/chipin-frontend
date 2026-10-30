@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components -- dev-only design-system gallery entry, never shipped in the app bundle */
 import { type ReactNode, useEffect, useState } from 'react';
 import i18n from 'i18n';
-import { LucideMinus, LucideMoon, LucidePlus, LucideSun, LucideTrash2, LucideUsers } from 'lucide-react';
+import { MinusIcon, MoonIcon, PlusIcon, SunIcon, Trash2Icon, UsersIcon } from 'lucide-react';
 import { createRoot } from 'react-dom/client';
 import { Trans, useTranslation } from 'react-i18next';
 import { MemoryRouter } from 'react-router-dom';
@@ -156,7 +156,7 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
                             </RSelect.Content>
                         </RSelect.Root>
                         <IconButton variant="soft" onClick={onToggleDark} aria-label={t('controls.toggleTheme')}>
-                            {isDark ? <LucideSun size={16} /> : <LucideMoon size={16} />}
+                            {isDark ? <SunIcon size={16} /> : <MoonIcon size={16} />}
                         </IconButton>
                     </Flex>
                 </Flex>
@@ -196,10 +196,10 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
                             <Button variant="soft">{t('common:buttons.settleUp')}</Button>
                             <Button variant="outline">{t('samples.invite')}</Button>
                             <Button variant="ghost">{t('common:buttons.cancel')}</Button>
-                            <Button color="red" variant="soft"><LucideTrash2 size={16} />{t('common:buttons.delete')}</Button>
+                            <Button color="red" variant="soft"><Trash2Icon size={16} />{t('common:buttons.delete')}</Button>
                         </Specimen>
                         <Specimen name="IconButton / Button sizes">
-                            <IconButton size="3" radius="full" aria-label={t('common:buttons.addExpense')}><LucidePlus /></IconButton>
+                            <IconButton size="3" radius="full" aria-label={t('common:buttons.addExpense')}><PlusIcon /></IconButton>
                             {(['1', '2', '3'] as const).map(s => <Button key={s} size={s}>{t('samples.size', { size: s })}</Button>)}
                         </Specimen>
                         <Specimen name="basics/CopyButton">
@@ -211,7 +211,7 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
                                 trigger={<Button variant="soft">{t('samples.groupActions')}</Button>}
                                 sections={[
                                     { label: t('common:modes.group'), items: [{ value: 'edit', label: t('group:modal.titleEdit') }, { value: 'invite', label: t('samples.inviteMembers') }] },
-                                    { items: [{ value: 'leave', label: t('common:buttons.leaveGroup'), color: 'red', icon: <LucideTrash2 size={14} /> }] },
+                                    { items: [{ value: 'leave', label: t('common:buttons.leaveGroup'), color: 'red', icon: <Trash2Icon size={14} /> }] },
                                 ]}
                             />
                         </Specimen>
@@ -263,7 +263,7 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
                         <Specimen name="basics/RadioCards" wide>
                             <Box width="100%">
                                 <RadioCards defaultValue="group" columns={{ initial: '1', sm: '3' }} items={[
-                                    { value: 'group', label: t('samples.groupExpense'), icon: <LucideUsers size={16} /> },
+                                    { value: 'group', label: t('samples.groupExpense'), icon: <UsersIcon size={16} /> },
                                     { value: 'friend', label: t('samples.withFriend') },
                                     { value: 'solo', label: t('samples.personal') },
                                 ] as Parameters<typeof RadioCards>[0]['items']} />
@@ -345,7 +345,7 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
                             <Flex direction="column" gap="2" width="100%">
                                 <ProgressBar value={progress} />
                                 <ProgressBar value={progress} size="3" color="violet" />
-                                <Flex gap="2"><IconButton size="1" variant="soft" aria-label={t('controls.decrease')} onClick={() => setProgress(p => Math.max(0, p - 16))}><LucideMinus size={14} /></IconButton><IconButton size="1" variant="soft" aria-label={t('controls.increase')} onClick={() => setProgress(p => Math.min(100, p + 16))}><LucidePlus size={14} /></IconButton></Flex>
+                                <Flex gap="2"><IconButton size="1" variant="soft" aria-label={t('controls.decrease')} onClick={() => setProgress(p => Math.max(0, p - 16))}><MinusIcon size={14} /></IconButton><IconButton size="1" variant="soft" aria-label={t('controls.increase')} onClick={() => setProgress(p => Math.min(100, p + 16))}><PlusIcon size={14} /></IconButton></Flex>
                             </Flex>
                         </Specimen>
                         <Specimen name="skeletons/BalanceBadgesSkeleton">
@@ -378,12 +378,12 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
 
                 <Section id="empty" title={t('sections.empty')}>
                     <Grid columns={{ initial: '1', md: '2' }} gap="3">
-                        <Card size="2"><NoGroupsEmptyState action={<Button size="2"><LucidePlus size={16} />{t('common:buttons.createGroup')}</Button>} /></Card>
+                        <Card size="2"><NoGroupsEmptyState action={<Button size="2"><PlusIcon size={16} />{t('common:buttons.createGroup')}</Button>} /></Card>
                         <Card size="2"><NoFriendsEmptyState /></Card>
                         <Card size="2"><NoGroupExpensesEmptyState /></Card>
                         <Card size="2"><NoActivityEmptyState /></Card>
                         <Card size="2" style={{ gridColumn: '1 / -1' }}>
-                            <EmptyState icon={<LucideUsers size={20} />} iconColor="violet" title={t('samples.customEmptyTitle')} description={t('samples.customEmptyDescription')} actionPosition="inline" action={<Button variant="soft" size="2">{t('samples.action')}</Button>} />
+                            <EmptyState icon={<UsersIcon size={20} />} iconColor="violet" title={t('samples.customEmptyTitle')} description={t('samples.customEmptyDescription')} actionPosition="inline" action={<Button variant="soft" size="2">{t('samples.action')}</Button>} />
                         </Card>
                     </Grid>
                 </Section>

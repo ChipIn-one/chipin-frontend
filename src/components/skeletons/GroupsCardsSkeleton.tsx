@@ -1,4 +1,4 @@
-import { LucidePlus, LucideSearch } from 'lucide-react';
+import { PlusIcon, SearchIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -30,12 +30,12 @@ export const GroupsCardsSkeleton = ({ label }: Props) => {
                 <Flex gap="3">
                     <Skeleton>
                         <IconButton>
-                            <LucideSearch size={16} />
+                            <SearchIcon size={16} />
                         </IconButton>
                     </Skeleton>
                     <Skeleton>
                         <IconButton>
-                            <LucidePlus size={16} />
+                            <PlusIcon size={16} />
                         </IconButton>
                     </Skeleton>
                 </Flex>

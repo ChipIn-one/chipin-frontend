@@ -1,15 +1,15 @@
 import { useContext } from 'react';
-import { LucideSend } from 'lucide-react';
+import { SendIcon } from 'lucide-react';
+import { PublicBuildYearContext } from 'public-routes/PublicBuildYearContext';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
 import { Avatar, Box, Container, Flex, Link, Separator, Text } from '@radix-ui/themes';
 
 import { PROJECT_NAME } from 'constants/chipin';
-import { getPublicPath } from 'helpers/publicRoutes';
 import { DEFAULT_LOCALE } from 'constants/locales';
-import { PublicBuildYearContext } from 'public-routes/PublicBuildYearContext';
 import { matchLocale } from 'helpers/locale';
+import { getPublicPath } from 'helpers/publicRoutes';
 
 import Logotype from 'assets/logo.svg?react';
 
@@ -22,7 +22,7 @@ const MEDIA_LINKS = [
     {
         href: 'https://t.me/chipin_one',
         label: 'Telegram',
-        Icon: LucideSend,
+        Icon: SendIcon,
     },
 ] as const;
 

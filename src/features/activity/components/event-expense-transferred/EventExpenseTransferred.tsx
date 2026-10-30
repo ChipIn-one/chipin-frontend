@@ -1,5 +1,5 @@
 import { RelativeTime } from 'basics';
-import { LucideRedo2, LucideUndo2 } from 'lucide-react';
+import { Redo2Icon, Undo2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
@@ -51,9 +51,9 @@ const EventExpenseTransferred = ({ event }: Props) => {
                             color={isTransferredFrom ? 'orange' : 'blue'}
                             fallback={
                                 isTransferredFrom ? (
-                                    <LucideUndo2 size={28} />
+                                    <Undo2Icon size={28} />
                                 ) : (
-                                    <LucideRedo2 size={28} />
+                                    <Redo2Icon size={28} />
                                 )
                             }
                         />

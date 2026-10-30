@@ -1,7 +1,7 @@
 import {
-    LucideLogOut,
-    LucideTrash2,
-    LucideUserMinus,
+    LogOutIcon,
+    Trash2Icon,
+    UserMinusIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -16,8 +16,8 @@ import { KickGroupMemberAlertDialog } from 'components/modals/kick-group-member-
 import { LeaveGroupAlertDialog } from 'components/modals/leave-group-alert-dialog';
 import { RemoveGroupAlertDialog } from 'components/modals/remove-group-alert-dialog';
 
-import GroupInviteActionRows from './GroupInviteActionRows';
 import { useConnect } from './internal/group-settings';
+import GroupInviteActionRows from './GroupInviteActionRows';
 
 interface Props {
     group: Group;
@@ -100,7 +100,7 @@ const GroupSettingsTab = ({ group }: Props) => {
                                 {isUserOwner && !isCurrentUser && (
                                     <KickGroupMemberAlertDialog member={member.user}>
                                         <Button variant="soft" color="orange" size="1">
-                                            <LucideUserMinus size={13} />
+                                            <UserMinusIcon size={13} />
                                             {t('common:buttons.kickMember')}
                                         </Button>
                                     </KickGroupMemberAlertDialog>
@@ -168,7 +168,7 @@ const GroupSettingsTab = ({ group }: Props) => {
                 <LeaveGroupAlertDialog>
                     <Box width="100%" asChild>
                         <Button variant="ghost" color="orange" size="3">
-                            <LucideLogOut size={16} />
+                            <LogOutIcon size={16} />
                             {t('common:buttons.leaveGroup')}
                         </Button>
                     </Box>
@@ -181,7 +181,7 @@ const GroupSettingsTab = ({ group }: Props) => {
                         <RemoveGroupAlertDialog>
                             <Box width="100%" asChild>
                                 <Button variant="ghost" color="red" size="3">
-                                    <LucideTrash2 size={16} />
+                                    <Trash2Icon size={16} />
                                     {t('common:buttons.removeGroup')}
                                 </Button>
                             </Box>

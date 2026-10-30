@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LucideLogOut } from 'lucide-react';
+import { LogOutIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Flex } from '@radix-ui/themes';
@@ -63,7 +63,7 @@ const ProfileActions = ({ isSoloMode }: Props) => {
                         color="gray"
                         size="3"
                     >
-                        <LucideLogOut size={18} />
+                        <LogOutIcon size={18} />
                         {t('buttons.signOut')}
                     </Button>
                 </ProfileSignOutContent>

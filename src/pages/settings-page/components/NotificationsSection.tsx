@@ -1,4 +1,4 @@
-import { LucideBell, LucideInfo } from 'lucide-react';
+import { BellIcon, InfoIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -28,7 +28,7 @@ const NotificationsSection = ({ isLoading }: Props) => {
                             variant="soft"
                             size="3"
                             color="mint"
-                            fallback={<LucideBell size={20} />}
+                            fallback={<BellIcon size={20} />}
                         />
                     </Skeleton>
                     <Flex direction="column">
@@ -45,7 +45,7 @@ const NotificationsSection = ({ isLoading }: Props) => {
 
                 <Callout.Root color="blue" size="2">
                     <Callout.Icon>
-                        <LucideInfo size={16} />
+                        <InfoIcon size={16} />
                     </Callout.Icon>
                     <Callout.Text>{t('notifications.workInProgress')}</Callout.Text>
                 </Callout.Root>

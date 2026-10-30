@@ -1,4 +1,4 @@
-import { LucideCheckCircle } from 'lucide-react';
+import { CheckCircleIcon } from 'lucide-react';
 import type { ReactElement } from 'react';
 
 import { Badge, Box, Flex, Grid, Heading, Text } from '@radix-ui/themes';
@@ -55,7 +55,7 @@ const ShowcaseSection = ({
                 {bullets.map(bullet => (
                     <Flex key={bullet.key} align="center" gap="3">
                         <Text as="span" color={color}>
-                            <LucideCheckCircle size={18} />
+                            <CheckCircleIcon size={18} />
                         </Text>
                         <Text size="3">{bullet.text}</Text>
                     </Flex>

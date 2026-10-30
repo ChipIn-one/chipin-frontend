@@ -1,7 +1,7 @@
 import { ComponentProps, useState } from 'react';
-import styled from 'styled-components';
-import { LucideChevronLeft } from 'lucide-react';
+import { ChevronLeftIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import styled from 'styled-components';
 
 import { Badge, Button, Flex } from '@radix-ui/themes';
 
@@ -75,7 +75,7 @@ const BalanceBadges: React.FC<Props> = ({
                     size="2"
                     onClick={() => setIsExpanded(false)}
                 >
-                    <LucideChevronLeft size={16} />
+                    <ChevronLeftIcon size={16} />
                     {t('buttons.hide')}
                 </BalanceBadgesButton>
             )}

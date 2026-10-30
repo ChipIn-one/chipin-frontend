@@ -1,4 +1,4 @@
-import { LucideUserPlus } from 'lucide-react';
+import { UserPlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
@@ -6,8 +6,9 @@ import { Button, Card, Flex, Heading, Text } from '@radix-ui/themes';
 
 import type { UseInviteResult } from 'hooks/pwaHooks';
 
-import InviteIllustrationAsset from 'assets/group-invite-empty-state.png';
 import { InviteActionRows } from 'components/invite';
+
+import InviteIllustrationAsset from 'assets/group-invite-empty-state.png';
 
 const InviteCard = styled(Card)`
     overflow: hidden;
@@ -81,7 +82,7 @@ const InviteOnboarding = ({ invite }: Props) => {
                         radius="full"
                         onClick={onInviteFriends}
                     >
-                        <LucideUserPlus size={18} />
+                        <UserPlusIcon size={18} />
                         {t('page.expenses.inviteAction')}
                     </InviteButton>
                 </Flex>

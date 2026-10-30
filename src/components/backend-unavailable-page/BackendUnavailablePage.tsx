@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { LucideRefreshCw, LucideTriangleAlert } from 'lucide-react';
+import { RefreshCwIcon, TriangleAlertIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Dialog } from '@radix-ui/themes';
@@ -61,7 +61,7 @@ const BackendUnavailablePage = () => {
                 onInteractOutside={event => event.preventDefault()}
             >
                 <BackendUnavailableIcon aria-hidden="true">
-                    <LucideTriangleAlert size={34} strokeWidth={2} />
+                    <TriangleAlertIcon size={34} strokeWidth={2} />
                 </BackendUnavailableIcon>
 
                 <BackendUnavailableEyebrow>
@@ -83,7 +83,7 @@ const BackendUnavailablePage = () => {
                         aria-busy={isChecking}
                         onClick={onTryAgain}
                     >
-                        <LucideRefreshCw size={19} aria-hidden="true" />
+                        <RefreshCwIcon size={19} aria-hidden="true" />
                         {t('backendUnavailable.tryAgain')}
                     </BackendUnavailableButton>
                 </BackendUnavailableActions>

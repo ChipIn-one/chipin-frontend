@@ -1,8 +1,8 @@
 import { useCallback } from 'react';
 import {
-    LucideChevronsDown,
-    LucidePlus,
-    LucideRefreshCw,
+    ChevronsDownIcon,
+    PlusIcon,
+    RefreshCwIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
@@ -91,7 +91,7 @@ const DashboardPage = () => {
                             dashboardView !== 'dashboard' ? undefined : (
                                 <CreateUpdateGroupModal type="create">
                                     <FullWidthButton size="2" variant="soft">
-                                        <LucidePlus size={14} />
+                                        <PlusIcon size={14} />
                                         {t('common:buttons.createGroup')}
                                     </FullWidthButton>
                                 </CreateUpdateGroupModal>
@@ -112,7 +112,7 @@ const DashboardPage = () => {
                             {t('errors.loadDescription')}
                         </Text>
                         <Button type="button" size="1" variant="soft" onClick={onRetryLoad}>
-                            <LucideRefreshCw size={14} />
+                            <RefreshCwIcon size={14} />
                             {t('activity:retryAction')}
                         </Button>
                     </Flex>
@@ -123,12 +123,12 @@ const DashboardPage = () => {
                     <ActivityFeedSkeleton isShowSummary />
                 ) : dashboardView === 'error' ? (
                     <EmptyState
-                        icon={<LucideRefreshCw size={20} />}
+                        icon={<RefreshCwIcon size={20} />}
                         title={t('errors.loadTitle')}
                         description={t('errors.loadDescription')}
                         action={
                             <Button type="button" variant="soft" onClick={onRetryLoad}>
-                                <LucideRefreshCw size={14} />
+                                <RefreshCwIcon size={14} />
                                 {t('activity:retryAction')}
                             </Button>
                         }
@@ -154,7 +154,7 @@ const DashboardPage = () => {
                                             variant="soft"
                                             onClick={onRetryNextPage}
                                         >
-                                            <LucideRefreshCw size={14} />
+                                            <RefreshCwIcon size={14} />
                                             {t('activity:retryAction')}
                                         </Button>
                                     </Flex>
@@ -168,7 +168,7 @@ const DashboardPage = () => {
                                         py="4"
                                     >
                                         <Text as="span" color="gray">
-                                            <LucideChevronsDown
+                                            <ChevronsDownIcon
                                                 size={14}
                                             />
                                         </Text>

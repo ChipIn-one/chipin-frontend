@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { UserAvatar } from 'basics';
-import { LucideCircleAlert, LucideImageUp } from 'lucide-react';
+import { CircleAlertIcon, ImageUpIcon } from 'lucide-react';
 import type { ChangeEvent, DragEvent, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -177,7 +177,7 @@ const UserAvatarModal = ({ children }: Props) => {
                                         radius="full"
                                         variant="soft"
                                         color="grass"
-                                        fallback={<LucideImageUp size={20} />}
+                                        fallback={<ImageUpIcon size={20} />}
                                     />
                                     <Flex direction="column" gap="1" minWidth="0">
                                         <Text weight="medium" truncate>
@@ -194,7 +194,7 @@ const UserAvatarModal = ({ children }: Props) => {
                                 <Box width="100%">
                                     <Callout.Root color="red" role="alert" size="1">
                                         <Callout.Icon>
-                                            <LucideCircleAlert />
+                                            <CircleAlertIcon />
                                         </Callout.Icon>
                                         <Callout.Text>
                                             {t(`avatarModal.errors.${validationError}`)}

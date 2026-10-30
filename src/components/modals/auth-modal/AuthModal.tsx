@@ -1,4 +1,4 @@
-import { LucideShieldLock } from 'lucide-react';
+import { ShieldLockIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Flex, Heading, Text } from '@radix-ui/themes';
@@ -60,7 +60,7 @@ const AuthModal = ({ children, isOpened, onOpenChange }: Props) => {
                     <AuthButtons />
                     <Flex align="center" justify="center" gap="2">
                         <Text color="gray">
-                            <LucideShieldLock size={14} />
+                            <ShieldLockIcon size={14} />
                         </Text>
                         <Text size="1" color="gray" align="center">
                             {t('modal.trust')}

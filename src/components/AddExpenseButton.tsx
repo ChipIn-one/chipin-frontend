@@ -1,4 +1,4 @@
-import { LucideCirclePlus, LucidePlus } from 'lucide-react';
+import { CirclePlusIcon, PlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import styled from 'styled-components';
@@ -47,7 +47,7 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
                 aria-label={t('buttons.addExpense')}
                 onClick={onClickAddExpense}
             >
-                <LucidePlus size={28} />
+                <PlusIcon size={28} />
             </ButtonMobile>
         );
     }
@@ -60,7 +60,7 @@ const AddExpenseButton = ({ type = 'desktop' }: Props) => {
             color={buttonColor}
             onClick={onClickAddExpense}
         >
-            <LucideCirclePlus />
+            <CirclePlusIcon />
             {t('buttons.addExpense')}
         </Button>
     );

@@ -1,4 +1,4 @@
-import { LucideChevronLeft } from 'lucide-react';
+import { ChevronLeftIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
@@ -16,7 +16,7 @@ const BackButton = () => {
             aria-label={t('buttons.back')}
             onClick={() => navigate(-1)}
         >
-            <LucideChevronLeft size={18} />
+            <ChevronLeftIcon size={18} />
         </IconButton>
     );
 };

@@ -1,4 +1,4 @@
-import { LucideSettings } from 'lucide-react';
+import { SettingsIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar, Box, Flex, Heading, Skeleton, Text } from '@radix-ui/themes';
@@ -17,7 +17,7 @@ const SettingsPageHeader = ({ isLoading }: Props) => {
                     <Avatar
                         size={{ initial: '4', sm: '5' }}
                         color="cyan"
-                        fallback={<LucideSettings size={32} />}
+                        fallback={<SettingsIcon size={32} />}
                     />
                 </Skeleton>
                 <Box>

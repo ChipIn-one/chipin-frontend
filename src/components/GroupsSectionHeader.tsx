@@ -1,4 +1,4 @@
-import { LucidePlus, LucideUsers } from 'lucide-react';
+import { PlusIcon, UsersIcon } from 'lucide-react';
 import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -18,7 +18,7 @@ const GroupsSectionHeader = ({ label, isLoading = false, ...flexProps }: Props) 
         <Flex align="center" justify="between" gap="3" wrap="wrap" {...flexProps}>
             <Flex align="center" gap="2">
                 <Skeleton loading={isLoading}>
-                    <Avatar size="2" color="gray" fallback={<LucideUsers size={18} />} />
+                    <Avatar size="2" color="gray" fallback={<UsersIcon size={18} />} />
                 </Skeleton>
                 <Text size="2" color="gray" weight="medium">
                     <Skeleton loading={isLoading}>
@@ -29,7 +29,7 @@ const GroupsSectionHeader = ({ label, isLoading = false, ...flexProps }: Props) 
 
             <CreateUpdateGroupModal type="create">
                 <Button size="2" variant="soft" loading={isLoading}>
-                    <LucidePlus size={16} />
+                    <PlusIcon size={16} />
                     {t('common:buttons.create')}
                 </Button>
             </CreateUpdateGroupModal>

@@ -1,5 +1,5 @@
 import i18n from 'i18n';
-import { LucideRefreshCw } from 'lucide-react';
+import { RefreshCwIcon } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Box, Button, Card, Flex, Text } from '@radix-ui/themes';
@@ -133,7 +133,7 @@ export const showUpdateToast = (): void => {
                                     activateWaitingWorker();
                                 }}
                             >
-                                <LucideRefreshCw size={14} />
+                                <RefreshCwIcon size={14} />
                                 {i18n.t('toasts:pwa.updateAction')}
                             </Button>
                         </Flex>

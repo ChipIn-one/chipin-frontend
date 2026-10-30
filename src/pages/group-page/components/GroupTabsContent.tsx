@@ -1,8 +1,8 @@
 import { useCallback, useState } from 'react';
 import {
-    LucideChevronsDown,
-    LucidePlus,
-    LucideRefreshCw,
+    ChevronsDownIcon,
+    PlusIcon,
+    RefreshCwIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -83,7 +83,7 @@ const GroupTabsContent = ({
                             aria-label={t('common:buttons.invitePeople')}
                             onClick={onInvitePeople}
                         >
-                            <LucidePlus size={18} />
+                            <PlusIcon size={18} />
                         </IconButton>
                     </Flex>
                     <Box ml="auto">
@@ -133,7 +133,7 @@ const GroupTabsContent = ({
                                                     variant="soft"
                                                     onClick={onRetryNextPage}
                                                 >
-                                                    <LucideRefreshCw size={14} />
+                                                    <RefreshCwIcon size={14} />
                                                     {t('activity:retryAction')}
                                                 </Button>
                                             </Flex>
@@ -147,7 +147,7 @@ const GroupTabsContent = ({
                                                 py="4"
                                             >
                                                 <Text as="span" color="gray">
-                                                    <LucideChevronsDown size={14} />
+                                                    <ChevronsDownIcon size={14} />
                                                 </Text>
                                                 <Text size="1" color="gray">
                                                     {t('activity:endOfFeed')}

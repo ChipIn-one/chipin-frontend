@@ -1,4 +1,4 @@
-import { LucideHotel, LucideTrainFront, LucideUtensilsCrossed } from 'lucide-react';
+import { HotelIcon, TrainFrontIcon, UtensilsCrossedIcon } from 'lucide-react';
 
 import type { GroupUser } from 'api/chipin.types';
 
@@ -6,9 +6,9 @@ const GROUP_PREVIEW_COVER_URL =
     'https://images.unsplash.com/photo-1646590126631-c3c01f631b74?auto=format&fit=crop&w=1200&q=80';
 
 const GROUP_PREVIEW_EXPENSES = [
-    { key: 'hotel', amount: 420, debt: 210, icon: LucideHotel, payer: 'you' },
-    { key: 'dinner', amount: 86, debt: -43, icon: LucideUtensilsCrossed, payer: 'Aleh' },
-    { key: 'tickets', amount: 120, debt: 60, icon: LucideTrainFront, payer: 'you' },
+    { key: 'hotel', amount: 420, debt: 210, icon: HotelIcon, payer: 'you' },
+    { key: 'dinner', amount: 86, debt: -43, icon: UtensilsCrossedIcon, payer: 'Aleh' },
+    { key: 'tickets', amount: 120, debt: 60, icon: TrainFrontIcon, payer: 'you' },
 ] as const;
 
 const GROUP_PREVIEW_NET_BALANCE = GROUP_PREVIEW_EXPENSES.reduce(
