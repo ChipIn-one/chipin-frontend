@@ -143,6 +143,19 @@
                 "pet_items": "Artículos para mascotas"
             },
             "currentUser": "Tú",
+            "submitFeedback": {
+                "amount": "Introduce un importe mayor que cero.",
+                "target": "Selecciona un grupo disponible o un amigo para este gasto.",
+                "participants": "Selecciona participantes válidos para este gasto. Para un gasto directo, selecciona un amigo cuya invitación se haya aceptado.",
+                "payer": "Selecciona una persona válida que haya pagado este gasto.",
+                "percentUnder": "Los porcentajes suman {{current}}%. Añade el {{difference}}% restante para llegar al {{required}}%.",
+                "percentOver": "Los porcentajes suman {{current}}%. Quita el {{difference}}% sobrante para llegar al {{required}}%.",
+                "amountsUnder": "Se han asignado <current/> de <required/>. Añade los <difference/> restantes para que los importes sumen el total del gasto.",
+                "amountsOver": "Se han asignado <current/> de <required/>. Quita los <difference/> sobrantes para que los importes sumen el total del gasto.",
+                "shares": "Asigna una parte positiva a al menos un participante. La suma de los pesos debe ser mayor que cero.",
+                "noDebt": "Este gasto no genera deuda. Asigna un importe positivo a la persona que no pagó.",
+                "unchanged": "Haz un cambio para guardar este gasto."
+            },
             "directSelfOnlyWarning": "Asigna una parte a tu amigo.",
             "directZeroDebtWarning": "Este gasto no genera una deuda. Asigna un importe positivo a quien no pagó.",
             "splitHint": "Dividido equitativamente entre los miembros del grupo.",

@@ -2,8 +2,10 @@ import type { CreateLedgerEntryParams, SharingMode } from 'api/chipin.types';
 import {
     EXPENSE_SPLIT_MODES,
     EXPENSE_SPLIT_STATUSES,
-    MIN_GROUP_EXPENSE_PARTICIPANTS,
+    EXPENSE_SUBMIT_BLOCKERS,
     type ExpenseSplitStatus,
+    type ExpenseSubmitBlocker,
+    MIN_GROUP_EXPENSE_PARTICIPANTS,
 } from 'constants/chipin';
 import { MONEY_INPUT_PRECISION, roundHalfUp } from 'helpers/numbers';
 
@@ -11,6 +13,13 @@ import type { ExpenseModalState, ExpenseModalStore, ExpenseParticipant } from '.
 import { buildExpenseUpdateParams } from './expenseModalUpdate';
 
 type ShareColor = 'gray' | 'jade' | 'red';
+
+export interface ExpenseSubmitFeedback {
+    reason: ExpenseSubmitBlocker;
+    current?: number;
+    required?: number;
+    difference?: number;
+}
 
 const putCurrentUserFirst = (users: ExpenseParticipant[], currentUserId?: string) => {
     const otherUsers: ExpenseParticipant[] = [];
@@ -201,6 +210,8 @@ const calculateSplit = (state: ExpenseModalStore) => {
             (state.splitMode !== EXPENSE_SPLIT_MODES.AMOUNTS ||
                 Math.abs(totalCustomAmount - totalAmount) < 0.001) &&
             (state.splitMode !== EXPENSE_SPLIT_MODES.SHARES || totalShares > 0),
+        totalPercent,
+        totalCustomAmount,
         totalShares,
         includedUserIds,
         directFriend,
@@ -294,7 +305,6 @@ const isDirectExpenseValid = (
         )
     );
 };
-
 
 /**
  * Mirrors the backend's largest-remainder allocation at four decimal places.
@@ -392,6 +402,7 @@ const getSubmitState = (state: ExpenseModalStore) => {
         state.targetMode === 'friends' ? split.includedUsers : split.users,
     );
     const hasNoDebt = getDirectNonPayerUnits(state, split, payerId) === 0;
+    const isDirectValid = isDirectExpenseValid(state, split, payerId);
     const isDisabled =
         hasNoDebt ||
         split.totalAmount <= 0 ||
@@ -399,11 +410,11 @@ const getSubmitState = (state: ExpenseModalStore) => {
         (state.targetMode === 'group' && !state.groupId) ||
         (state.targetMode === 'group' &&
             split.users.length < MIN_GROUP_EXPENSE_PARTICIPANTS) ||
-        !isDirectExpenseValid(state, split, payerId) ||
+        !isDirectValid ||
         split.includedUsers.length === 0 ||
         !split.isValid;
 
-    return { isDisabled, hasNoDebt, payerId, split };
+    return { isDisabled, hasNoDebt, isDirectValid, payerId, split };
 };
 
 export const selectShouldShowSelfOnlyCallout = (state: ExpenseModalStore): boolean => {
@@ -433,6 +444,66 @@ export const selectIsSubmitDisabled = (state: ExpenseModalStore) => {
         state.editContext.original,
         payload,
     ) === null;
+};
+
+export const selectExpenseSubmitFeedback = (
+    state: ExpenseModalStore,
+): ExpenseSubmitFeedback | null => {
+    const { split, payerId, hasNoDebt, isDirectValid } = getSubmitState(state);
+
+    if (split.totalAmount <= 0) {
+        return { reason: EXPENSE_SUBMIT_BLOCKERS.AMOUNT };
+    }
+
+    if (state.targetMode === 'group' && !state.groupId) {
+        return { reason: EXPENSE_SUBMIT_BLOCKERS.TARGET };
+    }
+
+    if (
+        (state.targetMode === 'group' && split.users.length < MIN_GROUP_EXPENSE_PARTICIPANTS) ||
+        !isDirectValid ||
+        split.includedUsers.length === 0
+    ) {
+        return { reason: EXPENSE_SUBMIT_BLOCKERS.PARTICIPANTS };
+    }
+
+    if (!payerId) {
+        return { reason: EXPENSE_SUBMIT_BLOCKERS.PAYER };
+    }
+
+    if (!split.isValid) {
+        if (state.splitMode === EXPENSE_SPLIT_MODES.PERCENT) {
+            return {
+                reason: split.totalPercent < 100
+                    ? EXPENSE_SUBMIT_BLOCKERS.PERCENT_UNDER
+                    : EXPENSE_SUBMIT_BLOCKERS.PERCENT_OVER,
+                current: split.totalPercent,
+                required: 100,
+                difference: Math.abs(split.totalPercent - 100),
+            };
+        }
+
+        if (state.splitMode === EXPENSE_SPLIT_MODES.AMOUNTS) {
+            return {
+                reason: split.totalCustomAmount < split.totalAmount
+                    ? EXPENSE_SUBMIT_BLOCKERS.AMOUNTS_UNDER
+                    : EXPENSE_SUBMIT_BLOCKERS.AMOUNTS_OVER,
+                current: split.totalCustomAmount,
+                required: split.totalAmount,
+                difference: Math.abs(split.totalCustomAmount - split.totalAmount),
+            };
+        }
+
+        return { reason: EXPENSE_SUBMIT_BLOCKERS.SHARES, current: split.totalShares };
+    }
+
+    if (hasNoDebt) {
+        return { reason: EXPENSE_SUBMIT_BLOCKERS.NO_DEBT };
+    }
+
+    return selectIsSubmitDisabled(state)
+        ? { reason: EXPENSE_SUBMIT_BLOCKERS.UNCHANGED }
+        : null;
 };
 
 const getPayloadParticipants = (

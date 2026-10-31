@@ -143,6 +143,19 @@
                 "pet_items": "Itens para pets"
             },
             "currentUser": "Você",
+            "submitFeedback": {
+                "amount": "Informe um valor maior que zero.",
+                "target": "Selecione um grupo disponível ou um amigo para esta despesa.",
+                "participants": "Selecione participantes elegíveis para esta despesa. Para uma despesa direta, selecione um amigo cujo convite tenha sido aceito.",
+                "payer": "Selecione um pagador elegível para esta despesa.",
+                "percentUnder": "As porcentagens somam {{current}}%. Adicione os {{difference}}% restantes para chegar a {{required}}%.",
+                "percentOver": "As porcentagens somam {{current}}%. Remova os {{difference}}% excedentes para chegar a {{required}}%.",
+                "amountsUnder": "Foram distribuídos <current/> de <required/>. Adicione os <difference/> restantes para que os valores somem o total da despesa.",
+                "amountsOver": "Foram distribuídos <current/> de <required/>. Remova os <difference/> excedentes para que os valores somem o total da despesa.",
+                "shares": "Atribua uma cota positiva a pelo menos um participante. A soma dos pesos das cotas deve ser maior que zero.",
+                "noDebt": "Esta despesa não gera dívida. Atribua um valor positivo à pessoa que não pagou.",
+                "unchanged": "Faça uma alteração para salvar esta despesa."
+            },
             "directSelfOnlyWarning": "Atribua uma parte ao seu amigo.",
             "directZeroDebtWarning": "Esta despesa não gera dívida. Atribua um valor positivo a quem não pagou.",
             "splitHint": "Dividido igualmente entre os membros do grupo.",
