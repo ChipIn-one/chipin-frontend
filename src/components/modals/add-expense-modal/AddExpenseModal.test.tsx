@@ -83,7 +83,8 @@ test('does not render a single-member notice in the modal', () => {
         </MemoryRouter>,
     );
 
-    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getByRole('status').textContent).toBe('Enter an amount greater than zero.');
+    expect(screen.queryByText(/invite.*members/i)).toBeNull();
     expect(screen.getByRole('button', { name: 'Add expense' })).toHaveProperty(
         'disabled',
         true,
