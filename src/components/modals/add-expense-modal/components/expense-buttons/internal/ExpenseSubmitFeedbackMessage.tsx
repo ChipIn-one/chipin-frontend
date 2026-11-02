@@ -2,7 +2,7 @@ import { Amount } from 'basics';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { EXPENSE_SUBMIT_BLOCKERS } from 'constants/chipin';
-import { formatPercentValue } from 'helpers/numbers';
+import { formatPercentDifference, formatPercentTotal } from 'helpers/decimalDisplay';
 import type { ExpenseSubmitFeedback } from 'store/expenseModalSelectors';
 
 interface Props {
@@ -38,9 +38,9 @@ export const ExpenseSubmitFeedbackMessage = ({ feedback, currency }: Props) => {
         const { current = 0, required = 0, difference = 0 } = feedback;
 
         return t(key, {
-            current: formatPercentValue(current),
-            required: formatPercentValue(required),
-            difference: formatPercentValue(difference),
+            current: formatPercentTotal(current),
+            required: formatPercentTotal(required),
+            difference: formatPercentDifference(difference),
         });
     }
 
