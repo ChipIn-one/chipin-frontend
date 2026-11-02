@@ -259,7 +259,7 @@ export default defineConfig(({ mode }) => {
                         groups: [
                             {
                                 name: 'vendor-react',
-                                test: /node_modules[\\/](?:react|react-dom|react-router-dom)[\\/]/,
+                                test: /node_modules[\\/](?:react|react-dom|react-router|react-router-dom|scheduler)[\\/]/,
                             },
                             {
                                 name: 'vendor-radix',
@@ -279,7 +279,7 @@ export default defineConfig(({ mode }) => {
                             },
                             {
                                 name: 'vendor-misc',
-                                test: /node_modules[\\/](?:axios|dexie|dexie-react-hooks|zustand)[\\/]/,
+                                test: /node_modules[\\/](?:axios|zustand)[\\/]/,
                             },
                         ],
                     },
