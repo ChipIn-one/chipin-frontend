@@ -10,7 +10,7 @@ import {
     addPublicDirectoryAliases,
     runPrerenderPublic,
 } from './scripts/prerender-before-workbox.mjs';
-import { PRIVATE_SPA_NAVIGATION_ALLOWLIST } from './scripts/private-spa-navigation';
+import { PRIVATE_SPA_NAVIGATION_ALLOWLIST } from './scripts/private-spa-navigation.ts';
 import { resolveAppVersion } from './scripts/version-resolver.mjs';
 
 // https://vite.dev/config/
@@ -233,6 +233,9 @@ export default defineConfig(({ mode }) => {
                           },
                           sourcemaps: {
                               assets: './dist/**',
+                              // Rolldown emits its tiny runtime helper chunk without a source map,
+                              // so Sentry cannot resolve a reference for it (#575).
+                              ignore: ['./dist/assets/rolldown-runtime-*.js'],
                               filesToDeleteAfterUpload: './dist/**/*.map',
                           },
                       }),

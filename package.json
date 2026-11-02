@@ -71,7 +71,13 @@
         "vitest": "^5.0.5",
         "yaml": "^2.9.1"
     },
+    "allowScripts": {
+        "@sentry/cli": true,
+        "@swc/core": true,
+        "fsevents": false,
+        "sharp": false
+    },
     "engines": {
-        "node": "24.21.0"
+        "node": "24.x"
     }
 }

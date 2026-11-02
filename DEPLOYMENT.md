@@ -104,6 +104,27 @@ The Vercel project remains connected to `ChipIn-one/chipin-frontend`.
 
 No paid custom Vercel environment is required.
 
+### Build toolchain (#575)
+
+- Node: `package.json` declares `engines.node: "24.x"`, matching the Vercel
+  project Node.js Version setting `24.x`. Vercel selects the latest 24.x; CI
+  workflows pin an exact 24.x patch for reproducibility. Change the major in
+  `package.json`, the Vercel setting and the workflows together.
+- npm install scripts: `allowScripts` in `package.json` is the reviewed policy.
+  Allowed: `@sentry/cli` (fetches the `sentry-cli` binary used for source-map
+  upload) and `@swc/core` (checks the native binding, falls back to wasm).
+  Denied: `sharp` (prebuilt `@img/sharp-*` binaries cover supported platforms;
+  the script only builds from source) and `fsevents` (macOS-only, ships a
+  prebuilt binary). Review any new entry from
+  `npm approve-scripts --allow-scripts-pending` before adding it.
+- The npm warning `Unknown env config "cache-dir"` comes from the Vercel build
+  image environment, not from this repository (no `.npmrc`, `vercel.json` or
+  project environment variable sets it). It is harmless and cannot be changed
+  here.
+- Sentry: the Rolldown runtime chunk (`assets/rolldown-runtime-*.js`) has no
+  source map, so it is excluded from the Sentry upload via `sourcemaps.ignore`.
+  Source maps stay `hidden` and are deleted from `dist` after upload.
+
 ### Rollback
 
 Production rollback is a Vercel action independent of git: Instant Rollback, or
