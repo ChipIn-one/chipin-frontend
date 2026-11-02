@@ -7,7 +7,7 @@ import { useInfiniteScroll } from './useInfiniteScroll';
 const sentinelRef = vi.fn();
 let isIntersecting = false;
 
-vi.mock('@uidotdev/usehooks', () => ({
+vi.mock('hooks/useIntersectionObserver', () => ({
     useIntersectionObserver: () => [
         sentinelRef,
         { isIntersecting },
