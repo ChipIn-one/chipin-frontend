@@ -5,6 +5,8 @@ Backend-контракты не меняем без явного запроса.
 
 ## Инварианты
 
+Инварианты 3–6 и 9 — целевое состояние спеки 03; пока её PR не влиты, действуют текущий код и правила `docs/engineering/rules/` (для денег — `60-money-helpers.md`).
+
 1. Слои импортируются только вниз по одному графу: app → pages → features → components → hooks → store → entities → helpers → shared → api → base (constants, types, i18n, styles, assets); basics — между components и helpers; `shared` делится на `shared-api` (`shared/api`, `shared/offline`: только hooks, store, entities, app) и `shared-lib`. Подробности — `docs/engineering/rules/10-architecture.md`.
 2. UI (pages, features, components, basics) и helpers не вызывают runtime-API, `axios`, `shared/api` и `shared/offline`; серверные данные приходят через query-слой (`entities/*`) или store. Импорт `axios` и runtime-модулей `api/` из UI ловит `no-restricted-imports`.
 3. Деньги в коде — `Money { minor: bigint }` (ledger units scale 4); на проводе — JSON-число scale 4 (D21). Граница провода — два слоя: транспорт `shared/api/wireJson.ts` (только в обёртке `api()`) разбирает тело без double в opaque `WireAmount` и пишет исходящие суммы decimal-литералом, но суммы не интерпретирует; конверсия `WireAmount` ↔ `Money` — только `moneyFromWire`/`moneyToWire` в мапперах `entities/*/model` (`toX()`/`toXWire()`). Парсинг ввода, округление, суммы и форматирование — только `src/shared/money/`; `parseFloat`/`Number()`/`JSON.parse` на денежных полях вне него запрещены. Отображение — только `basics/numbers/amount/Amount.tsx`.
@@ -18,14 +20,14 @@ Backend-контракты не меняем без явного запроса.
 11. Весь пользовательский текст, включая `aria-*`, `placeholder`, `title` и тосты, идёт через i18n во все локали. Интерактив — нативные элементы или Radix, у кнопок-иконок есть переводимое имя (ревью).
 12. `localStorage`/`sessionStorage` — только через `helpers/localStorage.ts`. Токены, invite-токены и персональные данные не попадают в логи, Sentry и URL; logout очищает все пользовательские данные (кэш, outbox, `id`/`role` пользователя); сохраняются только UI-настройки языка и темы.
 13. Порядок импортов — `simple-import-sort` (чинит `--fix`), формат — `.prettierrc.cjs`; код, который задача не меняет, не переформатируем.
-14. Задача не меняет `version` в `package.json` и `package-lock.json` и не запускает `version:bump`; бамп делается только в release-PR (см. «Релиз»).
+14. В теле каждого PR задачи есть `## Version impact` (`none|patch|minor|major`); задача не меняет `version` в `package.json`/`package-lock.json` и не запускает `version:bump` (см. «Релиз»).
 15. Изменение домена, API или видимого поведения начинается с KB: `chipin-knowledge-base/common/glossary.md` и `common/specs/<capability>.md`; тесты называются по id требований. Новое поведение сначала попадает в spec KB связанным PR; конфликт с ADR из `common/adr/` — стоп и вопрос владельцу. KB берётся из `../chipin-knowledge-base`, иначе `git clone` туда, иначе через GitHub; если KB недоступна ни локально, ни через GitHub — BLOCKED.
 
 ## Команды
 
 - `npm run test:task -- <пути тестов>` — точечные тесты; без пути не запускается.
 - `npx eslint --fix <файлы>` — автоисправления ESLint только в изменённых файлах.
-- `npm run verify` — быстрый lint (без warnings) и typecheck.
+- `npm run verify` — быстрый lint (`--quiet`: показывает только ошибки, warnings не валят) и typecheck.
 - `npm run verify:full` — полный гейт: lint, все тесты, build, ds-gallery; его же запускает CI. Перед `IMPLEMENTATION_COMPLETE`.
 - `npm run typecheck` — `tsc -b`.
 - `npm run version:check` — версия в `package.json` и `package-lock.json` валидна и совпадает (только чтение).
@@ -41,11 +43,12 @@ Backend-контракты не меняем без явного запроса.
 
 ## Релиз
 
-Версия меняется только при релизе (D15). Один release-Issue на релиз → ветка `chore/issue-<n>-release-vX-Y-Z` → в ней `npm run version:bump -- <patch|minor|major>` (уровень выбирает владелец; бамп делает владелец или Trusted Publisher, Executor — никогда) → merge в `master` → Vercel Preview → «Prepare frontend release QA» → Promote to Production этой сборки в Vercel. Других путей деплоя нет: [`DEPLOYMENT.md`](DEPLOYMENT.md#vercel-delivery-from-master).
+Релизом управляет процесс релиза: владелец делает Promote to Production выбранной `master`-сборки в Vercel ([`DEPLOYMENT.md`](DEPLOYMENT.md#vercel-delivery-from-master)); политика версий — [org release policy](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/release.md) (версия — git-тег по `## Version impact` влитых PR; переход — ChipIn-one/.github#172). Executor версию в feature-PR не меняет.
 
 ## Ревью
 
 Независимый ревьюер проверяет инварианты 1–15 и наличие регрессионных тестов для изменённой логики. Стиль, формат, порядок импортов и всё, что ловит CI, ревьюер не комментирует.
+Обязательный фокус ревью: auth/session/refresh и токены, interceptors и права, роутинг и auth-композиция, гонки и отмена запросов, service worker/PWA, CI, безопасность (CSP) и обновления зависимостей.
 
 <!-- ai-workflow:agents-routing:start -->
 ChipIn AI routing: start at the organization canon [FLOW.md](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/FLOW.md) and follow its reading order, roles and gates. Its [precedence and availability](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/FLOW.md#precedence-and-availability) rules apply: if the canon cannot be read, stop.

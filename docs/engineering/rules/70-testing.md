@@ -85,13 +85,14 @@ Generic lifecycle and reviewer definitions belong to the organization canon
 [`ChipIn-one/.github/docs/workflow/`](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/FLOW.md). ChipIn-specific integration policy is:
 
 - `npm run verify:full` is the local completion gate. Executor stops at `IMPLEMENTATION_COMPLETE` after local validation and does not commit, push, or publish.
-- Tasks do not change `version` and do not run `npm run version:bump`; the bump happens only in the release PR
-  (`AGENTS.md`, «Релиз»).
+- Feature PRs do not change `version` and do not run `npm run version:bump`; the release process owns the version
+  (`DEPLOYMENT.md`, org `docs/workflow/release.md`).
 - `npm run version:check` validates matching SemVer values in `package.json` and `package-lock.json` without writing.
 - Tracked Husky `pre-push` runs `npm run version:check` followed by `npm run verify:full`; a non-zero result blocks the push and the hook is read-only.
 - Runtime labels are `<baseVersion>-dev-<shortTaskHeadSha>` for task/dev/preview builds and `<baseVersion>` for `main` releases.
   Release labelling moves to tags in ChipIn-one/.github#172; until then every `master` build is labelled `<baseVersion>-dev-<shortTaskHeadSha>`.
   Pull-request CI receives `github.event.pull_request.head.sha`; push CI receives `github.sha`.
+- Every task PR body has a `## Version impact` section (`none | patch | minor | major`), chosen from product/API meaning.
 - New Issue-backed task branches use the canonical `<type>/issue-<number>-<slug>` pattern. The PR helper does not support historical/noncanonical branch formats.
 - `npm run pr:create` checks the current task branch, performs a cheap
   `gh auth status`, and creates/updates a PR with explicit `--base master`; it
