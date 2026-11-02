@@ -26,7 +26,6 @@ Direct runtime packages
 
 @radix-ui/themes — MIT
 @sentry/react — MIT
-@uidotdev/usehooks — MIT
 @vercel/analytics — MIT
 @vercel/speed-insights — Apache-2.0
 axios — MIT
@@ -66,7 +65,7 @@ under MIT:
 @radix-ui/react-use-previous, @radix-ui/react-use-size,
 @radix-ui/react-visually-hidden, @radix-ui/themes, @sentry/browser,
 @sentry/browser-utils, @sentry/conventions, @sentry/core, @sentry/react,
-@uidotdev/usehooks, @vercel/analytics, aria-hidden, axios, classnames,
+@vercel/analytics, aria-hidden, axios, classnames,
 get-nonce, html-parse-stringify, i18next, next-themes,
 qrcode-generator, radix-ui, react, react-dom, react-i18next,
 react-remove-scroll, react-remove-scroll-bar, react-router,

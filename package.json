@@ -30,7 +30,6 @@
     "dependencies": {
         "@radix-ui/themes": "^3.3.0",
         "@sentry/react": "^10.75.2",
-        "@uidotdev/usehooks": "^2.4.1",
         "@vercel/analytics": "^2.0.1",
         "@vercel/speed-insights": "^2.0.0",
         "axios": "^1.21.0",

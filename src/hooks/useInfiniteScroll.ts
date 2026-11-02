@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-import { useIntersectionObserver } from '@uidotdev/usehooks';
+import { type IntersectionObserverRef, useIntersectionObserver } from 'hooks/useIntersectionObserver';
 
 interface UseInfiniteScrollParams {
     hasMore: boolean;
@@ -8,7 +8,7 @@ interface UseInfiniteScrollParams {
     onLoadMore: () => void;
 }
 
-type InfiniteScrollRef = ReturnType<typeof useIntersectionObserver>[0];
+type InfiniteScrollRef = IntersectionObserverRef;
 
 const useInfiniteScroll = ({
     hasMore,

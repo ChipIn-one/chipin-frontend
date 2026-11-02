@@ -16,7 +16,6 @@ const GlobalHooks = () => {
     useSyncAppMode();
 
     // TODO: Use hooks
-    // console.log(useCopyToClipboard('ttt'));
     // console.log(useDocumentTitle('ttt'));
     // console.log(useGeolocation());
     // console.log(usePreferredLanguage());

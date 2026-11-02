@@ -3,9 +3,8 @@ import { CheckIcon, CopyIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Tooltip } from '@radix-ui/themes';
-import { useCopyToClipboard } from '@uidotdev/usehooks';
-
 import { SECOND } from 'constants/time';
+import { copyTextToClipboard } from 'helpers/clipboard';
 
 const COPIED_RESET_DELAY_MS = 2 * SECOND;
 
@@ -22,15 +21,20 @@ interface Props {
 const CopyButton = ({ value, what, children, size = '3', variant = 'solid', disabled }: Props) => {
     const { t } = useTranslation('common');
     const [isCopied, setIsCopied] = useState(false);
-    const [, copyToClipboard] = useCopyToClipboard();
 
-    const handleCopy = async () => {
+    const onCopy = (): Promise<void> => {
         if (!value) {
-            return;
+            return Promise.resolve();
         }
-        await copyToClipboard(value);
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), COPIED_RESET_DELAY_MS);
+
+        return copyTextToClipboard(value).then(result => {
+            if (result !== 'copied') {
+                return;
+            }
+
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), COPIED_RESET_DELAY_MS);
+        });
     };
 
     const tooltipContent = isCopied ? t('copy.copied') : t('copy.copy', { what });
@@ -40,7 +44,7 @@ const CopyButton = ({ value, what, children, size = '3', variant = 'solid', disa
             <Button
                 size={size}
                 variant={variant}
-                onClick={handleCopy}
+                onClick={onCopy}
                 disabled={disabled || !value}
             >
                 {isCopied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}

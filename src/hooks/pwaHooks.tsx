@@ -3,8 +3,6 @@ import i18n from 'i18next';
 import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
 
-import { useNetworkState } from '@uidotdev/usehooks';
-
 import type { Group } from 'api/chipin.types';
 import { SECOND } from 'constants/time';
 import { TOASTS_IDS } from 'constants/toasts';
@@ -15,20 +13,17 @@ import {
     shareInvite,
 } from 'helpers/share';
 import { buildFriendInviteLink, buildGroupInviteLink } from 'helpers/url';
+import { useOnlineStatus } from 'hooks/useOnlineStatus';
 import { usePwaStore } from 'store/pwaStore';
 
 const INVITE_FEEDBACK_DELAY_MS = 1.5 * SECOND;
 const CONNECTION_RESTORED_TOAST_DURATION = 4 * SECOND;
 
 export const useCheckOnlineStatus = () => {
-    const { online } = useNetworkState();
+    const online = useOnlineStatus();
     const previousOnline = useRef<boolean | undefined>(undefined);
 
     useEffect(() => {
-        if (online === undefined) {
-            return;
-        }
-
         const previousOnlineValue = previousOnline.current;
         previousOnline.current = online;
 
@@ -36,7 +31,7 @@ export const useCheckOnlineStatus = () => {
             return;
         }
 
-        if (online === false) {
+        if (!online) {
             toast.warning(i18n.t('toasts:common.disconnect'), {
                 id: TOASTS_IDS.connectionStatus,
                 description: i18n.t('toasts:common.disconnectDescription'),

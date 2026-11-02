@@ -10,7 +10,7 @@ import { TOASTS_IDS } from 'constants/toasts';
 import { useCheckOnlineStatus, useFriendInvite, useGroupInvite } from './pwaHooks';
 
 const networkState = vi.hoisted(() => ({
-    online: true as boolean | undefined,
+    online: true,
 }));
 
 const hookMocks = vi.hoisted(() => ({
@@ -24,8 +24,8 @@ const hookMocks = vi.hoisted(() => ({
     ),
 }));
 
-vi.mock('@uidotdev/usehooks', () => ({
-    useNetworkState: () => networkState,
+vi.mock('hooks/useOnlineStatus', () => ({
+    useOnlineStatus: () => networkState.online,
 }));
 
 vi.mock('helpers/clipboard', () => ({
