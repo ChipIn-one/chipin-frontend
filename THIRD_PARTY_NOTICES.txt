@@ -30,8 +30,6 @@ Direct runtime packages
 @vercel/analytics — MIT
 @vercel/speed-insights — Apache-2.0
 axios — MIT
-dexie — Apache-2.0
-dexie-react-hooks — Apache-2.0
 i18next — MIT
 lucide-react — ISC; includes Feather-derived icons under MIT
 next-themes — MIT
@@ -84,8 +82,6 @@ Required upstream attributions
 Apache-2.0
 
 @vercel/speed-insights: Copyright (c) 2023 Vercel, Inc.
-Dexie and dexie-react-hooks: Dexie.js, Copyright (c) 2014-2017 David
-Fahlander.
 
 The Apache License, Version 2.0 applies to these packages:
 https://www.apache.org/licenses/LICENSE-2.0
