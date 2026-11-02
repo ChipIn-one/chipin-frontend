@@ -81,8 +81,8 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
 
 ## Integration boundary
 
-Generic lifecycle and reviewer definitions belong to canonical
-`syllik/ai-workflow`. ChipIn-specific integration policy is:
+Generic lifecycle and reviewer definitions belong to the organization canon
+[`ChipIn-one/.github/docs/workflow/`](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/FLOW.md). ChipIn-specific integration policy is:
 
 - `npm run verify:full` is the local completion gate. Executor stops at `IMPLEMENTATION_COMPLETE` after local validation and does not commit, push, or publish.
 - `npm run version:bump -- <none|patch|minor|major>` applies the task's explicit impact before the final commit;

@@ -32,7 +32,7 @@ composition.
 Read `docs/engineering/rules/00-foundation.md` and only relevant chapters before
 code changes. Testing guidance is in `docs/engineering/rules/70-testing.md`.
 The generic AI lifecycle, publication, and reviewer roles are owned by the
-canonical `syllik/ai-workflow`; this file contains only ChipIn-specific
+organization canon [`ChipIn-one/.github/docs/workflow/`](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/FLOW.md); this file contains only ChipIn-specific
 commands and repository policy.
 
 The read-only knowledge-base dependency is `ChipIn-one/chipin-knowledge-base@master`.
@@ -129,7 +129,7 @@ These rules apply only to ChipIn frontend tasks.
 
 ## Git and execution
 
-Generic execution lifecycle and reviewer semantics are defined by canonical `syllik/ai-workflow`. Task work targets `master`; release is an owner Promote of an exact `master` deployment in Vercel. Executor implements/validates the authorized scope and stops at `IMPLEMENTATION_COMPLETE` or `BLOCKED`. Trusted publication, independent review, corrections, and release decisions remain outside Executor authority.
+Generic execution lifecycle and reviewer semantics are defined by the organization canon [`ChipIn-one/.github/docs/workflow/`](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/FLOW.md). Task work targets `master`; release is an owner Promote of an exact `master` deployment in Vercel. Executor implements/validates the authorized scope and stops at `IMPLEMENTATION_COMPLETE` or `BLOCKED`. Trusted publication, independent review, corrections, and release decisions remain outside Executor authority.
 Preserve unrelated work and do not change backend or unrelated architecture.
 
 ## GATE — knowledge base
@@ -154,15 +154,7 @@ until every item below is done:
 If the knowledge base is not checked out next to this repo, clone it there before proceeding:
 `git clone https://github.com/ChipIn-one/chipin-knowledge-base.git ../chipin-knowledge-base`.
 <!-- ai-workflow:agents-routing:start -->
-Canonical AI routing:
-1. Read the canonical workflow: https://github.com/syllik/ai-workflow/blob/HEAD/FLOW.md.
-2. Select one GitHub record from https://github.com/syllik/ai-workflow/blob/HEAD/workspace.yaml / https://github.com/syllik/ai-workflow/blob/HEAD/projects/index.md.
-3. Read the role index https://github.com/syllik/ai-workflow/blob/HEAD/global/workflow.md, then only the selected role file.
-4. On that record's `integrationBranch`, read target `AGENTS.md`, then `.ai/context.md`.
-5. Read relevant `.ai/decisions.md`, task files, and required declared `contextDependencies`; block if required dependency context is unavailable.
-
-GitHub Issue/PR entry never bypasses this route; use GitHub records only, no auto-discovery; legacy contexts are migration-only.
-Canonical root: ~/Desktop/WORK
+ChipIn AI routing: start at the organization canon [FLOW.md](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/FLOW.md) and follow its reading order, roles and gates. Its [precedence and availability](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/FLOW.md#precedence-and-availability) rules apply: if the canon cannot be read, stop.
 <!-- ai-workflow:agents-routing:end -->
 ## Mandatory ChipIn Issue admission
 
