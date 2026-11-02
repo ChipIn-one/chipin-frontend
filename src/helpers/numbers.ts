@@ -116,6 +116,15 @@ export const roundHalfUp = (value: number, precision: number): number => {
     return sign * roundedValue;
 };
 
+export const PERCENT_DISPLAY_PRECISION = 2;
+
+/**
+ * Formats a percentage for display: rounds half-up and trims trailing zeros so
+ * float sums such as 96.66999999999999 read as "96.67" instead of exposing the tail.
+ */
+export const formatPercentValue = (value: number): string =>
+    roundHalfUp(value, PERCENT_DISPLAY_PRECISION).toString();
+
 export const normalizeApiMoneyAmount = (value: number): number => {
     const normalizedValue = roundHalfUp(value, API_MONEY_PRECISION);
     return Object.is(normalizedValue, -0) ? 0 : normalizedValue;

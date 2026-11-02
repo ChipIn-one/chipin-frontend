@@ -12,6 +12,7 @@ import ExpenseButtons from './ExpenseButtons';
 
 const currentUser = { id: 'self', displayName: 'You', picture: null };
 const friend = { id: 'friend', displayName: 'Friend', picture: null };
+const secondFriend = { id: 'secondFriend', displayName: 'Second friend', picture: null };
 
 beforeEach(() => {
     useLoadingStore.getState().setInitialLoadingStore();
@@ -82,6 +83,47 @@ test.each([
     act(() => store.setSplitValue(friend.id, String(100 - Number(self))));
     expect(screen.getByRole('status').textContent).toBe('');
     expect(screen.getByRole('button', { name: 'Add expense' })).toHaveProperty('disabled', false);
+});
+
+test.each([
+    {
+        shares: [30, 33.33, 33.34],
+        message: 'Percentages total 96.67%. Add the remaining 3.33% to reach 100%.',
+    },
+    {
+        shares: [40, 33.33, 33.34],
+        message: 'Percentages total 106.67%. Remove the excess 6.67% to reach 100%.',
+    },
+])('EXP-064 rounds raw percentage float totals for display: $shares', ({ shares, message }) => {
+    const current = shares.reduce((total, share) => total + share, 0);
+    const difference = Math.abs(current - 100);
+    const [selfShare = 0, friendShare = 0, secondFriendShare = 0] = shares;
+
+    useExpenseModalStore.setState(state => ({
+        source: {
+            ...state.source,
+            groups: [{ id: 'group', members: [currentUser, friend, secondFriend] }],
+        },
+        amount: '10',
+        splitMode: EXPENSE_SPLIT_MODES.PERCENT,
+        percentShares: {
+            [currentUser.id]: String(selfShare),
+            [friend.id]: String(friendShare),
+            [secondFriend.id]: String(secondFriendShare),
+        },
+        includedParticipantIds: {
+            [currentUser.id]: true,
+            [friend.id]: true,
+            [secondFriend.id]: true,
+        },
+    }));
+    render(<ExpenseButtons onClose={vi.fn()} />);
+
+    const statusText = screen.getByRole('status').textContent ?? '';
+    expect(statusText).toBe(message);
+    expect(statusText).not.toContain(String(difference));
+    expect(statusText).not.toMatch(/\d\.\d{3,}/);
+    expect(screen.getByRole('button', { name: 'Add expense' })).toHaveProperty('disabled', true);
 });
 
 test.each([

@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 
-import { getNumberData, MONEY_INPUT_PRECISION, roundHalfUp } from './numbers';
+import { formatPercentValue, getNumberData, MONEY_INPUT_PRECISION, roundHalfUp } from './numbers';
 
 test('formats zero as a valid number', () => {
     expect(getNumberData({ value: 0, precision: 2 }).numberFormatted).toBe('0');
@@ -111,6 +111,17 @@ test.each([
     [0, 0],
 ] as const)('rounds money input %s half-up away from zero to %s', (value, expected) => {
     expect(roundHalfUp(value, MONEY_INPUT_PRECISION)).toBe(expected);
+});
+
+test.each([
+    [30 + 33.33 + 33.34, '96.67'],
+    [40 + 33.33 + 33.34, '106.67'],
+    [Math.abs(30 + 33.33 + 33.34 - 100), '3.33'],
+    [33.3, '33.3'],
+    [100, '100'],
+    [0, '0'],
+])('formats percentage %s as %s without a floating-point tail', (value, expected) => {
+    expect(formatPercentValue(value)).toBe(expected);
 });
 
 test('differs from Math.round only on half-way float values', () => {

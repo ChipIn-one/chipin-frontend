@@ -2,6 +2,7 @@ import { Amount } from 'basics';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { EXPENSE_SUBMIT_BLOCKERS } from 'constants/chipin';
+import { formatPercentValue } from 'helpers/numbers';
 import type { ExpenseSubmitFeedback } from 'store/expenseModalSelectors';
 
 interface Props {
@@ -28,6 +29,19 @@ export const ExpenseSubmitFeedbackMessage = ({ feedback, currency }: Props) => {
                 }}
             />
         );
+    }
+
+    if (
+        feedback.reason === EXPENSE_SUBMIT_BLOCKERS.PERCENT_UNDER ||
+        feedback.reason === EXPENSE_SUBMIT_BLOCKERS.PERCENT_OVER
+    ) {
+        const { current = 0, required = 0, difference = 0 } = feedback;
+
+        return t(key, {
+            current: formatPercentValue(current),
+            required: formatPercentValue(required),
+            difference: formatPercentValue(difference),
+        });
     }
 
     return t(key, {
