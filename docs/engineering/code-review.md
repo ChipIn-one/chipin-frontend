@@ -2,8 +2,8 @@
 
 ## Canonical lifecycle
 
-Generic reviewer roles and lifecycle semantics belong to the canonical
-`syllik/ai-workflow`. ChipIn follows that workflow:
+Generic reviewer roles and lifecycle semantics belong to the organization canon
+[`ChipIn-one/.github/docs/workflow/`](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/FLOW.md). ChipIn follows that workflow:
 
 - Executor is implementation-only and does not review its own task diff.
 - After `IMPLEMENTATION_COMPLETE`, Trusted Publisher/human publication happens before review.
