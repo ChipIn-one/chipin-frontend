@@ -3,6 +3,7 @@
 - Repository: `ChipIn-one/chipin-frontend`
 - Purpose: ChipIn frontend Vite/React/TypeScript PWA.
 - Repository-specific engineering invariants live in `AGENTS.md` and relevant `docs/engineering/rules/*`.
+- Local decisions: `.ai/decisions.md`; knowledge-base reading gate: `AGENTS.md` § GATE — knowledge base.
 - Generic AI lifecycle and role semantics belong to the organization canon [`ChipIn-one/.github/docs/workflow/`](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/FLOW.md); model/provider does not define Planner/Architect/Executor/Reviewer/Auditor authority.
 - Canonical branch: `master` (the only long-lived branch, default, squash-only). New Issue-backed branches follow the canonical registry pattern, and `npm run pr:create` accepts only that pattern. Historical/noncanonical branches and PRs are not handled by the helper.
 - Canonical local completion gate: `npm run verify:full`.
