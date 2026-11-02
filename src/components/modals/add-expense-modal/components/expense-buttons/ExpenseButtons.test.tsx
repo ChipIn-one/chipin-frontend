@@ -154,6 +154,34 @@ test('EXP-064 keeps a sub-step percent difference visible instead of masking it 
     expect(screen.getByRole('button', { name: 'Add expense' })).toHaveProperty('disabled', true);
 });
 
+test('EXP-064 explains a percent total that rounds below the display precision', () => {
+    useExpenseModalStore.setState(state => ({
+        source: {
+            ...state.source,
+            groups: [{ id: 'group', members: [currentUser, friend, secondFriend] }],
+        },
+        amount: '10',
+        splitMode: EXPENSE_SPLIT_MODES.PERCENT,
+        percentShares: {
+            [currentUser.id]: '33.33333',
+            [friend.id]: '33.33333',
+            [secondFriend.id]: '33.33333',
+        },
+        includedParticipantIds: {
+            [currentUser.id]: true,
+            [friend.id]: true,
+            [secondFriend.id]: true,
+        },
+    }));
+    render(<ExpenseButtons onClose={vi.fn()} />);
+
+    const statusText = screen.getByRole('status').textContent ?? '';
+    expect(statusText).toBe('Percentages total < 100%. Add the remaining < 0.01% to reach 100%.');
+    expect(statusText).not.toContain('total 100%');
+    expect(statusText).not.toContain('0.00001');
+    expect(screen.getByRole('button', { name: 'Add expense' })).toHaveProperty('disabled', true);
+});
+
 test.each([
     ['9.998', 'Allocated 9.998 USD of 10 USD. Add the remaining 0.002 USD so the amounts equal the expense total.'],
     ['10.002', 'Allocated 10.002 USD of 10 USD. Remove the excess 0.002 USD so the amounts equal the expense total.'],

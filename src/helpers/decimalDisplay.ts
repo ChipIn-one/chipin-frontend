@@ -83,7 +83,9 @@ export const toPlainDecimal = (value: number): string | null => {
  * Percent total for display: 2 decimals with trailing zeros trimmed. When the
  * 2-decimal display would read `100` while the raw value is not exactly 100, the
  * 4-decimal value is shown instead so the text never claims 100% that the
- * strictly validated total does not have.
+ * strictly validated total does not have. If even 4 decimals round to `100`
+ * (e.g. 99.99999), show `< 100` or `> 100` to avoid contradicting the strict
+ * validation gate.
  */
 export const formatPercentTotal = (value: number): string => {
     const plain = toPlainDecimal(value);
@@ -101,7 +103,23 @@ export const formatPercentTotal = (value: number): string => {
 
     const escalated = roundDecimalHalfUp(plain, PERCENT_ESCALATED_PLACES);
 
-    return escalated ? formatRounded(escalated) : display;
+    if (!escalated) {
+        return display;
+    }
+
+    const escalatedDisplay = formatRounded(escalated);
+
+    if (escalatedDisplay !== '100' || plain === '100') {
+        return escalatedDisplay;
+    }
+
+    const numeric = Number(plain);
+
+    if (Number.isFinite(numeric)) {
+        return numeric < 100 ? '< 100' : '> 100';
+    }
+
+    return escalatedDisplay;
 };
 
 /**

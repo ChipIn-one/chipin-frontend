@@ -94,6 +94,9 @@ describe('formatPercentTotal', () => {
         [99.9999, '99.9999'],
         [100.0001, '100.0001'],
         [99.995, '99.995'],
+        [99.99999, '< 100'],
+        [100.00001, '> 100'],
+        [33.33333 + 33.33333 + 33.33333, '< 100'],
     ])('EXP-064 shows the percent total %s as %s without a floating-point tail', (value, expected) => {
         expect(formatPercentTotal(value)).toBe(expected);
     });
