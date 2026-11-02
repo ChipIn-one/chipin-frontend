@@ -20,3 +20,20 @@ export const EXPENSE_SPLIT_STATUSES = {
 
 export type ExpenseSplitStatus =
     (typeof EXPENSE_SPLIT_STATUSES)[keyof typeof EXPENSE_SPLIT_STATUSES];
+
+export const EXPENSE_SUBMIT_BLOCKERS = {
+    AMOUNT: 'amount',
+    TARGET: 'target',
+    PARTICIPANTS: 'participants',
+    PAYER: 'payer',
+    PERCENT_UNDER: 'percentUnder',
+    PERCENT_OVER: 'percentOver',
+    AMOUNTS_UNDER: 'amountsUnder',
+    AMOUNTS_OVER: 'amountsOver',
+    SHARES: 'shares',
+    NO_DEBT: 'noDebt',
+    UNCHANGED: 'unchanged',
+} as const;
+
+export type ExpenseSubmitBlocker =
+    (typeof EXPENSE_SUBMIT_BLOCKERS)[keyof typeof EXPENSE_SUBMIT_BLOCKERS];

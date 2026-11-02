@@ -143,6 +143,19 @@
                 "pet_items": "Pet Items"
             },
             "currentUser": "You",
+            "submitFeedback": {
+                "amount": "Enter an amount greater than zero.",
+                "target": "Select an available group or a friend for this expense.",
+                "participants": "Select eligible participants for this expense. For a direct expense, select a friend whose invitation has been accepted.",
+                "payer": "Select an eligible payer for this expense.",
+                "percentUnder": "Percentages total {{current}}%. Add the remaining {{difference}}% to reach {{required}}%.",
+                "percentOver": "Percentages total {{current}}%. Remove the excess {{difference}}% to reach {{required}}%.",
+                "amountsUnder": "Allocated <current/> of <required/>. Add the remaining <difference/> so the amounts equal the expense total.",
+                "amountsOver": "Allocated <current/> of <required/>. Remove the excess <difference/> so the amounts equal the expense total.",
+                "shares": "Give at least one participant a positive share. The total share weight must be greater than zero.",
+                "noDebt": "This expense creates no debt. Assign a positive amount to the person who did not pay.",
+                "unchanged": "Make a change to save this expense."
+            },
             "directSelfOnlyWarning": "Assign a share to your friend.",
             "directZeroDebtWarning": "This expense creates no debt. Assign a positive amount to the person who did not pay.",
             "splitHint": "Split equally among the group.",

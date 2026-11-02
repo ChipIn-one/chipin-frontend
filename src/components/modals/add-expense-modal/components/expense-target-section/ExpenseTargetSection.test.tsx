@@ -1,19 +1,20 @@
+import i18n from 'i18n/index';
 import { ThemeProvider } from 'styled-components';
-import { beforeEach, expect, test } from 'vitest';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 import { act, render, screen } from '@testing-library/react';
 
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
 import { lightThemeStyled } from 'constants/styled-themes';
-import i18n from 'i18n/index';
 import type {
     ExpenseModalEditInitialization,
     ExpenseParticipant,
 } from 'store/expenseModalStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
-import ExpenseTargetSection from './ExpenseTargetSection';
+import { ExpenseButtons } from '../expense-buttons';
 
+import ExpenseTargetSection from './ExpenseTargetSection';
 
 const currentUser = {
     id: 'user-1',
@@ -123,9 +124,10 @@ test('shows immutable P2P participants and keeps payer editing in edit mode', ()
     expect(screen.queryByText('Group', { selector: '[data-state]' })).toBeNull();
 });
 
-test('shows the self-only Radix Callout below payer only for a self-paid direct expense', () => {
+test('EXP-064 announces a self-paid direct edit blocker once beside Save', () => {
     useExpenseModalStore.getState().initializeEdit(getEditInitialization('friends'));
     renderTargetSection();
+    render(<ExpenseButtons onClose={vi.fn()} />);
 
     expect(screen.queryByRole('alert')).toBeNull();
 
@@ -136,16 +138,19 @@ test('shows the self-only Radix Callout below payer only for a self-paid direct 
         store.setSplitValue(friend.id, '0');
     });
 
-    expect(screen.getByRole('alert').textContent).toContain(
-        i18n.t('group:expenses.modal.directSelfOnlyWarning'),
+    expect(screen.getByRole('status').textContent).toBe(
+        i18n.t('group:expenses.modal.submitFeedback.noDebt'),
     );
-    expect(screen.getByRole('alert').parentElement?.textContent).toContain('Paid by');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveProperty('disabled', true);
 
     act(() => {
         useExpenseModalStore.getState().setPaidById(friend.id);
     });
 
     expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('status').textContent).toBe('');
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveProperty('disabled', false);
 
     act(() => {
         useExpenseModalStore.getState().setPaidById(currentUser.id);
@@ -153,6 +158,7 @@ test('shows the self-only Radix Callout below payer only for a self-paid direct 
     });
 
     expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('status').textContent).toBe('');
 });
 
 test('never shows the self-only Callout for a group expense', () => {

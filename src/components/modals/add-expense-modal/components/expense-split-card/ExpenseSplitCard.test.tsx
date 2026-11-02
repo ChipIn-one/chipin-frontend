@@ -1,15 +1,17 @@
+import i18n from 'i18n/index';
 import { ThemeProvider } from 'styled-components';
-import { beforeEach, expect, test } from 'vitest';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 import { act, render, screen } from '@testing-library/react';
 
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
 import { lightThemeStyled } from 'constants/styled-themes';
-import i18n from 'i18n/index';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
-import ExpenseSplitCard from './ExpenseSplitCard';
+import { ExpenseButtons } from '../expense-buttons';
+import { ExpensePayerSearchSelect } from '../expense-payer-search-select';
 
+import ExpenseSplitCard from './ExpenseSplitCard';
 
 const currentUser = { id: 'user-1', displayName: 'You', picture: null };
 const friend = { id: 'user-2', displayName: 'Friend', picture: null };
@@ -36,6 +38,7 @@ const renderSplitCard = () =>
     render(
         <ThemeProvider theme={lightThemeStyled}>
             <ExpenseSplitCard />
+            <ExpenseButtons onClose={vi.fn()} />
         </ThemeProvider>,
     );
 
@@ -43,30 +46,43 @@ beforeEach(() => {
     useExpenseModalStore.getState().reset();
 });
 
-test('shows the self-only Callout near shares when Skip category hides the payer control', () => {
+test('EXP-064 announces the self-only blocker once beside submit when category is skipped', () => {
     initializeDirectExpense(true);
     renderSplitCard();
 
-    expect(screen.getByRole('alert').textContent).toContain(
-        i18n.t('group:expenses.modal.directSelfOnlyWarning'),
+    expect(screen.getByRole('status').textContent).toBe(
+        i18n.t('group:expenses.modal.submitFeedback.noDebt'),
     );
+    expect(screen.queryByRole('alert')).toBeNull();
 
     act(() => {
         useExpenseModalStore.getState().setSplitValue(friend.id, '1');
     });
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('status').textContent).toBe('');
 
     act(() => {
         const store = useExpenseModalStore.getState();
         store.setSplitValue(currentUser.id, '0');
         store.setPaidById(friend.id);
     });
-    expect(screen.getByRole('alert').textContent).toContain('creates no debt');
+    expect(screen.getByRole('status').textContent).toContain('creates no debt');
+    expect(screen.queryByRole('alert')).toBeNull();
 });
 
-test('does not duplicate the payer Callout near shares when the payer control is visible', () => {
+test('EXP-064 reports only the first cause even when the payer control is visible', () => {
     initializeDirectExpense(false);
     renderSplitCard();
+    render(
+        <ThemeProvider theme={lightThemeStyled}>
+            <ExpensePayerSearchSelect />
+        </ThemeProvider>,
+    );
 
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(screen.getAllByText(i18n.t('group:expenses.modal.submitFeedback.noDebt'))).toHaveLength(1);
     expect(screen.queryByRole('alert')).toBeNull();
+
+    act(() => useExpenseModalStore.getState().setAmount(''));
+    expect(screen.getByRole('status').textContent).toBe('Enter an amount greater than zero.');
+    expect(screen.queryByText(i18n.t('group:expenses.modal.submitFeedback.noDebt'))).toBeNull();
 });
