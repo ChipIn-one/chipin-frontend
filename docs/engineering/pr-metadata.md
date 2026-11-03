@@ -1,11 +1,9 @@
-# Frontend PR metadata (#381)
+# Frontend PR metadata
 
-Contract: https://github.com/ChipIn-one/.github/blob/master/automation/pr-metadata.md
+Contract (Task identity, routes, labels, owner and reviewer rules): [org `automation/pr-metadata.md`](https://github.com/ChipIn-one/.github/blob/master/automation/pr-metadata.md). Roles and gates: [org `docs/workflow/FLOW.md`](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/FLOW.md). This page lists only what is specific to the frontend.
 
-FE-only caller invokes pinned shared action, which reuses GitHubClient and native Development link read-back. New `scripts/create-pr.mjs` PRs receive one explicit Task identity and concise metadata headings; human authors must replace the prompts with actual verified evidence. Existing PRs are preserved.
-
-Triggers: opened/edited/reopened/synchronize/ready_for_review and completed Frontend CI workflow_run (including failures for diagnostics) (once workflow is present on the default branch), plus manual workflow_dispatch retry with exact SHA. No PR code checkout and no paid reviewer on every event. Reviewer requests require all live target-branch required checks (frontend-ci on master) green for the exact current head/base SHA, with trusted GitHub Actions workflow-run provenance; human review and merges remain required.
-
-FE uses only the local scoped GITHUB_TOKEN for PR/Issue metadata and CHIPIN_DEV_READ_TOKEN for canonical Issue read-only admission. Org Project #5 writes are performed exclusively in .github by a scheduled/manual trusted writer using the existing .github CHIPIN_ISSUE_WRITE_TOKEN. FE never receives that credential. The org writer rereads exact PR SHA, Task identity, native Development links, and fresh per-Issue admission before idempotent Project write/read-back. No Issue closure, Project Status, or backend rollout.
-
-Org #53 is merged and published to FE; this adapter calls its canonical reader with fresh versioned INTAKE_COMPLETE receipt before any native Development writes. The release owner is syllik. With one maintainer, no native self-review request is made; exact-head CI, scoped independent code review and human-only merges remain required. Org #54 must merge before FE is re-pinned to the final published SHA. Project membership is only confirmed by org read-back. Existing #381 requires canonical Issue admission; no historical bypass.
+- **Caller:** [`.github/workflows/pr-metadata.yml`](../../.github/workflows/pr-metadata.yml) calls the shared `pr-metadata-action`, pinned to an exact commit. It does not check out PR code.
+- **Triggers:** `pull_request` to `master` (opened, reopened, edited, synchronize, ready_for_review; Dependabot PRs are filtered out), completed `Frontend CI` `workflow_run` for same-repo PRs, and manual `workflow_dispatch` with the PR number and exact head SHA.
+- **Credentials held by the frontend:** the job's scoped `GITHUB_TOKEN` for PR/Issue metadata and `CHIPIN_DEV_READ_TOKEN` for read-only canonical admission. The frontend never holds an org Project or Issue write credential.
+- **PR bodies:** `npm run pr:create` ([`scripts/create-pr.mjs`](../../scripts/create-pr.mjs)) writes one `Task identity:` line and the `## Summary`, `## Tests`, `## Version impact`, `## Dependencies` headings; replace the prompts with verified evidence.
+- **Review and merge:** the reconciler never approves or merges; independent review and human-only merges remain required.
