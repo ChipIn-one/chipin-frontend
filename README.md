@@ -1,88 +1,42 @@
 # ChipIn Frontend
 
-A React 19 + Vite frontend project that provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+ChipIn web app: Vite 8, React 19, TypeScript strict, Radix Themes, i18next, PWA.
+Agent and contributor rules: [`AGENTS.md`](./AGENTS.md); full rulebook: [`docs/engineering/rules/`](./docs/engineering/rules/).
+Delivery: [`DEPLOYMENT.md`](./DEPLOYMENT.md).
 
-## 🚀 Features
-
--   ⚡️ **Vite** - Next generation frontend tooling
--   ⚛️ **React 19** - Latest React version
--   🔥 **Hot Module Replacement (HMR)** - Fast development experience
--   📝 **ESLint** - Code quality and consistency
--   🏗️ **TypeScript ready** - Type checking support
-
-## 🛠️ Tech Stack
-
-Currently, two official plugins are available:
-
--   [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
--   [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## 📦 Installation
+## Installation
 
 ```bash
-git clone https://github.com/your-username/chipin-frontend.git
+git clone https://github.com/ChipIn-one/chipin-frontend.git
 cd chipin-frontend
 npm install
 ```
 
-## 🚀 Available Commands
+## Commands
 
-| Command                                      | Description                                      |
-| -------------------------------------------- | ------------------------------------------------ |
-| `npm run dev`                                | Start the development server                     |
-| `npm run test:task -- <test paths>`          | Run only explicitly selected tests               |
-| `npm run test:full`                          | Run the complete test suite                      |
-| `npm run typecheck`                          | Run the TypeScript compiler                      |
-| `npm run verify`                             | Fast lint/typecheck verification                 |
-| `npm run verify:full`                        | Full completion gate: lint, tests, and production build |
-| `npm run vercel-build`                       | Vercel gate: full test suite followed by production build |
-| `npm run build`                              | Generate version and build for production        |
-| `npm run preview`                            | Preview the production build locally             |
-| `npm run lint`                               | Run ESLint to check code quality                 |
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the development server |
+| `npm run test:task -- <test paths>` | Run only the listed tests; refuses to run without a path |
+| `npm run test:full` | Run the complete test suite |
+| `npm run lint` | Run ESLint |
+| `npm run typecheck` | Run the TypeScript compiler (`tsc -b`) |
+| `npm run verify` | Fast check: lint with `--quiet` (only errors are shown and fail; warnings are hidden), then typecheck |
+| `npm run verify:full` | Full gate, also run by CI: lint, full tests, production build, ds-gallery build |
+| `npm run build` | Typecheck and production build |
+| `npm run vercel-build` | Vercel deployment build: production build and public precache check, no tests |
+| `npm run preview` | Preview the production build locally |
+| `npm run version:check` | Check that `package.json` and `package-lock.json` versions are valid and equal |
 
-## 🛠️ Development
+Feature PRs do not change the version; every PR body carries `## Version impact`. Release: see `AGENTS.md`, «Релиз».
 
-### Start Development Server
-
-```bash
-npm run dev
-```
-
-### Build for Production
-
-```bash
-npm run build
-```
-
-### Preview Production Build
-
-```bash
-npm run preview
-```
-
-### Run Linter
-
-```bash
-npm run lint
-```
-
-### Run Targeted Tests
-
-During implementation, pass the smallest set of test files that covers the changed behavior:
+During implementation, pass the smallest set of test files that covers the change:
 
 ```bash
 npm run test:task -- src/store/groupsStore.test.ts src/pages/group-page/GroupPage.test.tsx
 ```
 
-`test:task` refuses to run without an explicit test path, which prevents an accidental full-suite run.
-
-### Full Completion Verification
-
-Run the full completion gate at implementation completion and CI/release checkpoints:
-
-```bash
-npm run verify:full
-```
+Run `npm run verify:full` before handing work over; Husky `pre-push` runs `version:check` and `verify:full`.
 
 ## License
 

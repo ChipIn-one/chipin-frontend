@@ -1,161 +1,56 @@
 # AGENTS.md
 
-## Scope and stack
+ChipIn — фронтенд на Vite 8, React 19, TS strict, Radix Themes, i18next, PWA.
+Backend-контракты не меняем без явного запроса. Полный свод правил — только `docs/engineering/rules/*`.
 
-ChipIn is a frontend-only Vite 7, React 19, TypeScript strict, Zustand 5,
-Axios, styled-components, Radix Themes, i18next and PWA application. Backend
-contracts remain unchanged unless explicitly requested.
+## Инварианты
 
-## Architecture and invariants
+Инварианты 1–6 и 9 — целевое состояние спек 03/04 (слоёв `app`, `entities`, `shared` ещё нет); пока их PR не влиты, действуют текущая структура `src/`, код и правила `docs/engineering/rules/` (для денег — `60-money-helpers.md`). Исключение: запрет новых серверных сторов и новых `useConnect` из п. 9 действует уже сейчас (D12; `10-architecture.md` и `20-react.md` описывают `internal/useConnect.ts` до 02-A2).
+По стилю async/await до 02-A2 приоритет у AGENTS.md (п. 7, D24).
 
-- Preserve dependency direction: app composition → pages → features → components → basics.
-- UI calls stores or focused hooks, never raw API clients; runtime API calls belong in store actions.
-- Helpers are pure and do not read Zustand stores or selectors.
-- Preserve public module boundaries and capability ownership; use existing aliases from `tsconfig.app.json`.
-- Keep strict types: no `any`, `as any`, unjustified assertions, or swallowed errors.
-- New/touched async code uses Promise `.then()`, `.catch()`, and `.finally()` chains, not `async`/`await`.
-- Local event handlers and callback props use `on*` names.
-- User-facing text, accessibility labels, and toast content use i18n.
-- Preserve money, offline, persistence, concurrency, API/data-shape, and accessibility invariants.
-- For dynamic collections, avoid unnecessary repeated traversals and allocations; follow the detailed
-  exceptions in `docs/engineering/rules/00-foundation.md`.
+1. Слои импортируются только вниз по одному графу: app → pages → features → components → hooks → store → entities → helpers → shared → api → base (constants, types, i18n, styles, assets); basics — между components и helpers; `shared` делится на `shared-api` (`shared/api`, `shared/offline`: только hooks, store, entities, app) и `shared-lib`. Подробности — `docs/engineering/rules/10-architecture.md`.
+2. UI (pages, features, components, basics) и helpers не вызывают runtime-API, `axios`, `shared/api` и `shared/offline`; серверные данные приходят через query-слой (`entities/*`) или store. Импорт `axios` и runtime-модулей `api/` из UI ловит `no-restricted-imports`.
+3. Деньги в коде — `Money { minor: bigint }` (ledger units scale 4); на проводе — JSON-число scale 4 (D21). Граница провода — два слоя: транспорт `shared/api/wireJson.ts` (только в обёртке `api()`) разбирает тело без double в opaque `WireAmount` и пишет исходящие суммы decimal-литералом, но суммы не интерпретирует; конверсия `WireAmount` ↔ `Money` — только `moneyFromWire`/`moneyToWire` в мапперах `entities/*/model` (`toX()`/`toXWire()`). Парсинг ввода, округление, суммы и форматирование — только `src/shared/money/`; `parseFloat`/`Number()`/`JSON.parse` на денежных полях вне него запрещены. Отображение — только `basics/numbers/amount/Amount.tsx`.
+4. Сервер — источник истины для финансов: не патчим балансы/долги локально; мутацию повторяет только цикл outbox `runOutboxOp` (спека 03 §2.4); у всех мутаций TanStack `retry: false`, онлайн-путь — `ledgerOnlineMutationKeys` (`networkMode: 'online'`); устаревший ответ не перезаписывает более новое состояние.
+5. Создание/правка/удаление расходов — только через `entities/ledger/api/mutations.ts` (селектор по `offlineWritesAvailable`: онлайн-ключи или outbox); офлайн — только через outbox с client UUID и `entryKind: 'expense'` (включается 03-17 за флагом и capabilities backend; до него офлайн-записи нет). Settle-up и платежи, включая правку и удаление settlement, офлайн запрещены (`ONLINE_ONLY_ACTIONS`, `<OnlineOnly>`).
+6. Типы: без `any`, `as any`, `@ts-ignore`, неоправданных `as` и `!`; type-only импорты — `import type`. Данные из IndexedDB, outbox и localStorage проверяются zod при чтении.
+7. Промисы не теряются: каждый промис возвращается, `await`-ится или явно помечается `void`; ошибки не глотаются. Стиль `await` или `.then` свободный (запрет async/await снят владельцем 2026-10-28, D24; предупреждения старого async-селектора в `eslint.config.js` не исправляйте). В JSX-атрибутах промис не возвращается: `onClick={() => void action()}`.
+8. Только именованные экспорты; не больше одного `index.ts` на слайс, без `export *`. Пока lint/codemod 02-C12/02-D3 не влиты — правило ревью; в новом коде обязательно. Существующие файлы не переписываем попутно (переводит codemod 02-D3).
+9. Серверное состояние — TanStack Query; Zustand — UI-состояние. Серверные сторы, которые спека 03 ещё не мигрировала, — переходные: новых не создаём, новые поля серверных данных в них не добавляем. Одно значение читается селектором, несколько — одним объектным селектором с `useShallow`; `useStore()` без селектора и новые `useConnect` запрещены.
+10. Автоисправимое чинит `npx eslint --fix <изменённые файлы>`; стиль руками не правим. Ошибка lint — корректность или граница, её сообщение говорит, как чинить; `eslint-disable` — только с причиной.
+11. Весь пользовательский текст, включая `aria-*`, `placeholder`, `title` и тосты, идёт через i18n во все локали. Интерактив — нативные элементы или Radix, у кнопок-иконок есть переводимое имя (ревью).
+12. `localStorage`/`sessionStorage` — только через `helpers/localStorage.ts`. Токены, invite-токены и персональные данные не попадают в логи, Sentry и URL; logout очищает все пользовательские данные (кэш, outbox, `id`/`role` пользователя); сохраняются только UI-настройки языка и темы.
+13. Порядок импортов — `simple-import-sort` (чинит `--fix`), формат — `.prettierrc.cjs`; код, который задача не меняет, не переформатируем.
+14. В теле каждого PR задачи есть `## Version impact` (`none|patch|minor|major`); задача не меняет `version` в `package.json`/`package-lock.json` и не запускает `version:bump` (см. «Релиз»).
+15. Изменение домена, API или видимого поведения начинается с KB: `chipin-knowledge-base/common/glossary.md` и `common/specs/<capability>.md`; тесты называются по id требований. Новое поведение сначала попадает в spec KB связанным PR; конфликт с ADR из `common/adr/` — стоп и вопрос владельцу. KB берётся из `../chipin-knowledge-base`, иначе `git clone` туда, иначе через GitHub; если KB недоступна ни локально, ни через GitHub — BLOCKED.
 
-## Landing previews
+## Команды
 
-When changing `GroupPage` or `SoloPage`, compare the corresponding
-`GroupPagePreview` or `SoloPagePreview` and update the landing mock when needed.
-When changing a landing preview, compare it with the current mobile page
-composition.
+- `npm run test:task -- <пути тестов>` — точечные тесты; без пути не запускается.
+- `npx eslint --fix <файлы>` — автоисправления ESLint только в изменённых файлах.
+- `npm run verify` — быстрый lint (`--quiet`: показывает только ошибки, warnings не валят) и typecheck.
+- `npm run verify:full` — полный гейт: lint, все тесты, build, ds-gallery; его же запускает CI. Перед `IMPLEMENTATION_COMPLETE`.
+- `npm run typecheck` — `tsc -b`.
+- `npm run version:check` — версия в `package.json` и `package-lock.json` валидна и совпадает (только чтение).
+- Husky `pre-push` запускает `version:check` и `verify:full`.
 
-## Local rules and commands
+## Процесс
 
-Read `docs/engineering/rules/00-foundation.md` and only relevant chapters before
-code changes. Testing guidance is in `docs/engineering/rules/70-testing.md`.
-The generic AI lifecycle, publication, and reviewer roles are owned by the
-organization canon [`ChipIn-one/.github/docs/workflow/`](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/FLOW.md); this file contains only ChipIn-specific
-commands and repository policy.
+- Роли, гейты и порядок чтения — [org canon FLOW.md](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/FLOW.md).
+- Перед исполнением задачи нужен свежий `INTAKE_COMPLETE` — [org issue-intake contract](https://github.com/ChipIn-one/.github/blob/master/automation/issue-intake.md).
+- Ветка задачи — `<type>/issue-<n>-<slug>` от `master`; PR в `master`, squash; мержит только человек.
+- FE Issue не закрывается руками; после merge в `master` он ждёт в `Awaiting release` — [completion canary](docs/engineering/frontend-production-completion-canary.md#issue-lifecycle-after-the-merge-to-master).
+- QA перед релизом — [`docs/engineering/release-qa.md`](docs/engineering/release-qa.md); метаданные PR — [`docs/engineering/pr-metadata.md`](docs/engineering/pr-metadata.md).
 
-The read-only knowledge-base dependency is `ChipIn-one/chipin-knowledge-base@master`.
-Resolve it from `../chipin-knowledge-base` when available. In GitHub-only/web
-environments, resolve the same canonical files through authenticated GitHub access;
-a missing sibling checkout alone is not a reason to substitute copied or stale KB
-content.
+## Релиз
 
-- `npm run test:task -- <explicit test paths>` — focused tests.
-- `npm run verify` — fast lint/typecheck.
-- `npm run test:full` — full tests.
-- `npm run verify:full` — full local completion gate and CI gate.
-- `npm run version:bump -- <none|patch|minor|major>` — apply the task's explicit SemVer impact before the final commit; `none` is a safe no-op.
-- `npm run version:check` — read-only validation that package and lockfile versions are valid and synchronized.
-- tracked Husky `pre-push` runs `npm run version:check` and `npm run verify:full`; both block a non-zero result and neither mutates repository files.
-- `npm run pr:create` — repository publication helper for Trusted Publisher/human-controlled publication with explicit `master` base; it is not Executor responsibility.
-- Every task prompt includes `Version impact: none | patch | minor | major`, selected from product/API meaning rather than file or LoC counts.
-- For `patch`, `minor`, or `major`, run the automatic `version:bump` before the final commit; `major` is rejected during the pre-1.0 period because `1.0.0` requires an explicit release decision.
-- Runtime labels are `<baseVersion>-dev-<shortTaskHeadSha>` for task/dev/preview builds and `<baseVersion>` for release builds from `main`. GitHub PR builds use the PR head SHA. Release labelling moves to tags in ChipIn-one/.github#172; until then every `master` build, including the promoted one, is labelled `<baseVersion>-dev-<shortSha>`.
-- New Issue-backed task branches use the canonical `<type>/issue-<number>-<slug>` pattern. `npm run pr:create` accepts only that canonical pattern; historical/noncanonical branches and PRs are outside this helper.
-- Executor work stays inside the prepared task branch/worktree and explicit task scope.
-- `master` is the only long-lived branch and the repository default. Publication
-  targets `master`; required `frontend-ci` remains the remote integration gate
-  after publication. PRs are squash-merged with the PR title as the subject.
-- Trusted task publication into `master` may use `gh pr create --base master --head
-  <current-task-branch> ...` or `npm run pr:create`; do not treat publication as
-  Executor work.
-- Reuse an existing open PR for the current head, retarget its base to `master`
-  when allowed, and return its real `/pull/<number>` URL.
-- Executor never pushes directly to `master` and never merges; human performs
-  the merge after the remote gate is green.
-- Delivery is Vercel's: the Vercel Git integration builds every `master` commit
-  as a Preview with development environment variables, and `dev.chipin.one` is
-  attached to `master`. The Vercel Production Branch stays `main`, a
-  placeholder that receives no pushes, and `vercel.json` disables Git deployments for
-  `main` and `dev`, so no push creates a production build; the owner releases
-  by **Promote to Production** of an exact `master` deployment, which Vercel
-  rebuilds with production environment variables and assigns to `chipin.one`.
-  The repository has no deploy workflow.
-- `npm run build` — production build.
-- `npm run vercel-build` — Vercel pipeline.
+Релизом управляет процесс релиза: владелец делает Promote to Production выбранной `master`-сборки в Vercel ([`DEPLOYMENT.md`](DEPLOYMENT.md#vercel-delivery-from-master)); политика версий — [org release policy](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/release.md) (версия — git-тег по `## Version impact` влитых PR; переход — ChipIn-one/.github#172). Executor версию в feature-PR не меняет.
 
-The canonical lifecycle is:
+## Ревью
 
-`Planner/Architect as risk requires → Executor implementation + local validation → IMPLEMENTATION_COMPLETE → Trusted Publisher one-batch publication → green required frontend-ci on current head → one independent Reviewer for that SHA → authorized bounded correction if needed → changed head repeats green CI + one fresh review → human merge`.
+Независимый ревьюер проверяет инварианты 1–15 и наличие регрессионных тестов для изменённой логики. Стиль, формат, порядок импортов и всё, что ловит CI, ревьюер не комментирует.
+Обязательный фокус ревью: auth/session/refresh и токены, interceptors и права, роутинг и auth-композиция, гонки и отмена запросов, service worker/PWA, CI, безопасность (CSP) и обновления зависимостей.
 
-Roles are provider-independent; stronger models are selected by risk/capability, not automatically by role. Executor never self-reviews or publishes. Reviewer is read-only and returns one consolidated findings package. Task contract v2 may pre-authorize 0–2 correction batches upfront; legacy v1/unspecified handoffs retain the existing human authorization gate per batch. When the handoff's authorized correction limit is exhausted, or a finding is disputed, stop and escalate to a human. A changed head invalidates prior CI/review. Only a human merges.
-
-## Code Review Rules
-
-These are the self-contained repository-wide rules for any independent Reviewer. Do not assume `.ai/context.md` or linked `docs/engineering/rules/*` files are loaded automatically; those files remain implementation guidance/navigation, not an implicit review-instruction source.
-
-- Flag auth/session/refresh-token changes that can leak credentials, restore a logged-out
-  session, break refresh ordering, or bypass protected-route behavior.
-- Flag API/wire/domain shape mismatches, unsafe nullable-field assumptions, stale-response
-  application, broken cancellation/concurrency guards, and local patching of canonical
-  backend-owned financial/domain state.
-- Flag money handling that loses decimal precision or coerces decimal wire values with
-  `Number()`/`parseFloat()` instead of preserving the contract and using canonical money
-  helpers at the appropriate boundary.
-- Flag persisted/offline state changes that can corrupt, duplicate, or incorrectly restore
-  state across reload, logout, retry, or reconciliation.
-- Flag React lifecycle/state bugs, routing regressions, CSP/security regressions, and
-  behavior changes that bypass i18n or required accessibility semantics.
-- Require meaningful regression tests for materially changed logic when a practical seam
-  exists. Do not report formatting, import ordering, or other deterministic style checks
-  already enforced by CI unless they cause a concrete correctness problem.
-
-## GitHub task authority
-
-These rules apply only to ChipIn frontend tasks.
-
-- The canonical task identity is `ChipIn-one/<repository>#<issue-number>`.
-- The GitHub Issue title and body are the task specification and dependency record.
-- Organization Issue Fields are canonical structured metadata for `Priority` and applicable `Severity`. Native repository Milestone is the optional concrete release target; missing Milestone is valid.
-- ChipIn Development Project #5 `Status` uses `Backlog`, `Todo`, `In Progress`, `Awaiting release` (written only by the `.github` completion automation), plus `Done` only as a derived mirror of an Issue already `closed/completed`. Native Issue state/reason remains terminal authority; `Done` must not authorize closure or duplicate completion logic.
-- Priority presentation is derived only from the canonical `Priority` field. If that field cannot be read, fail closed; do not substitute Issue labels or title/body encoding.
-- Existing Milestone assignments are human-owned release intent. Do not infer, add, clear, or rename a Milestone from labels/title/body; Milestone membership never authorizes execution or completion.
-- For frontend code work, merge to `master` is integration only. An Issue is completed only when the merge commit of every linked PR is contained in a Vercel production deployment (GitHub Deployment `Production` by `vercel[bot]`, expected to be written when the owner promotes a `master` deployment; verified at cutover step 7 of #497); close as not planned only for cancelled/abandoned work.
-- Never close a frontend code Issue by hand. After its merge to `master` it stays open in `Awaiting release`, and the completion automation (strategy `deployment-receipt`) closes it once the promoted production deployment contains the merge. The repository has no completion caller: the ChipIn-one/.github org sweep (`frontend-production-completion.yml`) runs it for the frontend (registry `capabilities.completion: automatic` since ChipIn-one/.github#217). `.github/workflows/forward-production-deployment.yml` sends the sweep a `repository_dispatch` on each successful `vercel[bot]` Production deployment (#559, needs secret `CHIPIN_COMPLETION_DISPATCH_TOKEN`), so the Issue closes within minutes of the Promote; if that dispatch is missing or fails, the next sweep run on a `.github` push or its GitHub-throttled schedule (observed every ~5–6 hours) closes it. GitHub auto-close of linked Issues is off. Issues without implementation evidence (decisions, research, gates) are still closed by hand. See `docs/engineering/frontend-production-completion-canary.md#issue-lifecycle-after-the-merge-to-master`.
-- Historical Trello links may remain in `References` as read-only provenance/evidence; Trello must not participate in current task state, notifications as authority, admission, planning, or execution authorization.
-- Active agents and workflows must not create or update Trello cards; move Trello cards or lists; update Trello labels, status, or metadata; write comments or activity to Trello; or invoke or maintain Trello task-tracking integrations.
-- There is no bidirectional Trello-to-GitHub or GitHub-to-Trello synchronization.
-- Slack and other notifications are presentation only and must derive meaning from canonical GitHub Issue and Project fields.
-- Issue or Project status never authorizes AI execution; explicit human approval provenance is required.
-- Area ownership is represented by the `Frontend` label.
-- Do not use legacy frontend priority/severity labels `Critical`, `Major`, `Minor`, `Priority`, or `PROD CRIT` for new frontend tasks.
-- Render priority as `P0 -> 🔴`, `P1 -> 🟠`, `P2 -> 🟡`, `P3 -> ⚪`. Emoji is presentation only and is not independent task state.
-- A blocker belongs in `Dependencies`.
-- Canonical descriptions use only the relevant durable subset of `Problem`, `Outcome`, `Acceptance`, `Dependencies`, and `References`.
-- Do not add `[TASK DESCRIPTION]`, generic AGENT INSTRUCTIONS, execution journals, runner state, mutable status/history, raw verification logs, or duplicated labels/status/tracker metadata.
-- A UI-affecting Issue carries 1–3 lines `- [ ] QA: <step> => <expected result>` (see `docs/engineering/release-qa.md`).
-- Durable PR, Issue, documentation, or historical Trello links belong in `References` when useful. Transient CI/execution evidence belongs in the separate authorized publication result or execution record, not in mutable task metadata.
-
-## Git and execution
-
-Generic execution lifecycle and reviewer semantics are defined by the organization canon [`ChipIn-one/.github/docs/workflow/`](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/FLOW.md). Task work targets `master`; release is an owner Promote of an exact `master` deployment in Vercel. Executor implements/validates the authorized scope and stops at `IMPLEMENTATION_COMPLETE` or `BLOCKED`. Trusted publication, independent review, corrections, and release decisions remain outside Executor authority.
-Preserve unrelated work and do not change backend or unrelated architecture.
-
-## GATE — knowledge base
-
-The ChipIn knowledge base (`../chipin-knowledge-base`, github.com/ChipIn-one/chipin-knowledge-base)
-owns the domain language, the behaviour specs and the HTTP contract. This repo owns how they are
-implemented. Do not start a change that touches the domain, the API or user-visible behaviour
-until every item below is done:
-
-1. Read `chipin-knowledge-base/common/glossary.md`. Use its terms in code, DTOs and docs; do not
-   introduce synonyms.
-2. Read `chipin-knowledge-base/common/specs/<capability>.md` for the capability you change.
-   Requirements carry stable ids (`SET-003`). Name tests after them.
-3. If the change alters behaviour or the contract: update the common spec in a linked PR to the
-   knowledge base before or together with this one. A bugfix for behaviour the spec is silent about
-   adds the missing requirement there.
-4. If the change conflicts with an accepted ADR in `chipin-knowledge-base/common/adr/`: stop and ask.
-5. Implementation-only invariants (transactions, locks, state ownership, deviations) go to this
-   repo's `docs/specs/<capability>.md`, referencing the requirement ids, never repeating the rules.
-   Design docs and plans stay in this repo.
-
-If the knowledge base is not checked out next to this repo, clone it there before proceeding:
-`git clone https://github.com/ChipIn-one/chipin-knowledge-base.git ../chipin-knowledge-base`.
 <!-- ai-workflow:agents-routing:start -->
 ChipIn AI routing: start at the organization canon [FLOW.md](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/FLOW.md) and follow its reading order, roles and gates. Its [precedence and availability](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/FLOW.md#precedence-and-availability) rules apply: if the canon cannot be read, stop.
 <!-- ai-workflow:agents-routing:end -->
-## Mandatory ChipIn Issue admission
-
-Before task execution, creating a task branch, publishing/retargeting an implementation PR, or agent handoff, require a fresh `INTAKE_COMPLETE` read-only receipt from `ChipIn-one/.github/automation/issue-admission.mjs` for the exact `ChipIn-one/chipin-frontend#number` and current revision. The native Issue must contain substantive Problem/Outcome/Acceptance, Type, Priority and Bug Severity, **syllik** as an actual GitHub assignee, and exactly one readable Project #5 Status. A raw Issue URL, bridge `QUEUED`, text marker, optional Milestone, stale receipt or a successful local test is not admission. Use the canonical `issue-intake.mjs` writer/bridge to repair newly authorized tasks; never invent or overwrite human classification or bulk-repair historical Issues. Incomplete read-back stops publication. Workflow preflight uses the pinned shared action and `CHIPIN_DEV_READ_TOKEN`; if missing Project/org access, fail closed. A green check is still not execution authority or human merge approval. See [org contract](https://github.com/ChipIn-one/.github/blob/master/automation/issue-intake.md).
