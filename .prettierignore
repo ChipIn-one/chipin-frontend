@@ -1,4 +1,28 @@
-package.json
+# Build output and dependencies
+dist
+dev-dist
+coverage
 node_modules
-LICENSE
 package-lock.json
+
+# Generated files: generators write the final output, checks compare it byte for byte
+**/vercel.json
+**/routing.generated.ts
+packages/tokens/generated/**
+src/shared/api/generated/**
+eslint-suppressions.json
+
+# Static assets, legal texts, standalone builds
+public
+LICENSE
+THIRD_PARTY_NOTICES.txt
+ds-gallery/standalone.html
+
+# Locale JSON is not reformatted
+src/i18n/locales/**
+
+# Synced from ai-workflow: Prettier would fight the sync
+docs/superpowers/**
+AGENTS.md
+CLAUDE.md
+.github/**

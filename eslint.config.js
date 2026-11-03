@@ -1,3 +1,4 @@
+import eslintConfigPrettier from 'eslint-config-prettier/flat';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
@@ -74,15 +75,6 @@ export default tseslint.config(
                         // Style imports
                         ['^.+\\.s?css$'],
                     ],
-                },
-            ],
-
-            'no-multiple-empty-lines': [
-                'warn',
-                {
-                    max: 1,
-                    maxEOF: 0,
-                    maxBOF: 0,
                 },
             ],
 
@@ -248,6 +240,22 @@ export default tseslint.config(
         files: ['src/helpers/localStorage.ts'],
         rules: {
             'no-restricted-globals': 'off',
+        },
+    },
+
+    /* ===============================
+       FORMATTING (keep last)
+       =============================== */
+
+    // Prettier owns formatting: turn off every ESLint rule that conflicts with it.
+    eslintConfigPrettier,
+    {
+        // eslint-config-prettier turns these off; both are safe with Prettier.
+        // `curly: all` never conflicts; `no-unexpected-multiline` is a correctness rule.
+        files: ['**/*.{ts,tsx,js,jsx}'],
+        rules: {
+            curly: ['error', 'all'],
+            'no-unexpected-multiline': 'error',
         },
     },
 );
