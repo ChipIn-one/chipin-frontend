@@ -28,7 +28,7 @@ npm install
 | `npm run preview` | Preview the production build locally |
 | `npm run version:check` | Check that `package.json` and `package-lock.json` versions are valid and equal |
 
-Feature PRs do not change the version; every PR body carries `## Version impact`. Release: see `AGENTS.md`, «Релиз».
+Feature PRs do not change the version; every PR body carries `## Version impact`. Release: see `AGENTS.md`, Release.
 
 During implementation, pass the smallest set of test files that covers the change:
 
