@@ -28,10 +28,10 @@ Do not create artificial tests for documentation, config-only edits, formatting,
 - Test public behavior, not private implementation details.
 - Mock resource API modules and external browser boundaries, not internal functions.
 - Reset Zustand stores, mocks, timers, and DOM between tests.
-- Prefer semantic assertions over snapshots; snapshots are prohibited by default.
+- Prefer semantic assertions over snapshots.
 - Query components by role and accessible name. Do not assert styled-components class names or Radix internals.
 - Use `userEvent.setup()` inside each interaction test; use `fireEvent` only for behavior user-event cannot express.
-- Tests follow repository Promise style and return chains instead of using `async`/`await`.
+- Tests may use `async`/`await` or returned Promise chains; a test never leaves a Promise unawaited.
 
 ```tsx
 test('submits a group', () => {
@@ -69,45 +69,22 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
 - Select tests by the changed behavior: pure helper/selector changes use their co-located tests,
   store/API changes use the owning store/API tests plus directly affected UI tests, and component
   changes use the component test plus the smallest affected integration test.
-- `npm run test:full` runs the complete suite and is used at completion or CI/release checkpoints.
-- Type safety: `npm run typecheck`.
-- Fast local verification: `npm run verify` (quiet lint plus typecheck; it does not run Vitest or build).
-- Full completion gate: `npm run verify:full` (lint, complete Vitest suite, and production build).
-- `npm run build` computes the runtime version through the shared Vite resolver and builds the app;
-  it does not run tests implicitly.
-- `npm run vercel-build` is wired through `vercel.json` and performs deployment-only artifact generation:
-  PWA asset generation followed by the Vite production build. Verification remains the responsibility of
-  `npm run verify:full` / Frontend CI.
-
-## Integration boundary
-
-Generic lifecycle and reviewer definitions belong to the organization canon
-[`ChipIn-one/.github/docs/workflow/`](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/FLOW.md). ChipIn-specific integration policy is:
-
-- `npm run verify:full` is the local completion gate. Executor stops at `IMPLEMENTATION_COMPLETE` after local validation and does not commit, push, or publish.
-- Feature PRs do not change `version` and do not run `npm run version:bump`; the release process owns the version
-  (`DEPLOYMENT.md`, org `docs/workflow/release.md`).
-- `npm run version:check` validates matching SemVer values in `package.json` and `package-lock.json` without writing.
-- Tracked Husky `pre-push` runs `npm run version:check` followed by `npm run verify:full`; a non-zero result blocks the push and the hook is read-only.
-- Runtime labels are `<baseVersion>-dev-<shortTaskHeadSha>` for task/dev/preview builds and `<baseVersion>` for `main` releases.
-  Release labelling moves to tags in ChipIn-one/.github#172; until then every `master` build is labelled `<baseVersion>-dev-<shortTaskHeadSha>`.
-  Pull-request CI receives `github.event.pull_request.head.sha`; push CI receives `github.sha`.
-- Every task PR body has a `## Version impact` section (`none | patch | minor | major`), chosen from product/API meaning.
-- New Issue-backed task branches use the canonical `<type>/issue-<number>-<slug>` pattern. The PR helper does not support historical/noncanonical branch formats.
-- `npm run pr:create` checks the current task branch, performs a cheap
-  `gh auth status`, and creates/updates a PR with explicit `--base master`; it
-  returns only a real `/pull/<number>` URL. It accepts only the canonical Issue-backed branch pattern. This is a Trusted Publisher/human-controlled publication helper, not Executor responsibility.
-- Trusted publication into `master` is separate from Executor execution. Remote
-  `frontend-ci` remains authoritative for post-publication integration readiness.
-- The independent Reviewer role is provider-neutral. After required `frontend-ci` is green for the current PR head, Trusted Publisher/human requests exactly one review for that SHA. Never request review while required CI is pending/failing or duplicate a request for the same SHA. Every changed head invalidates the previous review and repeats the green-CI gate before one fresh review.
-- Reviewer findings remain separate from Executor state and are passed as one consolidated package. A v2 handoff may authorize 0–2 correction batches upfront; those batches do not require another human approval. Legacy v1/unspecified handoffs still require explicit human authorization per correction batch. Exhausted correction authority or disputed findings escalate to a human. Reviewer unavailability may use a different independent reviewer selected by capability/risk, but does not bypass human escalation for disputes or exhausted correction authority. Human performs the merge.
-
-Run targeted checks first. Full verification belongs only at integration/completion checkpoints, not after
-every mechanical edit. Documentation/config-only changes may skip tests when the handoff explains why no
-runtime behavior is affected.
+- `npm run test:full` runs the complete Vitest suite once.
+- `npm run typecheck` runs `tsc -b`.
+- `npm run verify` is the fast local check: quiet lint plus typecheck; it does not run Vitest or build.
+- `npm run verify:full` is the full gate and the same command CI runs: lint, the complete Vitest suite,
+  the production build, and the ds-gallery build. Husky `pre-push` runs `version:check` and `verify:full`.
+- `npm run build` runs `tsc -b`, the Vite production build, and the public precache check; it does not run tests.
+- `npm run vercel-build` (wired through `vercel.json`) is the Vercel deployment build: Vite production
+  build and public precache check, no tests and no icon generation.
+- `npm run version:check` validates matching versions in `package.json` and `package-lock.json` without writing.
 
 ## Legacy Baseline
 
+- New and substantially refactored code follows this rulebook; a narrow edit in legacy code keeps the
+  touched flow consistent with it but does not migrate whole directories or start unrelated cleanup.
+- Warnings from the async/await and `handle*` selectors in `eslint.config.js` are obsolete (D24, D13):
+  ignore them and do not rewrite code to satisfy them; the selectors are removed in 02-C4.
 - Do not fix unrelated existing lint/test failures during a narrow task.
 - Run ESLint on touched files when the full baseline is not green.
 - Do not introduce new violations and report pre-existing failures explicitly.

@@ -2,8 +2,15 @@
 
 ## Money Model
 
-- Frontend money values and API payloads use JavaScript `Number`.
-- Do not introduce cents/integer-money domain models or arbitrary-precision arithmetic for frontend display.
+- Domain money is `Money { minor: bigint; currency }` in ledger units of scale 4 (`85.5` → `855000n`),
+  the same scale the backend uses (D21, spec 03 §4). On the wire money stays a JSON number of scale 4.
+- Conversion between wire and domain happens only at the API boundary: `moneyFromWire`/`moneyToWire` in
+  the `entities/*/model` mappers. Arithmetic runs on `bigint` ledger units; currency minor units are used
+  only for display and input limits.
+- Parsing, rounding, sums, and formatting live only in `src/shared/money/`.
+- Until `src/shared/money/` exists, legacy code keeps its current amounts and the shared helpers in
+  `helpers/numbers.ts` (`parseAmountInput`, `roundHalfUp`, `normalizeApiMoneyAmount`); do not add new money
+  parsing, rounding, or arithmetic anywhere else.
 - Keep the public `Amount` component as the shared display boundary; backend-confirmed values remain the financial source of truth.
 - Backend is the source of confirmed financial results after synchronization.
 - Frontend may validate input, preview splits, convert display summaries, and maintain local pending offline results.
@@ -14,28 +21,30 @@
 
 ## Offline Financial Mutations
 
-- Without network, a mutation may update the local store/table and UI immediately.
+No outbox and no offline writes exist until 03-17 (`AGENTS.md` invariant 5); a task does not build one.
+The rules below apply once it lands.
+
+- Offline expense create/edit/delete goes only through the outbox with a client-generated UUID
+  (`AGENTS.md` invariant 5, spec 03 §2). Settle-up and payments are never offline.
 - Track local lifecycle explicitly, for example `pending`, `syncing`, `synced`, or `failed`.
-- On reconnect, submit queued work and reconcile local values with the backend response.
+- On reconnect, the outbox replays queued work in order and reconciles local values with the backend response.
 - Failed synchronization remains retryable and is not silently marked successful.
-- Repeated synchronization must not duplicate an expense or settlement; use an idempotency identifier when the backend contract supports it.
+- Replay must not duplicate an expense; the client UUID is the idempotency key.
 - A stale backend fetch must not overwrite unsynchronized local changes.
-- Conflict/reconciliation policy is designed explicitly for the feature; do not invent a generic outbox during unrelated work.
 
 ## Amount Input And Validation
 
 - Keep an editable amount as a string and convert it at validation/submit boundaries.
-- Distinguish an empty string from numeric zero.
-- Validate with `Number.isFinite`, sign, and backend constraints.
-- Decimal normalization uses the shared amount parser/input, not duplicated regexes.
+- User input is parsed only by `parseMoneyInput`, wire values only by `moneyFromWire` (spec 03 §4.2);
+  legacy forms use the shared `parseAmountInput` until they migrate. Do not duplicate parsing regexes.
+- Distinguish an empty string from zero.
 - Do not use truthiness to validate numeric values.
 
 ## Calculation And Rounding
 
-- Do not round every intermediate calculation.
-- Round only for display or an explicit backend contract.
-- `toFixed()` returns a display/form string; do not convert it back into a number for continued domain calculation.
-- Centralize any comparison tolerance in a named constant/helper.
+- Do not round intermediate calculations.
+- Rounding is `roundToMinor` (half-up away from zero to the currency minor units), only for display, and
+  only inside `src/shared/money/`.
 - Do not make a financial decision from a visually rounded value.
 - Missing exchange rates return `null`, never a silent zero or fabricated rate.
 - Currency conversion helpers receive rates/base/source/target explicitly and do not read stores.
@@ -49,12 +58,7 @@
 
 ## Dates And Time
 
-- Make timestamp units explicit in type/function names; helpers do not guess seconds versus milliseconds.
 - Store serializable numbers/strings, not `Date` instances.
-- User-facing date/time formatting uses `Intl.DateTimeFormat` with explicit locale and, when meaningful, time zone.
-- Manual date assembly is limited to technical formats such as a native date input.
-- Relative-time logic accepts a `now` value when deterministic tests need it.
-- Keep boolean semantics correct: `hour12` is the inverse of `is24Hour`.
 
 ## Helpers And Constants
 
@@ -69,7 +73,8 @@
 
 - Direct `localStorage` access outside `helpers/localStorage.ts` is prohibited.
 - Every key belongs to the typed `StorageSchema` and project key constants.
-- `JSON.parse(raw) as T` is not validation; persisted objects need a runtime guard.
+- Persisted values are validated on read with a zod schema (a runtime guard until zod is added by spec 03);
+  `JSON.parse(raw) as T` is not validation.
 - Remove invalid/stale values and return a safe fallback.
 - Wrap storage access because reads/writes may throw.
 - Do not call `localStorage.clear()`; remove only known project keys.
