@@ -83,6 +83,8 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
 
 - New and substantially refactored code follows this rulebook; a narrow edit in legacy code keeps the
   touched flow consistent with it but does not migrate whole directories or start unrelated cleanup.
+- Warnings from the async/await and `handle*` selectors in `eslint.config.js` are obsolete (D24, D13):
+  ignore them and do not rewrite code to satisfy them; the selectors are removed in 02-C4.
 - Do not fix unrelated existing lint/test failures during a narrow task.
 - Run ESLint on touched files when the full baseline is not green.
 - Do not introduce new violations and report pre-existing failures explicitly.

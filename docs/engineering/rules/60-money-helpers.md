@@ -21,6 +21,9 @@
 
 ## Offline Financial Mutations
 
+No outbox and no offline writes exist until 03-17 (`AGENTS.md` invariant 5); a task does not build one.
+The rules below apply once it lands.
+
 - Offline expense create/edit/delete goes only through the outbox with a client-generated UUID
   (`AGENTS.md` invariant 5, spec 03 §2). Settle-up and payments are never offline.
 - Track local lifecycle explicitly, for example `pending`, `syncing`, `synced`, or `failed`.

@@ -15,6 +15,7 @@ app composition → pages → features → components → basics
 - `components` are reusable project components without route ownership.
 - `basics` are the lowest reusable UI primitives and cannot import higher UI layers.
 - Stores own shared application/domain state and call resource API modules.
+  (Legacy until the entity is migrated to TanStack Query, spec 03; see §Ownership.)
 - API modules own HTTP contracts and cannot import UI or stores.
 - Helpers are pure unless their module clearly represents a browser boundary.
 - Helpers never import or read Zustand stores, store hooks, or store selectors. Pass every required

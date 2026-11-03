@@ -1,5 +1,10 @@
 # Zustand State Rules
 
+Until the spec 03 PRs land, TanStack Query, the `api()` wrapper, the generated OpenAPI types
+(`src/shared/api/generated/`), and zod do not exist; a task does not install or create them. A new server
+read that would need them before they exist is BLOCKED — ask the owner. Existing server stores keep working
+as described in the legacy notes below, without new server-data fields (`10-architecture.md` §Ownership).
+
 ## Store Choice
 
 - Zustand holds UI state only: modal visibility, drafts, and UI preferences. Server state is TanStack
@@ -43,10 +48,11 @@ type RequestError = {
 - Selector results must be stable; do not create new arrays/objects on every subscription unless shallow comparison is intentional.
 
 ```ts
-const { groups, fetchSetGroups } = useGroupsStore(
+// UI store example.
+const { isOpened, close } = useExpenseModalStore(
     useShallow((state) => ({
-        groups: state.groups,
-        fetchSetGroups: state.fetchSetGroups,
+        isOpened: state.isOpened,
+        close: state.close,
     })),
 );
 ```

@@ -1,6 +1,13 @@
 # API And Data Rules
 
+Until the spec 03 PRs land, TanStack Query, the `api()` wrapper, the generated OpenAPI types
+(`src/shared/api/generated/`), and zod do not exist; a task does not install or create them. A new server
+read that would need them before they exist is BLOCKED — ask the owner. Existing server stores keep working
+as described in the legacy notes below, without new server-data fields (`10-architecture.md` §Ownership).
+
 ## Boundary
+
+The store-action path below is legacy until the entity is migrated to TanStack Query (spec 03).
 
 ```text
 UI → store action → resource API module → Axios instance → backend
@@ -86,7 +93,8 @@ Do not add `Api`, `Store`, `Effect`, or `Action` suffixes merely to distinguish 
 - A mutation failure preserves the last confirmed state. A refresh failure after mutation success does
   not change the mutation result; there is no automatic or toast-level retry.
 - Store mutation actions that are not migrated yet start the required canonical fetch actions in one
-  explicit `Promise.all` after backend success and resolve `void`; refresh failures do not reject them:
+  explicit `Promise.all` after backend success and resolve `void`; they reject when the backend mutation
+  fails, and refresh failures do not reject them:
 
   | Mutation | Canonical fetch actions |
   | --- | --- |
