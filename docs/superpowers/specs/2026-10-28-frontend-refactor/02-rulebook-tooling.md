@@ -32,7 +32,7 @@
 | Правило | Класс | Почему |
 |---|---|---|
 | Prettier (формат) | a | `prettier --write` |
-| `simple-import-sort/imports`, `/exports` | a | `--fix` |
+| `simple-import-sort/imports`, `simple-import-sort/exports` | a | `--fix` |
 | `consistent-type-imports` | a | `--fix` |
 | `no-import-type-side-effects` | a | `--fix` |
 | `no-unnecessary-type-assertion` | a | `--fix` |
@@ -60,6 +60,7 @@
 | `import-x/no-internal-modules` (allow-list) | b | граница слайса |
 | `boundaries/dependencies` | b | граф слоёв (инв. 1) |
 | `no-restricted-imports` (`axios`, runtime `api/` из UI, UI-библиотеки) | b | граница (инв. 2); runtime `shared/api`/`shared/offline` из UI держит `boundaries` (элемент `shared-api`, Д5) |
+| `no-restricted-imports` `lucide-react` only through `<Name>Icon` exports (02-C4: existing rule recorded in the registry) | b | one import surface for the icon library (spec 05: icons are lucide) |
 | `no-restricted-globals` (`localStorage`, `sessionStorage`) | b | граница `helpers/localStorage.ts` (инв. 12) |
 | `no-restricted-syntax` `ExportAllDeclaration` | b | граница barrel'а (D11) |
 | `no-restricted-syntax` `<img>`/`styled.img` | b | граница: только `basics/Image` |
@@ -451,8 +452,8 @@ eslint-suppressions.json  // в корне: нативные suppressions ESLint
 ```json
 "build": "tsc -b && vite build && npm run verify:public-precache",
 "vercel-build": "vite build && npm run verify:public-precache",
-"lint": "eslint . --max-warnings 0 && node scripts/check-rule-registry.mjs",
-"lint:full": "CHIPIN_ESLINT_FULL=1 eslint . --max-warnings 0 && node scripts/check-rule-registry.mjs",
+"lint": "node scripts/check-rule-registry.mjs && eslint . --max-warnings 0",
+"lint:full": "node scripts/check-rule-registry.mjs && CHIPIN_ESLINT_FULL=1 eslint . --max-warnings 0",
 "format": "prettier --write .",
 "format:check": "prettier --check .",
 "fix": "prettier --write . && eslint . --fix",
@@ -464,6 +465,8 @@ eslint-suppressions.json  // в корне: нативные suppressions ESLint
 "icons:generate": "pwa-assets-generator",
 "version:check": "node scripts/version-check.mjs"
 ```
+
+Note: the rule registry check runs first and resolves the config in both modes (default and `CHIPIN_ESLINT_FULL=1`) itself. Stylelint registry coverage comes with spec 05.
 
 Удаляются `test:run` (дубль `test:full`) и `create-pwa-icons` (переименован в `icons:generate`). `test` (watch) остаётся. `prerender:public` не трогаем — его удаляет спека 04.
 

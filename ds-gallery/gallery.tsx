@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components -- dev-only design-system gallery entry, never shipped in the app bundle */
 import { type ReactNode, useEffect, useState } from 'react';
 import {
     Badge,

@@ -61,9 +61,15 @@ jobs:
           fi
 
           echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "base_sha=$BASE_SHA" >> "$GITHUB_OUTPUT"
       - name: Install dependencies
         if: steps.gate.outputs.mode == 'full'
         run: npm ci
+      - name: Check lint baseline does not grow
+        if: github.event_name == 'pull_request' && steps.gate.outputs.mode == 'full'
+        env:
+          BASE_SHA: ${{ steps.gate.outputs.base_sha }}
+        run: node scripts/check-baseline.mjs --base "$BASE_SHA"
       - name: Verify frontend
         if: steps.gate.outputs.mode == 'full'
         # Step timeout (not only the job's) so a hang counts as a failure and notifies #chipin-ci.
