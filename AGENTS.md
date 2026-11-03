@@ -27,7 +27,7 @@ Invariants 1–6 and 9 describe the target state of specs 03/04 (the `app`, `ent
 
 - `npm run test:task -- <test paths>` — targeted tests; refuses to run without a path.
 - `npx eslint --fix <files>` — ESLint auto-fixes in changed files only.
-- `npx prettier --write <files>` — Prettier formatting for changed files only; do not run `npm run format` in a task (it rewrites the whole repo).
+- `npx prettier --write <files>` — until 02-C2 lands, only on new files or files that already pass `npx prettier --check`; never `npm run format` in a task.
 - `npm run verify` — fast lint (`--quiet`: shows only errors, warnings do not fail) and typecheck.
 - `npm run verify:full` — the full gate: lint, all tests, build, ds-gallery; CI runs the same. Run before `IMPLEMENTATION_COMPLETE`.
 - `npm run typecheck` — `tsc -b`.

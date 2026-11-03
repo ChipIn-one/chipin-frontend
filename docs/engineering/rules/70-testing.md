@@ -71,9 +71,10 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
   changes use the component test plus the smallest affected integration test.
 - `npm run test:full` runs the complete Vitest suite once.
 - `npm run typecheck` runs `tsc -b`.
-- `npm run format` rewrites the repository with Prettier (`prettier.config.js`); in a task, format only
-  changed files with `npx prettier --write <files>`. `npm run format:check` checks without writing and is
-  not yet part of `verify`, `verify:full`, or CI.
+- `npm run format` rewrites the repository with Prettier (`prettier.config.js`); never run it in a task.
+  Until 02-C2 lands, run `npx prettier --write <files>` only on new files or files that already pass
+  `npx prettier --check`. `npm run format:check` checks without writing and is not yet part of `verify`,
+  `verify:full`, or CI.
 - `npm run verify` is the fast local check: quiet lint plus typecheck; it does not run Vitest or build.
 - `npm run verify:full` is the full gate and the same command CI runs: lint, the complete Vitest suite,
   the production build, and the ds-gallery build. Husky `pre-push` runs `version:check` and `verify:full`.
