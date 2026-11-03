@@ -47,13 +47,27 @@ describe('check-baseline growth', () => {
         ).toHaveLength(1);
     });
 
-    test('passes suppressions of a rule that gets a new selector id in this change', () => {
+    test('fails when a junk id is added for an already registered rule', () => {
         expect(
             findBaselineGrowth({
                 base: {},
-                head: { 'src/b.ts': { 'no-restricted-syntax': entry(1) } },
-                baseRegistry: { 'no-restricted-syntax#a': 'b' },
-                headRegistry: { 'no-restricted-syntax#a': 'b', 'no-restricted-syntax#b': 'b' },
+                head: { 'src/ui/a.tsx': { 'no-restricted-imports': entry(1) } },
+                baseRegistry: { 'no-restricted-imports#axios-in-ui': 'b' },
+                headRegistry: {
+                    'no-restricted-imports#axios-in-ui': 'b',
+                    'no-restricted-imports#junk': 'b',
+                },
+            }),
+        ).toHaveLength(1);
+    });
+
+    test('passes suppressions of a selector rule registered for the first time', () => {
+        expect(
+            findBaselineGrowth({
+                base: {},
+                head: { 'src/a.ts': { 'no-restricted-syntax': entry(29) } },
+                baseRegistry: registry,
+                headRegistry: { ...registry, 'no-restricted-syntax#money-number': 'b' },
             }),
         ).toEqual([]);
     });
@@ -97,6 +111,17 @@ describe('check-baseline base resolution', () => {
             exit: 0,
             message: expect.stringContaining('::notice::'),
         });
+    });
+
+    test('main exits 1 on a well-formed SHA that is not an available commit', () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+
+        expect(
+            main(['--base', `${'0'.repeat(39)}1`], {
+                CI: 'true',
+                GITHUB_EVENT_NAME: 'pull_request',
+            }),
+        ).toBe(1);
     });
 
     test('main exits 1 on an empty base in a CI pull_request', () => {

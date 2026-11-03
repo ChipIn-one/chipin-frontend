@@ -75,7 +75,8 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
   Run `npx prettier --write <files>` on the files you changed. `npm run format:check` checks without
   writing; `verify`, `verify:full`, and CI run it, so CI enforces formatting.
 - `npm run lint` runs ESLint with `--max-warnings 0` and the rule registry check; `npm run lint:full`
-  is the same in full mode (`CHIPIN_ESLINT_FULL=1`, for CI-only rules).
+  is the same in full mode (`CHIPIN_ESLINT_FULL=1`, for CI-only rules; there are none yet,
+  `import-x/no-cycle` arrives in 02-C9). Extra arguments go to ESLint: `npm run lint -- <args>`.
 - `npm run baseline:update` prunes fixed entries from `eslint-suppressions.json`; it never adds entries.
 - `npm run verify` is the fast local check: format check, lint, and typecheck; it does not run
   Vitest or build.
@@ -96,12 +97,13 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
   `--max-warnings 0` only as a guard against an accidental `warn`. Each enabled rule is registered
   in `config/eslint/rule-classes.json` as class a (auto-fixable) or b (correctness or boundary);
   `scripts/check-rule-registry.mjs` (part of `npm run lint`) fails on a missing entry, a class c rule,
-  or a `warn` level.
+  a `warn` level, or a registry key that matches no enabled rule or entry id.
 - Known violations live in `eslint-suppressions.json` (native ESLint bulk suppressions): a count per
   file and rule. More violations than recorded fail lint; the file only shrinks.
   `npm run baseline:update` (`eslint . --prune-suppressions`) removes entries that no longer fire.
-- Entries are added only by the PR that enables the rule (`npx eslint . --suppress-rule <rule>`) and
-  registers it in `rule-classes.json`; CI `scripts/check-baseline.mjs` fails on any other new entry
-  or higher count.
+- Entries are added only by the PR that registers the rule in `rule-classes.json` for the first time
+  (no `<rule>` or `<rule>#<id>` key at base) and runs `npx eslint . --suppress-rule <rule>`; CI
+  `scripts/check-baseline.mjs` fails on any other new entry or higher count. A new `#id` of a rule
+  that is already registered does not allow suppressions: fix its violations in the same PR.
 - Do not fix unrelated existing lint/test failures during a narrow task, and do not add
   suppressions or `eslint-disable` comments to make a new violation pass.

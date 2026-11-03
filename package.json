@@ -6,8 +6,8 @@
     "scripts": {
         "dev": "vite",
         "build": "tsc -b && vite build && npm run verify:public-precache",
-        "lint": "eslint . --max-warnings 0 && node scripts/check-rule-registry.mjs",
-        "lint:full": "CHIPIN_ESLINT_FULL=1 eslint . --max-warnings 0 && node scripts/check-rule-registry.mjs",
+        "lint": "node scripts/check-rule-registry.mjs && eslint . --max-warnings 0",
+        "lint:full": "node scripts/check-rule-registry.mjs && CHIPIN_ESLINT_FULL=1 eslint . --max-warnings 0",
         "baseline:update": "eslint . --prune-suppressions",
         "format": "prettier --write .",
         "format:check": "prettier --check .",

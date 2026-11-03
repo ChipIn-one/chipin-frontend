@@ -1,7 +1,7 @@
 // Ratchet for the lint/type baselines (spec 02 §D0, §D7): compares the baseline files with their
 // version at the base commit (`git show <base>:<file>`). A new file x rule key or a higher count
-// fails, except for rules that get a new key in config/eslint/rule-classes.json in this change (an
-// "enable rule + --suppress-rule" PR).
+// fails, except for rules that config/eslint/rule-classes.json registers for the first time in this
+// change (an "enable rule + --suppress-rule" PR).
 //
 // Usage: node scripts/check-baseline.mjs [--base <sha>]
 // Without --base it compares with `git merge-base HEAD origin/master` locally. With CI=true a
@@ -20,21 +20,28 @@ export const REGISTRY_PATH = 'config/eslint/rule-classes.json';
 
 const SHA = /^(?!0{40}$)[0-9a-f]{40}$/i;
 
-// Rules with a registry key (`<rule>` or `<rule>#<id>`) that the base does not have: a PR that
-// enables a rule or adds a selector id may add suppressions for that rule.
-const addedRules = (baseRegistry, headRegistry) =>
-    new Set(
+const ruleOf = key => key.split('#')[0];
+
+// Rules registered for the first time in this change: the head registry has a key for the rule
+// (`<rule>` or `<rule>#<id>`) and the base registry has no key of any form for it. Only such a
+// PR (enable a rule + `--suppress-rule`) may add suppressions; a new `#id` of a rule that is
+// already registered does not open the ratchet.
+const firstTimeRules = (baseRegistry, headRegistry) => {
+    const baseRules = new Set(Object.keys(baseRegistry).map(ruleOf));
+
+    return new Set(
         Object.keys(headRegistry)
-            .filter(key => !(key in baseRegistry))
-            .map(key => key.split('#')[0]),
+            .map(ruleOf)
+            .filter(rule => !baseRules.has(rule)),
     );
+};
 
 /**
  * @param {{ base: object, head: object, baseRegistry: object, headRegistry: object, file?: string }} input
  * @returns {string[]} errors
  */
 export const findBaselineGrowth = ({ base, head, baseRegistry, headRegistry, file = '' }) => {
-    const newRules = addedRules(baseRegistry, headRegistry);
+    const newRules = firstTimeRules(baseRegistry, headRegistry);
     const errors = [];
 
     for (const [path, rules] of Object.entries(head)) {
@@ -56,6 +63,15 @@ const git = args =>
         encoding: 'utf8',
         stdio: ['ignore', 'pipe', 'pipe'],
     }).trim();
+
+const commitExists = ref => {
+    try {
+        git(['cat-file', '-e', `${ref}^{commit}`]);
+        return true;
+    } catch {
+        return false;
+    }
+};
 
 const readAtBase = (base, path) => {
     try {
@@ -111,6 +127,12 @@ export const main = (argv = process.argv.slice(2), env = process.env) => {
     if (!base) {
         (exit === 0 ? console.log : console.error)(message);
         return exit;
+    }
+    // A missing file at base reads as an empty baseline, so the base commit itself must exist:
+    // `git show <unknown full SHA>:<file>` reports the file as missing instead of the commit.
+    if (!commitExists(base)) {
+        console.error(`check-baseline: base commit "${base}" is not available (fetch it first)`);
+        return 1;
     }
 
     const baseRegistry = readAtBase(base, REGISTRY_PATH);

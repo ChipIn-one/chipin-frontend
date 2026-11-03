@@ -31,8 +31,31 @@ describe('check-rule-registry', () => {
     });
 
     test('fails on class c and on the warn level', () => {
-        expect(check({ 'no-nested-ternary': 'c' }, {})).toHaveLength(1);
+        expect(check({ 'no-nested-ternary': 'c' }, { 'no-nested-ternary': 'error' })).toEqual([
+            'no-nested-ternary: class "c" is not allowed (only a or b; class c is deleted)',
+        ]);
         expect(check({ 'no-debugger': 'b' }, { 'no-debugger': 'warn' })).toHaveLength(1);
+    });
+
+    test('checks every enabled rule of every config block, not only the samples', () => {
+        const blocks = [{ name: 'scripts', rules: { 'no-alert': 'warn', 'no-debugger': 2 } }];
+
+        expect(check({ 'no-alert': 'b' }, {}, blocks)).toEqual([
+            'no-alert is "warn" in block scripts: use error or off',
+            `no-debugger (block scripts) has no entry in ${REGISTRY_PATH}`,
+        ]);
+    });
+
+    test('fails on registry keys that match no enabled rule or entry id', () => {
+        expect(check({ curly: 'a', 'no-restricted-imports#junk': 'b' }, { curly: 2 })).toEqual([
+            `no-restricted-imports#junk in ${REGISTRY_PATH} matches no enabled rule or entry id`,
+        ]);
+    });
+
+    test('fails when a sample file gets no config', () => {
+        expect(
+            checkRegistry({ registry: {}, resolved: [{ file: 'src/gone.tsx' }], blocks: [] }),
+        ).toEqual(['sample file src/gone.tsx is missing, ignored or gets no ESLint config']);
     });
 
     test('registers restricted-syntax/imports entries by their [id] message prefix', () => {

@@ -3,7 +3,7 @@
 // `b` (correctness or boundary). Class c rules are not allowed in the config, and there is no
 // `warn` level. Entries of `no-restricted-syntax`/`no-restricted-imports` are registered by the
 // `[id]` prefix of their message.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -50,13 +50,16 @@ export const entryMessages = (ruleName, value) => {
 };
 
 /**
- * @param {{ registry: Record<string, string>, resolved: Array<{ file: string, rules: object }>, blocks: object[] }} input
- *   `resolved`: effective rules per sample file; `blocks`: raw config blocks (all scopes).
+ * @param {{ registry: Record<string, string>, resolved: Array<{ file: string, rules?: object }>, blocks: object[] }} input
+ *   `resolved`: effective rules per sample file (undefined when the file has no config);
+ *   `blocks`: every raw config block, so rules and entries scoped to any file are covered.
  * @returns {string[]} errors
  */
 export const checkRegistry = ({ registry, resolved, blocks }) => {
     const errors = new Set();
+    const used = new Set();
     const requireEntry = (key, where) => {
+        used.add(key);
         if (!(key in registry)) {
             errors.add(`${key} (${where}) has no entry in ${REGISTRY_PATH}`);
         }
@@ -68,40 +71,45 @@ export const checkRegistry = ({ registry, resolved, blocks }) => {
         }
     }
 
-    const checkIds = (ruleName, value, where) => {
-        for (const message of entryMessages(ruleName, value)) {
-            const id = message?.match(ID_PREFIX)?.[1];
+    const checkRules = (rules, where) => {
+        for (const [ruleName, value] of Object.entries(rules)) {
+            if (!isEnabled(value)) {
+                continue;
+            }
+            if (isWarn(value)) {
+                errors.add(`${ruleName} is "warn" in ${where}: use error or off`);
+            }
+            if (!ID_RULES.has(ruleName)) {
+                requireEntry(ruleName, where);
+                continue;
+            }
+            for (const message of entryMessages(ruleName, value)) {
+                const id = message?.match(ID_PREFIX)?.[1];
 
-            if (!id) {
-                errors.add(`${ruleName} entry without an [id] message prefix (${where})`);
-            } else {
-                requireEntry(`${ruleName}#${id}`, where);
+                if (!id) {
+                    errors.add(`${ruleName} entry without an [id] message prefix (${where})`);
+                } else {
+                    requireEntry(`${ruleName}#${id}`, where);
+                }
             }
         }
     };
 
     for (const { file, rules } of resolved) {
-        for (const [ruleName, value] of Object.entries(rules ?? {})) {
-            if (!isEnabled(value)) {
-                continue;
-            }
-            if (isWarn(value)) {
-                errors.add(`${ruleName} is "warn" in ${file}: use error or off`);
-            }
-            if (ID_RULES.has(ruleName)) {
-                checkIds(ruleName, value, file);
-            } else {
-                requireEntry(ruleName, file);
-            }
+        if (!rules) {
+            errors.add(`sample file ${file} is missing, ignored or gets no ESLint config`);
+        } else {
+            checkRules(rules, file);
         }
     }
-
-    // Restricted-syntax/imports entries may be scoped to files the samples do not cover.
     for (const block of blocks) {
-        for (const [ruleName, value] of Object.entries(block.rules ?? {})) {
-            if (ID_RULES.has(ruleName) && isEnabled(value)) {
-                checkIds(ruleName, value, `block ${block.name ?? '(unnamed)'}`);
-            }
+        checkRules(block.rules ?? {}, `block ${block.name ?? '(unnamed)'}`);
+    }
+
+    // No dead or junk keys: every key is an enabled rule or a restricted-entry id.
+    for (const key of Object.keys(registry)) {
+        if (!used.has(key)) {
+            errors.add(`${key} in ${REGISTRY_PATH} matches no enabled rule or entry id`);
         }
     }
 
@@ -112,10 +120,16 @@ export const main = async () => {
     const registry = JSON.parse(readFileSync(resolve(repoRoot, REGISTRY_PATH), 'utf8'));
     const eslint = new ESLint({ cwd: repoRoot });
     const resolved = await Promise.all(
-        SAMPLE_FILES.map(async file => ({
-            file,
-            rules: (await eslint.calculateConfigForFile(resolve(repoRoot, file)))?.rules,
-        })),
+        SAMPLE_FILES.map(async file => {
+            const path = resolve(repoRoot, file);
+
+            return {
+                file,
+                rules: existsSync(path)
+                    ? (await eslint.calculateConfigForFile(path))?.rules
+                    : undefined,
+            };
+        }),
     );
     const { default: blocks } = await import(pathToFileURL(resolve(repoRoot, 'eslint.config.js')));
 
