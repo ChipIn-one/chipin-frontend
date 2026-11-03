@@ -11,6 +11,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { ESLint } from 'eslint';
 
+import { PENDING_IDS } from '../config/eslint/project.js';
+
 const repoRoot = resolve(import.meta.dirname, '..');
 
 export const REGISTRY_PATH = 'config/eslint/rule-classes.json';
@@ -55,8 +57,9 @@ export const entryMessages = (ruleName, value) => {
 /**
  * @param {{ registry: Record<string, string>, resolved: Array<{ file: string, rules?: object }>, blocks: unknown[], samples?: string[] }} input
  *   `resolved`: effective rules of every linted file (undefined when a file has no config);
- *   `blocks`: raw config blocks, scanned only for restricted-entry ids (entries may be scoped to
- *   files that do not exist yet); `samples`: files that must get a config.
+ *   `blocks`: raw config blocks `{ name?, rules, pending? }`, scanned only for restricted-entry
+ *   ids; `pending` lists ids marked `pending: true` (scoped to files that do not exist yet);
+ *   `samples`: files that must get a config.
  * @returns {string[]} errors
  */
 export const checkRegistry = ({ registry, resolved, blocks, samples = [] }) => {
@@ -111,22 +114,28 @@ export const checkRegistry = ({ registry, resolved, blocks, samples = [] }) => {
         }
     }
 
-    // Restricted entries may be scoped to files that do not exist yet (e.g. `src/money/**`): every
-    // entry of a raw block must be registered and counts as effective even if no file matches it.
+    // Every restricted entry of a raw block must be registered, even if no linted file matches it.
+    // Only an entry marked `pending: true` (scoped to files that do not exist yet, e.g.
+    // `src/money/**`) also counts as effective without a matching file.
     for (const block of blocks.flat(Infinity)) {
         for (const [ruleName, value] of Object.entries(block?.rules ?? {})) {
             if (ID_RULES.has(ruleName) && isEnabled(value)) {
                 const where = `block ${block.name ?? '(unnamed)'}`;
 
+                if (isWarn(value)) {
+                    errors.add(`${ruleName} is "warn" in ${where}: use error or off`);
+                }
                 for (const key of entryIds(ruleName, value, where)) {
-                    effective.add(key);
+                    if ((block.pending ?? []).includes(key.split('#')[1])) {
+                        effective.add(key);
+                    }
                     requireEntry(key, where);
                 }
             }
         }
     }
 
-    // No dead or junk keys: every key is effective on a linted file or is a raw-block entry id.
+    // No dead or junk keys: every key is effective on a linted file or is a pending entry id.
     for (const key of Object.keys(registry)) {
         if (!effective.has(key)) {
             errors.add(`${key} in ${REGISTRY_PATH} is not effective on any linted file`);
@@ -169,12 +178,22 @@ export const resolveLintedFiles = async eslint => {
 // config modules read the env once, at import time.
 export const LINT_MODES = [{}, { CHIPIN_ESLINT_FULL: '1' }];
 
+// The child gets the caller's env without the mode flag and without test-runner variables
+// (NODE_ENV, VITEST*), so it resolves the config exactly as `npm run lint` does.
 export const modeEnv = (mode, base = process.env) => {
-    const env = { ...base };
+    const env = Object.fromEntries(
+        Object.entries(base).filter(
+            ([name]) =>
+                !['CHIPIN_ESLINT_FULL', 'NODE_ENV'].includes(name) && !name.startsWith('VITEST'),
+        ),
+    );
 
-    delete env.CHIPIN_ESLINT_FULL;
     return { ...env, ...mode };
 };
+
+// The child prints its JSON after this marker, so output of config modules does not break parsing.
+export const RESULT_MARKER = '\n@@check-rule-registry:result@@\n';
+const SELF = fileURLToPath(import.meta.url);
 
 /** Effective rules and restricted-entry blocks of the config in the current process env. */
 const resolveCurrentMode = async () => {
@@ -186,24 +205,38 @@ const resolveCurrentMode = async () => {
         rules: Object.fromEntries(
             Object.entries(block?.rules ?? {}).filter(([ruleName]) => ID_RULES.has(ruleName)),
         ),
+        pending: block?.[PENDING_IDS] ?? [],
     }));
 
     return { resolved, blocks };
 };
 
-const resolveMode = async mode => {
-    const { stdout } = await promisify(execFile)(
-        process.execPath,
-        [fileURLToPath(import.meta.url), '--resolve'],
-        { cwd: repoRoot, env: modeEnv(mode), encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 },
-    );
+/** Runs `script --resolve` (this file by default) in the env of `mode` and parses its result. */
+export const resolveMode = async (mode, script = SELF) => {
+    const { stdout } = await promisify(execFile)(process.execPath, [script, '--resolve'], {
+        cwd: repoRoot,
+        env: modeEnv(mode),
+        encoding: 'utf8',
+        maxBuffer: 256 * 1024 * 1024,
+    });
+    const start = stdout.lastIndexOf(RESULT_MARKER);
 
-    return JSON.parse(stdout);
+    try {
+        if (start < 0) {
+            throw new Error('result marker not found');
+        }
+        return JSON.parse(stdout.slice(start + RESULT_MARKER.length));
+    } catch (error) {
+        throw new Error(
+            `Cannot read the rule resolution for mode ${JSON.stringify(mode)}: ${error.message}; ` +
+                `stdout starts with: ${JSON.stringify(stdout.slice(0, 200))}`,
+        );
+    }
 };
 
 /** Union of every lint mode: `resolved` and `blocks` of all modes, concatenated. */
 export const collectModes = async (load = resolveMode) => {
-    const results = await Promise.all(LINT_MODES.map(load));
+    const results = await Promise.all(LINT_MODES.map(mode => load(mode)));
 
     return {
         resolved: results.flatMap(result => result.resolved),
@@ -221,7 +254,7 @@ export const main = async () => {
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
     // `--resolve` is the per-mode child of `resolveMode`; it prints JSON and lets stdout drain.
     if (process.argv[2] === '--resolve') {
-        process.stdout.write(JSON.stringify(await resolveCurrentMode()));
+        process.stdout.write(RESULT_MARKER + JSON.stringify(await resolveCurrentMode()));
     } else {
         const errors = await main();
 

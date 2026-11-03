@@ -452,8 +452,8 @@ eslint-suppressions.json  // в корне: нативные suppressions ESLint
 ```json
 "build": "tsc -b && vite build && npm run verify:public-precache",
 "vercel-build": "vite build && npm run verify:public-precache",
-"lint": "eslint . --max-warnings 0 && node scripts/check-rule-registry.mjs",
-"lint:full": "CHIPIN_ESLINT_FULL=1 eslint . --max-warnings 0 && node scripts/check-rule-registry.mjs",
+"lint": "node scripts/check-rule-registry.mjs && eslint . --max-warnings 0",
+"lint:full": "node scripts/check-rule-registry.mjs && CHIPIN_ESLINT_FULL=1 eslint . --max-warnings 0",
 "format": "prettier --write .",
 "format:check": "prettier --check .",
 "fix": "prettier --write . && eslint . --fix",
@@ -465,6 +465,8 @@ eslint-suppressions.json  // в корне: нативные suppressions ESLint
 "icons:generate": "pwa-assets-generator",
 "version:check": "node scripts/version-check.mjs"
 ```
+
+Note: the rule registry check runs first and resolves the config in both modes (default and `CHIPIN_ESLINT_FULL=1`) itself. Stylelint registry coverage comes with spec 05.
 
 Удаляются `test:run` (дубль `test:full`) и `create-pwa-icons` (переименован в `icons:generate`). `test` (watch) остаётся. `prerender:public` не трогаем — его удаляет спека 04.
 

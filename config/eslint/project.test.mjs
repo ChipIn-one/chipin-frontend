@@ -1,7 +1,7 @@
 import { ESLint } from 'eslint';
 import { describe, expect, test } from 'vitest';
 
-import { restrictedImports, restrictedSyntax } from './project.js';
+import { PENDING_IDS, restrictedImports, restrictedSyntax } from './project.js';
 
 const resolvedIds = async (config, file, rule) => {
     const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
@@ -64,5 +64,25 @@ describe('restrictedImports()', () => {
         ['src/store/a.ts', ['axios']],
     ])('%s gets exactly the entries that apply to it', async (file, ids) => {
         expect(await resolvedIds(config, file, 'no-restricted-imports')).toEqual(ids);
+    });
+});
+
+describe('pending entries', () => {
+    test('list the ids marked pending on every block where the entry is active', () => {
+        const blocks = restrictedSyntax([
+            { id: 'everywhere', selector: 'WithStatement', message: 'Remove it.' },
+            {
+                id: 'money',
+                selector: 'X',
+                message: 'Use money.',
+                files: ['src/money/**'],
+                pending: true,
+            },
+        ]);
+
+        expect(blocks.map(block => [block.name, block[PENDING_IDS]])).toEqual([
+            ['chipin/no-restricted-syntax/all', []],
+            ['chipin/no-restricted-syntax/src/money/**', ['money']],
+        ]);
     });
 });
