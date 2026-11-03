@@ -224,9 +224,7 @@ test('explains that balances moved because a member left the group', () => {
 
     render(<ActivityEvent event={event} />);
 
-    expect(
-        screen.getByText('event.expenseTransferLeaveDescription'),
-    ).toBeTruthy();
+    expect(screen.getByText('event.expenseTransferLeaveDescription')).toBeTruthy();
 });
 
 test('renders member kicked activity', () => {

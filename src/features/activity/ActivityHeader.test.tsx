@@ -16,11 +16,7 @@ test('removes the settings action and keeps activity filters interactive', () =>
 
     render(
         <Theme>
-            <ActivityHeader
-                isLoading={false}
-                activeFilter="all"
-                onFilterChange={onFilterChange}
-            />
+            <ActivityHeader isLoading={false} activeFilter="all" onFilterChange={onFilterChange} />
         </Theme>,
     );
 

@@ -107,22 +107,18 @@ const useConnect = () => {
             error: userSelfError !== null,
         },
     ];
-    const isOnboardingDataSettled = resources.every(
-        ({ fetched, snapshot }) => fetched || snapshot,
-    );
+    const isOnboardingDataSettled = resources.every(({ fetched, snapshot }) => fetched || snapshot);
     const hasOnboardingDataError =
-        currentUser === null ||
-        resources.some(({ error, snapshot }) => error && !snapshot);
+        currentUser === null || resources.some(({ error, snapshot }) => error && !snapshot);
     const hasNonBlockingRefreshError =
-        ratesError !== null ||
-        resources.some(({ error, snapshot }) => error && snapshot);
+        ratesError !== null || resources.some(({ error, snapshot }) => error && snapshot);
     const dashboardView = !isOnboardingDataSettled
         ? 'loading'
         : hasOnboardingDataError
-            ? 'error'
-            : hasConnections
-                ? 'dashboard'
-                : 'welcome';
+          ? 'error'
+          : hasConnections
+            ? 'dashboard'
+            : 'welcome';
     const onRetryLoad = () => {
         Promise.all([
             useDashboardStore.getState().fetchSetDashboardData(),
@@ -143,10 +139,7 @@ const useConnect = () => {
         isDashboardFetched: isDashboardFetched || hasConfirmedDashboardData,
         isDashboardLoading: isDashboardLoading && !hasConfirmedDashboardData,
         hasNonBlockingRefreshError,
-        isEndOfFeed:
-            !isNextPageLoading &&
-            !hasMoreActivity &&
-            activityItems.length > 0,
+        isEndOfFeed: !isNextPageLoading && !hasMoreActivity && activityItems.length > 0,
         isGroupListFetched: isGroupListFetched || hasConfirmedGroups,
         isNextPageError: nextPageError !== null,
         isNextPageLoading,

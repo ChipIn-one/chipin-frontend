@@ -24,15 +24,8 @@ interface Props {
 const EventSettlement = ({ event }: Props) => {
     const { t } = useTranslation('activity');
     const user = useUsersStore(state => state.user);
-    const {
-        amount,
-        currency,
-        fromDisplayName,
-        groupId,
-        groupName,
-        payerId,
-        toDisplayName,
-    } = event.metadata;
+    const { amount, currency, fromDisplayName, groupId, groupName, payerId, toDisplayName } =
+        event.metadata;
     const isReversed = event.action === ACTIVITY_ACTIONS.SETTLEMENT_REVERSED;
     const isCurrentUserPayer = user?.id === payerId;
 
@@ -54,21 +47,11 @@ const EventSettlement = ({ event }: Props) => {
                             toDisplayName={toDisplayName}
                             isReversed={isReversed}
                         />
-                        <AmountText
-                            color="gray"
-                            size="2"
-                            $isReversed={isReversed}
-                        >
+                        <AmountText color="gray" size="2" $isReversed={isReversed}>
                             {t('event.paidAmount', {
-                                payer: isCurrentUserPayer
-                                    ? t('event.you')
-                                    : fromDisplayName,
+                                payer: isCurrentUserPayer ? t('event.you') : fromDisplayName,
                             })}{' '}
-                            <Amount
-                                value={amount}
-                                tokenCode={currency}
-                                type="summary"
-                            />
+                            <Amount value={amount} tokenCode={currency} type="summary" />
                         </AmountText>
                         {isReversed ? (
                             <Text size="2" color="gray">
@@ -80,17 +63,8 @@ const EventSettlement = ({ event }: Props) => {
                     </Flex>
                 </Flex>
 
-                <Flex
-                    direction="column"
-                    align="end"
-                    gap="1"
-                    flexShrink="0"
-                    maxWidth="50%"
-                >
-                    <LedgerScopeBadge
-                        groupId={groupId ?? null}
-                        groupName={groupName ?? null}
-                    />
+                <Flex direction="column" align="end" gap="1" flexShrink="0" maxWidth="50%">
+                    <LedgerScopeBadge groupId={groupId ?? null} groupName={groupName ?? null} />
                 </Flex>
             </Flex>
         </Card>

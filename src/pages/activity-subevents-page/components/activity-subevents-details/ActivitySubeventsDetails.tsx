@@ -37,10 +37,7 @@ interface Props {
 type ExpenseActivityEvent = Extract<
     AppEvent,
     {
-        action:
-            | ExpenseCreatedAction
-            | ExpenseUpdatedAction
-            | ExpenseReversedAction;
+        action: ExpenseCreatedAction | ExpenseUpdatedAction | ExpenseReversedAction;
     }
 >;
 
@@ -105,12 +102,11 @@ const ActivitySubeventsDetails = ({ view, isLoading }: Props) => {
     const locale = i18n?.language ?? 'en';
     const createdAt = formatActivityAbsoluteDate(originalEvent.createdAt, locale);
     const metadata = currentEvent.metadata;
-    const groupId = metadata && 'groupId' in metadata
-        ? metadata.groupId ?? originalEvent.groupId ?? null
-        : originalEvent.groupId ?? null;
-    const groupName = metadata && 'groupName' in metadata
-        ? metadata.groupName ?? null
-        : null;
+    const groupId =
+        metadata && 'groupId' in metadata
+            ? (metadata.groupId ?? originalEvent.groupId ?? null)
+            : (originalEvent.groupId ?? null);
+    const groupName = metadata && 'groupName' in metadata ? (metadata.groupName ?? null) : null;
 
     const detailsContent = expenseEvent ? (
         <Flex direction="column" gap="3">
@@ -165,7 +161,9 @@ const ActivitySubeventsDetails = ({ view, isLoading }: Props) => {
                             {t('subeventsSubcategory')}
                         </DetailLabel>
                         <Text size="2">
-                            {t(`group:expenses.modal.subcategories.${expenseEvent.metadata.subcategory}`)}
+                            {t(
+                                `group:expenses.modal.subcategories.${expenseEvent.metadata.subcategory}`,
+                            )}
                         </Text>
                     </DetailRow>
                 ) : null}
@@ -281,7 +279,9 @@ const ActivitySubeventsDetails = ({ view, isLoading }: Props) => {
                     />
                 </Text>
             </Flex>
-            <Text size="1" color="gray">{createdAt}</Text>
+            <Text size="1" color="gray">
+                {createdAt}
+            </Text>
         </Flex>
     );
 

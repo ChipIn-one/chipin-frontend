@@ -30,12 +30,7 @@ const HeroSection = () => {
         <Section>
             <Container size="3">
                 <Flex direction="column" align="center" gap="5">
-                    <Badge
-                        size="3"
-                        color="green"
-                        variant="surface"
-                        radius="full"
-                    >
+                    <Badge size="3" color="green" variant="surface" radius="full">
                         {t('badge')}
                     </Badge>
 
@@ -52,12 +47,7 @@ const HeroSection = () => {
                     </Heading>
 
                     <Box maxWidth="560px">
-                        <Text
-                            align="center"
-                            color="gray"
-                            as="p"
-                            size={{ initial: '4', md: '5' }}
-                        >
+                        <Text align="center" color="gray" as="p" size={{ initial: '4', md: '5' }}>
                             {t('heroDescription')}
                         </Text>
                     </Box>

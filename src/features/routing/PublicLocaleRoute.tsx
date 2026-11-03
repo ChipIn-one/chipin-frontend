@@ -14,13 +14,7 @@ import PageLoader from 'basics/PageLoader';
 // SPA navigation can reach public URLs without reloading their SSG document.
 // Align each page with its URL; restore the authenticated user's preference
 // when returning to the private application.
-const PublicLocaleRoute = ({
-    locale,
-    children,
-}: {
-    locale: PublicLocale;
-    children: ReactNode;
-}) => {
+const PublicLocaleRoute = ({ locale, children }: { locale: PublicLocale; children: ReactNode }) => {
     const { i18n } = useTranslation();
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
     const savedLanguage = useUsersStore(selectUserSettings)?.language;

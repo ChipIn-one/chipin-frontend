@@ -36,9 +36,11 @@ vi.mock('store/activity-store', () => ({
         hasMore: state.hasMore,
     }),
     useActivityStore: (
-        selector: (state: typeof mocks.activityState & {
-            fetchMoreActivity: typeof mocks.fetchMoreActivity;
-        }) => unknown,
+        selector: (
+            state: typeof mocks.activityState & {
+                fetchMoreActivity: typeof mocks.fetchMoreActivity;
+            },
+        ) => unknown,
     ) =>
         selector({
             ...mocks.activityState,
@@ -48,25 +50,21 @@ vi.mock('store/activity-store', () => ({
 
 vi.mock('store/loadingSelectors', () => ({
     selectActivityLoading: (state: typeof mocks.loadingState) => state.isLoading,
-    selectActivityNextPageLoading: (state: typeof mocks.loadingState) =>
-        state.isNextPageLoading,
+    selectActivityNextPageLoading: (state: typeof mocks.loadingState) => state.isNextPageLoading,
 }));
 
 vi.mock('store/loadingStore', () => ({
-    useLoadingStore: (
-        selector: (state: typeof mocks.loadingState) => unknown,
-    ) => selector(mocks.loadingState),
+    useLoadingStore: (selector: (state: typeof mocks.loadingState) => unknown) =>
+        selector(mocks.loadingState),
 }));
 
 vi.mock('store/errorsSelectors', () => ({
-    selectActivityNextPageError: (state: typeof mocks.errorsState) =>
-        state.isNextPageError,
+    selectActivityNextPageError: (state: typeof mocks.errorsState) => state.isNextPageError,
 }));
 
 vi.mock('store/errorsStore', () => ({
-    useErrorsStore: (
-        selector: (state: typeof mocks.errorsState) => unknown,
-    ) => selector(mocks.errorsState),
+    useErrorsStore: (selector: (state: typeof mocks.errorsState) => unknown) =>
+        selector(mocks.errorsState),
 }));
 
 vi.mock('hooks/useInfiniteScroll', () => ({
@@ -79,9 +77,11 @@ vi.mock('components/skeletons', () => ({
 
 vi.mock('./components', () => ({
     ActivityEventsList: ({ events }: { events: Array<{ action: string }> }) =>
-        events.length === 0
-            ? <div data-testid="empty-state" />
-            : <div data-testid="activity-list" />,
+        events.length === 0 ? (
+            <div data-testid="empty-state" />
+        ) : (
+            <div data-testid="activity-list" />
+        ),
 }));
 
 beforeEach(() => {
@@ -109,9 +109,7 @@ test('keeps pagination recovery available when the active filter has no loaded m
         onLoadMore: mocks.fetchMoreActivity,
     });
 
-    return user
-        .click(screen.getByRole('button', { name: 'retryAction' }))
-        .then(() => {
-            expect(mocks.fetchMoreActivity).toHaveBeenCalledOnce();
-        });
+    return user.click(screen.getByRole('button', { name: 'retryAction' })).then(() => {
+        expect(mocks.fetchMoreActivity).toHaveBeenCalledOnce();
+    });
 });

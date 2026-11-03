@@ -103,9 +103,7 @@ test('replaces protected content with the auth modal on the current route after 
 
     expect(screen.getByTestId('auth-modal')).toBeTruthy();
     expect(screen.queryByTestId('dashboard-content')).toBeNull();
-    expect(screen.getByLabelText('Current route').textContent).toBe(
-        '/activity?filter=mine#latest',
-    );
+    expect(screen.getByLabelText('Current route').textContent).toBe('/activity?filter=mine#latest');
 });
 
 test('redirects an explicit sign out to the landing page instead of showing auth UI', () => {

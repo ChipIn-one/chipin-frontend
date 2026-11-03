@@ -72,11 +72,9 @@ test('resets the interface language to the first supported browser language', ()
         </Theme>,
     );
 
-    return interaction
-        .click(screen.getByRole('button', { name: 'Reset language' }))
-        .then(() =>
-            waitFor(() => {
-                expect(useUsersStore.getState().user?.settings.language).toBe('pt-PT');
-            }),
-        );
+    return interaction.click(screen.getByRole('button', { name: 'Reset language' })).then(() =>
+        waitFor(() => {
+            expect(useUsersStore.getState().user?.settings.language).toBe('pt-PT');
+        }),
+    );
 });

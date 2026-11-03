@@ -3,10 +3,7 @@ import styled from 'styled-components';
 import { Box, Flex } from '@radix-ui/themes';
 
 import { MEDIA_QUERIES } from 'constants/breakpoints';
-import {
-    GROUP_COVER_OBJECT_POSITION,
-    GROUP_COVER_RATIO,
-} from 'constants/groupCover';
+import { GROUP_COVER_OBJECT_POSITION, GROUP_COVER_RATIO } from 'constants/groupCover';
 import { themeColor } from 'helpers/colors';
 
 import Image from 'basics/Image';
@@ -14,8 +11,7 @@ import Image from 'basics/Image';
 const CoverWrapper = styled(Flex)<{ $hasCover: boolean }>`
     overflow: hidden;
     aspect-ratio: ${GROUP_COVER_RATIO};
-    color: ${({ $hasCover }) =>
-        $hasCover ? themeColor('white') : 'inherit'};
+    color: ${({ $hasCover }) => ($hasCover ? themeColor('white') : 'inherit')};
     border: 1px solid ${themeColor('gray6')};
     border-radius: var(--radius-5);
 

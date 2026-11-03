@@ -98,9 +98,7 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                     friend={friend.user}
                     balances={friend.balances}
                     initialCurrency={balance.currency}
-                    onSubmit={params => useActivityStore
-                        .getState()
-                        .createSettlement(params)}
+                    onSubmit={params => useActivityStore.getState().createSettlement(params)}
                 />
             )}
             {isRemoveFriendOpened && (

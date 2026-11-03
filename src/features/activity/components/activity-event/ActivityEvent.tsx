@@ -36,10 +36,7 @@ const ActivityEvent = ({ event, isNavigable = true, parentActivityId }: Props) =
             return isNavigable &&
                 (event.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ||
                     event.action === ACTIVITY_ACTIONS.EXPENSE_UPDATED) ? (
-                <ActivityEventLink
-                    to={buildActivitySubeventsRoute(activityId)}
-                    unsetStyles
-                >
+                <ActivityEventLink to={buildActivitySubeventsRoute(activityId)} unsetStyles>
                     {expenseCard}
                 </ActivityEventLink>
             ) : (
@@ -53,8 +50,7 @@ const ActivityEvent = ({ event, isNavigable = true, parentActivityId }: Props) =
         case ACTIVITY_ACTIONS.SETTLEMENT_REVERSED: {
             const settlementCard = <EventSettlement event={event} />;
 
-            return isNavigable &&
-                event.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED ? (
+            return isNavigable && event.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED ? (
                 <ActivityEventLink
                     to={buildActivitySubeventsRoute(parentActivityId ?? event.id)}
                     unsetStyles

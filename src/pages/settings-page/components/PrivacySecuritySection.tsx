@@ -21,9 +21,7 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
     const logoutOtherDevices = useAuthStore(s => s.logoutOtherDevices);
     const signOut = useAuthStore(s => s.signOut);
     const isSigningOut = useLoadingStore(selectAuthSignOutLoading);
-    const isLoggingOutOtherDevices = useLoadingStore(
-        selectAuthLogoutOtherDevicesLoading,
-    );
+    const isLoggingOutOtherDevices = useLoadingStore(selectAuthLogoutOtherDevicesLoading);
 
     const onLogoutOtherDevices = () => {
         if (isLoggingOutOtherDevices) {
@@ -35,10 +33,9 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                 toast.success(t('toasts:settings.logoutOtherDevicesSuccess'));
             })
             .catch((error: unknown) => {
-                toast.error(resolveApiErrorMessageFromError(
-                    error,
-                    t('toasts:common.requestFailed'),
-                ));
+                toast.error(
+                    resolveApiErrorMessageFromError(error, t('toasts:common.requestFailed')),
+                );
             });
     };
 
@@ -59,9 +56,7 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                             <Skeleton loading={isLoading}>{t('security.title')}</Skeleton>
                         </Text>
                         <Text size="2" color="gray">
-                            <Skeleton loading={isLoading}>
-                                {t('security.description')}
-                            </Skeleton>
+                            <Skeleton loading={isLoading}>{t('security.description')}</Skeleton>
                         </Text>
                     </Flex>
                 </Flex>

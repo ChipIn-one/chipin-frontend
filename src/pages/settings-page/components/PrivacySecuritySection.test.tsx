@@ -21,8 +21,7 @@ const translations: Record<string, string> = {
     'security.logoutOtherDevicesLoading':
         'Signing out on other devices… You’ll stay signed in here.',
     'security.logoutOtherDevicesTitle': 'Sign out on other devices',
-    'security.signOutDescription':
-        'End this session only. Other devices will stay signed in.',
+    'security.signOutDescription': 'End this session only. Other devices will stay signed in.',
     'security.signOutTitle': 'Sign out on this device',
     'security.title': 'Privacy & Security',
     'toasts:settings.logoutOtherDevicesSuccess':
@@ -62,9 +61,7 @@ test('distinguishes other-device logout and starts it directly from the card', (
     render(<PrivacySecuritySection isLoading={false} />);
 
     expect(
-        screen.getByText(
-            'End all other active sessions. You’ll stay signed in on this device.',
-        ),
+        screen.getByText('End all other active sessions. You’ll stay signed in on this device.'),
     ).toBeTruthy();
     expect(screen.getByText('Sign out on this device')).toBeTruthy();
     expect(
@@ -85,14 +82,10 @@ test('blocks repeated clicks, shows pending copy, and reports success after reso
         resolveRequest = resolve;
     });
     const logoutOtherDevices = vi.fn(() => {
-        useLoadingStore
-            .getState()
-            .setLoading('auth', 'logoutOtherDevices', 'loading');
+        useLoadingStore.getState().setLoading('auth', 'logoutOtherDevices', 'loading');
 
         return request.finally(() => {
-            useLoadingStore
-                .getState()
-                .setLoading('auth', 'logoutOtherDevices', 'fetched');
+            useLoadingStore.getState().setLoading('auth', 'logoutOtherDevices', 'fetched');
         });
     });
     useAuthStore.setState({ logoutOtherDevices });
@@ -104,9 +97,7 @@ test('blocks repeated clicks, shows pending copy, and reports success after reso
         .then(() => {
             expect(logoutOtherDevices).toHaveBeenCalledOnce();
             expect(
-                screen.getByText(
-                    'Signing out on other devices… You’ll stay signed in here.',
-                ),
+                screen.getByText('Signing out on other devices… You’ll stay signed in here.'),
             ).toBeTruthy();
 
             return user.click(
@@ -143,11 +134,7 @@ test('does not show success and keeps the card retryable after an error', () => 
                 expect(toast.success).not.toHaveBeenCalled();
             }),
         )
-        .then(() =>
-            user.click(
-                screen.getByRole('button', { name: /sign out on other devices/i }),
-            ),
-        )
+        .then(() => user.click(screen.getByRole('button', { name: /sign out on other devices/i })))
         .then(() => {
             expect(logoutOtherDevices).toHaveBeenCalledTimes(2);
             expect(toast.success).toHaveBeenCalledOnce();

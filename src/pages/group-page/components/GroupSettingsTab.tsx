@@ -1,12 +1,19 @@
-import {
-    LogOutIcon,
-    Trash2Icon,
-    UserMinusIcon,
-} from 'lucide-react';
+import { LogOutIcon, Trash2Icon, UserMinusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
-import { Avatar, Badge, Box, Button, Card, Flex, Separator, Spinner, Switch, Text } from '@radix-ui/themes';
+import {
+    Avatar,
+    Badge,
+    Box,
+    Button,
+    Card,
+    Flex,
+    Separator,
+    Spinner,
+    Switch,
+    Text,
+} from '@radix-ui/themes';
 
 import type { Group } from 'api/chipin.types';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
@@ -25,11 +32,7 @@ interface Props {
 
 const GroupSettingsTab = ({ group }: Props) => {
     const { t } = useTranslation(['group', 'common', 'toasts']);
-    const {
-        user,
-        updateGroup,
-        isGroupUpdatePending,
-    } = useConnect();
+    const { user, updateGroup, isGroupUpdatePending } = useConnect();
     const isUserOwner = user?.id === group.creator.id;
     const isGroupOwner = group.role === 'OWNER';
     const simplifyDebtsValue: unknown = group.simplifyDebts;
@@ -42,10 +45,7 @@ const GroupSettingsTab = ({ group }: Props) => {
         }
 
         updateGroup({ simplifyDebts: nextValue }).catch((error: unknown) => {
-            toast.error(resolveApiErrorMessageFromError(
-                error,
-                t('toasts:group.updateError'),
-            ));
+            toast.error(resolveApiErrorMessageFromError(error, t('toasts:group.updateError')));
         });
     };
 

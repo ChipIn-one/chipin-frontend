@@ -18,7 +18,9 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('basics', () => ({
     Amount: ({ value, tokenCode }: { value: number; tokenCode: string }) => (
-        <span>{value} {tokenCode}</span>
+        <span>
+            {value} {tokenCode}
+        </span>
     ),
     LedgerScopeBadge: ({ groupName }: { groupName?: string | null }) => (
         <span>{groupName ?? 'Direct'}</span>
@@ -129,12 +131,7 @@ test('ACT-004 shows current expense details from the latest snapshot', () => {
 });
 
 test('shows settlement direction without an expense participant list', () => {
-    render(
-        <ActivitySubeventsDetails
-            view={createView(settlementCreated)}
-            isLoading={false}
-        />,
-    );
+    render(<ActivitySubeventsDetails view={createView(settlementCreated)} isLoading={false} />);
 
     expect(screen.getAllByText('subeventsFrom')).not.toHaveLength(0);
     expect(screen.getAllByText('subeventsTo')).not.toHaveLength(0);
@@ -146,10 +143,7 @@ test('shows settlement direction without an expense participant list', () => {
 test('uses a chevron while preserving the mobile details disclosure behavior', () => {
     const user = userEvent.setup();
     const view = render(
-        <ActivitySubeventsDetails
-            view={createView(expenseCreated)}
-            isLoading={false}
-        />,
+        <ActivitySubeventsDetails view={createView(expenseCreated)} isLoading={false} />,
     );
     const details = view.container.querySelector('details');
     const summary = view.container.querySelector('summary');

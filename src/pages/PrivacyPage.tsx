@@ -43,7 +43,7 @@ const PrivacyPage = () => {
                         </Flex>
 
                         <Flex direction="column" gap="5">
-                            {PRIVACY_SECTIONS.map((sectionKey) => (
+                            {PRIVACY_SECTIONS.map(sectionKey => (
                                 <Flex key={sectionKey} direction="column" gap="2">
                                     <Heading as="h2" size="5">
                                         {t(`legal.privacy.${sectionKey}.title`)}

@@ -54,10 +54,7 @@ const AccountSection = ({ isLoading }: Props) => {
                     justify="between"
                     gap="4"
                 >
-                    <UserProfileSummary
-                        user={user ?? undefined}
-                        isLoading={isLoading}
-                    />
+                    <UserProfileSummary user={user ?? undefined} isLoading={isLoading} />
 
                     <UserAvatarModal>
                         <Button
@@ -116,9 +113,7 @@ const AccountSection = ({ isLoading }: Props) => {
                 <TextInput
                     key={user?.displayName ?? ''}
                     label={
-                        <Skeleton loading={isLoading}>
-                            {t('common:fields.displayName')}
-                        </Skeleton>
+                        <Skeleton loading={isLoading}>{t('common:fields.displayName')}</Skeleton>
                     }
                     description={
                         <Skeleton loading={isLoading}>

@@ -25,7 +25,10 @@ const createExpenseEvent = ({
     amount: number;
     payerId: string;
     shareAmount: number;
-    action?: typeof ACTIVITY_ACTIONS.EXPENSE_CREATED | typeof ACTIVITY_ACTIONS.EXPENSE_UPDATED | typeof ACTIVITY_ACTIONS.EXPENSE_REVERSED;
+    action?:
+        | typeof ACTIVITY_ACTIONS.EXPENSE_CREATED
+        | typeof ACTIVITY_ACTIONS.EXPENSE_UPDATED
+        | typeof ACTIVITY_ACTIONS.EXPENSE_REVERSED;
     currency?: string;
     groupId?: string | null;
     createdAt?: number;
@@ -134,37 +137,57 @@ const createPreview = (parent: AppEvent, lastEvent: AppEvent = parent): Activity
 
 test('ACT-021 includes edited 6000 USD debt and unedited 1000 USD debt, excluding self-only shares', () => {
     const original = createExpenseEvent({
-        id: 'edited-parent', amount: 6000, payerId: 'friend', shareAmount: 6000,
+        id: 'edited-parent',
+        amount: 6000,
+        payerId: 'friend',
+        shareAmount: 6000,
     });
     const edited = createExpenseEvent({
-        id: 'edited-latest', amount: 6000, payerId: 'friend', shareAmount: 6000,
+        id: 'edited-latest',
+        amount: 6000,
+        payerId: 'friend',
+        shareAmount: 6000,
         action: ACTIVITY_ACTIONS.EXPENSE_UPDATED,
         createdAt: CREATED_AT + 86400,
     });
     const unchanged = createExpenseEvent({
-        id: 'unchanged', amount: 1000, payerId: 'friend', shareAmount: 1000,
+        id: 'unchanged',
+        amount: 1000,
+        payerId: 'friend',
+        shareAmount: 1000,
     });
     const selfOnly = createExpenseEvent({
-        id: 'self-only', amount: 6000, payerId: CURRENT_USER_ID, shareAmount: 6000,
+        id: 'self-only',
+        amount: 6000,
+        payerId: CURRENT_USER_ID,
+        shareAmount: 6000,
     });
 
-    expect(getDailyExpenseSummary([
-        createPreview(original, edited),
-        createPreview(unchanged),
-        createPreview(selfOnly),
-    ], CURRENT_USER_ID)).toEqual({
+    expect(
+        getDailyExpenseSummary(
+            [createPreview(original, edited), createPreview(unchanged), createPreview(selfOnly)],
+            CURRENT_USER_ID,
+        ),
+    ).toEqual({
         [getActivityDateKey(CREATED_AT)]: [{ currency: 'USD', netBalance: -7000 }],
     });
 });
 
 test('ACT-021 uses original activity date rather than later edit or expense business date', () => {
     const parent = createExpenseEvent({
-        id: 'parent', amount: 50, payerId: 'friend', shareAmount: 50,
+        id: 'parent',
+        amount: 50,
+        payerId: 'friend',
+        shareAmount: 50,
     });
     const editDate = CREATED_AT + 3 * 86400;
     const updated = createExpenseEvent({
-        id: 'later-edit', amount: 75, payerId: 'friend', shareAmount: 75,
-        action: ACTIVITY_ACTIONS.EXPENSE_UPDATED, createdAt: editDate,
+        id: 'later-edit',
+        amount: 75,
+        payerId: 'friend',
+        shareAmount: 75,
+        action: ACTIVITY_ACTIONS.EXPENSE_UPDATED,
+        createdAt: editDate,
     });
     if (updated.action !== ACTIVITY_ACTIONS.EXPENSE_UPDATED || !updated.metadata) {
         throw new Error('Test requires current edited expense metadata');
@@ -186,28 +209,43 @@ test('ACT-021 uses original activity date rather than later edit or expense busi
         },
     } satisfies AppEvent;
 
-    expect(getDailyExpenseSummary([createPreview(parent, withBusinessDate)], CURRENT_USER_ID))
-        .toEqual({
-            [getActivityDateKey(CREATED_AT)]: [{ currency: 'USD', netBalance: -75 }],
-        });
+    expect(
+        getDailyExpenseSummary([createPreview(parent, withBusinessDate)], CURRENT_USER_ID),
+    ).toEqual({
+        [getActivityDateKey(CREATED_AT)]: [{ currency: 'USD', netBalance: -75 }],
+    });
 });
 
 test('ACT-021 includes changed group expense once, including duplicated pagination parents', () => {
     const parent = createExpenseEvent({
-        id: 'group-parent', amount: 100, payerId: 'group-payer',
-        shareAmount: 40, groupId: 'group-one',
+        id: 'group-parent',
+        amount: 100,
+        payerId: 'group-payer',
+        shareAmount: 40,
+        groupId: 'group-one',
     });
     const current = createExpenseEvent({
-        id: 'group-edit', amount: 200, payerId: 'group-payer',
-        shareAmount: 80, groupId: 'group-one', action: ACTIVITY_ACTIONS.EXPENSE_UPDATED,
+        id: 'group-edit',
+        amount: 200,
+        payerId: 'group-payer',
+        shareAmount: 80,
+        groupId: 'group-one',
+        action: ACTIVITY_ACTIONS.EXPENSE_UPDATED,
     });
     const item = createPreview(parent, current);
-    const another = createPreview(createExpenseEvent({
-        id: 'second-group', amount: 30, payerId: CURRENT_USER_ID,
-        shareAmount: 10, groupId: 'group-one',
-    }));
+    const another = createPreview(
+        createExpenseEvent({
+            id: 'second-group',
+            amount: 30,
+            payerId: CURRENT_USER_ID,
+            shareAmount: 10,
+            groupId: 'group-one',
+        }),
+    );
 
-    expect(getDailyExpenseSummary(getActivityPreviewEvents([item, another, item]), CURRENT_USER_ID)).toEqual({
+    expect(
+        getDailyExpenseSummary(getActivityPreviewEvents([item, another, item]), CURRENT_USER_ID),
+    ).toEqual({
         [getActivityDateKey(CREATED_AT)]: [{ currency: 'USD', netBalance: -60 }],
     });
 });
@@ -215,14 +253,23 @@ test('ACT-021 includes changed group expense once, including duplicated paginati
 test('nets opposite signs per date and currency without mixing currencies', () => {
     const expenses = [
         createExpenseEvent({
-            id: 'owe-usd', amount: 300, payerId: 'friend', shareAmount: 300,
+            id: 'owe-usd',
+            amount: 300,
+            payerId: 'friend',
+            shareAmount: 300,
         }),
         createExpenseEvent({
-            id: 'lent-usd', amount: 150, payerId: CURRENT_USER_ID, shareAmount: 50,
+            id: 'lent-usd',
+            amount: 150,
+            payerId: CURRENT_USER_ID,
+            shareAmount: 50,
         }),
         createExpenseEvent({
-            id: 'owe-vnd', amount: 100000, payerId: 'friend',
-            shareAmount: 100000, currency: 'VND',
+            id: 'owe-vnd',
+            amount: 100000,
+            payerId: 'friend',
+            shareAmount: 100000,
+            currency: 'VND',
         }),
     ].map(event => createPreview(event));
 
@@ -236,10 +283,16 @@ test('nets opposite signs per date and currency without mixing currencies', () =
 
 test('ACT-022 excludes reversed preview chains and keeps settlements out of expense totals', () => {
     const parent = createExpenseEvent({
-        id: 'reversed-parent', amount: 40, payerId: 'friend', shareAmount: 40,
+        id: 'reversed-parent',
+        amount: 40,
+        payerId: 'friend',
+        shareAmount: 40,
     });
     const reversal = createExpenseEvent({
-        id: 'reversed-child', amount: 40, payerId: 'friend', shareAmount: 40,
+        id: 'reversed-child',
+        amount: 40,
+        payerId: 'friend',
+        shareAmount: 40,
         action: ACTIVITY_ACTIONS.EXPENSE_REVERSED,
     });
     const settlementWithNoMetadata = {
@@ -259,7 +312,10 @@ test('ACT-022 excludes reversed preview chains and keeps settlements out of expe
 
 test('ACT-007 handles missing metadata and missing shares without inventing debt', () => {
     const expense = createExpenseEvent({
-        id: 'missing', amount: 100, payerId: 'friend', shareAmount: 100,
+        id: 'missing',
+        amount: 100,
+        payerId: 'friend',
+        shareAmount: 100,
     });
     const missingMetadata = {
         ...expense,
@@ -283,70 +339,100 @@ test('ACT-007 handles missing metadata and missing shares without inventing debt
         },
     } satisfies AppEvent;
 
-    expect(getDailyExpenseSummary([
-        createPreview(expense, missingMetadata),
-        createPreview(noShares),
-    ], CURRENT_USER_ID)).toEqual({});
+    expect(
+        getDailyExpenseSummary(
+            [createPreview(expense, missingMetadata), createPreview(noShares)],
+            CURRENT_USER_ID,
+        ),
+    ).toEqual({});
 });
 
 test('ACT-023 recomputes deterministic daily totals when another preview page arrives', () => {
-    const first = createPreview(createExpenseEvent({
-        id: 'first-page', amount: 10, payerId: 'friend', shareAmount: 10,
-    }));
-    const second = createPreview(createExpenseEvent({
-        id: 'second-page', amount: 5, payerId: 'friend', shareAmount: 5,
-    }));
+    const first = createPreview(
+        createExpenseEvent({
+            id: 'first-page',
+            amount: 10,
+            payerId: 'friend',
+            shareAmount: 10,
+        }),
+    );
+    const second = createPreview(
+        createExpenseEvent({
+            id: 'second-page',
+            amount: 5,
+            payerId: 'friend',
+            shareAmount: 5,
+        }),
+    );
     const day = getActivityDateKey(CREATED_AT);
 
     expect(getDailyExpenseSummary([first], CURRENT_USER_ID)).toEqual({
         [day]: [{ currency: 'USD', netBalance: -10 }],
     });
-    expect(getDailyExpenseSummary(getActivityPreviewEvents([first, second, second]), CURRENT_USER_ID)).toEqual({
+    expect(
+        getDailyExpenseSummary(getActivityPreviewEvents([first, second, second]), CURRENT_USER_ID),
+    ).toEqual({
         [day]: [{ currency: 'USD', netBalance: -15 }],
     });
 });
 
 test('ACT-021 normalizes fractional preview totals only after aggregating', () => {
     const paid = createExpenseEvent({
-        id: 'fractional-parent', amount: 0.30, payerId: CURRENT_USER_ID, shareAmount: 0.10,
+        id: 'fractional-parent',
+        amount: 0.3,
+        payerId: CURRENT_USER_ID,
+        shareAmount: 0.1,
     });
     const edited = createExpenseEvent({
-        id: 'fractional-edit', amount: 0.30, payerId: CURRENT_USER_ID, shareAmount: 0.10,
+        id: 'fractional-edit',
+        amount: 0.3,
+        payerId: CURRENT_USER_ID,
+        shareAmount: 0.1,
         action: ACTIVITY_ACTIONS.EXPENSE_UPDATED,
     });
     const borrowed = createExpenseEvent({
-        id: 'fractional-borrowed', amount: 0.20, payerId: 'friend', shareAmount: 0.20,
+        id: 'fractional-borrowed',
+        amount: 0.2,
+        payerId: 'friend',
+        shareAmount: 0.2,
     });
     const dateKey = getActivityDateKey(CREATED_AT);
 
-    expect(getDailyExpenseSummary(
-        [createPreview(paid, edited)],
-        CURRENT_USER_ID,
-    )).toEqual({ [dateKey]: [{ currency: 'USD', netBalance: 0.20 }] });
-    expect(getDailyExpenseSummary(
-        [createPreview(paid, edited), createPreview(borrowed)],
-        CURRENT_USER_ID,
-    )).toEqual({ [dateKey]: [] });
+    expect(getDailyExpenseSummary([createPreview(paid, edited)], CURRENT_USER_ID)).toEqual({
+        [dateKey]: [{ currency: 'USD', netBalance: 0.2 }],
+    });
+    expect(
+        getDailyExpenseSummary(
+            [createPreview(paid, edited), createPreview(borrowed)],
+            CURRENT_USER_ID,
+        ),
+    ).toEqual({ [dateKey]: [] });
 });
 
 test('ACT-021 preserves supported 4-decimal micro amounts after final normalization', () => {
     const small = createExpenseEvent({
-        id: 'fractional-micro', amount: 0.0001, payerId: 'friend', shareAmount: 0.0001,
+        id: 'fractional-micro',
+        amount: 0.0001,
+        payerId: 'friend',
+        shareAmount: 0.0001,
     });
-    expect(getDailyExpenseSummary(
-        [createPreview(small)],
-        CURRENT_USER_ID,
-    )).toEqual({
+    expect(getDailyExpenseSummary([createPreview(small)], CURRENT_USER_ID)).toEqual({
         [getActivityDateKey(CREATED_AT)]: [{ currency: 'USD', netBalance: -0.0001 }],
     });
 });
 
 test('ACT-020 leaves flat history event semantics intact', () => {
     const original = createExpenseEvent({
-        id: 'created', amount: 10, payerId: 'friend', shareAmount: 10,
+        id: 'created',
+        amount: 10,
+        payerId: 'friend',
+        shareAmount: 10,
     });
     const edited = createExpenseEvent({
-        id: 'updated', amount: 50, payerId: 'friend', shareAmount: 50,
+        id: 'updated',
+        amount: 50,
+        payerId: 'friend',
+        shareAmount: 50,
         action: ACTIVITY_ACTIONS.EXPENSE_UPDATED,
     });
 
@@ -357,10 +443,16 @@ test('ACT-020 leaves flat history event semantics intact', () => {
 
 test('ACT-007 does not count a missing edited payer share snapshot as full money lent', () => {
     const parent = createExpenseEvent({
-        id: 'original-payer', amount: 6000, payerId: CURRENT_USER_ID, shareAmount: 2000,
+        id: 'original-payer',
+        amount: 6000,
+        payerId: CURRENT_USER_ID,
+        shareAmount: 2000,
     });
     const updated = createExpenseEvent({
-        id: 'edited-payer', amount: 6000, payerId: CURRENT_USER_ID, shareAmount: 2000,
+        id: 'edited-payer',
+        amount: 6000,
+        payerId: CURRENT_USER_ID,
+        shareAmount: 2000,
         action: ACTIVITY_ACTIONS.EXPENSE_UPDATED,
     });
     if (updated.action !== ACTIVITY_ACTIONS.EXPENSE_UPDATED || !updated.metadata) {
@@ -372,28 +464,42 @@ test('ACT-007 does not count a missing edited payer share snapshot as full money
         metadata: { ...updated.metadata, shares: undefined },
     } satisfies AppEvent;
     const unchangedDebt = createExpenseEvent({
-        id: 'unchanged-debt', amount: 1000, payerId: 'friend', shareAmount: 1000,
+        id: 'unchanged-debt',
+        amount: 1000,
+        payerId: 'friend',
+        shareAmount: 1000,
     });
 
-    expect(getDailyExpenseSummary([
-        createPreview(parent, missingShares),
-        createPreview(unchangedDebt),
-    ], CURRENT_USER_ID)).toEqual({
+    expect(
+        getDailyExpenseSummary(
+            [createPreview(parent, missingShares), createPreview(unchangedDebt)],
+            CURRENT_USER_ID,
+        ),
+    ).toEqual({
         [getActivityDateKey(CREATED_AT)]: [{ currency: 'USD', netBalance: -1000 }],
     });
 });
 
 test('ACT-022 removes a previously loaded debt when an overlapping page returns its reversal', () => {
     const parent = createExpenseEvent({
-        id: 'stale-active-parent', amount: 6000, payerId: 'friend', shareAmount: 6000,
+        id: 'stale-active-parent',
+        amount: 6000,
+        payerId: 'friend',
+        shareAmount: 6000,
     });
     const reversal = createExpenseEvent({
-        id: 'reversal-child', amount: 6000, payerId: 'friend', shareAmount: 6000,
+        id: 'reversal-child',
+        amount: 6000,
+        payerId: 'friend',
+        shareAmount: 6000,
         action: ACTIVITY_ACTIONS.EXPENSE_REVERSED,
     });
     reversal.seq = parent.seq + 1;
     const unaffected = createExpenseEvent({
-        id: 'unaffected-debt', amount: 1000, payerId: 'friend', shareAmount: 1000,
+        id: 'unaffected-debt',
+        amount: 1000,
+        payerId: 'friend',
+        shareAmount: 1000,
     });
     const loaded = [
         createPreview(parent),

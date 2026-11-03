@@ -67,7 +67,6 @@ vi.mock('hooks/pwaHooks', () => ({
     }),
 }));
 
-
 vi.mock('components/modals/kick-group-member-alert-dialog', () => ({
     KickGroupMemberAlertDialog: ({ children }: { children?: ReactNode }) => children,
 }));
@@ -188,23 +187,20 @@ test('disables the setting and explains an unsupported runtime response', () => 
         'disabled',
         true,
     );
-    expect(
-        screen.getByText('Debt simplification is unavailable for this group.'),
-    ).toBeTruthy();
+    expect(screen.getByText('Debt simplification is unavailable for this group.')).toBeTruthy();
 });
 
 test('shows one localized toast and keeps the confirmed value after update failure', () => {
     const user = userEvent.setup();
-    const updateGroup = vi.fn<GroupsStore['updateGroup']>().mockRejectedValue(
-        new Error('Update failed'),
-    );
+    const updateGroup = vi
+        .fn<GroupsStore['updateGroup']>()
+        .mockRejectedValue(new Error('Update failed'));
     useGroupsStore.setState({ updateGroup });
 
     render(<GroupSettingsTab group={group} />);
 
-    return user
-        .click(screen.getByRole('switch', { name: 'Simplify group debts' }))
-        .then(() => waitFor(() => {
+    return user.click(screen.getByRole('switch', { name: 'Simplify group debts' })).then(() =>
+        waitFor(() => {
             expect(updateGroup).toHaveBeenCalledOnce();
             expect(toast.error).toHaveBeenCalledOnce();
             expect(toast.error).toHaveBeenCalledWith('Could not update the group.');
@@ -213,7 +209,8 @@ test('shows one localized toast and keeps the confirmed value after update failu
                     .getByRole('switch', { name: 'Simplify group debts' })
                     .getAttribute('aria-checked'),
             ).toBe('true');
-        }));
+        }),
+    );
 });
 
 test('keeps supported invite actions and hides the unfinished add people control', () => {

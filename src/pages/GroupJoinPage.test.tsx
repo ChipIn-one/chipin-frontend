@@ -50,29 +50,39 @@ const OpenOtherInvite = () => {
     const navigate = useNavigate();
 
     return (
-        <button type="button" onClick={() => navigate(`${ROUTES.GROUP_JOIN}/${OTHER_INVITE_TOKEN}`)}>
+        <button
+            type="button"
+            onClick={() => navigate(`${ROUTES.GROUP_JOIN}/${OTHER_INVITE_TOKEN}`)}
+        >
             {OPEN_OTHER_INVITE_LABEL}
         </button>
     );
 };
 
-const renderPage = (inviteToken = TEST_INVITE_TOKEN, isProtected = false) => render(
-    <MemoryRouter initialEntries={[`${ROUTES.GROUP_JOIN}/${inviteToken}`]}>
-        <Theme>
-            <Routes>
-                <Route
-                    path={`${ROUTES.GROUP_JOIN}/:inviteToken`}
-                    element={isProtected
-                        ? <ProtectedRoute><GroupJoinPage /></ProtectedRoute>
-                        : <GroupJoinPage />}
-                />
-                <Route path="*" element={null} />
-            </Routes>
-            <CurrentRoute />
-            <OpenOtherInvite />
-        </Theme>
-    </MemoryRouter>,
-);
+const renderPage = (inviteToken = TEST_INVITE_TOKEN, isProtected = false) =>
+    render(
+        <MemoryRouter initialEntries={[`${ROUTES.GROUP_JOIN}/${inviteToken}`]}>
+            <Theme>
+                <Routes>
+                    <Route
+                        path={`${ROUTES.GROUP_JOIN}/:inviteToken`}
+                        element={
+                            isProtected ? (
+                                <ProtectedRoute>
+                                    <GroupJoinPage />
+                                </ProtectedRoute>
+                            ) : (
+                                <GroupJoinPage />
+                            )
+                        }
+                    />
+                    <Route path="*" element={null} />
+                </Routes>
+                <CurrentRoute />
+                <OpenOtherInvite />
+            </Theme>
+        </MemoryRouter>,
+    );
 
 const joinButton = () => screen.getByRole('button', { name: i18n.t('group:join.confirm') });
 const currentRoute = () => screen.getByLabelText('Current route').textContent;
@@ -103,13 +113,17 @@ test('does not call the API on mount and does not focus the join button', () => 
 test('joins exactly once and opens the group', () => {
     const user = userEvent.setup();
     let resolveJoin: ((group: { id: string }) => void) | undefined;
-    mocks.joinGroup.mockImplementation(() => new Promise(resolve => {
-        resolveJoin = resolve;
-    }));
+    mocks.joinGroup.mockImplementation(
+        () =>
+            new Promise(resolve => {
+                resolveJoin = resolve;
+            }),
+    );
 
     renderPage();
 
-    return user.click(joinButton())
+    return user
+        .click(joinButton())
         .then(() => user.click(joinButton()))
         .then(() => {
             expect(mocks.joinGroup).toHaveBeenCalledTimes(1);
@@ -130,10 +144,12 @@ test('cancel goes to the dashboard without calling the API', () => {
 
     renderPage();
 
-    return user.click(screen.getByRole('button', { name: i18n.t('group:join.cancel') })).then(() => {
-        expect(mocks.joinGroup).not.toHaveBeenCalled();
-        expect(currentRoute()).toBe(ROUTES.DASHBOARD);
-    });
+    return user
+        .click(screen.getByRole('button', { name: i18n.t('group:join.cancel') }))
+        .then(() => {
+            expect(mocks.joinGroup).not.toHaveBeenCalled();
+            expect(currentRoute()).toBe(ROUTES.DASHBOARD);
+        });
 });
 
 test('shows the invalid screen for a malformed token without calling the API', () => {
@@ -144,10 +160,12 @@ test('shows the invalid screen for a malformed token without calling the API', (
     expect(screen.getByRole('heading', { name: i18n.t('group:join.invalidTitle') })).toBeTruthy();
     expect(screen.queryByRole('button', { name: i18n.t('group:join.confirm') })).toBeNull();
 
-    return user.click(screen.getByRole('button', { name: i18n.t('group:join.goHome') })).then(() => {
-        expect(mocks.joinGroup).not.toHaveBeenCalled();
-        expect(currentRoute()).toBe(ROUTES.DASHBOARD);
-    });
+    return user
+        .click(screen.getByRole('button', { name: i18n.t('group:join.goHome') }))
+        .then(() => {
+            expect(mocks.joinGroup).not.toHaveBeenCalled();
+            expect(currentRoute()).toBe(ROUTES.DASHBOARD);
+        });
 });
 
 test('shows the invalid screen when the backend does not know the token', () => {
@@ -157,7 +175,9 @@ test('shows the invalid screen when the backend does not know the token', () => 
     renderPage();
 
     return user.click(joinButton()).then(() => {
-        expect(screen.getByRole('heading', { name: i18n.t('group:join.invalidTitle') })).toBeTruthy();
+        expect(
+            screen.getByRole('heading', { name: i18n.t('group:join.invalidTitle') }),
+        ).toBeTruthy();
         expect(toast.error).not.toHaveBeenCalled();
     });
 });
@@ -171,9 +191,12 @@ test.each([
 
     renderPage();
 
-    return user.click(joinButton())
+    return user
+        .click(joinButton())
         .then(() => {
-            expect(screen.getByRole('alert').textContent).toBe(i18n.t('toasts:group.inviteJoinError'));
+            expect(screen.getByRole('alert').textContent).toBe(
+                i18n.t('toasts:group.inviteJoinError'),
+            );
             expect(toast.error).not.toHaveBeenCalled();
 
             return user.click(screen.getByRole('button', { name: i18n.t('group:join.retry') }));
@@ -187,13 +210,17 @@ test.each([
 test('releases the loading state but does not navigate after the auth session changes', () => {
     const user = userEvent.setup();
     let resolveJoin: ((group: { id: string }) => void) | undefined;
-    mocks.joinGroup.mockImplementation(() => new Promise(resolve => {
-        resolveJoin = resolve;
-    }));
+    mocks.joinGroup.mockImplementation(
+        () =>
+            new Promise(resolve => {
+                resolveJoin = resolve;
+            }),
+    );
 
     renderPage();
 
-    return user.click(joinButton())
+    return user
+        .click(joinButton())
         .then(() => {
             mocks.authSessionVersion += 1;
 
@@ -214,9 +241,12 @@ test('opening another invite on the same page starts from the ready screen', () 
 
     renderPage();
 
-    return user.click(joinButton())
+    return user
+        .click(joinButton())
         .then(() => {
-            expect(screen.getByRole('heading', { name: i18n.t('group:join.invalidTitle') })).toBeTruthy();
+            expect(
+                screen.getByRole('heading', { name: i18n.t('group:join.invalidTitle') }),
+            ).toBeTruthy();
 
             return user.click(screen.getByRole('button', { name: OPEN_OTHER_INVITE_LABEL }));
         })
@@ -230,13 +260,17 @@ test('opening another invite on the same page starts from the ready screen', () 
 test('ignores a join response after the page unmounts', () => {
     const user = userEvent.setup();
     let resolveJoin: ((group: { id: string }) => void) | undefined;
-    mocks.joinGroup.mockImplementation(() => new Promise(resolve => {
-        resolveJoin = resolve;
-    }));
+    mocks.joinGroup.mockImplementation(
+        () =>
+            new Promise(resolve => {
+                resolveJoin = resolve;
+            }),
+    );
 
     const { unmount } = renderPage();
 
-    return user.click(joinButton())
+    return user
+        .click(joinButton())
         .then(() => {
             unmount();
 

@@ -28,10 +28,7 @@ const FriendListItem = ({ friend, balance }: Props) => {
                     weight="medium"
                     size="2"
                 />
-                <FriendActionsDropdown
-                    friend={friend}
-                    balance={balance}
-                />
+                <FriendActionsDropdown friend={friend} balance={balance} />
             </Flex>
         </Flex>
     );

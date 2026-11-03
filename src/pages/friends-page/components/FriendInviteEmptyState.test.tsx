@@ -19,11 +19,10 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('store/users-store', () => ({
-    useUsersStore: (selector: (state: {
-        user: { inviteToken: string };
-    }) => unknown) => selector({
-        user: { inviteToken: 'friend-token' },
-    }),
+    useUsersStore: (selector: (state: { user: { inviteToken: string } }) => unknown) =>
+        selector({
+            user: { inviteToken: 'friend-token' },
+        }),
 }));
 
 vi.mock('hooks/pwaHooks', () => ({
@@ -43,7 +42,6 @@ vi.mock('hooks/pwaHooks', () => ({
     }),
 }));
 
-
 beforeEach(() => {
     vi.clearAllMocks();
     mocks.isNativeShareSupported = false;
@@ -60,9 +58,11 @@ test('reuses the group invite onboarding copy and personal invite behavior', () 
 
     expect(screen.getByText('page.expenses.inviteTitle')).toBeTruthy();
     expect(screen.getByText('page.expenses.inviteDescription')).toBeTruthy();
-    expect(screen.getByRole('button', {
-        name: /group:page\.settings\.showQRTitle/,
-    })).toBeTruthy();
+    expect(
+        screen.getByRole('button', {
+            name: /group:page\.settings\.showQRTitle/,
+        }),
+    ).toBeTruthy();
 
     return user
         .click(screen.getByRole('button', { name: 'page.expenses.inviteAction' }))

@@ -14,10 +14,7 @@ import {
 import { EventIcon } from '../activity-event';
 
 interface Props {
-    event: Extract<
-        AppEvent,
-        { action: ExpenseTransferredFromAction | ExpenseTransferredToAction }
-    >;
+    event: Extract<AppEvent, { action: ExpenseTransferredFromAction | ExpenseTransferredToAction }>;
 }
 
 const getDescriptionKey = (reason: string): string => {

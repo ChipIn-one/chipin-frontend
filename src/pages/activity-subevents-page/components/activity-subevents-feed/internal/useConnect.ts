@@ -1,9 +1,6 @@
 import { useShallow } from 'zustand/react/shallow';
 
-import {
-    selectActivitySubeventsFlow,
-    useActivityStore,
-} from 'store/activity-store';
+import { selectActivitySubeventsFlow, useActivityStore } from 'store/activity-store';
 import {
     selectActivitySubeventsLoading,
     selectActivitySubeventsNextPageLoading,

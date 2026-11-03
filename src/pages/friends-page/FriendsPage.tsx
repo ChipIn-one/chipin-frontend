@@ -3,18 +3,11 @@ import { useState } from 'react';
 import { Container } from '@radix-ui/themes';
 
 import { useLoadingStore } from 'store/loadingStore';
-import {
-    getFriendsView,
-    selectFriends,
-    useUsersStore,
-} from 'store/users-store';
+import { getFriendsView, selectFriends, useUsersStore } from 'store/users-store';
 
 import { InternalPageColumnsFromSm } from 'components/internal-page-layout';
 
-import {
-    FriendsList,
-    FriendsSidebar,
-} from './components';
+import { FriendsList, FriendsSidebar } from './components';
 
 const FriendsPage = () => {
     const friends = useUsersStore(selectFriends);

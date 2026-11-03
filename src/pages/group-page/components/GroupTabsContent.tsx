@@ -1,9 +1,5 @@
 import { useCallback, useState } from 'react';
-import {
-    ChevronsDownIcon,
-    PlusIcon,
-    RefreshCwIcon,
-} from 'lucide-react';
+import { ChevronsDownIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Box, Button, Flex, IconButton, Spinner, Tabs, Text } from '@radix-ui/themes';
@@ -41,17 +37,13 @@ const GroupTabsContent = ({
     const { t } = useTranslation(['group', 'common', 'activity']);
     const invite = useGroupInvite(group);
     const [activeTab, setActiveTab] = useState('expenses');
-    const activityItems = getActivityPreviewEvents(
-        group.recentActivities.items,
-    );
+    const activityItems = getActivityPreviewEvents(group.recentActivities.items);
     const members = group.members.map(member => member.user);
     const isSingleMemberGroup = group.members.length === 1;
     const shouldShowInviteOnboarding = isSingleMemberGroup;
     const hasMoreActivity = group.recentActivities.nextCursor !== null;
     const isEndOfFeed =
-        !isGroupActivityNextPageLoading &&
-        !hasMoreActivity &&
-        activityItems.length > 0;
+        !isGroupActivityNextPageLoading && !hasMoreActivity && activityItems.length > 0;
     const onLoadMore = useCallback(() => fetchMoreGroupActivity(), [fetchMoreGroupActivity]);
     const onRetryNextPage = () => {
         onLoadMore();
@@ -111,9 +103,9 @@ const GroupTabsContent = ({
                                 <ActivityEventsList
                                     events={activityItems}
                                     emptyState={
-                                        shouldShowInviteOnboarding
-                                            ? null
-                                            : <NoGroupExpensesEmptyState />
+                                        shouldShowInviteOnboarding ? null : (
+                                            <NoGroupExpensesEmptyState />
+                                        )
                                     }
                                     isShowSummary
                                     isNavigable
@@ -140,12 +132,7 @@ const GroupTabsContent = ({
                                         )}
 
                                         {isEndOfFeed && (
-                                            <Flex
-                                                justify="center"
-                                                align="center"
-                                                gap="2"
-                                                py="4"
-                                            >
+                                            <Flex justify="center" align="center" gap="2" py="4">
                                                 <Text as="span" color="gray">
                                                     <ChevronsDownIcon size={14} />
                                                 </Text>

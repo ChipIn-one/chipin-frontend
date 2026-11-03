@@ -71,11 +71,7 @@ const EventExpense = ({ event }: Props) => {
                                 </ExpenseDescription>
                             ) : null}
 
-                            <ExpensePaidAmountText
-                                size="2"
-                                color="gray"
-                                $isReversed={isReversed}
-                            >
+                            <ExpensePaidAmountText size="2" color="gray" $isReversed={isReversed}>
                                 {t('event.paidAmount', {
                                     payer: isCurrentUserPayer
                                         ? t('event.you')
@@ -99,31 +95,13 @@ const EventExpense = ({ event }: Props) => {
                     </Flex>
                 </Flex>
 
-                <Flex
-                    direction="column"
-                    gap="1"
-                    align="end"
-                    flexShrink="0"
-                    maxWidth="50%"
-                >
+                <Flex direction="column" gap="1" align="end" flexShrink="0" maxWidth="50%">
                     {userExpenseDebt ? (
                         <>
-                            <ExpenseDebtText
-                                $isReversed={isReversed}
-                                color={debtColor}
-                                size="1"
-                            >
-                                {t(
-                                    isUserLender
-                                        ? 'event.youLent'
-                                        : 'event.youBorrowed',
-                                )}
+                            <ExpenseDebtText $isReversed={isReversed} color={debtColor} size="1">
+                                {t(isUserLender ? 'event.youLent' : 'event.youBorrowed')}
                             </ExpenseDebtText>
-                            <ExpenseDebtText
-                                $isReversed={isReversed}
-                                color={debtColor}
-                                size="2"
-                            >
+                            <ExpenseDebtText $isReversed={isReversed} color={debtColor} size="2">
                                 <ExpenseDebtAmount
                                     $isReversed={isReversed}
                                     value={Math.abs(userExpenseDebt)}

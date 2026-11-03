@@ -1,16 +1,7 @@
 import { BellIcon, InfoIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import {
-    Avatar,
-    Callout,
-    Card,
-    Flex,
-    Separator,
-    Skeleton,
-    Switch,
-    Text,
-} from '@radix-ui/themes';
+import { Avatar, Callout, Card, Flex, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
 
 interface Props {
     isLoading: boolean;
@@ -64,11 +55,7 @@ const NotificationsSection = ({ isLoading }: Props) => {
                         </Text>
                     </Flex>
                     <Skeleton loading={isLoading}>
-                        <Switch
-                            disabled
-                            defaultChecked
-                            aria-label={t('notifications.pushTitle')}
-                        />
+                        <Switch disabled defaultChecked aria-label={t('notifications.pushTitle')} />
                     </Skeleton>
                 </Flex>
 

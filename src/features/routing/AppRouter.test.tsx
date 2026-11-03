@@ -12,7 +12,6 @@ import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 
 import AppRouter from './AppRouter';
 
-
 const { ACTIVITY_ROUTE_CONTENT, JOIN_ROUTE_CONTENT } = vi.hoisted(() => ({
     ACTIVITY_ROUTE_CONTENT: 'Activity route content',
     JOIN_ROUTE_CONTENT: 'Join route content',
@@ -57,8 +56,7 @@ test('wraps an internal activity route in the desktop sidebar layout', () => {
         const pageContent = screen.getByRole('main');
 
         expect(
-            sidebarLink.compareDocumentPosition(pageContent) &
-                Node.DOCUMENT_POSITION_FOLLOWING,
+            sidebarLink.compareDocumentPosition(pageContent) & Node.DOCUMENT_POSITION_FOLLOWING,
         ).toBeTruthy();
     });
 });

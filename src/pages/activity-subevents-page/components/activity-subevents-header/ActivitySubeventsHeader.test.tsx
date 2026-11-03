@@ -50,11 +50,7 @@ const parentEvent = {
     parentActivityId: null,
 } satisfies AppEvent;
 
-const renderHeader = (
-    event: AppEvent | undefined,
-    isLoading = false,
-    isUnavailable = false,
-) => {
+const renderHeader = (event: AppEvent | undefined, isLoading = false, isUnavailable = false) => {
     render(
         <ActivitySubeventsHeader
             parentEvent={event}

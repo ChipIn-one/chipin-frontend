@@ -60,8 +60,11 @@ beforeEach(() => {
     useUsersStore.getState().setInitialUsersStore();
 });
 
-test.each(['USER', 'ADMIN'] as const)('redirects a $role from the Solo route to the dashboard', role => {
-    renderGuard(role);
+test.each(['USER', 'ADMIN'] as const)(
+    'redirects a $role from the Solo route to the dashboard',
+    role => {
+        renderGuard(role);
 
-    expect(screen.getByLabelText('Current route').textContent).toBe('/dashboard');
-});
+        expect(screen.getByLabelText('Current route').textContent).toBe('/dashboard');
+    },
+);

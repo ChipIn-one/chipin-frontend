@@ -77,12 +77,7 @@ const ActivityList = ({ activeFilter }: Props) => {
 
             {isNextPageError && (
                 <Flex justify="center" py="4">
-                    <Button
-                        type="button"
-                        size="1"
-                        variant="soft"
-                        onClick={onRetryNextPage}
-                    >
+                    <Button type="button" size="1" variant="soft" onClick={onRetryNextPage}>
                         <RefreshCwIcon size={14} />
                         {t('retryAction')}
                     </Button>

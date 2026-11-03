@@ -44,9 +44,7 @@ const FriendsPageHeader = ({ isLoading }: Props) => {
                         <Skeleton loading={isLoading}>{t('friends:title')}</Skeleton>
                     </Heading>
                     <Text size="2" color="gray">
-                        <Skeleton loading={isLoading}>
-                            {t('friends:yourConnections')}
-                        </Skeleton>
+                        <Skeleton loading={isLoading}>{t('friends:yourConnections')}</Skeleton>
                     </Text>
                 </Box>
             </Flex>

@@ -16,8 +16,7 @@ vi.mock('react-i18next', () => ({
 vi.mock('components/modals', importOriginal =>
     importOriginal<typeof import('components/modals')>().then(modals => ({
         ...modals,
-        CreateUpdateGroupModal: ({ children }: { children: React.ReactNode }) =>
-            children,
+        CreateUpdateGroupModal: ({ children }: { children: React.ReactNode }) => children,
     })),
 );
 
@@ -93,26 +92,17 @@ test('keeps group details without member actions inside the hero', () => {
     expect(screen.getByText(group.description)).toBeTruthy();
     expect(screen.getByText('dashboard:groupsCard.members')).toBeTruthy();
     expect(screen.queryByTestId('group-avatar')).toBeNull();
-    expect(
-        screen.queryByRole('button', { name: 'common:buttons.settleUp' }),
-    ).toBeNull();
-    expect(
-        screen.queryByRole('button', { name: 'common:buttons.addExpense' }),
-    ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'common:buttons.settleUp' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'common:buttons.addExpense' })).toBeNull();
     expect(screen.getByRole('button', { name: 'buttons.back' })).toBeTruthy();
-    expect(
-        screen.queryByRole('button', { name: 'common:buttons.invitePeople' }),
-    ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'common:buttons.invitePeople' })).toBeNull();
 });
 
 test('uses the shared image fallback when cover is missing', () => {
     render(
         <ThemeProvider theme={lightThemeStyled}>
             <MemoryRouter>
-                <GroupCoverSection
-                    group={{ ...group, coverUrl: null }}
-                    isLoading={false}
-                />
+                <GroupCoverSection group={{ ...group, coverUrl: null }} isLoading={false} />
             </MemoryRouter>
         </ThemeProvider>,
     );

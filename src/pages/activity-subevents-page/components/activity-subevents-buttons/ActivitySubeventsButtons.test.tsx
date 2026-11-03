@@ -104,12 +104,16 @@ test('delegates deletion to the activity store', () => {
 
     return user
         .click(screen.getByRole('button', { name: 'subeventsDeleteAction' }))
-        .then(() => user.click(screen.getByRole('button', { name: 'subeventsDeleteConfirmAction' })))
-        .then(() => waitFor(() => {
-            expect(reverseLedgerEntry).toHaveBeenCalledWith({
-                entryId: 'expense-id',
-                groupId: undefined,
-                parentActivityId: parentEvent.id,
-            });
-        }));
+        .then(() =>
+            user.click(screen.getByRole('button', { name: 'subeventsDeleteConfirmAction' })),
+        )
+        .then(() =>
+            waitFor(() => {
+                expect(reverseLedgerEntry).toHaveBeenCalledWith({
+                    entryId: 'expense-id',
+                    groupId: undefined,
+                    parentActivityId: parentEvent.id,
+                });
+            }),
+        );
 });

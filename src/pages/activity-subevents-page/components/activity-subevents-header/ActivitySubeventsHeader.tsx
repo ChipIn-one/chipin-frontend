@@ -15,11 +15,7 @@ interface Props {
     isUnavailable?: boolean;
 }
 
-const ActivitySubeventsHeader = ({
-    parentEvent,
-    isLoading,
-    isUnavailable = false,
-}: Props) => {
+const ActivitySubeventsHeader = ({ parentEvent, isLoading, isUnavailable = false }: Props) => {
     const { t } = useTranslation('activity');
 
     if (isUnavailable) {

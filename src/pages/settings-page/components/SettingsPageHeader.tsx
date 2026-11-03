@@ -25,9 +25,7 @@ const SettingsPageHeader = ({ isLoading }: Props) => {
                         <Skeleton loading={isLoading}>{t('title')}</Skeleton>
                     </Heading>
                     <Text size="2" color="gray">
-                        <Skeleton loading={isLoading}>
-                            {t('subtitle')}
-                        </Skeleton>
+                        <Skeleton loading={isLoading}>{t('subtitle')}</Skeleton>
                     </Text>
                 </Box>
             </Flex>
