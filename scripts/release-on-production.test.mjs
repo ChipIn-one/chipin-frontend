@@ -42,7 +42,7 @@ describe('release-on-production workflow', () => {
 
     test('serializes guard and release of Production successes in one workflow-level group, never cancelled', () => {
         expect(workflow.concurrency).toEqual({
-            group: "${{ (github.event.deployment.environment == 'Production' && github.event.deployment_status.state == 'success') && format('release-{0}', github.repository) || format('no-release-{0}', github.run_id) }}",
+            group: "${{ (github.repository_owner == 'ChipIn-one' && github.event.deployment.environment == 'Production' && github.event.deployment_status.state == 'success' && github.event.deployment.creator.login == 'vercel[bot]' && github.event.deployment_status.creator.login == 'vercel[bot]') && format('release-{0}', github.repository) || format('no-release-{0}', github.run_id) }}",
             'cancel-in-progress': false,
         });
         expect(guard.concurrency).toBeUndefined();

@@ -22,11 +22,11 @@ permissions: {}
 
 # Guard and release share one group, so a second quick Promote runs its guard only after the first release created
 # its tag (a job-level group would let both guards pass before either tag exists, and the engine could then create a
-# lower version after a higher one). Only release-relevant statuses share the group; every other status gets its own.
-# GitHub keeps one pending run per group: a third quick Promote cancels the pending second run, and the PRs of the
-# cancelled SHA roll into the next tag.
+# lower version after a higher one). Only statuses that pass the guard condition share the group; every other status
+# gets its own. GitHub keeps one pending run per group: a third Production success (a quick Promote, or Vercel
+# re-posting success on an older deployment) cancels the pending run; re-run the cancelled run to tag its SHA.
 concurrency:
-  group: ${{ (github.event.deployment.environment == 'Production' && github.event.deployment_status.state == 'success') && format('release-{0}', github.repository) || format('no-release-{0}', github.run_id) }}
+  group: ${{ (github.repository_owner == 'ChipIn-one' && github.event.deployment.environment == 'Production' && github.event.deployment_status.state == 'success' && github.event.deployment.creator.login == 'vercel[bot]' && github.event.deployment_status.creator.login == 'vercel[bot]') && format('release-{0}', github.repository) || format('no-release-{0}', github.run_id) }}
   cancel-in-progress: false
 
 jobs:
