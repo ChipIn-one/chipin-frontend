@@ -6,7 +6,14 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 import { describe, expect, test } from 'vitest';
 
-import { checkRegistry, entryMessages, main, REGISTRY_PATH } from './check-rule-registry.mjs';
+import {
+    checkRegistry,
+    collectModes,
+    entryMessages,
+    main,
+    modeEnv,
+    REGISTRY_PATH,
+} from './check-rule-registry.mjs';
 
 const repoRoot = resolve(import.meta.dirname, '..');
 const SPEC_PATH = 'docs/superpowers/specs/2026-10-28-frontend-refactor/02-rulebook-tooling.md';
@@ -83,6 +90,50 @@ describe('check-rule-registry', () => {
         ]);
     });
 
+    test('passes a registered restricted entry scoped to a glob that matches no file yet', () => {
+        const money = ['error', { selector: 'X', message: '[money] Use the money helpers.' }];
+        const blocks = [
+            { name: 'money', files: ['src/money/**'], rules: { 'no-restricted-syntax': money } },
+        ];
+
+        expect(
+            check({ curly: 'a', 'no-restricted-syntax#money': 'b' }, { curly: 2 }, blocks),
+        ).toEqual([]);
+    });
+
+    test('checks rules of both lint modes: a full-only rule is required and not dead', async () => {
+        const load = async mode => ({
+            resolved: [
+                {
+                    file: 'src/a.tsx',
+                    rules:
+                        mode.CHIPIN_ESLINT_FULL === '1'
+                            ? { curly: 2, 'no-cycle': 2 }
+                            : { curly: 2 },
+                },
+            ],
+            blocks: [],
+        });
+        const { resolved, blocks } = await collectModes(load);
+
+        expect(
+            checkRegistry({ registry: { curly: 'a', 'no-cycle': 'b' }, resolved, blocks }),
+        ).toEqual([]);
+        expect(checkRegistry({ registry: { curly: 'a' }, resolved, blocks })).toEqual([
+            `no-cycle (src/a.tsx) has no entry in ${REGISTRY_PATH}`,
+        ]);
+    });
+
+    test('sets CHIPIN_ESLINT_FULL only for the full lint mode', () => {
+        const base = { PATH: '/bin', CHIPIN_ESLINT_FULL: '1' };
+
+        expect(modeEnv({}, base)).toEqual({ PATH: '/bin' });
+        expect(modeEnv({ CHIPIN_ESLINT_FULL: '1' }, { PATH: '/bin' })).toEqual({
+            PATH: '/bin',
+            CHIPIN_ESLINT_FULL: '1',
+        });
+    });
+
     test('fails when a sample file gets no config', () => {
         expect(
             checkRegistry({
@@ -124,7 +175,8 @@ describe('check-rule-registry', () => {
         ).toEqual([undefined, '[a] m', undefined, '[b] m', undefined]);
     });
 
-    test('the repository ESLint config passes', async () => {
+    // Resolves the whole repository once per lint mode, each in a child process.
+    test('the repository ESLint config passes', { timeout: 60_000 }, async () => {
         expect(await main()).toEqual([]);
     });
 });

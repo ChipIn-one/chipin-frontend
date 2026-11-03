@@ -3,10 +3,11 @@
 // `b` (correctness or boundary). Class c rules are not allowed in the config, and there is no
 // `warn` level. Entries of `no-restricted-syntax`/`no-restricted-imports` are registered by the
 // `[id]` prefix of their message.
-import { execFileSync } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { promisify } from 'node:util';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { ESLint } from 'eslint';
 
@@ -110,18 +111,22 @@ export const checkRegistry = ({ registry, resolved, blocks, samples = [] }) => {
         }
     }
 
-    // Restricted entries may be scoped to files that do not exist yet: register them anyway.
+    // Restricted entries may be scoped to files that do not exist yet (e.g. `src/money/**`): every
+    // entry of a raw block must be registered and counts as effective even if no file matches it.
     for (const block of blocks.flat(Infinity)) {
         for (const [ruleName, value] of Object.entries(block?.rules ?? {})) {
             if (ID_RULES.has(ruleName) && isEnabled(value)) {
                 const where = `block ${block.name ?? '(unnamed)'}`;
 
-                entryIds(ruleName, value, where).forEach(key => requireEntry(key, where));
+                for (const key of entryIds(ruleName, value, where)) {
+                    effective.add(key);
+                    requireEntry(key, where);
+                }
             }
         }
     }
 
-    // No dead or junk keys: every key is effective on at least one linted file.
+    // No dead or junk keys: every key is effective on a linted file or is a raw-block entry id.
     for (const key of Object.keys(registry)) {
         if (!effective.has(key)) {
             errors.add(`${key} in ${REGISTRY_PATH} is not effective on any linted file`);
@@ -159,20 +164,73 @@ export const resolveLintedFiles = async eslint => {
     return resolved;
 };
 
+// Lint modes whose effective rules are merged: `lint` and `lint:full` (CHIPIN_ESLINT_FULL=1), so a
+// full-only rule is checked and not reported dead. Each mode resolves in its own process because
+// config modules read the env once, at import time.
+export const LINT_MODES = [{}, { CHIPIN_ESLINT_FULL: '1' }];
+
+export const modeEnv = (mode, base = process.env) => {
+    const env = { ...base };
+
+    delete env.CHIPIN_ESLINT_FULL;
+    return { ...env, ...mode };
+};
+
+/** Effective rules and restricted-entry blocks of the config in the current process env. */
+const resolveCurrentMode = async () => {
+    const resolved = await resolveLintedFiles(new ESLint({ cwd: repoRoot }));
+    const { default: config } = await import(pathToFileURL(resolve(repoRoot, 'eslint.config.js')));
+    // Only the restricted rules of raw blocks are needed, and they are plain JSON.
+    const blocks = config.flat(Infinity).map(block => ({
+        name: block?.name,
+        rules: Object.fromEntries(
+            Object.entries(block?.rules ?? {}).filter(([ruleName]) => ID_RULES.has(ruleName)),
+        ),
+    }));
+
+    return { resolved, blocks };
+};
+
+const resolveMode = async mode => {
+    const { stdout } = await promisify(execFile)(
+        process.execPath,
+        [fileURLToPath(import.meta.url), '--resolve'],
+        { cwd: repoRoot, env: modeEnv(mode), encoding: 'utf8', maxBuffer: 256 * 1024 * 1024 },
+    );
+
+    return JSON.parse(stdout);
+};
+
+/** Union of every lint mode: `resolved` and `blocks` of all modes, concatenated. */
+export const collectModes = async (load = resolveMode) => {
+    const results = await Promise.all(LINT_MODES.map(load));
+
+    return {
+        resolved: results.flatMap(result => result.resolved),
+        blocks: results.flatMap(result => result.blocks),
+    };
+};
+
 export const main = async () => {
     const registry = JSON.parse(readFileSync(resolve(repoRoot, REGISTRY_PATH), 'utf8'));
-    const resolved = await resolveLintedFiles(new ESLint({ cwd: repoRoot }));
-    const { default: blocks } = await import(pathToFileURL(resolve(repoRoot, 'eslint.config.js')));
+    const { resolved, blocks } = await collectModes();
 
     return checkRegistry({ registry, resolved, blocks, samples: SAMPLE_FILES });
 };
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
-    const errors = await main();
+    // `--resolve` is the per-mode child of `resolveMode`; it prints JSON and lets stdout drain.
+    if (process.argv[2] === '--resolve') {
+        process.stdout.write(JSON.stringify(await resolveCurrentMode()));
+    } else {
+        const errors = await main();
 
-    if (errors.length > 0) {
-        console.error(`Rule registry check failed (spec 02 §D0):\n- ${errors.join('\n- ')}`);
-        process.exit(1);
+        if (errors.length > 0) {
+            console.error(`Rule registry check failed (spec 02 §D0):\n- ${errors.join('\n- ')}`);
+            process.exit(1);
+        }
+        console.log(
+            'Rule registry: every enabled ESLint rule is class a or b (lint and lint:full).',
+        );
     }
-    console.log('Rule registry: every enabled ESLint rule is class a or b.');
 }

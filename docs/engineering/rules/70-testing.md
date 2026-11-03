@@ -75,8 +75,10 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
   Run `npx prettier --write <files>` on the files you changed. `npm run format:check` checks without
   writing; `verify`, `verify:full`, and CI run it, so CI enforces formatting.
 - `npm run lint` runs ESLint with `--max-warnings 0` and the rule registry check; `npm run lint:full`
-  is the same in full mode (`CHIPIN_ESLINT_FULL=1`, for CI-only rules; there are none yet,
-  `import-x/no-cycle` arrives in 02-C9). Extra arguments go to ESLint: `npm run lint -- <args>`.
+  runs ESLint in full mode (`CHIPIN_ESLINT_FULL=1`, for CI-only rules; there are none yet,
+  `import-x/no-cycle` arrives in 02-C9). The registry check always resolves the config in both
+  modes and checks their union, so a full-only rule must be registered and is not reported as
+  dead in `lint`. Extra arguments go to ESLint: `npm run lint -- <args>`.
 - `npm run baseline:update` prunes fixed entries from `eslint-suppressions.json`; it never adds entries.
 - `npm run verify` is the fast local check: format check, lint, and typecheck; it does not run
   Vitest or build.
