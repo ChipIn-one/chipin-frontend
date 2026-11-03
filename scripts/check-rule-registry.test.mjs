@@ -311,7 +311,7 @@ const presetRules = new Set([
 // Backticked rule tokens of the §D0 registry tables with the class of their row.
 const specRegistry = () => {
     const spec = readFileSync(resolve(repoRoot, SPEC_PATH), 'utf8');
-    const section = spec.slice(spec.indexOf('## Д0'), spec.indexOf('## Контекст'));
+    const section = spec.slice(spec.indexOf('## D0'), spec.indexOf('## Context'));
     const rows = section
         .split('\n')
         .filter(line => line.startsWith('|') && !line.includes('~~'))
