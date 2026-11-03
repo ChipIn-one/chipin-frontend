@@ -1,7 +1,6 @@
+import { Flex } from '@radix-ui/themes';
 import { ListIcon, WalletCardsIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Flex } from '@radix-ui/themes';
 
 import { EmptyState } from 'basics/empty-states';
 

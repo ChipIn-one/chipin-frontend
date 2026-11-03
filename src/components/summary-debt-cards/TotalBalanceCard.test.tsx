@@ -1,7 +1,6 @@
-import { expect, test, vi } from 'vitest';
-
 import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
+import { expect, test, vi } from 'vitest';
 
 import TotalBalanceCard from './TotalBalanceCard';
 

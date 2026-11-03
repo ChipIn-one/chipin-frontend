@@ -1,7 +1,6 @@
-import { useEffect, useRef, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
-
+import { type ReactNode, useEffect, useRef } from 'react';
 import * as Sentry from '@sentry/react';
+import { useTranslation } from 'react-i18next';
 
 import { matchLocale } from 'helpers/locale';
 import { selectIsLoggedIn } from 'store/authSelectors';

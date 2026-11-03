@@ -1,6 +1,5 @@
-import type { ComponentProps, ReactNode } from 'react';
-
 import { RadioGroup as RadixRadioGroup } from '@radix-ui/themes';
+import type { ComponentProps, ReactNode } from 'react';
 
 interface RadioGroupItem {
     value: string;

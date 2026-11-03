@@ -4,7 +4,6 @@ import type { AppEvent } from 'api/activity.types';
 import type { BalanceEntry, BalancesMap } from 'api/chipin.raw.types';
 import type { Group } from 'api/chipin.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
-
 import {
     GROUP_CARD_FILTER_BUCKETS,
     GROUP_DEBT_FILTERS,

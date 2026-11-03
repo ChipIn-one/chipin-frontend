@@ -1,9 +1,10 @@
 import { useShallow } from 'zustand/react/shallow';
 
-import type { BadgeItem } from 'basics/BalanceBadges';
 import { selectDashboardSummary } from 'store/dashboardSelectors';
 import { useDashboardStore } from 'store/dashboardStore';
 import { selectUserCurrency, useUsersStore } from 'store/users-store';
+
+import type { BadgeItem } from 'basics/BalanceBadges';
 
 const useConnect = () => {
     const defaultCurrency = useUsersStore(selectUserCurrency);

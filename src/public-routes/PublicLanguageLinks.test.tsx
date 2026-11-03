@@ -3,8 +3,8 @@ import { I18nextProvider } from 'react-i18next';
 import { ThemeProvider } from 'styled-components';
 import { expect, test } from 'vitest';
 
-import { lightThemeStyled } from 'constants/styled-themes';
 import { PUBLIC_ROUTE_ENTRIES } from 'constants/publicRouteManifest';
+import { lightThemeStyled } from 'constants/styled-themes';
 import i18n from 'i18n';
 
 import { PublicLanguageLinks } from './PublicLanguageLinks';

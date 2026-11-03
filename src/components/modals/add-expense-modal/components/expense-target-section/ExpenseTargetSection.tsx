@@ -1,7 +1,6 @@
+import { Card, Flex } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-
-import { Card, Flex } from '@radix-ui/themes';
 
 import { type ExpenseTargetMode, useExpenseModalStore } from 'store/expenseModalStore';
 

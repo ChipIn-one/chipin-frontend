@@ -1,7 +1,6 @@
+import { Avatar, Box, Flex, Skeleton, Text } from '@radix-ui/themes';
 import { ChartBarIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Avatar, Box, Flex, Skeleton, Text } from '@radix-ui/themes';
 
 import SegmentedControl from 'components/SegmentedControl';
 

@@ -1,8 +1,7 @@
-import { useParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
-import { useShallow } from 'zustand/react/shallow';
-
 import { Box, Container } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
+import { useParams } from 'react-router-dom';
+import { useShallow } from 'zustand/react/shallow';
 
 import { ACTIVITY_CATEGORIES } from 'constants/activity';
 import { getActivityCategory, getActivitySubeventsView } from 'helpers/activityEvent';

@@ -1,14 +1,13 @@
+import { Link } from '@radix-ui/themes';
 import { GlobeIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import type { PublicRoute } from 'types/publicRoutes';
-
-import { Link } from '@radix-ui/themes';
 
 import { PUBLIC_ROUTE_ENTRIES } from 'constants/publicRouteManifest';
 import { themeColor } from 'helpers/colors';
 import { suppressPublicLocaleSuggestion } from 'helpers/publicLocaleSuggestion';
 import { getPublicPath } from 'helpers/publicRoutes';
+import type { PublicRoute } from 'types/publicRoutes';
 
 // Native details with real links preserve no-JS navigation on SSG pages.
 // After hydration the header's searchable selector replaces this fallback.

@@ -1,8 +1,7 @@
+import { Box, Flex, Skeleton, Switch, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
-
-import { Box, Flex, Skeleton, Switch, Text } from '@radix-ui/themes';
 
 import { getPreferredModeRoute } from 'helpers/routes';
 import { selectIsSoloMode } from 'store/dashboardSelectors';

@@ -1,6 +1,5 @@
-import { useTranslation } from 'react-i18next';
-
 import { Text } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 
 import { formatRelativeTime } from 'helpers/time';
 import { selectIsUserTime24H, useUsersStore } from 'store/users-store';

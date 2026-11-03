@@ -1,8 +1,7 @@
 import { Fragment, type ReactNode, useMemo } from 'react';
-
 import { Flex } from '@radix-ui/themes';
 
-import { isActivityPreview, type ActivityListItem } from 'helpers/activityEvent';
+import { type ActivityListItem, isActivityPreview } from 'helpers/activityEvent';
 import { getActivityDateKey } from 'helpers/time';
 import { useUsersStore } from 'store/users-store';
 

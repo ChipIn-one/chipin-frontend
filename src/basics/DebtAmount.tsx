@@ -1,7 +1,6 @@
+import { Skeleton, Text, VisuallyHidden } from '@radix-ui/themes';
 import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
-
-import { Skeleton, Text, VisuallyHidden } from '@radix-ui/themes';
 
 import { getBalanceDirection } from 'helpers/currencies';
 

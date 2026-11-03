@@ -82,6 +82,10 @@ The example shows the available locations, not a required complete file set.
 - Inside a slice, import files by relative path; do not import through the slice's own `index.ts`.
 - From outside a slice, import only that slice's `index.ts` or a file at the root of a layer.
 - Existing nested `index.ts` files are legacy: do not add new ones and do not remove them incidentally.
+- Bare imports such as `store/groupsStore` are aliases from `compilerOptions.paths` in `tsconfig.app.json`
+  (no `baseUrl`); that is the only alias list. Vite reads it through `vite-tsconfig-paths`, and the
+  `simple-import-sort` groups are built from it in `config/eslint/aliases.js`. A new top-level `src`
+  directory gets an entry there, nowhere else.
 
 ```ts
 // settle-up/index.ts

@@ -1,11 +1,10 @@
-import i18n from 'i18n/index';
+import { act, render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import { act, render, screen } from '@testing-library/react';
-
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
 import { lightThemeStyled } from 'constants/styled-themes';
+import i18n from 'i18n/index';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import { ExpenseButtons } from '../expense-buttons';

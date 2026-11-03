@@ -1,9 +1,10 @@
-import { Amount } from 'basics';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { EXPENSE_SUBMIT_BLOCKERS } from 'constants/chipin';
 import { formatPercentDifference, formatPercentTotal } from 'helpers/decimalDisplay';
 import type { ExpenseSubmitFeedback } from 'store/expenseModalSelectors';
+
+import { Amount } from 'basics';
 
 interface Props {
     feedback: ExpenseSubmitFeedback;

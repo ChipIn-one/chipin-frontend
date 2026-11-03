@@ -1,9 +1,8 @@
 import { useId, useRef, useState } from 'react';
+import { Button, Callout } from '@radix-ui/themes';
 import { InfoIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-
-import { Button, Callout } from '@radix-ui/themes';
 
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
 

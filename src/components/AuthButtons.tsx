@@ -1,6 +1,5 @@
-import { useTranslation } from 'react-i18next';
-
 import { Button, Flex } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 
 import { getSocialAuthUrl } from 'helpers/url';
 import { selectAuthLoginLoading } from 'store/loadingSelectors';

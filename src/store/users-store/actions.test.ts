@@ -7,6 +7,7 @@ import { LocalStorage } from 'helpers/localStorage';
 import { useLoadingStore } from 'store/loadingStore';
 
 import { useErrorsStore } from '../errorsStore';
+
 import { useUsersStore } from './actions';
 
 vi.mock('api/usersApi', () => ({

@@ -1,6 +1,5 @@
-import styled from 'styled-components';
-
 import { Card } from '@radix-ui/themes';
+import styled from 'styled-components';
 
 import { themeColor } from 'helpers/colors';
 

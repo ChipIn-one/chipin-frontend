@@ -1,7 +1,6 @@
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-
-import { fireEvent, render, screen } from '@testing-library/react';
 
 import GlobalHooks from './GlobalHooks';
 

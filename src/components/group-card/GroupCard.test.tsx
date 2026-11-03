@@ -1,8 +1,7 @@
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-
-import { render, screen } from '@testing-library/react';
 
 import type { Group } from 'api/chipin.types';
 import { GROUP_CARD_FILTER_BUCKETS, GROUP_NET_CONVERSION_STATES } from 'constants/groups';

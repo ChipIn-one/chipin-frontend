@@ -1,8 +1,9 @@
 import { Flex } from '@radix-ui/themes';
 import styled from 'styled-components';
 
-import Image from 'basics/Image';
 import { MEDIA_QUERIES } from 'constants/breakpoints';
+
+import Image from 'basics/Image';
 
 const IllustrationPanel = styled(Flex)`
     max-width: 390px;

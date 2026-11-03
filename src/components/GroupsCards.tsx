@@ -1,4 +1,5 @@
 import { type FocusEvent, type KeyboardEvent, useEffect, useRef, useState } from 'react';
+import { Button, Flex, IconButton, Separator, Text, TextField } from '@radix-ui/themes';
 import {
     ChevronDownIcon,
     ChevronUpIcon,
@@ -10,13 +11,12 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Button, Flex, IconButton, Separator, Text, TextField } from '@radix-ui/themes';
-
 import type { Group } from 'api/chipin.types';
 import { GROUP_DEBT_FILTERS, type GroupDebtFilter } from 'constants/groups';
 
 import { EmptyState } from 'basics/empty-states';
 
+import { GroupCard } from './group-card';
 import { useConnect } from './groups-cards/internal';
 import {
     SearchButtonShell,
@@ -24,7 +24,6 @@ import {
     SearchIndicator,
     SettledToggleButton,
 } from './groups-cards/styled';
-import { GroupCard } from './group-card';
 import { CreateUpdateGroupModal } from './modals';
 import { GroupsCardsSkeleton } from './skeletons';
 

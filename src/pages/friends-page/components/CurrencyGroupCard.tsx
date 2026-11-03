@@ -1,6 +1,5 @@
-import { useTranslation } from 'react-i18next';
-
 import { Card, Flex, Separator, Text } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 
 import { getBalanceDirection } from 'helpers/currencies';
 import type { FriendCurrencyGroup } from 'store/users-store';

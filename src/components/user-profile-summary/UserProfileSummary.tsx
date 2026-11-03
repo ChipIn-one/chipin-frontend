@@ -1,10 +1,10 @@
-import { UserAvatar } from 'basics';
+import { Flex, Skeleton, Text } from '@radix-ui/themes';
 import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Flex, Skeleton, Text } from '@radix-ui/themes';
-
 import type { UserSummary } from 'api/chipin.types';
+
+import { UserAvatar } from 'basics';
 
 type ProfileUser = Pick<UserSummary, 'displayName' | 'email' | 'picture'>;
 

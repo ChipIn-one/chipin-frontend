@@ -1,7 +1,6 @@
-import { beforeEach, afterEach, expect, test, vi } from 'vitest';
-import { toast } from 'sonner';
-
 import { render, screen } from '@testing-library/react';
+import { toast } from 'sonner';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { PUBLIC_ROUTE_ENTRIES } from 'constants/publicRouteManifest';
 import { useAuthToasts } from 'hooks/useAuthToasts';

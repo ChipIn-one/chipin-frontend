@@ -1,5 +1,4 @@
 import { ComponentProps, ReactNode } from 'react';
-
 import { Avatar, Box, Card, Flex, Text } from '@radix-ui/themes';
 
 interface Props {

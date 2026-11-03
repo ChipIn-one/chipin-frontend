@@ -1,8 +1,7 @@
 import { useState } from 'react';
+import { Avatar, Badge, Button, Flex, Heading, Text } from '@radix-ui/themes';
 import { Clock3Icon, CrownIcon, SparklesIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Avatar, Badge, Button, Flex, Heading, Text } from '@radix-ui/themes';
 
 import { SECOND } from 'constants/time';
 

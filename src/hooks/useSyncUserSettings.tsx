@@ -1,12 +1,11 @@
 import { useEffect } from 'react';
-import { useTheme } from 'next-themes';
-
 import * as Sentry from '@sentry/react';
+import { useTheme } from 'next-themes';
 
 import { matchLocale, saveLocalePreference } from 'helpers/locale';
 import i18n from 'i18n';
-import { selectAuthStatus } from 'store/authSelectors';
 import { AUTH_STATUS } from 'store/authConstants';
+import { selectAuthStatus } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { selectUserSettings, useUsersStore } from 'store/users-store';
 

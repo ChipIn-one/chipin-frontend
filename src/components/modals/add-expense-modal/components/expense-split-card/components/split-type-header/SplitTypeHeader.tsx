@@ -1,9 +1,7 @@
-import { Amount } from 'basics';
+import { Button, Flex, Text } from '@radix-ui/themes';
 import { CheckIcon, XIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-
-import { Button, Flex, Text } from '@radix-ui/themes';
 
 import {
     selectAllUsersSelected,
@@ -11,6 +9,8 @@ import {
     selectYourShareColor,
 } from 'store/expenseModalSelectors';
 import { useExpenseModalStore } from 'store/expenseModalStore';
+
+import { Amount } from 'basics';
 
 const SplitTypeHeader = () => {
     const { t } = useTranslation('group');

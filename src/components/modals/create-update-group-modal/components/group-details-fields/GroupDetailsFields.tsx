@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { TextArea, TextInput } from 'basics';
+import { Box, Flex } from '@radix-ui/themes';
 import { ChevronDownIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Box, Flex } from '@radix-ui/themes';
+import { TextArea, TextInput } from 'basics';
 
 import { DescriptionToggleButton, DescriptionToggleIcon } from './styled';
 

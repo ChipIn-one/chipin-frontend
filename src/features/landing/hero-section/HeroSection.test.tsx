@@ -1,8 +1,7 @@
+import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, test, vi } from 'vitest';
-
-import { render, screen } from '@testing-library/react';
 
 import { ROUTES } from 'constants/routes';
 import { usePwaStore } from 'store/pwaStore';

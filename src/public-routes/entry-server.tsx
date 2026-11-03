@@ -1,13 +1,13 @@
-import { renderToString } from 'react-dom/server';
 import { createInstance } from 'i18next';
+import { renderToString } from 'react-dom/server';
 import { ServerStyleSheet } from 'styled-components';
 
-import type { PublicRoute } from 'types/publicRoutes';
 import { DEFAULT_LOCALE } from 'constants/locales';
-import { PublicBuildYearContext } from './PublicBuildYearContext';
 import { resources } from 'i18n/resources';
+import type { PublicRoute } from 'types/publicRoutes';
 
 import { PublicApp } from './PublicApp';
+import { PublicBuildYearContext } from './PublicBuildYearContext';
 
 const renderPublicRoute = (
     route: PublicRoute,

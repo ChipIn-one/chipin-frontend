@@ -1,6 +1,5 @@
-import { UsersIcon } from 'lucide-react';
-
 import { Avatar } from '@radix-ui/themes';
+import { UsersIcon } from 'lucide-react';
 
 import type { Group } from 'api/chipin.types';
 

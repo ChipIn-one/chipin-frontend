@@ -1,6 +1,5 @@
-import { useTranslation } from 'react-i18next';
-
 import { Flex, Skeleton, Text } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 
 import { selectLandingStats, useLandingStatsStore } from 'store/landing-stats-store';
 import { selectLandingStatsLoading } from 'store/loadingSelectors';

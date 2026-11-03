@@ -1,7 +1,6 @@
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, test } from 'vitest';
-
-import { render, screen } from '@testing-library/react';
 
 import type { UserSettings } from 'api/chipin.types';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';

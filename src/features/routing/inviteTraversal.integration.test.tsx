@@ -1,18 +1,17 @@
 /* eslint-disable no-restricted-imports -- integration test drives the real Axios instance through the router to prove invite links cannot reach the API */
+import { Theme } from '@radix-ui/themes';
+import { render, screen } from '@testing-library/react';
 import axios, { type AxiosAdapter } from 'axios';
-import i18n from 'i18n';
 import { MemoryRouter } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ThemeProvider } from 'styled-components';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
-import { Theme } from '@radix-ui/themes';
-import { render, screen } from '@testing-library/react';
-
 import { InvalidPathSegmentError } from 'api/apiPath';
 import { inviteApiUserToGroup } from 'api/chipin';
 import { apiInstance } from 'api/chipin.instance';
 import { lightThemeStyled } from 'constants/styled-themes';
+import i18n from 'i18n';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 

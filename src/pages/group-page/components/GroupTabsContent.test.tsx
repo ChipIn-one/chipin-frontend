@@ -1,8 +1,7 @@
-import type { ReactNode } from 'react';
-import { beforeEach, expect, test, vi } from 'vitest';
-
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactNode } from 'react';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
 import type { Group } from 'api/chipin.types';

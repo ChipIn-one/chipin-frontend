@@ -1,8 +1,7 @@
-import { ThemeProvider } from 'styled-components';
-import { beforeEach, expect, test } from 'vitest';
-
 import { Theme } from '@radix-ui/themes';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { ThemeProvider } from 'styled-components';
+import { beforeEach, expect, test } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';

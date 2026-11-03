@@ -1,8 +1,7 @@
-import type { ReactNode } from 'react';
-import { expect, test, vi } from 'vitest';
-
 import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { expect, test, vi } from 'vitest';
 
 import CurrencyGroupCard from './CurrencyGroupCard';
 

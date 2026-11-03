@@ -1,6 +1,5 @@
-import styled from 'styled-components';
-
 import { Box, Flex } from '@radix-ui/themes';
+import styled from 'styled-components';
 
 import { MEDIA_QUERIES } from 'constants/breakpoints';
 import { GROUP_COVER_OBJECT_POSITION, GROUP_COVER_RATIO } from 'constants/groupCover';

@@ -1,6 +1,5 @@
-import { beforeEach, expect, test, vi } from 'vitest';
-
 import type { Breadcrumb, BrowserOptions, ErrorEvent } from '@sentry/react';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 import { initializeSentry } from './initializeSentry';
 

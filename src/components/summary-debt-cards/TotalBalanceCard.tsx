@@ -1,6 +1,5 @@
-import { useTranslation } from 'react-i18next';
-
 import { Card, Flex, Skeleton, Text } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 
 import DebtAmount from 'basics/DebtAmount';
 

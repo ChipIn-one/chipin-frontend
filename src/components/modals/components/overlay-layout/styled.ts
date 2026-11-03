@@ -1,6 +1,5 @@
-import styled, { createGlobalStyle } from 'styled-components';
-
 import { ScrollArea, Separator } from '@radix-ui/themes';
+import styled, { createGlobalStyle } from 'styled-components';
 
 import { MEDIA_QUERIES } from 'constants/breakpoints';
 

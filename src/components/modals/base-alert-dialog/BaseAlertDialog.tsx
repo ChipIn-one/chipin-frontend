@@ -1,7 +1,6 @@
 import { type ComponentProps, type MouseEvent, type ReactNode, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
 import { AlertDialog, Button, Flex, Text } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 
 import {
     MODAL_SIZES,

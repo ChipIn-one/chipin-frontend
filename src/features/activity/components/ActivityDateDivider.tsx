@@ -1,10 +1,10 @@
-import { BalanceSummaryText } from 'basics';
-import { useTranslation } from 'react-i18next';
-
 import { Box, Flex, Separator, Text } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 
 import type { BalanceEntry } from 'api/chipin.raw.types';
 import { formatActivityDateDivider } from 'helpers/time';
+
+import { BalanceSummaryText } from 'basics';
 
 interface Props {
     createdAt: number;

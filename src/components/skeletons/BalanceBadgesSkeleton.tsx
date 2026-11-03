@@ -1,6 +1,5 @@
-import { useTranslation } from 'react-i18next';
-
 import { Badge, Flex, Skeleton } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 
 const SKELETON_COUNT = 3;
 

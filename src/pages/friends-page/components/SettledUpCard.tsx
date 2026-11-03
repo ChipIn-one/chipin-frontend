@@ -1,7 +1,6 @@
+import { Card, Flex, Separator, Text } from '@radix-ui/themes';
 import { CircleCheckIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Card, Flex, Separator, Text } from '@radix-ui/themes';
 
 import type { KnownUser } from 'api/chipin.types';
 

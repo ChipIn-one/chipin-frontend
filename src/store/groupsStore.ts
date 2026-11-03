@@ -17,9 +17,9 @@ import { getApiErrorStatus, normalizeApiError } from 'helpers/errors';
 
 import { useActivityStore } from './activity-store/actions';
 import { ACTIVITY_API_LIMIT } from './activity-store/constants';
-import { createRequestChannel } from './internal/resourceRequests';
 import { useDashboardStore } from './dashboardStore';
 import { useErrorsStore } from './errorsStore';
+import { createRequestChannel } from './internal/resourceRequests';
 import { useLoadingStore } from './loadingStore';
 import { useUsersStore } from './users-store';
 

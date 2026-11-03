@@ -1,7 +1,6 @@
 import { useId } from 'react';
-import { useTranslation } from 'react-i18next';
-
 import { Box, Button, Flex, Text } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 
 import { OverlayFooter } from '../../../components';
 import { useExpenseModalSubmit } from '../../internal';

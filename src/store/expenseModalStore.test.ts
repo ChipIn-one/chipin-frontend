@@ -6,10 +6,10 @@ import {
     selectExpensePayload,
     selectIncludedUsers,
     selectIsSubmitDisabled,
-    selectShouldShowSelfOnlyCallout,
-    selectShouldShowOtherDirectZeroDebtWarning,
     selectIsUserLocked,
     selectPayerId,
+    selectShouldShowOtherDirectZeroDebtWarning,
+    selectShouldShowSelfOnlyCallout,
     selectSplitSummary,
     selectUserIds,
 } from './expenseModalSelectors';

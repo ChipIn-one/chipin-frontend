@@ -1,7 +1,6 @@
+import { Box, Flex, Skeleton, TextField } from '@radix-ui/themes';
 import { SearchIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Box, Flex, Skeleton, TextField } from '@radix-ui/themes';
 
 import FriendsFilterDropdown from './FriendsFilterDropdown';
 

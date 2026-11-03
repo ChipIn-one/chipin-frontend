@@ -1,8 +1,7 @@
-import { InfoIcon } from 'lucide-react';
-import { expect, test } from 'vitest';
-
 import { Button, Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
+import { InfoIcon } from 'lucide-react';
+import { expect, test } from 'vitest';
 
 import EmptyState from './EmptyState';
 

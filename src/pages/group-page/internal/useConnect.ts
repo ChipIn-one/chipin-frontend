@@ -1,8 +1,8 @@
 import { useShallow } from 'zustand/react/shallow';
 
-import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupNextPageError } from 'store/errorsSelectors';
 import { useErrorsStore } from 'store/errorsStore';
+import { useGroupsStore } from 'store/groupsStore';
 import {
     selectGroupDataFetched,
     selectGroupDataLoading,

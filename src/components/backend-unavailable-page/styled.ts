@@ -1,6 +1,5 @@
-import styled, { css } from 'styled-components';
-
 import { Button, Dialog } from '@radix-ui/themes';
+import styled, { css } from 'styled-components';
 
 import { themeColor } from 'helpers/colors';
 

@@ -1,8 +1,7 @@
+import { Dialog, IconButton, Text, VisuallyHidden } from '@radix-ui/themes';
 import { ArrowLeftIcon, XIcon } from 'lucide-react';
 import type { ReactNode, Ref } from 'react';
 import { useTranslation } from 'react-i18next';
-
-import { Dialog, IconButton, Text, VisuallyHidden } from '@radix-ui/themes';
 
 import { OverlayHeader } from '../components';
 

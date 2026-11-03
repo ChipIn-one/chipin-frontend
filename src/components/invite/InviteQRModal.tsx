@@ -1,8 +1,7 @@
+import { Box, Button, Card, Dialog, Flex, Text } from '@radix-ui/themes';
 import { QrCodeIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-
-import { Box, Button, Card, Dialog, Flex, Text } from '@radix-ui/themes';
 
 import type { InviteQrContent } from 'hooks/pwaHooks';
 

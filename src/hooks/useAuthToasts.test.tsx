@@ -1,7 +1,6 @@
+import { act, render, waitFor } from '@testing-library/react';
 import { toast } from 'sonner';
 import { beforeEach, expect, test, vi } from 'vitest';
-
-import { act, render, waitFor } from '@testing-library/react';
 
 import { useAuthStore } from 'store/authStore';
 

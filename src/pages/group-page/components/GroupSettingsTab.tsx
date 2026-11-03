@@ -1,7 +1,3 @@
-import { LogOutIcon, Trash2Icon, UserMinusIcon } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
-
 import {
     Avatar,
     Badge,
@@ -14,6 +10,9 @@ import {
     Switch,
     Text,
 } from '@radix-ui/themes';
+import { LogOutIcon, Trash2Icon, UserMinusIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 
 import type { Group } from 'api/chipin.types';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
@@ -23,8 +22,8 @@ import { KickGroupMemberAlertDialog } from 'components/modals/kick-group-member-
 import { LeaveGroupAlertDialog } from 'components/modals/leave-group-alert-dialog';
 import { RemoveGroupAlertDialog } from 'components/modals/remove-group-alert-dialog';
 
-import { useConnect } from './internal/group-settings';
 import GroupInviteActionRows from './GroupInviteActionRows';
+import { useConnect } from './internal/group-settings';
 
 interface Props {
     group: Group;

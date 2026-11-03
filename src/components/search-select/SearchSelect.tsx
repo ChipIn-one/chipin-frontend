@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
+import { Box, Flex, Popover, Text, TextField } from '@radix-ui/themes';
 import { SearchIcon } from 'lucide-react';
 import type { ComponentProps } from 'react';
-
-import { Box, Flex, Popover, Text, TextField } from '@radix-ui/themes';
 
 import { getFilterFunction } from 'helpers/text';
 

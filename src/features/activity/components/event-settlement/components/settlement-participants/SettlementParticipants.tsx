@@ -1,6 +1,5 @@
-import { useTranslation } from 'react-i18next';
-
 import { Flex } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 
 import { ParticipantText } from './styled';
 

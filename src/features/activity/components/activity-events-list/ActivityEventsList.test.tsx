@@ -1,10 +1,10 @@
-import type { ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { expect, test, vi } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
-import type { ActivityFeedItem } from 'api/chipin.types';
 import type { BalanceEntry } from 'api/chipin.raw.types';
+import type { ActivityFeedItem } from 'api/chipin.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { getActivityPreviewEvents } from 'helpers/activityEvent';
 

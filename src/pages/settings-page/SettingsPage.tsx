@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
-import { toast } from 'sonner';
-
 import { Box, Container, Flex, Grid } from '@radix-ui/themes';
+import { toast } from 'sonner';
 
 import { useErrorsStore } from 'store/errorsStore';
 import { selectUserSelfFetched, selectUserSelfLoading } from 'store/loadingSelectors';

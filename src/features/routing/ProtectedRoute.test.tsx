@@ -1,8 +1,7 @@
-import { MemoryRouter, useLocation } from 'react-router-dom';
-import { beforeEach, expect, test, vi } from 'vitest';
-
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter, useLocation } from 'react-router-dom';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 import { LS_KEY_USER } from 'constants/localstorage';
 import { getLocalUser, LocalStorage } from 'helpers/localStorage';

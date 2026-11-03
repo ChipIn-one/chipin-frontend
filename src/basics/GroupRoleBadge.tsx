@@ -1,6 +1,5 @@
-import { useTranslation } from 'react-i18next';
-
 import { Badge } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
     isOwner: boolean;

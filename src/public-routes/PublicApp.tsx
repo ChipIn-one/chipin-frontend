@@ -1,10 +1,9 @@
 import { useSyncExternalStore } from 'react';
+import { Theme } from '@radix-ui/themes';
+import type { i18n as I18nInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
 import { BrowserRouter, MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
-import type { i18n as I18nInstance } from 'i18next';
-
-import { Theme } from '@radix-ui/themes';
 
 import { darkThemeStyled, lightThemeStyled } from 'constants/styled-themes';
 import { isPreferredPublicThemeDark } from 'helpers/theme';

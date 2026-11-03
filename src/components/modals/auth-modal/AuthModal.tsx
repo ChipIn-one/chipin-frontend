@@ -1,7 +1,6 @@
+import { Flex, Heading, Text } from '@radix-ui/themes';
 import { ShieldLockIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Flex, Heading, Text } from '@radix-ui/themes';
 
 import AuthButtons from 'components/AuthButtons';
 

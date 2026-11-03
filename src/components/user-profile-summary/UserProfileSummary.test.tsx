@@ -1,7 +1,6 @@
+import { render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { expect, test } from 'vitest';
-
-import { render, screen } from '@testing-library/react';
 
 import type { UserSummary } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';

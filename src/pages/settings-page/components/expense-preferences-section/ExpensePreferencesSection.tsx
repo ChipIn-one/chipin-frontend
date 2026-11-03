@@ -1,8 +1,7 @@
+import { Avatar, Box, Card, Flex, Grid, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
 import { ReceiptTextIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-
-import { Avatar, Box, Card, Flex, Grid, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
 
 import {
     selectUserCurrency,

@@ -1,8 +1,7 @@
+import { Avatar, Box, Button, Card, Flex, Separator, Skeleton, Text } from '@radix-ui/themes';
 import { GlobeIcon, RotateCcwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-
-import { Avatar, Box, Button, Card, Flex, Separator, Skeleton, Text } from '@radix-ui/themes';
 
 import type { UserSettings } from 'api/chipin.types';
 import { matchLocale, resolveBrowserLocale, type SupportedLocale } from 'helpers/locale';

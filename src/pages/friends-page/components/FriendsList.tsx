@@ -1,6 +1,5 @@
-import type { ReactNode } from 'react';
-
 import { Flex } from '@radix-ui/themes';
+import type { ReactNode } from 'react';
 
 import type { KnownUser } from 'api/chipin.types';
 import type { FriendCurrencyGroup } from 'store/users-store';

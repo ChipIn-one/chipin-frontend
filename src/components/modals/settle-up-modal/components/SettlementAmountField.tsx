@@ -1,8 +1,7 @@
 import { useRef } from 'react';
+import { Button, Flex, Text, TextField } from '@radix-ui/themes';
 import { PencilIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Button, Flex, Text, TextField } from '@radix-ui/themes';
 
 import Select, { type SelectItem } from 'components/Select';
 

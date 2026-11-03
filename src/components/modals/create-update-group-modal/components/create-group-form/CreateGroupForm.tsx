@@ -1,9 +1,8 @@
 import { useState } from 'react';
+import { Button, Dialog, Flex } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
-
-import { Button, Dialog, Flex } from '@radix-ui/themes';
 
 import type { Group } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';

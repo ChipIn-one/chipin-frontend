@@ -1,8 +1,7 @@
-import { ThemeProvider } from 'styled-components';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { ThemeProvider } from 'styled-components';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';

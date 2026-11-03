@@ -1,8 +1,7 @@
 import { type ImgHTMLAttributes, type ReactEventHandler, useState } from 'react';
+import { Skeleton } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-
-import { Skeleton } from '@radix-ui/themes';
 
 type ImageStatus = 'loading' | 'loaded' | 'error';
 

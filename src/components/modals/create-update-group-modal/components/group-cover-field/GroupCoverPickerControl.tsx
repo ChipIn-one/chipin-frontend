@@ -1,8 +1,7 @@
+import { IconButton } from '@radix-ui/themes';
 import { ImageUpIcon } from 'lucide-react';
 import type { ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-
-import { IconButton } from '@radix-ui/themes';
 
 import { IMAGE_FILE_ACCEPT } from 'helpers/imageFile';
 

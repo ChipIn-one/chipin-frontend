@@ -1,17 +1,15 @@
-import i18n from 'i18n';
-import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import { TEST_INVITE_TOKEN } from 'test/fixtures/inviteToken';
-import { beforeEach, expect, test, vi } from 'vitest';
-
 import { Theme } from '@radix-ui/themes';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 import { ROUTES } from 'constants/routes';
-import { useAuthStore } from 'store/authStore';
-
 import { ProtectedRoute } from 'features/routing/ProtectedRoute';
+import i18n from 'i18n';
+import { useAuthStore } from 'store/authStore';
+import { TEST_INVITE_TOKEN } from 'test/fixtures/inviteToken';
 
 import FriendJoinPage from './FriendJoinPage';
 

@@ -1,6 +1,5 @@
-import { Navigate, useNavigate } from 'react-router-dom';
-
 import { Box } from '@radix-ui/themes';
+import { Navigate, useNavigate } from 'react-router-dom';
 
 import { ROUTES } from 'constants/routes';
 import { getLastAccountLandingPath } from 'helpers/publicRoutes';

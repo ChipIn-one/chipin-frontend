@@ -1,8 +1,8 @@
-import { UserAvatar } from 'basics';
 import { useTranslation } from 'react-i18next';
 
 import type { ExpenseParticipant } from 'store/expenseModalStore';
 
+import { UserAvatar } from 'basics';
 import { SearchSelect, type SearchSelectItem } from 'components/search-select';
 
 import { ExpenseSearchSelectContent } from '../expense-search-select-content';

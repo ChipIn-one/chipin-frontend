@@ -1,8 +1,7 @@
+import { IconButton } from '@radix-ui/themes';
 import { MoonIcon, SunIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
-
-import { IconButton } from '@radix-ui/themes';
 
 import { isThemeDark } from 'helpers/theme';
 

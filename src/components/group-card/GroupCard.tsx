@@ -1,6 +1,5 @@
-import { useTranslation } from 'react-i18next';
-
 import { Badge, Flex, Text, VisuallyHidden } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 
 import { GROUP_NET_CONVERSION_STATES } from 'constants/groups';
 import { ROUTES } from 'constants/routes';

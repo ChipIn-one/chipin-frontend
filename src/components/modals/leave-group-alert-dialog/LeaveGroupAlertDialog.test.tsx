@@ -1,8 +1,7 @@
-import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, expect, test, vi } from 'vitest';
-
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group, SelfUser } from 'api/chipin.types';
 import { useGroupsStore } from 'store/groupsStore';

@@ -1,7 +1,6 @@
 import { useId, useState } from 'react';
-import type { ChangeEvent, ComponentProps, FocusEvent, ReactNode } from 'react';
-
 import { Flex, Text, TextField } from '@radix-ui/themes';
+import type { ChangeEvent, ComponentProps, FocusEvent, ReactNode } from 'react';
 
 type TextFieldRootProps = ComponentProps<typeof TextField.Root>;
 

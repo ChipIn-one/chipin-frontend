@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { IconButton } from '@radix-ui/themes';
 import {
     ArrowLeftRightIcon,
     BellIcon,
@@ -7,8 +8,6 @@ import {
     UserXIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { IconButton } from '@radix-ui/themes';
 
 import type { FriendBalance, KnownUser } from 'api/chipin.types';
 import { useActivityStore } from 'store/activity-store';

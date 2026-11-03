@@ -1,6 +1,5 @@
-import type { ReactNode } from 'react';
-
 import { Flex, Text } from '@radix-ui/themes';
+import type { ReactNode } from 'react';
 
 interface HintCardProps {
     icon: ReactNode;

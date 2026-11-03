@@ -1,8 +1,7 @@
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-
 import { Theme } from '@radix-ui/themes';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
 import type { UsersStoreActions } from 'store/users-store';

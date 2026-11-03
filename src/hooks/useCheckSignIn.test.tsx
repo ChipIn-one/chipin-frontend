@@ -1,7 +1,6 @@
+import { act, render, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-
-import { act, render, waitFor } from '@testing-library/react';
 
 import type { SelfUser } from 'api/chipin.types';
 import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';

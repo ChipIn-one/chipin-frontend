@@ -1,12 +1,5 @@
 /* eslint-disable react-refresh/only-export-components -- dev-only design-system gallery entry, never shipped in the app bundle */
 import { type ReactNode, useEffect, useState } from 'react';
-import i18n from 'i18n';
-import { MinusIcon, MoonIcon, PlusIcon, SunIcon, Trash2Icon, UsersIcon } from 'lucide-react';
-import { createRoot } from 'react-dom/client';
-import { Trans, useTranslation } from 'react-i18next';
-import { MemoryRouter } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
-
 import {
     Badge,
     Box,
@@ -23,9 +16,15 @@ import {
     Text,
     Theme,
 } from '@radix-ui/themes';
+import { MinusIcon, MoonIcon, PlusIcon, SunIcon, Trash2Icon, UsersIcon } from 'lucide-react';
+import { createRoot } from 'react-dom/client';
+import { Trans, useTranslation } from 'react-i18next';
+import { MemoryRouter } from 'react-router-dom';
+import { ThemeProvider } from 'styled-components';
 
 import { SUPPORTED_LOCALES } from 'constants/locales';
 import { darkThemeStyled, lightThemeStyled } from 'constants/styled-themes';
+import i18n from 'i18n';
 
 import CopyButton from 'basics/buttons/CopyButton';
 import DebtAmount from 'basics/DebtAmount';

@@ -1,7 +1,6 @@
-import { beforeEach, expect, test, vi } from 'vitest';
-
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group, GroupUser } from 'api/chipin.types';
 import { useGroupsStore } from 'store/groupsStore';

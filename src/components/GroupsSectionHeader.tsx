@@ -1,8 +1,7 @@
+import { Avatar, Button, Flex, Skeleton, Text } from '@radix-ui/themes';
 import { PlusIcon, UsersIcon } from 'lucide-react';
 import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
-
-import { Avatar, Button, Flex, Skeleton, Text } from '@radix-ui/themes';
 
 import { CreateUpdateGroupModal } from './modals';
 

@@ -1,5 +1,6 @@
-import { TEST_INVITE_TOKEN } from 'test/fixtures/inviteToken';
 import { describe, expect, test, vi } from 'vitest';
+
+import { TEST_INVITE_TOKEN } from 'test/fixtures/inviteToken';
 
 import { apiPath, encodePathSegment, InvalidPathSegmentError } from './apiPath';
 import { inviteApiUserToGroup } from './chipin';

@@ -3,8 +3,8 @@ import { create } from 'zustand';
 import type { UpdateUserParams } from 'api/chipin.types';
 import * as usersApi from 'api/usersApi';
 import { DAY, SECOND } from 'constants/time';
-import { normalizeApiError } from 'helpers/errors';
 import { getAuthSessionVersion, isAuthSessionCurrent } from 'helpers/authSession';
+import { normalizeApiError } from 'helpers/errors';
 import { saveLocalUser, toLocalUser } from 'helpers/localStorage';
 import { getUnixTimestampInSec } from 'helpers/time';
 

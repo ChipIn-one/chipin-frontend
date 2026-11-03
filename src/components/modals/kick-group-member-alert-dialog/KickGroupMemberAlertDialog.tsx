@@ -1,9 +1,8 @@
 import { type ReactNode, useState } from 'react';
+import { Callout } from '@radix-ui/themes';
 import { TriangleAlertIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-
-import { Callout } from '@radix-ui/themes';
 
 import type { GroupUser } from 'api/chipin.types';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';

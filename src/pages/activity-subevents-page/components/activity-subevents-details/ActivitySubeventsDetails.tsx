@@ -1,8 +1,6 @@
-import { Amount, LedgerScopeBadge } from 'basics';
+import { Card, Flex, Heading, Skeleton, Text } from '@radix-ui/themes';
 import { ArrowRightIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Card, Flex, Heading, Skeleton, Text } from '@radix-ui/themes';
 
 import type { AppEvent, ExpenseActivityMetadata } from 'api/activity.types';
 import {
@@ -15,6 +13,8 @@ import {
 } from 'constants/activity';
 import type { ActivitySubeventsView } from 'helpers/activityEvent';
 import { formatActivityAbsoluteDate } from 'helpers/time';
+
+import { Amount, LedgerScopeBadge } from 'basics';
 
 import { ActivitySubeventsButtons } from '../activity-subevents-buttons';
 

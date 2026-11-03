@@ -1,8 +1,7 @@
+import { Avatar, Box, Button, Card, Flex, Grid, Separator, Skeleton, Text } from '@radix-ui/themes';
 import { LogOutIcon, ShieldIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-
-import { Avatar, Box, Button, Card, Flex, Grid, Separator, Skeleton, Text } from '@radix-ui/themes';
 
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { useAuthStore } from 'store/authStore';

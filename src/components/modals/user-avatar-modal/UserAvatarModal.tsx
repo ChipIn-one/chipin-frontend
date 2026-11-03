@@ -1,11 +1,9 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { UserAvatar } from 'basics';
+import { Avatar, Box, Button, Callout, Dialog, Flex, Text } from '@radix-ui/themes';
 import { CircleAlertIcon, ImageUpIcon } from 'lucide-react';
 import type { ChangeEvent, DragEvent, ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-
-import { Avatar, Box, Button, Callout, Dialog, Flex, Text } from '@radix-ui/themes';
 
 import {
     IMAGE_FILE_ACCEPT,
@@ -16,6 +14,7 @@ import { selectUserAvatarUploading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
 
+import { UserAvatar } from 'basics';
 import { ProgressBar } from 'components/progress-bar';
 
 import { BaseModal } from '../base-modal';

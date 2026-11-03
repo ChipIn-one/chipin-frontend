@@ -1,8 +1,7 @@
+import { Button, Card, Flex, Heading, Text } from '@radix-ui/themes';
 import { UserPlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-
-import { Button, Card, Flex, Heading, Text } from '@radix-ui/themes';
 
 import type { UseInviteResult } from 'hooks/pwaHooks';
 

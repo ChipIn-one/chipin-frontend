@@ -1,4 +1,4 @@
-import { Amount, UserAvatar } from 'basics';
+import { Flex, Text } from '@radix-ui/themes';
 import {
     ArrowDownLeftIcon,
     ArrowUpRightIcon,
@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Flex, Text } from '@radix-ui/themes';
+import { Amount, UserAvatar } from 'basics';
 
 import type { DebtOption } from '../internal';
 import { DebtButton, ShowMoreButton } from '../styled';

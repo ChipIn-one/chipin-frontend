@@ -1,7 +1,6 @@
+import { Container, Section } from '@radix-ui/themes';
 import { UsersIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Container, Section } from '@radix-ui/themes';
 
 import { GroupPagePreview, ShowcaseSection } from './components';
 import { GROUPS_BULLET_KEYS } from './internal';

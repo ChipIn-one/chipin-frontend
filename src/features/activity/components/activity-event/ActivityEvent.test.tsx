@@ -1,8 +1,7 @@
+import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 import { expect, test, vi } from 'vitest';
-
-import { render, screen } from '@testing-library/react';
 
 import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';

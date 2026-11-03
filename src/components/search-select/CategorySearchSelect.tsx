@@ -1,8 +1,7 @@
 import { useMemo } from 'react';
+import { Button, Flex, Text } from '@radix-ui/themes';
 import { ChevronDownIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Button, Flex, Text } from '@radix-ui/themes';
 
 import { EXPENSE_CATEGORY_KEYS } from 'constants/category';
 import { EXPENSE_CATEGORY_UI } from 'constants/category-ui';

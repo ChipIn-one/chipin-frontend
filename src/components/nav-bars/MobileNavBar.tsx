@@ -1,7 +1,6 @@
+import { Box, Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
-
-import { Box, Flex, Text } from '@radix-ui/themes';
 
 import { getPreferredModeRoute, isNavigationRouteActive } from 'helpers/routes';
 import { useAddExpenseAvailability } from 'hooks/useAddExpenseAvailability';

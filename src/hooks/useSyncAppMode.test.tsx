@@ -1,9 +1,8 @@
-import { MemoryRouter, useNavigate } from 'react-router-dom';
-import { beforeEach, expect, test } from 'vitest';
-
 import { Button } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter, useNavigate } from 'react-router-dom';
+import { beforeEach, expect, test } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';

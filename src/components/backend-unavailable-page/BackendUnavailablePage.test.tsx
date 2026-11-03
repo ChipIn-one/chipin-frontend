@@ -1,8 +1,7 @@
-import { ThemeProvider } from 'styled-components';
-import { beforeEach, expect, test, vi } from 'vitest';
-
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { ThemeProvider } from 'styled-components';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';

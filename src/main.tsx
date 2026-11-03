@@ -1,14 +1,15 @@
+import { Box, Spinner, Theme } from '@radix-ui/themes';
 import { CircleCheckIcon, CircleXIcon, InfoIcon, TriangleAlertIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from 'styled-components';
 
-import { Box, Spinner, Theme } from '@radix-ui/themes';
-
 import { darkThemeStyled, lightThemeStyled } from 'constants/styled-themes';
+import AppRouter from 'features/routing';
 import { isThemeDark } from 'helpers/theme';
 import { useIsMobile } from 'hooks/common';
+import GlobalHooks from 'pages/GlobalHooks';
 
 import BackgroundBox from 'basics/BackgroundBox';
 import PWABadge from 'basics/PWABadge';
@@ -18,8 +19,6 @@ import Header from 'components/Header';
 import { AddExpenseModal } from 'components/modals/add-expense-modal';
 import { ModalOverlayGlobalStyles } from 'components/modals/components';
 import { EarlySupporterPromoModal } from 'components/modals/early-supporter-promo-modal';
-import AppRouter from 'features/routing';
-import GlobalHooks from 'pages/GlobalHooks';
 
 const ToastSuccessIcon = () => <CircleCheckIcon size={20} />;
 const ToastInfoIcon = () => <InfoIcon size={20} />;
