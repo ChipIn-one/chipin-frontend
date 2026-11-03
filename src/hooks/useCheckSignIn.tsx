@@ -16,9 +16,7 @@ import { useUsersStore } from 'store/users-store';
 export const useCheckSignIn = () => {
     const location = useLocation();
     const status = useAuthStore(selectAuthStatus);
-    const isBackendUnavailable = useBackendAvailabilityStore(
-        state => state.isUnavailable,
-    );
+    const isBackendUnavailable = useBackendAvailabilityStore(state => state.isUnavailable);
     const { fetchSetDashboardData, setDefaultAppMode } = useDashboardStore(
         useShallow(state => ({
             fetchSetDashboardData: state.fetchSetDashboardData,

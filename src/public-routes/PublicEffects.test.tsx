@@ -10,7 +10,9 @@ import { useScrollToTop } from 'hooks/useScrollToTop';
 import { PublicEffects } from './PublicEffects';
 
 vi.mock('sonner', () => ({
-    Toaster: ({ theme }: { theme: string }) => <output aria-label="Public toast theme">{theme}</output>,
+    Toaster: ({ theme }: { theme: string }) => (
+        <output aria-label="Public toast theme">{theme}</output>
+    ),
     toast: { message: vi.fn() },
 }));
 vi.mock('hooks/useAuthToasts', () => ({ useAuthToasts: vi.fn() }));
@@ -41,8 +43,13 @@ vi.mock('./internal/useConnect', () => ({
     }),
 }));
 
-beforeEach(() => { window.sessionStorage.clear(); vi.clearAllMocks(); });
-afterEach(() => { vi.restoreAllMocks(); });
+beforeEach(() => {
+    window.sessionStorage.clear();
+    vi.clearAllMocks();
+});
+afterEach(() => {
+    vi.restoreAllMocks();
+});
 
 test('mounts the existing session-feedback and scroll-restoration hooks on public routes', () => {
     render(<PublicEffects route={PUBLIC_ROUTE_ENTRIES[0]} isDark={false} />);
@@ -68,13 +75,23 @@ test('English privacy offers a localized persistent Sonner action only once', ()
 
 test('explicit locale URL never offers a competing browser language', () => {
     vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['ru-RU']);
-    render(<PublicEffects route={PUBLIC_ROUTE_ENTRIES.find(r => r.path === '/es/privacy')!} isDark={false} />);
+    render(
+        <PublicEffects
+            route={PUBLIC_ROUTE_ENTRIES.find(r => r.path === '/es/privacy')!}
+            isDark={false}
+        />,
+    );
     expect(toast.message).not.toHaveBeenCalled();
 });
 
 test('unsupported browser languages receive no suggestion', () => {
     vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['ja-JP']);
-    render(<PublicEffects route={PUBLIC_ROUTE_ENTRIES.find(r => r.path === '/privacy')!} isDark={false} />);
+    render(
+        <PublicEffects
+            route={PUBLIC_ROUTE_ENTRIES.find(r => r.path === '/privacy')!}
+            isDark={false}
+        />,
+    );
     expect(toast.message).not.toHaveBeenCalled();
 });
 

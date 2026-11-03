@@ -1,9 +1,6 @@
 import { beforeEach, expect, test } from 'vitest';
 
-import {
-    type ExpenseParticipant,
-    useExpenseModalStore,
-} from './expenseModalStore';
+import { type ExpenseParticipant, useExpenseModalStore } from './expenseModalStore';
 
 const currentUser = {
     id: 'user-1',

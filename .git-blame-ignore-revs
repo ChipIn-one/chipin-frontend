@@ -1,0 +1,17 @@
+# Commits that only reformat code (Prettier, issue #519: PRs 02-C2a, 02-C2b, 02-C2c).
+# `git blame` skips the commits listed here and shows the previous author of each line.
+#
+# Enable locally once per clone:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# GitHub's blame view reads this file automatically.
+#
+# After these commits land, rebase open branches and run `npm run format` once to resolve
+# formatting conflicts.
+#
+# One full commit SHA per line, with a comment line above naming the PR.
+# 02-C2c is added by a follow-up PR once its squash SHA exists.
+
+# 02-C2a: format src/components (#597)
+7c9413e8775e07003ec675cabad57d363a94f79e
+# 02-C2b: format src/pages and src/features (#596)
+adaff009965bf0992ccbded997a9d729b3dda788

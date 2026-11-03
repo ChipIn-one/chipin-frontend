@@ -12,8 +12,7 @@ export const resolveOAuthReturnTo = (returnTo: string | null, origin: string): s
     try {
         const url = new URL(returnTo, origin);
         const isOAuthCallback =
-            url.pathname === ROUTES.OAUTH_CALLBACK ||
-            url.pathname === `${ROUTES.OAUTH_CALLBACK}/`;
+            url.pathname === ROUTES.OAUTH_CALLBACK || url.pathname === `${ROUTES.OAUTH_CALLBACK}/`;
 
         if (url.origin !== origin || isOAuthCallback) {
             return ROUTES.HOME;
@@ -30,8 +29,7 @@ export const getSocialAuthUrl = (provider: AuthService) => {
 
     const { origin, pathname, search, hash } = window.location;
 
-    const returnTo =
-        pathname === ROUTES.HOME ? ROUTES.DASHBOARD : `${pathname}${search}${hash}`;
+    const returnTo = pathname === ROUTES.HOME ? ROUTES.DASHBOARD : `${pathname}${search}${hash}`;
     const callbackUrl = new URL(ROUTES.OAUTH_CALLBACK, origin);
     callbackUrl.searchParams.set('returnTo', returnTo);
 

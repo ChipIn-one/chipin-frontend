@@ -25,14 +25,16 @@ export const checkVersionConsistency = ({
     parseSemVer(lockVersion);
 
     if (packageVersion !== lockRootVersion || packageVersion !== lockVersion) {
-        throw new Error(`package.json (${packageVersion}) and package-lock.json (${lockRootVersion}/${lockVersion}) versions must match.`);
+        throw new Error(
+            `package.json (${packageVersion}) and package-lock.json (${lockRootVersion}/${lockVersion}) versions must match.`,
+        );
     }
 
     return packageVersion;
 };
 
-const isMainModule = process.argv[1]
-    && pathToFileURL(resolve(process.argv[1])).href === import.meta.url;
+const isMainModule =
+    process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url;
 
 if (isMainModule) {
     try {

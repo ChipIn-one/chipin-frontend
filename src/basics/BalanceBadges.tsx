@@ -53,7 +53,12 @@ const BalanceBadges: React.FC<Props> = ({
         <Flex gap="2" wrap="wrap" align="center">
             {visibleItems.map(item => (
                 <Badge key={item.tokenCode} color={item.color} variant="soft" size="3">
-                    <Amount type='summary' value={item.value} tokenCode={item.tokenCode} precision={0} />
+                    <Amount
+                        type="summary"
+                        value={item.value}
+                        tokenCode={item.tokenCode}
+                        precision={0}
+                    />
                 </Badge>
             ))}
 

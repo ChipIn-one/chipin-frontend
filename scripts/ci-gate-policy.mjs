@@ -21,8 +21,8 @@ const isSafeDocumentationPath = path => {
     return path !== 'docs/dependabot-security-updates.md';
 };
 
-export const isDocsOnlyChange = changedFiles => changedFiles.length > 0
-    && changedFiles.every(isSafeDocumentationPath);
+export const isDocsOnlyChange = changedFiles =>
+    changedFiles.length > 0 && changedFiles.every(isSafeDocumentationPath);
 
 export const resolveCiGateMode = ({ workflow, targetBranch, changedFiles }) => {
     if (!WORKFLOWS.has(workflow)) {
@@ -41,9 +41,8 @@ const isCli = process.argv[1] && pathToFileURL(process.argv[1]).href === import.
 if (isCli) {
     try {
         const input = fs.readFileSync(0);
-        const changedFiles = input.length === 0
-            ? []
-            : input.toString('utf8').split('\0').filter(Boolean);
+        const changedFiles =
+            input.length === 0 ? [] : input.toString('utf8').split('\0').filter(Boolean);
         const mode = resolveCiGateMode({
             workflow: process.env.CHIPIN_CI_WORKFLOW ?? '',
             targetBranch: process.env.CHIPIN_TARGET_BRANCH ?? '',

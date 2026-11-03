@@ -34,15 +34,11 @@ const resolveApiDestination = host => {
 
 describe('Vercel API proxy routing', () => {
     test('routes the production hostname only to the production API', () => {
-        expect(resolveApiDestination('chipin.one')).toBe(
-            'https://api.chipin.one/:path*',
-        );
+        expect(resolveApiDestination('chipin.one')).toBe('https://api.chipin.one/:path*');
     });
 
     test('routes the development hostname to the development API', () => {
-        expect(resolveApiDestination('dev.chipin.one')).toBe(
-            'https://api-dev.chipin.one/:path*',
-        );
+        expect(resolveApiDestination('dev.chipin.one')).toBe('https://api-dev.chipin.one/:path*');
     });
 
     test('routes Vercel preview hostnames to the development API', () => {
@@ -68,8 +64,7 @@ describe('Vercel API proxy routing', () => {
 
     test('keeps API rewrites before private SPA routes without capturing public SSG HTML', () => {
         const lastApiRewriteIndex = config.rewrites.reduce(
-            (lastIndex, rewrite, index) =>
-                rewrite.source === API_SOURCE ? index : lastIndex,
+            (lastIndex, rewrite, index) => (rewrite.source === API_SOURCE ? index : lastIndex),
             -1,
         );
         const appRewrites = config.rewrites
@@ -106,7 +101,6 @@ describe('Vercel API proxy routing', () => {
         expect(config.git?.deploymentEnabled).toEqual({ dev: false, main: false });
     });
 });
-
 
 describe('Vercel production security headers', () => {
     test('keeps script-src free of unsafe-inline while preserving connect-src', () => {

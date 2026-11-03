@@ -10,7 +10,14 @@ vi.mock('react-i18next', () => ({
 
 test('keeps a custom prefix inside the non-wrapping amount', () => {
     const { container } = render(
-        <Amount value={12.5} tokenCode="USD" symbol="" precision={2} type="summary" customPrefix="~" />,
+        <Amount
+            value={12.5}
+            tokenCode="USD"
+            symbol=""
+            precision={2}
+            type="summary"
+            customPrefix="~"
+        />,
     );
 
     expect(container.textContent).toBe('~12.5 USD');
@@ -19,7 +26,14 @@ test('keeps a custom prefix inside the non-wrapping amount', () => {
 
 test('hides a custom prefix when the tiny-amount indicator is present', () => {
     const { container } = render(
-        <Amount value={0.004} tokenCode="USD" symbol="" precision={2} type="summary" customPrefix="~" />,
+        <Amount
+            value={0.004}
+            tokenCode="USD"
+            symbol=""
+            precision={2}
+            type="summary"
+            customPrefix="~"
+        />,
     );
 
     expect(container.textContent).toBe('< 0.01 USD');

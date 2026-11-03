@@ -6,7 +6,12 @@ const en = {
     title: 'Chipin Design System',
     documentTitle: 'Chipin Components',
     intro: 'Live components from <code>ChipIn-one/chipin-frontend</code> — Radix Themes (accent grass, gray olive, radius large) with styled-components tokens. Everything below is the real code, rendered with mock data.',
-    controls: { locale: 'Locale', toggleTheme: 'Toggle theme', decrease: 'Decrease', increase: 'Increase' },
+    controls: {
+        locale: 'Locale',
+        toggleTheme: 'Toggle theme',
+        decrease: 'Decrease',
+        increase: 'Increase',
+    },
     nav: {
         tokens: 'Tokens',
         type: 'Typography',
@@ -69,7 +74,12 @@ const ru: GalleryStrings = {
     title: 'Дизайн-система Chipin',
     documentTitle: 'Компоненты Chipin',
     intro: 'Живые компоненты из <code>ChipIn-one/chipin-frontend</code> — Radix Themes (акцент grass, серый olive, радиус large) с токенами styled-components. Всё ниже — настоящий код с моковыми данными.',
-    controls: { locale: 'Язык', toggleTheme: 'Переключить тему', decrease: 'Уменьшить', increase: 'Увеличить' },
+    controls: {
+        locale: 'Язык',
+        toggleTheme: 'Переключить тему',
+        decrease: 'Уменьшить',
+        increase: 'Увеличить',
+    },
     nav: {
         tokens: 'Токены',
         type: 'Типографика',
@@ -130,7 +140,12 @@ const es: GalleryStrings = {
     title: 'Sistema de diseño de Chipin',
     documentTitle: 'Componentes de Chipin',
     intro: 'Componentes reales de <code>ChipIn-one/chipin-frontend</code>: Radix Themes (acento grass, gris olive, radio large) con tokens de styled-components. Todo lo de abajo es el código real, renderizado con datos de prueba.',
-    controls: { locale: 'Idioma', toggleTheme: 'Cambiar tema', decrease: 'Disminuir', increase: 'Aumentar' },
+    controls: {
+        locale: 'Idioma',
+        toggleTheme: 'Cambiar tema',
+        decrease: 'Disminuir',
+        increase: 'Aumentar',
+    },
     nav: {
         tokens: 'Tokens',
         type: 'Tipografía',
@@ -191,7 +206,12 @@ const ptBR: GalleryStrings = {
     title: 'Design system do Chipin',
     documentTitle: 'Componentes do Chipin',
     intro: 'Componentes reais de <code>ChipIn-one/chipin-frontend</code>: Radix Themes (destaque grass, cinza olive, raio large) com tokens de styled-components. Tudo abaixo é o código real, renderizado com dados fictícios.',
-    controls: { locale: 'Idioma', toggleTheme: 'Alternar tema', decrease: 'Diminuir', increase: 'Aumentar' },
+    controls: {
+        locale: 'Idioma',
+        toggleTheme: 'Alternar tema',
+        decrease: 'Diminuir',
+        increase: 'Aumentar',
+    },
     nav: {
         tokens: 'Tokens',
         type: 'Tipografia',
@@ -250,7 +270,12 @@ const ptBR: GalleryStrings = {
 
 const ptPT: GalleryStrings = {
     ...ptBR,
-    controls: { locale: 'Idioma', toggleTheme: 'Alternar tema', decrease: 'Diminuir', increase: 'Aumentar' },
+    controls: {
+        locale: 'Idioma',
+        toggleTheme: 'Alternar tema',
+        decrease: 'Diminuir',
+        increase: 'Aumentar',
+    },
     intro: 'Componentes reais de <code>ChipIn-one/chipin-frontend</code>: Radix Themes (destaque grass, cinzento olive, raio large) com tokens de styled-components. Tudo abaixo é o código real, apresentado com dados fictícios.',
     nav: { ...ptBR.nav, cards: 'Cartões' },
     sections: { ...ptBR.sections, cards: 'Cartões de resumo' },

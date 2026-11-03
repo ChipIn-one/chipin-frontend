@@ -9,8 +9,7 @@ export const EXPENSE_SPLIT_MODES = {
     SHARES: 'shares',
 } as const;
 
-export type ExpenseSplitMode =
-    (typeof EXPENSE_SPLIT_MODES)[keyof typeof EXPENSE_SPLIT_MODES];
+export type ExpenseSplitMode = (typeof EXPENSE_SPLIT_MODES)[keyof typeof EXPENSE_SPLIT_MODES];
 
 export const EXPENSE_SPLIT_STATUSES = {
     EXACT: 'exact',

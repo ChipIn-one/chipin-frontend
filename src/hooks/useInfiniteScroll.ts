@@ -1,6 +1,9 @@
 import { useEffect, useRef } from 'react';
 
-import { type IntersectionObserverRef, useIntersectionObserver } from 'hooks/useIntersectionObserver';
+import {
+    type IntersectionObserverRef,
+    useIntersectionObserver,
+} from 'hooks/useIntersectionObserver';
 
 interface UseInfiniteScrollParams {
     hasMore: boolean;

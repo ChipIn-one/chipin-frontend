@@ -12,10 +12,13 @@ const writeManifests = (packageVersion, lockVersion, rootLockVersion = lockVersi
     const lockfilePath = join(directory, 'package-lock.json');
 
     writeFileSync(packagePath, JSON.stringify({ version: packageVersion }));
-    writeFileSync(lockfilePath, JSON.stringify({
-        version: rootLockVersion,
-        packages: { '': { version: lockVersion } },
-    }));
+    writeFileSync(
+        lockfilePath,
+        JSON.stringify({
+            version: rootLockVersion,
+            packages: { '': { version: lockVersion } },
+        }),
+    );
 
     return { directory, packagePath, lockfilePath };
 };

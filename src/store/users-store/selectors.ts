@@ -1,8 +1,4 @@
-import type {
-    KnownUser,
-    ThemeName,
-    UserSettings,
-} from 'api/chipin.types';
+import type { KnownUser, ThemeName, UserSettings } from 'api/chipin.types';
 import { DEFAULT_EXPENSE_CATEGORY } from 'constants/category';
 import { DEFAULT_CURRENCY_CODE } from 'constants/currencies';
 import { normalizeApiMoneyAmount } from 'helpers/numbers';
@@ -15,8 +11,7 @@ export const selectUserSettings = (s: UsersStore): UserSettings | null =>
 export const selectUserCurrency = (s: UsersStore) =>
     selectUserSettings(s)?.defaultCurrency || DEFAULT_CURRENCY_CODE;
 export const selectUserDisplayName = (s: UsersStore) => s.user?.displayName ?? '';
-export const selectIsUserTime24H = (s: UsersStore) =>
-    selectUserSettings(s)?.timeFormat === '24h';
+export const selectIsUserTime24H = (s: UsersStore) => selectUserSettings(s)?.timeFormat === '24h';
 export const selectUserLanguage = (s: UsersStore) => selectUserSettings(s)?.language ?? 'en';
 export const selectUserTheme = (s: UsersStore): ThemeName =>
     selectUserSettings(s)?.theme ?? 'system';
@@ -30,8 +25,7 @@ export const selectUserSoloModeByDefault = (s: UsersStore) =>
     selectUserSettings(s)?.soloModeByDefault ?? false;
 export const selectUserSaveGroupExpensesToSolo = (s: UsersStore) =>
     selectUserSettings(s)?.saveGroupExpensesToSolo ?? false;
-export const selectUserSex = (s: UsersStore) =>
-    selectUserSettings(s)?.sex ?? 'male';
+export const selectUserSex = (s: UsersStore) => selectUserSettings(s)?.sex ?? 'male';
 export const selectFriends = (s: UsersStore): KnownUser[] => s.friends;
 export const selectIsUserAdmin = (s: UsersStore) => (s.user?.role ?? s.localUser?.role) === 'ADMIN';
 const IS_SOLO_MODE_RELEASED = false;

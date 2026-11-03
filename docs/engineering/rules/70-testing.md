@@ -72,12 +72,13 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
 - `npm run test:full` runs the complete Vitest suite once.
 - `npm run typecheck` runs `tsc -b`.
 - `npm run format` rewrites the repository with Prettier (`prettier.config.js`); never run it in a task.
-  Run `npx prettier --write <files>` only on files that passed `npx prettier --check` before your edit
-  (check before editing; new files always). `npm run format:check` checks without writing and is not yet
-  part of `verify`, `verify:full`, or CI.
-- `npm run verify` is the fast local check: quiet lint plus typecheck; it does not run Vitest or build.
-- `npm run verify:full` is the full gate and the same command CI runs: lint, the complete Vitest suite,
-  the production build, and the ds-gallery build. Husky `pre-push` runs `version:check` and `verify:full`.
+  Run `npx prettier --write <files>` on the files you changed. `npm run format:check` checks without
+  writing; `verify`, `verify:full`, and CI run it, so CI enforces formatting.
+- `npm run verify` is the fast local check: format check, quiet lint, and typecheck; it does not run
+  Vitest or build.
+- `npm run verify:full` is the full gate and the same command CI runs: format check, lint, the complete
+  Vitest suite, the production build, and the ds-gallery build. Husky `pre-push` runs `version:check`
+  and `verify:full`.
 - `npm run build` runs `tsc -b`, the Vite production build, and the public precache check; it does not run tests.
 - `npm run vercel-build` (wired through `vercel.json`) is the Vercel deployment build: Vite production
   build and public precache check, no tests and no icon generation.

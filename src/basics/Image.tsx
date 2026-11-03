@@ -1,8 +1,4 @@
-import {
-    type ImgHTMLAttributes,
-    type ReactEventHandler,
-    useState,
-} from 'react';
+import { type ImgHTMLAttributes, type ReactEventHandler, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 

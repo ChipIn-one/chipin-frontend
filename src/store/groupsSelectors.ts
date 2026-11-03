@@ -15,10 +15,7 @@ import {
     getBalanceEntriesSummary,
     sortBalancesByCurrency,
 } from 'helpers/currencies';
-import {
-    normalizeApiMoneyAmount,
-    normalizeFloatingPointZero,
-} from 'helpers/numbers';
+import { normalizeApiMoneyAmount, normalizeFloatingPointZero } from 'helpers/numbers';
 
 import type { GroupsStore } from './groupsStore';
 
@@ -86,27 +83,30 @@ export const selectGroupBalances = (group: Group): GroupBalances => {
     const balancesByDirection = group.members.reduce<{
         owed: BalancesMap;
         owing: BalancesMap;
-    }>((groupBalances, member) => {
-        Object.values(member.balancesByCurrency).forEach(balance => {
-            const balanceDirection = getBalanceDirection(balance.netBalance);
+    }>(
+        (groupBalances, member) => {
+            Object.values(member.balancesByCurrency).forEach(balance => {
+                const balanceDirection = getBalanceDirection(balance.netBalance);
 
-            if (balanceDirection === 'settled') {
-                return;
-            }
+                if (balanceDirection === 'settled') {
+                    return;
+                }
 
-            const direction =
-                balanceDirection === 'owed' ? groupBalances.owed : groupBalances.owing;
-            const existingBalance = direction[balance.currency];
-            direction[balance.currency] = {
-                currency: balance.currency,
-                netBalance: normalizeApiMoneyAmount(
-                    (existingBalance?.netBalance ?? 0) + balance.netBalance,
-                ),
-            };
-        });
+                const direction =
+                    balanceDirection === 'owed' ? groupBalances.owed : groupBalances.owing;
+                const existingBalance = direction[balance.currency];
+                direction[balance.currency] = {
+                    currency: balance.currency,
+                    netBalance: normalizeApiMoneyAmount(
+                        (existingBalance?.netBalance ?? 0) + balance.netBalance,
+                    ),
+                };
+            });
 
-        return groupBalances;
-    }, { owed: {}, owing: {} });
+            return groupBalances;
+        },
+        { owed: {}, owing: {} },
+    );
 
     return {
         owedEntries: Object.values(balancesByDirection.owed),
@@ -144,18 +144,8 @@ export const calcGroupSummary = (
     );
 
     return {
-        oweEntries: sortBalancesByCurrency(
-            oweEntries,
-            rates,
-            base,
-            defaultCurrency,
-        ),
-        owedEntries: sortBalancesByCurrency(
-            owedEntries,
-            rates,
-            base,
-            defaultCurrency,
-        ),
+        oweEntries: sortBalancesByCurrency(oweEntries, rates, base, defaultCurrency),
+        owedEntries: sortBalancesByCurrency(owedEntries, rates, base, defaultCurrency),
         netTotalInBase,
         owedTotalInBase,
         owingTotalInBase,
@@ -329,18 +319,14 @@ export const selectGroupsCardsView = (
         const groupModel = selectGroupCardViewModel(group, options);
         const isSelected = group.id === options.selectedGroupId;
         const matchesSearch =
-            normalizedQuery.length === 0 ||
-            group.name.toLowerCase().includes(normalizedQuery);
+            normalizedQuery.length === 0 || group.name.toLowerCase().includes(normalizedQuery);
 
         if (!matchesSearch) {
             continue;
         }
 
         if (groupModel.isSettled) {
-            if (
-                !isSelected &&
-                options.filter !== GROUP_DEBT_FILTERS.ALL
-            ) {
+            if (!isSelected && options.filter !== GROUP_DEBT_FILTERS.ALL) {
                 continue;
             }
 

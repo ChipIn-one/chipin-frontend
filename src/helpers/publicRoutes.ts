@@ -54,4 +54,10 @@ const resolveRegistrationLocale = (
     return resolveBrowserLocale(browserLanguages);
 };
 
-export { getLastAccountLandingPath, getPublicCanonical, getPublicPath, getPublicRoute, resolveRegistrationLocale };
+export {
+    getLastAccountLandingPath,
+    getPublicCanonical,
+    getPublicPath,
+    getPublicRoute,
+    resolveRegistrationLocale,
+};

@@ -22,7 +22,7 @@ describe('resolveContractConfig', () => {
 
     it.each(['http://localhost:8080', 'http://127.0.0.1:8080/'])(
         'allows the local development target %s without Basic credentials',
-        (baseUrl) => {
+        baseUrl => {
             expect(
                 resolveContractConfig({
                     CHIPIN_CONTRACT_BASE_URL: baseUrl,
@@ -55,7 +55,7 @@ describe('resolveContractConfig', () => {
         'http://localhost:3000',
         'https://localhost:8080',
         'http://127.0.0.1:3000',
-    ])('rejects a non-allowlisted or malformed target: %s', (baseUrl) => {
+    ])('rejects a non-allowlisted or malformed target: %s', baseUrl => {
         expect(() =>
             resolveContractConfig({
                 CHIPIN_CONTRACT_BASE_URL: baseUrl,
@@ -80,7 +80,7 @@ describe('resolveContractConfig', () => {
             CHIPIN_CONTRACT_SWAGGER_PASSWORD: 'contract-password',
             CHIPIN_CONTRACT_SWAGGER_USER: '',
         },
-    ])('requires both Basic credentials for staging', (credentials) => {
+    ])('requires both Basic credentials for staging', credentials => {
         expect(() =>
             resolveContractConfig({
                 CHIPIN_CONTRACT_BASE_URL: 'https://api-dev.chipin.one',

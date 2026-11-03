@@ -173,7 +173,8 @@ const calculateSplit = (state: ExpenseModalStore) => {
 
     const isDirectExpenseReady =
         state.targetMode !== 'friends' ||
-        (includedUsers.length === 2 && Boolean(currentUserId && includedUserIds.has(currentUserId)));
+        (includedUsers.length === 2 &&
+            Boolean(currentUserId && includedUserIds.has(currentUserId)));
     let assignedAmount = totalAmount;
 
     if (!isDirectExpenseReady) {
@@ -299,9 +300,9 @@ const isDirectExpenseValid = (
         split.includedUserIds.has(payerId) &&
         Boolean(
             split.directFriend &&
-                state.source.knownFriends.some(
-                    knownFriend => knownFriend.id === split.directFriend?.id,
-                ),
+            state.source.knownFriends.some(
+                knownFriend => knownFriend.id === split.directFriend?.id,
+            ),
         )
     );
 };
@@ -334,9 +335,7 @@ const getDirectNonPayerUnits = (
 
     if (state.splitMode === EXPENSE_SPLIT_MODES.AMOUNTS) {
         const amount = Number(state.amountShares[nonPayerId] ?? 0);
-        return Number.isFinite(amount) && amount >= 0
-            ? Math.round(amount * 10_000)
-            : null;
+        return Number.isFinite(amount) && amount >= 0 ? Math.round(amount * 10_000) : null;
     }
 
     const getWeight = (userId: string): number => {
@@ -388,9 +387,7 @@ const getDirectNonPayerUnits = (
     const leftover = totalUnits - firstFloor - secondFloor;
     const firstUnits =
         firstFloor +
-        (leftover > 0 && firstRawUnits - firstFloor >= secondRawUnits - secondFloor
-            ? 1
-            : 0);
+        (leftover > 0 && firstRawUnits - firstFloor >= secondRawUnits - secondFloor ? 1 : 0);
 
     return payerId === first.id ? totalUnits - firstUnits : firstUnits;
 };
@@ -408,8 +405,7 @@ const getSubmitState = (state: ExpenseModalStore) => {
         split.totalAmount <= 0 ||
         !payerId ||
         (state.targetMode === 'group' && !state.groupId) ||
-        (state.targetMode === 'group' &&
-            split.users.length < MIN_GROUP_EXPENSE_PARTICIPANTS) ||
+        (state.targetMode === 'group' && split.users.length < MIN_GROUP_EXPENSE_PARTICIPANTS) ||
         !isDirectValid ||
         split.includedUsers.length === 0 ||
         !split.isValid;
@@ -440,10 +436,9 @@ export const selectIsSubmitDisabled = (state: ExpenseModalStore) => {
 
     const payload = selectExpensePayload(state);
 
-    return payload === null || buildExpenseUpdateParams(
-        state.editContext.original,
-        payload,
-    ) === null;
+    return (
+        payload === null || buildExpenseUpdateParams(state.editContext.original, payload) === null
+    );
 };
 
 export const selectExpenseSubmitFeedback = (
@@ -474,9 +469,10 @@ export const selectExpenseSubmitFeedback = (
     if (!split.isValid) {
         if (state.splitMode === EXPENSE_SPLIT_MODES.PERCENT) {
             return {
-                reason: split.totalPercent < 100
-                    ? EXPENSE_SUBMIT_BLOCKERS.PERCENT_UNDER
-                    : EXPENSE_SUBMIT_BLOCKERS.PERCENT_OVER,
+                reason:
+                    split.totalPercent < 100
+                        ? EXPENSE_SUBMIT_BLOCKERS.PERCENT_UNDER
+                        : EXPENSE_SUBMIT_BLOCKERS.PERCENT_OVER,
                 current: split.totalPercent,
                 required: 100,
                 difference: Math.abs(split.totalPercent - 100),
@@ -485,9 +481,10 @@ export const selectExpenseSubmitFeedback = (
 
         if (state.splitMode === EXPENSE_SPLIT_MODES.AMOUNTS) {
             return {
-                reason: split.totalCustomAmount < split.totalAmount
-                    ? EXPENSE_SUBMIT_BLOCKERS.AMOUNTS_UNDER
-                    : EXPENSE_SUBMIT_BLOCKERS.AMOUNTS_OVER,
+                reason:
+                    split.totalCustomAmount < split.totalAmount
+                        ? EXPENSE_SUBMIT_BLOCKERS.AMOUNTS_UNDER
+                        : EXPENSE_SUBMIT_BLOCKERS.AMOUNTS_OVER,
                 current: split.totalCustomAmount,
                 required: split.totalAmount,
                 difference: Math.abs(split.totalCustomAmount - split.totalAmount),
@@ -501,9 +498,7 @@ export const selectExpenseSubmitFeedback = (
         return { reason: EXPENSE_SUBMIT_BLOCKERS.NO_DEBT };
     }
 
-    return selectIsSubmitDisabled(state)
-        ? { reason: EXPENSE_SUBMIT_BLOCKERS.UNCHANGED }
-        : null;
+    return selectIsSubmitDisabled(state) ? { reason: EXPENSE_SUBMIT_BLOCKERS.UNCHANGED } : null;
 };
 
 const getPayloadParticipants = (

@@ -39,21 +39,24 @@ beforeEach(() => {
     useUsersStore.setState({ user: null, localUser: null, friends: [] });
 });
 
-test.each(['USER', 'ADMIN'] as const)('does not activate Solo mode for a $role direct Solo route', role => {
-    useUsersStore.setState({
-        user: null,
-        localUser: { role, settings },
-        friends: [],
-    });
+test.each(['USER', 'ADMIN'] as const)(
+    'does not activate Solo mode for a $role direct Solo route',
+    role => {
+        useUsersStore.setState({
+            user: null,
+            localUser: { role, settings },
+            friends: [],
+        });
 
-    render(
-        <MemoryRouter initialEntries={['/solo']}>
-            <TestHarness />
-        </MemoryRouter>,
-    );
+        render(
+            <MemoryRouter initialEntries={['/solo']}>
+                <TestHarness />
+            </MemoryRouter>,
+        );
 
-    expect(useDashboardStore.getState().appMode).toBe(APP_MODES.GROUP);
-});
+        expect(useDashboardStore.getState().appMode).toBe(APP_MODES.GROUP);
+    },
+);
 
 test('sets Group mode when navigation reaches the dashboard route', () => {
     const interaction = userEvent.setup();

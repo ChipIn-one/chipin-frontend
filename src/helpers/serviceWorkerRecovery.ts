@@ -150,8 +150,4 @@ const reloadCurrentPage = (): void => {
     window.location.reload();
 };
 
-export {
-    activateServiceWorker,
-    checkForServiceWorkerUpdate,
-    reloadCurrentPage,
-};
+export { activateServiceWorker, checkForServiceWorkerUpdate, reloadCurrentPage };

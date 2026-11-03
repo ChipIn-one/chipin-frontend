@@ -114,11 +114,7 @@ const requireRecord = (value: unknown, label: string): Record<string, unknown> =
     return value;
 };
 
-const requireString = (
-    record: Record<string, unknown>,
-    key: string,
-    label: string,
-): string => {
+const requireString = (record: Record<string, unknown>, key: string, label: string): string => {
     const value = record[key];
 
     if (typeof value !== 'string' || value.length === 0) {
@@ -128,11 +124,7 @@ const requireString = (
     return value;
 };
 
-const requireNumber = (
-    record: Record<string, unknown>,
-    key: string,
-    label: string,
-): number => {
+const requireNumber = (record: Record<string, unknown>, key: string, label: string): number => {
     const value = record[key];
 
     if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -142,11 +134,7 @@ const requireNumber = (
     return value;
 };
 
-const requireBoolean = (
-    record: Record<string, unknown>,
-    key: string,
-    label: string,
-): boolean => {
+const requireBoolean = (record: Record<string, unknown>, key: string, label: string): boolean => {
     const value = record[key];
 
     if (typeof value !== 'boolean') {
@@ -269,9 +257,7 @@ const parseExpenseActivityMetadata = (
     const currency = requireString(metadata, 'currency', label);
     const payerDisplayName = requireString(metadata, 'payerDisplayName', label);
     const payerId =
-        metadata.payerId === undefined
-            ? null
-            : requireNullableString(metadata, 'payerId', label);
+        metadata.payerId === undefined ? null : requireNullableString(metadata, 'payerId', label);
 
     const rawShares = requireArray(metadata.shares, `${label}.shares`);
     const shares = rawShares.map((rawShare, index) => {
@@ -344,9 +330,7 @@ const parseSettlementActivityMetadata = (
             ? null
             : requireNullableString(metadata, 'actorUserId', label);
     const payerId =
-        metadata.payerId === undefined
-            ? null
-            : requireNullableString(metadata, 'payerId', label);
+        metadata.payerId === undefined ? null : requireNullableString(metadata, 'payerId', label);
 
     return {
         type: 'SETTLEMENT',
@@ -378,7 +362,11 @@ const parseActivityEvent = (
     requireNumber(event, 'createdAt', label);
 
     let ledgerActivity: ContractLedgerActivity | null = null;
-    if (action === 'EXPENSE_CREATED' || action === 'EXPENSE_UPDATED' || action === 'EXPENSE_REVERSED') {
+    if (
+        action === 'EXPENSE_CREATED' ||
+        action === 'EXPENSE_UPDATED' ||
+        action === 'EXPENSE_REVERSED'
+    ) {
         if (domain !== 'LEDGER' || subjectType !== 'expense') {
             throw new Error(`${label} expense actions must use LEDGER/expense discriminants`);
         }
@@ -392,7 +380,11 @@ const parseActivityEvent = (
         if (domain !== 'LEDGER' || subjectType !== 'settlement') {
             throw new Error(`${label} settlement actions must use LEDGER/settlement discriminants`);
         }
-        ledgerActivity = parseSettlementActivityMetadata(event.metadata, `${label}.metadata`, action);
+        ledgerActivity = parseSettlementActivityMetadata(
+            event.metadata,
+            `${label}.metadata`,
+            action,
+        );
     }
     if (
         action === 'GROUP_CREATED' ||
@@ -609,10 +601,7 @@ const parsePreviewPage = (value: unknown, label: string): ContractPreviewPage =>
     for (let index = 0; index < items.length; index += 1) {
         const item = requireRecord(items[index], `${label}.items[${index}]`);
         const parent = parseActivityEvent(item.parent, `${label}.items[${index}].parent`);
-        const lastEvent = parseActivityEvent(
-            item.lastEvent,
-            `${label}.items[${index}].lastEvent`,
-        );
+        const lastEvent = parseActivityEvent(item.lastEvent, `${label}.items[${index}].lastEvent`);
         if (
             parent.ledgerActivity !== null &&
             lastEvent.ledgerActivity !== null &&
@@ -689,18 +678,16 @@ export const parseCurrencyRates = (value: unknown): { base: string } => {
     requireNumber(rates, 'fetchedAt', 'currencyRates');
     requireBoolean(rates, 'stale', 'currencyRates');
     const values = requireRecord(rates.rates, 'currencyRates.rates');
-    if (
-        typeof values.EUR !== 'number' ||
-        !Number.isFinite(values.EUR) ||
-        values.EUR <= 0
-    ) {
+    if (typeof values.EUR !== 'number' || !Number.isFinite(values.EUR) || values.EUR <= 0) {
         throw new Error('currencyRates.rates.EUR must be a positive finite number');
     }
 
     return { base };
 };
 
-export const parseErrorCode = (value: unknown): { code: string; details?: Record<string, unknown> } => {
+export const parseErrorCode = (
+    value: unknown,
+): { code: string; details?: Record<string, unknown> } => {
     const error = requireRecord(value, 'error');
     const code = requireString(error, 'code', 'error');
     const details = error.details;

@@ -1,13 +1,7 @@
 // Expense categories with subcategories
 export const EXPENSE_CATEGORIES = {
     food: {
-        subcategories: [
-            'groceries',
-            'restaurants',
-            'fast_food',
-            'coffee',
-            'food_delivery',
-        ],
+        subcategories: ['groceries', 'restaurants', 'fast_food', 'coffee', 'food_delivery'],
     },
 
     transport: {
@@ -24,42 +18,19 @@ export const EXPENSE_CATEGORIES = {
     },
 
     housing: {
-        subcategories: [
-            'rent',
-            'mortgage',
-            'utilities',
-            'home_maintenance',
-            'furnishing',
-        ],
+        subcategories: ['rent', 'mortgage', 'utilities', 'home_maintenance', 'furnishing'],
     },
 
     digital: {
-        subcategories: [
-            'internet',
-            'mobile',
-            'subscriptions',
-            'software',
-        ],
+        subcategories: ['internet', 'mobile', 'subscriptions', 'software'],
     },
 
     shopping: {
-        subcategories: [
-            'clothing',
-            'electronics',
-            'home_goods',
-            'personal_items',
-            'gifts',
-        ],
+        subcategories: ['clothing', 'electronics', 'home_goods', 'personal_items', 'gifts'],
     },
 
     lifestyle: {
-        subcategories: [
-            'cinema',
-            'events',
-            'concerts',
-            'games',
-            'nightlife',
-        ],
+        subcategories: ['cinema', 'events', 'concerts', 'games', 'nightlife'],
     },
 
     personal_care: {
@@ -75,39 +46,19 @@ export const EXPENSE_CATEGORIES = {
     },
 
     sports: {
-        subcategories: [
-            'subscription',
-            'coach',
-            'equipment',
-        ],
+        subcategories: ['subscription', 'coach', 'equipment'],
     },
 
     health: {
-        subcategories: [
-            'medical',
-            'pharmacy',
-            'dental',
-            'health_insurance',
-        ],
+        subcategories: ['medical', 'pharmacy', 'dental', 'health_insurance'],
     },
 
     travel: {
-        subcategories: [
-            'flights',
-            'accommodation',
-            'activities',
-            'visa',
-            'insurance',
-        ],
+        subcategories: ['flights', 'accommodation', 'activities', 'visa', 'insurance'],
     },
 
     education: {
-        subcategories: [
-            'online_courses',
-            'books',
-            'tutoring',
-            'certification',
-        ],
+        subcategories: ['online_courses', 'books', 'tutoring', 'certification'],
     },
 
     finance: {
@@ -124,11 +75,7 @@ export const EXPENSE_CATEGORIES = {
     },
 
     pets: {
-        subcategories: [
-            'pet_food',
-            'vet',
-            'pet_items',
-        ],
+        subcategories: ['pet_food', 'vet', 'pet_items'],
     },
 
     other: {

@@ -17,16 +17,19 @@ const useFriendInviteLink = (): InviteConfirmationState => {
         (token: string) => acceptFriendInvite({ inviteToken: token }),
         [acceptFriendInvite],
     );
-    const onAccepted = useCallback(({ displayName }: { displayName: string }) => {
-        const friendName = displayName.trim();
+    const onAccepted = useCallback(
+        ({ displayName }: { displayName: string }) => {
+            const friendName = displayName.trim();
 
-        toast.success(
-            friendName
-                ? i18n.t('toasts:friend.inviteAcceptedWithName', { name: friendName })
-                : i18n.t('toasts:friend.inviteAccepted'),
-        );
-        navigate(ROUTES.FRIENDS, { replace: true });
-    }, [navigate]);
+            toast.success(
+                friendName
+                    ? i18n.t('toasts:friend.inviteAcceptedWithName', { name: friendName })
+                    : i18n.t('toasts:friend.inviteAccepted'),
+            );
+            navigate(ROUTES.FRIENDS, { replace: true });
+        },
+        [navigate],
+    );
 
     return useInviteConfirmation({
         inviteToken,

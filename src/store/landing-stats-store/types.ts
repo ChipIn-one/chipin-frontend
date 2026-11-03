@@ -11,8 +11,4 @@ interface LandingStatsStoreActions {
 
 type LandingStatsStore = LandingStatsStoreState & LandingStatsStoreActions;
 
-export type {
-    LandingStatsStore,
-    LandingStatsStoreActions,
-    LandingStatsStoreState,
-};
+export type { LandingStatsStore, LandingStatsStoreActions, LandingStatsStoreState };

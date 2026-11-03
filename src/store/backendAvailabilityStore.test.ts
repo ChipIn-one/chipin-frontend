@@ -34,7 +34,10 @@ test('changes only availability state and preserves the authenticated session', 
 test('clears unavailable state after a successful health retry', () => {
     useBackendAvailabilityStore.setState({ isUnavailable: true });
 
-    return useBackendAvailabilityStore.getState().retryBackendHealth().then(() => {
-        expect(useBackendAvailabilityStore.getState().isUnavailable).toBe(false);
-    });
+    return useBackendAvailabilityStore
+        .getState()
+        .retryBackendHealth()
+        .then(() => {
+            expect(useBackendAvailabilityStore.getState().isUnavailable).toBe(false);
+        });
 });

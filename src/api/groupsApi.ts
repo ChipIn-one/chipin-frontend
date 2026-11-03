@@ -42,17 +42,19 @@ const uploadGroupCover = ({
     formData.append('file', file);
 
     return Promise.resolve()
-        .then(() => apiInstance.put<Group>(apiPath`/groups/${groupId}/cover`, formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-            onUploadProgress: event => {
-                if (!event.total) {
-                    return;
-                }
+        .then(() =>
+            apiInstance.put<Group>(apiPath`/groups/${groupId}/cover`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                onUploadProgress: event => {
+                    if (!event.total) {
+                        return;
+                    }
 
-                const progress = Math.round((event.loaded * 100) / event.total);
-                onProgress?.(Math.min(Math.max(progress, 0), 100));
-            },
-        }))
+                    const progress = Math.round((event.loaded * 100) / event.total);
+                    onProgress?.(Math.min(Math.max(progress, 0), 100));
+                },
+            }),
+        )
         .then(response => response.data);
 };
 

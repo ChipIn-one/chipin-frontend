@@ -25,9 +25,7 @@ test('owns its value and character counter while enforcing the length limit', ()
 
     expect(input.value).toBe('Alex');
     expect(input.getAttribute('aria-describedby')).toBe(description.id);
-    expect(
-        counter.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).not.toBe(0);
+    expect(counter.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
 
     return interaction.type(input, 'yz').then(() => {
         expect(input.value).toBe('Alexy');
@@ -62,8 +60,7 @@ test('validates a required value inside the input', () => {
             expect(input.getAttribute('aria-invalid')).toBe('true');
             expect(screen.queryByText('Display name')).toBeNull();
             expect(
-                validationMessage.compareDocumentPosition(input) &
-                    Node.DOCUMENT_POSITION_FOLLOWING,
+                validationMessage.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING,
             ).not.toBe(0);
             expect(onValueChange).toHaveBeenLastCalledWith({ value: '   ', isValid: false });
         });

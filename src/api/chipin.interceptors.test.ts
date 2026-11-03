@@ -86,10 +86,7 @@ const rejectRequest = (url: string, status: number) => {
                 isAxiosError: true,
                 response: {
                     data: {
-                        code:
-                            status === 401
-                                ? 'AUTH.UNAUTHORIZED'
-                                : 'VALIDATION.INVALID',
+                        code: status === 401 ? 'AUTH.UNAUTHORIZED' : 'VALIDATION.INVALID',
                     },
                     status,
                 },
@@ -354,16 +351,18 @@ test('rejects a stale successful protected response after logout', () => {
         onStarted = resolve;
     });
     const request = apiInstance.get('/dashboard', {
-        adapter: config => new Promise(resolve => {
-            finish = () => resolve({
-                config,
-                data: { protected: true },
-                headers: {},
-                status: 200,
-                statusText: 'OK',
-            });
-            onStarted?.();
-        }),
+        adapter: config =>
+            new Promise(resolve => {
+                finish = () =>
+                    resolve({
+                        config,
+                        data: { protected: true },
+                        headers: {},
+                        status: 200,
+                        statusText: 'OK',
+                    });
+                onStarted?.();
+            }),
     });
 
     return started.then(() => {
@@ -389,12 +388,14 @@ test('does not send or expire the new session when an old request resumes', () =
     const adapter = vi.fn();
     const request = apiInstance.get('/dashboard', { adapter });
 
-    return prepareStarted.then(() => {
-        authSessionMocks.currentVersion = 2;
-        resolveToken?.('old-token');
-        return expect(request).rejects.toThrow('Auth request cancelled');
-    }).then(() => {
-        expect(adapter).not.toHaveBeenCalled();
-        expect(onUnauthorizedSession).not.toHaveBeenCalled();
-    });
+    return prepareStarted
+        .then(() => {
+            authSessionMocks.currentVersion = 2;
+            resolveToken?.('old-token');
+            return expect(request).rejects.toThrow('Auth request cancelled');
+        })
+        .then(() => {
+            expect(adapter).not.toHaveBeenCalled();
+            expect(onUnauthorizedSession).not.toHaveBeenCalled();
+        });
 });

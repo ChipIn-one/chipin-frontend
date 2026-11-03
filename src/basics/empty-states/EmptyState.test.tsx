@@ -33,9 +33,7 @@ test('uses the compact GroupCard-aligned visual contract', () => {
     expect(title.className).toContain('rt-r-size-3');
     expect(title.className).toContain('rt-r-weight-bold');
     expect(description.className).toContain('rt-r-size-1');
-    expect(
-        screen.getByRole('button', { name: ACTION_LABEL }),
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: ACTION_LABEL })).toBeTruthy();
 });
 
 test('stacks the optional action under the icon and description', () => {

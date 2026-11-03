@@ -55,8 +55,10 @@ describe('apiPath', () => {
             result = inviteApiUserToGroup({ inviteToken: '..' });
         }).not.toThrow();
 
-        return expect(result).rejects.toBeInstanceOf(InvalidPathSegmentError).then(() => {
-            expect(apiInstance.post).not.toHaveBeenCalled();
-        });
+        return expect(result)
+            .rejects.toBeInstanceOf(InvalidPathSegmentError)
+            .then(() => {
+                expect(apiInstance.post).not.toHaveBeenCalled();
+            });
     });
 });

@@ -10,11 +10,10 @@ interface TextAreaValueState {
     isValid: boolean;
 }
 
-interface Props
-    extends Omit<
-        TextAreaRootProps,
-        'aria-describedby' | 'aria-invalid' | 'defaultValue' | 'id' | 'onChange' | 'value'
-    > {
+interface Props extends Omit<
+    TextAreaRootProps,
+    'aria-describedby' | 'aria-invalid' | 'defaultValue' | 'id' | 'onChange' | 'value'
+> {
     id?: string;
     label: ReactNode;
     description?: ReactNode;
@@ -46,8 +45,7 @@ const TextArea = ({
     const isValid =
         (!isRequired || value.trim().length > 0) &&
         (maxLength === undefined || value.length <= maxLength);
-    const characterCounter =
-        maxLength === undefined ? undefined : `${value.length} / ${maxLength}`;
+    const characterCounter = maxLength === undefined ? undefined : `${value.length} / ${maxLength}`;
     const isValidationMessageVisible = isTouched && !isValid && validationMessage !== undefined;
 
     const onChange = (event: ChangeEvent<HTMLTextAreaElement>) => {

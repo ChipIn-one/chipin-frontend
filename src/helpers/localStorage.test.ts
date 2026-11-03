@@ -86,7 +86,6 @@ describe('auth session hint storage', () => {
 
         expect(getLocalUser()).toBeNull();
     });
-
 });
 
 describe('clearLocalUserRole', () => {

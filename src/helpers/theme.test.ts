@@ -43,9 +43,13 @@ test.each([
 });
 
 test('unknown cached theme falls back to system theme', () => {
-    window.localStorage.setItem(LS_KEY_USER, JSON.stringify({
-        role: 'USER', settings: { theme: 'unsupported-theme' },
-    }));
+    window.localStorage.setItem(
+        LS_KEY_USER,
+        JSON.stringify({
+            role: 'USER',
+            settings: { theme: 'unsupported-theme' },
+        }),
+    );
 
     expect(isPreferredPublicThemeDark(true)).toBe(true);
     expect(isPreferredPublicThemeDark(false)).toBe(false);

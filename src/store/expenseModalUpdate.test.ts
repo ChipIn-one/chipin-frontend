@@ -2,10 +2,7 @@ import { expect, test } from 'vitest';
 
 import type { CreateLedgerEntryParams, SharingMode } from 'api/chipin.types';
 
-import {
-    buildExpenseUpdateParams,
-    type ExpenseModalOriginalState,
-} from './expenseModalUpdate';
+import { buildExpenseUpdateParams, type ExpenseModalOriginalState } from './expenseModalUpdate';
 
 const original: ExpenseModalOriginalState = {
     description: 'Dinner',
@@ -47,12 +44,14 @@ test('represents an intentionally cleared description as null', () => {
 });
 
 test('includes payer and currency without sending a changed date', () => {
-    expect(buildExpenseUpdateParams(original, {
-        ...draft,
-        payerId: 'user-2',
-        currency: 'EUR',
-        date: 1_700_000_001,
-    })).toEqual({
+    expect(
+        buildExpenseUpdateParams(original, {
+            ...draft,
+            payerId: 'user-2',
+            currency: 'EUR',
+            date: 1_700_000_001,
+        }),
+    ).toEqual({
         type: 'EXPENSE',
         expense: {
             payerId: 'user-2',
@@ -62,17 +61,21 @@ test('includes payer and currency without sending a changed date', () => {
 });
 
 test('does not create an update for a date-only change', () => {
-    expect(buildExpenseUpdateParams(original, {
-        ...draft,
-        date: 1_700_000_001,
-    })).toBeNull();
+    expect(
+        buildExpenseUpdateParams(original, {
+            ...draft,
+            date: 1_700_000_001,
+        }),
+    ).toBeNull();
 });
 
 test('sends the complete atomic split block when amount changes', () => {
-    expect(buildExpenseUpdateParams(original, {
-        ...draft,
-        amount: 150,
-    })).toEqual({
+    expect(
+        buildExpenseUpdateParams(original, {
+            ...draft,
+            amount: 150,
+        }),
+    ).toEqual({
         type: 'EXPENSE',
         expense: {
             amount: 150,
@@ -83,27 +86,33 @@ test('sends the complete atomic split block when amount changes', () => {
 });
 
 test('does not treat participant ordering as a split change', () => {
-    expect(buildExpenseUpdateParams(original, {
-        ...draft,
-        participantIds: ['user-2', 'user-1'],
-    })).toBeNull();
+    expect(
+        buildExpenseUpdateParams(original, {
+            ...draft,
+            participantIds: ['user-2', 'user-1'],
+        }),
+    ).toBeNull();
 });
 
 test('does not send category or hidden subcategory when category is unchanged', () => {
-    expect(buildExpenseUpdateParams(original, {
-        ...draft,
-        description: 'Updated dinner',
-    })).toEqual({
+    expect(
+        buildExpenseUpdateParams(original, {
+            ...draft,
+            description: 'Updated dinner',
+        }),
+    ).toEqual({
         type: 'EXPENSE',
         expense: { description: 'Updated dinner' },
     });
 });
 
 test('sends a changed category without stale subcategory', () => {
-    expect(buildExpenseUpdateParams(original, {
-        ...draft,
-        category: 'transport',
-    })).toEqual({
+    expect(
+        buildExpenseUpdateParams(original, {
+            ...draft,
+            category: 'transport',
+        }),
+    ).toEqual({
         type: 'EXPENSE',
         expense: { category: 'transport' },
     });
@@ -119,10 +128,12 @@ test('detects split mode and allocation changes', () => {
         customShares: { 'user-1': 60, 'user-2': 60 },
     };
 
-    expect(buildExpenseUpdateParams(original, {
-        ...draft,
-        sharingMode,
-    })).toMatchObject({
+    expect(
+        buildExpenseUpdateParams(original, {
+            ...draft,
+            sharingMode,
+        }),
+    ).toMatchObject({
         expense: {
             amount: 120,
             participantIds: ['user-1', 'user-2'],

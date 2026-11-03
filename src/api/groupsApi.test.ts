@@ -66,8 +66,8 @@ describe('groupsApi', () => {
             data: { ...group, simplifyDebts: 'unsupported' },
         } as never);
 
-        return expect(updateGroup({ groupId: group.id })).rejects
-            .toThrow('Unsupported group simplifyDebts response')
+        return expect(updateGroup({ groupId: group.id }))
+            .rejects.toThrow('Unsupported group simplifyDebts response')
             .then(() => {
                 expect(apiInstance.patch).toHaveBeenCalledWith('/groups/group-1', {});
             });
@@ -127,9 +127,13 @@ describe('groupsApi', () => {
 describe('groupsApi path segment guard', () => {
     test.each([
         ['updateGroup', () => updateGroup({ groupId: 'a/b', groupName: 'Trip' })],
-        ['uploadGroupCover', () => uploadGroupCover({ groupId: 'a/b', file: new File(['x'], 'x.webp') })],
+        [
+            'uploadGroupCover',
+            () => uploadGroupCover({ groupId: 'a/b', file: new File(['x'], 'x.webp') }),
+        ],
     ])('%s rejects a "/" in a path parameter without calling the API', (_name, onCall) => {
-        return expect(onCall()).rejects.toBeInstanceOf(InvalidPathSegmentError)
+        return expect(onCall())
+            .rejects.toBeInstanceOf(InvalidPathSegmentError)
             .then(() => {
                 expect(apiInstance.patch).not.toHaveBeenCalled();
                 expect(apiInstance.put).not.toHaveBeenCalled();

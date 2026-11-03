@@ -55,9 +55,7 @@ describe('createContractHttpClient', () => {
                 path: '/users/self',
             })
             .then(() => {
-                expect(capturedHeaders?.get('Authorization')).toBe(
-                    'Bearer access-token-secret',
-                );
+                expect(capturedHeaders?.get('Authorization')).toBe('Bearer access-token-secret');
                 expect(capturedHeaders?.has('Cookie')).toBe(false);
                 expect(capturedHeaders?.has('X-Chipin-Csrf')).toBe(false);
             });
@@ -153,9 +151,7 @@ describe('createContractHttpClient', () => {
                     throw new Error('Expected the session request to fail');
                 },
                 (error: unknown) => {
-                    expect(error).toEqual(
-                        new Error('Contract refresh cookie is required'),
-                    );
+                    expect(error).toEqual(new Error('Contract refresh cookie is required'));
                     expect(calls).toBe(1);
                 },
             );
@@ -176,9 +172,10 @@ describe('createContractHttpClient', () => {
                 new Response(JSON.stringify({ token: `access-${call}` }), {
                     headers: {
                         'Content-Type': 'application/json',
-                        'Set-Cookie': call === 1
-                            ? 'other=value; Expires=Wed, 21 Oct 2037 07:28:00 GMT; Path=/, __Host-chipin_refresh=refresh-cookie; Path=/; Secure; HttpOnly; SameSite=Strict'
-                            : '__Host-chipin_refresh=rotated-cookie; Path=/; Secure; HttpOnly; SameSite=Strict',
+                        'Set-Cookie':
+                            call === 1
+                                ? 'other=value; Expires=Wed, 21 Oct 2037 07:28:00 GMT; Path=/, __Host-chipin_refresh=refresh-cookie; Path=/; Secure; HttpOnly; SameSite=Strict'
+                                : '__Host-chipin_refresh=rotated-cookie; Path=/; Secure; HttpOnly; SameSite=Strict',
                     },
                     status: 200,
                 }),
@@ -199,21 +196,13 @@ describe('createContractHttpClient', () => {
                 }),
             )
             .then(() => {
-                expect(capturedCookies).toEqual([
-                    '__Host-chipin_refresh=refresh-cookie',
-                ]);
+                expect(capturedCookies).toEqual(['__Host-chipin_refresh=refresh-cookie']);
             });
     });
 
     it.each([
-        [
-            'Secure',
-            '__Host-chipin_refresh=refresh-cookie; Path=/; HttpOnly; SameSite=Strict',
-        ],
-        [
-            'HttpOnly',
-            '__Host-chipin_refresh=refresh-cookie; Path=/; Secure; SameSite=Strict',
-        ],
+        ['Secure', '__Host-chipin_refresh=refresh-cookie; Path=/; HttpOnly; SameSite=Strict'],
+        ['HttpOnly', '__Host-chipin_refresh=refresh-cookie; Path=/; Secure; SameSite=Strict'],
         [
             'host-only scope',
             '__Host-chipin_refresh=refresh-cookie; Path=/; Secure; HttpOnly; SameSite=Strict; Domain=api-dev.chipin.one',
@@ -250,9 +239,7 @@ describe('createContractHttpClient', () => {
                 },
                 (error: unknown) => {
                     expect(error).toEqual(
-                        new Error(
-                            'Contract refresh cookie violates required security attributes',
-                        ),
+                        new Error('Contract refresh cookie violates required security attributes'),
                     );
                     expect(String(error)).not.toContain('refresh-cookie');
                 },
@@ -274,8 +261,7 @@ describe('createContractHttpClient', () => {
                 new Response(JSON.stringify({ token: `access-${call}` }), {
                     headers: {
                         'Content-Type': 'application/json',
-                        'Set-Cookie':
-                            `__Host-chipin_refresh=refresh-cookie-${call}; Path=/; Secure; HttpOnly; SameSite=Strict`,
+                        'Set-Cookie': `__Host-chipin_refresh=refresh-cookie-${call}; Path=/; Secure; HttpOnly; SameSite=Strict`,
                     },
                     status: 200,
                 }),
@@ -328,9 +314,7 @@ describe('createContractHttpClient', () => {
                     throw new Error('Expected the request to fail');
                 },
                 (error: unknown) => {
-                    expect(error).toEqual(
-                        new Error('Contract refresh cookie is required'),
-                    );
+                    expect(error).toEqual(new Error('Contract refresh cookie is required'));
                     expect(calls).toBe(0);
                 },
             );
@@ -420,9 +404,7 @@ describe('createContractHttpClient', () => {
                 },
                 (error: unknown) => {
                     expect(error).toEqual(
-                        new Error(
-                            'Contract request POST /auth/test-register failed with HTTP 401',
-                        ),
+                        new Error('Contract request POST /auth/test-register failed with HTTP 401'),
                     );
                     expect(String(error)).not.toContain('access-token-secret');
                 },

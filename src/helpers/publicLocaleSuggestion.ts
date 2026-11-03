@@ -33,10 +33,7 @@ const suppressPublicLocaleSuggestion = (): void => {
 
 // Use the current URL at action time; an infinite toast may survive an SPA
 // navigation between English public pages after it was first displayed.
-const getPublicLocaleSuggestionTarget = (
-    pathname: string,
-    locale: PublicLocale,
-): string | null => {
+const getPublicLocaleSuggestionTarget = (pathname: string, locale: PublicLocale): string | null => {
     const route = getPublicRoute(pathname);
     return route?.locale === DEFAULT_LOCALE ? getPublicPath(route.page, locale) : null;
 };

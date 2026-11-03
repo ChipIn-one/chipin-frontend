@@ -16,10 +16,7 @@ test('navigates to the previous history entry', () => {
     const user = userEvent.setup();
 
     render(
-        <MemoryRouter
-            initialEntries={['/dashboard', '/group/group-1']}
-            initialIndex={1}
-        >
+        <MemoryRouter initialEntries={['/dashboard', '/group/group-1']} initialIndex={1}>
             <BackButton />
             <CurrentPath />
         </MemoryRouter>,
@@ -27,9 +24,7 @@ test('navigates to the previous history entry', () => {
 
     expect(screen.getByText('/group/group-1')).toBeTruthy();
 
-    return user
-        .click(screen.getByRole('button', { name: /back/i }))
-        .then(() => {
-            expect(screen.getByText('/dashboard')).toBeTruthy();
-        });
+    return user.click(screen.getByRole('button', { name: /back/i })).then(() => {
+        expect(screen.getByText('/dashboard')).toBeTruthy();
+    });
 });

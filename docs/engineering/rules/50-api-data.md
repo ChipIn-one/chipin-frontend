@@ -97,12 +97,12 @@ Do not add `Api`, `Store`, `Effect`, or `Action` suffixes merely to distinguish 
   explicit `Promise.all` after backend success and resolve `void`; they reject when the backend mutation
   fails, and refresh failures do not reject them:
 
-  | Mutation | Canonical fetch actions |
-  | --- | --- |
+  | Mutation                       | Canonical fetch actions                                                                                      |
+  | ------------------------------ | ------------------------------------------------------------------------------------------------------------ |
   | Expense / settlement / reverse | dashboard, activity, and selected group detail or known-user data; current activity children when applicable |
-  | Group delete / leave | groups, known-user data, dashboard, activity |
-  | Group member removal | selected group detail, known-user data, dashboard, activity |
-  | Known-user removal | known-user data |
+  | Group delete / leave           | groups, known-user data, dashboard, activity                                                                 |
+  | Group member removal           | selected group detail, known-user data, dashboard, activity                                                  |
+  | Known-user removal             | known-user data                                                                                              |
 
 ## Activity Client Notes
 

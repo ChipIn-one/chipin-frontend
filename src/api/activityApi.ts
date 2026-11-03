@@ -20,10 +20,10 @@ const getPaginationParams = ({ limit, cursor }: FetchActivitiesParams): FetchAct
     };
 };
 
-export const fetchActivities = ({
-    limit,
-    cursor,
-}: FetchActivitiesParams = {}, signal?: AbortSignal): Promise<ApiActivityItemsResponse> => {
+export const fetchActivities = (
+    { limit, cursor }: FetchActivitiesParams = {},
+    signal?: AbortSignal,
+): Promise<ApiActivityItemsResponse> => {
     return apiInstance
         .get<ApiActivityItemsResponse>('/users/self/activities', {
             params: getPaginationParams({ limit, cursor }),
@@ -32,22 +32,22 @@ export const fetchActivities = ({
         .then(response => response.data);
 };
 
-export const fetchActivityChildren = ({
-    parentActivityId,
-    limit,
-    cursor,
-    category,
-}: FetchActivityChildrenParams, signal?: AbortSignal): Promise<ApiActivityChildrenResponse> => {
+export const fetchActivityChildren = (
+    { parentActivityId, limit, cursor, category }: FetchActivityChildrenParams,
+    signal?: AbortSignal,
+): Promise<ApiActivityChildrenResponse> => {
     const params: FetchActivitiesParams & { category?: ActivityCategory } = {
         ...getPaginationParams({ limit, cursor }),
         ...(category !== undefined && { category }),
     };
 
     return Promise.resolve()
-        .then(() => apiInstance.get<ApiActivityChildrenResponse>(
-            apiPath`/users/self/activities/${parentActivityId}/children`,
-            { params, signal },
-        ))
+        .then(() =>
+            apiInstance.get<ApiActivityChildrenResponse>(
+                apiPath`/users/self/activities/${parentActivityId}/children`,
+                { params, signal },
+            ),
+        )
         .then(response => response.data);
 };
 
@@ -63,15 +63,19 @@ export const fetchActivityPreviews = (
         .then(response => response.data);
 };
 
-export const fetchGroupActivityPreviews = ({
-    groupId,
-    limit,
-    cursor,
-}: FetchGroupActivityPreviewsParams, signal?: AbortSignal): Promise<ApiActivityFeedResponse> => {
+export const fetchGroupActivityPreviews = (
+    { groupId, limit, cursor }: FetchGroupActivityPreviewsParams,
+    signal?: AbortSignal,
+): Promise<ApiActivityFeedResponse> => {
     return Promise.resolve()
-        .then(() => apiInstance.get<ApiActivityFeedResponse>(apiPath`/groups/${groupId}/activity-previews`, {
-            params: getPaginationParams({ limit, cursor }),
-            signal,
-        }))
+        .then(() =>
+            apiInstance.get<ApiActivityFeedResponse>(
+                apiPath`/groups/${groupId}/activity-previews`,
+                {
+                    params: getPaginationParams({ limit, cursor }),
+                    signal,
+                },
+            ),
+        )
         .then(response => response.data);
 };

@@ -19,11 +19,7 @@ export const formatActivityAbsoluteDate = (date: DateInput, locale: string): str
     }).format(new Date(toTimestampMs(date)));
 };
 
-export const formatRelativeTime = (
-    date: DateInput,
-    locale: string,
-    is24Hour: boolean,
-): string => {
+export const formatRelativeTime = (date: DateInput, locale: string, is24Hour: boolean): string => {
     const timestamp = toTimestampMs(date);
     const diff = timestamp - Date.now();
 

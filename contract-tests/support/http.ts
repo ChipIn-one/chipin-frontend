@@ -1,10 +1,7 @@
 import type { ContractConfig } from './config';
 
 export type ContractRequestAuth =
-    | { kind: 'none' }
-    | { kind: 'basic' }
-    | { kind: 'bearer'; token: string }
-    | { kind: 'session' };
+    { kind: 'none' } | { kind: 'basic' } | { kind: 'bearer'; token: string } | { kind: 'session' };
 
 export interface ContractRequestOptions {
     auth: ContractRequestAuth;
@@ -40,10 +37,7 @@ const encodeBasicCredentials = (username: string, password: string): string => {
 class ContractRequestError extends Error {}
 
 const redactSensitivePath = (path: string): string =>
-    path.replace(
-        /^\/users\/invite\/[^/?#]+/,
-        '/users/invite/[redacted]',
-    );
+    path.replace(/^\/users\/invite\/[^/?#]+/, '/users/invite/[redacted]');
 
 const describeRequest = (options: ContractRequestOptions): string =>
     `${options.method} ${redactSensitivePath(options.path)}`;
@@ -55,19 +49,14 @@ const readRefreshCookie = (response: Response): string | null | undefined => {
         return undefined;
     }
 
-    const cookieHeaders = setCookie.split(
-        /,\s*(?=[!#$%&'*+\-.^_`|~0-9A-Za-z]+=)/,
-    );
+    const cookieHeaders = setCookie.split(/,\s*(?=[!#$%&'*+\-.^_`|~0-9A-Za-z]+=)/);
     let refreshCookieHeader: string | undefined;
 
     for (const cookieHeader of cookieHeaders) {
         const cookiePair = cookieHeader.split(';', 1)[0]?.trim();
         const separatorIndex = cookiePair?.indexOf('=') ?? -1;
 
-        if (
-            separatorIndex > 0 &&
-            cookiePair?.slice(0, separatorIndex) === REFRESH_COOKIE_NAME
-        ) {
+        if (separatorIndex > 0 && cookiePair?.slice(0, separatorIndex) === REFRESH_COOKIE_NAME) {
             refreshCookieHeader = cookieHeader;
             break;
         }
@@ -78,20 +67,16 @@ const readRefreshCookie = (response: Response): string | null | undefined => {
     }
 
     const cookiePrefix = `${REFRESH_COOKIE_NAME}=`;
-    const [cookiePair, ...rawAttributes] = refreshCookieHeader
-        .split(';')
-        .map(part => part.trim());
+    const [cookiePair, ...rawAttributes] = refreshCookieHeader.split(';').map(part => part.trim());
     const attributes = new Map<string, string | null>();
 
     for (const rawAttribute of rawAttributes) {
         const separatorIndex = rawAttribute.indexOf('=');
-        const name = (separatorIndex === -1
-            ? rawAttribute
-            : rawAttribute.slice(0, separatorIndex)
+        const name = (
+            separatorIndex === -1 ? rawAttribute : rawAttribute.slice(0, separatorIndex)
         ).toLowerCase();
-        const value = separatorIndex === -1
-            ? null
-            : rawAttribute.slice(separatorIndex + 1).toLowerCase();
+        const value =
+            separatorIndex === -1 ? null : rawAttribute.slice(separatorIndex + 1).toLowerCase();
 
         attributes.set(name, value);
     }
@@ -113,10 +98,7 @@ const readRefreshCookie = (response: Response): string | null | undefined => {
     return cookieValue ? `${REFRESH_COOKIE_NAME}=${cookieValue}` : null;
 };
 
-const readJsonResponse = (
-    response: Response,
-    requestDescription: string,
-): Promise<unknown> => {
+const readJsonResponse = (response: Response, requestDescription: string): Promise<unknown> => {
     return response.text().then(
         text => {
             try {
@@ -224,16 +206,12 @@ export const createContractHttpClient = (
                 return response;
             },
             () => {
-                throw new ContractRequestError(
-                    `Contract request ${requestDescription} failed`,
-                );
+                throw new ContractRequestError(`Contract request ${requestDescription} failed`);
             },
         );
     };
 
-    const createSuccessfulRequest = (
-        options: ContractRequestOptions,
-    ): Promise<Response> => {
+    const createSuccessfulRequest = (options: ContractRequestOptions): Promise<Response> => {
         const requestDescription = describeRequest(options);
 
         return performRequest(options).then(response => {

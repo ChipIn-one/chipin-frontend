@@ -109,10 +109,7 @@ const processApiResponseError = (error: unknown) => {
             ? requestAuthSessionVersions.get(requestConfig)
             : undefined;
 
-        if (
-            requestSessionVersion !== undefined &&
-            !isAuthSessionCurrent(requestSessionVersion)
-        ) {
+        if (requestSessionVersion !== undefined && !isAuthSessionCurrent(requestSessionVersion)) {
             return Promise.reject(error);
         }
 
@@ -127,14 +124,10 @@ const processApiResponseError = (error: unknown) => {
             authorizationHeader.startsWith(AUTHORIZATION_BEARER_PREFIX)
                 ? authorizationHeader.slice(AUTHORIZATION_BEARER_PREFIX.length)
                 : null;
-        const hasRetriedRequest =
-            Reflect.get(requestConfig, AUTH_RETRY_CONFIG_KEY) === true;
+        const hasRetriedRequest = Reflect.get(requestConfig, AUTH_RETRY_CONFIG_KEY) === true;
 
         if (hasRetriedRequest) {
-            if (
-                requestAccessToken &&
-                hasAuthAccessTokenRotated(requestAccessToken)
-            ) {
+            if (requestAccessToken && hasAuthAccessTokenRotated(requestAccessToken)) {
                 return Promise.reject(error);
             }
 
@@ -142,10 +135,7 @@ const processApiResponseError = (error: unknown) => {
             return Promise.reject(error);
         }
 
-        if (
-            requestAccessToken &&
-            hasAuthAccessTokenRotated(requestAccessToken)
-        ) {
+        if (requestAccessToken && hasAuthAccessTokenRotated(requestAccessToken)) {
             Reflect.set(requestConfig, AUTH_RETRY_CONFIG_KEY, true);
             return apiInstance.request(requestConfig);
         }
@@ -153,10 +143,7 @@ const processApiResponseError = (error: unknown) => {
         const refreshSessionVersion = getAuthSessionVersion();
 
         return refreshAuthSession().then(nextAccessToken => {
-            if (
-                !nextAccessToken ||
-                !isAuthSessionCurrent(refreshSessionVersion)
-            ) {
+            if (!nextAccessToken || !isAuthSessionCurrent(refreshSessionVersion)) {
                 onUnauthorizedSession?.();
                 return Promise.reject(error);
             }
@@ -177,9 +164,7 @@ const processPublicApiResponseError = (error: unknown): Promise<never> => {
     return processBackendAvailabilityError(error);
 };
 
-export const initChipInApiInterceptors = (
-    onUnauthorizedSessionCallback?: () => void,
-): void => {
+export const initChipInApiInterceptors = (onUnauthorizedSessionCallback?: () => void): void => {
     onUnauthorizedSession = onUnauthorizedSessionCallback;
 
     if (areChipInApiInterceptorsConfigured) {

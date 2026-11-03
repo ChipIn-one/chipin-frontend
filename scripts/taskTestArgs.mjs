@@ -1,14 +1,14 @@
 const TEST_PATH_PATTERN = /(?:^|\/)(?:[^/]+\.)?(?:test|spec)\.[cm]?[jt]sx?$/u;
 
-const isExplicitTestPath = (argument) => {
+const isExplicitTestPath = argument => {
     return !argument.startsWith('-') && TEST_PATH_PATTERN.test(argument);
 };
 
-export const getTaskTestArgs = (args) => {
+export const getTaskTestArgs = args => {
     if (!args.some(isExplicitTestPath)) {
         throw new Error(
-            'test:task requires at least one explicit test path, for example: '
-            + 'npm run test:task -- src/path/file.test.ts',
+            'test:task requires at least one explicit test path, for example: ' +
+                'npm run test:task -- src/path/file.test.ts',
         );
     }
 

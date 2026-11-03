@@ -21,12 +21,15 @@ test.each([
     [-1.005, 2, '-1.01'],
     [2.675, 2, '2.68'],
     [-2.675, 2, '-2.68'],
-] as const)('uses symmetric HALF_UP display rounding for %s at precision %s', (value, precision, expected) => {
-    const numberData = getNumberData({ value, precision });
+] as const)(
+    'uses symmetric HALF_UP display rounding for %s at precision %s',
+    (value, precision, expected) => {
+        const numberData = getNumberData({ value, precision });
 
-    expect(numberData.numberFormatted).toBe(expected);
-    expect(numberData.numberString).toBe(expected);
-});
+        expect(numberData.numberFormatted).toBe(expected);
+        expect(numberData.numberString).toBe(expected);
+    },
+);
 
 test.each([
     [1_000_000_000_000_000.375, '1000000000000000'],
@@ -66,11 +69,15 @@ test('formats thousands with a K suffix', () => {
 });
 
 test('formats millions with an M suffix', () => {
-    expect(getNumberData({ value: 1_234_567, precision: 2, isKMB: true }).numberFormatted).toBe('1.23M');
+    expect(getNumberData({ value: 1_234_567, precision: 2, isKMB: true }).numberFormatted).toBe(
+        '1.23M',
+    );
 });
 
 test('formats billions with a larger KMB suffix', () => {
-    expect(getNumberData({ value: 1_234_567_890, precision: 2, isKMB: true }).numberFormatted).toBe('1.23B');
+    expect(getNumberData({ value: 1_234_567_890, precision: 2, isKMB: true }).numberFormatted).toBe(
+        '1.23B',
+    );
 });
 
 test.each([

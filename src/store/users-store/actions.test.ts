@@ -131,14 +131,16 @@ test('resolves the premium promo counter with fallback state after a request err
         new Error('promo counter unavailable'),
     );
 
-    return useUsersStore.getState().fetchSetPremiumPromoRemaining().then(() => {
-        expect(useUsersStore.getState()).toMatchObject({
-            premiumPromoRemaining: null,
-            isPremiumPromoResolved: true,
+    return useUsersStore
+        .getState()
+        .fetchSetPremiumPromoRemaining()
+        .then(() => {
+            expect(useUsersStore.getState()).toMatchObject({
+                premiumPromoRemaining: null,
+                isPremiumPromoResolved: true,
+            });
         });
-    });
 });
-
 
 test('accepts a friend invite and refreshes the canonical friends list', () => {
     const friend = {
@@ -158,14 +160,17 @@ test('accepts a friend invite and refreshes the canonical friends list', () => {
         friends: [knownFriend],
     });
 
-    return useUsersStore.getState().acceptFriendInvite({ inviteToken: 'friend-token' }).then(result => {
-        expect(usersApi.acceptKnownUserInvite).toHaveBeenCalledWith({
-            inviteToken: 'friend-token',
+    return useUsersStore
+        .getState()
+        .acceptFriendInvite({ inviteToken: 'friend-token' })
+        .then(result => {
+            expect(usersApi.acceptKnownUserInvite).toHaveBeenCalledWith({
+                inviteToken: 'friend-token',
+            });
+            expect(usersApi.fetchKnownUsers).toHaveBeenCalledOnce();
+            expect(useUsersStore.getState().friends).toEqual([knownFriend]);
+            expect(result).toEqual(friend);
         });
-        expect(usersApi.fetchKnownUsers).toHaveBeenCalledOnce();
-        expect(useUsersStore.getState().friends).toEqual([knownFriend]);
-        expect(result).toEqual(friend);
-    });
 });
 
 test('resolves friend invite acceptance when the canonical friends refresh fails', () => {
@@ -180,15 +185,18 @@ test('resolves friend invite acceptance when the canonical friends refresh fails
     vi.mocked(usersApi.acceptKnownUserInvite).mockResolvedValue(friend);
     vi.mocked(usersApi.fetchKnownUsers).mockRejectedValue(refreshError);
 
-    return useUsersStore.getState().acceptFriendInvite({ inviteToken: 'friend-token' }).then(result => {
-        expect(result).toEqual(friend);
-        expect(usersApi.acceptKnownUserInvite).toHaveBeenCalledOnce();
-        expect(usersApi.fetchKnownUsers).toHaveBeenCalledOnce();
-        expect(useErrorsStore.getState().errors.users.friends).toEqual(
-            expect.objectContaining({ message: expect.any(String) }),
-        );
-        expect(useLoadingStore.getState().users.friends).toBe('fetched');
-    });
+    return useUsersStore
+        .getState()
+        .acceptFriendInvite({ inviteToken: 'friend-token' })
+        .then(result => {
+            expect(result).toEqual(friend);
+            expect(usersApi.acceptKnownUserInvite).toHaveBeenCalledOnce();
+            expect(usersApi.fetchKnownUsers).toHaveBeenCalledOnce();
+            expect(useErrorsStore.getState().errors.users.friends).toEqual(
+                expect.objectContaining({ message: expect.any(String) }),
+            );
+            expect(useLoadingStore.getState().users.friends).toBe('fetched');
+        });
 });
 
 test('returns the friends fetch promise', () => {
@@ -243,10 +251,13 @@ test('sends only changed settings fields and replaces state with the response', 
     vi.mocked(usersApi.updateUser).mockResolvedValue(updatedUser);
     useUsersStore.setState({ user, localUser: null });
 
-    return useUsersStore.getState().setUserSettings({ settings: { theme: 'dark' } }).then(() => {
-        expect(usersApi.updateUser).toHaveBeenCalledWith({ settings: { theme: 'dark' } });
-        expect(useUsersStore.getState().user).toEqual(updatedUser);
-    });
+    return useUsersStore
+        .getState()
+        .setUserSettings({ settings: { theme: 'dark' } })
+        .then(() => {
+            expect(usersApi.updateUser).toHaveBeenCalledWith({ settings: { theme: 'dark' } });
+            expect(useUsersStore.getState().user).toEqual(updatedUser);
+        });
 });
 
 test('records a settings error without replacing the current user', () => {
@@ -255,13 +266,16 @@ test('records a settings error without replacing the current user', () => {
     vi.mocked(usersApi.updateUser).mockRejectedValue(error);
     useUsersStore.setState({ user, localUser: null });
 
-    return useUsersStore.getState().setUserSettings({ settings: { theme: 'dark' } }).then(() => {
-        expect(useErrorsStore.getState().errors.users.settings).toEqual(
-            expect.objectContaining({ message: expect.any(String) }),
-        );
-        expect(useUsersStore.getState().user).toEqual(user);
-        expect(LocalStorage.getRaw(LS_KEY_USER)).toBeNull();
-    });
+    return useUsersStore
+        .getState()
+        .setUserSettings({ settings: { theme: 'dark' } })
+        .then(() => {
+            expect(useErrorsStore.getState().errors.users.settings).toEqual(
+                expect.objectContaining({ message: expect.any(String) }),
+            );
+            expect(useUsersStore.getState().user).toEqual(user);
+            expect(LocalStorage.getRaw(LS_KEY_USER)).toBeNull();
+        });
 });
 
 test('serializes settings updates so an older response cannot overwrite a newer one', () => {
@@ -275,9 +289,12 @@ test('serializes settings updates so an older response cannot overwrite a newer 
         settings: { ...firstResponse.settings, language: 'ru' },
     };
     vi.mocked(usersApi.updateUser)
-        .mockImplementationOnce(() => new Promise(resolve => {
-            resolveFirst = resolve;
-        }))
+        .mockImplementationOnce(
+            () =>
+                new Promise(resolve => {
+                    resolveFirst = resolve;
+                }),
+        )
         .mockResolvedValueOnce(secondResponse);
     useUsersStore.setState({ user, localUser: null });
 
@@ -308,9 +325,12 @@ test('does not keep an older settings error after a newer update succeeds', () =
         settings: { ...user.settings, language: 'ru' },
     };
     vi.mocked(usersApi.updateUser)
-        .mockImplementationOnce(() => new Promise((_resolve, reject) => {
-            rejectFirst = reject;
-        }))
+        .mockImplementationOnce(
+            () =>
+                new Promise((_resolve, reject) => {
+                    rejectFirst = reject;
+                }),
+        )
         .mockResolvedValueOnce(secondResponse);
     useUsersStore.setState({ user, localUser: null });
 
@@ -335,9 +355,12 @@ test('does not keep an older settings error after a newer update succeeds', () =
 
 test('does not restore profile state when a settings response arrives after reset', () => {
     let resolveUpdate: ((value: SelfUser) => void) | undefined;
-    vi.mocked(usersApi.updateUser).mockImplementation(() => new Promise(resolve => {
-        resolveUpdate = resolve;
-    }));
+    vi.mocked(usersApi.updateUser).mockImplementation(
+        () =>
+            new Promise(resolve => {
+                resolveUpdate = resolve;
+            }),
+    );
     useUsersStore.setState({ user, localUser: null });
 
     const update = useUsersStore.getState().setUserSettings({
@@ -361,9 +384,12 @@ test('does not restore profile state when a settings response arrives after rese
 
 test('ignores a settings rejection that arrives after reset', () => {
     let rejectUpdate: ((reason?: unknown) => void) | undefined;
-    vi.mocked(usersApi.updateUser).mockImplementation(() => new Promise((_resolve, reject) => {
-        rejectUpdate = reject;
-    }));
+    vi.mocked(usersApi.updateUser).mockImplementation(
+        () =>
+            new Promise((_resolve, reject) => {
+                rejectUpdate = reject;
+            }),
+    );
     useUsersStore.setState({ user, localUser: null });
 
     const update = useUsersStore.getState().setUserSettings({
@@ -416,22 +442,28 @@ test('keeps the current user when an avatar upload fails', () => {
     vi.mocked(usersApi.uploadUserAvatar).mockRejectedValue(error);
     useUsersStore.setState({ user, localUser: null });
 
-    return useUsersStore.getState().uploadUserAvatar({ file }).then(
-        () => Promise.reject(new Error('Expected the avatar upload to reject')),
-        reason => {
-            expect(reason).toBe(error);
-            expect(useUsersStore.getState().user).toEqual(user);
-            expect(useLoadingStore.getState().users.avatar).toBe('fetched');
-        },
-    );
+    return useUsersStore
+        .getState()
+        .uploadUserAvatar({ file })
+        .then(
+            () => Promise.reject(new Error('Expected the avatar upload to reject')),
+            reason => {
+                expect(reason).toBe(error);
+                expect(useUsersStore.getState().user).toEqual(user);
+                expect(useLoadingStore.getState().users.avatar).toBe('fetched');
+            },
+        );
 });
 
 test('does not restore profile state when an avatar response arrives after reset', () => {
     let resolveUpload: ((value: SelfUser) => void) | undefined;
     const file = new File(['avatar'], 'avatar.png', { type: 'image/png' });
-    vi.mocked(usersApi.uploadUserAvatar).mockImplementation(() => new Promise(resolve => {
-        resolveUpload = resolve;
-    }));
+    vi.mocked(usersApi.uploadUserAvatar).mockImplementation(
+        () =>
+            new Promise(resolve => {
+                resolveUpload = resolve;
+            }),
+    );
     useUsersStore.setState({ user, localUser: null });
 
     const upload = useUsersStore.getState().uploadUserAvatar({ file });
@@ -454,9 +486,12 @@ test('does not restore profile state when an avatar response arrives after reset
 test('ignores an avatar rejection that arrives after reset', () => {
     let rejectUpload: ((reason?: unknown) => void) | undefined;
     const file = new File(['avatar'], 'avatar.png', { type: 'image/png' });
-    vi.mocked(usersApi.uploadUserAvatar).mockImplementation(() => new Promise((_resolve, reject) => {
-        rejectUpload = reject;
-    }));
+    vi.mocked(usersApi.uploadUserAvatar).mockImplementation(
+        () =>
+            new Promise((_resolve, reject) => {
+                rejectUpload = reject;
+            }),
+    );
     useUsersStore.setState({ user, localUser: null });
 
     const upload = useUsersStore.getState().uploadUserAvatar({ file });
@@ -480,10 +515,13 @@ test('removes a friend and refetches the confirmed friends list', () => {
     vi.mocked(usersApi.removeKnownUser).mockResolvedValue(undefined);
     useUsersStore.setState({ fetchSetFriends });
 
-    return useUsersStore.getState().removeFriend({ userId: 'friend-1' }).then(() => {
-        expect(usersApi.removeKnownUser).toHaveBeenCalledWith({ userId: 'friend-1' });
-        expect(fetchSetFriends).toHaveBeenCalledWith(true);
-    });
+    return useUsersStore
+        .getState()
+        .removeFriend({ userId: 'friend-1' })
+        .then(() => {
+            expect(usersApi.removeKnownUser).toHaveBeenCalledWith({ userId: 'friend-1' });
+            expect(fetchSetFriends).toHaveBeenCalledWith(true);
+        });
 });
 
 test('resolves after a confirmed removal and friends refresh', () => {
@@ -492,10 +530,13 @@ test('resolves after a confirmed removal and friends refresh', () => {
         fetchSetFriends: vi.fn().mockResolvedValue(undefined),
     });
 
-    return useUsersStore.getState().removeFriend({ userId: 'friend-1' }).then(result => {
-        expect(result).toBeUndefined();
-        expect(usersApi.removeKnownUser).toHaveBeenCalledOnce();
-    });
+    return useUsersStore
+        .getState()
+        .removeFriend({ userId: 'friend-1' })
+        .then(result => {
+            expect(result).toBeUndefined();
+            expect(usersApi.removeKnownUser).toHaveBeenCalledOnce();
+        });
 });
 
 test('rejects a failed friend removal without starting a refetch', () => {
@@ -504,12 +545,12 @@ test('rejects a failed friend removal without starting a refetch', () => {
     vi.mocked(usersApi.removeKnownUser).mockRejectedValue(mutationError);
     useUsersStore.setState({ fetchSetFriends });
 
-    return expect(
-        useUsersStore.getState().removeFriend({ userId: 'friend-1' }),
-    ).rejects.toBe(mutationError).then(() => {
-        expect(fetchSetFriends).not.toHaveBeenCalled();
-        expect(useErrorsStore.getState().errors.users.removeFriend).toEqual(
-            expect.objectContaining({ message: expect.any(String) }),
-        );
-    });
+    return expect(useUsersStore.getState().removeFriend({ userId: 'friend-1' }))
+        .rejects.toBe(mutationError)
+        .then(() => {
+            expect(fetchSetFriends).not.toHaveBeenCalled();
+            expect(useErrorsStore.getState().errors.users.removeFriend).toEqual(
+                expect.objectContaining({ message: expect.any(String) }),
+            );
+        });
 });

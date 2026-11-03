@@ -1,8 +1,4 @@
-import type {
-    AppEvent,
-    ExpenseActivityMetadata,
-    ExpenseActivityShare,
-} from 'api/activity.types';
+import type { AppEvent, ExpenseActivityMetadata, ExpenseActivityShare } from 'api/activity.types';
 import type { SharingMode } from 'api/chipin.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { EXPENSE_SPLIT_MODES, type ExpenseSplitMode } from 'constants/chipin';
@@ -70,9 +66,7 @@ const toExpenseParticipant = (
     displayName: share.displayName,
 });
 
-const getPayerParticipant = (
-    metadata: ExpenseActivityMetadata,
-): ExpenseParticipant[] => {
+const getPayerParticipant = (metadata: ExpenseActivityMetadata): ExpenseParticipant[] => {
     if (!metadata.payerId) {
         return [];
     }
@@ -85,9 +79,7 @@ const getPayerParticipant = (
     ];
 };
 
-const getSnapshotParticipants = (
-    metadata: ExpenseActivityMetadata,
-): ExpenseParticipant[] => {
+const getSnapshotParticipants = (metadata: ExpenseActivityMetadata): ExpenseParticipant[] => {
     const participants: ExpenseParticipant[] = [];
 
     for (const share of metadata.shares ?? []) {
@@ -97,9 +89,7 @@ const getSnapshotParticipants = (
     return participants;
 };
 
-const getShareAmounts = (
-    shares: readonly ExpenseActivityShare[],
-): Record<string, number> => {
+const getShareAmounts = (shares: readonly ExpenseActivityShare[]): Record<string, number> => {
     const amounts: Record<string, number> = {};
 
     for (const share of shares) {
@@ -109,12 +99,11 @@ const getShareAmounts = (
     return amounts;
 };
 
-const getActivitySharingMode = (
-    metadata: ExpenseActivityMetadata,
-): SharingMode => metadata.sharingMode ?? {
-    type: 'EXACT',
-    customShares: getShareAmounts(metadata.shares ?? []),
-};
+const getActivitySharingMode = (metadata: ExpenseActivityMetadata): SharingMode =>
+    metadata.sharingMode ?? {
+        type: 'EXACT',
+        customShares: getShareAmounts(metadata.shares ?? []),
+    };
 
 const getModeValues = (
     sharingMode: SharingMode,
@@ -219,9 +208,7 @@ const mergeEditSource = (
     };
 };
 
-const createEqualPercentages = (
-    users: ExpenseParticipant[],
-): Record<string, string> => {
+const createEqualPercentages = (users: ExpenseParticipant[]): Record<string, string> => {
     if (users.length === 0) {
         return {};
     }
@@ -240,19 +227,19 @@ const createEqualPercentages = (
 const createUserValues = <Value extends string | boolean>(
     users: ExpenseParticipant[],
     value: Value,
-): Record<string, Value> =>
-    Object.fromEntries(users.map(user => [user.id, value]));
+): Record<string, Value> => Object.fromEntries(users.map(user => [user.id, value]));
 
 const getAvailableUsers = (
     source: ExpenseModalSource,
     targetMode: 'group' | 'friends',
     groupId: string | null,
 ): ExpenseParticipant[] => {
-    const users = targetMode === 'group'
-        ? (source.groups.find(group => group.id === groupId)?.members ?? [])
-        : [source.currentUser, ...source.knownFriends].filter(
-              (user): user is ExpenseParticipant => Boolean(user),
-          );
+    const users =
+        targetMode === 'group'
+            ? (source.groups.find(group => group.id === groupId)?.members ?? [])
+            : [source.currentUser, ...source.knownFriends].filter(
+                  (user): user is ExpenseParticipant => Boolean(user),
+              );
     const currentUserId = source.currentUser?.id;
     const currentUser = users.find(user => user.id === currentUserId);
     const otherUsers = users.filter(user => user.id !== currentUserId);
@@ -306,17 +293,8 @@ export const mapActivityExpenseToModalState = ({
     const targetMode = groupId ? 'group' : 'friends';
     const sharingMode = getActivitySharingMode(metadata);
     const snapshotParticipants = getSnapshotParticipants(metadata);
-    const snapshotUsers = mergeUsers(
-        getPayerParticipant(metadata),
-        snapshotParticipants,
-    );
-    const editSource = mergeEditSource(
-        source,
-        metadata,
-        targetMode,
-        groupId,
-        snapshotUsers,
-    );
+    const snapshotUsers = mergeUsers(getPayerParticipant(metadata), snapshotParticipants);
+    const editSource = mergeEditSource(source, metadata, targetMode, groupId, snapshotUsers);
     const availableUsers = getAvailableUsers(editSource, targetMode, groupId);
     const participantIds = new Set(snapshotParticipants.map(user => user.id));
     const includedParticipantIds = Object.fromEntries(
@@ -325,22 +303,22 @@ export const mapActivityExpenseToModalState = ({
     const fallbackExactValues = getShareAmounts(metadata.shares ?? []);
     const modeValues = getModeValues(sharingMode, fallbackExactValues);
     const splitMode = getSplitMode(sharingMode);
-    const percentShares = splitMode === EXPENSE_SPLIT_MODES.PERCENT
-        ? toStringRecord(availableUsers, modeValues)
-        : createEqualPercentages(
-              availableUsers.filter(user => participantIds.has(user.id)),
-          );
-    const amountShares = splitMode === EXPENSE_SPLIT_MODES.AMOUNTS
-        ? toStringRecord(availableUsers, modeValues)
-        : createUserValues(availableUsers, '0');
-    const shareWeights = splitMode === EXPENSE_SPLIT_MODES.SHARES
-        ? toStringRecord(availableUsers, modeValues)
-        : createUserValues(availableUsers, '1');
-    const selectedFriendId = targetMode === 'friends'
-        ? (snapshotParticipants.find(
-              user => user.id !== source.currentUser?.id,
-          )?.id ?? '')
-        : '';
+    const percentShares =
+        splitMode === EXPENSE_SPLIT_MODES.PERCENT
+            ? toStringRecord(availableUsers, modeValues)
+            : createEqualPercentages(availableUsers.filter(user => participantIds.has(user.id)));
+    const amountShares =
+        splitMode === EXPENSE_SPLIT_MODES.AMOUNTS
+            ? toStringRecord(availableUsers, modeValues)
+            : createUserValues(availableUsers, '0');
+    const shareWeights =
+        splitMode === EXPENSE_SPLIT_MODES.SHARES
+            ? toStringRecord(availableUsers, modeValues)
+            : createUserValues(availableUsers, '1');
+    const selectedFriendId =
+        targetMode === 'friends'
+            ? (snapshotParticipants.find(user => user.id !== source.currentUser?.id)?.id ?? '')
+            : '';
 
     return {
         mode: 'edit',

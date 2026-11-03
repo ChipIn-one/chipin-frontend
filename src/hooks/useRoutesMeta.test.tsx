@@ -28,7 +28,9 @@ const MetadataNavigation = () => {
 
 afterEach(() => {
     document
-        .querySelectorAll('meta[name="description"], meta[name="robots"], meta[property^="og:"], link[rel="canonical"]')
+        .querySelectorAll(
+            'meta[name="description"], meta[name="robots"], meta[property^="og:"], link[rel="canonical"]',
+        )
         .forEach(element => {
             element.remove();
         });

@@ -7,9 +7,7 @@ import userEvent from '@testing-library/user-event';
 import CopyButton from './CopyButton';
 
 const clipboardMocks = vi.hoisted(() => ({
-    copyTextToClipboard: vi.fn(
-        (): Promise<'copied' | 'unsupported'> => Promise.resolve('copied'),
-    ),
+    copyTextToClipboard: vi.fn((): Promise<'copied' | 'unsupported'> => Promise.resolve('copied')),
 }));
 
 vi.mock('helpers/clipboard', () => ({

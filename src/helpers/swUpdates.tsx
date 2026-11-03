@@ -62,10 +62,7 @@ const activateWaitingWorker = (): void => {
         reloadCurrentPage();
     };
 
-    activateServiceWorker(currentWaitingWorker).then(
-        reloadAfterActivation,
-        reloadAfterActivation,
-    );
+    activateServiceWorker(currentWaitingWorker).then(reloadAfterActivation, reloadAfterActivation);
 };
 
 // ─── Toast ────────────────────────────────────────────────────────────────────

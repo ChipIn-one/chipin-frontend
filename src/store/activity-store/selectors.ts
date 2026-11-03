@@ -15,9 +15,7 @@ const selectActivityFeed = (state: ActivityStore): ActivityFeedSlice => ({
     hasMore: state.hasMore,
 });
 
-const selectActivitySubeventsFlow = (
-    state: ActivityStore,
-): ActivitySubeventsFlowSlice => ({
+const selectActivitySubeventsFlow = (state: ActivityStore): ActivitySubeventsFlowSlice => ({
     subevents: state.subevents,
     subeventsParent: state.subeventsParent,
     hasMoreSubevents: state.hasMoreSubevents,

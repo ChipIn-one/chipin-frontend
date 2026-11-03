@@ -62,9 +62,7 @@ export const createSettlement = ({
         .then(response => response.data);
 };
 
-export const removeLedgerEntry = ({
-    entryId,
-}: RemoveLedgerEntryParams): Promise<void> => {
+export const removeLedgerEntry = ({ entryId }: RemoveLedgerEntryParams): Promise<void> => {
     return Promise.resolve()
         .then(() => apiInstance.delete<void>(apiPath`/ledger/entries/${entryId}`))
         .then(() => undefined);
@@ -86,6 +84,8 @@ export const updateExpense = ({
     entry: UpdateLedgerExpenseParams;
 }): Promise<ApiCreateLedgerResponse> => {
     return Promise.resolve()
-        .then(() => apiInstance.patch<ApiCreateLedgerResponse>(apiPath`/ledger/entries/${entryId}`, entry))
+        .then(() =>
+            apiInstance.patch<ApiCreateLedgerResponse>(apiPath`/ledger/entries/${entryId}`, entry),
+        )
         .then(response => response.data);
 };

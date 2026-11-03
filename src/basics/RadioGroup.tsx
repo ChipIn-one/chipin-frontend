@@ -15,11 +15,7 @@ interface Props extends Omit<ComponentProps<typeof RadixRadioGroup.Root>, 'child
 const RadioGroup = ({ items, ...rootProps }: Props) => (
     <RadixRadioGroup.Root {...rootProps}>
         {items.map(item => (
-            <RadixRadioGroup.Item
-                key={item.value}
-                value={item.value}
-                disabled={item.isDisabled}
-            >
+            <RadixRadioGroup.Item key={item.value} value={item.value} disabled={item.isDisabled}>
                 {item.label}
             </RadixRadioGroup.Item>
         ))}

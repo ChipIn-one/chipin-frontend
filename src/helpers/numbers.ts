@@ -121,10 +121,7 @@ export const normalizeApiMoneyAmount = (value: number): number => {
     return Object.is(normalizedValue, -0) ? 0 : normalizedValue;
 };
 
-export const normalizeFloatingPointZero = (
-    value: number,
-    magnitude: number,
-): number => {
+export const normalizeFloatingPointZero = (value: number, magnitude: number): number => {
     const tolerance = Number.EPSILON * Math.max(1, Math.abs(magnitude));
     return Math.abs(value) <= tolerance ? 0 : value;
 };
@@ -240,18 +237,16 @@ const getKMB = (value: number) => {
     };
 };
 
-export const getNumberData = (
-    {
-        value = 0,
-        precision,
-        isKMB = false,
-        isExternal = false,
-        isInteger = false,
-        isPrice = false,
-        isInteractive = false,
-        isZeros = false,
-    }: GetNumberDataArgs = {},
-): NumberData => {
+export const getNumberData = ({
+    value = 0,
+    precision,
+    isKMB = false,
+    isExternal = false,
+    isInteger = false,
+    isPrice = false,
+    isInteractive = false,
+    isZeros = false,
+}: GetNumberDataArgs = {}): NumberData => {
     const { precisionToUse, minPrecisionAmount, isValueTooSmall } = getNumberPrecisionData({
         value,
         precision,
@@ -307,7 +302,8 @@ export const parseAmountInput = (
 ): string | null => {
     const normalised = raw.replace(',', '.');
     const [integerPart = '', fractionalPart] = normalised.split('.');
-    const hasValidShape = /^\d*$/.test(integerPart) &&
+    const hasValidShape =
+        /^\d*$/.test(integerPart) &&
         (fractionalPart === undefined || /^\d*$/.test(fractionalPart)) &&
         normalised.split('.').length <= 2;
     const hasValidPrecision =

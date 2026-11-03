@@ -1,9 +1,6 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
-import {
-    InvalidLogoutOtherDevicesResponseError,
-    logoutOtherDevices,
-} from './authApi';
+import { InvalidLogoutOtherDevicesResponseError, logoutOtherDevices } from './authApi';
 import { apiInstance } from './chipin.instance';
 
 vi.mock('./chipin.instance', () => ({
@@ -23,29 +20,23 @@ describe('authApi.logoutOtherDevices', () => {
         });
 
         return logoutOtherDevices().then(result => {
-            expect(apiInstance.post).toHaveBeenCalledWith(
-                '/auth/logout-other-devices',
-                undefined,
-                {
-                    headers: {
-                        'X-Chipin-Csrf': '1',
-                    },
+            expect(apiInstance.post).toHaveBeenCalledWith('/auth/logout-other-devices', undefined, {
+                headers: {
+                    'X-Chipin-Csrf': '1',
                 },
-            );
+            });
             expect(result).toEqual({ token: 'next-access-token' });
         });
     });
 
-    test.each([
-        {},
-        { token: '' },
-        { token: 42 },
-        { refresh_token: 'must-not-be-used' },
-    ])('rejects an unusable access-token response %#', responseData => {
-        vi.mocked(apiInstance.post).mockResolvedValue({ data: responseData });
+    test.each([{}, { token: '' }, { token: 42 }, { refresh_token: 'must-not-be-used' }])(
+        'rejects an unusable access-token response %#',
+        responseData => {
+            vi.mocked(apiInstance.post).mockResolvedValue({ data: responseData });
 
-        return expect(logoutOtherDevices()).rejects.toBeInstanceOf(
-            InvalidLogoutOtherDevicesResponseError,
-        );
-    });
+            return expect(logoutOtherDevices()).rejects.toBeInstanceOf(
+                InvalidLogoutOtherDevicesResponseError,
+            );
+        },
+    );
 });

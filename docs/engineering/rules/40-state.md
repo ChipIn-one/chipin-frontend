@@ -59,12 +59,12 @@ const { isOpened, close } = useExpenseModalStore(
 
 ## Query And Mutation Naming
 
-| Behavior | Name |
-| --- | --- |
-| Read server data | `use<Entity>Query`, for example `useGroupsQuery` |
+| Behavior                     | Name                                                              |
+| ---------------------------- | ----------------------------------------------------------------- |
+| Read server data             | `use<Entity>Query`, for example `useGroupsQuery`                  |
 | Create/update/remove command | `use<Verb><Entity>Mutation`, for example `useCreateGroupMutation` |
-| UI store update | `set<Thing>`, for example `setSelectedGroup` |
-| Reset owned UI state | `reset<Thing>` |
+| UI store update              | `set<Thing>`, for example `setSelectedGroup`                      |
+| Reset owned UI state         | `reset<Thing>`                                                    |
 
 Names describe the business operation. Do not use vague names such as `setData`, `load`, or `process`.
 

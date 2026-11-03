@@ -8,7 +8,7 @@ const SHORT_SHA_LENGTH = 7;
 const BASE_VERSION_PATTERN = /^\d+\.\d+\.\d+$/u;
 const REPOSITORY_ROOT = resolve(process.cwd());
 
-const normalizeValue = value => typeof value === 'string' ? value.trim() : '';
+const normalizeValue = value => (typeof value === 'string' ? value.trim() : '');
 
 const getFirstValue = values => {
     for (const value of values) {
@@ -69,17 +69,18 @@ const resolveTaskHeadSha = ({
     commitSha,
     localHeadSha,
     readLocalHeadSha: readLocalHeadShaFn,
-}) => getFirstValue([
-    pullRequestHeadSha,
-    env.GITHUB_PR_HEAD_SHA,
-    taskHeadSha,
-    env.CHIPIN_TASK_HEAD_SHA,
-    commitSha,
-    env.GITHUB_SHA,
-    env.VERCEL_GIT_COMMIT_SHA,
-    localHeadSha,
-    readLocalHeadShaFn(),
-]);
+}) =>
+    getFirstValue([
+        pullRequestHeadSha,
+        env.GITHUB_PR_HEAD_SHA,
+        taskHeadSha,
+        env.CHIPIN_TASK_HEAD_SHA,
+        commitSha,
+        env.GITHUB_SHA,
+        env.VERCEL_GIT_COMMIT_SHA,
+        localHeadSha,
+        readLocalHeadShaFn(),
+    ]);
 
 export const resolveAppVersion = ({
     baseVersion = readPackageVersion(),

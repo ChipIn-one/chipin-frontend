@@ -9,11 +9,7 @@ import {
 } from './support/guards';
 import { createContractHttpClient } from './support/http';
 
-const REQUIRED_OPENAPI_PATHS = [
-    '/auth/test-register',
-    '/auth/refresh',
-    '/users/self',
-] as const;
+const REQUIRED_OPENAPI_PATHS = ['/auth/test-register', '/auth/refresh', '/users/self'] as const;
 
 const readEnvironmentVariable = (key: keyof ContractEnvironment): string | undefined => {
     const processValue: unknown = Reflect.get(globalThis, 'process');
@@ -72,7 +68,7 @@ it('validates the live auth and session contract', () => {
             method: 'GET',
             path: '/swagger/documentation.yaml',
         })
-        .then((document) => {
+        .then(document => {
             assertOpenApiPaths(document);
             provisionAttempted = true;
 
@@ -86,7 +82,7 @@ it('validates the live auth and session contract', () => {
                 path: '/auth/test-register',
             });
         })
-        .then((value) => {
+        .then(value => {
             const registerResponse = parseRegisterResponse(value);
 
             if (registerResponse.runId !== runId) {
@@ -104,7 +100,7 @@ it('validates the live auth and session contract', () => {
                 path: '/users/self',
             });
         })
-        .then((value) => {
+        .then(value => {
             const selfUser = parseSelfUserResponse(value);
 
             if (!provisionedUser) {
@@ -125,7 +121,7 @@ it('validates the live auth and session contract', () => {
                 path: '/auth/refresh',
             });
         })
-        .then((value) => {
+        .then(value => {
             parseRefreshResponse(value);
 
             return client.requestJson({
@@ -134,7 +130,7 @@ it('validates the live auth and session contract', () => {
                 path: '/auth/refresh',
             });
         })
-        .then((value) => {
+        .then(value => {
             parseRefreshResponse(value);
         })
         .catch((error: unknown) => {

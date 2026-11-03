@@ -7,10 +7,7 @@ import { normalizeApiError } from 'helpers/errors';
 import { useDashboardStore } from '../dashboardStore';
 import { useErrorsStore } from '../errorsStore';
 import { mapActivityExpenseToModalState } from '../expenseModalEditMapping';
-import type {
-    ExpenseModalEditInitialization,
-    ExpenseModalSource,
-} from '../expenseModalStore';
+import type { ExpenseModalEditInitialization, ExpenseModalSource } from '../expenseModalStore';
 import { useGroupsStore } from '../groupsStore';
 import { createRequestChannel } from '../internal/resourceRequests';
 import { useLoadingStore } from '../loadingStore';

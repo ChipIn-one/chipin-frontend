@@ -34,10 +34,7 @@ const transition = css`
         transform 120ms ease;
 `;
 
-const state = ({
-    backgroundColorToken,
-    borderColorToken,
-}: InteractiveCardStateOptions) => css`
+const state = ({ backgroundColorToken, borderColorToken }: InteractiveCardStateOptions) => css`
     background-color: ${themeColor(backgroundColorToken)};
     box-shadow: inset 0 0 0 1px ${themeColor(borderColorToken)};
 `;
@@ -47,10 +44,7 @@ const hover = (options: InteractiveCardStateOptions) => css`
     transform: translateY(-1px);
 `;
 
-const focus = ({
-    borderColorToken,
-    focusColorToken,
-}: InteractiveCardFocusOptions) => css`
+const focus = ({ borderColorToken, focusColorToken }: InteractiveCardFocusOptions) => css`
     box-shadow:
         inset 0 0 0 1px ${themeColor(borderColorToken)},
         0 0 0 2px ${themeColor(focusColorToken)};
@@ -76,20 +70,22 @@ const interactiveCardLinkStyles = ({
         ${focus(focusOptions)}
     }
 
-    ${selected &&
-    css`
-        &[aria-current='page'] [data-interactive-card] {
-            ${state(selected.state)}
-        }
+    ${
+        selected &&
+        css`
+            &[aria-current='page'] [data-interactive-card] {
+                ${state(selected.state)}
+            }
 
-        &[aria-current='page']:hover [data-interactive-card] {
-            ${hover(selected.hover)}
-        }
+            &[aria-current='page']:hover [data-interactive-card] {
+                ${hover(selected.hover)}
+            }
 
-        &[aria-current='page']:focus-visible [data-interactive-card] {
-            ${focus(selected.focus)}
-        }
-    `}
+            &[aria-current='page']:focus-visible [data-interactive-card] {
+                ${focus(selected.focus)}
+            }
+        `
+    }
 `;
 
 export { interactiveCardLinkStyles };

@@ -157,13 +157,8 @@ test('retries cookie-backed restoration after confirmed backend recovery', () =>
 test('initializes the app mode from the fetched preference without a cached user', () => {
     markRestorableAuthSession();
     useDashboardStore.setState({ appMode: APP_MODES.GROUP });
-    const setDefaultAppMode = vi.spyOn(
-        useDashboardStore.getState(),
-        'setDefaultAppMode',
-    );
-    vi.spyOn(useAuthStore.getState(), 'refreshAuthTokens').mockResolvedValue(
-        'next-access-token',
-    );
+    const setDefaultAppMode = vi.spyOn(useDashboardStore.getState(), 'setDefaultAppMode');
+    vi.spyOn(useAuthStore.getState(), 'refreshAuthTokens').mockResolvedValue('next-access-token');
     mockAuthenticatedDataFetches();
 
     renderHook();
@@ -185,13 +180,8 @@ test('preserves the active app mode when a cached user initialized it', () => {
     });
     useUsersStore.getState().setInitialUsersStore();
     useDashboardStore.setState({ appMode: APP_MODES.SOLO });
-    const setDefaultAppMode = vi.spyOn(
-        useDashboardStore.getState(),
-        'setDefaultAppMode',
-    );
-    vi.spyOn(useAuthStore.getState(), 'refreshAuthTokens').mockResolvedValue(
-        'next-access-token',
-    );
+    const setDefaultAppMode = vi.spyOn(useDashboardStore.getState(), 'setDefaultAppMode');
+    vi.spyOn(useAuthStore.getState(), 'refreshAuthTokens').mockResolvedValue('next-access-token');
     vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockResolvedValue();
     vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
     const fetchSetUser = vi
@@ -250,13 +240,9 @@ test('does not overwrite a newer authenticated session after stale validation fa
             act(() => {
                 useAuthStore.getState().setAuthenticated();
             });
-            rejectValidation?.(
-                new Error('Auth session changed during token rotation'),
-            );
+            rejectValidation?.(new Error('Auth session changed during token rotation'));
 
-            return expect(validation).rejects.toThrow(
-                'Auth session changed during token rotation',
-            );
+            return expect(validation).rejects.toThrow('Auth session changed during token rotation');
         })
         .then(() => {
             expect(useAuthStore.getState().status).toBe('authenticated');
@@ -290,9 +276,11 @@ test('remote tab logout clears protected data without a second server logout', (
 
     expect(receiver.name).toBe('chipin-auth-logout');
     act(() => {
-        receiver.onMessage?.(new MessageEvent('message', {
-            data: { type: 'logout', source: 'other-tab' },
-        }));
+        receiver.onMessage?.(
+            new MessageEvent('message', {
+                data: { type: 'logout', source: 'other-tab' },
+            }),
+        );
     });
 
     expect(useAuthStore.getState()).toMatchObject({

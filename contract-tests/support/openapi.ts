@@ -62,13 +62,7 @@ const collectSchemaFieldPaths = (
         for (const [field, childSchema] of Object.entries(properties)) {
             const fieldPath = prefix ? `${prefix}.${field}` : field;
             fieldPaths.add(fieldPath);
-            collectSchemaFieldPaths(
-                document,
-                childSchema,
-                fieldPaths,
-                activeReferences,
-                fieldPath,
-            );
+            collectSchemaFieldPaths(document, childSchema, fieldPaths, activeReferences, fieldPath);
         }
     }
 
@@ -81,24 +75,12 @@ const collectSchemaFieldPaths = (
             throw new Error(`Runtime OpenAPI schema ${compositionKey} must be an array`);
         }
         for (const childSchema of composition) {
-            collectSchemaFieldPaths(
-                document,
-                childSchema,
-                fieldPaths,
-                activeReferences,
-                prefix,
-            );
+            collectSchemaFieldPaths(document, childSchema, fieldPaths, activeReferences, prefix);
         }
     }
 
     if (schema.items !== undefined) {
-        collectSchemaFieldPaths(
-            document,
-            schema.items,
-            fieldPaths,
-            activeReferences,
-            prefix,
-        );
+        collectSchemaFieldPaths(document, schema.items, fieldPaths, activeReferences, prefix);
     }
     if (isRecord(schema.additionalProperties)) {
         collectSchemaFieldPaths(

@@ -4,10 +4,7 @@ import type { AppEvent } from 'api/activity.types';
 import * as activityApi from 'api/activityApi';
 import type { ApiExpenseLedgerEntry } from 'api/chipin.raw.types';
 import * as ledgerApi from 'api/ledgerApi';
-import {
-    ACTIVITY_ACTIONS,
-    ACTIVITY_CATEGORIES,
-} from 'constants/activity';
+import { ACTIVITY_ACTIONS, ACTIVITY_CATEGORIES } from 'constants/activity';
 
 import { useDashboardStore } from '../dashboardStore';
 import { useErrorsStore } from '../errorsStore';
@@ -152,9 +149,7 @@ test('resets activity state', () => {
 test('records an error when fetching activity subevents fails', () => {
     const requestError = new Error('Subevents unavailable');
     const confirmedEvent = createActivityEvent('confirmed-activity', 1);
-    vi.mocked(activityApi.fetchActivityChildren).mockRejectedValue(
-        requestError,
-    );
+    vi.mocked(activityApi.fetchActivityChildren).mockRejectedValue(requestError);
     useActivityStore.setState({
         subevents: [confirmedEvent],
         subeventsNextCursor: 40,
@@ -179,9 +174,7 @@ test('records an error when fetching activity subevents fails', () => {
                 hasMoreSubevents: true,
                 subeventsParent: null,
             });
-            expect(useLoadingStore.getState().activity.subeventsData).toBe(
-                'fetched',
-            );
+            expect(useLoadingStore.getState().activity.subeventsData).toBe('fetched');
         });
 });
 
@@ -206,10 +199,7 @@ test('records an error and preserves subevent pagination after a page request fa
                 subeventsNextCursor: 40,
                 hasMoreSubevents: true,
             });
-            expect(
-                useLoadingStore.getState().activity
-                    .subeventsNextPage,
-            ).toBe('fetched');
+            expect(useLoadingStore.getState().activity.subeventsNextPage).toBe('fetched');
         });
 });
 
@@ -233,10 +223,7 @@ test('appends subevents in API order', () => {
         .getState()
         .fetchMoreActivitySubevents()
         .then(() => {
-            expect(useActivityStore.getState().subevents).toEqual([
-                existingEvent,
-                nextEvent,
-            ]);
+            expect(useActivityStore.getState().subevents).toEqual([existingEvent, nextEvent]);
         });
 });
 
@@ -244,16 +231,16 @@ test('does not let a slower parent request replace the selected activity history
     const firstEvent = createActivityEvent('activity-1', 1);
     const secondEvent = createActivityEvent('activity-2', 2);
     let firstSignal: AbortSignal | undefined;
-    let resolveFirst: ((value: {
-        parent: AppEvent;
-        items: AppEvent[];
-        nextCursor: null;
-    }) => void) | undefined;
+    let resolveFirst:
+        ((value: { parent: AppEvent; items: AppEvent[]; nextCursor: null }) => void) | undefined;
     vi.mocked(activityApi.fetchActivityChildren)
-        .mockImplementationOnce((_params, signal) => new Promise(resolve => {
-            firstSignal = signal;
-            resolveFirst = resolve;
-        }))
+        .mockImplementationOnce(
+            (_params, signal) =>
+                new Promise(resolve => {
+                    firstSignal = signal;
+                    resolveFirst = resolve;
+                }),
+        )
         .mockResolvedValueOnce({
             parent: createActivityEvent('parent-2', 0),
             items: [secondEvent],
@@ -288,11 +275,8 @@ test('does not let a slower parent request replace the selected activity history
 
 test('aborts pending subevent pagination before replacing the selected history', () => {
     let pageSignal: AbortSignal | undefined;
-    let resolvePage: ((value: {
-        parent: AppEvent;
-        items: AppEvent[];
-        nextCursor: null;
-    }) => void) | undefined;
+    let resolvePage:
+        ((value: { parent: AppEvent; items: AppEvent[]; nextCursor: null }) => void) | undefined;
     useActivityStore.setState({
         subeventsNextCursor: 40,
         subeventsParent: createActivityEvent('parent-1', 0),
@@ -300,10 +284,13 @@ test('aborts pending subevent pagination before replacing the selected history',
         hasMoreSubevents: true,
     });
     vi.mocked(activityApi.fetchActivityChildren)
-        .mockImplementationOnce((_params, signal) => new Promise(resolve => {
-            pageSignal = signal;
-            resolvePage = resolve;
-        }))
+        .mockImplementationOnce(
+            (_params, signal) =>
+                new Promise(resolve => {
+                    pageSignal = signal;
+                    resolvePage = resolve;
+                }),
+        )
         .mockResolvedValueOnce({
             parent: createActivityEvent('parent-1', 0),
             items: [],
@@ -333,10 +320,13 @@ test('settles feed pagination when a forced feed refresh aborts it', () => {
     let resolvePage: ((value: { items: AppEvent[]; nextCursor: null }) => void) | undefined;
     useActivityStore.setState({ nextCursor: 40, hasMore: true });
     vi.mocked(activityApi.fetchActivities)
-        .mockImplementationOnce((_params, signal) => new Promise(resolve => {
-            pageSignal = signal;
-            resolvePage = resolve;
-        }))
+        .mockImplementationOnce(
+            (_params, signal) =>
+                new Promise(resolve => {
+                    pageSignal = signal;
+                    resolvePage = resolve;
+                }),
+        )
         .mockResolvedValueOnce({ items: [], nextCursor: null });
 
     const pageRequest = useActivityStore.getState().fetchMoreActivity();
@@ -377,9 +367,10 @@ test('does not append the same activity page twice while pagination is loading',
         hasMore: true,
     });
     vi.mocked(activityApi.fetchActivities).mockImplementationOnce(
-        () => new Promise(resolve => {
-            resolvePage = resolve;
-        }),
+        () =>
+            new Promise(resolve => {
+                resolvePage = resolve;
+            }),
     );
 
     const firstRequest = useActivityStore.getState().fetchMoreActivity();
@@ -431,18 +422,21 @@ test('creates a direct expense and refetches affected backend resources', () => 
     useDashboardStore.setState({ fetchSetDashboard });
     useUsersStore.setState({ fetchSetFriends });
 
-    return useActivityStore.getState().createExpense({
-        description: 'Dinner',
-        amount: 20,
-        date: 1,
-        payerId: 'user-1',
-        participantIds: ['user-2'],
-        currency: 'USD',
-    }).then(() => {
-        expect(fetchSetDashboard).toHaveBeenCalledWith(true);
-        expect(fetchSetFriends).toHaveBeenCalledWith(true);
-        expect(fetchSetActivity).toHaveBeenCalledWith(true);
-    });
+    return useActivityStore
+        .getState()
+        .createExpense({
+            description: 'Dinner',
+            amount: 20,
+            date: 1,
+            payerId: 'user-1',
+            participantIds: ['user-2'],
+            currency: 'USD',
+        })
+        .then(() => {
+            expect(fetchSetDashboard).toHaveBeenCalledWith(true);
+            expect(fetchSetFriends).toHaveBeenCalledWith(true);
+            expect(fetchSetActivity).toHaveBeenCalledWith(true);
+        });
 });
 
 test('creates a group settlement and refetches the affected group', () => {
@@ -454,15 +448,18 @@ test('creates a group settlement and refetches the affected group', () => {
     useDashboardStore.setState({ fetchSetDashboard });
     useGroupsStore.setState({ fetchSetGroupById });
 
-    return useActivityStore.getState().createSettlement({
-        fromUserId: 'user-1',
-        toUserId: 'user-2',
-        amount: 10,
-        currency: 'USD',
-        groupId: 'group-1',
-    }).then(() => {
-        expect(fetchSetGroupById).toHaveBeenCalledWith('group-1', true);
-    });
+    return useActivityStore
+        .getState()
+        .createSettlement({
+            fromUserId: 'user-1',
+            toUserId: 'user-2',
+            amount: 10,
+            currency: 'USD',
+            groupId: 'group-1',
+        })
+        .then(() => {
+            expect(fetchSetGroupById).toHaveBeenCalledWith('group-1', true);
+        });
 });
 
 test('does not reject a confirmed group expense when canonical refresh rejects', () => {
@@ -479,18 +476,21 @@ test('does not reject a confirmed group expense when canonical refresh rejects',
         fetchSetGroupById,
     });
 
-    return useActivityStore.getState().createExpense({
-        description: 'Dinner',
-        amount: 20,
-        date: 1,
-        payerId: 'user-1',
-        participantIds: ['user-2'],
-        currency: 'USD',
-        groupId: 'group-1',
-    }).then(() => {
-        expect(ledgerApi.createExpense).toHaveBeenCalledOnce();
-        expect(fetchSetGroupById).toHaveBeenCalledWith('group-1', true);
-    });
+    return useActivityStore
+        .getState()
+        .createExpense({
+            description: 'Dinner',
+            amount: 20,
+            date: 1,
+            payerId: 'user-1',
+            participantIds: ['user-2'],
+            currency: 'USD',
+            groupId: 'group-1',
+        })
+        .then(() => {
+            expect(ledgerApi.createExpense).toHaveBeenCalledOnce();
+            expect(fetchSetGroupById).toHaveBeenCalledWith('group-1', true);
+        });
 });
 
 test('does not reject a confirmed settlement when canonical refresh rejects', () => {
@@ -506,16 +506,19 @@ test('does not reject a confirmed settlement when canonical refresh rejects', ()
         fetchSetGroupById,
     });
 
-    return useActivityStore.getState().createSettlement({
-        fromUserId: 'user-1',
-        toUserId: 'user-2',
-        amount: 10,
-        currency: 'USD',
-        groupId: 'group-1',
-    }).then(() => {
-        expect(ledgerApi.createSettlement).toHaveBeenCalledOnce();
-        expect(fetchSetGroupById).toHaveBeenCalledWith('group-1', true);
-    });
+    return useActivityStore
+        .getState()
+        .createSettlement({
+            fromUserId: 'user-1',
+            toUserId: 'user-2',
+            amount: 10,
+            currency: 'USD',
+            groupId: 'group-1',
+        })
+        .then(() => {
+            expect(ledgerApi.createSettlement).toHaveBeenCalledOnce();
+            expect(fetchSetGroupById).toHaveBeenCalledWith('group-1', true);
+        });
 });
 
 test('reverses a ledger entry without locally patching activity state', () => {
@@ -532,12 +535,15 @@ test('reverses a ledger entry without locally patching activity state', () => {
         fetchSetFriends: vi.fn().mockResolvedValue(undefined),
     });
 
-    return useActivityStore.getState().reverseLedgerEntry({
-        entryId: 'expense-1',
-    }).then(() => {
-        expect(ledgerApi.removeLedgerEntry).toHaveBeenCalledWith({ entryId: 'expense-1' });
-        expect(useActivityStore.getState().items).toEqual(confirmedItems);
-    });
+    return useActivityStore
+        .getState()
+        .reverseLedgerEntry({
+            entryId: 'expense-1',
+        })
+        .then(() => {
+            expect(ledgerApi.removeLedgerEntry).toHaveBeenCalledWith({ entryId: 'expense-1' });
+            expect(useActivityStore.getState().items).toEqual(confirmedItems);
+        });
 });
 
 test('does not reject a confirmed ledger reversal when canonical refresh rejects', () => {
@@ -553,13 +559,16 @@ test('does not reject a confirmed ledger reversal when canonical refresh rejects
         fetchSetGroupById,
     });
 
-    return useActivityStore.getState().reverseLedgerEntry({
-        entryId: 'expense-1',
-        groupId: 'group-1',
-    }).then(() => {
-        expect(ledgerApi.removeLedgerEntry).toHaveBeenCalledWith({ entryId: 'expense-1' });
-        expect(fetchSetGroupById).toHaveBeenCalledWith('group-1', true);
-    });
+    return useActivityStore
+        .getState()
+        .reverseLedgerEntry({
+            entryId: 'expense-1',
+            groupId: 'group-1',
+        })
+        .then(() => {
+            expect(ledgerApi.removeLedgerEntry).toHaveBeenCalledWith({ entryId: 'expense-1' });
+            expect(fetchSetGroupById).toHaveBeenCalledWith('group-1', true);
+        });
 });
 
 test('resolves after a confirmed mutation when refreshes resolve', () => {
@@ -574,17 +583,20 @@ test('resolves after a confirmed mutation when refreshes resolve', () => {
         fetchSetFriends: vi.fn().mockResolvedValue(undefined),
     });
 
-    return useActivityStore.getState().createExpense({
-        description: 'Dinner',
-        amount: 20,
-        date: 1,
-        payerId: 'user-1',
-        participantIds: ['user-2'],
-        currency: 'USD',
-    }).then(result => {
-        expect(result).toBeUndefined();
-        expect(ledgerApi.createExpense).toHaveBeenCalledOnce();
-    });
+    return useActivityStore
+        .getState()
+        .createExpense({
+            description: 'Dinner',
+            amount: 20,
+            date: 1,
+            payerId: 'user-1',
+            participantIds: ['user-2'],
+            currency: 'USD',
+        })
+        .then(result => {
+            expect(result).toBeUndefined();
+            expect(ledgerApi.createExpense).toHaveBeenCalledOnce();
+        });
 });
 
 test('does not refetch when an expense mutation fails', () => {
@@ -593,16 +605,20 @@ test('does not refetch when an expense mutation fails', () => {
     vi.mocked(ledgerApi.createExpense).mockRejectedValue(mutationError);
     useDashboardStore.setState({ fetchSetDashboard });
 
-    return expect(useActivityStore.getState().createExpense({
-        description: 'Dinner',
-        amount: 20,
-        date: 1,
-        payerId: 'user-1',
-        participantIds: ['user-2'],
-        currency: 'USD',
-    })).rejects.toBe(mutationError).then(() => {
-        expect(fetchSetDashboard).not.toHaveBeenCalled();
-    });
+    return expect(
+        useActivityStore.getState().createExpense({
+            description: 'Dinner',
+            amount: 20,
+            date: 1,
+            payerId: 'user-1',
+            participantIds: ['user-2'],
+            currency: 'USD',
+        }),
+    )
+        .rejects.toBe(mutationError)
+        .then(() => {
+            expect(fetchSetDashboard).not.toHaveBeenCalled();
+        });
 });
 
 test('ACT-004 prepares an expense edit from the latest Activity snapshot without a ledger read', () => {
@@ -703,22 +719,25 @@ test('updates an expense and refreshes the original group scope', () => {
     const confirmedItems = [createActivityEvent('confirmed-item', 1)];
     useActivityStore.setState({ items: confirmedItems });
 
-    return useActivityStore.getState().updateExpense({
-        entryId: editEntry.id,
-        entry,
-        groupId: editEntry.groupId ?? undefined,
-        parentActivityId: 'parent-1',
-    }).then(() => {
-        expect(ledgerApi.updateExpense).toHaveBeenCalledWith({
+    return useActivityStore
+        .getState()
+        .updateExpense({
             entryId: editEntry.id,
             entry,
+            groupId: editEntry.groupId ?? undefined,
+            parentActivityId: 'parent-1',
+        })
+        .then(() => {
+            expect(ledgerApi.updateExpense).toHaveBeenCalledWith({
+                entryId: editEntry.id,
+                entry,
+            });
+            expect(fetchSetGroupById).toHaveBeenCalledWith('group-1', true);
+            expect(fetchSetDashboard).toHaveBeenCalledWith(true);
+            expect(fetchSetActivity).toHaveBeenCalledWith(true);
+            expect(useLoadingStore.getState().expense.update).toBe('fetched');
+            expect(useActivityStore.getState().items).toEqual(confirmedItems);
         });
-        expect(fetchSetGroupById).toHaveBeenCalledWith('group-1', true);
-        expect(fetchSetDashboard).toHaveBeenCalledWith(true);
-        expect(fetchSetActivity).toHaveBeenCalledWith(true);
-        expect(useLoadingStore.getState().expense.update).toBe('fetched');
-        expect(useActivityStore.getState().items).toEqual(confirmedItems);
-    });
 });
 
 test('updates a direct expense and refreshes friends and visible subevents', () => {
@@ -736,23 +755,26 @@ test('updates a direct expense and refreshes friends and visible subevents', () 
     useDashboardStore.setState({ fetchSetDashboard });
     useUsersStore.setState({ fetchSetFriends });
 
-    return useActivityStore.getState().updateExpense({
-        entryId: editEntry.id,
-        entry: {
-            type: 'EXPENSE',
-            expense: { description: 'Updated dinner' },
-        },
-        parentActivityId: 'parent-1',
-    }).then(() => {
-        expect(fetchSetFriends).toHaveBeenCalledWith(true);
-        expect(fetchSetActivitySubevents).toHaveBeenCalledWith({
+    return useActivityStore
+        .getState()
+        .updateExpense({
+            entryId: editEntry.id,
+            entry: {
+                type: 'EXPENSE',
+                expense: { description: 'Updated dinner' },
+            },
             parentActivityId: 'parent-1',
-            category: ACTIVITY_CATEGORIES.EXPENSE,
-            force: true,
+        })
+        .then(() => {
+            expect(fetchSetFriends).toHaveBeenCalledWith(true);
+            expect(fetchSetActivitySubevents).toHaveBeenCalledWith({
+                parentActivityId: 'parent-1',
+                category: ACTIVITY_CATEGORIES.EXPENSE,
+                force: true,
+            });
+            expect(fetchSetActivity).toHaveBeenCalledWith(true);
+            expect(fetchSetDashboard).toHaveBeenCalledWith(true);
         });
-        expect(fetchSetActivity).toHaveBeenCalledWith(true);
-        expect(fetchSetDashboard).toHaveBeenCalledWith(true);
-    });
 });
 
 test('records and rejects an expense update failure without refreshing', () => {
@@ -761,19 +783,23 @@ test('records and rejects an expense update failure without refreshing', () => {
     vi.mocked(ledgerApi.updateExpense).mockRejectedValue(mutationError);
     useDashboardStore.setState({ fetchSetDashboard });
 
-    return expect(useActivityStore.getState().updateExpense({
-        entryId: editEntry.id,
-        entry: {
-            type: 'EXPENSE',
-            expense: { description: 'Updated dinner' },
-        },
-    })).rejects.toBe(mutationError).then(() => {
-        expect(useErrorsStore.getState().errors.expense.update).toEqual(
-            expect.objectContaining({ message: expect.any(String) }),
-        );
-        expect(useLoadingStore.getState().expense.update).toBe('fetched');
-        expect(fetchSetDashboard).not.toHaveBeenCalled();
-    });
+    return expect(
+        useActivityStore.getState().updateExpense({
+            entryId: editEntry.id,
+            entry: {
+                type: 'EXPENSE',
+                expense: { description: 'Updated dinner' },
+            },
+        }),
+    )
+        .rejects.toBe(mutationError)
+        .then(() => {
+            expect(useErrorsStore.getState().errors.expense.update).toEqual(
+                expect.objectContaining({ message: expect.any(String) }),
+            );
+            expect(useLoadingStore.getState().expense.update).toBe('fetched');
+            expect(fetchSetDashboard).not.toHaveBeenCalled();
+        });
 });
 
 test('does not reject a confirmed expense update when canonical refresh rejects', () => {
@@ -788,13 +814,16 @@ test('does not reject a confirmed expense update when canonical refresh rejects'
         fetchSetFriends: vi.fn().mockRejectedValue(new Error('Friends unavailable')),
     });
 
-    return useActivityStore.getState().updateExpense({
-        entryId: editEntry.id,
-        entry: {
-            type: 'EXPENSE',
-            expense: { description: 'Updated dinner' },
-        },
-    }).then(() => {
-        expect(ledgerApi.updateExpense).toHaveBeenCalledOnce();
-    });
+    return useActivityStore
+        .getState()
+        .updateExpense({
+            entryId: editEntry.id,
+            entry: {
+                type: 'EXPENSE',
+                expense: { description: 'Updated dinner' },
+            },
+        })
+        .then(() => {
+            expect(ledgerApi.updateExpense).toHaveBeenCalledOnce();
+        });
 });

@@ -42,9 +42,7 @@ const resolveSentryBuildConfig = (env: Record<string, string>): SentryBuildConfi
 
     if (vercelEnvironment === 'preview') {
         if (chipInEnvironment !== 'dev') {
-            throw new Error(
-                'VITE_CHIPIN_ENV must be "dev" for a Vercel preview build',
-            );
+            throw new Error('VITE_CHIPIN_ENV must be "dev" for a Vercel preview build');
         }
 
         return { enabled: true, environment: 'preview' };
@@ -107,10 +105,7 @@ export default defineConfig(({ mode }) => {
     const buildEnvironment = loadEnv(mode, '.', '');
     const pwaAppName = buildEnvironment.VITE_CHIPIN_ENV === 'dev' ? 'ChipIn DEV' : 'ChipIn';
     const sentryBuildConfig = resolveSentryBuildConfig(buildEnvironment);
-    const sentryUploadConfig = resolveSentryUploadConfig(
-        buildEnvironment,
-        sentryBuildConfig,
-    );
+    const sentryUploadConfig = resolveSentryUploadConfig(buildEnvironment, sentryBuildConfig);
     const apiProxy = {
         '/api': {
             target: 'https://api-dev.chipin.one',
@@ -122,9 +117,7 @@ export default defineConfig(({ mode }) => {
     return {
         define: {
             __APP_VERSION__: JSON.stringify(appVersion),
-            'import.meta.env.VITE_SENTRY_ENABLED': JSON.stringify(
-                sentryBuildConfig.enabled,
-            ),
+            'import.meta.env.VITE_SENTRY_ENABLED': JSON.stringify(sentryBuildConfig.enabled),
             'import.meta.env.VITE_SENTRY_ENVIRONMENT': JSON.stringify(
                 sentryBuildConfig.environment,
             ),

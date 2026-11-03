@@ -13,7 +13,7 @@ const initializeSentry = () => {
         import.meta.env.VITE_SENTRY_ENVIRONMENT,
         window.location.hostname,
     );
-    
+
     Sentry.init({
         dsn: sentryDsn,
         enabled: import.meta.env.VITE_SENTRY_ENABLED && sentryDsn !== undefined,
@@ -25,7 +25,7 @@ const initializeSentry = () => {
             if (breadcrumb.category === 'console') {
                 return null;
             }
-    
+
             return {
                 ...breadcrumb,
                 ...(typeof breadcrumb.message === 'string' && {
@@ -45,11 +45,11 @@ const initializeSentry = () => {
                   }
                 : undefined;
             const extra = event.extra ? sanitizeStringValues(event.extra) : undefined;
-    
+
             if (extra) {
                 delete extra.__serialized__;
             }
-    
+
             return {
                 ...event,
                 extra,

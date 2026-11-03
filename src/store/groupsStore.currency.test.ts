@@ -59,9 +59,12 @@ test('replaces the cached group after a forced detail refresh', () => {
     useGroupsStore.setState({ groups: [group], selectedGroup: group });
     vi.mocked(chipinApi.fetchApiUserGroupById).mockResolvedValue(refreshedGroup);
 
-    return useGroupsStore.getState().fetchSetGroupById(group.id, true).then(result => {
-        expect(result).toBe(refreshedGroup);
-        expect(useGroupsStore.getState().groups).toEqual([refreshedGroup]);
-        expect(useGroupsStore.getState().selectedGroup).toBe(refreshedGroup);
-    });
+    return useGroupsStore
+        .getState()
+        .fetchSetGroupById(group.id, true)
+        .then(result => {
+            expect(result).toBe(refreshedGroup);
+            expect(useGroupsStore.getState().groups).toEqual([refreshedGroup]);
+            expect(useGroupsStore.getState().selectedGroup).toBe(refreshedGroup);
+        });
 });
