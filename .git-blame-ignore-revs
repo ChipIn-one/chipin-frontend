@@ -5,13 +5,14 @@
 #   git config blame.ignoreRevsFile .git-blame-ignore-revs
 # GitHub's blame view reads this file automatically.
 #
-# After these commits land, rebase open branches and run `npm run format` once to resolve
-# formatting conflicts.
+# Only when rebasing a branch that was opened before these commits: run `npm run format` once
+# on that branch to resolve formatting conflicts. In normal tasks, format only the files you change.
 #
 # One full commit SHA per line, with a comment line above naming the PR.
-# 02-C2c is added by a follow-up PR once its squash SHA exists.
 
 # 02-C2a: format src/components (#597)
 7c9413e8775e07003ec675cabad57d363a94f79e
 # 02-C2b: format src/pages and src/features (#596)
 adaff009965bf0992ccbded997a9d729b3dda788
+# 02-C2c: format the rest of the repo (#598)
+73536ef4d417e568b00d848146b3c9b6815c2583
