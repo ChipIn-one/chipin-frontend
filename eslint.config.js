@@ -250,10 +250,12 @@ export default tseslint.config(
     // Prettier owns formatting: turn off every ESLint rule that conflicts with it.
     eslintConfigPrettier,
     {
-        // eslint-config-prettier turns `curly` off; `all` never conflicts with Prettier.
+        // eslint-config-prettier turns these off; both are safe with Prettier.
+        // `curly: all` never conflicts; `no-unexpected-multiline` is a correctness rule.
         files: ['**/*.{ts,tsx,js,jsx}'],
         rules: {
             curly: ['error', 'all'],
+            'no-unexpected-multiline': 'error',
         },
     },
 );
