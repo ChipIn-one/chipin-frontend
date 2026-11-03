@@ -34,10 +34,7 @@ const enqueueProfileMutation = <T>(loader: () => Promise<T>): ProfileMutationHan
     const generation = profileMutationGeneration;
     const authSessionVersion = getAuthSessionVersion();
     const isCurrent = () => {
-        return (
-            generation === profileMutationGeneration &&
-            isAuthSessionCurrent(authSessionVersion)
-        );
+        return generation === profileMutationGeneration && isAuthSessionCurrent(authSessionVersion);
     };
     const promise = profileMutationQueue
         .then(() => {
@@ -124,11 +121,17 @@ const useUsersStore = create<UsersStore>((set, get) => ({
             });
     },
     acceptFriendInvite: ({ inviteToken }) => {
-        return usersApi
-            .acceptKnownUserInvite({ inviteToken })
-            // The invite is already accepted once the POST succeeds: a failed friends
-            // refresh is recorded in the errors store but must not turn into a retry.
-            .then(friend => get().fetchSetFriends(true).then(() => friend));
+        return (
+            usersApi
+                .acceptKnownUserInvite({ inviteToken })
+                // The invite is already accepted once the POST succeeds: a failed friends
+                // refresh is recorded in the errors store but must not turn into a retry.
+                .then(friend =>
+                    get()
+                        .fetchSetFriends(true)
+                        .then(() => friend),
+                )
+        );
     },
     fetchSetFriends: (force = false, rejectOnError = false) => {
         const { setLoading } = useLoadingStore.getState();

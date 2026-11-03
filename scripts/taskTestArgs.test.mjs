@@ -3,9 +3,7 @@ import { expect, test } from 'vitest';
 import { getTaskTestArgs } from './taskTestArgs.mjs';
 
 test('rejects an invocation without an explicit test path', () => {
-    expect(() => getTaskTestArgs([])).toThrow(
-        'test:task requires at least one explicit test path',
-    );
+    expect(() => getTaskTestArgs([])).toThrow('test:task requires at least one explicit test path');
     expect(() => getTaskTestArgs(['--testNamePattern', 'saves settings'])).toThrow(
         'test:task requires at least one explicit test path',
     );

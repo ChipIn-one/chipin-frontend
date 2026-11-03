@@ -6,12 +6,12 @@ Manual QA checks one exact Vercel Preview built from `master` before the owner *
 
 ## One-time setup
 
-| Name | Kind | Purpose |
-| --- | --- | --- |
-| `CHIPIN_DEV_READ_TOKEN` | Secret | Read deployments, ruleset, checks, PRs, Issues and the pinned `.github` checkout. |
-| `CHIPIN_ISSUE_WRITE_TOKEN` | Secret | Canonical Issue Intake (pinned `.github@7dbcfb2b72fca2d477c14f4d242261d72a103dbd`), QA Issue creation, Project #5 and QA assignment. Without it a UI candidate is blocked before any handoff. |
-| `SLACK_WEBHOOK_CI` | Secret | Incoming Webhook for `#chipin-ci`. Keep it secret. |
-| `SLACK_USER_MAP` | Repository variable | JSON map of GitHub login to Slack user ID, for example `{"SoRawSteak":"U0C9X8T4R2Q","syllik":"U0OWNER123"}`. The QA login must be mapped for a handoff (not needed when `qa_login=syllik`, which mentions nobody); `syllik` is mentioned on results when mapped, otherwise the plain login is written. |
+| Name                       | Kind                | Purpose                                                                                                                                                                                                                                                                                                |
+| -------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `CHIPIN_DEV_READ_TOKEN`    | Secret              | Read deployments, ruleset, checks, PRs, Issues and the pinned `.github` checkout.                                                                                                                                                                                                                      |
+| `CHIPIN_ISSUE_WRITE_TOKEN` | Secret              | Canonical Issue Intake (pinned `.github@7dbcfb2b72fca2d477c14f4d242261d72a103dbd`), QA Issue creation, Project #5 and QA assignment. Without it a UI candidate is blocked before any handoff.                                                                                                          |
+| `SLACK_WEBHOOK_CI`         | Secret              | Incoming Webhook for `#chipin-ci`. Keep it secret.                                                                                                                                                                                                                                                     |
+| `SLACK_USER_MAP`           | Repository variable | JSON map of GitHub login to Slack user ID, for example `{"SoRawSteak":"U0C9X8T4R2Q","syllik":"U0OWNER123"}`. The QA login must be mapped for a handoff (not needed when `qa_login=syllik`, which mentions nobody); `syllik` is mentioned on results when mapped, otherwise the plain login is written. |
 
 ## Owner: start a QA round
 
@@ -46,12 +46,12 @@ What goes into the QA Issue:
 
 All four messages use Slack links `<url|text>` with a short SHA; there are no bare URLs. The commit link is `https://github.com/ChipIn-one/chipin-frontend/commit/<full sha>`. Every value comes from a validated field (SHA, Issue number, GitHub login, URLs from the GitHub API or constants); `&` is escaped and `<`, `>`, `|` are rejected. Examples for SHA `de85a9a…` and QA Issue #561:
 
-| Case | Text |
-| --- | --- |
-| QA needed | `<@QA> Релиз-кандидат <commit\|de85a9a> — нужна проверка`, then `<preview\|QA Build>`, `<issue\|QA Issue #561>`, `<guide\|QA Guide>` on three lines. With `qa_login=syllik` the first line is `Релиз-кандидат <commit\|de85a9a> — проверяет владелец` and nobody is mentioned. |
-| QA not needed | `Релиз-кандидат <commit\|de85a9a> — QA не нужен, UI не менялся`, then `<preview\|Build>`. |
-| Valid result | `<@owner> QA PASS по <commit\|de85a9a> — <issue\|QA Issue #561> (QA: SoRawSteak)`; `QA FAIL` and `QA BLOCKED` alike. |
-| Withdrawn result | `<@owner> Результат QA по <commit\|de85a9a> отозван — <issue\|QA Issue #561>` |
+| Case             | Text                                                                                                                                                                                                                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| QA needed        | `<@QA> Релиз-кандидат <commit\|de85a9a> — нужна проверка`, then `<preview\|QA Build>`, `<issue\|QA Issue #561>`, `<guide\|QA Guide>` on three lines. With `qa_login=syllik` the first line is `Релиз-кандидат <commit\|de85a9a> — проверяет владелец` and nobody is mentioned. |
+| QA not needed    | `Релиз-кандидат <commit\|de85a9a> — QA не нужен, UI не менялся`, then `<preview\|Build>`.                                                                                                                                                                                      |
+| Valid result     | `<@owner> QA PASS по <commit\|de85a9a> — <issue\|QA Issue #561> (QA: SoRawSteak)`; `QA FAIL` and `QA BLOCKED` alike.                                                                                                                                                           |
+| Withdrawn result | `<@owner> Результат QA по <commit\|de85a9a> отозван — <issue\|QA Issue #561>`                                                                                                                                                                                                  |
 
 The fallback note goes at the end of the first line. `<@owner>` is the owner's Slack ID from `SLACK_USER_MAP`, or the plain login `syllik` without a mapping.
 
@@ -85,6 +85,7 @@ Only the sole current QA assignee counts; that is `syllik` only when he is the s
    The exact texts are in [Slack messages](#slack-messages).
 
    A Slack failure is a warning in that run and does not change the validation.
+
 2. Read the current result comment and the latest validation run. Then decide whether to **Promote** that exact deployment in Vercel.
 3. After a fix, run a new round: a new SHA gets its own QA Issue. Never carry a PASS across SHAs.
 

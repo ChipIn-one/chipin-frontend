@@ -59,11 +59,7 @@ const requireFiniteNumber = (
     return value;
 };
 
-const requireBoolean = (
-    record: Record<string, unknown>,
-    key: string,
-    label: string,
-): boolean => {
+const requireBoolean = (record: Record<string, unknown>, key: string, label: string): boolean => {
     const value = record[key];
 
     if (typeof value !== 'boolean') {

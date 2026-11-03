@@ -1,21 +1,24 @@
 import { isUiAffecting } from './ui-paths.mjs';
 
-const AUTH_041_URL = 'https://github.com/ChipIn-one/chipin-knowledge-base/blob/681d392140f33d4a47e3059eb53f77a2ee2c72c8/common/specs/auth.md';
+const AUTH_041_URL =
+    'https://github.com/ChipIn-one/chipin-knowledge-base/blob/681d392140f33d4a47e3059eb53f77a2ee2c72c8/common/specs/auth.md';
 const AUTH_041_STEP = 'Log out, then reload a protected page in the same browser';
 const AUTH_041_EXPECTED = 'No restored browser session; the protected page requires a fresh login';
 
 // Scope-specific regression checks. Add a rule only with a pinned canonical behavior source.
-export const IMPACT_RULES = [{
-    id: 'AUTH-041',
-    paths: new Set([
-        'src/store/authStore.ts',
-        'src/helpers/authSession.ts',
-        'src/features/routing/ProtectedRoute.tsx',
-    ]),
-    sourceUrl: AUTH_041_URL,
-    step: AUTH_041_STEP,
-    expected: AUTH_041_EXPECTED,
-}];
+export const IMPACT_RULES = [
+    {
+        id: 'AUTH-041',
+        paths: new Set([
+            'src/store/authStore.ts',
+            'src/helpers/authSession.ts',
+            'src/features/routing/ProtectedRoute.tsx',
+        ]),
+        sourceUrl: AUTH_041_URL,
+        step: AUTH_041_STEP,
+        expected: AUTH_041_EXPECTED,
+    },
+];
 
 // SMOKE-SHORT: owner decision of 2026-10-28 in ChipIn-one/chipin-frontend#543. One short regression
 // round when the compare touches routing, auth/session, API, store bootstrap, service worker/PWA,
@@ -67,31 +70,59 @@ export const SMOKE_SHORT = {
     ]),
     checks: [
         { step: 'Google sign-in on the Preview', expected: 'Dashboard opens' },
-        { step: 'Create a group expense split equally', expected: 'The expense is listed and the balance changed' },
-        { step: 'Open Balances / Settle up as the other participant', expected: 'The matching balance is shown' },
-        { step: 'Switch language and theme, then reload', expected: 'Both apply without a flash and survive the reload' },
-        { step: AUTH_041_STEP, expected: AUTH_041_EXPECTED, source: 'AUTH-041', sourceUrl: AUTH_041_URL },
+        {
+            step: 'Create a group expense split equally',
+            expected: 'The expense is listed and the balance changed',
+        },
+        {
+            step: 'Open Balances / Settle up as the other participant',
+            expected: 'The matching balance is shown',
+        },
+        {
+            step: 'Switch language and theme, then reload',
+            expected: 'Both apply without a flash and survive the reload',
+        },
+        {
+            step: AUTH_041_STEP,
+            expected: AUTH_041_EXPECTED,
+            source: 'AUTH-041',
+            sourceUrl: AUTH_041_URL,
+        },
     ],
 };
 
 export function touchesSmokePath(files) {
     for (const file of files) {
         if (!isUiAffecting(file)) continue;
-        if (SMOKE_SHORT.files.has(file) || SMOKE_SHORT.prefixes.some(prefix => file.startsWith(prefix))) return true;
+        if (
+            SMOKE_SHORT.files.has(file) ||
+            SMOKE_SHORT.prefixes.some(prefix => file.startsWith(prefix))
+        )
+            return true;
     }
     return false;
 }
 
 export function smokeChecks() {
-    return SMOKE_SHORT.checks.map(check => ({ smoke: true, source: SMOKE_SHORT.id, sourceUrl: SMOKE_SHORT.sourceUrl, ...check }));
+    return SMOKE_SHORT.checks.map(check => ({
+        smoke: true,
+        source: SMOKE_SHORT.id,
+        sourceUrl: SMOKE_SHORT.sourceUrl,
+        ...check,
+    }));
 }
 
 export function impactChecks(files, issueNumber) {
     const matches = [];
     for (const rule of IMPACT_RULES) {
         if (files.some(file => rule.paths.has(file))) {
-            matches.push({ issue: issueNumber, source: rule.id, sourceUrl: rule.sourceUrl,
-                step: rule.step, expected: rule.expected });
+            matches.push({
+                issue: issueNumber,
+                source: rule.id,
+                sourceUrl: rule.sourceUrl,
+                step: rule.step,
+                expected: rule.expected,
+            });
         }
     }
     return matches;

@@ -27,9 +27,10 @@ test('aborts the pending request when a forced request replaces it', () => {
         return new Promise<string>(() => undefined);
     });
     const second = channel.request(
-        () => new Promise(resolve => {
-            resolveSecond = resolve;
-        }),
+        () =>
+            new Promise(resolve => {
+                resolveSecond = resolve;
+            }),
         { force: true },
     );
 
@@ -54,10 +55,7 @@ test('aborts a different view request in the same channel', () => {
         },
         { identity: 'group-1' },
     );
-    channel.request(
-        () => Promise.resolve('group-2'),
-        { identity: 'group-2' },
-    );
+    channel.request(() => Promise.resolve('group-2'), { identity: 'group-2' });
 
     expect(firstSignal?.aborted).toBe(true);
 });

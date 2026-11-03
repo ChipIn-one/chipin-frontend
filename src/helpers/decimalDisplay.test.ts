@@ -30,19 +30,30 @@ describe('roundDecimalHalfUp', () => {
     });
 
     test('rounds a half to whole digits when places is zero', () => {
-        expect(roundDecimalHalfUp('5.5', 0)).toEqual({ negative: false, integer: '6', fraction: '' });
+        expect(roundDecimalHalfUp('5.5', 0)).toEqual({
+            negative: false,
+            integer: '6',
+            fraction: '',
+        });
     });
 
     test.each(['-0.004', '-0', '-0.00000000'])('never returns a negative zero for %s', raw => {
-        expect(roundDecimalHalfUp(raw, 2)).toEqual({ negative: false, integer: '0', fraction: '00' });
+        expect(roundDecimalHalfUp(raw, 2)).toEqual({
+            negative: false,
+            integer: '0',
+            fraction: '00',
+        });
     });
 
     test.each([
         ['5', 2, '5', '00'],
         ['007.5', 1, '7', '5'],
-    ])('pads the fraction and normalizes leading integer zeros for %s', (raw, places, integer, fraction) => {
-        expect(roundDecimalHalfUp(raw, places)).toEqual({ negative: false, integer, fraction });
-    });
+    ])(
+        'pads the fraction and normalizes leading integer zeros for %s',
+        (raw, places, integer, fraction) => {
+            expect(roundDecimalHalfUp(raw, places)).toEqual({ negative: false, integer, fraction });
+        },
+    );
 
     test('keeps every digit of very long integers', () => {
         expect(roundDecimalHalfUp('123456789012345678901234567890.5', 0)?.integer).toBe(
@@ -97,9 +108,12 @@ describe('formatPercentTotal', () => {
         [99.99999, '< 100'],
         [100.00001, '> 100'],
         [33.33333 + 33.33333 + 33.33333, '< 100'],
-    ])('EXP-064 shows the percent total %s as %s without a floating-point tail', (value, expected) => {
-        expect(formatPercentTotal(value)).toBe(expected);
-    });
+    ])(
+        'EXP-064 shows the percent total %s as %s without a floating-point tail',
+        (value, expected) => {
+            expect(formatPercentTotal(value)).toBe(expected);
+        },
+    );
 
     test.each([Number.NaN, Number.POSITIVE_INFINITY])('falls back to zero for %s', value => {
         expect(formatPercentTotal(value)).toBe('0');

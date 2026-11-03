@@ -13,13 +13,7 @@ interface Props {
     className?: string;
 }
 
-const OwedStatusText = ({
-    value,
-    currencyCode,
-    size,
-    align = 'right',
-    className,
-}: Props) => {
+const OwedStatusText = ({ value, currencyCode, size, align = 'right', className }: Props) => {
     const { t } = useTranslation('activity');
 
     if (!value) {

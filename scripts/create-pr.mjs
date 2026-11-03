@@ -39,12 +39,16 @@ export const validateTaskIdentity = (branch, identity) => {
 export const buildCreatePullRequestArgs = (branch, identity, commitDescription = '') => {
     const markers = [...commitDescription.matchAll(/^Task identity:\s*(\S+)\s*$/gmu)];
     if (markers.some(([, value]) => value !== identity)) {
-        throw new Error('Commit description has a conflicting Task identity; refusing PR creation.');
+        throw new Error(
+            'Commit description has a conflicting Task identity; refusing PR creation.',
+        );
     }
     const description = commitDescription.replace(/^Task identity:\s*\S+\s*$/gmu, '').trim();
     // Preserve human commit notes and ensure each standard heading appears once.
-    let body = `Task identity: ${identity}\n\n`
-        + (/^## Summary\s*$/mu.test(description) ? description
+    let body =
+        `Task identity: ${identity}\n\n` +
+        (/^## Summary\s*$/mu.test(description)
+            ? description
             : `## Summary\n${description || '<!-- Describe verified change -->'}`);
     for (const heading of ['Tests', 'Version impact', 'Dependencies']) {
         if (!new RegExp(`^## ${heading}\\s*$`, 'mu').test(body)) {
@@ -52,9 +56,12 @@ export const buildCreatePullRequestArgs = (branch, identity, commitDescription =
         }
     }
     return [
-        'pr', 'create',
-        '--base', INTEGRATION_BRANCH,
-        '--head', branch,
+        'pr',
+        'create',
+        '--base',
+        INTEGRATION_BRANCH,
+        '--head',
+        branch,
         '--fill',
         // --body takes precedence over --fill, so carry forward commit notes.
         '--body',
@@ -116,7 +123,11 @@ const getCommandFailure = result => {
         return result.error.message;
     }
 
-    return result.stderr.trim() || result.stdout.trim() || `Command exited with status ${result.status}.`;
+    return (
+        result.stderr.trim() ||
+        result.stdout.trim() ||
+        `Command exited with status ${result.status}.`
+    );
 };
 
 const parsePullRequests = output => {
@@ -130,49 +141,85 @@ const parsePullRequests = output => {
 };
 
 // Use the immutable shared canonical reader, never a locally reimplemented metadata gate.
-export const requireCurrentAdmission = (identity, token, {
-    run = runCommand,
-    createDirectory = () => mkdtempSync(join(tmpdir(), 'chipin-issue-admission-')),
-    removeDirectory = directory => rmSync(directory, { recursive: true, force: true }),
-    environment = process.env,
-} = {}) => {
+export const requireCurrentAdmission = (
+    identity,
+    token,
+    {
+        run = runCommand,
+        createDirectory = () => mkdtempSync(join(tmpdir(), 'chipin-issue-admission-')),
+        removeDirectory = directory => rmSync(directory, { recursive: true, force: true }),
+        environment = process.env,
+    } = {},
+) => {
     const directory = createDirectory();
     try {
         for (const args of [
             ['-C', directory, 'init', '-q'],
             ['-C', directory, 'remote', 'add', 'origin', CANONICAL_ADMISSION_REMOTE],
-            ['-C', directory, 'fetch', '--quiet', '--depth=1', 'origin', CANONICAL_ADMISSION_COMMIT],
+            [
+                '-C',
+                directory,
+                'fetch',
+                '--quiet',
+                '--depth=1',
+                'origin',
+                CANONICAL_ADMISSION_COMMIT,
+            ],
             ['-C', directory, 'checkout', '--quiet', '--detach', 'FETCH_HEAD'],
         ]) {
             const step = run('git', args);
-            if (step.status !== 0) throw new Error(`Could not load immutable admission reader: ${getCommandFailure(step)}`);
+            if (step.status !== 0)
+                throw new Error(
+                    `Could not load immutable admission reader: ${getCommandFailure(step)}`,
+                );
         }
-        const result = run('node', [
-            join(directory, 'automation/issue-admission.mjs'),
-            '--issue', identity,
-            '--config', join(directory, 'automation/metadata-migration.config.json'),
-        ], { ...environment, GITHUB_TOKEN: token });
-        if (result.status !== 0) throw new Error(`Canonical admission denied: ${getCommandFailure(result)}`);
+        const result = run(
+            'node',
+            [
+                join(directory, 'automation/issue-admission.mjs'),
+                '--issue',
+                identity,
+                '--config',
+                join(directory, 'automation/metadata-migration.config.json'),
+            ],
+            { ...environment, GITHUB_TOKEN: token },
+        );
+        if (result.status !== 0)
+            throw new Error(`Canonical admission denied: ${getCommandFailure(result)}`);
         const receipt = JSON.parse(result.stdout);
-        if (receipt.contractVersion !== 'chipin-issue-admission/v1' ||
-            receipt.status !== 'INTAKE_COMPLETE' || receipt.issue !== identity ||
-            typeof receipt.revision !== 'string' || !/^[a-f0-9]{64}$/.test(receipt.revision) ||
+        if (
+            receipt.contractVersion !== 'chipin-issue-admission/v1' ||
+            receipt.status !== 'INTAKE_COMPLETE' ||
+            receipt.issue !== identity ||
+            typeof receipt.revision !== 'string' ||
+            !/^[a-f0-9]{64}$/.test(receipt.revision) ||
             !Number.isFinite(Date.parse(receipt.checkedAt)) ||
             Date.now() - Date.parse(receipt.checkedAt) > 120_000 ||
-            Date.parse(receipt.checkedAt) > Date.now() || receipt.blockers?.length) {
-            throw new Error('Canonical reader did not return exact current INTAKE_COMPLETE revision.');
+            Date.parse(receipt.checkedAt) > Date.now() ||
+            receipt.blockers?.length
+        ) {
+            throw new Error(
+                'Canonical reader did not return exact current INTAKE_COMPLETE revision.',
+            );
         }
     } finally {
         removeDirectory(directory);
     }
 };
 
-export const main = ({ run = runCommand, admission = requireCurrentAdmission,
-    env = process.env, log = console.log, logError = console.error } = {}) => {
+export const main = ({
+    run = runCommand,
+    admission = requireCurrentAdmission,
+    env = process.env,
+    log = console.log,
+    logError = console.error,
+} = {}) => {
     const branchResult = run('git', ['branch', '--show-current']);
 
     if (branchResult.status !== 0) {
-        logError(`PR CREATION BLOCKED: unable to read current branch. ${getCommandFailure(branchResult)}`);
+        logError(
+            `PR CREATION BLOCKED: unable to read current branch. ${getCommandFailure(branchResult)}`,
+        );
         return 1;
     }
 
@@ -201,8 +248,8 @@ export const main = ({ run = runCommand, admission = requireCurrentAdmission,
 
     if (remoteBranchResult.status !== 0) {
         logError(
-            `PR CREATION BLOCKED: task branch ${branch} is not available on ${REMOTE_NAME}. `
-            + getCommandFailure(remoteBranchResult),
+            `PR CREATION BLOCKED: task branch ${branch} is not available on ${REMOTE_NAME}. ` +
+                getCommandFailure(remoteBranchResult),
         );
         return 1;
     }
@@ -276,7 +323,9 @@ export const main = ({ run = runCommand, admission = requireCurrentAdmission,
         ]);
 
         if (editResult.status !== 0) {
-            logError(`PR CREATION FAILED: unable to retarget PR ${action.number}. ${getCommandFailure(editResult)}`);
+            logError(
+                `PR CREATION FAILED: unable to retarget PR ${action.number}. ${getCommandFailure(editResult)}`,
+            );
             return 1;
         }
 
@@ -287,10 +336,15 @@ export const main = ({ run = runCommand, admission = requireCurrentAdmission,
     // Keep the human-written commit description that --fill would otherwise
     // generate; an explicit --body takes precedence over gh's automatic fill.
     const descriptionResult = run('git', [
-        'log', '--no-merges', '--format=%B', `${REMOTE_NAME}/${INTEGRATION_BRANCH}..HEAD`,
+        'log',
+        '--no-merges',
+        '--format=%B',
+        `${REMOTE_NAME}/${INTEGRATION_BRANCH}..HEAD`,
     ]);
     if (descriptionResult.status !== 0) {
-        logError(`PR CREATION BLOCKED: unable to read commit description. ${getCommandFailure(descriptionResult)}`);
+        logError(
+            `PR CREATION BLOCKED: unable to read commit description. ${getCommandFailure(descriptionResult)}`,
+        );
         return 1;
     }
     let createArgs;

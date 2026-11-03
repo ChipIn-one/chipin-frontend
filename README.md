@@ -14,21 +14,21 @@ npm install
 
 ## Commands
 
-| Command | Description |
-| --- | --- |
-| `npm run dev` | Start the development server |
-| `npm run test:task -- <test paths>` | Run only the listed tests; refuses to run without a path |
-| `npm run test:full` | Run the complete test suite |
-| `npm run lint` | Run ESLint |
-| `npm run format` | Format the repository with Prettier (`prettier --write .`) |
-| `npm run format:check` | Check formatting with Prettier without writing; not yet part of `verify` or CI |
-| `npm run typecheck` | Run the TypeScript compiler (`tsc -b`) |
-| `npm run verify` | Fast check: lint with `--quiet` (only errors are shown and fail; warnings are hidden), then typecheck |
-| `npm run verify:full` | Full gate, also run by CI: lint, full tests, production build, ds-gallery build |
-| `npm run build` | Typecheck and production build |
-| `npm run vercel-build` | Vercel deployment build: production build and public precache check, no tests |
-| `npm run preview` | Preview the production build locally |
-| `npm run version:check` | Check that `package.json` and `package-lock.json` versions are valid and equal |
+| Command                             | Description                                                                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`                       | Start the development server                                                                                        |
+| `npm run test:task -- <test paths>` | Run only the listed tests; refuses to run without a path                                                            |
+| `npm run test:full`                 | Run the complete test suite                                                                                         |
+| `npm run lint`                      | Run ESLint                                                                                                          |
+| `npm run format`                    | Format the repository with Prettier (`prettier --write .`)                                                          |
+| `npm run format:check`              | Check formatting with Prettier without writing; part of `verify` and `verify:full` (CI)                             |
+| `npm run typecheck`                 | Run the TypeScript compiler (`tsc -b`)                                                                              |
+| `npm run verify`                    | Fast check: format check, lint with `--quiet` (only errors are shown and fail; warnings are hidden), then typecheck |
+| `npm run verify:full`               | Full gate, also run by CI: format check, lint, full tests, production build, ds-gallery build                       |
+| `npm run build`                     | Typecheck and production build                                                                                      |
+| `npm run vercel-build`              | Vercel deployment build: production build and public precache check, no tests                                       |
+| `npm run preview`                   | Preview the production build locally                                                                                |
+| `npm run version:check`             | Check that `package.json` and `package-lock.json` versions are valid and equal                                      |
 
 Feature PRs do not change the version; every PR body carries `## Version impact`. Release: see `AGENTS.md`, Release.
 

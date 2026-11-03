@@ -15,12 +15,7 @@ import { isUnauthorizedApiError, normalizeApiError } from 'helpers/errors';
 import { clearLocalUserRole } from 'helpers/localStorage';
 
 import { useActivityStore } from './activity-store';
-import {
-    AUTH_STATUS,
-    type AuthStatus,
-    UNAUTH_REASON,
-    type UnauthReason,
-} from './authConstants';
+import { AUTH_STATUS, type AuthStatus, UNAUTH_REASON, type UnauthReason } from './authConstants';
 import { useDashboardStore } from './dashboardStore';
 import { useErrorsStore } from './errorsStore';
 import { useExpenseModalStore } from './expenseModalStore';
@@ -72,7 +67,11 @@ export const useAuthStore = create<AuthStore>(set => ({
     expireSession: () => {
         invalidateAuthSession();
         resetAuthScopedStores();
-        set({ status: AUTH_STATUS.UNAUTHENTICATED, unauthReason: UNAUTH_REASON.EXPIRED, isNewUser: null });
+        set({
+            status: AUTH_STATUS.UNAUTHENTICATED,
+            unauthReason: UNAUTH_REASON.EXPIRED,
+            isNewUser: null,
+        });
     },
 
     exchangeGoogleOAuthCode: code => {
@@ -82,8 +81,7 @@ export const useAuthStore = create<AuthStore>(set => ({
                 establishAuthSession(token);
                 set({ status: AUTH_STATUS.AUTHENTICATED, unauthReason: undefined, isNewUser });
 
-                const { fetchSetDashboardData, setDefaultAppMode } =
-                    useDashboardStore.getState();
+                const { fetchSetDashboardData, setDefaultAppMode } = useDashboardStore.getState();
                 const { fetchSetGroups } = useGroupsStore.getState();
                 const { fetchSetPremiumPromoRemaining, fetchSetUser, fetchSetFriends } =
                     useUsersStore.getState();
@@ -101,9 +99,10 @@ export const useAuthStore = create<AuthStore>(set => ({
                 ]).then(() => undefined);
             })
             .catch((error: unknown) => {
-                const cleanup = error instanceof AuthSessionPersistenceError
-                    ? startAuthLogout()
-                    : Promise.resolve();
+                const cleanup =
+                    error instanceof AuthSessionPersistenceError
+                        ? startAuthLogout()
+                        : Promise.resolve();
 
                 return cleanup.then(() => {
                     resetAuthScopedStores();
@@ -115,11 +114,7 @@ export const useAuthStore = create<AuthStore>(set => ({
                                 : UNAUTH_REASON.ERROR,
                         isNewUser: null,
                     });
-                    useErrorsStore.getState().setError(
-                        'auth',
-                        'login',
-                        normalizeApiError(error),
-                    );
+                    useErrorsStore.getState().setError('auth', 'login', normalizeApiError(error));
                     return Promise.reject(error);
                 });
             });
@@ -147,10 +142,7 @@ export const useAuthStore = create<AuthStore>(set => ({
         return logoutOtherDevicesSession()
             .catch((error: unknown) => {
                 setError('auth', 'logoutOtherDevices', normalizeApiError(error));
-                if (
-                    !isUnauthorizedApiError(error) &&
-                    !(error instanceof AuthSessionExpiredError)
-                ) {
+                if (!isUnauthorizedApiError(error) && !(error instanceof AuthSessionExpiredError)) {
                     return Promise.reject(error);
                 }
 

@@ -5,9 +5,7 @@ import type { SharingMode } from 'api/chipin.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
 
-import {
-    mapActivityExpenseToModalState,
-} from './expenseModalEditMapping';
+import { mapActivityExpenseToModalState } from './expenseModalEditMapping';
 import type { ExpenseModalSource } from './expenseModalStore';
 
 type ExpenseActivityEvent = Extract<AppEvent, { subjectType: 'expense' }>;
@@ -177,9 +175,7 @@ test('maps the latest Activity Expense snapshot without a canonical ledger entry
         },
     });
     expect(result?.source.groups[0].members).toEqual(
-        expect.arrayContaining([
-            { id: 'former-user', displayName: 'Former participant' },
-        ]),
+        expect.arrayContaining([{ id: 'former-user', displayName: 'Former participant' }]),
     );
     expect(result?.source.groups[0].members[2]).not.toHaveProperty('email');
 });
@@ -291,9 +287,7 @@ test('maps a direct expense former participant into known friends', () => {
 
     expect(result?.targetMode).toBe('friends');
     expect(result?.source.knownFriends).toEqual(
-        expect.arrayContaining([
-            { id: 'former-user', displayName: 'Former participant' },
-        ]),
+        expect.arrayContaining([{ id: 'former-user', displayName: 'Former participant' }]),
     );
     expect(result?.paidById).toBe('former-user');
 });

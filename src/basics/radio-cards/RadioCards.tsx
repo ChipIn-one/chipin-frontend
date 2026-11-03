@@ -17,11 +17,7 @@ interface Props extends Omit<ComponentProps<typeof RadixRadioCards.Root>, 'child
 const RadioCards = ({ items, ...rootProps }: Props) => (
     <RadixRadioCards.Root {...rootProps}>
         {items.map(item => (
-            <RadixRadioCards.Item
-                key={item.value}
-                value={item.value}
-                disabled={item.isDisabled}
-            >
+            <RadixRadioCards.Item key={item.value} value={item.value} disabled={item.isDisabled}>
                 <Flex align="center" gap="2">
                     <RadioMarker aria-hidden="true" />
                     {item.label}

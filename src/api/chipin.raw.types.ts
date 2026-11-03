@@ -162,10 +162,7 @@ export interface ApiExpenseDetails {
 }
 
 export type ApiLedgerScope = 'USER' | 'GROUP';
-export type ApiLedgerSystemAction =
-    | 'EXPENSE_TRANSFERRED_TO'
-    | 'EXPENSE_TRANSFERRED_FROM'
-    | null;
+export type ApiLedgerSystemAction = 'EXPENSE_TRANSFERRED_TO' | 'EXPENSE_TRANSFERRED_FROM' | null;
 
 export interface ApiSettlementDetails {
     id: string;

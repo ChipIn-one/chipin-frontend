@@ -2,18 +2,11 @@ import { create } from 'zustand';
 
 import type { User } from 'api/chipin.types';
 import { DEFAULT_EXPENSE_CATEGORY } from 'constants/category';
-import {
-    EXPENSE_SPLIT_MODES,
-    type ExpenseSplitMode,
-} from 'constants/chipin';
+import { EXPENSE_SPLIT_MODES, type ExpenseSplitMode } from 'constants/chipin';
 import { MONEY_INPUT_PRECISION, parseAmountInput, roundHalfUp } from 'helpers/numbers';
 import { getUnixTimestampInSec } from 'helpers/time';
 
-import {
-    selectAllUsersSelected,
-    selectIncludedUsers,
-    selectUsers,
-} from './expenseModalSelectors';
+import { selectAllUsersSelected, selectIncludedUsers, selectUsers } from './expenseModalSelectors';
 import type { ExpenseModalOriginalState } from './expenseModalUpdate';
 
 export type ExpenseTargetMode = 'group' | 'friends';
@@ -161,9 +154,7 @@ const INITIAL_EXPENSE_MODAL_STATE: ExpenseModalState = {
 const getDefaultFriendId = (source: ExpenseModalSource) => {
     if (
         source.preferredFriendId &&
-        source.knownFriends.some(
-            friend => friend.id === source.preferredFriendId,
-        )
+        source.knownFriends.some(friend => friend.id === source.preferredFriendId)
     ) {
         return source.preferredFriendId;
     }
@@ -189,8 +180,7 @@ const getDefaultCurrency = (
 const createUserValues = <Value extends string | boolean>(
     users: ExpenseParticipant[],
     value: Value,
-): Record<string, Value> =>
-    Object.fromEntries(users.map(user => [user.id, value]));
+): Record<string, Value> => Object.fromEntries(users.map(user => [user.id, value]));
 
 const createEqualPercentages = (users: ExpenseParticipant[]) => {
     if (users.length === 0) {
@@ -220,9 +210,7 @@ const getSplitDefaults = (state: ExpenseModalState) => {
                           member.id === state.selectedFriendId,
                   ]),
               );
-    const includedMembers = members.filter(
-        member => includedParticipantIds[member.id],
-    );
+    const includedMembers = members.filter(member => includedParticipantIds[member.id]);
     const paidById =
         state.targetMode === 'friends'
             ? (state.source.currentUser?.id ?? members[0]?.id ?? '')
@@ -243,10 +231,7 @@ const getPercentShares = (
     includedParticipantIds = state.includedParticipantIds,
     splitMode = state.splitMode,
 ) => {
-    if (
-        splitMode !== EXPENSE_SPLIT_MODES.PERCENT ||
-        state.isPercentManuallyEdited
-    ) {
+    if (splitMode !== EXPENSE_SPLIT_MODES.PERCENT || state.isPercentManuallyEdited) {
         return state.percentShares;
     }
 
@@ -260,9 +245,7 @@ const getPercentShares = (
 
 const getDefaultGroupId = (source: ExpenseModalSource): string => {
     const requestedGroup = source.defaultGroupId
-        ? source.groups.find(
-              group => group.id === source.defaultGroupId,
-          )
+        ? source.groups.find(group => group.id === source.defaultGroupId)
         : undefined;
 
     if (source.context === 'group') {
@@ -270,17 +253,13 @@ const getDefaultGroupId = (source: ExpenseModalSource): string => {
     }
 
     const usableGroup =
-        (requestedGroup && requestedGroup.members.length >= 2
-            ? requestedGroup
-            : undefined) ??
+        (requestedGroup && requestedGroup.members.length >= 2 ? requestedGroup : undefined) ??
         source.groups.find(group => group.members.length >= 2);
 
     return usableGroup?.id ?? requestedGroup?.id ?? source.groups[0]?.id ?? '';
 };
 
-const getInitializedState = (
-    source: ExpenseModalSource,
-): ExpenseModalState => {
+const getInitializedState = (source: ExpenseModalSource): ExpenseModalState => {
     const groupId = getDefaultGroupId(source);
     const targetMode: ExpenseTargetMode =
         source.context === 'friends' ||
@@ -294,8 +273,7 @@ const getInitializedState = (
         ...INITIAL_EXPENSE_MODAL_STATE,
         isOpened: true,
         mode: 'create',
-        openingContext:
-            source.context === 'friends' ? 'friends' : undefined,
+        openingContext: source.context === 'friends' ? 'friends' : undefined,
         openingFriendId: source.preferredFriendId,
         source,
         targetMode,
@@ -386,9 +364,7 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
     },
     setTargetMode: targetMode => {
         set(state => {
-            const selectedFriendId =
-                state.selectedFriendId ||
-                getDefaultFriendId(state.source);
+            const selectedFriendId = state.selectedFriendId || getDefaultFriendId(state.source);
 
             return {
                 ...state,
@@ -424,11 +400,7 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
         set(state => ({
             ...state,
             splitMode,
-            percentShares: getPercentShares(
-                state,
-                state.includedParticipantIds,
-                splitMode,
-            ),
+            percentShares: getPercentShares(state, state.includedParticipantIds, splitMode),
         }));
     },
     toggleAllParticipants: () => {
@@ -442,10 +414,7 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
             return {
                 ...state,
                 includedParticipantIds,
-                percentShares: getPercentShares(
-                    state,
-                    includedParticipantIds,
-                ),
+                percentShares: getPercentShares(state, includedParticipantIds),
             };
         });
     },
@@ -474,10 +443,7 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
                     paidById: includedParticipantIds[state.paidById]
                         ? state.paidById
                         : (state.source.currentUser?.id ?? ''),
-                    percentShares: getPercentShares(
-                        state,
-                        includedParticipantIds,
-                    ),
+                    percentShares: getPercentShares(state, includedParticipantIds),
                 };
             }
 
@@ -492,14 +458,10 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
                 shareWeights: isIncluded
                     ? {
                           ...state.shareWeights,
-                          [participantId]:
-                              state.shareWeights[participantId] ?? '1',
+                          [participantId]: state.shareWeights[participantId] ?? '1',
                       }
                     : state.shareWeights,
-                percentShares: getPercentShares(
-                    state,
-                    includedParticipantIds,
-                ),
+                percentShares: getPercentShares(state, includedParticipantIds),
             };
         });
     },
@@ -539,10 +501,7 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
             return;
         }
 
-        if (
-            splitMode === EXPENSE_SPLIT_MODES.SHARES &&
-            /^\d{0,4}$/.test(value)
-        ) {
+        if (splitMode === EXPENSE_SPLIT_MODES.SHARES && /^\d{0,4}$/.test(value)) {
             set(state => ({
                 ...state,
                 shareWeights: {

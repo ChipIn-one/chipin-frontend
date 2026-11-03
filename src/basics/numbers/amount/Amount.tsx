@@ -62,9 +62,7 @@ const Amount: FC<Props> = ({
             onClick={onClick && (() => onClick({ amountString, bigAmount }))}
         >
             {prefixLess}
-            <span dir="ltr">
-                {prefixLess ? prefixSymbol : customPrefix || prefixSymbol}
-            </span>
+            <span dir="ltr">{prefixLess ? prefixSymbol : customPrefix || prefixSymbol}</span>
             {amountPart}
             <span>{zerosPart}</span>
             {postfix && <> {postfix}</>}

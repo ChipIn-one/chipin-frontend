@@ -65,10 +65,8 @@ const areNumberMapsEqual = (
 };
 
 const areSharingModesEqual = (left: SharingMode, right: SharingMode): boolean =>
-    left.type === right.type && areNumberMapsEqual(
-        getSharingModeValues(left),
-        getSharingModeValues(right),
-    );
+    left.type === right.type &&
+    areNumberMapsEqual(getSharingModeValues(left), getSharingModeValues(right));
 
 const areParticipantIdsEqual = (left: string[], right: string[]): boolean => {
     if (left.length !== right.length) {

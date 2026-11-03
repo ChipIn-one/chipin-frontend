@@ -21,7 +21,13 @@ const subscribeToHydration = () => () => undefined;
 const getClientHydration = () => true;
 const getServerHydration = () => false;
 
-const PublicContent = ({ initialRoute, isDark }: { initialRoute: PublicRoute; isDark: boolean }) => {
+const PublicContent = ({
+    initialRoute,
+    isDark,
+}: {
+    initialRoute: PublicRoute;
+    isDark: boolean;
+}) => {
     const isHydrated = useSyncExternalStore(
         subscribeToHydration,
         getClientHydration,
@@ -50,7 +56,9 @@ const PublicContent = ({ initialRoute, isDark }: { initialRoute: PublicRoute; is
                 <BackgroundBox>
                     <Header />
                     {!isHydrated && <PublicLanguageLinks route={route} />}
-                    <Box px="4"><Page /></Box>
+                    <Box px="4">
+                        <Page />
+                    </Box>
                 </BackgroundBox>
             </BackendUnavailableGate>
         </>

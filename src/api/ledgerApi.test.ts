@@ -106,29 +106,30 @@ describe('ledgerApi', () => {
                 },
             },
         }).then(result => {
-            expect(apiInstance.patch).toHaveBeenCalledWith(
-                '/ledger/entries/entry-1',
-                {
-                    type: 'EXPENSE',
-                    expense: { description: 'Updated dinner' },
-                },
-            );
+            expect(apiInstance.patch).toHaveBeenCalledWith('/ledger/entries/entry-1', {
+                type: 'EXPENSE',
+                expense: { description: 'Updated dinner' },
+            });
             expect(result).toEqual({ id: 'entry-1' });
         });
     });
-
 });
 
 describe('ledgerApi path segment guard', () => {
     test.each([
         ['removeLedgerEntry', () => removeLedgerEntry({ entryId: 'a/b' })],
         ['fetchLedgerEntry', () => fetchLedgerEntry({ entryId: 'a/b' })],
-        ['updateExpense', () => updateExpense({
-            entryId: 'a/b',
-            entry: { type: 'EXPENSE', expense: { description: 'x' } },
-        })],
+        [
+            'updateExpense',
+            () =>
+                updateExpense({
+                    entryId: 'a/b',
+                    entry: { type: 'EXPENSE', expense: { description: 'x' } },
+                }),
+        ],
     ])('%s rejects a "/" in a path parameter without calling the API', (_name, onCall) => {
-        return expect(onCall()).rejects.toBeInstanceOf(InvalidPathSegmentError)
+        return expect(onCall())
+            .rejects.toBeInstanceOf(InvalidPathSegmentError)
             .then(() => {
                 expect(apiInstance.delete).not.toHaveBeenCalled();
                 expect(apiInstance.get).not.toHaveBeenCalled();

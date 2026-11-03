@@ -104,16 +104,16 @@ describe('authStore', () => {
             is_new_user: false,
         });
         useDashboardStore.setState({ appMode: APP_MODES.GROUP });
-        const setDefaultAppMode = vi.spyOn(
-            useDashboardStore.getState(),
-            'setDefaultAppMode',
-        );
+        const setDefaultAppMode = vi.spyOn(useDashboardStore.getState(), 'setDefaultAppMode');
         mockAuthenticatedDataFetches();
 
-        return useAuthStore.getState().exchangeGoogleOAuthCode('oauth-code').then(() => {
-            expect(authSession.establishAuthSession).toHaveBeenCalledWith('access-token');
-            expect(setDefaultAppMode).toHaveBeenCalledWith(true);
-        });
+        return useAuthStore
+            .getState()
+            .exchangeGoogleOAuthCode('oauth-code')
+            .then(() => {
+                expect(authSession.establishAuthSession).toHaveBeenCalledWith('access-token');
+                expect(setDefaultAppMode).toHaveBeenCalledWith(true);
+            });
     });
 
     test('cleans up the cookie session when the restore hint cannot be persisted', () => {
@@ -147,9 +147,12 @@ describe('authStore', () => {
             .spyOn(useUsersStore.getState(), 'fetchSetPremiumPromoRemaining')
             .mockResolvedValue();
 
-        return useAuthStore.getState().exchangeGoogleOAuthCode('oauth-code').then(() => {
-            expect(fetchSetPremiumPromoRemaining).toHaveBeenCalledOnce();
-        });
+        return useAuthStore
+            .getState()
+            .exchangeGoogleOAuthCode('oauth-code')
+            .then(() => {
+                expect(fetchSetPremiumPromoRemaining).toHaveBeenCalledOnce();
+            });
     });
 
     test('expires the session after logout-other-devices receives 401', () => {
@@ -157,9 +160,7 @@ describe('authStore', () => {
             isAxiosError: true,
             response: { status: 401 },
         };
-        vi.mocked(authSession.logoutOtherDevicesSession).mockRejectedValue(
-            unauthorizedError,
-        );
+        vi.mocked(authSession.logoutOtherDevicesSession).mockRejectedValue(unauthorizedError);
 
         return expect(useAuthStore.getState().logoutOtherDevices())
             .rejects.toBe(unauthorizedError)
@@ -275,14 +276,17 @@ describe('authStore', () => {
             includedParticipantIds: { 'user-1': true },
         });
 
-        return useAuthStore.getState().signOut().then(() => {
-            expect(useExpenseModalStore.getState()).toMatchObject({
-                isOpened: false,
-                groupId: '',
-                description: '',
-                includedParticipantIds: {},
+        return useAuthStore
+            .getState()
+            .signOut()
+            .then(() => {
+                expect(useExpenseModalStore.getState()).toMatchObject({
+                    isOpened: false,
+                    groupId: '',
+                    description: '',
+                    includedParticipantIds: {},
+                });
             });
-        });
     });
 
     test('hides protected data immediately and deduplicates repeated sign-out', () => {

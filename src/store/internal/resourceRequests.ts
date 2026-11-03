@@ -29,9 +29,7 @@ interface RequestChannel {
 const createRequestChannel = (): RequestChannel => {
     let activeRequest: ActiveRequest | undefined;
 
-    const createHandle = <T>(
-        request: ActiveRequest,
-    ): ResourceRequestHandle<T> => ({
+    const createHandle = <T>(request: ActiveRequest): ResourceRequestHandle<T> => ({
         promise: request.completion as Promise<T>,
         isCurrent: () => activeRequest === request && !request.isReplaced,
     });
@@ -94,11 +92,7 @@ const createRequestChannel = (): RequestChannel => {
         ): ResourceRequestHandle<T> => {
             const identity = options.identity ?? '';
 
-            if (
-                activeRequest?.isPending &&
-                !options.force &&
-                activeRequest.identity === identity
-            ) {
+            if (activeRequest?.isPending && !options.force && activeRequest.identity === identity) {
                 return createHandle<T>(activeRequest);
             }
 

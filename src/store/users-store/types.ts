@@ -52,10 +52,4 @@ interface FriendsView {
     settledFriends: KnownUser[];
 }
 
-export type {
-    FriendCurrencyGroup,
-    FriendsView,
-    UsersStore,
-    UsersStoreActions,
-    UsersStoreState,
-};
+export type { FriendCurrencyGroup, FriendsView, UsersStore, UsersStoreActions, UsersStoreState };

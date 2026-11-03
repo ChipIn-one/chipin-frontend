@@ -23,8 +23,7 @@ interface Params<TResult> {
 }
 
 type RequestState = { inviteToken: string } & (
-    | { status: 'ready' | 'joining' | 'invalid' }
-    | { status: 'error'; errorMessage: string }
+    { status: 'ready' | 'joining' | 'invalid' } | { status: 'error'; errorMessage: string }
 );
 
 export const useInviteConfirmation = <TResult>({
@@ -89,13 +88,18 @@ export const useInviteConfirmation = <TResult>({
                     return;
                 }
 
-                setRequestState(getApiErrorStatus(error) === 404
-                    ? { inviteToken: token, status: 'invalid' }
-                    : {
-                        inviteToken: token,
-                        status: 'error',
-                        errorMessage: resolveApiErrorMessageFromError(error, errorFallbackMessage),
-                    });
+                setRequestState(
+                    getApiErrorStatus(error) === 404
+                        ? { inviteToken: token, status: 'invalid' }
+                        : {
+                              inviteToken: token,
+                              status: 'error',
+                              errorMessage: resolveApiErrorMessageFromError(
+                                  error,
+                                  errorFallbackMessage,
+                              ),
+                          },
+                );
             })
             .finally(() => {
                 if (inFlightToken.current === token) {

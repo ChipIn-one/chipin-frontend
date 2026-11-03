@@ -223,15 +223,11 @@ describe('cookie-backed auth transport', () => {
         });
 
         return refreshApiAuthTokens().then(result => {
-            expect(apiInstance.post).toHaveBeenLastCalledWith(
-                '/auth/refresh',
-                undefined,
-                {
-                    headers: {
-                        'X-Chipin-Csrf': '1',
-                    },
+            expect(apiInstance.post).toHaveBeenLastCalledWith('/auth/refresh', undefined, {
+                headers: {
+                    'X-Chipin-Csrf': '1',
                 },
-            );
+            });
             expect(result).toEqual({ token: 'next-access-token' });
         });
     });
@@ -240,15 +236,11 @@ describe('cookie-backed auth transport', () => {
         vi.mocked(apiInstance.post).mockResolvedValue({ data: undefined });
 
         return logoutApiAuthTokens().then(result => {
-            expect(apiInstance.post).toHaveBeenLastCalledWith(
-                '/auth/logout',
-                undefined,
-                {
-                    headers: {
-                        'X-Chipin-Csrf': '1',
-                    },
+            expect(apiInstance.post).toHaveBeenLastCalledWith('/auth/logout', undefined, {
+                headers: {
+                    'X-Chipin-Csrf': '1',
                 },
-            );
+            });
             expect(result).toBeUndefined();
         });
     });
@@ -259,11 +251,21 @@ describe('chipin path segment guard', () => {
         ['fetchApiUserGroupById', () => fetchApiUserGroupById('a/b')],
         ['removeApiGroup', () => removeApiGroup({ groupId: 'a/b' })],
         ['leaveApiGroup', () => leaveApiGroup({ groupId: 'a/b' })],
-        ['kickApiGroupMember groupId', () => kickApiGroupMember({ groupId: 'a/b', userId: 'user-1' })],
-        ['kickApiGroupMember userId', () => kickApiGroupMember({ groupId: 'group-1', userId: 'a/b' })],
-        ['inviteApiUserToGroup', () => inviteApiUserToGroup({ inviteToken: '../g/members/u/kick' })],
+        [
+            'kickApiGroupMember groupId',
+            () => kickApiGroupMember({ groupId: 'a/b', userId: 'user-1' }),
+        ],
+        [
+            'kickApiGroupMember userId',
+            () => kickApiGroupMember({ groupId: 'group-1', userId: 'a/b' }),
+        ],
+        [
+            'inviteApiUserToGroup',
+            () => inviteApiUserToGroup({ inviteToken: '../g/members/u/kick' }),
+        ],
     ])('%s rejects a "/" in a path parameter without calling the API', (_name, onCall) => {
-        return expect(onCall()).rejects.toBeInstanceOf(InvalidPathSegmentError)
+        return expect(onCall())
+            .rejects.toBeInstanceOf(InvalidPathSegmentError)
             .then(() => {
                 expect(apiInstance.delete).not.toHaveBeenCalled();
                 expect(apiInstance.get).not.toHaveBeenCalled();

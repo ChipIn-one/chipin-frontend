@@ -41,12 +41,15 @@ describe('activityApi', () => {
         const controller = new AbortController();
         vi.mocked(apiInstance.get).mockResolvedValue({ data: response });
 
-        return fetchActivityChildren({
-            parentActivityId: 'activity-1',
-            category: 'expense',
-            limit: 15,
-            cursor: 30,
-        }, controller.signal).then(result => {
+        return fetchActivityChildren(
+            {
+                parentActivityId: 'activity-1',
+                category: 'expense',
+                limit: 15,
+                cursor: 30,
+            },
+            controller.signal,
+        ).then(result => {
             expect(apiInstance.get).toHaveBeenCalledWith(
                 '/users/self/activities/activity-1/children',
                 {
@@ -67,10 +70,7 @@ describe('activityApi', () => {
         const controller = new AbortController();
         vi.mocked(apiInstance.get).mockResolvedValue({ data: response });
 
-        return fetchActivityPreviews(
-            { limit: 20, cursor: 40 },
-            controller.signal,
-        ).then(result => {
+        return fetchActivityPreviews({ limit: 20, cursor: 40 }, controller.signal).then(result => {
             expect(apiInstance.get).toHaveBeenCalledWith('/users/self/activity-previews', {
                 params: { limit: 20, cursor: 40 },
                 signal: controller.signal,
@@ -102,7 +102,8 @@ describe('activityApi path segment guard', () => {
         ['fetchActivityChildren', () => fetchActivityChildren({ parentActivityId: 'a/b' })],
         ['fetchGroupActivityPreviews', () => fetchGroupActivityPreviews({ groupId: 'a/b' })],
     ])('%s rejects a "/" in a path parameter without calling the API', (_name, onCall) => {
-        return expect(onCall()).rejects.toBeInstanceOf(InvalidPathSegmentError)
+        return expect(onCall())
+            .rejects.toBeInstanceOf(InvalidPathSegmentError)
             .then(() => {
                 expect(apiInstance.get).not.toHaveBeenCalled();
             });

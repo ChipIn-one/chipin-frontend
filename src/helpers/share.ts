@@ -44,18 +44,20 @@ export const shareInvite = (options: ShareOptions): Promise<ShareResult> => {
         return copyShareUrl(options.url);
     }
 
-    return navigator.share({
-        title: options.title,
-        text: options.text,
-        url: options.url,
-    }).then(
-        () => 'shared',
-        (error: unknown) => {
-            if (error instanceof Error && error.name === 'AbortError') {
-                return 'cancelled';
-            }
+    return navigator
+        .share({
+            title: options.title,
+            text: options.text,
+            url: options.url,
+        })
+        .then(
+            () => 'shared',
+            (error: unknown) => {
+                if (error instanceof Error && error.name === 'AbortError') {
+                    return 'cancelled';
+                }
 
-            return copyShareUrl(options.url);
-        },
-    );
+                return copyShareUrl(options.url);
+            },
+        );
 };

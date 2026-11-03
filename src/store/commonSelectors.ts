@@ -11,10 +11,5 @@ export const calcBalancesSummary = (
     owingTotalInBase: number;
     netTotalInBase: number;
 } => {
-    return getBalanceEntriesSummary(
-        entries,
-        currenciesRates,
-        baseCurrency,
-        defaultCurrency,
-    );
+    return getBalanceEntriesSummary(entries, currenciesRates, baseCurrency, defaultCurrency);
 };

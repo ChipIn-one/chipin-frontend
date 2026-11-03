@@ -29,13 +29,19 @@ describe('release-on-production workflow', () => {
         expect(release.needs).toBe('guard');
         expect(release.if).toBe("needs.guard.outputs.release == 'true'");
         expect(release.permissions).toEqual({ contents: 'write', 'pull-requests': 'read' });
-        expect(release.uses).toMatch(/^ChipIn-one\/\.github\/\.github\/workflows\/release\.yml@[0-9a-f]{40}$/u);
+        expect(release.uses).toMatch(
+            /^ChipIn-one\/\.github\/\.github\/workflows\/release\.yml@[0-9a-f]{40}$/u,
+        );
         expect(release.with).toEqual({ ref: '${{ needs.guard.outputs.sha }}', apply: true });
         expect(release.secrets).toEqual({ token: '${{ secrets.GITHUB_TOKEN }}' });
         const checkout = guard.steps.find(step => step.uses?.startsWith('actions/checkout@'));
         expect(checkout.uses).toMatch(/@[0-9a-f]{40}$/u);
         expect(text).toMatch(/uses: actions\/checkout@[0-9a-f]{40} # v\d+\.\d+\.\d+\n/u);
-        expect(checkout.with).toMatchObject({ ref: 'master', 'fetch-depth': 0, 'persist-credentials': false });
+        expect(checkout.with).toMatchObject({
+            ref: 'master',
+            'fetch-depth': 0,
+            'persist-credentials': false,
+        });
         for (const step of guard.steps) expect(step.run ?? '').not.toContain('${{');
         expect(guardStep.env).toEqual({ DEPLOYED_SHA: '${{ github.event.deployment.sha }}' });
     });
@@ -59,7 +65,8 @@ const isolatedGitEnv = (base = process.env) => ({
     GIT_CONFIG_GLOBAL: '/dev/null',
     GIT_CONFIG_NOSYSTEM: '1',
 });
-const runGit = (env, cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8', env }).trim();
+const runGit = (env, cwd, ...args) =>
+    execFileSync('git', args, { cwd, encoding: 'utf8', env }).trim();
 const initTestRepo = (env, repo) => {
     runGit(env, repo, 'init', '-q', '-b', 'master');
     runGit(env, repo, 'config', 'user.email', 'test@example.com');
@@ -85,13 +92,18 @@ describe('release-on-production guard git isolation', () => {
                 GIT_PREFIX: '',
             };
             const env = isolatedGitEnv(hookEnv);
-            expect(Object.keys(env).filter(key => key.startsWith('GIT_')).sort())
-                .toEqual(['GIT_CONFIG_GLOBAL', 'GIT_CONFIG_NOSYSTEM']);
+            expect(
+                Object.keys(env)
+                    .filter(key => key.startsWith('GIT_'))
+                    .sort(),
+            ).toEqual(['GIT_CONFIG_GLOBAL', 'GIT_CONFIG_NOSYSTEM']);
 
             initTestRepo(env, repo);
 
             expect(readFileSync(decoyConfig, 'utf8')).toBe(before);
-            expect(runGit(env, repo, 'rev-parse', '--absolute-git-dir')).toBe(realpathSync(join(repo, '.git')));
+            expect(runGit(env, repo, 'rev-parse', '--absolute-git-dir')).toBe(
+                realpathSync(join(repo, '.git')),
+            );
             expect(runGit(env, repo, 'config', '--local', '--get', 'user.name')).toBe('test');
             expect(runGit(env, repo, 'config', '--local', '--get', 'core.bare')).toBe('false');
         } finally {
@@ -136,7 +148,11 @@ describe('release-on-production guard', () => {
             encoding: 'utf8',
             env: { ...env, DEPLOYED_SHA: sha, GITHUB_OUTPUT: output },
         });
-        return { status: result.status, stdout: result.stdout, output: readFileSync(output, 'utf8') };
+        return {
+            status: result.status,
+            stdout: result.stdout,
+            output: readFileSync(output, 'utf8'),
+        };
     };
 
     test('releases the master head ahead of the newest tag, ignoring non-semver v* tags', () => {

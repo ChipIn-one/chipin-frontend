@@ -4,11 +4,7 @@ import type { Environment } from 'constants/env.types';
 export const getEnv = (): Environment => {
     const explicitEnv: unknown = import.meta.env.VITE_CHIPIN_ENV;
 
-    if (
-        explicitEnv !== undefined &&
-        explicitEnv !== ENV_DEV &&
-        explicitEnv !== ENV_PROD
-    ) {
+    if (explicitEnv !== undefined && explicitEnv !== ENV_DEV && explicitEnv !== ENV_PROD) {
         throw new Error(
             'Invalid ChipIn environment configuration: VITE_CHIPIN_ENV must be "dev" or "prod".',
         );
@@ -39,8 +35,7 @@ export const getEnv = (): Environment => {
     }
 
     const hostname = window.location.hostname;
-    const isDevHostname =
-        hostname === 'localhost' || hostname === ENV_URLS[ENV_DEV].hostname;
+    const isDevHostname = hostname === 'localhost' || hostname === ENV_URLS[ENV_DEV].hostname;
 
     if (isDevHostname) {
         return ENV_DEV;

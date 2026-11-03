@@ -4,8 +4,7 @@ export const GROUP_DEBT_FILTERS = {
     OWES: 'owes',
 } as const;
 
-export type GroupDebtFilter =
-    (typeof GROUP_DEBT_FILTERS)[keyof typeof GROUP_DEBT_FILTERS];
+export type GroupDebtFilter = (typeof GROUP_DEBT_FILTERS)[keyof typeof GROUP_DEBT_FILTERS];
 
 export const GROUP_CARD_FILTER_BUCKETS = {
     OWED: 'owed',

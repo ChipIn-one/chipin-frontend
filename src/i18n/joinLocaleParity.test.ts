@@ -21,12 +21,15 @@ const LOCALES = {
     ru: { friends: ruFriends, group: ruGroup },
 };
 
-test.each(Object.entries(LOCALES))('%s has every join.* key in group and friends', (_locale, namespaces) => {
-    for (const { join } of [namespaces.group, namespaces.friends]) {
-        expect(Object.keys(join).sort()).toEqual(JOIN_KEYS);
+test.each(Object.entries(LOCALES))(
+    '%s has every join.* key in group and friends',
+    (_locale, namespaces) => {
+        for (const { join } of [namespaces.group, namespaces.friends]) {
+            expect(Object.keys(join).sort()).toEqual(JOIN_KEYS);
 
-        for (const value of Object.values(join)) {
-            expect(value.trim()).not.toBe('');
+            for (const value of Object.values(join)) {
+                expect(value.trim()).not.toBe('');
+            }
         }
-    }
-});
+    },
+);

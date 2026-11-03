@@ -33,10 +33,7 @@ vi.mock('helpers/authSession', () => ({
 
 vi.mock('helpers/errors', () => ({
     getApiErrorStatus: () => undefined,
-    resolveApiErrorMessageFromError: (
-        _error: unknown,
-        fallbackMessage: string,
-    ) => fallbackMessage,
+    resolveApiErrorMessageFromError: (_error: unknown, fallbackMessage: string) => fallbackMessage,
 }));
 
 vi.mock('i18next', () => ({
@@ -94,9 +91,7 @@ test('USR-003 accepts the invite, shows the friend name and redirects to Friends
         expect(mocks.acceptFriendInvite).toHaveBeenCalledWith({
             inviteToken: TEST_INVITE_TOKEN,
         });
-        expect(toast.success).toHaveBeenCalledWith(
-            'toasts:friend.inviteAcceptedWithName:Alex',
-        );
+        expect(toast.success).toHaveBeenCalledWith('toasts:friend.inviteAcceptedWithName:Alex');
         expect(mocks.navigate).toHaveBeenCalledWith(ROUTES.FRIENDS, {
             replace: true,
         });
@@ -121,16 +116,21 @@ test('USR-003 keeps invite failures on the join route and shows the error state'
 });
 
 test('ignores a successful invite completion after the join route unmounts', () => {
-    let resolveInvite: ((friend: {
-        id: string;
-        email: string;
-        displayName: string;
-        createdAt: number;
-        updatedAt: number;
-    }) => void) | undefined;
-    mocks.acceptFriendInvite.mockImplementation(() => new Promise(resolve => {
-        resolveInvite = resolve;
-    }));
+    let resolveInvite:
+        | ((friend: {
+              id: string;
+              email: string;
+              displayName: string;
+              createdAt: number;
+              updatedAt: number;
+          }) => void)
+        | undefined;
+    mocks.acceptFriendInvite.mockImplementation(
+        () =>
+            new Promise(resolve => {
+                resolveInvite = resolve;
+            }),
+    );
 
     const { result, unmount } = renderHook(() => useFriendInviteLink());
     act(() => {
@@ -157,9 +157,12 @@ test('ignores a successful invite completion after the join route unmounts', () 
 
 test('ignores a failed invite completion after the auth session changes', () => {
     let rejectInvite: ((error: unknown) => void) | undefined;
-    mocks.acceptFriendInvite.mockImplementation(() => new Promise((_resolve, reject) => {
-        rejectInvite = reject;
-    }));
+    mocks.acceptFriendInvite.mockImplementation(
+        () =>
+            new Promise((_resolve, reject) => {
+                rejectInvite = reject;
+            }),
+    );
 
     const { result } = renderHook(() => useFriendInviteLink());
     expect(mocks.acceptFriendInvite).not.toHaveBeenCalled();

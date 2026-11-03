@@ -50,7 +50,9 @@ export const bumpVersion = (version, impact) => {
     }
 
     if (parsedVersion.major === 0) {
-        throw new Error('Automatic major bump from 0.x.y to 1.0.0 is forbidden; 1.0.0 requires an explicit release decision.');
+        throw new Error(
+            'Automatic major bump from 0.x.y to 1.0.0 is forbidden; 1.0.0 requires an explicit release decision.',
+        );
     }
 
     return `${parsedVersion.major + 1}.0.0`;
@@ -96,7 +98,10 @@ const readStringToken = (source, offset) => {
     const start = offset;
     offset += 1;
     while (offset < source.length) {
-        if (source[offset] === '\\') { offset += 2; continue; }
+        if (source[offset] === '\\') {
+            offset += 2;
+            continue;
+        }
         if (source[offset] === '"') {
             const end = offset + 1;
             return { start, end, value: JSON.parse(source.slice(start, end)) };
@@ -112,7 +117,10 @@ const skipValue = (source, offset) => {
         const closers = [source[offset] === '{' ? '}' : ']'];
         offset += 1;
         while (closers.length && offset < source.length) {
-            if (source[offset] === '"') { offset = readStringToken(source, offset).end; continue; }
+            if (source[offset] === '"') {
+                offset = readStringToken(source, offset).end;
+                continue;
+            }
             if (source[offset] === '{' || source[offset] === '[') {
                 closers.push(source[offset] === '{' ? '}' : ']');
             } else if (source[offset] === closers[closers.length - 1]) {
@@ -128,7 +136,8 @@ const skipValue = (source, offset) => {
 
 const findMember = (source, objectStart, member) => {
     let offset = skipWhitespace(source, objectStart);
-    if (source[offset] !== '{') throw new Error('Expected an object containing ' + JSON.stringify(member) + '.');
+    if (source[offset] !== '{')
+        throw new Error('Expected an object containing ' + JSON.stringify(member) + '.');
     offset += 1;
     let found = null;
     while (true) {
@@ -163,31 +172,43 @@ const replaceStringValues = (source, replacements, version) => {
     const token = JSON.stringify(version);
     return replacements
         .sort((left, right) => right.start - left.start)
-        .reduce((text, range) => text.slice(0, range.start) + token + text.slice(range.end), source);
+        .reduce(
+            (text, range) => text.slice(0, range.start) + token + text.slice(range.end),
+            source,
+        );
 };
 
 const updatePackageVersionSource = (source, version) => {
     const manifest = JSON.parse(source);
-    if (typeof manifest.version !== 'string') throw new Error('package.json must contain a version string.');
+    if (typeof manifest.version !== 'string')
+        throw new Error('package.json must contain a version string.');
     const range = locateMember(source, ['version'], 'package.json');
     if (JSON.parse(source.slice(range.start, range.end)) !== manifest.version) {
         throw new Error('package.json root version could not be located safely.');
     }
     const updated = replaceStringValues(source, [range], version);
-    if (JSON.parse(updated).version !== version) throw new Error('package.json version could not be updated safely.');
+    if (JSON.parse(updated).version !== version)
+        throw new Error('package.json version could not be updated safely.');
     return updated;
 };
 
 const updateLockVersionSource = (source, version) => {
     const manifest = JSON.parse(source);
-    if (typeof manifest.version !== 'string') throw new Error('package-lock.json must contain a root version string.');
+    if (typeof manifest.version !== 'string')
+        throw new Error('package-lock.json must contain a root version string.');
     if (typeof manifest.packages?.['']?.version !== 'string') {
         throw new Error('package-lock.json must contain packages[""].version.');
     }
     const root = locateMember(source, ['version'], 'package-lock.json');
-    const nested = locateMember(source, ['packages', '', 'version'], 'package-lock.json packages[""]');
-    if (JSON.parse(source.slice(root.start, root.end)) !== manifest.version ||
-        JSON.parse(source.slice(nested.start, nested.end)) !== manifest.packages[''].version) {
+    const nested = locateMember(
+        source,
+        ['packages', '', 'version'],
+        'package-lock.json packages[""]',
+    );
+    if (
+        JSON.parse(source.slice(root.start, root.end)) !== manifest.version ||
+        JSON.parse(source.slice(nested.start, nested.end)) !== manifest.packages[''].version
+    ) {
         throw new Error('package-lock.json version fields could not be located safely.');
     }
     const updated = replaceStringValues(source, [root, nested], version);
@@ -198,10 +219,10 @@ const updateLockVersionSource = (source, version) => {
     return updated;
 };
 
-export const updateManifestVersions = (version, {
-    packagePath = PACKAGE_PATH,
-    lockfilePath = LOCKFILE_PATH,
-} = {}) => {
+export const updateManifestVersions = (
+    version,
+    { packagePath = PACKAGE_PATH, lockfilePath = LOCKFILE_PATH } = {},
+) => {
     parseSemVer(version);
     // Fully validate and prepare both files before writing either one.
     const packageSource = readFileSync(packagePath, 'utf8');
@@ -212,21 +233,26 @@ export const updateManifestVersions = (version, {
     writeFileSync(lockfilePath, nextLock, 'utf8');
 };
 
-export const runVersionBump = (impact, {
-    packagePath = PACKAGE_PATH,
-    lockfilePath = LOCKFILE_PATH,
-} = {}) => {
+export const runVersionBump = (
+    impact,
+    { packagePath = PACKAGE_PATH, lockfilePath = LOCKFILE_PATH } = {},
+) => {
     if (!isVersionImpact(impact)) {
         throw new Error(`Unsupported version impact: ${impact}`);
     }
 
-    const { packageVersion, lockRootVersion, lockVersion } = readManifestVersions({ packagePath, lockfilePath });
+    const { packageVersion, lockRootVersion, lockVersion } = readManifestVersions({
+        packagePath,
+        lockfilePath,
+    });
     parseSemVer(packageVersion);
     parseSemVer(lockRootVersion);
     parseSemVer(lockVersion);
 
     if (packageVersion !== lockRootVersion || packageVersion !== lockVersion) {
-        throw new Error(`package.json (${packageVersion}) and package-lock.json (${lockRootVersion}/${lockVersion}) versions must match.`);
+        throw new Error(
+            `package.json (${packageVersion}) and package-lock.json (${lockRootVersion}/${lockVersion}) versions must match.`,
+        );
     }
 
     const nextVersion = bumpVersion(packageVersion, impact);
@@ -239,15 +265,19 @@ export const runVersionBump = (impact, {
     return nextVersion;
 };
 
-const isMainModule = process.argv[1]
-    && pathToFileURL(resolve(process.argv[1])).href === import.meta.url;
+const isMainModule =
+    process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url;
 
 if (isMainModule) {
     const impact = process.argv[2];
 
     try {
         const nextVersion = runVersionBump(impact);
-        console.log(impact === 'none' ? `Version unchanged: ${nextVersion}` : `Version bumped to ${nextVersion}`);
+        console.log(
+            impact === 'none'
+                ? `Version unchanged: ${nextVersion}`
+                : `Version bumped to ${nextVersion}`,
+        );
     } catch (error) {
         console.error(error instanceof Error ? error.message : String(error));
         process.exitCode = 1;

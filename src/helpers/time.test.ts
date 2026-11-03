@@ -52,7 +52,7 @@ test('formats JavaScript timezone offsets as UTC labels', () => {
 test('round-trips a unix-seconds timestamp through a local date-time input', () => {
     const timestamp = getUnixTimestampInSec(activityDate);
 
-    expect(parseDateTimeInputToUnixTimestampInSec(
-        formatUnixTimestampInSecForDateTimeInput(timestamp),
-    )).toBe(timestamp);
+    expect(
+        parseDateTimeInputToUnixTimestampInSec(formatUnixTimestampInSecForDateTimeInput(timestamp)),
+    ).toBe(timestamp);
 });

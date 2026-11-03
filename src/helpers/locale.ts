@@ -1,9 +1,5 @@
 import { LS_KEY_LOCALE } from 'constants/localstorage';
-import {
-    getLocalUser,
-    hasAuthSessionHint,
-    LocalStorage,
-} from 'helpers/localStorage';
+import { getLocalUser, hasAuthSessionHint, LocalStorage } from 'helpers/localStorage';
 
 import { DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from 'constants/locales';
 

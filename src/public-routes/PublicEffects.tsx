@@ -60,7 +60,14 @@ const PublicEffects = ({ route, isDark }: { route: PublicRoute; isDark: boolean 
                 getPreferredModeRoute(canAccessSolo && (settings?.soloModeByDefault ?? false)),
             );
         }
-    }, [canAccessSolo, isAuthResolved, isLoggedIn, isUserFetched, route.page, settings?.soloModeByDefault]);
+    }, [
+        canAccessSolo,
+        isAuthResolved,
+        isLoggedIn,
+        isUserFetched,
+        route.page,
+        settings?.soloModeByDefault,
+    ]);
 
     useEffect(() => {
         if (!isAuthResolved || isLoggedIn || route.locale !== DEFAULT_LOCALE) {

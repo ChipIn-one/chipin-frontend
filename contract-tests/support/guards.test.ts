@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-    parseRefreshResponse,
-    parseRegisterResponse,
-    parseSelfUserResponse,
-} from './guards';
+import { parseRefreshResponse, parseRegisterResponse, parseSelfUserResponse } from './guards';
 
 const validSelfUser = {
     id: 'user-id',
@@ -83,7 +79,7 @@ describe('parseRegisterResponse', () => {
         ).toThrow('register response must not expose a refresh token');
     });
 
-    it.each(['id', 'email', 'displayName'])('rejects an empty user.%s field', (field) => {
+    it.each(['id', 'email', 'displayName'])('rejects an empty user.%s field', field => {
         expect(() =>
             parseRegisterResponse({
                 runId: 'contract-run',
@@ -140,7 +136,7 @@ describe('parseSelfUserResponse', () => {
         ).toThrow();
     });
 
-    it.each(['id', 'email', 'displayName'])('rejects an empty %s', (field) => {
+    it.each(['id', 'email', 'displayName'])('rejects an empty %s', field => {
         expect(() =>
             parseSelfUserResponse({
                 ...validSelfUser,

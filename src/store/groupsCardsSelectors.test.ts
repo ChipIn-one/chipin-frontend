@@ -11,10 +11,7 @@ import {
     GROUP_NET_CONVERSION_STATES,
 } from 'constants/groups';
 
-import {
-    selectGroupCardViewModel,
-    selectGroupsCardsView,
-} from './groupsSelectors';
+import { selectGroupCardViewModel, selectGroupsCardsView } from './groupsSelectors';
 
 const NOW = 2_000_000_000;
 const DAY_SECONDS = 24 * 60 * 60;
@@ -106,23 +103,14 @@ const getViewModel = (
     });
 
 test('DSH-001/DSH-002 derives positive, negative, zero-unsettled and settled group nets', () => {
-    const positive = getViewModel(
-        createGroup({ balances: [{ USD: balance('USD', 20) }] }),
-    );
-    const negative = getViewModel(
-        createGroup({ balances: [{ USD: balance('USD', -12) }] }),
-    );
+    const positive = getViewModel(createGroup({ balances: [{ USD: balance('USD', 20) }] }));
+    const negative = getViewModel(createGroup({ balances: [{ USD: balance('USD', -12) }] }));
     const neutral = getViewModel(
         createGroup({
-            balances: [
-                { USD: balance('USD', 20) },
-                { USD: balance('USD', -20) },
-            ],
+            balances: [{ USD: balance('USD', 20) }, { USD: balance('USD', -20) }],
         }),
     );
-    const settled = getViewModel(
-        createGroup({ balances: [{ USD: balance('USD', 0) }] }),
-    );
+    const settled = getViewModel(createGroup({ balances: [{ USD: balance('USD', 0) }] }));
 
     expect(positive).toMatchObject({
         netAmount: 20,
@@ -169,16 +157,11 @@ test('DSH-001 normalizes backend-scale cancellation before classifying', () => {
 });
 
 test('DSH-001 distinguishes same-currency, converted and unavailable totals', () => {
-    const sameCurrency = getViewModel(
-        createGroup({ balances: [{ USD: balance('USD', 25) }] }),
-    );
-    const converted = getViewModel(
-        createGroup({ balances: [{ EUR: balance('EUR', 80) }] }),
-        { rates: { EUR: 0.8 } },
-    );
-    const unavailable = getViewModel(
-        createGroup({ balances: [{ EUR: balance('EUR', 80) }] }),
-    );
+    const sameCurrency = getViewModel(createGroup({ balances: [{ USD: balance('USD', 25) }] }));
+    const converted = getViewModel(createGroup({ balances: [{ EUR: balance('EUR', 80) }] }), {
+        rates: { EUR: 0.8 },
+    });
+    const unavailable = getViewModel(createGroup({ balances: [{ EUR: balance('EUR', 80) }] }));
 
     expect(sameCurrency).toMatchObject({
         netAmount: 25,
@@ -200,10 +183,7 @@ test('DSH-001 distinguishes same-currency, converted and unavailable totals', ()
 test('DSH-001/DSH-003 normalizes cross-currency floating residue before classifying', () => {
     const neutral = getViewModel(
         createGroup({
-            balances: [
-                { USD: balance('USD', 0.1) },
-                { EUR: balance('EUR', -0.07) },
-            ],
+            balances: [{ USD: balance('USD', 0.1) }, { EUR: balance('EUR', -0.07) }],
         }),
         { rates: { EUR: 0.7 } },
     );
@@ -218,14 +198,12 @@ test('DSH-001/DSH-003 normalizes cross-currency floating residue before classify
 });
 
 test('DSH-001/DSH-003 preserves sub-cent converted nets for display and debt filters', () => {
-    const positive = getViewModel(
-        createGroup({ balances: [{ EUR: balance('EUR', 0.0032) }] }),
-        { rates: { EUR: 0.8 } },
-    );
-    const negative = getViewModel(
-        createGroup({ balances: [{ EUR: balance('EUR', -0.0032) }] }),
-        { rates: { EUR: 0.8 } },
-    );
+    const positive = getViewModel(createGroup({ balances: [{ EUR: balance('EUR', 0.0032) }] }), {
+        rates: { EUR: 0.8 },
+    });
+    const negative = getViewModel(createGroup({ balances: [{ EUR: balance('EUR', -0.0032) }] }), {
+        rates: { EUR: 0.8 },
+    });
 
     expect(positive.netAmount).toBeCloseTo(0.004);
     expect(positive.filterBucket).toBe(GROUP_CARD_FILTER_BUCKETS.OWED);
@@ -260,26 +238,17 @@ test('DSH-003 filters by final converted net and keeps zero-unsettled only in Al
         createGroup({
             id: 'positive',
             name: 'Vietnam',
-            balances: [
-                { USD: balance('USD', 20) },
-                { USD: balance('USD', -5) },
-            ],
+            balances: [{ USD: balance('USD', 20) }, { USD: balance('USD', -5) }],
         }),
         createGroup({
             id: 'neutral',
             name: 'Neutral',
-            balances: [
-                { USD: balance('USD', 20) },
-                { USD: balance('USD', -20) },
-            ],
+            balances: [{ USD: balance('USD', 20) }, { USD: balance('USD', -20) }],
         }),
         createGroup({
             id: 'negative',
             name: 'Bali',
-            balances: [
-                { USD: balance('USD', 3) },
-                { USD: balance('USD', -8) },
-            ],
+            balances: [{ USD: balance('USD', 3) }, { USD: balance('USD', -8) }],
         }),
     ];
     const baseOptions = {
@@ -341,12 +310,8 @@ test('DSH-003 excludes settled and unavailable groups from debt filters', () => 
 });
 
 test('DSH-004 uses the 15-day boundary, activity timestamp and createdAt fallback', () => {
-    const exactly15Days = getViewModel(
-        createGroup({ createdAt: NOW - 15 * DAY_SECONDS }),
-    );
-    const older = getViewModel(
-        createGroup({ createdAt: NOW - 15 * DAY_SECONDS - 1 }),
-    );
+    const exactly15Days = getViewModel(createGroup({ createdAt: NOW - 15 * DAY_SECONDS }));
+    const older = getViewModel(createGroup({ createdAt: NOW - 15 * DAY_SECONDS - 1 }));
     const recentActivity = getViewModel(
         createGroup({
             createdAt: NOW - 30 * DAY_SECONDS,
@@ -393,9 +358,7 @@ test('DSH-004 keeps recent settled groups visible and moves only >15-day groups 
         'new-settled',
         'boundary-settled',
     ]);
-    expect(view.hiddenSettledGroups.map(model => model.group.id)).toEqual([
-        'old-settled',
-    ]);
+    expect(view.hiddenSettledGroups.map(model => model.group.id)).toEqual(['old-settled']);
     expect(view.settledCount).toBe(1);
 });
 
@@ -541,9 +504,7 @@ test('DSH-004/DSH-005 search surfaces an auto-hidden settled group', () => {
     });
 
     expect(collapsed.displayedGroups.map(model => model.group.id)).toEqual(['active']);
-    expect(collapsed.hiddenSettledGroups.map(model => model.group.id)).toEqual([
-        'old-settled',
-    ]);
+    expect(collapsed.hiddenSettledGroups.map(model => model.group.id)).toEqual(['old-settled']);
 
     expect(
         selectGroupsCardsView(groups, {

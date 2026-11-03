@@ -5,10 +5,7 @@ import {
     selectIsSubmitDisabled,
     selectUsers,
 } from './expenseModalSelectors';
-import {
-    type ExpenseParticipant,
-    useExpenseModalStore,
-} from './expenseModalStore';
+import { type ExpenseParticipant, useExpenseModalStore } from './expenseModalStore';
 
 const currentUser = {
     id: 'user-1',
@@ -45,9 +42,7 @@ test('uses a preferred known friend and falls back to the first friend', () => {
     };
 
     useExpenseModalStore.getState().initialize(source);
-    expect(useExpenseModalStore.getState().selectedFriendId).toBe(
-        anotherFriend.id,
-    );
+    expect(useExpenseModalStore.getState().selectedFriendId).toBe(anotherFriend.id);
 
     useExpenseModalStore.getState().initialize({
         ...source,

@@ -8,10 +8,7 @@ const sentinelRef = vi.fn();
 let isIntersecting = false;
 
 vi.mock('hooks/useIntersectionObserver', () => ({
-    useIntersectionObserver: () => [
-        sentinelRef,
-        { isIntersecting },
-    ],
+    useIntersectionObserver: () => [sentinelRef, { isIntersecting }],
 }));
 
 beforeEach(() => {
@@ -114,9 +111,7 @@ test.each([
 );
 
 test('handles a rejected page request', () => {
-    const onLoadMore = vi.fn(() =>
-        Promise.reject(new Error('Page unavailable')),
-    );
+    const onLoadMore = vi.fn(() => Promise.reject(new Error('Page unavailable')));
     isIntersecting = true;
 
     renderHook(() =>

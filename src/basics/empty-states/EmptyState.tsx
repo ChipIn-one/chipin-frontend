@@ -31,20 +31,9 @@ const EmptyState = ({
                 minWidth="0"
             >
                 <Flex align="center" gap="3" flexGrow="1" minWidth="0">
-                    <Avatar
-                        size="4"
-                        color={iconColor}
-                        variant="soft"
-                        fallback={icon}
-                    />
+                    <Avatar size="4" color={iconColor} variant="soft" fallback={icon} />
 
-                    <Flex
-                        direction="column"
-                        gap="1"
-                        flexGrow="1"
-                        flexShrink="1"
-                        minWidth="0"
-                    >
+                    <Flex direction="column" gap="1" flexGrow="1" flexShrink="1" minWidth="0">
                         <Text size="3" weight="bold" as="p">
                             {title}
                         </Text>

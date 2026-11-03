@@ -4,11 +4,23 @@ import { join } from 'node:path';
 import { parse } from 'yaml';
 import { describe, expect, test, vi } from 'vitest';
 
-import { DISPATCH_URL, EVENT_TYPE, forward, main, readHint } from './forward-production-deployment.mjs';
+import {
+    DISPATCH_URL,
+    EVENT_TYPE,
+    forward,
+    main,
+    readHint,
+} from './forward-production-deployment.mjs';
 
 const SHA = '6f21103aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const event = (overrides = {}) => ({
-    deployment: { id: 7390928173, sha: SHA, environment: 'Production', creator: { login: 'vercel[bot]' }, ...overrides.deployment },
+    deployment: {
+        id: 7390928173,
+        sha: SHA,
+        environment: 'Production',
+        creator: { login: 'vercel[bot]' },
+        ...overrides.deployment,
+    },
     deployment_status: { state: 'success', ...overrides.deployment_status },
 });
 const respond = status => vi.fn(() => Promise.resolve({ status }));
@@ -34,13 +46,18 @@ describe('forward-production-deployment workflow', () => {
         expect(job.permissions).toBeUndefined();
         const checkout = job.steps.find(step => step.uses?.startsWith('actions/checkout@'));
         expect(checkout.with['persist-credentials']).toBe(false);
-        for (const step of job.steps.filter(item => item.uses)) expect(step.uses).toMatch(/@[0-9a-f]{40}$/);
+        for (const step of job.steps.filter(item => item.uses))
+            expect(step.uses).toMatch(/@[0-9a-f]{40}$/);
         const send = job.steps.find(step => step.run);
         expect(send.run).toBe('node scripts/forward-production-deployment.mjs');
-        expect(send.env).toEqual({ CHIPIN_COMPLETION_DISPATCH_TOKEN: '${{ secrets.CHIPIN_COMPLETION_DISPATCH_TOKEN }}' });
+        expect(send.env).toEqual({
+            CHIPIN_COMPLETION_DISPATCH_TOKEN: '${{ secrets.CHIPIN_COMPLETION_DISPATCH_TOKEN }}',
+        });
         for (const step of job.steps) expect(step.run ?? '').not.toContain('${{');
         expect(text).not.toContain('github.token');
-        expect(text).not.toMatch(/github\.event\.deployment(?:_status)?\.(?:sha|id|payload|description|ref)\b/u);
+        expect(text).not.toMatch(
+            /github\.event\.deployment(?:_status)?\.(?:sha|id|payload|description|ref)\b/u,
+        );
     });
 });
 
@@ -61,10 +78,21 @@ describe('readHint', () => {
 
     test('rejects a malformed deployment id or SHA', () => {
         for (const id of [0, -1, 1.5, '7390928173', null, 2 ** 53]) {
-            expect(() => readHint(event({ deployment: { id } })), String(id)).toThrow(/deployment\.id/u);
+            expect(() => readHint(event({ deployment: { id } })), String(id)).toThrow(
+                /deployment\.id/u,
+            );
         }
-        for (const sha of ['6f21103', SHA.toUpperCase(), `${SHA}0`, `${SHA.slice(0, 39)}$`, null, 123]) {
-            expect(() => readHint(event({ deployment: { sha } })), String(sha)).toThrow(/deployment\.sha/u);
+        for (const sha of [
+            '6f21103',
+            SHA.toUpperCase(),
+            `${SHA}0`,
+            `${SHA.slice(0, 39)}$`,
+            null,
+            123,
+        ]) {
+            expect(() => readHint(event({ deployment: { sha } })), String(sha)).toThrow(
+                /deployment\.sha/u,
+            );
         }
     });
 });
@@ -81,7 +109,8 @@ describe('forward', () => {
             expect(init.method).toBe('POST');
             expect(init.headers.Authorization).toBe('Bearer test-token');
             expect(JSON.parse(init.body)).toEqual({
-                event_type: EVENT_TYPE, client_payload: { deployment_id: 7390928173, sha: SHA },
+                event_type: EVENT_TYPE,
+                client_payload: { deployment_id: 7390928173, sha: SHA },
             });
             expect(EVENT_TYPE).toBe('frontend-production-deployed');
         });
@@ -89,7 +118,11 @@ describe('forward', () => {
 
     test('sends nothing for an event the guard should have filtered', () => {
         const fetchImpl = respond(204);
-        return forward({ env: TOKEN, event: event({ deployment: { environment: 'Preview' } }), fetchImpl }).then(result => {
+        return forward({
+            env: TOKEN,
+            event: event({ deployment: { environment: 'Preview' } }),
+            fetchImpl,
+        }).then(result => {
             expect(result.status).toBe('skipped');
             expect(fetchImpl).not.toHaveBeenCalled();
         });
@@ -120,7 +153,9 @@ describe('forward', () => {
 
     test('rejects a malformed SHA without sending', () => {
         const fetchImpl = respond(204);
-        return expect(forward({ env: TOKEN, event: event({ deployment: { sha: 'abc' } }), fetchImpl }))
+        return expect(
+            forward({ env: TOKEN, event: event({ deployment: { sha: 'abc' } }), fetchImpl }),
+        )
             .rejects.toThrow(/deployment\.sha/u)
             .then(() => expect(fetchImpl).not.toHaveBeenCalled());
     });
@@ -135,11 +170,19 @@ describe('main', () => {
 
     test('reads the event file and writes a ::warning:: line when the token is missing', () => {
         const write = vi.fn();
-        return main({ GITHUB_EVENT_PATH: eventFile(event()) }, { fetchImpl: respond(204), write }).then(result => {
+        return main(
+            { GITHUB_EVENT_PATH: eventFile(event()) },
+            { fetchImpl: respond(204), write },
+        ).then(result => {
             expect(result.status).toBe('warning');
-            expect(write).toHaveBeenCalledWith(expect.stringMatching(/^::warning::CHIPIN_COMPLETION_DISPATCH_TOKEN is not set/u));
+            expect(write).toHaveBeenCalledWith(
+                expect.stringMatching(/^::warning::CHIPIN_COMPLETION_DISPATCH_TOKEN is not set/u),
+            );
         });
     });
 
-    test('requires the event file', () => expect(main({}, { fetchImpl: respond(204), write: vi.fn() })).rejects.toThrow(/GITHUB_EVENT_PATH/u));
+    test('requires the event file', () =>
+        expect(main({}, { fetchImpl: respond(204), write: vi.fn() })).rejects.toThrow(
+            /GITHUB_EVENT_PATH/u,
+        ));
 });

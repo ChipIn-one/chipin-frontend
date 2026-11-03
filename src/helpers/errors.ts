@@ -65,10 +65,7 @@ const resolveApiErrorPayloadMessage = (payload: unknown, fallbackMessage: string
     return detailsMessage ? `${message}, ${detailsMessage}` : message;
 };
 
-export const resolveApiErrorMessage = (
-    payload?: unknown,
-    fallbackKey = 'api.unknown',
-): string => {
+export const resolveApiErrorMessage = (payload?: unknown, fallbackKey = 'api.unknown'): string => {
     return resolveApiErrorPayloadMessage(payload, i18n.t(`errors:${fallbackKey}`));
 };
 
@@ -85,9 +82,8 @@ export const normalizeApiError = (error: unknown): RequestError => {
     const defaultMessage = i18n.t('toasts:common.requestFailed', {
         defaultValue: 'Request failed',
     });
-    const fallbackMessage = response === undefined
-        ? (getErrorMessage(error) ?? defaultMessage)
-        : defaultMessage;
+    const fallbackMessage =
+        response === undefined ? (getErrorMessage(error) ?? defaultMessage) : defaultMessage;
 
     return {
         ...(payload ?? {}),
@@ -111,17 +107,12 @@ export const getApiErrorStatus = (error: unknown): number | undefined => {
 
 export const isNetworkApiError = (error: unknown): boolean => {
     return (
-        isRecord(error) &&
-        error.isAxiosError === true &&
-        getApiErrorResponse(error) === undefined
+        isRecord(error) && error.isAxiosError === true && getApiErrorResponse(error) === undefined
     );
 };
 
 const isCancelledApiError = (error: unknown): boolean => {
-    return (
-        isRecord(error) &&
-        (error.__CANCEL__ === true || error.code === 'ERR_CANCELED')
-    );
+    return isRecord(error) && (error.__CANCEL__ === true || error.code === 'ERR_CANCELED');
 };
 
 export const isLikelyBackendOutageError = (error: unknown): boolean => {

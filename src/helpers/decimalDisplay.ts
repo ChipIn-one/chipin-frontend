@@ -151,7 +151,9 @@ const incrementDigits = (digits: string): string => {
     }
 
     const incremented =
-        index < 0 ? '1' : digits.slice(0, index) + String.fromCharCode(digits.charCodeAt(index) + 1);
+        index < 0
+            ? '1'
+            : digits.slice(0, index) + String.fromCharCode(digits.charCodeAt(index) + 1);
 
     return incremented + '0'.repeat(digits.length - 1 - index);
 };

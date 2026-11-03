@@ -12,13 +12,13 @@ export const useJoinInviteLink = (): InviteConfirmationState => {
     const { joinGroup } = useGroupsStore();
     const { inviteToken } = useParams<{ inviteToken: string }>();
 
-    const onAccept = useCallback(
-        (token: string) => joinGroup({ inviteToken: token }),
-        [joinGroup],
+    const onAccept = useCallback((token: string) => joinGroup({ inviteToken: token }), [joinGroup]);
+    const onAccepted = useCallback(
+        ({ id }: { id: string }) => {
+            navigate(`${ROUTES.GROUP}/${id}`, { replace: true });
+        },
+        [navigate],
     );
-    const onAccepted = useCallback(({ id }: { id: string }) => {
-        navigate(`${ROUTES.GROUP}/${id}`, { replace: true });
-    }, [navigate]);
 
     return useInviteConfirmation({
         inviteToken,

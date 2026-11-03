@@ -3,11 +3,11 @@
 The browser uses only the same-origin `/api/*` path for ChipIn backend traffic.
 Vercel owns the deployment-to-backend mapping:
 
-| Frontend host | Runtime environment | `/api/*` backend |
-| --- | --- | --- |
-| `chipin.one` | production | `https://api.chipin.one/*` |
-| `dev.chipin.one` | development | `https://api-dev.chipin.one/*` |
-| `*.vercel.app` | development | `https://api-dev.chipin.one/*` |
+| Frontend host    | Runtime environment | `/api/*` backend               |
+| ---------------- | ------------------- | ------------------------------ |
+| `chipin.one`     | production          | `https://api.chipin.one/*`     |
+| `dev.chipin.one` | development         | `https://api-dev.chipin.one/*` |
+| `*.vercel.app`   | development         | `https://api-dev.chipin.one/*` |
 
 All Vercel-generated domains are development surfaces, including the default
 production `.vercel.app` domain. A production build opened through a
@@ -38,18 +38,17 @@ All Vercel `/api/*` responses are marked `no-store` for both browser and CDN
 caches. Keep these rules in sync with the auth transport decision in #151 and
 the token lifecycle work in #163.
 
-
 ## Vercel delivery from `master`
 
 Vercel is delivery only; the repository has no deploy workflow and no Deploy
 Hook or Vercel token secrets
 ([#497](https://github.com/ChipIn-one/chipin-frontend/issues/497)).
 
-| GitHub event | Required gate | Vercel |
-| --- | --- | --- |
-| Pull request to `master` | `frontend-ci` | Git integration Preview of the PR branch |
+| GitHub event             | Required gate             | Vercel                                                                                                 |
+| ------------------------ | ------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Pull request to `master` | `frontend-ci`             | Git integration Preview of the PR branch                                                               |
 | Merge (push) to `master` | `frontend-ci` on the push | Git integration Preview build of the exact `master` commit (dev env vars); `dev.chipin.one` follows it |
-| Release | none in GitHub | the owner runs **Promote to Production** on a chosen `master` deployment |
+| Release                  | none in GitHub            | the owner runs **Promote to Production** on a chosen `master` deployment                               |
 
 - `master` builds are Preview deployments: the Vercel Production Branch stays
   `main` (Vercel rejects a non-existent branch), and `vercel.json` disables Git

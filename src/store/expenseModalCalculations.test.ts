@@ -8,10 +8,7 @@ import {
     selectUserAmount,
     selectYourShareColor,
 } from './expenseModalSelectors';
-import {
-    type ExpenseParticipant,
-    useExpenseModalStore,
-} from './expenseModalStore';
+import { type ExpenseParticipant, useExpenseModalStore } from './expenseModalStore';
 
 const user = {
     id: 'user-1',
@@ -70,9 +67,7 @@ test('calculates equal, percent, amount, and shares splits', () => {
         yourShareAmount: 50,
     });
 
-    useExpenseModalStore
-        .getState()
-        .setSplitMode(EXPENSE_SPLIT_MODES.PERCENT);
+    useExpenseModalStore.getState().setSplitMode(EXPENSE_SPLIT_MODES.PERCENT);
     useExpenseModalStore.getState().setSplitValue(user.id, '60');
     useExpenseModalStore.getState().setSplitValue(friend.id, '40');
 
@@ -81,9 +76,7 @@ test('calculates equal, percent, amount, and shares splits', () => {
         yourShareAmount: 60,
     });
 
-    useExpenseModalStore
-        .getState()
-        .setSplitMode(EXPENSE_SPLIT_MODES.AMOUNTS);
+    useExpenseModalStore.getState().setSplitMode(EXPENSE_SPLIT_MODES.AMOUNTS);
     useExpenseModalStore.getState().setSplitValue(user.id, '25');
     useExpenseModalStore.getState().setSplitValue(friend.id, '75');
 
@@ -92,9 +85,7 @@ test('calculates equal, percent, amount, and shares splits', () => {
         yourShareAmount: 25,
     });
 
-    useExpenseModalStore
-        .getState()
-        .setSplitMode(EXPENSE_SPLIT_MODES.SHARES);
+    useExpenseModalStore.getState().setSplitMode(EXPENSE_SPLIT_MODES.SHARES);
     useExpenseModalStore.getState().setSplitValue(user.id, '1');
     useExpenseModalStore.getState().setSplitValue(friend.id, '3');
 
@@ -106,19 +97,13 @@ test('calculates equal, percent, amount, and shares splits', () => {
 
 test('builds shares payload from included users only', () => {
     initializeGroup([friend, thirdUser, user]);
-    useExpenseModalStore
-        .getState()
-        .setSplitMode(EXPENSE_SPLIT_MODES.SHARES);
+    useExpenseModalStore.getState().setSplitMode(EXPENSE_SPLIT_MODES.SHARES);
     useExpenseModalStore.getState().setSplitValue(user.id, '1');
     useExpenseModalStore.getState().setSplitValue(friend.id, '2');
     useExpenseModalStore.getState().setSplitValue(thirdUser.id, '9');
-    useExpenseModalStore
-        .getState()
-        .setParticipantIncluded(thirdUser.id, false);
+    useExpenseModalStore.getState().setParticipantIncluded(thirdUser.id, false);
 
-    expect(
-        selectExpensePayload(useExpenseModalStore.getState(), 1),
-    ).toMatchObject({
+    expect(selectExpensePayload(useExpenseModalStore.getState(), 1)).toMatchObject({
         participantIds: [user.id, friend.id],
         sharingMode: {
             type: 'SHARES',
@@ -132,13 +117,9 @@ test('builds shares payload from included users only', () => {
 
 test('returns zero amount for an excluded user', () => {
     initializeGroup([friend, thirdUser, user]);
-    useExpenseModalStore
-        .getState()
-        .setParticipantIncluded(thirdUser.id, false);
+    useExpenseModalStore.getState().setParticipantIncluded(thirdUser.id, false);
 
-    expect(selectUserAmount(useExpenseModalStore.getState(), thirdUser.id)).toBe(
-        0,
-    );
+    expect(selectUserAmount(useExpenseModalStore.getState(), thirdUser.id)).toBe(0);
 });
 
 test('colors your share based on the payer', () => {

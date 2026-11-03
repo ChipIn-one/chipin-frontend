@@ -78,13 +78,16 @@ test('stores dashboard balances as the canonical balance response', () => {
         activity: { items: [], nextCursor: null },
     });
 
-    return useDashboardStore.getState().fetchSetDashboard().then(() => {
-        expect(useDashboardStore.getState()).toMatchObject({
-            balances,
-            activityItems: [],
-            activityNextCursor: null,
+    return useDashboardStore
+        .getState()
+        .fetchSetDashboard()
+        .then(() => {
+            expect(useDashboardStore.getState()).toMatchObject({
+                balances,
+                activityItems: [],
+                activityNextCursor: null,
+            });
         });
-    });
 });
 
 test('tracks a confirmed dashboard snapshot through failed refreshes and resets', async () => {
@@ -111,23 +114,24 @@ test('keeps dashboard success separate from a currency-rates failure', () => {
         balances,
         activity: { items: [], nextCursor: null },
     });
-    vi.mocked(chipinApi.fetchApiCurrencyRates).mockRejectedValue(
-        new Error('Rates unavailable'),
-    );
+    vi.mocked(chipinApi.fetchApiCurrencyRates).mockRejectedValue(new Error('Rates unavailable'));
 
-    return useDashboardStore.getState().fetchSetDashboardData().then(() => {
-        expect(useErrorsStore.getState().errors.dashboard.data).toBeNull();
-        expect(useErrorsStore.getState().errors.dashboard.rates).toEqual(
-            expect.objectContaining({ message: expect.any(String) }),
-        );
-        expect(useLoadingStore.getState().dashboard.data).toBe('fetched');
-        expect(useLoadingStore.getState().dashboard.rates).toBe('fetched');
-        expect(useDashboardStore.getState()).toMatchObject({
-            balances,
-            activityItems: [],
-            activityNextCursor: null,
+    return useDashboardStore
+        .getState()
+        .fetchSetDashboardData()
+        .then(() => {
+            expect(useErrorsStore.getState().errors.dashboard.data).toBeNull();
+            expect(useErrorsStore.getState().errors.dashboard.rates).toEqual(
+                expect.objectContaining({ message: expect.any(String) }),
+            );
+            expect(useLoadingStore.getState().dashboard.data).toBe('fetched');
+            expect(useLoadingStore.getState().dashboard.rates).toBe('fetched');
+            expect(useDashboardStore.getState()).toMatchObject({
+                balances,
+                activityItems: [],
+                activityNextCursor: null,
+            });
         });
-    });
 });
 
 test('preserves confirmed dashboard data when a refresh fails', () => {
@@ -136,12 +140,15 @@ test('preserves confirmed dashboard data when a refresh fails', () => {
     useDashboardStore.setState({ balances: confirmedBalances });
     vi.mocked(chipinApi.fetchApiDashboard).mockRejectedValue(requestError);
 
-    return useDashboardStore.getState().fetchSetDashboard().then(() => {
-        expect(useErrorsStore.getState().errors.dashboard.data).toEqual(
-            expect.objectContaining({ message: expect.any(String) }),
-        );
-        expect(useDashboardStore.getState().balances).toBe(confirmedBalances);
-    });
+    return useDashboardStore
+        .getState()
+        .fetchSetDashboard()
+        .then(() => {
+            expect(useErrorsStore.getState().errors.dashboard.data).toEqual(
+                expect.objectContaining({ message: expect.any(String) }),
+            );
+            expect(useDashboardStore.getState().balances).toBe(confirmedBalances);
+        });
 });
 
 test('preserves the complete confirmed dashboard snapshot when dashboard fails', () => {
@@ -150,26 +157,34 @@ test('preserves the complete confirmed dashboard snapshot when dashboard fails',
     useDashboardStore.setState({ balances });
     vi.mocked(chipinApi.fetchApiDashboard).mockRejectedValue(requestError);
 
-    return useDashboardStore.getState().fetchSetDashboard().then(() => {
-        expect(useErrorsStore.getState().errors.dashboard.data).toEqual(
-            expect.objectContaining({ message: expect.any(String) }),
-        );
-        expect(useDashboardStore.getState().balances).toBe(balances);
-        expect(useDashboardStore.getState().activityItems).toBe(confirmedActivityItems);
-    });
+    return useDashboardStore
+        .getState()
+        .fetchSetDashboard()
+        .then(() => {
+            expect(useErrorsStore.getState().errors.dashboard.data).toEqual(
+                expect.objectContaining({ message: expect.any(String) }),
+            );
+            expect(useDashboardStore.getState().balances).toBe(balances);
+            expect(useDashboardStore.getState().activityItems).toBe(confirmedActivityItems);
+        });
 });
 
 test('does not let an older dashboard response overwrite a forced refresh', () => {
     let oldSignal: AbortSignal | undefined;
-    let resolveOld: ((value: {
-        balances: Record<string, never>;
-        activity: { items: []; nextCursor: null };
-    }) => void) | undefined;
+    let resolveOld:
+        | ((value: {
+              balances: Record<string, never>;
+              activity: { items: []; nextCursor: null };
+          }) => void)
+        | undefined;
     vi.mocked(chipinApi.fetchApiDashboard)
-        .mockImplementationOnce(signal => new Promise(resolve => {
-            oldSignal = signal;
-            resolveOld = resolve;
-        }))
+        .mockImplementationOnce(
+            signal =>
+                new Promise(resolve => {
+                    oldSignal = signal;
+                    resolveOld = resolve;
+                }),
+        )
         .mockResolvedValueOnce({
             balances: { USD: { currency: 'USD', netBalance: 40 } },
             activity: { items: [], nextCursor: null },
@@ -190,9 +205,12 @@ test('does not let an older dashboard response overwrite a forced refresh', () =
 test('ignores a stale dashboard failure after a newer refresh succeeds', () => {
     let rejectOld: ((reason: unknown) => void) | undefined;
     vi.mocked(chipinApi.fetchApiDashboard)
-        .mockImplementationOnce(() => new Promise((_, reject) => {
-            rejectOld = reject;
-        }))
+        .mockImplementationOnce(
+            () =>
+                new Promise((_, reject) => {
+                    rejectOld = reject;
+                }),
+        )
         .mockResolvedValueOnce({
             balances: { USD: { currency: 'USD', netBalance: 40 } },
             activity: { items: [], nextCursor: null },
@@ -327,11 +345,12 @@ test('does not append a page requested before a forced dashboard refresh', () =>
     let pageSignal: AbortSignal | undefined;
     let resolvePage: ((value: { items: []; nextCursor: null }) => void) | undefined;
     useDashboardStore.setState({ activityNextCursor: 40 });
-    vi.mocked(activityApi.fetchActivityPreviews).mockImplementation((_params, signal) =>
-        new Promise(resolve => {
-            pageSignal = signal;
-            resolvePage = resolve;
-        }),
+    vi.mocked(activityApi.fetchActivityPreviews).mockImplementation(
+        (_params, signal) =>
+            new Promise(resolve => {
+                pageSignal = signal;
+                resolvePage = resolve;
+            }),
     );
     vi.mocked(chipinApi.fetchApiDashboard).mockResolvedValue({
         balances: { USD: { currency: 'USD', netBalance: 18 } },

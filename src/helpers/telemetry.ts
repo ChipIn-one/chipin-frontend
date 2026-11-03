@@ -6,10 +6,7 @@ import {
     VERCEL_DOMAIN_SUFFIX,
 } from 'constants/telemetry';
 
-export const resolveTelemetryEnvironment = (
-    buildEnvironment: string,
-    hostname: string,
-): string => {
+export const resolveTelemetryEnvironment = (buildEnvironment: string, hostname: string): string => {
     if (hostname.endsWith(VERCEL_DOMAIN_SUFFIX)) {
         return 'development';
     }
@@ -46,9 +43,7 @@ interface TelemetryEventWithUrl {
     route?: string;
 }
 
-export const sanitizeTelemetryEvent = <T extends TelemetryEventWithUrl>(
-    event: T,
-): T => {
+export const sanitizeTelemetryEvent = <T extends TelemetryEventWithUrl>(event: T): T => {
     return {
         ...event,
         url: sanitizeTelemetryUrl(event.url),

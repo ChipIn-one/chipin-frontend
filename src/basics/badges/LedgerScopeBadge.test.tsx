@@ -23,9 +23,7 @@ test('hides the badge when its page context already identifies the group', () =>
             <Routes>
                 <Route
                     path="/group/:groupId"
-                    element={
-                        <LedgerScopeBadge groupId="group-1" groupName="Vietnam" />
-                    }
+                    element={<LedgerScopeBadge groupId="group-1" groupName="Vietnam" />}
                 />
             </Routes>
         </MemoryRouter>,

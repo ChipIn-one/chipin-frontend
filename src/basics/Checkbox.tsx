@@ -4,18 +4,8 @@ import { Checkbox as RadixCheckbox } from '@radix-ui/themes';
 
 type Props = ComponentProps<typeof RadixCheckbox>;
 
-const Checkbox = ({
-    color = 'grass',
-    size = '2',
-    ...checkboxProps
-}: Props) => {
-    return (
-        <RadixCheckbox
-            {...checkboxProps}
-            color={color}
-            size={size}
-        />
-    );
+const Checkbox = ({ color = 'grass', size = '2', ...checkboxProps }: Props) => {
+    return <RadixCheckbox {...checkboxProps} color={color} size={size} />;
 };
 
 export default Checkbox;

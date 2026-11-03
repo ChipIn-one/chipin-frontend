@@ -9,7 +9,9 @@ import { resources } from './resources';
 
 i18n.use(initReactI18next).init({
     resources,
-    lng: (typeof window !== 'undefined' && getPublicRoute(window.location.pathname)?.locale) || resolveLocale(),
+    lng:
+        (typeof window !== 'undefined' && getPublicRoute(window.location.pathname)?.locale) ||
+        resolveLocale(),
     fallbackLng: DEFAULT_LOCALE,
 
     ns: [

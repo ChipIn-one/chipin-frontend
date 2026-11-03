@@ -90,9 +90,7 @@ describe('authSession', () => {
             throw new Error('storage unavailable');
         });
 
-        expect(() => establishAuthSession('access-token')).toThrow(
-            AuthSessionPersistenceError,
-        );
+        expect(() => establishAuthSession('access-token')).toThrow(AuthSessionPersistenceError);
 
         return getFreshAccessToken().then(accessToken => {
             expect(accessToken).toBeNull();
@@ -137,10 +135,7 @@ describe('authSession', () => {
         markRestorableAuthSession();
         let runLockedRefresh: (() => void) | undefined;
         const lockRequest = vi.fn(
-            (
-                _name: string,
-                callback: () => Promise<string | null>,
-            ): Promise<string | null> =>
+            (_name: string, callback: () => Promise<string | null>): Promise<string | null> =>
                 new Promise<string | null>((resolve, reject) => {
                     runLockedRefresh = () => {
                         callback().then(resolve, reject);
@@ -158,10 +153,7 @@ describe('authSession', () => {
 
         const validation = validateAuthSession();
 
-        expect(lockRequest).toHaveBeenCalledWith(
-            'chipin-auth-refresh',
-            expect.any(Function),
-        );
+        expect(lockRequest).toHaveBeenCalledWith('chipin-auth-refresh', expect.any(Function));
         expect(chipinApi.refreshApiAuthTokens).not.toHaveBeenCalled();
 
         runLockedRefresh?.();
@@ -227,9 +219,7 @@ describe('authSession', () => {
         clearExpiredAuthSession();
         resolveRefresh?.({ token: 'stale-access-token' });
 
-        return expect(validation).rejects.toThrow(
-            'Auth session changed during token rotation',
-        );
+        return expect(validation).rejects.toThrow('Auth session changed during token rotation');
     });
 
     test('does not let an older refresh 401 clear a newer OAuth session', () => {
@@ -355,22 +345,27 @@ describe('authSession', () => {
         expect(second).toBe(first);
         expect(chipinApi.logoutApiAuthTokens).toHaveBeenCalledOnce();
 
-        return validateAuthSession().then(token => {
-            expect(token).toBeNull();
-            finish?.();
-            return Promise.all([first, second]);
-        }).then(() => {
-            expect(chipinApi.refreshApiAuthTokens).not.toHaveBeenCalled();
-        });
+        return validateAuthSession()
+            .then(token => {
+                expect(token).toBeNull();
+                finish?.();
+                return Promise.all([first, second]);
+            })
+            .then(() => {
+                expect(chipinApi.refreshApiAuthTokens).not.toHaveBeenCalled();
+            });
     });
 
     test('broadcasts logout without tokens or refresh persistence details', () => {
         const postMessage = vi.fn();
         const close = vi.fn();
-        vi.stubGlobal('BroadcastChannel', class {
-            postMessage = postMessage;
-            close = close;
-        });
+        vi.stubGlobal(
+            'BroadcastChannel',
+            class {
+                postMessage = postMessage;
+                close = close;
+            },
+        );
         establishAuthSession(createAccessToken(Date.now() / 1000 + 3_600));
         vi.mocked(chipinApi.logoutApiAuthTokens).mockResolvedValue(undefined);
 
@@ -389,12 +384,15 @@ describe('authSession', () => {
         };
         const close = vi.fn();
 
-        vi.stubGlobal('BroadcastChannel', class {
-            set onmessage(callback: ((event: MessageEvent<unknown>) => void) | null) {
-                receiver.onMessage = callback;
-            }
-            close = close;
-        });
+        vi.stubGlobal(
+            'BroadcastChannel',
+            class {
+                set onmessage(callback: ((event: MessageEvent<unknown>) => void) | null) {
+                    receiver.onMessage = callback;
+                }
+                close = close;
+            },
+        );
 
         const onLogout = vi.fn();
         const unsubscribe = subscribeToRemoteAuthLogout(onLogout);
@@ -404,13 +402,14 @@ describe('authSession', () => {
         });
         expect(onLogout).not.toHaveBeenCalled();
 
-        receiver.onMessage?.(new MessageEvent('message', {
-            data: { type: 'logout', source: 'another-tab' },
-        }));
+        receiver.onMessage?.(
+            new MessageEvent('message', {
+                data: { type: 'logout', source: 'another-tab' },
+            }),
+        );
         expect(onLogout).toHaveBeenCalledOnce();
 
         unsubscribe();
         expect(close).toHaveBeenCalledOnce();
     });
-
 });

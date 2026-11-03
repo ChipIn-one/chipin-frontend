@@ -14,13 +14,10 @@ const networkState = vi.hoisted(() => ({
 }));
 
 const hookMocks = vi.hoisted(() => ({
-    copyTextToClipboard: vi.fn(
-        (): Promise<'copied' | 'unsupported'> => Promise.resolve('copied'),
-    ),
+    copyTextToClipboard: vi.fn((): Promise<'copied' | 'unsupported'> => Promise.resolve('copied')),
     detectNativeShare: vi.fn(() => false),
-    shareInvite: vi.fn(
-        (): Promise<'shared' | 'copied' | 'cancelled' | 'unsupported'> =>
-            Promise.resolve('shared'),
+    shareInvite: vi.fn((): Promise<'shared' | 'copied' | 'cancelled' | 'unsupported'> =>
+        Promise.resolve('shared'),
     ),
 }));
 
@@ -111,14 +108,11 @@ test('shows the persistent offline warning only after an online to offline trans
     rerender();
 
     expect(vi.mocked(toast.warning)).toHaveBeenCalledOnce();
-    expect(vi.mocked(toast.warning)).toHaveBeenCalledWith(
-        'toasts:common.disconnect',
-        {
-            description: 'toasts:common.disconnectDescription',
-            duration: Infinity,
-            id: TOASTS_IDS.connectionStatus,
-        },
-    );
+    expect(vi.mocked(toast.warning)).toHaveBeenCalledWith('toasts:common.disconnect', {
+        description: 'toasts:common.disconnectDescription',
+        duration: Infinity,
+        id: TOASTS_IDS.connectionStatus,
+    });
     expect(vi.mocked(toast.success)).not.toHaveBeenCalled();
 });
 
@@ -130,15 +124,12 @@ test('replaces the offline warning after an offline to online transition', () =>
     rerender();
 
     expect(vi.mocked(toast.success)).toHaveBeenCalledOnce();
-    expect(vi.mocked(toast.success)).toHaveBeenCalledWith(
-        'toasts:common.reconnected',
-        {
-            description: null,
-            duration: SECOND * 4,
-            icon: null,
-            id: TOASTS_IDS.connectionStatus,
-        },
-    );
+    expect(vi.mocked(toast.success)).toHaveBeenCalledWith('toasts:common.reconnected', {
+        description: null,
+        duration: SECOND * 4,
+        icon: null,
+        id: TOASTS_IDS.connectionStatus,
+    });
     expect(vi.mocked(toast.dismiss)).not.toHaveBeenCalled();
 });
 
@@ -166,10 +157,7 @@ test('replaces share feedback timer and clears the pending timer on unmount', ()
     return Promise.resolve(act(() => result.current.onShare()))
         .then(() => {
             expect(result.current.isShareDone).toBe(true);
-            expect(setTimeoutSpy).toHaveBeenCalledWith(
-                expect.any(Function),
-                SECOND * 1.5,
-            );
+            expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), SECOND * 1.5);
 
             return Promise.resolve(act(() => result.current.onShare()));
         })
@@ -205,13 +193,9 @@ test('shows copied feedback when native sharing falls back to clipboard', () => 
     hookMocks.shareInvite.mockResolvedValueOnce('copied');
     const { result } = renderHook(() => useGroupInvite(group));
 
-    return Promise.resolve(
-        act(() => result.current.onShare()),
-    ).then(() => {
+    return Promise.resolve(act(() => result.current.onShare())).then(() => {
         expect(result.current.isCopied).toBe(true);
-        expect(vi.mocked(toast.success)).toHaveBeenCalledWith(
-            'toasts:group.inviteLinkCopied',
-        );
+        expect(vi.mocked(toast.success)).toHaveBeenCalledWith('toasts:group.inviteLinkCopied');
     });
 });
 
@@ -223,9 +207,7 @@ test('shows copied feedback after a successful invite link copy', () => {
             expect.stringContaining(group.inviteToken),
         );
         expect(result.current.isCopied).toBe(true);
-        expect(vi.mocked(toast.success)).toHaveBeenCalledWith(
-            'toasts:group.inviteLinkCopied',
-        );
+        expect(vi.mocked(toast.success)).toHaveBeenCalledWith('toasts:group.inviteLinkCopied');
         expect(vi.mocked(toast.error)).not.toHaveBeenCalled();
     });
 });
@@ -236,13 +218,10 @@ test('shows an error and keeps copied feedback off when invite link copy fails',
 
     return Promise.resolve(act(() => result.current.onCopyLink())).then(() => {
         expect(result.current.isCopied).toBe(false);
-        expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
-            'toasts:group.inviteLinkCopyError',
-        );
+        expect(vi.mocked(toast.error)).toHaveBeenCalledWith('toasts:group.inviteLinkCopyError');
         expect(vi.mocked(toast.success)).not.toHaveBeenCalled();
     });
 });
-
 
 test('uses friend-specific share and QR copy', () => {
     const { result } = renderHook(() => useFriendInvite('friend-invite-token'));
@@ -269,9 +248,7 @@ test('builds and copies the personal friend invite link', () => {
         expect(hookMocks.copyTextToClipboard).toHaveBeenCalledWith(
             expect.stringContaining('/friends/join/friend-invite-token'),
         );
-        expect(vi.mocked(toast.success)).toHaveBeenCalledWith(
-            'toasts:friend.inviteLinkCopied',
-        );
+        expect(vi.mocked(toast.success)).toHaveBeenCalledWith('toasts:friend.inviteLinkCopied');
     });
 });
 
@@ -282,10 +259,7 @@ test('clears the pending copy feedback timer on unmount', () => {
 
     return Promise.resolve(act(() => result.current.onCopyLink())).then(() => {
         expect(result.current.isCopied).toBe(true);
-        expect(setTimeoutSpy).toHaveBeenCalledWith(
-            expect.any(Function),
-            SECOND * 1.5,
-        );
+        expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), SECOND * 1.5);
 
         const clearedBeforeUnmount = clearTimeoutSpy.mock.calls.length;
         unmount();

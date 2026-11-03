@@ -29,11 +29,13 @@ const groupActivityPageChannel = createRequestChannel();
 const inaccessibleGroupIds = new Set<string>();
 let groupsMutationGeneration = 0;
 let successfulJoinVersions: Record<string, number> = Object.create(null) as Record<string, number>;
-let activeGroupUpdate: {
-    groupId: string;
-    isCurrent: () => boolean;
-    promise: Promise<Group>;
-} | undefined;
+let activeGroupUpdate:
+    | {
+          groupId: string;
+          isCurrent: () => boolean;
+          promise: Promise<Group>;
+      }
+    | undefined;
 
 const resetGroupActivityPagination = (): void => {
     groupActivityPageChannel.abort();
@@ -51,9 +53,10 @@ const appendUniqueActivityPreviews = (
     const totalItemCount = confirmedItemCount + incomingItems.length;
 
     for (let index = 0; index < totalItemCount; index += 1) {
-        const item = index < confirmedItemCount
-            ? confirmedItems[index]
-            : incomingItems[index - confirmedItemCount];
+        const item =
+            index < confirmedItemCount
+                ? confirmedItems[index]
+                : incomingItems[index - confirmedItemCount];
         const parentId = item.parent.id;
         const existingIndex = parentIndexes.get(parentId);
 
@@ -96,10 +99,7 @@ const createGroupsMutationGuard = () => {
     const authSessionVersion = getAuthSessionVersion();
 
     return () => {
-        return (
-            generation === groupsMutationGeneration &&
-            isAuthSessionCurrent(authSessionVersion)
-        );
+        return generation === groupsMutationGeneration && isAuthSessionCurrent(authSessionVersion);
     };
 };
 
@@ -192,9 +192,11 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     return get().groups;
                 }
 
-                let groups = uniqueGroups(response.items.filter(group =>
-                    !inaccessibleGroupIds.has(group.id) || deniedAtStart.has(group.id),
-                ));
+                let groups = uniqueGroups(
+                    response.items.filter(
+                        group => !inaccessibleGroupIds.has(group.id) || deniedAtStart.has(group.id),
+                    ),
+                );
 
                 for (const group of groups) {
                     inaccessibleGroupIds.delete(group.id);
@@ -237,9 +239,10 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             set({ selectedGroup: null });
         }
 
-        const cachedGroup = selectedGroup?.id === groupId
-            ? selectedGroup
-            : groups.find(group => group.id === groupId);
+        const cachedGroup =
+            selectedGroup?.id === groupId
+                ? selectedGroup
+                : groups.find(group => group.id === groupId);
 
         if (cachedGroup && !force) {
             set({ selectedGroup: cachedGroup });
@@ -280,9 +283,8 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                         }
                         set(state => ({
                             groups: state.groups.filter(group => group.id !== groupId),
-                            selectedGroup: state.selectedGroup?.id === groupId
-                                ? null
-                                : state.selectedGroup,
+                            selectedGroup:
+                                state.selectedGroup?.id === groupId ? null : state.selectedGroup,
                         }));
                     }
                 }
@@ -301,7 +303,12 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         const { setLoading, group } = useLoadingStore.getState();
         const { clearError, setError } = useErrorsStore.getState();
 
-        if (!groupId || nextCursor === null || nextCursor === undefined || group.nextPage === 'loading') {
+        if (
+            !groupId ||
+            nextCursor === null ||
+            nextCursor === undefined ||
+            group.nextPage === 'loading'
+        ) {
             return Promise.resolve();
         }
 
@@ -309,14 +316,15 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         setLoading('group', 'nextPage', 'loading');
 
         const request = groupActivityPageChannel.request(
-            signal => activityApi.fetchGroupActivityPreviews(
-                {
-                    groupId,
-                    limit: ACTIVITY_API_LIMIT,
-                    cursor: nextCursor,
-                },
-                signal,
-            ),
+            signal =>
+                activityApi.fetchGroupActivityPreviews(
+                    {
+                        groupId,
+                        limit: ACTIVITY_API_LIMIT,
+                        cursor: nextCursor,
+                    },
+                    signal,
+                ),
             { identity: `${groupId}:${nextCursor}` },
         );
 
@@ -437,14 +445,16 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     return updatedGroup;
                 }
 
-                return get().fetchSetGroups(true).then(() => {
-                    if (isCurrent()) {
-                        set(state => ({
-                            groups: uniqueGroups(state.groups, updatedGroup),
-                        }));
-                    }
-                    return updatedGroup;
-                });
+                return get()
+                    .fetchSetGroups(true)
+                    .then(() => {
+                        if (isCurrent()) {
+                            set(state => ({
+                                groups: uniqueGroups(state.groups, updatedGroup),
+                            }));
+                        }
+                        return updatedGroup;
+                    });
             })
             .catch((error: unknown) => {
                 if (isCurrent()) {
@@ -498,14 +508,16 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     return updatedGroup;
                 }
 
-                return get().fetchSetGroups(true).then(() => {
-                    if (isCurrent()) {
-                        set(state => ({
-                            groups: uniqueGroups(state.groups, updatedGroup),
-                        }));
-                    }
-                    return updatedGroup;
-                });
+                return get()
+                    .fetchSetGroups(true)
+                    .then(() => {
+                        if (isCurrent()) {
+                            set(state => ({
+                                groups: uniqueGroups(state.groups, updatedGroup),
+                            }));
+                        }
+                        return updatedGroup;
+                    });
             })
             .catch((error: unknown) => {
                 if (isCurrent()) {
@@ -636,14 +648,16 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     selectedGroup: joinedGroup,
                 }));
 
-                return get().fetchSetGroups(true).then(() => {
-                    if (isCurrent()) {
-                        set(state => ({
-                            groups: uniqueGroups(state.groups, joinedGroup),
-                        }));
-                    }
-                    return joinedGroup;
-                });
+                return get()
+                    .fetchSetGroups(true)
+                    .then(() => {
+                        if (isCurrent()) {
+                            set(state => ({
+                                groups: uniqueGroups(state.groups, joinedGroup),
+                            }));
+                        }
+                        return joinedGroup;
+                    });
             })
             .catch((error: unknown) => {
                 if (isCurrent()) {

@@ -29,9 +29,7 @@ const createAccessToken = (subject: string): string => {
     )}.signature`;
 };
 
-const getAuthorizationHeader = (
-    config: ApiRequestConfig,
-): string | undefined => {
+const getAuthorizationHeader = (config: ApiRequestConfig): string | undefined => {
     const authorizationHeader = config.headers.Authorization;
 
     return typeof authorizationHeader === 'string' ? authorizationHeader : undefined;
@@ -49,10 +47,7 @@ const unauthorizedResponse = (config: ApiRequestConfig) => ({
     },
 });
 
-const successResponse = (
-    config: ApiRequestConfig,
-    data: unknown = { ok: true },
-) => ({
+const successResponse = (config: ApiRequestConfig, data: unknown = { ok: true }) => ({
     config,
     data,
     headers: {},
@@ -90,7 +85,8 @@ test('deduplicates pending and delayed 401 refreshes without blocking the next r
         second: [],
         third: [],
     };
-    const rejectUnauthorizedRequests: Partial<Record<'first' | 'second' | 'third', () => void>> = {};
+    const rejectUnauthorizedRequests: Partial<Record<'first' | 'second' | 'third', () => void>> =
+        {};
     let originalRequestsStarted = 0;
     let refreshCalls = 0;
     let markOriginalRequestsStarted: (() => void) | undefined;
@@ -137,10 +133,7 @@ test('deduplicates pending and delayed 401 refreshes without blocking the next r
             authorizationHeaders[requestName].push(authorizationHeader);
         }
 
-        if (
-            requestName !== 'current' &&
-            authorizationHeader === `Bearer ${accessTokenT0}`
-        ) {
+        if (requestName !== 'current' && authorizationHeader === `Bearer ${accessTokenT0}`) {
             originalRequestsStarted += 1;
 
             if (originalRequestsStarted === 3) {
@@ -154,10 +147,7 @@ test('deduplicates pending and delayed 401 refreshes without blocking the next r
             });
         }
 
-        if (
-            requestName === 'current' &&
-            authorizationHeader === `Bearer ${accessTokenT1}`
-        ) {
+        if (requestName === 'current' && authorizationHeader === `Bearer ${accessTokenT1}`) {
             return Promise.reject(unauthorizedResponse(config));
         }
 
@@ -212,7 +202,6 @@ test('deduplicates pending and delayed 401 refreshes without blocking the next r
             expect(onUnauthorizedSession).not.toHaveBeenCalled();
         });
 });
-
 
 test('preserves a rotated session after a delayed retried request is rejected', () => {
     const accessTokenT0 = createAccessToken('stale-t0');
@@ -357,9 +346,7 @@ test('does not refresh or retry an old 401 after a new auth session is establish
         .then(() => apiInstance.get('/dashboard?request=new'))
         .then(() => {
             expect(refreshCalls).toBe(0);
-            expect(newSessionAuthorizationHeaders).toEqual([
-                `Bearer ${newAccessToken}`,
-            ]);
+            expect(newSessionAuthorizationHeaders).toEqual([`Bearer ${newAccessToken}`]);
             expect(onUnauthorizedSession).not.toHaveBeenCalled();
         });
 });

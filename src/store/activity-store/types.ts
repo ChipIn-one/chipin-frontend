@@ -54,17 +54,13 @@ interface ActivityStoreState {
 
 interface ActivityStoreActions {
     createExpense: (params: CreateExpenseParams) => Promise<void>;
-    prepareExpenseEdit: (
-        params: PrepareExpenseEditParams,
-    ) => ExpenseModalEditInitialization | null;
+    prepareExpenseEdit: (params: PrepareExpenseEditParams) => ExpenseModalEditInitialization | null;
     updateExpense: (params: UpdateExpenseParams) => Promise<void>;
     createSettlement: (params: CreateSettlementActionParams) => Promise<void>;
     reverseLedgerEntry: (params: ReverseLedgerEntryParams) => Promise<void>;
     fetchSetActivity: (force?: boolean) => Promise<void>;
     fetchMoreActivity: () => Promise<void>;
-    fetchSetActivitySubevents: (
-        params: FetchActivitySubeventsParams,
-    ) => Promise<void>;
+    fetchSetActivitySubevents: (params: FetchActivitySubeventsParams) => Promise<void>;
     fetchMoreActivitySubevents: () => Promise<void>;
     resetActivitySubevents: () => void;
     resetActivity: () => void;

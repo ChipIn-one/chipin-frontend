@@ -1,17 +1,9 @@
 import { beforeEach, expect, test } from 'vitest';
 
-import {
-    LS_KEY_AUTH_SESSION_HINT,
-    LS_KEY_LOCALE,
-    LS_KEY_USER,
-} from 'constants/localstorage';
+import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_LOCALE, LS_KEY_USER } from 'constants/localstorage';
 
 import { LocalStorage } from './localStorage';
-import {
-    resolveBrowserLocale,
-    resolveLocale,
-    saveLocalePreference,
-} from './locale';
+import { resolveBrowserLocale, resolveLocale, saveLocalePreference } from './locale';
 
 beforeEach(() => {
     LocalStorage.remove(LS_KEY_AUTH_SESSION_HINT);

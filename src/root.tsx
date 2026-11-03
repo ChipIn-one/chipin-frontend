@@ -27,27 +27,33 @@ initializeApi();
 
 const rootElement = document.getElementById('root')!;
 const publicBuildYear = Number(rootElement.dataset.publicBuildYear);
-const prerenderedRoute = rootElement.dataset.publicSsg === 'true'
-    ? getPublicRoute(window.location.pathname)
-    : null;
+const prerenderedRoute =
+    rootElement.dataset.publicSsg === 'true' ? getPublicRoute(window.location.pathname) : null;
 
 if (prerenderedRoute) {
     // Hydration preserves static, indexable React markup from the build.
     import('public-routes')
-        .then(({ PublicApp }) => i18n.changeLanguage(prerenderedRoute.locale)
-            .then(() => hydrateRoot(
-                rootElement,
-                <GlobalErrorBoundary>
-                    <PublicBuildYearContext.Provider
-                        value={Number.isInteger(publicBuildYear) && publicBuildYear > 2000 ? publicBuildYear : null}
-                    >
-                        <PublicApp route={prerenderedRoute} i18nInstance={i18n} />
-                    </PublicBuildYearContext.Provider>
-                    <PublicTelemetry />
-                    {/* Public SSG entry must register the same service worker as the SPA. */}
-                    <PWABadge />
-                </GlobalErrorBoundary>,
-            )))
+        .then(({ PublicApp }) =>
+            i18n.changeLanguage(prerenderedRoute.locale).then(() =>
+                hydrateRoot(
+                    rootElement,
+                    <GlobalErrorBoundary>
+                        <PublicBuildYearContext.Provider
+                            value={
+                                Number.isInteger(publicBuildYear) && publicBuildYear > 2000
+                                    ? publicBuildYear
+                                    : null
+                            }
+                        >
+                            <PublicApp route={prerenderedRoute} i18nInstance={i18n} />
+                        </PublicBuildYearContext.Provider>
+                        <PublicTelemetry />
+                        {/* Public SSG entry must register the same service worker as the SPA. */}
+                        <PWABadge />
+                    </GlobalErrorBoundary>,
+                ),
+            ),
+        )
         .catch(error => Sentry.captureException(error));
 } else {
     import('main')

@@ -8,9 +8,7 @@ export class InvalidLogoutOtherDevicesResponseError extends Error {
     }
 }
 
-const isLogoutOtherDevicesResponse = (
-    value: unknown,
-): value is ApiLogoutOtherDevicesResponse => {
+const isLogoutOtherDevicesResponse = (value: unknown): value is ApiLogoutOtherDevicesResponse => {
     if (!value || typeof value !== 'object') {
         return false;
     }

@@ -17,12 +17,9 @@ test.each([
     ['/dashboard/group', '/dashboard', true],
     ['/activity/activity-1', '/activity', true],
     ['/friends', '/activity', false],
-] as const)(
-    'resolves navigation route activity for %s against %s',
-    (pathname, href, expected) => {
-        expect(isNavigationRouteActive(pathname, href)).toBe(expected);
-    },
-);
+] as const)('resolves navigation route activity for %s against %s', (pathname, href, expected) => {
+    expect(isNavigationRouteActive(pathname, href)).toBe(expected);
+});
 
 test.each([
     ['/dashboard', true],

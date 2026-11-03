@@ -5,10 +5,7 @@ import { ROUTE_META, ROUTES } from 'constants/routes';
 const getPreferredModeRoute = (isSoloModeByDefault: boolean): string =>
     isSoloModeByDefault ? ROUTES.SOLO : ROUTES.DASHBOARD;
 
-const isNavigationRouteActive = (
-    pathname: string,
-    href: string,
-): boolean =>
+const isNavigationRouteActive = (pathname: string, href: string): boolean =>
     pathname === href || pathname.startsWith(`${href}/`);
 
 const getHasDesktopSidebar = (pathname: string): boolean => {
@@ -28,16 +25,13 @@ const getHasDesktopSidebar = (pathname: string): boolean => {
 
     return Boolean(
         matchPath({ path: `${ROUTES.GROUP}/:groupId`, end: true }, pathname) &&
-            !matchPath({ path: `${ROUTES.GROUP_JOIN}/:inviteToken`, end: true }, pathname),
+        !matchPath({ path: `${ROUTES.GROUP_JOIN}/:inviteToken`, end: true }, pathname),
     );
 };
 
 const getBreadcrumbParentPath = (pathname: string): string | null => {
     for (const routeMeta of ROUTE_META) {
-        if (
-            routeMeta.breadcrumb &&
-            matchPath({ path: routeMeta.path, end: true }, pathname)
-        ) {
+        if (routeMeta.breadcrumb && matchPath({ path: routeMeta.path, end: true }, pathname)) {
             return routeMeta.breadcrumb.parentPath;
         }
     }

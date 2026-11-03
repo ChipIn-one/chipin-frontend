@@ -24,8 +24,9 @@ test('leaves the version unchanged for none impact', () => {
 });
 
 test('rejects an automatic major bump during the pre-1.0 period', () => {
-    expect(() => bumpVersion('0.9.9', 'major'))
-        .toThrow('1.0.0 requires an explicit release decision');
+    expect(() => bumpVersion('0.9.9', 'major')).toThrow(
+        '1.0.0 requires an explicit release decision',
+    );
 });
 
 test('bumps a normal major version', () => {
@@ -44,11 +45,14 @@ test('updates package and lockfile versions together', () => {
     const lockfilePath = join(directory, 'package-lock.json');
 
     writeFileSync(packagePath, JSON.stringify({ name: 'chipin-frontend', version: '0.9.0' }));
-    writeFileSync(lockfilePath, JSON.stringify({
-        name: 'chipin-frontend',
-        version: '0.9.0',
-        packages: { '': { name: 'chipin-frontend', version: '0.9.0' } },
-    }));
+    writeFileSync(
+        lockfilePath,
+        JSON.stringify({
+            name: 'chipin-frontend',
+            version: '0.9.0',
+            packages: { '': { name: 'chipin-frontend', version: '0.9.0' } },
+        }),
+    );
 
     try {
         updateManifestVersions('0.9.1', { packagePath, lockfilePath });
@@ -79,20 +83,24 @@ test('preserves package.json formatting and unrelated content', () => {
 `;
 
     writeFileSync(packagePath, packageSource);
-    writeFileSync(lockfilePath, JSON.stringify({
-        name: 'chipin-frontend',
-        version: '0.9.0',
-        packages: { '': { name: 'chipin-frontend', version: '0.9.0' } },
-    }, null, 2) + '\n');
+    writeFileSync(
+        lockfilePath,
+        JSON.stringify(
+            {
+                name: 'chipin-frontend',
+                version: '0.9.0',
+                packages: { '': { name: 'chipin-frontend', version: '0.9.0' } },
+            },
+            null,
+            2,
+        ) + '\n',
+    );
 
     try {
         updateManifestVersions('0.9.1', { packagePath, lockfilePath });
 
         expect(readFileSync(packagePath, 'utf8')).toBe(
-            packageSource.replace(
-                '"version": "0.9.0"',
-                '"version": "0.9.1"',
-            ),
+            packageSource.replace('"version": "0.9.0"', '"version": "0.9.1"'),
         );
 
         const updatedLockfile = JSON.parse(readFileSync(lockfilePath, 'utf8'));

@@ -9,7 +9,9 @@ import { resources } from 'i18n/resources';
 
 import { PublicApp } from './PublicApp';
 
-const renderPublicRoute = (route: PublicRoute): { html: string; styles: string; buildYear: number } => {
+const renderPublicRoute = (
+    route: PublicRoute,
+): { html: string; styles: string; buildYear: number } => {
     const buildYear = new Date().getFullYear();
     const i18n = createInstance();
     i18n.init({

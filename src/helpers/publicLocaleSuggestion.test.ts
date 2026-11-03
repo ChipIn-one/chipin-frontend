@@ -33,7 +33,9 @@ test('a storage quota write failure still suppresses repeated suggestions', () =
         getItem: () => null,
         key: () => null,
         removeItem: () => undefined,
-        setItem: () => { throw new DOMException('Full', 'QuotaExceededError'); },
+        setItem: () => {
+            throw new DOMException('Full', 'QuotaExceededError');
+        },
     };
     const storage = vi.spyOn(window, 'sessionStorage', 'get').mockReturnValue(quotaStorage);
     try {
@@ -49,14 +51,16 @@ test('unavailable sessionStorage does not break manual language switching', () =
     const inaccessibleStorage: Storage = {
         length: 0,
         clear: () => undefined,
-        getItem: () => { throw new DOMException('Blocked', 'SecurityError'); },
+        getItem: () => {
+            throw new DOMException('Blocked', 'SecurityError');
+        },
         key: () => null,
         removeItem: () => undefined,
-        setItem: () => { throw new DOMException('Blocked', 'SecurityError'); },
+        setItem: () => {
+            throw new DOMException('Blocked', 'SecurityError');
+        },
     };
-    const storage = vi.spyOn(window, 'sessionStorage', 'get').mockReturnValue(
-        inaccessibleStorage,
-    );
+    const storage = vi.spyOn(window, 'sessionStorage', 'get').mockReturnValue(inaccessibleStorage);
     try {
         expect(() => isPublicLocaleSuggestionSuppressed()).not.toThrow();
         expect(() => suppressPublicLocaleSuggestion()).not.toThrow();

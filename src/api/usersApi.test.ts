@@ -110,7 +110,6 @@ describe('usersApi', () => {
         });
     });
 
-
     test('accepts a personal invite token and returns the invited user', () => {
         const friend = {
             id: 'friend-1',
@@ -122,9 +121,7 @@ describe('usersApi', () => {
         vi.mocked(apiInstance.post).mockResolvedValue({ data: friend });
 
         return acceptKnownUserInvite({ inviteToken: 'friend-token' }).then(result => {
-            expect(apiInstance.post).toHaveBeenCalledWith(
-                '/users/invite/friend-token',
-            );
+            expect(apiInstance.post).toHaveBeenCalledWith('/users/invite/friend-token');
             expect(result).toEqual(friend);
         });
     });
@@ -143,9 +140,7 @@ describe('usersApi', () => {
                 return removeKnownUser({ userId: 'friend-1' });
             })
             .then(() => {
-                expect(apiInstance.delete).toHaveBeenCalledWith(
-                    '/users/known-users/friend-1',
-                );
+                expect(apiInstance.delete).toHaveBeenCalledWith('/users/known-users/friend-1');
             });
     });
 });
@@ -155,7 +150,8 @@ describe('usersApi path segment guard', () => {
         ['acceptKnownUserInvite', () => acceptKnownUserInvite({ inviteToken: 'a/b' })],
         ['removeKnownUser', () => removeKnownUser({ userId: 'a/b' })],
     ])('%s rejects a "/" in a path parameter without calling the API', (_name, onCall) => {
-        return expect(onCall()).rejects.toBeInstanceOf(InvalidPathSegmentError)
+        return expect(onCall())
+            .rejects.toBeInstanceOf(InvalidPathSegmentError)
             .then(() => {
                 expect(apiInstance.delete).not.toHaveBeenCalled();
                 expect(apiInstance.post).not.toHaveBeenCalled();

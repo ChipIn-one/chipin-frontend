@@ -1,10 +1,6 @@
 import type { AppEvent } from 'api/activity.types';
 import type { ActivityFeedItem } from 'api/chipin.types';
-import {
-    ACTIVITY_ACTIONS,
-    ACTIVITY_CATEGORIES,
-    type ActivityCategory,
-} from 'constants/activity';
+import { ACTIVITY_ACTIONS, ACTIVITY_CATEGORIES, type ActivityCategory } from 'constants/activity';
 
 export interface ActivitySubeventsView {
     originalEvent: AppEvent;

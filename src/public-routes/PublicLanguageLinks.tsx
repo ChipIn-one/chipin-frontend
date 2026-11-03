@@ -57,21 +57,19 @@ const PublicLanguageLinks = ({ route }: { route: PublicRoute }) => {
                 {t('common:fields.interfaceLanguage')}
             </LanguageTrigger>
             <LanguageOptions aria-label={t('common:fields.interfaceLanguage')}>
-                {PUBLIC_ROUTE_ENTRIES
-                    .filter(item => item.page === route.page)
-                    .map(item => (
-                        <Link
-                            href={getPublicPath(item.page, item.locale)}
-                            onClick={suppressPublicLocaleSuggestion}
-                            key={item.locale}
-                            lang={item.locale}
-                            size="2"
-                            underline={item.locale === route.locale ? 'always' : 'hover'}
-                            aria-current={item.locale === route.locale ? 'page' : undefined}
-                        >
-                            {t(`language.options.${item.locale}`)}
-                        </Link>
-                    ))}
+                {PUBLIC_ROUTE_ENTRIES.filter(item => item.page === route.page).map(item => (
+                    <Link
+                        href={getPublicPath(item.page, item.locale)}
+                        onClick={suppressPublicLocaleSuggestion}
+                        key={item.locale}
+                        lang={item.locale}
+                        size="2"
+                        underline={item.locale === route.locale ? 'always' : 'hover'}
+                        aria-current={item.locale === route.locale ? 'page' : undefined}
+                    >
+                        {t(`language.options.${item.locale}`)}
+                    </Link>
+                ))}
             </LanguageOptions>
         </LanguageMenu>
     );

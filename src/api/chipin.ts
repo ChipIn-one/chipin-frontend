@@ -40,15 +40,10 @@ export const exchangeApiGoogleOAuthCode = (code: string): Promise<ApiOAuthTokenP
 };
 
 export const fetchApiUserGroups = (signal?: AbortSignal): Promise<ApiGroupsResponse> => {
-    return apiInstance
-        .get<ApiGroupsResponse>('/groups', { signal })
-        .then(result => result.data);
+    return apiInstance.get<ApiGroupsResponse>('/groups', { signal }).then(result => result.data);
 };
 
-export const fetchApiUserGroupById = (
-    groupId: string,
-    signal?: AbortSignal,
-): Promise<Group> => {
+export const fetchApiUserGroupById = (groupId: string, signal?: AbortSignal): Promise<Group> => {
     return Promise.resolve()
         .then(() => apiInstance.get<Group>(apiPath`/groups/${groupId}`, { signal }))
         .then(result => result.data);
@@ -74,9 +69,11 @@ export const removeApiGroup = ({ groupId }: RemoveGroupParams): Promise<void> =>
 
 export const leaveApiGroup = ({ groupId, newOwnerId }: LeaveGroupParams): Promise<void> => {
     return Promise.resolve()
-        .then(() => apiInstance.post<void>(apiPath`/groups/${groupId}/leave`, {
-            ...(newOwnerId && { newOwnerId }),
-        }))
+        .then(() =>
+            apiInstance.post<void>(apiPath`/groups/${groupId}/leave`, {
+                ...(newOwnerId && { newOwnerId }),
+            }),
+        )
         .then(() => undefined);
 };
 
@@ -93,14 +90,10 @@ export const inviteApiUserToGroup = ({ inviteToken }: InviteToGroupParams): Prom
 };
 
 export const fetchApiDashboard = (signal?: AbortSignal): Promise<Dashboard> => {
-    return apiInstance
-        .get<Dashboard>('/dashboard', { signal })
-        .then(result => result.data);
+    return apiInstance.get<Dashboard>('/dashboard', { signal }).then(result => result.data);
 };
 
-export const fetchApiCurrencyRates = (
-    signal?: AbortSignal,
-): Promise<ApiCurrencyRatesResponse> => {
+export const fetchApiCurrencyRates = (signal?: AbortSignal): Promise<ApiCurrencyRatesResponse> => {
     return apiInstance
         .get<ApiCurrencyRatesResponse>('/currency-rates', {
             params: {

@@ -70,9 +70,7 @@ interface LogoutMessage {
 }
 
 const isLogoutMessage = (value: unknown): value is LogoutMessage => {
-    return isRecord(value) &&
-        value.type === AUTH_LOGOUT_EVENT &&
-        typeof value.source === 'string';
+    return isRecord(value) && value.type === AUTH_LOGOUT_EVENT && typeof value.source === 'string';
 };
 
 export const subscribeToRemoteAuthLogout = (onLogout: () => void): (() => void) => {
@@ -101,7 +99,10 @@ const broadcastAuthLogout = (): void => {
 
     try {
         const channel = new BroadcastChannel(AUTH_LOGOUT_CHANNEL);
-        channel.postMessage({ type: AUTH_LOGOUT_EVENT, source: sourceTabId } satisfies LogoutMessage);
+        channel.postMessage({
+            type: AUTH_LOGOUT_EVENT,
+            source: sourceTabId,
+        } satisfies LogoutMessage);
         channel.close();
     } catch {
         // Local invalidation must work without BroadcastChannel.
@@ -181,10 +182,7 @@ const isAuthSessionRequest = (url?: string): boolean => {
 };
 
 interface AuthRefreshLockManager {
-    request: (
-        name: string,
-        callback: () => Promise<string | null>,
-    ) => Promise<string | null>;
+    request: (name: string, callback: () => Promise<string | null>) => Promise<string | null>;
 }
 
 const getAuthRefreshLockManager = (): AuthRefreshLockManager | null => {
@@ -205,9 +203,7 @@ const getAuthRefreshLockManager = (): AuthRefreshLockManager | null => {
     return locks as AuthRefreshLockManager;
 };
 
-const withAuthRefreshLock = (
-    callback: () => Promise<string | null>,
-): Promise<string | null> => {
+const withAuthRefreshLock = (callback: () => Promise<string | null>): Promise<string | null> => {
     const lockManager = getAuthRefreshLockManager();
 
     if (!lockManager) {
@@ -287,9 +283,7 @@ export const getFreshAccessToken = (): Promise<string | null> => {
     return Promise.resolve(accessToken);
 };
 
-export const prepareAuthRequest = (
-    url?: string,
-): Promise<string | null | undefined> => {
+export const prepareAuthRequest = (url?: string): Promise<string | null | undefined> => {
     if (isAuthSessionRequest(url)) {
         return Promise.resolve(undefined);
     }
