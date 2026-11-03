@@ -1,119 +1,119 @@
-# Спека 03 — Data layer: TanStack Query, offline-outbox, money, OpenAPI-типы
+# Spec 03 — Data layer: TanStack Query, offline outbox, money, OpenAPI types
 
-Реализует решения D2, D3, D4, D5, D21 (заменяет D10), D19 (в части outbox) (и D12 в части сторов) из `specs/DECISIONS.md`.
-Пути ниже даны относительно `src/` текущего репозитория `chipin-frontend`; после монорепо-переезда (D7)
-префикс становится `apps/app/src/`. Целевые папки `shared/`, `entities/`, `features/` — из
+Implements decisions D2, D3, D4, D5, D21 (replaces D10), D19 (the outbox part) (and D12 for the stores part) from `specs/DECISIONS.md`.
+Paths below are relative to `src/` of the current `chipin-frontend` repository; after the monorepo move (D7)
+the prefix becomes `apps/app/src/`. The target folders `shared/`, `entities/`, `features/` come from
 `01-architecture.md` §8.
 
-Идентификаторы PR — `03-<n>`, backend-issue — `BE-03-<n>` (глобальная схема, `00-overview.md`).
+PR identifiers are `03-<n>`, backend issues are `BE-03-<n>` (global scheme, `00-overview.md`).
 
-D10 withdrawn → D21: backend — источник истины, на проводе **навсегда** JSON-число scale 4 (строк на проводе нет,
-backend-issue на строки не создаётся). Граница провода — два слоя, у каждого одна задача (ревизия C1-03/C1-11/C2-06/C3-14):
-- **транспорт** `shared/api/wireJson.ts` (только в обёртке `api()`): тело ответа разбирается из **текста** без double
-  (`lossless-json` + реестр полей §4.3); денежное поле становится opaque `WireAmount`, исходящее тело пишется тем же
-  модулем decimal-литералом. Транспорт суммы не интерпретирует и не конвертирует в `Money`;
-- **конверсия** `WireAmount` ↔ `Money` — **только** в мапперах `entities/*/model/toX()` / `toXWire()`
+D10 withdrawn → D21: the backend is the source of truth, and the wire carries a JSON number of scale 4 **forever** (there are no strings on the wire,
+and no backend issue for strings is created). The wire boundary has two layers, each with one job (revision C1-03/C1-11/C2-06/C3-14):
+- **transport** `shared/api/wireJson.ts` (only inside the `api()` wrapper): the response body is parsed from **text** without
+  double (`lossless-json` + the field registry §4.3); a money field becomes an opaque `WireAmount`, and the outgoing body is written by the same
+  module as a decimal literal. The transport does not interpret amounts and does not convert them to `Money`;
+- **conversion** `WireAmount` ↔ `Money` — **only** in the mappers `entities/*/model/toX()` / `toXWire()`
   (`moneyFromWire`/`moneyToWire`, lint §4.3).
-Это толкование D21 «at the API boundary (generated types + wrapper)»: обёртка = lossless-транспорт, конверсия = мапперы;
-вынесено в подтверждения владельца в 00 (вместе с отклонениями D3 `networkMode: 'always'` §2.1 и D4 buster вместо zod
-для кэша §1.4). Домен — `Money { minor: bigint /* scale 4 */, currency }`, арифметики на float нет. Уточнения: (1) «integer
-units» D21 — ledger units scale 4, как backend (`ShareDistribution.kt`); минорные единицы валюты — только для
-отображения/ввода. (2) Модуль `money/` размещается как `src/shared/money/`. (3) D5 `version`/409 —
-backend этого пока не имеет; офлайн-запись включается флагом только после BE-03-1/BE-03-2 (PR 03-17) **и** при
-наличии runtime-capabilities от backend (§2.7).
+This is the interpretation of D21 "at the API boundary (generated types + wrapper)": wrapper = lossless transport, conversion = mappers;
+it is listed among the owner confirmations in 00 (together with the deviations from D3 `networkMode: 'always'` §2.1 and D4 buster instead of zod
+for the cache §1.4). The domain is `Money { minor: bigint /* scale 4 */, currency }`, there is no float arithmetic. Clarifications: (1) the "integer
+units" of D21 are ledger units of scale 4, like the backend (`ShareDistribution.kt`); currency minor units are only for
+display/input. (2) The `money/` module lives at `src/shared/money/`. (3) D5 `version`/409 —
+the backend does not have this yet; offline writing is enabled by a flag only after BE-03-1/BE-03-2 (PR 03-17) **and** when
+the backend runtime capabilities are present (§2.7).
 
-Ревизия 2026-10-28 по review B (`review-B-data.md`): B1–B3, M1–M14, m1–m11 — см. колонку Resolution там.
-Ревизия 2026-10-28 по review C1/C2/C3 (`review-C1.md`, `-C2.md`, `-C3.md`, колонка Resolution): деньги без double
-(§4.1, доказательство Node-sweep), outbox — guard restore, отмена, `seq`, фенсинг лидера, привязка к аккаунту (§2),
-таблица «причина выхода → что удаляется» (§1.5), settlement только онлайн (§2.9), точный контракт backend (§7),
-разбиение PR: 03-4a/b, 03-7a/b, 03-15a/b/c, 03-16a/b.
+Revision 2026-10-28 per review B (`review-B-data.md`): B1–B3, M1–M14, m1–m11 — see the Resolution column there.
+Revision 2026-10-28 per review C1/C2/C3 (`review-C1.md`, `-C2.md`, `-C3.md`, Resolution column): money without double
+(§4.1, Node-sweep proof), outbox — restore guard, cancellation, `seq`, leader fencing, account binding (§2),
+the "exit reason → what is deleted" table (§1.5), settlement online only (§2.9), the exact backend contract (§7),
+PR split: 03-4a/b, 03-7a/b, 03-15a/b/c, 03-16a/b.
 
-Зависимости от других спек:
-- спека 01 (хотфикс D1: дедуп `roundMoney`, знак нулевого баланса — PR 01-3) смержена до PR 03-1;
-- спека 04 (D6: data router, loaders, guards) использует `queryOptions` из этой спеки; loaders с prefetch
-  (PR 04-2e) появляются только после PR 03-5; экран «Нужно обновить» и SW — PR 04-2d;
-- спека 01 (PR 01-1 `clearLocalUserRole`, D16 «role из localStorage») — в PR 03-7b поглощается
-  функцией `clearUserData()` из этой спеки (сохраняет только `settings`, как требует 01-1);
-- спека 02: удаление `dexie` — PR 02-B1; запрет новых `useConnect.ts` — PR 02-C12; хелпер
-  `restrictedSyntax()`/`restrictedImports()` и `config/eslint/project.js` — PR 02-C4.
-- Монорепо (04-0): 03-1…03-4b можно делать до или после 04-0; 03-5 и далее — рекомендуемо после 04-0
-  (новые папки `src/app`, `src/shared`, `src/entities` сразу создаются в `apps/app/src/`).
-- Эта спека **единственный владелец** удаления `useConnect` (D12) — в PR миграции своего стора, остатки в 03-18.
-  Ленивая загрузка локалей (04-2c), регистрация SW (04-2d), vendor-regex (02-B1) — не здесь.
+Dependencies on other specs:
+- spec 01 (hotfix D1: dedupe `roundMoney`, sign of zero balance — PR 01-3) is merged before PR 03-1;
+- spec 04 (D6: data router, loaders, guards) uses `queryOptions` from this spec; loaders with prefetch
+  (PR 04-2e) appear only after PR 03-5; the "Update required" screen and the SW are PR 04-2d;
+- spec 01 (PR 01-1 `clearLocalUserRole`, D16 "role from localStorage") — in PR 03-7b it is absorbed by the
+  `clearUserData()` function from this spec (it keeps only `settings`, as 01-1 requires);
+- spec 02: removal of `dexie` — PR 02-B1; ban on new `useConnect.ts` — PR 02-C12; the helper
+  `restrictedSyntax()`/`restrictedImports()` and `config/eslint/project.js` — PR 02-C4.
+- Monorepo (04-0): 03-1…03-4b can be done before or after 04-0; 03-5 onwards is recommended after 04-0
+  (the new folders `src/app`, `src/shared`, `src/entities` are created directly in `apps/app/src/`).
+- This spec is the **sole owner** of the removal of `useConnect` (D12) — in the PR that migrates its own store, leftovers in 03-18.
+  Lazy loading of locales (04-2c), SW registration (04-2d), the vendor regex (02-B1) — not here.
 
 ---
 
-## Цель
+## Goal
 
-1. Один предсказуемый способ работы с серверными данными: TanStack Query вместо 11 рукописных
-   zustand-сторов с loading/error-мешками и `createRequestChannel`.
-2. Офлайн-PWA: чтение закэшированных данных без сети; создание/изменение/удаление расходов офлайн через
-   очередь (outbox), которая отправляется по порядку при восстановлении сети.
-3. Деньги без float: единый модуль `money/`, конверсия число ↔ `bigint` на границе, целые единицы внутри, правило остатка
-   совпадает с backend.
-4. Типы API генерируются из OpenAPI backend, расхождение ловит CI.
+1. One predictable way to work with server data: TanStack Query instead of 11 hand-written
+   zustand stores with loading/error bags and `createRequestChannel`.
+2. Offline PWA: reading cached data without a network; creating/changing/deleting expenses offline through a
+   queue (outbox) that is sent in order when the network is restored.
+3. Money without float: a single `money/` module, number ↔ `bigint` conversion at the boundary, integer units inside, the remainder rule
+   matches the backend.
+4. API types are generated from the backend OpenAPI, and CI catches drift.
 
-## Контекст (аудит)
+## Context (audit)
 
-- 11 сторов, ручной кэш, нет staleness/refetch: `02-routing-state-pwa.md:15`, `01-architecture.md:111-130`;
-  флаг-мешки `loadingStore.ts`/`errorsStore.ts` (`01-architecture.md:118-121`); `resourceRequests.ts` (:79-80).
-- Циклы `groupsStore.ts:18` ↔ `activity-store/actions.ts:14`, `expenseModalStore.ts:16` ↔ `expenseModalSelectors.ts` (:63-64).
-- `authStore.ts:46-53` сбрасывает 6 сторов, истечение сессии теряет черновик (`02-routing-state-pwa.md:22`).
-- Офлайн = «backend недоступен» на весь экран: `02-routing-state-pwa.md:16`, `helpers/errors.ts:127-139`,
+- 11 stores, a manual cache, no staleness/refetch: `02-routing-state-pwa.md:15`, `01-architecture.md:111-130`;
+  flag bags `loadingStore.ts`/`errorsStore.ts` (`01-architecture.md:118-121`); `resourceRequests.ts` (:79-80).
+- Cycles `groupsStore.ts:18` ↔ `activity-store/actions.ts:14`, `expenseModalStore.ts:16` ↔ `expenseModalSelectors.ts` (:63-64).
+- `authStore.ts:46-53` resets 6 stores, and session expiry loses the draft (`02-routing-state-pwa.md:22`).
+- Offline = "backend unavailable" over the whole screen: `02-routing-state-pwa.md:16`, `helpers/errors.ts:127-139`,
   `api/chipin.interceptors.ts:75-91`.
-- Деньги: `roundMoney` в `expenseModalStore.ts:161`, `expenseModalSelectors.ts:14`; 6 копий разбиения по знаку,
-  `CurrencyGroupCard.tsx:13` с `>= 0` (`01-architecture.md:86-101`). Типы ручные (`api/chipin.raw.types.ts`, :141-149).
-- axios: `api/chipin.interceptors.ts` (223 строки), `onUploadProgress` в `api/usersApi.ts:45`, `api/groupsApi.ts:46`.
+- Money: `roundMoney` in `expenseModalStore.ts:161`, `expenseModalSelectors.ts:14`; 6 copies of the sign split,
+  `CurrencyGroupCard.tsx:13` with `>= 0` (`01-architecture.md:86-101`). Types are hand-written (`api/chipin.raw.types.ts`, :141-149).
+- axios: `api/chipin.interceptors.ts` (223 lines), `onUploadProgress` in `api/usersApi.ts:45`, `api/groupsApi.ts:46`.
 
-Проверено в backend (`chipin-backend`, `develop`, read-only):
-- Суммы на проводе — **JSON-числа**, не строки: `BigDecimalJsonNumberSerializer` пишет literal scale 4
-  (`85.5000`) и **отклоняет строку** на входе (`common/serialization/BigDecimalJsonNumberSerializer.kt`).
-- БД `decimal(19,4)` (`ledger/models/database/LedgerDbObjects.kt:26`). Доли: целые единицы scale 4 для всех
-  валют, наибольший остаток, ничьи по порядку участников (`ledger/shares/ShareDistribution.kt:9-60`).
-- `version`/409/`If-Match` нет; есть только `createdAt`/`updatedAt` в **Unix-секундах** (expense, entry, group).
-  Ledger event-sourced: `expense_events` (`CREATED|CORRECTED|REVERSED`, `seq`) — `LedgerDbObjects.kt:13-36`.
-- `POST /ledger/entries` id не принимает (`LedgerCrudRequests.kt:17-22`), а неизвестное поле тела → **400**
-  (`ignoreUnknownKeys = false`: `SerializationPlugin.kt:8-9`, `OpenApiSchemaOverrides.kt:73-76`). `DELETE` удалённой → уже 204
-  (`LedgerEntryCommandService.kt:182`), `PATCH` удалённой → 404.
-- Транзиентная гонка транзакций (serialization failure/deadlock после ретраев Exposed) → **409 `SYSTEM.CONFLICT`**,
-  клиент должен просто повторить запрос (`ExceptionHandlingPlugin.kt:59-70`). Тело ошибки — только
-  `ErrorResponse { code, details?: Map<String,String> }` (`common/dto/ErrorResponse.kt:30-42`), сущность в нём не передать.
-- `GET /health` (public, есть на prod) → `{ status: "UP" }` (`features/health/HealthRoutes.kt`).
-- OpenAPI 3.1 только runtime, `/swagger/documentation.yaml` под Basic auth, на prod выключен; snapshot в
-  backend запрещён (`docs/openapi.md`).
-- Access 1 ч, refresh 30 дней (`resources/application.yaml:16,18`). CORS (develop): только `Content-Type`, `Authorization`
-  (`plugins/CORSPlugin.kt:21-23,37-41`); для FE не важно — запросы идут same-origin через Vercel-прокси `/api`.
-  Заголовка версии клиента нет.
+Verified in the backend (`chipin-backend`, `develop`, read-only):
+- Amounts on the wire are **JSON numbers**, not strings: `BigDecimalJsonNumberSerializer` writes a literal of scale 4
+  (`85.5000`) and **rejects a string** on input (`common/serialization/BigDecimalJsonNumberSerializer.kt`).
+- DB `decimal(19,4)` (`ledger/models/database/LedgerDbObjects.kt:26`). Shares: integer units of scale 4 for all
+  currencies, largest remainder, ties broken by participant order (`ledger/shares/ShareDistribution.kt:9-60`).
+- There is no `version`/409/`If-Match`; there are only `createdAt`/`updatedAt` in **Unix seconds** (expense, entry, group).
+  The ledger is event-sourced: `expense_events` (`CREATED|CORRECTED|REVERSED`, `seq`) — `LedgerDbObjects.kt:13-36`.
+- `POST /ledger/entries` does not accept an id (`LedgerCrudRequests.kt:17-22`), and an unknown body field → **400**
+  (`ignoreUnknownKeys = false`: `SerializationPlugin.kt:8-9`, `OpenApiSchemaOverrides.kt:73-76`). `DELETE` of a deleted entry → already 204
+  (`LedgerEntryCommandService.kt:182`), `PATCH` of a deleted entry → 404.
+- A transient transaction race (serialization failure/deadlock after Exposed retries) → **409 `SYSTEM.CONFLICT`**,
+  the client should simply repeat the request (`ExceptionHandlingPlugin.kt:59-70`). The error body is only
+  `ErrorResponse { code, details?: Map<String,String> }` (`common/dto/ErrorResponse.kt:30-42`), an entity cannot be passed in it.
+- `GET /health` (public, exists on prod) → `{ status: "UP" }` (`features/health/HealthRoutes.kt`).
+- OpenAPI 3.1 runtime only, `/swagger/documentation.yaml` is behind Basic auth, disabled on prod; a snapshot in the
+  backend is forbidden (`docs/openapi.md`).
+- Access 1 h, refresh 30 days (`resources/application.yaml:16,18`). CORS (develop): only `Content-Type`, `Authorization`
+  (`plugins/CORSPlugin.kt:21-23,37-41`); irrelevant for the FE — requests go same-origin through the Vercel proxy `/api`.
+  There is no client version header.
 
-## Решение
+## Decision
 
-1. TanStack Query v5, `networkMode: 'offlineFirst'`; кэш в IndexedDB (`idb-keyval`), ключ по `userId`, buster = хэш спеки.
-2. Outbox = paused-мутации с `mutationDefaults` и общим `scope`, но **персист отдельно** от кэша запросов
-   (свой ключ IDB, zod-схема), чтобы смена buster не стирала неотправленные операции.
-3. Конфликты — `version` + `If-Match` + 409 с текущей сущностью (backend добавляет).
-4. Офлайн-баланс **не пересчитывается**; серверный баланс с пометкой «без учёта неотправленных операций».
-5. HTTP остаётся на **axios** + типы `openapi-typescript` + тонкая типизированная обёртка с lossless-JSON транспортом (деньги без double, §4.1).
-6. `shared/money/`: `Money { minor: bigint; currency }` (scale 4), арифметика в `bigint` (как backend),
-   округление до минорных единиц валюты только для отображения.
+1. TanStack Query v5, `networkMode: 'offlineFirst'`; cache in IndexedDB (`idb-keyval`), keyed by `userId`, buster = spec hash.
+2. Outbox = paused mutations with `mutationDefaults` and a shared `scope`, but **persisted separately** from the query cache
+   (its own IDB key, a zod schema), so that a buster change does not wipe unsent operations.
+3. Conflicts — `version` + `If-Match` + 409 with the current entity (the backend adds this).
+4. The offline balance is **not recalculated**; the server balance is shown with the mark "excluding unsent operations".
+5. HTTP stays on **axios** + `openapi-typescript` types + a thin typed wrapper with a lossless-JSON transport (money without double, §4.1).
+6. `shared/money/`: `Money { minor: bigint; currency }` (scale 4), arithmetic in `bigint` (like the backend),
+   rounding to currency minor units only for display.
 
 ---
 
-## Детали
+## Details
 
 ### 1. Query layer
 
-#### 1.1 Зависимости
+#### 1.1 Dependencies
 
-Добавить: `@tanstack/react-query`, `@tanstack/react-query-persist-client`,
-`@tanstack/query-async-storage-persister` (все TanStack — одна точная версия, `5.105.0`), `idb-keyval` (`6.3.0`, нужен
-`update()` — атомарный read-modify-write в одной IDB-транзакции, §2.3), `lossless-json` (точно `4.3.3`, MIT, §4.1), `zod`;
-dev: `@tanstack/eslint-plugin-query`, `@tanstack/react-query-devtools` (только dev-сборка), `msw` (точно `2.15.0`: `latest`
-на npm — `3.0.3` с другим API, тесты §8 написаны под v2 `setupServer`), `fake-indexeddb`, `openapi-typescript`.
-`dexie`, `dexie-react-hooks` удаляются в PR 02-B1 (не в этой спеке; в `src/` они не используются).
+Add: `@tanstack/react-query`, `@tanstack/react-query-persist-client`,
+`@tanstack/query-async-storage-persister` (all TanStack — one exact version, `5.105.0`), `idb-keyval` (`6.3.0`, `update()` is needed —
+an atomic read-modify-write in a single IDB transaction, §2.3), `lossless-json` (exactly `4.3.3`, MIT, §4.1), `zod`;
+dev: `@tanstack/eslint-plugin-query`, `@tanstack/react-query-devtools` (dev build only), `msw` (exactly `2.15.0`: `latest`
+on npm is `3.0.3` with a different API, the §8 tests are written for v2 `setupServer`), `fake-indexeddb`, `openapi-typescript`.
+`dexie`, `dexie-react-hooks` are removed in PR 02-B1 (not in this spec; they are not used in `src/`).
 
 #### 1.2 QueryClient
 
-Файл `shared/api/queryClient.ts`, фабрика `createQueryClient()` (новый клиент на каждого пользователя, см. 1.5).
+File `shared/api/queryClient.ts`, factory `createQueryClient()` (a new client for each user, see 1.5).
 
 ```ts
 export const PERSIST_MAX_AGE = 14 * DAY;
@@ -122,53 +122,53 @@ export const createQueryClient = (): QueryClient => {
     queries: { networkMode: 'offlineFirst', staleTime: 30_000, gcTime: PERSIST_MAX_AGE, // gcTime >= maxAge
                retry: queryRetry, refetchOnWindowFocus: true, refetchOnReconnect: true },
     mutations: { networkMode: 'offlineFirst', retry: false } } });
-  registerMutationDefaults(client); // до hydrate, см. 2.1
+  registerMutationDefaults(client); // before hydrate, see 2.1
   return client;
 };
 ```
 
-`queryRetry(failureCount, error)`: network error → `!isNetworkUsable() || failureCount < 3` (в v5 `offlineFirst` ставит
-на паузу **только между ретраями**: после неудачной первой попытки retryer видит offline и держит запрос
-`fetchStatus: 'paused'`, `status` остаётся `success` с кэшем; с `retry: false` запрос ушёл бы в `error`; при
-`onlineManager` ещё online — не больше 3 попыток, иначе `isFetching` не завершается до probe, C1-31); 5xx и 409
-`SYSTEM.CONFLICT` → `failureCount < 2` (backoff по умолчанию TanStack); остальные 4xx → `false`.
+`queryRetry(failureCount, error)`: network error → `!isNetworkUsable() || failureCount < 3` (in v5 `offlineFirst` pauses
+**only between retries**: after a failed first attempt the retryer sees offline and holds the query as
+`fetchStatus: 'paused'`, `status` stays `success` with the cache; with `retry: false` the query would go to `error`; while
+`onlineManager` is still online — no more than 3 attempts, otherwise `isFetching` does not finish until the probe, C1-31); 5xx and 409
+`SYSTEM.CONFLICT` → `failureCount < 2` (default TanStack backoff); other 4xx → `false`.
 
-Правила, которые из этого следуют (проверяются ревью и тестом §8):
-- Компоненты рендерят `data`, если она есть; ошибку показывают **только** при `data === undefined`
-  (паттерн `const { data, error } = useXQuery(); if (data) … else if (error) …`). `isError` без проверки `data` запрещён.
-- Loaders (спека 04): `restoreReady.then(…)` (§1.6; стиль `await`/`.then` свободный, D24), внутри
-  `void queryClient.prefetchQuery(opts)` — не блокирует. Вернуть из цепочки `queryClient.ensureQueryData(opts)`
-  разрешено только если `isNetworkUsable()` (§1.7) **и** `queryClient.getQueryData(opts.queryKey) === undefined`;
-  иначе — `getQueryData` + prefetch. Причина: ожидание paused-запроса (offline) вешает навигацию до reconnect.
+Rules that follow from this (checked by review and by the §8 test):
+- Components render `data` if it exists; they show an error **only** when `data === undefined`
+  (the pattern `const { data, error } = useXQuery(); if (data) … else if (error) …`). `isError` without a `data` check is forbidden.
+- Loaders (spec 04): `restoreReady.then(…)` (§1.6; `await`/`.then` style is free, D24), inside it
+  `void queryClient.prefetchQuery(opts)` — does not block. Returning `queryClient.ensureQueryData(opts)` from the chain
+  is allowed only if `isNetworkUsable()` (§1.7) **and** `queryClient.getQueryData(opts.queryKey) === undefined`;
+  otherwise — `getQueryData` + prefetch. Reason: waiting for a paused query (offline) hangs navigation until reconnect.
 
-staleTime по сущностям (задаётся в `queryOptions` сущности, не в компонентах):
+staleTime per entity (set in the entity's `queryOptions`, not in components):
 
-| Сущность | queryKey | staleTime | Persist |
+| Entity | queryKey | staleTime | Persist |
 |---|---|---|---|
-| self user | `['users','self']` | 5 мин | да |
-| known users (друзья) | `['users','known']` | 60 с | да |
-| premium promo | `['users','premiumPromo']` | 10 мин | нет |
-| dashboard (балансы) | `['dashboard']` | 30 с | да |
-| groups list | `['groups','list']` | 60 с | да |
-| group detail (+ балансы группы) | `['groups','detail',id]` | 30 с | да |
-| group activity previews | `['groups','activity',id]` (infinite) | 30 с | да, только первая страница |
-| self activities / previews | `['activity','self',filters]` (infinite) | 30 с | да, только первая страница |
-| activity children | `['activity','children',parentId]` | 60 с | да |
-| ledger entry | `['ledger','entry',id]` | 30 с | да |
-| currency rates | `['currencyRates']` | 6 ч (backend обновляет раз в 12 ч) | да |
-| landing stats | `['stats']` | 10 мин | нет (публичное, уходит на Astro по D8) |
-| health | не query | — | нет |
+| self user | `['users','self']` | 5 min | yes |
+| known users (friends) | `['users','known']` | 60 s | yes |
+| premium promo | `['users','premiumPromo']` | 10 min | no |
+| dashboard (balances) | `['dashboard']` | 30 s | yes |
+| groups list | `['groups','list']` | 60 s | yes |
+| group detail (+ group balances) | `['groups','detail',id]` | 30 s | yes |
+| group activity previews | `['groups','activity',id]` (infinite) | 30 s | yes, first page only |
+| self activities / previews | `['activity','self',filters]` (infinite) | 30 s | yes, first page only |
+| activity children | `['activity','children',parentId]` | 60 s | yes |
+| ledger entry | `['ledger','entry',id]` | 30 s | yes |
+| currency rates | `['currencyRates']` | 6 h (the backend updates every 12 h) | yes |
+| landing stats | `['stats']` | 10 min | no (public, goes to Astro per D8) |
+| health | not a query | — | no |
 
-Infinite-запросы: при персисте обрезаются до первой страницы (`pages.slice(0,1)`, `pageParams.slice(0,1)`), иначе
-кэш растёт неограниченно. У `dehydrateOptions` нет хука трансформации данных, поэтому обрезка — в обёртке персистера:
+Infinite queries: when persisted they are trimmed to the first page (`pages.slice(0,1)`, `pageParams.slice(0,1)`), otherwise the
+cache grows without bound. `dehydrateOptions` has no data transformation hook, so the trimming is in the persister wrapper:
 `trimmingPersister(base)` = `{ ...base, persistClient: c => base.persistClient(trimInfinitePages(c)) }`
-(`shared/offline/queryPersister.ts`; `trimInfinitePages` узнаёт infinite по форме `{ pages, pageParams }`).
+(`shared/offline/queryPersister.ts`; `trimInfinitePages` recognizes an infinite query by the shape `{ pages, pageParams }`).
 
-#### 1.3 Фабрика ключей
+#### 1.3 Key factory
 
-Конвенция: у каждой сущности файл `entities/<entity>/api/queries.ts`. Он экспортирует объект ключей и
-функции `…QueryOptions`. Компоненты и loaders не пишут массивы ключей руками. Это проверяет lint:
-`no-restricted-syntax` на литерал-массив в свойстве `queryKey` вне `entities/*/api/queries.ts`.
+Convention: each entity has a file `entities/<entity>/api/queries.ts`. It exports a keys object and
+`…QueryOptions` functions. Components and loaders do not write key arrays by hand. This is enforced by lint:
+`no-restricted-syntax` on a literal array in the `queryKey` property outside `entities/*/api/queries.ts`.
 
 ```ts
 // entities/group/api/queries.ts
@@ -183,224 +183,224 @@ export const groupDetailQueryOptions = (groupId: string) => queryOptions({
   queryFn: ({ signal }) => api('get', '/groups/{groupId}', { params: { groupId }, signal }).then(toGroup) });
 ```
 
-Правила: первый элемент ключа — сущность во мн. числе (`groups`, `users`, `ledger`, `activity`, `dashboard`,
-`currencyRates`, `stats`), инвалидация сущности = `invalidateQueries({ queryKey: groupKeys.all })`; `queryFn`
-возвращает **доменную модель** (маппер `toGroup` в `entities/<e>/model/`, деньги уже `Money`); хук
-`useGroupQuery` в том же файле; производные значения — через `select`, а не zustand-селекторы; ESLint
+Rules: the first key element is the entity in the plural (`groups`, `users`, `ledger`, `activity`, `dashboard`,
+`currencyRates`, `stats`), entity invalidation = `invalidateQueries({ queryKey: groupKeys.all })`; `queryFn`
+returns the **domain model** (mapper `toGroup` in `entities/<e>/model/`, money is already `Money`); the
+`useGroupQuery` hook is in the same file; derived values go through `select`, not zustand selectors; ESLint
 `plugin:@tanstack/query/recommended`.
 
-#### 1.4 Персистер кэша запросов
+#### 1.4 Query cache persister
 
-Файл `shared/offline/queryPersister.ts`.
+File `shared/offline/queryPersister.ts`.
 
 ```ts
 export const queryCacheKey = (userId: string) => `chipin:rq:${userId}`;
-const idbStringStorage: AsyncStorage<string> = { getItem: get, setItem: set, removeItem: del };  // idb-keyval, значения — строки
+const idbStringStorage: AsyncStorage<string> = { getItem: get, setItem: set, removeItem: del };  // idb-keyval, values are strings
 export const persistOptions = (userId: string) => ({
   persister: trimmingPersister(createAsyncStoragePersister({ key: queryCacheKey(userId), throttleTime: 1000,
     storage: idbStringStorage,
-    serialize: persistCodec.stringify,          // JSON + тег bigint: Money.minor переживает запись (C1-05)
+    serialize: persistCodec.stringify,          // JSON + bigint tag: Money.minor survives the write (C1-05)
     deserialize: persistCodec.parse,
-    retry: ({ error }) => { reportPersistFailed(error); return undefined; } })),   // иначе ошибка записи проглатывается
+    retry: ({ error }) => { reportPersistFailed(error); return undefined; } })),   // otherwise a write error is swallowed
   maxAge: PERSIST_MAX_AGE,
   buster: `${QUERY_CACHE_EPOCH}:${MODEL_SHAPE_HASH}`,
   dehydrateOptions: { shouldDehydrateQuery: q => q.state.status === 'success' && q.meta?.persist !== false
-                        && !isEntryWithPendingOp(q.queryKey),     // оптимистичный entry не персистим (2.2)
-                      shouldDehydrateMutation: () => false },   // мутации персистит outbox (2.3)
+                        && !isEntryWithPendingOp(q.queryKey),     // an optimistic entry is not persisted (2.2)
+                      shouldDehydrateMutation: () => false },   // mutations are persisted by the outbox (2.3)
 });
 ```
 
-Проверено по исходникам `5.105.0` (C1-05): `createAsyncStoragePersister` принимает только `storage: AsyncStorage<string>`,
-`serialize: (c) => MaybePromise<string>` (по умолчанию `JSON.stringify`, который бросает на `BigInt`)
-(`query-async-storage-persister/src/index.ts`); ошибка `serialize`/`setItem` ловится внутри `trySave` и без `retry`
-молча теряется. Поэтому:
+Verified against the `5.105.0` sources (C1-05): `createAsyncStoragePersister` accepts only `storage: AsyncStorage<string>`,
+`serialize: (c) => MaybePromise<string>` (default `JSON.stringify`, which throws on `BigInt`)
+(`query-async-storage-persister/src/index.ts`); a `serialize`/`setItem` error is caught inside `trySave` and without `retry`
+is silently lost. Therefore:
 - `persistCodec` (`shared/offline/persistCodec.ts`): `stringify(c) = JSON.stringify(c, (_, v) => typeof v === 'bigint' ?
   { $bigint: v.toString() } : v)`, `parse(s) = JSON.parse(s, (_, v) => isBigintTag(v) ? BigInt(v.$bigint) : v)`;
-  `isBigintTag` = объект ровно с одним ключом `$bigint` и строкой `^-?\d+$`. `WireAmount` (plain-объект, §4.1) проходит
-  без тегов. Коллизии нет: доменные поля — camelCase без `$`. Тест: `Money { minor: 9999999999999999999n }` → persist → restore → `typeof minor === 'bigint'`,
-  значение то же.
-- `persistQueryClientRestore` при ошибке restore/deserialize **сам удаляет ключ кэша и бросает**
-  (`query-persist-client-core/src/persist.ts:125-160`) — для кэша это приемлемо (сервер — источник), обёртка §1.6 ловит.
-  Outbox этой функцией не восстанавливается никогда (§2.3).
+  `isBigintTag` = an object with exactly one key `$bigint` and a string `^-?\d+$`. `WireAmount` (a plain object, §4.1) passes through
+  without tags. There is no collision: domain fields are camelCase without `$`. Test: `Money { minor: 9999999999999999999n }` → persist → restore → `typeof minor === 'bigint'`,
+  same value.
+- On a restore/deserialize error `persistQueryClientRestore` **itself deletes the cache key and throws**
+  (`query-persist-client-core/src/persist.ts:125-160`) — acceptable for the cache (the server is the source), the §1.6 wrapper catches it.
+  The outbox is never restored by this function (§2.3).
 
-- `persistOptions(userId)` и `clientFor(userId)` мемоизируются по `userId` (`useMemo` в `QueryProvider` / `Map` в модуле):
-  новый объект персистера на каждый рендер = повторный restore.
-- `isEntryWithPendingOp(key)`: ключ `['ledger','entry',id]` и `id` есть в `outboxState.entryIds` (§2.3). После
-  `restoreOutbox` все `entryId` из outbox инвалидируются — persisted-кэш и outbox пишутся независимо, после краша
-  они могут расходиться, сервер — арбитр. До 03-15a (outbox ещё нет) 03-7a экспортирует заглушку
-  `isEntryWithPendingOp = () => false` из того же пути; 03-15a меняет реализацию, не путь (C2-08).
+- `persistOptions(userId)` and `clientFor(userId)` are memoized by `userId` (`useMemo` in `QueryProvider` / a module-level `Map`):
+  a new persister object on every render = a repeated restore.
+- `isEntryWithPendingOp(key)`: key `['ledger','entry',id]` and `id` is in `outboxState.entryIds` (§2.3). After
+  `restoreOutbox` all `entryId`s from the outbox are invalidated — the persisted cache and the outbox are written independently, after a crash
+  they may diverge, the server is the arbiter. Until 03-15a (no outbox yet) 03-7a exports a stub
+  `isEntryWithPendingOp = () => false` from the same path; 03-15a changes the implementation, not the path (C2-08).
 
-- Buster — **единственное** определение (C2-07, C3-14, C3-30): `${QUERY_CACHE_EPOCH}:${MODEL_SHAPE_HASH}`. Персистится
-  доменная модель (результат мапперов), поэтому buster зависит от её формы, а не от OpenAPI-спеки:
-  `MODEL_SHAPE_HASH` пишет `scripts/offline/write-model-hash.mjs` (вызывается из `api:gen`, расхождение ловит `api:check`):
-  первые 12 hex sha256 от `entities/*/model/types.ts` (пути отсортированы, каждый файл перепечатан TypeScript printer с
-  `removeComments: true` — комментарии и форматирование хэш не меняют) → `shared/offline/modelHash.generated.ts`.
-  Смена формы доменного типа сбрасывает кэш автоматически (руками поднимать нечего); sync OpenAPI без изменения
-  доменных типов кэш не сбрасывает. `QUERY_CACHE_EPOCH` (`shared/offline/constants.ts`, целое) поднимается руками
-  только при смене **смысла** поля без смены типа (например, секунды → мс; пункт чек-листа PR, трогающего
-  `entities/*/model/to*.ts`). `OPENAPI_SPEC_HASH`/`specHash.ts` не существуют. Отклонение от D4 («zod на кэше IDB»)
-  вынесено в подтверждения владельца (00).
-- `meta: { persist: false }` — premium promo, stats. Ошибка IDB (Safari private, квота) → Sentry
-  `offline.persist_failed` раз за сессию, работа без персиста.
+- Buster — the **single** definition (C2-07, C3-14, C3-30): `${QUERY_CACHE_EPOCH}:${MODEL_SHAPE_HASH}`. What is persisted is
+  the domain model (the result of the mappers), so the buster depends on its shape, not on the OpenAPI spec:
+  `MODEL_SHAPE_HASH` is written by `scripts/offline/write-model-hash.mjs` (called from `api:gen`, drift is caught by `api:check`):
+  the first 12 hex of sha256 over `entities/*/model/types.ts` (paths sorted, each file re-printed with the TypeScript printer with
+  `removeComments: true` — comments and formatting do not change the hash) → `shared/offline/modelHash.generated.ts`.
+  A change in the shape of a domain type resets the cache automatically (nothing to bump by hand); an OpenAPI sync without a change to
+  domain types does not reset the cache. `QUERY_CACHE_EPOCH` (`shared/offline/constants.ts`, an integer) is bumped by hand
+  only when the **meaning** of a field changes without a type change (for example seconds → ms; a checklist item of the PR touching
+  `entities/*/model/to*.ts`). `OPENAPI_SPEC_HASH`/`specHash.ts` do not exist. The deviation from D4 ("zod on the IDB cache")
+  is listed among the owner confirmations (00).
+- `meta: { persist: false }` — premium promo, stats. IDB error (Safari private, quota) → Sentry
+  `offline.persist_failed` once per session, work continues without persistence.
 
-#### 1.5 Привязка к пользователю, logout, смена аккаунта
+#### 1.5 Binding to the user, logout, account switch
 
-- `LocalUser` (`helpers/localStorage.ts`) получает `id: string`, чтение через zod `LocalUserSchema`
-  (невалидно → fallback): `userId` нужен до restore, а офлайн `users/self` не загрузить.
-- `app/providers/QueryProvider.tsx`: нет `userId` → `QueryClientProvider` без персиста; есть →
-  `<QueryClientProvider key={userId} client={clientFor(userId)}>`, а restore/subscribe с `persistOptions(userId)` идёт вне
-  React до создания роутера (§1.6, `bootstrapUserCache`). Два пользователя никогда не делят один `QueryClient`.
-  `onRestored` резолвит `restoreReady` (§1.6). Outbox восстанавливает и запускает **только вкладка-лидер** при получении
+- `LocalUser` (`helpers/localStorage.ts`) gets `id: string`, read through the zod `LocalUserSchema`
+  (invalid → fallback): `userId` is needed before restore, and offline `users/self` cannot be loaded.
+- `app/providers/QueryProvider.tsx`: no `userId` → `QueryClientProvider` without persistence; with one →
+  `<QueryClientProvider key={userId} client={clientFor(userId)}>`, and restore/subscribe with `persistOptions(userId)` happen outside
+  React before the router is created (§1.6, `bootstrapUserCache`). Two users never share one `QueryClient`.
+  `onRestored` resolves `restoreReady` (§1.6). The outbox is restored and started **only by the leader tab** on acquiring the
   lock (§2.3): `restoreOutbox(client, userId).then(() => client.resumePausedMutations())`.
-- `clearUserData(userId)` (`shared/offline/clearUserData.ts`), строго в этом порядке: (1) отписать персистер
-  (unsubscribe из `persistQueryClientSubscribe`/провайдера) и подписчика outbox на `mutationCache`, выйти из
-  leader-lock (§2.3); (2) `queryClient.clear()`; (2a) `resetAuthScopedStores()` — все ещё живые legacy zustand-сторы
-  **и** черновик `expenseModalStore.reset()` (C1-02: иначе между 03-7b и 03-12 Y увидит группы/балансы/друзей X из
-  `groupsStore`/`users-store`/`dashboardStore` и отправит черновик X); (3) `del` query-ключа, `chipin:outbox:<userId>`,
-  `chipin:outbox-failed:<userId>`, `chipin:outbox-inbox:<userId>`; (4) размонтировать провайдер (смена `key`). Иначе
-  throttled-запись (1 с) или событие `mutationCache` после `del` возвращают данные X. В `LS_KEY_USER` остаётся только
-  `{ settings }` (без `id`/`role` — как `clearLocalUserRole` из 01-1: язык/тема лендинга после выхода читаются из `settings`).
-- `resetAuthScopedStores()` (`store/authStore.ts:46-53`) **остаётся** до конца миграции и по-прежнему вызывается при
-  **любом** переходе в `unauthenticated` (как сегодня: `setUnauthenticated`, `expireSession`, ошибка OAuth exchange) —
-  legacy-сторы держат данные в памяти и перезагружаются после входа. Каждый PR миграции стора (03-8…03-12, 03-18)
-  удаляет **свою** строку из `resetAuthScopedStores` вместе со стором (тест PR: строки нет, стора нет). Единственное
-  изменение 03-7b: строка `useExpenseModalStore.getState().reset()` переезжает из `resetAuthScopedStores` в шаг (2a)
-  `clearUserData`; черновик получает поле `ownerId` и при входе пользователя ≠ `ownerId` сбрасывается.
+- `clearUserData(userId)` (`shared/offline/clearUserData.ts`), strictly in this order: (1) unsubscribe the persister
+  (unsubscribe from `persistQueryClientSubscribe`/the provider) and the outbox subscriber on `mutationCache`, leave the
+  leader lock (§2.3); (2) `queryClient.clear()`; (2a) `resetAuthScopedStores()` — all still-living legacy zustand stores
+  **and** the draft `expenseModalStore.reset()` (C1-02: otherwise between 03-7b and 03-12 Y would see X's groups/balances/friends from
+  `groupsStore`/`users-store`/`dashboardStore` and send X's draft); (3) `del` the query key, `chipin:outbox:<userId>`,
+  `chipin:outbox-failed:<userId>`, `chipin:outbox-inbox:<userId>`; (4) unmount the provider (change `key`). Otherwise a
+  throttled write (1 s) or a `mutationCache` event after `del` brings back X's data. In `LS_KEY_USER` only
+  `{ settings }` remains (no `id`/`role` — like `clearLocalUserRole` from 01-1: the landing language/theme after logout are read from `settings`).
+- `resetAuthScopedStores()` (`store/authStore.ts:46-53`) **stays** until the end of the migration and is still called on
+  **any** transition to `unauthenticated` (as today: `setUnauthenticated`, `expireSession`, OAuth exchange error) —
+  legacy stores hold data in memory and are reloaded after sign-in. Each store-migration PR (03-8…03-12, 03-18)
+  removes **its own** line from `resetAuthScopedStores` together with the store (PR test: no line, no store). The only
+  change in 03-7b: the line `useExpenseModalStore.getState().reset()` moves from `resetAuthScopedStores` to step (2a) of
+  `clearUserData`; the draft gets an `ownerId` field and is reset when a user ≠ `ownerId` signs in.
 
-Таблица «причина → что удаляется» (C3-08; реальные константы `store/authConstants.ts:9-16`). `clearUserData` вызывают
-**только** строки с ним; любая другая причина ничего пользовательского в IDB не удаляет. Тест — на каждую строку.
+The "reason → what is deleted" table (C3-08; real constants `store/authConstants.ts:9-16`). `clearUserData` is called
+**only** by the rows that mention it; any other reason deletes nothing user-related in IDB. Test — for each row.
 
-| Переход (код сегодня) | `unauthReason` | Кэш запросов (IDB) | Outbox / failed / inbox | Черновик | `LS_KEY_USER` |
+| Transition (code today) | `unauthReason` | Query cache (IDB) | Outbox / failed / inbox | Draft | `LS_KEY_USER` |
 |---|---|---|---|---|---|
-| `signOut()` в этой вкладке (`authStore.ts:164`) | `signed_out` | `clearUserData` | удалить; непустой outbox → confirm «N неотправленных операций будут удалены» | сброс | `{ settings }` |
-| remote logout по BroadcastChannel (`useCheckSignIn.tsx:41-52`) | `signed_out` | `clearUserData` | удалить (confirm был в вкладке-инициаторе) | сброс | `{ settings }` |
-| `expireSession()` (refresh 401: `authStore.ts:69,128`, `bootstrap/initializeApi.ts:6`); `logoutOtherDevices` → 401 (`authStore.ts:155`) | `expired` | сохранить | сохранить, гейт `auth` закрыт | сохранить | удалить только `role` (`clearLocalUserRole`, 01-1) |
-| `invalid` (зарезервирована, `useAuthToasts.tsx:23`) | `invalid` | сохранить | сохранить, гейт `auth` | сохранить | удалить только `role` |
-| холодный старт без session hint (`useCheckSignIn.tsx:64`) | `missing` | сохранить (без входа не восстанавливается) | сохранить | сохранить | без изменений |
-| refresh при старте упал не 401 (`useCheckSignIn.tsx:89`); ошибка OAuth exchange (`authStore.ts:100-122`, `OAuthCallbackPage.tsx:37`) | `error` / `persistence_error` | сохранить | сохранить | сохранить | без изменений |
-| вход Y при `LocalUser.id === X ≠ Y` или `sub` токена ≠ владелец outbox (§2.3) | — (после входа) | `clearUserData(X)` | удалить; непустой → диалог «На устройстве N неотправленных операций аккаунта X. Удалить и войти?»; «Отмена» → `signOut()` Y, данные X остаются | сброс | `{ id: Y, settings }` |
+| `signOut()` in this tab (`authStore.ts:164`) | `signed_out` | `clearUserData` | delete; non-empty outbox → confirm "N unsent operations will be deleted" | reset | `{ settings }` |
+| remote logout via BroadcastChannel (`useCheckSignIn.tsx:41-52`) | `signed_out` | `clearUserData` | delete (the confirm was in the initiating tab) | reset | `{ settings }` |
+| `expireSession()` (refresh 401: `authStore.ts:69,128`, `bootstrap/initializeApi.ts:6`); `logoutOtherDevices` → 401 (`authStore.ts:155`) | `expired` | keep | keep, the `auth` gate is closed | keep | delete only `role` (`clearLocalUserRole`, 01-1) |
+| `invalid` (reserved, `useAuthToasts.tsx:23`) | `invalid` | keep | keep, the `auth` gate | keep | delete only `role` |
+| cold start without a session hint (`useCheckSignIn.tsx:64`) | `missing` | keep (not restored without sign-in) | keep | keep | unchanged |
+| refresh at startup failed with non-401 (`useCheckSignIn.tsx:89`); OAuth exchange error (`authStore.ts:100-122`, `OAuthCallbackPage.tsx:37`) | `error` / `persistence_error` | keep | keep | keep | unchanged |
+| sign-in of Y when `LocalUser.id === X ≠ Y` or the token `sub` ≠ the outbox owner (§2.3) | — (after sign-in) | `clearUserData(X)` | delete; non-empty → dialog "This device has N unsent operations of account X. Delete and sign in?"; "Cancel" → `signOut()` Y, X's data stays | reset | `{ id: Y, settings }` |
 
-- **Истечение сессии ≠ logout** (finding 11, `02-routing-state-pwa.md:22`): кэш, outbox и черновик сохраняются,
-  показывается `AuthModal`, после входа тем же `userId` очередь продолжается (гейт `auth` открывает только проверка
-  владельца, §2.3). Legacy-сторы сбрасываются (см. выше) и перезагружаются после входа.
-- Session hint после expiry: `invalidateAuthSession()` пишет hint `false` (`helpers/authSession.ts:46-55`), поэтому
-  **офлайн-холодный старт после истечения сессии невозможен** — осознанно (C3-09): после «выйти на других устройствах»
-  потерянное устройство не показывает финансы без сети; кэш и outbox остаются в IDB и продолжаются после онлайн-входа тем
-  же `userId`. Скрытие данных под `AuthModal` онлайн — спека 04 §2.3. Различение REVOKED/EXPIRED на backend и
-  `clearUserData` при REVOKED — вопрос владельцу (00, «Подтверждения»); до решения backend-issue не создаётся.
+- **Session expiry ≠ logout** (finding 11, `02-routing-state-pwa.md:22`): the cache, outbox and draft are kept,
+  `AuthModal` is shown, after sign-in with the same `userId` the queue continues (the `auth` gate is opened only by the
+  owner check, §2.3). Legacy stores are reset (see above) and reloaded after sign-in.
+- Session hint after expiry: `invalidateAuthSession()` writes hint `false` (`helpers/authSession.ts:46-55`), therefore
+  **an offline cold start after session expiry is impossible** — deliberately (C3-09): after "sign out on other devices"
+  a lost device does not show finances without a network; the cache and outbox remain in IDB and continue after an online sign-in with the same
+  `userId`. Hiding data under `AuthModal` online — spec 04 §2.3. Distinguishing REVOKED/EXPIRED on the backend and
+  `clearUserData` on REVOKED — a question for the owner (00, "Confirmations"); until decided, no backend issue is created.
 
-#### 1.6 Гейт гидрации при старте
+#### 1.6 Hydration gate at startup
 
-- Restore выполняется **до** создания роутера, вне React: `shared/offline/restore.ts` экспортирует
-  `restoreReady: Promise<void>` = restore **кэша запросов** (`persistQueryClientRestore`). Промис резолвится и при
-  таймауте 3 с, и при ошибке IDB/десериализации (Sentry `offline.restore_timeout` / `offline.persist_failed`) — никогда
-  не reject. До 03-7a (спека 04, 04-2a2) тот же путь экспортирует `restoreReady = Promise.resolve()`. Все loaders
-  (спека 04) возвращают цепочку `restoreReady.then(…)` (стиль свободный, D24); data router запускает начальные loaders при `createBrowserRouter`,
-  до первого рендера, поэтому React-гейт `useIsRestoring()` один не спасает.
-- После таймаута restore кэша **отменяется**: флаг `restoreAborted = true`, поздний результат IDB игнорируется (не
-  делает `hydrate`), иначе он перезапишет данные, загруженные после старта.
-- **Outbox восстанавливается отдельно и не входит в `restoreReady`** (C3-02): лидер (§2.3) держит
-  `outboxRestore: 'pending' | 'ok' | 'failed'`. Таймаута нет — restore идёт до конца. Инвариант: **пока
-  `outboxRestore !== 'ok'`, ключ `chipin:outbox:<userId>` не пишется никогда** (ни подписка на `mutationCache`, ни
-  `persistNow`), а новые операции идут онлайн-путём (§2.1: `offlineWritesAvailable === false`, офлайн — `<OnlineOnly>`).
-  `failed` (ошибка IDB, ключ целиком не проходит `OutboxStateSchema`, `owner !== userId`) → офлайн-запись выключена до
-  перезапуска, неблокирующий баннер `offline:outboxUnavailable` «Офлайн-сохранение недоступно. Операции на устройстве
-  сохранены — перезапустите приложение», ключ **не удаляется**, Sentry `outbox.restore_failed`. Отдельные невалидные
-  операции → failed `unreadable`, restore при этом `ok`.
-- Поэтому провайдер — обычный `QueryClientProvider` (не `PersistQueryClientProvider`, который стартует restore сам при mount): `bootstrapUserCache(userId)` = `persistQueryClientRestore` → `persistQueryClientSubscribe` (unsubscribe хранится для `clearUserData`), `onRestored` из §1.5 — его продолжение. Пока `restoreReady` не резолвлен, рендерится shell (header + skeleton), не роуты (`useRestoreReady()` вместо `useIsRestoring()`).
-- Офлайн-холодный старт (PR 03-7b): `useCheckSignIn` (`hooks/useCheckSignIn.tsx:55-91`) при network error на refresh и
-  наличии `LocalUser.id` + session hint `=== true` (hint хранится как JSON `true`/`false`, `helpers/localStorage.ts`)
-  ставит `AUTHENTICATED` + новое поле `sessionMode = 'offline-cached'`; guards (спека 04 §2.3, `requireSession`) пускают к
-  кэшу. При reconnect `refreshAuthSession()`: 401 → `expireSession()`; успех → `sessionMode = 'online'`. Гейт outbox `auth`
-  открывает **не** успешный refresh, а проверка владельца (§2.3: `sub` нового access-токена === `userId` outbox).
-  До 03-15a `outboxGate` — no-op-заглушка из `shared/offline/outboxGate.ts` (тот же путь).
+- Restore runs **before** the router is created, outside React: `shared/offline/restore.ts` exports
+  `restoreReady: Promise<void>` = the restore of the **query cache** (`persistQueryClientRestore`). The promise resolves both on a
+  3 s timeout and on an IDB/deserialization error (Sentry `offline.restore_timeout` / `offline.persist_failed`) — it never
+  rejects. Until 03-7a (spec 04, 04-2a2) the same path exports `restoreReady = Promise.resolve()`. All loaders
+  (spec 04) return the chain `restoreReady.then(…)` (style is free, D24); the data router runs the initial loaders on `createBrowserRouter`,
+  before the first render, so the React gate `useIsRestoring()` alone does not save us.
+- After the timeout the cache restore is **cancelled**: flag `restoreAborted = true`, a late IDB result is ignored (does not
+  `hydrate`), otherwise it would overwrite data loaded after startup.
+- **The outbox is restored separately and is not part of `restoreReady`** (C3-02): the leader (§2.3) holds
+  `outboxRestore: 'pending' | 'ok' | 'failed'`. There is no timeout — the restore runs to the end. Invariant: **while
+  `outboxRestore !== 'ok'`, the key `chipin:outbox:<userId>` is never written** (neither the `mutationCache` subscription nor
+  `persistNow`), and new operations take the online path (§2.1: `offlineWritesAvailable === false`, offline — `<OnlineOnly>`).
+  `failed` (IDB error, the whole key fails `OutboxStateSchema`, `owner !== userId`) → offline writing is off until
+  restart, a non-blocking banner `offline:outboxUnavailable` "Offline saving is unavailable. Operations on the device
+  are preserved — restart the app", the key is **not deleted**, Sentry `outbox.restore_failed`. Individual invalid
+  operations → failed `unreadable`, and the restore is still `ok`.
+- Therefore the provider is a plain `QueryClientProvider` (not `PersistQueryClientProvider`, which starts restore itself on mount): `bootstrapUserCache(userId)` = `persistQueryClientRestore` → `persistQueryClientSubscribe` (the unsubscribe is stored for `clearUserData`), `onRestored` from §1.5 is its continuation. Until `restoreReady` is resolved, the shell (header + skeleton) is rendered, not the routes (`useRestoreReady()` instead of `useIsRestoring()`).
+- Offline cold start (PR 03-7b): `useCheckSignIn` (`hooks/useCheckSignIn.tsx:55-91`), on a network error during refresh and
+  when `LocalUser.id` + session hint `=== true` are present (the hint is stored as JSON `true`/`false`, `helpers/localStorage.ts`),
+  sets `AUTHENTICATED` + a new field `sessionMode = 'offline-cached'`; guards (spec 04 §2.3, `requireSession`) let the user through to
+  the cache. On reconnect `refreshAuthSession()`: 401 → `expireSession()`; success → `sessionMode = 'online'`. The outbox `auth` gate
+  is opened **not** by a successful refresh but by the owner check (§2.3: `sub` of the new access token === outbox `userId`).
+  Until 03-15a `outboxGate` is a no-op stub from `shared/offline/outboxGate.ts` (same path).
 
-#### 1.7 Refetch на focus/reconnect
+#### 1.7 Refetch on focus/reconnect
 
-- `focusManager` (`visibilitychange`) закрывает «PWA открыт днями со старыми балансами».
-- **Единственный источник «сеть пригодна» — TanStack `onlineManager`** (C1-06): `shared/offline/network.ts` экспортирует
-  `isNetworkUsable = () => onlineManager.isOnline()` и `waitForOnline()`. Спека 04 (await-правило loaders, офлайн-ветка
-  auth-guards), `connectivityStore`, `useRequiresOnline()` и outbox читают только их. `navigator.onLine` читается только
-  внутри `shared/offline/**` (bootstrap и probe ниже); lint `no-restricted-properties` `{ object: 'navigator', property:
-  'onLine' }` вне `shared/offline/**` (правило регистрируется в 02 §Д0, класс «корректность», подсказка «используй
-  isNetworkUsable()»).
-- `onlineManager`: v5 стартует с `online = true`; при bootstrap — `onlineManager.setOnline(navigator.onLine)`, затем
-  probe ниже (иначе офлайн-холодный старт не паузит запросы до первого события `offline`).
-- Дефолтные события + network error при `navigator.onLine === true` → `GET /health`
-  (таймаут 5 с); неудача → `setOnline(false)` и проверка каждые 15 с (captive portal, «Wi-Fi без интернета»).
+- `focusManager` (`visibilitychange`) closes "PWA open for days with stale balances".
+- **The single source of "network is usable" is TanStack `onlineManager`** (C1-06): `shared/offline/network.ts` exports
+  `isNetworkUsable = () => onlineManager.isOnline()` and `waitForOnline()`. Spec 04 (the loaders' await rule, the offline branch of
+  auth guards), `connectivityStore`, `useRequiresOnline()` and the outbox read only these. `navigator.onLine` is read only
+  inside `shared/offline/**` (bootstrap and the probe below); lint `no-restricted-properties` `{ object: 'navigator', property:
+  'onLine' }` outside `shared/offline/**` (the rule is registered in 02 §D0, class "correctness", hint "use
+  isNetworkUsable()").
+- `onlineManager`: v5 starts with `online = true`; at bootstrap — `onlineManager.setOnline(navigator.onLine)`, then the
+  probe below (otherwise an offline cold start does not pause queries until the first `offline` event).
+- Default events + a network error while `navigator.onLine === true` → `GET /health`
+  (timeout 5 s); on failure → `setOnline(false)` and a check every 15 s (captive portal, "Wi-Fi without internet").
 
-#### 1.8 Офлайн vs backend down
+#### 1.8 Offline vs backend down
 
-Новая классификация в `shared/api/errors.ts` (заменяет `isLikelyBackendOutageError`):
+A new classification in `shared/api/errors.ts` (replaces `isLikelyBackendOutageError`):
 
-| Ситуация | Классификация | UI |
+| Situation | Classification | UI |
 |---|---|---|
-| `!isNetworkUsable()` или network error + `/health` тоже network error | `offline` | баннер «Нет сети. Показаны сохранённые данные» (неблокирующий), offline-only действия разрешены |
-| online, ответ 502/503/504, `/health` отвечает 5xx | `backend-down` | текущий `BackendUnavailablePage` |
-| online, одиночный 500 на конкретный запрос, `/health` = 200 | `request-error` | ошибка запроса (toast / errorElement роута) |
-| 4xx | `client-error` | обработка в месте вызова |
+| `!isNetworkUsable()` or a network error + `/health` is also a network error | `offline` | banner "No network. Saved data is shown" (non-blocking), offline-only actions are allowed |
+| online, response 502/503/504, `/health` answers 5xx | `backend-down` | the current `BackendUnavailablePage` |
+| online, a single 500 on a specific request, `/health` = 200 | `request-error` | request error (toast / route errorElement) |
+| 4xx | `client-error` | handled at the call site |
 
 - `backendAvailabilityStore` → `connectivityStore` (zustand): `{ mode: 'online' | 'offline' | 'backend-down' }`;
-  `offline` выводится из подписки на `onlineManager` (не хранит свою копию сетевого флага).
-  Interceptors больше не импортируют store (V5, `01-architecture.md:53`), а зовут колбэк `onConnectivityChange`
-  из `app/bootstrap`.
-- `BackendUnavailableGate` — только при `backend-down`; при `offline` — `<OfflineBanner/>` в
-  `InternalPageLayout`; тост `useCheckOnlineStatus` (`hooks/pwaHooks.tsx:23-54`) удаляется.
+  `offline` is derived from a subscription to `onlineManager` (it does not keep its own copy of the network flag).
+  Interceptors no longer import the store (V5, `01-architecture.md:53`) but call the callback `onConnectivityChange`
+  from `app/bootstrap`.
+- `BackendUnavailableGate` — only on `backend-down`; on `offline` — `<OfflineBanner/>` in
+  `InternalPageLayout`; the toast `useCheckOnlineStatus` (`hooks/pwaHooks.tsx:23-54`) is removed.
 
-### 2. Мутации и outbox
+### 2. Mutations and the outbox
 
 #### 2.1 Mutation defaults
 
-Слои (граф спеки 02 Д5): `entities/**` и `shared/offline/**` **не импортируют `store`** (`entities → store` запрещён).
-`userId`, `sessionMode` и прочее из сторов передаются аргументом (`registerLedgerMutationDefaults(client)`,
-`clientFor(userId)`) или колбэком из `app/bootstrap`; вызовы `outboxGate.open/close` делает `store`/`app`, не наоборот.
+Layers (the graph of spec 02 D5): `entities/**` and `shared/offline/**` **do not import `store`** (`entities → store` is forbidden).
+`userId`, `sessionMode` and the rest from the stores are passed as an argument (`registerLedgerMutationDefaults(client)`,
+`clientFor(userId)`) or as a callback from `app/bootstrap`; calls to `outboxGate.open/close` are made by `store`/`app`, not the other way around.
 
-`entities/ledger/api/mutations.ts` → `registerLedgerMutationDefaults(client)`, вызывается в `createQueryClient()`
-**до hydrate**: иначе у восстановленных мутаций нет `mutationFn` и `resumePausedMutations` их не выполнит.
-**Все** lifecycle-колбэки (`onMutate`, `onError`, `onSuccess`, `onSettled`) живут здесь же, в defaults: колбэки,
-переданные в `useMutation`/`mutate()`, после reload теряются. Хуки `useCreateExpense()` и т.д. передают только
-`mutationKey`; переопределять `scope`, `retry`, `mutationFn` и колбэки в хуке запрещено (тест §8 проверяет
-`mutation.options.scope.id === OUTBOX_SCOPE` и `retry === false` у созданной хуком мутации).
+`entities/ledger/api/mutations.ts` → `registerLedgerMutationDefaults(client)`, called in `createQueryClient()`
+**before hydrate**: otherwise restored mutations have no `mutationFn` and `resumePausedMutations` will not run them.
+**All** lifecycle callbacks (`onMutate`, `onError`, `onSuccess`, `onSettled`) live here too, in the defaults: callbacks
+passed to `useMutation`/`mutate()` are lost after reload. The hooks `useCreateExpense()` etc. pass only
+`mutationKey`; overriding `scope`, `retry`, `mutationFn` and callbacks in the hook is forbidden (the §8 test checks
+`mutation.options.scope.id === OUTBOX_SCOPE` and `retry === false` on a mutation created by the hook).
 
-Два набора ключей, у каждого свои defaults (C1-10); третьего пути нет:
+Two sets of keys, each with its own defaults (C1-10); there is no third path:
 
 ```ts
-// Outbox: только расходы (D2). Замороженный контракт после 03-17 (m9): ключи не переименовывать.
+// Outbox: expenses only (D2). Frozen contract after 03-17 (m9): keys must not be renamed.
 export const ledgerOutboxMutationKeys = { createExpense: ['ledger','outbox','createExpense'],
   updateExpense: ['ledger','outbox','updateExpense'], deleteExpense: ['ledger','outbox','deleteExpense'] } as const;
-// Онлайн: любой вид записи (expense и settlement), без outbox. Используется, когда offline-запись недоступна,
-// и всегда — для settlement (C2-02).
+// Online: any kind of write (expense and settlement), no outbox. Used when offline writing is unavailable,
+// and always for settlement (C2-02).
 export const ledgerOnlineMutationKeys = { createEntry: ['ledger','online','createEntry'],
   updateEntry: ['ledger','online','updateEntry'], deleteEntry: ['ledger','online','deleteEntry'] } as const;
 for (const key of Object.values(ledgerOnlineMutationKeys)) client.setMutationDefaults(key, {
-  mutationFn: runOnlineLedgerOp,   // api() напрямую; тело — те же мапперы toXWire()
+  mutationFn: runOnlineLedgerOp,   // api() directly; the body is the same toXWire() mappers
   networkMode: 'online', retry: false, onSettled: invalidateAfterLedgerOp });
 client.setMutationDefaults(ledgerOutboxMutationKeys.createExpense, {
   mutationFn: (op: CreateExpenseOp) => runOutboxOp(op),
-  scope: { id: OUTBOX_SCOPE },   // 'outbox' — одна мутация за раз, строго по порядку постановки
-  networkMode: 'always',         // ожидание сети/гейта — внутри runOutboxOp (2.4), не в retryer TanStack
-  retry: false,                  // единственный механизм повторов — цикл runOutboxOp (2.4)
-  // Отклонение от буквы D3 (offlineFirst + paused): пауза TanStack срабатывает только между ретраями и не знает
-  // про гейт; ожидание в runOutboxOp покрывает и сеть, и auth/426. Restore по-прежнему через hydrate (isPaused=true)
-  // + resumePausedMutations(). Пункт подтверждения владельца в 00 (C1-16a/C3-27); 03-15a не стартует до него.
+  scope: { id: OUTBOX_SCOPE },   // 'outbox' — one mutation at a time, strictly in enqueue order
+  networkMode: 'always',         // waiting for network/gate is inside runOutboxOp (2.4), not in the TanStack retryer
+  retry: false,                  // the only retry mechanism is the runOutboxOp loop (2.4)
+  // Deviation from the letter of D3 (offlineFirst + paused): the TanStack pause fires only between retries and knows
+  // nothing about the gate; the wait in runOutboxOp covers both the network and auth/426. Restore still goes through hydrate (isPaused=true)
+  // + resumePausedMutations(). An owner confirmation item in 00 (C1-16a/C3-27); 03-15a does not start before it.
   onMutate, onError, onSettled,  // 2.2
   meta: { outbox: true } });
 ```
 
-Выбор пути — одна функция на действие, хуки компонентов передают только её результат (тест обеих веток):
-`useCreateExpense()`, `useUpdateLedgerEntry(entry)`, `useDeleteLedgerEntry(entry)` в `entities/ledger/api/mutations.ts`
-берут outbox-ключ, **только если** `offlineWritesAvailable` (§2.7) **и** `entry.type === 'EXPENSE'` (для create — всегда
-расход); иначе — онлайн-ключ (офлайн его кнопка обёрнута `<OnlineOnly>`, §2.9).
+The path choice is one function per action; component hooks pass only its result (test both branches):
+`useCreateExpense()`, `useUpdateLedgerEntry(entry)`, `useDeleteLedgerEntry(entry)` in `entities/ledger/api/mutations.ts`
+take the outbox key **only if** `offlineWritesAvailable` (§2.7) **and** `entry.type === 'EXPENSE'` (for create — always
+an expense); otherwise — the online key (offline its button is wrapped in `<OnlineOnly>`, §2.9).
 
-**Реестр операций — guard «только расходы» (C2-02).** `enqueueOutboxOp(op)` (`shared/offline/outboxRegistry.ts`, лидер) —
-единственный вход в outbox; `OUTBOX_OPS: Record<OutboxKind, { entryKind: 'expense' }>`. Для `updateExpense`/`deleteExpense`
-он требует `ledger.entry(entryId)` в кэше с `type === 'EXPENSE'`; нет записи в кэше или другой тип → throw
-`OnlineOnlyError` (операция не создаётся, UI показывает «Нужно подключение»). Settlement/платёж в outbox попасть не может ни
-из UI, ни из `command` вкладки-последователя (лидер повторяет ту же проверку). zod `OutboxOpSchema` требует
-`entryKind: 'expense'` — persisted-операция другого вида при restore → failed `unreadable`.
+**Operation registry — the "expenses only" guard (C2-02).** `enqueueOutboxOp(op)` (`shared/offline/outboxRegistry.ts`, leader) is
+the single entry into the outbox; `OUTBOX_OPS: Record<OutboxKind, { entryKind: 'expense' }>`. For `updateExpense`/`deleteExpense`
+it requires `ledger.entry(entryId)` in the cache with `type === 'EXPENSE'`; no cache entry or another type → throw
+`OnlineOnlyError` (the operation is not created, the UI shows "Connection required"). A settlement/payment cannot get into the outbox either
+from the UI or from a `command` of a follower tab (the leader repeats the same check). The zod `OutboxOpSchema` requires
+`entryKind: 'expense'` — a persisted operation of another kind on restore → failed `unreadable`.
 
-`variables` — сериализуемый `OutboxOp` (JSON-примитивы; суммы — `WireAmount` (plain-объект `{ __wireDecimal }`, §4.1)
-через `moneyToWire`):
+`variables` is a serializable `OutboxOp` (JSON primitives; amounts are `WireAmount` (a plain object `{ __wireDecimal }`, §4.1)
+via `moneyToWire`):
 
 ```ts
 type OutboxOpBase = { opId: string; seq: number; owner: string; entryKind: 'expense'; createdAt: number; schema: 1 };
@@ -409,358 +409,358 @@ type UpdateExpenseOp = OutboxOpBase & { kind: 'updateExpense'; entryId: string; 
 type DeleteExpenseOp = OutboxOpBase & { kind: 'deleteExpense'; entryId: string; baseVersion: string | null };
 ```
 
-- `seq` (C2-16) — монотонный номер, который присваивает **лидер** при `enqueueOutboxOp` из счётчика `nextSeq`
-  persisted-ключа (§2.3); последователь шлёт операцию без `seq`. Порядок очереди везде (restore, hydrate, overlay) —
-  по `seq`; `createdAt` (часы устройства) используется только для 14-дневного `stale` (§2.8).
-- `owner` = `userId` владельца outbox; проверяется перед каждой отправкой (§2.3).
+- `seq` (C2-16) — a monotonic number assigned by the **leader** on `enqueueOutboxOp` from the `nextSeq` counter of the
+  persisted key (§2.3); a follower sends the operation without `seq`. The queue order everywhere (restore, hydrate, overlay) is
+  by `seq`; `createdAt` (device clock) is used only for the 14-day `stale` (§2.8).
+- `owner` = the `userId` of the outbox owner; checked before every send (§2.3).
 
-Версия (opaque-строка, BE-03-1) разрешается **внутри outbox**, не из query-кэша:
-- `baseVersion` при постановке = версия из кэша `ledger.entry(id)`; `null` — если в очереди есть неотправленный create
-  того же `entryId` (версии ещё нет).
-- `outboxVersions: Map<entryId, version>` (в памяти лидера + в persisted outbox, §2.3): после успеха любой операции
-  с `entryId`, если в очереди остались операции того же `entryId`, — `set(entryId, response.version)`, иначе `delete`.
-  «Оставить мою» в `ConflictDialog` тоже пишет `current.version`.
-- При отправке: `effective = outboxVersions.get(entryId) ?? op.baseVersion` (запись карты приоритетна — это наша
-  последняя запись). `effective === null` → терминальный `conflict` (GET `ledger.entry(id)` даёт `current`).
-  PATCH/DELETE **без** `If-Match` из outbox не отправляются никогда.
+The version (an opaque string, BE-03-1) is resolved **inside the outbox**, not from the query cache:
+- `baseVersion` at enqueue time = the version from the `ledger.entry(id)` cache; `null` — if the queue holds an unsent create
+  of the same `entryId` (no version yet).
+- `outboxVersions: Map<entryId, version>` (in the leader's memory + in the persisted outbox, §2.3): after the success of any operation
+  with an `entryId`, if operations with the same `entryId` remain in the queue — `set(entryId, response.version)`, otherwise `delete`.
+  "Keep mine" in `ConflictDialog` also writes `current.version`.
+- On send: `effective = outboxVersions.get(entryId) ?? op.baseVersion` (the map entry takes priority — it is our
+  latest write). `effective === null` → terminal `conflict` (GET `ledger.entry(id)` provides `current`).
+  PATCH/DELETE **without** `If-Match` are never sent from the outbox.
 
-#### 2.2 Оптимистичные обновления и откат
+#### 2.2 Optimistic updates and rollback
 
-Activity — серверная проекция событий (`api/activity.types.ts`); подделывать события хрупко. Поэтому
-**оптимистичное состояние — оверлей из очереди, а не запись в серверные кэши**:
-- `useOutboxOverlay()` читает `outboxState` (§2.3; во вкладке-лидере его пишет подписка на `mutationCache`, в
-  остальных — сообщения лидера) → `{ pendingCreates, pendingUpdatesByEntryId, pendingDeletes, failed, statusByOpId }`.
-  В ленте: сверху блок «Не отправлено»; `entryId ∈ pendingDeletes` — зачёркнуто, «будет удалено»; pending update —
-  «изменено, не отправлено» (`entryId` есть в activity, `api/activity.types.ts:51,95`). Откат автоматический:
-  мутация ушла — оверлей пересчитан.
-- `['ledger','entry',id]`: `onMutate` (в defaults) — `cancelQueries` + `setQueryData` оптимистично; snapshot **не**
-  используется. `onError` (только терминальные ошибки, 2.4) → `invalidateQueries(ledger.entry(id))`: persisted
-  snapshot после reload может быть на дни старше сервера. `onSettled` → `invalidateAfterLedgerOp(client, op)`:
+Activity is a server projection of events (`api/activity.types.ts`); faking events is fragile. Therefore
+**the optimistic state is an overlay from the queue, not a write into the server caches**:
+- `useOutboxOverlay()` reads `outboxState` (§2.3; in the leader tab it is written by the subscription to `mutationCache`, in
+  the others — by the leader's messages) → `{ pendingCreates, pendingUpdatesByEntryId, pendingDeletes, failed, statusByOpId }`.
+  In the feed: a "Not sent" block on top; `entryId ∈ pendingDeletes` — struck through, "will be deleted"; a pending update —
+  "changed, not sent" (the `entryId` is present in activity, `api/activity.types.ts:51,95`). Rollback is automatic:
+  the mutation was sent — the overlay is recomputed.
+- `['ledger','entry',id]`: `onMutate` (in the defaults) — `cancelQueries` + `setQueryData` optimistically; a snapshot is **not**
+  used. `onError` (terminal errors only, 2.4) → `invalidateQueries(ledger.entry(id))`: a persisted
+  snapshot after reload may be days older than the server. `onSettled` → `invalidateAfterLedgerOp(client, op)`:
   `ledger.entry(id)`, `groupKeys.detail/activity(groupId)`, `['activity']`, `['dashboard']`, `['users','known']`.
-  Этот список заменяет fan-out `groupsStore.ts:133-155`; вкладки-последователи вызывают ту же функцию по сообщению
-  `settled` от лидера. После reload `onMutate` не перезапускается — достаточно оверлея и инвалидации из §1.4.
+  This list replaces the fan-out of `groupsStore.ts:133-155`; follower tabs call the same function on the `settled`
+  message from the leader. After reload `onMutate` is not re-run — the overlay and the invalidation from §1.4 are enough.
 
-#### 2.3 Персист outbox и вкладки: один писатель на пользователя
+#### 2.3 Outbox persistence and tabs: one writer per user
 
-Файлы `shared/offline/outboxLeader.ts`, `outboxPersistence.ts`, `outboxChannel.ts`, `outboxInbox.ts`.
-- **Лидер.** Каждая вкладка с `userId` вызывает
-  `navigator.locks.request('chipin-outbox:<userId>', () => leaderSession())`, где `leaderSession` возвращает промис,
-  резолвящийся только при logout/смене пользователя/unload. Вкладка, чей колбэк выполняется, — **единственный писатель**:
-  восстанавливает, исполняет и персистит очередь. Остальные стоят в очереди за lock; при закрытии лидера браузер
-  отдаёт lock следующей вкладке, она делает `restoreOutbox` из того же ключа — сирот и их адопции нет.
-- **Один ключ** `chipin:outbox:<userId>` = `OutboxState { owner: userId, epoch: number, nextSeq: number,
+Files `shared/offline/outboxLeader.ts`, `outboxPersistence.ts`, `outboxChannel.ts`, `outboxInbox.ts`.
+- **Leader.** Each tab with a `userId` calls
+  `navigator.locks.request('chipin-outbox:<userId>', () => leaderSession())`, where `leaderSession` returns a promise
+  that resolves only on logout/user change/unload. The tab whose callback is running is the **sole writer**:
+  it restores, executes and persists the queue. The others wait in line for the lock; when the leader closes, the browser
+  hands the lock to the next tab, which does `restoreOutbox` from the same key — there are no orphans and no adoption of them.
+- **One key** `chipin:outbox:<userId>` = `OutboxState { owner: userId, epoch: number, nextSeq: number,
   mutations: DehydratedState['mutations'], versions: Record<entryId, version>, cancelled: opId[] }` (zod
-  `OutboxStateSchema`, §5.7). Запись — только лидер, только при `outboxRestore === 'ok'` (§1.6), по событиям
-  `mutationCache` для `meta.outbox`: `dehydrate(client, { shouldDehydrateQuery: () => false, shouldDehydrateMutation:
-  m => m.meta?.outbox === true && m.state.status === 'pending' && !cancelled.has(opId(m)) })` — **только `pending`**
-  (C3-05: `error`-мутация после hydrate не paused и никогда не возобновится; failed живут в своём ключе). `pending`
-  пишется с `isPaused = true` (иначе in-flight после hydrate «висит»). Failed — `chipin:outbox-failed:<userId>` (2.5).
-- **Фенсинг (C3-06).** Каждая запись — `idb-keyval` `update(key, prev => …)` (одна readwrite-транзакция): если
-  `prev.epoch !== myEpoch`, updater возвращает `prev` без изменений и помечает «лидерство потеряно» — вкладка немедленно
-  перестаёт быть писателем (§ ниже). Новый лидер первым действием делает `update(key, prev => ({ ...prev, epoch:
-  prev.epoch + 1 }))` и восстанавливает очередь из этого значения.
-- **Последователи** (вкладки без lock) — read-only вид очереди: `outboxState` из сообщений лидера по
-  `BroadcastChannel('chipin-outbox:<userId>')` (`state` при каждом изменении; при старте последователь шлёт
-  `state-request`, а до ответа показывает содержимое IDB-ключа). Новая операция или действие из `OutboxSheet`
-  («Повторить», «Отменить», решение конфликта) в последователе: (1) запись в **IDB-inbox** `chipin:outbox-inbox:<userId>`
-  (`update`, map по `opId`) — с этого момента операция на устройстве не теряется, тост «Сохранено, отправим при
-  появлении сети» показывается после этой записи; (2) сообщение `command { opId }` лидеру. Лидер забирает inbox при
-  старте и по каждому `command`: `enqueueOutboxOp` (присваивает `seq`) → персист → удаляет запись inbox → `ack { opId }`.
-  Дедупликация по `opId` (уже в `mutationCache`, в persisted или в failed → только удалить из inbox и `ack`).
-  Сообщения — zod `OutboxChannelMessageSchema` (§5.7).
-- **Замороженный лидер (C3-06).** Лидер шлёт `heartbeat { epoch }` каждые 2 с. Если у видимой
-  (`document.visibilityState === 'visible'`) вкладки-последователя есть запись inbox без `ack` 5 с **и** heartbeat не
-  приходил 5 с, она вызывает `navigator.locks.request(name, { steal: true }, leaderSession)` и становится лидером (epoch+1,
-  restore, забирает inbox). Скрытая вкладка не крадёт lock. Без `ack` 10 с — тост `offline:saveDelayed` «Сохранено на
-  устройстве, отправка начнётся, когда приложение снова станет активным» (операция в inbox, не потеряна).
-  Бывший лидер после разморозки: его промис lock отклоняется (`AbortError`) **или** фенсинг в `update` срабатывает — он
-  ставит `isLeader = false`, отписывает персист, его `runOutboxOp` на ближайшей проверке резолвится `leadershipLost`
-  без запроса (2.4) и переходит в режим последователя. Уже отправленный им запрос безопасен благодаря идемпотентности
-  (BE-03-1 `X-Client-Op-Id`, BE-03-2 `id`, DELETE удалённого = 204).
-- **Привязка к аккаунту (C3-07).** Ключи и lock содержат `userId`; `OutboxState.owner` проверяется при restore
-  (`owner !== userId` → `outboxRestore = 'failed'`). Гейт `auth` при старте лидера **закрыт** и открывается только когда
-  `sessionUserId() === owner`, где `sessionUserId()` = `sub` текущего access-токена (backend: `JwtTokenService.kt:29`
-  `withSubject(userId)`; декод без проверки подписи, только для сравнения). Проверка повторяется на каждом обновлении
-  токена (колбэк interceptor `onAccessTokenChanged`) и синхронно **непосредственно перед каждой** отправкой
-  (`sendOutboxOp`). Несовпадение → `outboxGate.close('auth')` + поток смены аккаунта (§1.5); операции X никогда не
-  уходят с токеном Y (например, Y вошёл в соседней вкладке, а refresh cookie общая).
-- `restoreOutbox(client, userId)` (только лидер): ключ → `OutboxStateSchema` → каждая `variables` → zod `OutboxOpSchema`
-  (union по `kind`, `schema` для миграций), невалидные → failed `unreadable`; пропуск `opId` из `cancelled`, из
-  failed-ключа (C3-05: после краша между записью failed и перезаписью outbox операция может быть в обоих — failed
-  приоритетен) и уже присутствующих в `mutationCache` (идемпотентно при remount/StrictMode); **сортировка по `seq`**;
-  `hydrate`; восстановление `outboxVersions`; если есть failed — гейт закрыт по `blocked` **до**
-  `resumePausedMutations()`; затем забрать inbox; `outboxRestore = 'ok'`.
-- Повтор in-flight операции после смены лидера/reload безопасен по D5: create идемпотентен по `id` (BE-03-2), delete
-  удалённого = 204, PATCH несёт `X-Client-Op-Id: <opId>` — повтор уже применённой операции backend отвечает 200 с
-  текущей записью до проверки `If-Match` (BE-03-1, §7), глубокое сравнение `current` с `patch` не нужно.
-- **Нет `navigator.locks` или `BroadcastChannel`** (старые браузеры): офлайн-запись выключена
-  (`offlineWritesAvailable = false`), создание/правка/удаление расходов — только онлайн, как до 03-17; чтение кэша
-  офлайн работает. Выборы лидера через `localStorage`/`storage`-события не делаем (гонка check-then-act).
+  `OutboxStateSchema`, §5.7). Written only by the leader, only when `outboxRestore === 'ok'` (§1.6), on
+  `mutationCache` events for `meta.outbox`: `dehydrate(client, { shouldDehydrateQuery: () => false, shouldDehydrateMutation:
+  m => m.meta?.outbox === true && m.state.status === 'pending' && !cancelled.has(opId(m)) })` — **`pending` only**
+  (C3-05: an `error` mutation after hydrate is not paused and will never resume; failed ones live in their own key). `pending`
+  is written with `isPaused = true` (otherwise an in-flight one "hangs" after hydrate). Failed — `chipin:outbox-failed:<userId>` (2.5).
+- **Fencing (C3-06).** Each write is an `idb-keyval` `update(key, prev => …)` (a single readwrite transaction): if
+  `prev.epoch !== myEpoch`, the updater returns `prev` unchanged and marks "leadership lost" — the tab immediately
+  stops being a writer (see below). The new leader's first action is `update(key, prev => ({ ...prev, epoch:
+  prev.epoch + 1 }))`, and it restores the queue from that value.
+- **Followers** (tabs without the lock) — a read-only view of the queue: `outboxState` from the leader's messages over
+  `BroadcastChannel('chipin-outbox:<userId>')` (`state` on every change; on startup the follower sends
+  `state-request`, and until the reply it shows the contents of the IDB key). A new operation or an action from `OutboxSheet`
+  ("Retry", "Cancel", conflict resolution) in a follower: (1) a write to the **IDB inbox** `chipin:outbox-inbox:<userId>`
+  (`update`, map by `opId`) — from this moment the operation is not lost on the device, and the toast "Saved, we will send it when the
+  network is back" is shown after this write; (2) a `command { opId }` message to the leader. The leader picks up the inbox at
+  startup and on every `command`: `enqueueOutboxOp` (assigns `seq`) → persist → deletes the inbox entry → `ack { opId }`.
+  Deduplication by `opId` (already in `mutationCache`, in persisted or in failed → just delete from the inbox and `ack`).
+  Messages — zod `OutboxChannelMessageSchema` (§5.7).
+- **Frozen leader (C3-06).** The leader sends `heartbeat { epoch }` every 2 s. If a visible
+  (`document.visibilityState === 'visible'`) follower tab has an inbox entry without `ack` for 5 s **and** no heartbeat
+  has arrived for 5 s, it calls `navigator.locks.request(name, { steal: true }, leaderSession)` and becomes the leader (epoch+1,
+  restore, picks up the inbox). A hidden tab does not steal the lock. Without `ack` for 10 s — a toast `offline:saveDelayed` "Saved on the
+  device, sending will start when the app becomes active again" (the operation is in the inbox, not lost).
+  The former leader after unfreezing: its lock promise is rejected (`AbortError`) **or** the fencing in `update` triggers — it
+  sets `isLeader = false`, unsubscribes persistence, its `runOutboxOp` at the nearest check resolves `leadershipLost`
+  without a request (2.4) and switches to follower mode. A request it already sent is safe thanks to idempotency
+  (BE-03-1 `X-Client-Op-Id`, BE-03-2 `id`, DELETE of a deleted entry = 204).
+- **Account binding (C3-07).** The keys and the lock contain `userId`; `OutboxState.owner` is checked on restore
+  (`owner !== userId` → `outboxRestore = 'failed'`). The `auth` gate is **closed** when the leader starts and is opened only when
+  `sessionUserId() === owner`, where `sessionUserId()` = the `sub` of the current access token (backend: `JwtTokenService.kt:29`
+  `withSubject(userId)`; decoded without verifying the signature, only for comparison). The check is repeated on every token
+  refresh (interceptor callback `onAccessTokenChanged`) and synchronously **right before every** send
+  (`sendOutboxOp`). A mismatch → `outboxGate.close('auth')` + the account-switch flow (§1.5); X's operations are never
+  sent with Y's token (for example, Y signed in in a neighboring tab while the refresh cookie is shared).
+- `restoreOutbox(client, userId)` (leader only): key → `OutboxStateSchema` → each `variables` → zod `OutboxOpSchema`
+  (a union by `kind`, `schema` for migrations), invalid ones → failed `unreadable`; skip `opId`s from `cancelled`, from
+  the failed key (C3-05: after a crash between writing failed and rewriting the outbox an operation may be in both — failed
+  takes priority) and those already present in `mutationCache` (idempotent on remount/StrictMode); **sort by `seq`**;
+  `hydrate`; restore `outboxVersions`; if there are failed ones — close the gate with `blocked` **before**
+  `resumePausedMutations()`; then pick up the inbox; `outboxRestore = 'ok'`.
+- Repeating an in-flight operation after a leader change/reload is safe per D5: create is idempotent by `id` (BE-03-2), delete
+  of a deleted entry = 204, PATCH carries `X-Client-Op-Id: <opId>` — for a repeat of an already applied operation the backend answers 200 with
+  the current record before checking `If-Match` (BE-03-1, §7), a deep comparison of `current` with `patch` is not needed.
+- **No `navigator.locks` or `BroadcastChannel`** (old browsers): offline writing is off
+  (`offlineWritesAvailable = false`), creating/editing/deleting expenses is online only, as before 03-17; reading the cache
+  offline works. We do not do leader election via `localStorage`/`storage` events (a check-then-act race).
 
-#### 2.4 Порядок и гейт
+#### 2.4 Order and gate
 
-- `scope: { id: 'outbox' }` — TanStack v5 запускает следующую мутацию scope только после того, как предыдущая
-  **settled** (success или error), и в порядке постановки; после reload — в порядке hydrate (= `seq`). Поэтому порядок
-  держится на одном правиле: **`runOutboxOp` settle-ится только успехом, no-op-результатом или терминальной ошибкой**;
-  всё нетерминальное ждёт внутри него, мутация остаётся pending во главе scope и ничто её не обгоняет.
-- **`mutationCache.remove()` на pending outbox-мутации запрещён** (C3-04). Проверено в `query-core@5.105.0`
-  `mutationCache.ts`: `remove` только вырезает мутацию из scope, работающий `mutationFn` продолжается, а `canRun` (первая
-  `pending` в scope) тут же пускает следующую — `resumePausedMutations` запустит её параллельно с «удалённой».
-  Отмена — только через `cancelledOpIds` (2.5); settled-мутации убирает gc.
-- `outboxGate` (`shared/offline/outboxGate.ts`) — **в памяти** лидера: `close(reason)`, `open(reason)`,
-  `whenOpen(opts?): Promise<void>`, причины `auth | outdated | blocked`. Персистентные данные (failed-ключ) лишь
-  восстанавливают `blocked` при restore; решение «можно ли отправлять» никогда не читается из IDB.
+- `scope: { id: 'outbox' }` — TanStack v5 starts the next mutation of a scope only after the previous one
+  **settled** (success or error), and in enqueue order; after reload — in hydrate order (= `seq`). Therefore the order
+  rests on one rule: **`runOutboxOp` settles only with a success, a no-op result or a terminal error**;
+  everything non-terminal waits inside it, the mutation stays pending at the head of the scope and nothing overtakes it.
+- **`mutationCache.remove()` on a pending outbox mutation is forbidden** (C3-04). Verified in `query-core@5.105.0`
+  `mutationCache.ts`: `remove` only cuts the mutation out of the scope, the running `mutationFn` continues, and `canRun` (the first
+  `pending` in the scope) immediately lets the next one in — `resumePausedMutations` will start it in parallel with the "removed" one.
+  Cancellation is only through `cancelledOpIds` (2.5); settled mutations are removed by gc.
+- `outboxGate` (`shared/offline/outboxGate.ts`) — **in the leader's memory**: `close(reason)`, `open(reason)`,
+  `whenOpen(opts?): Promise<void>`, reasons `auth | outdated | blocked`. Persistent data (the failed key) only
+  restores `blocked` on restore; the decision "may we send" is never read from IDB.
 
 ```ts
-// Стиль свободный (D24); здесь: повтор = рекурсивный вызов из .catch, не цикл.
+// Style is free (D24); here: a retry = a recursive call from .catch, not a loop.
 function runOutboxOp(op: OutboxOp, opts?: { ignore?: GateReason[] }, attempt = 0): Promise<OutboxResult> {
   const retry = (): Promise<OutboxResult> => runOutboxOp(op, opts, attempt + 1);
-  const noOp = (): OutboxResult | null =>            // проверка после каждого await и прямо перед отправкой
+  const noOp = (): OutboxResult | null =>            // check after every await and right before sending
     !isLeader() ? LEADERSHIP_LOST : isCancelled(op.opId) ? CANCELLED : null;
   return outboxGate.whenOpen(opts)                    // auth / outdated / blocked
     .then(() => waitForOnline())                      // shared/offline/network.ts (§1.7)
     .then(() => {
-      const skip = noOp(); if (skip) return skip;     // discard / потеря лидерства: ни одного запроса
+      const skip = noOp(); if (skip) return skip;     // discard / leadership lost: not a single request
       if (sessionUserId() !== op.owner) { outboxGate.close('auth'); return retry(); }   // C3-07
-      setStatus(op.opId, 'sending'); return sendOutboxOp(op);   // 2xx и «успех-no-op» строки таблицы 2.5
+      setStatus(op.opId, 'sending'); return sendOutboxOp(op);   // 2xx and the "success-no-op" rows of table 2.5
     })
-    .catch((error: unknown) => {                      // retry() возвращается из catch — его reject сюда не попадает
-      const c = classifyOutboxError(error);           // таблица 2.5
+    .catch((error: unknown) => {                      // retry() is returned from catch — its reject does not land here
+      const c = classifyOutboxError(error);           // table 2.5
       if (c.kind === 'network') { setStatus(op.opId, 'waiting-network'); return retry(); }
       if (c.kind === 'transient') { setStatus(op.opId, 'server-unavailable'); return sleep(backoff(attempt)).then(retry); }
       if (c.kind === 'auth' || c.kind === 'outdated') { outboxGate.close(c.kind); return retry(); }
-      outboxGate.close('blocked');                    // синхронно, ДО записи — следующая операция встанет на whenOpen
-      return recordFailed(op, c)                      // C3-05: память + IDB failed-ключ, запись ДОЖИДАЕМСЯ
+      outboxGate.close('blocked');                    // synchronously, BEFORE the write — the next operation will stop at whenOpen
+      return recordFailed(op, c)                      // C3-05: memory + the IDB failed key, the write is AWAITED
         .then(() => { throw new OutboxTerminalError(c); },
               () => { setStatus(op.opId, 'failed-unsaved'); reportPersistFailed(); return retry(); });
-      // запись failed не удалась → операция остаётся pending во главе scope (persisted outbox её содержит),
-      // гейт blocked; действия OutboxSheet работают с записью в памяти. Никогда «ни в outbox, ни в failed».
+      // the failed write did not succeed → the operation stays pending at the head of the scope (the persisted outbox contains it),
+      // the gate is blocked; OutboxSheet actions work with the in-memory record. Never "neither in the outbox nor in failed".
     });
 }
 const backoff = (n: number) => Math.min(1000 * 2 ** n, 60_000) * (0.8 + Math.random() * 0.4);
 ```
 
-`CANCELLED`/`LEADERSHIP_LOST` — успешные результаты без побочных эффектов: `onSettled` в defaults по ним не инвалидирует
-кэш и не трогает `outboxVersions`.
+`CANCELLED`/`LEADERSHIP_LOST` are successful results without side effects: `onSettled` in the defaults does not invalidate
+the cache for them and does not touch `outboxVersions`.
 
-Единая политика повторов (заменяет прежние `outboxRetry`/`retry: outboxRetry`):
+A single retry policy (replaces the former `outboxRetry`/`retry: outboxRetry`):
 
-| Класс | Ответы | Поведение | Статус в UI |
+| Class | Responses | Behavior | UI status |
 |---|---|---|---|
-| `network` | network error, timeout | ждать `online`, повтор сразу | «ждёт сети» |
-| `transient` | 5xx, 409 `SYSTEM.CONFLICT` | backoff 1 с → 60 с ±20 %, бесконечно | «сервер недоступен, повторим» |
-| `auth` | 401 после неудачного refresh (interceptor уже вызвал `expireSession()`); `sub` токена ≠ `owner` | гейт `auth`; открывает только проверка владельца (2.3) | «нужно войти» |
-| `outdated` | 426 `CLIENT.OUTDATED` | гейт `outdated`; экран обновления (03-20) | «нужно обновить приложение» |
-| терминальный | 400/422, 403, 404 PATCH, 409 `LEDGER.VERSION_CONFLICT`, 409 `LEDGER.ID_CONFLICT`, неизвестная версия | гейт `blocked`, failed (запись дождались), throw | причина failed |
+| `network` | network error, timeout | wait for `online`, retry immediately | "waiting for network" |
+| `transient` | 5xx, 409 `SYSTEM.CONFLICT` | backoff 1 s → 60 s ±20 %, indefinitely | "server unavailable, will retry" |
+| `auth` | 401 after a failed refresh (the interceptor has already called `expireSession()`); token `sub` ≠ `owner` | `auth` gate; opened only by the owner check (2.3) | "sign-in required" |
+| `outdated` | 426 `CLIENT.OUTDATED` | `outdated` gate; update screen (03-20) | "app update required" |
+| terminal | 400/422, 403, 404 PATCH, 409 `LEDGER.VERSION_CONFLICT`, 409 `LEDGER.ID_CONFLICT`, unknown version | `blocked` gate, failed (write awaited), throw | failed reason |
 
-Запросы TanStack-**queries** используют свою политику `queryRetry` (§1.2); у outbox-мутаций `retry: false`.
+TanStack **queries** use their own `queryRetry` policy (§1.2); outbox mutations have `retry: false`.
 
-#### 2.5 Обработка ошибок
+#### 2.5 Error handling
 
-409 различается **по `code`**, не по статусу: `SYSTEM.CONFLICT` — транзиентный (повтор), `LEDGER.VERSION_CONFLICT` —
-конфликт версий (UI), `LEDGER.ID_CONFLICT` — ошибка данных.
+409 is distinguished **by `code`**, not by status: `SYSTEM.CONFLICT` — transient (retry), `LEDGER.VERSION_CONFLICT` —
+version conflict (UI), `LEDGER.ID_CONFLICT` — data error.
 
-| Ответ | Действие |
+| Response | Action |
 |---|---|
-| 2xx | успех; `setQueryData` для entry из ответа (включая новую `version`), обновить `outboxVersions` (2.1) |
-| network | ждать сети (2.4), операция pending |
-| 5xx, 409 `SYSTEM.CONFLICT` | backoff (2.4), операция pending |
-| 401 | interceptor делает refresh. Если refresh не удался → `expireSession()`, гейт `auth`, операция pending (не failed) |
-| 400 / 422 (валидация) | failed `validation`, гейт `blocked` |
-| 403 (нет доступа к группе / исключён) | failed `forbidden`, гейт `blocked` |
-| 404 на PATCH | failed `deletedRemotely`, гейт `blocked` |
-| 404/204 на DELETE | успех |
-| 409 `LEDGER.VERSION_CONFLICT` | failed `conflict`, `current` из тела `LedgerConflictResponse` (BE-03-1, парсится zod), гейт `blocked` |
-| 409 `LEDGER.ID_CONFLICT` на create | failed `idConflict` (не должно случаться; Sentry), гейт `blocked` |
-| 410 `LEDGER.ENTRY_DELETED` на create-дубль | успех-no-op, убрать из оверлея |
-| 426 `CLIENT.OUTDATED` | гейт `outdated`, операция pending, экран обновления |
+| 2xx | success; `setQueryData` for the entry from the response (including the new `version`), update `outboxVersions` (2.1) |
+| network | wait for the network (2.4), operation pending |
+| 5xx, 409 `SYSTEM.CONFLICT` | backoff (2.4), operation pending |
+| 401 | the interceptor does a refresh. If the refresh failed → `expireSession()`, `auth` gate, operation pending (not failed) |
+| 400 / 422 (validation) | failed `validation`, `blocked` gate |
+| 403 (no access to the group / excluded) | failed `forbidden`, `blocked` gate |
+| 404 on PATCH | failed `deletedRemotely`, `blocked` gate |
+| 404/204 on DELETE | success |
+| 409 `LEDGER.VERSION_CONFLICT` | failed `conflict`, `current` from the `LedgerConflictResponse` body (BE-03-1, parsed by zod), `blocked` gate |
+| 409 `LEDGER.ID_CONFLICT` on create | failed `idConflict` (should not happen; Sentry), `blocked` gate |
+| 410 `LEDGER.ENTRY_DELETED` on a duplicate create | success-no-op, remove from the overlay |
+| 426 `CLIENT.OUTDATED` | `outdated` gate, operation pending, update screen |
 
-Failed-операция пишется в `chipin:outbox-failed:<userId>` (zod-схема `FailedOpSchema = { op: OutboxOp, reason,
-current?: LedgerEntry, failedAt }`) **до** того, как мутация settle-ится ошибкой и уходит из persisted outbox (2.4).
-**Любая failed-операция блокирует очередь** (гейт `blocked`): следующие могут зависеть от неё (правка того же расхода).
+A failed operation is written to `chipin:outbox-failed:<userId>` (zod schema `FailedOpSchema = { op: OutboxOp, reason,
+current?: LedgerEntry, failedAt }`) **before** the mutation settles with an error and leaves the persisted outbox (2.4).
+**Any failed operation blocks the queue** (`blocked` gate): the following ones may depend on it (an edit of the same expense).
 
-`features/offline-queue/OutboxSheet.tsx` (из баннера/бейджа в header): pending со статусом из `statusByOpId`
-(«ждёт сети» / «отправляется» / «сервер недоступен» / «нужно войти» / «нужно обновить») и failed с причиной.
-Действия failed: «Повторить» (кроме `conflict`), «Отменить операцию», для `conflict` — «Разобраться» (2.6), для
-`deletedRemotely` — «Создать как новый расход». «Повторить» вызывает `runOutboxOp(op, { ignore: ['blocked'] })`
-**напрямую, вне scope** (ждёт `auth`/`outdated`, но не `blocked`) — остальные операции стоят на `whenOpen`, ничто не
-обгоняет; успех → операция убрана из failed, и если failed пуст — `outboxGate.open('blocked')`.
+`features/offline-queue/OutboxSheet.tsx` (from the banner/badge in the header): pending ones with a status from `statusByOpId`
+("waiting for network" / "sending" / "server unavailable" / "sign-in required" / "update required") and failed ones with a reason.
+Actions for failed: "Retry" (except `conflict`), "Cancel operation", for `conflict` — "Resolve" (2.6), for
+`deletedRemotely` — "Create as a new expense". "Retry" calls `runOutboxOp(op, { ignore: ['blocked'] })`
+**directly, outside the scope** (it waits for `auth`/`outdated`, but not `blocked`) — the other operations stand at `whenOpen`, nothing
+overtakes; on success the operation is removed from failed, and if failed is empty — `outboxGate.open('blocked')`.
 
-**Отмена (discard), C2-15/C3-04** — одна функция `discardOps(opIds)` у лидера (в последователе — `command`):
-одной `update`-записью добавляет `opIds` в `OutboxState.cancelled` и убирает их из `mutations`/failed; затем
-`cancelledOpIds` в памяти. Отменённая операция, где бы она ни ждала (`whenOpen`, `waitForOnline`, backoff), на ближайшей
-проверке резолвится `CANCELLED` **без запроса**; следующая операция стартует только после её settle (порядок scope
-сохраняется). Операция в статусе `sending` (запрос уже ушёл) отмене не подлежит — кнопка скрыта до ответа.
-- Discard pending (в т.ч. головы очереди): `discardOps([opId])`.
-- Discard failed **create**: `discardOps([createOpId, …все pending/failed с тем же `entryId`])` — зависимые правки и
-  удаление того же клиентского id отменяются вместе с ним (подтверждение «и N связанных правок»); ни один PATCH/DELETE
-  на несуществующую запись не уходит.
-- Discard failed update/delete: только эта операция; последующие операции того же `entryId` остаются (их версия — из
-  `outboxVersions`/`baseVersion`, конфликт ловит backend).
-- После discard: failed пуст → `outboxGate.open('blocked')`. `cancelled` чистится от `opId`, когда его мутация settled.
+**Cancellation (discard), C2-15/C3-04** — a single function `discardOps(opIds)` on the leader (in a follower — a `command`):
+with a single `update` write it adds `opIds` to `OutboxState.cancelled` and removes them from `mutations`/failed; then
+`cancelledOpIds` in memory. A cancelled operation, wherever it is waiting (`whenOpen`, `waitForOnline`, backoff), at the nearest
+check resolves `CANCELLED` **without a request**; the next operation starts only after its settle (the scope order
+is preserved). An operation in `sending` status (the request has already gone out) cannot be cancelled — the button is hidden until the response.
+- Discard pending (including the queue head): `discardOps([opId])`.
+- Discard failed **create**: `discardOps([createOpId, …all pending/failed with the same `entryId`])` — dependent edits and
+  deletion of the same client id are cancelled together with it (confirmation "and N related edits"); no PATCH/DELETE
+  goes out for a non-existent record.
+- Discard failed update/delete: only this operation; subsequent operations of the same `entryId` remain (their version comes from
+  `outboxVersions`/`baseVersion`, the backend catches a conflict).
+- After discard: failed is empty → `outboxGate.open('blocked')`. `cancelled` is cleaned of the `opId` when its mutation has settled.
 
-#### 2.6 Конфликт 409
+#### 2.6 Conflict 409
 
-`ConflictDialog` (`features/offline-queue/`): «Расход изменили на другом устройстве», таблица отличающихся
-полей (сумма, валюта, описание, дата, плательщик, участники, деление, категория), «Ваша версия» / «Сейчас на
-сервере». «Оставить мою» — повтор с `baseVersion = current.version` (осознанный last-write-wins, напрямую);
-«Взять с сервера» — `discardOps` (2.5) + `setQueryData(entry, current)`. Delete-конфликт: «Удалить всё равно» / «Не
-удалять». Пока конфликт не разобран, гейт закрыт.
+`ConflictDialog` (`features/offline-queue/`): "The expense was changed on another device", a table of differing
+fields (amount, currency, description, date, payer, participants, split, category), "Your version" / "Currently on the
+server". "Keep mine" — a retry with `baseVersion = current.version` (deliberate last-write-wins, directly);
+"Take from server" — `discardOps` (2.5) + `setQueryData(entry, current)`. Delete conflict: "Delete anyway" / "Do not
+delete". While the conflict is unresolved, the gate is closed.
 
-#### 2.7 Client UUID, create и capabilities backend
+#### 2.7 Client UUID, create and backend capabilities
 
-`entryId = crypto.randomUUID()` создаётся при открытии формы (повторный сабмит несёт тот же id). Поле `id` в теле
-`POST /ledger/entries` backend до BE-03-2 отвергает **400** (неизвестное поле), поэтому:
-- Источник правды — runtime-capabilities: `GET /health` → `{ status: "UP", capabilities: string[] }` (поле вводит
-  первый влитый из BE-03-1/2/5; контракт §7.0): `"ledger.clientEntryId"` (BE-03-2), `"ledger.entryVersion"` (BE-03-1),
+`entryId = crypto.randomUUID()` is created when the form is opened (a repeated submit carries the same id). The `id` field in the body of
+`POST /ledger/entries` is rejected by the backend with **400** (unknown field) until BE-03-2, therefore:
+- The source of truth is runtime capabilities: `GET /health` → `{ status: "UP", capabilities: string[] }` (the field is introduced by the
+  first merged of BE-03-1/2/5; contract §7.0): `"ledger.clientEntryId"` (BE-03-2), `"ledger.entryVersion"` (BE-03-1),
   `"client.minVersion"` (BE-03-5).
-  FE: `capabilitiesQueryOptions` (`['meta','capabilities']`, staleTime 10 мин, persist да, `queryFn` = тот же `/health`;
-  нет поля → `[]`). `useBackendCapability(name)` — единственный читатель.
-- Тело create строит одна функция `toCreateLedgerEntryWire(draft, { clientEntryId })`; `id` кладётся, **только** если
-  в момент отправки есть `ledger.clientEntryId`. Без него create — **только онлайн** (`ledgerOnlineMutationKeys.createEntry`, 2.1;
-  `<OnlineOnly>` на кнопке сохранения в офлайне), id не отправляется. Поле `id` в типах появляется только после
-  синхронизации OpenAPI с релизом backend, где оно есть (§5.3), — со старым снимком код с `id` не компилируется.
+  FE: `capabilitiesQueryOptions` (`['meta','capabilities']`, staleTime 10 min, persist yes, `queryFn` = the same `/health`;
+  no field → `[]`). `useBackendCapability(name)` is the only reader.
+- The create body is built by a single function `toCreateLedgerEntryWire(draft, { clientEntryId })`; `id` is included **only** if
+  `ledger.clientEntryId` is present at send time. Without it create is **online only** (`ledgerOnlineMutationKeys.createEntry`, 2.1;
+  `<OnlineOnly>` on the save button while offline), the id is not sent. The `id` field appears in the types only after
+  syncing OpenAPI with the backend release that has it (§5.3) — with an old snapshot code with `id` does not compile.
 - `offlineWritesAvailable = VITE_FEATURE_OFFLINE_WRITES && capabilities ⊇ {ledger.clientEntryId, ledger.entryVersion,
   client.minVersion} && navigator.locks && BroadcastChannel && outboxRestore === 'ok' && !persistFailedThisSession`
-  (§1.6, §2.3, §2.8). Отдельного `VITE_FEATURE_CLIENT_ENTRY_ID` нет.
-- Откат backend после того, как capability закэширована: create с `id` → 400 → failed `validation`; следующий
-  `/health` (refetch на focus/reconnect) снимает capability. Приемлемо, Sentry `outbox.capability_mismatch`.
+  (§1.6, §2.3, §2.8). There is no separate `VITE_FEATURE_CLIENT_ENTRY_ID`.
+- A backend rollback after the capability was cached: create with `id` → 400 → failed `validation`; the next
+  `/health` (refetch on focus/reconnect) clears the capability. Acceptable, Sentry `outbox.capability_mismatch`.
 
-#### 2.8 Лимиты
+#### 2.8 Limits
 
-- Максимум **50** pending+failed на пользователя; дальше офлайн-создание/правка выключены («Слишком много
-  неотправленных операций — подключитесь к сети»).
-- Старше **14 дней** по `createdAt` (refresh token 30 дней, `application.yaml:18`) → failed `stale` («Отправить всё
-  равно» / «Отменить»), без автоудаления. Лимиты и `stale` — PR 03-15b.
-- **Надёжность хранения (C3-10).** Первая офлайн-операция вызывает `navigator.storage.persist()` (один раз за сессию);
-  если `navigator.storage.persisted()` === `false` — в `OutboxSheet` подпись `offline:storageNotPersisted` «Браузер может
-  удалить несохранённые данные этого устройства (Safari — через 7 дней без открытия; приватное окно — при закрытии)».
-  Тост «Сохранено, отправим при появлении сети» в лидере — только после успешного `persistNow()` (немедленная запись
-  ключа без throttle). `persistNow()` отклонён (квота, приватный режим): если операция ещё не в `sending` —
-  `discardOps([opId])`, тост-ошибка `offline:saveFailed` «Не удалось сохранить на устройстве — подключитесь к сети»,
-  `persistFailedThisSession = true` (офлайн-запись выключена до перезапуска); если уже `sending` — дождаться ответа,
-  Sentry `outbox.persist_failed`. Тост успеха без успешной записи невозможен.
+- A maximum of **50** pending+failed per user; beyond that offline create/edit are disabled ("Too many
+  unsent operations — connect to the network").
+- Older than **14 days** by `createdAt` (refresh token 30 days, `application.yaml:18`) → failed `stale` ("Send anyway"
+  / "Cancel"), no auto-deletion. Limits and `stale` — PR 03-15b.
+- **Storage reliability (C3-10).** The first offline operation calls `navigator.storage.persist()` (once per session);
+  if `navigator.storage.persisted()` === `false` — a caption `offline:storageNotPersisted` in `OutboxSheet` "The browser may
+  delete unsaved data of this device (Safari — after 7 days without opening; a private window — on close)".
+  The toast "Saved, we will send it when the network is back" in the leader — only after a successful `persistNow()` (an immediate write
+  of the key without throttle). `persistNow()` rejected (quota, private mode): if the operation is not yet in `sending` —
+  `discardOps([opId])`, error toast `offline:saveFailed` "Could not save on the device — connect to the network",
+  `persistFailedThisSession = true` (offline writing is off until restart); if already `sending` — wait for the response,
+  Sentry `outbox.persist_failed`. A success toast without a successful write is impossible.
 
-#### 2.9 Что разрешено офлайн
+#### 2.9 What is allowed offline
 
-| Операция | Офлайн |
+| Operation | Offline |
 |---|---|
-| Создать / изменить / удалить расход (группа и личный) | да, фаза 1 |
-| Создать/переименовать группу, участники, обложка, выход, kick, инвайты | нет в фазе 1; фаза 2 (D2) — переименование и участники через тот же outbox после BE-03-8; PR-id фазы 2 не назначены — отсрочка вынесена в подтверждения владельца (00, C1-28) |
-| Settle-up / погашение / платёж, удаление и правка settlement | **никогда** (см. ниже) |
-| Аватар/обложка (upload) | никогда (multipart, прогресс) |
-| Настройки пользователя (`PATCH /users/self`) | нет (фаза 2 по желанию) |
-| Удалить друга, logout other devices | нет |
+| Create / edit / delete an expense (group and personal) | yes, phase 1 |
+| Create/rename a group, participants, cover, leave, kick, invites | no in phase 1; phase 2 (D2) — rename and participants through the same outbox after BE-03-8; phase 2 PR ids are not assigned — the deferral is listed among the owner confirmations (00, C1-28) |
+| Settle-up / repayment / payment, deletion and editing of a settlement | **never** (see below) |
+| Avatar/cover (upload) | never (multipart, progress) |
+| User settings (`PATCH /users/self`) | no (phase 2 optionally) |
+| Delete a friend, logout other devices | no |
 
-Механизм: `useRequiresOnline()` (из `isNetworkUsable()` + `sessionMode`) и `<OnlineOnly>` вокруг кнопки:
-офлайн → `disabled`, `aria-disabled`, tooltip «Нужно подключение к интернету»; вход в `GroupSettleUpFlow`
-закрыт целиком. Константа `ONLINE_ONLY_ACTIONS` + тест, что каждое действие обёрнуто.
+Mechanism: `useRequiresOnline()` (from `isNetworkUsable()` + `sessionMode`) and `<OnlineOnly>` around the button:
+offline → `disabled`, `aria-disabled`, tooltip "An internet connection is required"; entry into `GroupSettleUpFlow`
+is closed entirely. The constant `ONLINE_ONLY_ACTIONS` + a test that every action is wrapped.
 
-**Settlement — только онлайн, на двух уровнях (C2-02).** Удаление (reverse) и правка settlement идут по тем же
-`DELETE`/`PATCH /ledger/entries/{id}`, что и расходы (backend `LedgerEntryCommandService.deleteEntry` обрабатывает
-`EXPENSE` и `SETTLEMENT`), поэтому: (1) реестр outbox (2.1) отвергает любую запись не `EXPENSE`; (2)
-`ONLINE_ONLY_ACTIONS` включает `settlement.delete` и `settlement.edit`, а `ActivitySubeventsButtons.tsx:68-75` (`onRemove`
-сегодня без проверки `isExpense`, в отличие от `onEdit` `:52-54`) получает `<OnlineOnly>` для не-расхода; хук
-`useDeleteLedgerEntry(entry)` для settlement всегда берёт онлайн-ключ. Тест: офлайн settlement-delete → 0 outbox-мутаций,
-кнопка disabled; онлайн → `DELETE` ушёл онлайн-путём.
+**Settlement — online only, on two levels (C2-02).** Deleting (reverse) and editing a settlement go through the same
+`DELETE`/`PATCH /ledger/entries/{id}` as expenses (the backend `LedgerEntryCommandService.deleteEntry` handles
+`EXPENSE` and `SETTLEMENT`), therefore: (1) the outbox registry (2.1) rejects any non-`EXPENSE` entry; (2)
+`ONLINE_ONLY_ACTIONS` includes `settlement.delete` and `settlement.edit`, and `ActivitySubeventsButtons.tsx:68-75` (`onRemove`
+today has no `isExpense` check, unlike `onEdit` `:52-54`) gets `<OnlineOnly>` for a non-expense; the hook
+`useDeleteLedgerEntry(entry)` always takes the online key for a settlement. Test: offline settlement-delete → 0 outbox mutations,
+button disabled; online → `DELETE` went out via the online path.
 
-**Правка офлайн требует закэшированной записи (C2-33):** форма правки/удаления расхода в офлайне доступна, только если
-`ledger.entry(id)` есть в кэше (иначе нет ни `baseVersion`, ни типа записи) — иначе «Нужно подключение»; тест.
+**Editing offline requires a cached entry (C2-33):** the form for editing/deleting an expense offline is available only if
+`ledger.entry(id)` is in the cache (otherwise there is neither `baseVersion` nor the entry type) — otherwise "Connection required"; test.
 
-Создание расхода офлайн требует закэшированных группы и участников. Если `groupKeys.detail(id)` нет в
-кэше, форма показывает «Данные группы не загружены — подключитесь к сети».
+Creating an expense offline requires the cached group and participants. If `groupKeys.detail(id)` is not in the
+cache, the form shows "Group data is not loaded — connect to the network".
 
-### 3. Баланс офлайн
+### 3. Offline balance
 
-**Решение: локальный пересчёт не делаем.**
+**Decision: we do not recompute locally.**
 
-Обоснование: точное совпадение доказуемо только для долей одного расхода — `money.split` повторяет
-`distributeAmount` бит-в-бит. Отображаемые балансы строит серверная проекция (`ledger/balances/GroupDebtProjection.kt`,
-`LedgerDebtRefreshService.kt`, переносы `EXPENSE_TRANSFERRED_*`), агрегирует по группам/валютам
-(`netBalance`/`netAmount`) и конвертирует по курсам (`helpers/currencies.ts:3-18`). Повтор на клиенте —
-дубль бизнес-логики без доказуемого равенства; «прыгающая» цифра в деньгах хуже честной пометки.
+Rationale: an exact match is provable only for the shares of a single expense — `money.split` repeats
+`distributeAmount` bit for bit. The displayed balances are built by the server projection (`ledger/balances/GroupDebtProjection.kt`,
+`LedgerDebtRefreshService.kt`, transfers `EXPENSE_TRANSFERRED_*`), aggregated by groups/currencies
+(`netBalance`/`netAmount`) and converted by rates (`helpers/currencies.ts:3-18`). Repeating this on the client is
+a duplication of business logic without provable equality; a "jumping" figure in money is worse than an honest mark.
 
-UI: пока есть pending/failed операции, у каждого баланса (dashboard summary, шапка группы, карточка друга) —
-подпись «без учёта неотправленных операций» (`offline:balanceExcludesPending`) и счётчик N со ссылкой на
-`OutboxSheet`. В `OutboxSheet` у pending-расхода — «ваша доля: X» (`money.split`; EXACT как есть). Кэш
-балансов старше 24 ч → подпись «обновлено <relative time>».
+UI: while there are pending/failed operations, every balance (dashboard summary, group header, friend card) gets
+the caption "excluding unsent operations" (`offline:balanceExcludesPending`) and a counter N linking to
+`OutboxSheet`. In `OutboxSheet` a pending expense shows "your share: X" (`money.split`; EXACT as is). A balance cache
+older than 24 h → the caption "updated <relative time>".
 
-### 4. Модуль `shared/money/`
+### 4. Module `shared/money/`
 
-#### 4.1 Модель
+#### 4.1 Model
 
 ```ts
 export type CurrencyCode = string & { readonly __brand: 'CurrencyCode' };   // /^[A-Z]{3}$/
 export interface Money { readonly minor: bigint; readonly currency: CurrencyCode }
-// minor — целые ledger units = 10⁻⁴ (85.5 → 855000n); -0 не существует
-export const LEDGER_SCALE = 4;                     // как backend MONEY_SCALE / AMOUNT_SCALE — единственная константа на FE
+// minor — integer ledger units = 10⁻⁴ (85.5 → 855000n); -0 does not exist
+export const LEDGER_SCALE = 4;                     // like backend MONEY_SCALE / AMOUNT_SCALE — the only constant on the FE
 ```
 
-Провод — `number` scale 4 **навсегда** (D21), но на FE сумма **никогда не проходит через double** (ревизия C1-03, спор
-review B ↔ C1 решён запуском Node 24.21, seeded-sweep 400k на диапазон, `../evidence/money/double-path-sweep.mjs`):
+The wire is a `number` of scale 4 **forever** (D21), but on the FE an amount **never passes through double** (revision C1-03, the dispute
+review B ↔ C1 was settled by running Node 24.21, a seeded sweep of 400k per range, `../evidence/money/double-path-sweep.mjs`):
 
-| Диапазон значения | `JSON.parse` → `Math.round(v*1e4)` + round-trip (прежняя спека) | `JSON.parse` → `v.toFixed(4)` | разбор из текста (решение) |
+| Value range | `JSON.parse` → `Math.round(v*1e4)` + round-trip (previous spec) | `JSON.parse` → `v.toFixed(4)` | parse from text (decision) |
 |---|---|---|---|
-| [0, 1e11) | 0 неверных, 0 отказов | 0 / 0 | 0 / 0 |
-| [1e11, 2³⁹ ≈ 5.4976e11) | 0 неверных, **13 858 ложных отказов** (`365963032346.3555`) | 0 / 0 | 0 / 0 |
-| [2³⁹, 9e11) | **72 224 молча неверных**, 0 отказов (`899999999999.9997` → `…9998n`) | 72 231 неверных | 0 / 0 |
-| [9e11, 1e15) | ~89 % неверных или отказов | ~99 % неверных | 0 / 0 |
+| [0, 1e11) | 0 wrong, 0 rejections | 0 / 0 | 0 / 0 |
+| [1e11, 2³⁹ ≈ 5.4976e11) | 0 wrong, **13,858 false rejections** (`365963032346.3555`) | 0 / 0 | 0 / 0 |
+| [2³⁹, 9e11) | **72,224 silently wrong**, 0 rejections (`899999999999.9997` → `…9998n`) | 72,231 wrong | 0 / 0 |
+| [9e11, 1e15) | ~89 % wrong or rejected | ~99 % wrong | 0 / 0 |
 
-Прежнее утверждение «400k: 0 отказов, 0 неверных до 9e11» было ложным: выше 2³⁹ шаг double (2⁻¹³ ≈ 1.22·10⁻⁴) больше
-10⁻⁴, два соседних 4-знаковых значения дают один double — никакая проверка на FE это не восстановит. Поэтому:
-1. **Разбор из текста.** Транспорт `shared/api/wireJson.ts` (только в `api()`, §5.4) = `lossless-json` `parse(text,
-   reviver)`: все числа сначала `LosslessNumber` (исходная строка), reviver по реестру полей §4.3 превращает денежные
-   в `WireAmount`, проценты/веса/курсы — в `WireDecimal` (строка), остальные — в `number`. Runtime `WireAmount` —
-   замороженный plain-объект `{ __wireDecimal: '85.5000' }` (переживает structured clone, JSON и persist-codec §1.4);
-   тип — opaque brand `{ readonly __wire: unique symbol }`. `moneyFromWire` разбирает строку regex-ом в `bigint` без
-   арифметики. Тот же sweep (от 10⁰ до 10¹⁹ ledger units, знак ±): **0 неверных, 0 отказов**.
-2. **Документированная граница** = колонка backend `decimal(19,4)` (`LedgerDbObjects.kt:26`): `|v| ≤
-   999 999 999 999 999.9999`, regex `^-?\d{1,15}(\.\d{1,4})?$` (backend пишет `toPlainString` scale 4 без экспоненты,
-   `BigDecimalJsonNumberSerializer.kt`). Вне границы, > 4 дробных знаков, экспонента → `MoneyWireError` + Sentry
-   `money.wire_reject` — **жёсткий отказ, никогда не молчаливое значение**. Отказ локализуется в элементе (`mapItems`,
-   §4.2), страница не падает (C3-13). Backend-лимит суммы не нужен: границу держит колонка БД.
-3. **Исходящие тела с деньгами** пишет тот же модуль: `lossless-json` `stringify(body, null, undefined,
-   [{ test: isWireAmount, stringify: w => w.__wireDecimal }])` — decimal-литерал без экспоненты (проверено: `{"amount":
-   899999999999.9997}`). `JSON.stringify` для таких тел запрещён: backend принимает только `^-?\d+(\.\d+)?$`, а
+The previous claim "400k: 0 rejections, 0 wrong up to 9e11" was false: above 2³⁹ the double step (2⁻¹³ ≈ 1.22·10⁻⁴) is larger than
+10⁻⁴, two neighboring 4-decimal values give the same double — no check on the FE can recover that. Therefore:
+1. **Parsing from text.** The transport `shared/api/wireJson.ts` (only in `api()`, §5.4) = `lossless-json` `parse(text,
+   reviver)`: all numbers first become `LosslessNumber` (the original string), the reviver, per the field registry §4.3, turns money
+   ones into `WireAmount`, percentages/weights/rates into `WireDecimal` (a string), and the rest into `number`. The runtime `WireAmount` is a
+   frozen plain object `{ __wireDecimal: '85.5000' }` (survives structured clone, JSON and the persist codec §1.4);
+   the type is an opaque brand `{ readonly __wire: unique symbol }`. `moneyFromWire` parses the string with a regex into a `bigint` without
+   arithmetic. The same sweep (from 10⁰ to 10¹⁹ ledger units, sign ±): **0 wrong, 0 rejections**.
+2. **Documented boundary** = the backend column `decimal(19,4)` (`LedgerDbObjects.kt:26`): `|v| ≤
+   999 999 999 999 999.9999`, regex `^-?\d{1,15}(\.\d{1,4})?$` (the backend writes `toPlainString` of scale 4 without an exponent,
+   `BigDecimalJsonNumberSerializer.kt`). Out of bounds, > 4 fractional digits, an exponent → `MoneyWireError` + Sentry
+   `money.wire_reject` — **a hard rejection, never a silent value**. The rejection is localized to the item (`mapItems`,
+   §4.2), the page does not crash (C3-13). A backend amount limit is not needed: the DB column holds the boundary.
+3. **Outgoing bodies with money** are written by the same module: `lossless-json` `stringify(body, null, undefined,
+   [{ test: isWireAmount, stringify: w => w.__wireDecimal }])` — a decimal literal without an exponent (verified: `{"amount":
+   899999999999.9997}`). `JSON.stringify` for such bodies is forbidden: the backend accepts only `^-?\d+(\.\d+)?$`, while
    `JSON.stringify(1e-7) === '1e-7'`.
-4. **Стоимость:** 4.1 МБ JSON — `JSON.parse` 33 мс, `parseWireJson` 156 мс (Node 24, тот же прогон); типичный ответ
-   < 100 КБ — единицы мс. Не-JSON ответы (204, HTML 502) транспорт пропускает как есть.
-5. Legacy-слой `src/api/*` до миграции своего стора остаётся на `JSON.parse` + `normalizeApiMoneyAmount` (поведение как
-   сегодня, без регрессии); lossless-транспорт подключается только через `api()` (per-request `transformResponse`/
-   `transformRequest`, глобальные defaults `apiInstance` не меняются).
-6. Смена scale — одна константа с каждой стороны (`LEDGER_SCALE` на FE, `MONEY_SCALE` на backend), меняются синхронно.
+4. **Cost:** a 4.1 MB JSON — `JSON.parse` 33 ms, `parseWireJson` 156 ms (Node 24, the same run); a typical response
+   < 100 KB — a few ms. Non-JSON responses (204, HTML 502) are passed through by the transport as is.
+5. The legacy layer `src/api/*` stays on `JSON.parse` + `normalizeApiMoneyAmount` until its store is migrated (behavior as
+   today, no regression); the lossless transport is connected only through `api()` (per-request `transformResponse`/
+   `transformRequest`, the global `apiInstance` defaults do not change).
+6. Changing the scale is one constant on each side (`LEDGER_SCALE` on the FE, `MONEY_SCALE` on the backend), changed in sync.
 
-Арифметика в `bigint` «ledger units» = 10⁻⁴; минорные единицы валюты — **только** для отображения и
-ограничения ввода. Причина: backend делит и считает балансы со scale 4 для всех валют
-(`ShareDistribution.kt:7`); делёж в центах даёт другой остаток — текущая ошибка `expenseModalSelectors.ts:106-174`.
+Arithmetic is in `bigint` "ledger units" = 10⁻⁴; currency minor units are **only** for display and
+input limiting. Reason: the backend divides and computes balances with scale 4 for all currencies
+(`ShareDistribution.kt:7`); splitting in cents gives a different remainder — the current bug in `expenseModalSelectors.ts:106-174`.
 
-#### 4.2 API (`shared/money/index.ts` — единственный публичный вход)
+#### 4.2 API (`shared/money/index.ts` — the only public entry)
 
-| Функция | Сигнатура | Поведение |
+| Function | Signature | Behavior |
 |---|---|---|
-| `currencyCode` | `(s: string) => CurrencyCode` | upper-case + проверка `^[A-Z]{3}$`, иначе throw |
-| `minorUnits` | `(c: CurrencyCode) => 0 \| 2 \| 3` | таблица `MINOR_UNITS` (ISO 4217): 0 — BIF CLP DJF GNF ISK JPY KMF KRW PYG RWF UGX VND VUV XAF XOF XPF; 3 — BHD IQD JOD KWD LYD OMR TND; остальные 2. Не через Intl (у разных движков расхождения) |
-| `moneyFromWire` | `(v: WireAmount, c) => Money` | `v.__wireDecimal` по `^(-?)(\d{1,15})(?:\.(\d{1,4}))?$` → `BigInt(sign + int + frac.padEnd(4,'0'))`, `-0` → `0n`; не совпало → throw `MoneyWireError` + Sentry `money.wire_reject` (§4.1). Без `Number`/double. Вызывается **только** в мапперах `entities/*/model/toX()` |
-| `moneyToWire` | `(m: Money) => WireAmount` | decimal-строка из `minor` (`|minor| < 10¹⁹`, иначе throw `MoneyWireError`), `{ __wireDecimal }`; без double. Вызывается только в мапперах `toXWire()` |
-| `mapItems` | `<T, X>(list: readonly T[], toX: (t: T) => X, id: (t: T) => string) => (X \| InvalidItem)[]` | `MoneyWireError` в маппере элемента → `{ kind: 'invalid', id }` + Sentry один раз на `id`; UI рендерит строку «Запись не может быть показана» (`common:invalidAmount`), остальной список работает (C3-13). Другие ошибки пробрасываются |
-| `parseMoneyInput` | `(raw: string, c) => Money \| null` | ввод пользователя: trim, убрать пробелы/NBSP, один разделитель `,` или `.`, целых цифр ≤ 15 (граница §4.1), дробных цифр ≤ `minorUnits(c)`, ≥ 0. Заменяет `parseAmountInput` (`helpers/numbers.ts:302`). Правка записи с более точной суммой (backend допускает scale 4 для любой валюты, напр. `10.5 JPY`, C3-20): поле показывает сумму с её знаками; пока текст поля не менялся, форма отправляет исходный `Money` без разбора; изменённый текст разбирается по `minorUnits(c)` |
+| `currencyCode` | `(s: string) => CurrencyCode` | upper-case + check `^[A-Z]{3}$`, otherwise throw |
+| `minorUnits` | `(c: CurrencyCode) => 0 \| 2 \| 3` | the `MINOR_UNITS` table (ISO 4217): 0 — BIF CLP DJF GNF ISK JPY KMF KRW PYG RWF UGX VND VUV XAF XOF XPF; 3 — BHD IQD JOD KWD LYD OMR TND; the rest 2. Not via Intl (engines differ) |
+| `moneyFromWire` | `(v: WireAmount, c) => Money` | `v.__wireDecimal` by `^(-?)(\d{1,15})(?:\.(\d{1,4}))?$` → `BigInt(sign + int + frac.padEnd(4,'0'))`, `-0` → `0n`; no match → throw `MoneyWireError` + Sentry `money.wire_reject` (§4.1). No `Number`/double. Called **only** in the mappers `entities/*/model/toX()` |
+| `moneyToWire` | `(m: Money) => WireAmount` | a decimal string from `minor` (`|minor| < 10¹⁹`, otherwise throw `MoneyWireError`), `{ __wireDecimal }`; no double. Called only in the mappers `toXWire()` |
+| `mapItems` | `<T, X>(list: readonly T[], toX: (t: T) => X, id: (t: T) => string) => (X \| InvalidItem)[]` | a `MoneyWireError` in an item's mapper → `{ kind: 'invalid', id }` + Sentry once per `id`; the UI renders a row "This entry cannot be shown" (`common:invalidAmount`), the rest of the list works (C3-13). Other errors propagate |
+| `parseMoneyInput` | `(raw: string, c) => Money \| null` | user input: trim, remove spaces/NBSP, one separator `,` or `.`, integer digits ≤ 15 (boundary §4.1), fractional digits ≤ `minorUnits(c)`, ≥ 0. Replaces `parseAmountInput` (`helpers/numbers.ts:302`). Editing an entry with a more precise amount (the backend allows scale 4 for any currency, e.g. `10.5 JPY`, C3-20): the field shows the amount with its digits; while the field text is unchanged, the form sends the original `Money` without parsing; changed text is parsed by `minorUnits(c)` |
 | `toUnits` / `fromUnits` | `Money → bigint` / `(bigint, c) → Money` | |
-| `add`, `sub`, `negate`, `abs` | `(a, b) => Money` | разные валюты → throw `CurrencyMismatchError` |
-| `sum` | `(list: Money[], c) => Money` | пустой → zero |
+| `add`, `sub`, `negate`, `abs` | `(a, b) => Money` | different currencies → throw `CurrencyMismatchError` |
+| `sum` | `(list: Money[], c) => Money` | empty → zero |
 | `compare`, `isZero`, `sign` | | `sign` → `-1 \| 0 \| 1` |
-| `roundToMinor` | `(m) => Money` | half-up **от нуля** (как `RoundingMode.HALF_UP` и текущий `roundHalfUp` из `helpers/numbers.ts:95`) до `minorUnits`, результат снова scale 4 |
-| `displaySign` | `(m) => -1 \| 0 \| 1` | `sign(m)` на scale 4. **Единственное правило «должен/должны/в расчёте»**: «в расчёте» только при `minor === 0n`; `0.0040 USD` → 1 (backend считает это долгом и блокирует удаление друга `USER.OUTSTANDING_DEBT`). Отображение такой суммы — `formatMoney` «< $0.01» (§4.5) |
-| `split` | `(total: Money, entries: readonly { userId: string; weight: string }[]) => Money[]` | точная копия `distributeAmount` (`ShareDistribution.kt:41-63`): decimal-веса приводятся к общей целой шкале как `toCommonScaleIntegers` (по max числу дробных знаков), `floor(units*w/W)`, остаток по 1 единице на наибольшие остатки, ничьи — по индексу (стабильная сортировка). `entries` — **в точном порядке `participantIds` тела запроса** (тот же массив передаётся в маппер `toCreateLedgerEntryWire`). Веса: AUTO = все `'1'`, SHARES = веса, PERCENTAGE = проценты; нулевые веса допустимы. Пустой список → `[]`, `W <= 0` → throw |
-| `convert` | `(m, rate: string, target) => Money` | приблизительно (курсы), half-up до scale 4; результат помечен в типах `ApproxMoney` (brand) — нельзя передать в `moneyToWire` |
-| `formatMoney` | `(m, opts?: { locale?; currencyDisplay?: 'symbol' \| 'code'; signDisplay?: 'auto' \| 'always' \| 'exceptZero'; compact?: boolean }) => string` | `roundToMinor` → `Intl.NumberFormat(locale, { style:'currency', currency, minimumFractionDigits: mu, maximumFractionDigits: mu })`. Если `m ≠ 0`, а `roundToMinor(m) = 0` → «< » + формат одной минорной единицы со знаком `m` («< $0.01»); знак передаётся текстом «вы должны / вам должны», не символом. | На вход идёт decimal-строка, собранная из `minor` (ES2023 `format(string)` — без потери точности); кэш форматтеров по `locale+currency+opts` |
-| `formatMoneyParts` | то же → `Intl.NumberFormatPart[]` | для `basics/numbers/amount/Amount.tsx`, которому нужны отдельные части |
+| `roundToMinor` | `(m) => Money` | half-up **away from zero** (like `RoundingMode.HALF_UP` and the current `roundHalfUp` from `helpers/numbers.ts:95`) to `minorUnits`, the result is scale 4 again |
+| `displaySign` | `(m) => -1 \| 0 \| 1` | `sign(m)` at scale 4. **The single rule "owes/is owed/settled"**: "settled" only when `minor === 0n`; `0.0040 USD` → 1 (the backend counts this as a debt and blocks friend deletion `USER.OUTSTANDING_DEBT`). Such an amount is displayed by `formatMoney` as "< $0.01" (§4.5) |
+| `split` | `(total: Money, entries: readonly { userId: string; weight: string }[]) => Money[]` | an exact copy of `distributeAmount` (`ShareDistribution.kt:41-63`): decimal weights are brought to a common integer scale like `toCommonScaleIntegers` (by the max number of fractional digits), `floor(units*w/W)`, the remainder 1 unit each to the largest remainders, ties by index (stable sort). `entries` — **in the exact order of the request body's `participantIds`** (the same array is passed to the mapper `toCreateLedgerEntryWire`). Weights: AUTO = all `'1'`, SHARES = the weights, PERCENTAGE = the percentages; zero weights are allowed. Empty list → `[]`, `W <= 0` → throw |
+| `convert` | `(m, rate: string, target) => Money` | approximate (rates), half-up to scale 4; the result is marked in the types as `ApproxMoney` (brand) — it cannot be passed to `moneyToWire` |
+| `formatMoney` | `(m, opts?: { locale?; currencyDisplay?: 'symbol' \| 'code'; signDisplay?: 'auto' \| 'always' \| 'exceptZero'; compact?: boolean }) => string` | `roundToMinor` → `Intl.NumberFormat(locale, { style:'currency', currency, minimumFractionDigits: mu, maximumFractionDigits: mu })`. If `m ≠ 0` but `roundToMinor(m) = 0` → "< " + the format of one minor unit with the sign of `m` ("< $0.01"); the sign is conveyed as the text "you owe / you are owed", not a symbol. | A decimal string assembled from `minor` goes in as input (ES2023 `format(string)` — no loss of precision); a formatter cache by `locale+currency+opts` |
+| `formatMoneyParts` | same → `Intl.NumberFormatPart[]` | for `basics/numbers/amount/Amount.tsx`, which needs separate parts |
 
-Правила: все функции чистые, без React и i18n. Locale передаётся аргументом (берётся из `i18n.resolvedLanguage`
-в хуке `useFormatMoney()` в `shared/i18n`, не в money).
+Rules: all functions are pure, without React and i18n. Locale is passed as an argument (taken from `i18n.resolvedLanguage`
+in the hook `useFormatMoney()` in `shared/i18n`, not in money).
 
-#### 4.3 Lint-ограничение
+#### 4.3 Lint restriction
 
-Блок для `src/**/*.{ts,tsx}`, `ignores: ['src/shared/money/**', 'src/shared/lib/formatNumber.ts', '**/*.test.*']`:
+A block for `src/**/*.{ts,tsx}`, `ignores: ['src/shared/money/**', 'src/shared/lib/formatNumber.ts', '**/*.test.*']`:
 
 ```js
 'no-restricted-syntax': ['error',
@@ -772,118 +772,118 @@ review B ↔ C1 решён запуском Node 24.21, seeded-sweep 400k на �
   { selector: "BinaryExpression[operator=/^[<>]=?$/] > MemberExpression[property.name=/^(amount|minor)$/]", message: 'Money: compare via money.compare/sign.' },
 ],
 'no-restricted-imports': ['error', { patterns: [{ group: ['shared/money/*'], message: 'Import from shared/money only.' }] }],
-// вне entities/*/model/** дополнительно (C1-11): importNames moneyFromWire/moneyToWire из 'shared/money' запрещены —
+// outside entities/*/model/** additionally (C1-11): importNames moneyFromWire/moneyToWire from 'shared/money' are forbidden —
 // 'Wire↔Money conversion only in entities/*/model mappers.'
 ```
 
-Главная защита — типы, lint — страховка:
-- Сырые суммы в сгенерированных типах — opaque `WireAmount` (`type WireAmount = { readonly __wire: unique symbol }`,
-  **не** number-brand; тип, `isWireAmount` и `WireDecimal` — `shared/money/wire.ts`, PR 03-1). Решение «деньги или нет» —
-  по **реестру полей** `scripts/api/wire-fields.mjs`, а не по одному `multipleOf` (C1-04: backend ставит
-  `multipleOf: 0.0001` и на проценты/веса, `LedgerSharing.kt:30-62,91-101`):
+The main protection is the types, lint is a safety net:
+- Raw amounts in the generated types are an opaque `WireAmount` (`type WireAmount = { readonly __wire: unique symbol }`,
+  **not** a number-brand; the type, `isWireAmount` and `WireDecimal` are in `shared/money/wire.ts`, PR 03-1). The decision "money or not" is made
+  by the **field registry** `scripts/api/wire-fields.mjs`, not by `multipleOf` alone (C1-04: the backend sets
+  `multipleOf: 0.0001` on percentages/weights too, `LedgerSharing.kt:30-62,91-101`):
 
-  | Список | Поля (backend `64f9dd8`) | Тип в `schema.d.ts` | Runtime (транспорт §4.1) |
+  | List | Fields (backend `64f9dd8`) | Type in `schema.d.ts` | Runtime (transport §4.1) |
   |---|---|---|---|
   | `MONEY_FIELDS` | `amount`, `netBalance`, `netAmount`, `shareAmount` (`CurrencyBalance.kt`, `ActivityDtos.kt`, `LedgerEntryDtos.kt`, `LedgerBalanceDtos.kt`, `LedgerCrudRequests.kt`, `LedgerExpenseDtos.kt`, `KnownUserDtos.kt`) | `WireAmount` | `{ __wireDecimal }` |
-  | `MONEY_MAP_FIELDS` | `customShares` (EXACT, суммы по `userId`) | `Record<string, WireAmount>` | то же для значений |
-  | `DECIMAL_MAP_FIELDS` | `percentageShares`, `shares` (`LedgerSharing.kt`), `rates` (`CurrencyRatesDtos.kt:109`) | `Record<string, WireDecimal>` (`string & { __brand: 'WireDecimal' }`) | decimal-строка; в `moneyFromWire` не передаётся, `split` берёт веса строками |
+  | `MONEY_MAP_FIELDS` | `customShares` (EXACT, amounts by `userId`) | `Record<string, WireAmount>` | same for the values |
+  | `DECIMAL_MAP_FIELDS` | `percentageShares`, `shares` (`LedgerSharing.kt`), `rates` (`CurrencyRatesDtos.kt:109`) | `Record<string, WireDecimal>` (`string & { __brand: 'WireDecimal' }`) | a decimal string; not passed to `moneyFromWire`, `split` takes the weights as strings |
 
-  `openapi-typescript` `transform(schemaObject, { path })` в `scripts/api/openapi-ts.config.mjs` применяет реестр;
-  проверки генератора (exit 1, тест `scripts/api/wire-fields.test.mjs`): (a) каждое свойство с `multipleOf: 0.0001` (или
-  map таких чисел) есть ровно в одном списке; (b) свойство из `MONEY_FIELDS` в **любой** схеме имеет `multipleOf: 0.0001`;
-  (c) `percentageShares` в выходе — `Record<string, WireDecimal>`, не `WireAmount`. Тот же реестр пишется в
-  `shared/api/generated/wireFields.ts` и управляет reviver-ом транспорта — тип и runtime не расходятся. После BE-03-4
-  (`x-chipin-money` / `x-chipin-decimal`, §7) генератор сверяет реестр с расширениями и падает при расхождении.
-  Арифметика, сравнение и `Number()` над `WireAmount` не компилируются; прочитать можно только через `moneyFromWire`.
-- Домен — `minor: bigint` (`a.minor * 2` и `a.minor + 0.5` не скомпилируются).
-- Единственное место конверсии — мапперы `entities/*/model/toX()` (вход) и `toXWire()` (выход). `api()` деньги не трогает.
-- Lint эвристичен (по именам свойств) и ловит остатки в ещё не мигрированном коде; `Number(amount)` с идентификатором
-  (как `settle-up-modal/internal/helpers.ts:50`) он не видит — такие места перечислены в §4.4. Не-денежные
-`toFixed`/Intl (проценты, KMB `helpers/numbers.ts:236`) переезжают в `shared/lib/formatNumber.ts` (в `ignores`).
-Правило вводится **сразу `error`** (C2-03: `warn` несовместим с `--max-warnings 0` 02-C4 и запретом `warn` в 02 §Д0);
-существующие нарушения (~29 строк) — в baseline механизма спеки 02 (02 §Д7); если 03-1 влит раньше 02-C4 — нативные
-suppressions ESLint 9 (`eslint --suppress-rule no-restricted-syntax`, файл `eslint-suppressions.json`), которые 02 подхватывает
-как есть. Baseline только уменьшается: 03-3 (`entities/`, `features/`), далее по мере миграции, последним 03-18.
-Все правила этой спеки (§1.3 queryKey-литерал, §1.7 `navigator.onLine`, §4.3 деньги и импорт `moneyFromWire`, §6
-`zustand`) регистрируются в реестре правил 02 §Д0 с классом «корректность/граница» и подсказкой (C1-14).
-Это **единственное** определение денежных lint-правил во всех спеках (02 Д4 R1 и 02-C12 на него ссылаются).
-Расположение: `config/eslint/project.js` через хелпер `restrictedSyntax()` (02-C4); если 02-C4 ещё не влит —
-`eslint.config.js`, с переносом при 02-C4. Пути — от `APP_DIR` (после 04-0 — `apps/app/src/shared/money/**`).
+  `openapi-typescript` `transform(schemaObject, { path })` in `scripts/api/openapi-ts.config.mjs` applies the registry;
+  generator checks (exit 1, test `scripts/api/wire-fields.test.mjs`): (a) every property with `multipleOf: 0.0001` (or
+  a map of such numbers) is in exactly one list; (b) a property from `MONEY_FIELDS` in **any** schema has `multipleOf: 0.0001`;
+  (c) `percentageShares` in the output is `Record<string, WireDecimal>`, not `WireAmount`. The same registry is written to
+  `shared/api/generated/wireFields.ts` and drives the transport's reviver — the type and the runtime do not diverge. After BE-03-4
+  (`x-chipin-money` / `x-chipin-decimal`, §7) the generator checks the registry against the extensions and fails on a mismatch.
+  Arithmetic, comparison and `Number()` over `WireAmount` do not compile; it can be read only through `moneyFromWire`.
+- The domain is `minor: bigint` (`a.minor * 2` and `a.minor + 0.5` will not compile).
+- The only place of conversion is the mappers `entities/*/model/toX()` (input) and `toXWire()` (output). `api()` does not touch money.
+- Lint is heuristic (by property names) and catches leftovers in not-yet-migrated code; it does not see `Number(amount)` with an identifier
+  (like `settle-up-modal/internal/helpers.ts:50`) — such places are listed in §4.4. Non-money
+`toFixed`/Intl (percentages, KMB `helpers/numbers.ts:236`) move to `shared/lib/formatNumber.ts` (in `ignores`).
+The rule is introduced **immediately as `error`** (C2-03: `warn` is incompatible with `--max-warnings 0` of 02-C4 and the ban on `warn` in 02 §D0);
+existing violations (~29 lines) go into the baseline of the spec 02 mechanism (02 §D7); if 03-1 is merged earlier than 02-C4 — native
+ESLint 9 suppressions (`eslint --suppress-rule no-restricted-syntax`, file `eslint-suppressions.json`), which 02 picks up
+as is. The baseline only decreases: 03-3 (`entities/`, `features/`), then as migration progresses, 03-18 last.
+All rules of this spec (§1.3 queryKey literal, §1.7 `navigator.onLine`, §4.3 money and the `moneyFromWire` import, §6
+`zustand`) are registered in the rule registry of 02 §D0 with the class "correctness/boundary" and a hint (C1-14).
+This is the **single** definition of the money lint rules across all specs (02 D4 R1 and 02-C12 refer to it).
+Location: `config/eslint/project.js` via the helper `restrictedSyntax()` (02-C4); if 02-C4 is not yet merged —
+`eslint.config.js`, moved over at 02-C4. Paths are relative to `APP_DIR` (after 04-0 — `apps/app/src/shared/money/**`).
 
-#### 4.4 Миграция существующих мест
+#### 4.4 Migration of existing places
 
-| Место (аудит) | Замена |
+| Place (audit) | Replacement |
 |---|---|
-| `store/expenseModalStore.ts:161`, `store/expenseModalSelectors.ts:14` `roundMoney` (после D1 — `roundHalfUp`) | `split` / `roundToMinor`; превью долей = `split(total, weights)` — совпадает с backend AUTO/SHARES/PERCENTAGE |
-| `expenseModalStore.ts:574` `roundMoney(v).toFixed(2)` | `formatMoney` / ввод через `parseMoneyInput` |
-| 6 копий разбиения по знаку (`basics/BalanceSummaryText.tsx:29`, `store/dashboardSelectors.ts:21`, `components/dashboard-summary/internal/useConnect.ts:19,31`, `store/groupsSelectors.ts:52,94`, `pages/friends-page/components/CurrencyGroupCard.tsx:13`) | одна функция `partitionBalances` в `entities/balance/model/partition.ts` на `displaySign` |
-| агрегация по валютам ×3 (`store/groupsSelectors.ts:85-106`, `store/users-store/selectors.ts:76`, `features/activity/internal/selectors.ts:70`) | `entities/balance/model/aggregate.ts` на `sum` |
-| `helpers/currencies.ts:20 getBalanceEntriesSummary` + `store/commonSelectors.ts:4 calcBalancesSummary` | `entities/balance/model/summary.ts` на `convert` (`ApproxMoney`); pass-through удалить |
-| `helpers/numbers.ts` `normalizeApiMoneyAmount`, `parseAmountInput`, `getNumberData({isPrice})` | `moneyFromWire`, `parseMoneyInput`, `formatMoneyParts`; не-денежная часть `getNumberData` остаётся в `shared/lib/formatNumber.ts` |
+| `store/expenseModalStore.ts:161`, `store/expenseModalSelectors.ts:14` `roundMoney` (after D1 — `roundHalfUp`) | `split` / `roundToMinor`; the share preview = `split(total, weights)` — matches backend AUTO/SHARES/PERCENTAGE |
+| `expenseModalStore.ts:574` `roundMoney(v).toFixed(2)` | `formatMoney` / input via `parseMoneyInput` |
+| 6 copies of the sign split (`basics/BalanceSummaryText.tsx:29`, `store/dashboardSelectors.ts:21`, `components/dashboard-summary/internal/useConnect.ts:19,31`, `store/groupsSelectors.ts:52,94`, `pages/friends-page/components/CurrencyGroupCard.tsx:13`) | a single function `partitionBalances` in `entities/balance/model/partition.ts` based on `displaySign` |
+| aggregation by currency ×3 (`store/groupsSelectors.ts:85-106`, `store/users-store/selectors.ts:76`, `features/activity/internal/selectors.ts:70`) | `entities/balance/model/aggregate.ts` based on `sum` |
+| `helpers/currencies.ts:20 getBalanceEntriesSummary` + `store/commonSelectors.ts:4 calcBalancesSummary` | `entities/balance/model/summary.ts` based on `convert` (`ApproxMoney`); remove the pass-through |
+| `helpers/numbers.ts` `normalizeApiMoneyAmount`, `parseAmountInput`, `getNumberData({isPrice})` | `moneyFromWire`, `parseMoneyInput`, `formatMoneyParts`; the non-money part of `getNumberData` stays in `shared/lib/formatNumber.ts` |
 | `components/modals/early-supporter-promo-modal/EarlySupporterPromoModal.tsx:49` `new Intl.NumberFormat` | `formatMoney` |
-| `BalanceEntry.netBalance` vs `ApiFriendBalance.netAmount` (`api/chipin.raw.types.ts:5,127`) | маппер на границе: доменный `Balance { net: Money }` для обоих |
-| `components/modals/settle-up-modal/internal/helpers.ts:31-32` (`String(Math.abs(netAmount))`), `:50-55` (`Number(amount)`, `maxAmount`, `remainingAmount`) | §4.5: `resolveSettleAmount`, prefill `roundToMinor`, расчёт в `Money` (PR 03-21) |
+| `BalanceEntry.netBalance` vs `ApiFriendBalance.netAmount` (`api/chipin.raw.types.ts:5,127`) | a mapper at the boundary: domain `Balance { net: Money }` for both |
+| `components/modals/settle-up-modal/internal/helpers.ts:31-32` (`String(Math.abs(netAmount))`), `:50-55` (`Number(amount)`, `maxAmount`, `remainingAmount`) | §4.5: `resolveSettleAmount`, prefill `roundToMinor`, calculation in `Money` (PR 03-21) |
 
-Grep-оценка: 29 строк с `roundMoney|parseFloat|Number(` в `store/ helpers/ components/ features/ pages/
-basics/`, не все про деньги. Финальный список — файл suppressions/baseline, который создаёт PR 03-1 (§4.3).
+Grep estimate: 29 lines with `roundMoney|parseFloat|Number(` in `store/ helpers/ components/ features/ pages/
+basics/`, not all about money. The final list is the suppressions/baseline file created by PR 03-1 (§4.3).
 
-#### 4.5 Settle-up: остаток меньше минорной единицы невозможен
+#### 4.5 Settle-up: a remainder smaller than a minor unit is impossible
 
-Доли считаются в scale 4 (10/3 → 3.3334/3.3333/3.3333), ввод — в минорных единицах валюты. Правило:
-- `owed: Money` — точный `abs(balance.net)` scale 4 из ответа backend, **никогда** не пересобирается из текста поля.
-- Prefill поля = `roundToMinor(owed)`; если он `0` (долг < 1 минорной единицы) — одна минорная единица.
+Shares are computed at scale 4 (10/3 → 3.3334/3.3333/3.3333), input is in currency minor units. The rule:
+- `owed: Money` — the exact `abs(balance.net)` of scale 4 from the backend response, **never** reassembled from the field text.
+- The field prefill = `roundToMinor(owed)`; if that is `0` (the debt is < 1 minor unit) — one minor unit.
 - `resolveSettleAmount(input: Money, owed: Money): Money | null` (`entities/balance/model/settle.ts`):
-  `|input − owed| < oneMinor(c)` → **`owed` точно** (scale 4, «погасить полностью»); иначе `input > owed` → `null`
-  (кнопка disabled); иначе `input` (частичное погашение, остаток ≥ одной минорной единицы).
-  `oneMinor(c) = 10^(4 − minorUnits(c))` ledger units. Когда срабатывает первая ветка и `input ≠ owed`, под полем —
-  подпись `settle:fullSettlementHint` «Будет погашено полностью: <owed, 4 знака>» (C3-19; пункт подтверждения в 00).
-- Следствие: после settle-up остаток либо 0, либо ≥ 0.01 (USD) — «хвост» 0.0033 невозможен. Исторические хвосты
-  (созданы до 03-21 или распределением долей) показываются как «< $0.01», с прежней кнопкой settle-up; prefill даёт
-  0.01, `resolveSettleAmount` отправляет точный `owed`.
-- «Рассчитались» (серый, `balances.settledUp`) — только `displaySign === 0`, т.е. `minor === 0n` (§4.2), как в 01-3.
-- Тело запроса settle-up строит маппер `toSettleUpWire(amount: Money)` → `moneyToWire`. Settle-up остаётся online-only (§2.9).
+  `|input − owed| < oneMinor(c)` → **exactly `owed`** (scale 4, "settle in full"); otherwise `input > owed` → `null`
+  (button disabled); otherwise `input` (partial repayment, the remainder is ≥ one minor unit).
+  `oneMinor(c) = 10^(4 − minorUnits(c))` ledger units. When the first branch fires and `input ≠ owed`, a caption sits under the field —
+  `settle:fullSettlementHint` "Will be settled in full: <owed, 4 digits>" (C3-19; a confirmation item in 00).
+- Consequence: after settle-up the remainder is either 0 or ≥ 0.01 (USD) — a "tail" of 0.0033 is impossible. Historical tails
+  (created before 03-21 or by share distribution) are shown as "< $0.01", with the former settle-up button; the prefill gives
+  0.01, `resolveSettleAmount` sends the exact `owed`.
+- "Settled" (gray, `balances.settledUp`) — only `displaySign === 0`, i.e. `minor === 0n` (§4.2), as in 01-3.
+- The settle-up request body is built by the mapper `toSettleUpWire(amount: Money)` → `moneyToWire`. Settle-up stays online-only (§2.9).
 
-### 5. Генерация типов из OpenAPI
+### 5. Type generation from OpenAPI
 
-#### 5.1 Выбор: axios + `openapi-typescript` + тонкая обёртка
+#### 5.1 Choice: axios + `openapi-typescript` + a thin wrapper
 
-`openapi-fetch` не берём: (1) 223 строки interceptors (refresh-on-401 с версией сессии, Web Locks,
-retry-флаг, детект аутэйджа) покрыты `chipin.interceptors*.test.ts` — переписывать auth на middleware без
-пользы рискованно; (2) `fetch` не даёт upload-прогресс (`usersApi.ts:45`, `groupsApi.ts:46`); (3) 10 файлов
-`api/*.test.ts` мокают axios. Обёртка даёт ту же типобезопасность путь→тело→ответ.
+We do not take `openapi-fetch`: (1) the 223 lines of interceptors (refresh-on-401 with a session version, Web Locks,
+retry flag, outage detection) are covered by `chipin.interceptors*.test.ts` — rewriting auth to middleware without
+benefit is risky; (2) `fetch` gives no upload progress (`usersApi.ts:45`, `groupsApi.ts:46`); (3) 10 `api/*.test.ts`
+files mock axios. The wrapper gives the same type safety path→body→response.
 
-#### 5.2 Где лежит
+#### 5.2 Where it lives
 
-- `openapi/chipin.yaml` — снимок спеки **в FE** (запрет `docs/openapi.md` касается backend).
-- `openapi/BACKEND_VERSION` — **git SHA** backend, из которого взят снимок; это версия, развёрнутая на prod (не staging).
-  Тегов и релизов у backend нет (C3-15): prod = образ, промоутнутый `deploy-production.yml` (`workflow_dispatch`,
-  `image_tag` = SHA). Значение берётся командой `gh api 'repos/ChipIn-one/chipin-backend/deployments?environment=production&per_page=1' --jq '.[0].sha'`.
-- `src/shared/api/generated/schema.d.ts` и `wireFields.ts` (commit, руками не правятся, eslint/prettier ignore).
-  `specHash.ts` не генерируется — buster кэша определён только в §1.4 (C2-07).
-- `src/shared/api/client.ts` — обёртка `api()`; `src/shared/api/http.ts` — `apiInstance` + interceptors из `api/`.
+- `openapi/chipin.yaml` — a snapshot of the spec **in the FE** (the `docs/openapi.md` ban concerns the backend).
+- `openapi/BACKEND_VERSION` — the backend **git SHA** the snapshot was taken from; this is the version deployed on prod (not staging).
+  The backend has no tags or releases (C3-15): prod = the image promoted by `deploy-production.yml` (`workflow_dispatch`,
+  `image_tag` = SHA). The value is obtained with the command `gh api 'repos/ChipIn-one/chipin-backend/deployments?environment=production&per_page=1' --jq '.[0].sha'`.
+- `src/shared/api/generated/schema.d.ts` and `wireFields.ts` (committed, not edited by hand, eslint/prettier ignore).
+  `specHash.ts` is not generated — the cache buster is defined only in §1.4 (C2-07).
+- `src/shared/api/client.ts` — the `api()` wrapper; `src/shared/api/http.ts` — `apiInstance` + interceptors from `api/`.
 
-#### 5.3 Скрипты
+#### 5.3 Scripts
 
 ```jsonc
-"api:fetch": "node scripts/api/fetch-openapi.mjs",   // скачивает artifact `openapi-documentation` CI-прогона backend для SHA из openapi/BACKEND_VERSION (BE-03-4, `gh run download -R ChipIn-one/chipin-backend`); пишет openapi/chipin.yaml с сортировкой ключей
-"api:fetch:staging": "node scripts/api/fetch-openapi.mjs --staging", // только CI: GET https://api-dev.chipin.one/swagger/documentation.yaml, Basic auth
-"api:gen":   "node scripts/api/gen-types.mjs && node scripts/offline/write-model-hash.mjs", // openapi-typescript (точная версия, без ^) + реестр полей (§4.3) + MODEL_SHAPE_HASH (§1.4)
+"api:fetch": "node scripts/api/fetch-openapi.mjs",   // downloads the `openapi-documentation` artifact of the backend CI run for the SHA from openapi/BACKEND_VERSION (BE-03-4, `gh run download -R ChipIn-one/chipin-backend`); writes openapi/chipin.yaml with sorted keys
+"api:fetch:staging": "node scripts/api/fetch-openapi.mjs --staging", // CI only: GET https://api-dev.chipin.one/swagger/documentation.yaml, Basic auth
+"api:gen":   "node scripts/api/gen-types.mjs && node scripts/offline/write-model-hash.mjs", // openapi-typescript (exact version, no ^) + field registry (§4.3) + MODEL_SHAPE_HASH (§1.4)
 "api:check": "npm run api:gen && git diff --exit-code -- src/shared/api/generated src/shared/offline/modelHash.generated.ts"
 ```
 
-- Синхронизация — PR «chore(api): sync openapi to BE <sha7>» с label `requires-backend: <sha7>`; мержится только когда
-  prod-деплой backend содержит этот SHA (`gh api …/compare/<sha>...<prod-sha>` = `ahead`/`identical`; чек-лист PR).
-- **Входы без секретов у агента (C2-17).** До BE-03-4 снимок даёт drift-workflow (§5.5), он же создаётся в 03-4a первым
-  коммитом: использует уже существующие секреты FE-репо `CHIPIN_CONTRACT_SWAGGER_USER` / `CHIPIN_CONTRACT_SWAGGER_PASSWORD`
-  (их читает `contract-smoke.yml`) и выкладывает `chipin.yaml` как artifact; агент берёт его `gh run download`. Чек-лист
-  sync-PR: владелец подтверждает, что SHA staging, с которого снят снимок, = SHA prod-деплоя. Других ручных входов нет.
-- `openapi-typescript` пинуется точной версией: вывод меняется между версиями.
+- Sync — a PR "chore(api): sync openapi to BE <sha7>" with the label `requires-backend: <sha7>`; it is merged only when the
+  backend prod deploy contains this SHA (`gh api …/compare/<sha>...<prod-sha>` = `ahead`/`identical`; PR checklist).
+- **Inputs without secrets for the agent (C2-17).** Until BE-03-4 the snapshot is provided by the drift workflow (§5.5), which is also created in 03-4a as the first
+  commit: it uses the already existing secrets of the FE repo `CHIPIN_CONTRACT_SWAGGER_USER` / `CHIPIN_CONTRACT_SWAGGER_PASSWORD`
+  (read by `contract-smoke.yml`) and publishes `chipin.yaml` as an artifact; the agent takes it with `gh run download`. Sync-PR
+  checklist: the owner confirms that the staging SHA the snapshot was taken from = the prod deploy SHA. There are no other manual inputs.
+- `openapi-typescript` is pinned to an exact version: the output changes between versions.
 
-#### 5.4 Обёртка
+#### 5.4 Wrapper
 
 ```ts
 type Op<P extends keyof paths, M extends Method> = NonNullable<paths[P][M]>;
-// PathParams<O>, Query<O>, Body<O> (application/json), Success<O> (200 | 201 json, иначе void) — infer из Op
+// PathParams<O>, Query<O>, Body<O> (application/json), Success<O> (200 | 201 json, otherwise void) — infer from Op
 export function api<P extends keyof paths, M extends Method & keyof paths[P]>(
   method: M, path: P,
   opts: { params?: PathParams<Op<P, M>>; query?: Query<Op<P, M>>; body?: Body<Op<P, M>>;
@@ -891,325 +891,325 @@ export function api<P extends keyof paths, M extends Method & keyof paths[P]>(
 ): Promise<Success<Op<P, M>>>;
 ```
 
-- Подстановка `{param}` **всегда** через `encodePathSegment()` из спеки 01 (01-1.1; файл переезжает в
-  `shared/api/pathSegment.ts`): allowlist `^[A-Za-z0-9_-]+$` (отсекает `.`, `..`, `''`, `/`, `%`) + `encodeURIComponent`.
-  Только `encodeURIComponent` нельзя: `encodeURIComponent('..') === '..'`. Невалидный сегмент → rejected Promise
-  `InvalidPathSegmentError`. Кейсы `apiPath.test.ts` копируются в `client.test.ts`.
-- Ошибки — `ApiError { status, code, details, current? }` из `getApiErrorPayload` (`helpers/errors.ts`); `current`
-  заполняется только для 409 `LEDGER.VERSION_CONFLICT` разбором тела zod `LedgerConflictResponseSchema` (BE-03-1).
-- Тело ответа и запроса идёт через lossless-транспорт `shared/api/wireJson.ts` (§4.1): per-request
-  `transformResponse: [parseWireJson]` (только `application/json`; 204/не-JSON — как есть; тела ошибок тоже — поэтому
-  `LedgerConflictResponse.current` приходит с `WireAmount`) и `transformRequest: [stringifyWireJson]` для JSON-тел
-  (multipart upload — без изменений). Глобальные defaults `apiInstance` не трогаются (legacy `src/api/*` живёт как раньше).
-- `api()` не конвертирует деньги в `Money` (§4.3) — это делают мапперы.
+- Substitution of `{param}` is **always** through `encodePathSegment()` from spec 01 (01-1.1; the file moves to
+  `shared/api/pathSegment.ts`): allowlist `^[A-Za-z0-9_-]+$` (rejects `.`, `..`, `''`, `/`, `%`) + `encodeURIComponent`.
+  `encodeURIComponent` alone is not enough: `encodeURIComponent('..') === '..'`. An invalid segment → a rejected Promise
+  `InvalidPathSegmentError`. The `apiPath.test.ts` cases are copied into `client.test.ts`.
+- Errors — `ApiError { status, code, details, current? }` from `getApiErrorPayload` (`helpers/errors.ts`); `current`
+  is filled only for 409 `LEDGER.VERSION_CONFLICT` by parsing the body with the zod `LedgerConflictResponseSchema` (BE-03-1).
+- The response and request body go through the lossless transport `shared/api/wireJson.ts` (§4.1): per-request
+  `transformResponse: [parseWireJson]` (only `application/json`; 204/non-JSON — as is; error bodies too — hence
+  `LedgerConflictResponse.current` arrives with `WireAmount`) and `transformRequest: [stringifyWireJson]` for JSON bodies
+  (multipart upload — unchanged). The global `apiInstance` defaults are not touched (legacy `src/api/*` lives as before).
+- `api()` does not convert money to `Money` (§4.3) — the mappers do that.
 
 #### 5.5 CI
 
-- PR-check (блокирующий, без сети): `npm run api:check`.
-- Drift-check `.github/workflows/openapi-drift.yml` (раз в сутки + `workflow_dispatch`, рядом с `contract-smoke.yml`,
-  секреты те же): `api:fetch:staging` → artifact `chipin.yaml` → `api:gen` → при diff открыть/обновить issue «OpenAPI drift». Только отчёт, источником типов staging не бывает
-  (staging опережает prod — `contract-smoke.yml:30` `api-dev`, на prod swagger выключен `SwaggerRoutes.kt:16-19`).
-- Синхронизация — отдельный PR «chore(api): sync openapi».
+- PR check (blocking, no network): `npm run api:check`.
+- Drift check `.github/workflows/openapi-drift.yml` (once a day + `workflow_dispatch`, next to `contract-smoke.yml`,
+  same secrets): `api:fetch:staging` → artifact `chipin.yaml` → `api:gen` → on a diff open/update the issue "OpenAPI drift". Report only, staging is never a source of types
+  (staging is ahead of prod — `contract-smoke.yml:30` `api-dev`, swagger is disabled on prod `SwaggerRoutes.kt:16-19`).
+- Sync — a separate PR "chore(api): sync openapi".
 
-#### 5.6 Вывод ручных типов из оборота
+#### 5.6 Retiring the hand-written types
 
-1. `api/chipin.raw.types.ts`: `Api*` → алиасы `components['schemas'][…]`, по домену за PR; затем файл удаляется.
-2. `api/chipin.types.ts` → доменные типы `entities/*/model/types.ts` с `Money`; мапперы `toX()` — граница
-   (`moneyFromWire`, Unix-секунды → ms). `api/chipin.params.ts` удаляется (`Body<Op<…>>`).
-3. `contract-tests/core-api.contract.ts` (877 строк): проверки путей полей удаляются (их гарантирует
-   компилятор); остаются auth/session и runtime-семантика (`hasExpectedAutoShares`).
+1. `api/chipin.raw.types.ts`: `Api*` → aliases `components['schemas'][…]`, per domain per PR; then the file is deleted.
+2. `api/chipin.types.ts` → domain types `entities/*/model/types.ts` with `Money`; mappers `toX()` are the boundary
+   (`moneyFromWire`, Unix seconds → ms). `api/chipin.params.ts` is deleted (`Body<Op<…>>`).
+3. `contract-tests/core-api.contract.ts` (877 lines): the field path checks are deleted (the compiler
+   guarantees them); auth/session and runtime semantics (`hasExpectedAutoShares`) remain.
 
-#### 5.7 zod только на границах
+#### 5.7 zod only at the boundaries
 
-zod-схемы есть ровно для: `LocalUserSchema` (localStorage), `OutboxStateSchema` (ключ outbox целиком), `OutboxOpSchema`,
-`FailedOpSchema`, `OutboxInboxSchema` (IDB), `BroadcastChannel`-сообщений logout и outbox (`OutboxChannelMessageSchema`:
-`state | state-request | command | ack | heartbeat | settled`, §2.3), тела 409 `LedgerConflictResponseSchema` (§2.5;
-денежные поля — `z.custom<WireAmount>(isWireAmount)`). Ответы API zod **не** валидируются: формат гарантирует
-генерация + drift-check + реестр полей. Кэш запросов в IDB защищён buster = форма доменной модели (§1.4).
+zod schemas exist for exactly: `LocalUserSchema` (localStorage), `OutboxStateSchema` (the whole outbox key), `OutboxOpSchema`,
+`FailedOpSchema`, `OutboxInboxSchema` (IDB), `BroadcastChannel` messages for logout and outbox (`OutboxChannelMessageSchema`:
+`state | state-request | command | ack | heartbeat | settled`, §2.3), the 409 body `LedgerConflictResponseSchema` (§2.5;
+money fields — `z.custom<WireAmount>(isWireAmount)`). API responses are **not** validated by zod: the format is guaranteed
+by generation + drift check + the field registry. The query cache in IDB is protected by the buster = the shape of the domain model (§1.4).
 
-### 6. Миграция сторов (порядок и риски)
+### 6. Store migration (order and risks)
 
-Каждый шаг — отдельный PR (или два), старый стор удаляется в том же PR, где уходит последний читатель.
-Пока стор жив, его action может вызывать `queryClient.invalidateQueries` (мост) — обратного направления нет.
+Each step is a separate PR (or two), the old store is deleted in the same PR in which its last reader goes away.
+While a store is alive, its action may call `queryClient.invalidateQueries` (a bridge) — there is no reverse direction.
 
-| # | Стор | Что становится | Риск / заметки |
+| # | Store | What it becomes | Risk / notes |
 |---|---|---|---|
-| 1 | `landing-stats-store/` | `entities/stats/api/queries.ts` | низкий; пилот паттерна; после D8 уходит в Astro |
-| 2 | `dashboardStore.ts` (198) | `dashboard`, `currencyRates` queries; `appMode` → `uiPrefsStore` (zustand) | средний: пагинация активности на dashboard → `useInfiniteQuery` |
-| 3 | `users-store/` (283) | `users.self`, `users.known`, `users.premiumPromo` + мутации `updateSelf`, `removeKnownUser`, `uploadAvatar`; `localUser` остаётся в `helpers/localStorage` | средний: `useSyncUserSettings` (`hooks/useSyncUserSettings.tsx:18-33`) пишет язык — читать из `select`, без эффекта на каждый объект `settings` |
-| 4 | `groupsStore.ts` (660) — 2 PR | (a) queries `groups.list` (cursor → infinite), `groups.detail`; (b) мутации create/update/leave/kick/remove/join/cover | **высокий**: module-level `inaccessibleGroupIds` и mutation generation (`groupsStore.ts:105-131`) → 403/404 на detail = `ApiError`, роут показывает errorElement (спека 04 §2.5). Цикл с activity исчезает: пагинация активности группы уходит в `groups.activity` query |
-| 5 | `activity-store/` (443) | `activity.self` (infinite), `activity.children` | средний: cursor-пагинация, фильтры в ключе |
-| 6 | `expenseModalStore.ts` + selectors/mapping/update (~1.6k) — порядок = таблица PR (авторитет) | (a) **03-2**: split-математика превью → `money.split` + snapshot-тесты превью долей; (b) **03-13**: сетевые вызовы submit/update/delete → `entities/ledger/api/mutations.ts` (online, без outbox); черновик остаётся в zustand, перед reload сохраняется в `sessionStorage` колбэком `onBeforeAppReload` (04 §2.11 п. 4); (c) **03-14**: цикл store↔selectors убрать (`expenseModalSelectors.ts` получает state аргументом) + co-location в `features/add-expense/` | высокий: деньги. Snapshot-тесты 03-2 обязаны оставаться зелёными **без изменений** в 03-13/03-14. Outbox (03-15a) зависит от 03-13. File-lock ниже |
-| 7 | `authStore.ts` (183) | остаётся zustand (статус сессии — клиентское состояние); таблица «причина → что удаляется» §1.5: `clearUserData` только для `signed_out` и смены аккаунта; `resetAuthScopedStores` живёт, пока жив хоть один legacy-стор (каждый PR миграции убирает свою строку) | средний: импорт 7 сторов исчезает по мере миграции |
-| 8 | `loadingStore.ts`, `errorsStore.ts` (+ selectors) | удаляются; `isPending`/`error` из хуков | низкий, но последний: удаляется, когда счётчик `useLoadingStore` = 0 |
-| 9 | `backendAvailabilityStore.ts` | `connectivityStore` (1.8) | низкий |
-| 10 | `pwaStore.ts` | остаётся (UI) | — |
-| 11 | `store/internal/resourceRequests.ts` | удаляется после шага 5 (dedupe/abort даёт Query через `signal`) | низкий |
+| 1 | `landing-stats-store/` | `entities/stats/api/queries.ts` | low; a pilot of the pattern; after D8 goes to Astro |
+| 2 | `dashboardStore.ts` (198) | `dashboard`, `currencyRates` queries; `appMode` → `uiPrefsStore` (zustand) | medium: activity pagination on the dashboard → `useInfiniteQuery` |
+| 3 | `users-store/` (283) | `users.self`, `users.known`, `users.premiumPromo` + mutations `updateSelf`, `removeKnownUser`, `uploadAvatar`; `localUser` stays in `helpers/localStorage` | medium: `useSyncUserSettings` (`hooks/useSyncUserSettings.tsx:18-33`) writes the language — read it from `select`, without an effect on every `settings` object |
+| 4 | `groupsStore.ts` (660) — 2 PRs | (a) queries `groups.list` (cursor → infinite), `groups.detail`; (b) mutations create/update/leave/kick/remove/join/cover | **high**: module-level `inaccessibleGroupIds` and mutation generation (`groupsStore.ts:105-131`) → 403/404 on detail = `ApiError`, the route shows an errorElement (spec 04 §2.5). The cycle with activity disappears: group activity pagination moves to the `groups.activity` query |
+| 5 | `activity-store/` (443) | `activity.self` (infinite), `activity.children` | medium: cursor pagination, filters in the key |
+| 6 | `expenseModalStore.ts` + selectors/mapping/update (~1.6k) — order = the PR table (authoritative) | (a) **03-2**: split math of the preview → `money.split` + snapshot tests of the share preview; (b) **03-13**: network calls submit/update/delete → `entities/ledger/api/mutations.ts` (online, no outbox); the draft stays in zustand, before reload it is saved to `sessionStorage` by the `onBeforeAppReload` callback (04 §2.11 item 4); (c) **03-14**: remove the store↔selectors cycle (`expenseModalSelectors.ts` gets state as an argument) + co-location in `features/add-expense/` | high: money. The 03-2 snapshot tests must stay green **unchanged** in 03-13/03-14. The outbox (03-15a) depends on 03-13. File-lock below |
+| 7 | `authStore.ts` (183) | stays zustand (session status is client state); the "reason → what is deleted" table §1.5: `clearUserData` only for `signed_out` and account switch; `resetAuthScopedStores` lives as long as at least one legacy store is alive (each migration PR removes its own line) | medium: the import of 7 stores disappears as migration progresses |
+| 8 | `loadingStore.ts`, `errorsStore.ts` (+ selectors) | deleted; `isPending`/`error` from hooks | low, but last: deleted when the `useLoadingStore` counter = 0 |
+| 9 | `backendAvailabilityStore.ts` | `connectivityStore` (1.8) | low |
+| 10 | `pwaStore.ts` | stays (UI) | — |
+| 11 | `store/internal/resourceRequests.ts` | deleted after step 5 (dedupe/abort is provided by Query through `signal`) | low |
 
-**File-lock `src/store/expenseModal*` (+ `mapping`/`update`).** Последовательность PR по этим файлам:
-01-3 → 02-C2 (Prettier) → 03-1 (только suppressions) → 03-2 → 03-13 → 03-14 → затем 02-D-кодмоды и 05-4 (они пропускают
-эти файлы до мержа 03-14). Остальные PR, механически задевающие эти файлы (02-C3 import-sort, 02-C6 type-imports,
-02-C7a floating promises, 02-C11 `noUncheckedIndexedAccess`, 04-0a перенос) — либо до 03-2, либо `--exclude` этих файлов
-до 03-14, как 02-D (C2-13; порядок записывается в граф 00). Одновременно открыт только один PR, трогающий эти файлы.
+**File-lock `src/store/expenseModal*` (+ `mapping`/`update`).** The PR sequence over these files:
+01-3 → 02-C2 (Prettier) → 03-1 (suppressions only) → 03-2 → 03-13 → 03-14 → then the 02-D codemods and 05-4 (they skip
+these files until 03-14 is merged). Other PRs that mechanically touch these files (02-C3 import-sort, 02-C6 type-imports,
+02-C7a floating promises, 02-C11 `noUncheckedIndexedAccess`, 04-0a move) — either before 03-2, or with `--exclude` of these files
+until 03-14, like 02-D (C2-13; the order is recorded in the 00 graph). Only one PR touching these files is open at a time.
 
-`store/index.ts` (мёртвый barrel) удаляется в PR 03-5 — единственный владелец (из 02-D3 убирается, C2-28). `src/test/renderWithQueryClient.tsx` — новый клиент
-на тест (`retry: false`, `gcTime: Infinity`). В zustand остаются: `authStore`, `expenseModalStore` (черновик),
-`uiPrefsStore` (appMode, view mode) и `appearanceStore` (тема, спека 05 PR 05-3) — оба в `src/store/ui-prefs/`,
-`pwaStore`, `connectivityStore`, модалки; `no-restricted-imports` `paths: [{ name: 'zustand' }]` (ровно модуль
-`zustand`) запрещён вне `src/store/**` и `src/app/**`; `zustand/react/shallow` (`useShallow`, 39 импортов в UI) разрешён
-везде (C1-18).
+`store/index.ts` (a dead barrel) is deleted in PR 03-5 — the sole owner (removed from 02-D3, C2-28). `src/test/renderWithQueryClient.tsx` — a new client
+per test (`retry: false`, `gcTime: Infinity`). What stays in zustand: `authStore`, `expenseModalStore` (the draft),
+`uiPrefsStore` (appMode, view mode) and `appearanceStore` (theme, spec 05 PR 05-3) — both in `src/store/ui-prefs/`,
+`pwaStore`, `connectivityStore`, modals; `no-restricted-imports` `paths: [{ name: 'zustand' }]` (exactly the module
+`zustand`) is forbidden outside `src/store/**` and `src/app/**`; `zustand/react/shallow` (`useShallow`, 39 imports in the UI) is allowed
+everywhere (C1-18).
 
-**useConnect → useShallow (D12).** 17 файлов `useConnect.ts`, на них ссылаются 47 прод-файлов; удаляются в PR миграции своего стора (единственный владелец — эта спека).
-Сервер — `useXQuery()`, UI — `useExpenseModalStore(useShallow(s => ({ amount: s.amount, setAmount: s.setAmount })))`.
-Новые `useConnect` запрещает `scripts/check-file-layout.mjs` из спеки 02 (PR 02-C12, baseline только уменьшается).
+**useConnect → useShallow (D12).** 17 `useConnect.ts` files, referenced by 47 prod files; they are deleted in the PR that migrates their store (the sole owner is this spec).
+Server data — `useXQuery()`, UI — `useExpenseModalStore(useShallow(s => ({ amount: s.amount, setAmount: s.setAmount })))`.
+New `useConnect` files are banned by `scripts/check-file-layout.mjs` from spec 02 (PR 02-C12, the baseline only decreases).
 
-### 7. Требования к backend (issues)
+### 7. Backend requirements (issues)
 
-Ревизия C3-03: тексты issue #199, #200, #201, #202, #203 переписаны из этого раздела дословно по смыслу (2026-10-28).
-Каждое требование — проверяемый integration-тест. Коды ошибок — существующий `ErrorResponse { code, details? }`
-(`common/dto/ErrorResponse.kt:30-42`), кроме 409 `LEDGER.VERSION_CONFLICT` (своя схема, ниже).
+Revision C3-03: the texts of issues #199, #200, #201, #202, #203 were rewritten from this section verbatim in meaning (2026-10-28).
+Each requirement is a verifiable integration test. Error codes — the existing `ErrorResponse { code, details? }`
+(`common/dto/ErrorResponse.kt:30-42`), except 409 `LEDGER.VERSION_CONFLICT` (its own schema, below).
 
-#### 7.0 Общий контракт (вводит первый влитый из BE-03-1/2/5)
+#### 7.0 Common contract (introduced by the first merged of BE-03-1/2/5)
 
-- `GET /health` (public) → `{ "status": "UP", "capabilities": string[] }`; поле присутствует всегда (может быть `[]`).
-  Значения: `"ledger.clientEntryId"` (BE-03-2), `"ledger.entryVersion"` (BE-03-1), `"client.minVersion"` (BE-03-5).
-  Флаг появляется только в том деплое, где фича включена; откат фичи убирает флаг. Тест: каждый флаг ↔ поведение.
-- FE включает офлайн-запись только при всех трёх флагах (§2.7).
+- `GET /health` (public) → `{ "status": "UP", "capabilities": string[] }`; the field is always present (may be `[]`).
+  Values: `"ledger.clientEntryId"` (BE-03-2), `"ledger.entryVersion"` (BE-03-1), `"client.minVersion"` (BE-03-5).
+  A flag appears only in the deploy where the feature is enabled; rolling the feature back removes the flag. Test: each flag ↔ behavior.
+- The FE enables offline writing only with all three flags (§2.7).
 
-#### 7.1 Таблица issue
+#### 7.1 Issue table
 
-| ID | Issue | Контракт (тесты = приёмка) | Блокирует |
+| ID | Issue | Contract (tests = acceptance) | Blocks |
 |---|---|---|---|
-| BE-03-1 (#199) | Ledger: `version` + optimistic locking + id операции | **Версия:** `version: string` в `LedgerEntryInfo`/`LedgerExpenseInfo`/settlement-info — opaque (FE сравнивает только на равенство), = `seq` последнего события записи (`expense_events`/`settlement_events`, `LedgerDbObjects.kt:35,61`) десятичной строкой, без COUNT на list-запросах; меняется при **каждом** событии, включая `CORRECTED` и `REVERSED`. **Заголовки:** `If-Match: "<version>"` (в кавычках) и `X-Client-Op-Id: <uuid>` на `PATCH`/`DELETE /ledger/entries/{id}`; CORS `allowHeader` обоих; до мержа проверить на preview, что Vercel-прокси передаёт `If-Match` (иначе `X-Entry-Version`, FE меняет одну константу). **Порядок PATCH:** (1) auth/доступ; (2) событие с этим `X-Client-Op-Id` у записи уже есть → **200 с текущей записью, без нового события, независимо от `If-Match` и payload**; (3) запись удалена → 404; (4) `If-Match` есть и ≠ текущей → 409 `LedgerConflictResponse`; (5) применить, сохранить op-id в событии, 200 с новой записью. **Порядок DELETE:** (1) auth/доступ; (2) запись уже удалена (последнее событие `REVERSED`) → **204 независимо от `If-Match` и op-id**; (3) op-id уже есть → 204; (4) `If-Match` ≠ текущей → 409 `LedgerConflictResponse`; (5) `REVERSED` с op-id → 204. **409:** схема `LedgerConflictResponse { code: "LEDGER.VERSION_CONFLICT", current: LedgerEntryInfo }` (`application/json`), описана в OpenAPI отдельным 409-ответом PATCH и DELETE; транзиентный 409 `SYSTEM.CONFLICT` остаётся `ErrorResponse`. Без `If-Match` — как сейчас (last-write-wins). Op-id уникален в паре (`entry_id`, `client_op_id`), хранится в событии бессрочно. `/health.capabilities` += `"ledger.entryVersion"`. **Тесты:** (a) PATCH op-id A успех → повтор с op-id A и устаревшим `If-Match` → 200, событий не прибавилось; (b) DELETE удалённой записи с устаревшим `If-Match` → 204; (c) PATCH с устаревшим `If-Match` и новым op-id → 409, `current` равен `GET`; (d) `version` меняется после PATCH и после DELETE; (e) те же правила для settlement; (f) флаг в `/health` | PR 03-17 (offline update/delete) |
-| BE-03-2 (#200) | Идемпотентный create по client id | `CreateLedgerEntryRequest.id?: uuid`. Поиск по `id` до валидации payload: нет → создать, **201**; есть, тот же автор, не удалена → **200 с существующей записью независимо от payload** (тела не сравниваются, запись не меняется); есть, другой автор → 409 `LEDGER.ID_CONFLICT` (`ErrorResponse`); есть и удалена → 410 `LEDGER.ENTRY_DELETED` (`ErrorResponse`). Сверить с chipin-backend#101 (idempotency key), не дублировать механизм. `/health.capabilities` += `"ledger.clientEntryId"`. **Тесты:** 201; повтор с **другим** payload тем же автором → 200, запись прежняя; другой автор → 409; удалённая → 410; флаг в `/health`; contract-тест на dev: POST с `id` → 201 | PR 03-17 (offline create); `id` в теле create вообще |
-| ~~BE-03-3~~ | — | **снят по D21**: провод остаётся JSON-числом scale 4, backend не меняется. Номер не переиспользуется | — |
-| BE-03-4 (#201) | Качество OpenAPI + артефакт по SHA | уникальный `operationId`; все тела — именованные `components.schemas`; ответы 409 (`LedgerConflictResponse`), 410, 426 в операциях; детерминированный порядок ключей; денежные поля сохраняют `multipleOf: 0.0001` **и** несут `x-chipin-money: true`, не-денежные decimal (`percentageShares`, `shares`, `rates`) — `x-chipin-decimal: true` (§4.3); gradle-задача/тест (на базе `src/test/kotlin/common/testing/GeneratedOpenApiDocument.kt`) пишет `build/openapi/documentation.yaml`; CI backend выкладывает его artifact-ом `openapi-documentation` на **каждый** push в `develop` (имя прогона содержит SHA) — **основной** источник FE-типов (§5.3); релиз-тегов нет, `BACKEND_VERSION` = SHA prod-деплоя (C3-15). **Тесты:** повторная сборка → идентичный YAML; snapshot-тест: каждое поле из реестра §4.3 имеет `multipleOf` и нужное расширение; унификация `netBalance`/`netAmount` — опционально, с версионированием | §5 |
-| BE-03-5 (#202) | Заголовок `X-Client-Version` + `MIN_CLIENT_VERSION` → 426 | Проверено: версионирования API нет, FE версию не шлёт. Запрос: `X-Client-Version: <major.minor.patch[-suffix]>`; backend сравнивает **только** semver-ядро (суффикс после `-` отбрасывается). Конфиг `MIN_CLIENT_VERSION` (env; пусто = выключено). Ниже минимума → **426** `ErrorResponse { code: "CLIENT.OUTDATED", details: { minVersion: "<x.y.z>" } }` для всех путей, **кроме** `/health`, `/auth/refresh`, `/auth/logout`. Заголовка нет или он не парсится → пропуск (Postman, клиенты до rollout), лог `warn`. Каждый ответ при включённом конфиге несёт `X-Min-Client-Version: <x.y.z>`. CORS: `allowHeader(X-Client-Version)`, `X-Min-Client-Version` в `Access-Control-Expose-Headers`. `/health.capabilities` += `"client.minVersion"` при включённом конфиге. FE (03-20): заголовок одной строкой в axios request-interceptor (`APP_VERSION`, Vite `define`). **Тесты:** 426 ниже минимума; равная/выше → 200; суффикс игнорируется (`1.2.0-dev-abc` = `1.2.0`); три исключения → 200; без заголовка → 200; заголовок ответа; флаг | **обязателен до включения outbox** (03-17); гейт outbox `outdated` |
-| BE-03-6 (#203) | Тест-фиксатор «DELETE удалённого = 204» | поведение уже такое (`entries/LedgerEntryCommandService.kt:179-183`: `lockAndReload` → `null` → return); тест сейчас + после BE-03-1: DELETE удалённой записи **с устаревшим `If-Match` и любым op-id** → 204 | — |
-| BE-03-7 | Общие тест-векторы split | JSON `ledger-split-vectors.json` (total, weights, expected shares), который читают тесты backend и FE | §8 money |
-| BE-03-8 (фаза 2) | `version` для групп + 409 на `PATCH /groups/{id}` и операциях с участниками | как BE-03-1 | фаза 2 |
+| BE-03-1 (#199) | Ledger: `version` + optimistic locking + operation id | **Version:** `version: string` in `LedgerEntryInfo`/`LedgerExpenseInfo`/settlement-info — opaque (the FE compares only for equality), = the `seq` of the entry's last event (`expense_events`/`settlement_events`, `LedgerDbObjects.kt:35,61`) as a decimal string, without COUNT on list queries; changes on **every** event, including `CORRECTED` and `REVERSED`. **Headers:** `If-Match: "<version>"` (in quotes) and `X-Client-Op-Id: <uuid>` on `PATCH`/`DELETE /ledger/entries/{id}`; CORS `allowHeader` for both; before the merge verify on preview that the Vercel proxy passes `If-Match` (otherwise `X-Entry-Version`, the FE changes one constant). **PATCH order:** (1) auth/access; (2) an event with this `X-Client-Op-Id` already exists for the entry → **200 with the current entry, no new event, regardless of `If-Match` and payload**; (3) entry deleted → 404; (4) `If-Match` is present and ≠ current → 409 `LedgerConflictResponse`; (5) apply, store the op-id in the event, 200 with the new entry. **DELETE order:** (1) auth/access; (2) entry already deleted (last event `REVERSED`) → **204 regardless of `If-Match` and op-id**; (3) op-id already exists → 204; (4) `If-Match` ≠ current → 409 `LedgerConflictResponse`; (5) `REVERSED` with op-id → 204. **409:** schema `LedgerConflictResponse { code: "LEDGER.VERSION_CONFLICT", current: LedgerEntryInfo }` (`application/json`), described in OpenAPI as a separate 409 response of PATCH and DELETE; the transient 409 `SYSTEM.CONFLICT` stays an `ErrorResponse`. Without `If-Match` — as now (last-write-wins). The op-id is unique in the pair (`entry_id`, `client_op_id`), stored in the event indefinitely. `/health.capabilities` += `"ledger.entryVersion"`. **Tests:** (a) PATCH op-id A success → repeat with op-id A and a stale `If-Match` → 200, no events added; (b) DELETE of a deleted entry with a stale `If-Match` → 204; (c) PATCH with a stale `If-Match` and a new op-id → 409, `current` equals `GET`; (d) `version` changes after PATCH and after DELETE; (e) the same rules for settlement; (f) the flag in `/health` | PR 03-17 (offline update/delete) |
+| BE-03-2 (#200) | Idempotent create by client id | `CreateLedgerEntryRequest.id?: uuid`. Lookup by `id` before payload validation: none → create, **201**; exists, same author, not deleted → **200 with the existing entry regardless of payload** (bodies are not compared, the entry does not change); exists, different author → 409 `LEDGER.ID_CONFLICT` (`ErrorResponse`); exists and deleted → 410 `LEDGER.ENTRY_DELETED` (`ErrorResponse`). Reconcile with chipin-backend#101 (idempotency key), do not duplicate the mechanism. `/health.capabilities` += `"ledger.clientEntryId"`. **Tests:** 201; a repeat with a **different** payload by the same author → 200, the entry unchanged; different author → 409; deleted → 410; the flag in `/health`; a contract test on dev: POST with `id` → 201 | PR 03-17 (offline create); `id` in the create body at all |
+| ~~BE-03-3~~ | — | **withdrawn per D21**: the wire stays a JSON number of scale 4, the backend does not change. The number is not reused | — |
+| BE-03-4 (#201) | OpenAPI quality + artifact by SHA | unique `operationId`; all bodies are named `components.schemas`; 409 (`LedgerConflictResponse`), 410, 426 responses in the operations; deterministic key order; money fields keep `multipleOf: 0.0001` **and** carry `x-chipin-money: true`, non-money decimals (`percentageShares`, `shares`, `rates`) — `x-chipin-decimal: true` (§4.3); a gradle task/test (based on `src/test/kotlin/common/testing/GeneratedOpenApiDocument.kt`) writes `build/openapi/documentation.yaml`; backend CI publishes it as the artifact `openapi-documentation` on **every** push to `develop` (the run name contains the SHA) — the **primary** source of FE types (§5.3); there are no release tags, `BACKEND_VERSION` = the prod deploy SHA (C3-15). **Tests:** a rebuild → identical YAML; a snapshot test: every field from the §4.3 registry has `multipleOf` and the required extension; unification of `netBalance`/`netAmount` — optional, with versioning | §5 |
+| BE-03-5 (#202) | `X-Client-Version` header + `MIN_CLIENT_VERSION` → 426 | Verified: there is no API versioning, the FE does not send a version. Request: `X-Client-Version: <major.minor.patch[-suffix]>`; the backend compares **only** the semver core (the suffix after `-` is dropped). Config `MIN_CLIENT_VERSION` (env; empty = disabled). Below the minimum → **426** `ErrorResponse { code: "CLIENT.OUTDATED", details: { minVersion: "<x.y.z>" } }` for all paths **except** `/health`, `/auth/refresh`, `/auth/logout`. Header missing or not parseable → skip (Postman, clients before the rollout), `warn` log. When the config is enabled, every response carries `X-Min-Client-Version: <x.y.z>`. CORS: `allowHeader(X-Client-Version)`, `X-Min-Client-Version` in `Access-Control-Expose-Headers`. `/health.capabilities` += `"client.minVersion"` when the config is enabled. FE (03-20): the header in one line in the axios request interceptor (`APP_VERSION`, Vite `define`). **Tests:** 426 below the minimum; equal/above → 200; the suffix is ignored (`1.2.0-dev-abc` = `1.2.0`); the three exceptions → 200; no header → 200; the response header; the flag | **mandatory before enabling the outbox** (03-17); outbox gate `outdated` |
+| BE-03-6 (#203) | Pinning test "DELETE of a deleted entry = 204" | the behavior is already so (`entries/LedgerEntryCommandService.kt:179-183`: `lockAndReload` → `null` → return); a test now + after BE-03-1: DELETE of a deleted entry **with a stale `If-Match` and any op-id** → 204 | — |
+| BE-03-7 | Shared split test vectors | a JSON `ledger-split-vectors.json` (total, weights, expected shares) read by the backend and FE tests | §8 money |
+| BE-03-8 (phase 2) | `version` for groups + 409 on `PATCH /groups/{id}` and participant operations | like BE-03-1 | phase 2 |
 
-Политика минимальной версии (D19, вариант A, подтверждено владельцем 2026-10-28). Сейчас — только принудительное
-обновление SW через 24 ч (спека 04 §2.11 п. 3). До включения outbox (03-17) обязательны BE-03-5 и 03-20.
-Правило 72 ч: `MIN_CLIENT_VERSION` поднимается **только** при несовместимом изменении контракта, и только
-после того как новая версия FE пробыла в проде ≥ 72 ч. FE при 426 или
-`X-Min-Client-Version > APP_VERSION` показывает блокирующий экран «Нужно обновить приложение».
-Сравнение — только semver-ядро `major.minor.patch` обеих сторон (суффикс после `-` отбрасывается; prod-версия —
-чистая `x.y.z`, вне prod — `x.y.z-dev-<sha7>`; нормализацию задают спека 02 Д7 и спека 04 §1.2/04-0a). Экран
-(`showUpdateRequired()`, 04-2d) переводит гейт outbox в `outdated` (§2.4)
-(`updateServiceWorker(true)` или reload из `src/app/pwa/ServiceWorkerManager.tsx`, PR 04-2d; `helpers/swUpdates.tsx` к этому моменту удалён); outbox не удаляется, новая версия читает его
-через `OutboxOpSchema` с миграциями по `schema`.
+Minimum version policy (D19, option A, confirmed by the owner on 2026-10-28). For now — only the forced
+SW update after 24 h (spec 04 §2.11 item 3). Before enabling the outbox (03-17), BE-03-5 and 03-20 are mandatory.
+The 72 h rule: `MIN_CLIENT_VERSION` is raised **only** on an incompatible contract change, and only
+after the new FE version has been in prod for ≥ 72 h. On 426 or
+`X-Min-Client-Version > APP_VERSION` the FE shows a blocking screen "App update required".
+Comparison — only the semver core `major.minor.patch` of both sides (the suffix after `-` is dropped; the prod version is
+a pure `x.y.z`, outside prod — `x.y.z-dev-<sha7>`; normalization is defined by spec 02 D7 and spec 04 §1.2/04-0a). The screen
+(`showUpdateRequired()`, 04-2d) switches the outbox gate to `outdated` (§2.4)
+(`updateServiceWorker(true)` or a reload from `src/app/pwa/ServiceWorkerManager.tsx`, PR 04-2d; `helpers/swUpdates.tsx` has been deleted by then); the outbox is not deleted, the new version reads it
+through `OutboxOpSchema` with migrations by `schema`.
 
-Правило для PR (m9): PR, который поднимает `MIN_CLIENT_VERSION` **или** меняет схему ledger-запроса
-(`ExpenseDraftWire`/`ExpensePatchWire`), обязан добавить миграцию `OutboxOpSchema` (`schema: n → n+1`) и
-fixture-тест «старый dehydrated outbox → отправлен новым клиентом без 400». `ledgerOutboxMutationKeys` — замороженный
-контракт. Такой PR (и любой, меняющий ledger-провод или `OutboxStateSchema`) требует release-bump версии до Promote
-(C3-21): без bump два деплоя делят одно semver-ядро, и `MIN_CLIENT_VERSION` не может отличить их; пункт чек-листа PR.
+Rule for PRs (m9): a PR that raises `MIN_CLIENT_VERSION` **or** changes the schema of a ledger request
+(`ExpenseDraftWire`/`ExpensePatchWire`) must add an `OutboxOpSchema` migration (`schema: n → n+1`) and
+a fixture test "an old dehydrated outbox → sent by the new client without a 400". `ledgerOutboxMutationKeys` is a frozen
+contract. Such a PR (and any PR that changes the ledger wire or `OutboxStateSchema`) requires a release version bump before Promote
+(C3-21): without a bump two deploys share one semver core, and `MIN_CLIENT_VERSION` cannot tell them apart; a PR checklist item.
 
-### 8. Тесты
+### 8. Tests
 
 Unit `shared/money/*.test.ts` (table-driven):
-- `moneyFromWire`/`moneyToWire` (через `parseWireJson`/`stringifyWireJson` на тексте, не на числе): `"85.5000"`→`855000n`;
+- `moneyFromWire`/`moneyToWire` (via `parseWireJson`/`stringifyWireJson` on text, not on a number): `"85.5000"`→`855000n`;
   `"85.5"`→`855000n`; `"-0.0000"`→`0n`; `"0.3000"`→`3000n`; `"746251344.6807"`→`7462513446807n`;
-  `"96689212322.2351"`→`966892123222351n`; **`"365963032346.3555"`→`3659630323463555n`** (прежний метод ложно отклонял);
-  **`"899999999999.9997"`→`8999999999999997n`** (double даёт `…9998n`); `"632097188007.2934"`→`6320971880072934n`;
-  `"999999999999999.9999"`→`9999999999999999999n` (максимум `decimal(19,4)`); throw `MoneyWireError`:
-  `"1000000000000000.0000"`, `"1.23456"`, `"0.00005"`, `"85.50001"`, `"1e3"`, `"-1E-7"`. `moneyToWire` для каждого
-  ok-вектора → `stringifyWireJson({ amount })` содержит ровно исходный литерал (без экспоненты).
-- **Sweep (точный, C1-03):** PRNG `mulberry32(20261028)`; 400 000 случаев; на каждый: порядок `e = floor(rnd()*19)`
-  (0…18), `u = randBigInt(10^(e+1))` (4 × 32 бита `% 10^(e+1)`), знак `rnd() < 0.5 ? −u : u`; текст `T` = decimal со
-  ровно 4 дробными знаками; JSON `{"amount":T,"sharingMode":{"type":"EXACT","customShares":{"u1":T},"percentageShares":{"u1":33.3333}},"rate":1}`
-  → `parseWireJson` → `moneyFromWire(amount) === u`, `moneyFromWire(customShares.u1) === u`, `percentageShares.u1` —
-  строка `'33.3333'` (не `WireAmount`), `rate === 1` (number); затем `stringifyWireJson` → `amount` в тексте === `T`.
-  Ожидание: **0 неверных, 0 отказов** (эталон Node 24.21, `../evidence/money/lossless-wire-sweep.mjs`: 400 000 / 0 / 0).
-- **Регрессионный якорь:** тест `money-double-path.test.ts` фиксирует, почему путь через double запрещён:
-  `Math.round(JSON.parse('899999999999.9997') * 1e4) !== 8999999999999997` и `JSON.parse('365963032346.3555') * 1e4`
-  не целое — чтобы «упрощение» обратно к `JSON.parse` падало с объяснением.
-- Транспорт: ответ 204 / `text/html` 502 проходит как есть; тело ошибки 409 с `current.amount` → `WireAmount`; legacy
-  `apiInstance` без `api()` по-прежнему отдаёт `number` (глобальные defaults не изменены).
-- `parseMoneyInput`: `"1 234,5"` (NBSP), `"0,"`, `"1.234"` USD→null / KWD→ok, `"-1"`→null, 16 цифр целой части→null;
-  правка `10.5000 JPY` без изменения текста → отправлен исходный `Money`, изменённый `"10,5"` JPY → null (C3-20).
-- `mapItems`: список из 3, у второго `amount` `"1e3"` → `[X, invalid, X]`, Sentry один раз.
-- `wire-fields.test.mjs`: схема с неклассифицированным `multipleOf`-полем → генератор exit 1; `percentageShares` →
+  `"96689212322.2351"`→`966892123222351n`; **`"365963032346.3555"`→`3659630323463555n`** (the previous method falsely rejected it);
+  **`"899999999999.9997"`→`8999999999999997n`** (double gives `…9998n`); `"632097188007.2934"`→`6320971880072934n`;
+  `"999999999999999.9999"`→`9999999999999999999n` (the `decimal(19,4)` maximum); throw `MoneyWireError`:
+  `"1000000000000000.0000"`, `"1.23456"`, `"0.00005"`, `"85.50001"`, `"1e3"`, `"-1E-7"`. `moneyToWire` for each
+  ok vector → `stringifyWireJson({ amount })` contains exactly the original literal (no exponent).
+- **Sweep (exact, C1-03):** PRNG `mulberry32(20261028)`; 400,000 cases; for each: order `e = floor(rnd()*19)`
+  (0…18), `u = randBigInt(10^(e+1))` (4 × 32 bits `% 10^(e+1)`), sign `rnd() < 0.5 ? −u : u`; text `T` = a decimal with
+  exactly 4 fractional digits; JSON `{"amount":T,"sharingMode":{"type":"EXACT","customShares":{"u1":T},"percentageShares":{"u1":33.3333}},"rate":1}`
+  → `parseWireJson` → `moneyFromWire(amount) === u`, `moneyFromWire(customShares.u1) === u`, `percentageShares.u1` is
+  the string `'33.3333'` (not a `WireAmount`), `rate === 1` (number); then `stringifyWireJson` → `amount` in the text === `T`.
+  Expected: **0 wrong, 0 rejections** (reference Node 24.21, `../evidence/money/lossless-wire-sweep.mjs`: 400,000 / 0 / 0).
+- **Regression anchor:** the test `money-double-path.test.ts` records why the path through double is forbidden:
+  `Math.round(JSON.parse('899999999999.9997') * 1e4) !== 8999999999999997` and `JSON.parse('365963032346.3555') * 1e4`
+  is not an integer — so that a "simplification" back to `JSON.parse` fails with an explanation.
+- Transport: a 204 / `text/html` 502 response passes as is; a 409 error body with `current.amount` → `WireAmount`; the legacy
+  `apiInstance` without `api()` still returns a `number` (global defaults unchanged).
+- `parseMoneyInput`: `"1 234,5"` (NBSP), `"0,"`, `"1.234"` USD→null / KWD→ok, `"-1"`→null, 16 digits of the integer part→null;
+  editing `10.5000 JPY` without changing the text → the original `Money` is sent, a changed `"10,5"` JPY → null (C3-20).
+- `mapItems`: a list of 3, the second has `amount` `"1e3"` → `[X, invalid, X]`, Sentry once.
+- `wire-fields.test.mjs`: a schema with an unclassified `multipleOf` field → the generator exits 1; `percentageShares` →
   `Record<string, WireDecimal>`.
 - `roundToMinor`: `1.0050`→`1.0100`, `-1.0050`→`-1.0100`, `2.6750`→`2.6800` (USD); `0.5000 JPY`→`1.0000`; `1.2345 KWD`→`1.2350`.
 - `displaySign`: `0.0000`→0, `0.0040 USD`→1, `-0.0049`→-1; `formatMoney(0.0040 USD, en)` → `< $0.01`.
-- `resolveSettleAmount` (owed USD): `3.3333`/ввод `3.33` → `3.3333`; `3.3350`/`3.33` → `3.3350`; `3.3350`/`3.34` →
+- `resolveSettleAmount` (owed USD): `3.3333`/input `3.33` → `3.3333`; `3.3350`/`3.33` → `3.3350`; `3.3350`/`3.34` →
   `3.3350`; `3.3333`/`3.32` → `3.32`; `3.3333`/`3.35` → `null`; `0.0001`/prefill `0.01` → `0.0001`; JPY `10.4000`/`10` →
-  `10.4000`. Свойство (1000 seeded случаев): `owed − result` = 0 или ≥ `oneMinor`.
-- `split`: `100.0000/[1,1,1]`→`[33.3334,33.3333,33.3333]`; `0.0002/[1,1,1]`→`[0.0001,0.0001,0]`; веса
-  `['1.5','1']` = `['15','10']`; нулевой вес → 0; порядок entries меняет, кому достаётся остаток; 1000 случайных
-  входов (seeded PRNG): сумма == total, каждая ≥ 0, детерминизм; векторы BE-03-7.
-- `formatMoney`: `ru`/`en`/`pt-BR` × USD/JPY/KWD, отрицательные, `signDisplay`.
+  `10.4000`. Property (1000 seeded cases): `owed − result` = 0 or ≥ `oneMinor`.
+- `split`: `100.0000/[1,1,1]`→`[33.3334,33.3333,33.3333]`; `0.0002/[1,1,1]`→`[0.0001,0.0001,0]`; weights
+  `['1.5','1']` = `['15','10']`; a zero weight → 0; the order of entries changes who gets the remainder; 1000 random
+  inputs (seeded PRNG): sum == total, each ≥ 0, determinism; the BE-03-7 vectors.
+- `formatMoney`: `ru`/`en`/`pt-BR` × USD/JPY/KWD, negatives, `signDisplay`.
 
-Persister (`fake-indexeddb/auto`): данные X не видны Y; buster mismatch чистит кэш, **outbox сохраняется**;
-`Money { minor: 9999999999999999999n }` переживает persist → restore (`typeof minor === 'bigint'`, C1-05); ошибка
-`setItem` доходит до `reportPersistFailed` (через `retry`); комментарий в `entities/*/model/types.ts` не меняет
-`MODEL_SHAPE_HASH`, новое поле — меняет; `maxAge` истёк → пусто; infinite персистится одной
-страницей (через `trimmingPersister`); `clearUserData` удаляет все ключи пользователя, и событие `mutationCache` /
-throttled-persist **после** logout ничего не пишет; IDB бросает на `set` → приложение работает, Sentry один раз;
-restore дольше 3 с → старт без кэша, поздний результат не применяется; холодный старт с persisted-кэшем → 0 сетевых
-запросов до резолва `restoreReady`; повторный mount провайдера не дублирует восстановленные мутации (`opId`).
+Persister (`fake-indexeddb/auto`): X's data is not visible to Y; a buster mismatch clears the cache, **the outbox is preserved**;
+`Money { minor: 9999999999999999999n }` survives persist → restore (`typeof minor === 'bigint'`, C1-05); a `setItem`
+error reaches `reportPersistFailed` (via `retry`); a comment in `entities/*/model/types.ts` does not change
+`MODEL_SHAPE_HASH`, a new field does; `maxAge` expired → empty; infinite is persisted as a single
+page (via `trimmingPersister`); `clearUserData` deletes all of the user's keys, and a `mutationCache` event /
+throttled persist **after** logout writes nothing; IDB throws on `set` → the app works, Sentry once;
+a restore longer than 3 s → start without the cache, the late result is not applied; a cold start with a persisted cache → 0 network
+requests before `restoreReady` resolves; a repeated provider mount does not duplicate restored mutations (`opId`).
 
-Сессия и выход (§1.5, по строке таблицы на тест): `signOut` → IDB без ключей пользователя, черновик и legacy-сторы
-пусты; remote logout — то же; `expireSession` → кэш, outbox, черновик сохранены, `role` удалена, legacy-сторы
-сброшены; `missing`/`error` — ничего не удалено; **expire X → вход Y → ни в одном сторе, ни в черновике, ни в IDB нет
-данных X** (C1-02); expire X → вход X → черновик и очередь на месте; offline cold start после expiry (hint `false`) →
-экран входа, а не кэш.
+Session and logout (§1.5, one table row per test): `signOut` → IDB without the user's keys, the draft and legacy stores
+are empty; remote logout — the same; `expireSession` → the cache, outbox, draft are preserved, `role` removed, legacy stores
+reset; `missing`/`error` — nothing deleted; **expire X → sign-in Y → there is no X data in any store, in the draft, or in IDB**
+(C1-02); expire X → sign-in X → the draft and the queue are in place; an offline cold start after expiry (hint `false`) →
+the sign-in screen, not the cache.
 
-Query retry: офлайн refetch запроса с кэшем → `fetchStatus: 'paused'`, `status: 'success'`, `data` прежняя, компонент
-не показывает ошибку; loader при офлайне и пустом кэше не ждёт сеть (навигация завершается, скелетон).
+Query retry: an offline refetch of a query with a cache → `fetchStatus: 'paused'`, `status: 'success'`, `data` unchanged, the component
+shows no error; a loader while offline with an empty cache does not wait for the network (navigation completes, skeleton).
 
 Outbox (msw `2.15.0` `setupServer` + `onlineManager.setOnline`):
-- create → update → update того же id → delete другого офлайн → online: запросы в этом порядке, первый update несёт
-  `If-Match` из ответа create, второй — из ответа первого update (`outboxVersions`), ни одного запроса без `If-Match`.
-- **Строгий порядок при медленном IDB**: запись failed-ключа задержана на 2 с; 422 на op1 → op2 не отправлен
-  (msw считает 0 запросов op2), пока op1 не решён; то же для 401 (refresh 401) и 426 — op1 остаётся pending, op2 не ушёл.
-- 409 `SYSTEM.CONFLICT` ×2 затем 200 → одна запись, операция ни разу не failed, `ConflictDialog` не открывался.
-- reload (новый клиент + `restoreOutbox` + `resumePausedMutations`) → те же запросы без дублей; «анти-пример»
-  без `mutationDefaults` не выполняется (фиксирует 2.1).
-- 422 на второй → третья не ушла, failed в `OutboxSheet`; discard → третья ушла.
-- **Discard головы (C3-04):** офлайн create A, create B; discard A; online → 0 запросов A, B отправлен **после** settle A,
-  ни в один момент две операции не `sending`; после reload A не воскресает (`cancelled`).
-- **Discard failed create (C2-15):** create C → 422 (failed), update C — голова, ждёт `blocked`; discard failed C →
-  0 запросов PATCH/DELETE на `entryId` C, гейт открыт, следующая операция ушла.
-- **Порядок по `seq` (C2-16):** три операции одного `entryId` с убывающим `createdAt` (часы переведены назад) и растущим
-  `seq` → после reload отправлены в порядке `seq`.
-- **Restore не удался / медленный (C3-02):** restore outbox задержан 5 с, за это время пользователь сохраняет расход →
-  он уходит онлайн-путём (или `<OnlineOnly>` офлайн), IDB-ключ не перезаписан, после restore все старые операции на месте
-  и отправлены; IDB бросает на `get` → `outboxRestore = 'failed'`, баннер, ключ не изменён ни одной записью.
-- **Окно failed-записи (C3-05):** прервать «вкладку» во время записи failed-ключа → после reload операция в outbox или в
-  failed, никогда ни там ни там; ошибка записи failed → операция остаётся pending во главе; `error`-мутации не
-  попадают в persisted outbox.
-- **Квота (C3-10):** `persistNow` reject → тост успеха не показан, операция отменена до отправки,
-  `offlineWritesAvailable === false`; `persisted() === false` → подпись в `OutboxSheet`.
-- **Settlement (C2-02):** офлайн удаление/правка settlement → 0 outbox-мутаций, `OnlineOnlyError` из реестра, кнопка
-  disabled; `command` от последователя с settlement-записью лидер отвергает.
-- **Два пути create (C1-10):** без `offlineWritesAvailable` `useCreateExpense` создаёт мутацию с онлайн-ключом
-  (`networkMode: 'online'`, без scope), с ним — outbox-ключ (`scope.id === OUTBOX_SCOPE`, `retry === false`).
-- 409 → `ConflictDialog`; «Оставить мою» → повтор с `current.version`; «Взять с сервера» → кэш = current.
-- DELETE 404 = успех; PATCH 404 = `deletedRemotely`; 5xx ×3 затем 200 → одна запись.
-- 401 + refresh 401 → гейт `auth`; вход тем же userId → отправлено; другим → диалог и очистка.
-- **Чужая сессия (C3-07):** две вкладки; Y входит во вкладке B; вкладка A (outbox X) переподключается и успешно делает
-  refresh → `sub` = Y → 0 ledger-запросов из outbox X, гейт `auth` закрыт, поток смены аккаунта.
-- две «вкладки» (общий fake IDB, мок `navigator.locks` с очередью lock, общий мок `BroadcastChannel`): лидер — первая;
-  create во второй → `command` → выполнен лидером, `ack`, оверлей виден в обеих; закрыть лидера посреди запроса →
-  вторая получает lock, restore, повтор (create-дубль → 200), итог без дублей; одновременный старт двух вкладок →
-  ровно один restore; нет `navigator.locks` → офлайн-запись выключена, кнопки `OnlineOnly`.
-- **Замороженный лидер (C3-06):** мок лидера, который перестал слать heartbeat и не отвечает; видимая вторая вкладка
-  создаёт расход → запись в inbox, тост «Сохранено»; через 5 с `steal` → она лидер (epoch+1), операция отправлена ровно
-  один раз; «размороженный» старый лидер: его `update` не меняет ключ (фенсинг), его `runOutboxOp` → `LEADERSHIP_LOST`
-  без запроса; скрытая вкладка lock не крадёт.
-- Без capability `ledger.clientEntryId` create уходит онлайн без поля `id`; с ней — с `id`.
-- 51-я операция блокируется; старше 14 дней → `stale`.
+- create → update → update of the same id → delete of another one offline → online: requests in this order, the first update carries
+  `If-Match` from the create response, the second — from the first update's response (`outboxVersions`), not a single request without `If-Match`.
+- **Strict order with a slow IDB**: the write of the failed key is delayed by 2 s; 422 on op1 → op2 is not sent
+  (msw counts 0 requests of op2) until op1 is resolved; the same for 401 (refresh 401) and 426 — op1 stays pending, op2 has not gone out.
+- 409 `SYSTEM.CONFLICT` ×2 then 200 → one write, the operation was never failed, `ConflictDialog` was not opened.
+- reload (a new client + `restoreOutbox` + `resumePausedMutations`) → the same requests without duplicates; the "anti-example"
+  without `mutationDefaults` is not executed (pins 2.1).
+- 422 on the second → the third did not go out, failed in `OutboxSheet`; discard → the third went out.
+- **Discard of the head (C3-04):** offline create A, create B; discard A; online → 0 requests of A, B sent **after** A settles,
+  at no moment are two operations `sending`; after reload A does not come back to life (`cancelled`).
+- **Discard of a failed create (C2-15):** create C → 422 (failed), update C is the head, waiting on `blocked`; discard failed C →
+  0 PATCH/DELETE requests for `entryId` C, the gate is open, the next operation went out.
+- **Order by `seq` (C2-16):** three operations of one `entryId` with decreasing `createdAt` (the clock set back) and increasing
+  `seq` → after reload sent in `seq` order.
+- **Restore failed / slow (C3-02):** the outbox restore is delayed by 5 s, during that time the user saves an expense →
+  it goes out via the online path (or `<OnlineOnly>` offline), the IDB key is not overwritten, after restore all old operations are in place
+  and sent; IDB throws on `get` → `outboxRestore = 'failed'`, banner, the key unchanged by a single write.
+- **Failed-write window (C3-05):** interrupt the "tab" during the write of the failed key → after reload the operation is in the outbox or in
+  failed, never in neither and never in both; a failed-write error → the operation stays pending at the head; `error` mutations do not
+  get into the persisted outbox.
+- **Quota (C3-10):** `persistNow` reject → the success toast is not shown, the operation is cancelled before sending,
+  `offlineWritesAvailable === false`; `persisted() === false` → the caption in `OutboxSheet`.
+- **Settlement (C2-02):** offline deletion/edit of a settlement → 0 outbox mutations, `OnlineOnlyError` from the registry, the button
+  disabled; a `command` from a follower with a settlement entry is rejected by the leader.
+- **Two create paths (C1-10):** without `offlineWritesAvailable` `useCreateExpense` creates a mutation with the online key
+  (`networkMode: 'online'`, no scope), with it — the outbox key (`scope.id === OUTBOX_SCOPE`, `retry === false`).
+- 409 → `ConflictDialog`; "Keep mine" → a retry with `current.version`; "Take from server" → cache = current.
+- DELETE 404 = success; PATCH 404 = `deletedRemotely`; 5xx ×3 then 200 → one write.
+- 401 + refresh 401 → the `auth` gate; sign-in with the same userId → sent; with a different one → the dialog and cleanup.
+- **Foreign session (C3-07):** two tabs; Y signs in in tab B; tab A (outbox X) reconnects and successfully does a
+  refresh → `sub` = Y → 0 ledger requests from outbox X, the `auth` gate is closed, the account-switch flow.
+- two "tabs" (a shared fake IDB, a mock of `navigator.locks` with a lock queue, a shared `BroadcastChannel` mock): the leader is the first;
+  create in the second → `command` → executed by the leader, `ack`, the overlay is visible in both; close the leader in the middle of a request →
+  the second gets the lock, restore, repeat (duplicate create → 200), the result without duplicates; a simultaneous start of two tabs →
+  exactly one restore; no `navigator.locks` → offline writing is off, buttons `OnlineOnly`.
+- **Frozen leader (C3-06):** a mock leader that stopped sending heartbeat and does not respond; a visible second tab
+  creates an expense → an inbox entry, the toast "Saved"; after 5 s `steal` → it is the leader (epoch+1), the operation is sent exactly
+  once; the "unfrozen" old leader: its `update` does not change the key (fencing), its `runOutboxOp` → `LEADERSHIP_LOST`
+  without a request; a hidden tab does not steal the lock.
+- Without the capability `ledger.clientEntryId` create goes out online without the `id` field; with it — with `id`.
+- The 51st operation is blocked; older than 14 days → `stale`.
 
-Connectivity: `onLine=false` + network error → баннер; 503 + health 503 → страница; 500 + health 200 → ошибка запроса;
-холодный старт с `navigator.onLine=false` → `onlineManager.isOnline() === false` до первого события.
+Connectivity: `onLine=false` + network error → banner; 503 + health 503 → the page; 500 + health 200 → request error;
+a cold start with `navigator.onLine=false` → `onlineManager.isOnline() === false` before the first event.
 
 ---
 
-## Нюансы и подводные камни
+## Nuances and pitfalls
 
-- **Порядок hydrate**: `setMutationDefaults` до `hydrate`, иначе у восстановленных мутаций нет `mutationFn`.
-- **In-flight при закрытии вкладки**: запрос мог дойти, ответ — нет; после reload он повторится. Безопасно
-  только при BE-03-2 (create) и BE-03-1 (update/delete), поэтому офлайн-запись включается флагом после них.
-- **`updatedAt` в секундах** не годится для locking (две правки в одну секунду неразличимы) → `version`.
-- **JSON-числа**: деньги никогда не проходят через `JSON.parse`/double в новом слое — только lossless-транспорт (§4.1;
-  выше 2³⁹ ≈ 5.5·10¹¹ double молча путает соседние суммы). `JSON.parse` для денег — только в legacy `src/api/*` до
-  миграции стора (как сегодня).
-- **`Intl.format(string)`** — ES2023; старый Safari приводит строку к number: точно до 15 значащих цифр, выше —
-  округление **только на экране** (данные и провод остаются точными).
-- **Финансовые данные в IDB не шифруются**: смягчение — `clearUserData` (см. 04-security).
-- **Тесты с `vi.mock('store/…')`** (`01-architecture.md:259-261`) в PR миграции переписываются на msw +
-  `renderWithQueryClient`, а не на новый мок-путь.
-- **Нет Web Locks / BroadcastChannel**: офлайн-запись выключена, только онлайн (§2.3).
-- **Смена лидера во время запроса**: ответ мог не дойти — повтор безопасен только благодаря BE-03-2 (`id`) и
+- **Hydrate order**: `setMutationDefaults` before `hydrate`, otherwise restored mutations have no `mutationFn`.
+- **In-flight on tab close**: the request may have arrived, the response not; after reload it will be repeated. This is safe
+  only with BE-03-2 (create) and BE-03-1 (update/delete), so offline writing is enabled by a flag after them.
+- **`updatedAt` in seconds** is not suitable for locking (two edits in the same second are indistinguishable) → `version`.
+- **JSON numbers**: money never passes through `JSON.parse`/double in the new layer — only the lossless transport (§4.1;
+  above 2³⁹ ≈ 5.5·10¹¹ double silently confuses neighboring amounts). `JSON.parse` for money — only in the legacy `src/api/*` until
+  the store is migrated (as today).
+- **`Intl.format(string)`** is ES2023; an old Safari converts the string to a number: exact up to 15 significant digits, above that
+  rounding **only on the screen** (data and wire stay exact).
+- **Financial data in IDB is not encrypted**: mitigation — `clearUserData` (see 04-security).
+- **Tests with `vi.mock('store/…')`** (`01-architecture.md:259-261`) are rewritten to msw +
+  `renderWithQueryClient` in the migration PR, not to a new mock path.
+- **No Web Locks / BroadcastChannel**: offline writing is off, online only (§2.3).
+- **Leader change during a request**: the response may not have arrived — a repeat is safe only thanks to BE-03-2 (`id`) and
   BE-03-1 (`X-Client-Op-Id`).
 
-## Расширение в будущем
+## Future extension
 
-- Фаза 2: группы (переименование, участники) — те же `mutationDefaults` + `scope: 'outbox'`, BE-03-8.
-- Background Sync API в SW для отправки очереди без открытого приложения — только когда outbox
-  стабилен; сейчас SW не трогает API (`02-routing-state-pwa.md:121`).
-- Локальный пересчёт баланса — только если backend отдаст «дельту баланса» на каждый expense в ответе
-  create и правило агрегации станет публичным контрактом.
-- Переход на `openapi-fetch` возможен, если уйдёт потребность в upload-прогрессе и interceptors упростятся.
+- Phase 2: groups (rename, participants) — the same `mutationDefaults` + `scope: 'outbox'`, BE-03-8.
+- Background Sync API in the SW to send the queue without an open app — only when the outbox
+  is stable; for now the SW does not touch the API (`02-routing-state-pwa.md:121`).
+- Local balance recomputation — only if the backend returns a "balance delta" for each expense in the create response
+  and the aggregation rule becomes a public contract.
+- Switching to `openapi-fetch` is possible if the need for upload progress goes away and the interceptors get simpler.
 
-## Что НЕ делаем
+## What we do NOT do
 
-Не валидируем ответы API zod-ом; не кладём API в SW `runtimeCaching`; не пересчитываем балансы офлайн;
-settle-up офлайн никогда; не меняем axios на fetch; не пишем фейковые события в activity-кэши; не храним
-outbox в ключе кэша запросов; не делаем big-bang миграцию сторов.
+We do not validate API responses with zod; we do not put the API in SW `runtimeCaching`; we do not recompute balances offline;
+settle-up offline never; we do not change axios to fetch; we do not write fake events into the activity caches; we do not keep the
+outbox in a query cache key; we do not do a big-bang store migration.
 
-## Фазы / PR
+## Phases / PRs
 
-Каждый PR ≤ ~400 строк диффа (без generated-файла) и релизится независимо.
+Each PR ≤ ~400 lines of diff (excluding the generated file) and is released independently.
 
-| PR | Содержание | Зависит от |
+| PR | Contents | Depends on |
 |---|---|---|
-| 03-1 | `shared/money/` (+ `wire.ts`: `WireAmount`/`WireDecimal`/`isWireAmount`) + unit-тесты, lint-правила §4.3 сразу `error` + suppressions/baseline (в `config/eslint/project.js`, если 02-C4 влит, иначе в `eslint.config.js`) | 01-3 |
-| 03-2 | превью долей расхода на `money.split`, snapshot-тесты до/после | 03-1 |
-| 03-3 | `entities/balance` (partition/aggregate/summary), удаление 6 копий, baseline → 0 в `entities/`, `features/` | 03-1 |
-| 03-4a | `openapi/chipin.yaml` + `BACKEND_VERSION` (SHA), drift-workflow (первым коммитом, даёт снимок), `api:*` скрипты, реестр полей `wire-fields.mjs` + transform + проверки генератора, `MODEL_SHAPE_HASH`, generated, PR-check | 01-1, 03-1 |
-| 03-4b | транспорт `shared/api/wireJson.ts` (`lossless-json`, reviver по `wireFields.ts`, stringify), обёртка `api()` на `encodePathSegment` + per-request transforms, `client.test.ts`, sweep §8; lint (C1-11, §4.3): `moneyFromWire`/`moneyToWire` импортируются только в `entities/*/model/**` (`no-restricted-imports` `importNames` для остальных путей, `error`) | 03-4a |
-| 03-5 | QueryClient, провайдер без персиста, `renderWithQueryClient`, eslint-plugin-query, пилот landing-stats, удалить `store/index.ts` | 03-4b |
-| 03-6 | `connectivityStore` (из `onlineManager`), классификация ошибок, `OfflineBanner`, страница только для backend-down | 03-5 |
-| 03-7a | персистер кэша (string-storage + `persistCodec`, `retry`→Sentry, `trimmingPersister`), buster §1.4, `LocalUser.id` + zod, `restoreReady` + гейт гидрации, `shared/offline/network.ts` (`isNetworkUsable`, `setOnline`, probe, lint `navigator.onLine`), заглушки `isEntryWithPendingOp = () => false` и no-op `outboxGate` | 03-5 |
-| 03-7b | `clearUserData` (порядок §1.5, включая legacy-сторы и черновик), таблица «причина → что удаляется» + тест на строку, черновик с `ownerId`, expiry: только `role`, офлайн-холодный старт + `sessionMode`, диалог смены аккаунта (без outbox-части) | 03-7a |
+| 03-1 | `shared/money/` (+ `wire.ts`: `WireAmount`/`WireDecimal`/`isWireAmount`) + unit tests, lint rules §4.3 immediately `error` + suppressions/baseline (in `config/eslint/project.js` if 02-C4 is merged, otherwise in `eslint.config.js`) | 01-3 |
+| 03-2 | the expense share preview on `money.split`, snapshot tests before/after | 03-1 |
+| 03-3 | `entities/balance` (partition/aggregate/summary), removal of 6 copies, baseline → 0 in `entities/`, `features/` | 03-1 |
+| 03-4a | `openapi/chipin.yaml` + `BACKEND_VERSION` (SHA), drift workflow (as the first commit, provides the snapshot), `api:*` scripts, the field registry `wire-fields.mjs` + transform + generator checks, `MODEL_SHAPE_HASH`, generated, PR check | 01-1, 03-1 |
+| 03-4b | the transport `shared/api/wireJson.ts` (`lossless-json`, reviver by `wireFields.ts`, stringify), the `api()` wrapper on `encodePathSegment` + per-request transforms, `client.test.ts`, sweep §8; lint (C1-11, §4.3): `moneyFromWire`/`moneyToWire` are imported only in `entities/*/model/**` (`no-restricted-imports` `importNames` for the other paths, `error`) | 03-4a |
+| 03-5 | QueryClient, provider without persistence, `renderWithQueryClient`, eslint-plugin-query, landing-stats pilot, delete `store/index.ts` | 03-4b |
+| 03-6 | `connectivityStore` (from `onlineManager`), error classification, `OfflineBanner`, a page for backend-down only | 03-5 |
+| 03-7a | the cache persister (string-storage + `persistCodec`, `retry`→Sentry, `trimmingPersister`), buster §1.4, `LocalUser.id` + zod, `restoreReady` + the hydration gate, `shared/offline/network.ts` (`isNetworkUsable`, `setOnline`, probe, lint `navigator.onLine`), stubs `isEntryWithPendingOp = () => false` and a no-op `outboxGate` | 03-5 |
+| 03-7b | `clearUserData` (order §1.5, including legacy stores and the draft), the "reason → what is deleted" table + a test per row, the draft with `ownerId`, expiry: only `role`, offline cold start + `sessionMode`, the account-switch dialog (without the outbox part) | 03-7a |
 | 03-8 | dashboard + currency rates | 03-5 |
 | 03-9 | users-store | 03-5 |
 | 03-10/11 | groups queries / groups mutations | 03-9 |
-| 03-12 | activity + удаление `resourceRequests.ts` | 03-11 |
-| 03-13 | expense modal: сеть → `entities/ledger/api/mutations.ts` (`ledgerOnlineMutationKeys`, без `id` в теле), `capabilitiesQueryOptions`; регистрирует сохранение черновика расхода в `sessionStorage` через `onBeforeAppReload` (`ServiceWorkerManager`, спека 04 §2.11 п. 4) + восстановление при старте | 03-12 |
-| 03-14 | expense modal: разрыв цикла store↔selectors, co-location `features/add-expense/` | 03-13 |
-| 03-15a | outbox-ядро, одна вкладка, **в памяти**: `ledgerOutboxMutationKeys` + defaults/колбэки, хуки выбора пути (§2.1), реестр «только расходы», `seq`, `runOutboxOp` + гейт + `discardOps`/`cancelledOpIds` + `outboxVersions`, проверка `owner`; флаг `VITE_FEATURE_OFFLINE_WRITES=false`. Тесты: порядок, классы ошибок, discard, settlement-guard, два пути create | 03-7b, 03-13; подтверждение владельца по D3 (00) |
-| 03-15b | персист outbox: `OutboxState` + zod, `outboxRestore` guard (§1.6), запись только `pending`, failed-ключ с ожиданием записи, `persistNow` + тост, `storage.persist()`, лимиты 50/14 дней + `stale`, гейт `auth` по `sub` токена. Тесты: reload, медленный/упавший restore, окно failed, квота, чужая сессия | 03-15a |
-| 03-15c | несколько вкладок: Web Lock лидер, `BroadcastChannel` (`state`/`command`/`ack`/`heartbeat`), IDB-inbox, `steal` при замороженном лидере, фенсинг `epoch`. Тесты двух вкладок и замороженного лидера | 03-15b |
-| 03-16a | `OutboxSheet`, `<OnlineOnly>` + `ONLINE_ONLY_ACTIONS` (включая `settlement.delete`/`edit`), подпись у балансов, confirm `signOut` при непустом outbox и outbox-часть диалога смены аккаунта, баннеры `outboxUnavailable`/`storageNotPersisted`, i18n ×5 | 03-15c |
+| 03-12 | activity + removal of `resourceRequests.ts` | 03-11 |
+| 03-13 | expense modal: network → `entities/ledger/api/mutations.ts` (`ledgerOnlineMutationKeys`, no `id` in the body), `capabilitiesQueryOptions`; registers saving the expense draft into `sessionStorage` via `onBeforeAppReload` (`ServiceWorkerManager`, spec 04 §2.11 item 4) + restoring at startup | 03-12 |
+| 03-14 | expense modal: breaking the store↔selectors cycle, co-location `features/add-expense/` | 03-13 |
+| 03-15a | the outbox core, one tab, **in memory**: `ledgerOutboxMutationKeys` + defaults/callbacks, the path-choice hooks (§2.1), the "expenses only" registry, `seq`, `runOutboxOp` + gate + `discardOps`/`cancelledOpIds` + `outboxVersions`, the `owner` check; flag `VITE_FEATURE_OFFLINE_WRITES=false`. Tests: order, error classes, discard, settlement guard, two create paths | 03-7b, 03-13; owner confirmation on D3 (00) |
+| 03-15b | outbox persistence: `OutboxState` + zod, the `outboxRestore` guard (§1.6), writing only `pending`, the failed key with an awaited write, `persistNow` + toast, `storage.persist()`, limits 50/14 days + `stale`, the `auth` gate by the token `sub`. Tests: reload, slow/failed restore, the failed window, quota, foreign session | 03-15a |
+| 03-15c | multiple tabs: Web Lock leader, `BroadcastChannel` (`state`/`command`/`ack`/`heartbeat`), IDB inbox, `steal` for a frozen leader, `epoch` fencing. Tests of two tabs and a frozen leader | 03-15b |
+| 03-16a | `OutboxSheet`, `<OnlineOnly>` + `ONLINE_ONLY_ACTIONS` (including `settlement.delete`/`edit`), the caption at balances, confirm on `signOut` with a non-empty outbox and the outbox part of the account-switch dialog, banners `outboxUnavailable`/`storageNotPersisted`, i18n ×5 | 03-15c |
 | 03-16b | `ConflictDialog` (§2.6), i18n ×5 | 03-16a |
-| 03-17 | включить флаг для expenses | BE-03-1, BE-03-2, BE-03-5, 03-16b, 03-20, 04-4 (в prod: outbox старого origin `chipin.one` на `app.chipin.one` не переезжает, спека 04 §4.1) |
-| 03-18 | удалить `loadingStore`, `errorsStore`, их селекторы; остатки `useConnect` | 03-14 |
-| ~~03-19~~ | снят по D21 (провод остаётся числом) | — |
-| 03-21 | settle-up на `Money`: `resolveSettleAmount`, prefill `roundToMinor`, «< 0.01», подпись «погашено полностью», `toSettleUpWire` (§4.5) | 03-3, 03-4b |
-| 03-20 | новый заголовок `X-Client-Version: APP_VERSION` (одна строка в axios-interceptor), обработка 426 и `X-Min-Client-Version` (сравнение только `major.minor.patch`, §7) → гейт `outdated` + блокирующий экран «Нужно обновить» из 04-2d | BE-03-5, 04-2d |
+| 03-17 | enable the flag for expenses | BE-03-1, BE-03-2, BE-03-5, 03-16b, 03-20, 04-4 (in prod: the outbox of the old origin `chipin.one` does not move to `app.chipin.one`, spec 04 §4.1) |
+| 03-18 | delete `loadingStore`, `errorsStore`, their selectors; leftover `useConnect` | 03-14 |
+| ~~03-19~~ | withdrawn per D21 (the wire stays a number) | — |
+| 03-21 | settle-up on `Money`: `resolveSettleAmount`, prefill `roundToMinor`, "< 0.01", the "settled in full" caption, `toSettleUpWire` (§4.5) | 03-3, 03-4b |
+| 03-20 | the new header `X-Client-Version: APP_VERSION` (one line in the axios interceptor), handling 426 and `X-Min-Client-Version` (comparing only `major.minor.patch`, §7) → the `outdated` gate + the blocking "Update required" screen from 04-2d | BE-03-5, 04-2d |
 
-Переименования относительно прежней таблицы (для 00/04 и FE-issue): 03-4 → 03-4a + 03-4b; 03-7 → 03-7a + 03-7b
-(`restoreReady` — из 03-7a); 03-15 → 03-15a + 03-15b + 03-15c; 03-16 → 03-16a + 03-16b. Итого PR спеки 03: 25
-(было 20).
+Renames relative to the previous table (for 00/04 and FE issues): 03-4 → 03-4a + 03-4b; 03-7 → 03-7a + 03-7b
+(`restoreReady` — from 03-7a); 03-15 → 03-15a + 03-15b + 03-15c; 03-16 → 03-16a + 03-16b. Total PRs of spec 03: 25
+(was 20).
 
-## Тесты / критерии приёмки
+## Tests / acceptance criteria
 
-Разделение (C2-34): критерии 7–10 — gate PR (команды в CI); 1–6, 11, 12 — QA владельца на устройстве перед 03-17
-(чек-лист в issue 03-E), их автоматические аналоги — тесты §8.
+Split (C2-34): criteria 7–10 are the PR gate (commands in CI); 1–6, 11, 12 are the owner's QA on a device before 03-17
+(a checklist in issue 03-E), their automated analogs are the §8 tests.
 
-1. В airplane mode установленный PWA открывает dashboard, группу и активность с данными последней сессии,
-   без `BackendUnavailablePage`, с баннером. Проверяется на установке с `app.chipin.one`; PWA, установленные на `chipin.one` до переезда приложения на поддомен, не поддерживаются: онлайн они открывают сайт, офлайн-запуск с их иконки не гарантируется (D26, спека 04 §2.11).
-2. Офлайн создать, изменить и удалить расход. Перезагрузить приложение офлайн: операции видны в
-   «Не отправлено». Включить сеть: на сервере ровно эти изменения, в этом порядке, без дублей.
-3. Изменить расход на устройстве A офлайн, тот же расход на B онлайн. A online → конфликт-диалог, оба
-   варианта работают.
-4. Settle-up, удаление/правка settlement, загрузка аватара, создание группы офлайн недоступны (disabled + tooltip).
-5. Logout с непустой очередью → предупреждение; после logout IDB не содержит ключей пользователя.
-6. Истечение сессии во время редактирования не теряет черновик и очередь.
-7. `npm run api:check` зелёный; drift-job открывает issue при изменении staging-спеки.
-8. Money-правила lint — `error`, baseline/suppressions в `entities/`, `features/`, `pages/` пуст.
-9. Превью долей в форме совпадает с `participantShares` ответа backend на 100% векторов BE-03-7.
-10. В `src/` нет импортов `loadingStore`, `errorsStore`, `resourceRequests`, `dexie`.
-11. Две открытые вкладки офлайн: расход, созданный во второй, отправлен ровно один раз и в общем порядке очереди.
-12. Settle-up «полностью» по долгу `3.3333 USD` (поле показывает `3.33`) → баланс ровно 0, друга можно удалить.
+1. In airplane mode an installed PWA opens the dashboard, a group and activity with the data of the last session,
+   without `BackendUnavailablePage`, with a banner. Verified on an install from `app.chipin.one`; PWAs installed on `chipin.one` before the app moved to the subdomain are not supported: online they open the site, an offline launch from their icon is not guaranteed (D26, spec 04 §2.11).
+2. Offline create, edit and delete an expense. Reload the app offline: the operations are visible in
+   "Not sent". Turn the network on: on the server exactly these changes, in this order, without duplicates.
+3. Edit an expense on device A offline, the same expense on B online. A online → the conflict dialog, both
+   options work.
+4. Settle-up, deleting/editing a settlement, avatar upload, group creation are unavailable offline (disabled + tooltip).
+5. Logout with a non-empty queue → a warning; after logout IDB contains no keys of the user.
+6. Session expiry during editing does not lose the draft and the queue.
+7. `npm run api:check` is green; the drift job opens an issue when the staging spec changes.
+8. The money lint rules are `error`, the baseline/suppressions in `entities/`, `features/`, `pages/` are empty.
+9. The share preview in the form matches `participantShares` of the backend response on 100% of the BE-03-7 vectors.
+10. In `src/` there are no imports of `loadingStore`, `errorsStore`, `resourceRequests`, `dexie`.
+11. Two open tabs offline: an expense created in the second is sent exactly once and in the shared queue order.
+12. Settle-up "in full" for a debt of `3.3333 USD` (the field shows `3.33`) → the balance is exactly 0, the friend can be deleted.
 
-## Открытые вопросы
+## Open questions
 
-1. Проверено (review B, m10): ничьи остатка — по порядку `participantIds` запроса (стабильная сортировка,
-   `ShareDistribution.kt:41-63`, порядок сохраняется в `LedgerEntryCommandService.kt:408-421`). Вопрос закрыт.
-2. ASSUMPTION: refresh token приходит httpOnly-cookie через same-origin `/api` rewrite
-   (`02-routing-state-pwa.md:105`). Если FE хранит его сам, офлайн-старт (1.6) не меняется, но меняется
-   спека 04.
-3. Лимиты 50 операций / 14 дней / persist 14 дней — подтверждено владельцем 2026-10-28 (D20).
-4. «Ваша доля» pending-расхода в `OutboxSheet` (§3) с явной подписью — подтверждено владельцем 2026-10-28 (D20).
-5. Владельцу (вынесено в 00 «Подтверждения», до старта указанных PR): (a) толкование D21 — lossless-транспорт в обёртке
-   + конверсия в мапперах (шапка; до 03-4b); (b) D3: outbox `networkMode: 'always'` вместо paused (§2.1; до 03-15a);
-   (c) D4: buster по форме доменной модели вместо zod на кэше IDB (§1.4; до 03-7a); (d) после «выйти на других
-   устройствах» — офлайн-доступ к кэшу после expiry отключён, различение REVOKED/EXPIRED на backend — да/нет (§1.5);
-   (e) settle-up «досыпает» до точного долга при разнице < 1 минорной единицы с подписью (§4.5; до 03-21);
-   (f) фаза 2 D2 (группы/участники офлайн) без PR-id до 03-17 (§2.9).
+1. Verified (review B, m10): remainder ties are broken by the order of the request's `participantIds` (stable sort,
+   `ShareDistribution.kt:41-63`, the order is preserved in `LedgerEntryCommandService.kt:408-421`). Question closed.
+2. ASSUMPTION: the refresh token arrives as an httpOnly cookie through the same-origin `/api` rewrite
+   (`02-routing-state-pwa.md:105`). If the FE stores it itself, the offline start (1.6) does not change, but
+   spec 04 does.
+3. Limits 50 operations / 14 days / persist 14 days — confirmed by the owner on 2026-10-28 (D20).
+4. "Your share" of a pending expense in `OutboxSheet` (§3) with an explicit caption — confirmed by the owner on 2026-10-28 (D20).
+5. For the owner (listed in 00 "Confirmations", before the start of the named PRs): (a) the interpretation of D21 — a lossless transport in the wrapper
+   + conversion in the mappers (header; before 03-4b); (b) D3: outbox `networkMode: 'always'` instead of paused (§2.1; before 03-15a);
+   (c) D4: buster by the domain model shape instead of zod on the IDB cache (§1.4; before 03-7a); (d) after "sign out on other
+   devices" — offline access to the cache after expiry is disabled, distinguishing REVOKED/EXPIRED on the backend — yes/no (§1.5);
+   (e) settle-up "tops up" to the exact debt when the difference is < 1 minor unit, with a caption (§4.5; before 03-21);
+   (f) phase 2 of D2 (groups/participants offline) without a PR id until 03-17 (§2.9).
