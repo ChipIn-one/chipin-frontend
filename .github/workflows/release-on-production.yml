@@ -1,0 +1,84 @@
+# Release caller for the frontend (chipin-frontend#586; registry `release: deploy-tag / production-deploy`,
+# ChipIn-one/.github docs/workflow/release.md). Vercel writes a `Production` deployment at Promote to Production and can
+# re-post a success status on an older Production deployment; every successful vercel[bot] status runs the guard, and
+# a passed guard runs the reusable release workflow pinned to an org tag, which derives the version from
+# `## Version impact` of the PRs merged into master since the previous tag and creates the tag and the GitHub Release on
+# the promoted SHA. The trigger filter is the one of forward-production-deployment.yml, plus the status creator.
+# The guard job releases only a promoted SHA that is on master and is not older than the newest version tag:
+# - a SHA outside master (a promoted branch preview) gets no tag (the engine takes a deploy-tag SHA as is);
+# - a re-posted status or a rollback promote of an already tagged SHA reaches the engine and is a no-op
+#   (ALREADY_RELEASED);
+# - an untagged SHA behind the newest tag (rollback promote, re-posted old status) gets no tag (no lower version after
+#   a higher one).
+# A skip is a green run with a warning. A deployment_status run uses the workflow file at the deployment's SHA, so the
+# first automatic release is the Promote of a master build that contains this file.
+# Event fields reach `run:` only through env. In-app version, Sentry and version:bump removal: ChipIn-one/.github#172.
+name: Release on Production deployment
+
+on:
+  deployment_status:
+
+permissions: {}
+
+# Guard and release share one group, so a second quick Promote runs its guard only after the first release created
+# its tag (a job-level group would let both guards pass before either tag exists, and the engine could then create a
+# lower version after a higher one). Only statuses that pass the guard condition share the group; every other status
+# gets its own. GitHub keeps one pending run per group: a third Production success (a quick Promote, or Vercel
+# re-posting success on an older deployment) cancels the pending run; re-run the cancelled run to tag its SHA.
+concurrency:
+  group: ${{ (github.repository_owner == 'ChipIn-one' && github.event.deployment.environment == 'Production' && github.event.deployment_status.state == 'success' && github.event.deployment.creator.login == 'vercel[bot]' && github.event.deployment_status.creator.login == 'vercel[bot]') && format('release-{0}', github.repository) || format('no-release-{0}', github.run_id) }}
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    if: >-
+      github.repository_owner == 'ChipIn-one' &&
+      github.event.deployment.environment == 'Production' &&
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.creator.login == 'vercel[bot]' &&
+      github.event.deployment_status.creator.login == 'vercel[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      release: ${{ steps.guard.outputs.release }}
+      sha: ${{ steps.guard.outputs.sha }}
+    steps:
+      - name: Checkout master history and tags
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: master
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+      - name: Require a master SHA not older than the newest tag
+        id: guard
+        env:
+          DEPLOYED_SHA: ${{ github.event.deployment.sha }}
+        run: |
+          set -euo pipefail
+          skip() { echo "::warning::No release for $DEPLOYED_SHA: $1"; echo "release=false" >> "$GITHUB_OUTPUT"; exit 0; }
+          if [[ ! "$DEPLOYED_SHA" =~ ^[0-9a-f]{40}$ ]]; then echo "::error::deployment SHA '$DEPLOYED_SHA' is not a full commit SHA"; exit 1; fi
+          git cat-file -e "$DEPLOYED_SHA^{commit}" 2>/dev/null || skip "the commit is not in this repository's fetched history"
+          git merge-base --is-ancestor "$DEPLOYED_SHA" origin/master || skip "the commit is not on master"
+          tagged="$(git tag --points-at "$DEPLOYED_SHA" | grep -E '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' || true)"
+          newest="$(git tag --list 'v*' --sort=-v:refname | grep -E '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' | head -n 1 || true)"
+          if [[ -z "$tagged" && -n "$newest" ]]; then
+            git merge-base --is-ancestor "$newest" "$DEPLOYED_SHA" || skip "rollback to a commit behind the newest tag $newest"
+          fi
+          echo "sha=$DEPLOYED_SHA" >> "$GITHUB_OUTPUT"
+          echo "release=true" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: guard
+    if: needs.guard.outputs.release == 'true'
+    permissions:
+      contents: write           # tags and GitHub Releases in this repository (the called workflow inherits this)
+      pull-requests: read       # inventory: merged pull requests of the commits since the previous tag
+    uses: ChipIn-one/.github/.github/workflows/release.yml@2d875172c22c7c533f59a86b500e3ca85b395567 # v1.10.0
+    with:
+      ref: ${{ needs.guard.outputs.sha }}
+      apply: true
+    secrets:
+      token: ${{ secrets.GITHUB_TOKEN }}
