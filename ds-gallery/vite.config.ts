@@ -5,14 +5,13 @@ import { defineConfig } from 'vite';
 import svgr from 'vite-plugin-svgr';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
-const root = resolve(__dirname, '..');
+const root = resolve(import.meta.dirname, '..');
 
 export default defineConfig({
-    root: __dirname,
+    root: import.meta.dirname,
     plugins: [
-        // Aliases come from tsconfig.app.json `paths` (via ds-gallery/tsconfig.json, which extends it
-        // and also includes the gallery sources).
-        tsconfigPaths({ root, projects: [resolve(__dirname, 'tsconfig.json')] }),
+        // Aliases come from tsconfig.app.json `paths`; that project also includes the gallery sources.
+        tsconfigPaths({ root, projects: [resolve(root, 'tsconfig.app.json')] }),
         svgr(),
         react(),
     ],

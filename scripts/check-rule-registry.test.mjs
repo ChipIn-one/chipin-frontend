@@ -1,11 +1,11 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 import js from '@eslint/js';
 import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
-import { describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test } from 'vitest';
 
 import {
     checkRegistry,
@@ -20,6 +20,21 @@ import {
 
 const repoRoot = resolve(import.meta.dirname, '..');
 const SPEC_PATH = 'docs/superpowers/specs/2026-10-28-frontend-refactor/02-rulebook-tooling.md';
+
+// Temporary directories of the child-process tests, removed after each test.
+const tempDirs = [];
+const makeTempDir = () => {
+    const dir = mkdtempSync(join(tmpdir(), 'check-rule-registry-'));
+
+    tempDirs.push(dir);
+    return dir;
+};
+
+afterEach(() => {
+    for (const dir of tempDirs.splice(0)) {
+        rmSync(dir, { recursive: true, force: true });
+    }
+});
 
 const check = (registry, rules, blocks = []) =>
     checkRegistry({ registry, resolved: [{ file: 'src/a.tsx', rules }], blocks });
@@ -98,7 +113,32 @@ describe('check-rule-registry', () => {
         const block = { name: 'money', rules: { 'no-restricted-syntax': money } };
         const registry = { curly: 'a', 'no-restricted-syntax#money': 'b' };
 
-        expect(check(registry, { curly: 2 }, [{ ...block, pending: ['money'] }])).toEqual([]);
+        expect(
+            check(registry, { curly: 2 }, [{ ...block, pending: ['no-restricted-syntax#money'] }]),
+        ).toEqual([]);
+    });
+
+    test('fails on a pending restricted entry that is already effective on a linted file', () => {
+        const money = ['error', { selector: 'X', message: '[money] Use the money helpers.' }];
+        const block = { name: 'money', rules: { 'no-restricted-syntax': money } };
+        const registry = { 'no-restricted-syntax#money': 'b' };
+        const pending = [{ ...block, pending: ['no-restricted-syntax#money'] }];
+
+        expect(check(registry, { 'no-restricted-syntax': money }, pending)).toEqual([
+            'no-restricted-syntax#money is effective; remove `pending: true`',
+        ]);
+    });
+
+    test('matches pending keys by rule and id, not by the bare id', () => {
+        const entry = ['error', { selector: 'X', message: '[money] Use the money helpers.' }];
+        const block = { name: 'money', rules: { 'no-restricted-syntax': entry } };
+        const registry = { curly: 'a', 'no-restricted-syntax#money': 'b' };
+        // The same id under another rule does not mark this entry pending.
+        const blocks = [{ ...block, pending: ['no-restricted-imports#money'] }];
+
+        expect(check(registry, { curly: 2 }, blocks)).toEqual([
+            `no-restricted-syntax#money in ${REGISTRY_PATH} is not effective on any linted file`,
+        ]);
     });
 
     test('fails on an unmarked restricted entry whose glob matches no linted file', () => {
@@ -117,7 +157,7 @@ describe('check-rule-registry', () => {
             {
                 name: 'scoped',
                 rules: { 'no-restricted-syntax': ['warn', { selector: 'X', message: '[x] m' }] },
-                pending: ['x'],
+                pending: ['no-restricted-syntax#x'],
             },
         ];
 
@@ -152,7 +192,7 @@ describe('check-rule-registry', () => {
     test('resolves each lint mode in a child process with its own env', async () => {
         // A stand-in for `check-rule-registry.mjs --resolve`: it reads the mode flag and prints
         // noise before the marked result, as a config module with a console.log would.
-        const dir = mkdtempSync(join(tmpdir(), 'check-rule-registry-'));
+        const dir = makeTempDir();
         const script = join(dir, 'resolve.mjs');
 
         writeFileSync(
@@ -176,7 +216,7 @@ process.stdout.write(${JSON.stringify(RESULT_MARKER)} + JSON.stringify({
     });
 
     test('names the mode and the start of stdout when the child result cannot be read', async () => {
-        const dir = mkdtempSync(join(tmpdir(), 'check-rule-registry-'));
+        const dir = makeTempDir();
         const script = join(dir, 'resolve.mjs');
 
         writeFileSync(script, "console.log('config noise');\n");
@@ -184,6 +224,17 @@ process.stdout.write(${JSON.stringify(RESULT_MARKER)} + JSON.stringify({
         await expect(resolveMode({ CHIPIN_ESLINT_FULL: '1' }, script)).rejects.toThrow(
             'Cannot read the rule resolution for mode {"CHIPIN_ESLINT_FULL":"1"}: result marker ' +
                 'not found; stdout starts with: "config noise\\n"',
+        );
+    });
+
+    test('names the mode when the child process exits with an error', async () => {
+        const dir = makeTempDir();
+        const script = join(dir, 'resolve.mjs');
+
+        writeFileSync(script, "throw new Error('config broke');\n");
+
+        await expect(resolveMode({ CHIPIN_ESLINT_FULL: '1' }, script)).rejects.toThrow(
+            /^Rule resolution failed for mode \{"CHIPIN_ESLINT_FULL":"1"\}: Command failed: .*config broke/s,
         );
     });
 
