@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parse } from 'yaml';
@@ -50,14 +50,61 @@ describe('release-on-production workflow', () => {
     });
 });
 
+// Git subprocesses must never see the caller's repository. Inside a git hook (husky pre-push runs
+// verify:full) git exports GIT_DIR, GIT_WORK_TREE, GIT_INDEX_FILE and friends; inherited, they make
+// `git init`/`git config` act on the real repository instead of the temp one. Drop every GIT_* key,
+// then isolate from the developer's git config (tag signing, hooks, default branch).
+const isolatedGitEnv = (base = process.env) => ({
+    ...Object.fromEntries(Object.entries(base).filter(([key]) => !/^GIT_/u.test(key))),
+    GIT_CONFIG_GLOBAL: '/dev/null',
+    GIT_CONFIG_NOSYSTEM: '1',
+});
+const runGit = (env, cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8', env }).trim();
+const initTestRepo = (env, repo) => {
+    runGit(env, repo, 'init', '-q', '-b', 'master');
+    runGit(env, repo, 'config', 'user.email', 'test@example.com');
+    runGit(env, repo, 'config', 'user.name', 'test');
+};
+
+describe('release-on-production guard git isolation', () => {
+    test('ignores an inherited hook GIT_DIR/GIT_WORK_TREE and configures only the temp repo', () => {
+        const root = mkdtempSync(join(tmpdir(), 'release-guard-isolation-'));
+        try {
+            const decoy = join(root, 'decoy');
+            const repo = join(root, 'repo');
+            mkdirSync(decoy);
+            mkdirSync(repo);
+            runGit(isolatedGitEnv(), decoy, 'init', '-q', '-b', 'master');
+            const decoyConfig = join(decoy, '.git', 'config');
+            const before = readFileSync(decoyConfig, 'utf8');
+            const hookEnv = {
+                ...process.env,
+                GIT_DIR: join(decoy, '.git'),
+                GIT_WORK_TREE: decoy,
+                GIT_INDEX_FILE: join(decoy, '.git', 'index'),
+                GIT_PREFIX: '',
+            };
+            const env = isolatedGitEnv(hookEnv);
+            expect(Object.keys(env).filter(key => key.startsWith('GIT_')).sort())
+                .toEqual(['GIT_CONFIG_GLOBAL', 'GIT_CONFIG_NOSYSTEM']);
+
+            initTestRepo(env, repo);
+
+            expect(readFileSync(decoyConfig, 'utf8')).toBe(before);
+            expect(runGit(env, repo, 'rev-parse', '--absolute-git-dir')).toBe(realpathSync(join(repo, '.git')));
+            expect(runGit(env, repo, 'config', '--local', '--get', 'user.name')).toBe('test');
+            expect(runGit(env, repo, 'config', '--local', '--get', 'core.bare')).toBe('false');
+        } finally {
+            rmSync(root, { recursive: true, force: true });
+        }
+    });
+});
+
 describe('release-on-production guard', () => {
-    // Isolated from the developer's git config (tag signing, hooks, default branch).
-    const env = { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' };
-    const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8', env }).trim();
+    const env = isolatedGitEnv();
+    const git = (cwd, ...args) => runGit(env, cwd, ...args);
     const repo = mkdtempSync(join(tmpdir(), 'release-guard-'));
-    git(repo, 'init', '-q', '-b', 'master');
-    git(repo, 'config', 'user.email', 'test@example.com');
-    git(repo, 'config', 'user.name', 'test');
+    initTestRepo(env, repo);
     const commit = name => {
         git(repo, 'commit', '-q', '--allow-empty', '-m', name);
         return git(repo, 'rev-parse', 'HEAD');
