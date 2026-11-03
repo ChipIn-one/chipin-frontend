@@ -235,7 +235,7 @@ export default defineConfig(({ mode }) => {
                               assets: './dist/**',
                               // Rolldown emits its tiny runtime helper chunk without a source map,
                               // so Sentry cannot resolve a reference for it (#575).
-                              ignore: ['./dist/assets/rolldown-runtime-*.js'],
+                              ignore: ['**/node_modules/**', './dist/assets/rolldown-runtime-*.js'],
                               filesToDeleteAfterUpload: './dist/**/*.map',
                           },
                       }),
