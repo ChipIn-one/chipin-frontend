@@ -44,6 +44,24 @@ export const findBaselineGrowth = ({ base, head, baseRegistry, headRegistry, fil
     const newRules = firstTimeRules(baseRegistry, headRegistry);
     const errors = [];
 
+    // A malformed count (negative, fractional, missing, a string) would make the comparison
+    // meaningless, so it is an error on either side.
+    for (const [side, baseline] of [
+        ['base', base],
+        ['head', head],
+    ]) {
+        for (const [path, rules] of Object.entries(baseline)) {
+            for (const [rule, entry] of Object.entries(rules ?? {})) {
+                if (!Number.isInteger(entry?.count) || entry.count < 0) {
+                    errors.push(`${file}: ${path} ${rule} has invalid count at ${side}`);
+                }
+            }
+        }
+    }
+    if (errors.length > 0) {
+        return errors;
+    }
+
     for (const [path, rules] of Object.entries(head)) {
         for (const [rule, { count }] of Object.entries(rules)) {
             const before = base[path]?.[rule]?.count ?? 0;

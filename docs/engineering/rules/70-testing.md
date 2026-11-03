@@ -97,13 +97,16 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
   `--max-warnings 0` only as a guard against an accidental `warn`. Each enabled rule is registered
   in `config/eslint/rule-classes.json` as class a (auto-fixable) or b (correctness or boundary);
   `scripts/check-rule-registry.mjs` (part of `npm run lint`) fails on a missing entry, a class c rule,
-  a `warn` level, or a registry key that matches no enabled rule or entry id.
+  a `warn` level, or a registry key that is not effective on any linted file.
 - Known violations live in `eslint-suppressions.json` (native ESLint bulk suppressions): a count per
   file and rule. More violations than recorded fail lint; the file only shrinks.
   `npm run baseline:update` (`eslint . --prune-suppressions`) removes entries that no longer fire.
-- Entries are added only by the PR that registers the rule in `rule-classes.json` for the first time
-  (no `<rule>` or `<rule>#<id>` key at base) and runs `npx eslint . --suppress-rule <rule>`; CI
-  `scripts/check-baseline.mjs` fails on any other new entry or higher count. A new `#id` of a rule
-  that is already registered does not allow suppressions: fix its violations in the same PR.
+- Suppressions are keyed per rule (`no-restricted-syntax`), not per selector id. So only the PR that
+  first registers a rule in `rule-classes.json` (no `<rule>` or `<rule>#<id>` key at base) may add
+  suppressions for it, with `npx eslint . --suppress-rule <rule>`. Any later PR that adds selectors
+  or ids under an already registered rule must fix all of their violations in the same PR. CI
+  `scripts/check-baseline.mjs` fails on any other new entry or higher count.
+- Today `no-restricted-syntax` is unregistered, so whichever PR first adds selectors to it (the 03-1
+  money selectors or 02-C12) owns its initial suppressions.
 - Do not fix unrelated existing lint/test failures during a narrow task, and do not add
   suppressions or `eslint-disable` comments to make a new violation pass.

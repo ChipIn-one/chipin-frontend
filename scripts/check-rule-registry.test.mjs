@@ -37,24 +37,60 @@ describe('check-rule-registry', () => {
         expect(check({ 'no-debugger': 'b' }, { 'no-debugger': 'warn' })).toHaveLength(1);
     });
 
-    test('checks every enabled rule of every config block, not only the samples', () => {
-        const blocks = [{ name: 'scripts', rules: { 'no-alert': 'warn', 'no-debugger': 2 } }];
+    test('checks the effective rules of every linted file', () => {
+        const resolved = [
+            { file: 'src/a.tsx', rules: { curly: 2 } },
+            { file: 'scripts/b.js', rules: { 'no-alert': 'warn', 'no-debugger': 2 } },
+        ];
 
-        expect(check({ 'no-alert': 'b' }, {}, blocks)).toEqual([
-            'no-alert is "warn" in block scripts: use error or off',
-            `no-debugger (block scripts) has no entry in ${REGISTRY_PATH}`,
+        expect(
+            checkRegistry({ registry: { curly: 'a', 'no-alert': 'b' }, resolved, blocks: [] }),
+        ).toEqual([
+            'no-alert is "warn" in scripts/b.js: use error or off',
+            `no-debugger (scripts/b.js) has no entry in ${REGISTRY_PATH}`,
         ]);
     });
 
-    test('fails on registry keys that match no enabled rule or entry id', () => {
+    test('fails on a key that a raw block enables but a later block turns off for every file', () => {
+        const blocks = [{ rules: { 'no-undef': 'error' } }, { rules: { 'no-undef': 'off' } }];
+
+        expect(
+            check({ curly: 'a', 'no-undef': 'b' }, { curly: 2, 'no-undef': 'off' }, blocks),
+        ).toEqual([`no-undef in ${REGISTRY_PATH} is not effective on any linted file`]);
+    });
+
+    test('fails on registry keys that are not effective on any linted file', () => {
         expect(check({ curly: 'a', 'no-restricted-imports#junk': 'b' }, { curly: 2 })).toEqual([
-            `no-restricted-imports#junk in ${REGISTRY_PATH} matches no enabled rule or entry id`,
+            `no-restricted-imports#junk in ${REGISTRY_PATH} is not effective on any linted file`,
+        ]);
+    });
+
+    test('reads restricted-entry ids from nested config arrays', () => {
+        const blocks = [
+            [
+                [
+                    {
+                        rules: {
+                            'no-restricted-syntax': ['error', { selector: 'X', message: '[n] m' }],
+                        },
+                    },
+                ],
+            ],
+        ];
+
+        expect(check({}, {}, blocks)).toEqual([
+            `no-restricted-syntax#n (block (unnamed)) has no entry in ${REGISTRY_PATH}`,
         ]);
     });
 
     test('fails when a sample file gets no config', () => {
         expect(
-            checkRegistry({ registry: {}, resolved: [{ file: 'src/gone.tsx' }], blocks: [] }),
+            checkRegistry({
+                registry: {},
+                resolved: [{ file: 'src/a.tsx', rules: {} }],
+                blocks: [],
+                samples: ['src/gone.tsx'],
+            }),
         ).toEqual(['sample file src/gone.tsx is missing, ignored or gets no ESLint config']);
     });
 

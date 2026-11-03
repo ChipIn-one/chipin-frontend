@@ -72,6 +72,19 @@ describe('check-baseline growth', () => {
         ).toEqual([]);
     });
 
+    test.each([[-1], [1.5], ['2'], [null], [undefined]])(
+        'fails on an invalid count %s at base or head',
+        count => {
+            const bad = { 'src/a.ts': { 'no-debugger': { count } } };
+            const good = { 'src/a.ts': { 'no-debugger': entry(1) } };
+            const args = { baseRegistry: registry, headRegistry: registry, file: 'f.json' };
+            const message = side => [`f.json: src/a.ts no-debugger has invalid count at ${side}`];
+
+            expect(findBaselineGrowth({ ...args, base: bad, head: good })).toEqual(message('base'));
+            expect(findBaselineGrowth({ ...args, base: good, head: bad })).toEqual(message('head'));
+        },
+    );
+
     test('passes when the baseline shrinks', () => {
         expect(
             findBaselineGrowth({
