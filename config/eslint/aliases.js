@@ -14,6 +14,11 @@ const repoRoot = resolve(import.meta.dirname, '../..');
 const PRESENTATION_LAYERS = new Set(['components', 'basics']);
 const ASSET_LAYERS = new Set(['assets', 'styles']);
 
+const formatDiagnostics = diagnostics =>
+    diagnostics
+        .map(diagnostic => ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'))
+        .join('; ');
+
 const escapeRegExp = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /**
@@ -26,10 +31,21 @@ export const readAliases = ({ appDir = '.' } = {}) => {
     const { config, error } = ts.readConfigFile(configPath, ts.sys.readFile);
 
     if (error) {
-        throw new Error(ts.flattenDiagnosticMessageText(error.messageText, '\n'));
+        throw new Error(`Cannot read ${configPath}: ${formatDiagnostics([error])}`);
     }
 
-    const { options } = ts.parseJsonConfigFileContent(config, ts.sys, dirname(configPath));
+    // A broken `extends` or an invalid option is reported in `errors`, not thrown: fail loudly.
+    const { options, errors } = ts.parseJsonConfigFileContent(
+        config,
+        ts.sys,
+        dirname(configPath),
+        undefined,
+        configPath,
+    );
+
+    if (errors.length > 0) {
+        throw new Error(`Invalid ${configPath}: ${formatDiagnostics(errors)}`);
+    }
     const aliases = new Set(Object.keys(options.paths ?? {}).map(key => key.replace(/\/\*$/, '')));
 
     if (aliases.size === 0) {
