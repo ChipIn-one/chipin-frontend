@@ -1,12 +1,15 @@
 # Release caller for the frontend (chipin-frontend#586; registry `release: deploy-tag / production-deploy`,
-# ChipIn-one/.github docs/workflow/release.md). Vercel writes a `Production` deployment only at Promote to Production;
-# its successful vercel[bot] status runs the reusable release workflow pinned to an org tag, which derives the version
-# from `## Version impact` of the PRs merged into master since the previous tag and creates the tag and the GitHub
-# Release on the promoted SHA. The trigger filter is the one of forward-production-deployment.yml.
+# ChipIn-one/.github docs/workflow/release.md). Vercel writes a `Production` deployment at Promote to Production and can
+# re-post a success status on an older Production deployment; every successful vercel[bot] status runs the guard, and
+# a passed guard runs the reusable release workflow pinned to an org tag, which derives the version from
+# `## Version impact` of the PRs merged into master since the previous tag and creates the tag and the GitHub Release on
+# the promoted SHA. The trigger filter is the one of forward-production-deployment.yml, plus the status creator.
 # The guard job releases only a promoted SHA that is on master and is not older than the newest version tag:
 # - a SHA outside master (a promoted branch preview) gets no tag (the engine takes a deploy-tag SHA as is);
-# - a rollback promote of an already tagged SHA reaches the engine and is a no-op (ALREADY_RELEASED);
-# - a rollback promote of an untagged SHA behind the newest tag gets no tag (no lower version after a higher one).
+# - a re-posted status or a rollback promote of an already tagged SHA reaches the engine and is a no-op
+#   (ALREADY_RELEASED);
+# - an untagged SHA behind the newest tag (rollback promote, re-posted old status) gets no tag (no lower version after
+#   a higher one).
 # A skip is a green run with a warning. A deployment_status run uses the workflow file at the deployment's SHA, so the
 # first automatic release is the Promote of a master build that contains this file.
 # Event fields reach `run:` only through env. In-app version, Sentry and version:bump removal: ChipIn-one/.github#172.
@@ -17,13 +20,23 @@ on:
 
 permissions: {}
 
+# Guard and release share one group, so a second quick Promote runs its guard only after the first release created
+# its tag (a job-level group would let both guards pass before either tag exists, and the engine could then create a
+# lower version after a higher one). Only release-relevant statuses share the group; every other status gets its own.
+# GitHub keeps one pending run per group: a third quick Promote cancels the pending second run, and the PRs of the
+# cancelled SHA roll into the next tag.
+concurrency:
+  group: ${{ (github.event.deployment.environment == 'Production' && github.event.deployment_status.state == 'success') && format('release-{0}', github.repository) || format('no-release-{0}', github.run_id) }}
+  cancel-in-progress: false
+
 jobs:
   guard:
     if: >-
       github.repository_owner == 'ChipIn-one' &&
       github.event.deployment.environment == 'Production' &&
       github.event.deployment_status.state == 'success' &&
-      github.event.deployment.creator.login == 'vercel[bot]'
+      github.event.deployment.creator.login == 'vercel[bot]' &&
+      github.event.deployment_status.creator.login == 'vercel[bot]'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -33,7 +46,7 @@ jobs:
       sha: ${{ steps.guard.outputs.sha }}
     steps:
       - name: Checkout master history and tags
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: master
           fetch-depth: 0
@@ -63,10 +76,6 @@ jobs:
     permissions:
       contents: write           # tags and GitHub Releases in this repository (the called workflow inherits this)
       pull-requests: read       # inventory: merged pull requests of the commits since the previous tag
-    concurrency:
-      # job level, so Preview deployment statuses never enter the group; one release at a time, never cancelled
-      group: release-${{ github.repository }}
-      cancel-in-progress: false
     uses: ChipIn-one/.github/.github/workflows/release.yml@ef91af3f0e3334d9197e626219a1a92129322a99 # v1.9.2
     with:
       ref: ${{ needs.guard.outputs.sha }}
