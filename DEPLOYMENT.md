@@ -24,8 +24,8 @@ Sentry runtime reporting reads `VITE_SENTRY_DSN` from the deployment
 environment. Configure it independently for the Vercel environments that should
 send events. When the variable is absent or empty, runtime Sentry reporting is
 disabled even if the build would otherwise enable telemetry. Vercel Git
-integration builds use the normal Vercel environment configuration and preserve
-the existing Sentry source-map upload behavior.
+integration builds use the normal Vercel environment configuration; only
+production builds upload Sentry source maps (see Build toolchain below).
 
 There is no unconditional external API rewrite. Unknown hosts therefore cannot
 fall back to production.
@@ -123,6 +123,9 @@ No paid custom Vercel environment is required.
 - Sentry: the Rolldown runtime chunk (`assets/rolldown-runtime-*.js`) has no
   source map, so it is excluded from the Sentry upload via `sourcemaps.ignore`.
   Source maps stay `hidden` and are deleted from `dist` after upload.
+- Sentry source maps are uploaded only by Vercel production builds
+  (`VERCEL_ENV=production`, the Promote rebuild); preview, local and CI builds
+  skip the upload and emit no source maps (`scripts/sentry-sourcemaps.ts`).
 
 ### Rollback
 

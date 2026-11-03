@@ -40,6 +40,7 @@ export function uiAffectingFiles(files) {
 // candidate; it only forces a QA Issue with SMOKE-SHORT. Lint/test/types devDependencies stay out.
 const BUILD_PATH_FILES = new Set([
     'scripts/version-resolver.mjs', // imported by vite.config.ts
+    'scripts/sentry-sourcemaps.ts', // imported by vite.config.ts: Sentry source map upload gate
 ]);
 const TSCONFIG = /^tsconfig[^/]*\.json$/; // module resolution and compile targets
 // Every package vite.config.ts and pwa-assets.config.ts import (ui-paths.test.mjs parses both files to
