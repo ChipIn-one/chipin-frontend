@@ -11,6 +11,7 @@ import {
     runPrerenderPublic,
 } from './scripts/prerender-before-workbox.mjs';
 import { PRIVATE_SPA_NAVIGATION_ALLOWLIST } from './scripts/private-spa-navigation.ts';
+import { shouldUploadSourcemaps } from './scripts/sentry-sourcemaps.ts';
 import { resolveAppVersion } from './scripts/version-resolver.mjs';
 
 // https://vite.dev/config/
@@ -78,7 +79,8 @@ const resolveSentryUploadConfig = (
     env: Record<string, string>,
     sentryBuildConfig: SentryBuildConfig,
 ): SentryUploadConfig | null => {
-    if (env.VERCEL !== '1' || !sentryBuildConfig.enabled) {
+    // Only Vercel production builds upload; preview builds skip it even when SENTRY_AUTH_TOKEN is set (#575).
+    if (!shouldUploadSourcemaps(env) || !sentryBuildConfig.enabled) {
         return null;
     }
 
@@ -244,7 +246,8 @@ export default defineConfig(({ mode }) => {
         },
 
         build: {
-            sourcemap: 'hidden',
+            // Emit hidden source maps only for the Sentry upload, which deletes them from dist afterwards.
+            sourcemap: sentryUploadConfig ? 'hidden' : false,
             rolldownOptions: {
                 input: ['index.html', 'app.html'],
                 output: {

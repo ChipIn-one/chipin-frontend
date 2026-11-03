@@ -71,13 +71,15 @@ describe('build-affecting changes', () => {
         'node_modules/@babel/runtime': { version: '7.28.0' },
     });
 
-    test('tsconfig files and the version resolver are build-affecting by path', () => {
+    test('tsconfig files, the version resolver and the Sentry upload gate are build-affecting by path', () => {
         expect(
             buildAffectingFiles([
                 'tsconfig.app.json',
                 'tsconfig.json',
                 'tsconfig.node.json',
                 'scripts/version-resolver.mjs',
+                'scripts/sentry-sourcemaps.ts',
+                'scripts/sentry-sourcemaps.test.ts',
                 'docs/a.md',
                 'scripts/version-check.mjs',
             ]),
@@ -86,6 +88,7 @@ describe('build-affecting changes', () => {
             'tsconfig.json',
             'tsconfig.node.json',
             'scripts/version-resolver.mjs',
+            'scripts/sentry-sourcemaps.ts',
         ]);
     });
 
