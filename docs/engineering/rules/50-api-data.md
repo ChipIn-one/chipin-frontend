@@ -21,6 +21,7 @@ UI → store action → resource API module → Axios instance → backend
 ## Resource Modules And Namespace Calls
 
 New endpoints belong in focused modules such as `groupsApi.ts`, `usersApi.ts`, `activityApi.ts`, and `ledgerApi.ts`, not the growing legacy `chipin.ts`.
+Until the spec 03 PRs land, a new endpoint here is a mutation; reads are limited to the endpoints that already exist.
 
 - When a task touches an existing endpoint, move only its related resource block when safe; do not migrate the whole API incidentally.
 - Import API modules as namespaces so the transport layer is visible:
