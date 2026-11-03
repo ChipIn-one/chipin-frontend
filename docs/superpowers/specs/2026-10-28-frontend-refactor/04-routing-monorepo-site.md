@@ -285,7 +285,7 @@ RootLayout            errorElement=RootErrorBoundary; UI providers, Toaster (one
 - `Sentry.ErrorBoundary` stays outside `RouterProvider` and catches only provider crashes.
 - `RootErrorBoundary` (the root `errorElement`) and `RouteErrorBoundary` (on `InternalLayout`, rendered inside the layout, so the header and navigation remain; and on `AuthLayout` — for the bare join routes, C2-32) use one component `RouteErrorView`:
   - `isRouteErrorResponse(e) && e.status === 404` → NotFound without sending to Sentry.
-  - A chunk load error (`/Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/`) → a "A new version is available" screen with an update button: `updateServiceWorker(true)`, and if there is no SW, `location.reload()`. The automatic reload is done once per session (a flag in `sessionStorage`) so as not to fall into a loop.
+  - A chunk load error (`/Failed to fetch dynamically imported module|Importing a module script failed|error loading dynamically imported module/`) → an "A new version is available" screen with an update button: `updateServiceWorker(true)`, and if there is no SW, `location.reload()`. The automatic reload is done once per session (a flag in `sessionStorage`) so as not to fall into a loop.
   - Anything else → `Sentry.captureException(e, { tags: { routeId } })` and a recovery card (the logic of `GlobalErrorFallback.tsx:30-80`).
 - `routeId` for tags is taken from `useMatches()`. A raw URL with a token does not go to Sentry (D1 — token leak).
 
@@ -298,13 +298,13 @@ RootLayout            errorElement=RootErrorBoundary; UI providers, Toaster (one
 
 - `ModalRouter` (`docs/architecture/modal-router.md`) keeps history in memory and does not depend on the URL. The move to the data router does **not affect** it, no change is needed.
 - Global modals (`AddExpenseModal`, promo, `main.tsx:66-75`) are mounted in `RootLayout`, i.e. inside the router, so `useNavigate` works in them. A modal open on a page closes when `location.pathname` changes the same way as now (the behavior is preserved, test in the criteria).
-- Modals do not enter the manifest. The future URL mode (#412) is described in "Extension".
+- Modals do not enter the manifest. The future URL mode (#412) is described in "Future extension".
 
 #### 2.8 Code-splitting
 
 - Every `route.ts` is a separate chunk. `RootLayout`, `AuthLayout`, and `InternalLayout` are part of the entry.
 - Manual vendor groups (`vite.config.ts:258-285`): `dexie` was removed and the `vendor-react` regex (together with `react-router`) was fixed in 02-B1 — not repeated here.
-- Hover prefetch of chunks is not done in the phases (see "Extension").
+- Hover prefetch of chunks is not done in the phases (see "Future extension").
 
 #### 2.9 Generated artifacts and the sync test
 
@@ -458,7 +458,7 @@ The new sections `/help/*`, `/blog/*` in this spec only get routes and a schema.
 #### 3.6 Styles, islands, SW, 404, analytics
 
 - Styles: only `@chipin/tokens/radix-colors.css` + `@chipin/tokens/tokens.css` (package layout — spec 05 §1; the font is the system one, no webfont) and scoped `<style>` in `.astro`. Favicon (A-28): `BaseLayout` sets `<link rel="icon" href={faviconUrl}>`, where `faviconUrl` is `import faviconUrl from '@chipin/tokens/assets/favicon.svg?url'` (Astro emits a hashed file in `/_astro/`); `/favicon.*` on `chipin.one` is served by the site, the PWA manifest icons — by the app project on its host. Radix Themes, styled-components, and Tailwind are not used. The dark theme is the same mechanism as in the app: `THEME_INIT_SCRIPT` from `@chipin/tokens/theme-init` (spec 05, PR 05-3) inline in `<head>` sets `html.light|dark` by the key `Chipin_theme` and `prefers-color-scheme`.
-- React islands — only for a widget that needs state and cannot be done with a `<script>` of up to ~50 lines. Every island addition is a separate PR with a justification. Only the directives `client:visible` or `client:idle`, `client:load` is banned. The JS budget per site page is ≤ 30 KB gz (checked in `seoGuard`). Currently there are **zero** islands.
+- React islands — only for a widget that needs state and cannot be done with a `<script>` of up to ~50 lines. Every island addition is a separate PR with a justification. Only the `client:visible` or `client:idle` directives are allowed; `client:load` is banned. The JS budget per site page is ≤ 30 KB gz (checked in `seoGuard`). Currently there are **zero** islands.
 - There is **no** redirect of a logged-in user from `/` to the app (D26): the session flag `Chipin_authSessionHint` lives in the app's `localStorage` on `app.chipin.one`, it is not accessible to the site on `chipin.one`, and the same-named key on `chipin.one` after cutover is stale. The site header on all pages contains an "Open ChipIn" button → `${PUBLIC_APP_ORIGIN}/login`: until 04-5a the root `/` of the app host is the transitional `publicHome` (§2.2), and `/login` of an authenticated user leads straight into the app; from 04-5a the button may lead to `${PUBLIC_APP_ORIGIN}/`. There is also no standalone redirect or `?src=root` mark: old PWA installs are not supported (§2.11). `HomeRouteGuard` is removed in 04-5a with no replacement on the site.
 - The site does not register a worker. `apps/site/public/sw.js` holds a kill-switch for the old registration of the app on `chipin.one` (scope `/`, D26): `install` → `self.skipWaiting()`; `activate` → `caches.keys()` and deletion of **all** origin caches (after cutover nobody has their own caches on `chipin.one`) → `self.registration.unregister()` → `self.clients.matchAll({ type: 'window' })` and `client.navigate(client.url)`; there is no `fetch` handler. The kill-switch does not touch IndexedDB and `localStorage`. Header `Cache-Control: no-cache` for `/sw.js` (`apps/site/hosting.base.json`). Keep for at least 6 months after cutover; removal — a separate PR no earlier than this term. What an old install or tab sees online: the old SW may once more serve the previous shell from precache; its update check receives the kill-switch, it activates, cleans the caches, removes the registration, and reloads the window; after that `chipin.one` comes from the network — the site, and the old app paths — by redirect to `app.chipin.one` (§4.2). Offline the old SW serves the previous shell until the first online launch. Test `apps/site/src/lib/swKillSwitch.test.ts` (fake `caches`, `registration`, `clients`): after `activate` the caches are empty, `unregister` and `navigate` are called once each.
 - 404: `src/pages/404.astro` with text in en and links to the locales. Vercel serves it with status 404 for any unknown path on the site host.

@@ -269,7 +269,7 @@ Notation: `L:<rule>` — LINT, `CI:<script>`, `R` — REVIEW (invariant N), `RW`
 | 20.Components.1 | pure render | `L:react-hooks` (compiler rules, already exist) |
 | 20.Components.2 | no `React.FC` | DEL (§D0: the fixer of `react/function-component-definition` does not touch variables with the `FC` type) |
 | 20.Components.3 | one component per file | DEL (§D0) |
-| 20.Components.4 | Props in the component file | RW (D11): the convention "Props in the component file, right above the component" remains as rulebook text without lint (§D0: the check is removed, it is not a convention); the "Props in `./types`" variant is removed (C1-17) |
+| 20.Components.4 | Props in the component file | RW (D11): the convention "Props in the component file, right above the component" remains as rulebook text without lint (§D0: the check is removed, not the convention); the "Props in `./types`" variant is removed (C1-17) |
 | 20.Components.5 | named exports | `L:import-x/no-default-export` |
 | 20.Components.6 | no components inside render | `L:react/no-unstable-nested-components` |
 | 20.Components.7–8 | minimal props, boolean defaults to false | `L:react/jsx-boolean-value` (never) for part 8; the rest DEL |
@@ -491,7 +491,7 @@ node scripts/check-baseline.mjs --base "$BASE_SHA"
 node scripts/version-check.mjs --base "$BASE_SHA" --head-branch "$GITHUB_HEAD_REF"
 ```
 
-The check rule: if `version` in `package.json` differs from base, the branch must match `^chore/issue-\d+-release-v(\d+)-(\d+)-(\d+)$`, and the new version must equal the version from the branch name and be greater than base. Otherwise exit 1 with the text "version changes only in a release PR". Decided (confirmed by the owner 2026-10-28): one release Issue per release, the branch `chore/issue-<n>-release-vX-Y-Z` goes through the usual `pr:create`/admission; the `Version impact` field is removed from the Issue template, the owner chooses the bump. The `version-check.mjs` extension is about 40 lines + a test. Dependabot PRs are covered: they do not change the version.
+The check rule: if `version` in `package.json` differs from base, the branch must match `^chore/issue-\d+-release-v(\d+)-(\d+)-(\d+)$`, and the new version must equal the version from the branch name and be greater than base. Otherwise exit 1 with the text "version changes only in a release PR". Decided (confirmed by the owner 2026-10-28): exactly one release Issue per release, the branch `chore/issue-<n>-release-vX-Y-Z` goes through the usual `pr:create`/admission; the `Version impact` field is removed from the Issue template, the owner chooses the bump. The `version-check.mjs` extension is about 40 lines + a test. Dependabot PRs are covered: they do not change the version.
 
 `ci-gate-policy.mjs` does not change in this spec (`AGENTS.md` and configs give mode `full` anyway); the modes `app|site` are added by 04-1b (spec 04 §1.4).
 

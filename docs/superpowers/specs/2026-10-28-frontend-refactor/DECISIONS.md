@@ -30,7 +30,7 @@ D16. Misc approved: remove dexie, dexie-react-hooks, sharp, sharp-ico, workbox-c
 - Exact minimum-client-version policy (backend enforced?) — writer proposes default.
 
 ## Writing rules for spec authors
-- Markdown, Russian for prose, English identifiers/paths. Headings: Goal, Context (links to the audit path:line), Decision, Details, Nuances and pitfalls, Future extension, What we do NOT do, Phases/PRs (each PR ≤ ~400 diff lines, releases independently), Tests/acceptance criteria, Backend requirements (if any), Open questions.
+- Markdown, Russian for prose, English identifiers/paths. Headings: Goal, Context (links to the audit path:line), Decision, Details, Nuances and pitfalls, Future extension, What we do NOT do, Phases/PRs (each PR ≤ ~400 diff lines, releases independently), Tests/acceptance criteria, Backend requirements (if any), Open questions. Amended (#604): spec prose is English; Russian only in chat.
 - No placeholders/TBD. Each requirement unambiguous. Reference concrete files from audits.
 - Cross-spec dependencies stated explicitly by spec number.
 

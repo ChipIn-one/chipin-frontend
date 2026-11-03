@@ -92,7 +92,7 @@ packages/tokens/
     - `--accent-*` exists only inside `.radix-themes`, and the Astro site has no Radix Themes;
     - a custom property declared on `:root` evaluates `var()` at the place of declaration and becomes invalid when it references a nonexistent variable.
   - Declaration selector: `:root, .light, .light-theme, .dark, .dark-theme`. This way the token is recomputed in a nested theme, for example in `<Theme appearance="dark">` inside a light page.
-  - The `dark` mode in tokens.json is needed only where the value differs by more than a scale. Radix scales switch by `.dark` on their own.
+  - The `dark` mode in tokens.json is needed only where the value differs by more than the scale's own light/dark switch. Radix scales switch by `.dark` on their own.
 - `generated/tokens.ts`:
   - `RADIX_THEME = { accentColor: 'grass', grayColor: 'olive', radius: 'large', panelBackground: 'solid', scaling: '100%' } as const`;
   - `PROP_COLOR = { debtOwed: 'green', debtOwing: 'red', debtSettled: 'gray', danger: 'red', warning: 'amber', ... } as const` — roles for Radix `color` props, which do not accept CSS variables;
@@ -267,7 +267,7 @@ Moved files immediately switch to a named export (D11), because their imports ch
 3. Every control has an accessible name. For icon-only it is an `aria-label` through i18n.
 4. State is conveyed by an attribute (`aria-pressed`, `aria-current`, `aria-expanded`, `aria-invalid`), not by color alone.
 5. The tap target on mobile is not smaller than 44×44 CSS px.
-6. Text: only `--cp-text-*` (scales 11–12) on `--cp-surface-*` (1–3). Contrast from 4.5:1 is guaranteed by Radix.
+6. Text: only `--cp-text-*` (scales 11–12) on `--cp-surface-*` (1–3). Radix guarantees a contrast of at least 4.5:1.
 7. Animations on `--cp-duration-*`. `tokens.css` has an `@media (prefers-reduced-motion: reduce)` block that zeroes the durations.
 
 In PR 05-6, the 3 unchecked buttons from the audit are checked against these items: `SummaryCardButton`, `InviteActionButton`, `NavButton`.
