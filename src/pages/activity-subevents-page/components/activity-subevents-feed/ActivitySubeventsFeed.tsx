@@ -1,10 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import {
-    ChevronsDownIcon,
-    CircleAlertIcon,
-    ListTreeIcon,
-    RefreshCwIcon,
-} from 'lucide-react';
+import { ChevronsDownIcon, CircleAlertIcon, ListTreeIcon, RefreshCwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button, Flex, Spinner, Text } from '@radix-ui/themes';
@@ -28,10 +23,7 @@ interface Props {
     activityCategory?: ActivityCategory;
 }
 
-const ActivitySubeventsFeed = ({
-    parentActivityId,
-    activityCategory,
-}: Props) => {
+const ActivitySubeventsFeed = ({ parentActivityId, activityCategory }: Props) => {
     const { t } = useTranslation('activity');
     const {
         subevents,
@@ -47,10 +39,7 @@ const ActivitySubeventsFeed = ({
     const isCurrentParentLoaded = subeventsParent?.id === parentActivityId;
     const isLoadError = subeventsError !== null;
     const shouldShowSkeleton = isLoading || !isCurrentParentLoaded;
-    const isEndOfFeed =
-        !isNextPageLoading &&
-        !hasMoreSubevents &&
-        subevents.length > 0;
+    const isEndOfFeed = !isNextPageLoading && !hasMoreSubevents && subevents.length > 0;
     const onLoadMore = useCallback(() => {
         return fetchMoreActivitySubevents();
     }, [fetchMoreActivitySubevents]);
@@ -61,10 +50,7 @@ const ActivitySubeventsFeed = ({
     });
 
     useEffect(() => {
-        if (
-            !parentActivityId ||
-            isCurrentParentLoaded
-        ) {
+        if (!parentActivityId || isCurrentParentLoaded) {
             return;
         }
 
@@ -72,12 +58,7 @@ const ActivitySubeventsFeed = ({
             parentActivityId,
             category: activityCategory,
         });
-    }, [
-        parentActivityId,
-        activityCategory,
-        isCurrentParentLoaded,
-        fetchSetActivitySubevents,
-    ]);
+    }, [parentActivityId, activityCategory, isCurrentParentLoaded, fetchSetActivitySubevents]);
 
     const onRetry = () => {
         if (!parentActivityId) {
@@ -102,12 +83,7 @@ const ActivitySubeventsFeed = ({
                 title={t('subeventsLoadErrorTitle')}
                 description={t('subeventsLoadErrorDescription')}
                 action={
-                    <Button
-                        type="button"
-                        size="1"
-                        variant="soft"
-                        onClick={onRetry}
-                    >
+                    <Button type="button" size="1" variant="soft" onClick={onRetry}>
                         <RefreshCwIcon size={14} />
                         {t('retryAction')}
                     </Button>
@@ -141,12 +117,7 @@ const ActivitySubeventsFeed = ({
 
                 {isNextPageError && (
                     <Flex justify="center" py="4">
-                        <Button
-                            type="button"
-                            size="1"
-                            variant="soft"
-                            onClick={onRetryNextPage}
-                        >
+                        <Button type="button" size="1" variant="soft" onClick={onRetryNextPage}>
                             <RefreshCwIcon size={14} />
                             {t('retryAction')}
                         </Button>

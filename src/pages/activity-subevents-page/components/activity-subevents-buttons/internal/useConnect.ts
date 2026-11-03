@@ -2,10 +2,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { useActivityStore } from 'store/activity-store';
 import { useExpenseModalStore } from 'store/expenseModalStore';
-import {
-    selectActivitySubeventsLoading,
-    selectLedgerEntryRemoving,
-} from 'store/loadingSelectors';
+import { selectActivitySubeventsLoading, selectLedgerEntryRemoving } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
 const useConnect = () => {

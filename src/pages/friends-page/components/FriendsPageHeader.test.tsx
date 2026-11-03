@@ -19,11 +19,10 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('store/users-store', () => ({
-    useUsersStore: (selector: (state: {
-        user: { inviteToken: string };
-    }) => unknown) => selector({
-        user: { inviteToken: 'friend-token' },
-    }),
+    useUsersStore: (selector: (state: { user: { inviteToken: string } }) => unknown) =>
+        selector({
+            user: { inviteToken: 'friend-token' },
+        }),
 }));
 
 vi.mock('hooks/pwaHooks', () => ({
@@ -57,11 +56,10 @@ test('shares the personal invite from Add friend on supported mobile devices', (
         </Theme>,
     );
 
-    return user.click(screen.getByRole('button', { name: /common:buttons.addFriend/ }))
-        .then(() => {
-            expect(mocks.onShare).toHaveBeenCalledOnce();
-            expect(mocks.onCopyLink).not.toHaveBeenCalled();
-        });
+    return user.click(screen.getByRole('button', { name: /common:buttons.addFriend/ })).then(() => {
+        expect(mocks.onShare).toHaveBeenCalledOnce();
+        expect(mocks.onCopyLink).not.toHaveBeenCalled();
+    });
 });
 
 test('gives the icon-only mobile Add friend action an accessible name', () => {
@@ -71,9 +69,7 @@ test('gives the icon-only mobile Add friend action an accessible name', () => {
         </Theme>,
     );
 
-    expect(
-        screen.getByRole('button', { name: 'common:buttons.addFriend' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'common:buttons.addFriend' })).toBeTruthy();
 });
 
 test('copies the personal invite from Add friend when native share is unavailable', () => {
@@ -86,9 +82,8 @@ test('copies the personal invite from Add friend when native share is unavailabl
         </Theme>,
     );
 
-    return user.click(screen.getByRole('button', { name: /common:buttons.addFriend/ }))
-        .then(() => {
-            expect(mocks.onCopyLink).toHaveBeenCalledOnce();
-            expect(mocks.onShare).not.toHaveBeenCalled();
-        });
+    return user.click(screen.getByRole('button', { name: /common:buttons.addFriend/ })).then(() => {
+        expect(mocks.onCopyLink).toHaveBeenCalledOnce();
+        expect(mocks.onShare).not.toHaveBeenCalled();
+    });
 });

@@ -2,17 +2,7 @@ import { ReceiptTextIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
-import {
-    Avatar,
-    Box,
-    Card,
-    Flex,
-    Grid,
-    Separator,
-    Skeleton,
-    Switch,
-    Text,
-} from '@radix-ui/themes';
+import { Avatar, Box, Card, Flex, Grid, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
 
 import {
     selectUserCurrency,
@@ -31,21 +21,16 @@ interface Props {
 
 const ExpensePreferencesSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
-    const {
-        defaultCurrency,
-        defaultCategory,
-        skipCategory,
-        simplifyDebts,
-        setUserSettings,
-    } = useUsersStore(
-        useShallow(state => ({
-            defaultCurrency: selectUserCurrency(state),
-            defaultCategory: selectUserDefaultCategory(state),
-            skipCategory: selectUserSkipCategory(state),
-            simplifyDebts: selectUserSimplifyDebts(state),
-            setUserSettings: state.setUserSettings,
-        })),
-    );
+    const { defaultCurrency, defaultCategory, skipCategory, simplifyDebts, setUserSettings } =
+        useUsersStore(
+            useShallow(state => ({
+                defaultCurrency: selectUserCurrency(state),
+                defaultCategory: selectUserDefaultCategory(state),
+                skipCategory: selectUserSkipCategory(state),
+                simplifyDebts: selectUserSimplifyDebts(state),
+                setUserSettings: state.setUserSettings,
+            })),
+        );
 
     const onDefaultCurrencyChange = (value: string) => {
         setUserSettings({ settings: { defaultCurrency: value } });
@@ -80,9 +65,7 @@ const ExpensePreferencesSection = ({ isLoading }: Props) => {
                             <Skeleton loading={isLoading}>{t('expense.title')}</Skeleton>
                         </Text>
                         <Text size="2" color="gray">
-                            <Skeleton loading={isLoading}>
-                                {t('expense.description')}
-                            </Skeleton>
+                            <Skeleton loading={isLoading}>{t('expense.description')}</Skeleton>
                         </Text>
                     </Flex>
                 </Flex>

@@ -27,12 +27,7 @@ import {
     GROUP_PREVIEW_MEMBERS,
     GROUP_PREVIEW_NET_BALANCE,
 } from './internal';
-import {
-    PreviewCover,
-    PreviewCoverImage,
-    PreviewCoverScrim,
-    PreviewDescription,
-} from './styled';
+import { PreviewCover, PreviewCoverImage, PreviewCoverScrim, PreviewDescription } from './styled';
 
 const GroupPagePreview = () => {
     const { t } = useTranslation('landing');
@@ -118,9 +113,7 @@ const GroupPagePreview = () => {
                         </Box>
 
                         <BalanceSummaryText
-                            entries={[
-                                { currency: 'EUR', netBalance: GROUP_PREVIEW_NET_BALANCE },
-                            ]}
+                            entries={[{ currency: 'EUR', netBalance: GROUP_PREVIEW_NET_BALANCE }]}
                             size="1"
                             align="right"
                         />

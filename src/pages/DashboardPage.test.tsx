@@ -37,21 +37,13 @@ vi.mock('components/dashboard-onboarding', () => ({
 
 vi.mock('components/dashboard-summary', () => ({
     DashboardHeader: () => <div data-testid="dashboard-header" />,
-    DashboardSummary: ({ hasExpenseHistory }: { hasExpenseHistory: boolean }) => (
-        hasExpenseHistory ? <div data-testid="dashboard-summary" /> : null
-    ),
+    DashboardSummary: ({ hasExpenseHistory }: { hasExpenseHistory: boolean }) =>
+        hasExpenseHistory ? <div data-testid="dashboard-summary" /> : null,
 }));
 
 vi.mock('components/GroupsCards', () => ({
-    default: ({
-        groups,
-    }: {
-        groups: Group[];
-    }) => (
-        <div
-            data-testid="groups-cards"
-            data-count={groups.length}
-        />
+    default: ({ groups }: { groups: Group[] }) => (
+        <div data-testid="groups-cards" data-count={groups.length} />
     ),
 }));
 
@@ -64,39 +56,23 @@ vi.mock('components/internal-page-layout', () => ({
         sidePanel: React.ReactNode;
     }) => (
         <div data-testid="dashboard-columns">
-            <main data-testid="dashboard-main">
-                {children}
-            </main>
-            <aside data-testid="dashboard-side-panel">
-                {sidePanel}
-            </aside>
+            <main data-testid="dashboard-main">{children}</main>
+            <aside data-testid="dashboard-side-panel">{sidePanel}</aside>
         </div>
     ),
 }));
 
 vi.mock('components/modals/create-update-group-modal', () => ({
-    CreateUpdateGroupModal: ({
-        children,
-    }: {
-        children: React.ReactNode;
-    }) => children,
+    CreateUpdateGroupModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 vi.mock('components/skeletons', () => ({
-    ActivityFeedSkeleton: () => (
-        <div data-testid="activity-skeleton" />
-    ),
+    ActivityFeedSkeleton: () => <div data-testid="activity-skeleton" />,
 }));
 
 vi.mock('features/activity', () => ({
-    ActivityEventsList: ({
-        children,
-    }: {
-        children?: React.ReactNode;
-    }) => (
-        <div data-testid="activity-list">
-            {children}
-        </div>
+    ActivityEventsList: ({ children }: { children?: React.ReactNode }) => (
+        <div data-testid="activity-list">{children}</div>
     ),
 }));
 
@@ -170,18 +146,10 @@ const activityItem = {
 } as ActivityFeedItem;
 
 const resolveDashboardOnboardingData = () => {
-    useLoadingStore
-        .getState()
-        .setLoading('dashboard', 'data', 'fetched');
-    useLoadingStore
-        .getState()
-        .setLoading('group', 'list', 'fetched');
-    useLoadingStore
-        .getState()
-        .setLoading('users', 'friends', 'fetched');
-    useLoadingStore
-        .getState()
-        .setLoading('users', 'self', 'fetched');
+    useLoadingStore.getState().setLoading('dashboard', 'data', 'fetched');
+    useLoadingStore.getState().setLoading('group', 'list', 'fetched');
+    useLoadingStore.getState().setLoading('users', 'friends', 'fetched');
+    useLoadingStore.getState().setLoading('users', 'self', 'fetched');
 };
 
 const originalFetchSetDashboard = useDashboardStore.getState().fetchSetDashboard;
@@ -269,11 +237,13 @@ test('DSH-012 does not reserve vertical space when the Dashboard summary is empt
 test('DSH-012 shows settled summary after direct-friend expense history', () => {
     resolveDashboardOnboardingData();
     useUsersStore.setState({
-        friends: [{
-            user: { ...creator, id: 'friend-1' },
-            balances: [],
-            lastUsedCurrency: 'USD',
-        }],
+        friends: [
+            {
+                user: { ...creator, id: 'friend-1' },
+                balances: [],
+                lastUsedCurrency: 'USD',
+            },
+        ],
     });
 
     render(<DashboardPage />);
@@ -285,11 +255,13 @@ test('DSH-012 shows settled summary after direct-friend expense history', () => 
 test('DSH-012 hides settled summary without direct-friend or group history', () => {
     resolveDashboardOnboardingData();
     useUsersStore.setState({
-        friends: [{
-            user: { ...creator, id: 'friend-1' },
-            balances: [],
-            lastUsedCurrency: null,
-        }],
+        friends: [
+            {
+                user: { ...creator, id: 'friend-1' },
+                balances: [],
+                lastUsedCurrency: null,
+            },
+        ],
     });
 
     render(<DashboardPage />);
@@ -387,11 +359,13 @@ test('DSH-007 keeps confirmed friend snapshot visible after friends refresh fail
     resolveDashboardOnboardingData();
     useUsersStore.setState({
         hasFriendsSnapshot: true,
-        friends: [{
-            user: { ...creator, id: 'friend-1' },
-            balances: [],
-            lastUsedCurrency: null,
-        }],
+        friends: [
+            {
+                user: { ...creator, id: 'friend-1' },
+                balances: [],
+                lastUsedCurrency: null,
+            },
+        ],
     });
     useLoadingStore.getState().setLoading('users', 'friends', 'loading');
     useErrorsStore.getState().setError('users', 'friends', {
@@ -486,19 +460,13 @@ test('DSH-007 derives welcome from connections, not group lifecycle activity', (
 
 test('DSH-007 ignores currency-rate failure when onboarding data is resolved', () => {
     resolveDashboardOnboardingData();
-    useErrorsStore.getState().setError(
-        'dashboard',
-        'rates',
-        {
-            message: 'Rates unavailable',
-        },
-    );
+    useErrorsStore.getState().setError('dashboard', 'rates', {
+        message: 'Rates unavailable',
+    });
 
     render(<DashboardPage />);
 
-    expect(
-        screen.getByTestId('dashboard-onboarding'),
-    ).toBeTruthy();
+    expect(screen.getByTestId('dashboard-onboarding')).toBeTruthy();
 });
 
 test('DSH-007 surfaces a rates-only failure without hiding confirmed Dashboard content', () => {
@@ -536,34 +504,20 @@ test('DSH-007 preserves Welcome with a rates-only failure and offers retry', () 
 });
 
 test('DSH-007 keeps loading while connection inputs resolve', () => {
-    useLoadingStore
-        .getState()
-        .setLoading('dashboard', 'data', 'fetched');
-    useLoadingStore
-        .getState()
-        .setLoading('group', 'list', 'fetched');
-    useLoadingStore
-        .getState()
-        .setLoading('users', 'friends', 'fetched');
+    useLoadingStore.getState().setLoading('dashboard', 'data', 'fetched');
+    useLoadingStore.getState().setLoading('group', 'list', 'fetched');
+    useLoadingStore.getState().setLoading('users', 'friends', 'fetched');
 
     render(<DashboardPage />);
 
-    expect(
-        screen.getByTestId('activity-skeleton'),
-    ).toBeTruthy();
-    expect(
-        screen.queryByTestId('dashboard-onboarding'),
-    ).toBeNull();
-    expect(
-        screen.queryByTestId('activity-list'),
-    ).toBeNull();
+    expect(screen.getByTestId('activity-skeleton')).toBeTruthy();
+    expect(screen.queryByTestId('dashboard-onboarding')).toBeNull();
+    expect(screen.queryByTestId('activity-list')).toBeNull();
 });
 
 test('ACT-023 connects dashboard infinite scroll to the next activity preview page', () => {
     useGroupsStore.setState({ groups: [singleMemberGroup] });
-    const fetchMoreDashboardActivity = vi.fn(() =>
-        Promise.resolve(),
-    );
+    const fetchMoreDashboardActivity = vi.fn(() => Promise.resolve());
     resolveDashboardOnboardingData();
     useDashboardStore.setState({
         activityItems: [activityItem],
@@ -573,28 +527,21 @@ test('ACT-023 connects dashboard infinite scroll to the next activity preview pa
 
     render(<DashboardPage />);
 
-    expect(
-        useInfiniteScrollMock,
-    ).toHaveBeenLastCalledWith(
+    expect(useInfiniteScrollMock).toHaveBeenLastCalledWith(
         expect.objectContaining({
             hasMore: true,
             isLoading: false,
         }),
     );
 
-    const lastCall =
-        useInfiniteScrollMock.mock.lastCall;
+    const lastCall = useInfiniteScrollMock.mock.lastCall;
 
     if (!lastCall) {
-        throw new Error(
-            'Infinite scroll was not initialized',
-        );
+        throw new Error('Infinite scroll was not initialized');
     }
 
     return lastCall[0].onLoadMore().then(() => {
-        expect(
-            fetchMoreDashboardActivity,
-        ).toHaveBeenCalledOnce();
+        expect(fetchMoreDashboardActivity).toHaveBeenCalledOnce();
     });
 });
 

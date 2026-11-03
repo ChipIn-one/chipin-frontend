@@ -2,15 +2,7 @@ import { BackButton } from 'basics';
 import { PencilIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import {
-    Badge,
-    Box,
-    Flex,
-    Heading,
-    IconButton,
-    Skeleton,
-    Text,
-} from '@radix-ui/themes';
+import { Badge, Box, Flex, Heading, IconButton, Skeleton, Text } from '@radix-ui/themes';
 
 import type { Group } from 'api/chipin.types';
 
@@ -28,11 +20,7 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
     const members = group?.members ?? [];
 
     return (
-        <CoverWrapper
-            $hasCover={Boolean(group?.coverUrl)}
-            direction="column"
-            position="relative"
-        >
+        <CoverWrapper $hasCover={Boolean(group?.coverUrl)} direction="column" position="relative">
             <GroupCoverImage
                 src={group?.coverUrl ?? undefined}
                 alt={t('page.coverAlt', { name: group?.name ?? '' })}
@@ -67,21 +55,13 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
                     </Heading>
                     {group?.description ? (
                         <Text color="gray" size={{ initial: '1', sm: '2' }}>
-                            <Skeleton loading={isLoading}>
-                                {group.description}
-                            </Skeleton>
+                            <Skeleton loading={isLoading}>{group.description}</Skeleton>
                         </Text>
                     ) : null}
                 </Flex>
             </Flex>
 
-            <Flex
-                position="absolute"
-                top="3"
-                right="3"
-                left="3"
-                justify="between"
-            >
+            <Flex position="absolute" top="3" right="3" left="3" justify="between">
                 <Box display={{ initial: 'block', sm: 'none' }}>
                     <BackButton />
                 </Box>

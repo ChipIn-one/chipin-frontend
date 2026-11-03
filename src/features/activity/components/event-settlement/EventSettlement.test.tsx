@@ -31,17 +31,8 @@ vi.mock('basics', importOriginal =>
 vi.mock('./styled', importOriginal =>
     importOriginal<typeof import('./styled')>().then(styledComponents => ({
         ...styledComponents,
-        AmountText: ({
-            children,
-            $isReversed,
-        }: {
-            children: ReactNode;
-            $isReversed: boolean;
-        }) => (
-            <span
-                data-testid="settlement-amount"
-                data-is-reversed={String($isReversed)}
-            >
+        AmountText: ({ children, $isReversed }: { children: ReactNode; $isReversed: boolean }) => (
+            <span data-testid="settlement-amount" data-is-reversed={String($isReversed)}>
                 {children}
             </span>
         ),
@@ -82,8 +73,7 @@ const createSettlementEvent = ({
     groupId: string | null;
     groupName: string | null;
     action?:
-        | typeof ACTIVITY_ACTIONS.SETTLEMENT_CREATED
-        | typeof ACTIVITY_ACTIONS.SETTLEMENT_REVERSED;
+        typeof ACTIVITY_ACTIONS.SETTLEMENT_CREATED | typeof ACTIVITY_ACTIONS.SETTLEMENT_REVERSED;
 }): Extract<
     AppEvent,
     {
@@ -137,9 +127,7 @@ test('shows participants and group scope', () => {
     expect(screen.getByText('30 USD')).toBeTruthy();
     expect(screen.getByText('Vietnam')).toBeTruthy();
     expect(screen.queryByTestId('relative-time')).toBeNull();
-    expect(screen.getByTestId('settlement-full-amount').dataset.type).toBe(
-        'summary',
-    );
+    expect(screen.getByTestId('settlement-full-amount').dataset.type).toBe('summary');
 });
 
 test('uses You when the current user paid the settlement', () => {
@@ -179,19 +167,9 @@ test('strikes reversed settlement values and shows deletion context', () => {
         />,
     );
 
-    expect(getComputedStyle(screen.getByText('Ilya Govor')).textDecoration).toBe(
-        'line-through',
-    );
-    expect(getComputedStyle(screen.getByText('event.paidTo')).textDecoration).toBe(
-        'line-through',
-    );
-    expect(getComputedStyle(screen.getByText('Huek')).textDecoration).toBe(
-        'line-through',
-    );
-    expect(screen.getByTestId('settlement-amount').dataset.isReversed).toBe(
-        'true',
-    );
-    expect(
-        screen.getByText('event.settlementReversedDescription'),
-    ).toBeTruthy();
+    expect(getComputedStyle(screen.getByText('Ilya Govor')).textDecoration).toBe('line-through');
+    expect(getComputedStyle(screen.getByText('event.paidTo')).textDecoration).toBe('line-through');
+    expect(getComputedStyle(screen.getByText('Huek')).textDecoration).toBe('line-through');
+    expect(screen.getByTestId('settlement-amount').dataset.isReversed).toBe('true');
+    expect(screen.getByText('event.settlementReversedDescription')).toBeTruthy();
 });

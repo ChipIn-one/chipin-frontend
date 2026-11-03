@@ -54,7 +54,11 @@ const CtaSection = () => {
 
                         <Flex direction={{ initial: 'column', sm: 'row' }} gap="3" justify="center">
                             <AuthModal>
-                                <Button size={{ initial: '3', sm: '4' }} variant="solid" color="green">
+                                <Button
+                                    size={{ initial: '3', sm: '4' }}
+                                    variant="solid"
+                                    color="green"
+                                >
                                     {t('cta.getStartedFree')}
                                     <ArrowRightIcon />
                                 </Button>

@@ -28,15 +28,14 @@ const ActivitySubeventsPage = () => {
             subeventsParent: state.subeventsParent,
         })),
     );
-    const parentEvent = subeventsParent?.id === parentActivityId
-        ? subeventsParent
-        : undefined;
+    const parentEvent = subeventsParent?.id === parentActivityId ? subeventsParent : undefined;
     const activityView = getActivitySubeventsView(parentEvent, subevents);
     const isLoading = useLoadingStore(selectActivitySubeventsLoading);
     const activityCategory = getActivityCategory(activityView?.originalEvent);
-    const breadcrumbTitle = activityCategory === ACTIVITY_CATEGORIES.SETTLEMENT
-        ? t('subeventsSettlementHistoryTitle')
-        : t('subeventsExpenseHistoryTitle');
+    const breadcrumbTitle =
+        activityCategory === ACTIVITY_CATEGORIES.SETTLEMENT
+            ? t('subeventsSettlementHistoryTitle')
+            : t('subeventsExpenseHistoryTitle');
 
     return (
         <Container size="4" pb={{ initial: '9', sm: '6' }}>
@@ -47,12 +46,7 @@ const ActivitySubeventsPage = () => {
             ) : null}
 
             <InternalPageColumnsFromSm
-                sidePanel={
-                    <ActivitySubeventsDetails
-                        view={activityView}
-                        isLoading={isLoading}
-                    />
-                }
+                sidePanel={<ActivitySubeventsDetails view={activityView} isLoading={isLoading} />}
             >
                 <ActivitySubeventsHeader
                     parentEvent={activityView?.originalEvent}

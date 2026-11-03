@@ -75,19 +75,11 @@ const GroupBalancesTab = ({ group, showInviteOnboarding }: Props) => {
                                             isOwner={member.user.id === group.creator.id}
                                         />
                                     </Flex>
-                                    <BalanceSummaryText
-                                        entries={balances}
-                                        size="1"
-                                        align="left"
-                                    />
+                                    <BalanceSummaryText entries={balances} size="1" align="left" />
                                 </Flex>
                             </Flex>
 
-                            <SettleUpModal
-                                source="group"
-                                group={group}
-                                memberId={member.user.id}
-                            />
+                            <SettleUpModal source="group" group={group} memberId={member.user.id} />
                         </Flex>
                     </Card>
                 );

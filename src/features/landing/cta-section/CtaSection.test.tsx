@@ -69,15 +69,11 @@ test('runs the browser install prompt when installation is available', () => {
 
     renderSection();
 
-    return user
-        .click(screen.getByRole('button', { name: 'common:buttons.installApp' }))
-        .then(() =>
-            waitFor(() => {
-                expect(prompt).toHaveBeenCalledTimes(1);
-                expect(
-                    screen.queryByRole('button', { name: 'common:buttons.installApp' }),
-                ).toBeNull();
-                expect(screen.queryByRole('button', { name: 'cta.openApp' })).toBeNull();
-            }),
-        );
+    return user.click(screen.getByRole('button', { name: 'common:buttons.installApp' })).then(() =>
+        waitFor(() => {
+            expect(prompt).toHaveBeenCalledTimes(1);
+            expect(screen.queryByRole('button', { name: 'common:buttons.installApp' })).toBeNull();
+            expect(screen.queryByRole('button', { name: 'cta.openApp' })).toBeNull();
+        }),
+    );
 });

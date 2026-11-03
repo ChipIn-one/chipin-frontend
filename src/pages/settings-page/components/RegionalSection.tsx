@@ -2,29 +2,12 @@ import { GlobeIcon, RotateCcwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
-import {
-    Avatar,
-    Box,
-    Button,
-    Card,
-    Flex,
-    Separator,
-    Skeleton,
-    Text,
-} from '@radix-ui/themes';
+import { Avatar, Box, Button, Card, Flex, Separator, Skeleton, Text } from '@radix-ui/themes';
 
 import type { UserSettings } from 'api/chipin.types';
-import {
-    matchLocale,
-    resolveBrowserLocale,
-    type SupportedLocale,
-} from 'helpers/locale';
+import { matchLocale, resolveBrowserLocale, type SupportedLocale } from 'helpers/locale';
 import { detectDeviceTimezone, formatUtcOffset, getAmPm24Time } from 'helpers/time';
-import {
-    selectIsUserTime24H,
-    selectUserLanguage,
-    useUsersStore,
-} from 'store/users-store';
+import { selectIsUserTime24H, selectUserLanguage, useUsersStore } from 'store/users-store';
 
 import LanguageSelector from 'components/LanguageSelector';
 import SegmentedControl from 'components/SegmentedControl';
@@ -80,9 +63,7 @@ const RegionalSection = ({ isLoading }: Props) => {
                             <Skeleton loading={isLoading}>{t('regional.title')}</Skeleton>
                         </Text>
                         <Text size="2" color="gray">
-                            <Skeleton loading={isLoading}>
-                                {t('regional.description')}
-                            </Skeleton>
+                            <Skeleton loading={isLoading}>{t('regional.description')}</Skeleton>
                         </Text>
                     </Flex>
                 </Flex>

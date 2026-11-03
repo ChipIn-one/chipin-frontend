@@ -19,12 +19,7 @@ vi.mock('@radix-ui/themes', () => ({
         role?: string;
         'aria-label'?: string;
     }) => (
-        <div
-            data-testid="expense-icon"
-            data-color={color}
-            role={role}
-            aria-label={ariaLabel}
-        >
+        <div data-testid="expense-icon" data-color={color} role={role} aria-label={ariaLabel}>
             {fallback}
         </div>
     ),

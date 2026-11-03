@@ -77,15 +77,13 @@ test('saves gender immediately without a page-level save action', () => {
     expect(femaleRadio.getAttribute('aria-checked')).toBe('false');
     expect(screen.queryByRole('button', { name: 'Save changes' })).toBeNull();
 
-    return interaction
-        .click(femaleRadio)
-        .then(() =>
-            waitFor(() => {
-                expect(setUserSettings).toHaveBeenCalledTimes(1);
-                expect(setUserSettings).toHaveBeenCalledWith({ settings: { sex: 'female' } });
-                expect(useUsersStore.getState().user?.settings.sex).toBe('female');
-            }),
-        );
+    return interaction.click(femaleRadio).then(() =>
+        waitFor(() => {
+            expect(setUserSettings).toHaveBeenCalledTimes(1);
+            expect(setUserSettings).toHaveBeenCalledWith({ settings: { sex: 'female' } });
+            expect(useUsersStore.getState().user?.settings.sex).toBe('female');
+        }),
+    );
 });
 
 test('starts with the current display name and saves it on blur', () => {
@@ -176,9 +174,7 @@ test('opens the avatar upload modal from the change photo action', () => {
         </ThemeProvider>,
     );
 
-    return interaction
-        .click(screen.getByRole('button', { name: 'Change photo' }))
-        .then(() => {
-            expect(screen.getByRole('dialog', { name: 'Update profile photo' })).toBeTruthy();
-        });
+    return interaction.click(screen.getByRole('button', { name: 'Change photo' })).then(() => {
+        expect(screen.getByRole('dialog', { name: 'Update profile photo' })).toBeTruthy();
+    });
 });

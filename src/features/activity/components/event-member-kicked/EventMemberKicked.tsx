@@ -15,8 +15,7 @@ interface Props {
 
 const EventMemberKicked = ({ event }: Props) => {
     const { t } = useTranslation('activity');
-    const targetUserDisplayName =
-        event.metadata.targetUserDisplayName || t('event.unknownMember');
+    const targetUserDisplayName = event.metadata.targetUserDisplayName || t('event.unknownMember');
 
     return (
         <Card size="1" mb="2">

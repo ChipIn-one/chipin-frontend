@@ -57,9 +57,7 @@ const ExpenseIcon = ({
 }: Props) => {
     const { t } = useTranslation('group');
     const isReversed = action === ACTIVITY_ACTIONS.EXPENSE_REVERSED;
-    const configuredIcon = isReversed
-        ? undefined
-        : getConfiguredExpenseIcon(subcategory, category);
+    const configuredIcon = isReversed ? undefined : getConfiguredExpenseIcon(subcategory, category);
     const ConfiguredIcon = configuredIcon?.icon;
     const accessibleLabel = configuredIcon ? t(configuredIcon.labelKey) : undefined;
 

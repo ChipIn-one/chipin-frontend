@@ -29,15 +29,12 @@ vi.mock('components/page-breadcrumb', () => ({
 vi.mock('./components', () => ({
     ActivitySubeventsDetails: () => <span data-testid="subevents-details" />,
     ActivitySubeventsFeed: () => <span data-testid="subevents-feed" />,
-    ActivitySubeventsHeader: ({
-        isUnavailable,
-    }: {
-        isUnavailable: boolean;
-    }) => (
-        isUnavailable
-            ? <span data-testid="parent-unavailable" />
-            : <span data-testid="subevents-header" />
-    ),
+    ActivitySubeventsHeader: ({ isUnavailable }: { isUnavailable: boolean }) =>
+        isUnavailable ? (
+            <span data-testid="parent-unavailable" />
+        ) : (
+            <span data-testid="subevents-header" />
+        ),
 }));
 
 const expenseParentEvent = {
@@ -107,10 +104,7 @@ const renderPage = (parentEvent: AppEvent | null) => {
     return render(
         <MemoryRouter initialEntries={['/activity/activity-1']}>
             <Routes>
-                <Route
-                    path="/activity/:parentActivityId"
-                    element={<ActivitySubeventsPage />}
-                />
+                <Route path="/activity/:parentActivityId" element={<ActivitySubeventsPage />} />
             </Routes>
         </MemoryRouter>,
     );
@@ -132,14 +126,15 @@ test('renders the expense breadcrumb before the details column', () => {
     const details = screen.getByTestId('subevents-details');
 
     expect(breadcrumb.textContent).toBe('subeventsExpenseHistoryTitle');
-    expect(
-        breadcrumb.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).not.toBe(0);
+    expect(breadcrumb.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(
+        0,
+    );
 });
 
 test('preserves the settlement breadcrumb title', () => {
     renderPage(settlementParentEvent);
 
-    expect(screen.getByTestId('page-breadcrumb').textContent)
-        .toBe('subeventsSettlementHistoryTitle');
+    expect(screen.getByTestId('page-breadcrumb').textContent).toBe(
+        'subeventsSettlementHistoryTitle',
+    );
 });

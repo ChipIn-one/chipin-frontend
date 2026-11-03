@@ -47,7 +47,11 @@ const InternalRoute = ({ children }: { children: ReactNode }) => (
 
 const AppRouter = () => {
     const publicElements: Record<PublicPage, ReactNode> = {
-        home: <HomeRouteGuard><HomePage /></HomeRouteGuard>,
+        home: (
+            <HomeRouteGuard>
+                <HomePage />
+            </HomeRouteGuard>
+        ),
         privacy: <PrivacyPage />,
         terms: <TermsPage />,
     };

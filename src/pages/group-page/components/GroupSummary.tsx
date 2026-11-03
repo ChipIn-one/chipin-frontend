@@ -7,13 +7,8 @@ interface Props {
 }
 
 const GroupSummary = ({ isLoading }: Props) => {
-    const {
-        owedTotalInBase,
-        owingTotalInBase,
-        owedEntries,
-        oweEntries,
-        defaultCurrency,
-    } = useConnect();
+    const { owedTotalInBase, owingTotalInBase, owedEntries, oweEntries, defaultCurrency } =
+        useConnect();
 
     return (
         <SummaryDebtCards

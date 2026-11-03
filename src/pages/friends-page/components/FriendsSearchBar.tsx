@@ -39,11 +39,7 @@ const FriendsSearchBar = ({
                         </TextField.Slot>
                     </TextField.Root>
                 </Box>
-                <Flex
-                    flexBasis={{ sm: '33%', lg: 'auto' }}
-                    flexShrink="0"
-                    direction="column"
-                >
+                <Flex flexBasis={{ sm: '33%', lg: 'auto' }} flexShrink="0" direction="column">
                     <FriendsFilterDropdown
                         currencies={currencies}
                         filterKey={filterKey}

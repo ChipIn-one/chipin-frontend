@@ -37,7 +37,12 @@ const ActivityEventsList = ({
 
     if (events.length === 0) {
         // Pagination/retry controls must remain mounted when a preview page filters to empty.
-        return <>{emptyState}{children}</>;
+        return (
+            <>
+                {emptyState}
+                {children}
+            </>
+        );
     }
 
     return (
@@ -49,9 +54,9 @@ const ActivityEventsList = ({
                     const event = isPreview ? item.lastEvent : item;
                     const dateKey = getActivityDateKey(originalEvent.createdAt);
                     const previousItem = events[index - 1];
-                    const previousEvent = previousItem && (
-                        isActivityPreview(previousItem) ? previousItem.parent : previousItem
-                    );
+                    const previousEvent =
+                        previousItem &&
+                        (isActivityPreview(previousItem) ? previousItem.parent : previousItem);
                     const shouldRenderDivider =
                         previousEvent === undefined ||
                         dateKey !== getActivityDateKey(previousEvent.createdAt);

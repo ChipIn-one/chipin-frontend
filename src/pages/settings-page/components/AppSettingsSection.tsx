@@ -1,23 +1,8 @@
-import {
-    MonitorIcon,
-    MoonIcon,
-    RefreshCwIcon,
-    Settings2Icon,
-    SunIcon,
-} from 'lucide-react';
+import { MonitorIcon, MoonIcon, RefreshCwIcon, Settings2Icon, SunIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
-import {
-    Avatar,
-    Button,
-    Card,
-    Code,
-    Flex,
-    Separator,
-    Skeleton,
-    Text,
-} from '@radix-ui/themes';
+import { Avatar, Button, Card, Code, Flex, Separator, Skeleton, Text } from '@radix-ui/themes';
 
 import { APP_VERSION } from 'constants/version';
 import { applySwUpdate } from 'helpers/swUpdates';
@@ -64,9 +49,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                             <Skeleton loading={isLoading}>{t('app.title')}</Skeleton>
                         </Text>
                         <Text size="2" color="gray">
-                            <Skeleton loading={isLoading}>
-                                {t('app.description')}
-                            </Skeleton>
+                            <Skeleton loading={isLoading}>{t('app.description')}</Skeleton>
                         </Text>
                     </Flex>
                 </Flex>
@@ -79,9 +62,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                             <Skeleton loading={isLoading}>{t('app.themeTitle')}</Skeleton>
                         </Text>
                         <Text size="2" color="gray">
-                            <Skeleton loading={isLoading}>
-                                {t('app.themeDescription')}
-                            </Skeleton>
+                            <Skeleton loading={isLoading}>{t('app.themeDescription')}</Skeleton>
                         </Text>
                     </Flex>
 
@@ -126,9 +107,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                     <Flex justify="between" align="center">
                         <Flex direction="column">
                             <Text weight="medium">
-                                <Skeleton loading={isLoading}>
-                                    {t('app.versionTitle')}
-                                </Skeleton>
+                                <Skeleton loading={isLoading}>{t('app.versionTitle')}</Skeleton>
                             </Text>
                             <Text size="2" color="gray">
                                 <Skeleton loading={isLoading}>
@@ -142,12 +121,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
                             </Flex>
                         </Flex>
                         {isSwUpdateAvailable && (
-                            <Button
-                                variant="soft"
-                                color="jade"
-                                size="2"
-                                onClick={applySwUpdate}
-                            >
+                            <Button variant="soft" color="jade" size="2" onClick={applySwUpdate}>
                                 <RefreshCwIcon size={12} />
                                 {t('app.updateButton')}
                             </Button>

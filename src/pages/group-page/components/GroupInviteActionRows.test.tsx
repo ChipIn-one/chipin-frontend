@@ -36,7 +36,6 @@ vi.mock('hooks/pwaHooks', () => ({
     }),
 }));
 
-
 const creator = {
     id: 'user-1',
     email: 'alice@example.com',
@@ -76,18 +75,22 @@ test('renders the same three invite actions used in group settings', () => {
         </Theme>,
     );
 
-    expect(screen.getByRole('button', {
-        name: /common:buttons\.invitePeople/,
-    })).not.toBeNull();
+    expect(
+        screen.getByRole('button', {
+            name: /common:buttons\.invitePeople/,
+        }),
+    ).not.toBeNull();
     const copyInviteButton = screen.getByRole('button', {
         name: /group:page\.settings\.copyLinkTitle/,
     });
 
     expect(copyInviteButton).not.toBeNull();
     expect(copyInviteButton.textContent).toContain('group:page.shareWarning');
-    expect(screen.getByRole('button', {
-        name: /group:page\.settings\.showQRTitle/,
-    })).not.toBeNull();
+    expect(
+        screen.getByRole('button', {
+            name: /group:page\.settings\.showQRTitle/,
+        }),
+    ).not.toBeNull();
 });
 
 test('keeps share and copy behavior in the shared rows', () => {
@@ -100,15 +103,19 @@ test('keeps share and copy behavior in the shared rows', () => {
     );
 
     return user
-        .click(screen.getByRole('button', {
-            name: /common:buttons\.invitePeople/,
-        }))
+        .click(
+            screen.getByRole('button', {
+                name: /common:buttons\.invitePeople/,
+            }),
+        )
         .then(() => {
             expect(mocks.onShare).toHaveBeenCalledOnce();
 
-            return user.click(screen.getByRole('button', {
-                name: /group:page\.settings\.copyLinkTitle/,
-            }));
+            return user.click(
+                screen.getByRole('button', {
+                    name: /group:page\.settings\.copyLinkTitle/,
+                }),
+            );
         })
         .then(() => {
             expect(mocks.onCopyLink).toHaveBeenCalledOnce();

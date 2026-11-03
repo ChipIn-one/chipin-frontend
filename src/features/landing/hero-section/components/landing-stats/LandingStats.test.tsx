@@ -45,7 +45,9 @@ test('maps every response field to its corresponding landing metric', () => {
         within(screen.getByRole('group', { name: 'stats.groupsCreated' })).getByText('34.00K'),
     ).toBeTruthy();
     expect(
-        within(screen.getByRole('group', { name: 'stats.settlementsRecorded' })).getByText('456.00K'),
+        within(screen.getByRole('group', { name: 'stats.settlementsRecorded' })).getByText(
+            '456.00K',
+        ),
     ).toBeTruthy();
     expect(screen.queryByText('stats.userRating')).toBeNull();
 });

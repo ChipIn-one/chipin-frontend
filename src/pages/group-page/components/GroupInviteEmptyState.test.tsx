@@ -37,7 +37,6 @@ vi.mock('hooks/pwaHooks', () => ({
     }),
 }));
 
-
 const creator = {
     id: 'user-1',
     email: 'alice@example.com',
@@ -82,9 +81,11 @@ test('shares from the primary invite button when native share is supported', () 
 
     expect(screen.getByText('page.expenses.inviteTitle')).toBeTruthy();
     expect(screen.getByText('page.expenses.shareVia')).toBeTruthy();
-    expect(screen.getByRole('button', {
-        name: /group:page\.settings\.showQRTitle/,
-    })).toBeTruthy();
+    expect(
+        screen.getByRole('button', {
+            name: /group:page\.settings\.showQRTitle/,
+        }),
+    ).toBeTruthy();
 
     return user
         .click(screen.getByRole('button', { name: 'page.expenses.inviteAction' }))
@@ -123,5 +124,7 @@ test('uses the same illustrated invite layout as Friends with the group-specific
     expect(illustration).toBeTruthy();
     expect(screen.getByRole('button', { name: 'page.expenses.inviteAction' })).toBeTruthy();
     expect(screen.getByRole('button', { name: /group:page\.settings\.showQRTitle/ })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /group:page\.settings\.copyLinkTitle/ })).toBeTruthy();
+    expect(
+        screen.getByRole('button', { name: /group:page\.settings\.copyLinkTitle/ }),
+    ).toBeTruthy();
 });

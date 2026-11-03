@@ -51,8 +51,9 @@ const expense = (
     id: string,
     amount: number,
     createdAt = DAY_A,
-    action: typeof ACTIVITY_ACTIONS.EXPENSE_CREATED | typeof ACTIVITY_ACTIONS.EXPENSE_UPDATED =
-        ACTIVITY_ACTIONS.EXPENSE_CREATED,
+    action:
+        | typeof ACTIVITY_ACTIONS.EXPENSE_CREATED
+        | typeof ACTIVITY_ACTIONS.EXPENSE_UPDATED = ACTIVITY_ACTIONS.EXPENSE_CREATED,
 ): AppEvent => ({
     id,
     seq: 1,
@@ -84,15 +85,16 @@ test('ACT-021 groups by parent date and displays latest edited expense with orig
         { parent: other, lastEvent: other },
     ];
 
-    render(<ActivityEventsList events={getActivityPreviewEvents(items)} isShowSummary isNavigable />);
+    render(
+        <ActivityEventsList events={getActivityPreviewEvents(items)} isShowSummary isNavigable />,
+    );
 
     expect(screen.getAllByTestId('activity-divider')).toHaveLength(1);
-    expect(screen.getByTestId('activity-divider').getAttribute('data-created-at'))
-        .toBe(String(DAY_A));
-    expect(screen.getByTestId('activity-divider').textContent)
-        .toContain('"netBalance":-7000');
-    expect(screen.getByText('edited-child').getAttribute('data-parent-id'))
-        .toBe('original-parent');
+    expect(screen.getByTestId('activity-divider').getAttribute('data-created-at')).toBe(
+        String(DAY_A),
+    );
+    expect(screen.getByTestId('activity-divider').textContent).toContain('"netBalance":-7000');
+    expect(screen.getByText('edited-child').getAttribute('data-parent-id')).toBe('original-parent');
 });
 
 test('ACT-023 renders each logical preview once across duplicate page entries', () => {
@@ -106,8 +108,7 @@ test('ACT-023 renders each logical preview once across duplicate page entries', 
     render(<ActivityEventsList events={items} isShowSummary />);
 
     expect(screen.getAllByTestId('activity-card')).toHaveLength(2);
-    expect(screen.getByTestId('activity-divider').textContent)
-        .toContain('"netBalance":-5');
+    expect(screen.getByTestId('activity-divider').textContent).toContain('"netBalance":-5');
 });
 
 test('ACT-020 still renders individual flat activity events on their own dates', () => {
@@ -118,8 +119,9 @@ test('ACT-020 still renders individual flat activity events on their own dates',
 
     expect(screen.getAllByTestId('activity-card')).toHaveLength(2);
     expect(screen.getAllByTestId('activity-divider')).toHaveLength(2);
-    expect(screen.getAllByTestId('activity-divider')[1].getAttribute('data-created-at'))
-        .toBe(String(DAY_B));
+    expect(screen.getAllByTestId('activity-divider')[1].getAttribute('data-created-at')).toBe(
+        String(DAY_B),
+    );
     expect(screen.getByText('flat-edit').getAttribute('data-parent-id')).toBeNull();
 });
 
@@ -138,10 +140,7 @@ test('ACT-022/023 keeps pagination controls mounted after an all-reversed previe
 
     expect(items).toHaveLength(0);
     render(
-        <ActivityEventsList
-            events={items}
-            emptyState={<div data-testid="empty-preview-state" />}
-        >
+        <ActivityEventsList events={items} emptyState={<div data-testid="empty-preview-state" />}>
             <div data-testid="pagination-sentinel" />
         </ActivityEventsList>,
     );

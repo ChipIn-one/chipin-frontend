@@ -3,10 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import {
-    resolveApiErrorMessage,
-    resolveApiErrorMessageFromError,
-} from 'helpers/errors';
+import { resolveApiErrorMessage, resolveApiErrorMessageFromError } from 'helpers/errors';
 import { resolveOAuthReturnTo } from 'helpers/url';
 import { useAuthStore } from 'store/authStore';
 
@@ -28,10 +25,7 @@ export const OAuthCallbackPage = () => {
         hasStartedExchange.current = true;
 
         const code = searchParams.get('code')?.trim();
-        const returnTo = resolveOAuthReturnTo(
-            searchParams.get('returnTo'),
-            window.location.origin,
-        );
+        const returnTo = resolveOAuthReturnTo(searchParams.get('returnTo'), window.location.origin);
 
         if (!code) {
             setUnauthenticated('error');
@@ -45,10 +39,9 @@ export const OAuthCallbackPage = () => {
                 navigate(returnTo, { replace: true });
             })
             .catch((error: unknown) => {
-                toast.error(resolveApiErrorMessageFromError(
-                    error,
-                    t('AUTH.INVALID_OAUTH_EXCHANGE_CODE'),
-                ));
+                toast.error(
+                    resolveApiErrorMessageFromError(error, t('AUTH.INVALID_OAUTH_EXCHANGE_CODE')),
+                );
                 navigate(returnTo, { replace: true });
             });
     }, [exchangeGoogleOAuthCode, navigate, searchParams, setUnauthenticated, t]);

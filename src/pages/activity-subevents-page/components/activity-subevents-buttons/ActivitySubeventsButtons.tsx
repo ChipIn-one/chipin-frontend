@@ -38,10 +38,10 @@ const ActivitySubeventsButtons = ({
         isRemoving,
     } = useConnect();
     const childEvents = childEventsProp ?? subevents;
-    const currentEvent = currentEventProp ?? getActivitySubeventsView(
-        parentEvent,
-        childEvents,
-    )?.currentEvent ?? parentEvent;
+    const currentEvent =
+        currentEventProp ??
+        getActivitySubeventsView(parentEvent, childEvents)?.currentEvent ??
+        parentEvent;
     const parentEntryId = getActivityLedgerEntryId(parentEvent);
     const rootActivityId = parentEvent.parentActivityId ?? parentEvent.id;
     const isEntryReversed =
@@ -79,10 +79,9 @@ const ActivitySubeventsButtons = ({
                 toast.success(t('toasts:ledger.entryDeleted'));
             })
             .catch(error => {
-                toast.error(resolveApiErrorMessageFromError(
-                    error,
-                    t('toasts:common.requestFailed'),
-                ));
+                toast.error(
+                    resolveApiErrorMessageFromError(error, t('toasts:common.requestFailed')),
+                );
                 return Promise.reject(error);
             });
     };
@@ -123,16 +122,8 @@ const ActivitySubeventsButtons = ({
                 {t('subeventsUpdateAction')}
             </Button>
 
-            <RemoveLedgerEntryAlertDialog
-                isActionLoading={isRemoving}
-                onAction={onRemove}
-            >
-                <Button
-                    size="1"
-                    variant="soft"
-                    color="red"
-                    disabled={!parentEntryId || isRemoving}
-                >
+            <RemoveLedgerEntryAlertDialog isActionLoading={isRemoving} onAction={onRemove}>
+                <Button size="1" variant="soft" color="red" disabled={!parentEntryId || isRemoving}>
                     <Trash2Icon size={14} />
                     {t('subeventsDeleteAction')}
                 </Button>

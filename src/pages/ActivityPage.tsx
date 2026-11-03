@@ -3,11 +3,7 @@ import { useEffect, useState } from 'react';
 import { Container } from '@radix-ui/themes';
 
 import { InternalPageColumnsFromSm } from 'components/internal-page-layout';
-import {
-    type ActivityFilter,
-    ActivityList,
-    ActivitySidebar,
-} from 'features/activity';
+import { type ActivityFilter, ActivityList, ActivitySidebar } from 'features/activity';
 
 import { useConnect } from './internal/activity-page';
 
@@ -25,10 +21,7 @@ const ActivityPage = () => {
         <Container size="4" pb={{ initial: '9', sm: '6' }}>
             <InternalPageColumnsFromSm
                 sidePanel={
-                    <ActivitySidebar
-                        activeFilter={activeFilter}
-                        onFilterChange={setActiveFilter}
-                    />
+                    <ActivitySidebar activeFilter={activeFilter} onFilterChange={setActiveFilter} />
                 }
             >
                 <ActivityList activeFilter={activeFilter} />

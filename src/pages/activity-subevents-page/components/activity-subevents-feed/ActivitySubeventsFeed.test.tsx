@@ -22,11 +22,7 @@ let onLoadMore: (() => Promise<void>) | undefined;
 const parentEvent = { id: 'activity-1' } as AppEvent;
 
 vi.mock('hooks/useInfiniteScroll', () => ({
-    useInfiniteScroll: ({
-        onLoadMore: nextOnLoadMore,
-    }: {
-        onLoadMore: () => Promise<void>;
-    }) => {
+    useInfiniteScroll: ({ onLoadMore: nextOnLoadMore }: { onLoadMore: () => Promise<void> }) => {
         onLoadMore = nextOnLoadMore;
         return vi.fn();
     },
@@ -61,9 +57,7 @@ test('ACT-025 fetches subevents without a category on a direct visit', () => {
     });
     useLoadingStore.getState().setInitialLoadingStore();
 
-    render(
-        <ActivitySubeventsFeed parentActivityId="activity-1" />,
-    );
+    render(<ActivitySubeventsFeed parentActivityId="activity-1" />);
 
     return waitFor(() => {
         expect(fetchSetActivitySubevents).toHaveBeenCalledWith({
@@ -75,14 +69,12 @@ test('ACT-025 fetches subevents without a category on a direct visit', () => {
 
 test('offers retry after the initial subevents request fails', () => {
     const user = userEvent.setup();
-    const fetchSetActivitySubevents = vi
-        .fn()
-        .mockImplementation(() => {
-            useErrorsStore.getState().setError('activity', 'subeventsData', {
-                message: 'Subevents unavailable',
-            });
-            return Promise.resolve();
+    const fetchSetActivitySubevents = vi.fn().mockImplementation(() => {
+        useErrorsStore.getState().setError('activity', 'subeventsData', {
+            message: 'Subevents unavailable',
         });
+        return Promise.resolve();
+    });
     useActivityStore.setState({
         subevents: [],
         hasMoreSubevents: false,
@@ -140,16 +132,10 @@ test('offers retry after loading the next page fails', () => {
     return Promise.resolve(onLoadMore())
         .then(() =>
             waitFor(() => {
-                expect(
-                    screen.getByRole('button', { name: 'retryAction' }),
-                ).toBeTruthy();
+                expect(screen.getByRole('button', { name: 'retryAction' })).toBeTruthy();
             }),
         )
-        .then(() =>
-            user.click(
-                screen.getByRole('button', { name: 'retryAction' }),
-            ),
-        )
+        .then(() => user.click(screen.getByRole('button', { name: 'retryAction' })))
         .then(() => {
             expect(fetchMoreActivitySubevents).toHaveBeenCalledTimes(2);
         });

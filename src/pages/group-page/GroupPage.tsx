@@ -78,15 +78,9 @@ const GroupPage = () => {
                     />
                 </Flex>
 
-                <Box
-                    gridColumn={{ initial: 'span 3', sm: '1 / span 2' }}
-                    gridRow={{ sm: '1' }}
-                >
+                <Box gridColumn={{ initial: 'span 3', sm: '1 / span 2' }} gridRow={{ sm: '1' }}>
                     <GroupCoverBox mb={{ initial: '4', sm: '6' }}>
-                        <GroupCoverSection
-                            group={routeGroup}
-                            isLoading={isGroupDataLoading}
-                        />
+                        <GroupCoverSection group={routeGroup} isLoading={isGroupDataLoading} />
                     </GroupCoverBox>
 
                     <Box display={{ initial: 'block', sm: 'none' }} mb="4">

@@ -49,9 +49,7 @@ const SoloPreferencesSection = ({ isLoading }: Props) => {
                             <Skeleton loading={isLoading}>{t('solo.title')}</Skeleton>
                         </Text>
                         <Text size="2" color="gray">
-                            <Skeleton loading={isLoading}>
-                                {t('solo.description')}
-                            </Skeleton>
+                            <Skeleton loading={isLoading}>{t('solo.description')}</Skeleton>
                         </Text>
                     </Flex>
                 </Flex>

@@ -60,29 +60,39 @@ const OpenOtherInvite = () => {
     const navigate = useNavigate();
 
     return (
-        <button type="button" onClick={() => navigate(`${ROUTES.FRIENDS_JOIN}/${OTHER_INVITE_TOKEN}`)}>
+        <button
+            type="button"
+            onClick={() => navigate(`${ROUTES.FRIENDS_JOIN}/${OTHER_INVITE_TOKEN}`)}
+        >
             {OPEN_OTHER_INVITE_LABEL}
         </button>
     );
 };
 
-const renderPage = (inviteToken = TEST_INVITE_TOKEN, isProtected = false) => render(
-    <MemoryRouter initialEntries={[`${ROUTES.FRIENDS_JOIN}/${inviteToken}`]}>
-        <Theme>
-            <Routes>
-                <Route
-                    path={`${ROUTES.FRIENDS_JOIN}/:inviteToken`}
-                    element={isProtected
-                        ? <ProtectedRoute><FriendJoinPage /></ProtectedRoute>
-                        : <FriendJoinPage />}
-                />
-                <Route path="*" element={null} />
-            </Routes>
-            <CurrentRoute />
-            <OpenOtherInvite />
-        </Theme>
-    </MemoryRouter>,
-);
+const renderPage = (inviteToken = TEST_INVITE_TOKEN, isProtected = false) =>
+    render(
+        <MemoryRouter initialEntries={[`${ROUTES.FRIENDS_JOIN}/${inviteToken}`]}>
+            <Theme>
+                <Routes>
+                    <Route
+                        path={`${ROUTES.FRIENDS_JOIN}/:inviteToken`}
+                        element={
+                            isProtected ? (
+                                <ProtectedRoute>
+                                    <FriendJoinPage />
+                                </ProtectedRoute>
+                            ) : (
+                                <FriendJoinPage />
+                            )
+                        }
+                    />
+                    <Route path="*" element={null} />
+                </Routes>
+                <CurrentRoute />
+                <OpenOtherInvite />
+            </Theme>
+        </MemoryRouter>,
+    );
 
 const joinButton = () => screen.getByRole('button', { name: i18n.t('friends:join.confirm') });
 const currentRoute = () => screen.getByLabelText('Current route').textContent;
@@ -113,17 +123,23 @@ test('does not call the API on mount and does not focus the join button', () => 
 test('accepts exactly once, shows the friend name and opens Friends', () => {
     const user = userEvent.setup();
     let resolveInvite: ((friend: typeof FRIEND) => void) | undefined;
-    mocks.acceptFriendInvite.mockImplementation(() => new Promise(resolve => {
-        resolveInvite = resolve;
-    }));
+    mocks.acceptFriendInvite.mockImplementation(
+        () =>
+            new Promise(resolve => {
+                resolveInvite = resolve;
+            }),
+    );
 
     renderPage();
 
-    return user.click(joinButton())
+    return user
+        .click(joinButton())
         .then(() => user.click(joinButton()))
         .then(() => {
             expect(mocks.acceptFriendInvite).toHaveBeenCalledTimes(1);
-            expect(mocks.acceptFriendInvite).toHaveBeenCalledWith({ inviteToken: TEST_INVITE_TOKEN });
+            expect(mocks.acceptFriendInvite).toHaveBeenCalledWith({
+                inviteToken: TEST_INVITE_TOKEN,
+            });
 
             return act(() => {
                 resolveInvite?.(FRIEND);
@@ -131,7 +147,9 @@ test('accepts exactly once, shows the friend name and opens Friends', () => {
             });
         })
         .then(() => {
-            expect(toast.success).toHaveBeenCalledWith(i18n.t('toasts:friend.inviteAcceptedWithName', { name: 'Alex' }));
+            expect(toast.success).toHaveBeenCalledWith(
+                i18n.t('toasts:friend.inviteAcceptedWithName', { name: 'Alex' }),
+            );
             expect(currentRoute()).toBe(ROUTES.FRIENDS);
         });
 });
@@ -141,10 +159,12 @@ test('cancel goes to the dashboard without calling the API', () => {
 
     renderPage();
 
-    return user.click(screen.getByRole('button', { name: i18n.t('friends:join.cancel') })).then(() => {
-        expect(mocks.acceptFriendInvite).not.toHaveBeenCalled();
-        expect(currentRoute()).toBe(ROUTES.DASHBOARD);
-    });
+    return user
+        .click(screen.getByRole('button', { name: i18n.t('friends:join.cancel') }))
+        .then(() => {
+            expect(mocks.acceptFriendInvite).not.toHaveBeenCalled();
+            expect(currentRoute()).toBe(ROUTES.DASHBOARD);
+        });
 });
 
 test('shows the invalid screen for a malformed token without calling the API', () => {
@@ -155,10 +175,12 @@ test('shows the invalid screen for a malformed token without calling the API', (
     expect(screen.getByRole('heading', { name: i18n.t('friends:join.invalidTitle') })).toBeTruthy();
     expect(screen.queryByRole('button', { name: i18n.t('friends:join.confirm') })).toBeNull();
 
-    return user.click(screen.getByRole('button', { name: i18n.t('friends:join.goHome') })).then(() => {
-        expect(mocks.acceptFriendInvite).not.toHaveBeenCalled();
-        expect(currentRoute()).toBe(ROUTES.DASHBOARD);
-    });
+    return user
+        .click(screen.getByRole('button', { name: i18n.t('friends:join.goHome') }))
+        .then(() => {
+            expect(mocks.acceptFriendInvite).not.toHaveBeenCalled();
+            expect(currentRoute()).toBe(ROUTES.DASHBOARD);
+        });
 });
 
 test('shows the invalid screen when the backend does not know the token', () => {
@@ -168,7 +190,9 @@ test('shows the invalid screen when the backend does not know the token', () => 
     renderPage();
 
     return user.click(joinButton()).then(() => {
-        expect(screen.getByRole('heading', { name: i18n.t('friends:join.invalidTitle') })).toBeTruthy();
+        expect(
+            screen.getByRole('heading', { name: i18n.t('friends:join.invalidTitle') }),
+        ).toBeTruthy();
         expect(toast.error).not.toHaveBeenCalled();
     });
 });
@@ -182,9 +206,12 @@ test.each([
 
     renderPage();
 
-    return user.click(joinButton())
+    return user
+        .click(joinButton())
         .then(() => {
-            expect(screen.getByRole('alert').textContent).toBe(i18n.t('toasts:friend.inviteJoinError'));
+            expect(screen.getByRole('alert').textContent).toBe(
+                i18n.t('toasts:friend.inviteJoinError'),
+            );
             expect(toast.error).not.toHaveBeenCalled();
 
             return user.click(screen.getByRole('button', { name: i18n.t('friends:join.retry') }));
@@ -198,13 +225,17 @@ test.each([
 test('releases the loading state but does not navigate after the auth session changes', () => {
     const user = userEvent.setup();
     let resolveInvite: ((friend: typeof FRIEND) => void) | undefined;
-    mocks.acceptFriendInvite.mockImplementation(() => new Promise(resolve => {
-        resolveInvite = resolve;
-    }));
+    mocks.acceptFriendInvite.mockImplementation(
+        () =>
+            new Promise(resolve => {
+                resolveInvite = resolve;
+            }),
+    );
 
     renderPage();
 
-    return user.click(joinButton())
+    return user
+        .click(joinButton())
         .then(() => {
             mocks.authSessionVersion += 1;
 
@@ -225,15 +256,20 @@ test('opening another invite on the same page starts from the ready screen', () 
 
     renderPage();
 
-    return user.click(joinButton())
+    return user
+        .click(joinButton())
         .then(() => {
-            expect(screen.getByRole('heading', { name: i18n.t('friends:join.invalidTitle') })).toBeTruthy();
+            expect(
+                screen.getByRole('heading', { name: i18n.t('friends:join.invalidTitle') }),
+            ).toBeTruthy();
 
             return user.click(screen.getByRole('button', { name: OPEN_OTHER_INVITE_LABEL }));
         })
         .then(() => {
             expect(currentRoute()).toBe(`${ROUTES.FRIENDS_JOIN}/${OTHER_INVITE_TOKEN}`);
-            expect(screen.getByRole('heading', { name: i18n.t('friends:join.title') })).toBeTruthy();
+            expect(
+                screen.getByRole('heading', { name: i18n.t('friends:join.title') }),
+            ).toBeTruthy();
             expect(joinButton().hasAttribute('disabled')).toBe(false);
         });
 });
@@ -241,13 +277,17 @@ test('opening another invite on the same page starts from the ready screen', () 
 test('ignores a join response after the page unmounts', () => {
     const user = userEvent.setup();
     let resolveInvite: ((friend: typeof FRIEND) => void) | undefined;
-    mocks.acceptFriendInvite.mockImplementation(() => new Promise(resolve => {
-        resolveInvite = resolve;
-    }));
+    mocks.acceptFriendInvite.mockImplementation(
+        () =>
+            new Promise(resolve => {
+                resolveInvite = resolve;
+            }),
+    );
 
     const { unmount } = renderPage();
 
-    return user.click(joinButton())
+    return user
+        .click(joinButton())
         .then(() => {
             unmount();
 

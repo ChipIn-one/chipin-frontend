@@ -40,9 +40,7 @@ vi.mock('basics', () => ({
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
         t: (key: string, params?: { actor?: string }) =>
-            key === 'event.actorAvatarLabel'
-                ? `Performed by ${params?.actor}`
-                : key,
+            key === 'event.actorAvatarLabel' ? `Performed by ${params?.actor}` : key,
     }),
 }));
 
@@ -127,9 +125,7 @@ test('renders the actor badge at 24px with reduced icon overlap', () => {
 test('exposes actor identity when event text does not identify the actor', () => {
     renderIcon(eventWithActor);
 
-    expect(
-        screen.getByRole('img', { name: 'Performed by Misha' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'Performed by Misha' })).toBeTruthy();
 });
 
 test('hides redundant actor identity only when the renderer marks it as visible', () => {

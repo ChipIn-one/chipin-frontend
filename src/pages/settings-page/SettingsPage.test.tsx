@@ -62,8 +62,7 @@ test('does not render unfinished notifications settings', () => {
         const currentTitle = sectionTitles[index];
 
         expect(
-            previousTitle.compareDocumentPosition(currentTitle) &
-                Node.DOCUMENT_POSITION_FOLLOWING,
+            previousTitle.compareDocumentPosition(currentTitle) & Node.DOCUMENT_POSITION_FOLLOWING,
         ).not.toBe(0);
     }
 });

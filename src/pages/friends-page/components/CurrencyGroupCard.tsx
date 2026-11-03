@@ -37,10 +37,7 @@ const CurrencyGroupCard = ({ currency, netBalance, friends }: FriendCurrencyGrou
                 {friends.map(({ friend, balance }, index) => (
                     <Flex key={friend.user.id} direction="column" gap="3">
                         {index === 0 && <Separator size="4" />}
-                        <FriendListItem
-                            friend={friend}
-                            balance={balance}
-                        />
+                        <FriendListItem friend={friend} balance={balance} />
                     </Flex>
                 ))}
             </Flex>

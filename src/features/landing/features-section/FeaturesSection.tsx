@@ -1,10 +1,4 @@
-import {
-    ArrowLeftRightIcon,
-    CalculatorIcon,
-    GlobeIcon,
-    UsersIcon,
-    ZapIcon,
-} from 'lucide-react';
+import { ArrowLeftRightIcon, CalculatorIcon, GlobeIcon, UsersIcon, ZapIcon } from 'lucide-react';
 import type { ComponentPropsWithoutRef, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
 

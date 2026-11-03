@@ -82,9 +82,7 @@ const createExpenseEvent = (
 ): Extract<
     AppEvent,
     {
-        action:
-            | typeof ACTIVITY_ACTIONS.EXPENSE_CREATED
-            | typeof ACTIVITY_ACTIONS.EXPENSE_REVERSED;
+        action: typeof ACTIVITY_ACTIONS.EXPENSE_CREATED | typeof ACTIVITY_ACTIONS.EXPENSE_REVERSED;
     }
 > => ({
     id: 'activity-1',
@@ -229,19 +227,9 @@ test('shows reversed expense context and strikes through monetary values', () =>
         />,
     );
 
-    expect(
-        getComputedStyle(screen.getByText('Dinner')).textDecoration,
-    ).toBe('line-through');
+    expect(getComputedStyle(screen.getByText('Dinner')).textDecoration).toBe('line-through');
     expect(screen.getByText('event.expenseReversedDescription')).toBeTruthy();
-    expect(
-        getComputedStyle(screen.getByText('30 USD')).textDecoration,
-    ).toBe(
-        'line-through',
-    );
-    expect(
-        getComputedStyle(screen.getByText('You borrowed')).textDecoration,
-    ).toBe('line-through');
-    expect(getComputedStyle(screen.getByText('10 USD')).textDecoration).toBe(
-        'line-through',
-    );
+    expect(getComputedStyle(screen.getByText('30 USD')).textDecoration).toBe('line-through');
+    expect(getComputedStyle(screen.getByText('You borrowed')).textDecoration).toBe('line-through');
+    expect(getComputedStyle(screen.getByText('10 USD')).textDecoration).toBe('line-through');
 });

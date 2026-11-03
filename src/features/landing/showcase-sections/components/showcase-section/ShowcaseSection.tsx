@@ -74,16 +74,10 @@ const ShowcaseSection = ({
 
     return (
         <Grid columns={{ initial: '1', md: '2' }} gap="9" align="center">
-            <Box
-                gridColumn={{ initial: '1', md: '2' }}
-                gridRow={{ initial: '1', md: '1' }}
-            >
+            <Box gridColumn={{ initial: '1', md: '2' }} gridRow={{ initial: '1', md: '1' }}>
                 {content}
             </Box>
-            <Box
-                gridColumn={{ initial: '1', md: '1' }}
-                gridRow={{ initial: '2', md: '1' }}
-            >
+            <Box gridColumn={{ initial: '1', md: '1' }} gridRow={{ initial: '2', md: '1' }}>
                 {media}
             </Box>
         </Grid>

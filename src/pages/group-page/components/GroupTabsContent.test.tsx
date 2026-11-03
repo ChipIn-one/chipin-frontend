@@ -51,9 +51,7 @@ vi.mock('hooks/pwaHooks', () => ({
 }));
 
 vi.mock('components/modals/settle-up-modal', () => ({
-    SettleUpModal: ({ group }: { group: Group }) => (
-        <button type="button">{group.id}</button>
-    ),
+    SettleUpModal: ({ group }: { group: Group }) => <button type="button">{group.id}</button>,
 }));
 
 vi.mock('components/skeletons', () => ({
@@ -69,7 +67,7 @@ vi.mock('features/activity', () => ({
         children?: ReactNode;
         emptyState?: ReactNode;
         events: AppEvent[];
-    }) => events.length === 0 ? <>{emptyState}</> : <>{children}</>,
+    }) => (events.length === 0 ? <>{emptyState}</> : <>{children}</>),
 }));
 
 vi.mock('./GroupBalancesTab', () => ({ default: () => null }));
@@ -113,10 +111,7 @@ const secondMember = {
 
 const groupWithTwoMembers = {
     ...group,
-    members: [
-        ...group.members,
-        { user: secondMember, balancesByCurrency: {} },
-    ],
+    members: [...group.members, { user: secondMember, balancesByCurrency: {} }],
 } satisfies Group;
 
 const activityItem = {
@@ -185,9 +180,7 @@ test('renders member actions on the left and settle up on the right before tabs'
 
     expect(actions?.lastElementChild).toBe(settleUp.parentElement);
     expect(memberActions).not.toBeNull();
-    expect(memberActions?.firstElementChild?.children).toHaveLength(
-        group.members.length,
-    );
+    expect(memberActions?.firstElementChild?.children).toHaveLength(group.members.length);
 
     if (!(memberActions instanceof HTMLElement)) {
         throw new Error('Member actions were not rendered');
@@ -205,9 +198,11 @@ test('starts the existing invite flow from the member action button', () => {
     render(<GroupTabsContent group={groupWithTwoMembers} {...defaultProps} />);
 
     return user
-        .click(screen.getByRole('button', {
-            name: 'common:buttons.invitePeople',
-        }))
+        .click(
+            screen.getByRole('button', {
+                name: 'common:buttons.invitePeople',
+            }),
+        )
         .then(() => {
             expect(inviteMocks.onShare).toHaveBeenCalledOnce();
         });
@@ -235,13 +230,11 @@ test('suppresses group activity pagination while another tab is active', () => {
     const user = userEvent.setup();
     render(<GroupTabsContent group={groupWithActivity} {...defaultProps} />);
 
-    return user
-        .click(screen.getByRole('tab', { name: /page\.tabs\.balances/ }))
-        .then(() => {
-            expect(useInfiniteScrollMock).toHaveBeenLastCalledWith(
-                expect.objectContaining({ hasMore: false }),
-            );
-        });
+    return user.click(screen.getByRole('tab', { name: /page\.tabs\.balances/ })).then(() => {
+        expect(useInfiniteScrollMock).toHaveBeenLastCalledWith(
+            expect.objectContaining({ hasMore: false }),
+        );
+    });
 });
 
 test('renders the retained activity list retry action after an incremental failure', () => {
@@ -266,7 +259,10 @@ test('renders the retained activity list retry action after an incremental failu
 test('renders the group activity exhausted marker after the last page', () => {
     render(
         <GroupTabsContent
-            group={{ ...groupWithActivity, recentActivities: { items: [activityItem], nextCursor: null } }}
+            group={{
+                ...groupWithActivity,
+                recentActivities: { items: [activityItem], nextCursor: null },
+            }}
             {...defaultProps}
         />,
     );
@@ -281,9 +277,11 @@ test('renders shared illustrated invite onboarding instead of No expenses for a 
     expect(screen.getByText('page.expenses.inviteDescription')).not.toBeNull();
     expect(screen.getByRole('button', { name: 'page.expenses.inviteAction' })).not.toBeNull();
     expect(screen.getByText('page.expenses.shareVia')).not.toBeNull();
-    expect(screen.getByRole('button', {
-        name: /group:page\.settings\.showQRTitle/,
-    })).not.toBeNull();
+    expect(
+        screen.getByRole('button', {
+            name: /group:page\.settings\.showQRTitle/,
+        }),
+    ).not.toBeNull();
     expect(screen.queryByText('page.expenses.emptyTitle')).toBeNull();
 });
 
@@ -311,13 +309,7 @@ test('keeps the invite hint in a single-member group with existing activity', ()
 });
 
 test('keeps the full skeleton for initial group loading', () => {
-    render(
-        <GroupTabsContent
-            group={group}
-            {...defaultProps}
-            isGroupDataLoading
-        />,
-    );
+    render(<GroupTabsContent group={group} {...defaultProps} isGroupDataLoading />);
 
     expect(screen.getByTestId('activity-skeleton')).not.toBeNull();
 });

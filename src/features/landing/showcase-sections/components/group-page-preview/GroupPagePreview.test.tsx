@@ -27,9 +27,7 @@ test('renders the mobile Group preview with exactly three expenses', () => {
             name: 'sections.groups.preview.label',
         }),
     ).not.toBeNull();
-    const loadingCover = screen.getByAltText(
-        'sections.groups.preview.coverAlt',
-    );
+    const loadingCover = screen.getByAltText('sections.groups.preview.coverAlt');
 
     fireEvent.load(loadingCover);
 

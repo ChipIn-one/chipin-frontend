@@ -127,9 +127,7 @@ test('delegates group details and actions to the responsive cover hero', () => {
     render(<GroupPage />);
 
     expect(screen.getAllByTestId('group-cover-hero')).toHaveLength(1);
-    expect(
-        screen.queryByRole('button', { name: 'common:buttons.addExpense' }),
-    ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'common:buttons.addExpense' })).toBeNull();
 });
 
 test('revalidates a preselected list group through the canonical detail endpoint', () => {
