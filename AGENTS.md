@@ -19,7 +19,7 @@ Invariants 1–6 and 9 describe the target state of specs 03/04 (the `app`, `ent
 10. `npx eslint --fix <changed files>` fixes everything auto-fixable; do not fix style by hand. A lint error is about correctness or a boundary, and its message says how to fix it; `eslint-disable` only with a reason.
 11. All user-facing text, including `aria-*`, `placeholder`, `title`, and toasts, goes through i18n in every locale. Interactive elements are native elements or Radix; icon buttons have a translated name (review).
 12. `localStorage`/`sessionStorage` only through `helpers/localStorage.ts`. Tokens, invite tokens, and personal data never reach logs, Sentry, or URLs; logout clears all user data (cache, outbox, user `id`/`role`); only the language and theme UI settings survive.
-13. Import order is `simple-import-sort` (fixed by `--fix`), formatting is Prettier (`prettier.config.js`, fixed by `prettier --write`); do not reformat code the task does not change.
+13. Import order is `simple-import-sort` (fixed by `--fix`), formatting is Prettier (`prettier.config.js`), fixed by `prettier --write` only on files that passed `prettier --check` before your edit (new files always); do not reformat code the task does not change.
 14. Every task PR body has `## Version impact` (`none|patch|minor|major`); a task does not change `version` in `package.json`/`package-lock.json` and does not run `version:bump` (see Release).
 15. A change to the domain, API, or visible behavior starts in the KB: `chipin-knowledge-base/common/glossary.md` and `common/specs/<capability>.md`; tests are named by requirement IDs. New behavior lands in the KB spec first through a linked PR; a conflict with an ADR in `common/adr/` means stop and ask the owner. Take the KB from `../chipin-knowledge-base`, otherwise `git clone` it there, otherwise read it through GitHub; if the KB is unavailable both locally and through GitHub — BLOCKED.
 
@@ -27,7 +27,7 @@ Invariants 1–6 and 9 describe the target state of specs 03/04 (the `app`, `ent
 
 - `npm run test:task -- <test paths>` — targeted tests; refuses to run without a path.
 - `npx eslint --fix <files>` — ESLint auto-fixes in changed files only.
-- `npx prettier --write <files>` — until 02-C2 lands, only on new files or files that already pass `npx prettier --check`; never `npm run format` in a task.
+- `npx prettier --write <files>` — only on files that passed `npx prettier --check` before your edit (check before editing; new files always); never `npm run format` in a task.
 - `npm run verify` — fast lint (`--quiet`: shows only errors, warnings do not fail) and typecheck.
 - `npm run verify:full` — the full gate: lint, all tests, build, ds-gallery; CI runs the same. Run before `IMPLEMENTATION_COMPLETE`.
 - `npm run typecheck` — `tsc -b`.
