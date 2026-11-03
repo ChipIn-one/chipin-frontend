@@ -4,7 +4,7 @@ import {
     forwardRef,
     type ReactNode,
 } from 'react';
-import { Button, Flex, Text } from '@radix-ui/themes';
+import { type Button, Flex, Text } from '@radix-ui/themes';
 import { ChevronDownIcon } from 'lucide-react';
 
 import { TriggerButton } from './styled';

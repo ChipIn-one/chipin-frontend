@@ -322,9 +322,9 @@ test('DSH-005 preserves the query after blur and clears it explicitly', () => {
             return user.click(collapsedSearch);
         })
         .then(() => {
-            const input = screen.getByRole('textbox', {
+            const input = screen.getByRole<HTMLInputElement>('textbox', {
                 name: 'groups.searchLabel',
-            }) as HTMLInputElement;
+            });
 
             expect(input.value).toBe('Vietnam');
             return user.click(screen.getByRole('button', { name: 'groups.clearSearch' }));

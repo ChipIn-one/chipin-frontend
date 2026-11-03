@@ -1,5 +1,5 @@
-import { ComponentProps, ReactNode } from 'react';
 import { Avatar, Box, Card, Flex, Text } from '@radix-ui/themes';
+import type { ComponentProps, ReactNode } from 'react';
 
 interface Props {
     icon: NonNullable<ReactNode>;

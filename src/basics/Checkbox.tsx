@@ -1,5 +1,5 @@
-import { type ComponentProps } from 'react';
 import { Checkbox as RadixCheckbox } from '@radix-ui/themes';
+import type { ComponentProps } from 'react';
 
 type Props = ComponentProps<typeof RadixCheckbox>;
 

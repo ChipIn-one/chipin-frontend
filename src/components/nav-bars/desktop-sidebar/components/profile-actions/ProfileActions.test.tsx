@@ -117,7 +117,7 @@ test('disables sign out while the request is loading', () => {
         .click(screen.getByRole('button', { name: /Alex.*user@example\.com/i }))
         .then(() => {
             expect(
-                (screen.getByRole('button', { name: 'Sign Out' }) as HTMLButtonElement).disabled,
+                screen.getByRole<HTMLButtonElement>('button', { name: 'Sign Out' }).disabled,
             ).toBe(true);
         });
 });

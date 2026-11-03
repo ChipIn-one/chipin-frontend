@@ -1,4 +1,4 @@
-import { posix } from 'node:path';
+import { posix, resolve } from 'node:path';
 
 import js from '@eslint/js';
 import eslintConfigPrettier from 'eslint-config-prettier/flat';
@@ -14,6 +14,13 @@ import { importSortGroups } from './aliases.js';
 
 /** Files the ESLint presets apply to. */
 export const LINT_FILES = '**/*.{ts,tsx,js,jsx}';
+
+/** TypeScript files: the type-aware rules apply only to them (JS files get no type information). */
+export const TS_FILES = '**/*.{ts,tsx}';
+
+// TypeScript files outside every tsconfig `include` (repository scripts and their tests). The
+// project service lints them with the compiler options of tsconfig.node.json (spec 02 §D5).
+const DEFAULT_PROJECT_FILES = ['scripts/*.ts'];
 
 /**
  * Resolves a glob relative to the app directory (`'.'` now, `'apps/app'` after the monorepo move).
@@ -39,8 +46,9 @@ export const baseConfig = ({ appDir }) =>
             },
             rules: {
                 curly: ['error', 'all'],
-                // Unused variables are reported by @typescript-eslint/no-unused-vars and tsc.
+                // Unused variables are reported only by tsc `noUnused*` (spec 02 §D5).
                 'no-unused-vars': 'off',
+                '@typescript-eslint/no-unused-vars': 'off',
                 'unused-imports/no-unused-imports': 'error',
                 'simple-import-sort/exports': 'error',
                 // Groups are built from the tsconfig.app.json `paths` aliases (aliases.js).
@@ -48,6 +56,58 @@ export const baseConfig = ({ appDir }) =>
             },
         },
     );
+
+/**
+ * Type-aware rules (spec 02 §D5): the explicit list of §D0, not the whole `recommendedTypeChecked`.
+ * Type information comes from the project service; the tsconfig root is the app directory.
+ */
+export const typeAwareConfig = ({ appDir }) => [
+    {
+        files: [TS_FILES],
+        languageOptions: {
+            parserOptions: {
+                projectService: {
+                    allowDefaultProject: DEFAULT_PROJECT_FILES,
+                    defaultProject: 'tsconfig.node.json',
+                },
+                tsconfigRootDir: resolve(import.meta.dirname, '../..', appDir),
+            },
+        },
+        rules: {
+            // Inv. 7: a promise is returned, awaited, or marked `void`.
+            '@typescript-eslint/no-floating-promises': ['error', { ignoreVoid: true }],
+            // Inv. 7: no promise where void is expected, JSX attributes included:
+            // `onClick={() => void action()}`.
+            '@typescript-eslint/no-misused-promises': [
+                'error',
+                { checksVoidReturn: { attributes: true } },
+            ],
+            // Inv. 6: `any` does not leak into typed code.
+            '@typescript-eslint/no-unsafe-argument': 'error',
+            '@typescript-eslint/no-unsafe-assignment': 'error',
+            '@typescript-eslint/no-unsafe-call': 'error',
+            '@typescript-eslint/no-unsafe-member-access': 'error',
+            '@typescript-eslint/no-unsafe-return': 'error',
+            '@typescript-eslint/no-unnecessary-type-assertion': 'error',
+            // Type-only imports are explicit (tsc `verbatimModuleSyntax`); all three are autofixed.
+            // `typeof import('x')` annotations stay allowed: they have no autofix (class a, §D0)
+            // and are the vitest idiom `vi.importActual<typeof import('x')>`.
+            '@typescript-eslint/consistent-type-imports': [
+                'error',
+                { fixStyle: 'inline-type-imports', disallowTypeAnnotations: false },
+            ],
+            '@typescript-eslint/no-import-type-side-effects': 'error',
+        },
+    },
+    {
+        // vi.fn()/expect patterns in tests.
+        files: ['**/*.test.{ts,tsx}'],
+        rules: {
+            '@typescript-eslint/no-unsafe-assignment': 'off',
+            '@typescript-eslint/no-unsafe-member-access': 'off',
+        },
+    },
+];
 
 /** Prettier owns formatting: keep this preset last. */
 export const formattingConfig = () => [

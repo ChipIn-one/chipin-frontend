@@ -64,7 +64,7 @@ describe('groupsApi', () => {
     test('rejects a response without a boolean simplifyDebts contract', () => {
         vi.mocked(apiInstance.patch).mockResolvedValue({
             data: { ...group, simplifyDebts: 'unsupported' },
-        } as never);
+        });
 
         return expect(updateGroup({ groupId: group.id }))
             .rejects.toThrow('Unsupported group simplifyDebts response')

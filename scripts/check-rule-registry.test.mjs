@@ -328,10 +328,19 @@ describe('rule-classes.json matches the spec 02 §D0 registry', () => {
 
     test.each(Object.entries(registry))('%s is registered with class %s', (key, cls) => {
         const rule = key.split('#')[0];
-        const rows = tokens.filter(
-            ({ token }) =>
-                token === rule || token.startsWith(`${rule}:`) || token.startsWith(`${rule} `),
-        );
+        // The §D0 table names typescript-eslint rules without the plugin prefix, and a family
+        // with a trailing `*` (`no-unsafe-*`).
+        const names = [rule, rule.replace(/^@typescript-eslint\//, '')];
+        const matches = token =>
+            token.endsWith('-*')
+                ? names.some(name => name.startsWith(token.slice(0, -1)))
+                : names.some(
+                      name =>
+                          token === name ||
+                          token.startsWith(`${name}:`) ||
+                          token.startsWith(`${name} `),
+                  );
+        const rows = tokens.filter(({ token }) => matches(token));
 
         if (rows.length > 0) {
             expect(rows.map(row => row.cls)).toContain(cls);

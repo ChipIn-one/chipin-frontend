@@ -545,19 +545,16 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
                                 <UserAvatar
                                     key={s}
                                     size={s}
-                                    user={{ displayName: 'Anna', picture: '' } as never}
+                                    user={{ displayName: 'Anna', picture: '' }}
                                 />
                             ))}
                             <UserAvatar size="3" isLoading />
                         </Specimen>
                         <Specimen name="components/GroupAvatar">
-                            <GroupAvatar group={{ name: 'Lisbon', coverUrl: null } as never} />
+                            <GroupAvatar group={{ name: 'Lisbon', coverUrl: null }} />
+                            <GroupAvatar group={{ name: 'Flat', coverUrl: null }} color="violet" />
                             <GroupAvatar
-                                group={{ name: 'Flat', coverUrl: null } as never}
-                                color="violet"
-                            />
-                            <GroupAvatar
-                                group={{ name: 'Ski', coverUrl: null } as never}
+                                group={{ name: 'Ski', coverUrl: null }}
                                 color="cyan"
                                 variant="solid"
                                 size="3"

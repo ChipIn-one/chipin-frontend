@@ -3,7 +3,7 @@ import { Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
-import { type ExpenseSplitMode } from 'constants/chipin';
+import type { ExpenseSplitMode } from 'constants/chipin';
 import { selectSplitSummary } from 'store/expenseModalSelectors';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 

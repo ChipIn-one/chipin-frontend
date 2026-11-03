@@ -1,9 +1,9 @@
 import type { SelfUser, ThemeName, UserRole, UserSettings } from 'api/chipin.types';
 import {
     LS_KEY_AUTH_SESSION_HINT,
-    LS_KEY_LOCALE,
-    LS_KEY_SW_UPDATE_DISMISSED_AT,
-    LS_KEY_THEME,
+    type LS_KEY_LOCALE,
+    type LS_KEY_SW_UPDATE_DISMISSED_AT,
+    type LS_KEY_THEME,
     LS_KEY_USER,
 } from 'constants/localstorage';
 

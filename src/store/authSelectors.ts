@@ -1,5 +1,5 @@
 import { AUTH_STATUS } from './authConstants';
-import { AuthStore } from './authStore';
+import type { AuthStore } from './authStore';
 
 export const selectAuthStatus = (s: AuthStore) => s.status;
 

@@ -1,4 +1,4 @@
-import { baseConfig, formattingConfig } from './config/eslint/base.js';
+import { baseConfig, formattingConfig, typeAwareConfig } from './config/eslint/base.js';
 import { layerImports } from './config/eslint/layers.js';
 import {
     projectConfig,
@@ -14,6 +14,7 @@ const APP_DIR = '.';
 
 export default [
     ...baseConfig({ appDir: APP_DIR }),
+    ...typeAwareConfig({ appDir: APP_DIR }),
     ...reactConfig(),
     ...projectConfig({ appDir: APP_DIR }),
     // Each helper is called once with every entry of its rule (see config/eslint/project.js).

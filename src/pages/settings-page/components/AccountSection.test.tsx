@@ -94,9 +94,9 @@ test('starts with the current display name and saves it on blur', () => {
         </ThemeProvider>,
     );
 
-    const displayNameInput = screen.getByRole('textbox', {
+    const displayNameInput = screen.getByRole<HTMLInputElement>('textbox', {
         name: 'Display name',
-    }) as HTMLInputElement;
+    });
 
     expect(displayNameInput.value).toBe('Alex');
     expect(screen.getByText('4 / 64')).toBeTruthy();
@@ -159,7 +159,7 @@ test('initializes the display name draft when the user fetch completes', () => {
     );
 
     return waitFor(() => {
-        const input = screen.getByRole('textbox') as HTMLInputElement;
+        const input = screen.getByRole<HTMLInputElement>('textbox');
         expect(input.value).toBe(user.displayName);
     });
 });

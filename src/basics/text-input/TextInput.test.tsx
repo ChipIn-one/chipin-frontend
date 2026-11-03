@@ -18,7 +18,7 @@ test('owns its value and character counter while enforcing the length limit', ()
         />,
     );
 
-    const input = screen.getByRole('textbox', { name: 'Display name' }) as HTMLInputElement;
+    const input = screen.getByRole<HTMLInputElement>('textbox', { name: 'Display name' });
     const description = screen.getByText('Visible to other users');
     const counter = screen.getByText('4 / 5');
 
