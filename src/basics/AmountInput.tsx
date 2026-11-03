@@ -1,5 +1,4 @@
 import { ComponentProps } from 'react';
-
 import { TextField } from '@radix-ui/themes';
 
 import { parseAmountInput } from 'helpers/numbers';

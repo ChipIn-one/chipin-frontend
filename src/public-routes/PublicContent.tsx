@@ -1,17 +1,16 @@
 import { useEffect, useSyncExternalStore } from 'react';
+import { Box } from '@radix-ui/themes';
 import { useLocation } from 'react-router-dom';
 
-import { Box } from '@radix-ui/themes';
-
 import { getPublicRoute } from 'helpers/publicRoutes';
-import type { PublicRoute } from 'types/publicRoutes';
-
-import BackgroundBox from 'basics/BackgroundBox';
-import Header from 'components/Header';
-import { BackendUnavailableGate } from 'components/backend-unavailable-page/BackendUnavailableGate';
 import HomePage from 'pages/HomePage';
 import PrivacyPage from 'pages/PrivacyPage';
 import TermsPage from 'pages/TermsPage';
+import type { PublicRoute } from 'types/publicRoutes';
+
+import BackgroundBox from 'basics/BackgroundBox';
+import { BackendUnavailableGate } from 'components/backend-unavailable-page/BackendUnavailableGate';
+import Header from 'components/Header';
 
 import { PublicEffects } from './PublicEffects';
 import { PublicLanguageLinks } from './PublicLanguageLinks';

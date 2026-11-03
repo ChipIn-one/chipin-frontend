@@ -1,6 +1,5 @@
-import styled from 'styled-components';
-
 import { Button } from '@radix-ui/themes';
+import styled from 'styled-components';
 
 export const TriggerButton = styled(Button)`
     width: 100%;

@@ -1,10 +1,10 @@
 import { useCallback, useState } from 'react';
+import { Box, Button, Flex, IconButton, Spinner, Tabs, Text } from '@radix-ui/themes';
 import { ChevronsDownIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Box, Button, Flex, IconButton, Spinner, Tabs, Text } from '@radix-ui/themes';
-
 import type { Group } from 'api/chipin.types';
+import { ActivityEventsList } from 'features/activity';
 import { getActivityPreviewEvents } from 'helpers/activityEvent';
 import { useGroupInvite } from 'hooks/pwaHooks';
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
@@ -13,7 +13,6 @@ import { NoGroupExpensesEmptyState } from 'basics/empty-states';
 import { SettleUpModal } from 'components/modals/settle-up-modal';
 import { ActivityFeedSkeleton } from 'components/skeletons';
 import UsersRow from 'components/UsersRow';
-import { ActivityEventsList } from 'features/activity';
 
 import GroupBalancesTab from './GroupBalancesTab';
 import GroupInviteEmptyState from './GroupInviteEmptyState';

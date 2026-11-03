@@ -1,7 +1,6 @@
+import { Avatar, Badge, Button, Card, Flex, Text } from '@radix-ui/themes';
 import { UserPlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Avatar, Badge, Button, Card, Flex, Text } from '@radix-ui/themes';
 
 import type { Group } from 'api/chipin.types';
 import { buildGroupInviteLink } from 'helpers/url';

@@ -1,14 +1,13 @@
 import { useMemo } from 'react';
-import { Amount } from 'basics';
+import { Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-
-import { Flex, Text } from '@radix-ui/themes';
 
 import { type ExpenseSplitMode } from 'constants/chipin';
 import { selectSplitSummary } from 'store/expenseModalSelectors';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
+import { Amount } from 'basics';
 import { ProgressBar } from 'components/progress-bar';
 import SegmentedControl from 'components/SegmentedControl';
 

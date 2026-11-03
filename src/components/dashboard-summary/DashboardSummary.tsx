@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { BalanceBadges } from 'basics';
+import { Card, Flex, Skeleton, Text, VisuallyHidden } from '@radix-ui/themes';
 import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Card, Flex, Skeleton, Text, VisuallyHidden } from '@radix-ui/themes';
-
+import { BalanceBadges } from 'basics';
 import DebtAmount from 'basics/DebtAmount';
 import { NoDebtsEmptyState } from 'basics/empty-states';
 import { Amount } from 'basics/numbers';

@@ -1,5 +1,6 @@
-import { TEST_INVITE_TOKEN } from 'test/fixtures/inviteToken';
 import { expect, test } from 'vitest';
+
+import { TEST_INVITE_TOKEN } from 'test/fixtures/inviteToken';
 
 import { isInviteToken } from './inviteToken';
 

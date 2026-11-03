@@ -1,5 +1,4 @@
 import { ComponentProps, ReactNode } from 'react';
-
 import { SegmentedControl as RadixSegmentedControl } from '@radix-ui/themes';
 
 export interface SegmentedControlItem {

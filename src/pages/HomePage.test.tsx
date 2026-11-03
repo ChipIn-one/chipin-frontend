@@ -1,7 +1,6 @@
 import { StrictMode } from 'react';
-import { beforeEach, expect, test, vi } from 'vitest';
-
 import { render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 import { useLandingStatsStore } from 'store/landing-stats-store';
 

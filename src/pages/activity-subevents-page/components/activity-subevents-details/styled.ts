@@ -1,7 +1,6 @@
+import { Card, Flex, Text } from '@radix-ui/themes';
 import { ChevronDownIcon } from 'lucide-react';
 import styled from 'styled-components';
-
-import { Card, Flex, Text } from '@radix-ui/themes';
 
 const DetailsCard = styled(Card)`
     position: sticky;

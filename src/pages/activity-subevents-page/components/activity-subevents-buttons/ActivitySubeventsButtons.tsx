@@ -1,8 +1,7 @@
+import { Button, Flex, Skeleton } from '@radix-ui/themes';
 import { PencilIcon, Trash2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-
-import { Button, Flex, Skeleton } from '@radix-ui/themes';
 
 import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS, ACTIVITY_CATEGORIES } from 'constants/activity';

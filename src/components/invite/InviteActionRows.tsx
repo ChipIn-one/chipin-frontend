@@ -1,8 +1,7 @@
+import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 import { CheckIcon, Link2Icon, QrCodeIcon, Share2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-
-import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 
 import type { UseInviteResult } from 'hooks/pwaHooks';
 

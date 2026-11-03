@@ -1,7 +1,6 @@
-import { beforeEach, expect, test, vi } from 'vitest';
-
 import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 import ThemeSwitcherDev from './ThemeSwitcherDev';
 

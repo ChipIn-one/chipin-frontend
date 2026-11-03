@@ -1,6 +1,5 @@
-import { beforeEach, expect, test, vi } from 'vitest';
-
 import { render, screen, within } from '@testing-library/react';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 import { useLandingStatsStore } from 'store/landing-stats-store';
 import { useLoadingStore } from 'store/loadingStore';

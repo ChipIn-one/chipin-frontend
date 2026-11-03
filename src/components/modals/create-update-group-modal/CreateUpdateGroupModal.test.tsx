@@ -1,9 +1,8 @@
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
-
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 
 import type { Group } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';

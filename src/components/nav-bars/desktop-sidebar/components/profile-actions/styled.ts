@@ -1,7 +1,6 @@
+import { Button } from '@radix-ui/themes';
 import { ChevronDownIcon } from 'lucide-react';
 import styled from 'styled-components';
-
-import { Button } from '@radix-ui/themes';
 
 const ProfileButton = styled(Button)`
     width: 100%;

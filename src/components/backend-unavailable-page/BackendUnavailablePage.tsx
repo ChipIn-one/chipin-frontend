@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { Dialog } from '@radix-ui/themes';
 import { RefreshCwIcon, TriangleAlertIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Dialog } from '@radix-ui/themes';
 
 import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
 

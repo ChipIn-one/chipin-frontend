@@ -1,8 +1,7 @@
 import { useEffect, useRef } from 'react';
+import { Box, Card, Container, Flex, Grid, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
-
-import { Box, Card, Container, Flex, Grid, Text } from '@radix-ui/themes';
 
 import GroupsCards from 'components/GroupsCards';
 

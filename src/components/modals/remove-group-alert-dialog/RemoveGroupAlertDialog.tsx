@@ -1,10 +1,9 @@
 import { type ReactNode, useState } from 'react';
+import { Callout } from '@radix-ui/themes';
 import { OctagonAlertIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-
-import { Callout } from '@radix-ui/themes';
 
 import { ROUTES } from 'constants/routes';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';

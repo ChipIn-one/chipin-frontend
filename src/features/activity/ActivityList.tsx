@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
+import { Button, Flex, Spinner, Text } from '@radix-ui/themes';
 import { ChevronsDownIcon, RefreshCwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-
-import { Button, Flex, Spinner, Text } from '@radix-ui/themes';
 
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';

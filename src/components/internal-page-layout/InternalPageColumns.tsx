@@ -1,6 +1,5 @@
-import type { ComponentProps, ReactNode } from 'react';
-
 import { Box, Grid } from '@radix-ui/themes';
+import type { ComponentProps, ReactNode } from 'react';
 
 interface Props {
     children: ReactNode;

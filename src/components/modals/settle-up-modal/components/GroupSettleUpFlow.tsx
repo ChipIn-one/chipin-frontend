@@ -1,8 +1,7 @@
 import { useState } from 'react';
+import { Button, Text } from '@radix-ui/themes';
 import { ArrowLeftRightIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Button, Text } from '@radix-ui/themes';
 
 import { useActivityStore } from 'store/activity-store';
 import { selectGroupSettlementOptions } from 'store/groupsSelectors';

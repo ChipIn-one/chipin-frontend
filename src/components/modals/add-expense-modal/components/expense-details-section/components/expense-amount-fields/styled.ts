@@ -1,9 +1,9 @@
-import { AmountInput } from 'basics';
+import { TextField } from '@radix-ui/themes';
 import styled from 'styled-components';
 
-import { TextField } from '@radix-ui/themes';
-
 import { themeColor } from 'helpers/colors';
+
+import { AmountInput } from 'basics';
 
 export const AmountBox = styled.div`
     display: flex;

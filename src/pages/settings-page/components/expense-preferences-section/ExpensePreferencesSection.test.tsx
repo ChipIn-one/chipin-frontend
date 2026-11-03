@@ -1,6 +1,5 @@
-import { expect, test } from 'vitest';
-
 import { render, screen } from '@testing-library/react';
+import { expect, test } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
 import { useDashboardStore } from 'store/dashboardStore';

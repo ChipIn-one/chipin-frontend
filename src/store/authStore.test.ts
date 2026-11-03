@@ -5,13 +5,13 @@ import type { SelfUser } from 'api/chipin.types';
 import * as authSession from 'helpers/authSession';
 import { getLocalUser, saveLocalUser } from 'helpers/localStorage';
 
-import { selectIsUserAdmin } from './users-store/selectors';
 import { useAuthStore } from './authStore';
 import { APP_MODES, useDashboardStore } from './dashboardStore';
 import { useExpenseModalStore } from './expenseModalStore';
 import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
 import { useUsersStore } from './users-store';
+import { selectIsUserAdmin } from './users-store/selectors';
 
 const user = {
     id: 'user-1',

@@ -1,6 +1,5 @@
-import { beforeEach, expect, test, vi } from 'vitest';
-
 import { render, screen } from '@testing-library/react';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group, SelfUser } from 'api/chipin.types';
 import { useUsersStore } from 'store/users-store';

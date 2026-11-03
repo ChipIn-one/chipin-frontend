@@ -1,6 +1,5 @@
-import { expect, test, vi } from 'vitest';
-
 import { render } from '@testing-library/react';
+import { expect, test, vi } from 'vitest';
 
 const { formatRelativeTimeMock } = vi.hoisted(() => ({
     formatRelativeTimeMock: vi.fn(() => '20:05'),

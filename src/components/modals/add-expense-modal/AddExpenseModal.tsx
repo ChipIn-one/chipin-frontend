@@ -1,8 +1,7 @@
 import { useCallback } from 'react';
+import { Flex } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-
-import { Flex } from '@radix-ui/themes';
 
 import { useExpenseModalStore } from 'store/expenseModalStore';
 

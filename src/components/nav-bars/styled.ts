@@ -1,9 +1,9 @@
+import { Box, Flex } from '@radix-ui/themes';
 import styled, { css } from 'styled-components';
 
-import { Box, Flex } from '@radix-ui/themes';
+import { themeColor } from 'helpers/colors';
 
 import { NavButton } from 'basics/buttons';
-import { themeColor } from 'helpers/colors';
 
 const MobileNavBarWrapper = styled(Box)`
     --mobile-nav-action-lift: var(--space-3);

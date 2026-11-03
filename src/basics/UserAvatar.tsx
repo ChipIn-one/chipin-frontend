@@ -1,7 +1,6 @@
+import { Avatar, Skeleton } from '@radix-ui/themes';
 import { UserIcon } from 'lucide-react';
 import type { ComponentProps } from 'react';
-
-import { Avatar, Skeleton } from '@radix-ui/themes';
 
 interface UserLike {
     displayName: string;

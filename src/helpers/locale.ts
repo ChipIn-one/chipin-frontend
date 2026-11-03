@@ -1,7 +1,6 @@
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from 'constants/locales';
 import { LS_KEY_LOCALE } from 'constants/localstorage';
 import { getLocalUser, hasAuthSessionHint, LocalStorage } from 'helpers/localStorage';
-
-import { DEFAULT_LOCALE, SUPPORTED_LOCALES, type SupportedLocale } from 'constants/locales';
 
 // Set for O(1) lookup — avoids repeated Array.includes casts.
 const SUPPORTED_LOCALES_SET: ReadonlySet<SupportedLocale> = new Set(SUPPORTED_LOCALES);

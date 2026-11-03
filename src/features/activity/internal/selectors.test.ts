@@ -2,8 +2,8 @@ import { expect, test } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
 import type { ActivityFeedItem } from 'api/chipin.types';
-import { getActivityPreviewEvents } from 'helpers/activityEvent';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
+import { getActivityPreviewEvents } from 'helpers/activityEvent';
 import { getActivityDateKey } from 'helpers/time';
 
 import { getDailyExpenseSummary } from './selectors';

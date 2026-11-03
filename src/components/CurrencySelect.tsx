@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react';
+import { Button, Flex, Text } from '@radix-ui/themes';
 import { ChevronDownIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-
-import { Button, Flex, Text } from '@radix-ui/themes';
 
 import { selectAvailableCurrencies, selectDefaultCurrency } from 'store/dashboardSelectors';
 import { useDashboardStore } from 'store/dashboardStore';

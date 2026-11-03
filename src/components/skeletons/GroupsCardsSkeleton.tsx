@@ -1,7 +1,6 @@
+import { Avatar, Button, Card, Flex, IconButton, Skeleton, Text } from '@radix-ui/themes';
 import { PlusIcon, SearchIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Avatar, Button, Card, Flex, IconButton, Skeleton, Text } from '@radix-ui/themes';
 
 const SKELETON_COUNT = 3;
 

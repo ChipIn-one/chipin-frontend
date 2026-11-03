@@ -1,10 +1,10 @@
 import { useCallback, useEffect } from 'react';
+import { Button, Flex, Spinner, Text } from '@radix-ui/themes';
 import { ChevronsDownIcon, CircleAlertIcon, ListTreeIcon, RefreshCwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Button, Flex, Spinner, Text } from '@radix-ui/themes';
-
 import type { ActivityCategory } from 'constants/activity';
+import { ActivityEventsList } from 'features/activity';
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 import {
     selectActivitySubeventsError,
@@ -14,7 +14,6 @@ import { useErrorsStore } from 'store/errorsStore';
 
 import { EmptyState } from 'basics/empty-states';
 import { ActivityFeedSkeleton } from 'components/skeletons';
-import { ActivityEventsList } from 'features/activity';
 
 import { useConnect } from './internal';
 

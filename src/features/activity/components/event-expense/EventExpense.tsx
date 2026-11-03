@@ -1,7 +1,5 @@
-import { LedgerScopeBadge } from 'basics';
-import { useTranslation } from 'react-i18next';
-
 import { Card, Flex, Text } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 
 import type { AppEvent } from 'api/activity.types';
 import {
@@ -12,7 +10,10 @@ import {
 } from 'constants/activity';
 import { useUsersStore } from 'store/users-store';
 
+import { LedgerScopeBadge } from 'basics';
+
 import { EventIcon } from '../activity-event';
+
 import { ExpenseIcon } from './components';
 import {
     ExpenseAmount,

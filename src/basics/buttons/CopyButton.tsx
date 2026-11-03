@@ -1,8 +1,8 @@
 import { ComponentProps, useState } from 'react';
+import { Button, Tooltip } from '@radix-ui/themes';
 import { CheckIcon, CopyIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Button, Tooltip } from '@radix-ui/themes';
 import { SECOND } from 'constants/time';
 import { copyTextToClipboard } from 'helpers/clipboard';
 

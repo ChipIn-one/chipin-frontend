@@ -1,6 +1,5 @@
-import { useTranslation } from 'react-i18next';
-
 import { Box, Button, Flex, Link } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 
 import LanguageSelector from 'components/LanguageSelector';
 

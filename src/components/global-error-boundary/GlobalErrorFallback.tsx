@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import i18n from 'i18n';
+import * as Sentry from '@sentry/react';
 import { DownloadIcon, HouseIcon, RefreshCwIcon, TriangleAlertIcon } from 'lucide-react';
 import type { MouseEvent } from 'react';
-
-import * as Sentry from '@sentry/react';
 
 import { ROUTES } from 'constants/routes';
 import { APP_VERSION } from 'constants/version';
@@ -12,6 +10,7 @@ import {
     checkForServiceWorkerUpdate,
     reloadCurrentPage,
 } from 'helpers/serviceWorkerRecovery';
+import i18n from 'i18n';
 
 import BackgroundBox from 'basics/BackgroundBox';
 

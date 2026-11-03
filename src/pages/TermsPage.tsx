@@ -1,6 +1,5 @@
-import { useTranslation } from 'react-i18next';
-
 import { Box, Container, Flex, Heading, Section, Text } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';

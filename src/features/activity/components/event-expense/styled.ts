@@ -1,7 +1,7 @@
-import { Amount } from 'basics';
+import { Text } from '@radix-ui/themes';
 import styled, { css } from 'styled-components';
 
-import { Text } from '@radix-ui/themes';
+import { Amount } from 'basics';
 
 interface ReversedProps {
     $isReversed: boolean;

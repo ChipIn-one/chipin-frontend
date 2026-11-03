@@ -1,8 +1,6 @@
-import { Amount, LedgerScopeBadge } from 'basics';
+import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 import { ArrowLeftRightIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 
 import type { AppEvent } from 'api/activity.types';
 import {
@@ -11,6 +9,8 @@ import {
     type SettlementReversedAction,
 } from 'constants/activity';
 import { useUsersStore } from 'store/users-store';
+
+import { Amount, LedgerScopeBadge } from 'basics';
 
 import { EventIcon } from '../activity-event';
 

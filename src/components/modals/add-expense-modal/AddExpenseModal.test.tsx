@@ -1,8 +1,7 @@
+import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
-
-import { render, screen } from '@testing-library/react';
 
 import type { Group, SelfUser } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';

@@ -1,7 +1,7 @@
-import { AmountInput } from 'basics';
+import { Button, Card, Text } from '@radix-ui/themes';
 import styled from 'styled-components';
 
-import { Button, Card, Text } from '@radix-ui/themes';
+import { AmountInput } from 'basics';
 
 export const ModalSurface = styled.div`
     display: flex;

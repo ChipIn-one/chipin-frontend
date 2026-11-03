@@ -1,6 +1,5 @@
-import styled from 'styled-components';
-
 import { Box } from '@radix-ui/themes';
+import styled from 'styled-components';
 
 import { MEDIA_QUERIES } from 'constants/breakpoints';
 

@@ -1,13 +1,12 @@
+import { Box } from '@radix-ui/themes';
 import { InfoIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Box } from '@radix-ui/themes';
-
 import type { AppEvent } from 'api/activity.types';
+import { ActivityEvent } from 'features/activity';
 
 import { EmptyState } from 'basics/empty-states';
 import { ActivityEventSkeleton } from 'components/skeletons/activity-event-skeleton';
-import { ActivityEvent } from 'features/activity';
 
 interface Props {
     parentEvent?: AppEvent;

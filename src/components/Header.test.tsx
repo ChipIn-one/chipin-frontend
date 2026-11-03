@@ -1,10 +1,9 @@
-import { MemoryRouter, useLocation } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
-import { beforeEach, expect, test, vi } from 'vitest';
-
 import { Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter, useLocation } from 'react-router-dom';
+import { ThemeProvider } from 'styled-components';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
 import { PROJECT_NAME } from 'constants/chipin';

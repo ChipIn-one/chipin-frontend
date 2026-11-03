@@ -1,6 +1,5 @@
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-
 import { act, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { useIntersectionObserver } from './useIntersectionObserver';
 

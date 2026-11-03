@@ -1,6 +1,5 @@
-import styled from 'styled-components';
-
 import { Avatar, Flex, Text } from '@radix-ui/themes';
+import styled from 'styled-components';
 
 import type { GroupUser } from 'api/chipin.types';
 

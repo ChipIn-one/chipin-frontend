@@ -1,6 +1,5 @@
-import { useTranslation } from 'react-i18next';
-
 import { Badge, Box, Flex, Text } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 
 import { PROJECT_NAME } from 'constants/chipin';
 

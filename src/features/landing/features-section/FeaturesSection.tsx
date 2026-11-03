@@ -1,8 +1,7 @@
+import { Avatar, Box, Card, Container, Flex, Grid, Heading, Section, Text } from '@radix-ui/themes';
 import { ArrowLeftRightIcon, CalculatorIcon, GlobeIcon, UsersIcon, ZapIcon } from 'lucide-react';
 import type { ComponentPropsWithoutRef, ReactElement } from 'react';
 import { useTranslation } from 'react-i18next';
-
-import { Avatar, Box, Card, Container, Flex, Grid, Heading, Section, Text } from '@radix-ui/themes';
 
 type AvatarColor = ComponentPropsWithoutRef<typeof Avatar>['color'];
 

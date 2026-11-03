@@ -1,6 +1,5 @@
-import { useTranslation } from 'react-i18next';
-
 import { Avatar, Box, Container, Flex, Heading, Section, Text } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 
 import { STEP_KEYS } from './internal';
 import { StepLine, TimelineWrap } from './styled';

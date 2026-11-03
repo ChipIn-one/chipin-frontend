@@ -1,42 +1,24 @@
 import { resolve } from 'node:path';
 
+import react from '@vitejs/plugin-react-swc';
 import { defineConfig } from 'vite';
 import svgr from 'vite-plugin-svgr';
 import tsconfigPaths from 'vite-tsconfig-paths';
-
-import react from '@vitejs/plugin-react-swc';
 
 const root = resolve(__dirname, '..');
 
 export default defineConfig({
     root: __dirname,
     plugins: [
-        tsconfigPaths({ root, projects: [resolve(root, 'tsconfig.app.json')] }),
+        // Aliases come from tsconfig.app.json `paths` (via ds-gallery/tsconfig.json, which extends it
+        // and also includes the gallery sources).
+        tsconfigPaths({ root, projects: [resolve(__dirname, 'tsconfig.json')] }),
         svgr(),
         react(),
     ],
     define: {
         'import.meta.env.VITE_CHIPIN_ENV': JSON.stringify('dev'),
         'import.meta.env.VITE_SENTRY_ENABLED': 'false',
-    },
-    resolve: {
-        alias: [
-            'api',
-            'assets',
-            'basics',
-            'bootstrap',
-            'components',
-            'constants',
-            'features',
-            'helpers',
-            'hooks',
-            'i18n',
-            'pages',
-            'public-routes',
-            'store',
-            'styles',
-            'types',
-        ].map(d => ({ find: new RegExp(`^${d}(?=/|$)`), replacement: resolve(root, 'src', d) })),
     },
     build: {
         outDir: resolve(root, 'node_modules/.cache/ds-gallery'),

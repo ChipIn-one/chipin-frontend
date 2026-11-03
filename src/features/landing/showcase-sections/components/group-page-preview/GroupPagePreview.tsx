@@ -1,7 +1,3 @@
-import { Amount, BalanceSummaryText } from 'basics';
-import { PlusIcon } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-
 import {
     Avatar,
     Badge,
@@ -15,7 +11,10 @@ import {
     Tabs,
     Text,
 } from '@radix-ui/themes';
+import { PlusIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
+import { Amount, BalanceSummaryText } from 'basics';
 import { OwedToYouCard } from 'components/summary-debt-cards';
 import UsersRow from 'components/UsersRow';
 

@@ -1,6 +1,5 @@
-import { useTranslation } from 'react-i18next';
-
 import { Avatar, Badge, Card, Flex, Skeleton, Text } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 
 const ActivityEventSkeletonIcon = () => (
     <Skeleton>

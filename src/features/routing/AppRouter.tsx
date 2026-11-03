@@ -1,15 +1,15 @@
 import { lazy, type ReactNode, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
-import { ROUTES } from 'constants/routes';
 import { PUBLIC_ROUTE_ENTRIES, type PublicPage } from 'constants/publicRoutes';
+import { ROUTES } from 'constants/routes';
 
 import PageLoader from 'basics/PageLoader';
 import { InternalPageLayout } from 'components/internal-page-layout';
 
 import HomeRouteGuard from './HomeRouteGuard';
-import { PublicLocaleRoute } from './PublicLocaleRoute';
 import { ProtectedRoute } from './ProtectedRoute';
+import { PublicLocaleRoute } from './PublicLocaleRoute';
 import SoloRouteGuard from './SoloRouteGuard';
 
 const FriendJoinPage = lazy(() => import('pages/FriendJoinPage'));

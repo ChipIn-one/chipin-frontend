@@ -1,8 +1,7 @@
+import { Avatar, Button, Card, Code, Flex, Separator, Skeleton, Text } from '@radix-ui/themes';
 import { MonitorIcon, MoonIcon, RefreshCwIcon, Settings2Icon, SunIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-
-import { Avatar, Button, Card, Code, Flex, Separator, Skeleton, Text } from '@radix-ui/themes';
 
 import { APP_VERSION } from 'constants/version';
 import { applySwUpdate } from 'helpers/swUpdates';

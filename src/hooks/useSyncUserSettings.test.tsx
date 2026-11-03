@@ -1,6 +1,5 @@
-import { beforeEach, expect, test, vi } from 'vitest';
-
 import { renderHook } from '@testing-library/react';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
 import { useAuthStore } from 'store/authStore';

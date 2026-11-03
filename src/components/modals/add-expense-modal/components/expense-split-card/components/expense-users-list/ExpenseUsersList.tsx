@@ -1,10 +1,8 @@
 import { memo, useId } from 'react';
-import { Amount, Checkbox, UserAvatar } from 'basics';
-import { useTranslation } from 'react-i18next';
-import { useShallow } from 'zustand/react/shallow';
-
 import { Flex } from '@radix-ui/themes';
 import { Text } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
+import { useShallow } from 'zustand/react/shallow';
 
 import {
     selectAmountStep,
@@ -15,6 +13,8 @@ import {
     selectUserIds,
 } from 'store/expenseModalSelectors';
 import { useExpenseModalStore } from 'store/expenseModalStore';
+
+import { Amount, Checkbox, UserAvatar } from 'basics';
 
 import { ExpenseInputActions } from '../expense-input-actions';
 

@@ -1,17 +1,16 @@
+import { Theme } from '@radix-ui/themes';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
-
-import { Theme } from '@radix-ui/themes';
-import { fireEvent, render, screen } from '@testing-library/react';
 
 import type { Group, KnownUser, SelfUser } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
-import { useExpenseModalStore } from 'store/expenseModalStore';
 import { useErrorsStore } from 'store/errorsStore';
+import { useExpenseModalStore } from 'store/expenseModalStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';

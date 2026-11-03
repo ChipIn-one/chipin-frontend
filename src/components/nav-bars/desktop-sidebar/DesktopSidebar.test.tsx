@@ -1,9 +1,8 @@
+import { Theme } from '@radix-ui/themes';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
-
-import { Theme } from '@radix-ui/themes';
-import { render, screen, within } from '@testing-library/react';
 
 import type { KnownUser, SelfUser } from 'api/chipin.types';
 import { PROJECT_NAME } from 'constants/chipin';

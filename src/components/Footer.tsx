@@ -1,15 +1,14 @@
 import { useContext } from 'react';
+import { Avatar, Box, Container, Flex, Link, Separator, Text } from '@radix-ui/themes';
 import { SendIcon } from 'lucide-react';
-import { PublicBuildYearContext } from 'public-routes/PublicBuildYearContext';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-
-import { Avatar, Box, Container, Flex, Link, Separator, Text } from '@radix-ui/themes';
 
 import { PROJECT_NAME } from 'constants/chipin';
 import { DEFAULT_LOCALE } from 'constants/locales';
 import { matchLocale } from 'helpers/locale';
 import { getPublicPath } from 'helpers/publicRoutes';
+import { PublicBuildYearContext } from 'public-routes/PublicBuildYearContext';
 
 import Logotype from 'assets/logo.svg?react';
 

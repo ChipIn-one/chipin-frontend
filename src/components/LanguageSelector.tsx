@@ -1,7 +1,6 @@
+import { Button, Flex, IconButton, Text } from '@radix-ui/themes';
 import { ChevronDownIcon, GlobeIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Button, Flex, IconButton, Text } from '@radix-ui/themes';
 
 import { matchLocale, SUPPORTED_LOCALES, type SupportedLocale } from 'helpers/locale';
 import { suppressPublicLocaleSuggestion } from 'helpers/publicLocaleSuggestion';

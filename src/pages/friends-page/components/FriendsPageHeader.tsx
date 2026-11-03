@@ -1,7 +1,6 @@
+import { Avatar, Box, Button, Flex, Heading, Skeleton, Text } from '@radix-ui/themes';
 import { UserPlusIcon, UsersIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Avatar, Box, Button, Flex, Heading, Skeleton, Text } from '@radix-ui/themes';
 
 import { useFriendInvite } from 'hooks/pwaHooks';
 import { useUsersStore } from 'store/users-store';

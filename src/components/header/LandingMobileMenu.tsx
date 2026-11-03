@@ -1,7 +1,6 @@
+import { IconButton } from '@radix-ui/themes';
 import { MenuIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { IconButton } from '@radix-ui/themes';
 
 import { matchLocale, SUPPORTED_LOCALES } from 'helpers/locale';
 

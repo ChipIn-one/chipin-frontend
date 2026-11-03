@@ -1,7 +1,6 @@
+import { Box, Flex, Separator, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
-
-import { Box, Flex, Separator, Text } from '@radix-ui/themes';
 
 import { PROJECT_NAME } from 'constants/chipin';
 import { getPreferredModeRoute, isNavigationRouteActive } from 'helpers/routes';

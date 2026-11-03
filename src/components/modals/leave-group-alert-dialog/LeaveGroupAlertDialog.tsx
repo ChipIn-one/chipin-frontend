@@ -1,14 +1,13 @@
 import { type ReactNode, useState } from 'react';
-import { UserAvatar } from 'basics';
+import { Callout, Flex } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import { Callout, Flex } from '@radix-ui/themes';
-
 import { ROUTES } from 'constants/routes';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
 
+import { UserAvatar } from 'basics';
 import Select, { type SelectItem } from 'components/Select';
 
 import { BaseAlertDialog } from '../base-alert-dialog';

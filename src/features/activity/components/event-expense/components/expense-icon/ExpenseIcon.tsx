@@ -1,7 +1,6 @@
+import { Avatar } from '@radix-ui/themes';
 import { BanknoteArrowDownIcon, BanknoteArrowUpIcon, Trash2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Avatar } from '@radix-ui/themes';
 
 import {
     ACTIVITY_ACTIONS,

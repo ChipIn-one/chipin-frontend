@@ -1,8 +1,7 @@
 import { useEffect } from 'react';
-import { Toaster, toast } from 'sonner';
-import { useTranslation } from 'react-i18next';
-
 import * as Sentry from '@sentry/react';
+import { useTranslation } from 'react-i18next';
+import { toast, Toaster } from 'sonner';
 
 import { DEFAULT_LOCALE } from 'constants/locales';
 import { resolveBrowserLocale } from 'helpers/locale';
@@ -13,8 +12,8 @@ import {
 } from 'helpers/publicLocaleSuggestion';
 import { getPreferredModeRoute } from 'helpers/routes';
 import { useCheckOnlineStatus, useCheckPwa } from 'hooks/pwaHooks';
-import { useAuthToasts } from 'hooks/useAuthToasts';
 import { updateSeoMetadata } from 'hooks/seoMetadata';
+import { useAuthToasts } from 'hooks/useAuthToasts';
 import { useCheckSignIn } from 'hooks/useCheckSignIn';
 import { useScrollToTop } from 'hooks/useScrollToTop';
 import type { PublicRoute } from 'types/publicRoutes';

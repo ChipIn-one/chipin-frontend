@@ -1,6 +1,5 @@
-import { beforeEach, expect, test, vi } from 'vitest';
-
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { ActivityFeedItem, Group, SelfUser } from 'api/chipin.types';
 import { useDashboardStore } from 'store/dashboardStore';

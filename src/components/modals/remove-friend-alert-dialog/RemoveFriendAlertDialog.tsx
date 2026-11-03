@@ -1,15 +1,15 @@
-import { UserAvatar } from 'basics';
+import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 import { HeartCrackIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-
-import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 
 import type { FriendUser } from 'api/chipin.types';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { selectFriendRemoving } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
+
+import { UserAvatar } from 'basics';
 
 import { BaseAlertDialog } from '../base-alert-dialog';
 

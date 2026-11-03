@@ -1,5 +1,4 @@
 import { type ComponentProps } from 'react';
-
 import { Progress } from '@radix-ui/themes';
 
 import { PROGRESS_MAX } from './constants';

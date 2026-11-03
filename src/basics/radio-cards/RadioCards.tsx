@@ -1,6 +1,5 @@
-import type { ComponentProps, ReactNode } from 'react';
-
 import { Flex, RadioCards as RadixRadioCards } from '@radix-ui/themes';
+import type { ComponentProps, ReactNode } from 'react';
 
 import { RadioMarker } from './styled';
 

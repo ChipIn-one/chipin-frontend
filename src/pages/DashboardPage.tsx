@@ -1,10 +1,10 @@
 import { useCallback } from 'react';
+import { Button, Container, Flex, Spinner, Text } from '@radix-ui/themes';
 import { ChevronsDownIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
-import { Button, Container, Flex, Spinner, Text } from '@radix-ui/themes';
-
+import { ActivityEventsList } from 'features/activity';
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 
 import { EmptyState, NoGroupsEmptyState } from 'basics/empty-states';
@@ -14,7 +14,6 @@ import GroupsCards from 'components/GroupsCards';
 import { InternalPageColumnsFromSm } from 'components/internal-page-layout';
 import { CreateUpdateGroupModal } from 'components/modals/create-update-group-modal';
 import { ActivityFeedSkeleton } from 'components/skeletons';
-import { ActivityEventsList } from 'features/activity';
 
 import { useConnect } from './internal/dashboard-page';
 

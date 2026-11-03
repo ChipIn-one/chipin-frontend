@@ -1,6 +1,5 @@
-import styled, { css } from 'styled-components';
-
 import { Button } from '@radix-ui/themes';
+import styled, { css } from 'styled-components';
 
 const DescriptionToggleButton = styled(Button)`
     width: fit-content;

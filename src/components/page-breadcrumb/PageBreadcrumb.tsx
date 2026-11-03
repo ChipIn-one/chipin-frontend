@@ -1,9 +1,8 @@
+import { Box, Flex, IconButton, Text } from '@radix-ui/themes';
 import { ChevronLeftIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
-
-import { Box, Flex, IconButton, Text } from '@radix-ui/themes';
 
 import { getBreadcrumbParentPath } from 'helpers/routes';
 

@@ -1,9 +1,9 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-import { resolveLocale } from 'helpers/locale';
 import { DEFAULT_LOCALE } from 'constants/locales';
 import { getPublicRoute } from 'constants/publicRoutes';
+import { resolveLocale } from 'helpers/locale';
 
 import { resources } from './resources';
 

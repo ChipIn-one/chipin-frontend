@@ -1,8 +1,7 @@
+import { Callout, Flex, Text } from '@radix-ui/themes';
 import { CircleAlertIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-
-import { Callout, Flex, Text } from '@radix-ui/themes';
 
 import type { ImageFileValidationError } from 'helpers/imageFile';
 

@@ -1,9 +1,8 @@
 import { Fragment } from 'react';
+import { Flex, Text } from '@radix-ui/themes';
 import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-
-import { Flex, Text } from '@radix-ui/themes';
 
 import type { BalanceEntry } from 'api/chipin.raw.types';
 import { getBalanceDirection } from 'helpers/currencies';

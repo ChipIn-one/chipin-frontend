@@ -1,6 +1,5 @@
-import { useTranslation } from 'react-i18next';
-
 import { Flex, Separator } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 
 import type { DebtOption } from '../internal';
 

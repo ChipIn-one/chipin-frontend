@@ -1,8 +1,7 @@
 import { useState } from 'react';
+import { Button, Flex } from '@radix-ui/themes';
 import { LogOutIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Button, Flex } from '@radix-ui/themes';
 
 import { useAuthStore } from 'store/authStore';
 import { selectAuthSignOutLoading, selectUserSelfLoading } from 'store/loadingSelectors';

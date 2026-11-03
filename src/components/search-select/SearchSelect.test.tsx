@@ -1,9 +1,8 @@
-import { ThemeProvider } from 'styled-components';
-import { expect, test } from 'vitest';
-
 import { Button, Theme } from '@radix-ui/themes';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { ThemeProvider } from 'styled-components';
+import { expect, test } from 'vitest';
 
 import { lightThemeStyled } from 'constants/styled-themes';
 

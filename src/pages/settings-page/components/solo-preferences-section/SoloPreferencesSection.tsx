@@ -1,8 +1,7 @@
+import { Avatar, Card, Flex, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
 import { CircleUserRoundIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
-
-import { Avatar, Card, Flex, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
 
 import {
     selectUserSaveGroupExpensesToSolo,

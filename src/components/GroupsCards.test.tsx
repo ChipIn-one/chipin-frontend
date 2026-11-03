@@ -1,9 +1,8 @@
-import { MemoryRouter } from 'react-router-dom';
-import { ThemeProvider } from 'styled-components';
-import { beforeEach, afterEach, expect, test, vi } from 'vitest';
-
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
+import { ThemeProvider } from 'styled-components';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
 import type { BalanceEntry, BalancesMap } from 'api/chipin.raw.types';

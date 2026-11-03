@@ -1,8 +1,8 @@
-import { Amount } from 'basics';
+import { Card, Flex, Text } from '@radix-ui/themes';
 import { CircleCheckIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Card, Flex, Text } from '@radix-ui/themes';
+import { Amount } from 'basics';
 
 interface SettlementStatusProps {
     isDebtSettled: boolean;

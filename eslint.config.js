@@ -1,3 +1,4 @@
+import js from '@eslint/js';
 import eslintConfigPrettier from 'eslint-config-prettier/flat';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
@@ -7,7 +8,7 @@ import unusedImports from 'eslint-plugin-unused-imports';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
-import js from '@eslint/js';
+import { importSortGroups } from './config/eslint/aliases.js';
 
 // lucide-react icons are imported only by their `<Name>Icon` export (no `Lucide<Name>` aliases,
 // no bare names, no namespace import). Repeated in every `no-restricted-imports` block below,
@@ -54,29 +55,8 @@ export default tseslint.config(
 
             // For sort imports
             'simple-import-sort/exports': 'warn',
-            'simple-import-sort/imports': [
-                'warn',
-                {
-                    groups: [
-                        // Node.js builtins
-                        ['^node:'],
-                        // External packages (npm)
-                        ['^react$', '^react-dom$', '^\\w'],
-                        // Aliases (e.g. @mui/material, @custom/*)
-                        ['^@\\w'],
-                        // Absolute imports from project (like 'basics/', 'components/', 'src/')
-                        ['^api/', '^constants/', '^helpers/', '^hooks/', '^store/'],
-                        ['^basics/', '^components/', '^features/', '^pages/'],
-                        ['^assets/', '^styles/', '^src/'],
-                        // Relative imports up
-                        ['^\\.\\.(?!/?$)', '^\\.\\./?$'],
-                        // Relative imports current folder
-                        ['^\\./(?=.*/)(?!/?$)', '^\\.(?!/?$)', '^\\./?$'],
-                        // Style imports
-                        ['^.+\\.s?css$'],
-                    ],
-                },
-            ],
+            // Groups are built from the tsconfig.app.json `paths` aliases (config/eslint/aliases.js).
+            'simple-import-sort/imports': ['warn', { groups: importSortGroups() }],
 
             /* ===============================
                i18n / UI TEXT RULES

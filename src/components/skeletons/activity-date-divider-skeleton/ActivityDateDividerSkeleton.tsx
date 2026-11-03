@@ -1,6 +1,5 @@
-import { useTranslation } from 'react-i18next';
-
 import { Box, Flex, Separator, Skeleton, Text } from '@radix-ui/themes';
+import { useTranslation } from 'react-i18next';
 
 interface Props {
     isShowSummary: boolean;

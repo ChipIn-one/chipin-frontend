@@ -1,7 +1,6 @@
+import { act, render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
-
-import { act, render, screen } from '@testing-library/react';
 
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';

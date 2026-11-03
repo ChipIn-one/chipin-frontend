@@ -1,6 +1,5 @@
-import styled, { keyframes } from 'styled-components';
-
 import { Box, Button } from '@radix-ui/themes';
+import styled, { keyframes } from 'styled-components';
 
 import { themeColor } from 'helpers/colors';
 

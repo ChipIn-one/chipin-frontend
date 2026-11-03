@@ -1,9 +1,8 @@
-import { ThemeProvider } from 'next-themes';
-import { createRoot, hydrateRoot } from 'react-dom/client';
-
 import * as Sentry from '@sentry/react';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
+import { ThemeProvider } from 'next-themes';
+import { createRoot, hydrateRoot } from 'react-dom/client';
 
 import { initializeApi } from 'bootstrap/initializeApi';
 import { initializeSentry } from 'bootstrap/initializeSentry';
@@ -11,16 +10,15 @@ import { LS_KEY_THEME } from 'constants/localstorage';
 import { getPublicRoute } from 'helpers/publicRoutes';
 import { sanitizeTelemetryEvent } from 'helpers/telemetry';
 import { resolveStoredTheme } from 'helpers/theme';
-
-import PWABadge from 'basics/PWABadge';
-import { GlobalErrorBoundary } from 'components/global-error-boundary';
+import i18n from 'i18n';
 import { PublicBuildYearContext } from 'public-routes/PublicBuildYearContext';
 import { PublicTelemetry } from 'public-routes/PublicTelemetry';
 
+import PWABadge from 'basics/PWABadge';
+import { GlobalErrorBoundary } from 'components/global-error-boundary';
+
 import '@radix-ui/themes/styles.css';
 import 'styles/radixStylesOverwrite.css';
-
-import i18n from 'i18n';
 
 initializeSentry();
 initializeApi();

@@ -1,6 +1,5 @@
-import type { ReactNode } from 'react';
-
 import { Flex, Separator } from '@radix-ui/themes';
+import type { ReactNode } from 'react';
 
 import { Header, HeaderContainer } from './styled';
 

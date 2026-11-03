@@ -1,3 +1,4 @@
+import { Avatar } from '@radix-ui/themes';
 import type { LucideIcon } from 'lucide-react';
 import {
     ArrowLeftRightIcon,
@@ -73,8 +74,6 @@ import {
     ZapIcon,
 } from 'lucide-react';
 import type { ComponentProps } from 'react';
-
-import { Avatar } from '@radix-ui/themes';
 
 import { EXPENSE_CATEGORIES, type ExpenseCategory } from './category';
 

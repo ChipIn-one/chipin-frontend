@@ -1,14 +1,13 @@
-import { UserAvatar } from 'basics';
+import { Box, Flex, Heading, Skeleton, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-
-import { Box, Flex, Heading, Skeleton, Text } from '@radix-ui/themes';
 
 import { ROUTES } from 'constants/routes';
 import { selectUserSelfLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 import { selectIsUserAdmin, useUsersStore } from 'store/users-store';
 
+import { UserAvatar } from 'basics';
 import { NavButton } from 'basics/buttons';
 import DevMenu from 'components/DevMenu';
 

@@ -1,7 +1,6 @@
+import { render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-
-import { render, screen } from '@testing-library/react';
 
 import type { Group } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';

@@ -1,8 +1,7 @@
+import { IconButton } from '@radix-ui/themes';
 import { ChevronLeftIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-
-import { IconButton } from '@radix-ui/themes';
 
 const BackButton = () => {
     const { t } = useTranslation('common');

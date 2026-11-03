@@ -1,11 +1,11 @@
-import { RelativeTime } from 'basics';
+import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 import { UserPenIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
-
 import type { AppEvent } from 'api/activity.types';
 import type { GroupUpdatedAction } from 'constants/activity';
+
+import { RelativeTime } from 'basics';
 
 import { EventActorInlineAvatar, EventIcon } from './activity-event';
 

@@ -1,14 +1,13 @@
-import i18n from 'i18n';
+import { Box, Button, Card, Flex, Text } from '@radix-ui/themes';
 import { RefreshCwIcon } from 'lucide-react';
 import { toast } from 'sonner';
-
-import { Box, Button, Card, Flex, Text } from '@radix-ui/themes';
 
 import { LS_KEY_SW_UPDATE_DISMISSED_AT } from 'constants/localstorage';
 import { HOUR } from 'constants/time';
 import { TOASTS_IDS } from 'constants/toasts';
 import { LocalStorage } from 'helpers/localStorage';
 import { activateServiceWorker, reloadCurrentPage } from 'helpers/serviceWorkerRecovery';
+import i18n from 'i18n';
 import { usePwaStore } from 'store/pwaStore';
 const UPDATE_DISMISS_TTL_MS = 4 * HOUR;
 

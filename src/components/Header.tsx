@@ -1,9 +1,8 @@
+import { Box, Button, Container, Flex } from '@radix-ui/themes';
 import { ArrowRightIcon, LogInIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import styled from 'styled-components';
-
-import { Box, Button, Container, Flex } from '@radix-ui/themes';
 
 import { PROJECT_NAME } from 'constants/chipin';
 import { DEFAULT_LOCALE } from 'constants/locales';
@@ -19,12 +18,12 @@ import { NavButton } from 'basics/buttons';
 import LanguageSelector from 'components/LanguageSelector';
 import { ModeLogotype } from 'components/mode-logotype';
 
+import DevMenu from './DevMenu';
 import { useConnect } from './header/internal/useConnect';
 import { LandingMobileMenu } from './header/LandingMobileMenu';
 import { LandingNav } from './header/LandingNav';
-import HeaderNav from './nav-bars/HeaderNav';
-import DevMenu from './DevMenu';
 import { AuthModal } from './modals';
+import HeaderNav from './nav-bars/HeaderNav';
 
 const StickyBox = styled(Box)`
     position: sticky;

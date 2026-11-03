@@ -1,7 +1,6 @@
+import { Avatar, Callout, Card, Flex, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
 import { BellIcon, InfoIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Avatar, Callout, Card, Flex, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
 
 interface Props {
     isLoading: boolean;

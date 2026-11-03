@@ -1,9 +1,9 @@
-import { Amount, UserAvatar } from 'basics';
+import { Card, Flex } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
-import { Card, Flex } from '@radix-ui/themes';
-
 import type { FriendUser } from 'api/chipin.types';
+
+import { Amount, UserAvatar } from 'basics';
 
 import { DebtAmount, ParticipantName } from '../styled';
 import type { SettlementUser } from '../types';

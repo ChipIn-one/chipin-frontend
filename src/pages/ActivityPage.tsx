@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-
 import { Container } from '@radix-ui/themes';
 
-import { InternalPageColumnsFromSm } from 'components/internal-page-layout';
 import { type ActivityFilter, ActivityList, ActivitySidebar } from 'features/activity';
+
+import { InternalPageColumnsFromSm } from 'components/internal-page-layout';
 
 import { useConnect } from './internal/activity-page';
 

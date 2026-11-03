@@ -1,7 +1,6 @@
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { expect, test, vi } from 'vitest';
-
-import { fireEvent, render, screen, within } from '@testing-library/react';
 
 import { lightThemeStyled } from 'constants/styled-themes';
 

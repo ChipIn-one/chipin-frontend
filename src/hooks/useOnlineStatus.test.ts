@@ -1,6 +1,5 @@
-import { afterEach, expect, test, vi } from 'vitest';
-
 import { act, renderHook } from '@testing-library/react';
+import { afterEach, expect, test, vi } from 'vitest';
 
 import { useOnlineStatus } from './useOnlineStatus';
 

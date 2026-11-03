@@ -1,7 +1,6 @@
+import { Avatar, Box, Flex, Heading, Skeleton, Text } from '@radix-ui/themes';
 import { SettingsIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Avatar, Box, Flex, Heading, Skeleton, Text } from '@radix-ui/themes';
 
 interface Props {
     isLoading: boolean;

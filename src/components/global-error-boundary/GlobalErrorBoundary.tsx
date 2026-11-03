@@ -1,6 +1,5 @@
-import type { ReactNode } from 'react';
-
 import * as Sentry from '@sentry/react';
+import type { ReactNode } from 'react';
 
 import { APP_VERSION } from 'constants/version';
 

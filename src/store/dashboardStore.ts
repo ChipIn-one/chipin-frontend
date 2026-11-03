@@ -8,8 +8,8 @@ import { normalizeApiError } from 'helpers/errors';
 import { getLocalUser } from 'helpers/localStorage';
 
 import { ACTIVITY_API_LIMIT } from './activity-store/constants';
-import { createRequestChannel } from './internal/resourceRequests';
 import { useErrorsStore } from './errorsStore';
+import { createRequestChannel } from './internal/resourceRequests';
 import { useLoadingStore } from './loadingStore';
 
 const dashboardDataChannel = createRequestChannel();

@@ -1,11 +1,10 @@
 import { useState } from 'react';
+import { Button, IconButton } from '@radix-ui/themes';
 import { BugIcon, CalendarPlusIcon, FlaskConicalIcon, MoonIcon, SunIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import { useShallow } from 'zustand/react/shallow';
-
-import { Button, IconButton } from '@radix-ui/themes';
 
 import { isThemeDark } from 'helpers/theme';
 import { AUTH_STATUS } from 'store/authConstants';

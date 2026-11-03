@@ -1,9 +1,8 @@
+import { Box, Button } from '@radix-ui/themes';
 import { CirclePlusIcon, PlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import styled from 'styled-components';
-
-import { Box, Button } from '@radix-ui/themes';
 
 import { themeColor } from 'helpers/colors';
 

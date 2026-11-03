@@ -1,10 +1,9 @@
-import i18n from 'i18n/index';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
+import i18n from 'i18n/index';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { useLoadingStore } from 'store/loadingStore';
 

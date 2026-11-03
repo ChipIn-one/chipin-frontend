@@ -1,6 +1,5 @@
-import styled from 'styled-components';
-
 import { Text } from '@radix-ui/themes';
+import styled from 'styled-components';
 
 const AmountText = styled(Text)<{
     $isReversed: boolean;

@@ -1,11 +1,10 @@
-import { BalanceBadges } from 'basics';
+import { Avatar, Card, Flex, Skeleton, Text } from '@radix-ui/themes';
 import { TrendingUpIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Avatar, Card, Flex, Skeleton, Text } from '@radix-ui/themes';
-
 import { BalanceEntry } from 'api/chipin.raw.types';
 
+import { BalanceBadges } from 'basics';
 import { Amount } from 'basics/numbers';
 
 interface Props {

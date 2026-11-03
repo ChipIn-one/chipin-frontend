@@ -1,7 +1,6 @@
+import { Badge, Box, Flex, Grid, Heading, Text } from '@radix-ui/themes';
 import { CheckCircleIcon } from 'lucide-react';
 import type { ReactElement } from 'react';
-
-import { Badge, Box, Flex, Grid, Heading, Text } from '@radix-ui/themes';
 
 interface Bullet {
     key: string;

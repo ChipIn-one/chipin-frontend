@@ -1,8 +1,7 @@
+import { Button } from '@radix-ui/themes';
 import type { ComponentPropsWithoutRef, MouseEvent } from 'react';
 import type { To } from 'react-router-dom';
 import styled from 'styled-components';
-
-import { Button } from '@radix-ui/themes';
 
 import { useAppNavigate } from 'hooks/useAppNavigate';
 

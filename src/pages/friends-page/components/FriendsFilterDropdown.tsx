@@ -1,7 +1,6 @@
+import { Box, Button } from '@radix-ui/themes';
 import { ChevronDownIcon, FilterIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Box, Button } from '@radix-ui/themes';
 
 import type { DropdownMenuSection } from 'components/Dropdown';
 import Dropdown from 'components/Dropdown';

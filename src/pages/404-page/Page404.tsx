@@ -1,7 +1,6 @@
+import { Box, Container, Flex, Heading, Separator, Text } from '@radix-ui/themes';
 import { ChartPieIcon, HomeIcon, LayoutListIcon, SearchIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-
-import { Box, Container, Flex, Heading, Separator, Text } from '@radix-ui/themes';
 
 import { ROUTES } from 'constants/routes';
 import { selectIsLoggedIn } from 'store/authSelectors';

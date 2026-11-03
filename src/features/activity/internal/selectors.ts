@@ -1,7 +1,7 @@
 import type { AppEvent, ExpenseActivityMetadata } from 'api/activity.types';
 import type { BalanceEntry } from 'api/chipin.raw.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
-import { isActivityPreview, type ActivityListItem } from 'helpers/activityEvent';
+import { type ActivityListItem, isActivityPreview } from 'helpers/activityEvent';
 import { normalizeApiMoneyAmount } from 'helpers/numbers';
 import { getActivityDateKey } from 'helpers/time';
 

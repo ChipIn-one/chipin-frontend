@@ -1,7 +1,6 @@
+import { render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
-
-import { render, screen } from '@testing-library/react';
 
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useExpenseModalStore } from 'store/expenseModalStore';

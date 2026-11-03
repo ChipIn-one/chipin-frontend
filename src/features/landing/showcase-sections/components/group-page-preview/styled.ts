@@ -1,6 +1,5 @@
-import styled from 'styled-components';
-
 import { Flex, Text } from '@radix-ui/themes';
+import styled from 'styled-components';
 
 import { GROUP_COVER_RATIO } from 'constants/groupCover';
 import { themeColor } from 'helpers/colors';

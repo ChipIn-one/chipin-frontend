@@ -1,7 +1,6 @@
+import { Flex, IconButton } from '@radix-ui/themes';
 import { MinusIcon, PlusIcon } from 'lucide-react';
 import type { ChangeEvent } from 'react';
-
-import { Flex, IconButton } from '@radix-ui/themes';
 
 import { InputRoot } from './styled';
 

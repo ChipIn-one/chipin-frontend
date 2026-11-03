@@ -1,7 +1,6 @@
+import { Text } from '@radix-ui/themes';
 import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
-
-import { Text } from '@radix-ui/themes';
 
 import { Amount } from './numbers';
 

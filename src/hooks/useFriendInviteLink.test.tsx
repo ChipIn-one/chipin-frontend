@@ -1,10 +1,9 @@
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { toast } from 'sonner';
-import { TEST_INVITE_TOKEN } from 'test/fixtures/inviteToken';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import { act, renderHook, waitFor } from '@testing-library/react';
-
 import { ROUTES } from 'constants/routes';
+import { TEST_INVITE_TOKEN } from 'test/fixtures/inviteToken';
 
 import { useFriendInviteLink } from './useFriendInviteLink';
 
