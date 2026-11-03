@@ -9,13 +9,11 @@ lerna-debug.log*
 
 node_modules
 dist
-docs/superpowers/*
 dist-ssr
 dev-dist
 *.local
 
 # Editor directories and files
-.superpowers/*
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -26,6 +24,9 @@ dev-dist
 *.sln
 *.sw?
 
+# Local agent files
+.claude/
+
 # Env files (secrets)
 .env*
 !.env.example
@@ -33,6 +34,3 @@ dev-dist
 # Local Superpowers working artifacts
 /.superpowers/
 /docs/superpowers/plans/
-/docs/superpowers/specs/
-/docs/engineering/plans/
-/docs/engineering/specs/
