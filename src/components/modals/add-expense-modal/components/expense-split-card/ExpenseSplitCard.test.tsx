@@ -79,7 +79,9 @@ test('EXP-064 reports only the first cause even when the payer control is visibl
     );
 
     expect(screen.getAllByRole('status')).toHaveLength(1);
-    expect(screen.getAllByText(i18n.t('group:expenses.modal.submitFeedback.noDebt'))).toHaveLength(1);
+    expect(screen.getAllByText(i18n.t('group:expenses.modal.submitFeedback.noDebt'))).toHaveLength(
+        1,
+    );
     expect(screen.queryByRole('alert')).toBeNull();
 
     act(() => useExpenseModalStore.getState().setAmount(''));

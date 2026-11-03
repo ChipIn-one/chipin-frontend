@@ -18,10 +18,7 @@ import GroupsCards from './GroupsCards';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
-        t: (
-            key: string,
-            params?: { count?: number; query?: string },
-        ) => {
+        t: (key: string, params?: { count?: number; query?: string }) => {
             if (params?.count !== undefined) {
                 return `${key}:${params.count}`;
             }
@@ -36,11 +33,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('./group-card', () => ({
-    GroupCard: ({
-        model,
-    }: {
-        model: { group: Group; netAmount: number | null };
-    }) => (
+    GroupCard: ({ model }: { model: { group: Group; netAmount: number | null } }) => (
         <div
             data-testid="group-card"
             data-group-id={model.group.id}
@@ -149,10 +142,7 @@ const createGroup = ({
         status: 'ACTIVE',
         lastUsedCurrency: null,
         recentActivities: {
-            items:
-                activityAt === undefined
-                    ? []
-                    : [{ parent: activity, lastEvent: activity }],
+            items: activityAt === undefined ? [] : [{ parent: activity, lastEvent: activity }],
             nextCursor: null,
         },
     };
@@ -162,11 +152,7 @@ const renderGroups = (groups: Group[], selectedGroupId?: string) =>
     render(
         <MemoryRouter>
             <ThemeProvider theme={lightThemeStyled}>
-                <GroupsCards
-                    groups={groups}
-                    label="Groups"
-                    selectedGroupId={selectedGroupId}
-                />
+                <GroupsCards groups={groups} label="Groups" selectedGroupId={selectedGroupId} />
             </ThemeProvider>
         </MemoryRouter>,
     );
@@ -200,26 +186,17 @@ test('DSH-003 filters mixed-direction groups by their final group net', () => {
     const positive = createGroup({
         id: 'positive',
         name: 'Positive',
-        balances: [
-            { USD: balance('USD', 20) },
-            { USD: balance('USD', -5) },
-        ],
+        balances: [{ USD: balance('USD', 20) }, { USD: balance('USD', -5) }],
     });
     const neutral = createGroup({
         id: 'neutral',
         name: 'Neutral',
-        balances: [
-            { USD: balance('USD', 20) },
-            { USD: balance('USD', -20) },
-        ],
+        balances: [{ USD: balance('USD', 20) }, { USD: balance('USD', -20) }],
     });
     const negative = createGroup({
         id: 'negative',
         name: 'Negative',
-        balances: [
-            { USD: balance('USD', 5) },
-            { USD: balance('USD', -20) },
-        ],
+        balances: [{ USD: balance('USD', 5) }, { USD: balance('USD', -20) }],
     });
 
     renderGroups([positive, neutral, negative]);
@@ -271,8 +248,7 @@ test('DSH-004 keeps recent settled groups visible and collapses only >15-day ina
             const hideButton = screen.getByRole('button', { name: /groups.hideSettled/ });
 
             expect(
-                hideButton.compareDocumentPosition(hiddenGroup) &
-                    Node.DOCUMENT_POSITION_FOLLOWING,
+                hideButton.compareDocumentPosition(hiddenGroup) & Node.DOCUMENT_POSITION_FOLLOWING,
             ).toBeTruthy();
 
             return user.click(screen.getByRole('button', { name: 'summary.owedToYou' }));
@@ -280,9 +256,7 @@ test('DSH-004 keeps recent settled groups visible and collapses only >15-day ina
         .then(() => {
             expect(screen.queryByText('Recent settled')).toBeNull();
             expect(screen.queryByText('Old settled')).toBeNull();
-            expect(
-                screen.queryByRole('button', { name: /groups.hideSettled/ }),
-            ).toBeNull();
+            expect(screen.queryByRole('button', { name: /groups.hideSettled/ })).toBeNull();
         });
 });
 
@@ -306,10 +280,7 @@ test('DSH-004/DSH-005 search surfaces an auto-hidden settled group', () => {
     return user
         .click(screen.getByRole('button', { name: 'groups.searchLabel' }))
         .then(() =>
-            user.type(
-                screen.getByRole('textbox', { name: 'groups.searchLabel' }),
-                'Thailand',
-            ),
+            user.type(screen.getByRole('textbox', { name: 'groups.searchLabel' }), 'Thailand'),
         )
         .then(() => {
             expect(screen.getByText('Archive Thailand')).toBeTruthy();
@@ -335,16 +306,11 @@ test('DSH-005 preserves the query after blur and clears it explicitly', () => {
     return user
         .click(screen.getByRole('button', { name: 'groups.searchLabel' }))
         .then(() =>
-            user.type(
-                screen.getByRole('textbox', { name: 'groups.searchLabel' }),
-                'Vietnam',
-            ),
+            user.type(screen.getByRole('textbox', { name: 'groups.searchLabel' }), 'Vietnam'),
         )
         .then(() => {
             expect(screen.queryByText('Bali')).toBeNull();
-            return user.click(
-                screen.getByRole('button', { name: 'common:buttons.createGroup' }),
-            );
+            return user.click(screen.getByRole('button', { name: 'common:buttons.createGroup' }));
         })
         .then(() => {
             const collapsedSearch = screen.getByRole('button', {
@@ -352,9 +318,7 @@ test('DSH-005 preserves the query after blur and clears it explicitly', () => {
             });
 
             expect(collapsedSearch.getAttribute('data-query-active')).toBe('true');
-            expect(
-                screen.queryByRole('textbox', { name: 'groups.searchLabel' }),
-            ).toBeNull();
+            expect(screen.queryByRole('textbox', { name: 'groups.searchLabel' })).toBeNull();
 
             return user.click(collapsedSearch);
         })
@@ -364,9 +328,7 @@ test('DSH-005 preserves the query after blur and clears it explicitly', () => {
             }) as HTMLInputElement;
 
             expect(input.value).toBe('Vietnam');
-            return user.click(
-                screen.getByRole('button', { name: 'groups.clearSearch' }),
-            );
+            return user.click(screen.getByRole('button', { name: 'groups.clearSearch' }));
         })
         .then(() => {
             expect(screen.getByText('Vietnam')).toBeTruthy();
@@ -396,14 +358,9 @@ test('DSH-005 composes search with the selected debt filter', () => {
 
     return user
         .click(screen.getByRole('button', { name: 'summary.owedToYou' }))
+        .then(() => user.click(screen.getByRole('button', { name: 'groups.searchLabel' })))
         .then(() =>
-            user.click(screen.getByRole('button', { name: 'groups.searchLabel' })),
-        )
-        .then(() =>
-            user.type(
-                screen.getByRole('textbox', { name: 'groups.searchLabel' }),
-                'Vietnam',
-            ),
+            user.type(screen.getByRole('textbox', { name: 'groups.searchLabel' }), 'Vietnam'),
         )
         .then(() => {
             expect(screen.getByText('Vietnam trip')).toBeTruthy();
@@ -431,9 +388,7 @@ test('DSH-003 keeps a selected settled group in backend order without prepending
     renderGroups([activeFirst, selectedSettled, activeLast], selectedSettled.id);
 
     expect(
-        screen
-            .getAllByTestId('group-card')
-            .map(element => element.getAttribute('data-group-id')),
+        screen.getAllByTestId('group-card').map(element => element.getAttribute('data-group-id')),
     ).toEqual(['first', 'selected', 'last']);
 });
 
@@ -457,12 +412,12 @@ test('uses one full-width thick settled toggle with state chevrons', () => {
 
     return user.click(toggle).then(() => {
         expect(
-            screen.getByRole('button', { name: /groups.hideSettled/ })
+            screen
+                .getByRole('button', { name: /groups.hideSettled/ })
                 .querySelector('.lucide-chevron-up'),
         ).not.toBeNull();
     });
 });
-
 
 test('uses matching highlighted header actions', () => {
     const group = createGroup({
@@ -481,7 +436,6 @@ test('uses matching highlighted header actions', () => {
     expect(getComputedStyle(search).padding).toBe(getComputedStyle(create).padding);
 });
 
-
 test('keeps clear search keyboard-accessible before collapsing on focus exit', () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const vietnam = createGroup({
@@ -495,10 +449,7 @@ test('keeps clear search keyboard-accessible before collapsing on focus exit', (
     return user
         .click(screen.getByRole('button', { name: 'groups.searchLabel' }))
         .then(() =>
-            user.type(
-                screen.getByRole('textbox', { name: 'groups.searchLabel' }),
-                'Vietnam',
-            ),
+            user.type(screen.getByRole('textbox', { name: 'groups.searchLabel' }), 'Vietnam'),
         )
         .then(() => user.tab())
         .then(() => {
@@ -507,9 +458,7 @@ test('keeps clear search keyboard-accessible before collapsing on focus exit', (
             });
 
             expect(document.activeElement).toBe(clearButton);
-            expect(
-                screen.getByRole('textbox', { name: 'groups.searchLabel' }),
-            ).toBeTruthy();
+            expect(screen.getByRole('textbox', { name: 'groups.searchLabel' })).toBeTruthy();
 
             return user.keyboard('{Enter}');
         })
@@ -522,7 +471,6 @@ test('keeps clear search keyboard-accessible before collapsing on focus exit', (
             expect(document.activeElement).toBe(input);
         });
 });
-
 
 test('announces retained search state after collapse', () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
@@ -537,16 +485,9 @@ test('announces retained search state after collapse', () => {
     return user
         .click(screen.getByRole('button', { name: 'groups.searchLabel' }))
         .then(() =>
-            user.type(
-                screen.getByRole('textbox', { name: 'groups.searchLabel' }),
-                'Vietnam',
-            ),
+            user.type(screen.getByRole('textbox', { name: 'groups.searchLabel' }), 'Vietnam'),
         )
-        .then(() =>
-            user.click(
-                screen.getByRole('button', { name: 'common:buttons.createGroup' }),
-            ),
-        )
+        .then(() => user.click(screen.getByRole('button', { name: 'common:buttons.createGroup' })))
         .then(() => {
             expect(
                 screen.getByRole('button', {
@@ -569,35 +510,23 @@ test('uses search-specific and filter-specific empty-state descriptions', () => 
     return user
         .click(screen.getByRole('button', { name: 'summary.youOwe' }))
         .then(() => {
-            const emptyDescription = screen.getByText(
-                'groups.filterEmptyDescription',
-            );
-            const emptyCard = emptyDescription.closest(
-                '[data-empty-state]',
-            );
+            const emptyDescription = screen.getByText('groups.filterEmptyDescription');
+            const emptyCard = emptyDescription.closest('[data-empty-state]');
 
             expect(emptyCard).toBeTruthy();
             expect(emptyCard?.className).toContain('rt-r-size-1');
-            expect(
-                screen.queryByText('groups.searchEmptyDescription'),
-            ).toBeNull();
+            expect(screen.queryByText('groups.searchEmptyDescription')).toBeNull();
 
-            return user.click(
-                screen.getByRole('button', { name: 'groups.searchLabel' }),
-            );
+            return user.click(screen.getByRole('button', { name: 'groups.searchLabel' }));
         })
         .then(() =>
-            user.type(
-                screen.getByRole('textbox', { name: 'groups.searchLabel' }),
-                'missing',
-            ),
+            user.type(screen.getByRole('textbox', { name: 'groups.searchLabel' }), 'missing'),
         )
         .then(() => {
             expect(screen.getByText('groups.searchEmptyDescription')).toBeTruthy();
             expect(screen.queryByText('groups.filterEmptyDescription')).toBeNull();
         });
 });
-
 
 test('returns focus to the search trigger on Escape', () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
@@ -624,9 +553,7 @@ test('returns focus to the search trigger on Escape', () => {
                 name: 'groups.searchLabel',
             });
 
-            expect(
-                screen.queryByRole('textbox', { name: 'groups.searchLabel' }),
-            ).toBeNull();
+            expect(screen.queryByRole('textbox', { name: 'groups.searchLabel' })).toBeNull();
             expect(document.activeElement).toBe(searchButton);
         });
 });

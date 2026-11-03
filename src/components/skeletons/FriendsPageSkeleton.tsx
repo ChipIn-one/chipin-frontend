@@ -13,9 +13,7 @@ export const FriendsPageSkeleton = () => {
                 <Card key={i}>
                     <Flex justify="between" align="center" mb="3">
                         <Text size="3" weight="bold">
-                            <Skeleton>
-                                {t('friendsPage.currency')}
-                            </Skeleton>
+                            <Skeleton>{t('friendsPage.currency')}</Skeleton>
                         </Text>
                         <Text size="3">
                             <Skeleton>{t('friendsPage.total')}</Skeleton>
@@ -33,9 +31,7 @@ export const FriendsPageSkeleton = () => {
                                         />
                                     </Skeleton>
                                     <Text size={{ initial: '2', sm: '3' }}>
-                                        <Skeleton>
-                                            {t('friendsPage.name')}
-                                        </Skeleton>
+                                        <Skeleton>{t('friendsPage.name')}</Skeleton>
                                     </Text>
                                 </Flex>
                                 <Text size="2">

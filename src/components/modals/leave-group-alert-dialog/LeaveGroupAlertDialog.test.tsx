@@ -89,11 +89,13 @@ test('waits for confirmation before leaving a group', () => {
         .click(screen.getByRole('button', { name: OPEN_LEAVE_LABEL }))
         .then(() => {
             expect(leaveGroup).not.toHaveBeenCalled();
-            return user.click(
-                screen.getByRole('button', { name: 'common:buttons.leaveGroup' }),
-            );
+            return user.click(screen.getByRole('button', { name: 'common:buttons.leaveGroup' }));
         })
-        .then(() => waitFor(() => expect(leaveGroup).toHaveBeenCalledWith({
-            groupId: group.id,
-        })));
+        .then(() =>
+            waitFor(() =>
+                expect(leaveGroup).toHaveBeenCalledWith({
+                    groupId: group.id,
+                }),
+            ),
+        );
 });

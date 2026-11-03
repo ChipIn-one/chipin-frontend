@@ -24,17 +24,20 @@ const RemoveFriendAlertDialog = ({ friend, isOpened, setIsOpened }: Props) => {
     const isRemovingFriend = useLoadingStore(selectFriendRemoving);
 
     const onRemoveFriend = () => {
-        return useUsersStore.getState().removeFriend({ userId: friend.id })
+        return useUsersStore
+            .getState()
+            .removeFriend({ userId: friend.id })
             .then(() => {
-                toast.success(t('toasts:friend.removed', {
-                    name: friend.displayName,
-                }));
+                toast.success(
+                    t('toasts:friend.removed', {
+                        name: friend.displayName,
+                    }),
+                );
             })
             .catch(error => {
-                toast.error(resolveApiErrorMessageFromError(
-                    error,
-                    t('toasts:common.requestFailed'),
-                ));
+                toast.error(
+                    resolveApiErrorMessageFromError(error, t('toasts:common.requestFailed')),
+                );
                 return Promise.reject(error);
             });
     };

@@ -91,10 +91,7 @@ test('rejects an unsupported file before starting an upload', () => {
     return interaction
         .click(screen.getByRole('button', { name: OPEN_MODAL_LABEL }))
         .then(() =>
-            interaction.upload(
-                screen.getByLabelText('avatarModal.pickerLabel'),
-                unsupportedFile,
-            ),
+            interaction.upload(screen.getByLabelText('avatarModal.pickerLabel'), unsupportedFile),
         )
         .then(() => {
             expect(screen.getByText('avatarModal.errors.unsupportedType')).toBeTruthy();
@@ -132,16 +129,11 @@ test('previews a valid file, shows upload progress, and closes after success', (
             });
 
             expect(uploadButton).toHaveProperty('disabled', true);
-            return interaction.upload(
-                screen.getByLabelText('avatarModal.pickerLabel'),
-                file,
-            );
+            return interaction.upload(screen.getByLabelText('avatarModal.pickerLabel'), file);
         })
         .then(() => {
             expect(screen.getByText(file.name)).toBeTruthy();
-            expect(
-                screen.getByRole('img', { name: 'avatarModal.previewLabel' }),
-            ).toBeTruthy();
+            expect(screen.getByRole('img', { name: 'avatarModal.previewLabel' })).toBeTruthy();
             expect(URL.createObjectURL).toHaveBeenCalledWith(file);
             expect(
                 screen.getByRole('button', { name: 'avatarModal.actions.upload' }),

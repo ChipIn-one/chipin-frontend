@@ -53,9 +53,4 @@ const HiddenFileInput = styled.input`
     border: 0;
 `;
 
-export {
-    CoverPickerLabel,
-    CoverPreview,
-    CoverPreviewImage,
-    HiddenFileInput,
-};
+export { CoverPickerLabel, CoverPreview, CoverPreviewImage, HiddenFileInput };

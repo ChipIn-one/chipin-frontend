@@ -128,23 +128,19 @@ test('lists one row per group debt with display names and two-digit precision', 
 
     render(<SettleUpModal source="group" group={group} />);
 
-    return user
-        .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
-        .then(() => {
-            const userDebtsHeading = screen.getByText('group:page.settleUp.youOwe');
-            const userIsOwedHeading = screen.getByText('group:page.settleUp.owedToYou');
+    return user.click(screen.getByRole('button', { name: 'common:buttons.settleUp' })).then(() => {
+        const userDebtsHeading = screen.getByText('group:page.settleUp.youOwe');
+        const userIsOwedHeading = screen.getByText('group:page.settleUp.owedToYou');
 
-            expect(
-                userDebtsHeading.compareDocumentPosition(userIsOwedHeading) &
-                    Node.DOCUMENT_POSITION_FOLLOWING,
-            ).toBeTruthy();
-            expect(
-                screen.getAllByRole('button', { name: /Debtor Person Full/ }),
-            ).toHaveLength(3);
-            expect(screen.getByText('823.23K USD')).toBeTruthy();
-            expect(screen.getByText('30.12 EUR')).toBeTruthy();
-            expect(screen.queryByText('6 AFN')).toBeNull();
-        });
+        expect(
+            userDebtsHeading.compareDocumentPosition(userIsOwedHeading) &
+                Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+        expect(screen.getAllByRole('button', { name: /Debtor Person Full/ })).toHaveLength(3);
+        expect(screen.getByText('823.23K USD')).toBeTruthy();
+        expect(screen.getByText('30.12 EUR')).toBeTruthy();
+        expect(screen.queryByText('6 AFN')).toBeNull();
+    });
 });
 
 test('uses summary formatting for the selected debt display', () => {
@@ -163,10 +159,7 @@ test('uses summary formatting for the selected debt display', () => {
         )
         .then(() => {
             expect(screen.getByText('823.23K USD')).toBeTruthy();
-            expect(screen.getByRole('textbox')).toHaveProperty(
-                'value',
-                '823226.67',
-            );
+            expect(screen.getByRole('textbox')).toHaveProperty('value', '823226.67');
         });
 });
 
@@ -189,9 +182,7 @@ test('toggles group debts beyond the first three rows within their section', () 
         .then(() => {
             expect(screen.getByText('6 AFN')).toBeTruthy();
             expect(screen.getAllByRole('button', { name: /Debtor/ })).toHaveLength(4);
-            return user.click(
-                screen.getByRole('button', { name: 'group:page.settleUp.showLess' }),
-            );
+            return user.click(screen.getByRole('button', { name: 'group:page.settleUp.showLess' }));
         })
         .then(() => {
             expect(screen.queryByText('6 AFN')).toBeNull();
@@ -204,11 +195,9 @@ test('does not show an explanatory description above the group debt sections', (
 
     render(<SettleUpModal source="group" group={group} />);
 
-    return user
-        .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
-        .then(() => {
-            expect(screen.queryByText('group:page.settleUp.chooseDebtDescription')).toBeNull();
-        });
+    return user.click(screen.getByRole('button', { name: 'common:buttons.settleUp' })).then(() => {
+        expect(screen.queryByText('group:page.settleUp.chooseDebtDescription')).toBeNull();
+    });
 });
 
 test('renders the group debt list as an accessible selection region', () => {
@@ -216,15 +205,13 @@ test('renders the group debt list as an accessible selection region', () => {
 
     render(<SettleUpModal source="group" group={group} />);
 
-    return user
-        .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
-        .then(() => {
-            expect(
-                screen.getByRole('region', {
-                    name: 'group:page.settleUp.chooseDebtTitle',
-                }),
-            ).toBeTruthy();
-        });
+    return user.click(screen.getByRole('button', { name: 'common:buttons.settleUp' })).then(() => {
+        expect(
+            screen.getByRole('region', {
+                name: 'group:page.settleUp.chooseDebtTitle',
+            }),
+        ).toBeTruthy();
+    });
 });
 
 test('keeps a single constrained scroll body for group debt selection', () => {
@@ -232,19 +219,15 @@ test('keeps a single constrained scroll body for group debt selection', () => {
 
     render(<SettleUpModal source="group" group={group} />);
 
-    return user
-        .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
-        .then(() => {
-            const dialog = screen.getByRole('dialog');
-            const scrollViewports = dialog.querySelectorAll(
-                '[data-radix-scroll-area-viewport]',
-            );
-            const scrollRoot = scrollViewports[0]?.closest('.rt-ScrollAreaRoot');
+    return user.click(screen.getByRole('button', { name: 'common:buttons.settleUp' })).then(() => {
+        const dialog = screen.getByRole('dialog');
+        const scrollViewports = dialog.querySelectorAll('[data-radix-scroll-area-viewport]');
+        const scrollRoot = scrollViewports[0]?.closest('.rt-ScrollAreaRoot');
 
-            expect(scrollViewports).toHaveLength(1);
-            expect(scrollRoot).not.toBeNull();
-            expect(getComputedStyle(scrollRoot as HTMLElement).maxHeight).not.toBe('none');
-        });
+        expect(scrollViewports).toHaveLength(1);
+        expect(scrollRoot).not.toBeNull();
+        expect(getComputedStyle(scrollRoot as HTMLElement).maxHeight).not.toBe('none');
+    });
 });
 
 test('keeps a hidden accessible description for the group debt selection dialog', () => {
@@ -252,17 +235,15 @@ test('keeps a hidden accessible description for the group debt selection dialog'
 
     render(<SettleUpModal source="group" group={group} />);
 
-    return user
-        .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
-        .then(() => {
-            const dialog = screen.getByRole('dialog');
-            const descriptionId = dialog.getAttribute('aria-describedby');
+    return user.click(screen.getByRole('button', { name: 'common:buttons.settleUp' })).then(() => {
+        const dialog = screen.getByRole('dialog');
+        const descriptionId = dialog.getAttribute('aria-describedby');
 
-            expect(descriptionId).not.toBeNull();
-            expect(document.getElementById(descriptionId ?? '')?.textContent).toBe(
-                'group:page.settleUp.chooseDebtAccessibleDescription',
-            );
-        });
+        expect(descriptionId).not.toBeNull();
+        expect(document.getElementById(descriptionId ?? '')?.textContent).toBe(
+            'group:page.settleUp.chooseDebtAccessibleDescription',
+        );
+    });
 });
 
 test('closes the group debt selection dialog from its cancel footer action', () => {
@@ -316,22 +297,21 @@ test('keeps the same dialog node while navigating to payment and back', () => {
     const user = userEvent.setup();
     render(<SettleUpModal source="group" group={group} />);
 
-    return user
-        .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
-        .then(() => {
-            const dialog = screen.getByRole('dialog');
+    return user.click(screen.getByRole('button', { name: 'common:buttons.settleUp' })).then(() => {
+        const dialog = screen.getByRole('dialog');
 
-            return user.click(
-                screen.getByRole('button', { name: /Debtor Person Full.*823/ }),
-            ).then(() => {
+        return user
+            .click(screen.getByRole('button', { name: /Debtor Person Full.*823/ }))
+            .then(() => {
                 expect(screen.getByRole('dialog')).toBe(dialog);
                 return user.click(screen.getByRole('button', { name: 'buttons.back' }));
-            }).then(() => {
+            })
+            .then(() => {
                 expect(screen.getByRole('dialog')).toBe(dialog);
                 expect(screen.getByText('group:page.settleUp.youOwe')).toBeTruthy();
                 expect(screen.queryByRole('button', { name: 'buttons.back' })).toBeNull();
             });
-        });
+    });
 });
 
 test('prevents submitting a group debt that disappears before payment starts', () => {
@@ -340,9 +320,7 @@ test('prevents submitting a group debt that disappears before payment starts', (
 
     return user
         .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
-        .then(() => user.click(
-            screen.getByRole('button', { name: /Debtor Person Full.*823/ }),
-        ))
+        .then(() => user.click(screen.getByRole('button', { name: /Debtor Person Full.*823/ })))
         .then(() => {
             const dialog = screen.getByRole('dialog');
             const updatedGroup = {
@@ -356,9 +334,11 @@ test('prevents submitting a group debt that disappears before payment starts', (
 
             expect(screen.getByRole('dialog')).toBe(dialog);
             expect(screen.queryByRole('textbox')).toBeNull();
-            expect(screen.queryByRole('button', {
-                name: 'friends:settleUp.recordPayment',
-            })).toBeNull();
+            expect(
+                screen.queryByRole('button', {
+                    name: 'friends:settleUp.recordPayment',
+                }),
+            ).toBeNull();
             expect(screen.getByText('group:page.balances.settled')).toBeTruthy();
         });
 });
@@ -370,9 +350,13 @@ test('sets the selected group debt with the Full debt and Half quick picks', () 
 
     return user
         .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
-        .then(() => user.click(screen.getByRole('button', {
-            name: /Debtor Person Full.*30.12 EUR/,
-        })))
+        .then(() =>
+            user.click(
+                screen.getByRole('button', {
+                    name: /Debtor Person Full.*30.12 EUR/,
+                }),
+            ),
+        )
         .then(() => {
             const input = screen.getByRole('textbox', {
                 name: 'friends:settleUp.paymentAmount',
@@ -390,9 +374,11 @@ test('sets the selected group debt with the Full debt and Half quick picks', () 
                 .then(() => user.keyboard('10'))
                 .then(() => {
                     expect(input).toHaveProperty('value', '10');
-                    return user.click(screen.getByRole('button', {
-                        name: 'friends:settleUp.fullDebt',
-                    }));
+                    return user.click(
+                        screen.getByRole('button', {
+                            name: 'friends:settleUp.fullDebt',
+                        }),
+                    );
                 })
                 .then(() => {
                     expect(input).toHaveProperty('value', '30.1234');
@@ -411,13 +397,21 @@ test('submits half of the selected group debt', () => {
 
     return user
         .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
-        .then(() => user.click(screen.getByRole('button', {
-            name: /Debtor Person Full.*90 BDT/,
-        })))
+        .then(() =>
+            user.click(
+                screen.getByRole('button', {
+                    name: /Debtor Person Full.*90 BDT/,
+                }),
+            ),
+        )
         .then(() => user.click(screen.getByRole('button', { name: 'friends:settleUp.half' })))
-        .then(() => user.click(screen.getByRole('button', {
-            name: 'friends:settleUp.recordPayment',
-        })))
+        .then(() =>
+            user.click(
+                screen.getByRole('button', {
+                    name: 'friends:settleUp.recordPayment',
+                }),
+            ),
+        )
         .then(() => {
             expect(createSettlement).toHaveBeenCalledWith({
                 fromUserId: currentUser.id,
@@ -443,12 +437,20 @@ test('keeps payment content while its already-started settlement request refresh
 
     return user
         .click(screen.getByRole('button', { name: 'common:buttons.settleUp' }))
-        .then(() => user.click(screen.getByRole('button', {
-            name: /Debtor Person Full.*823/,
-        })))
-        .then(() => user.click(screen.getByRole('button', {
-            name: 'friends:settleUp.recordPayment',
-        })))
+        .then(() =>
+            user.click(
+                screen.getByRole('button', {
+                    name: /Debtor Person Full.*823/,
+                }),
+            ),
+        )
+        .then(() =>
+            user.click(
+                screen.getByRole('button', {
+                    name: 'friends:settleUp.recordPayment',
+                }),
+            ),
+        )
         .then(() => {
             expect(createSettlement).toHaveBeenCalledOnce();
             const dialog = screen.getByRole('dialog');
@@ -464,9 +466,11 @@ test('keeps payment content while its already-started settlement request refresh
 
             expect(screen.getByRole('dialog')).toBe(dialog);
             expect(screen.getByRole('textbox')).toBeTruthy();
-            expect(screen.getByRole('button', {
-                name: 'friends:settleUp.recordPayment',
-            })).toHaveProperty('disabled', true);
+            expect(
+                screen.getByRole('button', {
+                    name: 'friends:settleUp.recordPayment',
+                }),
+            ).toHaveProperty('disabled', true);
 
             onResolve?.();
             return waitFor(() => {

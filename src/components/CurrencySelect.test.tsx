@@ -34,9 +34,7 @@ test('uses the currencies namespace for the search placeholder', () => {
         </ThemeProvider>,
     );
 
-    return interaction
-        .click(screen.getByRole('button', { name: /USD - US Dollar/i }))
-        .then(() => {
-            expect(screen.getByPlaceholderText('Search currency')).not.toBeNull();
-        });
+    return interaction.click(screen.getByRole('button', { name: /USD - US Dollar/i })).then(() => {
+        expect(screen.getByPlaceholderText('Search currency')).not.toBeNull();
+    });
 });

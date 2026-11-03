@@ -3,10 +3,7 @@ import { useLocation } from 'react-router-dom';
 
 import { Box, Flex, Text } from '@radix-ui/themes';
 
-import {
-    getPreferredModeRoute,
-    isNavigationRouteActive,
-} from 'helpers/routes';
+import { getPreferredModeRoute, isNavigationRouteActive } from 'helpers/routes';
 import { selectIsSoloMode } from 'store/dashboardSelectors';
 import { useDashboardStore } from 'store/dashboardStore';
 import { selectCanAccessSolo, useUsersStore } from 'store/users-store';
@@ -22,18 +19,13 @@ const HeaderNav = () => {
     const isSoloModeFromStore = useDashboardStore(selectIsSoloMode);
     const isSoloMode = canAccessSolo && isSoloModeFromStore;
     const activeColor = isSoloMode ? 'violet' : 'green';
-    const navElements = getNavElements(
-        getPreferredModeRoute(isSoloMode),
-    );
+    const navElements = getNavElements(getPreferredModeRoute(isSoloMode));
 
     return (
         <Box display={{ initial: 'none', sm: 'block' }}>
             <Flex justify="between" align="center" gap="5">
                 {navElements.map(({ href, labelKey, Icon }) => {
-                    const isActive = isNavigationRouteActive(
-                        location.pathname,
-                        href,
-                    );
+                    const isActive = isNavigationRouteActive(location.pathname, href);
 
                     return (
                         <NavButton

@@ -144,10 +144,7 @@ const UserAvatarModal = ({ children }: Props) => {
                 <>
                     <OverlayBody>
                         <Flex direction="column" align="center" gap="5">
-                            <PreviewBackdrop
-                                role="img"
-                                aria-label={t('avatarModal.previewLabel')}
-                            >
+                            <PreviewBackdrop role="img" aria-label={t('avatarModal.previewLabel')}>
                                 <UserAvatar
                                     user={user ?? undefined}
                                     src={resolvedPreviewUrl}
@@ -228,12 +225,7 @@ const UserAvatarModal = ({ children }: Props) => {
                     <OverlayFooter
                         cancelAction={
                             <Dialog.Close>
-                                <Button
-                                    size="3"
-                                    variant="soft"
-                                    color="gray"
-                                    disabled={isUploading}
-                                >
+                                <Button size="3" variant="soft" color="gray" disabled={isUploading}>
                                     {t('common:buttons.cancel')}
                                 </Button>
                             </Dialog.Close>

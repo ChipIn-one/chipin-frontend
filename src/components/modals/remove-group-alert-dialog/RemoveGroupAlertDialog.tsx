@@ -33,16 +33,17 @@ const RemoveGroupAlertDialog = ({ children }: Props) => {
 
         return removeGroup({ groupId: selectedGroup.id })
             .then(() => {
-                toast.success(t('toasts:group.removed', {
-                    name: selectedGroup.name,
-                }));
+                toast.success(
+                    t('toasts:group.removed', {
+                        name: selectedGroup.name,
+                    }),
+                );
                 navigate(ROUTES.DASHBOARD, { replace: true });
             })
             .catch(error => {
-                toast.error(resolveApiErrorMessageFromError(
-                    error,
-                    t('toasts:common.requestFailed'),
-                ));
+                toast.error(
+                    resolveApiErrorMessageFromError(error, t('toasts:common.requestFailed')),
+                );
                 return Promise.reject(error);
             });
     };

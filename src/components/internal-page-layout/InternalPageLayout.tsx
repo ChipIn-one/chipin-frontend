@@ -2,11 +2,7 @@ import type { ReactNode } from 'react';
 
 import { Box, Flex } from '@radix-ui/themes';
 
-import {
-    DESKTOP_SHELL_MAX_WIDTH,
-    DesktopSidebar,
-    MobileNavBar,
-} from 'components/nav-bars';
+import { DESKTOP_SHELL_MAX_WIDTH, DesktopSidebar, MobileNavBar } from 'components/nav-bars';
 
 interface Props {
     children: ReactNode;

@@ -62,7 +62,12 @@ const BaseModal = ({
                         ) : undefined
                     }
                     title={
-                        <Dialog.Title ref={titleRef} tabIndex={titleRef ? -1 : undefined} size="6" mb="0">
+                        <Dialog.Title
+                            ref={titleRef}
+                            tabIndex={titleRef ? -1 : undefined}
+                            size="6"
+                            mb="0"
+                        >
                             <Text color="gray">{title}</Text>
                         </Dialog.Title>
                     }

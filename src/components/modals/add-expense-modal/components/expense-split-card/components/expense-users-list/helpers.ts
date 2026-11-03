@@ -1,7 +1,4 @@
-import {
-    EXPENSE_SPLIT_MODES,
-    type ExpenseSplitMode,
-} from 'constants/chipin';
+import { EXPENSE_SPLIT_MODES, type ExpenseSplitMode } from 'constants/chipin';
 
 interface SplitControlLabels {
     decreaseAmount: string;

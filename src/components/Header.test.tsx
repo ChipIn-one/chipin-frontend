@@ -72,11 +72,9 @@ test('opens the Group route when an authenticated user clicks the logo', () => {
         </MemoryRouter>,
     );
 
-    return interaction
-        .click(screen.getByRole('link', { name: PROJECT_NAME }))
-        .then(() => {
-            expect(screen.getByLabelText('Current route').textContent).toBe('/dashboard');
-        });
+    return interaction.click(screen.getByRole('link', { name: PROJECT_NAME })).then(() => {
+        expect(screen.getByLabelText('Current route').textContent).toBe('/dashboard');
+    });
 });
 
 test('opens the Group route for a user with stale Solo state', () => {
@@ -99,13 +97,11 @@ test('opens the Group route for a user with stale Solo state', () => {
         </MemoryRouter>,
     );
 
-    return interaction
-        .click(screen.getByRole('link', { name: PROJECT_NAME }))
-        .then(() => {
-            expect(screen.getByLabelText('Current route').textContent).toBe('/dashboard');
-            expect(screen.getByText('Group')).toBeTruthy();
-            expect(screen.queryByText('Solo')).toBeNull();
-        });
+    return interaction.click(screen.getByRole('link', { name: PROJECT_NAME })).then(() => {
+        expect(screen.getByLabelText('Current route').textContent).toBe('/dashboard');
+        expect(screen.getByText('Group')).toBeTruthy();
+        expect(screen.queryByText('Solo')).toBeNull();
+    });
 });
 
 test('opens the Group route when the logo is clicked from another page with stale Solo state', () => {
@@ -130,11 +126,9 @@ test('opens the Group route when the logo is clicked from another page with stal
         </MemoryRouter>,
     );
 
-    return interaction
-        .click(screen.getByRole('link', { name: PROJECT_NAME }))
-        .then(() => {
-            expect(screen.getByLabelText('Current route').textContent).toBe('/dashboard');
-        });
+    return interaction.click(screen.getByRole('link', { name: PROJECT_NAME })).then(() => {
+        expect(screen.getByLabelText('Current route').textContent).toBe('/dashboard');
+    });
 });
 
 test('hides the mode badge on the landing page', () => {
@@ -168,11 +162,8 @@ test('hides the dev menu after authentication ends even with a cached admin role
         </MemoryRouter>,
     );
 
-    expect(
-        screen.queryByRole('button', { name: i18n.t('header.devMenu') }),
-    ).toBeNull();
+    expect(screen.queryByRole('button', { name: i18n.t('header.devMenu') })).toBeNull();
 });
-
 
 test('manual public language selection does not change SSG content or persist language', () => {
     const interaction = userEvent.setup();
@@ -227,10 +218,16 @@ test('public legal pages expose equivalent language URLs in the search dropdown'
         </MemoryRouter>,
     );
 
-    return interaction.click(screen.getByRole('button', { name: 'Interface language' })).then(() => {
-        expect(screen.getByRole('link', { name: 'English' }).getAttribute('href')).toBe('/privacy');
-        expect(screen.getByRole('link', { name: 'Russian' }).getAttribute('href')).toBe('/ru/privacy');
-    });
+    return interaction
+        .click(screen.getByRole('button', { name: 'Interface language' }))
+        .then(() => {
+            expect(screen.getByRole('link', { name: 'English' }).getAttribute('href')).toBe(
+                '/privacy',
+            );
+            expect(screen.getByRole('link', { name: 'Russian' }).getAttribute('href')).toBe(
+                '/ru/privacy',
+            );
+        });
 });
 
 test('signed-in visitors retain the public legal language selector', () => {
@@ -247,8 +244,14 @@ test('signed-in visitors retain the public legal language selector', () => {
         </MemoryRouter>,
     );
 
-    return interaction.click(screen.getByRole('button', { name: 'Interface language' })).then(() => {
-        expect(screen.getByRole('link', { name: 'English' }).getAttribute('href')).toBe('/terms');
-        expect(screen.getByRole('link', { name: 'Russian' }).getAttribute('href')).toBe('/ru/terms');
-    });
+    return interaction
+        .click(screen.getByRole('button', { name: 'Interface language' }))
+        .then(() => {
+            expect(screen.getByRole('link', { name: 'English' }).getAttribute('href')).toBe(
+                '/terms',
+            );
+            expect(screen.getByRole('link', { name: 'Russian' }).getAttribute('href')).toBe(
+                '/ru/terms',
+            );
+        });
 });

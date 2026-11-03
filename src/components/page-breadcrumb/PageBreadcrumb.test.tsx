@@ -24,11 +24,7 @@ const renderBreadcrumb = (
 ) => {
     render(
         <MemoryRouter initialEntries={initialEntries} initialIndex={initialIndex}>
-            <PageBreadcrumb
-                title="History"
-                subtitle="Expense details"
-                action={action}
-            />
+            <PageBreadcrumb title="History" subtitle="Expense details" action={action} />
             <Routes>
                 <Route path="*" element={<CurrentRoute />} />
             </Routes>
@@ -49,10 +45,7 @@ test('renders an optional subtitle without requiring one', () => {
 });
 
 test('renders an optional action without reserving an empty action slot', () => {
-    renderBreadcrumb(
-        ['/activity/activity-1'],
-        <button type="button">{ACTION_LABEL}</button>,
-    );
+    renderBreadcrumb(['/activity/activity-1'], <button type="button">{ACTION_LABEL}</button>);
 
     expect(screen.getByRole('button', { name: ACTION_LABEL })).toBeTruthy();
 });
@@ -68,11 +61,9 @@ test('navigates Back to the declarative structural parent', () => {
 
     renderBreadcrumb(['/settings', '/activity/activity-1'], null, 1);
 
-    return user
-        .click(screen.getByRole('link', { name: 'Back' }))
-        .then(() => {
-            expect(screen.getByLabelText('Current route').textContent).toBe('/activity');
-        });
+    return user.click(screen.getByRole('link', { name: 'Back' })).then(() => {
+        expect(screen.getByLabelText('Current route').textContent).toBe('/activity');
+    });
 });
 
 test('does not let a previous history entry determine the structural Back destination', () => {
@@ -80,11 +71,9 @@ test('does not let a previous history entry determine the structural Back destin
 
     renderBreadcrumb(['/activity', '/settings', '/activity/activity-1'], null, 2);
 
-    return user
-        .click(screen.getByRole('link', { name: 'Back' }))
-        .then(() => {
-            expect(screen.getByLabelText('Current route').textContent).toBe('/activity');
-        });
+    return user.click(screen.getByRole('link', { name: 'Back' })).then(() => {
+        expect(screen.getByLabelText('Current route').textContent).toBe('/activity');
+    });
 });
 
 test('does not render on a route without breadcrumb opt-in', () => {

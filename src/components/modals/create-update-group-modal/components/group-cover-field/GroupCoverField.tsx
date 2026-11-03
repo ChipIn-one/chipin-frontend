@@ -50,9 +50,7 @@ const GroupCoverField = ({
                     <Callout.Icon>
                         <CircleAlertIcon />
                     </Callout.Icon>
-                    <Callout.Text>
-                        {t(`modal.cover.errors.${coverValidationError}`)}
-                    </Callout.Text>
+                    <Callout.Text>{t(`modal.cover.errors.${coverValidationError}`)}</Callout.Text>
                 </Callout.Root>
             )}
 

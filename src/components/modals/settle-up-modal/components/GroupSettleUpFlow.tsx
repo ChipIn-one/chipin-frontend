@@ -10,7 +10,7 @@ import { useUsersStore } from 'store/users-store';
 
 import { MODAL_SIZES } from '../../base-modal';
 import { OverlayBody, OverlayFooter } from '../../components';
-import { type ModalRoute,ModalRouter } from '../../modal-router';
+import { type ModalRoute, ModalRouter } from '../../modal-router';
 import { type DebtOption, getDebtOptions } from '../internal';
 import type { GroupSettleUpProps } from '../types';
 
@@ -37,9 +37,7 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
         : { youOwe: [], owedToYou: [] };
     const settlementOptions = memberId
         ? {
-              youOwe: groupSettlementOptions.youOwe.filter(
-                  option => option.user.id === memberId,
-              ),
+              youOwe: groupSettlementOptions.youOwe.filter(option => option.user.id === memberId),
               owedToYou: groupSettlementOptions.owedToYou.filter(
                   option => option.user.id === memberId,
               ),
@@ -52,13 +50,11 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
     // Prevent submitting stale debt data. Retain the snapshot only while
     // this modal's already-started settlement request is completing.
     const selectedOption = selectedDebt
-        ? (
-              debts.find(
-                  debt =>
-                      debt.user.id === selectedDebt.user.id &&
-                      debt.balance.currency === selectedDebt.balance.currency,
-              ) ?? (isSettlementPending ? selectedDebt : undefined)
-          )
+        ? (debts.find(
+              debt =>
+                  debt.user.id === selectedDebt.user.id &&
+                  debt.balance.currency === selectedDebt.balance.currency,
+          ) ?? (isSettlementPending ? selectedDebt : undefined))
         : undefined;
 
     const onOpenChange = (isOpen: boolean) => {
@@ -83,9 +79,7 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
                             owedToYou={owedToYou}
                             isYouOweExpanded={isYouOweExpanded}
                             isOwedToYouExpanded={isOwedToYouExpanded}
-                            onToggleYouOwe={() =>
-                                setIsYouOweExpanded(isExpanded => !isExpanded)
-                            }
+                            onToggleYouOwe={() => setIsYouOweExpanded(isExpanded => !isExpanded)}
                             onToggleOwedToYou={() =>
                                 setIsOwedToYouExpanded(isExpanded => !isExpanded)
                             }
@@ -155,11 +149,7 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
                     disabled={debts.length === 0}
                 >
                     <ArrowLeftRightIcon size={15} />
-                    {t(
-                        isSettledMember
-                            ? 'group:page.balances.settled'
-                            : 'common:buttons.settleUp',
-                    )}
+                    {t(isSettledMember ? 'group:page.balances.settled' : 'common:buttons.settleUp')}
                 </Button>
             }
         />

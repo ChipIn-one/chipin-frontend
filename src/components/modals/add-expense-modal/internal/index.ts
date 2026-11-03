@@ -1,11 +1,3 @@
-import {
-    useExpenseModalOpenChange,
-    useExpenseModalSource,
-    useExpenseModalSubmit,
-} from './hooks';
+import { useExpenseModalOpenChange, useExpenseModalSource, useExpenseModalSubmit } from './hooks';
 
-export {
-    useExpenseModalOpenChange,
-    useExpenseModalSource,
-    useExpenseModalSubmit,
-};
+export { useExpenseModalOpenChange, useExpenseModalSource, useExpenseModalSubmit };

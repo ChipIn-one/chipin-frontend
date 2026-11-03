@@ -10,10 +10,7 @@ import { useGroupsStore } from 'store/groupsStore';
 import { Amount } from 'basics/numbers';
 import GroupAvatar from 'components/GroupAvatar';
 
-import {
-    GroupCardSurface,
-    GroupNavButton,
-} from './styled';
+import { GroupCardSurface, GroupNavButton } from './styled';
 
 interface Props {
     model: GroupCardViewModel;
@@ -37,15 +34,11 @@ const GroupCard = ({ model, isSelected = false }: Props) => {
     const directionAmount =
         model.netAmount ??
         (model.activeCurrencyCount === 1
-            ? model.sourceCurrencyBalance?.netBalance ?? null
+            ? (model.sourceCurrencyBalance?.netBalance ?? null)
             : null);
     const directionLabel =
         !model.isSettled && directionAmount !== null && directionAmount !== 0
-            ? tCommon(
-                  directionAmount > 0
-                      ? 'balances.youAreOwed'
-                      : 'balances.youOwe',
-              )
+            ? tCommon(directionAmount > 0 ? 'balances.youAreOwed' : 'balances.youOwe')
             : null;
 
     let secondaryBadge = null;
@@ -88,13 +81,7 @@ const GroupCard = ({ model, isSelected = false }: Props) => {
             >
                 <Flex align="center" gap="3" width="100%" minWidth="0">
                     <GroupAvatar group={group} size="4" />
-                    <Flex
-                        direction="column"
-                        gap="1"
-                        minWidth="0"
-                        flexGrow="1"
-                        flexShrink="1"
-                    >
+                    <Flex direction="column" gap="1" minWidth="0" flexGrow="1" flexShrink="1">
                         <Text size="3" weight="bold" truncate>
                             {group.name}
                         </Text>
@@ -102,13 +89,7 @@ const GroupCard = ({ model, isSelected = false }: Props) => {
                             {t('groupsCard.members', { count: group.members.length })}
                         </Text>
                     </Flex>
-                    <Flex
-                        direction="column"
-                        align="end"
-                        gap="1"
-                        flexShrink="0"
-                        maxWidth="48%"
-                    >
+                    <Flex direction="column" align="end" gap="1" flexShrink="0" maxWidth="48%">
                         {model.isSettled ? (
                             <Badge color="gray" size="1" variant="soft">
                                 {t('groupsCard.settled')}
@@ -126,9 +107,7 @@ const GroupCard = ({ model, isSelected = false }: Props) => {
                                         <>
                                             {t('groupsCard.unavailable')}
                                             {directionLabel && (
-                                                <VisuallyHidden>
-                                                    {directionLabel}
-                                                </VisuallyHidden>
+                                                <VisuallyHidden>{directionLabel}</VisuallyHidden>
                                             )}
                                         </>
                                     ) : (
@@ -146,9 +125,7 @@ const GroupCard = ({ model, isSelected = false }: Props) => {
                                                 type="summary"
                                             />
                                             {directionLabel && (
-                                                <VisuallyHidden>
-                                                    {directionLabel}
-                                                </VisuallyHidden>
+                                                <VisuallyHidden>{directionLabel}</VisuallyHidden>
                                             )}
                                         </>
                                     )}

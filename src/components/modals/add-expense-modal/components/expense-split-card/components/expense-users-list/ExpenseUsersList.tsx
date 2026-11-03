@@ -130,14 +130,9 @@ const ExpenseUserRow = memo(({ participantId }: ExpenseUserRowProps) => {
                         stepSize={controlData.stepSize}
                         minLabel={controlData.decreaseLabel}
                         plusLabel={controlData.increaseLabel}
-                        onChange={nextValue =>
-                            setSplitValue(participantId, nextValue)
-                        }
+                        onChange={nextValue => setSplitValue(participantId, nextValue)}
                         onStep={delta =>
-                            stepSplitValue(
-                                participantId,
-                                delta * controlData.stepSize,
-                            )
+                            stepSplitValue(participantId, delta * controlData.stepSize)
                         }
                     />
                 ) : null}
@@ -149,9 +144,7 @@ const ExpenseUserRow = memo(({ participantId }: ExpenseUserRowProps) => {
 ExpenseUserRow.displayName = 'ExpenseUserRow';
 
 const ExpenseUsersList = () => {
-    const participantIds = useExpenseModalStore(
-        useShallow(selectUserIds),
-    );
+    const participantIds = useExpenseModalStore(useShallow(selectUserIds));
 
     return (
         <Flex direction="column" gap="3">

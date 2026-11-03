@@ -10,12 +10,7 @@ interface Props {
 
 const OverlayBody = ({ children, fillHeight = false, maxHeight }: Props) => {
     return (
-        <Body
-            type="auto"
-            scrollbars="vertical"
-            $fillHeight={fillHeight}
-            $maxHeight={maxHeight}
-        >
+        <Body type="auto" scrollbars="vertical" $fillHeight={fillHeight} $maxHeight={maxHeight}>
             <BodyContent $fillHeight={fillHeight}>{children}</BodyContent>
         </Body>
     );

@@ -94,11 +94,7 @@ const DebtSection = ({ debts, isExpanded, isUserOwing, onToggle, onSelect }: Pro
                     {isExpanded
                         ? t('group:page.settleUp.showLess')
                         : t('group:page.settleUp.showMore', { count: hiddenDebtCount })}
-                    {isExpanded ? (
-                        <ChevronUpIcon size={18} />
-                    ) : (
-                        <ChevronDownIcon size={18} />
-                    )}
+                    {isExpanded ? <ChevronUpIcon size={18} /> : <ChevronDownIcon size={18} />}
                 </ShowMoreButton>
             )}
         </Flex>

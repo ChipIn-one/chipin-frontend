@@ -88,31 +88,27 @@ const DashBoardSummary = ({ isLoading = false, hasExpenseHistory = false }: Prop
     );
 
     const detailsContent = (
-                    <Flex direction="column" gap="3">
-                        <Flex
-                            id={SUMMARY_DETAILS_ID}
-                            direction="column"
-                            gap="3"
-                        >
-                            {hasOwing && (
-                                <Flex direction="column" gap="1" minWidth="0">
-                                    <Text color="tomato" size="3" weight="bold">
-                                        {t('summary.youOwe')}
-                                    </Text>
-                                    <BalanceBadges items={oweBadgeItems} />
-                                </Flex>
-                            )}
-
-                            {hasOwed && (
-                                <Flex direction="column" gap="1" minWidth="0">
-                                    <Text color="grass" size="3" weight="bold">
-                                        {t('summary.owedToYou')}
-                                    </Text>
-                                    <BalanceBadges items={owedBadgeItems} />
-                                </Flex>
-                            )}
-                        </Flex>
+        <Flex direction="column" gap="3">
+            <Flex id={SUMMARY_DETAILS_ID} direction="column" gap="3">
+                {hasOwing && (
+                    <Flex direction="column" gap="1" minWidth="0">
+                        <Text color="tomato" size="3" weight="bold">
+                            {t('summary.youOwe')}
+                        </Text>
+                        <BalanceBadges items={oweBadgeItems} />
                     </Flex>
+                )}
+
+                {hasOwed && (
+                    <Flex direction="column" gap="1" minWidth="0">
+                        <Text color="grass" size="3" weight="bold">
+                            {t('summary.owedToYou')}
+                        </Text>
+                        <BalanceBadges items={owedBadgeItems} />
+                    </Flex>
+                )}
+            </Flex>
+        </Flex>
     );
 
     const summaryCard = <Card size="1">{summaryContent}</Card>;
@@ -153,9 +149,7 @@ const DashBoardSummary = ({ isLoading = false, hasExpenseHistory = false }: Prop
                 </SummaryCardButton>
             </Card>
 
-            {isExpanded && (
-                <Card size="1">{detailsContent}</Card>
-            )}
+            {isExpanded && <Card size="1">{detailsContent}</Card>}
         </Flex>
     );
 };

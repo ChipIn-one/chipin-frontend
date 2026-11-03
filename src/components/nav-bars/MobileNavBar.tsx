@@ -3,10 +3,7 @@ import { useLocation } from 'react-router-dom';
 
 import { Box, Flex, Text } from '@radix-ui/themes';
 
-import {
-    getPreferredModeRoute,
-    isNavigationRouteActive,
-} from 'helpers/routes';
+import { getPreferredModeRoute, isNavigationRouteActive } from 'helpers/routes';
 import { useAddExpenseAvailability } from 'hooks/useAddExpenseAvailability';
 
 import AddExpenseButton from 'components/AddExpenseButton';
@@ -24,18 +21,14 @@ import {
 const MobileNavBar = () => {
     const location = useLocation();
     const { t } = useTranslation('common');
-    const { isSoloMode, isVisible: isAddExpenseVisible } =
-        useAddExpenseAvailability(location.pathname);
-    const activeColor = isSoloMode ? 'violet' : 'green';
-    const navElements = getNavElements(
-        getPreferredModeRoute(isSoloMode),
+    const { isSoloMode, isVisible: isAddExpenseVisible } = useAddExpenseAvailability(
+        location.pathname,
     );
+    const activeColor = isSoloMode ? 'violet' : 'green';
+    const navElements = getNavElements(getPreferredModeRoute(isSoloMode));
 
     const renderNavItem = ({ labelKey, href, Icon }: NavElement) => {
-        const isActive = isNavigationRouteActive(
-            location.pathname,
-            href,
-        );
+        const isActive = isNavigationRouteActive(location.pathname, href);
 
         return (
             <Box key={href} flexGrow="1">
@@ -45,18 +38,9 @@ const MobileNavBar = () => {
                     radius="none"
                     variant={isActive ? 'solid' : 'surface'}
                 >
-                    <Flex
-                        direction="column"
-                        align="center"
-                        justify="center"
-                        gap="1"
-                        py="1"
-                    >
+                    <Flex direction="column" align="center" justify="center" gap="1" py="1">
                         <Icon size={20} />
-                        <Text
-                            size="1"
-                            {...(!isActive && { color: 'gray' })}
-                        >
+                        <Text size="1" {...(!isActive && { color: 'gray' })}>
                             {t(labelKey)}
                         </Text>
                     </Flex>
@@ -73,9 +57,7 @@ const MobileNavBar = () => {
             left="0"
             right="0"
         >
-            <MobileNavSurface
-                $hasCenterAction={isAddExpenseVisible}
-            />
+            <MobileNavSurface $hasCenterAction={isAddExpenseVisible} />
 
             <MobileNavContent align="stretch">
                 <MobileNavItems justify="between" align="stretch">

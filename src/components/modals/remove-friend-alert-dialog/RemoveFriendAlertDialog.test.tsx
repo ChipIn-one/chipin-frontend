@@ -42,13 +42,7 @@ test('waits for explicit confirmation before removing a friend', () => {
 
     useUsersStore.setState({ removeFriend });
 
-    render(
-        <RemoveFriendAlertDialog
-            friend={friend}
-            isOpened
-            setIsOpened={vi.fn()}
-        />,
-    );
+    render(<RemoveFriendAlertDialog friend={friend} isOpened setIsOpened={vi.fn()} />);
 
     expect(screen.getByRole('alertdialog')).toBeTruthy();
     expect(removeFriend).not.toHaveBeenCalled();

@@ -26,7 +26,10 @@ const ExpenseScopeContext = () => {
             }
 
             if (!scopeIsGroup(state)) {
-                if (state.source.currentUser && state.includedParticipantIds[state.source.currentUser.id]) {
+                if (
+                    state.source.currentUser &&
+                    state.includedParticipantIds[state.source.currentUser.id]
+                ) {
                     includedUsers.push(state.source.currentUser.displayName);
                 }
 

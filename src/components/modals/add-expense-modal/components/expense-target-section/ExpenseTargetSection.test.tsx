@@ -6,10 +6,7 @@ import { act, render, screen } from '@testing-library/react';
 
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
 import { lightThemeStyled } from 'constants/styled-themes';
-import type {
-    ExpenseModalEditInitialization,
-    ExpenseParticipant,
-} from 'store/expenseModalStore';
+import type { ExpenseModalEditInitialization, ExpenseParticipant } from 'store/expenseModalStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import { ExpenseButtons } from '../expense-buttons';

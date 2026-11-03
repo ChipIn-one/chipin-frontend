@@ -50,9 +50,9 @@ test('renders a blocking localized dialog with an accessible retry action', () =
 test('reserves retry feedback space before the first failed retry', () => {
     renderPage();
 
-    expect(
-        screen.getByText('backendUnavailable.retryFailed').getAttribute('aria-hidden'),
-    ).toBe('true');
+    expect(screen.getByText('backendUnavailable.retryFailed').getAttribute('aria-hidden')).toBe(
+        'true',
+    );
 });
 
 test('shows a stable loading state and prevents duplicate retries', async () => {

@@ -71,9 +71,7 @@ beforeEach(() => {
 });
 
 test('shows the Add expense action on Settings when a valid target exists', () => {
-    useLoadingStore
-        .getState()
-        .setLoading('users', 'friends', 'fetched');
+    useLoadingStore.getState().setLoading('users', 'friends', 'fetched');
     useUsersStore.setState({ friends: [friend] });
 
     render(
@@ -107,9 +105,7 @@ test('shows the authenticated navigation and profile actions', () => {
 
     expect(dashboardLink.getAttribute('aria-current')).toBe('page');
     expect(getComputedStyle(dashboardLink).marginLeft).toBe('0px');
-    expect(
-        screen.getByRole('link', { name: 'Activity' }).getAttribute('aria-current'),
-    ).toBeNull();
+    expect(screen.getByRole('link', { name: 'Activity' }).getAttribute('aria-current')).toBeNull();
     expect(screen.getByRole('link', { name: 'Friends' })).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Settings' })).toBeTruthy();
     expect(screen.queryByRole('switch', { name: 'Group mode' })).toBeNull();
@@ -171,7 +167,7 @@ test('shows the developer menu for an admin', () => {
         </MemoryRouter>,
     );
 
-    expect(
-        screen.getByRole('button', { name: 'Developer menu' }).textContent,
-    ).toContain('Developer menu');
+    expect(screen.getByRole('button', { name: 'Developer menu' }).textContent).toContain(
+        'Developer menu',
+    );
 });

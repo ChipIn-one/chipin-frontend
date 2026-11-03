@@ -9,15 +9,14 @@ import { AmountBox, DescriptionInput, LargeAmountInput } from './styled';
 
 const ExpenseAmountFields = () => {
     const { t } = useTranslation('group');
-    const { amount, description, setAmount, setDescription } =
-        useExpenseModalStore(
-            useShallow(state => ({
-                amount: state.amount,
-                description: state.description,
-                setAmount: state.setAmount,
-                setDescription: state.setDescription,
-            })),
-        );
+    const { amount, description, setAmount, setDescription } = useExpenseModalStore(
+        useShallow(state => ({
+            amount: state.amount,
+            description: state.description,
+            setAmount: state.setAmount,
+            setDescription: state.setDescription,
+        })),
+    );
 
     return (
         <AmountBox>
@@ -25,13 +24,7 @@ const ExpenseAmountFields = () => {
                 {t('common:fields.amount')}
             </Text>
 
-            <LargeAmountInput
-                value={amount}
-                onChange={setAmount}
-                color="gray"
-                size="3"
-                autoFocus
-            />
+            <LargeAmountInput value={amount} onChange={setAmount} color="gray" size="3" autoFocus />
 
             <DescriptionInput
                 type="text"

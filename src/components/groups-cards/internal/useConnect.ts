@@ -6,10 +6,7 @@ import type { GroupDebtFilter } from 'constants/groups';
 import { getUnixTimestampInSec } from 'helpers/time';
 import { useDashboardStore } from 'store/dashboardStore';
 import { selectGroupsCardsView } from 'store/groupsSelectors';
-import {
-    selectDashboardFetched,
-    selectGroupListFetched,
-} from 'store/loadingSelectors';
+import { selectDashboardFetched, selectGroupListFetched } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 import { selectUserCurrency, useUsersStore } from 'store/users-store';
 
@@ -20,12 +17,7 @@ interface Options {
     selectedGroupId?: Group['id'];
 }
 
-const useConnect = ({
-    groups,
-    filter,
-    query,
-    selectedGroupId,
-}: Options) => {
+const useConnect = ({ groups, filter, query, selectedGroupId }: Options) => {
     const [nowTimestamp] = useState(() => getUnixTimestampInSec());
 
     const { isDashboardFetched, isGroupListFetched } = useLoadingStore(

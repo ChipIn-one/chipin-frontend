@@ -1,9 +1,4 @@
-import {
-    CheckIcon,
-    Link2Icon,
-    QrCodeIcon,
-    Share2Icon,
-} from 'lucide-react';
+import { CheckIcon, Link2Icon, QrCodeIcon, Share2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
@@ -31,28 +26,15 @@ interface Props {
 
 const InviteActionRows = ({ invite }: Props) => {
     const { t } = useTranslation(['group', 'common']);
-    const {
-        inviteLink,
-        isNativeShareSupported,
-        isShareDone,
-        isCopied,
-        qr,
-        onShare,
-        onCopyLink,
-    } = invite;
+    const { inviteLink, isNativeShareSupported, isShareDone, isCopied, qr, onShare, onCopyLink } =
+        invite;
 
     let primaryIcon = <Link2Icon size={16} />;
-    let primaryLabel = isCopied
-        ? t('common:copy.copied')
-        : t('group:page.settings.copyLinkTitle');
+    let primaryLabel = isCopied ? t('common:copy.copied') : t('group:page.settings.copyLinkTitle');
 
     if (isNativeShareSupported) {
-        primaryIcon = isShareDone
-            ? <CheckIcon size={16} />
-            : <Share2Icon size={16} />;
-        primaryLabel = isShareDone
-            ? t('common:copy.shared')
-            : t('common:buttons.invitePeople');
+        primaryIcon = isShareDone ? <CheckIcon size={16} /> : <Share2Icon size={16} />;
+        primaryLabel = isShareDone ? t('common:copy.shared') : t('common:buttons.invitePeople');
     }
 
     const onPrimaryInvite = (): Promise<void> => {
@@ -97,9 +79,7 @@ const InviteActionRows = ({ invite }: Props) => {
                                 variant="soft"
                                 color="indigo"
                                 fallback={
-                                    isCopied
-                                        ? <CheckIcon size={16} />
-                                        : <Link2Icon size={16} />
+                                    isCopied ? <CheckIcon size={16} /> : <Link2Icon size={16} />
                                 }
                             />
                             <Flex direction="column" gap="1">

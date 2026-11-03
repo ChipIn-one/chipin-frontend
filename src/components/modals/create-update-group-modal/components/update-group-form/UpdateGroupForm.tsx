@@ -59,10 +59,7 @@ const UpdateGroupForm = ({ onClose }: Props) => {
             onProgress: setUploadProgress,
         }).catch((error: unknown) => {
             setUploadProgress(0);
-            toast.error(resolveApiErrorMessageFromError(
-                error,
-                t('toasts:group.coverUploadError'),
-            ));
+            toast.error(resolveApiErrorMessageFromError(error, t('toasts:group.coverUploadError')));
             console.error('Error uploading group cover:', error);
             return Promise.reject(error);
         });
@@ -86,10 +83,7 @@ const UpdateGroupForm = ({ onClose }: Props) => {
             groupDescription: normalizedDescription,
         })
             .catch((error: unknown) => {
-                toast.error(resolveApiErrorMessageFromError(
-                    error,
-                    t('toasts:group.updateError'),
-                ));
+                toast.error(resolveApiErrorMessageFromError(error, t('toasts:group.updateError')));
                 console.error('Error updating group:', error);
                 return Promise.reject(error);
             })

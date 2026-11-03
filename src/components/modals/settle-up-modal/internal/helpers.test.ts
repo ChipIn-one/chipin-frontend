@@ -134,19 +134,16 @@ test('builds a fully settled model when the friend owes', () => {
     });
 });
 
-test.each(['', '0', '-1', '100.01', 'invalid'])(
-    'disables invalid settlement amount %s',
-    amount => {
-        const model = getSettlementViewModel({
-            user: currentUser,
-            friend,
-            balance: { currency: 'USD', netAmount: -100 },
-            amount,
-        });
+test.each(['', '0', '-1', '100.01', 'invalid'])('disables invalid settlement amount %s', amount => {
+    const model = getSettlementViewModel({
+        user: currentUser,
+        friend,
+        balance: { currency: 'USD', netAmount: -100 },
+        amount,
+    });
 
-        expect(model.isSubmitDisabled).toBe(true);
-    },
-);
+    expect(model.isSubmitDisabled).toBe(true);
+});
 
 test.each([
     [-100, '50'],

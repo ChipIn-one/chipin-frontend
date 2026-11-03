@@ -59,10 +59,7 @@ const CreateGroupForm = ({ onClose }: Props) => {
             onProgress: setUploadProgress,
         }).catch((error: unknown) => {
             setUploadProgress(0);
-            toast.error(resolveApiErrorMessageFromError(
-                error,
-                t('toasts:group.coverUploadError'),
-            ));
+            toast.error(resolveApiErrorMessageFromError(error, t('toasts:group.coverUploadError')));
             console.error('Error uploading group cover:', error);
             return Promise.reject(error);
         });
@@ -93,19 +90,16 @@ const CreateGroupForm = ({ onClose }: Props) => {
                       return group;
                   })
                   .catch((error: unknown) => {
-                      toast.error(resolveApiErrorMessageFromError(
-                          error,
-                          t('toasts:group.createError'),
-                      ));
+                      toast.error(
+                          resolveApiErrorMessageFromError(error, t('toasts:group.createError')),
+                      );
                       console.error('Error creating group:', error);
                       return Promise.reject(error);
                   });
 
-        createRequest
-            .then(uploadSelectedCover)
-            .then(onSaveSuccess, () => {
-                // The request stages already show the error and keep the form open.
-            });
+        createRequest.then(uploadSelectedCover).then(onSaveSuccess, () => {
+            // The request stages already show the error and keep the form open.
+        });
     };
 
     const coverPicker = (
@@ -156,9 +150,7 @@ const CreateGroupForm = ({ onClose }: Props) => {
                         loading={isSaving}
                         onClick={onClickSave}
                     >
-                        {isGroupCreated
-                            ? t('modal.cover.retry')
-                            : t('common:buttons.createGroup')}
+                        {isGroupCreated ? t('modal.cover.retry') : t('common:buttons.createGroup')}
                     </Button>
                 }
             />

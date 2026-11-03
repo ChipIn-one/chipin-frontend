@@ -102,12 +102,7 @@ const BaseAlertDialog = ({
                 <OverlayFooter
                     cancelAction={
                         <AlertDialog.Cancel>
-                            <Button
-                                size="3"
-                                variant="soft"
-                                color="gray"
-                                disabled={isPending}
-                            >
+                            <Button size="3" variant="soft" color="gray" disabled={isPending}>
                                 {t('buttons.cancel')}
                             </Button>
                         </AlertDialog.Cancel>

@@ -68,9 +68,7 @@ test('expands and collapses the profile actions', () => {
     expect(profileButton.getAttribute('aria-expanded')).toBe('false');
     expect(profileButton.getAttribute('data-accent-color')).toBe('green');
     expect(profileButton.querySelector('.lucide-chevron-down')).toBeTruthy();
-    expect(container.querySelector('.rt-AvatarRoot')?.classList.contains('rt-r-size-4')).toBe(
-        true,
-    );
+    expect(container.querySelector('.rt-AvatarRoot')?.classList.contains('rt-r-size-4')).toBe(true);
     expect(screen.queryByRole('button', { name: 'Sign Out' })).toBeNull();
 
     return interaction
@@ -120,8 +118,7 @@ test('disables sign out while the request is loading', () => {
         .click(screen.getByRole('button', { name: /Alex.*user@example\.com/i }))
         .then(() => {
             expect(
-                (screen.getByRole('button', { name: 'Sign Out' }) as HTMLButtonElement)
-                    .disabled,
+                (screen.getByRole('button', { name: 'Sign Out' }) as HTMLButtonElement).disabled,
             ).toBe(true);
         });
 });

@@ -10,12 +10,7 @@ const ActivityDateDividerSkeleton = ({ isShowSummary }: Props) => {
     const { t } = useTranslation('skeletons');
 
     return (
-        <Flex
-            align="center"
-            gap="3"
-            py="2"
-            data-activity-date-divider-skeleton
-        >
+        <Flex align="center" gap="3" py="2" data-activity-date-divider-skeleton>
             <Text size="1" color="gray" weight="medium" wrap="nowrap">
                 <Skeleton>{t('activityFeed.dateDivider')}</Skeleton>
             </Text>

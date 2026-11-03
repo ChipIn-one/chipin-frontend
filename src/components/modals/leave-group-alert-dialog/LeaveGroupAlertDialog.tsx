@@ -56,16 +56,17 @@ const LeaveGroupAlertDialog = ({ children }: Props) => {
             ...(mustTransfer && { newOwnerId }),
         })
             .then(() => {
-                toast.success(t('toasts:group.left', {
-                    name: selectedGroup.name,
-                }));
+                toast.success(
+                    t('toasts:group.left', {
+                        name: selectedGroup.name,
+                    }),
+                );
                 navigate(ROUTES.DASHBOARD, { replace: true });
             })
             .catch(error => {
-                toast.error(resolveApiErrorMessageFromError(
-                    error,
-                    t('toasts:common.requestFailed'),
-                ));
+                toast.error(
+                    resolveApiErrorMessageFromError(error, t('toasts:common.requestFailed')),
+                );
                 return Promise.reject(error);
             });
     };
@@ -94,9 +95,7 @@ const LeaveGroupAlertDialog = ({ children }: Props) => {
                 mustTransfer ? (
                     <Flex direction="column" gap="4">
                         <Callout.Root color="amber" size="2">
-                            <Callout.Text>
-                                {t('group:leaveModal.ownerWarning')}
-                            </Callout.Text>
+                            <Callout.Text>{t('group:leaveModal.ownerWarning')}</Callout.Text>
                         </Callout.Root>
 
                         <Select

@@ -52,7 +52,9 @@ test('EXP-064 keeps the status mounted as participant feedback clears and return
         store.toggleAllParticipants();
         store.setAmount('10');
     });
-    expect(status.textContent).toBe('Select eligible participants for this expense. For a direct expense, select a friend whose invitation has been accepted.');
+    expect(status.textContent).toBe(
+        'Select eligible participants for this expense. For a direct expense, select a friend whose invitation has been accepted.',
+    );
     expect(button).toHaveProperty('disabled', true);
 
     act(() => useExpenseModalStore.getState().toggleAllParticipants());
@@ -183,8 +185,14 @@ test('EXP-064 explains a percent total that rounds below the display precision',
 });
 
 test.each([
-    ['9.998', 'Allocated 9.998 USD of 10 USD. Add the remaining 0.002 USD so the amounts equal the expense total.'],
-    ['10.002', 'Allocated 10.002 USD of 10 USD. Remove the excess 0.002 USD so the amounts equal the expense total.'],
+    [
+        '9.998',
+        'Allocated 9.998 USD of 10 USD. Add the remaining 0.002 USD so the amounts equal the expense total.',
+    ],
+    [
+        '10.002',
+        'Allocated 10.002 USD of 10 USD. Remove the excess 0.002 USD so the amounts equal the expense total.',
+    ],
 ])('EXP-064 preserves the visible exact amount mismatch for %s', (allocated, message) => {
     useExpenseModalStore.setState({
         amount: '10',
@@ -208,7 +216,9 @@ test('EXP-064 explains a non-positive total share weight', () => {
         shareWeights: { self: '0', friend: '0' },
     });
     render(<ExpenseButtons onClose={vi.fn()} />);
-    expect(screen.getByRole('status').textContent).toBe('Give at least one participant a positive share. The total share weight must be greater than zero.');
+    expect(screen.getByRole('status').textContent).toBe(
+        'Give at least one participant a positive share. The total share weight must be greater than zero.',
+    );
 
     act(() => useExpenseModalStore.getState().setSplitValue(friend.id, '1'));
     expect(screen.getByRole('status').textContent).toBe('');
@@ -255,21 +265,41 @@ test('EXP-064 distinguishes an unchanged Save from invalid input and submission 
     expect(button.getAttribute('aria-describedby')).toBe(status.id);
 });
 
-test.each(['en', 'ru', 'es', 'pt-BR', 'pt-PT'])('EXP-064 localizes all blocker messages in %s', language => {
-    const reasons = ['amount', 'target', 'participants', 'payer', 'percentUnder', 'percentOver', 'amountsUnder', 'amountsOver', 'shares', 'noDebt', 'unchanged'];
-    return i18n.changeLanguage(language).then(() => {
-        for (const reason of reasons) {
-            expect(i18n.exists(`group:expenses.modal.submitFeedback.${reason}`, { lng: language, fallbackLng: false })).toBe(true);
-        }
-        render(<ExpenseButtons onClose={vi.fn()} />);
-        const status = screen.getByRole('status');
-        expect(status.textContent).not.toBe('');
-        expect(status.textContent).not.toContain('submitFeedback');
-        if (language !== 'en') {
-            expect(status.textContent).not.toBe('Enter an amount greater than zero.');
-        }
-    });
-});
+test.each(['en', 'ru', 'es', 'pt-BR', 'pt-PT'])(
+    'EXP-064 localizes all blocker messages in %s',
+    language => {
+        const reasons = [
+            'amount',
+            'target',
+            'participants',
+            'payer',
+            'percentUnder',
+            'percentOver',
+            'amountsUnder',
+            'amountsOver',
+            'shares',
+            'noDebt',
+            'unchanged',
+        ];
+        return i18n.changeLanguage(language).then(() => {
+            for (const reason of reasons) {
+                expect(
+                    i18n.exists(`group:expenses.modal.submitFeedback.${reason}`, {
+                        lng: language,
+                        fallbackLng: false,
+                    }),
+                ).toBe(true);
+            }
+            render(<ExpenseButtons onClose={vi.fn()} />);
+            const status = screen.getByRole('status');
+            expect(status.textContent).not.toBe('');
+            expect(status.textContent).not.toContain('submitFeedback');
+            if (language !== 'en') {
+                expect(status.textContent).not.toBe('Enter an amount greater than zero.');
+            }
+        });
+    },
+);
 
 test('keeps cancellation available while input is invalid', () => {
     const user = userEvent.setup();

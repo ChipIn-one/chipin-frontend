@@ -32,15 +32,16 @@ const KickGroupMemberAlertDialog = ({ children, member }: Props) => {
 
         return kickGroupMember({ groupId: selectedGroup.id, userId: member.id })
             .then(() => {
-                toast.success(t('toasts:group.kicked', {
-                    name: member.displayName,
-                }));
+                toast.success(
+                    t('toasts:group.kicked', {
+                        name: member.displayName,
+                    }),
+                );
             })
             .catch(error => {
-                toast.error(resolveApiErrorMessageFromError(
-                    error,
-                    t('toasts:common.requestFailed'),
-                ));
+                toast.error(
+                    resolveApiErrorMessageFromError(error, t('toasts:common.requestFailed')),
+                );
                 return Promise.reject(error);
             });
     };
@@ -61,9 +62,7 @@ const KickGroupMemberAlertDialog = ({ children, member }: Props) => {
                     <Callout.Icon>
                         <TriangleAlertIcon size={18} />
                     </Callout.Icon>
-                    <Callout.Text>
-                        {t('group:kickModal.transferExpensesWarning')}
-                    </Callout.Text>
+                    <Callout.Text>{t('group:kickModal.transferExpensesWarning')}</Callout.Text>
                 </Callout.Root>
             }
         />
