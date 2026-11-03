@@ -113,12 +113,10 @@ test('shows the update section only when an update is available', () => {
         </GlobalErrorBoundary>,
     );
 
-    return screen
-        .findByRole('button', { name: 'errorBoundary.updateApp' })
-        .then(updateButton => {
-            expect(updateButton).toBeTruthy();
-            expect(screen.getByText('errorBoundary.or')).toBeTruthy();
-        });
+    return screen.findByRole('button', { name: 'errorBoundary.updateApp' }).then(updateButton => {
+        expect(updateButton).toBeTruthy();
+        expect(screen.getByText('errorBoundary.or')).toBeTruthy();
+    });
 });
 
 test('activates the available update before reloading', () => {
@@ -222,11 +220,9 @@ test('reloads even when action diagnostics cannot be reported', () => {
         </GlobalErrorBoundary>,
     );
 
-    return user
-        .click(screen.getByRole('button', { name: 'errorBoundary.tryAgain' }))
-        .then(() => {
-            expect(mocks.reloadCurrentPage).toHaveBeenCalledOnce();
-        });
+    return user.click(screen.getByRole('button', { name: 'errorBoundary.tryAgain' })).then(() => {
+        expect(mocks.reloadCurrentPage).toHaveBeenCalledOnce();
+    });
 });
 
 test('does not automatically reload when the same crash renders again', () => {

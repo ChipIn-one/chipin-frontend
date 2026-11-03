@@ -30,9 +30,7 @@ test('shows the current user identity', () => {
 
     expect(screen.getByText('Alex')).toBeTruthy();
     expect(screen.getByText('user@example.com')).toBeTruthy();
-    expect(container.querySelector('.rt-AvatarRoot')?.classList.contains('rt-r-size-5')).toBe(
-        true,
-    );
+    expect(container.querySelector('.rt-AvatarRoot')?.classList.contains('rt-r-size-5')).toBe(true);
 });
 
 test('uses the requested avatar size', () => {
@@ -42,7 +40,5 @@ test('uses the requested avatar size', () => {
         </ThemeProvider>,
     );
 
-    expect(container.querySelector('.rt-AvatarRoot')?.classList.contains('rt-r-size-4')).toBe(
-        true,
-    );
+    expect(container.querySelector('.rt-AvatarRoot')?.classList.contains('rt-r-size-4')).toBe(true);
 });

@@ -1,7 +1,4 @@
-import {
-    EXPENSE_SPLIT_MODES,
-    EXPENSE_SPLIT_STATUSES,
-} from 'constants/chipin';
+import { EXPENSE_SPLIT_MODES, EXPENSE_SPLIT_STATUSES } from 'constants/chipin';
 
 export const EXPENSE_SPLIT_MODE_ITEMS = [
     {

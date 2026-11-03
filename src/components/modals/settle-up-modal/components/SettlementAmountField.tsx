@@ -6,12 +6,7 @@ import { Button, Flex, Text, TextField } from '@radix-ui/themes';
 
 import Select, { type SelectItem } from 'components/Select';
 
-import {
-    AmountField,
-    CurrencyField,
-    LargeAmountInput,
-    StaticCurrencyField,
-} from '../styled';
+import { AmountField, CurrencyField, LargeAmountInput, StaticCurrencyField } from '../styled';
 
 interface Props {
     inputId: string;

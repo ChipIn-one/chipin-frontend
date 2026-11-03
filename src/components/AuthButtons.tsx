@@ -34,7 +34,6 @@ const AuthButtons = () => {
                 <GoogleIconSvg width={18} height={18} />
                 {t('button.google')}
             </Button>
-
         </Flex>
     );
 };

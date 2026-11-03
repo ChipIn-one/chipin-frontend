@@ -115,8 +115,7 @@ test('does not rerun when only the callback identity changes', () => {
     const firstOnOpenChange = vi.fn();
     const secondOnOpenChange = vi.fn();
     const { rerender } = renderHook(
-        ({ onOpenChange }) =>
-            useExpenseModalOpenChange(true, onOpenChange),
+        ({ onOpenChange }) => useExpenseModalOpenChange(true, onOpenChange),
         { initialProps: { onOpenChange: firstOnOpenChange } },
     );
 

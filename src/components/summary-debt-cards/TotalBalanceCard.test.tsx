@@ -12,11 +12,7 @@ vi.mock('react-i18next', () => ({
 test('renders a negative dashboard total without a minus sign', () => {
     render(
         <Theme>
-            <TotalBalanceCard
-                isLoading={false}
-                netTotalInBase={-12.5}
-                defaultCurrency="USD"
-            />
+            <TotalBalanceCard isLoading={false} netTotalInBase={-12.5} defaultCurrency="USD" />
         </Theme>,
     );
 

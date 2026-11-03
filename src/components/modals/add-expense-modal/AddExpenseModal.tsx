@@ -76,9 +76,7 @@ const AddExpenseModal = () => {
             setIsOpened={setIsOpened}
             title={t(mode === 'edit' ? 'expenses.modal.titleEdit' : 'expenses.modal.title')}
             accessibleDescription={t(
-                mode === 'edit'
-                    ? 'expenses.modal.descriptionEdit'
-                    : 'expenses.modal.description',
+                mode === 'edit' ? 'expenses.modal.descriptionEdit' : 'expenses.modal.description',
             )}
             maxWidth={MODAL_SIZES.desktop}
             content={content}

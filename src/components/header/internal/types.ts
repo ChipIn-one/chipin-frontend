@@ -5,4 +5,3 @@ export interface LandingLanguageProps {
     onChange: (locale: SupportedLocale) => void;
     getHref?: (locale: SupportedLocale) => string;
 }
-

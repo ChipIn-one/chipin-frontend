@@ -15,10 +15,7 @@ vi.mock('react-i18next', () => ({
             language: 'en',
             resolvedLanguage: 'en',
         },
-        t: (
-            key: string,
-            options?: { date?: string; position?: string; total?: string },
-        ) => {
+        t: (key: string, options?: { date?: string; position?: string; total?: string }) => {
             const translations: Record<string, string> = {
                 'buttons.close': 'Close',
                 'promo.benefit': 'Premium is yours for 1 year — free.',
@@ -175,15 +172,13 @@ test('dismisses the promo for the current registration and allows a later regist
 
     render(<EarlySupporterPromoModal />);
 
-    return user
-        .click(screen.getByRole('button', { name: 'Thank you' }))
-        .then(() => {
-            expect(screen.queryByRole('dialog')).toBeNull();
+    return user.click(screen.getByRole('button', { name: 'Thank you' })).then(() => {
+        expect(screen.queryByRole('dialog')).toBeNull();
 
-            setSession(true, createUser('second-new-user', 1_830_000_000));
+        setSession(true, createUser('second-new-user', 1_830_000_000));
 
-            expect(screen.getByRole('dialog', { name: 'Welcome to ChipIn' })).toBeTruthy();
-        });
+        expect(screen.getByRole('dialog', { name: 'Welcome to ChipIn' })).toBeTruthy();
+    });
 });
 
 test('dismisses the promo from the shared close control', () => {
@@ -192,11 +187,9 @@ test('dismisses the promo from the shared close control', () => {
 
     render(<EarlySupporterPromoModal />);
 
-    return user
-        .click(screen.getByRole('button', { name: 'Close' }))
-        .then(() => {
-            expect(screen.queryByRole('dialog')).toBeNull();
-        });
+    return user.click(screen.getByRole('button', { name: 'Close' })).then(() => {
+        expect(screen.queryByRole('dialog')).toBeNull();
+    });
 });
 
 test('suppresses the promo while the backend unavailable fallback is active', () => {

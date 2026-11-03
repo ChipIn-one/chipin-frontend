@@ -4,10 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { Box, Flex, Separator, Text } from '@radix-ui/themes';
 
 import { PROJECT_NAME } from 'constants/chipin';
-import {
-    getPreferredModeRoute,
-    isNavigationRouteActive,
-} from 'helpers/routes';
+import { getPreferredModeRoute, isNavigationRouteActive } from 'helpers/routes';
 import { selectIsSoloMode } from 'store/dashboardSelectors';
 import { useDashboardStore } from 'store/dashboardStore';
 import { selectCanAccessSolo, selectIsUserAdmin, useUsersStore } from 'store/users-store';

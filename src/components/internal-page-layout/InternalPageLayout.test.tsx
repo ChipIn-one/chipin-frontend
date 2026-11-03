@@ -17,9 +17,7 @@ test('renders desktop and mobile navigation around internal page content', () =>
         </InternalPageLayout>,
     );
 
-    expect(
-        screen.getByRole('complementary', { name: 'Desktop navigation' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('complementary', { name: 'Desktop navigation' })).toBeTruthy();
     expect(screen.getByRole('navigation', { name: 'Mobile navigation' })).toBeTruthy();
     expect(screen.getByRole('main', { name: 'Page content' })).toBeTruthy();
 });

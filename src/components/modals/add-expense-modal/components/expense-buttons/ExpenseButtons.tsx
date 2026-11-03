@@ -16,8 +16,7 @@ const ExpenseButtons = ({ onClose }: Props) => {
     const { t } = useTranslation('group');
     const { mode, currency, feedback } = useConnect();
     const feedbackId = useId();
-    const { isSubmitDisabled, isSubmitting, onSubmit } =
-        useExpenseModalSubmit(onClose);
+    const { isSubmitDisabled, isSubmitting, onSubmit } = useExpenseModalSubmit(onClose);
 
     return (
         <Flex direction="column" gap="2" minWidth="0" flexShrink="0">

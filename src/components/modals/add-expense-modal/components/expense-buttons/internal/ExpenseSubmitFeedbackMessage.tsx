@@ -24,8 +24,12 @@ export const ExpenseSubmitFeedbackMessage = ({ feedback, currency }: Props) => {
                 i18nKey={key}
                 components={{
                     current: <Amount value={feedback.current} tokenCode={currency} precision={4} />,
-                    required: <Amount value={feedback.required} tokenCode={currency} precision={4} />,
-                    difference: <Amount value={feedback.difference} tokenCode={currency} precision={4} />,
+                    required: (
+                        <Amount value={feedback.required} tokenCode={currency} precision={4} />
+                    ),
+                    difference: (
+                        <Amount value={feedback.difference} tokenCode={currency} precision={4} />
+                    ),
                 }}
             />
         );

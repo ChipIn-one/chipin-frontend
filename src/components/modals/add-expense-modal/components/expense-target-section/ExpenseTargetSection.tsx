@@ -3,10 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { Card, Flex } from '@radix-ui/themes';
 
-import {
-    type ExpenseTargetMode,
-    useExpenseModalStore,
-} from 'store/expenseModalStore';
+import { type ExpenseTargetMode, useExpenseModalStore } from 'store/expenseModalStore';
 
 import SegmentedControl from 'components/SegmentedControl';
 
@@ -16,25 +13,18 @@ import { ExpenseGroupSearchSelect, ExpenseScopeContext } from './components';
 
 const ExpenseTargetSection = () => {
     const { t } = useTranslation('group');
-    const {
-        targetMode,
-        mode,
-        isTabsVisible,
-        isGroupSelectVisible,
-        skipCategory,
-        setTargetMode,
-    } = useExpenseModalStore(
-        useShallow(state => ({
-            targetMode: state.targetMode,
-            mode: state.mode,
-            isTabsVisible: state.source.context === 'dashboard',
-            isGroupSelectVisible:
-                state.source.context === 'dashboard' &&
-                state.targetMode === 'group',
-            skipCategory: state.source.skipCategory,
-            setTargetMode: state.setTargetMode,
-        })),
-    );
+    const { targetMode, mode, isTabsVisible, isGroupSelectVisible, skipCategory, setTargetMode } =
+        useExpenseModalStore(
+            useShallow(state => ({
+                targetMode: state.targetMode,
+                mode: state.mode,
+                isTabsVisible: state.source.context === 'dashboard',
+                isGroupSelectVisible:
+                    state.source.context === 'dashboard' && state.targetMode === 'group',
+                skipCategory: state.source.skipCategory,
+                setTargetMode: state.setTargetMode,
+            })),
+        );
 
     if (mode === 'edit') {
         return (
@@ -62,9 +52,7 @@ const ExpenseTargetSection = () => {
                                     label: t('expenses.modal.tabs.friends'),
                                 },
                             ]}
-                            onValueChange={value =>
-                                setTargetMode(value as ExpenseTargetMode)
-                            }
+                            onValueChange={value => setTargetMode(value as ExpenseTargetMode)}
                         />
 
                         {isGroupSelectVisible && <ExpenseGroupSearchSelect />}

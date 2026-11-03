@@ -70,9 +70,7 @@ test('waits for confirmation before kicking a group member', () => {
         .click(screen.getByRole('button', { name: OPEN_KICK_LABEL }))
         .then(() => {
             expect(kickGroupMember).not.toHaveBeenCalled();
-            return user.click(
-                screen.getByRole('button', { name: 'common:buttons.kickMember' }),
-            );
+            return user.click(screen.getByRole('button', { name: 'common:buttons.kickMember' }));
         })
         .then(() => {
             return waitFor(() => {

@@ -42,12 +42,7 @@ const SettlementDebtSummary = ({
                     </ParticipantName>
                 </Flex>
                 <DebtAmount size="3" weight="bold" color={color}>
-                    <Amount
-                        value={amount}
-                        tokenCode={currency}
-                        precision={2}
-                        type="summary"
-                    />
+                    <Amount value={amount} tokenCode={currency} precision={2} type="summary" />
                 </DebtAmount>
             </Flex>
         </Card>

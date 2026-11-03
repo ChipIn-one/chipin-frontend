@@ -66,8 +66,8 @@ const Header = () => {
     const logoRoute = isLoggedIn
         ? getPreferredModeRoute(isSoloMode)
         : currentPublicRoute
-            ? getPublicPath(PUBLIC_HOME_PAGE, currentPublicRoute.locale)
-            : ROUTES.HOME;
+          ? getPublicPath(PUBLIC_HOME_PAGE, currentPublicRoute.locale)
+          : ROUTES.HOME;
 
     return (
         <StickyBox

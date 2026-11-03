@@ -13,12 +13,7 @@ import type { SearchSelectItem } from './types';
 
 type CategorySearchSelectProps = Pick<
     SearchSelectProps,
-    | 'contentMaxWidth'
-    | 'contentMinWidth'
-    | 'contentWidth'
-    | 'onChange'
-    | 'triggerWidth'
-    | 'value'
+    'contentMaxWidth' | 'contentMinWidth' | 'contentWidth' | 'onChange' | 'triggerWidth' | 'value'
 > & {
     isLoading?: boolean;
     isDisabled?: boolean;
@@ -55,31 +50,19 @@ const CategorySearchSelect = ({
             result.push({
                 value: key,
                 label: categoryLabel,
-                icon: (
-                    <CategoryIcon
-                        size={20}
-                        color={`var(--${categoryUi.color}-9)`}
-                    />
-                ),
+                icon: <CategoryIcon size={20} color={`var(--${categoryUi.color}-9)`} />,
                 isIndented: false,
                 searchFields: [key, categoryLabel],
             });
 
-            for (const [subcategory, subcategoryUi] of Object.entries(
-                categoryUi.subcategories,
-            )) {
+            for (const [subcategory, subcategoryUi] of Object.entries(categoryUi.subcategories)) {
                 const subLabel = t(`expenses.modal.subcategories.${subcategory}`);
                 const SubcategoryIcon = subcategoryUi.icon;
 
                 result.push({
                     value: subcategory,
                     label: subLabel,
-                    icon: (
-                        <SubcategoryIcon
-                            size={16}
-                            color={`var(--${subcategoryUi.color}-9)`}
-                        />
-                    ),
+                    icon: <SubcategoryIcon size={16} color={`var(--${subcategoryUi.color}-9)`} />,
                     isIndented: true,
                     searchFields: [subcategory, subLabel, categoryLabel],
                 });

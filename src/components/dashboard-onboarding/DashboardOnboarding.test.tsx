@@ -26,19 +26,13 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('components/modals/create-update-group-modal', () => ({
-    CreateUpdateGroupModal: ({
-        children,
-    }: {
-        children: React.ReactNode;
-    }) => children,
+    CreateUpdateGroupModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 vi.mock('hooks/pwaHooks', () => ({
     useFriendInvite: () => ({
-        inviteLink:
-            'https://chipin.one/friends/join/friend-token',
-        isNativeShareSupported:
-            inviteMocks.isNativeShareSupported,
+        inviteLink: 'https://chipin.one/friends/join/friend-token',
+        isNativeShareSupported: inviteMocks.isNativeShareSupported,
         isShareDone: false,
         isCopied: false,
         qr: {
@@ -77,7 +71,9 @@ test('DSH-008 shows the single welcome with two actions', () => {
     const card = screen.getByTestId('dashboard-onboarding-card');
     expect(card.className).toContain('rt-Card');
     expect(card.contains(screen.getByTestId('onboarding-illustration'))).toBe(true);
-    expect(card.contains(screen.getByRole('heading', { name: 'onboarding.welcome.title' }))).toBe(true);
+    expect(card.contains(screen.getByRole('heading', { name: 'onboarding.welcome.title' }))).toBe(
+        true,
+    );
     expect(screen.getAllByRole('button')).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'common:buttons.createGroup' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'onboarding.actions.inviteFriend' })).toBeTruthy();
@@ -113,4 +109,3 @@ test('DSH-008 uses native share when it is available', async () => {
     expect(inviteMocks.onShare).toHaveBeenCalledOnce();
     expect(inviteMocks.onCopyLink).not.toHaveBeenCalled();
 });
-

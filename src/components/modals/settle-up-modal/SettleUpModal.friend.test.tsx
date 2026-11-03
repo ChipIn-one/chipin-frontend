@@ -183,9 +183,8 @@ test('shows compact debt context and the remaining amount for a partial payment'
 
     const amountInput = screen.getByRole('textbox');
 
-    const debtSummary = screen.getByText(
-        'friends:settleUp.youOwe:Bob Builder',
-    ).parentElement?.parentElement;
+    const debtSummary = screen.getByText('friends:settleUp.youOwe:Bob Builder').parentElement
+        ?.parentElement;
 
     expect(debtSummary?.textContent).toContain('100 USD');
     expect(screen.queryByText('friends:settleUp.you')).toBeNull();
@@ -246,8 +245,7 @@ test('updates the amount, context, and remaining debt when the currency changes'
         .then(() => {
             expect(screen.getByRole('textbox')).toHaveProperty('value', '30');
             expect(
-                screen.getByText('friends:settleUp.youOwe:Bob Builder').parentElement
-                    ?.parentElement
+                screen.getByText('friends:settleUp.youOwe:Bob Builder').parentElement?.parentElement
                     ?.textContent,
             ).toContain('30 EUR');
             expect(screen.getByText('friends:settleUp.debtWillBeSettled')).toBeTruthy();
@@ -433,9 +431,8 @@ test('selects the amount again when the field regains focus', () => {
 test('keeps the debt summary amount as plain text', () => {
     renderFriendSettleUp();
 
-    const debtSummary = screen.getByText(
-        'friends:settleUp.youOwe:Bob Builder',
-    ).parentElement?.parentElement;
+    const debtSummary = screen.getByText('friends:settleUp.youOwe:Bob Builder').parentElement
+        ?.parentElement;
 
     expect(debtSummary?.textContent).toContain('24.57 BZD');
     expect(debtSummary?.querySelector('button')).toBeNull();
@@ -500,14 +497,12 @@ test('keeps Half within the API money precision and the debt', () => {
 
     const input = screen.getByRole('textbox', { name: 'friends:settleUp.paymentAmount' });
 
-    return user
-        .click(screen.getByRole('button', { name: 'friends:settleUp.half' }))
-        .then(() => {
-            expect(input).toHaveProperty('value', '0.0002');
-            expect(
-                screen.getByRole('button', { name: 'friends:settleUp.recordPayment' }),
-            ).toHaveProperty('disabled', false);
-        });
+    return user.click(screen.getByRole('button', { name: 'friends:settleUp.half' })).then(() => {
+        expect(input).toHaveProperty('value', '0.0002');
+        expect(
+            screen.getByRole('button', { name: 'friends:settleUp.recordPayment' }),
+        ).toHaveProperty('disabled', false);
+    });
 });
 
 test('resets a quick-picked amount to the full debt when the currency changes', () => {
@@ -538,7 +533,8 @@ test('submits only once while an earlier settlement request is pending', () => {
     const pendingRequest = new Promise<void>(resolve => {
         onResolve = resolve;
     });
-    const onSubmit = vi.fn<(params: CreateSettlementParams) => Promise<void>>()
+    const onSubmit = vi
+        .fn<(params: CreateSettlementParams) => Promise<void>>()
         .mockReturnValue(pendingRequest);
     const onOpenChange = vi.fn<(isOpen: boolean) => void>();
     const user = userEvent.setup();
@@ -580,7 +576,8 @@ test('re-enables payment after rejection so the user can retry', () => {
     const pendingRequest = new Promise<void>((_resolve, reject) => {
         onReject = reject;
     });
-    const onSubmit = vi.fn<(params: CreateSettlementParams) => Promise<void>>()
+    const onSubmit = vi
+        .fn<(params: CreateSettlementParams) => Promise<void>>()
         .mockReturnValueOnce(pendingRequest)
         .mockResolvedValueOnce(undefined);
     const user = userEvent.setup();

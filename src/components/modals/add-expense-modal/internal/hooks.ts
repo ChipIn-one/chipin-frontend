@@ -135,10 +135,7 @@ export const useExpenseModalSubmit = (onClose: () => void): ExpenseModalSubmitRe
         }
 
         const onMutationError = (error: unknown) => {
-            toast.error(resolveApiErrorMessageFromError(
-                error,
-                t('toasts:common.requestFailed'),
-            ));
+            toast.error(resolveApiErrorMessageFromError(error, t('toasts:common.requestFailed')));
         };
 
         if (state.mode === 'edit' && state.editContext) {

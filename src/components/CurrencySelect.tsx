@@ -13,11 +13,7 @@ import { SearchSelect } from 'components/search-select';
 
 type Props = Pick<
     SearchSelectProps,
-    | 'contentMaxWidth'
-    | 'contentMinWidth'
-    | 'contentWidth'
-    | 'onChange'
-    | 'triggerWidth'
+    'contentMaxWidth' | 'contentMinWidth' | 'contentWidth' | 'onChange' | 'triggerWidth'
 > & {
     currency?: string;
     isLoading?: boolean;

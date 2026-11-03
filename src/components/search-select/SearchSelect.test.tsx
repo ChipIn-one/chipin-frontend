@@ -64,7 +64,6 @@ test('supports an explicit dropdown width and max width', () => {
     });
 });
 
-
 test('exposes the selected option with pressed semantics', () => {
     const interaction = userEvent.setup();
 
@@ -105,10 +104,14 @@ test('searchable dropdown renders public language options as actual links', () =
         const russianLink = screen.getByRole('link', { name: 'Russian' });
         expect(russianLink.getAttribute('href')).toBe('/ru/privacy');
         expect(russianLink.getAttribute('lang')).toBe('ru');
-        expect(screen.getByRole('link', { name: 'English' }).getAttribute('aria-current')).toBe('page');
-        return interaction.type(screen.getByRole('textbox', { name: 'Search' }), 'Russian').then(() => {
-            expect(screen.getByRole('link', { name: 'Russian' })).toBeTruthy();
-            expect(screen.queryByRole('link', { name: 'English' })).toBeNull();
-        });
+        expect(screen.getByRole('link', { name: 'English' }).getAttribute('aria-current')).toBe(
+            'page',
+        );
+        return interaction
+            .type(screen.getByRole('textbox', { name: 'Search' }), 'Russian')
+            .then(() => {
+                expect(screen.getByRole('link', { name: 'Russian' })).toBeTruthy();
+                expect(screen.queryByRole('link', { name: 'English' })).toBeNull();
+            });
     });
 });

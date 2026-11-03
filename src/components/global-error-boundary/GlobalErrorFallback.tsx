@@ -1,11 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import i18n from 'i18n';
-import {
-    DownloadIcon,
-    HouseIcon,
-    RefreshCwIcon,
-    TriangleAlertIcon,
-} from 'lucide-react';
+import { DownloadIcon, HouseIcon, RefreshCwIcon, TriangleAlertIcon } from 'lucide-react';
 import type { MouseEvent } from 'react';
 
 import * as Sentry from '@sentry/react';
@@ -35,10 +30,7 @@ const RECOVERY_ACTION = {
 
 type RecoveryAction = (typeof RECOVERY_ACTION)[keyof typeof RECOVERY_ACTION];
 
-const reportRecoveryAction = (
-    action: RecoveryAction,
-    timestamp: string,
-): void => {
+const reportRecoveryAction = (action: RecoveryAction, timestamp: string): void => {
     try {
         Sentry.captureMessage('Application recovery action', {
             extra: {
@@ -66,13 +58,16 @@ const GlobalErrorFallback = ({ timestamp }: GlobalErrorFallbackProps) => {
     useEffect(() => {
         let isMounted = true;
 
-        checkForServiceWorkerUpdate().then(worker => {
+        checkForServiceWorkerUpdate().then(
+            worker => {
                 if (isMounted) {
                     setWaitingWorker(worker);
                 }
-            }, () => {
+            },
+            () => {
                 // Recovery UI can continue without an update check result.
-            });
+            },
+        );
 
         return () => {
             isMounted = false;
@@ -128,9 +123,7 @@ const GlobalErrorFallback = ({ timestamp }: GlobalErrorFallbackProps) => {
                         <TriangleAlertIcon size={34} strokeWidth={2} />
                     </div>
 
-                    <p className="global-error__eyebrow">
-                        {i18n.t('errorBoundary.runtimeError')}
-                    </p>
+                    <p className="global-error__eyebrow">{i18n.t('errorBoundary.runtimeError')}</p>
                     <h1 id="global-error-title">{i18n.t('errorBoundary.title')}</h1>
 
                     <div className="global-error__actions">

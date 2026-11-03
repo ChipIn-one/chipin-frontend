@@ -108,10 +108,7 @@ const readyGroup = {
     ],
 } satisfies Group;
 
-const renderButton = (
-    pathname: string,
-    type: 'mobile' | 'desktop' | 'sidebar' = 'mobile',
-) => {
+const renderButton = (pathname: string, type: 'mobile' | 'desktop' | 'sidebar' = 'mobile') => {
     return render(
         <MemoryRouter initialEntries={[pathname]}>
             <ThemeProvider theme={lightThemeStyled}>
@@ -124,12 +121,8 @@ const renderButton = (
 };
 
 const resolveGlobalTargets = () => {
-    useLoadingStore
-        .getState()
-        .setLoading('group', 'list', 'fetched');
-    useLoadingStore
-        .getState()
-        .setLoading('users', 'friends', 'fetched');
+    useLoadingStore.getState().setLoading('group', 'list', 'fetched');
+    useLoadingStore.getState().setLoading('users', 'friends', 'fetched');
 };
 
 beforeEach(() => {
@@ -167,9 +160,7 @@ test('EXP-061 hides a stale friend target while its data is unresolved', () => {
 
     renderButton(ROUTES.DASHBOARD);
 
-    expect(
-        screen.queryByRole('button', { name: 'Add expense' }),
-    ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
 });
 
 test('EXP-061 does not expose Add Expense before current user resolves', () => {
@@ -179,9 +170,7 @@ test('EXP-061 does not expose Add Expense before current user resolves', () => {
 
     renderButton(ROUTES.DASHBOARD);
 
-    expect(
-        screen.queryByRole('button', { name: 'Add expense' }),
-    ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
 });
 
 test('EXP-061 does not expose Add Expense when self request resolves without a user', () => {
@@ -190,47 +179,39 @@ test('EXP-061 does not expose Add Expense when self request resolves without a u
 
     renderButton(ROUTES.DASHBOARD);
 
-    expect(
-        screen.queryByRole('button', { name: 'Add expense' }),
-    ).toBeNull();
-});
-
-test.each([
-    ROUTES.DASHBOARD,
-    ROUTES.ACTIVITY,
-    ROUTES.SETTINGS,
-])('EXP-060 uses the global friend target rule on %s', route => {
-    resolveGlobalTargets();
-    useUsersStore.setState({ friends: [friend] });
-
-    renderButton(route);
-
-    expect(
-        screen.getByRole('button', { name: 'Add expense' }),
-    ).toBeTruthy();
-});
-
-test.each([
-    ROUTES.DASHBOARD,
-    ROUTES.ACTIVITY,
-    ROUTES.SETTINGS,
-])('EXP-060 excludes a one-member group from global targets on %s', route => {
-    resolveGlobalTargets();
-    useGroupsStore.setState({ groups: [singleMemberGroup] });
-
-    renderButton(route);
-
     expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
 });
+
+test.each([ROUTES.DASHBOARD, ROUTES.ACTIVITY, ROUTES.SETTINGS])(
+    'EXP-060 uses the global friend target rule on %s',
+    route => {
+        resolveGlobalTargets();
+        useUsersStore.setState({ friends: [friend] });
+
+        renderButton(route);
+
+        expect(screen.getByRole('button', { name: 'Add expense' })).toBeTruthy();
+    },
+);
+
+test.each([ROUTES.DASHBOARD, ROUTES.ACTIVITY, ROUTES.SETTINGS])(
+    'EXP-060 excludes a one-member group from global targets on %s',
+    route => {
+        resolveGlobalTargets();
+        useGroupsStore.setState({ groups: [singleMemberGroup] });
+
+        renderButton(route);
+
+        expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
+    },
+);
 
 test('EXP-060 hides the global action when resolved targets are empty', () => {
     resolveGlobalTargets();
 
     renderButton(ROUTES.DASHBOARD);
 
-    expect(
-        screen.queryByRole('button', { name: 'Add expense' }),
-    ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
 });
 
 test('EXP-060 shows Add Expense for a two-member group', () => {
@@ -239,9 +220,7 @@ test('EXP-060 shows Add Expense for a two-member group', () => {
 
     renderButton(ROUTES.DASHBOARD);
 
-    expect(
-        screen.getByRole('button', { name: 'Add expense' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Add expense' })).toBeTruthy();
 });
 
 test('EXP-060 Friends ignores a ready group when there is no friend', () => {
@@ -250,29 +229,21 @@ test('EXP-060 Friends ignores a ready group when there is no friend', () => {
 
     renderButton(ROUTES.FRIENDS);
 
-    expect(
-        screen.queryByRole('button', { name: 'Add expense' }),
-    ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
 });
 
 test('EXP-060 Friends shows Add Expense when a friend is resolved', () => {
-    useLoadingStore
-        .getState()
-        .setLoading('users', 'friends', 'fetched');
+    useLoadingStore.getState().setLoading('users', 'friends', 'fetched');
     useUsersStore.setState({ friends: [friend] });
 
     renderButton(ROUTES.FRIENDS);
 
-    expect(
-        screen.getByRole('button', { name: 'Add expense' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Add expense' })).toBeTruthy();
 });
 
 test('EXP-060 Group hides Add Expense with one member', () => {
     useGroupsStore.setState({ groups: [singleMemberGroup] });
-    useLoadingStore
-        .getState()
-        .setLoading('group', 'list', 'fetched');
+    useLoadingStore.getState().setLoading('group', 'list', 'fetched');
 
     renderButton(`${ROUTES.GROUP}/group-1`);
 
@@ -281,15 +252,11 @@ test('EXP-060 Group hides Add Expense with one member', () => {
 
 test('EXP-060 Group shows Add Expense with enough members', () => {
     useGroupsStore.setState({ groups: [readyGroup] });
-    useLoadingStore
-        .getState()
-        .setLoading('group', 'list', 'fetched');
+    useLoadingStore.getState().setLoading('group', 'list', 'fetched');
 
     renderButton(`${ROUTES.GROUP}/group-1`);
 
-    expect(
-        screen.getByRole('button', { name: 'Add expense' }),
-    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Add expense' })).toBeTruthy();
 });
 
 test('EXP-061 hides Add Expense after target-load failure without a valid target', () => {
@@ -303,9 +270,7 @@ test('EXP-061 hides Add Expense after target-load failure without a valid target
 
     renderButton(ROUTES.DASHBOARD);
 
-    expect(
-        screen.queryByRole('button', { name: 'Add expense' }),
-    ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
 });
 
 test.each([ROUTES.DASHBOARD, ROUTES.FRIENDS])(
@@ -379,9 +344,7 @@ test('opens Add Expense when a valid target exists', () => {
 
     renderButton(ROUTES.DASHBOARD);
 
-    fireEvent.click(
-        screen.getByRole('button', { name: 'Add expense' }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Add expense' }));
 
     expect(useExpenseModalStore.getState().isOpened).toBe(true);
 });

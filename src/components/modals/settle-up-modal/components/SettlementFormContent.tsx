@@ -31,13 +31,7 @@ interface Props extends Pick<
     onClose: () => void;
 }
 
-const SettlementFormContent = ({
-    friend,
-    balances,
-    initialCurrency,
-    onSubmit,
-    onClose,
-}: Props) => {
+const SettlementFormContent = ({ friend, balances, initialCurrency, onSubmit, onClose }: Props) => {
     const { t } = useTranslation(['common', 'friends', 'toasts']);
     const { user, isSubmitting } = useConnect();
     const amountInputId = useId();
@@ -84,10 +78,9 @@ const SettlementFormContent = ({
                 toast.success(t('toasts:settlement.created'));
             })
             .catch(error => {
-                toast.error(resolveApiErrorMessageFromError(
-                    error,
-                    t('toasts:common.requestFailed'),
-                ));
+                toast.error(
+                    resolveApiErrorMessageFromError(error, t('toasts:common.requestFailed')),
+                );
             })
             .finally(() => {
                 isSubmitInFlight.current = false;
@@ -130,22 +123,14 @@ const SettlementFormContent = ({
                         <Callout.Icon>
                             <InfoIcon size={18} />
                         </Callout.Icon>
-                        <Callout.Text>
-                            {t('friends:settleUp.noMoneyMoves')}
-                        </Callout.Text>
+                        <Callout.Text>{t('friends:settleUp.noMoneyMoves')}</Callout.Text>
                     </Callout.Root>
                 </ModalSurface>
             </OverlayBody>
 
             <OverlayFooter
                 cancelAction={
-                    <Button
-                        type="button"
-                        size="4"
-                        variant="soft"
-                        color="gray"
-                        onClick={onClose}
-                    >
+                    <Button type="button" size="4" variant="soft" color="gray" onClick={onClose}>
                         {t('common:buttons.cancel')}
                     </Button>
                 }

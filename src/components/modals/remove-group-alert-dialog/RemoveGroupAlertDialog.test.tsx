@@ -71,7 +71,11 @@ test('waits for confirmation before removing a group', () => {
             expect(removeGroup).not.toHaveBeenCalled();
             return user.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
         })
-        .then(() => waitFor(() => expect(removeGroup).toHaveBeenCalledWith({
-            groupId: selectedGroup.id,
-        })));
+        .then(() =>
+            waitFor(() =>
+                expect(removeGroup).toHaveBeenCalledWith({
+                    groupId: selectedGroup.id,
+                }),
+            ),
+        );
 });

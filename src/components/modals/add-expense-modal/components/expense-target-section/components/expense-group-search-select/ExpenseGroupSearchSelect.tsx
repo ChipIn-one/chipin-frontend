@@ -43,9 +43,7 @@ const ExpenseGroupSearchSelect = () => {
             emptyText={t('expenses.modal.noGroups')}
             triggerElement={
                 <ExpenseSearchSelectContent
-                    icon={
-                        selectedGroup ? <GroupAvatar group={selectedGroup} size="2" /> : null
-                    }
+                    icon={selectedGroup ? <GroupAvatar group={selectedGroup} size="2" /> : null}
                     title={t('expenses.modal.fields.group')}
                     value={selectedGroup?.name ?? t('expenses.modal.fields.group')}
                 />

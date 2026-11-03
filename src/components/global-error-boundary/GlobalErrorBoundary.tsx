@@ -20,9 +20,7 @@ const GlobalErrorBoundary = ({ children }: GlobalErrorBoundaryProps) => (
                 timestamp: new Date().toISOString(),
             });
         }}
-        fallback={() => (
-            <GlobalErrorFallback timestamp={new Date().toISOString()} />
-        )}
+        fallback={() => <GlobalErrorFallback timestamp={new Date().toISOString()} />}
     >
         {children}
     </Sentry.ErrorBoundary>

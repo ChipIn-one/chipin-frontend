@@ -15,11 +15,7 @@ const SELECT_DEBT = 'Select debt';
 const REVIEW_PAYMENT = 'Review payment';
 const EDIT_PAYMENT = 'Edit payment';
 
-const ModalRouterHarness = ({
-    isExternallyClosed = false,
-}: {
-    isExternallyClosed?: boolean;
-}) => {
+const ModalRouterHarness = ({ isExternallyClosed = false }: { isExternallyClosed?: boolean }) => {
     const [isOpened, setIsOpened] = useState(false);
 
     return (
@@ -65,26 +61,25 @@ test('keeps one dialog node and shows Back next to the title during transitions'
     const user = userEvent.setup();
     render(<ModalRouterHarness />);
 
-    return user
-        .click(screen.getByRole('button', { name: 'Open flow' }))
-        .then(() => {
-            const dialog = screen.getByRole('dialog');
-            expect(screen.queryByRole('button', { name: 'buttons.back' })).toBeNull();
-            return user.click(screen.getByRole('button', { name: 'Select debt' }))
-                .then(() => {
-                    expect(screen.getByRole('dialog')).toBe(dialog);
-                    expect(screen.getByRole('button', { name: 'buttons.back' })).toBeTruthy();
-                    expect(document.activeElement).toBe(
-                        screen.getByRole('heading', { name: 'Record payment' }),
-                    );
-                    return user.click(screen.getByRole('button', { name: 'buttons.back' }));
-                })
-                .then(() => {
-                    expect(screen.getByRole('dialog')).toBe(dialog);
-                    expect(screen.queryByRole('button', { name: 'buttons.back' })).toBeNull();
-                    expect(screen.getByRole('heading', { name: 'Choose debt' })).toBeTruthy();
-                });
-        });
+    return user.click(screen.getByRole('button', { name: 'Open flow' })).then(() => {
+        const dialog = screen.getByRole('dialog');
+        expect(screen.queryByRole('button', { name: 'buttons.back' })).toBeNull();
+        return user
+            .click(screen.getByRole('button', { name: 'Select debt' }))
+            .then(() => {
+                expect(screen.getByRole('dialog')).toBe(dialog);
+                expect(screen.getByRole('button', { name: 'buttons.back' })).toBeTruthy();
+                expect(document.activeElement).toBe(
+                    screen.getByRole('heading', { name: 'Record payment' }),
+                );
+                return user.click(screen.getByRole('button', { name: 'buttons.back' }));
+            })
+            .then(() => {
+                expect(screen.getByRole('dialog')).toBe(dialog);
+                expect(screen.queryByRole('button', { name: 'buttons.back' })).toBeNull();
+                expect(screen.getByRole('heading', { name: 'Choose debt' })).toBeTruthy();
+            });
+    });
 });
 
 test('resets history when the flow closes and reopens', () => {

@@ -104,16 +104,14 @@ test('hides the cover preview until a file is selected in create mode', () => {
 
     renderModal('create');
 
-    return interaction
-        .click(screen.getByRole('button', { name: OPEN_MODAL_LABEL }))
-        .then(() => {
-            const nameInput = screen.getByRole('textbox', { name: 'common:fields.groupName' });
-            const coverPicker = screen.getByLabelText('modal.cover.pickerLabel');
+    return interaction.click(screen.getByRole('button', { name: OPEN_MODAL_LABEL })).then(() => {
+        const nameInput = screen.getByRole('textbox', { name: 'common:fields.groupName' });
+        const coverPicker = screen.getByLabelText('modal.cover.pickerLabel');
 
-            expect(screen.queryByRole('img', { name: 'modal.cover.previewLabel' })).toBeNull();
-            expect(coverPicker.getAttribute('accept')).toBe(IMAGE_FILE_ACCEPT);
-            expect(nameInput.closest('.rt-TextFieldRoot')?.contains(coverPicker)).toBe(false);
-        });
+        expect(screen.queryByRole('img', { name: 'modal.cover.previewLabel' })).toBeNull();
+        expect(coverPicker.getAttribute('accept')).toBe(IMAGE_FILE_ACCEPT);
+        expect(nameInput.closest('.rt-TextFieldRoot')?.contains(coverPicker)).toBe(false);
+    });
 });
 
 test('reveals an optional description in create mode', () => {
@@ -151,9 +149,7 @@ test('preserves the description draft while its field is collapsed', () => {
     return interaction
         .click(screen.getByRole('button', { name: OPEN_MODAL_LABEL }))
         .then(() =>
-            interaction.click(
-                screen.getByRole('button', { name: 'modal.fields.addDescription' }),
-            ),
+            interaction.click(screen.getByRole('button', { name: 'modal.fields.addDescription' })),
         )
         .then(() =>
             interaction.type(
@@ -162,9 +158,7 @@ test('preserves the description draft while its field is collapsed', () => {
             ),
         )
         .then(() =>
-            interaction.click(
-                screen.getByRole('button', { name: 'modal.fields.addDescription' }),
-            ),
+            interaction.click(screen.getByRole('button', { name: 'modal.fields.addDescription' })),
         )
         .then(() => {
             expect(screen.queryByPlaceholderText('modal.fields.descriptionPlaceholder')).toBeNull();
@@ -173,10 +167,9 @@ test('preserves the description draft while its field is collapsed', () => {
             );
         })
         .then(() => {
-            expect(screen.getByPlaceholderText('modal.fields.descriptionPlaceholder')).toHaveProperty(
-                'value',
-                'Shared trip',
-            );
+            expect(
+                screen.getByPlaceholderText('modal.fields.descriptionPlaceholder'),
+            ).toHaveProperty('value', 'Shared trip');
         });
 });
 
@@ -187,16 +180,13 @@ test('shows the description textarea immediately in update mode when it is empty
     useGroupsStore.setState({ selectedGroup: groupWithoutDescription });
     renderModal('update');
 
-    return interaction
-        .click(screen.getByRole('button', { name: OPEN_MODAL_LABEL }))
-        .then(() => {
-            expect(
-                screen.queryByRole('button', { name: 'modal.fields.addDescription' }),
-            ).toBeNull();
-            expect(
-                screen.getByRole('textbox', { name: 'common:fields.description' }),
-            ).toHaveProperty('value', '');
-        });
+    return interaction.click(screen.getByRole('button', { name: OPEN_MODAL_LABEL })).then(() => {
+        expect(screen.queryByRole('button', { name: 'modal.fields.addDescription' })).toBeNull();
+        expect(screen.getByRole('textbox', { name: 'common:fields.description' })).toHaveProperty(
+            'value',
+            '',
+        );
+    });
 });
 
 test('keeps the cover picker in the field row when the update cover is null', () => {
@@ -206,15 +196,11 @@ test('keeps the cover picker in the field row when the update cover is null', ()
     useGroupsStore.setState({ selectedGroup: groupWithoutCover });
     renderModal('update');
 
-    return interaction
-        .click(screen.getByRole('button', { name: OPEN_MODAL_LABEL }))
-        .then(() => {
-            const picker = screen.getByLabelText('modal.cover.pickerLabel');
+    return interaction.click(screen.getByRole('button', { name: OPEN_MODAL_LABEL })).then(() => {
+        const picker = screen.getByLabelText('modal.cover.pickerLabel');
 
-            expect(getComputedStyle(picker.parentElement as HTMLElement).position).not.toBe(
-                'absolute',
-            );
-        });
+        expect(getComputedStyle(picker.parentElement as HTMLElement).position).not.toBe('absolute');
+    });
 });
 
 test('creates a group before uploading the selected cover and closes after both succeed', () => {
@@ -251,9 +237,7 @@ test('creates a group before uploading the selected cover and closes after both 
                 'New Trip',
             );
         })
-        .then(() =>
-            interaction.upload(screen.getByLabelText('modal.cover.pickerLabel'), file),
-        )
+        .then(() => interaction.upload(screen.getByLabelText('modal.cover.pickerLabel'), file))
         .then(() => {
             fireEvent.load(screen.getByAltText('modal.cover.previewLabel'));
             expect(screen.getByRole('img', { name: 'modal.cover.previewLabel' })).toHaveProperty(
@@ -293,9 +277,10 @@ test('creates a group before uploading the selected cover and closes after both 
                 expect(
                     screen.getByRole('button', { name: 'common:buttons.cancel' }),
                 ).toHaveProperty('disabled', true);
-                expect(
-                    screen.getByPlaceholderText('modal.fields.namePlaceholder'),
-                ).toHaveProperty('disabled', true);
+                expect(screen.getByPlaceholderText('modal.fields.namePlaceholder')).toHaveProperty(
+                    'disabled',
+                    true,
+                );
             });
         })
         .then(() => {
@@ -329,15 +314,15 @@ test('navigates to a created group when no cover is selected', () => {
             ),
         )
         .then(() =>
-            interaction.click(
-                screen.getByRole('button', { name: 'common:buttons.createGroup' }),
-            ),
+            interaction.click(screen.getByRole('button', { name: 'common:buttons.createGroup' })),
         )
         .then(() =>
             waitFor(() => {
                 expect(uploadGroupCover).not.toHaveBeenCalled();
                 expect(screen.queryByRole('dialog')).toBeNull();
-                expect(screen.getByTestId('location').textContent).toBe(`/group/${createdGroup.id}`);
+                expect(screen.getByTestId('location').textContent).toBe(
+                    `/group/${createdGroup.id}`,
+                );
             }),
         );
 });
@@ -382,9 +367,7 @@ test('updates group fields without uploading when no new cover is selected', () 
             ),
         )
         .then(() =>
-            interaction.click(
-                screen.getByRole('button', { name: 'common:buttons.saveGroup' }),
-            ),
+            interaction.click(screen.getByRole('button', { name: 'common:buttons.saveGroup' })),
         )
         .then(() => {
             expect(updateGroup).toHaveBeenCalledOnce();
@@ -404,14 +387,10 @@ test('clears an existing group description', () => {
     return interaction
         .click(screen.getByRole('button', { name: OPEN_MODAL_LABEL }))
         .then(() =>
-            interaction.clear(
-                screen.getByRole('textbox', { name: 'common:fields.description' }),
-            ),
+            interaction.clear(screen.getByRole('textbox', { name: 'common:fields.description' })),
         )
         .then(() =>
-            interaction.click(
-                screen.getByRole('button', { name: 'common:buttons.saveGroup' }),
-            ),
+            interaction.click(screen.getByRole('button', { name: 'common:buttons.saveGroup' })),
         )
         .then(() => {
             expect(updateGroup).toHaveBeenCalledWith({
@@ -438,9 +417,7 @@ test('updates group fields before uploading a newly selected cover', () => {
         .click(screen.getByRole('button', { name: OPEN_MODAL_LABEL }))
         .then(() => interaction.upload(screen.getByLabelText('modal.cover.pickerLabel'), file))
         .then(() =>
-            interaction.click(
-                screen.getByRole('button', { name: 'common:buttons.saveGroup' }),
-            ),
+            interaction.click(screen.getByRole('button', { name: 'common:buttons.saveGroup' })),
         )
         .then(() =>
             waitFor(() => {
@@ -475,13 +452,9 @@ test('locks created group details while retrying a failed cover upload', () => {
                 createdGroup.name,
             ),
         )
+        .then(() => interaction.upload(screen.getByLabelText('modal.cover.pickerLabel'), file))
         .then(() =>
-            interaction.upload(screen.getByLabelText('modal.cover.pickerLabel'), file),
-        )
-        .then(() =>
-            interaction.click(
-                screen.getByRole('button', { name: 'common:buttons.createGroup' }),
-            ),
+            interaction.click(screen.getByRole('button', { name: 'common:buttons.createGroup' })),
         )
         .then(() =>
             waitFor(() => {
@@ -489,19 +462,14 @@ test('locks created group details while retrying a failed cover upload', () => {
                 expect(createGroup).toHaveBeenCalledOnce();
                 expect(uploadGroupCover).toHaveBeenCalledOnce();
                 expect(screen.getByTestId('location').textContent).toBe('/dashboard');
-                expect(
-                    screen.getByPlaceholderText('modal.fields.namePlaceholder'),
-                ).toHaveProperty('disabled', true);
-                expect(
-                    screen.getByRole('button', { name: 'modal.cover.retry' }),
-                ).toBeTruthy();
+                expect(screen.getByPlaceholderText('modal.fields.namePlaceholder')).toHaveProperty(
+                    'disabled',
+                    true,
+                );
+                expect(screen.getByRole('button', { name: 'modal.cover.retry' })).toBeTruthy();
             }),
         )
-        .then(() =>
-            interaction.click(
-                screen.getByRole('button', { name: 'modal.cover.retry' }),
-            ),
-        )
+        .then(() => interaction.click(screen.getByRole('button', { name: 'modal.cover.retry' })))
         .then(() =>
             waitFor(() => {
                 expect(createGroup).toHaveBeenCalledOnce();

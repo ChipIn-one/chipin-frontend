@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 
-import {
-    type ImageFileValidationError,
-    validateImageFile,
-} from 'helpers/imageFile';
+import { type ImageFileValidationError, validateImageFile } from 'helpers/imageFile';
 
 interface GroupCoverDraft {
     coverPreviewUrl?: string;

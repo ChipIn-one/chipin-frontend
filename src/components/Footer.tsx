@@ -28,7 +28,8 @@ const MEDIA_LINKS = [
 
 const Footer = () => {
     const { t, i18n } = useTranslation();
-    const locale = matchLocale(i18n?.resolvedLanguage ?? i18n?.language ?? DEFAULT_LOCALE) ?? DEFAULT_LOCALE;
+    const locale =
+        matchLocale(i18n?.resolvedLanguage ?? i18n?.language ?? DEFAULT_LOCALE) ?? DEFAULT_LOCALE;
     const publicBuildYear = useContext(PublicBuildYearContext);
     const copyrightYear = publicBuildYear ?? new Date().getFullYear();
 
@@ -107,10 +108,20 @@ const Footer = () => {
 
                     {/* Right — links */}
                     <Flex justify="center" gap={{ initial: '3', md: '5' }} wrap="wrap">
-                        <Link href={getPublicPath('privacy', locale)} color="gray" size="2" underline="hover">
+                        <Link
+                            href={getPublicPath('privacy', locale)}
+                            color="gray"
+                            size="2"
+                            underline="hover"
+                        >
                             {t('footer.privacy')}
                         </Link>
-                        <Link href={getPublicPath('terms', locale)} color="gray" size="2" underline="hover">
+                        <Link
+                            href={getPublicPath('terms', locale)}
+                            color="gray"
+                            size="2"
+                            underline="hover"
+                        >
                             {t('footer.terms')}
                         </Link>
                     </Flex>

@@ -37,8 +37,7 @@ const ExpensePayerSearchSelect = () => {
         }
     }
 
-    const fallbackMember =
-        targetMode === 'friends' && currentUserId ? currentMember : members[0];
+    const fallbackMember = targetMode === 'friends' && currentUserId ? currentMember : members[0];
     const resolvedMember = selectedMember ?? fallbackMember;
     const selectedPayer =
         resolvedMember?.id ?? (targetMode === 'friends' ? (currentUserId ?? '') : '');

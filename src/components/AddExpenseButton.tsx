@@ -13,8 +13,7 @@ const ButtonMobile = styled(Button)<{ $isSoloMode: boolean }>`
     width: var(--space-9);
     height: var(--space-9);
     padding: 0;
-    border: 6px solid ${({ $isSoloMode }) =>
-        themeColor($isSoloMode ? 'violet7' : 'grass7')};
+    border: 6px solid ${({ $isSoloMode }) => themeColor($isSoloMode ? 'violet7' : 'grass7')};
 `;
 
 interface Props {
@@ -24,8 +23,7 @@ interface Props {
 const AddExpenseButton = ({ type = 'desktop' }: Props) => {
     const { t } = useTranslation('common');
     const location = useLocation();
-    const { isSoloMode, isVisible, openExpenseModal } =
-        useConnect(location.pathname);
+    const { isSoloMode, isVisible, openExpenseModal } = useConnect(location.pathname);
 
     if (!isVisible) {
         return null;

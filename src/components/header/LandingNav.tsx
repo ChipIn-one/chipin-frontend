@@ -20,7 +20,12 @@ const LandingNav = ({ value, onChange, getHref }: LandingLanguageProps) => {
                         </Link>
                     </Button>
                 ))}
-                <LanguageSelector value={value} variant="compact" onChange={onChange} getHref={getHref} />
+                <LanguageSelector
+                    value={value}
+                    variant="compact"
+                    onChange={onChange}
+                    getHref={getHref}
+                />
             </Flex>
         </Box>
     );

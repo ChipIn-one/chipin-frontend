@@ -32,8 +32,4 @@ const GroupCardSurface = styled(Card)`
     }
 `;
 
-
-export {
-    GroupCardSurface,
-    GroupNavButton,
-};
+export { GroupCardSurface, GroupNavButton };

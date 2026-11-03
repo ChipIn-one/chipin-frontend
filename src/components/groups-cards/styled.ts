@@ -42,9 +42,4 @@ const SettledToggleButton = styled(Button)`
     width: 100%;
 `;
 
-export {
-    SearchButtonShell,
-    SearchFieldShell,
-    SearchIndicator,
-    SettledToggleButton,
-};
+export { SearchButtonShell, SearchFieldShell, SearchIndicator, SettledToggleButton };

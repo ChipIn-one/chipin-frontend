@@ -10,20 +10,10 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import {
-    Button,
-    Flex,
-    IconButton,
-    Separator,
-    Text,
-    TextField,
-} from '@radix-ui/themes';
+import { Button, Flex, IconButton, Separator, Text, TextField } from '@radix-ui/themes';
 
 import type { Group } from 'api/chipin.types';
-import {
-    GROUP_DEBT_FILTERS,
-    type GroupDebtFilter,
-} from 'constants/groups';
+import { GROUP_DEBT_FILTERS, type GroupDebtFilter } from 'constants/groups';
 
 import { EmptyState } from 'basics/empty-states';
 
@@ -45,9 +35,7 @@ interface Props {
 }
 
 const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
-    const [activeFilter, setActiveFilter] = useState<GroupDebtFilter>(
-        GROUP_DEBT_FILTERS.ALL,
-    );
+    const [activeFilter, setActiveFilter] = useState<GroupDebtFilter>(GROUP_DEBT_FILTERS.ALL);
     const [isSettledVisible, setIsSettledVisible] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -55,12 +43,7 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
     const searchButtonRef = useRef<HTMLButtonElement>(null);
     const shouldRestoreSearchButtonFocusRef = useRef(false);
     const { t } = useTranslation('dashboard');
-    const {
-        displayedGroups,
-        hiddenSettledGroups,
-        settledCount,
-        isReady,
-    } = useConnect({
+    const { displayedGroups, hiddenSettledGroups, settledCount, isReady } = useConnect({
         groups,
         filter: activeFilter,
         query: searchQuery,
@@ -68,9 +51,7 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
     });
     const hasSearchQuery = searchQuery.trim().length > 0;
     const showSettledSection =
-        activeFilter === GROUP_DEBT_FILTERS.ALL &&
-        !hasSearchQuery &&
-        settledCount > 0;
+        activeFilter === GROUP_DEBT_FILTERS.ALL && !hasSearchQuery && settledCount > 0;
     const showEmptyState = displayedGroups.length === 0 && !showSettledSection;
     const searchButtonLabel = hasSearchQuery
         ? t('groups.searchActiveLabel', { query: searchQuery.trim() })
@@ -238,17 +219,9 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
                         variant="soft"
                         color="gray"
                         aria-expanded={isSettledVisible}
-                        onClick={() =>
-                            setIsSettledVisible(isVisible => !isVisible)
-                        }
+                        onClick={() => setIsSettledVisible(isVisible => !isVisible)}
                     >
-                        <Flex
-                            align="center"
-                            justify="between"
-                            gap="3"
-                            width="100%"
-                            minWidth="0"
-                        >
+                        <Flex align="center" justify="between" gap="3" width="100%" minWidth="0">
                             <Flex align="center" gap="2" minWidth="0">
                                 <CircleCheckIcon size={16} />
                                 <Text size="2" weight="medium" truncate>

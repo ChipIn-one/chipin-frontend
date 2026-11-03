@@ -20,7 +20,8 @@ beforeEach(() => {
     useExpenseModalStore.getState().reset();
 });
 
-const renderSection = () => render(
+const renderSection = () =>
+    render(
         <ThemeProvider theme={lightThemeStyled}>
             <ExpenseDetailsSection />
         </ThemeProvider>,

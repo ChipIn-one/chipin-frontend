@@ -14,20 +14,11 @@ interface Props {
     onCoverChange: (event: ChangeEvent<HTMLInputElement>) => void;
 }
 
-const GroupCoverPickerControl = ({
-    isOverlay = false,
-    isSaving,
-    onCoverChange,
-}: Props) => {
+const GroupCoverPickerControl = ({ isOverlay = false, isSaving, onCoverChange }: Props) => {
     const { t } = useTranslation('group');
 
     return (
-        <IconButton
-            asChild
-            variant="surface"
-            color="gray"
-            size="2"
-        >
+        <IconButton asChild variant="surface" color="gray" size="2">
             <CoverPickerLabel
                 $isDisabled={isSaving}
                 $isOverlay={isOverlay}

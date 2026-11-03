@@ -54,25 +54,20 @@ test('keeps a destructive alert open and disables its actions until the request 
     expect(screen.getByRole('alertdialog')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'buttons.close' })).toBeNull();
 
-    return user
-        .click(screen.getByRole('button', { name: 'Remove' }))
-        .then(() => {
-            expect(screen.getByRole('alertdialog')).toBeTruthy();
-            expect(screen.getByRole('button', { name: 'buttons.cancel' })).toHaveProperty(
-                'disabled',
-                true,
-            );
-            expect(screen.getByRole('button', { name: 'Remove' })).toHaveProperty(
-                'disabled',
-                true,
-            );
+    return user.click(screen.getByRole('button', { name: 'Remove' })).then(() => {
+        expect(screen.getByRole('alertdialog')).toBeTruthy();
+        expect(screen.getByRole('button', { name: 'buttons.cancel' })).toHaveProperty(
+            'disabled',
+            true,
+        );
+        expect(screen.getByRole('button', { name: 'Remove' })).toHaveProperty('disabled', true);
 
-            action.resolve();
+        action.resolve();
 
-            return waitFor(() => {
-                expect(screen.queryByRole('alertdialog')).toBeNull();
-            });
+        return waitFor(() => {
+            expect(screen.queryByRole('alertdialog')).toBeNull();
         });
+    });
 });
 
 test('leaves a destructive alert open when the request fails', () => {
@@ -81,19 +76,17 @@ test('leaves a destructive alert open when the request fails', () => {
 
     render(<AlertDialogHarness onAction={() => action.promise} />);
 
-    return user
-        .click(screen.getByRole('button', { name: 'Remove' }))
-        .then(() => {
-            action.reject(new Error('Request failed'));
+    return user.click(screen.getByRole('button', { name: 'Remove' })).then(() => {
+        action.reject(new Error('Request failed'));
 
-            return waitFor(() => {
-                expect(screen.getByRole('alertdialog')).toBeTruthy();
-                expect(screen.getByRole('button', { name: 'Remove' })).toHaveProperty(
-                    'disabled',
-                    false,
-                );
-            });
+        return waitFor(() => {
+            expect(screen.getByRole('alertdialog')).toBeTruthy();
+            expect(screen.getByRole('button', { name: 'Remove' })).toHaveProperty(
+                'disabled',
+                false,
+            );
         });
+    });
 });
 
 test('does not dismiss a destructive alert with Escape before or during the request', () => {

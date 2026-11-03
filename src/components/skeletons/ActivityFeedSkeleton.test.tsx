@@ -13,25 +13,13 @@ vi.mock('react-i18next', () => ({
 test('renders the expense-created skeleton feed', () => {
     const { container } = render(<ActivityFeedSkeleton />);
 
-    expect(
-        container.querySelector('[data-activity-date-divider-skeleton]'),
-    ).toBeTruthy();
-    expect(
-        container.querySelector(
-            '[data-activity-date-divider-summary-skeleton]',
-        ),
-    ).toBeNull();
-    expect(
-        container.querySelectorAll('[data-activity-event-skeleton]'),
-    ).toHaveLength(8);
+    expect(container.querySelector('[data-activity-date-divider-skeleton]')).toBeTruthy();
+    expect(container.querySelector('[data-activity-date-divider-summary-skeleton]')).toBeNull();
+    expect(container.querySelectorAll('[data-activity-event-skeleton]')).toHaveLength(8);
 });
 
 test('can render the date divider with a daily summary', () => {
     const { container } = render(<ActivityFeedSkeleton isShowSummary />);
 
-    expect(
-        container.querySelector(
-            '[data-activity-date-divider-summary-skeleton]',
-        ),
-    ).toBeTruthy();
+    expect(container.querySelector('[data-activity-date-divider-summary-skeleton]')).toBeTruthy();
 });

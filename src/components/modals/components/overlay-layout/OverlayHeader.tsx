@@ -19,7 +19,9 @@ const OverlayHeader = ({ title, closeControl, backControl }: Props) => {
                         {backControl}
                         {title}
                     </Flex>
-                ) : title}
+                ) : (
+                    title
+                )}
                 {closeControl}
             </Header>
             <Separator orientation="horizontal" size="4" />

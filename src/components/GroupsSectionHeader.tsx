@@ -21,9 +21,7 @@ const GroupsSectionHeader = ({ label, isLoading = false, ...flexProps }: Props) 
                     <Avatar size="2" color="gray" fallback={<UsersIcon size={18} />} />
                 </Skeleton>
                 <Text size="2" color="gray" weight="medium">
-                    <Skeleton loading={isLoading}>
-                        {label}
-                    </Skeleton>
+                    <Skeleton loading={isLoading}>{label}</Skeleton>
                 </Text>
             </Flex>
 

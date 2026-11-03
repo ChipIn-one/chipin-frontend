@@ -1,10 +1,6 @@
 import { Card, Flex } from '@radix-ui/themes';
 
-import {
-    ExpenseSplitModeControl,
-    ExpenseUsersList,
-    SplitTypeHeader,
-} from './components';
+import { ExpenseSplitModeControl, ExpenseUsersList, SplitTypeHeader } from './components';
 
 const ExpenseSplitCard = () => {
     return (

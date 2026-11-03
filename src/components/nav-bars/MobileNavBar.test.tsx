@@ -21,11 +21,7 @@ import 'i18n/index';
 const LocationPath = () => {
     const location = useLocation();
 
-    return (
-        <output aria-label="Current route">
-            {location.pathname}
-        </output>
-    );
+    return <output aria-label="Current route">{location.pathname}</output>;
 };
 
 const settings = {
@@ -87,12 +83,8 @@ const soloGroup = {
 } satisfies Group;
 
 const resolveGlobalTargets = () => {
-    useLoadingStore
-        .getState()
-        .setLoading('group', 'list', 'fetched');
-    useLoadingStore
-        .getState()
-        .setLoading('users', 'friends', 'fetched');
+    useLoadingStore.getState().setLoading('group', 'list', 'fetched');
+    useLoadingStore.getState().setLoading('users', 'friends', 'fetched');
 };
 
 beforeEach(() => {
@@ -118,37 +110,31 @@ test.each([
         appMode: APP_MODES.GROUP,
         expectedRoute: '/dashboard',
     },
-])(
-    'opens $expectedRoute from the home link in $appMode mode',
-    ({ appMode, expectedRoute }) => {
-        const interaction = userEvent.setup();
-        useDashboardStore.setState({ appMode });
+])('opens $expectedRoute from the home link in $appMode mode', ({ appMode, expectedRoute }) => {
+    const interaction = userEvent.setup();
+    useDashboardStore.setState({ appMode });
 
-        render(
-            <MemoryRouter initialEntries={['/settings']}>
-                <ThemeProvider theme={lightThemeStyled}>
-                    <Theme>
-                        <MobileNavBar />
-                        <LocationPath />
-                    </Theme>
-                </ThemeProvider>
-            </MemoryRouter>,
-        );
+    render(
+        <MemoryRouter initialEntries={['/settings']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <MobileNavBar />
+                    <LocationPath />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+    );
 
-        return interaction
-            .click(
-                screen.getByRole('link', {
-                    name: 'Dashboard',
-                }),
-            )
-            .then(() => {
-                expect(
-                    screen.getByLabelText('Current route')
-                        .textContent,
-                ).toBe(expectedRoute);
-            });
-    },
-);
+    return interaction
+        .click(
+            screen.getByRole('link', {
+                name: 'Dashboard',
+            }),
+        )
+        .then(() => {
+            expect(screen.getByLabelText('Current route').textContent).toBe(expectedRoute);
+        });
+});
 
 test('EXP-062 removes the center slot and leaves four navigation items', () => {
     resolveGlobalTargets();
@@ -163,9 +149,7 @@ test('EXP-062 removes the center slot and leaves four navigation items', () => {
         </MemoryRouter>,
     );
 
-    expect(
-        screen.queryByRole('button', { name: 'Add expense' }),
-    ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
     expect(screen.getAllByRole('link')).toHaveLength(4);
 });
 
@@ -231,35 +215,21 @@ test('EXP-062 restores the lifted Add Expense slot for a valid target', () => {
     const addExpenseButton = screen.getByRole('button', {
         name: 'Add expense',
     });
-    const centerAction =
-        addExpenseButton.parentElement as HTMLElement;
-    const navContent =
-        centerAction.parentElement as HTMLElement;
-    const navWrapper =
-        navContent.parentElement as HTMLElement;
-    const navSurface =
-        navContent.previousElementSibling as HTMLElement;
+    const centerAction = addExpenseButton.parentElement as HTMLElement;
+    const navContent = centerAction.parentElement as HTMLElement;
+    const navWrapper = navContent.parentElement as HTMLElement;
+    const navSurface = navContent.previousElementSibling as HTMLElement;
 
-    expect(
-        getComputedStyle(navWrapper)
-            .getPropertyValue('--mobile-nav-action-lift')
-            .trim(),
-    ).toBe('var(--space-3)');
-    expect(
-        getComputedStyle(navWrapper)
-            .getPropertyValue('--mobile-nav-cutout-center-y')
-            .trim(),
-    ).toBe(
-        'calc(0px - var(--mobile-nav-action-lift))',
+    expect(getComputedStyle(navWrapper).getPropertyValue('--mobile-nav-action-lift').trim()).toBe(
+        'var(--space-3)',
     );
+    expect(
+        getComputedStyle(navWrapper).getPropertyValue('--mobile-nav-cutout-center-y').trim(),
+    ).toBe('calc(0px - var(--mobile-nav-action-lift))');
     expect(getComputedStyle(centerAction).transform).toBe(
         'translate(-50%, calc(-50% - var(--mobile-nav-action-lift)))',
     );
-    expect(
-        getComputedStyle(navSurface)
-            .getPropertyValue('--mobile-nav-cutout-radius')
-            .trim(),
-    ).toBe(
+    expect(getComputedStyle(navSurface).getPropertyValue('--mobile-nav-cutout-radius').trim()).toBe(
         'calc(var(--space-7) - var(--space-1))',
     );
 });

@@ -13,16 +13,15 @@ import { ExpenseSearchSelectContent } from '../../../expense-search-select-conte
 
 const ExpenseCurrencyCategoryFields = () => {
     const { t } = useTranslation('group');
-    const { currency, category, skipCategory, setCurrency, setCategory } =
-        useExpenseModalStore(
-            useShallow(state => ({
-                currency: state.currency,
-                category: state.category,
-                skipCategory: state.source.skipCategory && state.mode === 'create',
-                setCurrency: state.setCurrency,
-                setCategory: state.setCategory,
-            })),
-        );
+    const { currency, category, skipCategory, setCurrency, setCategory } = useExpenseModalStore(
+        useShallow(state => ({
+            currency: state.currency,
+            category: state.category,
+            skipCategory: state.source.skipCategory && state.mode === 'create',
+            setCurrency: state.setCurrency,
+            setCategory: state.setCategory,
+        })),
+    );
 
     return (
         <Flex direction="column" justify="between" gap="3" height="100%">
@@ -46,10 +45,7 @@ const ExpenseCurrencyCategoryFields = () => {
                         <ExpenseSearchSelectContent
                             icon={selectedCategory?.icon}
                             title={t('common:fields.category')}
-                            value={
-                                selectedCategory?.label ??
-                                t('common:fields.category')
-                            }
+                            value={selectedCategory?.label ?? t('common:fields.category')}
                         />
                     )}
                     onChange={setCategory}

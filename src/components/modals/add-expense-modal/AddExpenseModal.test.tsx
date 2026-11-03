@@ -85,10 +85,7 @@ test('does not render a single-member notice in the modal', () => {
 
     expect(screen.getByRole('status').textContent).toBe('Enter an amount greater than zero.');
     expect(screen.queryByText(/invite.*members/i)).toBeNull();
-    expect(screen.getByRole('button', { name: 'Add expense' })).toHaveProperty(
-        'disabled',
-        true,
-    );
+    expect(screen.getByRole('button', { name: 'Add expense' })).toHaveProperty('disabled', true);
 });
 
 test('uses the edit title and Save action in edit mode', () => {
@@ -103,8 +100,5 @@ test('uses the edit title and Save action in edit mode', () => {
     );
 
     expect(screen.getByText('Edit expense')).not.toBeNull();
-    expect(screen.getByRole('button', { name: 'Save' })).toHaveProperty(
-        'disabled',
-        true,
-    );
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveProperty('disabled', true);
 });

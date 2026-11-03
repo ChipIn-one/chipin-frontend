@@ -21,7 +21,7 @@ interface NavigationState<RouteId extends string> {
     history: RouteId[];
 }
 
-const ModalRouter = <RouteId extends string,>({
+const ModalRouter = <RouteId extends string>({
     initialRoute,
     routes,
     isOpened,
@@ -59,18 +59,19 @@ const ModalRouter = <RouteId extends string,>({
         });
     }, [initialRoute]);
 
-    const onDialogOpenChange = useCallback((nextIsOpen: boolean) => {
-        if (!nextIsOpen) {
-            onReset();
-        }
-        onOpenChange(nextIsOpen);
-    }, [onOpenChange, onReset]);
+    const onDialogOpenChange = useCallback(
+        (nextIsOpen: boolean) => {
+            if (!nextIsOpen) {
+                onReset();
+            }
+            onOpenChange(nextIsOpen);
+        },
+        [onOpenChange, onReset],
+    );
 
     const onPush = useCallback((route: RouteId) => {
         setNavigationState(state =>
-            state.route === route
-                ? state
-                : { route, history: [...state.history, state.route] },
+            state.route === route ? state : { route, history: [...state.history, state.route] },
         );
     }, []);
 

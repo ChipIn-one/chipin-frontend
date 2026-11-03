@@ -22,14 +22,16 @@ const InviteQRModal = ({ children, content, qrLink }: Props) => {
         <BaseModal
             title={content.title}
             accessibleDescription={content.accessibleDescription}
-            triggerElement={children ?? (
-                <Box width="100%" asChild>
-                    <Button variant="soft" size="3">
-                        <QrCodeIcon />
-                        {t('buttons.showQRCode')}
-                    </Button>
-                </Box>
-            )}
+            triggerElement={
+                children ?? (
+                    <Box width="100%" asChild>
+                        <Button variant="soft" size="3">
+                            <QrCodeIcon />
+                            {t('buttons.showQRCode')}
+                        </Button>
+                    </Box>
+                )
+            }
             content={
                 <>
                     <OverlayBody>
@@ -49,12 +51,7 @@ const InviteQRModal = ({ children, content, qrLink }: Props) => {
                     <OverlayFooter
                         cancelAction={
                             <Dialog.Close>
-                                <Button
-                                    type="button"
-                                    size="3"
-                                    variant="soft"
-                                    color="gray"
-                                >
+                                <Button type="button" size="3" variant="soft" color="gray">
                                     {t('buttons.close')}
                                 </Button>
                             </Dialog.Close>

@@ -13,8 +13,7 @@ import InviteIllustrationAsset from 'assets/group-invite-empty-state.png';
 const InviteCard = styled(Card)`
     overflow: hidden;
     background:
-        radial-gradient(circle at top, var(--green-a4), transparent 68%),
-        var(--color-panel-solid);
+        radial-gradient(circle at top, var(--green-a4), transparent 68%), var(--color-panel-solid);
 `;
 
 const InviteIllustration = styled.img`

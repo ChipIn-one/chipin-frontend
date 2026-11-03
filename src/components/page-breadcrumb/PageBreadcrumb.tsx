@@ -49,9 +49,7 @@ const PageBreadcrumb = ({ title, subtitle, action }: Props) => {
                 ) : null}
             </Flex>
 
-            {action !== undefined && action !== null ? (
-                <Box flexShrink="0">{action}</Box>
-            ) : null}
+            {action !== undefined && action !== null ? <Box flexShrink="0">{action}</Box> : null}
         </Flex>
     );
 };

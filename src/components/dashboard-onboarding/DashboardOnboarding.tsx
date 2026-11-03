@@ -1,7 +1,4 @@
-import {
-    UserPlusIcon,
-    UsersRoundIcon,
-} from 'lucide-react';
+import { UserPlusIcon, UsersRoundIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
@@ -32,16 +29,11 @@ const DashboardOnboarding = () => {
             return Promise.resolve();
         }
 
-        return invite.isNativeShareSupported
-            ? invite.onShare()
-            : invite.onCopyLink();
+        return invite.isNativeShareSupported ? invite.onShare() : invite.onCopyLink();
     };
 
     return (
-        <Card
-            size={{ initial: '2', md: '3' }}
-            data-testid="dashboard-onboarding-card"
-        >
+        <Card size={{ initial: '2', md: '3' }} data-testid="dashboard-onboarding-card">
             <Flex
                 direction={{ initial: 'column', md: 'row' }}
                 align={{ initial: 'center', md: 'start' }}

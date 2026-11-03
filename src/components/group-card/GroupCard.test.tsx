@@ -5,10 +5,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import type { Group } from 'api/chipin.types';
-import {
-    GROUP_CARD_FILTER_BUCKETS,
-    GROUP_NET_CONVERSION_STATES,
-} from 'constants/groups';
+import { GROUP_CARD_FILTER_BUCKETS, GROUP_NET_CONVERSION_STATES } from 'constants/groups';
 import { lightThemeStyled } from 'constants/styled-themes';
 import type { GroupCardViewModel } from 'store/groupsSelectors';
 
@@ -67,9 +64,7 @@ const group = {
     recentActivities: { items: [], nextCursor: null },
 } satisfies Group;
 
-const createModel = (
-    overrides: Partial<GroupCardViewModel> = {},
-): GroupCardViewModel => ({
+const createModel = (overrides: Partial<GroupCardViewModel> = {}): GroupCardViewModel => ({
     group,
     isSettled: false,
     activeCurrencyCount: 1,
@@ -83,10 +78,7 @@ const createModel = (
     ...overrides,
 });
 
-const renderCard = (
-    model: GroupCardViewModel = createModel(),
-    isSelected = false,
-) =>
+const renderCard = (model: GroupCardViewModel = createModel(), isSelected = false) =>
     render(
         <MemoryRouter>
             <ThemeProvider theme={lightThemeStyled}>
@@ -116,9 +108,7 @@ test('shows the same dense selection outline for the card', () => {
 
 test('renders the card without cover layers when the API cover is null', () => {
     const groupWithoutCover = { ...group, coverUrl: null } satisfies Group;
-    const { container } = renderCard(
-        createModel({ group: groupWithoutCover }),
-    );
+    const { container } = renderCard(createModel({ group: groupWithoutCover }));
 
     expect(container.querySelector('img')).toBeNull();
     expect(screen.getByText(group.name)).toBeTruthy();
@@ -188,9 +178,7 @@ test('DSH-001 announces source direction when conversion is unavailable', () => 
     );
 
     expect(screen.getByText('groupsCard.unavailable')).toBeTruthy();
-    expect(
-        screen.getByRole('link', { name: /balances\.youOwe/ }),
-    ).toBeTruthy();
+    expect(screen.getByRole('link', { name: /balances\.youOwe/ })).toBeTruthy();
 });
 
 test('DSH-001 shows a source-currency badge only for one non-default currency', () => {
@@ -241,9 +229,7 @@ test('DSH-001 keeps tiny non-zero amounts and exposes debt direction without col
     );
 
     expect(positive.container.textContent).toContain('< 0.01 USD');
-    expect(
-        screen.getByRole('link', { name: /balances\.youAreOwed/ }),
-    ).toBeTruthy();
+    expect(screen.getByRole('link', { name: /balances\.youAreOwed/ })).toBeTruthy();
     positive.unmount();
 
     const negative = renderCard(
@@ -254,9 +240,7 @@ test('DSH-001 keeps tiny non-zero amounts and exposes debt direction without col
     );
 
     expect(negative.container.textContent).toContain('< 0.01 USD');
-    expect(
-        screen.getByRole('link', { name: /balances\.youOwe/ }),
-    ).toBeTruthy();
+    expect(screen.getByRole('link', { name: /balances\.youOwe/ })).toBeTruthy();
     expect(negative.container.textContent).not.toContain('-0.01');
 });
 
