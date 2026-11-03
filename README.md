@@ -20,6 +20,8 @@ npm install
 | `npm run test:task -- <test paths>` | Run only the listed tests; refuses to run without a path |
 | `npm run test:full` | Run the complete test suite |
 | `npm run lint` | Run ESLint |
+| `npm run format` | Format the repository with Prettier (`prettier --write .`) |
+| `npm run format:check` | Check formatting with Prettier without writing; not yet part of `verify` or CI |
 | `npm run typecheck` | Run the TypeScript compiler (`tsc -b`) |
 | `npm run verify` | Fast check: lint with `--quiet` (only errors are shown and fail; warnings are hidden), then typecheck |
 | `npm run verify:full` | Full gate, also run by CI: lint, full tests, production build, ds-gallery build |
