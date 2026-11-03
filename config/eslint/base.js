@@ -20,6 +20,8 @@ export const TS_FILES = '**/*.{ts,tsx}';
 
 // TypeScript files outside every tsconfig `include` (repository scripts and their tests). The
 // project service lints them with the compiler options of tsconfig.node.json (spec 02 §D5).
+// Resolved against `tsconfigRootDir` (APP_DIR): after 04-0 (APP_DIR = 'apps/app') the root
+// `scripts/*.ts` need their own glob and root.
 const DEFAULT_PROJECT_FILES = ['scripts/*.ts'];
 
 /**
@@ -88,7 +90,10 @@ export const typeAwareConfig = ({ appDir }) => [
             '@typescript-eslint/no-unsafe-call': 'error',
             '@typescript-eslint/no-unsafe-member-access': 'error',
             '@typescript-eslint/no-unsafe-return': 'error',
+            // Mostly autofixed; for a generic call use `getByRole<HTMLInputElement>(…)`, not `as`.
             '@typescript-eslint/no-unnecessary-type-assertion': 'error',
+            // Inv. 6: no `!`; narrow with a guard or `?.` instead.
+            '@typescript-eslint/no-non-null-assertion': 'error',
             // Type-only imports are explicit (tsc `verbatimModuleSyntax`); all three are autofixed.
             // `typeof import('x')` annotations stay allowed: they have no autofix (class a, §D0)
             // and are the vitest idiom `vi.importActual<typeof import('x')>`.

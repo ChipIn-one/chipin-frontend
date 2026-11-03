@@ -4,6 +4,11 @@
       "count": 1
     }
   },
+  "ds-gallery/gallery.tsx": {
+    "@typescript-eslint/no-non-null-assertion": {
+      "count": 1
+    }
+  },
   "src/basics/PWABadge.tsx": {
     "@typescript-eslint/no-floating-promises": {
       "count": 1
@@ -64,6 +69,11 @@
       "count": 1
     },
     "@typescript-eslint/no-unsafe-member-access": {
+      "count": 2
+    }
+  },
+  "src/constants/publicRoutes.test.ts": {
+    "@typescript-eslint/no-non-null-assertion": {
       "count": 2
     }
   },
@@ -242,8 +252,23 @@
       "count": 2
     }
   },
+  "src/public-routes/PublicEffects.test.tsx": {
+    "@typescript-eslint/no-non-null-assertion": {
+      "count": 4
+    }
+  },
+  "src/public-routes/PublicLanguageLinks.test.tsx": {
+    "@typescript-eslint/no-non-null-assertion": {
+      "count": 1
+    }
+  },
   "src/public-routes/entry-server.tsx": {
     "@typescript-eslint/no-floating-promises": {
+      "count": 1
+    }
+  },
+  "src/root.tsx": {
+    "@typescript-eslint/no-non-null-assertion": {
       "count": 1
     }
   }

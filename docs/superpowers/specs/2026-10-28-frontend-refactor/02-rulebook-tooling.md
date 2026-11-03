@@ -35,7 +35,7 @@ Consequences:
 | `simple-import-sort/imports`, `simple-import-sort/exports` | a | `--fix` |
 | `consistent-type-imports` | a | `--fix` |
 | `no-import-type-side-effects` | a | `--fix` |
-| `no-unnecessary-type-assertion` | a | `--fix` |
+| `no-unnecessary-type-assertion` | b | mostly `--fix`, but the "type arguments may be inferred from the assertion" report has no autofix; message: use `getByRole<HTMLInputElement>(…)` instead of `as` |
 | `unused-imports/no-unused-imports` | a | `--fix` |
 | `curly: all` | a | `--fix` |
 | `react/jsx-boolean-value: never` | a | `--fix` |
@@ -539,12 +539,13 @@ A new `tsconfig.base.json` with the shared options: `strict`, `noUnused*`, `eras
 | `handle*`, `react-refresh`, `React.FC` | 4 / 1 / 9 | the rules are removed (§D0), we do not touch the code | 02-C4 |
 | Prettier format | 317 files | `prettier --write`, mechanically | 02-C2a–c |
 | `consistent-type-imports` | 34 | autofix | 02-C6 |
-| floating/misused promises | 35 / 28 (52 in prod) | by hand: `void` for intentional ones, `return`/`.catch` for the rest | 02-C7a, 02-C7b |
+| floating/misused promises | 36 / 30 (measured in 02-C6; audit: 35 / 28, 52 in prod) | by hand: `void` for intentional ones, `return`/`.catch` for the rest | 02-C7a, 02-C7b |
 | `jsx-a11y` (6 rules) | unknown (the plugin is not installed) | new rules are immediately error; current violations — `--suppress-rule` in the same PR, fixed by slices | 02-C8 + per-slice PRs |
 | boundaries | ~30 | suppressions; the fix — 05-6 (basics → components/store/hooks/api, including `NavButton`, `BalanceSummaryText`), 04-5a (public-routes); routing → pages is not counted as a violation (element `app`) | 02-C9 |
 | `import-x/no-cycle` | known cycles `groupsStore`↔`activity-store`, `expenseModalStore`↔selectors (03:50) | suppressions; broken by 03-10/03-12 and 03-14 (C2-05) | 02-C9 |
 | `import-x/no-internal-modules` (allow-list) | 103 nested barrels | suppressions; the entries go away with 02-D3a–e (C2-05) | 02-C9 |
-| type-aware (`no-floating-promises`, `no-misused-promises`, `no-unsafe-*`) | 35 / 28+JSX / 35 | suppressions in 02-C6; fix 02-C7a/b (C2-05) | 02-C6 |
+| type-aware (`no-floating-promises`, `no-misused-promises`, `no-unsafe-*`) | 36 / 30 (incl. JSX) / 10 (5 assignment, 4 member-access, 1 return), measured in 02-C6 | suppressions in 02-C6; fix 02-C7a/b (C2-05) | 02-C6 |
+| `no-non-null-assertion` | 9 in 5 files | suppressions in 02-C6; fixed when the file is touched | 02-C6 |
 | default exports | 172 files, 314 imports, 14 lazy, 25 `vi.mock` | codemod `scripts/codemods/named-exports.mjs` (ts-morph, a temporary devDep): `export default X` → `export { X }`, `import X from` → `import { X } from`, lazy → `.then(m => ({ default: m.X }))`. `vi.mock` with `default` — by hand | 02-D2a basics(24), 02-D2b–c components(80), 02-D2d features(24), 02-D2e pages(42)+i18n+main |
 | nested barrels | 103 + 3 root ones (`basics/index.ts`, `i18n/index.ts`, `public-routes/index.ts`; `store/index.ts` is removed by 03-5 — the only owner, C2-28) | codemod `scripts/codemods/inline-barrels.mjs`: an import through a nested index → an import of the file; delete the index. `vi.mock('<barrel>')` is split by hand into mocks of files | 02-D3a–02-D3e by layer |
 | `export *` / inline re-export in index | 9 | disappear together with 02-D3 | 02-D3 |
@@ -601,7 +602,7 @@ Each PR releases independently. The size is a guideline, not a rule: one PR = on
 | **02-C3** | T2 (paths without baseUrl, ds-gallery alias) + `config/eslint/aliases.js` + import-sort autofix | 02-C2 |
 | **02-C4** | turn off the class c rules (§D0: the `handle*` selector, react-refresh, etc.) and the async selector `eslint.config.js:99-122` (C2-04); **`--max-warnings 0`**; delete the dead authSession override; the helpers `restrictedSyntax()`/`restrictedImports()` (the only owner; 03-1 and 05-5 only add their blocks); split `eslint.config.js` into `config/eslint/*`; the baseline mechanism (C2-05): `eslint-suppressions.json`, `baseline:update`, `check-baseline.mjs` + test, `rule-classes.json` + `check-rule-registry.mjs`, `lint:full`; CI: `base_sha` in `GITHUB_OUTPUT` and the `check-baseline` step (C1-15) | 02-C3 |
 | **02-C5** | T1 (typecheck of ds-gallery + configs), `tsconfig.base.json` | — |
-| **02-C6** | type-aware preset + `consistent-type-imports` autofix + T3 `verbatimModuleSyntax`; `--suppress-rule` for `no-floating-promises`/`no-misused-promises`/`no-unsafe-*` | 02-C4, 02-C5 |
+| **02-C6** | type-aware preset + `consistent-type-imports` autofix + T3 `verbatimModuleSyntax`; `--suppress-rule` for `no-floating-promises`/`no-misused-promises`/`no-unsafe-*`/`no-non-null-assertion` | 02-C4, 02-C5 |
 | **02-C7a/b** | `no-floating-promises`/`no-misused-promises`: fix store/helpers/hooks (a), UI (b); edit 00.Promises.5 and 20.Effects.5 | 02-C6 |
 | **02-C8** | 6 jsx-a11y rules + `jsx-no-literals` + the i18n attribute selector (D5) + baseline | 02-C4 |
 | **02-C9** | boundaries (with `shared-api`/`shared-lib`) + resolver + `import-x/no-cycle` + `import-x/no-internal-modules` + suppressions (~30 + cycles + barrels) + `generate-layers-doc.mjs` + probe fixtures | 02-C4 (`config/eslint/layers.js` appears when the config is split, A-39) |
