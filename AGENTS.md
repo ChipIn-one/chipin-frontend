@@ -5,7 +5,8 @@ Backend-контракты не меняем без явного запроса.
 
 ## Инварианты
 
-Инварианты 3–6 и 9 — целевое состояние спеки 03; пока её PR не влиты, действуют текущий код и правила `docs/engineering/rules/` (для денег — `60-money-helpers.md`).
+Инварианты 1–6 и 9 — целевое состояние спек 03/04 (слоёв `app`, `entities`, `shared` ещё нет); пока их PR не влиты, действуют текущая структура `src/`, код и правила `docs/engineering/rules/` (для денег — `60-money-helpers.md`). Исключение: запрет новых серверных сторов и новых `useConnect` из п. 9 действует уже сейчас (D12; `10-architecture.md` и `20-react.md` описывают `internal/useConnect.ts` до 02-A2).
+До переписывания глав 00–70 (02-A2) в стиле async/await приоритет у AGENTS.md (п. 7, D24).
 
 1. Слои импортируются только вниз по одному графу: app → pages → features → components → hooks → store → entities → helpers → shared → api → base (constants, types, i18n, styles, assets); basics — между components и helpers; `shared` делится на `shared-api` (`shared/api`, `shared/offline`: только hooks, store, entities, app) и `shared-lib`. Подробности — `docs/engineering/rules/10-architecture.md`.
 2. UI (pages, features, components, basics) и helpers не вызывают runtime-API, `axios`, `shared/api` и `shared/offline`; серверные данные приходят через query-слой (`entities/*`) или store. Импорт `axios` и runtime-модулей `api/` из UI ловит `no-restricted-imports`.
@@ -14,7 +15,7 @@ Backend-контракты не меняем без явного запроса.
 5. Создание/правка/удаление расходов — только через `entities/ledger/api/mutations.ts` (селектор по `offlineWritesAvailable`: онлайн-ключи или outbox); офлайн — только через outbox с client UUID и `entryKind: 'expense'` (включается 03-17 за флагом и capabilities backend; до него офлайн-записи нет). Settle-up и платежи, включая правку и удаление settlement, офлайн запрещены (`ONLINE_ONLY_ACTIONS`, `<OnlineOnly>`).
 6. Типы: без `any`, `as any`, `@ts-ignore`, неоправданных `as` и `!`; type-only импорты — `import type`. Данные из IndexedDB, outbox и localStorage проверяются zod при чтении.
 7. Промисы не теряются: каждый промис возвращается, `await`-ится или явно помечается `void`; ошибки не глотаются. Стиль `await` или `.then` свободный (запрет async/await снят владельцем 2026-10-28, D24; предупреждения старого async-селектора в `eslint.config.js` не исправляйте). В JSX-атрибутах промис не возвращается: `onClick={() => void action()}`.
-8. Только именованные экспорты; не больше одного `index.ts` на слайс, без `export *`.
+8. Только именованные экспорты; не больше одного `index.ts` на слайс, без `export *`. Правило ревью, не lint: существующие нарушения исправляются, когда файл затронут.
 9. Серверное состояние — TanStack Query; Zustand — UI-состояние. Серверные сторы, которые спека 03 ещё не мигрировала, — переходные: новых не создаём, новые поля серверных данных в них не добавляем. Одно значение читается селектором, несколько — одним объектным селектором с `useShallow`; `useStore()` без селектора и новые `useConnect` запрещены.
 10. Автоисправимое чинит `npx eslint --fix <изменённые файлы>`; стиль руками не правим. Ошибка lint — корректность или граница, её сообщение говорит, как чинить; `eslint-disable` — только с причиной.
 11. Весь пользовательский текст, включая `aria-*`, `placeholder`, `title` и тосты, идёт через i18n во все локали. Интерактив — нативные элементы или Radix, у кнопок-иконок есть переводимое имя (ревью).

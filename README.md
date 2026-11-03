@@ -21,7 +21,7 @@ npm install
 | `npm run test:full` | Run the complete test suite |
 | `npm run lint` | Run ESLint |
 | `npm run typecheck` | Run the TypeScript compiler (`tsc -b`) |
-| `npm run verify` | Fast check: lint without warnings, then typecheck |
+| `npm run verify` | Fast check: lint with `--quiet` (only errors are shown and fail; warnings are hidden), then typecheck |
 | `npm run verify:full` | Full gate, also run by CI: lint, full tests, production build, ds-gallery build |
 | `npm run build` | Typecheck and production build |
 | `npm run vercel-build` | Vercel deployment build: production build and public precache check, no tests |
