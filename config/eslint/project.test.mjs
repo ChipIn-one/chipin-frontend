@@ -68,7 +68,7 @@ describe('restrictedImports()', () => {
 });
 
 describe('pending entries', () => {
-    test('list the ids marked pending on every block where the entry is active', () => {
+    test('list the keys marked pending on every block where the entry is active', () => {
         const blocks = restrictedSyntax([
             { id: 'everywhere', selector: 'WithStatement', message: 'Remove it.' },
             {
@@ -82,7 +82,7 @@ describe('pending entries', () => {
 
         expect(blocks.map(block => [block.name, block[PENDING_IDS]])).toEqual([
             ['chipin/no-restricted-syntax/all', []],
-            ['chipin/no-restricted-syntax/src/money/**', ['money']],
+            ['chipin/no-restricted-syntax/src/money/**', ['no-restricted-syntax#money']],
         ]);
     });
 });

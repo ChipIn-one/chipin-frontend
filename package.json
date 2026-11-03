@@ -29,7 +29,7 @@
         "test:contract:full": "vitest run --config vitest.contract.config.ts contract-tests/core-api.contract.ts",
         "prerender:public": "node scripts/prerender-public.mjs",
         "verify:public-precache": "node scripts/verify-public-precache.mjs",
-        "build:ds-gallery": "tsc -b ds-gallery && vite build --config ds-gallery/vite.config.ts && node ds-gallery/build-html.mjs"
+        "build:ds-gallery": "vite build --config ds-gallery/vite.config.ts && node ds-gallery/build-html.mjs"
     },
     "dependencies": {
         "@radix-ui/themes": "^3.3.0",
@@ -54,6 +54,7 @@
         "@sentry/vite-plugin": "^5.4.0",
         "@testing-library/react": "^16.3.3",
         "@testing-library/user-event": "^14.6.8",
+        "@types/node": "^24.19.2",
         "@types/react": "^19.3.0",
         "@types/react-dom": "^19.3.0",
         "@vite-pwa/assets-generator": "^1.0.0",

@@ -58,14 +58,16 @@ export const entryMessages = (ruleName, value) => {
  * @param {{ registry: Record<string, string>, resolved: Array<{ file: string, rules?: object }>, blocks: unknown[], samples?: string[] }} input
  *   `resolved`: effective rules of every linted file (undefined when a file has no config);
  *   `blocks`: raw config blocks `{ name?, rules, pending? }`, scanned only for restricted-entry
- *   ids; `pending` lists ids marked `pending: true` (scoped to files that do not exist yet);
+ *   ids; `pending` lists `<rule>#<id>` keys marked `pending: true` (scoped to files that do not
+ *   exist yet);
  *   `samples`: files that must get a config.
  * @returns {string[]} errors
  */
 export const checkRegistry = ({ registry, resolved, blocks, samples = [] }) => {
     const errors = new Set();
-    // Keys that are effective on at least one linted file.
+    // Keys that are effective on at least one linted file (`onFiles`), or pending.
     const effective = new Set();
+    const onFiles = new Set();
     const requireEntry = (key, where) => {
         if (!(key in registry)) {
             errors.add(`${key} (${where}) has no entry in ${REGISTRY_PATH}`);
@@ -109,6 +111,7 @@ export const checkRegistry = ({ registry, resolved, blocks, samples = [] }) => {
 
             for (const key of keys) {
                 effective.add(key);
+                onFiles.add(key);
                 requireEntry(key, file);
             }
         }
@@ -126,8 +129,12 @@ export const checkRegistry = ({ registry, resolved, blocks, samples = [] }) => {
                     errors.add(`${ruleName} is "warn" in ${where}: use error or off`);
                 }
                 for (const key of entryIds(ruleName, value, where)) {
-                    if ((block.pending ?? []).includes(key.split('#')[1])) {
+                    if ((block.pending ?? []).includes(key)) {
                         effective.add(key);
+                        // A pending entry that already matches a linted file is no longer pending.
+                        if (onFiles.has(key)) {
+                            errors.add(`${key} is effective; remove \`pending: true\``);
+                        }
                     }
                     requireEntry(key, where);
                 }
@@ -213,12 +220,21 @@ const resolveCurrentMode = async () => {
 
 /** Runs `script --resolve` (this file by default) in the env of `mode` and parses its result. */
 export const resolveMode = async (mode, script = SELF) => {
-    const { stdout } = await promisify(execFile)(process.execPath, [script, '--resolve'], {
-        cwd: repoRoot,
-        env: modeEnv(mode),
-        encoding: 'utf8',
-        maxBuffer: 256 * 1024 * 1024,
-    });
+    let stdout;
+
+    try {
+        ({ stdout } = await promisify(execFile)(process.execPath, [script, '--resolve'], {
+            cwd: repoRoot,
+            env: modeEnv(mode),
+            encoding: 'utf8',
+            maxBuffer: 256 * 1024 * 1024,
+        }));
+    } catch (error) {
+        throw new Error(
+            `Rule resolution failed for mode ${JSON.stringify(mode)}: ${error.message}`,
+            { cause: error },
+        );
+    }
     const start = stdout.lastIndexOf(RESULT_MARKER);
 
     try {

@@ -1,33 +1,21 @@
 {
+    "extends": "./tsconfig.base.json",
     "compilerOptions": {
         "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
         "target": "ES2022",
         "lib": ["ES2023", "DOM"],
-        "module": "ESNext",
-        "skipLibCheck": true,
-
-        /* Bundler mode */
-        "moduleResolution": "bundler",
-        "allowImportingTsExtensions": true,
+        // Stage T3 (02-C6) moves this to tsconfig.base.json and removes this line.
         "verbatimModuleSyntax": true,
-        "moduleDetection": "force",
-        "noEmit": true,
         "paths": {
             "constants/*": ["./src/constants/*"]
-        },
-
-        /* Linting */
-        "strict": true,
-        "noUnusedLocals": true,
-        "noUnusedParameters": true,
-        "erasableSyntaxOnly": true,
-        "noFallthroughCasesInSwitch": true,
-        "noUncheckedSideEffectImports": true
+        }
     },
     "include": [
         "vite.config.ts",
         "vitest.config.ts",
         "vitest.contract.config.ts",
+        "pwa-assets.config.ts",
+        "ds-gallery/vite.config.ts",
         "contract-tests/**/*.ts"
     ]
 }

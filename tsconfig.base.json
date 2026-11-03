@@ -1,0 +1,22 @@
+{
+    // Shared compiler options for tsconfig.app.json and tsconfig.node.json (spec 02, D8).
+    "compilerOptions": {
+        "module": "ESNext",
+        "skipLibCheck": true,
+        "useDefineForClassFields": true,
+
+        /* Bundler mode */
+        "moduleResolution": "bundler",
+        "allowImportingTsExtensions": true,
+        "moduleDetection": "force",
+        "noEmit": true,
+
+        /* Linting */
+        "strict": true,
+        "noUnusedLocals": true,
+        "noUnusedParameters": true,
+        "erasableSyntaxOnly": true,
+        "noFallthroughCasesInSwitch": true,
+        "noUncheckedSideEffectImports": true
+    }
+}

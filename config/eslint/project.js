@@ -12,7 +12,7 @@ import { appGlob, LINT_FILES } from './base.js';
 // `[id]`; the id is the registry key `<rule>#<id>` in config/eslint/rule-classes.json.
 // `pending: true` marks an entry whose globs match no file yet (e.g. `src/money/**` before the
 // money module exists): scripts/check-rule-registry.mjs then does not report its key as dead.
-// The ids are kept on each block under the PENDING_IDS symbol, which ESLint ignores.
+// Their `<rule>#<id>` keys are kept on each block under the PENDING_IDS symbol, which ESLint ignores.
 export const PENDING_IDS = Symbol.for('chipin.eslint.pendingIds');
 
 const MAX_SCOPES = 6;
@@ -61,7 +61,9 @@ const scopedBlocks = (ruleName, entries, toOptions) => {
             name: `chipin/${ruleName}/${combo.join(' & ') || 'all'}`,
             files: [[LINT_FILES, ...combo]],
             rules: { [ruleName]: active.length > 0 ? ['error', ...toOptions(active)] : 'off' },
-            [PENDING_IDS]: active.filter(entry => entry.pending).map(entry => entry.id),
+            [PENDING_IDS]: active
+                .filter(entry => entry.pending)
+                .map(entry => `${ruleName}#${entry.id}`),
         };
     });
 };

@@ -1,30 +1,14 @@
 {
+    "extends": "./tsconfig.base.json",
     "compilerOptions": {
         "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
         "target": "ES2020",
-        "useDefineForClassFields": true,
         "lib": ["ES2020", "DOM", "DOM.Iterable"],
-        "module": "ESNext",
-        "skipLibCheck": true,
-
-        // Types add
-        "typeRoots": ["./node_modules/@types"],
-
-        /* Bundler mode */
-        "moduleResolution": "bundler",
-        "allowImportingTsExtensions": true,
-        "verbatimModuleSyntax": false,
-        "moduleDetection": "force",
-        "noEmit": true,
         "jsx": "react-jsx",
-
-        /* Linting */
-        "strict": true,
-        "noUnusedLocals": true,
-        "noUnusedParameters": true,
-        "erasableSyntaxOnly": true,
-        "noFallthroughCasesInSwitch": true,
-        "noUncheckedSideEffectImports": true,
+        // No ambient @types: browser code must not see the Node globals of @types/node.
+        "types": [],
+        // Stage T3 (02-C6) turns this on in tsconfig.base.json and removes this line.
+        "verbatimModuleSyntax": false,
 
         // Aliases: the only list. ESLint (config/eslint/aliases.js) and Vite (vite-tsconfig-paths) read it.
         "paths": {
@@ -50,5 +34,6 @@
             "styles/*": ["./src/styles/*"]
         }
     },
-    "include": ["src"]
+    "include": ["src", "ds-gallery"],
+    "exclude": ["ds-gallery/vite.config.ts"]
 }
