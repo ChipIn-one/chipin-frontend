@@ -13,7 +13,7 @@ Invariants 1–6 and 9 describe the target state of specs 03/04 (the `app`, `ent
 4. The server is the source of truth for finances: do not patch balances/debts locally; only the outbox loop `runOutboxOp` repeats a mutation (spec 03 §2.4); every TanStack mutation has `retry: false`, the online path is `ledgerOnlineMutationKeys` (`networkMode: 'online'`); a stale response never overwrites newer state.
 5. Expenses are created/edited/deleted only through `entities/ledger/api/mutations.ts` (selected by `offlineWritesAvailable`: online keys or outbox); offline only through the outbox with a client UUID and `entryKind: 'expense'` (enabled by 03-17 behind a flag and backend capabilities; until then there are no offline writes). Settle-up and payments, including editing and deleting a settlement, are forbidden offline (`ONLINE_ONLY_ACTIONS`, `<OnlineOnly>`).
 6. Types: no `any`, `as any`, `@ts-ignore`, unjustified `as`, or `!`; type-only imports use `import type`. Data from IndexedDB, the outbox, and localStorage is validated with zod on read.
-7. Promises are never lost: every promise is returned, awaited, or explicitly marked `void`; errors are not swallowed. `await` or `.then` style is free (the owner lifted the async/await ban on 2026-10-28, D24; do not fix warnings from the old async selector in `eslint.config.js`). A JSX attribute never returns a promise: `onClick={() => void action()}`.
+7. Promises are never lost: every promise is returned, awaited, or explicitly marked `void`; errors are not swallowed. `await` or `.then` style is free (the owner lifted the async/await ban on 2026-10-28, D24). A JSX attribute never returns a promise: `onClick={() => void action()}`.
 8. Named exports only; at most one `index.ts` per slice, no `export *`. Until lint/codemod 02-C12/02-D3 land this is a review rule; it is mandatory in new code. Do not rewrite existing files incidentally (codemod 02-D3 migrates them).
 9. Server state is TanStack Query; Zustand is UI state. Server stores that spec 03 has not migrated yet are transitional: do not create new ones and do not add new server-data fields to them. Read one value with a selector, several with one object selector wrapped in `useShallow`; `useStore()` without a selector and new `useConnect` hooks are forbidden.
 10. `npx eslint --fix <changed files>` fixes everything auto-fixable; do not fix style by hand. A lint error is about correctness or a boundary, and its message says how to fix it; `eslint-disable` only with a reason.
@@ -28,8 +28,9 @@ Invariants 1–6 and 9 describe the target state of specs 03/04 (the `app`, `ent
 - `npm run test:task -- <test paths>` — targeted tests; refuses to run without a path.
 - `npx eslint --fix <files>` — ESLint auto-fixes in changed files only.
 - `npx prettier --write <files>` — format the files you changed; never `npm run format` in a task.
-- `npm run verify` — format check, fast lint (`--quiet`: shows only errors, warnings do not fail) and typecheck.
-- `npm run verify:full` — the full gate: format check, lint, all tests, build, ds-gallery; CI runs the same. Run before `IMPLEMENTATION_COMPLETE`.
+- `npm run verify` — format check, lint (`--max-warnings 0`: every rule is error or off) and typecheck.
+- `npm run baseline:update` — prune fixed entries from `eslint-suppressions.json`; the lint baseline only shrinks.
+- `npm run verify:full` — the full gate: format check, `lint:full`, all tests, build, ds-gallery; CI runs the same. Run before `IMPLEMENTATION_COMPLETE`.
 - `npm run typecheck` — `tsc -b`.
 - `npm run version:check` — the version in `package.json` and `package-lock.json` is valid and matches (read-only).
 - Husky `pre-push` runs `version:check` and `verify:full`.
