@@ -5,8 +5,7 @@ Backend-контракты не меняем без явного запроса.
 
 ## Инварианты
 
-Инварианты 1–6 и 9 — целевое состояние спек 03/04 (слоёв `app`, `entities`, `shared` ещё нет); пока их PR не влиты, действуют текущая структура `src/`, код и правила `docs/engineering/rules/` (для денег — `60-money-helpers.md`). Исключение: запрет новых серверных сторов и новых `useConnect` из п. 9 действует уже сейчас (D12; `10-architecture.md` и `20-react.md` описывают `internal/useConnect.ts` до 02-A2).
-По стилю async/await до 02-A2 приоритет у AGENTS.md (п. 7, D24).
+Инварианты 1–6 и 9 — целевое состояние спек 03/04 (слоёв `app`, `entities`, `shared` ещё нет); пока их PR не влиты, действуют текущая структура `src/`, код и правила `docs/engineering/rules/` (для денег — `60-money-helpers.md`). Исключение: запреты п. 9 (новые серверные сторы и новые connector-хуки) действуют уже сейчас (D12).
 
 1. Слои импортируются только вниз по одному графу: app → pages → features → components → hooks → store → entities → helpers → shared → api → base (constants, types, i18n, styles, assets); basics — между components и helpers; `shared` делится на `shared-api` (`shared/api`, `shared/offline`: только hooks, store, entities, app) и `shared-lib`. Подробности — `docs/engineering/rules/10-architecture.md`.
 2. UI (pages, features, components, basics) и helpers не вызывают runtime-API, `axios`, `shared/api` и `shared/offline`; серверные данные приходят через query-слой (`entities/*`) или store. Импорт `axios` и runtime-модулей `api/` из UI ловит `no-restricted-imports`.

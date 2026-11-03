@@ -1,21 +1,21 @@
 # Zustand State Rules
 
-## Store Choice And Shape
+## Store Choice
 
-- Use Zustand for shared domain, session, remote, or cross-feature state.
-- Keep form drafts, modal visibility, hover, and temporary UI state local.
-- Do not create a store only to avoid passing a small number of props.
+- Zustand holds UI state only: modal visibility, drafts, and UI preferences. Server state is TanStack
+  Query (spec 03).
+- Server stores that spec 03 has not migrated yet are transitional: do not create new ones and do not add
+  new server-data fields to them.
+- Keep form drafts, hover, and temporary UI state local unless they are shared outside the flow.
 - A dedicated global Zustand store is allowed for an explicitly approved, single-active-session
   financial modal that opens from multiple application contexts. It owns draft transitions,
   calculations, validation, and payload construction; it resets with the modal lifecycle, exposes
   narrow stable selectors, and does not perform API requests.
-- Domain stores hold domain data and actions. Request lifecycle and errors remain centralized.
-- Define focused state/action types and explicit Promise return types for async actions.
-- Follow the required `<domain>-store/` capability layout in `10-architecture.md`. `actions.ts` owns
-  `use*Store` and Zustand `set`/`get`, while `initialState.ts` contains the complete state-only reset
-  value.
+- Store location: `10-architecture.md` §Store Location.
 
 ## Central Loading And Errors
+
+Applies to stores that still fetch server data; a store drops these rules when it migrates to TanStack Query.
 
 - `loadingStore` owns operation lifecycle.
 - `errorsStore` owns normalized, serializable errors.
@@ -40,75 +40,35 @@ type RequestError = {
 - Read a single value or action with a direct selector.
 - When a component reads two or more related values or actions from the same store, combine them
   in one object selector wrapped with `useShallow`.
-- Do not group unrelated state only to reduce the number of hooks.
-- Keep arrays or objects that require element-level shallow comparison in their own top-level
-  `useShallow` selector instead of nesting them as properties inside another selector result.
-- Reused or derived selectors are named and live next to the store.
-- Named selectors live in the store's `selectors.ts` and are exported through its `index.ts`.
-- Selectors may call pure helpers. Helpers must receive data as arguments and must not import stores,
-  Zustand hooks, or selectors.
 - Selector results must be stable; do not create new arrays/objects on every subscription unless shallow comparison is intentional.
-- Do not use `getState()` during render. It is for store actions or imperative orchestration outside React.
 
 ```ts
-const groups = useGroupsStore((state) => state.groups);
-const fetchSetGroups = useGroupsStore((state) => state.fetchSetGroups);
+const { groups, fetchSetGroups } = useGroupsStore(
+    useShallow((state) => ({
+        groups: state.groups,
+        fetchSetGroups: state.fetchSetGroups,
+    })),
+);
 ```
 
-## Updates And Derived Data
-
-- Update state immutably.
-- Use functional `set((state) => ...)` whenever the next value depends on previous state.
-- Do not capture a store snapshot before an async request and apply it after the request settles.
-- Keep derived values in selectors/helpers instead of synchronizing duplicate state through effects.
-- Reset only state owned by the action/store.
-
-## Action Naming
+## Query And Mutation Naming
 
 | Behavior | Name |
 | --- | --- |
-| Fetch without store write | API `fetchGroups` |
-| Fetch and write store | `fetchSetGroups` |
-| Pure store update | `setSelectedGroup` |
-| Create/update/remove command | `createGroup`, `updateGroup`, `removeGroup` |
-| Reset owned state | `resetGroups` |
+| Read server data | `use<Entity>Query`, for example `useGroupsQuery` |
+| Create/update/remove command | `use<Verb><Entity>Mutation`, for example `useCreateGroupMutation` |
+| UI store update | `set<Thing>`, for example `setSelectedGroup` |
+| Reset owned UI state | `reset<Thing>` |
 
-Command names describe the business operation; their store layer is clear from the Zustand selector. Do not use vague names such as `setData`, `load`, or `process`.
+Names describe the business operation. Do not use vague names such as `setData`, `load`, or `process`.
 
-## Async Actions
+## Server Requests
 
-```ts
-fetchSetGroups: (): Promise<Group[]> => {
-    const { setLoading } = useLoadingStore.getState();
-    const { clearError, setError } = useErrorsStore.getState();
-
-    clearError('group', 'data');
-    setLoading('group', 'data', 'loading');
-
-    return groupsApi
-        .fetchGroups()
-        .then((groups) => {
-            set({ groups });
-            return groups;
-        })
-        .catch((error: unknown) => {
-            setError('group', 'data', normalizeApiError(error));
-            return [];
-        })
-        .finally(() => {
-            setLoading('group', 'data', 'fetched');
-        });
-},
-```
-
-- Validate preconditions before entering `loading`.
-- Read actions record normalized errors and resolve with the confirmed/current value; mutation actions
-  reject when the caller must react to a backend failure.
-- Cancellation is not a domain error.
-- Protect searches/pagination from stale responses and duplicate requests.
-- The simple `.finally(set fetched)` example is valid only for a single-flight operation. Concurrent/latest-wins actions must verify request identity so an older Promise cannot settle the newer request's loading/error state.
-- Append results with functional `set`.
-- One layer owns presentation: stores record errors; UI displays contextual state/toasts; interceptors handle only global transport/session concerns.
+- Server reads and mutations are TanStack Query hooks (spec 03 §2); mutations use `retry: false`, and
+  a stale response never overwrites newer state (`AGENTS.md` invariant 4).
+- Validate preconditions before starting a request. Cancellation is not a domain error.
+- Stores that still fetch keep request identity checks so an older Promise cannot settle a newer
+  request's loading/error state, until they migrate.
 
 ## Store Coordination
 

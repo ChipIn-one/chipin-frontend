@@ -30,37 +30,23 @@ groupsApi.createGroup(input);
 
 ## Naming
 
-| Operation | API | Store |
-| --- | --- | --- |
-| Read | `groupsApi.fetchGroups` | `fetchSetGroups` when stored |
-| Create | `groupsApi.createGroup` | `createGroup` |
-| Update | `groupsApi.updateGroup` | `updateGroup` |
-| Remove | `groupsApi.removeGroup` | `removeGroup` |
-| Local-only update | — | `setSelectedGroup` |
+- Query keys start with the plural entity (`groups`, `users`, `ledger`, `activity`, `dashboard`,
+  `currencyRates`, `stats`) and live in `<entity>Keys`, for example `groupKeys.detail(groupId)`.
+- Mappers in `entities/<entity>/model/` are `toX()` (wire → domain) and `toXWire()` (domain → wire).
+- Query and mutation hooks follow `40-state.md` §Query And Mutation Naming.
 
 Do not add `Api`, `Store`, `Effect`, or `Action` suffixes merely to distinguish layers.
 
-## Axios And Types
+## Wire Types
 
-- Use the shared configured Axios instance; direct `axios` calls outside `src/api` are prohibited.
-- Provide a response generic for every request and return `response.data`.
-- Axios generics are compile-time only. Add a focused runtime guard/mapper when a contract is untrusted or critical; do not add a validation dependency without approval.
-- API input, wire request, wire response, and domain types are distinct only when their shapes or invariants differ.
-- Use `Input` for client-facing input, `Request`/`Response` for wire DTOs, and an unsuffixed name for the domain type.
-- Avoid no-op mappers when response and domain are intentionally identical.
-- When a wire contract is smaller than another response, declare its exact fields explicitly. Do
-  not derive it with `Pick` from a broader response unless the backend contract guarantees that
-  they are the same resource representation.
-- When a wire response and domain shape are identical, export a semantic alias from the core types
-  module and keep the `Api*Response` name below the UI boundary.
-
-```ts
-export const fetchGroups = (signal?: AbortSignal): Promise<GroupResponse[]> => {
-    return apiInstance
-        .get<GroupResponse[]>('/groups', { signal })
-        .then((response) => response.data);
-};
-```
+- Request and response types come from the backend OpenAPI snapshot (`src/shared/api/generated/`, spec 03
+  §5); do not hand-write new `Request`/`Response` types for endpoints it covers. Generated files are not
+  edited by hand.
+- Calls go through the typed `api()` wrapper over the shared Axios instance; direct `axios` calls outside
+  the API layer are prohibited.
+- zod validates only data that can have a stale format: IndexedDB cache, outbox, and `localStorage`.
+- Legacy `src/api/*` modules keep their hand-written types and the namespace-import rule above until their
+  resource moves to the generated client.
 
 ## Payloads
 
@@ -93,17 +79,14 @@ export const fetchGroups = (signal?: AbortSignal): Promise<GroupResponse[]> => {
 
 ## Online-First Domain Mutations
 
-- Backend responses are the only canonical source for financial and domain state.
-- Expense, settlement, reverse, group lifecycle, and known-user mutations live in their owning Zustand
-  stores. Existing `friend`-named public/store identifiers are legacy compatibility names and are not
-  renamed incidentally. Do not add a generic command layer, mutation store, mutation map, or resource registry.
-- After mutation success, the action starts the required canonical fetch actions in one explicit
-  `Promise.all`. Read actions record their own normalized errors and resolve, so a refresh failure
-  cannot turn a confirmed backend mutation into a rejected mutation Promise. Do not patch balances,
+- Backend responses are the only canonical source for financial and domain state. Do not patch balances,
   debts, totals, activity, known-user data, groups, or dashboard data locally.
-- `dashboardStore` owns the `balances` and `activity` fields returned by `/dashboard`. Dashboard
-  summaries derive totals from that confirmed response and the separately fetched currency rates.
-- Required refreshes are:
+- After a mutation succeeds, invalidate the affected queries with `invalidateQueries`; the refetch and
+  rollback rules are in spec 03 §2.2.
+- A mutation failure preserves the last confirmed state. A refresh failure after mutation success does
+  not change the mutation result; there is no automatic or toast-level retry.
+- Store mutation actions that are not migrated yet start the required canonical fetch actions in one
+  explicit `Promise.all` after backend success and resolve `void`; refresh failures do not reject them:
 
   | Mutation | Canonical fetch actions |
   | --- | --- |
@@ -111,17 +94,6 @@ export const fetchGroups = (signal?: AbortSignal): Promise<GroupResponse[]> => {
   | Group delete / leave | groups, known-user data, dashboard, activity |
   | Group member removal | selected group detail, known-user data, dashboard, activity |
   | Known-user removal | known-user data |
-
-- A mutation failure preserves the last confirmed state. A refresh failure after mutation success
-  does not change the mutation result or show a second partial-success warning; the UI reports only
-  whether the backend operation itself succeeded. There is no automatic or toast-level retry.
-- Store mutation actions reject when the backend mutation fails and resolve `void` when the backend
-  mutation succeeds. Required canonical refreshes still run after success, but their failures do not
-  turn a confirmed mutation into a failed result.
-- Store-owned request channels may abort an active GET when a forced refresh or reset supersedes it;
-  identical pending reads in the same channel reuse one Promise, and stale responses never update
-  state. Each store owns and resets its channels; do not add a global request registry or string key
-  map.
 
 ## Activity Client Notes
 
