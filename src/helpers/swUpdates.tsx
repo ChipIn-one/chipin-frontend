@@ -198,7 +198,7 @@ const observeInstalling = (
 };
 
 /** Bound visibilitychange handler — stored so it can be removed on cleanup. */
-let visibilityHandler: (() => Promise<void>) | null = null;
+let visibilityHandler: (() => void) | null = null;
 
 /** Periodic poll interval id — stored so it can be cleared on cleanup. */
 let periodicPollId: ReturnType<typeof setInterval> | null = null;
@@ -253,7 +253,7 @@ export const initServiceWorkerUpdates = async (): Promise<void> => {
     });
 
     // Phase 3 — re-check on tab focus after a potential cooldown expiry.
-    visibilityHandler = async () => {
+    const recheckOnVisible = async (): Promise<void> => {
         if (document.visibilityState !== 'visible') {
             return;
         }
@@ -269,10 +269,14 @@ export const initServiceWorkerUpdates = async (): Promise<void> => {
         checkShowUpdateToast(registration);
     };
 
+    visibilityHandler = () => {
+        void recheckOnVisible();
+    };
+
     document.addEventListener('visibilitychange', visibilityHandler);
 
     // Phase 4 — hourly poll for apps left open across background sessions.
-    periodicPollId = setInterval(async () => {
+    const pollForUpdate = async (): Promise<void> => {
         if (!navigator.onLine) {
             return;
         }
@@ -282,6 +286,10 @@ export const initServiceWorkerUpdates = async (): Promise<void> => {
         } catch {
             // Ignore network errors during periodic checks.
         }
+    };
+
+    periodicPollId = setInterval(() => {
+        void pollForUpdate();
     }, HOUR);
 };
 

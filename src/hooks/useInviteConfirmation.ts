@@ -109,7 +109,7 @@ export const useInviteConfirmation = <TResult>({
     }, [errorFallbackMessage, inviteToken, onAccept, onAccepted]);
 
     const cancel = useCallback(() => {
-        navigate(ROUTES.DASHBOARD, { replace: true });
+        void navigate(ROUTES.DASHBOARD, { replace: true });
     }, [navigate]);
 
     if (!isInviteToken(inviteToken)) {

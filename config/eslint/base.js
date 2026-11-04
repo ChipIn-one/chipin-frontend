@@ -55,6 +55,8 @@ export const baseConfig = ({ appDir }) =>
                 'simple-import-sort/exports': 'error',
                 // Groups are built from the tsconfig.app.json `paths` aliases (aliases.js).
                 'simple-import-sort/imports': ['error', { groups: importSortGroups({ appDir }) }],
+                // Inv. 6: no `!`; narrow with a guard or `?.` instead. Needs no type information.
+                '@typescript-eslint/no-non-null-assertion': 'error',
             },
         },
     );
@@ -92,8 +94,6 @@ export const typeAwareConfig = ({ appDir }) => [
             '@typescript-eslint/no-unsafe-return': 'error',
             // Mostly autofixed; for a generic call use `getByRole<HTMLInputElement>(…)`, not `as`.
             '@typescript-eslint/no-unnecessary-type-assertion': 'error',
-            // Inv. 6: no `!`; narrow with a guard or `?.` instead.
-            '@typescript-eslint/no-non-null-assertion': 'error',
             // Type-only imports are explicit (tsc `verbatimModuleSyntax`); all three are autofixed.
             // `typeof import('x')` annotations stay allowed: they have no autofix (class a, §D0)
             // and are the vitest idiom `vi.importActual<typeof import('x')>`.

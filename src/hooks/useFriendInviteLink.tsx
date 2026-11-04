@@ -26,7 +26,7 @@ const useFriendInviteLink = (): InviteConfirmationState => {
                     ? i18n.t('toasts:friend.inviteAcceptedWithName', { name: friendName })
                     : i18n.t('toasts:friend.inviteAccepted'),
             );
-            navigate(ROUTES.FRIENDS, { replace: true });
+            void navigate(ROUTES.FRIENDS, { replace: true });
         },
         [navigate],
     );

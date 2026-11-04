@@ -14,9 +14,10 @@ Legacy and touched-code policy lives in `70-testing.md` §Legacy Baseline.
 ## Promises
 
 - Do not swallow errors. Normalize or record the error, then reject unless the operation explicitly recovers.
-- Read actions record expected request errors in `errorsStore` and resolve after handling them, so callers do not
-  need fire-and-forget wrappers. Mutations reject when the caller must react; do not add no-op catches or `void`
-  wrappers around requests.
+- Read actions record expected request errors in `errorsStore` and resolve after handling them, so callers may
+  mark them `void` instead of awaiting them. Every promise is returned, awaited, or, when it is intentionally not
+  awaited, marked `void` (`void fetchGroups();`; in JSX `onClick={() => void action()}`); `no-floating-promises`
+  and `no-misused-promises` enforce this. Mutations reject when the caller must react; do not add no-op catches.
 - Do not wrap an existing Promise with `new Promise`.
 
 ```ts

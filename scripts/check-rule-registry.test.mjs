@@ -329,20 +329,27 @@ const specRegistry = () => {
             return members.map(member => ({
                 token: `@typescript-eslint/${token.slice(0, -1)}${member.trim()}`,
                 cls,
+                family: true,
             }));
         }),
     );
 };
 
 // Rows of the §D0 tables that register `rule`. The tables name typescript-eslint rules without
-// the plugin prefix; family members are expanded to full names by `specRegistry`.
+// the plugin prefix; family members are expanded to full names by `specRegistry` and match only
+// the full `@typescript-eslint/` name, never an unprefixed (core) rule of the same name.
 const rowsFor = (rule, tokens) => {
     const names = [rule, rule.replace(/^@typescript-eslint\//, '')];
 
-    return tokens.filter(({ token }) =>
-        names.some(
-            name => token === name || token.startsWith(`${name}:`) || token.startsWith(`${name} `),
-        ),
+    return tokens.filter(({ token, family }) =>
+        family
+            ? token === rule
+            : names.some(
+                  name =>
+                      token === name ||
+                      token.startsWith(`${name}:`) ||
+                      token.startsWith(`${name} `),
+              ),
     );
 };
 
@@ -367,5 +374,7 @@ describe('rule-classes.json matches the spec 02 §D0 registry', () => {
         ]);
         expect(rowsFor('@typescript-eslint/no-unsafe-type-assertion', tokens)).toEqual([]);
         expect(rowsFor('no-unsafe-finally', tokens)).toEqual([]);
+        // A hypothetical core rule with a family member's unprefixed name is not covered.
+        expect(rowsFor('no-unsafe-call', tokens)).toEqual([]);
     });
 });

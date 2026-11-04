@@ -1,4 +1,4 @@
-import { beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
     activateServiceWorker: vi.fn<() => Promise<void>>(),
@@ -65,6 +65,15 @@ beforeEach(() => {
     mocks.activateServiceWorker.mockResolvedValue(undefined);
 });
 
+// Each test imports a fresh module instance; remove its document listener and interval so a
+// later test only sees its own instance's reactions.
+afterEach(async () => {
+    const { cleanupServiceWorkerUpdates } = await import('./swUpdates');
+
+    cleanupServiceWorkerUpdates();
+    vi.restoreAllMocks();
+});
+
 test('applies the shared worker activation before reloading', () => {
     const waitingWorker = installServiceWorkerRegistration();
 
@@ -93,4 +102,20 @@ test('reloads safely when shared worker activation fails', () => {
             }),
         )
         .then(() => vi.waitFor(() => expect(mocks.reloadCurrentPage).toHaveBeenCalledOnce()));
+});
+
+test('re-checks the waiting worker on tab focus even when the update request fails', async () => {
+    installServiceWorkerRegistration();
+    const { initServiceWorkerUpdates } = await import('./swUpdates');
+
+    await initServiceWorkerUpdates();
+    const registration = await navigator.serviceWorker.register('/sw.js');
+    vi.mocked(registration.update).mockRejectedValueOnce(new Error('offline'));
+    mocks.setIsSwUpdateAvailable.mockClear();
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    await vi.waitFor(() => expect(mocks.setIsSwUpdateAvailable).toHaveBeenCalledWith(true));
+    expect(registration.update).toHaveBeenCalledOnce();
 });
