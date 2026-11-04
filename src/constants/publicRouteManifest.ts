@@ -11,9 +11,6 @@ const PUBLIC_HOME_PAGE = PUBLIC_PAGES[0].id;
 const LOCALE_PREFIX: Record<SupportedLocale, string> = {
     en: '',
     ru: '/ru',
-    es: '/es',
-    'pt-BR': '/pt-br',
-    'pt-PT': '/pt-pt',
 };
 const PUBLIC_ROUTE_ENTRIES = SUPPORTED_LOCALES.flatMap(locale =>
     PUBLIC_PAGES.map(page => {

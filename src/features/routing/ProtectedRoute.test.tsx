@@ -128,9 +128,9 @@ test('redirects an explicit sign out to the landing page instead of showing auth
 // never the auth session. The English public root stays unchanged.
 test.each([
     ['ru', '/ru/'],
-    ['es', '/es/'],
-    ['pt-BR', '/pt-br/'],
-    ['pt-PT', '/pt-pt/'],
+    ['es', '/'],
+    ['pt-BR', '/'],
+    ['pt-PT', '/'],
     ['en', '/'],
     ['unreleased-locale', '/'],
 ])('explicit sign-out uses cached locale %s and navigates to %s', (language, expectedPath) => {

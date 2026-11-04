@@ -7,6 +7,13 @@
             "main": false
         }
     },
+    "redirects": [
+        {
+            "source": "/:locale(es|pt-br|pt-pt|pt-BR|pt-PT){/:path([^/].*?)}?{/}?",
+            "destination": "/:path",
+            "statusCode": 301
+        }
+    ],
     "rewrites": [
         {
             "source": "/api/:path*",

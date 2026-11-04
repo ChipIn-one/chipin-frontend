@@ -2,7 +2,7 @@ import { createInstance } from 'i18next';
 import { renderToString } from 'react-dom/server';
 import { ServerStyleSheet } from 'styled-components';
 
-import { DEFAULT_LOCALE } from 'constants/locales';
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from 'constants/locales';
 import { resources } from 'i18n/resources';
 import type { PublicRoute } from 'types/publicRoutes';
 
@@ -18,6 +18,7 @@ const renderPublicRoute = (
         resources,
         lng: route.locale,
         fallbackLng: DEFAULT_LOCALE,
+        supportedLngs: SUPPORTED_LOCALES,
         defaultNS: 'common',
         initAsync: false,
         interpolation: { escapeValue: false },

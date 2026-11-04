@@ -53,7 +53,7 @@ beforeEach(() => {
     setUserSettings.mockClear();
     Object.defineProperty(navigator, 'languages', {
         configurable: true,
-        value: ['de-DE', 'pt-PT'],
+        value: ['de-DE', 'ru-RU'],
     });
     useUsersStore.setState({ user, localUser: null, friends: [], setUserSettings });
 });
@@ -73,7 +73,21 @@ test('resets the interface language to the first supported browser language', ()
 
     return interaction.click(screen.getByRole('button', { name: 'Reset language' })).then(() =>
         waitFor(() => {
-            expect(useUsersStore.getState().user?.settings.language).toBe('pt-PT');
+            expect(useUsersStore.getState().user?.settings.language).toBe('ru');
         }),
     );
+});
+
+// #609: a backend setting that still holds a removed locale shows English.
+test.each(['es', 'pt-BR', 'pt-PT'])('shows English for the removed saved language %s', language => {
+    useUsersStore.setState({ user: { ...user, settings: { ...user.settings, language } } });
+
+    render(
+        <Theme>
+            <RegionalSection isLoading={false} />
+        </Theme>,
+    );
+
+    expect(screen.getByRole('button', { name: 'English' })).toBeTruthy();
+    expect(setUserSettings).not.toHaveBeenCalled();
 });

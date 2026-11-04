@@ -1,7 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-import { DEFAULT_LOCALE } from 'constants/locales';
+import { DEFAULT_LOCALE, SUPPORTED_LOCALES } from 'constants/locales';
 import { getPublicRoute } from 'constants/publicRoutes';
 import { resolveLocale } from 'helpers/locale';
 
@@ -13,6 +13,7 @@ void i18n.use(initReactI18next).init({
         (typeof window !== 'undefined' && getPublicRoute(window.location.pathname)?.locale) ||
         resolveLocale(),
     fallbackLng: DEFAULT_LOCALE,
+    supportedLngs: SUPPORTED_LOCALES,
 
     ns: [
         'common',

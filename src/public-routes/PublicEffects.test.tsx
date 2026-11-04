@@ -73,26 +73,29 @@ test('English privacy offers a localized persistent Sonner action only once', ()
 });
 
 test('explicit locale URL never offers a competing browser language', () => {
-    vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['ru-RU']);
+    vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['en-US']);
     render(
         <PublicEffects
-            route={PUBLIC_ROUTE_ENTRIES.find(r => r.path === '/es/privacy')!}
+            route={PUBLIC_ROUTE_ENTRIES.find(r => r.path === '/ru/privacy')!}
             isDark={false}
         />,
     );
     expect(toast.message).not.toHaveBeenCalled();
 });
 
-test('unsupported browser languages receive no suggestion', () => {
-    vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['ja-JP']);
-    render(
-        <PublicEffects
-            route={PUBLIC_ROUTE_ENTRIES.find(r => r.path === '/privacy')!}
-            isDark={false}
-        />,
-    );
-    expect(toast.message).not.toHaveBeenCalled();
-});
+test.each([['ja-JP'], ['es-ES'], ['pt-BR'], ['pt-PT']])(
+    'unsupported or removed browser language %s receives no suggestion',
+    language => {
+        vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue([language]);
+        render(
+            <PublicEffects
+                route={PUBLIC_ROUTE_ENTRIES.find(r => r.path === '/privacy')!}
+                isDark={false}
+            />,
+        );
+        expect(toast.message).not.toHaveBeenCalled();
+    },
+);
 
 test('Sonner follows the public cached-theme snapshot including updates', () => {
     const route = PUBLIC_ROUTE_ENTRIES.find(item => item.path === '/ru/privacy')!;

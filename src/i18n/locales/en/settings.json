@@ -46,10 +46,7 @@
     "language": {
         "options": {
             "en": "English",
-            "ru": "Russian",
-            "es": "Spanish",
-            "pt-BR": "Portuguese (Brazil)",
-            "pt-PT": "Portuguese (Portugal)"
+            "ru": "Russian"
         }
     },
     "notifications": {

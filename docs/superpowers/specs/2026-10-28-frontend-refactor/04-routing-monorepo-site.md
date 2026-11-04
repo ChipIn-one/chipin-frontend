@@ -24,8 +24,8 @@ Ownership of overlapping topics: lazy-loading of locales (D16) — **this spec**
 - The router is declarative only: `<BrowserRouter>` in `src/main.tsx:57`, `InternalRoute` repeated 8 times, one `Suspense`, no `errorElement` (audit 02, findings 9–10). `features/routing` imports `pages`, which violates V1 (audit 01 §1.2).
 - The SW is registered twice: `registerSW` in `src/basics/PWABadge.tsx:8-23` and a manual `navigator.serviceWorker.register('/sw.js', { scope: '/' })` in `src/helpers/swUpdates.tsx:221-289`. The "Later" TTL is 4 h (`swUpdates.tsx:13`), there is no minimum-version check (audit 02, findings 7–8).
 - PWA manifest: `start_url: '/'`, `scope: '/'`, `id: '/'` (`vite.config.ts:142-160`). Workbox `navigateFallback: 'app.html'` with an allowlist (`vite.config.ts:197-211`).
-- All 5 locales × 13 namespaces are imported statically: `src/i18n/resources.ts`, 65 imports (audit 02, finding 12).
-- The public manifest is 3 pages × 5 locales = 15 URLs. Prefixes: `en: ''`, `/ru`, `/es`, `/pt-br`, `/pt-pt` (`src/constants/publicRouteManifest.ts:4-20`).
+- All locales × 13 namespaces are imported statically: `src/i18n/resources.ts` (audit 02, finding 12; 5 locales and 65 imports at the audit, 2 locales and 26 imports after #609).
+- The public manifest is 3 pages × 2 locales = 6 URLs. Prefixes: `en: ''`, `/ru` (`src/constants/publicRouteManifest.ts`). The former `/es`, `/pt-br`, `/pt-pt` prefixes were removed by #609 and permanently redirect to the English page (`vercel.json` `redirects`).
 - The app itself builds invite links: `src/helpers/url.ts:46-50` (`/friends/join/<t>`, `/group/join/<t>`). The backend returns only `inviteToken`: `GroupDtos.kt:11,30`, `UserService.kt:91-93`.
 - OAuth: the frontend passes `redirect_to=<origin>/oauth/callback?returnTo=…` (`src/helpers/url.ts:28-44`). The backend checks **only the origin** (`OAuthRedirectValidator.kt:21-27`, `application.yaml:26-27` `OAUTH_ALLOWED_REDIRECT_ORIGINS`, `OAUTH_ALLOWED_VERCEL_PREVIEW_PROJECTS`).
 - ds-gallery imports the app's `basics/*` and `components/*` directly (`ds-gallery/gallery.tsx`), and there is also `ds-gallery/vite.config.ts` with aliases to `src/*`.
@@ -37,7 +37,7 @@ Ownership of overlapping topics: lazy-loading of locales (D16) — **this spec**
 - Two Vercel projects and two hosts (D26). The current project (name unchanged) — Root Directory `apps/app`, domains `app.chipin.one` (Production) and `app-dev.chipin.one` (branch `master`); it serves the app, `/api/*` (same-origin proxy to the backend), and `/.well-known/*`. The new project `chipin-site` (Root Directory `apps/site`) — domains `chipin.one` (Production) and `site-dev.chipin.one` (`master`). The projects do not proxy each other. Cutover — moving the domains `dev.chipin.one`, then `chipin.one` from the app project to the site project; DNS is on Vercel, the records do not change. Rollback — move the domain back to the app project, takes minutes (§4.5).
 - Vite `base` = `'/'` and SW `/sw.js` with scope `/` on the app host — as now; there is no base path and no mode flag (§2.1, §2.11). PWAs installed on `chipin.one` before the move are not supported: no reinstall banner, offline launch from their icon is not guaranteed (D26). On `chipin.one` the site serves a self-removing `/sw.js` (kill-switch) for at least 6 months (§3.6).
 - One route manifest (pure data) and a typed map of lazy modules. The guard is implemented as a layout route, `errorElement` exists at the root and on the layout. Loaders warm up TanStack Query (spec 03) and do not block navigation.
-- The site is Astro static: built-in i18n with the same URLs (`/`, `/ru/`, `/pt-br/privacy`…), content collections, hreflang, sitemap, only tokens CSS; it does not register a worker (only the kill-switch `/sw.js`). The invite landing is `/join/group/<token>` and `/join/friend/<token>` with an explicit button to the confirmation screen on `app.chipin.one`. Old app URLs on `chipin.one` are served by the site project's redirects (§4.2).
+- The site is Astro static: built-in i18n with the same URLs (`/`, `/ru/`, `/ru/privacy`…), content collections, hreflang, sitemap, only tokens CSS; it does not register a worker (only the kill-switch `/sw.js`). The invite landing is `/join/group/<token>` and `/join/friend/<token>` with an explicit button to the confirmation screen on `app.chipin.one`. Old app URLs on `chipin.one` are served by the site project's redirects (§4.2).
 - ds-gallery stays in `apps/app/ds-gallery/`.
 
 ## Details
@@ -194,7 +194,7 @@ interface AppRouteDef {
     meta: { titleKey: string; entityTitleKey?: string };  // keys of ns 'meta'
     legacyPaths: readonly string[]; // paths on chipin.one from which the site project redirects to app.chipin.one (§4.2)
     transitional?: true;            // transitional public route; removed in 04-5a
-    localePrefix?: true;            // the path is repeated under the 5 LOCALE_PREFIX prefixes
+    localePrefix?: true;            // the path is repeated under every LOCALE_PREFIX prefix
 }
 ```
 
@@ -332,7 +332,7 @@ The listed rewrites, rather than a single `/:path*`, are needed so that an unkno
 #### 2.10 i18n in the app
 
 - There is no locale prefix in the app URL.
-- Lazy loading: `i18next-resources-to-backend` with `(lng, ns) => ns === 'common' ? loadCommon(lng) : import(`./locales/${lng}/${ns}.json`)` (the relative `./` template is bundled by Vite via dynamic-import-vars). The `common` namespace is taken from `@chipin/i18n-content`: a bare specifier with a variable (`import(`@chipin/i18n-content/common/${lng}.json`)`) is **not** bundled by Vite and stays a runtime import with a 404 (A-13). Therefore the package exports `loadCommon(lng: SupportedLocale): Promise<Record<string, unknown>>` from `packages/i18n-content/src/loadCommon.ts`, built on `import.meta.glob('../common/*.json', { import: 'default' })` (key `../common/${lng}.json`; unknown locale → reject). The package's `package.json`: `exports` `".": "./src/index.ts"`, `"./common/*": "./common/*"`. No JSON ends up in the entry. `src/i18n/resources.ts` is removed. Build test: `dist/assets` has exactly 5 `common` chunks.
+- Lazy loading: `i18next-resources-to-backend` with `(lng, ns) => ns === 'common' ? loadCommon(lng) : import(`./locales/${lng}/${ns}.json`)` (the relative `./` template is bundled by Vite via dynamic-import-vars). The `common` namespace is taken from `@chipin/i18n-content`: a bare specifier with a variable (`import(`@chipin/i18n-content/common/${lng}.json`)`) is **not** bundled by Vite and stays a runtime import with a 404 (A-13). Therefore the package exports `loadCommon(lng: SupportedLocale): Promise<Record<string, unknown>>` from `packages/i18n-content/src/loadCommon.ts`, built on `import.meta.glob('../common/*.json', { import: 'default' })` (key `../common/${lng}.json`; unknown locale → reject). The package's `package.json`: `exports` `".": "./src/index.ts"`, `"./common/*": "./common/*"`. No JSON ends up in the entry. `src/i18n/resources.ts` is removed. Build test: `dist/assets` has exactly 2 `common` chunks.
 - `SUPPORTED_LOCALES` and `DEFAULT_LOCALE` are imported from `@chipin/i18n-content`, and `src/constants/locales.ts` becomes a re-export.
 - The language changes **in one place**: `src/app/i18n/setAppLanguage.ts` returns a chain (free style, D24): `i18n.loadLanguages(lng).then(() => i18n.changeLanguage(lng)).then(() => { document.documentElement.lang = lng; LocalStorage.set(LS_KEY_LOCALE, lng); })`. `i18n.changeLanguage` outside this file is banned by the `no-restricted-syntax` lint rule.
 - The initial language is chosen once at init, in this order: `LocalUser.settings.language` → the saved `locale` → `?locale=` on `/login` (comes from the site; the `localStorage` of the site and the app are on different origins, so the site knows only the language of its page or `navigator.languages`, §3.5) → `navigator.languages` → `en`. After the profile loads, `useSyncUserSettings` calls `setAppLanguage` only if the server language differs from the current one.
@@ -384,7 +384,7 @@ src/
   content/                legal/, help/, blog/ (md/MDX)
   pages/
     index.astro                         en home
-    [locale]/index.astro                ru/es/pt-br/pt-pt home (getStaticPaths from locales)
+    [locale]/index.astro                ru home (getStaticPaths from locales)
     privacy.astro, terms.astro, [locale]/privacy.astro, [locale]/terms.astro  (from the legal collection)
     help/[...slug].astro, [locale]/help/[...slug].astro
     blog/[...slug].astro, [locale]/blog/[...slug].astro
@@ -395,11 +395,11 @@ public/                   robots.txt, favicon.*, og/*.png, sw.js (kill-switch, �
 
 #### 3.2 i18n
 
-- `@chipin/i18n-content/locales.ts` exports `SUPPORTED_LOCALES`, `DEFAULT_LOCALE`, and `LOCALE_PATH: { en: '', ru: 'ru', es: 'es', 'pt-BR': 'pt-br', 'pt-PT': 'pt-pt' }`. The values match `LOCALE_PREFIX` (`publicRouteManifest.ts:11-13`).
-- `astro.config.ts`: `i18n: { defaultLocale: 'en', locales: ['en', 'ru', 'es', { path: 'pt-br', codes: ['pt-BR'] }, { path: 'pt-pt', codes: ['pt-PT'] }], routing: { prefixDefaultLocale: false, redirectToDefaultLocale: false } }`. The list is built from `LOCALE_PATH`, not written by hand.
-- URLs do not change: `/`, `/privacy`, `/terms`, `/ru/`, `/ru/privacy` … `/pt-pt/terms` (15 URLs; locale home pages — with a trailing slash, the others — without, as in `publicRouteManifest.ts:14-19`). Duplicates by trailing slash (A-33): `trailingSlash: 'ignore'` serves both `/privacy` and `/privacy/` with 200, so `apps/site/hosting.base.json` gets 301 redirects generated from `LOCALE_PATH` × pages: `/<page>/` → `/<page>` for non-home pages and `/<locale>` → `/<locale>/` for locale home pages. One URL form = canonical.
+- `@chipin/i18n-content/locales.ts` exports `SUPPORTED_LOCALES`, `DEFAULT_LOCALE`, and `LOCALE_PATH: { en: '', ru: 'ru' }`. The values match `LOCALE_PREFIX` (`publicRouteManifest.ts`).
+- `astro.config.ts`: `i18n: { defaultLocale: 'en', locales: ['en', 'ru'], routing: { prefixDefaultLocale: false, redirectToDefaultLocale: false } }`. The list is built from `LOCALE_PATH`, not written by hand.
+- URLs do not change: `/`, `/privacy`, `/terms`, `/ru/`, `/ru/privacy`, `/ru/terms` (6 URLs; locale home pages — with a trailing slash, the others — without, as in `publicRouteManifest.ts:14-19`). Duplicates by trailing slash (A-33): `trailingSlash: 'ignore'` serves both `/privacy` and `/privacy/` with 200, so `apps/site/hosting.base.json` gets 301 redirects generated from `LOCALE_PATH` × pages: `/<page>/` → `/<page>` for non-home pages and `/<locale>` → `/<locale>/` for locale home pages. One URL form = canonical.
 - hreflang in `BaseLayout`: for every page `<link rel="alternate" hreflang="<code>">` to all locales that have a translation (`getRelativeLocaleUrl`), plus `x-default` → en. Canonical is the absolute `https://chipin.one/...` (`site` in the config). The hosts `site-dev.chipin.one` and `dev.chipin.one` never end up in canonical.
-- `@astrojs/sitemap` with `i18n: { defaultLocale: 'en', locales: { en: 'en', ru: 'ru', … 'pt-br': 'pt-BR' } }` writes `sitemap-index.xml`. `robots.txt` points to `Sitemap: https://chipin.one/sitemap-index.xml`. `/sitemap.xml` gets a 301 to `/sitemap-index.xml`.
+- `@astrojs/sitemap` with `i18n: { defaultLocale: 'en', locales: { en: 'en', ru: 'ru' } }` writes `sitemap-index.xml`. `robots.txt` points to `Sitemap: https://chipin.one/sitemap-index.xml`. `/sitemap.xml` gets a 301 to `/sitemap-index.xml`.
 - Build check (moved from `prerender-public.mjs:55-70`): every page has a title and description in all locales, and the HTML has no strings that look like tokens. Implemented by an `astro:build:done` integration in `apps/site/integrations/seoGuard.ts` that fails the build. Site key parity (A-32): the test `apps/site/src/i18n/parity.test.ts` compares the keys of all `apps/site/src/i18n/locales/<locale>/*.json`, including `join.json`, with `en`; it runs in the site step of CI.
 
 #### 3.3 Content collections
@@ -414,7 +414,7 @@ import { z } from 'astro/zod';
 const base = z.object({
     title: z.string().min(1),
     description: z.string().min(50).max(160),
-    locale: z.enum(['en', 'ru', 'es', 'pt-BR', 'pt-PT']),
+    locale: z.enum(['en', 'ru']),
     translationKey: z.string(),          // links translations for hreflang
     updatedAt: z.coerce.date(),
     draft: z.boolean().default(false),
@@ -428,7 +428,7 @@ export const collections = {
 };
 ```
 
-Files are laid out as `<collection>/<locale-path>/<slug>.md(x)`, the locale folder is in path form (`en`, `ru`, `es`, `pt-br`, `pt-pt`, the values of `LOCALE_PATH`), the `locale` field in the frontmatter is the code (`pt-BR`) (A-32). Criterion of 04-3a: a fixture with invalid frontmatter fails `astro build`. `draft: true` does not enter the build or the sitemap. Pages without a translation are not generated, and no hreflang is set for them (they are not substituted with English).
+Files are laid out as `<collection>/<locale-path>/<slug>.md(x)`, the locale folder is in path form (`en`, `ru`, the values of `LOCALE_PATH`), the `locale` field in the frontmatter is the code (`ru`) (A-32). Criterion of 04-3a: a fixture with invalid frontmatter fails `astro build`. `draft: true` does not enter the build or the sitemap. Pages without a translation are not generated, and no hreflang is set for them (they are not substituted with English).
 
 #### 3.4 Which pages move
 
@@ -451,7 +451,7 @@ The new sections `/help/*`, `/blog/*` in this spec only get routes and a schema.
 - Inline script:
   1. Extracts the token from `location.pathname` and validates it with the same regex as hotfix D1. The token format is a domain constant, it belongs neither in `packages/tokens` nor in `packages/i18n-content`, so the regex is copied into `apps/site/src/lib/inviteToken.ts`. A test in `apps/app` imports both regexes and fails on a mismatch.
   2. If the token is valid, the "Open invitation" button gets the href `PUBLIC_APP_ORIGIN` (§4.4) + an explicit table `{ group: '/group/join/', friend: '/friends/join/' }[kind] + encodeURIComponent(token)`. If invalid, the page shows "The link is broken" and a link to `/`.
-  3. Language: the page contains the strings of all 5 locales (≈6 strings × 5) from `apps/site/src/i18n/locales/<locale>/join.json` (the same JSONs as the rest of the site, checked by the parity test of §3.2; there are no inline strings in `.astro`) and chooses by `navigator.languages` → `en`. The app's `localStorage` is not accessible to the site (different origin, D26), and the `Chipin_*` keys on `chipin.one` after cutover are stale data of the old install, the site does not read them. The button passes the chosen code as `?locale=<code>` (and inside `returnTo`), so that the registration of a new user gets the right language (`url.ts:39-41`; C3-25); for an existing user the app takes the saved language before `?locale` (§2.10). There are no prefixed `/ru/join/...`, because the links are built by the app without a locale.
+  3. Language: the page contains the strings of all locales (≈6 strings × 2) from `apps/site/src/i18n/locales/<locale>/join.json` (the same JSONs as the rest of the site, checked by the parity test of §3.2; there are no inline strings in `.astro`) and chooses by `navigator.languages` → `en`. The app's `localStorage` is not accessible to the site (different origin, D26), and the `Chipin_*` keys on `chipin.one` after cutover are stale data of the old install, the site does not read them. The button passes the chosen code as `?locale=<code>` (and inside `returnTo`), so that the registration of a new user gets the right language (`url.ts:39-41`; C3-25); for an existing user the app takes the saved language before `?locale` (§2.10). There are no prefixed `/ru/join/...`, because the links are built by the app without a locale.
 - There is **no** automatic redirect into the app, only an explicit button. The app on `app.chipin.one/group/join/:token` shows the confirmation screen from spec 01 (PR 01-2: generic text and a "Join" button; the group name — only after BE-01-3) and calls `joinGroup` only after a click. An unauthenticated user goes through `/login?returnTo=…` and returns to the confirmation screen.
 - In the app, `buildGroupInviteLink` and `buildFriendInviteLink` (`src/helpers/url.ts:46-50`) change in 04-2g to `${getSiteOrigin()}/join/group/${encodeURIComponent(t)}` and `/join/friend/…`. Before cutover `chipin.one` still belongs to the app project, and the compat redirect (§4.2, 302) leads `/join/group/<t>` straight to `https://app.chipin.one/group/join/<t>` (dev — `app-dev.chipin.one`), so that a new member does not create data on the old origin; after cutover the link is opened by the site landing.
 
@@ -497,7 +497,8 @@ They apply on the site hosts: `chipin.one` → `appOrigin` = `https://app.chipin
 | `/sitemap.xml` | `/sitemap-index.xml` | fixed |
 | `/index.html`, `/app.html` | `/` | fixed (A-33: indexed variants of the current html entries) |
 | `/manifest.webmanifest`, icons of the old manifest (`/pwa-*.png` etc.) | no redirect: 404 (old installs are not supported, D26) | — |
-| `/`, `/privacy`, `/terms`, `/ru/…`, `/es/…`, `/pt-br/…`, `/pt-pt/…` | **unchanged** (200 from the site) | — |
+| `/`, `/privacy`, `/terms`, `/ru/…` | **unchanged** (200 from the site) | — |
+| `/es/…`, `/pt-br/…`, `/pt-pt/…` (removed by #609) | permanent redirect to the English page (the site project keeps the rule) | — |
 
 The status is `legacyRedirectStatus`: `302` until 04-5a, `301` from 04-5a (`"statusCode"` in Vercel; 301 rather than 308: all source requests are GET navigations, and old crawlers understand 301 better). 302 for the rollback window is needed because the browser caches 301 indefinitely: after a rollback (§4.5) `chipin.one` again serves the former pages, and the browser must follow the current rules of the app project, not the cached redirects of the site. There is no loop in either direction: the compat redirects of the app project lead to the app host, not back to `/group/join/<t>` of the old host. Tabs opened before cutover that load old `/assets/*` from `chipin.one` get a 404 on the chunk; after reloading the page they hit a redirect from this table (C3-22).
 
@@ -618,8 +619,8 @@ Dependencies: 04-0a after the merge of FE#497 (both change `.github/workflows`) 
 | 04-2f | Cutover preparation, part 1 (path-agnostic): the `login` screen on `/login` (`?returnTo`, `?locale`), `requireSession` → `/login`; `SITE_PATHS` instead of `ROUTES.HOME/PRIVACY/TERMS` + lint (§2.1) | 04-2a4 | 04-2g |
 | 04-2g | App host (D26): `ENV_URLS` (`appHostnames`, `siteOrigin`) + `getSiteOrigin()` + `env.test.ts` (§2.1); `SITE_PATHS` absolute; invite links `${getSiteOrigin()}/join/group\|friend/<t>` (§3.5); `apps/app/hosting.base.json`: hosts `app.chipin.one`/`app-dev.chipin.one` + `legacyProd`/`legacyDev`, `X-Robots-Tag` by host, compat redirects `/join/*` (302) from the former hosts to the app host (§1.5a, §4.2); `assetlinks.json` + app hosts. After the merge and Promote the owner adds the domains `app.chipin.one`/`app-dev.chipin.one` to the app project (precondition 2 of §4.5) | 04-2a4, 04-2d, 04-2f, 04-3c, BE-04-2 | 04-3b1, 04-3b2 |
 | 04-3a | `apps/site`: Astro skeleton (`astro@^7.4`, `content.config.ts`), i18n + parity test, BaseLayout, 404, robots, sitemap, seoGuard, `astro check`, `noindex` for dev hosts; creation of `chipin-site` with the release model of §1.5 (owner); deploy to `site-dev.chipin.one` | 04-1a, 04-1b, 05-2a | 04-2* |
-| 04-3b1 | Site: home page (5 locales) — parity of `<title>`/description and of the `landing.json` texts; theme-init from 05-3; the "Sign in"/"Open ChipIn" buttons to `PUBLIC_APP_ORIGIN` (§4.4); rewrite `/api/stats` for the landing statistics with `no-store` headers (§4.1) | 04-3a, 05-3 | 04-2*, 04-3b2 |
-| 04-3b2 | Site: legal collection privacy/terms × 5 locales + a text parity test: the normalized text of the old `PRIVACY_SECTIONS`/i18n versus the text of the built HTML for each locale (C2-35) | 04-3a | 04-2*, 04-3b1 |
+| 04-3b1 | Site: home page (en, ru) — parity of `<title>`/description and of the `landing.json` texts; theme-init from 05-3; the "Sign in"/"Open ChipIn" buttons to `PUBLIC_APP_ORIGIN` (§4.4); rewrite `/api/stats` for the landing statistics with `no-store` headers (§4.1) | 04-3a, 05-3 | 04-2*, 04-3b2 |
+| 04-3b2 | Site: legal collection privacy/terms × 2 locales + a text parity test: the normalized text of the old `PRIVACY_SECTIONS`/i18n versus the text of the built HTML for each locale (C2-35) | 04-3a | 04-2*, 04-3b1 |
 | 04-3c | Site: `/join/group`, `/join/friend` (no analytics + `beforeSend` redaction in `BaseLayout`, the button to `PUBLIC_APP_ORIGIN`) + a token regex equality test | 04-3a, 01-2 | 04-3b1, 04-3b2 |
 | 04-3d | Site, the compatibility layer for `chipin.one`: kill-switch `apps/site/public/sw.js` + `swKillSwitch.test.ts` + `Cache-Control: no-cache` (§3.6); redirects of old URLs §4.2 from `legacy-redirects.generated.json` (generator §2.9, `legacyRedirectStatus: 302`); `.well-known/assetlinks.json`. Promote of the site to prod before 04-4 | 04-2b, 04-3a | 04-3b1, 04-3b2, 04-3c |
 | 04-4 | **Cutover — moving the domains** (§4.5): a PR with the runbook in `DEPLOYMENT.md` (section "Domains and rollback": preconditions, steps, rollback criterion and steps); after the merge the owner moves `dev.chipin.one`, then `chipin.one` to the site project and verifies criteria 7 and 9 | 04-2g (in prod, app domains added), 04-2h, 04-3b1, 04-3b2, 04-3c, 04-3d (in prod), BE-04-2; before 03-17 in prod | — |
@@ -674,7 +675,7 @@ The minimum client version is not a separate issue: the contract of the new head
 | SEO capabilities | present, but every new page = edits to the manifest, prerender, precache, two trees | best (SSG/ISR, metadata API) | good (prerender, `meta`) | best for static: 0 JS, i18n routing, hreflang, sitemap, collections out of the box |
 | Content (md/MDX) | no, texts in i18n JSON | via MDX plugins | manually | built in, with a schema |
 | PWA/offline | works, but the SW shares scope with the public pages | App Router and SW offline for a private app conflict (RSC, server requests); `next-pwa` is not maintained | SPA mode is possible, but prerender and SW are again in one build | not affected: the app SW is `/sw.js` with scope `/` on its own host `app.chipin.one`, the site has no SW (D26) |
-| Migration cost | 0 | high: rewrite routing, data layer, auth (in-memory token + Web Locks), styles (styled-components SSR), all tests | medium: move to `routes.ts` and route modules, the same prerender+SW tangle | medium: only 3 pages × 5 locales and a section; the app changes in the router (D6 is needed in any option) |
+| Migration cost | 0 | high: rewrite routing, data layer, auth (in-memory token + Web Locks), styles (styled-components SSR), all tests | medium: move to `routes.ts` and route modules, the same prerender+SW tangle | medium: only 3 pages × 2 locales and a section; the app changes in the router (D6 is needed in any option) |
 | Risk | grows with every SEO page | high, big-bang, conflict with D2/D3 | medium | low: the site is rolled out alongside, cutover and rollback are a domain move within minutes |
 | CI/deploy | as now | one project, but a server runtime and functions | one project | two Vercel projects, path filters, two hosts with no rewrite between them |
 | Maintenance | high (a custom pipeline that one person knows) | medium, frequent major changes | medium | low: two standard tools with documentation |

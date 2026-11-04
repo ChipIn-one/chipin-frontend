@@ -16,15 +16,16 @@ const LOCALE_ALIASES: Readonly<Record<string, SupportedLocale>> = {
     'us-en': 'en',
 };
 
-// Language codes that need a non-trivial region fallback.
-// Keys are restricted to the set of lang tags actually present in SUPPORTED_LOCALES
-// or that appear as the language part of a supported locale.
-type LanguageCode = 'en' | 'ru' | 'es' | 'pt';
+// Languages whose locales were removed (#609: es, pt-BR, pt-PT). Saved user settings,
+// cached users and browser languages that still carry them resolve to English
+// instead of failing or falling through to another candidate.
+type RemovedLanguageCode = 'es' | 'pt';
 
 // Applied only when neither exact match nor language match succeeds.
-// E.g. 'pt' and 'pt-AO' both resolve to 'pt-BR'.
-const LANGUAGE_FALLBACK: Readonly<Partial<Record<LanguageCode, SupportedLocale>>> = {
-    pt: 'pt-BR',
+// E.g. 'es', 'pt', 'pt-BR' and 'pt-PT' all resolve to 'en'.
+const LANGUAGE_FALLBACK: Readonly<Record<RemovedLanguageCode, SupportedLocale>> = {
+    es: DEFAULT_LOCALE,
+    pt: DEFAULT_LOCALE,
 };
 
 /**
@@ -65,9 +66,9 @@ const normalizeLocale = (input: string): string | null => {
  *
  * Resolution order:
  * 1. Alias map   — lookup by lowercased normalized key (e.g. 'us-en' → 'en')
- * 2. Exact match — (e.g. 'pt-PT' → 'pt-PT')
+ * 2. Exact match — (e.g. 'ru' → 'ru')
  * 3. Language match — lang tag is itself supported (e.g. 'en-US' → 'en')
- * 4. Language fallback — map by lang tag (e.g. 'pt-AO' → 'pt-BR')
+ * 4. Language fallback — removed locales by lang tag (e.g. 'pt-BR' → 'en')
  * 5. null
  */
 const matchLocale = (raw: string): SupportedLocale | null => {
@@ -79,7 +80,7 @@ const matchLocale = (raw: string): SupportedLocale | null => {
 
     // normalized is guaranteed to be either:
     //   'lang'         (e.g. 'en', 'pt')
-    //   'lang-REGION'  (e.g. 'pt-BR', 'en-US')
+    //   'lang-REGION'  (e.g. 'ru-RU', 'en-US')
 
     // 1. Exact match — checked before aliases so a supported locale can never
     //    be silently redirected by an alias entry (alias only handles unsupported inputs).
@@ -102,8 +103,8 @@ const matchLocale = (raw: string): SupportedLocale | null => {
         return lang;
     }
 
-    // 4. Language fallback — 'pt-AO' → 'pt-BR'
-    return LANGUAGE_FALLBACK[lang as LanguageCode] ?? null;
+    // 4. Language fallback — removed locales, e.g. 'pt-BR' → 'en'
+    return LANGUAGE_FALLBACK[lang as RemovedLanguageCode] ?? null;
 };
 
 const getStoredLocale = (): string | null => {

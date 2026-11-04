@@ -112,17 +112,17 @@ test('restores the saved user language on unmount', () => {
 test('does not restore the user language when switching between public locales', () => {
     const changeLanguage = vi.spyOn(i18nMock.instance, 'changeLanguage');
     const { rerender } = render(
-        <PublicLocaleRoute locale="ru">
+        <PublicLocaleRoute locale="en">
             <p>{PAGE_TEXT}</p>
         </PublicLocaleRoute>,
     );
 
     rerender(
-        <PublicLocaleRoute locale="es">
+        <PublicLocaleRoute locale="ru">
             <p>{PAGE_TEXT}</p>
         </PublicLocaleRoute>,
     );
 
-    expect(changeLanguage.mock.calls.map(([language]) => language)).toEqual(['ru', 'es']);
-    expect(i18nMock.instance.resolvedLanguage).toBe('es');
+    expect(changeLanguage.mock.calls.map(([language]) => language)).toEqual(['ru']);
+    expect(i18nMock.instance.resolvedLanguage).toBe('ru');
 });
