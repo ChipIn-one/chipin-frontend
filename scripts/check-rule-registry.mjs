@@ -185,13 +185,15 @@ export const resolveLintedFiles = async eslint => {
 // config modules read the env once, at import time.
 export const LINT_MODES = [{}, { CHIPIN_ESLINT_FULL: '1' }];
 
-// The child gets the caller's env without the mode flag and without test-runner variables
+// The child gets the caller's env without the mode flags (a shell-set CHIPIN_ESLINT_FAST would
+// drop the type-aware rules) and without test-runner variables
 // (NODE_ENV, VITEST*), so it resolves the config exactly as `npm run lint` does.
 export const modeEnv = (mode, base = process.env) => {
     const env = Object.fromEntries(
         Object.entries(base).filter(
             ([name]) =>
-                !['CHIPIN_ESLINT_FULL', 'NODE_ENV'].includes(name) && !name.startsWith('VITEST'),
+                !['CHIPIN_ESLINT_FULL', 'CHIPIN_ESLINT_FAST', 'NODE_ENV'].includes(name) &&
+                !name.startsWith('VITEST'),
         ),
     );
 

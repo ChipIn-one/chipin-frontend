@@ -1,4 +1,9 @@
-import { baseConfig, formattingConfig, typeAwareConfig } from './config/eslint/base.js';
+import {
+    baseConfig,
+    fastModeConfig,
+    formattingConfig,
+    typeAwareConfig,
+} from './config/eslint/base.js';
 import { layerImports } from './config/eslint/layers.js';
 import {
     projectConfig,
@@ -21,4 +26,6 @@ export default [
     ...restrictedImports([...layerImports({ appDir: APP_DIR }), ...projectImports()]),
     ...restrictedSyntax([...projectSyntax(), ...reactSyntax({ appDir: APP_DIR })]),
     ...formattingConfig(),
+    // CHIPIN_ESLINT_FAST=1 (pre-commit): no type-aware rules, no TS program.
+    ...fastModeConfig(),
 ];

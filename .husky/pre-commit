@@ -1,0 +1,3 @@
+# Fast and never blocking (spec 02 §D0): Prettier + `eslint --fix` on staged files without type
+# information; remaining errors are printed (--verbose shows them), only CI blocks.
+CHIPIN_ESLINT_FAST=1 npx lint-staged --verbose

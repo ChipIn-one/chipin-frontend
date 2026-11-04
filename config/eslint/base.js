@@ -114,6 +114,16 @@ export const typeAwareConfig = ({ appDir }) => [
     },
 ];
 
+/**
+ * FAST mode (`CHIPIN_ESLINT_FAST=1`, only the pre-commit hook; spec 02 §D5): no type information,
+ * so no TS program is built and a one-file run stays under 5 s. CI and `verify:full` never set it.
+ * A whole-project rule (`import-x/no-cycle`, 02-C9) must also be off when `isFastMode` is true.
+ */
+export const isFastMode = process.env.CHIPIN_ESLINT_FAST === '1';
+
+/** In FAST mode turns off every type-aware rule and the project service for all files. */
+export const fastModeConfig = () => (isFastMode ? [tseslint.configs.disableTypeChecked] : []);
+
 /** Prettier owns formatting: keep this preset last. */
 export const formattingConfig = () => [
     eslintConfigPrettier,
