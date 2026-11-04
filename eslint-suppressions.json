@@ -9,6 +9,91 @@
       "count": 1
     }
   },
+  "src/api/chipin.instance.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/api/chipin.interceptors.integration.test.ts": {
+    "boundaries/dependencies": {
+      "count": 2
+    }
+  },
+  "src/api/chipin.interceptors.test.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/api/chipin.interceptors.ts": {
+    "boundaries/dependencies": {
+      "count": 4
+    }
+  },
+  "src/basics/BalanceBadges.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/basics/BalanceSummaryText.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/basics/RelativeTime.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/basics/buttons/NavButton.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/basics/numbers/NumberConstructor.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/basics/numbers/amount/Amount.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 3
+    }
+  },
+  "src/basics/numbers/amount/index.ts": {
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/components/AddExpenseButton.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/components/Footer.test.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/components/Footer.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/components/GroupsCards.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 2
+    }
+  },
+  "src/components/Header.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 4
+    }
+  },
+  "src/components/dashboard-onboarding/DashboardOnboarding.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
   "src/components/search-select/CategorySearchSelect.tsx": {
     "@typescript-eslint/no-unsafe-assignment": {
       "count": 1
@@ -20,6 +105,71 @@
   "src/constants/publicRoutes.test.ts": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 2
+    }
+  },
+  "src/constants/publicRoutes.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/constants/version.test.ts": {
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/features/activity/components/EventGroupCreated.tsx": {
+    "import-x/no-cycle": {
+      "count": 1
+    }
+  },
+  "src/features/activity/components/EventGroupDeleted.tsx": {
+    "import-x/no-cycle": {
+      "count": 1
+    }
+  },
+  "src/features/activity/components/EventGroupUpdated.tsx": {
+    "import-x/no-cycle": {
+      "count": 1
+    }
+  },
+  "src/features/activity/components/EventMemberJoin.tsx": {
+    "import-x/no-cycle": {
+      "count": 1
+    }
+  },
+  "src/features/activity/components/EventMemberLeft.tsx": {
+    "import-x/no-cycle": {
+      "count": 1
+    }
+  },
+  "src/features/activity/components/EventUnknown.tsx": {
+    "import-x/no-cycle": {
+      "count": 1
+    }
+  },
+  "src/features/activity/components/activity-event/ActivityEvent.tsx": {
+    "import-x/no-cycle": {
+      "count": 1
+    }
+  },
+  "src/features/activity/components/activity-event/index.ts": {
+    "import-x/no-cycle": {
+      "count": 1
+    }
+  },
+  "src/features/activity/components/event-expense-transferred/EventExpenseTransferred.tsx": {
+    "import-x/no-cycle": {
+      "count": 1
+    }
+  },
+  "src/features/activity/components/event-expense-transferred/index.ts": {
+    "import-x/no-cycle": {
+      "count": 1
+    }
+  },
+  "src/features/activity/components/event-expense/EventExpense.tsx": {
+    "import-x/no-cycle": {
+      "count": 1
     }
   },
   "src/features/activity/components/event-expense/components/expense-icon/ExpenseIcon.tsx": {
@@ -35,6 +185,225 @@
       "count": 2
     }
   },
+  "src/features/activity/components/event-expense/index.ts": {
+    "import-x/no-cycle": {
+      "count": 1
+    }
+  },
+  "src/features/activity/components/event-member-kicked/EventMemberKicked.tsx": {
+    "import-x/no-cycle": {
+      "count": 1
+    }
+  },
+  "src/features/activity/components/event-member-kicked/index.ts": {
+    "import-x/no-cycle": {
+      "count": 1
+    }
+  },
+  "src/features/activity/components/event-settlement/EventSettlement.tsx": {
+    "import-x/no-cycle": {
+      "count": 1
+    }
+  },
+  "src/features/activity/components/event-settlement/index.ts": {
+    "import-x/no-cycle": {
+      "count": 1
+    }
+  },
+  "src/features/landing/cta-section/CtaSection.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/features/landing/hero-section/HeroSection.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/features/routing/ProtectedRoute.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/helpers/activityEvent.test.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/helpers/activityEvent.ts": {
+    "boundaries/dependencies": {
+      "count": 2
+    }
+  },
+  "src/helpers/authSession.test.ts": {
+    "boundaries/dependencies": {
+      "count": 2
+    }
+  },
+  "src/helpers/authSession.ts": {
+    "boundaries/dependencies": {
+      "count": 3
+    }
+  },
+  "src/helpers/currencies.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/helpers/expenseTargets.test.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/helpers/expenseTargets.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/helpers/localStorage.test.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/helpers/localStorage.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/helpers/swUpdates.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/helpers/theme.test.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/helpers/theme.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/i18n/index.ts": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/main.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 3
+    }
+  },
+  "src/pages/ActivityPage.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/pages/DashboardPage.test.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/pages/DashboardPage.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    },
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/pages/FriendJoinPage.test.tsx": {
+    "boundaries/dependencies": {
+      "count": 2
+    },
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/pages/FriendJoinPage.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/pages/GlobalHooks.test.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/pages/GroupJoinPage.test.tsx": {
+    "boundaries/dependencies": {
+      "count": 2
+    },
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/pages/GroupJoinPage.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/pages/HomePage.test.tsx": {
+    "boundaries/dependencies": {
+      "count": 1
+    }
+  },
+  "src/pages/LegalPages.test.tsx": {
+    "boundaries/dependencies": {
+      "count": 2
+    }
+  },
+  "src/pages/activity-subevents-page/components/activity-subevents-buttons/ActivitySubeventsButtons.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/pages/activity-subevents-page/components/activity-subevents-header/ActivitySubeventsHeader.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/pages/friends-page/components/FriendActionsDropdown.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 2
+    }
+  },
+  "src/pages/group-page/components/GroupBalancesTab.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/pages/group-page/components/GroupCoverSection.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/pages/group-page/components/GroupSettingsTab.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 3
+    }
+  },
+  "src/pages/group-page/components/GroupTabsContent.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/pages/settings-page/components/AccountSection.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/public-routes/PublicApp.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/public-routes/PublicContent.tsx": {
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
   "src/public-routes/PublicEffects.test.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 4
@@ -48,6 +417,29 @@
   "src/root.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
       "count": 1
+    }
+  },
+  "src/store/activity-store/actions.ts": {
+    "import-x/no-cycle": {
+      "count": 1
+    }
+  },
+  "src/store/authStore.test.ts": {
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/store/dashboardStore.ts": {
+    "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/store/groupsStore.ts": {
+    "import-x/no-cycle": {
+      "count": 1
+    },
+    "import-x/no-internal-modules": {
+      "count": 2
     }
   }
 }
