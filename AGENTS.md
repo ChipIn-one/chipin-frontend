@@ -28,12 +28,13 @@ Invariants 1–6 and 9 describe the target state of specs 03/04 (the `app`, `ent
 - `npm run test:task -- <test paths>` — targeted tests; refuses to run without a path.
 - `npx eslint --fix <files>` — ESLint auto-fixes in changed files only.
 - `npx prettier --write <files>` — format the files you changed; never `npm run format` in a task.
-- `npm run verify` — format check, lint (`--max-warnings 0`: every rule is error or off) and typecheck.
+- `npm run verify` — version check, format check, lint (`--max-warnings 0`: every rule is error or off) and typecheck.
 - `npm run baseline:update` — prune fixed entries from `eslint-suppressions.json`; the lint baseline only shrinks.
-- `npm run verify:full` — the full gate: format check, `lint:full`, all tests, build, ds-gallery; CI runs the same. Run before `IMPLEMENTATION_COMPLETE`.
+- `npm run verify:full` — the full gate: version check, format check, `lint:full`, all tests, build, ds-gallery; CI runs the same. Run before `IMPLEMENTATION_COMPLETE`.
 - `npm run typecheck` — `tsc -b`.
 - `npm run version:check` — the version in `package.json` and `package-lock.json` is valid and matches (read-only).
-- Husky `pre-push` runs `version:check` and `verify:full`.
+- `npm run fix` — Prettier and `eslint --fix` over the whole repository (not in a task).
+- Husky `pre-commit` only auto-fixes staged files (`lint-staged`, FAST mode) and never blocks; there is no `pre-push`, only CI blocks.
 
 ## Process
 

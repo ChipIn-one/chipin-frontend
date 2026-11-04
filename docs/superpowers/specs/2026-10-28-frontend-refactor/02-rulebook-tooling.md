@@ -493,6 +493,8 @@ node scripts/version-check.mjs --base "$BASE_SHA" --head-branch "$GITHUB_HEAD_RE
 
 The check rule: if `version` in `package.json` differs from base, the branch must match `^chore/issue-\d+-release-v(\d+)-(\d+)-(\d+)$`, and the new version must equal the version from the branch name and be greater than base. Otherwise exit 1 with the text "version changes only in a release PR". Decided (confirmed by the owner 2026-10-28): exactly one release Issue per release, the branch `chore/issue-<n>-release-vX-Y-Z` goes through the usual `pr:create`/admission; the `Version impact` field is removed from the Issue template, the owner chooses the bump. The `version-check.mjs` extension is about 40 lines + a test. Dependabot PRs are covered: they do not change the version.
 
+Amended (owner, 2026-11-05): the version comes from the git tag per ChipIn-one/.github#172; the release-branch version policy and the `version-check.mjs` extension are dropped from 02-C10.
+
 `ci-gate-policy.mjs` does not change in this spec (`AGENTS.md` and configs give mode `full` anyway); the modes `app|site` are added by 04-1b (spec 04 §1.4).
 
 Version format (A-09, D15). The version is produced only by `scripts/version-resolver.mjs` from the root `package.json`: prod (`VERCEL_ENV=production`) — a plain `x.y.z`, other builds — `x.y.z-dev-<sha7>` (spec 04 §1.2, 04-0a). Any version comparison (min-client-version 03-20, `version-check`) takes only the semver core `major.minor.patch`.
@@ -606,7 +608,7 @@ Each PR releases independently. The size is a guideline, not a rule: one PR = on
 | **02-C7a/b** | `no-floating-promises`/`no-misused-promises`: fix store/helpers/hooks (a), UI (b); edit 00.Promises.5 and 20.Effects.5 | 02-C6 |
 | **02-C8** | 6 jsx-a11y rules + `jsx-no-literals` + the i18n attribute selector (D5) + baseline | 02-C4 |
 | **02-C9** | boundaries (with `shared-api`/`shared-lib`) + resolver + `import-x/no-cycle` + `import-x/no-internal-modules` + suppressions (~30 + cycles + barrels) + `generate-layers-doc.mjs` + probe fixtures | 02-C4 (`config/eslint/layers.js` appears when the config is split, A-39) |
-| **02-C10** | husky pre-commit + lint-staged (`--fix`, does not block) + FAST mode; delete pre-push; `fix`, `eslint-fix-staged.mjs`; the CI version-policy step; the `version-check.mjs` extension; the release section in release-qa.md | 02-C4 |
+| **02-C10** | husky pre-commit + lint-staged (`--fix`, does not block) + FAST mode; delete pre-push; `fix`, `eslint-fix-staged.mjs`; the CI version-policy step; the `version-check.mjs` extension; the release section in release-qa.md. Amended (owner, 2026-11-05): the version comes from the git tag per ChipIn-one/.github#172; the release-branch version policy and the `version-check.mjs` extension are dropped from 02-C10. | 02-C4 |
 | **02-C11** | T4 `noUncheckedIndexedAccess` (39) | 02-C6 |
 | **02-C12** | project rules: `<img>`, `useStore()`/`useShallow`, `check-file-layout.mjs` (`index.ts` depth, ban on new `useConnect.ts`, baseline 17). The money rules are **not** included here — they are introduced by 03-1 (§4.3 of spec 03) | 02-C4 |
 | **02-D2a–e** | default → named (codemod). Executed **after** 04-0 (the monorepo move), so as not to conflict with the rename. The codemod skips the files `src/store/expenseModal*` (`--exclude`) until 03-14 is merged (file-lock in `00-overview.md`); a layer is taken into work only when it has no open PRs of spec 03 (C2-14) | 02-C4, 04-0 |

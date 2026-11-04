@@ -238,10 +238,11 @@ process.stdout.write(${JSON.stringify(RESULT_MARKER)} + JSON.stringify({
         );
     });
 
-    test('sets CHIPIN_ESLINT_FULL only for the full lint mode', () => {
+    test('sets CHIPIN_ESLINT_FULL only for the full lint mode and never CHIPIN_ESLINT_FAST', () => {
         const base = {
             PATH: '/bin',
             CHIPIN_ESLINT_FULL: '1',
+            CHIPIN_ESLINT_FAST: '1',
             NODE_ENV: 'test',
             VITEST: 'true',
             VITEST_POOL_ID: '1',
