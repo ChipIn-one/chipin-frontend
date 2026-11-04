@@ -63,7 +63,7 @@ const GroupBalancesTab = ({ group, showInviteOnboarding }: Props) => {
                                     radius="full"
                                     src={member.user.picture || ''}
                                     alt={member.user.displayName}
-                                    fallback={member.user.displayName?.[0]}
+                                    fallback={member.user.displayName?.charAt(0)}
                                 />
                                 <Flex direction="column" gap="1">
                                     <Flex align="center" gap="2">

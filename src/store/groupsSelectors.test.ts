@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 
 import type { Group } from 'api/chipin.types';
+import { getOrThrow } from 'test/getOrThrow';
 
 import { selectGroupBalances, selectGroupSettlementOptions } from './groupsSelectors';
 
@@ -315,9 +316,15 @@ test('keeps non-zero group balances and skips float-noise zero balances', () => 
     const settlementOptions = selectGroupSettlementOptions(group, 'user-1');
 
     expect(settlementOptions.owedToYou).toEqual([
-        { user: group.members[1].user, balances: [{ currency: 'USD', netBalance: 0.2 }] },
+        {
+            user: getOrThrow(group.members, 1).user,
+            balances: [{ currency: 'USD', netBalance: 0.2 }],
+        },
     ]);
     expect(settlementOptions.youOwe).toEqual([
-        { user: group.members[1].user, balances: [{ currency: 'EUR', netBalance: -10 }] },
+        {
+            user: getOrThrow(group.members, 1).user,
+            balances: [{ currency: 'EUR', netBalance: -10 }],
+        },
     ]);
 });

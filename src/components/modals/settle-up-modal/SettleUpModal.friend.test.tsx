@@ -6,6 +6,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import type { CreateSettlementParams, SelfUser } from 'api/chipin.types';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
+import { getOrThrow } from 'test/getOrThrow';
 
 import SettleUpModal from './SettleUpModal';
 
@@ -356,7 +357,7 @@ const renderFriendSettleUp = (
             onOpenChange={vi.fn()}
             friend={friend}
             balances={balances}
-            initialCurrency={balances[0].currency}
+            initialCurrency={getOrThrow(balances, 0).currency}
             onSubmit={onSubmit}
         />,
     );

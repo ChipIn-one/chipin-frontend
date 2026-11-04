@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 
 import type { KnownUser, UserRole, UserSettings } from 'api/chipin.types';
+import { getOrThrow } from 'test/getOrThrow';
 
 import { useUsersStore } from './actions';
 import {
@@ -112,12 +113,22 @@ test('builds the friends page view in one coordinated derivation', () => {
             {
                 currency: 'USD',
                 netBalance: 10,
-                friends: [{ friend: friends[0], balance: friends[0].balances[0] }],
+                friends: [
+                    {
+                        friend: getOrThrow(friends, 0),
+                        balance: getOrThrow(getOrThrow(friends, 0).balances, 0),
+                    },
+                ],
             },
             {
                 currency: 'EUR',
                 netBalance: -2,
-                friends: [{ friend: friends[0], balance: friends[0].balances[1] }],
+                friends: [
+                    {
+                        friend: getOrThrow(friends, 0),
+                        balance: getOrThrow(getOrThrow(friends, 0).balances, 1),
+                    },
+                ],
             },
         ],
         settledFriends: [friends[1]],
@@ -145,5 +156,5 @@ test('normalizes float noise in friends currency group totals', () => {
         createFriend('friend-3', [{ currency: 'USD', netAmount: -0.3 }]),
     ];
 
-    expect(getFriendsView(friends, '', 'all').currencyGroups[0].netBalance).toBe(0);
+    expect(getOrThrow(getFriendsView(friends, '', 'all').currencyGroups, 0).netBalance).toBe(0);
 });

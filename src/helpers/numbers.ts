@@ -54,7 +54,7 @@ export const getIsTooSmallForPrecision = (
 };
 
 const getExpandedDecimalParts = (value: number) => {
-    const [coefficient, exponentPart] = value.toString().split('e');
+    const [coefficient = '0', exponentPart] = value.toString().split('e');
     const [integerPart = '0', fractionalPart = ''] = coefficient.split('.');
     const digits = integerPart + fractionalPart;
     const decimalPosition = integerPart.length + Number(exponentPart ?? 0);

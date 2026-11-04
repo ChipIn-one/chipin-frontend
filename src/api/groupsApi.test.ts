@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
+import { getOrThrow } from 'test/getOrThrow';
+
 import { InvalidPathSegmentError } from './apiPath';
 import { apiInstance } from './chipin.instance';
 import type { Group } from './chipin.types';
@@ -82,7 +84,7 @@ describe('groupsApi', () => {
         return uploadGroupCover({ groupId: group.id, file, onProgress }).then(result => {
             expect(result).toEqual(group);
 
-            const [path, body, config] = vi.mocked(apiInstance.put).mock.calls[0];
+            const [path, body, config] = getOrThrow(vi.mocked(apiInstance.put).mock.calls, 0);
 
             expect(path).toBe('/groups/group-1/cover');
             expect(body).toBeInstanceOf(FormData);

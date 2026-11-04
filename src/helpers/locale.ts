@@ -41,7 +41,7 @@ const normalizeLocale = (input: string): string | null => {
     }
 
     const parts = input.trim().replace(/_/g, '-').split('-');
-    const lang = parts[0].toLowerCase();
+    const lang = (parts[0] ?? '').toLowerCase();
 
     if (!/^[a-z]{2,3}$/.test(lang)) {
         return null;
@@ -51,7 +51,7 @@ const normalizeLocale = (input: string): string | null => {
     // looks like a region code (exactly 2–3 letters). This skips script tags (4 chars,
     // e.g. 'Hans') and numeric variants. Example: zh-Hans-CN → zh-CN.
     for (let i = 1; i < parts.length; i++) {
-        const upper = parts[i].toUpperCase();
+        const upper = (parts[i] ?? '').toUpperCase();
 
         if (/^[A-Z]{2,3}$/.test(upper)) {
             return `${lang}-${upper}`;

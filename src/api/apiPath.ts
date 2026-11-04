@@ -22,5 +22,5 @@ export const apiPath = (strings: TemplateStringsArray, ...segments: string[]): s
         if (index >= segments.length) {
             return path + chunk;
         }
-        return path + chunk + encodePathSegment(segments[index]);
+        return path + chunk + encodePathSegment(String(segments[index]));
     }, '');

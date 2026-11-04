@@ -6,6 +6,7 @@ import { expect, test, vi } from 'vitest';
 import type { UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useUsersStore } from 'store/users-store';
+import { getOrThrow } from 'test/getOrThrow';
 
 import SettingsPage from './SettingsPage';
 
@@ -57,8 +58,8 @@ test('does not render unfinished notifications settings', () => {
     expect(screen.queryByText('Solo Preferences')).toBeNull();
 
     for (let index = 1; index < sectionTitles.length; index += 1) {
-        const previousTitle = sectionTitles[index - 1];
-        const currentTitle = sectionTitles[index];
+        const previousTitle = getOrThrow(sectionTitles, index - 1);
+        const currentTitle = getOrThrow(sectionTitles, index);
 
         expect(
             previousTitle.compareDocumentPosition(currentTitle) & Node.DOCUMENT_POSITION_FOLLOWING,

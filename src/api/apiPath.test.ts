@@ -43,6 +43,12 @@ describe('apiPath', () => {
         }
     });
 
+    test('keeps the pre-noUncheckedIndexedAccess output for a type-bypassed undefined segment', () => {
+        expect(apiPath`/groups/${undefined as unknown as string}/cover`).toBe(
+            '/groups/undefined/cover',
+        );
+    });
+
     test('builds multi-segment paths', () => {
         expect(apiPath`/groups/${UUID}/members/${'user-1'}/kick`).toBe(
             `/groups/${UUID}/members/user-1/kick`,

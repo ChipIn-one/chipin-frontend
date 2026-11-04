@@ -28,7 +28,7 @@ const UsersRow = ({ members, size = '1', max = 5 }: Props) => {
                         radius="full"
                         src={user.picture || ''}
                         alt={user.displayName}
-                        fallback={user.displayName?.[0]}
+                        fallback={user.displayName?.charAt(0)}
                     />
                 </AvatarWrapper>
             ))}

@@ -5,6 +5,7 @@ import { ThemeProvider } from 'styled-components';
 import { expect, test } from 'vitest';
 
 import { lightThemeStyled } from 'constants/styled-themes';
+import { getOrThrow } from 'test/getOrThrow';
 
 import type { SearchSelectProps } from './SearchSelect';
 import { SearchSelect } from './SearchSelect';
@@ -20,7 +21,7 @@ const renderSelect = (props: Partial<SearchSelectProps> = {}) => {
                     value="one"
                     searchPlaceholder="Search"
                     emptyText="Nothing found"
-                    triggerElement={<Button>{ITEMS[0].label}</Button>}
+                    triggerElement={<Button>{getOrThrow(ITEMS, 0).label}</Button>}
                     {...props}
                 />
             </Theme>

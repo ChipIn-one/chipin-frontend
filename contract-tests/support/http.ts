@@ -67,7 +67,9 @@ const readRefreshCookie = (response: Response): string | null | undefined => {
     }
 
     const cookiePrefix = `${REFRESH_COOKIE_NAME}=`;
-    const [cookiePair, ...rawAttributes] = refreshCookieHeader.split(';').map(part => part.trim());
+    const [cookiePair = '', ...rawAttributes] = refreshCookieHeader
+        .split(';')
+        .map(part => part.trim());
     const attributes = new Map<string, string | null>();
 
     for (const rawAttribute of rawAttributes) {
