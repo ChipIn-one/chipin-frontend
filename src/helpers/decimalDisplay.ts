@@ -38,7 +38,7 @@ export const roundDecimalHalfUp = (raw: string, places: number): RoundedDecimal 
     const padded = fraction.padEnd(places + 1, '0');
     let digits = integer + padded.slice(0, places);
 
-    if (padded[places] >= '5') {
+    if (padded.charAt(places) >= '5') {
         digits = incrementDigits(digits);
     }
 

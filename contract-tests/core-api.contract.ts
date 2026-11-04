@@ -790,6 +790,7 @@ it(
                 const b = requireState(userB, 'user B');
                 if (
                     groupPreview.ledgerActivities.length !== 1 ||
+                    groupPreview.ledgerActivities[0] === undefined ||
                     !isExpectedLedgerActivity(
                         groupPreview.ledgerActivities[0],
                         a,
@@ -804,6 +805,7 @@ it(
                 }
                 if (
                     groupPreview.renderedLedgerActivities.length !== 1 ||
+                    groupPreview.renderedLedgerActivities[0] === undefined ||
                     !isExpectedLedgerActivity(
                         groupPreview.renderedLedgerActivities[0],
                         a,

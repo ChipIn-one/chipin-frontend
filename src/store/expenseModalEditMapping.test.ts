@@ -4,6 +4,7 @@ import type { AppEvent } from 'api/activity.types';
 import type { SharingMode } from 'api/chipin.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
+import { getOrThrow } from 'test/getOrThrow';
 
 import { mapActivityExpenseToModalState } from './expenseModalEditMapping';
 import type { ExpenseModalSource } from './expenseModalStore';
@@ -174,10 +175,10 @@ test('maps the latest Activity Expense snapshot without a canonical ledger entry
             },
         },
     });
-    expect(result?.source.groups[0].members).toEqual(
+    expect(getOrThrow(result?.source.groups ?? [], 0).members).toEqual(
         expect.arrayContaining([{ id: 'former-user', displayName: 'Former participant' }]),
     );
-    expect(result?.source.groups[0].members[2]).not.toHaveProperty('email');
+    expect(getOrThrow(result?.source.groups ?? [], 0).members[2]).not.toHaveProperty('email');
 });
 
 test.each([

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { PUBLIC_ROUTE_ENTRIES } from 'constants/publicRouteManifest';
 import { useAuthToasts } from 'hooks/useAuthToasts';
 import { useScrollToTop } from 'hooks/useScrollToTop';
+import { getOrThrow } from 'test/getOrThrow';
 
 import { PublicEffects } from './PublicEffects';
 
@@ -51,7 +52,7 @@ afterEach(() => {
 });
 
 test('mounts the existing session-feedback and scroll-restoration hooks on public routes', () => {
-    render(<PublicEffects route={PUBLIC_ROUTE_ENTRIES[0]} isDark={false} />);
+    render(<PublicEffects route={getOrThrow(PUBLIC_ROUTE_ENTRIES, 0)} isDark={false} />);
 
     expect(useAuthToasts).toHaveBeenCalledOnce();
     expect(useScrollToTop).toHaveBeenCalledOnce();

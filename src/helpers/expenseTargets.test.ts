@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest';
 
 import type { Group } from 'api/chipin.types';
+import { getOrThrow } from 'test/getOrThrow';
 
 import { hasGroupExpenseTarget, isGroupExpenseTarget } from './expenseTargets';
 
@@ -37,9 +38,12 @@ const group = {
 
 test('EXP-060 excludes a one-member group from expense targets', () => {
     expect(isGroupExpenseTarget(group)).toBe(false);
-    expect(isGroupExpenseTarget({ ...group, members: [...group.members, group.members[0]] })).toBe(
-        true,
-    );
+    expect(
+        isGroupExpenseTarget({
+            ...group,
+            members: [...group.members, getOrThrow(group.members, 0)],
+        }),
+    ).toBe(true);
     expect(isGroupExpenseTarget(null)).toBe(false);
     expect(isGroupExpenseTarget(undefined)).toBe(false);
 });
@@ -48,6 +52,8 @@ test('EXP-060 requires a group with two members for the global group target', ()
     expect(hasGroupExpenseTarget([])).toBe(false);
     expect(hasGroupExpenseTarget([group])).toBe(false);
     expect(
-        hasGroupExpenseTarget([{ ...group, members: [...group.members, group.members[0]] }]),
+        hasGroupExpenseTarget([
+            { ...group, members: [...group.members, getOrThrow(group.members, 0)] },
+        ]),
     ).toBe(true);
 });

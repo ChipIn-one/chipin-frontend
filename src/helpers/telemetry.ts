@@ -15,8 +15,8 @@ export const resolveTelemetryEnvironment = (buildEnvironment: string, hostname: 
 };
 
 export const sanitizeTelemetryUrl = (url: string): string => {
-    const [withoutHash] = url.split('#');
-    const [withoutQuery] = withoutHash.split('?');
+    const [withoutHash = ''] = url.split('#');
+    const [withoutQuery = ''] = withoutHash.split('?');
 
     return withoutQuery
         .replace(GROUP_INVITE_ROUTE_PATTERN, '/group/join/:inviteToken')

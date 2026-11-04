@@ -90,11 +90,12 @@ const ModalRouter = <RouteId extends string>({
 
     const onBack = useCallback(() => {
         setNavigationState(state => {
-            if (state.history.length === 0) {
+            const previousRoute = state.history[state.history.length - 1];
+            if (previousRoute === undefined) {
                 return state;
             }
             const history = state.history.slice(0, -1);
-            return { route: state.history[state.history.length - 1], history };
+            return { route: previousRoute, history };
         });
     }, []);
 

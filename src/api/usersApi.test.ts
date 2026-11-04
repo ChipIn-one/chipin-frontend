@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
+import { getOrThrow } from 'test/getOrThrow';
+
 import { InvalidPathSegmentError } from './apiPath';
 import { apiInstance } from './chipin.instance';
 import type { SelfUser } from './chipin.types';
@@ -81,7 +83,7 @@ describe('usersApi', () => {
         vi.mocked(apiInstance.put).mockResolvedValue({ data: updatedUser });
 
         const uploadPromise = uploadUserAvatar({ file, onProgress });
-        const [path, body, config] = vi.mocked(apiInstance.put).mock.calls[0];
+        const [path, body, config] = getOrThrow(vi.mocked(apiInstance.put).mock.calls, 0);
 
         expect(path).toBe('/users/self/avatar');
         expect(body).toBeInstanceOf(FormData);

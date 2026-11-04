@@ -27,7 +27,13 @@ export interface SettlementViewModel {
 export const selectSettlementBalance = (
     balances: FriendBalance[],
     currency: string,
-): FriendBalance => balances.find(balance => balance.currency === currency) ?? balances[0];
+): FriendBalance => {
+    const balance = balances.find(item => item.currency === currency) ?? balances[0];
+    if (!balance) {
+        throw new Error('Settlement requires at least one balance');
+    }
+    return balance;
+};
 
 export const getSettlementAmount = (balance: FriendBalance): string =>
     String(Math.abs(balance.netAmount));

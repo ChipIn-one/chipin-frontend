@@ -19,8 +19,9 @@ export const encodePathSegment = (segment: string): string => {
 // Call only inside `.then` so an invalid segment becomes a rejected Promise, not a sync throw.
 export const apiPath = (strings: TemplateStringsArray, ...segments: string[]): string =>
     strings.reduce((path, chunk, index) => {
-        if (index >= segments.length) {
+        const segment = segments[index];
+        if (segment === undefined) {
             return path + chunk;
         }
-        return path + chunk + encodePathSegment(segments[index]);
+        return path + chunk + encodePathSegment(segment);
     }, '');

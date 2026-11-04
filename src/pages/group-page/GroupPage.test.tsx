@@ -5,6 +5,7 @@ import type { Group, SelfUser } from 'api/chipin.types';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
+import { getOrThrow } from 'test/getOrThrow';
 
 import GroupPage from './GroupPage';
 
@@ -110,7 +111,7 @@ test('composes summaries without viewport-specific component props', () => {
     render(<GroupPage />);
 
     const summaries = screen.getAllByTestId('group-summary');
-    const mobileSummary = summaries[1];
+    const mobileSummary = getOrThrow(summaries, 1);
     const tabs = screen.getByTestId('group-tabs');
 
     expect(summaries).toHaveLength(2);

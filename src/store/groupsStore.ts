@@ -57,12 +57,16 @@ const appendUniqueActivityPreviews = (
             index < confirmedItemCount
                 ? confirmedItems[index]
                 : incomingItems[index - confirmedItemCount];
+        if (!item) {
+            continue;
+        }
         const parentId = item.parent.id;
         const existingIndex = parentIndexes.get(parentId);
 
         if (existingIndex !== undefined) {
+            const existingItem = uniqueItems[existingIndex];
             // Keep a newer edit or reversal, including reversals needed as tombstones.
-            if (item.lastEvent.seq > uniqueItems[existingIndex].lastEvent.seq) {
+            if (!existingItem || item.lastEvent.seq > existingItem.lastEvent.seq) {
                 uniqueItems[existingIndex] = item;
             }
             continue;

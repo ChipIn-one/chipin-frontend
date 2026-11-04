@@ -7,6 +7,7 @@ import type { BalanceEntry } from 'api/chipin.raw.types';
 import type { ActivityFeedItem } from 'api/chipin.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { getActivityPreviewEvents } from 'helpers/activityEvent';
+import { getOrThrow } from 'test/getOrThrow';
 
 import { ActivityEventsList } from './ActivityEventsList';
 
@@ -119,9 +120,9 @@ test('ACT-020 still renders individual flat activity events on their own dates',
 
     expect(screen.getAllByTestId('activity-card')).toHaveLength(2);
     expect(screen.getAllByTestId('activity-divider')).toHaveLength(2);
-    expect(screen.getAllByTestId('activity-divider')[1].getAttribute('data-created-at')).toBe(
-        String(DAY_B),
-    );
+    expect(
+        getOrThrow(screen.getAllByTestId('activity-divider'), 1).getAttribute('data-created-at'),
+    ).toBe(String(DAY_B));
     expect(screen.getByText('flat-edit').getAttribute('data-parent-id')).toBeNull();
 });
 

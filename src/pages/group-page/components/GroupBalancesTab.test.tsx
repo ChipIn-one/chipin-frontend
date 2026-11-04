@@ -3,6 +3,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group, SelfUser } from 'api/chipin.types';
 import { useUsersStore } from 'store/users-store';
+import { getOrThrow } from 'test/getOrThrow';
 
 import GroupBalancesTab from './GroupBalancesTab';
 
@@ -103,7 +104,7 @@ test('shows invite onboarding for an empty single-member group', () => {
             showInviteOnboarding
             group={{
                 ...group,
-                members: [group.members[0]],
+                members: [getOrThrow(group.members, 0)],
                 lastUsedCurrency: null,
             }}
         />,
@@ -118,7 +119,7 @@ test('keeps the existing no-members state after the group has expense history', 
             showInviteOnboarding={false}
             group={{
                 ...group,
-                members: [group.members[0]],
+                members: [getOrThrow(group.members, 0)],
                 lastUsedCurrency: 'USD',
             }}
         />,

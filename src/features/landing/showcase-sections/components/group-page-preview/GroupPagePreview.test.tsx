@@ -3,6 +3,7 @@ import { ThemeProvider } from 'styled-components';
 import { expect, test, vi } from 'vitest';
 
 import { lightThemeStyled } from 'constants/styled-themes';
+import { getOrThrow } from 'test/getOrThrow';
 
 import GroupPagePreview from './GroupPagePreview';
 import { GROUP_PREVIEW_MEMBERS } from './internal';
@@ -57,7 +58,10 @@ test('renders the mobile Group preview with exactly three expenses', () => {
         name: 'sections.groups.preview.expensesLabel',
     });
 
-    const [hotel, dinner, tickets] = within(expenses).getAllByRole('listitem');
+    const items = within(expenses).getAllByRole('listitem');
+    const hotel = getOrThrow(items, 0);
+    const dinner = getOrThrow(items, 1);
+    const tickets = getOrThrow(items, 2);
 
     expect(within(hotel).getByText('activity:event.you paid')).not.toBeNull();
     expect(within(dinner).getByText('Aleh paid')).not.toBeNull();

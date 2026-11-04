@@ -1,6 +1,8 @@
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
+import { getOrThrow } from 'test/getOrThrow';
+
 import { useIntersectionObserver } from './useIntersectionObserver';
 
 type ObserverCallback = (entries: IntersectionObserverEntry[]) => void;
@@ -52,12 +54,12 @@ test('observes the attached element and exposes the latest entry', () => {
     render(<Sentinel />);
 
     expect(observers).toHaveLength(1);
-    expect(observers[0].observe).toHaveBeenCalledWith(screen.getByTestId('sentinel'));
-    expect(observers[0].options?.threshold).toEqual([0]);
+    expect(getOrThrow(observers, 0).observe).toHaveBeenCalledWith(screen.getByTestId('sentinel'));
+    expect(getOrThrow(observers, 0).options?.threshold).toEqual([0]);
     expect(screen.getByText('none')).toBeTruthy();
 
     act(() => {
-        observers[0].callback([{ isIntersecting: true } as IntersectionObserverEntry]);
+        getOrThrow(observers, 0).callback([{ isIntersecting: true } as IntersectionObserverEntry]);
     });
 
     expect(screen.getByText('true')).toBeTruthy();
@@ -68,11 +70,11 @@ test('disconnects when the element is detached or the component unmounts', () =>
 
     rerender(<Sentinel visible={false} />);
 
-    expect(observers[0].disconnect).toHaveBeenCalledOnce();
+    expect(getOrThrow(observers, 0).disconnect).toHaveBeenCalledOnce();
 
     rerender(<Sentinel />);
     unmount();
 
     expect(observers).toHaveLength(2);
-    expect(observers[1].disconnect).toHaveBeenCalledOnce();
+    expect(getOrThrow(observers, 1).disconnect).toHaveBeenCalledOnce();
 });
