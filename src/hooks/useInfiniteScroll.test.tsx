@@ -113,11 +113,12 @@ test('does not retry a failed load on rerender while the sentinel stays visible'
     const onLoadMore = vi.fn<() => void>();
     isIntersecting = true;
 
+    // A fresh callback on every render re-runs the effect, so only the trigger guard prevents a retry.
     const { rerender } = renderHook(() =>
         useInfiniteScroll({
             hasMore: true,
             isLoading: false,
-            onLoadMore,
+            onLoadMore: () => onLoadMore(),
         }),
     );
 
