@@ -1,8 +1,8 @@
-import { FC } from 'react';
+import type { FC } from 'react';
 
 import { tryToNumber } from 'helpers/numbers';
 
-import { BaseProps } from './duck/types';
+import type { BaseProps } from './duck/types';
 
 interface Props {
     value?: NumericValue;

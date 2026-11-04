@@ -1,4 +1,4 @@
-import { Avatar } from '@radix-ui/themes';
+import type { Avatar } from '@radix-ui/themes';
 import type { LucideIcon } from 'lucide-react';
 import {
     ArrowLeftRightIcon,
@@ -75,7 +75,7 @@ import {
 } from 'lucide-react';
 import type { ComponentProps } from 'react';
 
-import { EXPENSE_CATEGORIES, type ExpenseCategory } from './category';
+import type { EXPENSE_CATEGORIES, ExpenseCategory } from './category';
 
 type ExpenseCategoryUiColor = NonNullable<ComponentProps<typeof Avatar>['color']>;
 

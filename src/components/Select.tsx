@@ -1,5 +1,5 @@
-import { ReactNode } from 'react';
 import { Flex, Select as RadixSelect } from '@radix-ui/themes';
+import type { ReactNode } from 'react';
 
 type RadixSelectRootProps = React.ComponentProps<typeof RadixSelect.Root>;
 type RadixSelectTriggerProps = React.ComponentProps<typeof RadixSelect.Trigger>;

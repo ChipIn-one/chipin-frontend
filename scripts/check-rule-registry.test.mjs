@@ -318,7 +318,31 @@ const specRegistry = () => {
         .map(line => line.split('|').map(cell => cell.trim()));
 
     return rows.flatMap(([, rule = '', cls = '']) =>
-        [...rule.matchAll(/`([^`]+)`/g)].map(([, token]) => ({ token, cls })),
+        [...rule.matchAll(/`([^`]+)`/g)].flatMap(([, token]) => {
+            if (!token.endsWith('-*')) {
+                return [{ token, cls }];
+            }
+            // A family row lists its members in parentheses: `no-unsafe-*` (assignment, …; tests off).
+            // Members are typescript-eslint rules.
+            const members = rule.match(/\(([^;)]*)/)?.[1].split(',') ?? [];
+
+            return members.map(member => ({
+                token: `@typescript-eslint/${token.slice(0, -1)}${member.trim()}`,
+                cls,
+            }));
+        }),
+    );
+};
+
+// Rows of the §D0 tables that register `rule`. The tables name typescript-eslint rules without
+// the plugin prefix; family members are expanded to full names by `specRegistry`.
+const rowsFor = (rule, tokens) => {
+    const names = [rule, rule.replace(/^@typescript-eslint\//, '')];
+
+    return tokens.filter(({ token }) =>
+        names.some(
+            name => token === name || token.startsWith(`${name}:`) || token.startsWith(`${name} `),
+        ),
     );
 };
 
@@ -328,15 +352,20 @@ describe('rule-classes.json matches the spec 02 §D0 registry', () => {
 
     test.each(Object.entries(registry))('%s is registered with class %s', (key, cls) => {
         const rule = key.split('#')[0];
-        const rows = tokens.filter(
-            ({ token }) =>
-                token === rule || token.startsWith(`${rule}:`) || token.startsWith(`${rule} `),
-        );
+        const rows = rowsFor(rule, tokens);
 
         if (rows.length > 0) {
             expect(rows.map(row => row.cls)).toContain(cls);
         } else {
             expect(presetRules.has(rule) && cls).toBe('b');
         }
+    });
+
+    test('the no-unsafe-* row covers only its listed typescript-eslint members', () => {
+        expect(rowsFor('@typescript-eslint/no-unsafe-call', tokens).map(row => row.cls)).toEqual([
+            'b',
+        ]);
+        expect(rowsFor('@typescript-eslint/no-unsafe-type-assertion', tokens)).toEqual([]);
+        expect(rowsFor('no-unsafe-finally', tokens)).toEqual([]);
     });
 });

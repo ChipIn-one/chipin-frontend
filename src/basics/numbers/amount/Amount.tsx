@@ -1,11 +1,11 @@
-import { FC, ReactNode, useMemo } from 'react';
+import { type FC, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
-import { BaseProps } from '../duck/types';
+import type { BaseProps } from '../duck/types';
 
 import { getAmountData, getAmountTypesBool } from './duck/selectors';
-import { AmountTypes, ClickFuncParams } from './duck/types';
+import type { AmountTypes, ClickFuncParams } from './duck/types';
 
 const Wrapper = styled.span`
     display: inline-block;

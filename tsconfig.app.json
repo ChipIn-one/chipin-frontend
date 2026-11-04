@@ -7,8 +7,6 @@
         "jsx": "react-jsx",
         // No ambient @types: browser code must not see the Node globals of @types/node.
         "types": [],
-        // Stage T3 (02-C6) turns this on in tsconfig.base.json and removes this line.
-        "verbatimModuleSyntax": false,
 
         // Aliases: the only list. ESLint (config/eslint/aliases.js) and Vite (vite-tsconfig-paths) read it.
         "paths": {

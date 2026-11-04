@@ -1,6 +1,6 @@
 import { getNumberData } from 'helpers/numbers';
 
-import { AmountTypes, GetAmountDataParams, GetAmountDataReturn } from './types';
+import type { AmountTypes, GetAmountDataParams, GetAmountDataReturn } from './types';
 
 export const getAmountTypesBool = (type: AmountTypes) => ({
     isDefault: type === 'default',

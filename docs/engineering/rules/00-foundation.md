@@ -6,7 +6,8 @@ Legacy and touched-code policy lives in `70-testing.md` §Legacy Baseline.
 
 - Use `unknown` for untrusted values and narrow with type guards.
 - Do not add `any`, `as any`, unjustified assertions, `@ts-ignore`, or non-null assertions that hide missing validation.
-- Use `import type` for type-only dependencies.
+- Mark type-only imports with `type` (`import type { X }`, or `import { type X, y }` when mixed); tsc
+  `verbatimModuleSyntax` requires it and `npx eslint --fix` adds it (`consistent-type-imports`).
 - UI (pages, features, components, basics) imports domain types such as `Group` and `GroupUser`, never
   wire `Api*Request`/`Api*Response` types.
 

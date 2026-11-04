@@ -30,6 +30,7 @@ Do not create artificial tests for documentation, config-only edits, formatting,
 - Reset Zustand stores, mocks, timers, and DOM between tests.
 - Prefer semantic assertions over snapshots.
 - Query components by role and accessible name. Do not assert styled-components class names or Radix internals.
+- Narrow a queried element with the type argument, not `as`: `screen.getByRole<HTMLInputElement>('textbox')`.
 - Use `userEvent.setup()` inside each interaction test; use `fireEvent` only for behavior user-event cannot express.
 - Tests may use `async`/`await` or returned Promise chains; a test never leaves a Promise unawaited.
 

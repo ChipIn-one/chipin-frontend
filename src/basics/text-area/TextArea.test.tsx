@@ -18,7 +18,7 @@ test('owns its value and exposes the character limit next to the label', () => {
         />,
     );
 
-    const input = screen.getByRole('textbox', { name: 'Description' }) as HTMLTextAreaElement;
+    const input = screen.getByRole<HTMLTextAreaElement>('textbox', { name: 'Description' });
     const description = screen.getByText('Optional');
 
     expect(input.value).toBe('Trip');

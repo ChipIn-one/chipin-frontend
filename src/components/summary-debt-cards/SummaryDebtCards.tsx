@@ -1,6 +1,6 @@
 import { Flex } from '@radix-ui/themes';
 
-import { BalanceEntry } from 'api/chipin.raw.types';
+import type { BalanceEntry } from 'api/chipin.raw.types';
 
 import { NoDebtsEmptyState } from 'basics/empty-states';
 

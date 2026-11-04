@@ -200,7 +200,7 @@ const getAuthRefreshLockManager = (): AuthRefreshLockManager | null => {
         return null;
     }
 
-    return locks as AuthRefreshLockManager;
+    return locks;
 };
 
 const withAuthRefreshLock = (callback: () => Promise<string | null>): Promise<string | null> => {

@@ -1,4 +1,4 @@
-import { type ExpenseSplitStatus } from 'constants/chipin';
+import type { ExpenseSplitStatus } from 'constants/chipin';
 
 import { EXPENSE_SPLIT_STATUS_COLORS } from './constants';
 

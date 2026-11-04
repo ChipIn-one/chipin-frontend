@@ -1,5 +1,5 @@
-import { ReactNode } from 'react';
 import { BanknoteXIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import EmptyState from './EmptyState';
