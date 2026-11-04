@@ -9,7 +9,7 @@
         "lint": "node scripts/check-rule-registry.mjs && eslint . --max-warnings 0",
         "lint:full": "node scripts/check-rule-registry.mjs && CHIPIN_ESLINT_FULL=1 eslint . --max-warnings 0",
         "baseline:update": "eslint . --prune-suppressions",
-        "fix": "prettier --write . && eslint . --fix",
+        "fix": "eslint . --fix; prettier --write .",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "test": "vitest",
@@ -33,11 +33,11 @@
         "build:ds-gallery": "vite build --config ds-gallery/vite.config.ts && node ds-gallery/build-html.mjs"
     },
     "lint-staged": {
-        "*.{ts,tsx,js,mjs}": [
-            "prettier --write",
-            "node scripts/eslint-fix-staged.mjs"
+        "*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}": [
+            "node scripts/eslint-fix-staged.mjs",
+            "prettier --write"
         ],
-        "*.{json,md,css,yml,yaml,html}": [
+        "*.{json,md,css,scss,yml,yaml,html}": [
             "prettier --write"
         ]
     },

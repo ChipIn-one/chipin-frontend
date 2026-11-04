@@ -33,8 +33,8 @@ Invariants 1–6 and 9 describe the target state of specs 03/04 (the `app`, `ent
 - `npm run verify:full` — the full gate: version check, format check, `lint:full`, all tests, build, ds-gallery; CI runs the same. Run before `IMPLEMENTATION_COMPLETE`.
 - `npm run typecheck` — `tsc -b`.
 - `npm run version:check` — the version in `package.json` and `package-lock.json` is valid and matches (read-only).
-- `npm run fix` — Prettier and `eslint --fix` over the whole repository (not in a task).
-- Husky `pre-commit` only auto-fixes staged files (`lint-staged`, FAST mode) and never blocks; there is no `pre-push`, only CI blocks.
+- `npm run fix` — `eslint --fix`, then Prettier, over the whole repository (not in a task).
+- Husky `pre-commit` only auto-fixes staged files (`lint-staged`, FAST mode) and does not block on lint (only a syntax error, which Prettier cannot parse, blocks it); there is no `pre-push`, only CI blocks.
 
 ## Process
 

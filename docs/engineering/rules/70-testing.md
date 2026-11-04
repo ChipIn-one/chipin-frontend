@@ -86,8 +86,8 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
 - `npm run verify:full` is the full gate and the same command CI runs: version check, format check, `lint:full`, the
   complete Vitest suite, the production build, and the ds-gallery build. CI also runs
   `scripts/check-baseline.mjs` on pull requests. Husky `pre-commit` runs `lint-staged` with `CHIPIN_ESLINT_FAST=1`
-  (no type-aware rules): Prettier and `eslint --fix` on staged files, remaining errors are printed
-  and the commit is never blocked. There is no `pre-push` hook.
+  (no type-aware rules): `eslint --fix`, then Prettier, on staged files; remaining errors are printed
+  and lint never blocks the commit (only a syntax error that Prettier cannot parse does). There is no `pre-push` hook.
 - `npm run build` runs `tsc -b`, the Vite production build, and the public precache check; it does not run tests.
 - `npm run vercel-build` (wired through `vercel.json`) is the Vercel deployment build: Vite production
   build and public precache check, no tests and no icon generation.
