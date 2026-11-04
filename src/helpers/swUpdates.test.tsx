@@ -1,4 +1,4 @@
-import { beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
     activateServiceWorker: vi.fn<() => Promise<void>>(),
@@ -65,6 +65,15 @@ beforeEach(() => {
     mocks.activateServiceWorker.mockResolvedValue(undefined);
 });
 
+// Each test imports a fresh module instance; remove its document listener and interval so a
+// later test only sees its own instance's reactions.
+afterEach(async () => {
+    const { cleanupServiceWorkerUpdates } = await import('./swUpdates');
+
+    cleanupServiceWorkerUpdates();
+    vi.restoreAllMocks();
+});
+
 test('applies the shared worker activation before reloading', () => {
     const waitingWorker = installServiceWorkerRegistration();
 
@@ -97,7 +106,7 @@ test('reloads safely when shared worker activation fails', () => {
 
 test('re-checks the waiting worker on tab focus even when the update request fails', async () => {
     installServiceWorkerRegistration();
-    const { cleanupServiceWorkerUpdates, initServiceWorkerUpdates } = await import('./swUpdates');
+    const { initServiceWorkerUpdates } = await import('./swUpdates');
 
     await initServiceWorkerUpdates();
     const registration = await navigator.serviceWorker.register('/sw.js');
@@ -105,13 +114,8 @@ test('re-checks the waiting worker on tab focus even when the update request fai
     mocks.setIsSwUpdateAvailable.mockClear();
     vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
 
-    try {
-        document.dispatchEvent(new Event('visibilitychange'));
+    document.dispatchEvent(new Event('visibilitychange'));
 
-        await vi.waitFor(() => expect(mocks.setIsSwUpdateAvailable).toHaveBeenCalledWith(true));
-        expect(registration.update).toHaveBeenCalledOnce();
-    } finally {
-        cleanupServiceWorkerUpdates();
-        vi.restoreAllMocks();
-    }
+    await vi.waitFor(() => expect(mocks.setIsSwUpdateAvailable).toHaveBeenCalledWith(true));
+    expect(registration.update).toHaveBeenCalledOnce();
 });

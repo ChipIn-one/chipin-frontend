@@ -109,14 +109,11 @@ test.each([
     },
 );
 
-test('calls a failing page loader once and leaves rejection handling to the caller', async () => {
-    const onPageError = vi.fn();
-    const onLoadMore = vi.fn((): void => {
-        Promise.reject(new Error('Page unavailable')).catch(onPageError);
-    });
+test('does not retry a failed load on rerender while the sentinel stays visible', () => {
+    const onLoadMore = vi.fn<() => void>();
     isIntersecting = true;
 
-    renderHook(() =>
+    const { rerender } = renderHook(() =>
         useInfiniteScroll({
             hasMore: true,
             isLoading: false,
@@ -124,6 +121,9 @@ test('calls a failing page loader once and leaves rejection handling to the call
         }),
     );
 
+    // The load failed before any loading state was published: nothing re-arms the trigger.
+    rerender();
+    rerender();
+
     expect(onLoadMore).toHaveBeenCalledOnce();
-    await vi.waitFor(() => expect(onPageError).toHaveBeenCalledOnce());
 });
