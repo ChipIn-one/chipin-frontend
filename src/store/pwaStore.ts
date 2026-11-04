@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react';
 import i18n from 'i18next';
 import { toast } from 'sonner';
 import { create } from 'zustand';
@@ -53,6 +54,11 @@ export const usePwaStore = create<PwaStore>((set, get) => ({
                 }
 
                 set({ pwaInstallPrompt: null });
+            })
+            .catch(error => {
+                // A deferred install prompt cannot be reused after prompt(), so drop it.
+                set({ pwaInstallPrompt: null });
+                Sentry.captureException(error);
             });
     },
 }));
