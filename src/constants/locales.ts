@@ -1,5 +1,5 @@
 // Released locales are shared by the public manifest and the client locale resolver.
-const SUPPORTED_LOCALES = ['en', 'ru', 'es', 'pt-BR', 'pt-PT'] as const;
+const SUPPORTED_LOCALES = ['en', 'ru'] as const;
 type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
 const DEFAULT_LOCALE: SupportedLocale = SUPPORTED_LOCALES[0];
 

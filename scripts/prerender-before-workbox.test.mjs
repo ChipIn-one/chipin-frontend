@@ -8,7 +8,7 @@ test('canonical and slash-form public routes share final HTML revisions', () => 
         { url: 'privacy/index.html', revision: 'en-privacy' },
         { url: 'ru/index.html', revision: 'ru-home' },
         { url: 'ru/privacy/index.html', revision: 'ru-privacy' },
-        { url: 'pt-br/terms/index.html', revision: 'br-terms' },
+        { url: 'ru/terms/index.html', revision: 'ru-terms' },
         { url: 'app.html', revision: 'spa' },
     ];
 
@@ -17,7 +17,7 @@ test('canonical and slash-form public routes share final HTML revisions', () => 
         expect(manifest).toContainEqual({ url: 'privacy', revision: 'en-privacy' });
         expect(manifest).toContainEqual({ url: 'ru', revision: 'ru-home' });
         expect(manifest).toContainEqual({ url: 'ru/privacy', revision: 'ru-privacy' });
-        expect(manifest).toContainEqual({ url: 'pt-br/terms', revision: 'br-terms' });
+        expect(manifest).toContainEqual({ url: 'ru/terms', revision: 'ru-terms' });
         expect(manifest).toContainEqual({ url: 'ru/privacy/index.html', revision: 'ru-privacy' });
         expect(manifest).not.toContainEqual({ url: 'app', revision: 'spa' });
         expect(manifest).not.toContainEqual({ url: '', revision: 'en-home' });

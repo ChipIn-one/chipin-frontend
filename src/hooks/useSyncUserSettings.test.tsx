@@ -11,7 +11,7 @@ const setTheme = vi.hoisted(() => vi.fn());
 const changeLanguage = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 const captureException = vi.hoisted(() => vi.fn());
 const locale = vi.hoisted(() => ({
-    matchLocale: vi.fn(() => 'en'),
+    matchLocale: vi.fn<(raw: string) => string | null>(() => 'en'),
     saveLocalePreference: vi.fn(),
 }));
 
@@ -84,3 +84,26 @@ test('applies cached user theme settings while the authenticated user is loading
     expect(locale.saveLocalePreference).toHaveBeenCalledWith('en');
     expect(changeLanguage).toHaveBeenCalledWith('en');
 });
+
+// #609: es, pt-BR and pt-PT were removed; a backend setting that still holds one
+// is applied as English without an error and without changing the backend value.
+test.each(['es', 'pt-BR', 'pt-PT', 'pt'])(
+    'applies English for the removed saved language %s',
+    language =>
+        vi
+            .importActual<{ matchLocale: (raw: string) => string | null }>('helpers/locale')
+            .then(actual => {
+                locale.matchLocale.mockImplementationOnce(actual.matchLocale);
+                useUsersStore.setState({
+                    localUser: { role: 'USER', settings: { ...settings, language } },
+                });
+                useAuthStore.setState({ status: 'authenticated' });
+
+                renderHook(() => useSyncUserSettings());
+
+                expect(locale.matchLocale).toHaveBeenCalledWith(language);
+                expect(locale.saveLocalePreference).toHaveBeenCalledWith('en');
+                expect(changeLanguage).toHaveBeenCalledWith('en');
+                expect(captureException).not.toHaveBeenCalled();
+            }),
+);

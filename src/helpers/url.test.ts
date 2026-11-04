@@ -59,9 +59,9 @@ test.each([
 });
 
 test('Google OAuth uses a prefixed URL before conflicting browser language', () => {
-    window.history.replaceState({}, '', '/pt-pt/privacy');
-    vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['ru-RU']);
-    expect(new URL(getSocialAuthUrl('google')).searchParams.get('locale')).toBe('pt-PT');
+    window.history.replaceState({}, '', '/ru/privacy');
+    vi.spyOn(window.navigator, 'languages', 'get').mockReturnValue(['en-US']);
+    expect(new URL(getSocialAuthUrl('google')).searchParams.get('locale')).toBe('ru');
 });
 
 test('English SSG homepage uses supported browser language for signup', () => {

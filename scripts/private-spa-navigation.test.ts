@@ -24,6 +24,7 @@ test.each([
     '/privacy',
     '/terms',
     '/ru/',
+    // Removed locales (#609) are redirected by vercel.json, never served the app shell.
     '/pt-br/privacy',
     '/es/unknown',
     '/missing-page',

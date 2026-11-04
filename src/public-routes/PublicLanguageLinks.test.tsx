@@ -23,6 +23,7 @@ test('SSG retains native no-JS language navigation without a visible link row', 
     expect(markup).toContain('<summary');
     expect(markup).toContain('href="/privacy"');
     expect(markup).toContain('href="/ru/privacy"');
-    expect(markup).toContain('href="/pt-br/privacy"');
-    expect(markup).toContain('href="/pt-pt/privacy"');
+    expect(markup).not.toContain('href="/es/privacy"');
+    expect(markup).not.toContain('href="/pt-br/privacy"');
+    expect(markup).not.toContain('href="/pt-pt/privacy"');
 });

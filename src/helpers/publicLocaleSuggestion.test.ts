@@ -21,8 +21,8 @@ test('manual locale change suppresses a suggestion for this session only', () =>
 test('persistent toast action follows the current English public path', () => {
     expect(getPublicLocaleSuggestionTarget('/privacy', 'ru')).toBe('/ru/privacy');
     expect(getPublicLocaleSuggestionTarget('/', 'ru')).toBe('/ru/');
-    expect(getPublicLocaleSuggestionTarget('/terms', 'pt-PT')).toBe('/pt-pt/terms');
-    expect(getPublicLocaleSuggestionTarget('/es/privacy', 'ru')).toBeNull();
+    expect(getPublicLocaleSuggestionTarget('/terms', 'ru')).toBe('/ru/terms');
+    expect(getPublicLocaleSuggestionTarget('/ru/privacy', 'ru')).toBeNull();
     expect(getPublicLocaleSuggestionTarget('/dashboard', 'ru')).toBeNull();
 });
 
