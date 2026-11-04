@@ -65,3 +65,37 @@ test('clears the prompt without installing when the user dismisses it', async ()
     expect(usePwaStore.getState()).toMatchObject({ isPwaInstalled: false, pwaInstallPrompt: null });
     expect(captureException).not.toHaveBeenCalled();
 });
+
+test('resolves, clears the prompt and reports the error when userChoice rejects', async () => {
+    const error = new Error('user choice failed');
+    // A getter creates the rejected promise only when the store reads it.
+    const promptEvent = {
+        platforms: [],
+        prompt: () => Promise.resolve(),
+        get userChoice() {
+            return Promise.reject(error);
+        },
+    } as unknown as BeforeInstallPromptEvent;
+    usePwaStore.setState({ pwaInstallPrompt: promptEvent });
+
+    await expect(usePwaStore.getState().callPWAInstall()).resolves.toBeUndefined();
+
+    expect(usePwaStore.getState()).toMatchObject({ isPwaInstalled: false, pwaInstallPrompt: null });
+    expect(captureException).toHaveBeenCalledWith(error);
+    expect(toastSuccess).not.toHaveBeenCalled();
+});
+
+test('resolves and keeps the installed state when the success toast throws', async () => {
+    const error = new Error('toast failed');
+    toastSuccess.mockImplementation(() => {
+        throw error;
+    });
+    usePwaStore.setState({
+        pwaInstallPrompt: createPromptEvent(() => Promise.resolve(), 'accepted'),
+    });
+
+    await expect(usePwaStore.getState().callPWAInstall()).resolves.toBeUndefined();
+
+    expect(usePwaStore.getState()).toMatchObject({ isPwaInstalled: true, pwaInstallPrompt: null });
+    expect(captureException).toHaveBeenCalledWith(error);
+});
