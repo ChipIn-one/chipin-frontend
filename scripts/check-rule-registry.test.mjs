@@ -335,11 +335,11 @@ const specRegistry = () => {
     );
 };
 
-// Rows of the §D0 tables that register `rule`. The tables name typescript-eslint rules without
-// the plugin prefix; family members are expanded to full names by `specRegistry` and match only
+// Rows of the §D0 tables that register `rule`. The tables name typescript-eslint and jsx-a11y
+// rules without the plugin prefix; family members are expanded to full names by `specRegistry` and match only
 // the full `@typescript-eslint/` name, never an unprefixed (core) rule of the same name.
 const rowsFor = (rule, tokens) => {
-    const names = [rule, rule.replace(/^@typescript-eslint\//, '')];
+    const names = [rule, rule.replace(/^(?:@typescript-eslint|jsx-a11y)\//, '')];
 
     return tokens.filter(({ token, family }) =>
         family
@@ -376,5 +376,11 @@ describe('rule-classes.json matches the spec 02 §D0 registry', () => {
         expect(rowsFor('no-unsafe-finally', tokens)).toEqual([]);
         // A hypothetical core rule with a family member's unprefixed name is not covered.
         expect(rowsFor('no-unsafe-call', tokens)).toEqual([]);
+    });
+
+    test('the jsx-a11y row covers only its six rules', () => {
+        expect(rowsFor('jsx-a11y/alt-text', tokens).map(row => row.cls)).toEqual(['b']);
+        expect(rowsFor('jsx-a11y/no-static-element-interactions', tokens)).toHaveLength(1);
+        expect(rowsFor('jsx-a11y/no-autofocus', tokens)).toEqual([]);
     });
 });
