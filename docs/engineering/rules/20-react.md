@@ -17,11 +17,11 @@
 - Do not use an effect for derived data or logic that belongs in the initiating event.
 - Effects include complete dependencies and cleanup subscriptions/timers/requests.
 - UI effects never call raw API clients. They may trigger a store action.
-- When React must ignore a returned Promise, make that intentional and ensure the action or attached chain owns errors:
+- When React must ignore a returned Promise, mark it `void` and ensure the action or attached chain owns errors:
 
 ```ts
 useEffect(() => {
-    fetchSetGroups();
+    void fetchSetGroups();
 }, [fetchSetGroups]);
 ```
 

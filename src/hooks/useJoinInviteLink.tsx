@@ -15,7 +15,7 @@ export const useJoinInviteLink = (): InviteConfirmationState => {
     const onAccept = useCallback((token: string) => joinGroup({ inviteToken: token }), [joinGroup]);
     const onAccepted = useCallback(
         ({ id }: { id: string }) => {
-            navigate(`${ROUTES.GROUP}/${id}`, { replace: true });
+            void navigate(`${ROUTES.GROUP}/${id}`, { replace: true });
         },
         [navigate],
     );

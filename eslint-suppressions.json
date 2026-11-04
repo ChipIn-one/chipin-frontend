@@ -113,51 +113,6 @@
       "count": 1
     }
   },
-  "src/helpers/authSession.test.ts": {
-    "@typescript-eslint/no-floating-promises": {
-      "count": 1
-    }
-  },
-  "src/helpers/swUpdates.tsx": {
-    "@typescript-eslint/no-misused-promises": {
-      "count": 2
-    }
-  },
-  "src/hooks/useAppNavigate.ts": {
-    "@typescript-eslint/no-floating-promises": {
-      "count": 1
-    }
-  },
-  "src/hooks/useFriendInviteLink.tsx": {
-    "@typescript-eslint/no-floating-promises": {
-      "count": 1
-    }
-  },
-  "src/hooks/useInfiniteScroll.test.tsx": {
-    "@typescript-eslint/no-misused-promises": {
-      "count": 5
-    }
-  },
-  "src/hooks/useInviteConfirmation.ts": {
-    "@typescript-eslint/no-floating-promises": {
-      "count": 1
-    }
-  },
-  "src/hooks/useJoinInviteLink.tsx": {
-    "@typescript-eslint/no-floating-promises": {
-      "count": 1
-    }
-  },
-  "src/hooks/useSyncAppMode.test.tsx": {
-    "@typescript-eslint/no-misused-promises": {
-      "count": 1
-    }
-  },
-  "src/i18n/index.ts": {
-    "@typescript-eslint/no-floating-promises": {
-      "count": 1
-    }
-  },
   "src/pages/ActivityPage.tsx": {
     "@typescript-eslint/no-floating-promises": {
       "count": 1
@@ -259,11 +214,6 @@
   },
   "src/public-routes/PublicLanguageLinks.test.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    }
-  },
-  "src/public-routes/entry-server.tsx": {
-    "@typescript-eslint/no-floating-promises": {
       "count": 1
     }
   },

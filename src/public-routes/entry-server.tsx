@@ -14,7 +14,7 @@ const renderPublicRoute = (
 ): { html: string; styles: string; buildYear: number } => {
     const buildYear = new Date().getFullYear();
     const i18n = createInstance();
-    i18n.init({
+    void i18n.init({
         resources,
         lng: route.locale,
         fallbackLng: DEFAULT_LOCALE,

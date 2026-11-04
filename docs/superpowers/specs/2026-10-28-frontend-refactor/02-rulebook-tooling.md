@@ -35,7 +35,7 @@ Consequences:
 | `simple-import-sort/imports`, `simple-import-sort/exports` | a | `--fix` |
 | `consistent-type-imports` | a | `--fix` |
 | `no-import-type-side-effects` | a | `--fix` |
-| `no-unnecessary-type-assertion` | b | mostly `--fix`, but the "type arguments may be inferred from the assertion" report has no autofix; message: use `getByRole<HTMLInputElement>(…)` instead of `as` |
+| `no-unnecessary-type-assertion` | b | mostly `--fix`, but the "type arguments may be inferred from the assertion" report has no autofix; hint (rulebook 70-testing): use `getByRole<HTMLInputElement>(…)` instead of `as` |
 | `unused-imports/no-unused-imports` | a | `--fix` |
 | `curly: all` | a | `--fix` |
 | `react/jsx-boolean-value: never` | a | `--fix` |

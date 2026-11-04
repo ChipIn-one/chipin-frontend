@@ -94,3 +94,24 @@ test('reloads safely when shared worker activation fails', () => {
         )
         .then(() => vi.waitFor(() => expect(mocks.reloadCurrentPage).toHaveBeenCalledOnce()));
 });
+
+test('re-checks the waiting worker on tab focus even when the update request fails', async () => {
+    installServiceWorkerRegistration();
+    const { cleanupServiceWorkerUpdates, initServiceWorkerUpdates } = await import('./swUpdates');
+
+    await initServiceWorkerUpdates();
+    const registration = await navigator.serviceWorker.register('/sw.js');
+    vi.mocked(registration.update).mockRejectedValueOnce(new Error('offline'));
+    mocks.setIsSwUpdateAvailable.mockClear();
+    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+
+    try {
+        document.dispatchEvent(new Event('visibilitychange'));
+
+        await vi.waitFor(() => expect(mocks.setIsSwUpdateAvailable).toHaveBeenCalledWith(true));
+        expect(registration.update).toHaveBeenCalledOnce();
+    } finally {
+        cleanupServiceWorkerUpdates();
+        vi.restoreAllMocks();
+    }
+});

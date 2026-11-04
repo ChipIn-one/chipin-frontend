@@ -30,7 +30,15 @@ const TestHarness = () => {
 
     useSyncAppMode();
 
-    return <Button onClick={() => navigate('/dashboard')}>{DASHBOARD_LABEL}</Button>;
+    return (
+        <Button
+            onClick={() => {
+                void navigate('/dashboard');
+            }}
+        >
+            {DASHBOARD_LABEL}
+        </Button>
+    );
 };
 
 beforeEach(() => {

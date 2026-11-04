@@ -16,7 +16,7 @@ beforeEach(() => {
 });
 
 test('loads the next page when the sentinel enters the viewport', () => {
-    const onLoadMore = vi.fn(() => Promise.resolve());
+    const onLoadMore = vi.fn<() => void>();
     const { rerender, result } = renderHook(() =>
         useInfiniteScroll({
             hasMore: true,
@@ -35,7 +35,7 @@ test('loads the next page when the sentinel enters the viewport', () => {
 });
 
 test('re-arms pagination after a completed load while the sentinel stays visible', () => {
-    const onLoadMore = vi.fn(() => Promise.resolve());
+    const onLoadMore = vi.fn<() => void>();
     let isLoading = false;
     const { rerender } = renderHook(() =>
         useInfiniteScroll({
@@ -59,7 +59,7 @@ test('re-arms pagination after a completed load while the sentinel stays visible
 });
 
 test('does not re-arm pagination when the completed request removes eligibility', () => {
-    const onLoadMore = vi.fn(() => Promise.resolve());
+    const onLoadMore = vi.fn<() => void>();
     let hasMore = true;
     let isLoading = false;
     const { rerender } = renderHook(() =>
@@ -94,7 +94,7 @@ test.each([
 ])(
     'does not load when hasMore is $hasMore and isLoading is $isLoading',
     ({ hasMore, isLoading }) => {
-        const onLoadMore = vi.fn(() => Promise.resolve());
+        const onLoadMore = vi.fn<() => void>();
         isIntersecting = true;
 
         renderHook(() =>
@@ -109,8 +109,11 @@ test.each([
     },
 );
 
-test('handles a rejected page request', () => {
-    const onLoadMore = vi.fn(() => Promise.reject(new Error('Page unavailable')));
+test('calls a failing page loader once and leaves rejection handling to the caller', async () => {
+    const onPageError = vi.fn();
+    const onLoadMore = vi.fn((): void => {
+        Promise.reject(new Error('Page unavailable')).catch(onPageError);
+    });
     isIntersecting = true;
 
     renderHook(() =>
@@ -122,4 +125,5 @@ test('handles a rejected page request', () => {
     );
 
     expect(onLoadMore).toHaveBeenCalledOnce();
+    await vi.waitFor(() => expect(onPageError).toHaveBeenCalledOnce());
 });

@@ -5,6 +5,6 @@ export const useAppNavigate = () => {
     const navigate = useNavigate();
 
     return (to: To, options?: NavigateOptions) => {
-        navigate(to, options);
+        void navigate(to, options);
     };
 };

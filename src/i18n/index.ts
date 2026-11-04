@@ -7,7 +7,7 @@ import { resolveLocale } from 'helpers/locale';
 
 import { resources } from './resources';
 
-i18n.use(initReactI18next).init({
+void i18n.use(initReactI18next).init({
     resources,
     lng:
         (typeof window !== 'undefined' && getPublicRoute(window.location.pathname)?.locale) ||

@@ -216,7 +216,7 @@ describe('authSession', () => {
 
         const validation = validateAuthSession();
 
-        clearExpiredAuthSession();
+        void clearExpiredAuthSession();
         resolveRefresh?.({ token: 'stale-access-token' });
 
         return expect(validation).rejects.toThrow('Auth session changed during token rotation');
