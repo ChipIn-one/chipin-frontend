@@ -54,6 +54,12 @@ test('selects the requested balance and falls back to the first currency', () =>
     expect(selectSettlementBalance(balances, 'BZD')).toEqual(balances[0]);
 });
 
+test('throws when there is no balance to settle', () => {
+    expect(() => selectSettlementBalance([], 'USD')).toThrow(
+        'Settlement requires at least one balance',
+    );
+});
+
 test('expands member balances into one selectable option per currency', () => {
     expect(
         getDebtOptions([
