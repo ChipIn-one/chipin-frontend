@@ -60,7 +60,7 @@ const ActivityList = ({ activeFilter }: Props) => {
         onLoadMore,
     });
     const onRetryNextPage = () => {
-        void fetchMoreActivity();
+        onLoadMore();
     };
 
     if (isLoading) {
