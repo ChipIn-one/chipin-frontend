@@ -60,7 +60,7 @@ const LeaveGroupAlertDialog = ({ children }: Props) => {
                         name: selectedGroup.name,
                     }),
                 );
-                navigate(ROUTES.DASHBOARD, { replace: true });
+                void navigate(ROUTES.DASHBOARD, { replace: true });
             })
             .catch(error => {
                 toast.error(

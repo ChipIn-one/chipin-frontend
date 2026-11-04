@@ -105,10 +105,21 @@ test('keeps pagination recovery available when the active filter has no loaded m
     expect(mocks.useInfiniteScroll).toHaveBeenLastCalledWith({
         hasMore: false,
         isLoading: false,
-        onLoadMore: mocks.fetchMoreActivity,
+        onLoadMore: expect.any(Function),
     });
 
     return user.click(screen.getByRole('button', { name: 'retryAction' })).then(() => {
         expect(mocks.fetchMoreActivity).toHaveBeenCalledOnce();
+
+        const lastCall = mocks.useInfiniteScroll.mock.lastCall as
+            [{ onLoadMore: () => void }] | undefined;
+
+        if (!lastCall) {
+            throw new Error('Infinite scroll was not initialized');
+        }
+
+        lastCall[0].onLoadMore();
+
+        expect(mocks.fetchMoreActivity).toHaveBeenCalledTimes(2);
     });
 });

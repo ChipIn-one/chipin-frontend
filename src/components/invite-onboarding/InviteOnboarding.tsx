@@ -78,7 +78,7 @@ const InviteOnboarding = ({ invite }: Props) => {
                         size="3"
                         color="green"
                         radius="full"
-                        onClick={onInviteFriends}
+                        onClick={() => void onInviteFriends()}
                     >
                         <UserPlusIcon size={18} />
                         {t('page.expenses.inviteAction')}

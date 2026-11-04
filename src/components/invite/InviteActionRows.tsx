@@ -47,7 +47,7 @@ const InviteActionRows = ({ invite }: Props) => {
     return (
         <Flex direction="column" gap="2">
             <Card asChild size="2">
-                <InviteActionButton type="button" onClick={onPrimaryInvite}>
+                <InviteActionButton type="button" onClick={() => void onPrimaryInvite()}>
                     <Flex align="center" gap="3" p="4">
                         <Avatar
                             size="3"
@@ -70,7 +70,7 @@ const InviteActionRows = ({ invite }: Props) => {
 
             {isNativeShareSupported && (
                 <Card asChild size="2">
-                    <InviteActionButton type="button" onClick={onCopyLink}>
+                    <InviteActionButton type="button" onClick={() => void onCopyLink()}>
                         <Flex align="center" gap="3" p="4">
                             <Avatar
                                 size="3"

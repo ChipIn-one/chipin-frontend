@@ -43,7 +43,9 @@ const GroupTabsContent = ({
     const hasMoreActivity = group.recentActivities.nextCursor !== null;
     const isEndOfFeed =
         !isGroupActivityNextPageLoading && !hasMoreActivity && activityItems.length > 0;
-    const onLoadMore = useCallback(() => fetchMoreGroupActivity(), [fetchMoreGroupActivity]);
+    const onLoadMore = useCallback(() => {
+        void fetchMoreGroupActivity();
+    }, [fetchMoreGroupActivity]);
     const onRetryNextPage = () => {
         onLoadMore();
     };
@@ -72,7 +74,7 @@ const GroupTabsContent = ({
                             variant="outline"
                             radius="full"
                             aria-label={t('common:buttons.invitePeople')}
-                            onClick={onInvitePeople}
+                            onClick={() => void onInvitePeople()}
                         >
                             <PlusIcon size={18} />
                         </IconButton>

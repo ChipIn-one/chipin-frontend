@@ -34,10 +34,18 @@ const NavigationControls = () => {
 
     return (
         <>
-            <button type="button" aria-label="Activity" onClick={() => navigate('/activity')} />
-            <button type="button" aria-label="Settings" onClick={() => navigate('/settings')} />
-            <button type="button" aria-label="Back" onClick={() => navigate(-1)} />
-            <button type="button" aria-label="Forward" onClick={() => navigate(1)} />
+            <button
+                type="button"
+                aria-label="Activity"
+                onClick={() => void navigate('/activity')}
+            />
+            <button
+                type="button"
+                aria-label="Settings"
+                onClick={() => void navigate('/settings')}
+            />
+            <button type="button" aria-label="Back" onClick={() => void navigate(-1)} />
+            <button type="button" aria-label="Forward" onClick={() => void navigate(1)} />
         </>
     );
 };

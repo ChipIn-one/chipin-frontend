@@ -52,7 +52,7 @@ const FriendsPageHeader = ({ isLoading }: Props) => {
                 loading={isLoading}
                 disabled={!inviteToken}
                 aria-label={addFriendLabel}
-                onClick={onAddFriend}
+                onClick={() => void onAddFriend()}
             >
                 <UserPlusIcon size={16} />
                 <Box display={{ initial: 'none', sm: 'inline' }}>

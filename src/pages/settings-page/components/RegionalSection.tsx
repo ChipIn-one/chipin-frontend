@@ -32,13 +32,13 @@ const RegionalSection = ({ isLoading }: Props) => {
     const selectedLanguage = matchLocale(language) ?? 'en';
 
     const onTimeFormatChange = (value: string) => {
-        setUserSettings({
+        void setUserSettings({
             settings: { timeFormat: value as UserSettings['timeFormat'] },
         });
     };
 
     const onLanguageChange = (locale: SupportedLocale) => {
-        setUserSettings({ settings: { language: locale } });
+        void setUserSettings({ settings: { language: locale } });
     };
 
     const onUseSystemLanguage = () => {

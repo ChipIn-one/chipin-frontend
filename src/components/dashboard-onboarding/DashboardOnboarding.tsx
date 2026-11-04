@@ -101,7 +101,7 @@ const DashboardOnboarding = () => {
                             size="3"
                             variant="soft"
                             disabled={!inviteToken}
-                            onClick={onInviteFriend}
+                            onClick={() => void onInviteFriend()}
                         >
                             <UserPlusIcon size={18} />
                             {t('onboarding.actions.inviteFriend')}

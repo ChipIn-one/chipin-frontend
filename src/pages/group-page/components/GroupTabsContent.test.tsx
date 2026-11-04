@@ -15,13 +15,9 @@ const inviteMocks = vi.hoisted(() => ({
 }));
 
 const useInfiniteScrollMock = vi.hoisted(() =>
-    vi.fn<
-        (params: {
-            hasMore: boolean;
-            isLoading: boolean;
-            onLoadMore: () => Promise<void>;
-        }) => () => void
-    >(() => vi.fn()),
+    vi.fn<(params: { hasMore: boolean; isLoading: boolean; onLoadMore: () => void }) => () => void>(
+        () => vi.fn(),
+    ),
 );
 
 vi.mock('react-i18next', () => ({
@@ -220,9 +216,9 @@ test('triggers group activity pagination from the active Expenses tab', () => {
         throw new Error('Infinite scroll was not initialized');
     }
 
-    return lastCall[0].onLoadMore().then(() => {
-        expect(defaultProps.fetchMoreGroupActivity).toHaveBeenCalledOnce();
-    });
+    lastCall[0].onLoadMore();
+
+    expect(defaultProps.fetchMoreGroupActivity).toHaveBeenCalledOnce();
 });
 
 test('suppresses group activity pagination while another tab is active', () => {

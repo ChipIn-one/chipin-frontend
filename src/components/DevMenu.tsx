@@ -48,7 +48,7 @@ const DevMenu = ({ isShowLabel = false }: Props) => {
             return;
         }
 
-        setUserSettings({ settings: { theme: nextTheme } });
+        void setUserSettings({ settings: { theme: nextTheme } });
     };
 
     const items = [

@@ -13,7 +13,7 @@ const BackButton = () => {
             color="gray"
             size="2"
             aria-label={t('buttons.back')}
-            onClick={() => navigate(-1)}
+            onClick={() => void navigate(-1)}
         >
             <ChevronLeftIcon size={18} />
         </IconButton>

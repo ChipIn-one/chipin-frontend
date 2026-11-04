@@ -41,7 +41,12 @@ const CopyButton = ({ value, what, children, size = '3', variant = 'solid', disa
 
     return (
         <Tooltip content={tooltipContent}>
-            <Button size={size} variant={variant} onClick={onCopy} disabled={disabled || !value}>
+            <Button
+                size={size}
+                variant={variant}
+                onClick={() => void onCopy()}
+                disabled={disabled || !value}
+            >
                 {isCopied ? <CheckIcon size={16} /> : <CopyIcon size={16} />}
                 {isCopied ? t('copy.copied') : children}
             </Button>

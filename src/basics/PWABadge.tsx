@@ -15,7 +15,7 @@ const PWABadge = () => {
         // Wire up the update notification system:
         // waiting-worker check, updatefound listener, visibilitychange
         // re-notification, and hourly periodic poll.
-        initServiceWorkerUpdates();
+        void initServiceWorkerUpdates();
 
         return () => {
             cleanupServiceWorkerUpdates();

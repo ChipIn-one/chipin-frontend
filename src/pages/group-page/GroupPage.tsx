@@ -31,7 +31,7 @@ const GroupPage = () => {
         }
 
         requestedRouteId.current = groupId;
-        fetchSetGroupById(groupId, true);
+        void fetchSetGroupById(groupId, true);
     }, [fetchSetGroupById, groupId]);
 
     if (!groupId) {

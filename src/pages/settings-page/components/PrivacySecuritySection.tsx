@@ -105,7 +105,7 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                     </Flex>
                     <Skeleton loading={isLoading}>
                         <Button
-                            onClick={signOut}
+                            onClick={() => void signOut()}
                             variant="soft"
                             color="gray"
                             loading={isSigningOut}
