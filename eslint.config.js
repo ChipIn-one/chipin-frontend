@@ -7,7 +7,7 @@ import {
     restrictedImports,
     restrictedSyntax,
 } from './config/eslint/project.js';
-import { reactConfig } from './config/eslint/react.js';
+import { reactConfig, reactSyntax } from './config/eslint/react.js';
 
 // App directory relative to the repository root: '.' now, 'apps/app' after the monorepo move.
 const APP_DIR = '.';
@@ -15,10 +15,10 @@ const APP_DIR = '.';
 export default [
     ...baseConfig({ appDir: APP_DIR }),
     ...typeAwareConfig({ appDir: APP_DIR }),
-    ...reactConfig(),
+    ...reactConfig({ appDir: APP_DIR }),
     ...projectConfig({ appDir: APP_DIR }),
     // Each helper is called once with every entry of its rule (see config/eslint/project.js).
     ...restrictedImports([...layerImports({ appDir: APP_DIR }), ...projectImports()]),
-    ...restrictedSyntax(projectSyntax()),
+    ...restrictedSyntax([...projectSyntax(), ...reactSyntax({ appDir: APP_DIR })]),
     ...formattingConfig(),
 ];

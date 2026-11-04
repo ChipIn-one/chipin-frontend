@@ -386,7 +386,7 @@ Rules (all `error` unless stated otherwise; the class of each is in §D0, class 
 | react | `react.configs.flat.recommended` + `jsx-runtime`; `react/no-unstable-nested-components`, `react/jsx-boolean-value: never`, `react/prop-types: off` |
 | react-hooks | `recommended` (v7); `exhaustive-deps: error` |
 | a11y | without `recommended`; only `alt-text`, `anchor-is-valid`, `aria-props`, `aria-role`, `role-has-required-aria-props`, `no-static-element-interactions` (§D0); `no-autofocus` is not enabled (modals) |
-| i18n | `react/jsx-no-literals`: `noStrings: true`, `ignoreProps: true`, `noAttributeStrings: false`, `allowedStrings: [' ','-','+','/','~','·']` — catches text in JSX children. User-facing attributes are caught by `no-restricted-syntax` on `JSXAttribute[name.name=/^(aria-label\|aria-description\|placeholder\|title\|alt)$/] > Literal[value=/\\w/]` (A-38: `elementOverrides` works per element, not per attribute). `ds-gallery/**` is excluded (demo literals) |
+| i18n | `react/jsx-no-literals`: `noStrings: true`, `ignoreProps: true`, `noAttributeStrings: false`, `allowedStrings: [' ','-','+','/','~','·']` — catches text in JSX children. User-facing attributes are caught by `no-restricted-syntax` on `JSXAttribute[name.name=/^(aria-label\|aria-description\|placeholder\|title\|alt)$/] > Literal[value=/\\w/]` (A-38: `elementOverrides` works per element, not per attribute). `ds-gallery/**` is excluded (demo literals); `**/*.test.{ts,tsx}` is excluded from the attribute selector only (test-harness markup is not user-facing, 02-C8) |
 | naming | none (§D0: `naming-convention` without autofix is removed, including the current `handle*` selector) |
 | project | `no-restricted-syntax`: `ExportAllDeclaration`, `<img>`, `localStorage.clear`, `CancelToken`, an object literal in `use*Store(...)` without `useShallow`, `use*Store()` without an argument; every selector has a `message` with a ready fix. The money selectors — spec 03 §4.3, the color ones — spec 05 (05-5); all `no-restricted-syntax`/`no-restricted-imports` blocks are assembled by the helpers `restrictedSyntax()`/`restrictedImports()` from `config/eslint/project.js` (introduced by 02-C4), because in a flat config a later block replaces the rule's options entirely |
 | globals | `no-restricted-globals`: `localStorage`, `sessionStorage` (except `helpers/localStorage.ts`) |
@@ -540,7 +540,7 @@ A new `tsconfig.base.json` with the shared options: `strict`, `noUnused*`, `eras
 | Prettier format | 317 files | `prettier --write`, mechanically | 02-C2a–c |
 | `consistent-type-imports` | 34 | autofix | 02-C6 |
 | floating/misused promises | 36 / 30 (measured in 02-C6; audit: 35 / 28, 52 in prod) | by hand: `void` for intentional ones, `return`/`.catch` for the rest | 02-C7a, 02-C7b |
-| `jsx-a11y` (6 rules) | unknown (the plugin is not installed) | new rules are immediately error; current violations — `--suppress-rule` in the same PR, fixed by slices | 02-C8 + per-slice PRs |
+| `jsx-a11y` (6 rules), `jsx-no-literals`, the i18n attribute selector | 0 / 0 / 0, measured in 02-C8 (the 39 attribute hits were all test-harness markup in `*.test.tsx`; tests are excluded from the attribute selector) | new rules are immediately error; current violations — `--suppress-rule` in the same PR, fixed by slices | 02-C8 + per-slice PRs |
 | boundaries | ~30 | suppressions; the fix — 05-6 (basics → components/store/hooks/api, including `NavButton`, `BalanceSummaryText`), 04-5a (public-routes); routing → pages is not counted as a violation (element `app`) | 02-C9 |
 | `import-x/no-cycle` | known cycles `groupsStore`↔`activity-store`, `expenseModalStore`↔selectors (03:50) | suppressions; broken by 03-10/03-12 and 03-14 (C2-05) | 02-C9 |
 | `import-x/no-internal-modules` (allow-list) | 103 nested barrels | suppressions; the entries go away with 02-D3a–e (C2-05) | 02-C9 |
@@ -561,7 +561,7 @@ The order of `--max-warnings 0`: it is enabled in 02-C4, when the import-sort an
 - **Prettier PRs conflict with all open PRs.** 02-C2a–c are merged back to back on one day, in a window with no open feature PRs; after the merge the authors run `npm run format`. The SHAs go into `.git-blame-ignore-revs`. A mechanical PR with no size guideline: PR = the output of one command, review = repeat the command and compare.
 - **The default→named codemod and barrels break string `vi.mock` calls** (477 calls). A mock of a barrel and a mock of a file are different modules. The codemod prints a list of affected `vi.mock` calls, which are fixed by hand in the same PR. The criterion — 1230 tests green.
 - **`no-misused-promises` in JSX.** `checksVoidReturn.attributes: true` (C1-22): `onClick={() => action()}` returns a promise to React, and `no-floating-promises` does not see it; the rule with the `void` hint closes this path. Existing places — suppressions 02-C6, fix 02-C7b.
-- **Attributes and i18n.** Technical attributes (`variant`, `size`, `type`…) are not checked: the D5 selector lists only user-facing ones (`aria-label`, `placeholder`, `title`, `alt`), otherwise agents will start writing `{'primary'}`.
+- **Attributes and i18n.** Technical attributes (`variant`, `size`, `type`…) are not checked: the D5 selector lists only user-facing ones (`aria-label`, `aria-description`, `placeholder`, `title`, `alt`), otherwise agents will start writing `{'primary'}`. Test files (`**/*.test.{ts,tsx}`) are not checked (02-C8).
 - **boundaries + aliases.** Without `eslint-import-resolver-typescript` the plugin does not recognize `components/...` and silently checks nothing. The 02-C9 acceptance criterion — a violating test file must produce an error.
 - **Type-aware lint and lint-staged.** projectService builds the whole program; therefore pre-commit works in FAST mode and only fixes, and the full check is done by CI (and `verify:full` on demand).
 - **`unbound-method` in tests** (70 hits) — noise from `expect(store.action)`; disabled for `*.test.*`.
@@ -635,5 +635,5 @@ None.
 
 1. ~~Release branch~~ — decided (confirmed by the owner 2026-10-28): one release Issue per release, the branch `chore/issue-<n>-release-vX-Y-Z` through `pr:create`/admission, CI `version-check` by branch name (D7).
 2. ~~`Version impact`~~ — decided (confirmed by the owner 2026-10-28): the field is removed, the owner chooses the bump.
-3. The jsx-a11y baseline is unknown until the plugin is installed. If there are more than ~80 violations, 02-C8 splits by layer (unlikely with 6 rules).
+3. ~~The jsx-a11y baseline~~ — measured in 02-C8: 0 jsx-a11y violations, 0 i18n attribute violations outside tests; no split by layer.
 4. ~~The `async/await` ban (inv. 7)~~ — decided (owner 2026-10-28, D24): the ban is lifted; style is free, the guards are `no-floating-promises`/`no-misused-promises`.

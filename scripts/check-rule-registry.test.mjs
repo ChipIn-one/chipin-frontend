@@ -309,9 +309,10 @@ const presetRules = new Set([
 ]);
 
 // Backticked rule tokens of the §D0 registry tables with the class of their row.
-const specRegistry = () => {
-    const spec = readFileSync(resolve(repoRoot, SPEC_PATH), 'utf8');
-    const section = spec.slice(spec.indexOf('## D0'), spec.indexOf('## Context'));
+// The §D0 row of the six jsx-a11y rules; only it registers their bare names.
+const A11Y_ROW = /^jsx-a11y —/;
+
+const registryTokens = section => {
     const rows = section
         .split('\n')
         .filter(line => line.startsWith('|') && !line.includes('~~'))
@@ -320,7 +321,7 @@ const specRegistry = () => {
     return rows.flatMap(([, rule = '', cls = '']) =>
         [...rule.matchAll(/`([^`]+)`/g)].flatMap(([, token]) => {
             if (!token.endsWith('-*')) {
-                return [{ token, cls }];
+                return [{ token, cls, a11yRow: A11Y_ROW.test(rule) }];
             }
             // A family row lists its members in parentheses: `no-unsafe-*` (assignment, …; tests off).
             // Members are typescript-eslint rules.
@@ -335,22 +336,32 @@ const specRegistry = () => {
     );
 };
 
-// Rows of the §D0 tables that register `rule`. The tables name typescript-eslint rules without
-// the plugin prefix; family members are expanded to full names by `specRegistry` and match only
-// the full `@typescript-eslint/` name, never an unprefixed (core) rule of the same name.
-const rowsFor = (rule, tokens) => {
-    const names = [rule, rule.replace(/^@typescript-eslint\//, '')];
+const specRegistry = () => {
+    const spec = readFileSync(resolve(repoRoot, SPEC_PATH), 'utf8');
 
-    return tokens.filter(({ token, family }) =>
-        family
+    return registryTokens(spec.slice(spec.indexOf('## D0'), spec.indexOf('## Context')));
+};
+
+// Rows of the §D0 tables that register `rule`. The tables name typescript-eslint and jsx-a11y
+// rules without the plugin prefix; family members are expanded to full names by `specRegistry`
+// and match only the full `@typescript-eslint/` name, never an unprefixed (core) rule of the same
+// name. A bare jsx-a11y name matches only in the jsx-a11y row.
+const rowsFor = (rule, tokens) => {
+    const a11y = rule.startsWith('jsx-a11y/');
+    const bare = rule.replace(/^(?:@typescript-eslint|jsx-a11y)\//, '');
+
+    return tokens.filter(({ token, family, a11yRow }) => {
+        const names = a11y && !a11yRow ? [rule] : [rule, bare];
+
+        return family
             ? token === rule
             : names.some(
                   name =>
                       token === name ||
                       token.startsWith(`${name}:`) ||
                       token.startsWith(`${name} `),
-              ),
-    );
+              );
+    });
 };
 
 describe('rule-classes.json matches the spec 02 §D0 registry', () => {
@@ -376,5 +387,18 @@ describe('rule-classes.json matches the spec 02 §D0 registry', () => {
         expect(rowsFor('no-unsafe-finally', tokens)).toEqual([]);
         // A hypothetical core rule with a family member's unprefixed name is not covered.
         expect(rowsFor('no-unsafe-call', tokens)).toEqual([]);
+    });
+
+    test('the jsx-a11y row covers only its six rules', () => {
+        expect(rowsFor('jsx-a11y/alt-text', tokens).map(row => row.cls)).toEqual(['b']);
+        expect(rowsFor('jsx-a11y/no-static-element-interactions', tokens)).toHaveLength(1);
+        expect(rowsFor('jsx-a11y/no-autofocus', tokens)).toEqual([]);
+    });
+
+    test('a bare jsx-a11y rule name outside the jsx-a11y row registers nothing', () => {
+        const fake = registryTokens('| `alt-text` | a | not the jsx-a11y row |');
+
+        expect(rowsFor('jsx-a11y/alt-text', fake)).toEqual([]);
+        expect(rowsFor('alt-text', fake).map(row => row.cls)).toEqual(['a']);
     });
 });
