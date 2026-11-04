@@ -42,7 +42,7 @@ const DashboardPage = () => {
     } = useConnect();
 
     const onLoadMore = useCallback(() => {
-        return fetchMoreDashboardActivity();
+        void fetchMoreDashboardActivity();
     }, [fetchMoreDashboardActivity]);
 
     const sentinelRef = useInfiniteScroll({

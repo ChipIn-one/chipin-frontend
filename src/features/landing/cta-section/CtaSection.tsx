@@ -20,7 +20,7 @@ const CtaSection = () => {
             size={{ initial: '3', sm: '4' }}
             variant="soft"
             color="gray"
-            onClick={callPWAInstall}
+            onClick={() => void callPWAInstall()}
         >
             {t('common:buttons.installApp')}
             <DownloadIcon />

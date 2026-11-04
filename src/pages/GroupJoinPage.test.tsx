@@ -50,7 +50,7 @@ const OpenOtherInvite = () => {
     return (
         <button
             type="button"
-            onClick={() => navigate(`${ROUTES.GROUP_JOIN}/${OTHER_INVITE_TOKEN}`)}
+            onClick={() => void navigate(`${ROUTES.GROUP_JOIN}/${OTHER_INVITE_TOKEN}`)}
         >
             {OPEN_OTHER_INVITE_LABEL}
         </button>

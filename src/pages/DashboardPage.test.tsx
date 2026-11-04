@@ -11,13 +11,9 @@ import { useUsersStore } from 'store/users-store';
 import DashboardPage from './DashboardPage';
 
 const useInfiniteScrollMock = vi.hoisted(() =>
-    vi.fn<
-        (params: {
-            hasMore: boolean;
-            isLoading: boolean;
-            onLoadMore: () => Promise<void>;
-        }) => () => void
-    >(() => vi.fn()),
+    vi.fn<(params: { hasMore: boolean; isLoading: boolean; onLoadMore: () => void }) => () => void>(
+        () => vi.fn(),
+    ),
 );
 
 vi.mock('react-i18next', () => ({
@@ -539,9 +535,9 @@ test('ACT-023 connects dashboard infinite scroll to the next activity preview pa
         throw new Error('Infinite scroll was not initialized');
     }
 
-    return lastCall[0].onLoadMore().then(() => {
-        expect(fetchMoreDashboardActivity).toHaveBeenCalledOnce();
-    });
+    lastCall[0].onLoadMore();
+
+    expect(fetchMoreDashboardActivity).toHaveBeenCalledOnce();
 });
 
 test('renders the shared profile greeting directly in the dashboard side panel at all breakpoints', () => {

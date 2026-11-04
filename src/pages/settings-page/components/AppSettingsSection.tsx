@@ -28,7 +28,7 @@ const AppSettingsSection = ({ isLoading }: Props) => {
     const onChangeTheme = (value: string) => {
         const nextTheme = value as ThemeName;
 
-        setUserSettings({ settings: { theme: nextTheme } });
+        void setUserSettings({ settings: { theme: nextTheme } });
     };
 
     return (

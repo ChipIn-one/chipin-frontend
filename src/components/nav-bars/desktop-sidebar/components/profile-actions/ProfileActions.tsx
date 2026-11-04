@@ -54,7 +54,7 @@ const ProfileActions = ({ isSoloMode }: Props) => {
             >
                 <ProfileSignOutContent>
                     <Button
-                        onClick={signOut}
+                        onClick={() => void signOut()}
                         disabled={!isExpanded || isSigningOut}
                         tabIndex={isExpanded ? 0 : -1}
                         loading={isSigningOut}

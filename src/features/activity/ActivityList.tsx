@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Button, Flex, Spinner, Text } from '@radix-ui/themes';
 import { ChevronsDownIcon, RefreshCwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -51,13 +51,16 @@ const ActivityList = ({ activeFilter }: Props) => {
     }, [items, activeFilter]);
 
     const isEndOfFeed = !isNextPageLoading && !hasMore && items.length > 0;
+    const onLoadMore = useCallback(() => {
+        void fetchMoreActivity();
+    }, [fetchMoreActivity]);
     const sentinelRef = useInfiniteScroll({
         hasMore: hasMore && !isNextPageError,
         isLoading: isNextPageLoading,
-        onLoadMore: fetchMoreActivity,
+        onLoadMore,
     });
     const onRetryNextPage = () => {
-        fetchMoreActivity();
+        void fetchMoreActivity();
     };
 
     if (isLoading) {

@@ -13,7 +13,7 @@ const ActivityPage = () => {
 
     useEffect(() => {
         if (!isActivityFetched) {
-            fetchSetActivity();
+            void fetchSetActivity();
         }
     }, [fetchSetActivity, isActivityFetched]);
 

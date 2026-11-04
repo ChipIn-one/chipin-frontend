@@ -26,7 +26,7 @@ const ViewModeSwitch = () => {
         const nextAppMode = isGroup ? APP_MODES.GROUP : APP_MODES.SOLO;
 
         setAppMode(nextAppMode);
-        navigate(getPreferredModeRoute(nextAppMode === APP_MODES.SOLO));
+        void navigate(getPreferredModeRoute(nextAppMode === APP_MODES.SOLO));
     };
 
     if (!canAccessSolo) {

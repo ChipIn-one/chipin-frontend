@@ -40,7 +40,7 @@ const ActivitySubeventsFeed = ({ parentActivityId, activityCategory }: Props) =>
     const shouldShowSkeleton = isLoading || !isCurrentParentLoaded;
     const isEndOfFeed = !isNextPageLoading && !hasMoreSubevents && subevents.length > 0;
     const onLoadMore = useCallback(() => {
-        return fetchMoreActivitySubevents();
+        void fetchMoreActivitySubevents();
     }, [fetchMoreActivitySubevents]);
     const sentinelRef = useInfiniteScroll({
         hasMore: hasMoreSubevents && !isNextPageError,
@@ -53,7 +53,7 @@ const ActivitySubeventsFeed = ({ parentActivityId, activityCategory }: Props) =>
             return;
         }
 
-        fetchSetActivitySubevents({
+        void fetchSetActivitySubevents({
             parentActivityId,
             category: activityCategory,
         });
@@ -64,7 +64,7 @@ const ActivitySubeventsFeed = ({ parentActivityId, activityCategory }: Props) =>
             return;
         }
 
-        fetchSetActivitySubevents({
+        void fetchSetActivitySubevents({
             parentActivityId,
             category: activityCategory,
         });

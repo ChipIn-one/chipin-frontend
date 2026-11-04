@@ -32,7 +32,7 @@ export const ProtectedRoute = ({ children }: Props) => {
                 isOpened
                 onOpenChange={isOpen => {
                     if (!isOpen) {
-                        navigate(ROUTES.HOME, { replace: true });
+                        void navigate(ROUTES.HOME, { replace: true });
                     }
                 }}
             />

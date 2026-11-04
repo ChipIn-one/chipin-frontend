@@ -30,19 +30,19 @@ export const OAuthCallbackPage = () => {
         if (!code) {
             setUnauthenticated('error');
             toast.error(resolveApiErrorMessage(undefined, 'oauth.missing_code'));
-            navigate(returnTo, { replace: true });
+            void navigate(returnTo, { replace: true });
             return;
         }
 
         exchangeGoogleOAuthCode(code)
             .then(() => {
-                navigate(returnTo, { replace: true });
+                void navigate(returnTo, { replace: true });
             })
             .catch((error: unknown) => {
                 toast.error(
                     resolveApiErrorMessageFromError(error, t('AUTH.INVALID_OAUTH_EXCHANGE_CODE')),
                 );
-                navigate(returnTo, { replace: true });
+                void navigate(returnTo, { replace: true });
             });
     }, [exchangeGoogleOAuthCode, navigate, searchParams, setUnauthenticated, t]);
 
