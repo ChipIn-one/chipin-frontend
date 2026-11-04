@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 
+import { getTransformedRoutes } from '@vercel/routing-utils';
 import { describe, expect, test } from 'vitest';
 
 const API_SOURCE = '/api/:path*';
@@ -144,20 +145,32 @@ describe('Vercel production security headers', () => {
     });
 });
 
-// Minimal matcher for the two path-to-regexp forms the locale redirects use:
-// `/:name(a|b)` (one constrained segment) and `/:path*` (zero or more segments).
+// Vercel compiles `redirects` into routes with `getTransformedRoutes` from
+// `@vercel/routing-utils` (path-to-regexp v6, strict and case-sensitive), so the test
+// uses the same compiler. The edge then substitutes the numbered capture groups (`$1`,
+// `$2`, ...) into the `Location` template; an unmatched optional group becomes empty.
+// That substitution is done here by hand. The first matching route wins.
+const redirectRoutes = (() => {
+    const { routes, error } = getTransformedRoutes({ redirects: config.redirects ?? [] });
+
+    if (error) {
+        throw new Error(error.message);
+    }
+
+    return routes ?? [];
+})();
+
 const resolveRedirect = pathname => {
-    for (const redirect of config.redirects ?? []) {
-        const pattern = redirect.source
-            .replace(/\/:\w+\(([^)]+)\)/g, '/(?:$1)')
-            .replace('/:path*', '(?:/(.*))?');
-        const match = new RegExp('^' + pattern + '$').exec(pathname);
+    for (const route of redirectRoutes) {
+        const match = new RegExp(route.src).exec(pathname);
 
         if (match) {
-            const path = match[1] ?? '';
             return {
-                destination: redirect.destination.replace('/:path*', path ? '/' + path : '/'),
-                statusCode: redirect.statusCode,
+                destination: route.headers.Location.replace(
+                    /\$(\d+)/g,
+                    (_, index) => match[Number(index)] ?? '',
+                ),
+                statusCode: route.status,
             };
         }
     }
@@ -170,22 +183,41 @@ describe('Vercel redirects for removed public locales (#609)', () => {
         ['/es', '/'],
         ['/es/', '/'],
         ['/es/privacy', '/privacy'],
+        ['/es/privacy/', '/privacy'],
         ['/pt-br', '/'],
-        ['/pt-br/terms', '/terms'],
+        ['/pt-br/', '/'],
+        ['/pt-br/privacy', '/privacy'],
+        ['/pt-br/privacy/', '/privacy'],
+        ['/pt-pt', '/'],
+        ['/pt-pt/', '/'],
+        ['/pt-pt/privacy', '/privacy'],
+        ['/pt-pt/privacy/', '/privacy'],
+        ['/pt-BR', '/'],
         ['/pt-BR/', '/'],
         ['/pt-BR/privacy', '/privacy'],
-        ['/pt-pt', '/'],
-        ['/pt-pt/privacy', '/privacy'],
+        ['/pt-BR/privacy/', '/privacy'],
+        ['/pt-PT', '/'],
         ['/pt-PT/', '/'],
-        ['/pt-PT/terms', '/terms'],
+        ['/pt-PT/privacy', '/privacy'],
+        ['/pt-PT/privacy/', '/privacy'],
+        ['/es/terms', '/terms'],
     ])('permanently redirects %s to the English page %s', (source, destination) => {
         expect(resolveRedirect(source)).toEqual({ destination, statusCode: 301 });
     });
 
-    test.each(['/', '/ru/', '/ru/privacy', '/privacy', '/estonia', '/pt', '/dashboard/es'])(
-        'leaves %s untouched',
-        pathname => {
-            expect(resolveRedirect(pathname)).toBeUndefined();
-        },
-    );
+    test.each([
+        '/',
+        '/ru/',
+        '/ru/privacy',
+        '/privacy',
+        '/estonia',
+        '/pt',
+        '/dashboard/es',
+        '/ES/',
+        // Never emit a protocol-relative Location (open redirect).
+        '/es//',
+        '/es//example.com',
+    ])('leaves %s untouched', pathname => {
+        expect(resolveRedirect(pathname)).toBeUndefined();
+    });
 });
