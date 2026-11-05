@@ -175,44 +175,58 @@ export const projectSyntax = ({ appDir }) =>
         },
     ].map(entry => ({ ...entry, ...moneyScope(appDir) }));
 
-// Zustand store hooks are named `use<Name>Store`; React's `useSyncExternalStore` is not one.
-const STORE_HOOK = 'CallExpression[callee.name=/^use(?!SyncExternal)[A-Z][A-Za-z0-9]*Store$/]';
+// Zustand store hooks: `use<Name>Store(selector)` (React's `useSyncExternalStore` is not one) and
+// Zustand's own `useStore(store, selector)`. Aliased hooks are out of scope.
+const NAMED_STORE_HOOK =
+    'CallExpression[callee.name=/^use(?!SyncExternal)[A-Z][A-Za-z0-9]*Store$/]';
+const ZUSTAND_USE_STORE = "CallExpression[callee.name='useStore']";
+const STORE_HOOK = `:matches(${NAMED_STORE_HOOK}, ${ZUSTAND_USE_STORE})`;
 // A selector function passed straight to a store hook (not wrapped in `useShallow(...)`).
 const STORE_SELECTOR = `${STORE_HOOK} > :matches(ArrowFunctionExpression, FunctionExpression)`;
+// A new object/array on every call: a literal, or a conditional with a literal branch.
+const LITERAL = 'ObjectExpression, ArrayExpression';
+const LITERAL_TYPE = '/^(?:ObjectExpression|ArrayExpression)$/';
+const NEW_VALUE = `:matches(${LITERAL}, ConditionalExpression[consequent.type=${LITERAL_TYPE}], ConditionalExpression[alternate.type=${LITERAL_TYPE}])`;
 
 /**
  * ChipIn project `no-restricted-syntax` entries (spec 02 §D0 "project"; 02-C12): images only
  * through basics/Image, Zustand reads only by a selector, an object selector only with useShallow
- * (D12).
+ * (D12). The store entries are a heuristic: derived values (`.map`/`.filter`, `Object.assign`)
+ * and named selectors are not detected.
  */
 export const projectRules = ({ appDir }) => [
     {
         id: 'img-element',
-        // `<img>`, `styled.img` and `styled('img')`.
+        // `<img>`, `styled.img`, `styled('img')`, `createElement('img')`, `React.createElement('img')`.
         selector: [
             "JSXOpeningElement[name.name='img']",
             "MemberExpression[object.name='styled'][property.name='img']",
             "CallExpression[callee.name='styled'][arguments.0.value='img']",
+            "CallExpression[callee.name='createElement'][arguments.0.value='img']",
+            "CallExpression[callee.object.name='React'][callee.property.name='createElement'][arguments.0.value='img']",
         ].join(', '),
         ignores: [appGlob(appDir, 'src/basics/Image.tsx')],
         message: 'Use the Image component from basics/Image instead of `<img>`/`styled.img`.',
     },
     {
         id: 'store-without-selector',
-        selector: `${STORE_HOOK}[arguments.length=0]`,
+        // `useXStore()` and `useStore(store)`.
+        selector: `${NAMED_STORE_HOOK}[arguments.length=0], ${ZUSTAND_USE_STORE}[arguments.length<2]`,
         message:
             'Read a Zustand store through a selector: `useXStore(state => state.value)`, or several values with `useXStore(useShallow(state => ({ a: state.a })))`.',
     },
     {
         id: 'store-object-without-shallow',
-        // `useXStore(s => ({ … }))`, `useXStore(s => { return { … }; })`, `useXStore({ … })`.
+        // `useXStore(s => ({ … }))`, `s => [a, b]`, `s => (c ? { … } : { … })`,
+        // `useXStore(s => { return { … }; })`, `useXStore({ … })`; the same for `useStore(store, s => …)`.
+        // A function's other children are params (patterns, never these expressions).
         selector: [
-            `${STORE_SELECTOR} > ObjectExpression.body`,
-            `${STORE_SELECTOR} > BlockStatement.body > ReturnStatement > ObjectExpression.argument`,
-            `${STORE_HOOK} > ObjectExpression.arguments`,
+            `${STORE_SELECTOR} > ${NEW_VALUE}`,
+            `${STORE_SELECTOR} > BlockStatement > ReturnStatement > ${NEW_VALUE}`,
+            `${STORE_HOOK} > :matches(${LITERAL})`,
         ].join(', '),
         message:
-            'A selector that returns a new object re-renders on every store change (an infinite loop in Zustand 5): wrap it, `useXStore(useShallow(state => ({ … })))`.',
+            'A selector that returns a new object or array re-renders on every store change (an infinite loop in Zustand 5): wrap it, `useXStore(useShallow(state => ({ … })))`.',
     },
 ];
 

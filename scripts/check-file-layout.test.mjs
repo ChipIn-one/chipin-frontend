@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 
 import { afterEach, describe, expect, test } from 'vitest';
 
-import { checkFileLayout, findViolations, listFiles, parseBase } from './check-file-layout.mjs';
+import { checkFileLayout, findViolations, listFiles, parseArgs } from './check-file-layout.mjs';
 
 const FILES = [
     'src/features/activity/index.ts',
@@ -50,6 +50,26 @@ describe('checkFileLayout', () => {
             checkFileLayout({ files: [...FILES, 'src/helpers/index.ts'], baseline: BASELINE }),
         ).toEqual([expect.stringMatching(/^src\/helpers\/index\.ts: .*\[index-depth\]$/)]);
     });
+
+    test.each([
+        'src/features/activity/internal/index.ts',
+        'src/components/components/index.ts',
+        'src/features/activity/index.tsx',
+        'src/components/x/y/index.tsx',
+    ])('fails on %s (not a slice root index.ts)', path => {
+        expect(checkFileLayout({ files: [...FILES, path], baseline: BASELINE })).toEqual([
+            expect.stringMatching(/\[index-depth\]$/),
+        ]);
+    });
+
+    test.each(['src/pages/a/internal/useconnect.ts', 'src/pages/a/UseConnect.tsx'])(
+        'fails on %s (case-insensitive)',
+        path => {
+            expect(checkFileLayout({ files: [...FILES, path], baseline: BASELINE })).toEqual([
+                expect.stringMatching(/\[use-connect\]$/),
+            ]);
+        },
+    );
 
     test('fails on a new useConnect.ts and useConnect.tsx', () => {
         const errors = checkFileLayout({
@@ -124,13 +144,16 @@ describe('listFiles', () => {
     });
 });
 
-describe('parseBase', () => {
+describe('parseArgs', () => {
     test.each([
-        [[], undefined],
-        [['--base', 'abc1234'], 'abc1234'],
-        [['--base=abc1234'], 'abc1234'],
-        [['--base'], ''],
-    ])('%j -> %j', (argv, base) => {
-        expect(parseBase(argv)).toBe(base);
+        [[], { base: undefined }],
+        [['--base', 'abc1234'], { base: 'abc1234' }],
+        [['--base=abc1234'], { base: 'abc1234' }],
+        [['--base'], { base: '' }],
+        [['--bsae', 'abc1234'], { error: 'check-file-layout: unknown argument "--bsae"' }],
+        [['abc1234'], { error: 'check-file-layout: unknown argument "abc1234"' }],
+        [['--base', 'abc1234', '--fix'], { error: 'check-file-layout: unknown argument "--fix"' }],
+    ])('%j -> %j', (argv, result) => {
+        expect(parseArgs(argv)).toEqual(result);
     });
 });

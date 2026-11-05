@@ -1,8 +1,9 @@
 // File layout checks that are not import rules (spec 02 §D0, 02-C12):
-// - `index-depth`: an `index.ts`/`index.tsx` may exist only at a slice root,
-//   `src/<layer>/<slice>/index.ts` (D11: one barrel per slice, no nested barrels; D27: this is
-//   where an index may exist, not how it is imported);
-// - `use-connect`: no `useConnect.ts`/`useConnect.tsx` files (D12: a selector with useShallow).
+// - `index-depth`: an `index.ts` may exist only at a slice root, `src/<layer>/<slice>/index.ts`,
+//   where the slice is not an `internal/` or `components/` folder (10.Recursive); an `index.tsx`
+//   is never allowed (no slice root has one) (D11: one barrel per slice, no nested barrels; D27:
+//   this is where an index may exist, not how it is imported);
+// - `use-connect`: no `useConnect.ts(x)` files, in any letter case (D12: a selector with useShallow).
 // The existing files are listed in config/file-layout-baseline.json. The baseline only shrinks:
 // a listed file that is gone or allowed now must be removed from it, and with --base <sha> a path
 // that is not in the baseline at that commit fails (the base file missing = the check is new).
@@ -17,17 +18,25 @@ const repoRoot = resolve(import.meta.dirname, '..');
 
 export const BASELINE_PATH = 'config/file-layout-baseline.json';
 export const SOURCE_DIR = 'src';
+// Folders that hold a slice's private files, never a slice of their own (10.Recursive).
+const NOT_A_SLICE = new Set(['internal', 'components']);
 
 export const CHECKS = {
     'index-depth': {
         matches: path => /\/index\.tsx?$/.test(path),
-        // `src/<layer>/<slice>/index.ts`: exactly four path segments.
-        allowed: path => path.split('/').length === 4,
+        // `src/<layer>/<slice>/index.ts`: exactly four path segments, a real slice folder.
+        allowed: path => {
+            const segments = path.split('/');
+
+            return (
+                segments.length === 4 && segments[3] === 'index.ts' && !NOT_A_SLICE.has(segments[2])
+            );
+        },
         message:
             'an index.ts is allowed only at a slice root, src/<layer>/<slice>/index.ts (D11); import the file directly',
     },
     'use-connect': {
-        matches: path => /\/useConnect\.tsx?$/.test(path),
+        matches: path => /\/useconnect\.tsx?$/i.test(path),
         allowed: () => false,
         message:
             'no new useConnect.ts (D12): read the store in the component, `useXStore(useShallow(state => ({ ... })))`',
@@ -124,19 +133,33 @@ const readBaselineAt = base => {
     }
 };
 
-export const parseBase = argv => {
-    const index = argv.findIndex(arg => arg === '--base' || arg.startsWith('--base='));
+/** `{ base }` from `[--base <sha>]` / `[--base=<sha>]`, or `{ error }` for any other argument. */
+export const parseArgs = argv => {
+    let base;
 
-    if (index === -1) {
-        return undefined;
+    for (let index = 0; index < argv.length; index += 1) {
+        const arg = argv[index];
+
+        if (arg.startsWith('--base=')) {
+            base = arg.slice(7);
+        } else if (arg === '--base') {
+            base = argv[index + 1] ?? '';
+            index += 1;
+        } else {
+            return { error: `check-file-layout: unknown argument "${arg}"` };
+        }
     }
 
-    return argv[index].startsWith('--base=') ? argv[index].slice(7) : (argv[index + 1] ?? '');
+    return { base };
 };
 
 export const main = (argv = process.argv.slice(2)) => {
-    const base = parseBase(argv);
+    const { base, error } = parseArgs(argv);
 
+    if (error) {
+        console.error(`${error}\nUsage: node scripts/check-file-layout.mjs [--base <sha>]`);
+        return 1;
+    }
     if (base !== undefined && !/^[0-9a-f]{7,40}$/i.test(base)) {
         console.error(`check-file-layout: --base "${base}" is not a commit SHA`);
         return 1;
