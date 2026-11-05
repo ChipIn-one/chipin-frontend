@@ -108,10 +108,72 @@ export const projectImports = () => [
         },
         message: 'Import lucide-react icons by their `<Name>Icon` export (e.g. `UsersIcon`).',
     },
+    {
+        // spec 03 §4.3: shared/money has one public entry, its index.ts.
+        id: 'money-deep-import',
+        pattern: { group: ['shared/money/*'] },
+        message: 'Import from shared/money only (its index.ts is the public API).',
+    },
 ];
 
+// Money (spec 03 §4.3, the only definition of these rules): heuristic by property names, a safety
+// net behind the `Money`/`WireAmount` types. Applies to app sources outside the money module and
+// the non-money number formatter; tests are exempt. Non-money exceptions use
+// `// eslint-disable-next-line no-restricted-syntax -- not money: <reason>`.
+const moneyScope = appDir => ({
+    files: [appGlob(appDir, 'src/**/*.{ts,tsx}')],
+    // The test glob is the one of the i18n attribute entry (react.js): one scope, not two.
+    ignores: [appGlob(appDir, 'src/shared/{money/**,lib/formatNumber.ts}'), '**/*.test.{ts,tsx}'],
+});
+
+// A money field as a direct operand of `parent`: `x.amount`, `x?.amount` (ChainExpression) and
+// `x.amount!` (TSNonNullExpression).
+const fieldOperand = (parent, names) =>
+    ['', 'ChainExpression > ', 'TSNonNullExpression > ']
+        .map(wrapper => `${parent} > ${wrapper}MemberExpression[property.name=/^(${names})$/]`)
+        .join(', ');
+
 /** ChipIn `no-restricted-syntax` entries (money: spec 03-1, colors/styles: spec 05-5). */
-export const projectSyntax = () => [];
+export const projectSyntax = ({ appDir }) =>
+    [
+        {
+            id: 'money-parse-float',
+            // `parseFloat(x)` and `Number.parseFloat(x)`.
+            selector:
+                "CallExpression[callee.name='parseFloat'], CallExpression[callee.property.name='parseFloat']",
+            message: 'Money: use shared/money (parseMoneyInput/moneyFromWire).',
+        },
+        {
+            id: 'money-number-field',
+            selector: fieldOperand(
+                "CallExpression[callee.name='Number']",
+                'amount|minor|netBalance|netAmount|shareAmount',
+            ),
+            message: 'Money: no Number() on money fields; read them with moneyFromWire.',
+        },
+        {
+            id: 'money-to-fixed',
+            selector: "CallExpression[callee.property.name='toFixed']",
+            message: 'Money: use formatMoney/roundToMinor from shared/money.',
+        },
+        {
+            id: 'money-math-round',
+            selector:
+                "CallExpression[callee.object.name='Math'][callee.property.name='round'] BinaryExpression[operator='*']",
+            message: 'Money: no Math.round(x*N) rounding; use roundToMinor from shared/money.',
+        },
+        {
+            id: 'money-intl-number-format',
+            selector:
+                "NewExpression[callee.object.name='Intl'][callee.property.name='NumberFormat']",
+            message: 'Use formatMoney (shared/money) or shared/lib/formatNumber.',
+        },
+        {
+            id: 'money-compare-field',
+            selector: fieldOperand('BinaryExpression[operator=/^[<>]=?$/]', 'amount|minor'),
+            message: 'Money: compare via compare/sign from shared/money.',
+        },
+    ].map(entry => ({ ...entry, ...moneyScope(appDir) }));
 
 /** Storage boundary: localStorage only through helpers/localStorage.ts. */
 export const projectConfig = ({ appDir }) => [

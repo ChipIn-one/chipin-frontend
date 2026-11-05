@@ -29,6 +29,16 @@
       "count": 4
     }
   },
+  "src/api/groupsApi.ts": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
+  "src/api/usersApi.ts": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
   "src/basics/BalanceBadges.tsx": {
     "boundaries/dependencies": {
       "count": 1
@@ -91,6 +101,11 @@
   },
   "src/components/dashboard-onboarding/DashboardOnboarding.tsx": {
     "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/components/modals/early-supporter-promo-modal/EarlySupporterPromoModal.tsx": {
+    "no-restricted-syntax": {
       "count": 1
     }
   },
@@ -250,6 +265,11 @@
       "count": 1
     }
   },
+  "src/helpers/decimalDisplay.ts": {
+    "no-restricted-syntax": {
+      "count": 1
+    }
+  },
   "src/helpers/expenseTargets.test.ts": {
     "boundaries/dependencies": {
       "count": 1
@@ -268,6 +288,11 @@
   "src/helpers/localStorage.ts": {
     "boundaries/dependencies": {
       "count": 1
+    }
+  },
+  "src/helpers/numbers.ts": {
+    "no-restricted-syntax": {
+      "count": 3
     }
   },
   "src/helpers/swUpdates.tsx": {
@@ -431,6 +456,16 @@
   },
   "src/store/dashboardStore.ts": {
     "import-x/no-internal-modules": {
+      "count": 1
+    }
+  },
+  "src/store/expenseModalSelectors.ts": {
+    "no-restricted-syntax": {
+      "count": 3
+    }
+  },
+  "src/store/expenseModalStore.ts": {
+    "no-restricted-syntax": {
       "count": 1
     }
   },
