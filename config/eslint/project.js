@@ -126,18 +126,29 @@ const moneyScope = appDir => ({
     ignores: [appGlob(appDir, 'src/shared/{money/**,lib/formatNumber.ts}'), '**/*.test.{ts,tsx}'],
 });
 
+// A money field as a direct operand of `parent`: `x.amount`, `x?.amount` (ChainExpression) and
+// `x.amount!` (TSNonNullExpression).
+const fieldOperand = (parent, names) =>
+    ['', 'ChainExpression > ', 'TSNonNullExpression > ']
+        .map(wrapper => `${parent} > ${wrapper}MemberExpression[property.name=/^(${names})$/]`)
+        .join(', ');
+
 /** ChipIn `no-restricted-syntax` entries (money: spec 03-1, colors/styles: spec 05-5). */
 export const projectSyntax = ({ appDir }) =>
     [
         {
             id: 'money-parse-float',
-            selector: "CallExpression[callee.name='parseFloat']",
+            // `parseFloat(x)` and `Number.parseFloat(x)`.
+            selector:
+                "CallExpression[callee.name='parseFloat'], CallExpression[callee.property.name='parseFloat']",
             message: 'Money: use shared/money (parseMoneyInput/moneyFromWire).',
         },
         {
             id: 'money-number-field',
-            selector:
-                "CallExpression[callee.name='Number'] > MemberExpression[property.name=/^(amount|minor|netBalance|netAmount|shareAmount)$/]",
+            selector: fieldOperand(
+                "CallExpression[callee.name='Number']",
+                'amount|minor|netBalance|netAmount|shareAmount',
+            ),
             message: 'Money: no Number() on money fields; read them with moneyFromWire.',
         },
         {
@@ -159,8 +170,7 @@ export const projectSyntax = ({ appDir }) =>
         },
         {
             id: 'money-compare-field',
-            selector:
-                'BinaryExpression[operator=/^[<>]=?$/] > MemberExpression[property.name=/^(amount|minor)$/]',
+            selector: fieldOperand('BinaryExpression[operator=/^[<>]=?$/]', 'amount|minor'),
             message: 'Money: compare via compare/sign from shared/money.',
         },
     ].map(entry => ({ ...entry, ...moneyScope(appDir) }));

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 
-import type { Money } from './money';
+import type { ApproxMoney, Money } from './money';
 import {
     abs,
     add,
@@ -10,6 +10,7 @@ import {
     displaySign,
     divideHalfUp,
     fromUnits,
+    isApprox,
     isZero,
     LEDGER_SCALE,
     minorUnits,
@@ -45,7 +46,8 @@ describe('currencyCode', () => {
         expect(currencyCode(input)).toBe(expected);
     });
 
-    test.each(['', 'US', 'USDT', 'U1D', ' USD', 'ÜSD'])('rejects %j', input => {
+    // 'uß' upper-cases to 'USS': the input is checked before upper-casing.
+    test.each(['', 'US', 'USDT', 'U1D', ' USD', 'ÜSD', 'uß', 'ﬀx'])('rejects %j', input => {
         expect(() => currencyCode(input)).toThrow(RangeError);
     });
 });
@@ -189,5 +191,28 @@ describe('displaySign: settled only at minor === 0n', () => {
     test('JPY and KWD use the same scale-4 rule', () => {
         expect(displaySign(fromUnits(1n, JPY))).toBe(1);
         expect(displaySign(fromUnits(-1n, KWD))).toBe(-1);
+    });
+});
+
+describe('ApproxMoney survives arithmetic', () => {
+    const approx: ApproxMoney = { ...usd('1.0000'), approx: true };
+
+    test.each([
+        ['add(approx, exact)', () => add(approx, usd('1'))],
+        ['add(exact, approx)', () => add(usd('1'), approx)],
+        ['sub(approx, exact)', () => sub(approx, usd('1'))],
+        ['sub(exact, approx)', () => sub(usd('1'), approx)],
+        ['negate', () => negate(approx)],
+        ['abs', () => abs(negate(approx))],
+        ['roundToMinor', () => roundToMinor(approx)],
+        ['sum', () => sum([usd('1'), approx], USD)],
+    ])('%s is approximate at runtime', (_, run) => {
+        expect(isApprox(run())).toBe(true);
+    });
+
+    test('exact inputs stay exact', () => {
+        expect(isApprox(add(usd('1'), usd('2')))).toBe(false);
+        expect(add(usd('1'), usd('2'))).toEqual(usd('3'));
+        expect(isApprox(sum([usd('1')], USD))).toBe(false);
     });
 });

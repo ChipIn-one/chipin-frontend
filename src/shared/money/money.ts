@@ -31,14 +31,16 @@ export class CurrencyMismatchError extends Error {
 }
 
 const CURRENCY_PATTERN = /^[A-Z]{3}$/;
+// Checked before upper-casing: 'uß'.toUpperCase() is 'USS'.
+const CURRENCY_INPUT = /^[A-Za-z]{3}$/;
 
 const isCurrencyCode = (value: string): value is CurrencyCode => CURRENCY_PATTERN.test(value);
 
-/** Upper-cases and validates a currency code; throws on anything but three letters. */
+/** Upper-cases and validates a currency code; throws on anything but three ASCII letters. */
 export const currencyCode = (value: string): CurrencyCode => {
     const code = value.toUpperCase();
 
-    if (!isCurrencyCode(code)) {
+    if (!CURRENCY_INPUT.test(value) || !isCurrencyCode(code)) {
         throw new RangeError(`Invalid currency code: "${value}"`);
     }
     return code;
@@ -84,30 +86,65 @@ export const fromUnits = (units: bigint, currency: CurrencyCode): Money => ({
 
 export const toUnits = (money: Money): bigint => money.minor;
 
+/**
+ * A converted, approximate amount (`convert`): still a `Money` for arithmetic and display, but
+ * `moneyToWire` does not accept it, and arithmetic keeps it approximate (`add(approx, exact)` is
+ * an `ApproxMoney`), so a converted figure never becomes a request amount.
+ */
+export type ApproxMoney = Money & { readonly approx: true };
+
+export const isApprox = (money: Money): money is ApproxMoney =>
+    'approx' in money && money.approx === true;
+
+/** An amount with the exactness of its inputs: approximate if any input is. */
+const derived = (minor: bigint, currency: CurrencyCode, approx: boolean): Money => {
+    const exact = fromUnits(minor, currency);
+    const approximate: ApproxMoney = { ...exact, approx: true };
+
+    return approx ? approximate : exact;
+};
+
 const assertSameCurrency = (left: Money, right: Money): void => {
     if (left.currency !== right.currency) {
         throw new CurrencyMismatchError(left.currency, right.currency);
     }
 };
 
-export const add = (left: Money, right: Money): Money => {
+// Overloads carry ApproxMoney through arithmetic at the type level; `derived` does it at runtime.
+export function add(left: ApproxMoney, right: Money): ApproxMoney;
+export function add(left: Money, right: ApproxMoney): ApproxMoney;
+export function add(left: Money, right: Money): Money;
+export function add(left: Money, right: Money): Money {
     assertSameCurrency(left, right);
-    return fromUnits(left.minor + right.minor, left.currency);
-};
+    return derived(left.minor + right.minor, left.currency, isApprox(left) || isApprox(right));
+}
 
-export const sub = (left: Money, right: Money): Money => {
+export function sub(left: ApproxMoney, right: Money): ApproxMoney;
+export function sub(left: Money, right: ApproxMoney): ApproxMoney;
+export function sub(left: Money, right: Money): Money;
+export function sub(left: Money, right: Money): Money {
     assertSameCurrency(left, right);
-    return fromUnits(left.minor - right.minor, left.currency);
-};
+    return derived(left.minor - right.minor, left.currency, isApprox(left) || isApprox(right));
+}
 
-export const negate = (money: Money): Money => fromUnits(-money.minor, money.currency);
+export function negate(money: ApproxMoney): ApproxMoney;
+export function negate(money: Money): Money;
+export function negate(money: Money): Money {
+    return derived(-money.minor, money.currency, isApprox(money));
+}
 
-export const abs = (money: Money): Money =>
-    fromUnits(money.minor < 0n ? -money.minor : money.minor, money.currency);
+export function abs(money: ApproxMoney): ApproxMoney;
+export function abs(money: Money): Money;
+export function abs(money: Money): Money {
+    return derived(money.minor < 0n ? -money.minor : money.minor, money.currency, isApprox(money));
+}
 
 /** The sum of amounts in `currency`; an empty list is zero; another currency throws. */
-export const sum = (list: readonly Money[], currency: CurrencyCode): Money =>
-    list.reduce(add, fromUnits(0n, currency));
+export function sum(list: readonly ApproxMoney[], currency: CurrencyCode): ApproxMoney;
+export function sum(list: readonly Money[], currency: CurrencyCode): Money;
+export function sum(list: readonly Money[], currency: CurrencyCode): Money {
+    return list.reduce<Money>((total, money) => add(total, money), fromUnits(0n, currency));
+}
 
 const signOf = (value: bigint): Sign => {
     if (value === 0n) {
@@ -141,11 +178,13 @@ export const divideHalfUp = (value: bigint, divisor: bigint): bigint => {
 };
 
 /** Rounds half-up away from zero to the currency minor units; the result is scale 4 again. */
-export const roundToMinor = (money: Money): Money => {
+export function roundToMinor(money: ApproxMoney): ApproxMoney;
+export function roundToMinor(money: Money): Money;
+export function roundToMinor(money: Money): Money {
     const step = ledgerUnitsPerMinor(money.currency);
 
-    return fromUnits(divideHalfUp(money.minor, step) * step, money.currency);
-};
+    return derived(divideHalfUp(money.minor, step) * step, money.currency, isApprox(money));
+}
 
 /** The plain decimal text of `units` at `scale` (no exponent): 855000n, 4 → "85.5000". */
 export const unitsToDecimal = (units: bigint, scale: number): string => {

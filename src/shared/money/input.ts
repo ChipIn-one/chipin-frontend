@@ -20,7 +20,9 @@ export const parseMoneyInput = (raw: string, currency: CurrencyCode): Money | nu
     if (!match) {
         return null;
     }
-    const [, integer = '', fraction = ''] = match;
+    const [, digits = '', fraction = ''] = match;
+    // Leading zeros do not count toward the 15-digit limit ("000…001" is 1).
+    const integer = digits.replace(/^0+(?=\d)/, '');
 
     if (
         (integer === '' && fraction === '') ||

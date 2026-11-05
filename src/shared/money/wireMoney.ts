@@ -3,13 +3,14 @@
 import * as Sentry from '@sentry/react';
 
 import type { CurrencyCode, Money } from './money';
-import { fromUnits, LEDGER_SCALE, unitsToDecimal } from './money';
+import { fromUnits, isApprox, LEDGER_SCALE, unitsToDecimal } from './money';
 import type { WireAmount } from './wire';
 import { createWireAmount, MoneyWireError, wireAmountText } from './wire';
 
 // The backend column `decimal(19,4)`: |v| ≤ 999 999 999 999 999.9999, written by `toPlainString`
 // of scale 4 (no exponent). Anything else is a hard rejection, never a silent value.
-const WIRE_DECIMAL = /^(-?)(\d{1,15})(?:\.(\d{1,4}))?$/;
+const WIRE_DECIMAL = /^(-?)(\d+)(?:\.(\d{1,4}))?$/;
+const MAX_INTEGER_DIGITS = 15;
 
 /** |minor| < 10¹⁹: the largest `decimal(19,4)` amount in ledger units. */
 const MAX_UNITS = 10n ** 19n;
@@ -51,6 +52,11 @@ export const moneyFromWire = (value: WireAmount, currency: CurrencyCode): Money 
         return reject('format');
     }
     const [, negative = '', integer = '', fraction = ''] = match;
+
+    // A well-formed literal beyond decimal(19,4) is out of range, not malformed.
+    if (integer.length > MAX_INTEGER_DIGITS) {
+        return reject('range');
+    }
     const units = BigInt(`${negative}${integer}${fraction.padEnd(LEDGER_SCALE, '0')}`);
 
     // BigInt('-0') is 0n: -0 does not exist in the domain.
@@ -59,6 +65,10 @@ export const moneyFromWire = (value: WireAmount, currency: CurrencyCode): Money 
 
 /** Writes an amount as a plain decimal literal of scale 4 (`|minor| < 10¹⁹`, else MoneyWireError). */
 export const moneyToWire = (money: Money & { readonly approx?: never }): WireAmount => {
+    // The type already refuses an ApproxMoney; this catches one widened to `Money`.
+    if (isApprox(money)) {
+        throw new TypeError('An approximate (converted) amount cannot be sent to the backend');
+    }
     if (money.minor >= MAX_UNITS || money.minor <= -MAX_UNITS) {
         return reject('range');
     }

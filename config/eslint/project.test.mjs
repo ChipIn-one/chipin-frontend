@@ -113,21 +113,34 @@ describe('money entries (spec 03 §4.3) merged with the existing selector entrie
         "import { split } from 'shared/money/split';",
         'export const a = (row: { amount: number; minor: number }, b: number) => [',
         "    parseFloat('1.5'),",
+        "    Number.parseFloat('1.5'),",
         '    Number(row.amount),',
+        '    Number(row?.netAmount),',
+        '    Number(row.shareAmount!),',
         '    b.toFixed(2),',
         '    Math.round(b * 100),',
         "    new Intl.NumberFormat('en'),",
         '    row.minor > 0,',
+        '    row?.amount >= 0,',
+        '    row.amount! < b,',
+        // Not money fields or not a direct operand: not reported.
+        '    Number(row.count),',
+        '    row.amount.length > 0,',
         '    split,',
         '];',
     ].join('\n');
     const tsxSource = `${tsSource}\nexport const C = () => <input placeholder="Type here" />;`;
     const MONEY = [
         'money-parse-float',
+        'money-parse-float',
+        'money-number-field',
+        'money-number-field',
         'money-number-field',
         'money-to-fixed',
         'money-math-round',
         'money-intl-number-format',
+        'money-compare-field',
+        'money-compare-field',
         'money-compare-field',
     ];
 

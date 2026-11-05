@@ -1,7 +1,7 @@
 // Ratchet for the lint/type baselines (spec 02 §D0, §D7): compares the baseline files with their
 // version at the base commit (`git show <base>:<file>`). A new file x rule key or a higher count
 // fails, except for rules that config/eslint/rule-classes.json registers for the first time in this
-// change, or that gain a new `#id` entry (an "enable rule + --suppress-rule" PR, firstTimeRules).
+// change, and, up to the count of their own messages, new `#id` entries (ratchetOpenings).
 //
 // Usage: node scripts/check-baseline.mjs [--base <sha>]
 // Without --base it compares with `git merge-base HEAD origin/master` locally. With CI=true a
@@ -22,26 +22,53 @@ const SHA = /^(?!0{40}$)[0-9a-f]{40}$/i;
 
 const ruleOf = key => key.split('#')[0];
 
-// Rules that gain a registry key in this change: a rule registered for the first time (`<rule>`
-// or `<rule>#<id>` with no key of any form at base), or a new `#id` entry of a
-// `no-restricted-syntax`/`no-restricted-imports` rule that is already registered (spec 03-1 adds
-// the money entries next to the i18n entry of 02-C8). Only such a PR (enable a rule or entry +
-// `--suppress-rule`) may add suppressions for that rule. Suppressions are counted per rule, not
-// per entry id, so in that PR the ratchet is open for the whole rule; a junk id cannot open it
-// because scripts/check-rule-registry.mjs rejects a key that is not effective on any linted file.
-const firstTimeRules = (baseRegistry, headRegistry) =>
-    new Set(
-        Object.keys(headRegistry)
-            .filter(key => !(key in baseRegistry))
-            .map(ruleOf),
-    );
+// What a change may add suppressions for (an "enable rule + --suppress-rule" PR):
+// - `rules`: rules registered for the first time (`<rule>` or `<rule>#<id>` with no key of any
+//   form at base); their growth is not limited;
+// - `ids`: new `#id` entries of a `no-restricted-syntax`/`no-restricted-imports` rule that is
+//   already registered (spec 03-1 adds the money entries next to the i18n entry of 02-C8).
+//   Suppressions count per rule, not per entry, so the growth of such a rule is allowed only up to
+//   the number of its messages that carry a NEW `[id]` (re-linted without suppressions); growth of
+//   the rule's older entries still fails.
+export const ratchetOpenings = (baseRegistry, headRegistry) => {
+    const baseRules = new Set(Object.keys(baseRegistry).map(ruleOf));
+    const rules = new Set();
+    const ids = new Map();
+
+    for (const key of Object.keys(headRegistry)) {
+        if (key in baseRegistry) {
+            continue;
+        }
+        const [rule, id] = key.split('#');
+
+        if (!baseRules.has(rule)) {
+            rules.add(rule);
+        } else if (id) {
+            ids.set(rule, new Set([...(ids.get(rule) ?? []), id]));
+        }
+    }
+
+    return { rules, ids };
+};
+
+const noNewIdMessages = async () => 0;
 
 /**
- * @param {{ base: object, head: object, baseRegistry: object, headRegistry: object, file?: string }} input
- * @returns {string[]} errors
+ * @param {{ base: object, head: object, baseRegistry: object, headRegistry: object, file?: string,
+ *   countNewIdMessages?: (path: string, rule: string, ids: Set<string>) => Promise<number> }} input
+ *   `countNewIdMessages`: messages of `rule` in `path` (linted without suppressions) whose `[id]`
+ *   is one of `ids`.
+ * @returns {Promise<string[]>} errors
  */
-export const findBaselineGrowth = ({ base, head, baseRegistry, headRegistry, file = '' }) => {
-    const newRules = firstTimeRules(baseRegistry, headRegistry);
+export const findBaselineGrowth = async ({
+    base,
+    head,
+    baseRegistry,
+    headRegistry,
+    file = '',
+    countNewIdMessages = noNewIdMessages,
+}) => {
+    const openings = ratchetOpenings(baseRegistry, headRegistry);
     const errors = [];
 
     // A malformed count (negative, fractional, missing, a string) would make the comparison
@@ -66,13 +93,46 @@ export const findBaselineGrowth = ({ base, head, baseRegistry, headRegistry, fil
         for (const [rule, { count }] of Object.entries(rules)) {
             const before = base[path]?.[rule]?.count ?? 0;
 
-            if (count > before && !newRules.has(rule)) {
-                errors.push(`${file}: ${path} ${rule} ${before} -> ${count}`);
+            if (count <= before || openings.rules.has(rule)) {
+                continue;
+            }
+            const newIds = openings.ids.get(rule);
+            const allowed = newIds
+                ? before + (await countNewIdMessages(path, rule, newIds))
+                : before;
+
+            if (count > allowed) {
+                const detail = newIds
+                    ? ` (new entries ${[...newIds].join(', ')} allow ${allowed})`
+                    : '';
+
+                errors.push(`${file}: ${path} ${rule} ${before} -> ${count}${detail}`);
             }
         }
     }
 
     return errors;
+};
+
+const ENTRY_ID = /\[([a-z0-9]+(?:-[a-z0-9]+)*)\] /;
+
+/** `[id]` of a restricted-entry message: a prefix (syntax) or inside ESLint's text (imports). */
+export const messageId = message => message.match(ENTRY_ID)?.[1];
+
+/** Lints a file with the repository config and no suppressions (the ESLint API never applies them). */
+export const eslintNewIdCounter = () => {
+    let eslint;
+
+    return async (path, rule, ids) => {
+        const { ESLint } = await import('eslint');
+
+        eslint ??= new ESLint({ cwd: repoRoot });
+        const [result] = await eslint.lintFiles([resolve(repoRoot, path)]);
+
+        return (result?.messages ?? []).filter(
+            message => message.ruleId === rule && ids.has(messageId(message.message)),
+        ).length;
+    };
 };
 
 const git = args =>
@@ -139,7 +199,7 @@ export const resolveBase = (argBase, env) => {
     return { exit: 0, message: '::notice::check-baseline: no base commit, growth check skipped' };
 };
 
-export const main = (argv = process.argv.slice(2), env = process.env) => {
+export const main = async (argv = process.argv.slice(2), env = process.env) => {
     const { base, exit, message } = resolveBase(parseBase(argv), env);
 
     if (!base) {
@@ -155,20 +215,26 @@ export const main = (argv = process.argv.slice(2), env = process.env) => {
 
     const baseRegistry = readAtBase(base, REGISTRY_PATH);
     const headRegistry = readHead(REGISTRY_PATH);
-    const errors = BASELINE_FILES.flatMap(file =>
-        findBaselineGrowth({
-            base: readAtBase(base, file),
-            head: readHead(file),
-            baseRegistry,
-            headRegistry,
-            file,
-        }),
-    );
+    const countNewIdMessages = eslintNewIdCounter();
+    const errors = [];
+
+    for (const file of BASELINE_FILES) {
+        errors.push(
+            ...(await findBaselineGrowth({
+                base: readAtBase(base, file),
+                head: readHead(file),
+                baseRegistry,
+                headRegistry,
+                file,
+                countNewIdMessages,
+            })),
+        );
+    }
 
     if (errors.length > 0) {
         console.error(
             'Baseline grew. Fix the new violations instead of suppressing them; only a PR that ' +
-                `adds a rule to ${REGISTRY_PATH} may add its suppressions:\n- ${errors.join('\n- ')}`,
+                `adds a rule (or a restricted entry id, for that entry's own messages) to ${REGISTRY_PATH} may add its suppressions:\n- ${errors.join('\n- ')}`,
         );
         return 1;
     }
@@ -177,5 +243,5 @@ export const main = (argv = process.argv.slice(2), env = process.env) => {
 };
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
-    process.exit(main());
+    process.exit(await main());
 }

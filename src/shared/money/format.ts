@@ -7,7 +7,6 @@ import {
     ledgerUnitsPerMinor,
     minorUnits,
     roundToMinor,
-    sign,
     unitsToDecimal,
 } from './money';
 
@@ -60,26 +59,37 @@ const numericLiteral = (money: Money): `${number}` => {
 };
 
 /**
- * What is displayed: the amount rounded to minor units, or, when a non-zero amount rounds to
- * zero, one minor unit with the sign of the amount behind the "< " prefix.
+ * What is displayed and with which options: the amount rounded to minor units, or, when a
+ * non-zero amount rounds to zero, the absolute "< one minor unit" ("< $0.01" for ±0.0040 USD).
+ * Below one minor unit the sign is carried by the owe/owed text, so `signDisplay` is ignored.
  */
-const displayed = (money: Money): { value: Money; belowMinor: boolean } => {
+const displayed = (
+    money: Money,
+    options: FormatMoneyOptions,
+): { value: Money; belowMinor: boolean; options: FormatMoneyOptions } => {
     const rounded = roundToMinor(money);
 
     if (rounded.minor !== 0n || money.minor === 0n) {
-        return { value: rounded, belowMinor: false };
+        return { value: rounded, belowMinor: false, options };
     }
-    const oneMinor = ledgerUnitsPerMinor(money.currency) * BigInt(sign(money));
 
-    return { value: fromUnits(oneMinor, money.currency), belowMinor: true };
+    return {
+        value: fromUnits(ledgerUnitsPerMinor(money.currency), money.currency),
+        belowMinor: true,
+        options: { ...options, signDisplay: 'auto' },
+    };
 };
 
-/** Formats an amount for display: "$1,234.50", "¥1,235", "< $0.01" for 0.0040 USD. */
-export const formatMoney = (money: Money, options: FormatMoneyOptions = {}): string => {
-    const { value, belowMinor } = displayed(money);
-    const text = formatterFor(value, options).format(numericLiteral(value));
+// `format(string)` keeps full precision only in engines with Intl.NumberFormat v3 (Chrome 106,
+// Firefox 116, Safari 15.4); older engines convert the string to a double, so amounts above
+// ~1e13 may display wrong there. Accepted: display only, the build target is unchanged.
 
-    return belowMinor ? `${BELOW_MINOR_PREFIX}${text}` : text;
+/** Formats an amount for display: "$1,234.50", "¥1,235", "< $0.01" for ±0.0040 USD. */
+export const formatMoney = (money: Money, options: FormatMoneyOptions = {}): string => {
+    const shown = displayed(money, options);
+    const text = formatterFor(shown.value, shown.options).format(numericLiteral(shown.value));
+
+    return shown.belowMinor ? `${BELOW_MINOR_PREFIX}${text}` : text;
 };
 
 /** Like `formatMoney`, as Intl parts (for `basics/numbers/amount/Amount.tsx`). */
@@ -87,8 +97,10 @@ export const formatMoneyParts = (
     money: Money,
     options: FormatMoneyOptions = {},
 ): Intl.NumberFormatPart[] => {
-    const { value, belowMinor } = displayed(money);
-    const parts = formatterFor(value, options).formatToParts(numericLiteral(value));
+    const shown = displayed(money, options);
+    const parts = formatterFor(shown.value, shown.options).formatToParts(
+        numericLiteral(shown.value),
+    );
 
-    return belowMinor ? [{ type: 'literal', value: BELOW_MINOR_PREFIX }, ...parts] : parts;
+    return shown.belowMinor ? [{ type: 'literal', value: BELOW_MINOR_PREFIX }, ...parts] : parts;
 };

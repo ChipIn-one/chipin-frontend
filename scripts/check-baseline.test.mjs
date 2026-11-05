@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path';
 
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
-import { findBaselineGrowth, main, parseBase, resolveBase } from './check-baseline.mjs';
+import { findBaselineGrowth, main, messageId, parseBase, resolveBase } from './check-baseline.mjs';
 
 const SHA = 'a'.repeat(40);
 const entry = count => ({ count });
@@ -13,9 +13,9 @@ const entry = count => ({ count });
 describe('check-baseline growth', () => {
     const registry = { 'no-debugger': 'b' };
 
-    test('passes a new key for a rule this change adds to the registry', () => {
+    test('passes a new key for a rule this change adds to the registry', async () => {
         expect(
-            findBaselineGrowth({
+            await findBaselineGrowth({
                 base: {},
                 head: { 'src/a.ts': { 'no-alert': entry(3) } },
                 baseRegistry: registry,
@@ -24,9 +24,9 @@ describe('check-baseline growth', () => {
         ).toEqual([]);
     });
 
-    test('fails when the count of an existing key grows', () => {
+    test('fails when the count of an existing key grows', async () => {
         expect(
-            findBaselineGrowth({
+            await findBaselineGrowth({
                 base: { 'src/a.ts': { 'no-debugger': entry(1) } },
                 head: { 'src/a.ts': { 'no-debugger': entry(2) } },
                 baseRegistry: registry,
@@ -36,9 +36,9 @@ describe('check-baseline growth', () => {
         ).toEqual(['eslint-suppressions.json: src/a.ts no-debugger 1 -> 2']);
     });
 
-    test('fails on a new key for a rule that is already registered', () => {
+    test('fails on a new key for a rule that is already registered', async () => {
         expect(
-            findBaselineGrowth({
+            await findBaselineGrowth({
                 base: {},
                 head: { 'src/b.ts': { 'no-debugger': entry(1) } },
                 baseRegistry: registry,
@@ -47,52 +47,98 @@ describe('check-baseline growth', () => {
         ).toHaveLength(1);
     });
 
-    test('passes suppressions of a new entry id of an already registered rule (03-1 money)', () => {
-        expect(
-            findBaselineGrowth({
-                base: {},
-                head: { 'src/a.ts': { 'no-restricted-syntax': entry(3) } },
-                baseRegistry: { 'no-restricted-syntax#i18n-attributes': 'b' },
-                headRegistry: {
-                    'no-restricted-syntax#i18n-attributes': 'b',
-                    'no-restricted-syntax#money-to-fixed': 'b',
-                },
-            }),
-        ).toEqual([]);
+    describe('a new entry id of an already registered rule (03-1 money)', () => {
+        const baseRegistry = {
+            'no-restricted-imports#axios-in-ui': 'b',
+            'no-restricted-syntax#i18n-attributes': 'b',
+        };
+        const headRegistry = { ...baseRegistry, 'no-restricted-syntax#money-to-fixed': 'b' };
+        const counter = newIdMessages => {
+            const calls = [];
+            const count = async (path, rule, ids) => {
+                calls.push([path, rule, [...ids]]);
+                return newIdMessages;
+            };
+
+            return { calls, count };
+        };
+
+        test('passes growth up to the messages of the new id', async () => {
+            const { calls, count } = counter(3);
+
+            expect(
+                await findBaselineGrowth({
+                    base: { 'src/a.ts': { 'no-restricted-syntax': entry(1) } },
+                    head: { 'src/a.ts': { 'no-restricted-syntax': entry(4) } },
+                    baseRegistry,
+                    headRegistry,
+                    countNewIdMessages: count,
+                }),
+            ).toEqual([]);
+            expect(calls).toEqual([['src/a.ts', 'no-restricted-syntax', ['money-to-fixed']]]);
+        });
+
+        test('fails growth that comes from an old id of the same rule', async () => {
+            // 3 new suppressions, only 1 message carries the new id: 2 are old-entry violations.
+            expect(
+                await findBaselineGrowth({
+                    base: {},
+                    head: { 'src/a.tsx': { 'no-restricted-syntax': entry(3) } },
+                    baseRegistry,
+                    headRegistry,
+                    countNewIdMessages: counter(1).count,
+                    file: 'eslint-suppressions.json',
+                }),
+            ).toEqual([
+                'eslint-suppressions.json: src/a.tsx no-restricted-syntax 0 -> 3 (new entries money-to-fixed allow 1)',
+            ]);
+        });
+
+        test('fails growth of a registered selector rule when no entry id is added', async () => {
+            const { calls, count } = counter(5);
+
+            expect(
+                await findBaselineGrowth({
+                    base: {},
+                    head: { 'src/ui/a.tsx': { 'no-restricted-imports': entry(1) } },
+                    baseRegistry,
+                    headRegistry: baseRegistry,
+                    countNewIdMessages: count,
+                }),
+            ).toHaveLength(1);
+            expect(calls).toEqual([]);
+        });
+
+        test('a new id of one rule does not open another rule', async () => {
+            const { calls, count } = counter(5);
+
+            expect(
+                await findBaselineGrowth({
+                    base: {},
+                    head: { 'src/ui/a.tsx': { 'no-restricted-imports': entry(1) } },
+                    baseRegistry,
+                    headRegistry,
+                    countNewIdMessages: count,
+                }),
+            ).toHaveLength(1);
+            expect(calls).toEqual([]);
+        });
     });
 
-    test('fails on growth of a registered selector rule when no entry id is added', () => {
-        expect(
-            findBaselineGrowth({
-                base: {},
-                head: { 'src/ui/a.tsx': { 'no-restricted-imports': entry(1) } },
-                baseRegistry: { 'no-restricted-imports#axios-in-ui': 'b' },
-                headRegistry: { 'no-restricted-imports#axios-in-ui': 'b' },
-            }),
-        ).toHaveLength(1);
+    test.each([
+        ['[money-to-fixed] Money: use formatMoney.', 'money-to-fixed'],
+        [
+            "'shared/money/split' import is restricted from being used by a pattern. [money-deep-import] Import from shared/money only.",
+            'money-deep-import',
+        ],
+        ['Unexpected debugger statement.', undefined],
+    ])('messageId(%j) → %s', (message, id) => {
+        expect(messageId(message)).toBe(id);
     });
 
-    test('a new id of one rule does not open another rule', () => {
+    test('passes suppressions of a selector rule registered for the first time', async () => {
         expect(
-            findBaselineGrowth({
-                base: {},
-                head: { 'src/ui/a.tsx': { 'no-restricted-imports': entry(1) } },
-                baseRegistry: {
-                    'no-restricted-imports#axios-in-ui': 'b',
-                    'no-restricted-syntax#i18n-attributes': 'b',
-                },
-                headRegistry: {
-                    'no-restricted-imports#axios-in-ui': 'b',
-                    'no-restricted-syntax#i18n-attributes': 'b',
-                    'no-restricted-syntax#money-to-fixed': 'b',
-                },
-            }),
-        ).toHaveLength(1);
-    });
-
-    test('passes suppressions of a selector rule registered for the first time', () => {
-        expect(
-            findBaselineGrowth({
+            await findBaselineGrowth({
                 base: {},
                 head: { 'src/a.ts': { 'no-restricted-syntax': entry(29) } },
                 baseRegistry: registry,
@@ -103,20 +149,24 @@ describe('check-baseline growth', () => {
 
     test.each([[-1], [1.5], ['2'], [null], [undefined]])(
         'fails on an invalid count %s at base or head',
-        count => {
+        async count => {
             const bad = { 'src/a.ts': { 'no-debugger': { count } } };
             const good = { 'src/a.ts': { 'no-debugger': entry(1) } };
             const args = { baseRegistry: registry, headRegistry: registry, file: 'f.json' };
             const message = side => [`f.json: src/a.ts no-debugger has invalid count at ${side}`];
 
-            expect(findBaselineGrowth({ ...args, base: bad, head: good })).toEqual(message('base'));
-            expect(findBaselineGrowth({ ...args, base: good, head: bad })).toEqual(message('head'));
+            expect(await findBaselineGrowth({ ...args, base: bad, head: good })).toEqual(
+                message('base'),
+            );
+            expect(await findBaselineGrowth({ ...args, base: good, head: bad })).toEqual(
+                message('head'),
+            );
         },
     );
 
-    test('passes when the baseline shrinks', () => {
+    test('passes when the baseline shrinks', async () => {
         expect(
-            findBaselineGrowth({
+            await findBaselineGrowth({
                 base: { 'src/a.ts': { 'no-debugger': entry(2) } },
                 head: { 'src/a.ts': { 'no-debugger': entry(1) } },
                 baseRegistry: registry,
@@ -155,21 +205,23 @@ describe('check-baseline base resolution', () => {
         });
     });
 
-    test('main exits 1 on a well-formed SHA that is not an available commit', () => {
+    test('main exits 1 on a well-formed SHA that is not an available commit', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
 
         expect(
-            main(['--base', `${'0'.repeat(39)}1`], {
+            await main(['--base', `${'0'.repeat(39)}1`], {
                 CI: 'true',
                 GITHUB_EVENT_NAME: 'pull_request',
             }),
         ).toBe(1);
     });
 
-    test('main exits 1 on an empty base in a CI pull_request', () => {
+    test('main exits 1 on an empty base in a CI pull_request', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
 
-        expect(main(['--base', ''], { CI: 'true', GITHUB_EVENT_NAME: 'pull_request' })).toBe(1);
+        expect(await main(['--base', ''], { CI: 'true', GITHUB_EVENT_NAME: 'pull_request' })).toBe(
+            1,
+        );
     });
 });
 

@@ -18,6 +18,10 @@ describe('parseMoneyInput', () => {
         ['10', 'JPY', 100000n],
         ['999999999999999.99', 'USD', 9999999999999999900n],
         ['007', 'USD', 70000n],
+        // Leading zeros do not count toward the 15 integer digits.
+        ['000000000000000001', 'USD', 10000n],
+        ['0000123456789012345.67', 'USD', 1234567890123456700n],
+        ['000', 'USD', 0n],
     ])('%j %s → %s', (raw, code, expected) => {
         expect(parseMoneyInput(raw, currencyCode(code))).toEqual({
             minor: expected,
@@ -42,6 +46,7 @@ describe('parseMoneyInput', () => {
         ['1 234,5 €', 'EUR'],
         // 16 integer digits: beyond the decimal(19,4) boundary.
         ['1234567890123456', 'USD'],
+        ['0001234567890123456', 'USD'],
     ])('%j %s → null', (raw, code) => {
         expect(parseMoneyInput(raw, currencyCode(code))).toBeNull();
     });

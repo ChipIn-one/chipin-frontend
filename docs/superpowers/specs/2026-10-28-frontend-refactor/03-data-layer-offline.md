@@ -751,8 +751,8 @@ input limiting. Reason: the backend divides and computes balances with scale 4 f
 | `roundToMinor` | `(m) => Money` | half-up **away from zero** (like `RoundingMode.HALF_UP` and the current `roundHalfUp` from `helpers/numbers.ts:95`) to `minorUnits`, the result is scale 4 again |
 | `displaySign` | `(m) => -1 \| 0 \| 1` | `sign(m)` at scale 4. **The single rule "owes/is owed/settled"**: "settled" only when `minor === 0n`; `0.0040 USD` → 1 (the backend counts this as a debt and blocks friend deletion `USER.OUTSTANDING_DEBT`). Such an amount is displayed by `formatMoney` as "< $0.01" (§4.5) |
 | `split` | `(total: Money, entries: readonly { userId: string; weight: string }[]) => Money[]` | an exact copy of `distributeAmount` (`ShareDistribution.kt:41-63`): decimal weights are brought to a common integer scale like `toCommonScaleIntegers` (by the max number of fractional digits), `floor(units*w/W)`, the remainder 1 unit each to the largest remainders, ties by index (stable sort). `entries` — **in the exact order of the request body's `participantIds`** (the same array is passed to the mapper `toCreateLedgerEntryWire`). Weights: AUTO = all `'1'`, SHARES = the weights, PERCENTAGE = the percentages; zero weights are allowed. Empty list → `[]`, `W <= 0` → throw |
-| `convert` | `(m, rate: string, target) => Money` | approximate (rates), half-up to scale 4; the result is marked in the types as `ApproxMoney` (brand) — it cannot be passed to `moneyToWire` |
-| `formatMoney` | `(m, opts?: { locale?; currencyDisplay?: 'symbol' \| 'code'; signDisplay?: 'auto' \| 'always' \| 'exceptZero'; compact?: boolean }) => string` | `roundToMinor` → `Intl.NumberFormat(locale, { style:'currency', currency, minimumFractionDigits: mu, maximumFractionDigits: mu })`. If `m ≠ 0` but `roundToMinor(m) = 0` → "< " + the format of one minor unit with the sign of `m` ("< $0.01"); the sign is conveyed as the text "you owe / you are owed", not a symbol. | A decimal string assembled from `minor` goes in as input (ES2023 `format(string)` — no loss of precision); a formatter cache by `locale+currency+opts` |
+| `convert` | `(m, rate: string, target) => Money` | approximate (rates), half-up to scale 4; the result is marked in the types as `ApproxMoney` (brand) — it cannot be passed to `moneyToWire`; `add`/`sub`/`negate`/`abs`/`sum`/`roundToMinor` return `ApproxMoney` when any input is approximate |
+| `formatMoney` | `(m, opts?: { locale?; currencyDisplay?: 'symbol' \| 'code'; signDisplay?: 'auto' \| 'always' \| 'exceptZero'; compact?: boolean }) => string` | `roundToMinor` → `Intl.NumberFormat(locale, { style:'currency', currency, minimumFractionDigits: mu, maximumFractionDigits: mu })`. If `m ≠ 0` but `roundToMinor(m) = 0` → "< " + the format of one minor unit, always absolute (`signDisplay` is ignored there; "< $0.01" for ±0.0040 USD); the sign is conveyed as the text "you owe / you are owed", not a symbol. | A decimal string assembled from `minor` goes in as input (ES2023 `format(string)` — no loss of precision); a formatter cache by `locale+currency+opts` |
 | `formatMoneyParts` | same → `Intl.NumberFormatPart[]` | for `basics/numbers/amount/Amount.tsx`, which needs separate parts |
 
 Rules: all functions are pure, without React and i18n. Locale is passed as an argument (taken from `i18n.resolvedLanguage`
@@ -763,13 +763,15 @@ in the hook `useFormatMoney()` in `shared/i18n`, not in money).
 A block for `src/**/*.{ts,tsx}`, `ignores: ['src/shared/money/**', 'src/shared/lib/formatNumber.ts', '**/*.test.*']`:
 
 ```js
+// F(parent, names) = `${parent} > MemberExpression[property.name=/^(names)$/]`, plus the same with
+// `ChainExpression > ` (x?.amount) and `TSNonNullExpression > ` (x.amount!) before MemberExpression.
 'no-restricted-syntax': ['error',
-  { selector: "CallExpression[callee.name='parseFloat']", message: 'Money: use shared/money (parseMoneyInput/moneyFromWire).' },
-  { selector: "CallExpression[callee.name='Number'] > MemberExpression[property.name=/^(amount|minor|netBalance|netAmount|shareAmount)$/]", message: 'Money: no Number() on money fields.' },
+  { selector: "CallExpression[callee.name='parseFloat'], CallExpression[callee.property.name='parseFloat']", message: 'Money: use shared/money (parseMoneyInput/moneyFromWire).' },
+  { selector: F("CallExpression[callee.name='Number']", 'amount|minor|netBalance|netAmount|shareAmount'), message: 'Money: no Number() on money fields.' },
   { selector: "CallExpression[callee.property.name='toFixed']", message: 'Money: use formatMoney/roundToMinor.' },
   { selector: "CallExpression[callee.object.name='Math'][callee.property.name='round'] BinaryExpression[operator='*']", message: 'Money: no Math.round(x*N) rounding.' },
   { selector: "NewExpression[callee.object.name='Intl'][callee.property.name='NumberFormat']", message: 'Use formatMoney or shared/lib/formatNumber.' },
-  { selector: "BinaryExpression[operator=/^[<>]=?$/] > MemberExpression[property.name=/^(amount|minor)$/]", message: 'Money: compare via money.compare/sign.' },
+  { selector: F("BinaryExpression[operator=/^[<>]=?$/]", 'amount|minor'), message: 'Money: compare via money.compare/sign.' },
 ],
 'no-restricted-imports': ['error', { patterns: [{ group: ['shared/money/*'], message: 'Import from shared/money only.' }] }],
 // outside entities/*/model/** additionally (C1-11): importNames moneyFromWire/moneyToWire from 'shared/money' are forbidden —

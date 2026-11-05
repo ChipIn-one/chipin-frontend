@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { convert } from './convert';
 import type { Money } from './money';
-import { currencyCode, fromUnits } from './money';
+import { abs, add, currencyCode, fromUnits, negate, roundToMinor, sub, sum } from './money';
 import { createWireAmount, isWireAmount, MoneyWireError, wireAmountText } from './wire';
 import { mapItems, moneyFromWire, moneyToWire, resetReportedItems } from './wireMoney';
 
@@ -64,7 +64,6 @@ describe('moneyFromWire (spec 03 §8 vectors)', () => {
     });
 
     test.each([
-        '1000000000000000.0000',
         '1.23456',
         '0.00005',
         '85.50001',
@@ -88,6 +87,19 @@ describe('moneyFromWire (spec 03 §8 vectors)', () => {
             expect.objectContaining({ level: 'error', tags: { 'money.reason': 'format' } }),
         );
     });
+
+    test.each(['1000000000000000.0000', '-1000000000000000', '12345678901234567890.1'])(
+        '"%s" (more than 15 integer digits) → MoneyWireError with reason range',
+        text => {
+            expect(() => fromText(text)).toThrow(
+                expect.objectContaining({ name: 'MoneyWireError', reason: 'range' }),
+            );
+            expect(Sentry.captureMessage).toHaveBeenCalledWith(
+                'money.wire_reject',
+                expect.objectContaining({ tags: { 'money.reason': 'range' } }),
+            );
+        },
+    );
 
     test('a value that is not a WireAmount is a shape rejection', () => {
         const notWire = JSON.parse('{"amount":85.5}') as { amount: never };
@@ -134,11 +146,43 @@ describe('moneyToWire', () => {
         );
     });
 
+    test('arithmetic keeps an ApproxMoney approximate: none of these type-check', () => {
+        const approx = convert(fromUnits(10000n, USD), '1', USD);
+        const zero = fromUnits(0n, USD);
+        const attempts = [
+            // @ts-expect-error -- add(approx, exact) is approximate.
+            () => moneyToWire(add(approx, zero)),
+            // @ts-expect-error -- add(exact, approx) is approximate.
+            () => moneyToWire(add(zero, approx)),
+            // @ts-expect-error -- sub keeps it approximate.
+            () => moneyToWire(sub(approx, zero)),
+            // @ts-expect-error -- negate keeps it approximate.
+            () => moneyToWire(negate(approx)),
+            // @ts-expect-error -- abs keeps it approximate.
+            () => moneyToWire(abs(approx)),
+            // @ts-expect-error -- roundToMinor keeps it approximate.
+            () => moneyToWire(roundToMinor(approx)),
+            // @ts-expect-error -- a sum of approximate amounts is approximate.
+            () => moneyToWire(sum([approx, approx], USD)),
+        ];
+
+        // At runtime the flag survives too, so even a call that slipped past the types throws.
+        for (const attempt of attempts) {
+            expect(attempt).toThrow(TypeError);
+        }
+    });
+
+    test('an ApproxMoney widened to Money is refused at runtime', () => {
+        const widened: Money = convert(fromUnits(10000n, USD), '1', USD);
+
+        expect(() => moneyToWire(widened)).toThrow(TypeError);
+    });
+
     test('an ApproxMoney does not type-check', () => {
         const approx = convert(fromUnits(10000n, USD), '1', currencyCode('EUR'));
 
         // @ts-expect-error -- a converted (approximate) amount never becomes a request amount.
-        expect(wireAmountText(moneyToWire(approx))).toBe('1.0000');
+        expect(() => moneyToWire(approx)).toThrow(TypeError);
     });
 });
 

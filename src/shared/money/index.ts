@@ -1,11 +1,10 @@
 // The only public entry of shared/money (spec 03 §4.2). All functions are pure apart from the
 // Sentry report of a rejected wire amount; no React, no i18n (the locale is an argument).
-export type { ApproxMoney } from './convert';
 export { convert } from './convert';
 export type { FormatMoneyOptions } from './format';
 export { BELOW_MINOR_PREFIX, formatMoney, formatMoneyParts } from './format';
 export { parseMoneyInput } from './input';
-export type { CurrencyCode, MinorUnits, Money, Sign } from './money';
+export type { ApproxMoney, CurrencyCode, MinorUnits, Money, Sign } from './money';
 export {
     abs,
     add,
@@ -14,6 +13,7 @@ export {
     CurrencyMismatchError,
     displaySign,
     fromUnits,
+    isApprox,
     isZero,
     LEDGER_SCALE,
     minorUnits,

@@ -28,9 +28,16 @@ describe('formatMoney', () => {
         expect(formatMoney(money(5000n, 'JPY'), { locale: 'en' })).toBe('¥1');
     });
 
-    test('an amount below one minor unit is "< one minor unit", with the sign of the amount', () => {
+    test('an amount below one minor unit is the absolute "< one minor unit"', () => {
         expect(formatMoney(money(40n, 'USD'), { locale: 'en' })).toBe('< $0.01');
-        expect(formatMoney(money(-49n, 'USD'), { locale: 'en' })).toBe('< -$0.01');
+        // The sign is carried by the owe/owed text, not by the amount.
+        expect(formatMoney(money(-49n, 'USD'), { locale: 'en' })).toBe('< $0.01');
+        expect(formatMoney(money(-1n, 'USD'), { locale: 'en', signDisplay: 'always' })).toBe(
+            '< $0.01',
+        );
+        expect(formatMoney(money(1n, 'USD'), { locale: 'en', signDisplay: 'exceptZero' })).toBe(
+            '< $0.01',
+        );
         expect(formatMoney(money(4999n, 'JPY'), { locale: 'en' })).toBe('< ¥1');
         expect(plain(formatMoney(money(4n, 'KWD'), { locale: 'en' }))).toBe('< KWD 0.001');
     });
@@ -80,7 +87,7 @@ describe('formatMoneyParts', () => {
     });
 
     test('prefixes "< " as a literal part below one minor unit', () => {
-        const parts = formatMoneyParts(money(40n, 'USD'), { locale: 'en' });
+        const parts = formatMoneyParts(money(-40n, 'USD'), { locale: 'en', signDisplay: 'always' });
 
         expect(parts[0]).toEqual({ type: 'literal', value: '< ' });
         expect(parts.map(part => part.value).join('')).toBe('< $0.01');
