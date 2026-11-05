@@ -260,7 +260,8 @@ const MAX_TEXT_LENGTH = 300;
 // GitHub rejects Issue bodies above 65,536 characters; PR steps share this budget across the release.
 const MAX_PR_TEXT_TOTAL = 40000;
 const QA_HEADING = /^QA(?:\s*\([^)]*\))?$/i;
-const NO_STEP = /^(?:none|n\/a|no qa(?: needed)?)(?:\s*[.!]?|\s*[(—–-].*)$/i;
+const NO_STEP = /^(?:none|n\/a|no qa(?: needed)?)(?:\s*[.!]?|\s*(?:[(—–,:;-]|=>).*)$/i;
+const THEMATIC_BREAK = /^\s*(?:[-*_]\s*){3,}$/;
 const LIST_ITEM = /^(\s*)(?:[-*+]|\d+[.)])\s+(.*)$/;
 
 // PR bodies and titles are free text that reaches the QA Issue: drop anything that could fake the QA
@@ -303,7 +304,7 @@ export function prQaSteps(body) {
     for (const raw of (body ?? '').split('\n')) {
         const line = raw.replace(/\r$/, '');
         if (fence) {
-            const close = /^\s{0,3}(`{3,}|~{3,})\s*$/.exec(line)?.[1];
+            const close = /^\s*(`{3,}|~{3,})\s*$/.exec(line)?.[1];
             if (close && close[0] === fence[0] && close.length >= fence.length) fence = null;
             continue;
         }
@@ -311,7 +312,8 @@ export function prQaSteps(body) {
             if (line.includes('-->')) comment = false;
             continue;
         }
-        const open = /^\s{0,3}(`{3,}|~{3,})/.exec(line)?.[1];
+        // Any indent: a fence nested in a list item sits at 4+ spaces.
+        const open = /^\s*(`{3,}|~{3,})/.exec(line)?.[1];
         if (open) {
             fence = open;
             parent = null;
@@ -327,7 +329,7 @@ export function prQaSteps(body) {
             parent = null;
             continue;
         }
-        if (!line.trim()) {
+        if (!line.trim() || THEMATIC_BREAK.test(line)) {
             parent = null;
             continue;
         }
@@ -460,6 +462,8 @@ export function buildChecklist({
         const pullSteps = [];
         for (const pull of [...linked.uiPulls].sort((a, b) => a.number - b.number)) {
             if (pull.title) titles.pulls[pull.number] = safeText(pull.title);
+            // The group heading costs about its title plus the label.
+            prTextBudget -= (titles.pulls[pull.number]?.length ?? 0) + 40;
             for (const item of prQaSteps(pull.body)) {
                 prTextBudget -= item.step.length + (item.expected?.length ?? 0) + 24;
                 if (prTextBudget < 0) {
