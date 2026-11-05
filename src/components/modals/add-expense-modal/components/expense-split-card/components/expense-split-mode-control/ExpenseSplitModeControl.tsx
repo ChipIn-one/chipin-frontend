@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
 import type { ExpenseSplitMode } from 'constants/chipin';
-import { selectSplitSummary } from 'store/expenseModalSelectors';
+import { selectAmountPrecision, selectSplitSummary } from 'store/expenseModalSelectors';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import { Amount } from 'basics';
@@ -22,6 +22,7 @@ const ExpenseSplitModeControl = () => {
         status,
         progressPercent,
         currency,
+        precision,
         splitMode,
         setSplitMode,
     } = useExpenseModalStore(
@@ -31,6 +32,7 @@ const ExpenseSplitModeControl = () => {
             return {
                 ...summary,
                 currency: state.currency,
+                precision: selectAmountPrecision(state),
                 splitMode: state.splitMode,
                 setSplitMode: state.setSplitMode,
             };
@@ -59,13 +61,13 @@ const ExpenseSplitModeControl = () => {
                         {t('expenses.modal.split.total')}
                     </Text>
                     <Text size="2" weight="bold" color={statusColor}>
-                        <Amount value={assignedAmount} tokenCode={currency} />
+                        <Amount value={assignedAmount} tokenCode={currency} precision={precision} />
                     </Text>
                     <Text size="2" color="gray">
                         {SPLIT_SUMMARY_SEPARATOR}
                     </Text>
                     <Text size="2" weight="bold" color="gray">
-                        <Amount value={totalAmount} tokenCode={currency} />
+                        <Amount value={totalAmount} tokenCode={currency} precision={precision} />
                     </Text>
                 </Flex>
             </Flex>

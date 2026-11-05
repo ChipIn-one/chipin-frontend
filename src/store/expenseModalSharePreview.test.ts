@@ -2,13 +2,19 @@
 // backend stores as `participantShares` for the same request: `distributeAmount`
 // (chipin-backend `features/ledger/shares/ShareDistribution.kt`) over AUTO weights '1', SHARES
 // weights or PERCENTAGE percentages in `participantIds` order, or the EXACT amounts as given.
-// `display` is what the form shows per member (`roundToMinor`, "< 0.01" below one minor unit).
-// These assertions must stay unchanged through 03-13/03-14 (spec 03 §6, row 6).
+// Inputs go only through public store actions (`initialize` + `set*`, or `initializeEdit` from an
+// activity snapshot for values the form cannot type, such as decimal percentages).
+// FROZEN through 03-13/03-14 (spec 03 §6, row 6): the `shares` and `feedback` expectations. Only
+// the imports, the setup helper and the display block may change there.
 import { beforeEach, expect, test } from 'vitest';
 
+import type { AppEvent } from 'api/activity.types';
+import type { SharingMode } from 'api/chipin.types';
+import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { EXPENSE_SPLIT_MODES, type ExpenseSplitMode } from 'constants/chipin';
 import { type Money, toUnits } from 'shared/money';
 
+import { mapActivityExpenseToModalState } from './expenseModalEditMapping';
 import {
     selectExpensePayload,
     selectExpenseSubmitFeedback,
@@ -16,7 +22,11 @@ import {
     selectSplitSummary,
     selectUserAmount,
 } from './expenseModalSelectors';
-import { type ExpenseParticipant, useExpenseModalStore } from './expenseModalStore';
+import {
+    type ExpenseModalSource,
+    type ExpenseParticipant,
+    useExpenseModalStore,
+} from './expenseModalStore';
 
 const A = { id: 'user-a', displayName: 'A', picture: null } satisfies ExpenseParticipant;
 const B = { id: 'user-b', displayName: 'B', picture: null } satisfies ExpenseParticipant;
@@ -36,6 +46,8 @@ interface PreviewCase {
     values?: string[];
     excluded?: string[];
     payer?: string;
+    /** Loaded through `initializeEdit` from an activity snapshot (group, payer A, no exclusions). */
+    edit?: true;
     /** Exact shares of the included members in request order, scale 4. */
     shares: string[];
     /** `selectUserAmount` per member, in `members` order. */
@@ -196,6 +208,7 @@ const CASES: PreviewCase[] = [
     },
     {
         name: 'percent 33.335/33.335/33.33 of 1',
+        edit: true,
         amount: '1',
         mode: E.PERCENT,
         values: ['33.335', '33.335', '33.33'],
@@ -206,6 +219,7 @@ const CASES: PreviewCase[] = [
     },
     {
         name: 'percent 0.07/0.07/99.86 of 0.01',
+        edit: true,
         amount: '0.01',
         mode: E.PERCENT,
         values: ['0.07', '0.07', '99.86'],
@@ -216,6 +230,7 @@ const CASES: PreviewCase[] = [
     },
     {
         name: 'percent 37.55/26.65/35.8 of 100 (float sum 99.999…)',
+        edit: true,
         amount: '100',
         mode: E.PERCENT,
         values: ['37.55', '26.65', '35.8'],
@@ -276,6 +291,7 @@ const CASES: PreviewCase[] = [
     },
     {
         name: 'percent 33.33/33.33/33.34 of 100',
+        edit: true,
         amount: '100',
         mode: E.PERCENT,
         values: ['33.33', '33.33', '33.34'],
@@ -306,6 +322,7 @@ const CASES: PreviewCase[] = [
     },
     {
         name: 'percent 10.1/20.2/69.7 of 1',
+        edit: true,
         amount: '1',
         mode: E.PERCENT,
         values: ['10.1', '20.2', '69.7'],
@@ -368,6 +385,7 @@ const CASES: PreviewCase[] = [
     },
     {
         name: 'exact 0.9991/0/0 of 1 (api precision)',
+        edit: true,
         amount: '1',
         mode: E.AMOUNTS,
         values: ['0.9991', '0', '0'],
@@ -497,54 +515,125 @@ const CASES: PreviewCase[] = [
     },
 ];
 
+type ExpenseActivityEvent = Extract<AppEvent, { subjectType: 'expense' }>;
+
+const toSharingMode = (item: PreviewCase, members: ExpenseParticipant[]): SharingMode => {
+    const values = Object.fromEntries(
+        members.map((user, index) => [user.id, Number(item.values?.[index] ?? '0')]),
+    );
+
+    switch (item.mode) {
+        case E.PERCENT:
+            return { type: 'PERCENTAGE', percentageShares: values };
+        case E.AMOUNTS:
+            return { type: 'EXACT', customShares: values };
+        case E.SHARES:
+            return { type: 'SHARES', shares: values };
+        case E.EQUAL:
+            return { type: 'AUTO' };
+    }
+};
+
+/** An activity snapshot of the expense, as the edit flow receives it. */
+const toExpenseEvent = (
+    item: PreviewCase,
+    members: ExpenseParticipant[],
+): ExpenseActivityEvent => ({
+    id: 'activity-1',
+    seq: 1,
+    domain: 'LEDGER',
+    action: ACTIVITY_ACTIONS.EXPENSE_CREATED,
+    actorUserId: A.id,
+    actorSnapshot: { displayName: A.displayName, picture: null },
+    subjectType: 'expense',
+    subjectId: 'entry-1',
+    groupId: 'group-1',
+    metadata: {
+        type: 'expense',
+        entryId: 'entry-1',
+        groupId: 'group-1',
+        groupName: 'Group',
+        description: 'Dinner',
+        amount: Number(item.amount),
+        currency: item.currency ?? 'USD',
+        category: 'food',
+        payerId: A.id,
+        payerDisplayName: A.displayName,
+        sharingMode: toSharingMode(item, members),
+        shares: members.map(user => ({
+            userId: user.id,
+            displayName: user.displayName,
+            shareAmount: 0,
+            currency: item.currency ?? 'USD',
+        })),
+    },
+    createdAt: 1_700_000_000,
+    parentActivityId: null,
+});
+
 const setUp = (item: PreviewCase): ExpenseParticipant[] => {
     const members = item.members ?? [A, B, C];
     const [self, ...others] = members;
     const store = useExpenseModalStore.getState();
-    const source = {
+    const base = {
         currentUser: self ?? null,
         defaultCurrency: item.currency ?? 'USD',
         defaultCategory: 'food',
         skipCategory: false,
     };
+    const groupSource: ExpenseModalSource = {
+        ...base,
+        context: 'group',
+        groups: [{ id: 'group-1', members }],
+        knownFriends: [],
+        defaultGroupId: 'group-1',
+    };
+
+    if (item.edit) {
+        const initialization = mapActivityExpenseToModalState({
+            parentEvent: toExpenseEvent(item, members),
+            childEvents: [],
+            source: groupSource,
+        });
+
+        if (!initialization) {
+            throw new Error(`No edit initialization for ${item.name}`);
+        }
+        store.initializeEdit(initialization);
+        // A change, so the edit is submittable and the feedback is about the split only.
+        useExpenseModalStore.getState().setDescription('Dinner (edited)');
+
+        return members;
+    }
 
     if (item.target === 'friends') {
         store.initialize({
-            ...source,
+            ...base,
             context: 'friends',
             groups: [],
             knownFriends: others,
             preferredFriendId: others[0]?.id,
         });
     } else {
-        store.initialize({
-            ...source,
-            context: 'group',
-            groups: [{ id: 'group-1', members }],
-            knownFriends: [],
-            defaultGroupId: 'group-1',
+        store.initialize(groupSource);
+    }
+
+    const actions = useExpenseModalStore.getState();
+
+    actions.setDescription('Dinner');
+    actions.setAmount(item.amount);
+    for (const userId of item.excluded ?? []) {
+        actions.setParticipantIncluded(userId, false);
+    }
+    actions.setSplitMode(item.mode);
+    if (item.mode !== E.EQUAL) {
+        members.forEach((user, index) => {
+            useExpenseModalStore.getState().setSplitValue(user.id, item.values?.[index] ?? '0');
         });
     }
-    store.setDescription('Dinner');
-    store.setAmount(item.amount);
-    store.setSplitMode(item.mode);
-
-    const values = Object.fromEntries(
-        members.map((user, index) => [user.id, item.values?.[index] ?? '0']),
-    );
-
-    useExpenseModalStore.setState(state => ({
-        ...state,
-        ...(item.mode === E.PERCENT
-            ? { percentShares: values, isPercentManuallyEdited: true }
-            : {}),
-        ...(item.mode === E.AMOUNTS ? { amountShares: values } : {}),
-        ...(item.mode === E.SHARES ? { shareWeights: values } : {}),
-        includedParticipantIds: Object.fromEntries(
-            members.map(user => [user.id, !(item.excluded ?? []).includes(user.id)]),
-        ),
-        ...(item.payer ? { paidById: item.payer } : {}),
-    }));
+    if (item.payer) {
+        useExpenseModalStore.getState().setPaidById(item.payer);
+    }
 
     return members;
 };
@@ -559,13 +648,24 @@ beforeEach(() => {
     useExpenseModalStore.getState().reset();
 });
 
+// FROZEN: unchanged through 03-13/03-14.
 test.each(CASES)('share preview: $name', item => {
+    setUp(item);
+    const state = useExpenseModalStore.getState();
+
+    expect(selectSharePreview(state).shares.map(({ share }) => toDecimal(share))).toEqual(
+        item.shares,
+    );
+    expect(selectExpenseSubmitFeedback(state)).toEqual(item.feedback);
+});
+
+// DISPLAY: the numbers the legacy `Amount` renders. Adaptable when `Amount` moves to
+// `formatMoneyParts` (spec 03 §4.4); the frozen block above does not depend on them.
+test.each(CASES)('share preview display: $name', item => {
     const members = setUp(item);
     const state = useExpenseModalStore.getState();
-    const preview = selectSharePreview(state);
     const summary = selectSplitSummary(state);
 
-    expect(preview.shares.map(({ share }) => toDecimal(share))).toEqual(item.shares);
     expect(members.map(user => selectUserAmount(state, user.id))).toEqual(item.display);
     expect({
         assigned: summary.assignedAmount,
@@ -574,7 +674,6 @@ test.each(CASES)('share preview: $name', item => {
         status: summary.status,
         progress: summary.progressPercent,
     }).toEqual(item.summary);
-    expect(selectExpenseSubmitFeedback(state)).toEqual(item.feedback);
 });
 
 test('a valid preview distributes exactly the total', () => {

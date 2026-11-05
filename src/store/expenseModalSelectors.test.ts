@@ -95,3 +95,34 @@ test('limits AMOUNTS input to the currency minor units', () => {
 
     expect(useExpenseModalStore.getState().amountShares[user.id]).toBe('5');
 });
+
+test('erases AMOUNTS digits after a switch to a currency with fewer minor units', () => {
+    initializeGroup('10');
+    const store = useExpenseModalStore.getState();
+    store.setSplitMode(EXPENSE_SPLIT_MODES.AMOUNTS);
+    store.setSplitValue(user.id, '1.25');
+    store.setCurrency('JPY');
+
+    for (const text of ['1.2', '1.', '1']) {
+        useExpenseModalStore.getState().setSplitValue(user.id, text);
+        expect(useExpenseModalStore.getState().amountShares[user.id]).toBe(text);
+    }
+    // Back at the JPY limit, decimals are not accepted again.
+    useExpenseModalStore.getState().setSplitValue(user.id, '1.5');
+    expect(useExpenseModalStore.getState().amountShares[user.id]).toBe('1');
+});
+
+test('erases an edit-loaded scale-4 AMOUNTS value digit by digit', () => {
+    initializeGroup('1');
+    useExpenseModalStore.getState().setSplitMode(EXPENSE_SPLIT_MODES.AMOUNTS);
+    useExpenseModalStore.setState({ amountShares: { [user.id]: '0.9991', [friend.id]: '0' } });
+
+    for (const text of ['0.999', '0.99', '0.9']) {
+        useExpenseModalStore.getState().setSplitValue(user.id, text);
+        expect(useExpenseModalStore.getState().amountShares[user.id]).toBe(text);
+    }
+    // Within USD cents again: typing up to two decimals works, a third is refused.
+    useExpenseModalStore.getState().setSplitValue(user.id, '0.99');
+    useExpenseModalStore.getState().setSplitValue(user.id, '0.999');
+    expect(useExpenseModalStore.getState().amountShares[user.id]).toBe('0.99');
+});

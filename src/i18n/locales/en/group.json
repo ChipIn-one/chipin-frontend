@@ -153,6 +153,7 @@
                 "amountsUnder": "Allocated <current/> of <required/>. Add the remaining <difference/> so the amounts equal the expense total.",
                 "amountsOver": "Allocated <current/> of <required/>. Remove the excess <difference/> so the amounts equal the expense total.",
                 "shares": "Give at least one participant a positive share. The total share weight must be greater than zero.",
+                "invalidValue": "A split value is not a valid number. Correct it to continue.",
                 "noDebt": "This expense creates no debt. Assign a positive amount to the person who did not pay.",
                 "unchanged": "Make a change to save this expense."
             },

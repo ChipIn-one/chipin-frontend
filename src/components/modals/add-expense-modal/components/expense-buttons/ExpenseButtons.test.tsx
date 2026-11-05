@@ -305,3 +305,22 @@ test('keeps cancellation available while input is invalid', () => {
         expect(onClose).toHaveBeenCalledOnce();
     });
 });
+
+test('EXP-064 names a split value the backend cannot read', async () => {
+    useExpenseModalStore.setState({
+        amount: '10',
+        splitMode: EXPENSE_SPLIT_MODES.AMOUNTS,
+        amountShares: { [currentUser.id]: '1e3', [friend.id]: '0' },
+    });
+    render(<ExpenseButtons onClose={vi.fn()} />);
+
+    expect(screen.getByRole('status').textContent).toBe(
+        'A split value is not a valid number. Correct it to continue.',
+    );
+    expect(screen.getByRole('button', { name: 'Add expense' })).toHaveProperty('disabled', true);
+
+    await act(() => i18n.changeLanguage('ru'));
+    const russian = i18n.t('group:expenses.modal.submitFeedback.invalidValue');
+    expect(russian).not.toBe('A split value is not a valid number. Correct it to continue.');
+    expect(screen.getByRole('status').textContent).toBe(russian);
+});

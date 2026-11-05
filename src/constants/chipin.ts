@@ -30,6 +30,7 @@ export const EXPENSE_SUBMIT_BLOCKERS = {
     AMOUNTS_UNDER: 'amountsUnder',
     AMOUNTS_OVER: 'amountsOver',
     SHARES: 'shares',
+    INVALID_VALUE: 'invalidValue',
     NO_DEBT: 'noDebt',
     UNCHANGED: 'unchanged',
 } as const;

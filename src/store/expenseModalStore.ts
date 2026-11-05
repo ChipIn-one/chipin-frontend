@@ -19,8 +19,8 @@ import {
 import {
     selectAllUsersSelected,
     selectAmountShare,
-    selectCurrencyCode,
     selectIncludedUsers,
+    selectInputFractionDigits,
     selectUsers,
 } from './expenseModalSelectors';
 import type { ExpenseModalOriginalState } from './expenseModalUpdate';
@@ -518,8 +518,13 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
         }
 
         if (splitMode === EXPENSE_SPLIT_MODES.AMOUNTS) {
-            // Input is limited to the currency minor units (spec 03 §4.2 `parseMoneyInput`).
-            const parsedValue = parseAmountInput(value, minorUnits(selectCurrencyCode(get())));
+            // Input is limited to the currency minor units (spec 03 §4.2 `parseMoneyInput`), or to
+            // the digits the current text already has, so an edit-loaded value can be erased.
+            const draft = get();
+            const parsedValue = parseAmountInput(
+                value,
+                selectInputFractionDigits(draft, draft.amountShares[participantId]),
+            );
 
             if (parsedValue === null) {
                 return;

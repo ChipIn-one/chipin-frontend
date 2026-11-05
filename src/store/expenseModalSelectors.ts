@@ -15,6 +15,8 @@ import {
     fromUnits,
     isZero,
     LEDGER_SCALE,
+    type MinorUnits,
+    minorUnits,
     type Money,
     roundToMinor,
     sign,
@@ -136,7 +138,10 @@ const parseScaled = (text: string | undefined, scale: number): bigint | null => 
     return BigInt(`${integer || '0'}${fraction.padEnd(scale, '0')}`);
 };
 
-/** Unparseable or empty input counts as zero, as `Number(value) || 0` did. */
+/** Empty input (a cleared field) counts as zero. */
+const isBlank = (text: string | undefined): boolean => (text ?? '').trim() === '';
+
+/** Zero when empty or unparseable; callers that validate check `parseScaled` themselves. */
 const scaledOrZero = (text: string | undefined, scale: number): bigint =>
     parseScaled(text, scale) ?? 0n;
 
@@ -149,18 +154,23 @@ const scaledToText = (value: bigint, scale: number): string => {
         : `${value / unit}.${(value % unit).toString().padStart(scale, '0')}`;
 };
 
-/** A plain number for counters and percentages in feedback (not money). */
+/**
+ * A plain number from the decimal text: one rounding, the same double `Number(text)` gives, so a
+ * payload literal is unchanged (never `Number(units) / 10 ** scale`, which rounds twice).
+ */
 const scaledToNumber = (value: bigint, scale: number = LEDGER_SCALE): number =>
-    Number(value) / 10 ** scale;
+    Number(scaledToText(value, scale));
 
 const percentTotal = (scale: number): bigint => 100n * 10n ** BigInt(scale);
 
 const absValue = (value: bigint): bigint => (value < 0n ? -value : value);
 
 /**
- * A number for the legacy number-based `Amount`, following `formatMoney` (spec 03 §4.2, §4.5): the
- * amount rounded to the currency minor units; a non-zero amount that rounds to zero stays exact,
- * so `Amount` shows it as "< 0.01". Display only, until `Amount` takes `formatMoneyParts`.
+ * A number for the legacy number-based `Amount` (rendered with `precision = minorUnits`): the
+ * amount rounded to the currency minor units (`roundToMinor`). A non-zero amount that rounds to
+ * zero is passed exactly, so it is not shown as a settled 0: `Amount` renders it as "< 0.01 USD"
+ * ("< 1 JPY"), its own too-small notation. Display only; `formatMoney`'s "< $0.01" comes when
+ * `Amount` moves to `formatMoneyParts` (spec 03 §4.4).
  */
 const toDisplayNumber = (money: Money): number => {
     const rounded = roundToMinor(money);
@@ -177,6 +187,19 @@ export const selectCurrencyCode = (state: ExpenseModalState): CurrencyCode => {
     }
 };
 
+/** `precision` for the legacy `Amount` that renders preview numbers: the currency minor units. */
+export const selectAmountPrecision = (state: ExpenseModalState): MinorUnits =>
+    minorUnits(selectCurrencyCode(state));
+
+/**
+ * Fraction digits a money input accepts: the currency minor units, or more while `current` already
+ * has more (an edit-loaded scale-4 value, a currency switch), so such a value can still be erased.
+ */
+export const selectInputFractionDigits = (
+    state: ExpenseModalState,
+    current: string | undefined,
+): number => Math.max(minorUnits(selectCurrencyCode(state)), fractionDigits(current));
+
 /** The EXACT-mode amount entered for `userId` (zero when empty or not a decimal). */
 export const selectAmountShare = (state: ExpenseModalState, userId: string): Money =>
     fromUnits(scaledOrZero(state.amountShares[userId], LEDGER_SCALE), selectCurrencyCode(state));
@@ -191,6 +214,8 @@ interface SplitValues {
     readonly scale: number;
     readonly byUserId: ReadonlyMap<string, bigint>;
     readonly total: bigint;
+    /** Some non-empty value is not a decimal the backend accepts ("1e3", ".", > 4 decimals). */
+    readonly hasInvalid: boolean;
 }
 
 const getSplitValues = (
@@ -220,15 +245,18 @@ const getSplitValues = (
 
     const byUserId = new Map<string, bigint>();
     let total = 0n;
+    let hasInvalid = false;
 
     for (const user of includedUsers) {
-        const value = scaledOrZero(texts[user.id], scale);
+        const text = texts[user.id];
+        const value = parseScaled(text, scale);
 
-        byUserId.set(user.id, value);
-        total += value;
+        hasInvalid ||= value === null && !isBlank(text);
+        byUserId.set(user.id, value ?? 0n);
+        total += value ?? 0n;
     }
 
-    return { scale, byUserId, total };
+    return { scale, byUserId, total, hasInvalid };
 };
 
 /** `money × percent / 100`, floored to a ledger unit: a percentage split that is not 100 % in total. */
@@ -324,6 +352,10 @@ const getAssigned = (
 };
 
 const isSplitValid = (state: ExpenseModalStore, total: Money, values: SplitValues): boolean => {
+    if (values.hasInvalid) {
+        return false;
+    }
+
     switch (state.splitMode) {
         case EXPENSE_SPLIT_MODES.EQUAL:
             return true;
@@ -612,7 +644,11 @@ export const selectExpenseSubmitFeedback = (
     }
 
     if (!split.isValid) {
-        const { scale, total } = split.values;
+        const { scale, total, hasInvalid } = split.values;
+
+        if (hasInvalid) {
+            return { reason: EXPENSE_SUBMIT_BLOCKERS.INVALID_VALUE };
+        }
 
         if (state.splitMode === EXPENSE_SPLIT_MODES.PERCENT) {
             return {
@@ -652,31 +688,16 @@ export const selectExpenseSubmitFeedback = (
 
 const getPayloadParticipants = (
     state: ExpenseModalStore,
-    users: ExpenseParticipant[],
+    split: ReturnType<typeof getSplit>,
 ): { participantIds: string[]; sharingMode: SharingMode } => {
-    const participantIds: string[] = [];
-    const values: Record<string, number> = {};
-    let sourceValues: Record<string, string> | undefined;
-
-    switch (state.splitMode) {
-        case EXPENSE_SPLIT_MODES.PERCENT:
-            sourceValues = state.percentShares;
-            break;
-        case EXPENSE_SPLIT_MODES.AMOUNTS:
-            sourceValues = state.amountShares;
-            break;
-        case EXPENSE_SPLIT_MODES.SHARES:
-            sourceValues = state.shareWeights;
-            break;
-    }
-
-    for (const user of users) {
-        participantIds.push(user.id);
-
-        if (sourceValues) {
-            values[user.id] = Number(sourceValues[user.id] ?? 0);
-        }
-    }
+    const participantIds = split.includedUsers.map(user => user.id);
+    // The same parsed integers the preview split, as decimal-text numbers (no `Number(text)`).
+    const values = Object.fromEntries(
+        participantIds.map(userId => [
+            userId,
+            scaledToNumber(split.values.byUserId.get(userId) ?? 0n, split.values.scale),
+        ]),
+    );
 
     switch (state.splitMode) {
         case EXPENSE_SPLIT_MODES.PERCENT:
@@ -703,7 +724,7 @@ export const selectExpensePayload = (
         return null;
     }
 
-    const { participantIds, sharingMode } = getPayloadParticipants(state, split.includedUsers);
+    const { participantIds, sharingMode } = getPayloadParticipants(state, split);
 
     return {
         ...(state.targetMode === 'group' ? { groupId: state.groupId } : {}),
