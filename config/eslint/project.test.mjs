@@ -279,12 +279,14 @@ describe('money-wire-conversion (spec 03 §4.3, C1-11) merged with the other imp
     const source = [
         "import { moneyFromWire, moneyToWire, sum } from 'shared/money';",
         "import { moneyFromWire as read } from '../../shared/money';",
+        "import { moneyToWire as write } from '../../../shared/money/index';",
+        "import { moneyFromWire as deep } from '../../../shared/money/wireMoney';",
         "import { split } from 'shared/money/split';",
         "import { Users } from 'lucide-react';",
-        'export { moneyFromWire, moneyToWire, read, split, sum, Users };',
+        'export { deep, moneyFromWire, moneyToWire, read, split, sum, Users, write };',
     ].join('\n');
     const OTHERS = ['money-deep-import', 'lucide-icon-names'];
-    const WIRE = ['money-wire-conversion', 'money-wire-conversion', 'money-wire-conversion'];
+    const WIRE = Array(5).fill('money-wire-conversion');
 
     test.each([
         ['src/shared/api/client.ts', [...WIRE, ...OTHERS]],

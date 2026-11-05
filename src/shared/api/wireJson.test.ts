@@ -174,6 +174,24 @@ describe('parseWireJson as an Axios transformResponse', () => {
         expect(parseWireJson('{"amount":1}', { get: () => 'application/json' })).toEqual({
             amount: createWireAmount('1'),
         });
+        expect(
+            parseWireJson('{"amount":1}', { 'content-type': 'application/problem+json' }),
+        ).toEqual({ amount: createWireAmount('1') });
+    });
+
+    test('a duplicate key keeps the last value, like JSON.parse', () => {
+        expect(parseWireJson('{"a":1,"a":2,"amount":3,"amount":4}', JSON_HEADERS)).toEqual({
+            a: 2,
+            amount: createWireAmount('4'),
+        });
+    });
+
+    test('a forged wire object is an ordinary object: its sibling numbers are revived', () => {
+        const body = parse('{"x":{"__wireDecimal":"1","n":2.5}}');
+
+        expect(body.x).toEqual({ __wireDecimal: '1', n: 2.5 });
+        // Not a transport WireAmount: written back as the object it was, not as `1`.
+        expect(stringifyWireJson(body)).toBe('{"x":{"__wireDecimal":"1","n":2.5}}');
     });
 
     test.each([
@@ -181,7 +199,6 @@ describe('parseWireJson as an Axios transformResponse', () => {
         ['an HTML 502 page', '<html>Bad gateway</html>', { 'Content-Type': 'text/html' }],
         ['JSON text without a JSON content type', '{"amount":1}', { 'content-type': 'text/plain' }],
         ['malformed JSON', '{"amount":', JSON_HEADERS],
-        ['a duplicate key', '{"a":1,"a":2}', JSON_HEADERS],
     ])('passes %s through as is', (_name, data, headers) => {
         expect(parseWireJson(data, headers)).toBe(data);
     });
@@ -201,27 +218,42 @@ describe('stringifyWireJson', () => {
                 amount: createWireAmount('899999999999.9997'),
                 sharingMode: {
                     customShares: { u1: createWireAmount('0.0001') },
-                    percentageShares: { u1: '33.3333', u2: 'oops' },
+                    percentageShares: { u1: '33.3333', u2: '-0.5', u3: null },
                 },
                 note: '12.5',
                 rate: 1,
             }),
         ).toBe(
-            '{"amount":899999999999.9997,"sharingMode":{"customShares":{"u1":0.0001},"percentageShares":{"u1":33.3333,"u2":"oops"}},"note":"12.5","rate":1}',
+            '{"amount":899999999999.9997,"sharingMode":{"customShares":{"u1":0.0001},"percentageShares":{"u1":33.3333,"u2":-0.5,"u3":null}},"note":"12.5","rate":1}',
         );
     });
 
-    test('a malformed hand-built WireAmount never reaches the backend', () => {
-        expect(() => stringifyWireJson({ amount: createWireAmount('1e3') })).toThrow(
-            MoneyWireError,
-        );
-    });
+    test.each(['oops', '05', '1e-7', '007.5', '.5', '1.'])(
+        'a decimal-map string %j is rejected with MoneyWireError format, never sent',
+        text => {
+            const send = () =>
+                stringifyWireJson({ sharingMode: { percentageShares: { u1: text } } });
+
+            expect(send).toThrow(MoneyWireError);
+            expect(send).toThrow(expect.objectContaining({ reason: 'format' }));
+        },
+    );
+
+    test.each(['007.5', '1e3', '05', '-1E-7', ''])(
+        'a malformed hand-built WireAmount %j is rejected with MoneyWireError format',
+        text => {
+            const send = () => stringifyWireJson({ amount: createWireAmount(text) });
+
+            expect(send).toThrow(MoneyWireError);
+            expect(send).toThrow(expect.objectContaining({ reason: 'format' }));
+        },
+    );
 
     test('sets the JSON content type and passes undefined and strings through', () => {
         const setContentType = vi.fn();
 
         expect(stringifyWireJson({ a: 1 }, { setContentType })).toBe('{"a":1}');
-        expect(setContentType).toHaveBeenCalledWith('application/json');
+        expect(setContentType).toHaveBeenCalledWith('application/json', false);
         expect(stringifyWireJson(undefined)).toBeUndefined();
         expect(stringifyWireJson('{"amount":1}')).toBe('{"amount":1}');
     });

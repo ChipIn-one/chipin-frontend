@@ -1,7 +1,7 @@
 import i18n from 'i18next';
 
-import type { ApiErrorPayload } from 'shared/lib/apiErrorPayload';
-import { getApiErrorPayload } from 'shared/lib/apiErrorPayload';
+import type { ApiErrorPayload } from 'shared/lib/apiError';
+import { ApiError, getApiErrorPayload } from 'shared/lib/apiError';
 
 export type { ApiErrorPayload };
 export { getApiErrorPayload };
@@ -70,8 +70,11 @@ export const normalizeApiError = (error: unknown): RequestError => {
     const defaultMessage = i18n.t('toasts:common.requestFailed', {
         defaultValue: 'Request failed',
     });
-    const fallbackMessage =
-        response === undefined ? (getErrorMessage(error) ?? defaultMessage) : defaultMessage;
+    // An `ApiError` is a backend response too: its own message is not user-facing.
+    const hasResponse = response !== undefined || error instanceof ApiError;
+    const fallbackMessage = hasResponse
+        ? defaultMessage
+        : (getErrorMessage(error) ?? defaultMessage);
 
     return {
         ...(payload ?? {}),
@@ -84,6 +87,9 @@ export const isUnauthorizedApiError = (error: unknown): boolean => {
 };
 
 export const getApiErrorStatus = (error: unknown): number | undefined => {
+    if (error instanceof ApiError) {
+        return error.status;
+    }
     if (!isRecord(error) || error.isAxiosError !== true) {
         return undefined;
     }

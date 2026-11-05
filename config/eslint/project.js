@@ -121,7 +121,9 @@ export const projectImports = ({ appDir = '.' } = {}) => [
         // itself and every test.
         id: 'money-wire-conversion',
         pattern: {
-            regex: '^(?:shared/money|(?:\\.\\.?/)+(?:[^/]+/)*money)$',
+            // The alias and any relative path to the money folder, with or without a subpath
+            // (`../../shared/money/index`, `../money/wireMoney`).
+            regex: '^(?:shared/money|(?:\\.\\.?/)+(?:[^/]+/)*money)(?:/.*)?$',
             importNames: ['moneyFromWire', 'moneyToWire'],
         },
         ignores: [

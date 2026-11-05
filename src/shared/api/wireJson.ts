@@ -15,9 +15,13 @@ const MONEY = new Set<string>(MONEY_FIELDS);
 const MONEY_MAP = new Set<string>(MONEY_MAP_FIELDS);
 const DECIMAL_MAP = new Set<string>(DECIMAL_MAP_FIELDS);
 
-// The backend accepts only a plain decimal literal (no exponent) in a request body.
-const PLAIN_DECIMAL = /^-?\d+(?:\.\d+)?$/;
-const JSON_CONTENT_TYPE = /^application\/json\s*(?:;|$)/i;
+// The backend accepts only a plain JSON decimal literal (no exponent, no leading zeros).
+const PLAIN_DECIMAL = /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/;
+const JSON_CONTENT_TYPE = /^application\/(?:[\w.-]+\+)?json\s*(?:;|$)/i;
+
+// Only a real `WireAmount` (frozen by `createWireAmount`) counts as one: a forged wire object
+// `{"__wireDecimal":"1","n":2.5}` is an ordinary object whose numbers are revived as usual.
+const isRealWireAmount = (value: unknown): boolean => isWireAmount(value) && Object.isFrozen(value);
 
 type Container = Record<string, unknown> | unknown[];
 
@@ -26,7 +30,7 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
     value !== null &&
     !Array.isArray(value) &&
     !isLosslessNumber(value) &&
-    !isWireAmount(value);
+    !isRealWireAmount(value);
 
 /**
  * The value of one number literal, decided by its own key and its parent's key (the registry is
@@ -115,18 +119,19 @@ export function parseWireJson(data: unknown, headers?: unknown): unknown {
         return data;
     }
     try {
-        return parse(data, reviver);
+        // A duplicate key keeps the last value, like `JSON.parse`.
+        return parse(data, reviver, { onDuplicateKey: ({ newValue }) => newValue });
     } catch {
         return data;
     }
 }
 
 const wireNumberStringifier = {
-    test: isWireAmount,
+    test: isRealWireAmount,
     stringify: (value: unknown): string => {
         const text = isWireAmount(value) ? wireAmountText(value) : '';
 
-        // A `WireAmount` built by hand with a malformed literal never reaches the backend.
+        // A hand-built `WireAmount` with a malformed literal (`'007.5'`, `'1e3'`) is never sent.
         if (!PLAIN_DECIMAL.test(text)) {
             throw new MoneyWireError('format');
         }
@@ -135,7 +140,15 @@ const wireNumberStringifier = {
 };
 
 // Outgoing decimal maps (`percentageShares`, `shares`, `rates`) hold `WireDecimal` strings; the
-// backend expects JSON numbers there, so a plain decimal string is written as a number literal.
+// backend expects JSON numbers there, so each string is written as a number literal, and a
+// string that is not a plain decimal is rejected (`MoneyWireError('format')`), never sent.
+const decimalLiteral = (text: string): LosslessNumber => {
+    if (!PLAIN_DECIMAL.test(text)) {
+        throw new MoneyWireError('format');
+    }
+    return new LosslessNumber(text);
+};
+
 const replacer = (key: string, value: unknown): unknown => {
     if (!DECIMAL_MAP.has(key) || !isPlainObject(value)) {
         return value;
@@ -143,28 +156,33 @@ const replacer = (key: string, value: unknown): unknown => {
     return Object.fromEntries(
         Object.entries(value).map(([mapKey, item]) => [
             mapKey,
-            typeof item === 'string' && PLAIN_DECIMAL.test(item) ? new LosslessNumber(item) : item,
+            typeof item === 'string' ? decimalLiteral(item) : item,
         ]),
     );
 };
 
-const hasSetContentType = (headers: unknown): headers is { setContentType: (v: string) => void } =>
+const hasSetContentType = (
+    headers: unknown,
+): headers is { setContentType: (value: string, rewrite: boolean) => void } =>
     typeof headers === 'object' &&
     headers !== null &&
     'setContentType' in headers &&
     typeof headers.setContentType === 'function';
 
 /**
- * Axios `transformRequest` for JSON bodies: a `WireAmount` is written as its decimal literal (no
- * exponent, no double). `undefined` and strings (an Axios retry of an already written body) are
- * passed through; `api()` never uses this for a multipart body.
+ * Writes a JSON body: a `WireAmount` is written as its decimal literal (no exponent, no double).
+ * Also the Axios `transformRequest`: `undefined` and an already written string (`api()` writes the
+ * body before Axios; an interceptor retry resends it) pass through; never used for multipart.
  */
 export function stringifyWireJson(data: unknown, headers?: unknown): unknown {
-    if (data === undefined || typeof data === 'string') {
+    if (data === undefined) {
         return data;
     }
     if (hasSetContentType(headers)) {
-        headers.setContentType('application/json');
+        headers.setContentType('application/json', false);
+    }
+    if (typeof data === 'string') {
+        return data;
     }
     return stringify(data, replacer, undefined, [wireNumberStringifier]);
 }

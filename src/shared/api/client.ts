@@ -7,17 +7,28 @@ import type { AxiosProgressEvent, AxiosRequestConfig } from 'axios';
 import { isAxiosError } from 'axios';
 
 import type { paths } from 'shared/api/generated/schema';
-import { getApiErrorPayload } from 'shared/lib/apiErrorPayload';
+import { ApiError, getApiErrorPayload } from 'shared/lib/apiError';
 
 import { apiInstance } from './http';
 import { encodePathSegment, InvalidPathSegmentError } from './pathSegment';
 import { parseWireJson, stringifyWireJson } from './wireJson';
 
-export { InvalidPathSegmentError };
+export { ApiError, InvalidPathSegmentError };
 
 export type Method = 'get' | 'put' | 'post' | 'delete' | 'patch';
 
-export type Op<P extends keyof paths, M extends Method & keyof paths[P]> = NonNullable<paths[P][M]>;
+/** The methods a path really defines (openapi-typescript writes `put?: never` for the others). */
+export type MethodOf<P extends keyof paths> = {
+    [K in Method]: K extends keyof paths[P]
+        ? [NonNullable<paths[P][K]>] extends [never]
+            ? never
+            : K
+        : never;
+}[Method];
+
+export type Op<P extends keyof paths, M extends MethodOf<P>> = NonNullable<
+    paths[P][M & keyof paths[P]]
+>;
 
 type Parameters<O> = O extends { parameters: infer X } ? X : never;
 type Part<O, K extends string> = Parameters<O> extends { [Q in K]?: infer X } ? X : never;
@@ -48,48 +59,54 @@ export type Success<O> = O extends { responses: infer R }
           : void
     : void;
 
-export interface ApiOptions<O> {
-    params?: PathParams<O>;
-    query?: Query<O>;
-    body?: Body<O>;
+// A part is required exactly when the operation requires it (`path: {...}`, `requestBody: {...}`).
+type ParamsPart<O> = Parameters<O> extends { path: infer X } ? { params: X } : { params?: never };
+type QueryPart<O> = Parameters<O> extends { query: infer X } ? { query: X } : { query?: Query<O> };
+type BodyPart<O> = O extends { requestBody: unknown } ? { body: Body<O> } : { body?: Body<O> };
+type IsRequired<O> =
+    Parameters<O> extends { path: unknown }
+        ? true
+        : Parameters<O> extends { query: unknown }
+          ? true
+          : O extends { requestBody: unknown }
+            ? true
+            : false;
+
+export type ApiOptions<O> = ParamsPart<O> &
+    QueryPart<O> &
+    BodyPart<O> & {
+        headers?: Record<string, string>;
+        signal?: AbortSignal;
+        onUploadProgress?: (event: AxiosProgressEvent) => void;
+    };
+
+/** `opts` is required when the operation has a required path param, query or body. */
+export type ApiArgs<O> =
+    IsRequired<O> extends true ? [opts: ApiOptions<O>] : [opts?: ApiOptions<O>];
+
+/** A 2xx response whose body is still text: it was not valid JSON (every 2xx body is JSON). */
+export class ApiResponseFormatError extends Error {
+    override readonly name = 'ApiResponseFormatError';
+    readonly status: number;
+
+    constructor(status: number) {
+        super(`API response with status ${status} is not valid JSON`);
+        this.status = status;
+    }
+}
+
+// The runtime view of the options; the public types above have already checked them.
+interface LooseOptions {
+    params?: unknown;
+    query?: unknown;
+    body?: unknown;
     headers?: Record<string, string>;
     signal?: AbortSignal;
     onUploadProgress?: (event: AxiosProgressEvent) => void;
 }
 
-/** A backend error response. `details` and `current` keep the wire shape (`WireAmount` money). */
-export class ApiError extends Error {
-    override readonly name = 'ApiError';
-    readonly status: number;
-    readonly code: string | undefined;
-    readonly details: Record<string, unknown> | undefined;
-    /** Only for a 409 `LEDGER.VERSION_CONFLICT`: the body's `current` (zod schema: BE-03-1). */
-    readonly current?: unknown;
-    /** The Axios error (the ES2022 `cause`, which the target lib does not type yet). */
-    readonly cause: unknown;
-
-    constructor(status: number, error: unknown) {
-        super(`API request failed with status ${status}`);
-        this.cause = error;
-        const payload = getApiErrorPayload(error);
-
-        this.status = status;
-        this.code = payload?.code;
-        this.details = payload?.details;
-
-        const data: unknown = isAxiosError(error) ? error.response?.data : undefined;
-
-        if (
-            status === 409 &&
-            payload?.code === 'LEDGER.VERSION_CONFLICT' &&
-            typeof data === 'object' &&
-            data !== null &&
-            'current' in data
-        ) {
-            this.current = data.current;
-        }
-    }
-}
+const isLooseOptions = (value: unknown): value is LooseOptions =>
+    typeof value === 'object' && value !== null;
 
 const PATH_PARAM = /\{([^}]+)\}/g;
 const MULTIPART_HEADERS = { 'Content-Type': 'multipart/form-data' };
@@ -97,36 +114,63 @@ const MULTIPART_HEADERS = { 'Content-Type': 'multipart/form-data' };
 const buildPath = (path: string, params: unknown): string =>
     path.replace(PATH_PARAM, (_match, name: string) => {
         const value: unknown =
-            typeof params === 'object' && params !== null ? Reflect.get(params, name) : undefined;
+            typeof params === 'object' &&
+            params !== null &&
+            Object.prototype.hasOwnProperty.call(params, name)
+                ? Reflect.get(params, name)
+                : undefined;
 
-        // A missing or non-scalar value must not become the segment "undefined".
-        if (typeof value !== 'string' && typeof value !== 'number') {
-            throw new InvalidPathSegmentError();
+        // Only a string or a safe integer; a missing value must not become "undefined".
+        if (typeof value === 'string') {
+            return encodePathSegment(value);
         }
-        return encodePathSegment(String(value));
+        if (typeof value === 'number' && Number.isSafeInteger(value)) {
+            return encodePathSegment(String(value));
+        }
+        throw new InvalidPathSegmentError();
     });
 
-const toApiError = (error: unknown): unknown =>
-    isAxiosError(error) && error.response ? new ApiError(error.response.status, error) : error;
+const toApiError = (error: unknown): unknown => {
+    if (!isAxiosError(error) || !error.response) {
+        return error;
+    }
+    const { status } = error.response;
+    const data: unknown = error.response.data;
+    const payload = getApiErrorPayload(error);
+    const current: unknown =
+        status === 409 &&
+        payload?.code === 'LEDGER.VERSION_CONFLICT' &&
+        typeof data === 'object' &&
+        data !== null &&
+        'current' in data
+            ? data.current
+            : undefined;
+
+    return new ApiError({ status, payload, current, cause: error });
+};
 
 /**
  * Calls `method path` with typed params, query, body and response. An invalid `{param}` gives a
- * rejected `InvalidPathSegmentError` (no request); an HTTP error response gives `ApiError`;
- * network errors and cancellations are rejected as Axios gives them.
+ * rejected `InvalidPathSegmentError` (no request); an HTTP error response gives `ApiError`; a 2xx
+ * body that is not JSON gives `ApiResponseFormatError`; network errors and cancellations are
+ * rejected as Axios gives them.
  */
-export async function api<P extends keyof paths, M extends Method & keyof paths[P]>(
+export async function api<P extends keyof paths, M extends MethodOf<P>>(
     method: M,
     path: P,
-    opts: ApiOptions<Op<P, M>> = {},
+    ...args: ApiArgs<Op<P, M>>
 ): Promise<Success<Op<P, M>>> {
+    const [first]: readonly unknown[] = args;
+    const opts: LooseOptions = isLooseOptions(first) ? first : {};
     const url = buildPath(path, opts.params);
-    const body: unknown = opts.body;
-    const isMultipart = body instanceof FormData;
+    const isMultipart = opts.body instanceof FormData;
     const config: AxiosRequestConfig = {
         method,
         url,
         params: opts.query,
-        data: body,
+        // Written here, before Axios: its config merge deep-copies a plain-object body, which would
+        // lose the frozen `WireAmount` marks. The transform then only sets the content type.
+        data: isMultipart ? opts.body : stringifyWireJson(opts.body),
         // Like the legacy uploads (usersApi/groupsApi): the multipart header with the Axios
         // default request transform; a caller-supplied header wins.
         headers: isMultipart ? { ...MULTIPART_HEADERS, ...opts.headers } : opts.headers,
@@ -136,12 +180,17 @@ export async function api<P extends keyof paths, M extends Method & keyof paths[
         // A multipart upload keeps the Axios default request transform.
         ...(isMultipart ? {} : { transformRequest: [stringifyWireJson] }),
     };
+    let response;
 
     try {
-        const response = await apiInstance.request<Success<Op<P, M>>>(config);
-
-        return response.data;
+        response = await apiInstance.request<Success<Op<P, M>>>(config);
     } catch (error) {
         throw toApiError(error);
     }
+    const data: unknown = response.data;
+
+    if (typeof data === 'string' && data !== '') {
+        throw new ApiResponseFormatError(response.status);
+    }
+    return response.data;
 }

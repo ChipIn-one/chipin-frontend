@@ -1,17 +1,43 @@
 import type { AxiosAdapter, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { AxiosError, AxiosHeaders } from 'axios';
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { createWireAmount, currencyCode, isWireAmount, moneyFromWire } from 'shared/money';
 import { TEST_INVITE_TOKEN } from 'test/fixtures/inviteToken';
 
 import type { Body, Op } from './client';
-import { api, ApiError, InvalidPathSegmentError } from './client';
-import { apiInstance } from './http';
+import { api, ApiError, ApiResponseFormatError, InvalidPathSegmentError } from './client';
+import { apiInstance, initChipInApiInterceptors } from './http';
 import { encodePathSegment } from './pathSegment';
 import { parseWireJson, stringifyWireJson } from './wireJson';
 
 vi.mock('@sentry/react', () => ({ captureMessage: vi.fn() }));
+
+// Used only by the interceptor cases at the end (the interceptors are installed there).
+const auth = vi.hoisted(() => {
+    const state = { token: 'access-token' };
+
+    return {
+        state,
+        prepareAuthRequest: vi.fn(() => Promise.resolve(state.token)),
+        refreshAuthSession: vi.fn(() => {
+            state.token = 'next-access-token';
+            return Promise.resolve(state.token);
+        }),
+        checkBackendHealth: vi.fn(() => Promise.resolve()),
+    };
+});
+
+vi.mock('helpers/authSession', () => ({
+    getAuthSessionVersion: () => 1,
+    hasAuthAccessTokenRotated: () => false,
+    isAuthSessionCurrent: () => true,
+    isAuthSessionSignedOut: () => false,
+    prepareAuthRequest: auth.prepareAuthRequest,
+    refreshAuthSession: auth.refreshAuthSession,
+}));
+
+vi.mock('api/healthApi', () => ({ checkBackendHealth: auth.checkBackendHealth }));
 
 const UUID = '11111111-1111-1111-1111-111111111111';
 const USD = currencyCode('USD');
@@ -102,6 +128,26 @@ describe('{param} substitution through encodePathSegment (cases of api/apiPath.t
         expect(adapter).not.toHaveBeenCalled();
     });
 
+    test('a safe integer param is accepted; other numbers and inherited keys are rejected', async () => {
+        await api('get', '/groups/{groupId}/activities', {
+            params: { groupId: 42 } as unknown as { groupId: string },
+        });
+        expect(lastRequest().url).toBe('/groups/42/activities');
+
+        for (const params of [
+            { groupId: 1.5 },
+            { groupId: 2 ** 53 },
+            Object.create({ groupId: 'g' }),
+        ]) {
+            await expect(
+                api('get', '/groups/{groupId}/activities', {
+                    params: params as { groupId: string },
+                }),
+            ).rejects.toBeInstanceOf(InvalidPathSegmentError);
+        }
+        expect(adapter).toHaveBeenCalledTimes(1);
+    });
+
     test('does not leak the rejected segment value in the error message', async () => {
         const secret = '../secret-token/members';
         const error: unknown = await api('get', '/groups/{groupId}/activities', {
@@ -164,12 +210,27 @@ describe('the lossless transport per request', () => {
         );
     });
 
-    test('a non-JSON response passes through as is', async () => {
-        reply = { status: 200, data: '<html>ok</html>', contentType: 'text/html' };
+    test.each([
+        ['a non-JSON 2xx body', '<html>ok</html>', 'text/html'],
+        ['a malformed JSON 2xx body', '{"items":', 'application/json'],
+    ])('%s is rejected with ApiResponseFormatError', async (_name, data, contentType) => {
+        reply = { status: 200, data, contentType };
 
         await expect(
             api('get', '/groups/{groupId}/activities', { params: { groupId: UUID } }),
-        ).resolves.toBe('<html>ok</html>');
+        ).rejects.toMatchObject({ name: 'ApiResponseFormatError', status: 200 });
+        await expect(
+            api('get', '/groups/{groupId}/activities', { params: { groupId: UUID } }),
+        ).rejects.toBeInstanceOf(ApiResponseFormatError);
+    });
+
+    test('an application/*+json body is parsed losslessly too', async () => {
+        reply = { status: 200, data: '{"amount":1.5}', contentType: 'application/vnd.api+json' };
+        const page: unknown = await api('get', '/groups/{groupId}/activities', {
+            params: { groupId: UUID },
+        });
+
+        expect(page).toEqual({ amount: createWireAmount('1.5') });
     });
 
     test('a FormData body reaches the adapter as FormData with the multipart header', async () => {
@@ -262,4 +323,75 @@ describe('ApiError', () => {
             network,
         );
     });
+});
+
+describe('through the installed interceptors (auth refresh, outage detection)', () => {
+    beforeAll(() => {
+        initChipInApiInterceptors(vi.fn());
+    });
+
+    afterAll(() => {
+        apiInstance.interceptors.request.clear();
+        apiInstance.interceptors.response.clear();
+    });
+
+    test('401 then 200: the retry resends the identical body and the result keeps WireAmount', async () => {
+        const replies: Reply[] = [
+            { status: 401, data: '{"code":"AUTH.UNAUTHORIZED"}', contentType: 'application/json' },
+            {
+                status: 201,
+                data: '{"id":"e1","amount":899999999999.9997}',
+                contentType: 'application/json',
+            },
+        ];
+
+        adapter.mockImplementation(config => {
+            reply = replies.shift() ?? reply;
+            return respond(config);
+        });
+        const body = { amount: createWireAmount('899999999999.9997') } as unknown as Body<
+            Op<'/ledger/entries', 'post'>
+        >;
+        const result: unknown = await api('post', '/ledger/entries', { body });
+        const [first, second] = adapter.mock.calls.map(([config]) => config);
+
+        expect(auth.refreshAuthSession).toHaveBeenCalledOnce();
+        expect(adapter).toHaveBeenCalledTimes(2);
+        expect(first?.data).toBe('{"amount":899999999999.9997}');
+        expect(second?.data).toBe(first?.data);
+        expect(second?.headers.Authorization).toBe('Bearer next-access-token');
+        expect(result).toEqual({ id: 'e1', amount: createWireAmount('899999999999.9997') });
+    });
+
+    test('an HTML 502 goes through the health check and is rejected as ApiError 502', async () => {
+        auth.checkBackendHealth.mockRejectedValueOnce(new Error('health unavailable'));
+        reply = { status: 502, data: '<html>Bad gateway</html>', contentType: 'text/html' };
+
+        await expect(
+            api('get', '/ledger/entries/{id}', { params: { id: UUID } }),
+        ).rejects.toMatchObject({ name: 'ApiError', status: 502, code: undefined });
+        expect(auth.checkBackendHealth).toHaveBeenCalledOnce();
+    });
+});
+
+// Type-level checks: never called, only compiled by `tsc -b` (tsconfig.app.json includes the
+// tests). Each `@ts-expect-error` fails the typecheck if its line stops being an error.
+export const typeChecks = (): void => {
+    // @ts-expect-error -- /health defines no PUT (`put?: never`).
+    void api('put', '/health');
+    // @ts-expect-error -- the required path param is missing (no opts).
+    void api('get', '/groups/{groupId}/activities');
+    // @ts-expect-error -- the required path param is missing (empty opts).
+    void api('get', '/groups/{groupId}/activities', {});
+    // @ts-expect-error -- the required body is missing (no opts).
+    void api('post', '/ledger/entries');
+    // @ts-expect-error -- the required body is missing (empty opts).
+    void api('post', '/ledger/entries', { headers: {} });
+    // A GET without params compiles without opts.
+    void api('get', '/health');
+    void api('get', '/dashboard', { signal: new AbortController().signal });
+};
+
+test('the type-level checks are compiled', () => {
+    expect(typeChecks).toBeTypeOf('function');
 });

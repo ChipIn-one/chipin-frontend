@@ -70,7 +70,8 @@ describe('lossless wire sweep (spec 03 §8)', () => {
                     read(body.sharingMode.customShares.u1) === units &&
                     body.sharingMode.percentageShares.u1 === '33.3333' &&
                     body.rate === 1 &&
-                    String(stringifyWireJson(body)).startsWith(`{"amount":${text},`);
+                    // The write-back (amount and customShares.u1) is the original text exactly.
+                    stringifyWireJson(body) === json;
 
                 if (!ok) {
                     wrong += 1;
