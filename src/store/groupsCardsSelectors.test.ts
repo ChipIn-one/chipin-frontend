@@ -635,10 +635,20 @@ test.each([
     expect(getViewModel(group, { defaultCurrency: 'EURO' })).toMatchObject({
         activeCurrencyCount: 1,
         netAmount: 2,
-        netCurrency: 'EURO',
+        netCurrency: 'USD',
         filterBucket: GROUP_CARD_FILTER_BUCKETS.OWED,
     });
     expect(calcGroupSummary(selectGroupBalances(group), 'USD', {}, '')).toMatchObject({
         netTotalInBase: 2,
+    });
+});
+
+test('the card net currency is the resolved default, not a corrupted raw value', () => {
+    const group = createGroup({ balances: [{ USD: balance('USD', 2) }] });
+
+    expect(getViewModel(group, { defaultCurrency: '??' })).toMatchObject({
+        netCurrency: 'USD',
+        netAmount: 2,
+        filterBucket: GROUP_CARD_FILTER_BUCKETS.OWED,
     });
 });

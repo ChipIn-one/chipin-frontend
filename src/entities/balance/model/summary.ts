@@ -2,7 +2,7 @@
 // currency. Rates make it approximate, so every total is an `ApproxMoney` (never a request amount).
 // The converted products are summed exactly (bigint fractions, no double) and rounded once.
 import type { ApproxMoney, CurrencyCode, Money } from 'shared/money';
-import { fromUnits, isZero } from 'shared/money';
+import { fromUnits, isZero, sign, sum } from 'shared/money';
 
 /**
  * A conversion rate as a ratio of two decimal strings: `amount × to / from`. It is how rates
@@ -26,7 +26,7 @@ export interface BalanceSummary {
     readonly owing: ApproxMoney;
     /** Whether a balance in another currency was converted. */
     readonly converted: boolean;
-    /** Currencies of non-zero balances left out for lack of a rate, in input order. */
+    /** Currencies of non-zero balances left out for lack of a rate, once each, in input order. */
     readonly unconverted: CurrencyCode[];
 }
 
@@ -103,10 +103,33 @@ const toApprox = ({ n, d }: Fraction, currency: CurrencyCode): ApproxMoney => {
     return { ...fromUnits(n < 0n ? -units : units, currency), approx: true };
 };
 
+interface CurrencyParts {
+    readonly positive: Money[];
+    readonly negative: Money[];
+}
+
+/** Non-zero balances by currency (first-appearance order) and sign. */
+const partsByCurrency = (balances: readonly Money[]): Map<CurrencyCode, CurrencyParts> => {
+    const parts = new Map<CurrencyCode, CurrencyParts>();
+
+    for (const balance of balances) {
+        if (isZero(balance)) {
+            continue;
+        }
+        const entry = parts.get(balance.currency) ?? { positive: [], negative: [] };
+
+        (sign(balance) > 0 ? entry.positive : entry.negative).push(balance);
+        parts.set(balance.currency, entry);
+    }
+    return parts;
+};
+
 /**
- * Converts every non-zero balance into `target` and sums it by direction exactly; each total is
- * rounded once. A balance whose rate is unknown is skipped and listed in `unconverted`; a balance
- * already in `target` needs no rate.
+ * Converts the non-zero balances into `target` and sums them by direction exactly; each total is
+ * rounded once. Balances are first summed per currency and sign (`sum`), so each rate is applied
+ * once per currency and direction; conversion is linear, so this equals converting every balance.
+ * A currency whose rate is unknown is skipped and listed once in `unconverted`; a balance already
+ * in `target` needs no rate.
  */
 export const summarizeBalances = (
     balances: readonly Money[],
@@ -118,25 +141,20 @@ export const summarizeBalances = (
     let converted = false;
     const unconverted: CurrencyCode[] = [];
 
-    for (const balance of balances) {
-        if (isZero(balance)) {
-            continue;
-        }
-        const isSame = balance.currency === target;
-        const rate = isSame ? SAME_CURRENCY : rateOf(balance.currency, target);
-        const amount = rate && convertExact(balance, rate);
+    for (const [currency, { positive, negative }] of partsByCurrency(balances)) {
+        const isSame = currency === target;
+        const rate = isSame ? SAME_CURRENCY : rateOf(currency, target);
+        const owedPart = rate && convertExact(sum(positive, currency), rate);
+        const owingPart = rate && convertExact(sum(negative, currency), rate);
 
-        if (!amount) {
-            unconverted.push(balance.currency);
+        // A zero total converts to 0/d; only an unusable rate gives null.
+        if (!owedPart || !owingPart) {
+            unconverted.push(currency);
             continue;
         }
         converted ||= !isSame;
-
-        if (amount.n > 0n) {
-            owed = addFractions(owed, amount);
-        } else {
-            owing = addFractions(owing, { n: -amount.n, d: amount.d });
-        }
+        owed = addFractions(owed, owedPart);
+        owing = addFractions(owing, { n: -owingPart.n, d: owingPart.d });
     }
 
     return {

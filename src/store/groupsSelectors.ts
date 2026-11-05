@@ -181,11 +181,8 @@ export const selectGroupCardViewModel = (
     const [singleTotal] = totals;
     const sourceCurrencyBalance =
         activeCurrencyCount === 1 && singleTotal ? legacyEntryFromMoney(singleTotal) : null;
-    const summary = summarizeBalances(
-        totals,
-        legacyCurrencyOrDefault(defaultCurrency),
-        legacyRateLookup(rates, baseCurrency),
-    );
+    const netCurrency = legacyCurrencyOrDefault(defaultCurrency);
+    const summary = summarizeBalances(totals, netCurrency, legacyRateLookup(rates, baseCurrency));
     let conversionState: GroupNetConversionState = GROUP_NET_CONVERSION_STATES.SAME_CURRENCY;
 
     if (summary.unconverted.length > 0) {
@@ -205,7 +202,7 @@ export const selectGroupCardViewModel = (
             activeCurrencyCount,
             sourceCurrencyBalance,
             netAmount: null,
-            netCurrency: defaultCurrency,
+            netCurrency,
             conversionState,
             filterBucket: isSettled
                 ? GROUP_CARD_FILTER_BUCKETS.SETTLED
@@ -231,7 +228,7 @@ export const selectGroupCardViewModel = (
         activeCurrencyCount,
         sourceCurrencyBalance,
         netAmount: legacyAmountFromMoney(summary.net),
-        netCurrency: defaultCurrency,
+        netCurrency,
         conversionState,
         filterBucket,
         latestActivityAt,
