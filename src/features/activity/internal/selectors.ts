@@ -1,42 +1,24 @@
-import type { AppEvent, ExpenseActivityMetadata } from 'api/activity.types';
+import type { AppEvent } from 'api/activity.types';
 import type { BalanceEntry } from 'api/chipin.raw.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
+import {
+    aggregateByCurrency,
+    legacyEntryFromMoney,
+    legacyExpenseBalanceChange,
+} from 'entities/balance';
 import { type ActivityListItem, isActivityPreview } from 'helpers/activityEvent';
-import { normalizeApiMoneyAmount } from 'helpers/numbers';
 import { getActivityDateKey } from 'helpers/time';
-
-interface DailyBalance extends BalanceEntry {
-    dateKey: string;
-}
-
-const getUserExpenseBalanceChange = (
-    metadata: ExpenseActivityMetadata,
-    userId: string,
-): number | undefined => {
-    // A missing share snapshot cannot establish how much the payer funded for others.
-    if (!metadata.shares) {
-        return undefined;
-    }
-
-    const userShareAmount =
-        metadata.shares.find(share => share.userId === userId)?.shareAmount ?? 0;
-
-    if (metadata.payerId === userId) {
-        return metadata.amount - userShareAmount;
-    }
-
-    return userShareAmount * -1;
-};
+import type { Money } from 'shared/money';
+import { isZero } from 'shared/money';
 
 export const getDailyExpenseSummary = (
     events: readonly ActivityListItem[],
     userId?: string,
 ): Record<string, BalanceEntry[]> => {
-    const summaries: Record<string, BalanceEntry[]> = {};
-    const balances = new Map<string, DailyBalance>();
+    const changesByDate = new Map<string, Money[]>();
 
     if (!userId) {
-        return summaries;
+        return {};
     }
 
     for (const item of events) {
@@ -55,35 +37,29 @@ export const getDailyExpenseSummary = (
             continue;
         }
 
-        const netBalance = getUserExpenseBalanceChange(event.metadata, userId);
+        const change = legacyExpenseBalanceChange(event.metadata, userId);
 
-        if (!netBalance) {
+        if (!change || isZero(change)) {
             continue;
         }
 
         const dateKey = getActivityDateKey(isPreview ? item.parent.createdAt : event.createdAt);
-        const { currency } = event.metadata;
-        const balanceKey = `${dateKey}:${currency}`;
-        const existingBalance = balances.get(balanceKey);
+        const changes = changesByDate.get(dateKey);
 
-        if (existingBalance) {
-            existingBalance.netBalance += netBalance;
+        if (changes) {
+            changes.push(change);
         } else {
-            balances.set(balanceKey, { dateKey, currency, netBalance });
+            changesByDate.set(dateKey, [change]);
         }
     }
 
-    for (const { dateKey, currency, netBalance } of balances.values()) {
-        const dateSummary = summaries[dateKey] ?? [];
-        // Normalize only the final UI sum, not each individual financial contribution.
-        const normalizedBalance = normalizeApiMoneyAmount(netBalance);
-
-        if (normalizedBalance) {
-            dateSummary.push({ currency, netBalance: normalizedBalance });
-        }
-
-        summaries[dateKey] = dateSummary;
-    }
-
-    return summaries;
+    // Exact per-currency sums; a day whose changes cancel out has no entry for that currency.
+    return Object.fromEntries(
+        Array.from(changesByDate, ([dateKey, changes]) => [
+            dateKey,
+            aggregateByCurrency(changes, change => change)
+                .filter(({ total }) => !isZero(total))
+                .map(({ total }) => legacyEntryFromMoney(total)),
+        ]),
+    );
 };

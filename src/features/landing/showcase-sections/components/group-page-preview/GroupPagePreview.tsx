@@ -112,7 +112,12 @@ const GroupPagePreview = () => {
                         </Box>
 
                         <BalanceSummaryText
-                            entries={[{ currency: 'EUR', netBalance: GROUP_PREVIEW_NET_BALANCE }]}
+                            // Static props: the public landing must not bundle entities/shared money.
+                            // The preview net (constants.ts) is a positive constant.
+                            balances={{
+                                owed: [{ currency: 'EUR', netBalance: GROUP_PREVIEW_NET_BALANCE }],
+                                owe: [],
+                            }}
                             size="1"
                             align="right"
                         />

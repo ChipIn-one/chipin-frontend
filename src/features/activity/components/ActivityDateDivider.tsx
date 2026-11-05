@@ -2,6 +2,7 @@ import { Box, Flex, Separator, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
 import type { BalanceEntry } from 'api/chipin.raw.types';
+import { legacyPartitionEntries } from 'entities/balance';
 import { formatActivityDateDivider } from 'helpers/time';
 
 import { BalanceSummaryText } from 'basics';
@@ -29,7 +30,13 @@ const ActivityDateDivider = ({ createdAt, summary }: Props) => {
                 <Separator size="4" />
             </Box>
 
-            {summary.length > 0 && <BalanceSummaryText entries={summary} size="1" align="right" />}
+            {summary.length > 0 && (
+                <BalanceSummaryText
+                    balances={legacyPartitionEntries(summary)}
+                    size="1"
+                    align="right"
+                />
+            )}
         </Flex>
     );
 };

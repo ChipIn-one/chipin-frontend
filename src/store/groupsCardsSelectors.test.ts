@@ -10,7 +10,12 @@ import {
     GROUP_NET_CONVERSION_STATES,
 } from 'constants/groups';
 
-import { selectGroupCardViewModel, selectGroupsCardsView } from './groupsSelectors';
+import {
+    calcGroupSummary,
+    selectGroupBalances,
+    selectGroupCardViewModel,
+    selectGroupsCardsView,
+} from './groupsSelectors';
 
 const NOW = 2_000_000_000;
 const DAY_SECONDS = 24 * 60 * 60;
@@ -542,4 +547,108 @@ test('DSH-005 composes search with the active debt filter', () => {
     });
 
     expect(view.displayedGroups.map(model => model.group.id)).toEqual(['owed-trip']);
+});
+
+// Bad runtime input the legacy DTO types do not admit (`JSON.parse` carries anything).
+const unsafeBalance = (currency: unknown, netBalance: unknown): BalanceEntry =>
+    ({ currency, netBalance }) as unknown as BalanceEntry;
+
+test('DSH-001 keeps a converted residue below display precision as a tiny signed value', () => {
+    const vndResidue = getViewModel(createGroup({ balances: [{ VND: balance('VND', 0.3333) }] }), {
+        rates: { VND: 25_900 },
+    });
+    const usdInKwd = getViewModel(createGroup({ balances: [{ USD: balance('USD', -0.0001) }] }), {
+        rates: { KWD: 0.31 },
+        defaultCurrency: 'KWD',
+    });
+
+    expect(vndResidue).toMatchObject({
+        netAmount: 0.0001,
+        conversionState: GROUP_NET_CONVERSION_STATES.CONVERTED,
+        filterBucket: GROUP_CARD_FILTER_BUCKETS.OWED,
+    });
+    expect(usdInKwd).toMatchObject({
+        netAmount: -0.0001,
+        netCurrency: 'KWD',
+        filterBucket: GROUP_CARD_FILTER_BUCKETS.OWES,
+    });
+});
+
+test('DSH-001 a true cross-currency cancellation stays neutral', () => {
+    const cancelled = getViewModel(
+        createGroup({ balances: [{ USD: balance('USD', 10) }, { EUR: balance('EUR', -9) }] }),
+        { rates: { EUR: 0.9 } },
+    );
+
+    expect(cancelled).toMatchObject({
+        netAmount: 0,
+        isSettled: false,
+        activeCurrencyCount: 2,
+        conversionState: GROUP_NET_CONVERSION_STATES.CONVERTED,
+        filterBucket: GROUP_CARD_FILTER_BUCKETS.NEUTRAL,
+    });
+});
+
+test('calcGroupSummary converts exactly and keeps a tiny converted debt', () => {
+    const group = createGroup({
+        balances: [
+            { USD: balance('USD', 10), VND: balance('VND', 0.3333) },
+            { EUR: balance('EUR', -9), SEK: balance('SEK', 5) },
+        ],
+    });
+    const summary = calcGroupSummary(selectGroupBalances(group), 'USD', { EUR: 0.9, VND: 25_900 });
+
+    expect(summary).toEqual({
+        owedEntries: [balance('USD', 10), balance('VND', 0.3333), balance('SEK', 5)],
+        oweEntries: [balance('EUR', -9)],
+        // 10 + 0.3333/25900 − 9/0.9 = 0.0000128… → one ledger unit; SEK has no rate.
+        netTotalInBase: 0.0001,
+        owedTotalInBase: 10,
+        owingTotalInBase: 10,
+    });
+});
+
+test('calcGroupSummary in another target currency (USD → EUR)', () => {
+    const group = createGroup({ balances: [{ USD: balance('USD', 10), EUR: balance('EUR', -3) }] });
+
+    expect(calcGroupSummary(selectGroupBalances(group), 'USD', { EUR: 0.9 }, 'EUR')).toMatchObject({
+        netTotalInBase: 6,
+        owedTotalInBase: 9,
+        owingTotalInBase: 3,
+    });
+});
+
+test.each([
+    ['empty currency', unsafeBalance('', 5)],
+    ['two-letter currency', unsafeBalance('US', 5)],
+    ['four-letter currency', unsafeBalance('EURO', 5)],
+    ['null currency', unsafeBalance(null, 5)],
+    ['NaN amount', unsafeBalance('EUR', Number.NaN)],
+    ['null amount', unsafeBalance('EUR', null)],
+])('group selectors skip an invalid legacy balance (%s) without throwing', (_name, bad) => {
+    const group = createGroup({ balances: [{ USD: balance('USD', 2), BAD: bad }] });
+
+    expect(selectGroupBalances(group)).toEqual({
+        owedEntries: [balance('USD', 2)],
+        oweEntries: [],
+    });
+    expect(getViewModel(group, { defaultCurrency: 'EURO' })).toMatchObject({
+        activeCurrencyCount: 1,
+        netAmount: 2,
+        netCurrency: 'USD',
+        filterBucket: GROUP_CARD_FILTER_BUCKETS.OWED,
+    });
+    expect(calcGroupSummary(selectGroupBalances(group), 'USD', {}, '')).toMatchObject({
+        netTotalInBase: 2,
+    });
+});
+
+test('the card net currency is the resolved default, not a corrupted raw value', () => {
+    const group = createGroup({ balances: [{ USD: balance('USD', 2) }] });
+
+    expect(getViewModel(group, { defaultCurrency: '??' })).toMatchObject({
+        netCurrency: 'USD',
+        netAmount: 2,
+        filterBucket: GROUP_CARD_FILTER_BUCKETS.OWED,
+    });
 });

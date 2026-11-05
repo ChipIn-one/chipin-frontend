@@ -323,6 +323,9 @@ export const layerImports = ({ appDir }) => {
     const axiosOwners = appGlob(appDir, 'src/api/chipin.{instance,interceptors}.ts');
     const ui = appGlob(appDir, 'src/{pages,features,components,basics}/**/*.{ts,tsx}');
     const numbers = appGlob(appDir, 'src/{helpers/numbers.ts,basics/numbers/**/*.{ts,tsx}}');
+    // Layers of the target architecture (specs 03/04): new code there reads money from the wire.
+    const newLayers = appGlob(appDir, 'src/{app,shared,entities}/**/*.{ts,tsx}');
+    const balanceEntity = appGlob(appDir, 'src/entities/balance/**');
 
     return [
         {
@@ -356,6 +359,21 @@ export const layerImports = ({ appDir }) => {
             pattern: { regex: RUNTIME_API_MODULE, allowTypeImports: true },
             files: [numbers],
             message: 'The number layer cannot call runtime API modules.',
+        },
+        {
+            // spec 03 §4.1 item 5: the number → Money bridge serves only the legacy `src/api/*`
+            // stores until they migrate; only entities/balance itself may use it in the new layers.
+            id: 'money-legacy-bridge',
+            // The alias `entities/balance[/...]` and any relative path through a `balance` folder
+            // (`../balance`, `../../entities/balance/model/legacy`).
+            pattern: {
+                regex: '^(?:entities/balance|(?:\\.\\.?/)+(?:[^/]+/)*balance)(?:/.*)?$',
+                importNamePattern: '^legacy',
+            },
+            files: [newLayers],
+            ignores: [balanceEntity],
+            message:
+                'legacy* adapters are for not-yet-migrated stores; read amounts with moneyFromWire in an entities/*/model mapper.',
         },
     ];
 };

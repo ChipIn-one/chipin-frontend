@@ -112,7 +112,7 @@ test('builds the friends page view in one coordinated derivation', () => {
         currencyGroups: [
             {
                 currency: 'USD',
-                netBalance: 10,
+                net: { minor: 100_000n, currency: 'USD' },
                 friends: [
                     {
                         friend: getOrThrow(friends, 0),
@@ -122,7 +122,7 @@ test('builds the friends page view in one coordinated derivation', () => {
             },
             {
                 currency: 'EUR',
-                netBalance: -2,
+                net: { minor: -20_000n, currency: 'EUR' },
                 friends: [
                     {
                         friend: getOrThrow(friends, 0),
@@ -156,5 +156,47 @@ test('normalizes float noise in friends currency group totals', () => {
         createFriend('friend-3', [{ currency: 'USD', netAmount: -0.3 }]),
     ];
 
-    expect(getOrThrow(getFriendsView(friends, '', 'all').currencyGroups, 0).netBalance).toBe(0);
+    expect(getOrThrow(getFriendsView(friends, '', 'all').currencyGroups, 0).net).toEqual({
+        minor: 0n,
+        currency: 'USD',
+    });
+});
+
+test('skips invalid legacy friend balances without throwing', () => {
+    const friend = (balances: unknown): KnownUser =>
+        // Bad runtime input the legacy DTO types do not admit (`JSON.parse` carries anything).
+        ({
+            user: {
+                id: 'friend',
+                email: 'friend@example.com',
+                displayName: 'Friend',
+                firstName: null,
+                lastName: null,
+                picture: null,
+                createdAt: 1,
+                updatedAt: 1,
+            },
+            balances,
+            lastUsedCurrency: null,
+        }) as unknown as KnownUser;
+    const view = getFriendsView(
+        [
+            friend([
+                { currency: 'USD', netAmount: 4 },
+                { currency: '', netAmount: 1 },
+                { currency: 'US', netAmount: 1 },
+                { currency: 'EURO', netAmount: 1 },
+                { currency: null, netAmount: 1 },
+                { currency: 'EUR', netAmount: Number.NaN },
+                { currency: 'EUR', netAmount: null },
+            ]),
+        ],
+        '',
+        'all',
+    );
+
+    expect(view.currencies).toEqual(['USD']);
+    expect(view.currencyGroups.map(group => [group.currency, group.net.minor])).toEqual([
+        ['USD', 40_000n],
+    ]);
 });

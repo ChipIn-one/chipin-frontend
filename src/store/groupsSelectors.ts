@@ -1,4 +1,4 @@
-import type { BalanceEntry, BalancesMap, CurrenciesRates } from 'api/chipin.raw.types';
+import type { BalanceEntry, CurrenciesRates } from 'api/chipin.raw.types';
 import type { Group, GroupUser } from 'api/chipin.types';
 import {
     GROUP_CARD_FILTER_BUCKETS,
@@ -10,12 +10,17 @@ import {
     type GroupNetConversionState,
 } from 'constants/groups';
 import {
-    convertCurrencyAmount,
-    getBalanceDirection,
-    getBalanceEntriesSummary,
-    sortBalancesByCurrency,
-} from 'helpers/currencies';
-import { normalizeApiMoneyAmount, normalizeFloatingPointZero } from 'helpers/numbers';
+    legacyAmountFromMoney,
+    legacyCurrencyOrDefault,
+    legacyEntryFromMoney,
+    legacyPartitionEntries,
+    legacyRateLookup,
+    legacySumEntriesByCurrency,
+    legacySummarizeEntries,
+    summarizeBalances,
+} from 'entities/balance';
+import { sortBalancesByCurrency } from 'helpers/currencies';
+import { displaySign } from 'shared/money';
 
 import type { GroupsStore } from './groupsStore';
 
@@ -43,18 +48,9 @@ export const selectGroupSettlementOptions = (
             return;
         }
 
-        const balancesYouOwe: BalanceEntry[] = [];
-        const balancesOwedToYou: BalanceEntry[] = [];
-
-        Object.values(member.balancesByCurrency).forEach(balance => {
-            const direction = getBalanceDirection(balance.netBalance);
-
-            if (direction === 'owe') {
-                balancesYouOwe.push(balance);
-            } else if (direction === 'owed') {
-                balancesOwedToYou.push(balance);
-            }
-        });
+        const { owe: balancesYouOwe, owed: balancesOwedToYou } = legacyPartitionEntries(
+            Object.values(member.balancesByCurrency),
+        );
 
         if (balancesYouOwe.length > 0) {
             settlementOptions.youOwe.push({
@@ -79,38 +75,15 @@ export interface GroupBalances {
     oweEntries: BalanceEntry[];
 }
 
+const groupMemberBalances = (group: Group): BalanceEntry[] =>
+    group.members.flatMap(member => Object.values(member.balancesByCurrency));
+
 export const selectGroupBalances = (group: Group): GroupBalances => {
-    const balancesByDirection = group.members.reduce<{
-        owed: BalancesMap;
-        owing: BalancesMap;
-    }>(
-        (groupBalances, member) => {
-            Object.values(member.balancesByCurrency).forEach(balance => {
-                const balanceDirection = getBalanceDirection(balance.netBalance);
-
-                if (balanceDirection === 'settled') {
-                    return;
-                }
-
-                const direction =
-                    balanceDirection === 'owed' ? groupBalances.owed : groupBalances.owing;
-                const existingBalance = direction[balance.currency];
-                direction[balance.currency] = {
-                    currency: balance.currency,
-                    netBalance: normalizeApiMoneyAmount(
-                        (existingBalance?.netBalance ?? 0) + balance.netBalance,
-                    ),
-                };
-            });
-
-            return groupBalances;
-        },
-        { owed: {}, owing: {} },
-    );
+    const { owed, owe } = legacyPartitionEntries(groupMemberBalances(group));
 
     return {
-        owedEntries: Object.values(balancesByDirection.owed),
-        oweEntries: Object.values(balancesByDirection.owing),
+        owedEntries: legacySumEntriesByCurrency(owed).map(legacyEntryFromMoney),
+        oweEntries: legacySumEntriesByCurrency(owe).map(legacyEntryFromMoney),
     };
 };
 
@@ -136,7 +109,7 @@ export const calcGroupSummary = (
     defaultCurrency = base,
 ) => {
     const { owedEntries, oweEntries } = balances;
-    const { netTotalInBase, owedTotalInBase, owingTotalInBase } = getBalanceEntriesSummary(
+    const { netTotalInBase, owedTotalInBase, owingTotalInBase } = legacySummarizeEntries(
         [...owedEntries, ...oweEntries],
         rates,
         base,
@@ -200,67 +173,23 @@ export const selectGroupCardViewModel = (
     group: Group,
     { rates, baseCurrency, defaultCurrency, nowTimestamp }: GroupCardViewOptions,
 ): GroupCardViewModel => {
-    const balancesByCurrency = new Map<string, number>();
-
-    for (const member of group.members) {
-        for (const balance of Object.values(member.balancesByCurrency)) {
-            if (balance.netBalance === 0) {
-                continue;
-            }
-
-            balancesByCurrency.set(
-                balance.currency,
-                (balancesByCurrency.get(balance.currency) ?? 0) + balance.netBalance,
-            );
-        }
-    }
-
-    const isSettled = balancesByCurrency.size === 0;
-    const activeCurrencyCount = balancesByCurrency.size;
-    let sourceCurrencyBalance: BalanceEntry | null = null;
-    let netAmount = 0;
-    let netMagnitude = 0;
+    // Currencies with at least one open member balance, each summed exactly.
+    const { owed, owe } = legacyPartitionEntries(groupMemberBalances(group));
+    const totals = legacySumEntriesByCurrency([...owed, ...owe]);
+    const activeCurrencyCount = totals.length;
+    const isSettled = activeCurrencyCount === 0;
+    const [singleTotal] = totals;
+    const sourceCurrencyBalance =
+        activeCurrencyCount === 1 && singleTotal ? legacyEntryFromMoney(singleTotal) : null;
+    const netCurrency = legacyCurrencyOrDefault(defaultCurrency);
+    const summary = summarizeBalances(totals, netCurrency, legacyRateLookup(rates, baseCurrency));
     let conversionState: GroupNetConversionState = GROUP_NET_CONVERSION_STATES.SAME_CURRENCY;
 
-    for (const [currency, accumulatedAmount] of balancesByCurrency) {
-        const amount = normalizeApiMoneyAmount(accumulatedAmount);
-
-        if (activeCurrencyCount === 1) {
-            sourceCurrencyBalance = {
-                currency,
-                netBalance: amount,
-            };
-        }
-
-        if (amount === 0) {
-            continue;
-        }
-
-        if (currency === defaultCurrency) {
-            netAmount += amount;
-            netMagnitude += Math.abs(amount);
-            continue;
-        }
-
-        const convertedAmount = convertCurrencyAmount(
-            amount,
-            currency,
-            defaultCurrency,
-            rates,
-            baseCurrency,
-        );
-
-        if (convertedAmount === null) {
-            conversionState = GROUP_NET_CONVERSION_STATES.UNAVAILABLE;
-            break;
-        }
-
+    if (summary.unconverted.length > 0) {
+        conversionState = GROUP_NET_CONVERSION_STATES.UNAVAILABLE;
+    } else if (summary.converted) {
         conversionState = GROUP_NET_CONVERSION_STATES.CONVERTED;
-        netAmount += convertedAmount;
-        netMagnitude += Math.abs(convertedAmount);
     }
-
-    netAmount = normalizeFloatingPointZero(netAmount, netMagnitude);
 
     const latestActivityAt = getLatestGroupActivityAt(group);
     const isAutoHidden =
@@ -273,7 +202,7 @@ export const selectGroupCardViewModel = (
             activeCurrencyCount,
             sourceCurrencyBalance,
             netAmount: null,
-            netCurrency: defaultCurrency,
+            netCurrency,
             conversionState,
             filterBucket: isSettled
                 ? GROUP_CARD_FILTER_BUCKETS.SETTLED
@@ -287,9 +216,9 @@ export const selectGroupCardViewModel = (
 
     if (isSettled) {
         filterBucket = GROUP_CARD_FILTER_BUCKETS.SETTLED;
-    } else if (netAmount > 0) {
+    } else if (displaySign(summary.net) > 0) {
         filterBucket = GROUP_CARD_FILTER_BUCKETS.OWED;
-    } else if (netAmount < 0) {
+    } else if (displaySign(summary.net) < 0) {
         filterBucket = GROUP_CARD_FILTER_BUCKETS.OWES;
     }
 
@@ -298,8 +227,8 @@ export const selectGroupCardViewModel = (
         isSettled,
         activeCurrencyCount,
         sourceCurrencyBalance,
-        netAmount,
-        netCurrency: defaultCurrency,
+        netAmount: legacyAmountFromMoney(summary.net),
+        netCurrency,
         conversionState,
         filterBucket,
         latestActivityAt,

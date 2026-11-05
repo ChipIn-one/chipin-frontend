@@ -9,6 +9,7 @@ import type {
     UserSettings,
 } from 'api/chipin.types';
 import type { LocalUser } from 'helpers/localStorage';
+import type { Money } from 'shared/money';
 
 interface UsersStoreState {
     user: SelfUser | null;
@@ -39,7 +40,8 @@ type UsersStore = UsersStoreState & UsersStoreActions;
 
 interface FriendCurrencyGroup {
     currency: string;
-    netBalance: number;
+    /** The exact sum of the friends' balances in `currency`. */
+    net: Money;
     friends: {
         friend: KnownUser;
         balance: FriendBalance;

@@ -3,6 +3,7 @@ import { UserPlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import type { Group } from 'api/chipin.types';
+import { legacyPartitionEntries } from 'entities/balance';
 import { buildGroupInviteLink } from 'helpers/url';
 import { useUsersStore } from 'store/users-store';
 
@@ -74,7 +75,11 @@ const GroupBalancesTab = ({ group, showInviteOnboarding }: Props) => {
                                             isOwner={member.user.id === group.creator.id}
                                         />
                                     </Flex>
-                                    <BalanceSummaryText entries={balances} size="1" align="left" />
+                                    <BalanceSummaryText
+                                        balances={legacyPartitionEntries(balances)}
+                                        size="1"
+                                        align="left"
+                                    />
                                 </Flex>
                             </Flex>
 

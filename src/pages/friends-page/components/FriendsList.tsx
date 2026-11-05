@@ -31,7 +31,7 @@ const FriendsList = ({ currencyGroups, isEmpty, isLoading, settledFriends }: Pro
                     <CurrencyGroupCard
                         key={group.currency}
                         currency={group.currency}
-                        netBalance={group.netBalance}
+                        net={group.net}
                         friends={group.friends}
                     />
                 ))}

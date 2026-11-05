@@ -1,5 +1,7 @@
 import { expect, test } from 'vitest';
 
+import type { BalanceEntry } from 'api/chipin.raw.types';
+
 import { selectDashboardSummary, selectIsSoloMode } from './dashboardSelectors';
 import { APP_MODES, useDashboardStore } from './dashboardStore';
 
@@ -60,4 +62,37 @@ test('keeps non-zero dashboard entries and drops float-noise zero balances', () 
         { currency: 'CHF', netBalance: 0.004 },
     ]);
     expect(summary.oweEntries).toEqual([{ currency: 'EUR', netBalance: -9.25 }]);
+});
+
+test('skips invalid legacy balances and an invalid default currency without throwing', () => {
+    // Bad runtime input the legacy DTO types do not admit (`JSON.parse` carries anything).
+    const unsafe = (currency: unknown, netBalance: unknown) =>
+        ({ currency, netBalance }) as unknown as BalanceEntry;
+
+    useDashboardStore.setState({
+        balances: {
+            USD: { currency: 'USD', netBalance: 3 },
+            A: unsafe('', 1),
+            B: unsafe('US', 1),
+            C: unsafe('EURO', 1),
+            D: unsafe(null, 1),
+            E: unsafe('EUR', Number.POSITIVE_INFINITY),
+            F: unsafe('EUR', null),
+        },
+        currencies: {
+            base: 'USD',
+            timestamp: 1,
+            fetchedAt: 1,
+            stale: false,
+            rates: { EUR: 0.9 },
+        },
+    });
+
+    expect(selectDashboardSummary(useDashboardStore.getState(), 'nope')).toEqual({
+        owedEntries: [{ currency: 'USD', netBalance: 3 }],
+        oweEntries: [],
+        netTotalInBase: 3,
+        owedTotalInBase: 3,
+        owingTotalInBase: 0,
+    });
 });
