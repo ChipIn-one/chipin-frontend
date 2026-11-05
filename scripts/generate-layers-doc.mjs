@@ -16,6 +16,8 @@ import {
     LAYER_GRAPH,
     LAYER_TYPES,
     LAYERS_DOC,
+    TEST_FILES,
+    TEST_TYPE,
 } from '../config/eslint/layers.js';
 
 const repoRoot = resolve(import.meta.dirname, '..');
@@ -38,7 +40,10 @@ const folders = patterns =>
 
 const allowed = from => {
     if (from === 'app') {
-        return 'everything';
+        return `every layer except ${code(TEST_TYPE)}`;
+    }
+    if (from === TEST_TYPE) {
+        return 'every layer';
     }
     return LAYER_GRAPH[from]
         .map(type =>
@@ -55,7 +60,10 @@ export const renderTable = () =>
         BEGIN,
         '',
         'Element types (folders under `src/`; the first matching row wins) and what each may import.',
-        'Anything not listed is a `boundaries/dependencies` error.',
+        'Anything not listed is a `boundaries/dependencies` error, and a file under `src/` outside',
+        'every row is a `boundaries/no-unknown-files` error.',
+        `Test files (${TEST_FILES.map(code).join(', ')}) keep the row of their folder and may also`,
+        `import ${code(TEST_TYPE)}; no production file may import it.`,
         '',
         '| Layer | Folders | May import |',
         '| --- | --- | --- |',

@@ -29,7 +29,7 @@ Invariants 1–6 and 9 describe the target state of specs 03/04 (the `app`, `ent
 - `npx eslint --fix <files>` — ESLint auto-fixes in changed files only.
 - `npx prettier --write <files>` — format the files you changed; never `npm run format` in a task.
 - `npm run verify` — version check, format check, lint (`--max-warnings 0`: every rule is error or off) and typecheck.
-- `npm run baseline:update` — prune fixed entries from `eslint-suppressions.json`; the lint baseline only shrinks.
+- `npm run baseline:update` — prune fixed entries from `eslint-suppressions.json`; the lint baseline only shrinks. Prune only through this script (it sets `CHIPIN_ESLINT_FULL=1`): a plain `eslint . --prune-suppressions` drops the `import-x/no-cycle` entries and CI `lint:full` goes red.
 - `npm run verify:full` — the full gate: version check, format check, `lint:full`, all tests, build, ds-gallery; CI runs the same. Run before `IMPLEMENTATION_COMPLETE`.
 - `npm run typecheck` — `tsc -b`.
 - `npm run version:check` — the version in `package.json` and `package-lock.json` is valid and matches (read-only).

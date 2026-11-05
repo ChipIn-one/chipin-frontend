@@ -12,6 +12,12 @@ import { appGlob, isFastMode } from './base.js';
 // LAYER_ELEMENTS and LAYER_GRAPH, and docs/engineering/rules/10-architecture.md gets its table
 // from them through scripts/generate-layers-doc.mjs. The runtime `api/` and Axios boundaries stay
 // `no-restricted-imports` entries (layerImports below): they allow type imports.
+//
+// Aliases: boundaries and import-x see a layer only through the `paths` aliases of
+// tsconfig.app.json; an import they cannot resolve is silently skipped, not reported. Every new
+// layer folder (e.g. `src/shared`, `src/entities`, `src/app` from specs 03/04) must add its `paths`
+// alias in the same PR as its first file, otherwise its imports are unchecked. A file outside every
+// element below is a `boundaries/no-unknown-files` error.
 
 /** Rulebook section every boundary message points to. */
 export const LAYERS_DOC = 'docs/engineering/rules/10-architecture.md';
@@ -105,6 +111,11 @@ export const LAYER_ELEMENTS = [
         patterns: [{ pattern: 'api', mode: 'folder' }],
     },
     {
+        type: 'test',
+        description: 'test support: setup, fixtures, helpers (only test files import it)',
+        patterns: [{ pattern: 'test', mode: 'folder' }],
+    },
+    {
         type: 'base',
         description: 'constants, types, i18n, styles, assets',
         patterns: [
@@ -119,11 +130,20 @@ export const LAYER_ELEMENTS = [
 
 export const LAYER_TYPES = LAYER_ELEMENTS.map(element => element.type);
 
+/** Test support (`src/test/`): it may import any layer; only TEST_FILES may import it. */
+export const TEST_TYPE = 'test';
+
+/** Every element type except test support: what production code is made of. */
+export const PRODUCTION_TYPES = LAYER_TYPES.filter(type => type !== TEST_TYPE);
+
+/** Test files (patterns relative to `src/`): they keep their folder's element and may import `test`. */
+export const TEST_FILES = ['**/*.{test,spec}.{ts,tsx}'];
+
 // "from" → the element types it may import (spec 02 §D5). The graph is acyclic: `store → entities`
 // is allowed, `entities → store` is not. A type listed in INDEX_ONLY may import another slice of
 // its own type only through that slice's `index.ts`.
 export const LAYER_GRAPH = {
-    app: LAYER_TYPES,
+    app: PRODUCTION_TYPES,
     pages: [
         'features',
         'components',
@@ -167,6 +187,7 @@ export const LAYER_GRAPH = {
     'shared-api': ['shared-api', 'shared-lib', 'api', 'base'],
     'shared-lib': ['shared-lib', 'base'],
     api: ['api', 'base'],
+    test: LAYER_TYPES,
     base: ['base'],
 };
 
@@ -226,7 +247,18 @@ export const boundaryPolicies = () =>
             });
         }
         return policies;
+    }).concat({
+        // Test files may import test support whatever their layer; production files may not.
+        from: { file: { categories: TEST_TYPE } },
+        allow: { to: { element: { type: TEST_TYPE } } },
     });
+
+/** `boundaries/files` settings: TEST_FILES get the `test` file category. */
+export const boundaryFiles = ({ appDir }) =>
+    TEST_FILES.map(pattern => ({
+        pattern: appGlob(appDir, `src/${pattern}`),
+        category: TEST_TYPE,
+    }));
 
 const repoRoot = resolve(import.meta.dirname, '../..');
 
@@ -273,6 +305,7 @@ export const layersConfig = ({ appDir }) => {
                     importX.flatConfigs.typescript.settings['import-x/external-module-folders'],
                 'import-x/parsers': importX.flatConfigs.typescript.settings['import-x/parsers'],
                 'boundaries/elements': boundaryElements({ appDir }),
+                'boundaries/files': boundaryFiles({ appDir }),
                 // Spec 02 §D5 (A-35) requires an explicit `mode` on every element, which v7 reports
                 // as deprecated on every run; the graph is pinned to it until the plugin drops it.
                 'boundaries/legacy-warnings': false,
@@ -286,6 +319,9 @@ export const layersConfig = ({ appDir }) => {
                         policies: boundaryPolicies(),
                     },
                 ],
+                // Every file under src/ belongs to an element: a new top-level folder must be
+                // classified in LAYER_ELEMENTS (and get its tsconfig `paths` alias).
+                'boundaries/no-unknown-files': 'error',
                 'import-x/no-internal-modules': ['error', { allow: internalModulesAllow(appDir) }],
                 ...(FULL_MODE
                     ? { 'import-x/no-cycle': ['error', { maxDepth: 3, ignoreExternal: true }] }

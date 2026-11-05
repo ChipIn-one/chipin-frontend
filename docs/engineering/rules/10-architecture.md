@@ -8,11 +8,14 @@ Layers import only downward along one graph (invariant 1). The only source of th
 <!-- BEGIN layers (generated from config/eslint/layers.js by `npm run layers:doc`; do not edit) -->
 
 Element types (folders under `src/`; the first matching row wins) and what each may import.
-Anything not listed is a `boundaries/dependencies` error.
+Anything not listed is a `boundaries/dependencies` error, and a file under `src/` outside
+every row is a `boundaries/no-unknown-files` error.
+Test files (`**/*.{test,spec}.{ts,tsx}`) keep the row of their folder and may also
+import `test`; no production file may import it.
 
 | Layer        | Folders                                                                                                      | May import                                                                                                                                       |
 | ------------ | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `app`        | `main.tsx`, `root.tsx`, `pages/GlobalHooks.tsx`, `app/`, `bootstrap/`, `features/routing/`, `public-routes/` | everything                                                                                                                                       |
+| `app`        | `main.tsx`, `root.tsx`, `pages/GlobalHooks.tsx`, `app/`, `bootstrap/`, `features/routing/`, `public-routes/` | every layer except `test`                                                                                                                        |
 | `pages`      | `pages/*/`, `pages/*` files                                                                                  | `features`, `components`, `basics`, `hooks`, `store`, `entities`, `helpers`, `shared-lib`, `api`, `base`                                         |
 | `features`   | `features/*/`, `features/*` files                                                                            | `features` (another slice only via its `index.ts`), `components`, `basics`, `hooks`, `store`, `entities`, `helpers`, `shared-lib`, `api`, `base` |
 | `entities`   | `entities/*/`, `entities/*` files                                                                            | `entities` (another slice only via its `index.ts`), `helpers`, `shared-api`, `shared-lib`, `api`, `base`                                         |
@@ -24,6 +27,7 @@ Anything not listed is a `boundaries/dependencies` error.
 | `shared-api` | `shared/api/`, `shared/offline/`                                                                             | `shared-api`, `shared-lib`, `api`, `base`                                                                                                        |
 | `shared-lib` | `shared/`                                                                                                    | `shared-lib`, `base`                                                                                                                             |
 | `api`        | `api/`                                                                                                       | `api`, `base`                                                                                                                                    |
+| `test`       | `test/`                                                                                                      | every layer                                                                                                                                      |
 | `base`       | `constants/`, `types/`, `i18n/`, `styles/`, `assets/`                                                        | `base`                                                                                                                                           |
 
 <!-- END layers -->

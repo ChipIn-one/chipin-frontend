@@ -30,6 +30,7 @@
     "@typescript-eslint/prefer-namespace-keyword": "b",
     "@typescript-eslint/triple-slash-reference": "b",
     "boundaries/dependencies": "b",
+    "boundaries/no-unknown-files": "b",
     "curly": "a",
     "for-direction": "b",
     "import-x/no-cycle": "b",
