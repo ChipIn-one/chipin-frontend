@@ -59,9 +59,14 @@ export const wireKind = (name, schema, registry = REGISTRY) => {
 const pointer = segments =>
     `#/${segments.map(s => String(s).replace(/~/g, '~0').replace(/\//g, '~1')).join('/')}`;
 
-/** Every `multipleOf: 0.0001` schema and every object property of the document, with JSON pointers. */
+/**
+ * JSON pointers of every `multipleOf: 0.0001` schema and every schema whose type includes `number`
+ * (anywhere: under `oneOf`/`anyOf`/`allOf`, components behind a `$ref`, nested arrays and maps),
+ * plus every object property.
+ */
 const scan = document => {
     const scaled = [];
+    const numbers = [];
     const properties = [];
     const walk = (node, segments) => {
         if (node === null || typeof node !== 'object') {
@@ -69,6 +74,9 @@ const scan = document => {
         }
         if (isScaled(node)) {
             scaled.push(pointer(segments));
+        }
+        if (mentionsNumber(node)) {
+            numbers.push(pointer(segments));
         }
         if (!Array.isArray(node) && node.properties && typeof node.properties === 'object') {
             for (const [name, schema] of Object.entries(node.properties)) {
@@ -81,13 +89,8 @@ const scan = document => {
     };
 
     walk(document, []);
-    return { scaled, properties };
+    return { scaled, numbers, properties };
 };
-
-const holdsNumbers = schema =>
-    mentionsNumber(schema) ||
-    mentionsNumber(schema?.additionalProperties) ||
-    mentionsNumber(schema?.items);
 
 /** Checks (a), (b) and the stale-entry check; returns the error messages (empty = ok). */
 export const checkWireFields = (document, registry = REGISTRY) => {
@@ -102,7 +105,7 @@ export const checkWireFields = (document, registry = REGISTRY) => {
         }
     }
 
-    const { scaled, properties } = scan(document);
+    const { scaled, numbers, properties } = scan(document);
 
     for (const { name, schema, path } of properties) {
         const kind = wireKind(name, schema, registry);
@@ -111,12 +114,10 @@ export const checkWireFields = (document, registry = REGISTRY) => {
         if (kind || allowed) {
             used.add(name);
         }
-        if (kind) {
-            classified.add(kind === 'money' ? path : `${path}/additionalProperties`);
-        } else if (!allowed && holdsNumbers(schema)) {
-            errors.push(
-                `(a) ${path}: an unclassified number field (or a number union); add it to exactly one list in scripts/api/wire-fields.mjs`,
-            );
+        if (kind === 'money' || allowed) {
+            classified.add(path);
+        } else if (kind) {
+            classified.add(`${path}/additionalProperties`);
         }
         if (registry.money.includes(name) && !(kind === 'money' && isScaled(schema))) {
             errors.push(
@@ -132,8 +133,17 @@ export const checkWireFields = (document, registry = REGISTRY) => {
             );
         }
     }
-    for (const path of scaled) {
+    // A number schema is allowed only as a classified property or its map values (the registry
+    // shape): never under oneOf/anyOf/allOf, behind a $ref, in an array or nested, nor in a union.
+    for (const path of numbers) {
         if (!classified.has(path)) {
+            errors.push(
+                `(a) ${path}: an unclassified number schema; make it a registered property (or its map values) or add the field to NON_MONEY_NUMBER_FIELDS in scripts/api/wire-fields.mjs`,
+            );
+        }
+    }
+    for (const path of scaled) {
+        if (!classified.has(path) && !numbers.includes(path)) {
             errors.push(
                 `(a) ${path}: multipleOf: ${LEDGER_STEP} is not classified; add the field to exactly one list in scripts/api/wire-fields.mjs`,
             );

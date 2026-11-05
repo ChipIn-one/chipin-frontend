@@ -873,7 +873,7 @@ files mock axios. The wrapper gives the same type safety path→body→response.
 "api:fetch": "node scripts/api/fetch-openapi.mjs",   // downloads the `openapi-documentation` artifact of the backend CI run for the SHA from openapi/BACKEND_VERSION (BE-03-4, `gh run download -R ChipIn-one/chipin-backend`); writes openapi/chipin.yaml with sorted keys
 "api:fetch:staging": "node scripts/api/fetch-openapi.mjs --staging", // CI only: GET https://api-dev.chipin.one/swagger/documentation.yaml, Basic auth
 "api:gen":   "node scripts/api/gen-types.mjs && node scripts/offline/write-model-hash.mjs", // openapi-typescript (exact version, no ^) + field registry (§4.3) + MODEL_SHAPE_HASH (§1.4)
-"api:check": "npm run api:gen && git diff --exit-code -- src/shared/api/generated src/shared/offline/modelHash.generated.ts"
+"api:check": "npm run api:gen && node scripts/api/check-generated.mjs" // openapi/chipin.yaml is normalized (sorted keys); the generated files match the commit (git status --porcelain: changes and untracked files)
 ```
 
 - Sync — a PR "chore(api): sync openapi to BE <sha7>" with the label `requires-backend: <sha7>`; it is merged only when the

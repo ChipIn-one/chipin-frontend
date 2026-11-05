@@ -79,10 +79,46 @@ describe('checkWireFields', () => {
         const errors = checkWireFields(spec({ Fee: { type: 'object', properties: fields } }));
 
         expect(errors).toEqual(
-            ['fee', 'fees', 'weights'].map(name =>
-                expect.stringContaining(`(a) #/components/schemas/Fee/properties/${name}:`),
+            ['fee', 'fees/additionalProperties', 'weights/items'].map(path =>
+                expect.stringContaining(`(a) #/components/schemas/Fee/properties/${path}:`),
             ),
         );
+    });
+
+    test.each([
+        ['oneOf [number, null]', { oneOf: [{ type: 'number' }, { type: 'null' }] }, 'oneOf/0'],
+        ['anyOf', { anyOf: [{ type: 'number' }, { type: 'string' }] }, 'anyOf/0'],
+        ['allOf', { allOf: [{ type: 'number' }] }, 'allOf/0'],
+        [
+            'a map of number arrays',
+            map({ type: 'array', items: { type: 'number' } }),
+            'additionalProperties/items',
+        ],
+        [
+            'an array of number arrays',
+            { type: 'array', items: { type: 'array', items: { type: 'number' } } },
+            'items/items',
+        ],
+    ])('(a) a number nested in %s fails', (_, fee, at) => {
+        const errors = checkWireFields(spec({ Fee: { type: 'object', properties: { fee } } }));
+
+        expect(errors).toEqual([
+            expect.stringContaining(`(a) #/components/schemas/Fee/properties/fee/${at}:`),
+        ]);
+    });
+
+    test('(a) a $ref to a numeric component fails at the component', () => {
+        const errors = checkWireFields(
+            spec({
+                Decimal: { type: 'number' },
+                Fee: {
+                    type: 'object',
+                    properties: { fee: { $ref: '#/components/schemas/Decimal' } },
+                },
+            }),
+        );
+
+        expect(errors).toEqual([expect.stringContaining('(a) #/components/schemas/Decimal:')]);
     });
 
     test('(a) a field on the non-money allowlist stays a number', () => {
@@ -99,7 +135,9 @@ describe('checkWireFields', () => {
         );
 
         expect(errors).toContainEqual(expect.stringMatching(/^\(b\) .*Mixed\/properties\/amount:/));
-        expect(errors).toContainEqual(expect.stringMatching(/^\(a\) .*Mixed\/properties\/rates:/));
+        expect(errors).toContainEqual(
+            expect.stringMatching(/^\(a\) .*Mixed\/properties\/rates\/additionalProperties:/),
+        );
     });
 
     test.each([

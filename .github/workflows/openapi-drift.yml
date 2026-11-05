@@ -63,7 +63,7 @@ jobs:
           delimiter="DRIFT_$(openssl rand -hex 16)"
           if ! npm run -s api:gen 2> "$RUNNER_TEMP/drift.txt"; then
             echo "::warning::api:gen failed on the staging snapshot"
-            sed -i '1i npm run api:gen failed on the staging snapshot:' "$RUNNER_TEMP/drift.txt"
+            { echo "npm run api:gen failed on the staging snapshot:"; cat "$RUNNER_TEMP/drift.txt"; } > "$RUNNER_TEMP/drift.tmp" && mv "$RUNNER_TEMP/drift.tmp" "$RUNNER_TEMP/drift.txt"
           elif [ -n "$(git status --porcelain --untracked-files=all -- "${paths[@]}")" ]; then
             echo "::warning::the staging snapshot differs from the committed one"
             { git status --porcelain --untracked-files=all -- "${paths[@]}"; git diff --stat -- "${paths[@]}"; } > "$RUNNER_TEMP/drift.txt"
