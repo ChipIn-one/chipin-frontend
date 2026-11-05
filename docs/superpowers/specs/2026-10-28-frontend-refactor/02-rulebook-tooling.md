@@ -244,7 +244,7 @@ Notation: `L:<rule>` — LINT, `CI:<script>`, `R` — REVIEW (invariant N), `RW`
 | 00.Collections.* (8 items) | one pass, `for...of`, no spread in reduce, `Map` for lookup | RW → compress to 3 lines, no lint (§D0); the rest DEL |
 | 00.Modules.1 | named exports | `L:import-x/no-default-export` (exceptions in D5) |
 | 00.Modules.2 | `index.ts` format | RW (D11): one barrel per slice, `export { … } from` is allowed, `export *` is forbidden — `L:no-restricted-syntax ExportAllDeclaration` + `CI:scripts/check-file-layout.mjs` (new, ≈40 lines; only: an index.ts deeper than the slice is forbidden, new `useConnect.ts` are forbidden) |
-| 00.Modules.3 | directory boundary via index | RW → "slice boundary via its index"; `L:import-x/no-internal-modules` in the allow-list form (D5) |
+| 00.Modules.3 | directory boundary via index | RW → "slice boundary via its index"; `L:boundaries/dependencies` slice policies (D5; `import-x/no-internal-modules` from 02-C9 is removed by 02-C12, D27) |
 | 00.Modules.4 | early returns | DEL |
 | 00.Modules.5 | no nested ternaries | DEL (§D0) |
 | 00.Modules.6–8 | abstractions, function size, comments in English | DEL |
