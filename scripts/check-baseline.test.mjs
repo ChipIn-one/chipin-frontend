@@ -47,15 +47,44 @@ describe('check-baseline growth', () => {
         ).toHaveLength(1);
     });
 
-    test('fails when a junk id is added for an already registered rule', () => {
+    test('passes suppressions of a new entry id of an already registered rule (03-1 money)', () => {
+        expect(
+            findBaselineGrowth({
+                base: {},
+                head: { 'src/a.ts': { 'no-restricted-syntax': entry(3) } },
+                baseRegistry: { 'no-restricted-syntax#i18n-attributes': 'b' },
+                headRegistry: {
+                    'no-restricted-syntax#i18n-attributes': 'b',
+                    'no-restricted-syntax#money-to-fixed': 'b',
+                },
+            }),
+        ).toEqual([]);
+    });
+
+    test('fails on growth of a registered selector rule when no entry id is added', () => {
         expect(
             findBaselineGrowth({
                 base: {},
                 head: { 'src/ui/a.tsx': { 'no-restricted-imports': entry(1) } },
                 baseRegistry: { 'no-restricted-imports#axios-in-ui': 'b' },
+                headRegistry: { 'no-restricted-imports#axios-in-ui': 'b' },
+            }),
+        ).toHaveLength(1);
+    });
+
+    test('a new id of one rule does not open another rule', () => {
+        expect(
+            findBaselineGrowth({
+                base: {},
+                head: { 'src/ui/a.tsx': { 'no-restricted-imports': entry(1) } },
+                baseRegistry: {
+                    'no-restricted-imports#axios-in-ui': 'b',
+                    'no-restricted-syntax#i18n-attributes': 'b',
+                },
                 headRegistry: {
                     'no-restricted-imports#axios-in-ui': 'b',
-                    'no-restricted-imports#junk': 'b',
+                    'no-restricted-syntax#i18n-attributes': 'b',
+                    'no-restricted-syntax#money-to-fixed': 'b',
                 },
             }),
         ).toHaveLength(1);

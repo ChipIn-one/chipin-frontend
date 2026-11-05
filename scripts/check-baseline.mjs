@@ -1,7 +1,7 @@
 // Ratchet for the lint/type baselines (spec 02 §D0, §D7): compares the baseline files with their
 // version at the base commit (`git show <base>:<file>`). A new file x rule key or a higher count
 // fails, except for rules that config/eslint/rule-classes.json registers for the first time in this
-// change (an "enable rule + --suppress-rule" PR).
+// change, or that gain a new `#id` entry (an "enable rule + --suppress-rule" PR, firstTimeRules).
 //
 // Usage: node scripts/check-baseline.mjs [--base <sha>]
 // Without --base it compares with `git merge-base HEAD origin/master` locally. With CI=true a
@@ -22,19 +22,19 @@ const SHA = /^(?!0{40}$)[0-9a-f]{40}$/i;
 
 const ruleOf = key => key.split('#')[0];
 
-// Rules registered for the first time in this change: the head registry has a key for the rule
-// (`<rule>` or `<rule>#<id>`) and the base registry has no key of any form for it. Only such a
-// PR (enable a rule + `--suppress-rule`) may add suppressions; a new `#id` of a rule that is
-// already registered does not open the ratchet.
-const firstTimeRules = (baseRegistry, headRegistry) => {
-    const baseRules = new Set(Object.keys(baseRegistry).map(ruleOf));
-
-    return new Set(
+// Rules that gain a registry key in this change: a rule registered for the first time (`<rule>`
+// or `<rule>#<id>` with no key of any form at base), or a new `#id` entry of a
+// `no-restricted-syntax`/`no-restricted-imports` rule that is already registered (spec 03-1 adds
+// the money entries next to the i18n entry of 02-C8). Only such a PR (enable a rule or entry +
+// `--suppress-rule`) may add suppressions for that rule. Suppressions are counted per rule, not
+// per entry id, so in that PR the ratchet is open for the whole rule; a junk id cannot open it
+// because scripts/check-rule-registry.mjs rejects a key that is not effective on any linted file.
+const firstTimeRules = (baseRegistry, headRegistry) =>
+    new Set(
         Object.keys(headRegistry)
-            .map(ruleOf)
-            .filter(rule => !baseRules.has(rule)),
+            .filter(key => !(key in baseRegistry))
+            .map(ruleOf),
     );
-};
 
 /**
  * @param {{ base: object, head: object, baseRegistry: object, headRegistry: object, file?: string }} input

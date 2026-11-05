@@ -25,7 +25,10 @@ export default [
     ...layersConfig({ appDir: APP_DIR }),
     // Each helper is called once with every entry of its rule (see config/eslint/project.js).
     ...restrictedImports([...layerImports({ appDir: APP_DIR }), ...projectImports()]),
-    ...restrictedSyntax([...projectSyntax(), ...reactSyntax({ appDir: APP_DIR })]),
+    ...restrictedSyntax([
+        ...projectSyntax({ appDir: APP_DIR }),
+        ...reactSyntax({ appDir: APP_DIR }),
+    ]),
     ...formattingConfig(),
     // CHIPIN_ESLINT_FAST=1 (pre-commit): no type-aware rules, no TS program.
     ...fastModeConfig(),
