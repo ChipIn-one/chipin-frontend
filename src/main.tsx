@@ -5,12 +5,14 @@ import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from 'styled-components';
 
-import { QueryProvider } from 'app/providers/QueryProvider';
+import { RestoreGate } from 'app/providers/RestoreGate';
+import { UserQueryProvider } from 'app/providers/UserQueryProvider';
 import { darkThemeStyled, lightThemeStyled } from 'constants/styled-themes';
 import AppRouter from 'features/routing';
 import { isThemeDark } from 'helpers/theme';
 import { useIsMobile } from 'hooks/common';
 import GlobalHooks from 'pages/GlobalHooks';
+import { useUsersStore } from 'store/users-store';
 
 import BackgroundBox from 'basics/BackgroundBox';
 import PWABadge from 'basics/PWABadge';
@@ -33,9 +35,10 @@ const Main = () => {
     const themeName = isDarkTheme ? 'dark' : 'light';
     const styledThemeParams = isDarkTheme ? darkThemeStyled : lightThemeStyled;
     const isMobile = useIsMobile();
+    const userId = useUsersStore(state => state.localUser?.id);
 
     return (
-        <QueryProvider>
+        <UserQueryProvider userId={userId}>
             <ThemeProvider theme={styledThemeParams}>
                 <ModalOverlayGlobalStyles />
                 <Theme
@@ -50,12 +53,14 @@ const Main = () => {
                         <BackgroundBox>
                             <BackendUnavailableGate>
                                 <Header />
-                                <GlobalHooks />
-                                <Box px="4">
-                                    <AppRouter />
-                                </Box>
-                                <AddExpenseButton />
-                                <AddExpenseModal />
+                                <RestoreGate>
+                                    <GlobalHooks />
+                                    <Box px="4">
+                                        <AppRouter />
+                                    </Box>
+                                    <AddExpenseButton />
+                                    <AddExpenseModal />
+                                </RestoreGate>
                                 <PWABadge />
 
                                 <Toaster
@@ -79,7 +84,7 @@ const Main = () => {
                     </BrowserRouter>
                 </Theme>
             </ThemeProvider>
-        </QueryProvider>
+        </UserQueryProvider>
     );
 };
 

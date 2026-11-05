@@ -115,9 +115,92 @@ describe('clearLocalUserRole', () => {
         expect(getLocalUser()).toEqual({ settings });
     });
 
+    test('keeps the user id (session expiry keeps the per-user cache)', () => {
+        saveLocalUser({ id: 'user-1', role: 'USER', settings });
+
+        clearLocalUserRole();
+
+        expect(getLocalUser()).toEqual({ id: 'user-1', settings });
+    });
+
     test('does nothing when no user is cached', () => {
         clearLocalUserRole();
 
         expect(getLocalUser()).toBeNull();
+    });
+});
+
+describe('getLocalUser (LocalUserSchema)', () => {
+    const settings = {
+        defaultCurrency: 'USD',
+        defaultCategory: 'food',
+        timeFormat: '24h',
+        language: 'en',
+        theme: 'light',
+        simplifyDebts: true,
+        skipCategory: false,
+        soloModeByDefault: false,
+        saveGroupExpensesToSolo: false,
+        sex: 'female',
+    } satisfies UserSettings;
+
+    beforeEach(() => {
+        vi.unstubAllGlobals();
+        LocalStorage.remove(LS_KEY_USER);
+    });
+
+    test('reads the id written with the user', () => {
+        saveLocalUser({ id: 'user-7', role: 'ADMIN', settings });
+
+        expect(getLocalUser()).toEqual({ id: 'user-7', role: 'ADMIN', settings });
+    });
+
+    test('a user stored before 03-7a (no id) is still valid', () => {
+        saveLocalUser({ role: 'USER', settings });
+
+        expect(getLocalUser()).toEqual({ role: 'USER', settings });
+    });
+
+    test.each([
+        ['not an object', 'user'],
+        ['null', null],
+        ['missing settings', { id: 'user-7' }],
+        ['settings not an object', { id: 'user-7', settings: 'dark' }],
+    ])('a structurally broken stored user (%s) reads as absent', (_name, stored) => {
+        window.localStorage.setItem(LS_KEY_USER, JSON.stringify(stored));
+
+        expect(getLocalUser()).toBeNull();
+    });
+
+    test('an older stored user missing settings fields keeps its theme and language', () => {
+        window.localStorage.setItem(
+            LS_KEY_USER,
+            JSON.stringify({ role: 'USER', settings: { language: 'ru', theme: 'dark' } }),
+        );
+
+        expect(getLocalUser()).toEqual({
+            role: 'USER',
+            settings: {
+                defaultCurrency: 'USD',
+                defaultCategory: 'other',
+                timeFormat: '24h',
+                language: 'ru',
+                theme: 'dark',
+                simplifyDebts: true,
+                skipCategory: false,
+                soloModeByDefault: false,
+                saveGroupExpensesToSolo: false,
+                sex: 'male',
+            },
+        });
+    });
+
+    test('an invalid field falls back alone; an invalid id or role is dropped', () => {
+        window.localStorage.setItem(
+            LS_KEY_USER,
+            JSON.stringify({ id: 7, role: 'ROOT', settings: { ...settings, theme: 'neon' } }),
+        );
+
+        expect(getLocalUser()).toEqual({ settings: { ...settings, theme: 'system' } });
     });
 });

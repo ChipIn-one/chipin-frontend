@@ -109,7 +109,7 @@ describe('authStore', () => {
 
         return useAuthStore
             .getState()
-            .exchangeGoogleOAuthCode('oauth-code')
+            .exchangeGoogleOAuthCode('oauth-code-1')
             .then(() => {
                 expect(authSession.establishAuthSession).toHaveBeenCalledWith('access-token');
                 expect(setDefaultAppMode).toHaveBeenCalledWith(true);
@@ -126,7 +126,7 @@ describe('authStore', () => {
             throw persistenceError;
         });
 
-        return expect(useAuthStore.getState().exchangeGoogleOAuthCode('oauth-code'))
+        return expect(useAuthStore.getState().exchangeGoogleOAuthCode('oauth-code-2'))
             .rejects.toBe(persistenceError)
             .then(() => {
                 expect(authSession.startAuthLogout).toHaveBeenCalledOnce();
@@ -149,7 +149,7 @@ describe('authStore', () => {
 
         return useAuthStore
             .getState()
-            .exchangeGoogleOAuthCode('oauth-code')
+            .exchangeGoogleOAuthCode('oauth-code-3')
             .then(() => {
                 expect(fetchSetPremiumPromoRemaining).toHaveBeenCalledOnce();
             });
@@ -331,5 +331,37 @@ describe('authStore', () => {
 
         expect(getLocalUser()).toEqual({ settings: user.settings });
         expect(selectIsUserAdmin(useUsersStore.getState())).toBe(false);
+    });
+
+    // Spec 03 §1.5 table, invariant 12: a sign-out drops the cached user `id`; any other
+    // transition to unauthenticated keeps it (the user's cache survives an expiry).
+    test.each([
+        ['signOut (this tab)', () => void useAuthStore.getState().signOut()],
+        [
+            'remote logout (signed_out)',
+            () => useAuthStore.getState().setUnauthenticated('signed_out'),
+        ],
+    ])('%s drops the cached id and role, keeps settings', (_name, onSignOut) => {
+        saveLocalUser({ id: user.id, role: 'ADMIN', settings: user.settings });
+
+        onSignOut();
+
+        expect(getLocalUser()).toEqual({ settings: user.settings });
+        expect(useUsersStore.getState().localUser?.id).toBeUndefined();
+    });
+
+    test.each([
+        ['expireSession', () => useAuthStore.getState().expireSession()],
+        ['invalid', () => useAuthStore.getState().setUnauthenticated('invalid')],
+        ['expired', () => useAuthStore.getState().setUnauthenticated('expired')],
+        ['missing', () => useAuthStore.getState().setUnauthenticated('missing')],
+        ['error', () => useAuthStore.getState().setUnauthenticated('error')],
+    ])('%s keeps the cached id, drops only the role', (_name, onReset) => {
+        saveLocalUser({ id: user.id, role: 'ADMIN', settings: user.settings });
+
+        onReset();
+
+        expect(getLocalUser()).toEqual({ id: user.id, settings: user.settings });
+        expect(useUsersStore.getState().localUser?.id).toBe(user.id);
     });
 });

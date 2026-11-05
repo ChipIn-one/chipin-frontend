@@ -277,11 +277,9 @@ export const initServiceWorkerUpdates = async (): Promise<void> => {
 
     // Phase 4 — hourly poll for apps left open across background sessions.
     const pollForUpdate = async (): Promise<void> => {
-        if (!navigator.onLine) {
-            return;
-        }
-
         try {
+            // Offline the update request rejects at once and is ignored (no `navigator.onLine`
+            // check: it is read only in shared/offline, which helpers cannot import).
             await registration.update();
         } catch {
             // Ignore network errors during periodic checks.

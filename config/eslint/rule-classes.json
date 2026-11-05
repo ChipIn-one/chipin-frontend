@@ -84,6 +84,7 @@
     "no-restricted-imports#money-deep-import": "b",
     "no-restricted-imports#runtime-api-in-numbers": "b",
     "no-restricted-imports#runtime-api-in-ui": "b",
+    "no-restricted-properties": "b",
     "no-restricted-syntax#i18n-attributes": "b",
     "no-restricted-syntax#img-element": "b",
     "no-restricted-syntax#money-compare-field": "b",

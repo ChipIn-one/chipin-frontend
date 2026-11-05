@@ -1,8 +1,8 @@
-// The TanStack Query client (spec 03 §1.2). 03-5: no persistence yet; the persister, the
-// `PERSIST_MAX_AGE` gcTime, `registerMutationDefaults` and the per-user client arrive in 03-7a,
-// 03-15a and 03-7b.
-import { QueryClient } from '@tanstack/react-query';
+// The TanStack Query client (spec 03 §1.2). The per-user client and its persister live in
+// `shared/offline/restore.ts` (03-7a); `registerMutationDefaults` arrives in 03-15a.
+import { isServer, QueryClient } from '@tanstack/react-query';
 
+import { DAY } from 'constants/time';
 import { ApiError } from 'shared/lib/apiError';
 import { isNetworkUsable } from 'shared/offline/network';
 
@@ -12,6 +12,9 @@ import { isNetworkError } from './client';
 // `failureCount < n` allows n retries, n + 1 attempts in all.
 const NETWORK_RETRIES = 3;
 const SERVER_RETRIES = 2;
+
+/** How long a persisted cache is restored (spec 03 §1.4); `gcTime` must not be shorter. */
+export const PERSIST_MAX_AGE = 14 * DAY;
 
 /**
  * Retry policy of every query: a network error (no HTTP response, not a cancellation) gets 3
@@ -32,13 +35,16 @@ export const queryRetry = (failureCount: number, error: unknown): boolean => {
     return false;
 };
 
-/** A new client for one app instance (03-7b: one client per user). */
+/** A new client: one per user (`clientFor`), or one without persistence when signed out. */
 export const createQueryClient = (): QueryClient =>
     new QueryClient({
         defaultOptions: {
             queries: {
                 networkMode: 'offlineFirst',
                 staleTime: 30_000,
+                // >= maxAge, otherwise an inactive query is collected before it is persisted. On the
+                // server (landing prerender) Infinity: no 14-day GC timer keeps Node alive.
+                gcTime: isServer ? Infinity : PERSIST_MAX_AGE,
                 retry: queryRetry,
                 refetchOnWindowFocus: true,
                 refetchOnReconnect: true,
