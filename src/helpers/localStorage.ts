@@ -1,4 +1,6 @@
 import type { SelfUser, ThemeName, UserRole, UserSettings } from 'api/chipin.types';
+import { DEFAULT_EXPENSE_CATEGORY } from 'constants/category';
+import { DEFAULT_CURRENCY_CODE } from 'constants/currencies';
 import {
     LS_KEY_AUTH_SESSION_HINT,
     type LS_KEY_LOCALE,
@@ -18,9 +20,8 @@ export interface LocalUser {
 // module is on the landing path (theme, language), and zod would add ~15 KB gz (zod/mini) to
 // ~23 KB gz (zod) to what the landing loads. Lenient per field: a user stored by an older build
 // that lacks a field, or has an unknown value, keeps every valid field, so the landing
-// language/theme survive. The fallbacks are neutral: no language (locale detection decides), the
-// system theme, the backend defaults. An invalid `id`/`role` is dropped; only a structurally broken
-// record (not an object, no `settings` object) reads as absent.
+// language/theme survive (fallbacks below). An invalid `id`/`role` is dropped; only a structurally
+// broken record (not an object, no `settings` object) reads as absent.
 type UnknownRecord = Partial<Record<string, unknown>>;
 
 const isRecord = (value: unknown): value is UnknownRecord =>
@@ -40,10 +41,14 @@ const THEMES = ['light', 'dark', 'system'] as const;
 const SEXES = ['male', 'female'] as const;
 const ROLES = ['USER', 'ADMIN'] as const;
 
+// The fallbacks are the ones the app already applies to a missing setting: the default currency
+// and category constants and the `users-store` selectors (`selectUserSettings(s)?.x ?? …`, where a
+// missing `timeFormat` reads as 12h). One exception: language `''` (unset; locale detection
+// decides) instead of the selector's `'en'`, so the landing locale is not forced.
 const parseUserSettings = (value: UnknownRecord): UserSettings => ({
-    defaultCurrency: stringOr(value.defaultCurrency, 'USD'),
-    defaultCategory: stringOr(value.defaultCategory, 'other'),
-    timeFormat: oneOf(value.timeFormat, TIME_FORMATS, '24h'),
+    defaultCurrency: stringOr(value.defaultCurrency, DEFAULT_CURRENCY_CODE),
+    defaultCategory: stringOr(value.defaultCategory, DEFAULT_EXPENSE_CATEGORY),
+    timeFormat: oneOf(value.timeFormat, TIME_FORMATS, '12h'),
     language: stringOr(value.language, ''),
     theme: oneOf(value.theme, THEMES, 'system'),
     simplifyDebts: booleanOr(value.simplifyDebts, true),

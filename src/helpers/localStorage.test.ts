@@ -183,7 +183,7 @@ describe('getLocalUser (LocalUserSchema)', () => {
             settings: {
                 defaultCurrency: 'USD',
                 defaultCategory: 'other',
-                timeFormat: '24h',
+                timeFormat: '12h',
                 language: 'ru',
                 theme: 'dark',
                 simplifyDebts: true,

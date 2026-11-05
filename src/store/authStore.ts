@@ -45,6 +45,8 @@ let lastOAuthExchange: { code: string; promise: Promise<void> } | null = null;
 const resetAuthScopedStores = (signedOut = false) => {
     // Before setInitialUsersStore(), which re-reads the cached user from localStorage.
     if (signedOut) {
+        // A later sign-in with the same code must reach the server, not this session's result.
+        lastOAuthExchange = null;
         clearLocalUserIdentity();
     } else {
         clearLocalUserRole();
@@ -133,6 +135,12 @@ export const useAuthStore = create<AuthStore>(set => ({
             });
 
         lastOAuthExchange = { code, promise };
+        // A failed exchange is not cached: a retry sends a new request.
+        promise.catch(() => {
+            if (lastOAuthExchange?.promise === promise) {
+                lastOAuthExchange = null;
+            }
+        });
         return promise;
     },
 

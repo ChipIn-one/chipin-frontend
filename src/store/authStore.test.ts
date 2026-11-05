@@ -364,4 +364,57 @@ describe('authStore', () => {
         expect(getLocalUser()).toEqual({ id: user.id, settings: user.settings });
         expect(useUsersStore.getState().localUser?.id).toBe(user.id);
     });
+
+    describe('OAuth code dedupe (the remount on the first user id)', () => {
+        const tokens = { token: 'access-token', is_new_user: false };
+
+        test('the same code while it is exchanged: one request, one promise', () => {
+            vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue(tokens);
+            mockAuthenticatedDataFetches();
+            const { exchangeGoogleOAuthCode } = useAuthStore.getState();
+
+            const first = exchangeGoogleOAuthCode('dedupe-code');
+            const second = exchangeGoogleOAuthCode('dedupe-code');
+
+            expect(second).toBe(first);
+            return first.then(() => {
+                expect(exchangeApiGoogleOAuthCode).toHaveBeenCalledOnce();
+            });
+        });
+
+        test('a failed exchange is not cached: a retry sends a new request', () => {
+            vi.mocked(exchangeApiGoogleOAuthCode)
+                .mockRejectedValueOnce(new Error('exchange failed'))
+                .mockResolvedValueOnce(tokens);
+            mockAuthenticatedDataFetches();
+            const { exchangeGoogleOAuthCode } = useAuthStore.getState();
+
+            return expect(exchangeGoogleOAuthCode('retried-code'))
+                .rejects.toThrow('exchange failed')
+                .then(() => exchangeGoogleOAuthCode('retried-code'))
+                .then(() => {
+                    expect(exchangeApiGoogleOAuthCode).toHaveBeenCalledTimes(2);
+                    expect(useAuthStore.getState().status).toBe('authenticated');
+                });
+        });
+
+        test.each([
+            ['signOut', () => void useAuthStore.getState().signOut()],
+            ['remote logout', () => useAuthStore.getState().setUnauthenticated('signed_out')],
+        ])('after %s the same code is not served from the cache', (_name, onSignOut) => {
+            vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue(tokens);
+            mockAuthenticatedDataFetches();
+            const { exchangeGoogleOAuthCode } = useAuthStore.getState();
+            const code = `signed-out-code-${_name}`;
+
+            return exchangeGoogleOAuthCode(code)
+                .then(() => {
+                    onSignOut();
+                    return exchangeGoogleOAuthCode(code);
+                })
+                .then(() => {
+                    expect(exchangeApiGoogleOAuthCode).toHaveBeenCalledTimes(2);
+                });
+        });
+    });
 });

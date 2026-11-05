@@ -31,6 +31,11 @@ const idbStringStorage: AsyncStorage<string> = {
 
 let persistFailureReported = false;
 
+/** Tests only: forget that this session already reported a persist failure. */
+export const resetPersistFailureReport = (): void => {
+    persistFailureReported = false;
+};
+
 // `DOMException` (the IDB errors) is not an `Error` in every realm: read its `name` directly.
 const errorName = (error: unknown): string =>
     typeof error === 'object' && error !== null && 'name' in error && typeof error.name === 'string'

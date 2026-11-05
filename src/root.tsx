@@ -4,6 +4,7 @@ import { SpeedInsights } from '@vercel/speed-insights/react';
 import { ThemeProvider } from 'next-themes';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 
+import { persistedUserId } from 'app/providers/persistedUserId';
 import { initializeApi } from 'bootstrap/initializeApi';
 import { initializeSentry } from 'bootstrap/initializeSentry';
 import { LS_KEY_THEME } from 'constants/localstorage';
@@ -59,7 +60,7 @@ if (prerenderedRoute) {
     // the public SSG branch above never touches IndexedDB.
     Promise.all([import('main'), import('shared/offline/restore')])
         .then(([{ default: Main }, { startCacheRestore }]) => {
-            startCacheRestore(getLocalUser()?.id);
+            startCacheRestore(persistedUserId(getLocalUser()?.id));
             createRoot(rootElement).render(
                 <GlobalErrorBoundary>
                     <ThemeProvider

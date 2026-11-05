@@ -10,6 +10,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 
 import { exchangeApiGoogleOAuthCode } from 'api/chipin';
 import type { SelfUser } from 'api/chipin.types';
+import { persistedUserId } from 'app/providers/persistedUserId';
 import { UserQueryProvider } from 'app/providers/UserQueryProvider';
 import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
 import { LocalStorage, saveLocalUser } from 'helpers/localStorage';
@@ -80,7 +81,7 @@ const Destination = () => <p>{DESTINATION_TEXT}</p>;
 // What main.tsx does: the provider follows `localUser.id` from the users store, the router is
 // inside it (a MemoryRouter even restarts at its initial entry on the remount).
 const App = ({ initialEntry = '/' }: { initialEntry?: string }) => {
-    const userId = useUsersStore(state => state.localUser?.id);
+    const userId = useUsersStore(state => persistedUserId(state.localUser?.id));
 
     return (
         <Theme>
@@ -171,4 +172,17 @@ test('a fresh OAuth sign-in: the remounted callback page does not exchange the c
     expect(fetchSetUser).toHaveBeenCalledOnce();
     expect(refresh).not.toHaveBeenCalled();
     expect(useAuthStore.getState().status).toBe('authenticated');
+});
+
+test('a cached id without a session hint: no IndexedDB read, no persisted client mounted', async () => {
+    LocalStorage.remove(LS_KEY_AUTH_SESSION_HINT);
+    saveLocalUser({ id: 'hintless-user', role: 'USER', settings: user.settings });
+    useUsersStore.getState().setInitialUsersStore();
+    useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'missing' });
+
+    render(<App />);
+
+    expect(await screen.findByText(DESTINATION_TEXT)).not.toBeNull();
+    expect(get).not.toHaveBeenCalled();
+    expect(mounts).toBe(1);
 });

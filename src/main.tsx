@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from 'styled-components';
 
+import { persistedUserId } from 'app/providers/persistedUserId';
 import { RestoreGate } from 'app/providers/RestoreGate';
 import { UserQueryProvider } from 'app/providers/UserQueryProvider';
 import { darkThemeStyled, lightThemeStyled } from 'constants/styled-themes';
@@ -35,7 +36,8 @@ const Main = () => {
     const themeName = isDarkTheme ? 'dark' : 'light';
     const styledThemeParams = isDarkTheme ? darkThemeStyled : lightThemeStyled;
     const isMobile = useIsMobile();
-    const userId = useUsersStore(state => state.localUser?.id);
+    // Re-read on every users-store change: sign-in, sign-out and expiry all update it.
+    const userId = useUsersStore(state => persistedUserId(state.localUser?.id));
 
     return (
         <UserQueryProvider userId={userId}>

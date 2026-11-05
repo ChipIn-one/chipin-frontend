@@ -9,7 +9,12 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { currencyCode, fromUnits } from 'shared/money';
 
-import { persistOptions, QUERY_CACHE_BUSTER, queryCacheKey } from './queryPersister';
+import {
+    persistOptions,
+    QUERY_CACHE_BUSTER,
+    queryCacheKey,
+    resetPersistFailureReport,
+} from './queryPersister';
 
 import 'fake-indexeddb/auto';
 
@@ -56,6 +61,8 @@ const restore = (userId: string, client: QueryClient): Promise<void> => {
 
 beforeEach(() => {
     vi.mocked(Sentry.captureMessage).mockClear();
+    // Once per session: every test starts as a new session, independent of the order.
+    resetPersistFailureReport();
 });
 
 describe('query cache persister', () => {

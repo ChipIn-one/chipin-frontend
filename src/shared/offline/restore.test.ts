@@ -4,7 +4,7 @@ import { get, set } from 'idb-keyval';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { persistCodec } from './persistCodec';
-import { QUERY_CACHE_BUSTER, queryCacheKey } from './queryPersister';
+import { QUERY_CACHE_BUSTER, queryCacheKey, resetPersistFailureReport } from './queryPersister';
 import {
     bootstrapUserCache,
     clientFor,
@@ -43,6 +43,8 @@ const settleIdb = (): Promise<void> => new Promise(resolve => setTimeout(resolve
 
 beforeEach(() => {
     vi.mocked(Sentry.captureMessage).mockClear();
+    // Once per session: every test starts as a new session, independent of the order.
+    resetPersistFailureReport();
 });
 
 afterEach(() => {
@@ -131,5 +133,43 @@ describe('restoreReady', () => {
         startCacheRestore(undefined);
 
         await expect(restoreReady).resolves.toBeUndefined();
+    });
+});
+
+// `restoreReady` is a module singleton: a fresh module per test.
+describe('startCacheRestore → restoreReady (fresh module)', () => {
+    const loadFresh = async () => {
+        vi.resetModules();
+        const idb = await import('idb-keyval');
+        const restore = await import('./restore');
+
+        return { idb, restore };
+    };
+
+    test('a user: resolves after that user cache is restored into its client', async () => {
+        await storeCache('boot-user');
+        const { restore } = await loadFresh();
+
+        restore.startCacheRestore('boot-user');
+        await restore.restoreReady;
+
+        expect(restore.clientFor('boot-user').getQueryData(DASHBOARD_KEY)).toEqual({ total: 5n });
+    });
+
+    test('a user whose restore hangs: resolves after the 3 s timeout, empty', async () => {
+        await storeCache('boot-slow');
+        const { idb, restore } = await loadFresh();
+        vi.mocked(idb.get).mockImplementationOnce(() => new Promise(() => undefined));
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+        const settled = vi.fn();
+
+        restore.startCacheRestore('boot-slow');
+        void restore.restoreReady.then(settled);
+        await vi.advanceTimersByTimeAsync(restore.RESTORE_TIMEOUT_MS - 1);
+        expect(settled).not.toHaveBeenCalled();
+        await vi.advanceTimersByTimeAsync(1);
+
+        expect(settled).toHaveBeenCalledOnce();
+        expect(restore.clientFor('boot-slow').getQueryData(DASHBOARD_KEY)).toBeUndefined();
     });
 });
