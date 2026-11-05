@@ -226,6 +226,17 @@ const withAuthRefreshLock = (callback: () => Promise<string | null>): Promise<st
     return lockManager.request(AUTH_REFRESH_LOCK_NAME, callback);
 };
 
+let accessTokenRefreshListener: ((token: string) => void) | null = null;
+
+/**
+ * Called with every token a cookie refresh returns (the interceptor refresh and the session
+ * check alike): the auth store compares its `sub` with the cached user (spec 03 §1.5, another tab
+ * may have switched the account). One listener.
+ */
+export const setAccessTokenRefreshListener = (listener: ((token: string) => void) | null): void => {
+    accessTokenRefreshListener = listener;
+};
+
 const refreshAccessToken = (): Promise<string | null> => {
     if (!refreshPromise) {
         const version = authSessionVersion;
@@ -244,6 +255,7 @@ const refreshAccessToken = (): Promise<string | null> => {
             return refreshApiAuthTokens().then(({ token }) => {
                 assertCurrentAuthSession(version);
                 accessToken = token;
+                accessTokenRefreshListener?.(token);
                 return token;
             });
         })

@@ -4,7 +4,7 @@ import * as Sentry from '@sentry/react';
 import { del } from 'idb-keyval';
 
 import { outboxKeys, queryCacheKey } from './constants';
-import { blockCacheWrites, cachesByUser } from './userCaches';
+import { blockCacheWrites, cachesByUser, claimPersistFailureReport } from './userCaches';
 
 const errorName = (error: unknown): string =>
     typeof error === 'object' && error !== null && 'name' in error && typeof error.name === 'string'
@@ -17,8 +17,9 @@ const errorName = (error: unknown): string =>
  * lock join here from 03-15a/03-15c); (2) clear the user's QueryClient; (2a) `resetUserStores`, the
  * legacy zustand stores and the expense draft (they live in `store`, so the caller passes them);
  * (3) delete the user's IndexedDB keys; (4) forget the user's client, so the provider and the next
- * sign-in get a new one. Steps 1–2a and 4 are synchronous; the promise settles when the keys are
- * deleted and never rejects (an IDB error is reported, the app goes on).
+ * sign-in get a new one. Steps 1–2a and 4 are synchronous; callers do not wait for the deletes (a
+ * hanging IDB must not hold a sign-in or a sign-out). The promise settles when the keys are deleted
+ * and never rejects (an IDB error is reported once per session, the app goes on).
  */
 export const clearUserData = (userId: string, resetUserStores: () => void): Promise<void> => {
     const entry = cachesByUser.get(userId);
@@ -43,6 +44,9 @@ export const clearUserData = (userId: string, resetUserStores: () => void): Prom
         .then(
             () => undefined,
             (error: unknown) => {
+                if (!claimPersistFailureReport()) {
+                    return;
+                }
                 Sentry.captureMessage('offline.persist_failed', {
                     level: 'warning',
                     tags: { 'offline.error': errorName(error) },

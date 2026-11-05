@@ -360,11 +360,11 @@ test('offline cold start: a cached user with a hint is authenticated on the cach
 
 test('a network error during the startup refresh: offline-cached, nothing loaded', () => {
     cacheSignedInUser();
-    const refreshAuthTokens = vi
-        .fn<() => Promise<string>>()
-        .mockRejectedValueOnce(networkError)
-        // The reconnect retry (the network is "usable" again for onlineManager): offline again.
-        .mockRejectedValue(networkError);
+    // As the interceptor: the failure is classified offline before the caller's `catch`.
+    const refreshAuthTokens = vi.fn(() => {
+        onlineManager.setOnline(false);
+        return Promise.reject(networkError);
+    });
     useAuthStore.setState({ refreshAuthTokens });
     const fetchSetDashboardData = vi
         .spyOn(useDashboardStore.getState(), 'fetchSetDashboardData')
@@ -456,4 +456,116 @@ test('reconnect: a 401 refresh expires the session', () => {
             });
         });
     });
+});
+
+test('a network error classified backend-down keeps waiting, then refreshes when back online', () => {
+    cacheSignedInUser();
+    const refreshAuthTokens = vi
+        .fn<() => Promise<string>>()
+        .mockImplementationOnce(() => {
+            useConnectivityStore.setState({ mode: 'backend-down' });
+            return Promise.reject(networkError);
+        })
+        .mockResolvedValueOnce('next-access-token');
+    useAuthStore.setState({ refreshAuthTokens });
+    mockAuthenticatedDataFetches();
+
+    renderHook();
+
+    return waitFor(() => {
+        expect(refreshAuthTokens).toHaveBeenCalledOnce();
+        expect(useConnectivityStore.getState().mode).toBe('backend-down');
+    }).then(() => {
+        expect(useAuthStore.getState().status).toBe('unknown');
+        act(() => {
+            useConnectivityStore.setState({ mode: 'online' });
+        });
+        return waitFor(() => {
+            expect(refreshAuthTokens).toHaveBeenCalledTimes(2);
+            expect(useAuthStore.getState()).toMatchObject({
+                status: 'authenticated',
+                sessionMode: 'online',
+            });
+        });
+    });
+});
+
+test('a one-off request error while online is an error, not the offline cache', () => {
+    cacheSignedInUser();
+    useAuthStore.setState({ refreshAuthTokens: vi.fn(() => Promise.reject(networkError)) });
+
+    renderHook();
+
+    return waitFor(() => {
+        expect(useAuthStore.getState()).toMatchObject({
+            status: 'unauthenticated',
+            unauthReason: 'error',
+        });
+    });
+});
+
+test('the hint turns false during the boot refresh: no offline-cached session', () => {
+    cacheSignedInUser();
+    const refreshAuthTokens = vi.fn(() => {
+        localStorageHelpers.LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, false);
+        onlineManager.setOnline(false);
+        return Promise.reject(networkError);
+    });
+    useAuthStore.setState({ refreshAuthTokens });
+
+    renderHook();
+
+    return waitFor(() => {
+        expect(refreshAuthTokens).toHaveBeenCalledOnce();
+    }).then(() => {
+        expect(useAuthStore.getState().sessionMode).toBe('online');
+        expect(useAuthStore.getState().status).not.toBe('authenticated');
+    });
+});
+
+test('a connectivity flap during the reconnect refresh: one refresh, data loaded once', () => {
+    cacheSignedInUser();
+    onlineManager.setOnline(false);
+    let finish: (token: string) => void = () => undefined;
+    const refreshAuthTokens = vi.fn(
+        () =>
+            new Promise<string>(resolve => {
+                finish = token => {
+                    useAuthStore.setState({ sessionMode: 'online' });
+                    resolve(token);
+                };
+            }),
+    );
+    useAuthStore.setState({ refreshAuthTokens });
+    mockAuthenticatedDataFetches();
+    const fetchSetDashboardData = vi.mocked(useDashboardStore.getState().fetchSetDashboardData);
+
+    renderHook();
+
+    return waitFor(() => {
+        expect(useAuthStore.getState().sessionMode).toBe('offline-cached');
+    })
+        .then(() => {
+            act(() => {
+                onlineManager.setOnline(true);
+            });
+            return waitFor(() => {
+                expect(refreshAuthTokens).toHaveBeenCalledOnce();
+            });
+        })
+        .then(() => {
+            act(() => {
+                onlineManager.setOnline(false);
+            });
+            act(() => {
+                onlineManager.setOnline(true);
+            });
+            expect(refreshAuthTokens).toHaveBeenCalledOnce();
+            act(() => {
+                finish('next-access-token');
+            });
+            return waitFor(() => {
+                expect(fetchSetDashboardData).toHaveBeenCalledOnce();
+            });
+        });
 });

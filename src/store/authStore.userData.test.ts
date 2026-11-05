@@ -1,16 +1,21 @@
 // Spec 03 §1.5, the "reason → what is deleted" table: one test per row. Only a sign-out (this tab
 // or remote) and an account switch delete the user's data; any other reason deletes nothing in IDB.
-import { get, set } from 'idb-keyval';
+import { del, get, set } from 'idb-keyval';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import { exchangeApiGoogleOAuthCode } from 'api/chipin';
+import { exchangeApiGoogleOAuthCode, refreshApiAuthTokens } from 'api/chipin';
 import type { SelfUser } from 'api/chipin.types';
-import { LS_KEY_USER } from 'constants/localstorage';
+import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
+import {
+    AuthSessionPersistenceError,
+    establishAuthSession,
+    setAccessTokenRefreshListener,
+} from 'helpers/authSession';
 import { getLocalUser, LocalStorage, saveLocalUser } from 'helpers/localStorage';
 import { outboxKeys, queryCacheKey } from 'shared/offline/constants';
 import { fakeAccessToken } from 'test/fakeAccessToken';
 
-import { useAuthStore } from './authStore';
+import { onAccessTokenRefreshed, useAuthStore } from './authStore';
 import { useDashboardStore } from './dashboardStore';
 import { useExpenseModalStore } from './expenseModalStore';
 import { useGroupsStore } from './groupsStore';
@@ -19,7 +24,15 @@ import { useUsersStore } from './users-store';
 import 'fake-indexeddb/auto';
 
 vi.mock('@sentry/react', () => ({ captureMessage: vi.fn(), captureException: vi.fn() }));
-vi.mock('api/chipin', () => ({ exchangeApiGoogleOAuthCode: vi.fn() }));
+vi.mock('api/chipin', () => ({
+    exchangeApiGoogleOAuthCode: vi.fn(),
+    refreshApiAuthTokens: vi.fn(),
+}));
+vi.mock('idb-keyval', async importOriginal => {
+    const actual = await importOriginal<typeof import('idb-keyval')>();
+
+    return { ...actual, del: vi.fn(actual.del) };
+});
 // The real `getAccessTokenSubject`; no network for the session itself.
 vi.mock('helpers/authSession', async importOriginal => ({
     ...(await importOriginal<typeof import('helpers/authSession')>()),
@@ -121,6 +134,9 @@ const signInWith = (id: string, code: string): Promise<void> => {
 
 beforeEach(() => {
     vi.restoreAllMocks();
+    vi.mocked(establishAuthSession).mockReset();
+    // Back to the real delete after a test that made it hang.
+    vi.mocked(del).mockReset();
     LocalStorage.remove(LS_KEY_USER);
     useExpenseModalStore.getState().reset();
 });
@@ -195,6 +211,38 @@ describe('reason → what is deleted (spec 03 §1.5)', () => {
         expect(getLocalUser()).toEqual({ id: USER_X, role: 'ADMIN', settings });
     });
 
+    test('a failing OAuth exchange (error): nothing deleted, LS_KEY_USER unchanged', async () => {
+        await signInX();
+        useAuthStore.getState().expireSession();
+        vi.mocked(exchangeApiGoogleOAuthCode).mockRejectedValue(new Error('exchange failed'));
+
+        await expect(
+            useAuthStore.getState().exchangeGoogleOAuthCode('failing-code'),
+        ).rejects.toThrow('exchange failed');
+
+        expect(useAuthStore.getState().unauthReason).toBe('error');
+        expect(await storedKeys(USER_X)).toEqual(userKeys(USER_X));
+        expectDraftKept();
+        expect(getLocalUser()).toEqual({ id: USER_X, settings });
+    });
+
+    test('a switch to Y that fails with persistence_error keeps X data', async () => {
+        await signInX();
+        useAuthStore.getState().expireSession();
+        vi.mocked(establishAuthSession).mockImplementation(() => {
+            throw new AuthSessionPersistenceError();
+        });
+
+        await expect(signInWith(USER_Y, 'persistence-code')).rejects.toBeInstanceOf(
+            AuthSessionPersistenceError,
+        );
+
+        expect(useAuthStore.getState().unauthReason).toBe('persistence_error');
+        expect(await storedKeys(USER_X)).toEqual(userKeys(USER_X));
+        expectDraftKept();
+        expect(getLocalUser()).toEqual({ id: USER_X, settings });
+    });
+
     test.each(['error', 'persistence_error'] as const)(
         '%s: nothing deleted, LS_KEY_USER unchanged',
         async reason => {
@@ -224,6 +272,76 @@ describe('reason → what is deleted (spec 03 §1.5)', () => {
     });
 });
 
+describe('a hanging IndexedDB delete holds neither sign-in nor sign-out', () => {
+    const hangDeletes = (): void => {
+        vi.mocked(del).mockImplementation(() => new Promise(() => undefined));
+    };
+
+    test('sign-in of Y completes; X data is gone from the stores and LocalUser', async () => {
+        await signInX();
+        useAuthStore.getState().expireSession();
+        hangDeletes();
+
+        await signInWith(USER_Y, 'hanging-switch-code');
+
+        expect(useAuthStore.getState().status).toBe('authenticated');
+        expectDraftReset();
+        expect(getLocalUser()).toEqual({ id: USER_Y, role: 'USER', settings });
+        expect(del).toHaveBeenCalledWith(queryCacheKey(USER_X));
+    });
+
+    test('sign-out completes, and a later sign-out is not stuck behind it', async () => {
+        await signInX();
+        hangDeletes();
+
+        await useAuthStore.getState().signOut();
+        await signInX();
+        await useAuthStore.getState().signOut();
+
+        expectDraftReset();
+        expect(getLocalUser()).toEqual({ settings });
+    });
+});
+
+describe('another tab switched the account (a refreshed token of Y)', () => {
+    // As `bootstrap/initializeApi` wires it.
+    beforeEach(() => {
+        setAccessTokenRefreshListener(onAccessTokenRefreshed);
+    });
+    afterEach(() => {
+        setAccessTokenRefreshListener(null);
+    });
+
+    const refreshTo = (id: string): Promise<string> => {
+        LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
+        vi.mocked(refreshApiAuthTokens).mockResolvedValue({ token: fakeAccessToken(id) });
+        mockSignedInFetches(id);
+        return useAuthStore.getState().refreshAuthTokens();
+    };
+
+    test('X is dropped, LocalUser = { id: Y, settings }, the data reloads', async () => {
+        await signInX();
+
+        await refreshTo(USER_Y);
+        await settleIdb();
+
+        expect(await storedKeys(USER_X)).toEqual([]);
+        expectDraftReset();
+        expect(useUsersStore.getState().user?.id).toBe(USER_Y);
+        expect(getLocalUser()).toEqual({ id: USER_Y, role: 'USER', settings });
+    });
+
+    test('a refresh of the same user keeps everything', async () => {
+        await signInX();
+
+        await refreshTo(USER_X);
+        await settleIdb();
+
+        expect(await storedKeys(USER_X)).toEqual(userKeys(USER_X));
+        expectDraftKept();
+    });
+});
+
 describe('the session continues for the same user', () => {
     test('expire X → sign-in X: the draft and the stored data are in place', async () => {
         await signInX();
@@ -233,6 +351,21 @@ describe('the session continues for the same user', () => {
 
         expect(await storedKeys(USER_X)).toEqual(userKeys(USER_X));
         expectDraftKept();
+    });
+
+    test('a token without a readable sub counts as another user', async () => {
+        await signInX();
+        useAuthStore.getState().expireSession();
+        vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue({
+            token: 'not-a-jwt',
+            is_new_user: false,
+        });
+        mockSignedInFetches(USER_Y);
+
+        await useAuthStore.getState().exchangeGoogleOAuthCode('opaque-token-code');
+
+        expect(await storedKeys(USER_X)).toEqual([]);
+        expectDraftReset();
     });
 
     test('a draft of another user is reset on sign-in even without a cached id', async () => {

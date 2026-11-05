@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -106,9 +106,15 @@ export const useCheckSignIn = () => {
                 if (useAuthStore.getState().status !== AUTH_STATUS.UNKNOWN) {
                     return;
                 }
-                // A network error during the refresh: the same offline cold start. The hint is
-                // read again, the refresh may have ended the session in the meantime.
-                if (isNetworkError(error) && hasCachedUserId && hasAuthSessionHint()) {
+                // A network error during the refresh, classified offline before this `catch` runs:
+                // the same offline cold start. Backend down keeps waiting; a one-off request error
+                // is an `error`. The hint is read again, the refresh may have ended the session.
+                if (
+                    isNetworkError(error) &&
+                    useConnectivityStore.getState().mode === 'offline' &&
+                    hasCachedUserId &&
+                    hasAuthSessionHint()
+                ) {
                     setOfflineCachedSession();
                     return;
                 }
@@ -133,20 +139,27 @@ export const useCheckSignIn = () => {
 
     // Reconnect of an offline-cached session: a 401 refresh expires the session (inside
     // `refreshAuthTokens`), a success makes it `online` and loads the data the cold start skipped.
+    // A connectivity flap during the refresh must not start a second one (and load twice).
+    const isReconnecting = useRef(false);
     useEffect(() => {
         if (
             status !== AUTH_STATUS.AUTHENTICATED ||
             sessionMode !== SESSION_MODE.OFFLINE_CACHED ||
-            isDisconnected
+            isDisconnected ||
+            isReconnecting.current
         ) {
             return;
         }
 
+        isReconnecting.current = true;
         refreshAuthTokens()
             .then(loadSessionData)
             .catch(() => {
                 // A 401 has already expired the session; a network error keeps the cached
                 // session, and the next reconnect (a connectivity change) tries again.
+            })
+            .finally(() => {
+                isReconnecting.current = false;
             });
     }, [isDisconnected, loadSessionData, refreshAuthTokens, sessionMode, status]);
 };

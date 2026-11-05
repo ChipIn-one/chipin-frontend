@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import type { User } from 'api/chipin.types';
 import { DEFAULT_EXPENSE_CATEGORY } from 'constants/category';
 import { EXPENSE_SPLIT_MODES, type ExpenseSplitMode } from 'constants/chipin';
+import { getLocalUser } from 'helpers/localStorage';
 import { parseAmountInput } from 'helpers/numbers';
 import { getUnixTimestampInSec } from 'helpers/time';
 import {
@@ -295,7 +296,7 @@ const getInitializedState = (source: ExpenseModalSource): ExpenseModalState => {
         openingContext: source.context === 'friends' ? 'friends' : undefined,
         openingFriendId: source.preferredFriendId,
         source,
-        ownerId: source.currentUser?.id ?? null,
+        ownerId: source.currentUser?.id ?? getLocalUser()?.id ?? null,
         targetMode,
         groupId,
         selectedFriendId,
@@ -365,7 +366,7 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
         set(state => ({
             ...state,
             ...initialization,
-            ownerId: initialization.source.currentUser?.id ?? null,
+            ownerId: initialization.source.currentUser?.id ?? getLocalUser()?.id ?? null,
             isOpened: true,
             isCurrencyManuallyEdited: true,
             openingContext: undefined,

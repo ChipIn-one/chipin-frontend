@@ -29,3 +29,20 @@ export const unblockCacheWrites = (key: string): void => {
 };
 
 export const isCacheWriteBlocked = (key: string): boolean => blockedWriteKeys.has(key);
+
+// `offline.persist_failed` is reported once per session, by the persister and `clearUserData` alike.
+let persistFailureReported = false;
+
+/** True the first time in a session: the caller reports, later callers stay quiet. */
+export const claimPersistFailureReport = (): boolean => {
+    if (persistFailureReported) {
+        return false;
+    }
+    persistFailureReported = true;
+    return true;
+};
+
+/** Tests only: forget that this session already reported a persist failure. */
+export const resetPersistFailureFlag = (): void => {
+    persistFailureReported = false;
+};

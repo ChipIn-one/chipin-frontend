@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { clearUserData } from './clearUserData';
 import { outboxKeys, queryCacheKey } from './constants';
 import { bootstrapUserCache, clientFor } from './restore';
-import { cachesByUser } from './userCaches';
+import { cachesByUser, resetPersistFailureFlag } from './userCaches';
 
 import 'fake-indexeddb/auto';
 
@@ -33,6 +33,7 @@ const storedValues = (userId: string): Promise<unknown[]> =>
 beforeEach(() => {
     vi.mocked(Sentry.captureMessage).mockClear();
     vi.mocked(del).mockClear();
+    resetPersistFailureFlag();
 });
 
 describe('clearUserData (spec 03 §1.5)', () => {
