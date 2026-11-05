@@ -1,16 +1,7 @@
-import { StrictMode } from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, expect, test, vi } from 'vitest';
-
-import { useLandingStatsStore } from 'store/landing-stats-store';
+import { render, screen } from '@testing-library/react';
+import { expect, test, vi } from 'vitest';
 
 import HomePage from './HomePage';
-
-const { fetchStatsMock } = vi.hoisted(() => ({
-    fetchStatsMock: vi.fn(),
-}));
-
-vi.mock('api/statsApi', () => ({ fetchStats: fetchStatsMock }));
 
 vi.mock('features/landing', () => ({
     CtaSection: () => <section aria-label="CTA" />,
@@ -22,44 +13,7 @@ vi.mock('features/landing', () => ({
 
 vi.mock('components/Footer', () => ({ default: () => <footer aria-label="Footer" /> }));
 
-beforeEach(() => {
-    vi.clearAllMocks();
-    useLandingStatsStore.getState().setInitialLandingStatsStore();
-});
-
-test('loads public statistics once when the landing page mounts in Strict Mode', () => {
-    fetchStatsMock.mockResolvedValue({
-        usersCount: 51_234,
-        groupsCount: 16_789,
-        expensesCount: 25_345_678,
-        settlementsCount: 321_987,
-    });
-
-    render(
-        <StrictMode>
-            <HomePage />
-        </StrictMode>,
-    );
-
-    return waitFor(() => {
-        expect(fetchStatsMock).toHaveBeenCalledOnce();
-        expect(useLandingStatsStore.getState().stats).toEqual({
-            usersCount: 51_234,
-            groupsCount: 16_789,
-            expensesCount: 25_345_678,
-            settlementsCount: 321_987,
-        });
-    });
-});
-
 test('keeps every landing section and footer in the intended order', () => {
-    fetchStatsMock.mockResolvedValue({
-        usersCount: 51_234,
-        groupsCount: 16_789,
-        expensesCount: 25_345_678,
-        settlementsCount: 321_987,
-    });
-
     render(<HomePage />);
 
     const sectionLabels = screen

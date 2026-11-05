@@ -3,13 +3,14 @@
 // the lossless transport (wireJson.ts); the instance's global defaults are not changed, so the
 // legacy `src/api/*` modules keep `JSON.parse`. `api()` never converts money to `Money`: the
 // `entities/*/model` mappers do that.
-import type { AxiosProgressEvent, AxiosRequestConfig } from 'axios';
-import { isAxiosError } from 'axios';
+import type { AxiosInstance, AxiosProgressEvent, AxiosRequestConfig } from 'axios';
+import { isAxiosError, isCancel } from 'axios';
 
+import type { PublicOperations } from 'shared/api/generated/publicOperations';
 import type { paths } from 'shared/api/generated/schema';
 import { ApiError, ApiResponseFormatError, getApiErrorPayload } from 'shared/lib/apiError';
 
-import { apiInstance } from './http';
+import { apiInstance, publicApiInstance } from './http';
 import { encodePathSegment, InvalidPathSegmentError } from './pathSegment';
 import { parseWireJson, stringifyWireJson } from './wireJson';
 
@@ -138,17 +139,12 @@ const toApiError = (error: unknown): unknown => {
     return new ApiError({ status, payload, current, cause: error });
 };
 
-/**
- * Calls `method path` with typed params, query, body and response. An invalid `{param}` gives a
- * rejected `InvalidPathSegmentError` (no request); an HTTP error response gives `ApiError`; a 2xx
- * body that is not JSON gives `ApiResponseFormatError`; network errors and cancellations are
- * rejected as Axios gives them.
- */
-export async function api<P extends keyof paths, M extends MethodOf<P>>(
+const request = async <P extends keyof paths, M extends MethodOf<P>>(
+    instance: AxiosInstance,
     method: M,
     path: P,
-    ...args: ApiArgs<Op<P, M>>
-): Promise<Success<Op<P, M>>> {
+    args: ApiArgs<Op<P, M>>,
+): Promise<Success<Op<P, M>>> => {
     const [first]: readonly unknown[] = args;
     const opts: LooseOptions = isLooseOptions(first) ? first : {};
     const url = buildPath(path, opts.params);
@@ -170,7 +166,7 @@ export async function api<P extends keyof paths, M extends MethodOf<P>>(
     let response;
 
     try {
-        response = await apiInstance.request<Success<Op<P, M>>>(config);
+        response = await instance.request<Success<Op<P, M>>>(config);
     } catch (error) {
         throw toApiError(error);
     }
@@ -180,4 +176,44 @@ export async function api<P extends keyof paths, M extends MethodOf<P>>(
         throw new ApiResponseFormatError(response.status);
     }
     return response.data;
+};
+
+/**
+ * Calls `method path` with typed params, query, body and response. An invalid `{param}` gives a
+ * rejected `InvalidPathSegmentError` (no request); an HTTP error response gives `ApiError`; a 2xx
+ * body that is not JSON gives `ApiResponseFormatError`; network errors and cancellations are
+ * rejected as Axios gives them.
+ */
+export function api<P extends keyof paths, M extends MethodOf<P>>(
+    method: M,
+    path: P,
+    ...args: ApiArgs<Op<P, M>>
+): Promise<Success<Op<P, M>>> {
+    return request(apiInstance, method, path, args);
 }
+
+/** The paths with at least one operation without authentication (`security: []`). */
+export type PublicPath = keyof PublicOperations & keyof paths;
+/** The methods of `P` that need no authentication. */
+export type PublicMethodOf<P extends PublicPath> = PublicOperations[P] & MethodOf<P>;
+
+/**
+ * `api()` for the public operations only (`security: []` in the OpenAPI snapshot, e.g.
+ * `GET /stats`): the same typing and transport, on the instance without the auth interceptors (no
+ * token, no refresh, no sign-out on 401), so an anonymous visitor's request is sent; `api()`
+ * cancels it. Outage detection still applies. A secured operation is a type error.
+ */
+export function publicApi<P extends PublicPath, M extends PublicMethodOf<P>>(
+    method: M,
+    path: P,
+    ...args: ApiArgs<Op<P, M>>
+): Promise<Success<Op<P, M>>> {
+    return request(publicApiInstance, method, path, args);
+}
+
+/**
+ * A request that got no HTTP response (offline, DNS, CORS, timeout); a cancellation is not one.
+ * Only `api()`/`publicApi()` errors are classified: an `ApiError` has a response.
+ */
+export const isNetworkError = (error: unknown): boolean =>
+    isAxiosError(error) && error.response === undefined && !isCancel(error);

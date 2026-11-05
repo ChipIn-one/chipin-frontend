@@ -12,6 +12,7 @@
         // Aliases: the only list. ESLint (config/eslint/aliases.js) and Vite (vite-tsconfig-paths) read it.
         "paths": {
             "main": ["./src/main.tsx"],
+            "app/*": ["./src/app/*"],
             "bootstrap/*": ["./src/bootstrap/*"],
             "pages/*": ["./src/pages/*"],
             "features/*": ["./src/features/*"],

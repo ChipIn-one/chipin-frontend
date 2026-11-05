@@ -305,3 +305,107 @@ describe('money-wire-conversion (spec 03 §4.3, C1-11) merged with the other imp
         ).toEqual(ids);
     });
 });
+
+describe('query-key-literal (spec 03 §1.3)', () => {
+    const config = [
+        {
+            files: ['**/*.{ts,tsx}'],
+            languageOptions: { parser: tseslint.parser },
+        },
+        ...restrictedSyntax([
+            ...projectSyntax({ appDir: '.' }),
+            ...projectRules({ appDir: '.' }),
+            ...reactSyntax({ appDir: '.' }),
+        ]),
+    ];
+    const source = [
+        "export const a = useQuery({ queryKey: ['stats'], queryFn });",
+        "export const b = queryOptions({ queryKey: ['groups', id] as const, queryFn });",
+        "export const c = client.invalidateQueries({ queryKey: ['groups'] satisfies unknown[] });",
+        "export const f = client.getQueryData(['stats']);",
+        "export const g = client.setQueryData(['stats'] as const, data);",
+        "export const h = client.getQueryState(['stats']);",
+        // Fine: keys from a factory (property and argument), an array in another property or
+        // in a later argument.
+        'export const d = useQuery({ queryKey: statsKeys.all, queryFn });',
+        "export const e = useQuery({ queryKey: groupKeys.detail(id), meta: { tags: ['x'] } });",
+        "export const i = client.setQueryData(statsKeys.all, ['x']);",
+    ].join('\n');
+
+    test.each([
+        ['src/features/landing/A.tsx', Array(6).fill('query-key-literal')],
+        ['src/entities/stats/A.test.tsx', Array(6).fill('query-key-literal')],
+        // The key factories themselves.
+        ['src/entities/stats/api/queries.ts', []],
+    ])('%s reports exactly %j', async (file, ids) => {
+        const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
+        const [result] = await eslint.lintText(source, { filePath: file });
+
+        expect(
+            result.messages.map(message => message.message.match(/\[([a-z0-9-]+)\]/)?.[1]),
+        ).toEqual(ids);
+    });
+});
+
+describe('store-object-without-shallow: fallbacks, nested conditionals, returns in if (#625)', () => {
+    const config = [
+        {
+            files: ['**/*.{ts,tsx}'],
+            languageOptions: { parser: tseslint.parser },
+        },
+        ...restrictedSyntax([
+            ...projectSyntax({ appDir: '.' }),
+            ...projectRules({ appDir: '.' }),
+            ...reactSyntax({ appDir: '.' }),
+        ]),
+    ];
+    const flagged = [
+        'useAuthStore(s => s.list ?? [])',
+        'useAuthStore(s => s.x || {})',
+        'useAuthStore(s => s.a ?? s.b ?? [])',
+        'useAuthStore(s => (s.c ? (s.d ? s.a : {}) : s.b))',
+        'useAuthStore(s => (s.c ? s.a : s.list ?? []))',
+        'useAuthStore(s => (s.c ? s.a : s.d ? s.b : s.e ? s.f : []))',
+        'useStore(authStore, s => s.list || [])',
+        'useAuthStore(s => { if (s.c) { return []; } return s.a; })',
+        'useAuthStore(s => { if (s.c) return {}; return s.a; })',
+        'useAuthStore(function (s) { if (s.c) { return s.a; } else { return s.list ?? []; } })',
+        'useAuthStore(s => { if (s.c) { return s.a; } else if (s.d) { return []; } return s.b; })',
+        'useAuthStore(s => s.list ?? ([] as Item[]))',
+        'useAuthStore(s => (s.list ?? []) as Item[])',
+        'useAuthStore(s => (s.c ? s.a : ({} satisfies Partial<Item>)))',
+        'useAuthStore(s => ({}) as Item)',
+        'useAuthStore(s => { return (s.list || []) as Item[]; })',
+    ];
+    const fine = [
+        'useAuthStore(s => s.list ?? EMPTY)',
+        'useAuthStore(s => s.a && s.b)',
+        'useAuthStore(s => s.a ?? 0)',
+        'useAuthStore(useShallow(s => s.list ?? []))',
+        'useAuthStore(s => (s.c ? (s.d ? s.a : s.e) : s.b))',
+        'useAuthStore(s => { const f = () => { if (s.c) { return []; } return null; }; return f; })',
+        'useAuthStore(s => { if (s.c) { return s.a; } return s.b; })',
+        'useAuthStore(s => s.list as Item[])',
+        'useAuthStore(s => (s.list ?? EMPTY) as Item[])',
+    ];
+
+    test.each(flagged)('flags %s', async expression => {
+        const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
+        const [result] = await eslint.lintText(`export const v = ${expression};`, {
+            filePath: 'src/components/A.tsx',
+        });
+
+        expect(result.messages.map(message => message.message.slice(0, 30))).toEqual([
+            '[store-object-without-shallow]',
+        ]);
+    });
+
+    test.each(fine)('accepts %s', async expression => {
+        const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
+        const [result] = await eslint.lintText(`export const v = ${expression};`, {
+            filePath: 'src/components/A.tsx',
+        });
+
+        expect(result.messages).toEqual([]);
+    });
+});

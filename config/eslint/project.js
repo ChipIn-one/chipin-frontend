@@ -1,3 +1,5 @@
+import pluginQuery from '@tanstack/eslint-plugin-query';
+
 import { appGlob, LINT_FILES } from './base.js';
 
 // In flat config a later block replaces the options of `no-restricted-syntax` /
@@ -212,10 +214,52 @@ const ZUSTAND_USE_STORE = "CallExpression[callee.name='useStore']";
 const STORE_HOOK = `:matches(${NAMED_STORE_HOOK}, ${ZUSTAND_USE_STORE})`;
 // A selector function passed straight to a store hook (not wrapped in `useShallow(...)`).
 const STORE_SELECTOR = `${STORE_HOOK} > :matches(ArrowFunctionExpression, FunctionExpression)`;
-// A new object/array on every call: a literal, or a conditional with a literal branch.
+// A new object/array on every call: a literal, or an expression that may evaluate to one through
+// up to three levels of conditional branches and `??`/`||` fallbacks (`s.list ?? []`,
+// `c ? (d ? s.a : {}) : s.b`). esquery has no recursion, so the paths are enumerated.
 const LITERAL = 'ObjectExpression, ArrayExpression';
 const LITERAL_TYPE = '/^(?:ObjectExpression|ArrayExpression)$/';
-const NEW_VALUE = `:matches(${LITERAL}, ConditionalExpression[consequent.type=${LITERAL_TYPE}], ConditionalExpression[alternate.type=${LITERAL_TYPE}])`;
+const FALLBACK_OPERATOR = '/^(?:\\?\\?|\\|\\|)$/';
+const VALUE_STEPS = [
+    { type: 'ConditionalExpression', field: 'consequent' },
+    { type: 'ConditionalExpression', field: 'alternate' },
+    { type: 'LogicalExpression', field: 'right', operator: FALLBACK_OPERATOR },
+];
+const MAX_VALUE_DEPTH = 3;
+const TYPE_ASSERTION = '/^(?:TSAsExpression|TSSatisfiesExpression)$/';
+// Attribute chains `[a.type=X][a.operator=Y][a.b.type=...]` from the root node to a literal.
+const valuePaths = (depth, prefix = '') =>
+    VALUE_STEPS.flatMap(({ type, field, operator }) => {
+        const self = `${prefix ? `[${prefix}type='${type}']` : ''}${operator ? `[${prefix}operator=${operator}]` : ''}`;
+        const path = `${prefix}${field}.`;
+        // The literal, bare or under a type assertion (`s.list ?? ([] as Item[])`).
+        const leaves = [
+            `[${path}type=${LITERAL_TYPE}]`,
+            `[${path}type=${TYPE_ASSERTION}][${path}expression.type=${LITERAL_TYPE}]`,
+        ].map(leaf => ({ root: prefix ? undefined : type, attrs: `${self}${leaf}` }));
+        const deeper =
+            depth > 1
+                ? valuePaths(depth - 1, path).map(({ attrs }) => ({
+                      root: prefix ? undefined : type,
+                      attrs: `${self}${attrs}`,
+                  }))
+                : [];
+
+        return [...leaves, ...deeper];
+    });
+const NEW_VALUE = `:matches(${[
+    LITERAL,
+    ...valuePaths(MAX_VALUE_DEPTH).map(({ root, attrs }) => `${root}${attrs}`),
+].join(', ')})`;
+const ASSERTED = ':matches(TSAsExpression, TSSatisfiesExpression) > ';
+// Where a function body returns: directly, or inside `if`/`else` (with or without braces).
+const RETURN_CONTAINERS = [
+    '',
+    'IfStatement > ',
+    'IfStatement > BlockStatement > ',
+    'IfStatement > IfStatement > ',
+    'IfStatement > IfStatement > BlockStatement > ',
+];
 
 /**
  * ChipIn project `no-restricted-syntax` entries (spec 02 §D0 "project"; 02-C12): images only
@@ -238,6 +282,27 @@ export const projectRules = ({ appDir }) => [
         message: 'Use the Image component from basics/Image instead of `<img>`/`styled.img`.',
     },
     {
+        // spec 03 §1.3: query keys come only from the entity key factories.
+        // Its ignore glob is the 6th of MAX_SCOPES (6/6) of `no-restricted-syntax`: a new scoped
+        // entry must reuse an existing glob.
+        id: 'query-key-literal',
+        // `queryKey: [...]` (also `as const` / `satisfies`), and a literal key as the first
+        // argument of the QueryClient methods that take a key: `getQueryData([...])`, ...
+        selector: [
+            ...['', 'TSAsExpression > ', 'TSSatisfiesExpression > '].map(
+                wrapper => `Property[key.name='queryKey'] > ${wrapper}ArrayExpression`,
+            ),
+            // `:first-child` must be on the argument itself (the wrapper when there is one).
+            ...['ArrayExpression', 'TSAsExpression', 'TSSatisfiesExpression'].map(
+                argument =>
+                    `CallExpression[callee.property.name=/^(?:getQueryData|setQueryData|getQueryState)$/] > ${argument}:first-child${argument === 'ArrayExpression' ? '' : ' > ArrayExpression'}`,
+            ),
+        ].join(', '),
+        ignores: [appGlob(appDir, 'src/entities/*/api/queries.ts')],
+        message:
+            'Build query keys with the entity key factory (`statsKeys.all`, `groupKeys.detail(id)`) from entities/<entity>/api/queries.ts.',
+    },
+    {
         id: 'store-without-selector',
         // `useXStore()` and `useStore(store)`.
         selector: `${NAMED_STORE_HOOK}[arguments.length=0], ${ZUSTAND_USE_STORE}[arguments.length<2]`,
@@ -247,11 +312,19 @@ export const projectRules = ({ appDir }) => [
     {
         id: 'store-object-without-shallow',
         // `useXStore(s => ({ … }))`, `s => [a, b]`, `s => (c ? { … } : { … })`,
-        // `useXStore(s => { return { … }; })`, `useXStore({ … })`; the same for `useStore(store, s => …)`.
+        // `s => s.list ?? []`, `s => s.x || {}`, `c ? (d ? s.a : {}) : s.b` (NEW_VALUE),
+        // `useXStore(s => { return { … }; })` (also inside `if`/`else`), `useXStore({ … })`; the
+        // same for `useStore(store, s => …)`.
         // A function's other children are params (patterns, never these expressions).
         selector: [
-            `${STORE_SELECTOR} > ${NEW_VALUE}`,
-            `${STORE_SELECTOR} > BlockStatement > ReturnStatement > ${NEW_VALUE}`,
+            // The whole returned value may itself be asserted: `(s.list ?? []) as Item[]`.
+            ...['', ASSERTED].flatMap(asserted => [
+                `${STORE_SELECTOR} > ${asserted}${NEW_VALUE}`,
+                ...RETURN_CONTAINERS.map(
+                    container =>
+                        `${STORE_SELECTOR} > BlockStatement > ${container}ReturnStatement > ${asserted}${NEW_VALUE}`,
+                ),
+            ]),
             `${STORE_HOOK} > :matches(${LITERAL})`,
         ].join(', '),
         message:
@@ -278,5 +351,34 @@ export const projectConfig = ({ appDir }) => [
         rules: {
             'no-restricted-globals': 'off',
         },
+    },
+];
+
+// There is no `warn` level (spec 02 §D0): the preset's warnings become errors, with or without
+// options (`'warn'`, `1`, `['warn', ...options]`); an unknown value shape fails the config load.
+const asError = (name, value) => {
+    const [severity, ...options] = Array.isArray(value) ? value : [value];
+
+    if (!['off', 'warn', 'error', 0, 1, 2].includes(severity)) {
+        throw new Error(
+            `@tanstack/query preset: unexpected severity for ${name}: ${JSON.stringify(value)}`,
+        );
+    }
+    const level = severity === 'warn' || severity === 1 ? 'error' : severity;
+
+    return options.length > 0 ? [level, ...options] : level;
+};
+const queryRecommendedRules = Object.fromEntries(
+    pluginQuery.configs['flat/recommended'].flatMap(block =>
+        Object.entries(block.rules ?? {}).map(([name, value]) => [name, asError(name, value)]),
+    ),
+);
+
+/** TanStack Query: `plugin:@tanstack/query/recommended` (spec 03 §1.3). */
+export const queryConfig = () => [
+    {
+        files: [LINT_FILES],
+        plugins: { '@tanstack/query': pluginQuery },
+        rules: queryRecommendedRules,
     },
 ];

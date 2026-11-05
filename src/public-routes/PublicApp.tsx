@@ -5,6 +5,7 @@ import { I18nextProvider } from 'react-i18next';
 import { BrowserRouter, MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 
+import { QueryProvider } from 'app/providers/QueryProvider';
 import { darkThemeStyled, lightThemeStyled } from 'constants/styled-themes';
 import { isPreferredPublicThemeDark } from 'helpers/theme';
 import type { PublicRoute } from 'types/publicRoutes';
@@ -57,21 +58,23 @@ const PublicApp = ({ route, i18nInstance, server = false }: PublicAppProps) => {
     );
 
     return (
-        <I18nextProvider i18n={i18nInstance}>
-            <ThemeProvider theme={isDark ? darkThemeStyled : lightThemeStyled}>
-                <ModalOverlayGlobalStyles />
-                <Theme
-                    appearance={isDark ? 'dark' : 'light'}
-                    accentColor="grass"
-                    grayColor="olive"
-                    radius="large"
-                    panelBackground="solid"
-                    hasBackground
-                >
-                    {routerContent}
-                </Theme>
-            </ThemeProvider>
-        </I18nextProvider>
+        <QueryProvider>
+            <I18nextProvider i18n={i18nInstance}>
+                <ThemeProvider theme={isDark ? darkThemeStyled : lightThemeStyled}>
+                    <ModalOverlayGlobalStyles />
+                    <Theme
+                        appearance={isDark ? 'dark' : 'light'}
+                        accentColor="grass"
+                        grayColor="olive"
+                        radius="large"
+                        panelBackground="solid"
+                        hasBackground
+                    >
+                        {routerContent}
+                    </Theme>
+                </ThemeProvider>
+            </I18nextProvider>
+        </QueryProvider>
     );
 };
 

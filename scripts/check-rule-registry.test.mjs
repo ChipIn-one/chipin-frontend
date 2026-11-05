@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 import js from '@eslint/js';
+import pluginQuery from '@tanstack/eslint-plugin-query';
 import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 import { afterEach, describe, expect, test } from 'vitest';
@@ -307,6 +308,7 @@ const presetRules = new Set([
     ...Object.keys(js.configs.recommended.rules),
     ...tseslint.configs.recommended.flatMap(config => Object.keys(config.rules ?? {})),
     ...Object.keys(reactHooks.configs.recommended.rules),
+    ...pluginQuery.configs['flat/recommended'].flatMap(config => Object.keys(config.rules ?? {})),
 ]);
 
 // Backticked rule tokens of the §D0 registry tables with the class of their row.
