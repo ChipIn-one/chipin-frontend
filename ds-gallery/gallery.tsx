@@ -517,11 +517,13 @@ const Gallery = ({ isDark, onToggleDark }: { isDark: boolean; onToggleDark: () =
                         <Specimen name="basics/BalanceSummaryText">
                             <BalanceSummaryText
                                 size="2"
-                                entries={[
-                                    { currency: 'EUR', netBalance: 54.3 },
-                                    { currency: 'USD', netBalance: -12 },
-                                    { currency: 'GBP', netBalance: 8 },
-                                ]}
+                                balances={{
+                                    owed: [
+                                        { currency: 'EUR', netBalance: 54.3 },
+                                        { currency: 'GBP', netBalance: 8 },
+                                    ],
+                                    owe: [{ currency: 'USD', netBalance: -12 }],
+                                }}
                             />
                         </Specimen>
                         <Specimen name="basics/BalanceBadges" wide>

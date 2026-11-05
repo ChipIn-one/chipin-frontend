@@ -4,6 +4,8 @@ import { normalizeApiMoneyAmount } from './numbers';
 
 export type BalanceDirection = 'owed' | 'owe' | 'settled';
 
+// The sign rule of `displaySign` (entities/balance `balanceDirection`) for the number-based
+// `basics/DebtAmount`, which cannot import entities; settled only at zero after scale-4 rounding.
 export const getBalanceDirection = (netBalance: number): BalanceDirection => {
     const normalized = normalizeApiMoneyAmount(netBalance);
 
@@ -33,47 +35,6 @@ export const convertCurrencyAmount = (
     }
 
     return (amount / sourceRate) * targetRate;
-};
-
-export const getBalanceEntriesSummary = (
-    entries: BalanceEntry[],
-    rates: CurrenciesRates,
-    baseCurrency: string,
-    defaultCurrency: string,
-): { netTotalInBase: number; owedTotalInBase: number; owingTotalInBase: number } => {
-    let netTotalInBase = 0;
-    let owedTotalInBase = 0;
-    let owingTotalInBase = 0;
-
-    for (const entry of entries) {
-        const amount = entry.netBalance;
-
-        if (amount === null || amount === 0) {
-            continue;
-        }
-
-        const converted = convertCurrencyAmount(
-            amount,
-            entry.currency,
-            defaultCurrency,
-            rates,
-            baseCurrency,
-        );
-
-        if (converted === null) {
-            continue;
-        }
-
-        netTotalInBase += converted;
-
-        if (amount > 0) {
-            owedTotalInBase += converted;
-        } else {
-            owingTotalInBase += Math.abs(converted);
-        }
-    }
-
-    return { netTotalInBase, owedTotalInBase, owingTotalInBase };
 };
 
 export const sortBalancesByCurrency = (

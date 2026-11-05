@@ -112,7 +112,7 @@ test('builds the friends page view in one coordinated derivation', () => {
         currencyGroups: [
             {
                 currency: 'USD',
-                netBalance: 10,
+                net: { minor: 100_000n, currency: 'USD' },
                 friends: [
                     {
                         friend: getOrThrow(friends, 0),
@@ -122,7 +122,7 @@ test('builds the friends page view in one coordinated derivation', () => {
             },
             {
                 currency: 'EUR',
-                netBalance: -2,
+                net: { minor: -20_000n, currency: 'EUR' },
                 friends: [
                     {
                         friend: getOrThrow(friends, 0),
@@ -156,5 +156,8 @@ test('normalizes float noise in friends currency group totals', () => {
         createFriend('friend-3', [{ currency: 'USD', netAmount: -0.3 }]),
     ];
 
-    expect(getOrThrow(getFriendsView(friends, '', 'all').currencyGroups, 0).netBalance).toBe(0);
+    expect(getOrThrow(getFriendsView(friends, '', 'all').currencyGroups, 0).net).toEqual({
+        minor: 0n,
+        currency: 'USD',
+    });
 });

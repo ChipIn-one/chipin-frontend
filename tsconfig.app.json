@@ -15,6 +15,7 @@
             "bootstrap/*": ["./src/bootstrap/*"],
             "pages/*": ["./src/pages/*"],
             "features/*": ["./src/features/*"],
+            "entities/*": ["./src/entities/*"],
             "store/*": ["./src/store/*"],
             "api/*": ["./src/api/*"],
             "hooks/*": ["./src/hooks/*"],

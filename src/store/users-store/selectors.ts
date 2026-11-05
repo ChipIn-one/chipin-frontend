@@ -1,10 +1,12 @@
 import type { KnownUser, ThemeName, UserSettings } from 'api/chipin.types';
 import { DEFAULT_EXPENSE_CATEGORY } from 'constants/category';
 import { DEFAULT_CURRENCY_CODE } from 'constants/currencies';
-import { normalizeApiMoneyAmount } from 'helpers/numbers';
+import { aggregateByCurrency, legacyBalanceFromFriend } from 'entities/balance';
 import { getFilterFunction } from 'helpers/text';
 
 import type { FriendCurrencyGroup, FriendsView, UsersStore } from './types';
+
+type FriendEntry = FriendCurrencyGroup['friends'][number];
 
 export const selectUserSettings = (s: UsersStore): UserSettings | null =>
     s.user?.settings ?? s.localUser?.settings ?? null;
@@ -39,7 +41,7 @@ export const getFriendsView = (
 ): FriendsView => {
     const filterFn = getFilterFunction(search);
     const currencies = new Set<string>();
-    const groups = new Map<string, FriendCurrencyGroup>();
+    const entries: FriendEntry[] = [];
     const settledFriends: KnownUser[] = [];
 
     for (const friend of friends) {
@@ -62,25 +64,18 @@ export const getFriendsView = (
                 continue;
             }
 
-            const group = groups.get(balance.currency) ?? {
-                currency: balance.currency,
-                netBalance: 0,
-                friends: [],
-            };
-
-            group.netBalance += balance.netAmount;
-            group.friends.push({ friend, balance });
-            groups.set(balance.currency, group);
+            entries.push({ friend, balance });
         }
     }
 
-    for (const group of groups.values()) {
-        group.netBalance = normalizeApiMoneyAmount(group.netBalance);
-    }
+    const currencyGroups = aggregateByCurrency(
+        entries,
+        ({ balance }) => legacyBalanceFromFriend(balance).net,
+    ).map(({ total, items }) => ({ currency: total.currency, net: total, friends: items }));
 
     return {
         currencies: Array.from(currencies),
-        currencyGroups: Array.from(groups.values()),
+        currencyGroups,
         settledFriends,
     };
 };

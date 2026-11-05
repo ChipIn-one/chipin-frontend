@@ -1,6 +1,6 @@
-import { getBalanceDirection, sortBalancesByCurrency } from 'helpers/currencies';
+import { legacyPartitionEntries, legacySummarizeEntries } from 'entities/balance';
+import { sortBalancesByCurrency } from 'helpers/currencies';
 
-import { calcBalancesSummary } from './commonSelectors';
 import type { DashboardStore } from './dashboardStore';
 import { APP_MODES } from './dashboardStore';
 
@@ -14,35 +14,23 @@ export const selectDashboardSummary = (
     defaultCurrency: string,
 ) => {
     const entries = Object.values(state.balances);
-    const owedEntries = [];
-    const oweEntries = [];
-
-    for (const entry of entries) {
-        const direction = getBalanceDirection(entry.netBalance);
-
-        if (direction === 'owed') {
-            owedEntries.push(entry);
-        } else if (direction === 'owe') {
-            oweEntries.push(entry);
-        }
-    }
-
-    const totals = calcBalancesSummary(
-        defaultCurrency,
+    const { owed, owe } = legacyPartitionEntries(entries);
+    const totals = legacySummarizeEntries(
+        entries,
         state.currencies.rates,
         state.currencies.base,
-        entries,
+        defaultCurrency,
     );
 
     return {
         owedEntries: sortBalancesByCurrency(
-            owedEntries,
+            owed,
             state.currencies.rates,
             state.currencies.base,
             defaultCurrency,
         ),
         oweEntries: sortBalancesByCurrency(
-            oweEntries,
+            owe,
             state.currencies.rates,
             state.currencies.base,
             defaultCurrency,

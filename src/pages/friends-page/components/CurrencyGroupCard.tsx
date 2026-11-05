@@ -1,16 +1,16 @@
 import { Card, Flex, Separator, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
-import { getBalanceDirection } from 'helpers/currencies';
+import { balanceDirection, legacyAmountFromMoney } from 'entities/balance';
 import type { FriendCurrencyGroup } from 'store/users-store';
 
 import DebtAmount from 'basics/DebtAmount';
 
 import FriendListItem from './FriendListItem';
 
-const CurrencyGroupCard = ({ currency, netBalance, friends }: FriendCurrencyGroup) => {
+const CurrencyGroupCard = ({ currency, net, friends }: FriendCurrencyGroup) => {
     const { t } = useTranslation('common');
-    const direction = getBalanceDirection(netBalance);
+    const direction = balanceDirection(net);
     const color = direction === 'settled' ? 'gray' : direction === 'owed' ? 'green' : 'red';
     const directionLabel =
         direction === 'settled'
@@ -29,7 +29,12 @@ const CurrencyGroupCard = ({ currency, netBalance, friends }: FriendCurrencyGrou
                     </Text>
                 </Flex>
 
-                <DebtAmount amount={netBalance} currency={currency} weight="bold" size="3" />
+                <DebtAmount
+                    amount={legacyAmountFromMoney(net)}
+                    currency={currency}
+                    weight="bold"
+                    size="3"
+                />
             </Flex>
 
             <Flex direction="column" gap="3">

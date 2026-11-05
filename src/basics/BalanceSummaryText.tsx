@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
 import type { BalanceEntry } from 'api/chipin.raw.types';
-import { getBalanceDirection } from 'helpers/currencies';
 
 import { Amount } from './numbers';
 
@@ -14,26 +13,18 @@ const AmountChunk = styled.span`
 `;
 
 interface Props {
-    entries: BalanceEntry[];
+    /** Balances split by sign (entities/balance `legacyPartitionEntries`); zero ones are dropped. */
+    balances: {
+        readonly owed: readonly BalanceEntry[];
+        readonly owe: readonly BalanceEntry[];
+    };
     size: ComponentProps<typeof Text>['size'];
     align?: ComponentProps<typeof Text>['align'];
 }
 
-const BalanceSummaryText = ({ entries, size, align = 'left' }: Props) => {
+const BalanceSummaryText = ({ balances, size, align = 'left' }: Props) => {
     const { t } = useTranslation('common');
-
-    const owedEntries: BalanceEntry[] = [];
-    const oweEntries: BalanceEntry[] = [];
-
-    for (const entry of entries) {
-        const direction = getBalanceDirection(entry.netBalance);
-
-        if (direction === 'owed') {
-            owedEntries.push(entry);
-        } else if (direction === 'owe') {
-            oweEntries.push(entry);
-        }
-    }
+    const { owed: owedEntries, owe: oweEntries } = balances;
 
     if (owedEntries.length === 0 && oweEntries.length === 0) {
         return (

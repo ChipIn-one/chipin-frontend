@@ -14,6 +14,8 @@ import {
 import { PlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { legacyPartitionEntries } from 'entities/balance';
+
 import { Amount, BalanceSummaryText } from 'basics';
 import { OwedToYouCard } from 'components/summary-debt-cards';
 import UsersRow from 'components/UsersRow';
@@ -112,7 +114,9 @@ const GroupPagePreview = () => {
                         </Box>
 
                         <BalanceSummaryText
-                            entries={[{ currency: 'EUR', netBalance: GROUP_PREVIEW_NET_BALANCE }]}
+                            balances={legacyPartitionEntries([
+                                { currency: 'EUR', netBalance: GROUP_PREVIEW_NET_BALANCE },
+                            ])}
                             size="1"
                             align="right"
                         />
