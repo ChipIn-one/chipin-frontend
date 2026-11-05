@@ -57,17 +57,17 @@ Consequences:
 | `import-x/no-default-export` | b | module boundary (D11); message: `export { X }` |
 | `import-x/no-self-import` | b | import error |
 | `import-x/no-cycle` (CI only) | b | boundary |
-| `import-x/no-internal-modules` (allow-list) | b | slice boundary |
+| ~~`import-x/no-internal-modules` (allow-list)~~ — removed by 02-C12 (D27) | — | slice entry stays enforced by the `boundaries/dependencies` policies; file imports inside a slice and in plain layers are allowed |
 | `boundaries/dependencies` | b | layer graph (inv. 1) |
 | `boundaries/no-unknown-files` | b | every file under `src/` belongs to a layer element (inv. 1); test support `src/test/` is the element `test`, which only test files may import |
 | `no-restricted-imports` (`axios`, runtime `api/` from UI, UI libraries) | b | boundary (inv. 2); runtime `shared/api`/`shared/offline` from UI is held by `boundaries` (element `shared-api`, D5) |
 | `no-restricted-imports` `lucide-react` only through `<Name>Icon` exports (02-C4: existing rule recorded in the registry) | b | one import surface for the icon library (spec 05: icons are lucide) |
 | `no-restricted-globals` (`localStorage`, `sessionStorage`) | b | the `helpers/localStorage.ts` boundary (inv. 12) |
 | `no-restricted-syntax` `ExportAllDeclaration` | b | barrel boundary (D11) |
-| `no-restricted-syntax` `<img>`/`styled.img` | b | boundary: only `basics/Image` |
+| `no-restricted-syntax` `<img>`/`styled.img` (`#img-element`, 02-C12) | b | boundary: only `basics/Image` |
 | `no-restricted-syntax` `localStorage.clear` | b | wipes the language/theme settings |
 | `no-restricted-syntax` `CancelToken` | b | deprecated cancellation API |
-| `no-restricted-syntax` `use*Store()` without a selector, an object literal without `useShallow` | b | extra re-renders / an infinite loop in Zustand 5 |
+| `no-restricted-syntax` `use*Store()` without a selector (`#store-without-selector`), an object literal without `useShallow` (`#store-object-without-shallow`; 02-C12) | b | extra re-renders / an infinite loop in Zustand 5 |
 | `no-restricted-syntax` `TemplateLiteral` in the URL of `apiInstance.*` | b | path safety (01-1 `apiPath`) |
 | money selectors (spec 03 §4.3; 03-1 — immediately `error` + suppressions, no `warn`) | b | money |
 | `no-restricted-imports` `shared/money/*` (only the module root; 03-1) and `moneyFromWire`/`moneyToWire` only in `entities/*/model/**` (03-4b) | b | money: one place of conversion (inv. 3) |

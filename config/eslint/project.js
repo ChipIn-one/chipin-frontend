@@ -175,6 +175,47 @@ export const projectSyntax = ({ appDir }) =>
         },
     ].map(entry => ({ ...entry, ...moneyScope(appDir) }));
 
+// Zustand store hooks are named `use<Name>Store`; React's `useSyncExternalStore` is not one.
+const STORE_HOOK = 'CallExpression[callee.name=/^use(?!SyncExternal)[A-Z][A-Za-z0-9]*Store$/]';
+// A selector function passed straight to a store hook (not wrapped in `useShallow(...)`).
+const STORE_SELECTOR = `${STORE_HOOK} > :matches(ArrowFunctionExpression, FunctionExpression)`;
+
+/**
+ * ChipIn project `no-restricted-syntax` entries (spec 02 §D0 "project"; 02-C12): images only
+ * through basics/Image, Zustand reads only by a selector, an object selector only with useShallow
+ * (D12).
+ */
+export const projectRules = ({ appDir }) => [
+    {
+        id: 'img-element',
+        // `<img>`, `styled.img` and `styled('img')`.
+        selector: [
+            "JSXOpeningElement[name.name='img']",
+            "MemberExpression[object.name='styled'][property.name='img']",
+            "CallExpression[callee.name='styled'][arguments.0.value='img']",
+        ].join(', '),
+        ignores: [appGlob(appDir, 'src/basics/Image.tsx')],
+        message: 'Use the Image component from basics/Image instead of `<img>`/`styled.img`.',
+    },
+    {
+        id: 'store-without-selector',
+        selector: `${STORE_HOOK}[arguments.length=0]`,
+        message:
+            'Read a Zustand store through a selector: `useXStore(state => state.value)`, or several values with `useXStore(useShallow(state => ({ a: state.a })))`.',
+    },
+    {
+        id: 'store-object-without-shallow',
+        // `useXStore(s => ({ … }))`, `useXStore(s => { return { … }; })`, `useXStore({ … })`.
+        selector: [
+            `${STORE_SELECTOR} > ObjectExpression.body`,
+            `${STORE_SELECTOR} > BlockStatement.body > ReturnStatement > ObjectExpression.argument`,
+            `${STORE_HOOK} > ObjectExpression.arguments`,
+        ].join(', '),
+        message:
+            'A selector that returns a new object re-renders on every store change (an infinite loop in Zustand 5): wrap it, `useXStore(useShallow(state => ({ … })))`.',
+    },
+];
+
 /** Storage boundary: localStorage only through helpers/localStorage.ts. */
 export const projectConfig = ({ appDir }) => [
     {

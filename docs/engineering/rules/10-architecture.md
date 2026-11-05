@@ -105,10 +105,13 @@ The example shows the available locations, not a required complete file set.
 - The only barrel is the slice root `src/<layer>/<slice>/index.ts`; it exposes the slice's public API and
   never re-exports `internal/`.
 - Inside a slice, import files by relative path; do not import through the slice's own `index.ts`.
-- From outside a slice, import only that slice's `index.ts` or a file at the root of a layer
-  (`import-x/no-internal-modules`: an alias import stops at `<layer>/<slice or root file>`; a relative
-  import may reach `./internal/<file>` or `./components/<file>`, not deeper).
+- Another `features`/`entities` slice is imported only through its `index.ts` (`boundaries/dependencies`).
+  Inside a slice and in the plain layers (`basics`, `components`, `helpers`, ...) import files directly,
+  at any depth (D27).
 - Existing nested `index.ts` files are legacy: do not add new ones and do not remove them incidentally.
+  `scripts/check-file-layout.mjs` (`npm run check:file-layout`, part of `verify`) fails on an `index.ts`
+  outside `src/<layer>/<slice>/` and on a new `useConnect.ts`; the existing ones are listed in
+  `config/file-layout-baseline.json`, which only shrinks.
 - Bare imports such as `store/groupsStore` are aliases from `compilerOptions.paths` in `tsconfig.app.json`
   (no `baseUrl`); that is the only alias list. Vite reads it through `vite-tsconfig-paths`, and the
   `simple-import-sort` groups are built from it in `config/eslint/aliases.js`. A new top-level `src`
