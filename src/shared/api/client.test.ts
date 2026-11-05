@@ -224,6 +224,19 @@ describe('the lossless transport per request', () => {
         ).rejects.toBeInstanceOf(ApiResponseFormatError);
     });
 
+    test.each(['', '  \n'])(
+        'a 2xx with an empty or whitespace body %j resolves (kick: 200, no content)',
+        async data => {
+            reply = { status: 200, data, contentType: 'application/json' };
+
+            await expect(
+                api('post', '/groups/{id}/members/{userId}/kick', {
+                    params: { id: UUID, userId: UUID },
+                }),
+            ).resolves.toBe(data);
+        },
+    );
+
     test('an application/*+json body is parsed losslessly too', async () => {
         reply = { status: 200, data: '{"amount":1.5}', contentType: 'application/vnd.api+json' };
         const page: unknown = await api('get', '/groups/{groupId}/activities', {

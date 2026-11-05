@@ -7,13 +7,13 @@ import type { AxiosProgressEvent, AxiosRequestConfig } from 'axios';
 import { isAxiosError } from 'axios';
 
 import type { paths } from 'shared/api/generated/schema';
-import { ApiError, getApiErrorPayload } from 'shared/lib/apiError';
+import { ApiError, ApiResponseFormatError, getApiErrorPayload } from 'shared/lib/apiError';
 
 import { apiInstance } from './http';
 import { encodePathSegment, InvalidPathSegmentError } from './pathSegment';
 import { parseWireJson, stringifyWireJson } from './wireJson';
 
-export { ApiError, InvalidPathSegmentError };
+export { ApiError, ApiResponseFormatError, InvalidPathSegmentError };
 
 export type Method = 'get' | 'put' | 'post' | 'delete' | 'patch';
 
@@ -83,17 +83,6 @@ export type ApiOptions<O> = ParamsPart<O> &
 /** `opts` is required when the operation has a required path param, query or body. */
 export type ApiArgs<O> =
     IsRequired<O> extends true ? [opts: ApiOptions<O>] : [opts?: ApiOptions<O>];
-
-/** A 2xx response whose body is still text: it was not valid JSON (every 2xx body is JSON). */
-export class ApiResponseFormatError extends Error {
-    override readonly name = 'ApiResponseFormatError';
-    readonly status: number;
-
-    constructor(status: number) {
-        super(`API response with status ${status} is not valid JSON`);
-        this.status = status;
-    }
-}
 
 // The runtime view of the options; the public types above have already checked them.
 interface LooseOptions {
@@ -168,9 +157,7 @@ export async function api<P extends keyof paths, M extends MethodOf<P>>(
         method,
         url,
         params: opts.query,
-        // Written here, before Axios: its config merge deep-copies a plain-object body, which would
-        // lose the frozen `WireAmount` marks. The transform then only sets the content type.
-        data: isMultipart ? opts.body : stringifyWireJson(opts.body),
+        data: opts.body,
         // Like the legacy uploads (usersApi/groupsApi): the multipart header with the Axios
         // default request transform; a caller-supplied header wins.
         headers: isMultipart ? { ...MULTIPART_HEADERS, ...opts.headers } : opts.headers,
@@ -189,7 +176,7 @@ export async function api<P extends keyof paths, M extends MethodOf<P>>(
     }
     const data: unknown = response.data;
 
-    if (typeof data === 'string' && data !== '') {
+    if (typeof data === 'string' && data.trim() !== '') {
         throw new ApiResponseFormatError(response.status);
     }
     return response.data;

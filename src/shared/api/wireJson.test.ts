@@ -190,8 +190,10 @@ describe('parseWireJson as an Axios transformResponse', () => {
         const body = parse('{"x":{"__wireDecimal":"1","n":2.5}}');
 
         expect(body.x).toEqual({ __wireDecimal: '1', n: 2.5 });
-        // Not a transport WireAmount: written back as the object it was, not as `1`.
-        expect(stringifyWireJson(body)).toBe('{"x":{"__wireDecimal":"1","n":2.5}}');
+        // A wire-shaped object with extra keys is ambiguous on write: rejected, never sent.
+        expect(() => stringifyWireJson(body)).toThrow(
+            expect.objectContaining({ name: 'MoneyWireError', reason: 'shape' }),
+        );
     });
 
     test.each([
@@ -212,6 +214,28 @@ describe('parseWireJson as an Axios transformResponse', () => {
 });
 
 describe('stringifyWireJson', () => {
+    const amount = createWireAmount('85.5000');
+
+    test.each([
+        ['structuredClone', () => structuredClone(amount)],
+        ['a spread', () => ({ ...amount })],
+        ['a JSON round trip', () => JSON.parse(JSON.stringify(amount)) as unknown],
+    ])('a WireAmount copied by %s (no longer frozen) is still sent as money', (_name, copy) => {
+        const copied = copy();
+
+        expect(Object.isFrozen(copied)).toBe(false);
+        expect(stringifyWireJson({ amount: copied })).toBe('{"amount":85.5000}');
+        expect(stringifyWireJson({ amount: structuredClone(createWireAmount('1.5')) })).toBe(
+            '{"amount":1.5}',
+        );
+    });
+
+    test('a wire-shaped object with sibling keys is rejected with MoneyWireError shape', () => {
+        expect(() => stringifyWireJson({ amount: { __wireDecimal: '1', n: 2.5 } })).toThrow(
+            expect.objectContaining({ name: 'MoneyWireError', reason: 'shape' }),
+        );
+    });
+
     test('writes WireAmount as a plain literal and decimal maps as numbers', () => {
         expect(
             stringifyWireJson({

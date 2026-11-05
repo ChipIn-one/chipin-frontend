@@ -13,7 +13,7 @@ const i18nMock = vi.hoisted(() => ({
 
 vi.mock('i18next', () => ({ default: i18nMock }));
 
-import { ApiError } from 'shared/lib/apiError';
+import { ApiError, ApiResponseFormatError } from 'shared/lib/apiError';
 
 import {
     getApiErrorPayload,
@@ -154,5 +154,13 @@ describe('an ApiError from api()', () => {
         expect(normalizeApiError(apiError(400, 'NEW.CODE')).message).toBe(
             'toasts:common.requestFailed',
         );
+    });
+
+    test('an ApiResponseFormatError maps to the generic localized message, not its English text', () => {
+        const error = new ApiResponseFormatError(200);
+
+        expect(error.message).toContain('not valid JSON');
+        expect(normalizeApiError(error)).toEqual({ message: 'toasts:common.requestFailed' });
+        expect(getApiErrorStatus(error)).toBeUndefined();
     });
 });

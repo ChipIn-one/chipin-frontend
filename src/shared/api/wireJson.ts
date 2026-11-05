@@ -19,9 +19,10 @@ const DECIMAL_MAP = new Set<string>(DECIMAL_MAP_FIELDS);
 const PLAIN_DECIMAL = /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/;
 const JSON_CONTENT_TYPE = /^application\/(?:[\w.-]+\+)?json\s*(?:;|$)/i;
 
-// Only a real `WireAmount` (frozen by `createWireAmount`) counts as one: a forged wire object
-// `{"__wireDecimal":"1","n":2.5}` is an ordinary object whose numbers are revived as usual.
-const isRealWireAmount = (value: unknown): boolean => isWireAmount(value) && Object.isFrozen(value);
+// Parse side: only a `WireAmount` this reviver created (frozen by `createWireAmount`) is skipped;
+// a wire object `{"__wireDecimal":"1","n":2.5}` is an ordinary object whose numbers are revived.
+const isRevivedWireAmount = (value: unknown): boolean =>
+    isWireAmount(value) && Object.isFrozen(value);
 
 type Container = Record<string, unknown> | unknown[];
 
@@ -30,7 +31,7 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
     value !== null &&
     !Array.isArray(value) &&
     !isLosslessNumber(value) &&
-    !isRealWireAmount(value);
+    !isRevivedWireAmount(value);
 
 /**
  * The value of one number literal, decided by its own key and its parent's key (the registry is
@@ -126,9 +127,15 @@ export function parseWireJson(data: unknown, headers?: unknown): unknown {
     }
 }
 
+// Write side: the freeze does not survive `structuredClone`, a spread, JSON or the persist codec,
+// so any `{ __wireDecimal }` with exactly one own key is money; a wire-shaped object with more
+// keys is ambiguous and rejected (`MoneyWireError('shape')`), never sent as an object.
 const wireNumberStringifier = {
-    test: isRealWireAmount,
+    test: isWireAmount,
     stringify: (value: unknown): string => {
+        if (typeof value !== 'object' || value === null || Object.keys(value).length !== 1) {
+            throw new MoneyWireError('shape');
+        }
         const text = isWireAmount(value) ? wireAmountText(value) : '';
 
         // A hand-built `WireAmount` with a malformed literal (`'007.5'`, `'1e3'`) is never sent.

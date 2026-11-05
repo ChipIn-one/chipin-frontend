@@ -34,6 +34,17 @@ export class ApiError extends Error {
     }
 }
 
+/** A 2xx response whose body is still text: it was not valid JSON (every 2xx body is JSON). */
+export class ApiResponseFormatError extends Error {
+    override readonly name = 'ApiResponseFormatError';
+    readonly status: number;
+
+    constructor(status: number) {
+        super(`API response with status ${status} is not valid JSON`);
+        this.status = status;
+    }
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> => {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
 };
