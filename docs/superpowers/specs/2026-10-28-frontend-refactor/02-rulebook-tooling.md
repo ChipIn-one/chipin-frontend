@@ -545,7 +545,7 @@ A new `tsconfig.base.json` with the shared options: `strict`, `noUnused*`, `eras
 | `jsx-a11y` (6 rules), `jsx-no-literals`, the i18n attribute selector | 0 / 0 / 0, measured in 02-C8 (the 39 attribute hits were all test-harness markup in `*.test.tsx`; tests are excluded from the attribute selector) | new rules are immediately error; current violations — `--suppress-rule` in the same PR, fixed by slices | 02-C8 + per-slice PRs |
 | boundaries | ~30 | suppressions; the fix — 05-6 (basics → components/store/hooks/api, including `NavButton`, `BalanceSummaryText`), 04-5a (public-routes); routing → pages is not counted as a violation (element `app`) | 02-C9 |
 | `import-x/no-cycle` | known cycles `groupsStore`↔`activity-store`, `expenseModalStore`↔selectors (03:50) | suppressions; broken by 03-10/03-12 and 03-14 (C2-05) | 02-C9 |
-| `import-x/no-internal-modules` (allow-list) | 103 nested barrels | suppressions; the entries go away with 02-D3a–e (C2-05) | 02-C9 |
+| `import-x/no-internal-modules` (allow-list) | 103 nested barrels | suppressions; before 02-D3a the rule is narrowed to slice entry points (D27: from outside a slice only through its `index.ts`, file imports allowed elsewhere), then the entries go away with 02-D3a–e (C2-05) | 02-C9 |
 | type-aware (`no-floating-promises`, `no-misused-promises`, `no-unsafe-*`) | 36 / 30 (incl. JSX) / 10 (5 assignment, 4 member-access, 1 return), measured in 02-C6 | suppressions in 02-C6; fix 02-C7a/b (C2-05) | 02-C6 |
 | `no-non-null-assertion` | 9 in 5 files | suppressions in 02-C6; fixed when the file is touched | 02-C6 |
 | default exports | 172 files, 314 imports, 14 lazy, 25 `vi.mock` | codemod `scripts/codemods/named-exports.mjs` (ts-morph, a temporary devDep): `export default X` → `export { X }`, `import X from` → `import { X } from`, lazy → `.then(m => ({ default: m.X }))`. `vi.mock` with `default` — by hand | 02-D2a basics(24), 02-D2b–c components(80), 02-D2d features(24), 02-D2e pages(42)+i18n+main |
@@ -612,7 +612,7 @@ Each PR releases independently. The size is a guideline, not a rule: one PR = on
 | **02-C11** | T4 `noUncheckedIndexedAccess` (39) | 02-C6 |
 | **02-C12** | project rules: `<img>`, `useStore()`/`useShallow`, `check-file-layout.mjs` (`index.ts` depth, ban on new `useConnect.ts`, baseline 17). The money rules are **not** included here — they are introduced by 03-1 (§4.3 of spec 03) | 02-C4 |
 | **02-D2a–e** | default → named (codemod). Executed **after** 04-0 (the monorepo move), so as not to conflict with the rename. The codemod skips the files `src/store/expenseModal*` (`--exclude`) until 03-14 is merged (file-lock in `00-overview.md`); a layer is taken into work only when it has no open PRs of spec 03 (C2-14) | 02-C4, 04-0 |
-| **02-D3a–e** | nested barrels (codemod; removes the `no-internal-modules` entries from suppressions); `src/store/expenseModal*` — as in 02-D2, after 03-14 | 02-D2 of the corresponding layer |
+| **02-D3a–e** | nested barrels (codemod; removes the `no-internal-modules` entries from suppressions and adds none — needs the D27 narrowing first); `src/store/expenseModal*` — as in 02-D2, after 03-14 | 02-D2 of the corresponding layer |
 
 ## Tests / acceptance criteria
 
