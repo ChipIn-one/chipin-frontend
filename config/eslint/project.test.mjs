@@ -266,3 +266,40 @@ describe('project entries (02-C12) merged with the money and i18n entries', () =
         ).toEqual(ids);
     });
 });
+
+describe('money-wire-conversion (spec 03 §4.3, C1-11) merged with the other import entries', () => {
+    // One `no-restricted-imports` rule key: the new entry must not drop the older ones.
+    const config = [
+        {
+            files: ['**/*.{ts,tsx}'],
+            languageOptions: { parser: tseslint.parser },
+        },
+        ...restrictedImports(projectImports({ appDir: '.' })),
+    ];
+    const source = [
+        "import { moneyFromWire, moneyToWire, sum } from 'shared/money';",
+        "import { moneyFromWire as read } from '../../shared/money';",
+        "import { split } from 'shared/money/split';",
+        "import { Users } from 'lucide-react';",
+        'export { moneyFromWire, moneyToWire, read, split, sum, Users };',
+    ].join('\n');
+    const OTHERS = ['money-deep-import', 'lucide-icon-names'];
+    const WIRE = ['money-wire-conversion', 'money-wire-conversion', 'money-wire-conversion'];
+
+    test.each([
+        ['src/shared/api/client.ts', [...WIRE, ...OTHERS]],
+        ['src/entities/balance/api/queries.ts', [...WIRE, ...OTHERS]],
+        ['src/store/a.ts', [...WIRE, ...OTHERS]],
+        ['src/entities/balance/model/toBalance.ts', OTHERS],
+        ['src/entities/ledger/model/deep/toEntryWire.ts', OTHERS],
+        ['src/shared/money/wireMoney.ts', OTHERS],
+        ['src/shared/api/client.test.ts', OTHERS],
+    ])('%s reports exactly %j', async (file, ids) => {
+        const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
+        const [result] = await eslint.lintText(source, { filePath: file });
+
+        expect(
+            result.messages.map(message => message.message.match(/\[([a-z0-9-]+)\]/)?.[1]),
+        ).toEqual(ids);
+    });
+});

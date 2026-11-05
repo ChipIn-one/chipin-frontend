@@ -1,9 +1,10 @@
 import i18n from 'i18next';
 
-export interface ApiErrorPayload {
-    code?: string;
-    details?: Record<string, unknown>;
-}
+import type { ApiErrorPayload } from 'shared/lib/apiErrorPayload';
+import { getApiErrorPayload } from 'shared/lib/apiErrorPayload';
+
+export type { ApiErrorPayload };
+export { getApiErrorPayload };
 
 export interface RequestError extends ApiErrorPayload {
     message: string;
@@ -15,19 +16,6 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 
 const getApiErrorResponse = (error: unknown): Record<string, unknown> | undefined => {
     return isRecord(error) && isRecord(error.response) ? error.response : undefined;
-};
-
-export const getApiErrorPayload = (error: unknown): ApiErrorPayload | undefined => {
-    const payload = getApiErrorResponse(error)?.data;
-
-    if (!isRecord(payload)) {
-        return undefined;
-    }
-
-    const code = typeof payload.code === 'string' ? payload.code : undefined;
-    const details = isRecord(payload.details) ? payload.details : undefined;
-
-    return code || details ? { ...(code && { code }), ...(details && { details }) } : undefined;
 };
 
 const getErrorMessage = (error: unknown): string | undefined => {
