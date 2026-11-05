@@ -4,7 +4,7 @@ import {
     formattingConfig,
     typeAwareConfig,
 } from './config/eslint/base.js';
-import { layerImports } from './config/eslint/layers.js';
+import { layerImports, layersConfig } from './config/eslint/layers.js';
 import {
     projectConfig,
     projectImports,
@@ -22,6 +22,7 @@ export default [
     ...typeAwareConfig({ appDir: APP_DIR }),
     ...reactConfig({ appDir: APP_DIR }),
     ...projectConfig({ appDir: APP_DIR }),
+    ...layersConfig({ appDir: APP_DIR }),
     // Each helper is called once with every entry of its rule (see config/eslint/project.js).
     ...restrictedImports([...layerImports({ appDir: APP_DIR }), ...projectImports()]),
     ...restrictedSyntax([...projectSyntax(), ...reactSyntax({ appDir: APP_DIR })]),
