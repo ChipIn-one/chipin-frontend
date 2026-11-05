@@ -6,8 +6,14 @@ import { createWireAmount, currencyCode, isWireAmount, moneyFromWire } from 'sha
 import { TEST_INVITE_TOKEN } from 'test/fixtures/inviteToken';
 
 import type { Body, Op } from './client';
-import { api, ApiError, ApiResponseFormatError, InvalidPathSegmentError } from './client';
-import { apiInstance, initChipInApiInterceptors } from './http';
+import {
+    api,
+    ApiError,
+    ApiResponseFormatError,
+    InvalidPathSegmentError,
+    publicApi,
+} from './client';
+import { apiInstance, initChipInApiInterceptors, publicApiInstance } from './http';
 import { encodePathSegment } from './pathSegment';
 import { parseWireJson, stringifyWireJson } from './wireJson';
 
@@ -384,6 +390,60 @@ describe('through the installed interceptors (auth refresh, outage detection)', 
             api('get', '/ledger/entries/{id}', { params: { id: UUID } }),
         ).rejects.toMatchObject({ name: 'ApiError', status: 502, code: undefined });
         expect(auth.checkBackendHealth).toHaveBeenCalledOnce();
+    });
+});
+
+describe('publicApi() for public endpoints', () => {
+    const originalPublicAdapter = publicApiInstance.defaults.adapter;
+
+    beforeAll(() => {
+        initChipInApiInterceptors(vi.fn());
+    });
+
+    afterAll(() => {
+        apiInstance.interceptors.request.clear();
+        apiInstance.interceptors.response.clear();
+        publicApiInstance.interceptors.response.clear();
+    });
+
+    beforeEach(() => {
+        publicApiInstance.defaults.adapter = adapter;
+    });
+
+    afterEach(() => {
+        publicApiInstance.defaults.adapter = originalPublicAdapter;
+    });
+
+    test('sends without the auth interceptors (no token lookup, no Authorization header)', async () => {
+        reply = {
+            status: 200,
+            data: '{"usersCount":1,"groupsCount":2,"expensesCount":3,"settlementsCount":4}',
+            contentType: 'application/json',
+        };
+
+        await expect(publicApi('get', '/stats')).resolves.toEqual({
+            usersCount: 1,
+            groupsCount: 2,
+            expensesCount: 3,
+            settlementsCount: 4,
+        });
+        expect(auth.prepareAuthRequest).not.toHaveBeenCalled();
+        expect(lastRequest().url).toBe('/stats');
+        expect(lastRequest().headers.Authorization).toBeUndefined();
+    });
+
+    test('an HTTP error is an ApiError, as with api()', async () => {
+        reply = {
+            status: 500,
+            data: '{"code":"SYSTEM.INTERNAL"}',
+            contentType: 'application/json',
+        };
+
+        await expect(publicApi('get', '/stats')).rejects.toMatchObject({
+            name: 'ApiError',
+            status: 500,
+            code: 'SYSTEM.INTERNAL',
+        });
     });
 });
 

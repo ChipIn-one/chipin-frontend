@@ -1,19 +1,17 @@
 import { Flex, Skeleton, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
-import { selectLandingStats, useLandingStatsStore } from 'store/landing-stats-store';
-import { selectLandingStatsLoading } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
+import { useStatsQuery } from 'entities/stats';
 
 import { Amount } from 'basics/numbers';
 
 import { LANDING_STATISTICS } from '../../internal';
 
 const LandingStats = () => {
-    const stats = useLandingStatsStore(selectLandingStats);
-    const isStatsLoading = useLoadingStore(selectLandingStatsLoading);
+    const { data: stats, error } = useStatsQuery();
     const { t } = useTranslation('landing');
-    const isLoading = stats === null && isStatsLoading;
+    // Data wins; without data, a final error shows the safe value, otherwise the skeleton.
+    const isLoading = stats === undefined && error === null;
 
     return (
         <Flex

@@ -10,6 +10,7 @@ import {
     projectImports,
     projectRules,
     projectSyntax,
+    queryConfig,
     restrictedImports,
     restrictedSyntax,
 } from './config/eslint/project.js';
@@ -23,6 +24,7 @@ export default [
     ...typeAwareConfig({ appDir: APP_DIR }),
     ...reactConfig({ appDir: APP_DIR }),
     ...projectConfig({ appDir: APP_DIR }),
+    ...queryConfig(),
     ...layersConfig({ appDir: APP_DIR }),
     // Each helper is called once with every entry of its rule (see config/eslint/project.js).
     ...restrictedImports([

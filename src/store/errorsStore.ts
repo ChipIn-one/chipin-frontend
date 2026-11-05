@@ -25,9 +25,6 @@ interface RequestErrors {
         rates: RequestError | null;
         nextPage: RequestError | null;
     };
-    landing: {
-        stats: RequestError | null;
-    };
     activity: {
         data: RequestError | null;
         nextPage: RequestError | null;
@@ -83,7 +80,6 @@ const initialErrors: RequestErrors = {
         cover: null,
     },
     dashboard: { data: null, rates: null, nextPage: null },
-    landing: { stats: null },
     activity: {
         data: null,
         nextPage: null,

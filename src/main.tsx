@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from 'styled-components';
 
+import { QueryProvider } from 'app/providers/QueryProvider';
 import { darkThemeStyled, lightThemeStyled } from 'constants/styled-themes';
 import AppRouter from 'features/routing';
 import { isThemeDark } from 'helpers/theme';
@@ -34,49 +35,51 @@ const Main = () => {
     const isMobile = useIsMobile();
 
     return (
-        <ThemeProvider theme={styledThemeParams}>
-            <ModalOverlayGlobalStyles />
-            <Theme
-                appearance={themeName}
-                accentColor="grass"
-                grayColor="olive"
-                radius="large"
-                panelBackground="solid"
-                hasBackground
-            >
-                <BrowserRouter>
-                    <BackgroundBox>
-                        <BackendUnavailableGate>
-                            <Header />
-                            <GlobalHooks />
-                            <Box px="4">
-                                <AppRouter />
-                            </Box>
-                            <AddExpenseButton />
-                            <AddExpenseModal />
-                            <PWABadge />
+        <QueryProvider>
+            <ThemeProvider theme={styledThemeParams}>
+                <ModalOverlayGlobalStyles />
+                <Theme
+                    appearance={themeName}
+                    accentColor="grass"
+                    grayColor="olive"
+                    radius="large"
+                    panelBackground="solid"
+                    hasBackground
+                >
+                    <BrowserRouter>
+                        <BackgroundBox>
+                            <BackendUnavailableGate>
+                                <Header />
+                                <GlobalHooks />
+                                <Box px="4">
+                                    <AppRouter />
+                                </Box>
+                                <AddExpenseButton />
+                                <AddExpenseModal />
+                                <PWABadge />
 
-                            <Toaster
-                                theme={themeName}
-                                richColors
-                                closeButton
-                                position={isMobile ? 'top-center' : 'bottom-left'}
-                                offset={isMobile ? 12 : 16}
-                                mobileOffset={isMobile ? 12 : 16}
-                                icons={{
-                                    success: <ToastSuccessIcon />,
-                                    info: <ToastInfoIcon />,
-                                    warning: <ToastWarningIcon />,
-                                    error: <ToastErrorIcon />,
-                                    loading: <ToastLoadingIcon />,
-                                }}
-                            />
-                        </BackendUnavailableGate>
-                        <EarlySupporterPromoModal />
-                    </BackgroundBox>
-                </BrowserRouter>
-            </Theme>
-        </ThemeProvider>
+                                <Toaster
+                                    theme={themeName}
+                                    richColors
+                                    closeButton
+                                    position={isMobile ? 'top-center' : 'bottom-left'}
+                                    offset={isMobile ? 12 : 16}
+                                    mobileOffset={isMobile ? 12 : 16}
+                                    icons={{
+                                        success: <ToastSuccessIcon />,
+                                        info: <ToastInfoIcon />,
+                                        warning: <ToastWarningIcon />,
+                                        error: <ToastErrorIcon />,
+                                        loading: <ToastLoadingIcon />,
+                                    }}
+                                />
+                            </BackendUnavailableGate>
+                            <EarlySupporterPromoModal />
+                        </BackgroundBox>
+                    </BrowserRouter>
+                </Theme>
+            </ThemeProvider>
+        </QueryProvider>
     );
 };
 

@@ -107,8 +107,7 @@
         "src/pages/settings-page/components/expense-preferences-section/index.ts",
         "src/pages/settings-page/components/index.ts",
         "src/pages/settings-page/components/solo-preferences-section/index.ts",
-        "src/public-routes/index.ts",
-        "src/store/index.ts"
+        "src/public-routes/index.ts"
     ],
     "use-connect": [
         "src/components/add-expense-button/internal/useConnect.ts",

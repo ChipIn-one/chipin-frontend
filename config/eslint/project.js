@@ -1,3 +1,5 @@
+import pluginQuery from '@tanstack/eslint-plugin-query';
+
 import { appGlob, LINT_FILES } from './base.js';
 
 // In flat config a later block replaces the options of `no-restricted-syntax` /
@@ -238,6 +240,17 @@ export const projectRules = ({ appDir }) => [
         message: 'Use the Image component from basics/Image instead of `<img>`/`styled.img`.',
     },
     {
+        // spec 03 §1.3: query keys come only from the entity key factories.
+        id: 'query-key-literal',
+        // `queryKey: [...]`, `queryKey: [...] as const`, `queryKey: [...] satisfies ...`.
+        selector: ['', 'TSAsExpression > ', 'TSSatisfiesExpression > ']
+            .map(wrapper => `Property[key.name='queryKey'] > ${wrapper}ArrayExpression`)
+            .join(', '),
+        ignores: [appGlob(appDir, 'src/entities/*/api/queries.ts')],
+        message:
+            'Build query keys with the entity key factory (`statsKeys.all`, `groupKeys.detail(id)`) from entities/<entity>/api/queries.ts.',
+    },
+    {
         id: 'store-without-selector',
         // `useXStore()` and `useStore(store)`.
         selector: `${NAMED_STORE_HOOK}[arguments.length=0], ${ZUSTAND_USE_STORE}[arguments.length<2]`,
@@ -278,5 +291,24 @@ export const projectConfig = ({ appDir }) => [
         rules: {
             'no-restricted-globals': 'off',
         },
+    },
+];
+
+// There is no `warn` level (spec 02 §D0): the preset's warnings become errors.
+const queryRecommendedRules = Object.fromEntries(
+    pluginQuery.configs['flat/recommended'].flatMap(block =>
+        Object.entries(block.rules ?? {}).map(([name, value]) => [
+            name,
+            value === 'warn' || value === 1 ? 'error' : value,
+        ]),
+    ),
+);
+
+/** TanStack Query: `plugin:@tanstack/query/recommended` (spec 03 §1.3). */
+export const queryConfig = () => [
+    {
+        files: [LINT_FILES],
+        plugins: { '@tanstack/query': pluginQuery },
+        rules: queryRecommendedRules,
     },
 ];

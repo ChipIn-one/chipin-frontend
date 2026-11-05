@@ -305,3 +305,45 @@ describe('money-wire-conversion (spec 03 §4.3, C1-11) merged with the other imp
         ).toEqual(ids);
     });
 });
+
+describe('query-key-literal (spec 03 §1.3)', () => {
+    const config = [
+        {
+            files: ['**/*.{ts,tsx}'],
+            languageOptions: { parser: tseslint.parser },
+        },
+        ...restrictedSyntax([
+            ...projectSyntax({ appDir: '.' }),
+            ...projectRules({ appDir: '.' }),
+            ...reactSyntax({ appDir: '.' }),
+        ]),
+    ];
+    const source = [
+        "export const a = useQuery({ queryKey: ['stats'], queryFn });",
+        "export const b = queryOptions({ queryKey: ['groups', id] as const, queryFn });",
+        "export const c = client.invalidateQueries({ queryKey: ['groups'] satisfies unknown[] });",
+        // Fine: keys from a factory, a spread of a factory key, another property's array.
+        'export const d = useQuery({ queryKey: statsKeys.all, queryFn });',
+        "export const e = useQuery({ queryKey: groupKeys.detail(id), meta: { tags: ['x'] } });",
+    ].join('\n');
+
+    test.each([
+        [
+            'src/features/landing/A.tsx',
+            ['query-key-literal', 'query-key-literal', 'query-key-literal'],
+        ],
+        [
+            'src/entities/stats/A.test.tsx',
+            ['query-key-literal', 'query-key-literal', 'query-key-literal'],
+        ],
+        // The key factories themselves.
+        ['src/entities/stats/api/queries.ts', []],
+    ])('%s reports exactly %j', async (file, ids) => {
+        const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
+        const [result] = await eslint.lintText(source, { filePath: file });
+
+        expect(
+            result.messages.map(message => message.message.match(/\[([a-z0-9-]+)\]/)?.[1]),
+        ).toEqual(ids);
+    });
+});
