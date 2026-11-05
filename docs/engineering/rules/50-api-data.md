@@ -50,6 +50,9 @@ Do not add `Api`, `Store`, `Effect`, or `Action` suffixes merely to distinguish 
 - Request and response types come from the backend OpenAPI snapshot (`src/shared/api/generated/`, spec 03
   §5); do not hand-write new `Request`/`Response` types for endpoints it covers. Generated files are not
   edited by hand.
+- The snapshot is `openapi/chipin.yaml`; `openapi/BACKEND_VERSION` is the backend prod SHA that `npm run api:fetch` takes it from.
+- `npm run api:gen` regenerates the types, the wire field registry (`scripts/api/wire-fields.mjs`) and `MODEL_SHAPE_HASH`; CI runs
+  `npm run api:check`, and `openapi-drift.yml` reports staging drift daily in the "OpenAPI drift" issue.
 - Calls go through the typed `api()` wrapper over the shared Axios instance; direct `axios` calls outside
   the API layer are prohibited.
 - zod validates only data that can have a stale format: IndexedDB cache, outbox, and `localStorage`.

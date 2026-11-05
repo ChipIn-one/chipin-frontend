@@ -34,7 +34,9 @@
         "verify:public-precache": "node scripts/verify-public-precache.mjs",
         "build:ds-gallery": "vite build --config ds-gallery/vite.config.ts && node ds-gallery/build-html.mjs",
         "api:fetch": "node scripts/api/fetch-openapi.mjs",
-        "api:fetch:staging": "node scripts/api/fetch-openapi.mjs --staging"
+        "api:fetch:staging": "node scripts/api/fetch-openapi.mjs --staging",
+        "api:gen": "node scripts/api/gen-types.mjs && node scripts/offline/write-model-hash.mjs",
+        "api:check": "npm run api:gen && git diff --exit-code -- src/shared/api/generated src/shared/offline/modelHash.generated.ts"
     },
     "lint-staged": {
         "*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}": [
@@ -88,6 +90,7 @@
         "husky": "^9.1.7",
         "jsdom": "^30.1.3",
         "lint-staged": "^17.6.0",
+        "openapi-typescript": "7.13.0",
         "prettier": "^3.9.10",
         "typescript": "~5.9.3",
         "typescript-eslint": "^8.72.1",

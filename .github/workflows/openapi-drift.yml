@@ -54,17 +54,23 @@ jobs:
           retention-days: 30
       - name: Generate types
         id: gen
-        # The generator lands in the second commit of 03-4a; until then there is nothing to diff.
+        # A generator failure (e.g. a new unclassified multipleOf field) is drift too: report it.
         run: |
-          if [ ! -f scripts/api/gen-types.mjs ]; then
-            echo "generator not present yet, skipping drift check"
-            echo "drift=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          npm run api:gen
-          if git diff --quiet -- openapi src/shared/api/generated src/shared/offline/modelHash.generated.ts; then
+          if ! npm run -s api:gen 2> "$RUNNER_TEMP/gen-error.txt"; then
+            echo "::warning::api:gen failed on the staging snapshot"
+            cat "$RUNNER_TEMP/gen-error.txt"
+            {
+              echo "drift=true"
+              echo "stat<<DRIFT_STAT_EOF"
+              echo "npm run api:gen failed on the staging snapshot:"
+              cat "$RUNNER_TEMP/gen-error.txt"
+              echo "DRIFT_STAT_EOF"
+            } >> "$GITHUB_OUTPUT"
+          elif git diff --quiet -- openapi src/shared/api/generated src/shared/offline/modelHash.generated.ts; then
             echo "drift=false" >> "$GITHUB_OUTPUT"
           else
+            echo "::warning::the staging snapshot differs from the committed one"
+            git diff --stat -- openapi src/shared/api/generated src/shared/offline/modelHash.generated.ts
             {
               echo "drift=true"
               echo "stat<<DRIFT_STAT_EOF"

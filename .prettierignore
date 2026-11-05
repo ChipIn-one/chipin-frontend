@@ -10,6 +10,7 @@ package-lock.json
 **/routing.generated.ts
 packages/tokens/generated/**
 src/shared/api/generated/**
+openapi/chipin.yaml
 eslint-suppressions.json
 
 # Static assets, legal texts, standalone builds
