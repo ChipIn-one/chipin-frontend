@@ -794,7 +794,7 @@ The main protection is the types, lint is a safety net:
   `openapi-typescript` `transform(schemaObject, { path })` in `scripts/api/openapi-ts.config.mjs` applies the registry;
   generator checks (exit 1, test `scripts/api/wire-fields.test.mjs`): (a) every property with `multipleOf: 0.0001` (or
   a map of such numbers) is in exactly one list; (b) a property from `MONEY_FIELDS` in **any** schema has `multipleOf: 0.0001`;
-  (c) `percentageShares` in the output is `Record<string, WireDecimal>`, not `WireAmount`. The same registry is written to
+  (c) `percentageShares` in the output is `Record<string, WireDecimal>`, not `WireAmount`. Check (a) also covers every non-integer `type: number` property, map or array of numbers: it must be in a registry list or on the explicit non-money allowlist `NON_MONEY_NUMBER_FIELDS` (empty today), and a number union other than `number | null` fails. The same registry is written to
   `shared/api/generated/wireFields.ts` and drives the transport's reviver — the type and the runtime do not diverge. After BE-03-4
   (`x-chipin-money` / `x-chipin-decimal`, §7) the generator checks the registry against the extensions and fails on a mismatch.
   Arithmetic, comparison and `Number()` over `WireAmount` do not compile; it can be read only through `moneyFromWire`.

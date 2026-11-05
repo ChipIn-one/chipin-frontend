@@ -36,7 +36,7 @@
         "api:fetch": "node scripts/api/fetch-openapi.mjs",
         "api:fetch:staging": "node scripts/api/fetch-openapi.mjs --staging",
         "api:gen": "node scripts/api/gen-types.mjs && node scripts/offline/write-model-hash.mjs",
-        "api:check": "npm run api:gen && git diff --exit-code -- src/shared/api/generated src/shared/offline/modelHash.generated.ts"
+        "api:check": "npm run api:gen && node scripts/api/check-generated.mjs"
     },
     "lint-staged": {
         "*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}": [

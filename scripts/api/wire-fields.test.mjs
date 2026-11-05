@@ -7,7 +7,7 @@ import { afterAll, describe, expect, test } from 'vitest';
 import { parse, stringify } from 'yaml';
 
 import { generate } from './gen-types.mjs';
-import { checkGeneratedTypes, checkWireFields } from './wire-fields.mjs';
+import { checkGeneratedTypes, checkWireFields, REGISTRY } from './wire-fields.mjs';
 
 const scaled = { type: 'number', multipleOf: 0.0001 };
 const map = values => ({ type: 'object', additionalProperties: values });
@@ -64,9 +64,82 @@ describe('checkWireFields', () => {
             spec({ Fee: { type: 'object', properties: { fee: scaled } } }),
         );
 
-        expect(errors).toEqual([
+        expect(errors).toContainEqual(
             expect.stringMatching(/^\(a\) #\/components\/schemas\/Fee\/properties\/fee:/),
+        );
+    });
+
+    test('(a) any unclassified non-integer number, map or array of numbers is an error', () => {
+        const fields = {
+            fee: { type: 'number' },
+            fees: map({ type: 'number' }),
+            weights: { type: 'array', items: { type: 'number' } },
+            count: { type: 'integer' },
+        };
+        const errors = checkWireFields(spec({ Fee: { type: 'object', properties: fields } }));
+
+        expect(errors).toEqual(
+            ['fee', 'fees', 'weights'].map(name =>
+                expect.stringContaining(`(a) #/components/schemas/Fee/properties/${name}:`),
+            ),
+        );
+    });
+
+    test('(a) a field on the non-money allowlist stays a number', () => {
+        const registry = { ...REGISTRY, nonMoney: ['fee'] };
+        const document = spec({ Fee: { type: 'object', properties: { fee: { type: 'number' } } } });
+
+        expect(checkWireFields(document, registry)).toEqual([]);
+    });
+
+    test('a number union with string fails, for money and for maps', () => {
+        const mixed = { type: ['number', 'string'], multipleOf: 0.0001 };
+        const errors = checkWireFields(
+            spec({ Mixed: { type: 'object', properties: { amount: mixed, rates: map(mixed) } } }),
+        );
+
+        expect(errors).toContainEqual(expect.stringMatching(/^\(b\) .*Mixed\/properties\/amount:/));
+        expect(errors).toContainEqual(expect.stringMatching(/^\(a\) .*Mixed\/properties\/rates:/));
+    });
+
+    test.each([
+        ['$ref', { $ref: '#/components/schemas/Money' }],
+        ['oneOf', { oneOf: [scaled] }],
+        ['allOf', { allOf: [scaled] }],
+        ['an array', { type: 'array', items: scaled }],
+    ])('a money field written as %s fails', (_, amount) => {
+        const errors = checkWireFields(
+            spec({
+                Money: scaled,
+                Wrapped: { type: 'object', properties: { amount } },
+            }),
+        );
+
+        expect(errors).toContainEqual(
+            expect.stringMatching(/^\(b\) #\/components\/schemas\/Wrapped\/properties\/amount:/),
+        );
+    });
+
+    test('a money map with unscaled values fails', () => {
+        const errors = checkWireFields(
+            spec({
+                Exact: { type: 'object', properties: { customShares: map({ type: 'number' }) } },
+            }),
+        );
+
+        expect(errors).toEqual([
+            expect.stringMatching(
+                /^\(b\) #\/components\/schemas\/Exact\/properties\/customShares:/,
+            ),
         ]);
+    });
+
+    test('a field in two lists fails', () => {
+        const registry = { ...REGISTRY, decimalMap: [...REGISTRY.decimalMap, 'customShares'] };
+
+        expect(checkWireFields(spec(), registry)).toContainEqual(
+            'customShares is in more than one list of scripts/api/wire-fields.mjs',
+        );
     });
 
     test('(b) a money field without multipleOf is an error, in any schema', () => {
@@ -103,6 +176,18 @@ describe('checkWireFields', () => {
         );
         expect(checkGeneratedTypes('')).toHaveLength(1);
     });
+
+    test('(c) a registered field generated as number fails', () => {
+        const ok = 'percentageShares: Record<string, WireDecimal>;\n';
+
+        expect(checkGeneratedTypes(`${ok}amount?: number;`)).toEqual([
+            expect.stringContaining('(c) amount is generated as "number"'),
+        ]);
+        expect(checkGeneratedTypes(`${ok}customShares: Record<string, number>;`)).toHaveLength(1);
+        expect(checkGeneratedTypes(`${ok}rates: {\n    [key: string]: number;\n};`)).toHaveLength(
+            1,
+        );
+    });
 });
 
 describe('gen-types', () => {
@@ -135,6 +220,24 @@ describe('gen-types', () => {
         expect(schema).toContain('shares?: Record<string, WireDecimal>;');
         expect(schema).toContain('rates?: Record<string, WireDecimal>;');
         expect(schema).not.toMatch(/\bnumber\b/);
+    });
+
+    test('a nullable money field or map value generates | null', async () => {
+        const nullable = { type: ['number', 'null'], multipleOf: 0.0001 };
+        const { schema } = await generate(
+            write(
+                'nullable.yaml',
+                spec({
+                    Nullable: {
+                        type: 'object',
+                        properties: { amount: nullable, customShares: map(nullable) },
+                    },
+                }),
+            ),
+        );
+
+        expect(schema).toContain('amount?: WireAmount | null;');
+        expect(schema).toContain('customShares?: Record<string, WireAmount | null>;');
     });
 
     test('the committed snapshot passes and percentageShares is Record<string, WireDecimal>', () => {

@@ -54,12 +54,13 @@ describe('fetchStaging', () => {
         );
     });
 
-    test('sends Basic auth to the staging swagger URL', async () => {
+    test('sends Basic auth to the staging swagger URL and refuses redirects', async () => {
         const fetchImpl = vi.fn(async () => new Response('openapi: 3.1.0\n'));
 
         await expect(fetchStaging({ env, fetchImpl })).resolves.toBe('openapi: 3.1.0\n');
         expect(fetchImpl).toHaveBeenCalledWith(STAGING_URL, {
             headers: { authorization: `Basic ${btoa('u:p')}` },
+            redirect: 'error',
         });
     });
 

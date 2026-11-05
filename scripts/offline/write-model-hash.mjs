@@ -32,18 +32,39 @@ export const modelShapeHash = files => {
     return hash.digest('hex').slice(0, 12);
 };
 
-/** `src/entities/<entity>/model/types.ts` files of the repository. */
+/**
+ * `src/entities/<entity>/model/types.ts` files of the repository. Fails closed: a `model/` folder
+ * without `types.ts`, or no files at all, throws (a hash over nothing would never bust the cache).
+ */
 export const modelTypeFiles = (root = repoRoot) => {
     const entities = join(root, 'src/entities');
+    const slices = existsSync(entities)
+        ? readdirSync(entities, { withFileTypes: true })
+              .filter(
+                  entry => entry.isDirectory() && existsSync(join(entities, entry.name, 'model')),
+              )
+              .map(entry => entry.name)
+              .sort()
+        : [];
+    const missing = slices
+        .map(slice => `src/entities/${slice}/model/types.ts`)
+        .filter(path => !existsSync(join(root, path)));
 
-    if (!existsSync(entities)) {
-        return [];
+    if (missing.length > 0) {
+        throw new Error(
+            `every entities/<slice>/model/ needs a types.ts with its domain types (spec 03 §1.4), missing: ${missing.join(', ')}`,
+        );
     }
-    return readdirSync(entities, { withFileTypes: true })
-        .filter(entry => entry.isDirectory())
-        .map(entry => `src/entities/${entry.name}/model/types.ts`)
-        .filter(path => existsSync(join(root, path)))
-        .map(path => ({ path, text: readFileSync(join(root, path), 'utf8') }));
+    if (slices.length === 0) {
+        throw new Error(
+            'no src/entities/*/model/types.ts found: MODEL_SHAPE_HASH would hash nothing',
+        );
+    }
+    return slices.map(slice => {
+        const path = `src/entities/${slice}/model/types.ts`;
+
+        return { path, text: readFileSync(join(root, path), 'utf8') };
+    });
 };
 
 export const renderModelHash = hash =>
@@ -51,7 +72,14 @@ export const renderModelHash = hash =>
     '// The shape of the persisted domain model: part of the query cache buster (spec 03 §1.4).\n' +
     `export const MODEL_SHAPE_HASH = '${hash}';\n`;
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-    mkdirSync(dirname(join(repoRoot, OUTPUT_PATH)), { recursive: true });
-    writeFileSync(join(repoRoot, OUTPUT_PATH), renderModelHash(modelShapeHash(modelTypeFiles())));
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+    try {
+        const text = renderModelHash(modelShapeHash(modelTypeFiles()));
+
+        mkdirSync(dirname(join(repoRoot, OUTPUT_PATH)), { recursive: true });
+        writeFileSync(join(repoRoot, OUTPUT_PATH), text);
+    } catch (error) {
+        process.stderr.write(`write-model-hash: ${error.message}\n`);
+        process.exitCode = 1;
+    }
 }

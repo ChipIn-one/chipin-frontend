@@ -51,7 +51,7 @@ export const main = async (argv = process.argv.slice(2)) => {
     writeFileSync(join(outDir, 'wireFields.ts'), wireFields);
 };
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
     main().catch(error => {
         process.stderr.write(`gen-types: ${error.message}\n`);
         process.exit(1);

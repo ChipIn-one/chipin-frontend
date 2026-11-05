@@ -72,7 +72,11 @@ export const fetchStaging = async ({ env = process.env, fetchImpl = fetch } = {}
     }
 
     const authorization = `Basic ${Buffer.from(`${user}:${password}`).toString('base64')}`;
-    const response = await fetchImpl(STAGING_URL, { headers: { authorization } });
+    // No redirects: the Basic credentials must never follow a redirect to another host.
+    const response = await fetchImpl(STAGING_URL, {
+        headers: { authorization },
+        redirect: 'error',
+    });
 
     if (!response.ok) {
         throw new Error(`GET ${STAGING_URL} failed: HTTP ${response.status}`);
@@ -164,7 +168,7 @@ export const main = async (argv = process.argv.slice(2)) => {
     process.stdout.write(`wrote ${SNAPSHOT_PATH} (${staging ? 'staging' : 'backend artifact'})\n`);
 };
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
     main().catch(error => {
         process.stderr.write(`fetch-openapi: ${error.message}\n`);
         process.exit(1);

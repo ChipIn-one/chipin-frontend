@@ -53,6 +53,10 @@ Do not add `Api`, `Store`, `Effect`, or `Action` suffixes merely to distinguish 
 - The snapshot is `openapi/chipin.yaml`; `openapi/BACKEND_VERSION` is the backend prod SHA that `npm run api:fetch` takes it from.
 - `npm run api:gen` regenerates the types, the wire field registry (`scripts/api/wire-fields.mjs`) and `MODEL_SHAPE_HASH`; CI runs
   `npm run api:check`, and `openapi-drift.yml` reports staging drift daily in the "OpenAPI drift" issue.
+- Run `npm run api:gen` and commit its output after any bump of `typescript` or `openapi-typescript`: both change the
+  generated text, and `api:check` fails until it is regenerated.
+- Until chipin-backend#201 publishes the `openapi-documentation` artifact, `npm run api:fetch` by SHA fails; take the snapshot
+  from the `chipin.yaml` artifact of the `openapi-drift.yml` run instead.
 - Calls go through the typed `api()` wrapper over the shared Axios instance; direct `axios` calls outside
   the API layer are prohibited.
 - zod validates only data that can have a stale format: IndexedDB cache, outbox, and `localStorage`.

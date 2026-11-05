@@ -2,24 +2,26 @@
 // and non-money decimal maps into `Record<string, WireDecimal>`.
 import ts from 'typescript';
 
-import { wireKind } from './wire-fields.mjs';
+import { isNullable, wireKind } from './wire-fields.mjs';
 
 const { factory } = ts;
 
+const orNull = (node, schema) =>
+    isNullable(schema)
+        ? factory.createUnionTypeNode([node, factory.createLiteralTypeNode(factory.createNull())])
+        : node;
 const reference = name => factory.createTypeReferenceNode(name);
-const record = value =>
+// A nullable map value generates `Record<string, X | null>`.
+const record = (value, schema) =>
     factory.createTypeReferenceNode('Record', [
         factory.createKeywordTypeNode(ts.SyntaxKind.StringKeyword),
-        reference(value),
+        orNull(reference(value), schema.additionalProperties),
     ]);
-
-const isNullable = schema =>
-    schema.nullable === true || (Array.isArray(schema.type) && schema.type.includes('null'));
 
 const NODES = {
     money: () => reference('WireAmount'),
-    moneyMap: () => record('WireAmount'),
-    decimalMap: () => record('WireDecimal'),
+    moneyMap: schema => record('WireAmount', schema),
+    decimalMap: schema => record('WireDecimal', schema),
 };
 
 /** The property name of a schema path (`#/components/schemas/X/amount` -> `amount`). */
@@ -32,11 +34,7 @@ export const transform = (schemaObject, { path }) => {
         return undefined;
     }
 
-    const node = NODES[kind]();
-
-    return isNullable(schemaObject)
-        ? factory.createUnionTypeNode([node, factory.createLiteralTypeNode(factory.createNull())])
-        : node;
+    return orNull(NODES[kind](schemaObject), schemaObject);
 };
 
 export const openapiTsOptions = {

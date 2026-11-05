@@ -1,10 +1,2 @@
-import type { Money } from 'shared/money';
-
-/**
- * The domain balance with one counterpart (a friend, a group member) in one currency (spec 03
- * §4.4): `net > 0` — you are owed, `net < 0` — you owe. Both wire shapes (`BalanceEntry.netBalance`,
- * `ApiFriendBalance.netAmount`) map to it.
- */
-export interface Balance {
-    readonly net: Money;
-}
+// The domain types live in ./types.ts (spec 03 §1.4: MODEL_SHAPE_HASH hashes entities/*/model/types.ts).
+export type { Balance } from './types';

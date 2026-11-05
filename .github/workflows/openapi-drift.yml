@@ -23,6 +23,8 @@ concurrency:
 jobs:
   openapi-drift:
     name: openapi-drift
+    # Fork PRs get no secrets: skip them cleanly instead of failing the fetch.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
@@ -39,7 +41,8 @@ jobs:
           node-version: 24.21.0
           package-manager-cache: false
       - name: Install dependencies
-        run: npm ci
+        # No lifecycle scripts in the job that holds the secrets; fetch and api:gen do not need them.
+        run: npm ci --ignore-scripts
       - name: Fetch staging OpenAPI
         env:
           CHIPIN_CONTRACT_SWAGGER_USER: ${{ secrets.CHIPIN_CONTRACT_SWAGGER_USER }}
@@ -54,30 +57,27 @@ jobs:
           retention-days: 30
       - name: Generate types
         id: gen
-        # A generator failure (e.g. a new unclassified multipleOf field) is drift too: report it.
+        # A generator failure (e.g. a new unclassified number field) is drift too: report it.
         run: |
-          if ! npm run -s api:gen 2> "$RUNNER_TEMP/gen-error.txt"; then
+          paths=(openapi src/shared/api/generated src/shared/offline/modelHash.generated.ts)
+          delimiter="DRIFT_$(openssl rand -hex 16)"
+          if ! npm run -s api:gen 2> "$RUNNER_TEMP/drift.txt"; then
             echo "::warning::api:gen failed on the staging snapshot"
-            cat "$RUNNER_TEMP/gen-error.txt"
-            {
-              echo "drift=true"
-              echo "stat<<DRIFT_STAT_EOF"
-              echo "npm run api:gen failed on the staging snapshot:"
-              cat "$RUNNER_TEMP/gen-error.txt"
-              echo "DRIFT_STAT_EOF"
-            } >> "$GITHUB_OUTPUT"
-          elif git diff --quiet -- openapi src/shared/api/generated src/shared/offline/modelHash.generated.ts; then
-            echo "drift=false" >> "$GITHUB_OUTPUT"
-          else
+            sed -i '1i npm run api:gen failed on the staging snapshot:' "$RUNNER_TEMP/drift.txt"
+          elif [ -n "$(git status --porcelain --untracked-files=all -- "${paths[@]}")" ]; then
             echo "::warning::the staging snapshot differs from the committed one"
-            git diff --stat -- openapi src/shared/api/generated src/shared/offline/modelHash.generated.ts
-            {
-              echo "drift=true"
-              echo "stat<<DRIFT_STAT_EOF"
-              git diff --stat -- openapi src/shared/api/generated src/shared/offline/modelHash.generated.ts
-              echo "DRIFT_STAT_EOF"
-            } >> "$GITHUB_OUTPUT"
+            { git status --porcelain --untracked-files=all -- "${paths[@]}"; git diff --stat -- "${paths[@]}"; } > "$RUNNER_TEMP/drift.txt"
+          else
+            echo "drift=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          cat "$RUNNER_TEMP/drift.txt"
+          {
+            echo "drift=true"
+            echo "stat<<$delimiter"
+            cat "$RUNNER_TEMP/drift.txt"
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
 
   report:
     name: report
@@ -102,9 +102,12 @@ jobs:
             echo
             echo "Run: $RUN_URL (artifact \`chipin.yaml\`)."
             echo
-            echo '```'
+            # A fence longer than any backtick run in the text, so the text cannot close it.
+            longest=$(printf '%s' "$DRIFT_STAT" | grep -o '`*' | awk '{ if (length > n) n = length } END { print n + 0 }')
+            fence=$(printf '%*s' $(( longest >= 3 ? longest + 1 : 3 )) '' | tr ' ' '`')
+            echo "$fence"
             printf '%s\n' "$DRIFT_STAT"
-            echo '```'
+            echo "$fence"
             echo
             echo "Report only: sync through a \"chore(api): sync openapi\" PR once prod has the change (spec 03 §5.3)."
           } > "$RUNNER_TEMP/drift-body.md"
