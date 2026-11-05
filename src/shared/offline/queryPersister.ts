@@ -13,19 +13,19 @@ import { z } from 'zod';
 
 import { PERSIST_MAX_AGE } from 'shared/api/queryClient';
 
-import { QUERY_CACHE_EPOCH } from './constants';
+import { QUERY_CACHE_EPOCH, queryCacheKey } from './constants';
 import { MODEL_SHAPE_HASH } from './modelHash.generated';
 import { isEntryWithPendingOp } from './pendingOps';
 import { persistCodec } from './persistCodec';
-
-export const queryCacheKey = (userId: string): string => `chipin:rq:${userId}`;
+import { isCacheWriteBlocked } from './userCaches';
 
 /** The single definition of the buster (C2-07): a model shape change resets the cache by itself. */
 export const QUERY_CACHE_BUSTER = `${QUERY_CACHE_EPOCH}:${MODEL_SHAPE_HASH}`;
 
 const idbStringStorage: AsyncStorage<string> = {
     getItem: key => get<string>(key).then(value => (typeof value === 'string' ? value : null)),
-    setItem: (key, value) => set(key, value),
+    // A key cleared by `clearUserData` takes no late (throttled) write until its user is back.
+    setItem: (key, value) => (isCacheWriteBlocked(key) ? Promise.resolve() : set(key, value)),
     removeItem: key => del(key),
 };
 

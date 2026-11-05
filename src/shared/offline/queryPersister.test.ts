@@ -9,12 +9,8 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { currencyCode, fromUnits } from 'shared/money';
 
-import {
-    persistOptions,
-    QUERY_CACHE_BUSTER,
-    queryCacheKey,
-    resetPersistFailureReport,
-} from './queryPersister';
+import { queryCacheKey } from './constants';
+import { persistOptions, QUERY_CACHE_BUSTER, resetPersistFailureReport } from './queryPersister';
 
 import 'fake-indexeddb/auto';
 

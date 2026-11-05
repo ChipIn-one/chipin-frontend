@@ -12,3 +12,5 @@ export const selectIsAuthResolved = (s: AuthStore) => s.status !== AUTH_STATUS.U
 export const selectUnauthReason = (s: AuthStore) => s.unauthReason;
 
 export const selectIsNewUser = (s: AuthStore) => s.isNewUser;
+
+export const selectSessionMode = (s: AuthStore) => s.sessionMode;

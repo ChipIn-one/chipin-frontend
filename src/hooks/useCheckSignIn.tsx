@@ -1,12 +1,13 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
 import { ROUTES } from 'constants/routes';
 import { markAuthSessionSignedOut, subscribeToRemoteAuthLogout } from 'helpers/authSession';
 import { hasAuthSessionHint } from 'helpers/localStorage';
-import { AUTH_STATUS, UNAUTH_REASON } from 'store/authConstants';
-import { selectAuthStatus } from 'store/authSelectors';
+import { isNetworkError } from 'shared/api/client';
+import { AUTH_STATUS, SESSION_MODE, UNAUTH_REASON } from 'store/authConstants';
+import { selectAuthStatus, selectSessionMode } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { useConnectivityStore } from 'store/connectivityStore';
 import { useDashboardStore } from 'store/dashboardStore';
@@ -16,8 +17,10 @@ import { useUsersStore } from 'store/users-store';
 export const useCheckSignIn = () => {
     const location = useLocation();
     const status = useAuthStore(selectAuthStatus);
+    const sessionMode = useAuthStore(selectSessionMode);
     // Offline or backend down: the session check waits for connectivity instead of signing out.
     const isDisconnected = useConnectivityStore(state => state.mode !== 'online');
+    const isOffline = useConnectivityStore(state => state.mode === 'offline');
     const { fetchSetDashboardData, setDefaultAppMode } = useDashboardStore(
         useShallow(state => ({
             fetchSetDashboardData: state.fetchSetDashboardData,
@@ -25,14 +28,16 @@ export const useCheckSignIn = () => {
         })),
     );
     const fetchSetGroups = useGroupsStore(s => s.fetchSetGroups);
-    const { fetchSetUser, fetchSetFriends, hasCachedUser } = useUsersStore(
+    const { fetchSetUser, fetchSetFriends, hasCachedUser, hasCachedUserId } = useUsersStore(
         useShallow(state => ({
             fetchSetUser: state.fetchSetUser,
             fetchSetFriends: state.fetchSetFriends,
             hasCachedUser: state.localUser !== null,
+            hasCachedUserId: state.localUser?.id !== undefined,
         })),
     );
     const setAuthenticated = useAuthStore(s => s.setAuthenticated);
+    const setOfflineCachedSession = useAuthStore(s => s.setOfflineCachedSession);
     const setUnauthenticated = useAuthStore(s => s.setUnauthenticated);
     const refreshAuthTokens = useAuthStore(s => s.refreshAuthTokens);
 
@@ -51,12 +56,30 @@ export const useCheckSignIn = () => {
         });
     }, []);
 
+    const loadSessionData = useCallback(
+        () =>
+            Promise.all([
+                fetchSetDashboardData(),
+                fetchSetGroups(),
+                fetchSetUser().then(user => {
+                    if (user && !hasCachedUser) {
+                        setDefaultAppMode(user.settings.soloModeByDefault);
+                    }
+                }),
+                fetchSetFriends(),
+            ]).then(() => undefined),
+        [
+            fetchSetDashboardData,
+            fetchSetFriends,
+            fetchSetGroups,
+            fetchSetUser,
+            hasCachedUser,
+            setDefaultAppMode,
+        ],
+    );
+
     useEffect(() => {
-        if (
-            location.pathname === ROUTES.OAUTH_CALLBACK ||
-            status !== AUTH_STATUS.UNKNOWN ||
-            isDisconnected
-        ) {
+        if (location.pathname === ROUTES.OAUTH_CALLBACK || status !== AUTH_STATUS.UNKNOWN) {
             return;
         }
 
@@ -65,41 +88,65 @@ export const useCheckSignIn = () => {
             return;
         }
 
+        if (isDisconnected) {
+            // Offline cold start (spec 03 §1.6): a refresh cannot reach the server, so a cached user
+            // with a session hint goes straight to the cache. Backend down keeps waiting.
+            if (isOffline && hasCachedUserId) {
+                setOfflineCachedSession();
+            }
+            return;
+        }
+
         refreshAuthTokens()
             .then(() => {
                 setAuthenticated();
-                return Promise.all([
-                    fetchSetDashboardData(),
-                    fetchSetGroups(),
-                    fetchSetUser().then(user => {
-                        if (user && !hasCachedUser) {
-                            setDefaultAppMode(user.settings.soloModeByDefault);
-                        }
-                    }),
-                    fetchSetFriends(),
-                ]).then(() => undefined);
+                return loadSessionData();
             })
-            .catch(() => {
+            .catch((error: unknown) => {
+                if (useAuthStore.getState().status !== AUTH_STATUS.UNKNOWN) {
+                    return;
+                }
+                // A network error during the refresh: the same offline cold start. The hint is
+                // read again, the refresh may have ended the session in the meantime.
+                if (isNetworkError(error) && hasCachedUserId && hasAuthSessionHint()) {
+                    setOfflineCachedSession();
+                    return;
+                }
                 if (useConnectivityStore.getState().mode !== 'online') {
                     return;
                 }
 
-                if (useAuthStore.getState().status === AUTH_STATUS.UNKNOWN) {
-                    setUnauthenticated(UNAUTH_REASON.ERROR);
-                }
+                setUnauthenticated(UNAUTH_REASON.ERROR);
             });
     }, [
-        fetchSetDashboardData,
-        fetchSetFriends,
-        fetchSetGroups,
-        fetchSetUser,
-        hasCachedUser,
+        hasCachedUserId,
         isDisconnected,
+        isOffline,
+        loadSessionData,
         location.pathname,
         refreshAuthTokens,
         setAuthenticated,
-        setDefaultAppMode,
+        setOfflineCachedSession,
         setUnauthenticated,
         status,
     ]);
+
+    // Reconnect of an offline-cached session: a 401 refresh expires the session (inside
+    // `refreshAuthTokens`), a success makes it `online` and loads the data the cold start skipped.
+    useEffect(() => {
+        if (
+            status !== AUTH_STATUS.AUTHENTICATED ||
+            sessionMode !== SESSION_MODE.OFFLINE_CACHED ||
+            isDisconnected
+        ) {
+            return;
+        }
+
+        refreshAuthTokens()
+            .then(loadSessionData)
+            .catch(() => {
+                // A 401 has already expired the session; a network error keeps the cached
+                // session, and the next reconnect (a connectivity change) tries again.
+            });
+    }, [isDisconnected, loadSessionData, refreshAuthTokens, sessionMode, status]);
 };

@@ -163,6 +163,19 @@ const getJwtExpiration = (token: string): number | null => {
     return exp;
 };
 
+/**
+ * The user id of an access token (the backend signs `sub` = user id), decoded without verifying the
+ * signature: only to compare it with the cached user (spec 03 §1.5 account switch). Null when the
+ * token is not a readable JWT.
+ */
+export const getAccessTokenSubject = (token: string): string | null => {
+    const payload = decodeJwtPayload(token);
+
+    return isRecord(payload) && typeof payload.sub === 'string' && payload.sub !== ''
+        ? payload.sub
+        : null;
+};
+
 const isAccessTokenExpiring = (token: string): boolean => {
     const expiration = getJwtExpiration(token);
 

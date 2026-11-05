@@ -5,7 +5,11 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
 import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
-import { invalidateAuthSession, isAuthSessionSignedOut } from 'helpers/authSession';
+import {
+    invalidateAuthSession,
+    isAuthSessionSignedOut,
+    validateAuthSession,
+} from 'helpers/authSession';
 import * as localStorageHelpers from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
 import { useConnectivityStore } from 'store/connectivityStore';
@@ -15,6 +19,15 @@ import { useGroupsStore } from 'store/groupsStore';
 import { useUsersStore } from 'store/users-store';
 
 import { useCheckSignIn } from './useCheckSignIn';
+
+// The store's own refresh, over a mocked cookie refresh (`null` = 401).
+vi.mock('helpers/authSession', async importOriginal => {
+    const actual = await importOriginal<typeof import('helpers/authSession')>();
+
+    return { ...actual, validateAuthSession: vi.fn(actual.validateAuthSession) };
+});
+
+const storeRefreshAuthTokens = useAuthStore.getState().refreshAuthTokens;
 
 const user = {
     id: 'user-1',
@@ -77,6 +90,7 @@ beforeEach(() => {
         isNewUser: null,
         status: 'unknown',
         unauthReason: undefined,
+        sessionMode: 'online',
     });
 });
 
@@ -308,4 +322,138 @@ test('remote tab logout clears protected data without a second server logout', (
     });
     expect(isAuthSessionSignedOut()).toBe(true);
     expect(signOut).not.toHaveBeenCalled();
+});
+
+// Spec 03 §1.6: the offline cold start of a cached user with a session hint.
+const cacheSignedInUser = (): void => {
+    markRestorableAuthSession();
+    localStorageHelpers.LocalStorage.set(LS_KEY_USER, {
+        id: user.id,
+        role: user.role,
+        settings: user.settings,
+    });
+    useUsersStore.getState().setInitialUsersStore();
+};
+
+const networkError = Object.assign(new Error('Network Error'), {
+    isAxiosError: true,
+    response: undefined,
+});
+
+test('offline cold start: a cached user with a hint is authenticated on the cache, no refresh', () => {
+    cacheSignedInUser();
+    onlineManager.setOnline(false);
+    const refreshAuthTokens = vi.fn(() => Promise.resolve('unexpected-access-token'));
+    useAuthStore.setState({ refreshAuthTokens });
+
+    renderHook();
+
+    return waitFor(() => {
+        expect(useAuthStore.getState()).toMatchObject({
+            status: 'authenticated',
+            sessionMode: 'offline-cached',
+        });
+    }).then(() => {
+        expect(refreshAuthTokens).not.toHaveBeenCalled();
+    });
+});
+
+test('a network error during the startup refresh: offline-cached, nothing loaded', () => {
+    cacheSignedInUser();
+    const refreshAuthTokens = vi
+        .fn<() => Promise<string>>()
+        .mockRejectedValueOnce(networkError)
+        // The reconnect retry (the network is "usable" again for onlineManager): offline again.
+        .mockRejectedValue(networkError);
+    useAuthStore.setState({ refreshAuthTokens });
+    const fetchSetDashboardData = vi
+        .spyOn(useDashboardStore.getState(), 'fetchSetDashboardData')
+        .mockResolvedValue();
+
+    renderHook();
+
+    return waitFor(() => {
+        expect(useAuthStore.getState()).toMatchObject({
+            status: 'authenticated',
+            sessionMode: 'offline-cached',
+        });
+    }).then(() => {
+        expect(fetchSetDashboardData).not.toHaveBeenCalled();
+    });
+});
+
+test('without a cached user id an offline cold start keeps waiting', () => {
+    markRestorableAuthSession();
+    onlineManager.setOnline(false);
+
+    renderHook();
+
+    expect(useAuthStore.getState().status).toBe('unknown');
+});
+
+test('an offline cold start after expiry (hint false) shows the sign-in, not the cache', () => {
+    cacheSignedInUser();
+    localStorageHelpers.LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, false);
+    onlineManager.setOnline(false);
+
+    renderHook();
+
+    return waitFor(() => {
+        expect(useAuthStore.getState()).toMatchObject({
+            status: 'unauthenticated',
+            unauthReason: 'missing',
+        });
+    });
+});
+
+test('reconnect: a successful refresh makes the session online and loads the data', () => {
+    cacheSignedInUser();
+    onlineManager.setOnline(false);
+    useAuthStore.setState({ refreshAuthTokens: storeRefreshAuthTokens });
+    vi.mocked(validateAuthSession).mockResolvedValue('next-access-token');
+    mockAuthenticatedDataFetches();
+    const fetchSetDashboardData = vi.mocked(useDashboardStore.getState().fetchSetDashboardData);
+
+    renderHook();
+
+    return waitFor(() => {
+        expect(useAuthStore.getState().sessionMode).toBe('offline-cached');
+    })
+        .then(() => {
+            act(() => {
+                onlineManager.setOnline(true);
+            });
+            return waitFor(() => {
+                expect(useAuthStore.getState()).toMatchObject({
+                    status: 'authenticated',
+                    sessionMode: 'online',
+                });
+            });
+        })
+        .then(() => {
+            expect(fetchSetDashboardData).toHaveBeenCalledOnce();
+        });
+});
+
+test('reconnect: a 401 refresh expires the session', () => {
+    cacheSignedInUser();
+    onlineManager.setOnline(false);
+    useAuthStore.setState({ refreshAuthTokens: storeRefreshAuthTokens });
+    vi.mocked(validateAuthSession).mockResolvedValue(null);
+
+    renderHook();
+
+    return waitFor(() => {
+        expect(useAuthStore.getState().sessionMode).toBe('offline-cached');
+    }).then(() => {
+        act(() => {
+            onlineManager.setOnline(true);
+        });
+        return waitFor(() => {
+            expect(useAuthStore.getState()).toMatchObject({
+                status: 'unauthenticated',
+                unauthReason: 'expired',
+            });
+        });
+    });
 });
