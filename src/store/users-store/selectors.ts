@@ -3,10 +3,9 @@ import { DEFAULT_EXPENSE_CATEGORY } from 'constants/category';
 import { DEFAULT_CURRENCY_CODE } from 'constants/currencies';
 import { aggregateByCurrency, legacyBalanceFromFriend } from 'entities/balance';
 import { getFilterFunction } from 'helpers/text';
+import type { Money } from 'shared/money';
 
 import type { FriendCurrencyGroup, FriendsView, UsersStore } from './types';
-
-type FriendEntry = FriendCurrencyGroup['friends'][number];
 
 export const selectUserSettings = (s: UsersStore): UserSettings | null =>
     s.user?.settings ?? s.localUser?.settings ?? null;
@@ -34,6 +33,8 @@ const IS_SOLO_MODE_RELEASED = false;
 export const selectCanAccessSolo = (s: UsersStore): boolean =>
     IS_SOLO_MODE_RELEASED && selectIsUserAdmin(s);
 
+type FriendEntry = FriendCurrencyGroup['friends'][number];
+
 export const getFriendsView = (
     friends: KnownUser[],
     search: string,
@@ -41,7 +42,7 @@ export const getFriendsView = (
 ): FriendsView => {
     const filterFn = getFilterFunction(search);
     const currencies = new Set<string>();
-    const entries: FriendEntry[] = [];
+    const entries: { item: FriendEntry; net: Money }[] = [];
     const settledFriends: KnownUser[] = [];
 
     for (const friend of friends) {
@@ -58,20 +59,29 @@ export const getFriendsView = (
         }
 
         for (const balance of friend.balances) {
+            // An invalid legacy balance is skipped (and reported once) instead of crashing.
+            const net = legacyBalanceFromFriend(balance)?.net;
+
+            if (!net) {
+                continue;
+            }
             currencies.add(balance.currency);
 
             if (filterKey !== 'all' && balance.currency !== filterKey) {
                 continue;
             }
 
-            entries.push({ friend, balance });
+            entries.push({ item: { friend, balance }, net });
         }
     }
 
-    const currencyGroups = aggregateByCurrency(
-        entries,
-        ({ balance }) => legacyBalanceFromFriend(balance).net,
-    ).map(({ total, items }) => ({ currency: total.currency, net: total, friends: items }));
+    const currencyGroups = aggregateByCurrency(entries, entry => entry.net).map(
+        ({ total, items }) => ({
+            currency: total.currency,
+            net: total,
+            friends: items.map(entry => entry.item),
+        }),
+    );
 
     return {
         currencies: Array.from(currencies),

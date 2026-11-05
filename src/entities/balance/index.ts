@@ -8,13 +8,15 @@ export {
     legacyAmountFromMoney,
     legacyBalanceFromEntry,
     legacyBalanceFromFriend,
+    legacyCurrencyOrDefault,
     legacyEntryFromMoney,
     legacyExpenseBalanceChange,
     legacyPartitionEntries,
     legacyRateLookup,
+    legacySumEntriesByCurrency,
     legacySummarizeEntries,
 } from './model/legacy';
 export type { BalanceDirection, BalancePartition } from './model/partition';
 export { balanceDirection, partitionBalances } from './model/partition';
-export type { BalanceSummary, RateLookup } from './model/summary';
+export type { BalanceSummary, Rate, RateLookup } from './model/summary';
 export { summarizeBalances } from './model/summary';

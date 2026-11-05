@@ -101,3 +101,62 @@ describe('layer boundaries (config/eslint/layers.js)', () => {
         expect(errors).toContain('boundaries/no-unknown-files');
     });
 });
+
+/** Whether `money-legacy-bridge` reports `code` linted as the file `file`. */
+const legacyBridgeErrors = async (file, code) => {
+    const [result] = await eslint.lintText(code, { filePath: resolve(repoRoot, file) });
+
+    return result.messages.filter(
+        message =>
+            message.ruleId === 'no-restricted-imports' &&
+            message.message.includes('[money-legacy-bridge]'),
+    ).length;
+};
+
+describe('money-legacy-bridge (spec 03 §4.1 item 5)', () => {
+    test.each([
+        ['another entity, alias', 'src/entities/ledger/model/x.ts', "'entities/balance'"],
+        ['another entity, relative slice', 'src/entities/ledger/index.ts', "'../balance'"],
+        [
+            'another entity, relative index',
+            'src/entities/ledger/model/x.ts',
+            "'../../balance/index'",
+        ],
+        [
+            'shared, relative deep path',
+            'src/shared/lib/x.ts',
+            "'../../entities/balance/model/legacy'",
+        ],
+        ['app, alias deep path', 'src/app/x.ts', "'entities/balance/model/legacy'"],
+    ])('reports a legacy* import: %s', async (_name, file, source) => {
+        const code = `import { legacyAmountFromMoney } from ${source};\nexport const x = legacyAmountFromMoney;\n`;
+
+        expect(await legacyBridgeErrors(file, code)).toBe(1);
+    });
+
+    test('reports a namespace import that could reach legacy* names', async () => {
+        const code = "import * as balance from '../balance';\nexport const x = balance;\n";
+
+        expect(await legacyBridgeErrors('src/entities/ledger/index.ts', code)).toBe(1);
+    });
+
+    test.each([
+        [
+            'a non-legacy name from another entity',
+            'src/entities/ledger/index.ts',
+            "import { balanceDirection } from '../balance';\nexport const x = balanceDirection;\n",
+        ],
+        [
+            'the balance entity itself',
+            'src/entities/balance/model/x.ts',
+            "import { legacyAmountFromMoney } from './legacy';\nexport const x = legacyAmountFromMoney;\n",
+        ],
+        [
+            'a legacy store',
+            'src/store/x.ts',
+            "import { legacyAmountFromMoney } from 'entities/balance';\nexport const x = legacyAmountFromMoney;\n",
+        ],
+    ])('allows %s', async (_name, file, code) => {
+        expect(await legacyBridgeErrors(file, code)).toBe(0);
+    });
+});

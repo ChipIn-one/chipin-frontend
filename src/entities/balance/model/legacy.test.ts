@@ -1,6 +1,8 @@
-import { describe, expect, test } from 'vitest';
+import * as Sentry from '@sentry/react';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { ExpenseActivityMetadata } from 'api/activity.types';
+import type { BalanceEntry } from 'api/chipin.raw.types';
 import { normalizeApiMoneyAmount } from 'helpers/numbers';
 import { currencyCode } from 'shared/money';
 
@@ -8,14 +10,30 @@ import {
     legacyAmountFromMoney,
     legacyBalanceFromEntry,
     legacyBalanceFromFriend,
+    legacyCurrencyOrDefault,
     legacyExpenseBalanceChange,
     legacyPartitionEntries,
     legacyRateLookup,
+    legacySumEntriesByCurrency,
     legacySummarizeEntries,
+    resetLegacyRejectReports,
 } from './legacy';
 
+vi.mock('@sentry/react', () => ({ captureMessage: vi.fn() }));
+
+beforeEach(() => {
+    resetLegacyRejectReports();
+});
+
+const usd = (minor: bigint) => ({ minor, currency: currencyCode('USD') });
+const entry = (netBalance: number, currency = 'USD'): BalanceEntry => ({ currency, netBalance });
+// Bad runtime input that the legacy types do not admit (JSON can carry anything).
+const unsafeEntry = (netBalance: unknown, currency: unknown): BalanceEntry =>
+    // The cast is the point: a JSON.parse DTO is not checked at runtime.
+    ({ currency, netBalance }) as unknown as BalanceEntry;
+
 const minorOf = (netBalance: number, currency = 'USD') =>
-    legacyBalanceFromEntry({ currency, netBalance }).net.minor;
+    legacyBalanceFromEntry({ currency, netBalance })?.net.minor;
 
 describe('number → Money bridge', () => {
     test.each([
@@ -59,20 +77,37 @@ describe('number → Money bridge', () => {
         for (const value of [0.1 + 0.2, 6.666700000000001, -0.30000000000000004, 2.67549, 1e-5]) {
             expect(
                 legacyAmountFromMoney(
-                    legacyBalanceFromEntry({ currency: 'USD', netBalance: value }).net,
+                    legacyBalanceFromEntry({ currency: 'USD', netBalance: value })?.net ?? usd(0n),
                 ),
             ).toBe(normalizeApiMoneyAmount(value));
         }
     });
 
-    test('rejects non-finite numbers and invalid currencies', () => {
-        expect(() => minorOf(Number.NaN)).toThrow(RangeError);
-        expect(() => minorOf(Number.POSITIVE_INFINITY)).toThrow(RangeError);
-        expect(() => minorOf(1, 'usd1')).toThrow(RangeError);
-    });
+    test.each([
+        ['empty currency', 1, '', 'currency'],
+        ['two-letter currency', 1, 'US', 'currency'],
+        ['four-letter currency', 1, 'EURO', 'currency'],
+        ['null currency', 1, null, 'currency'],
+        ['NaN amount', Number.NaN, 'USD', 'amount'],
+        ['Infinity amount', Number.POSITIVE_INFINITY, 'USD', 'amount'],
+        ['null amount', null, 'USD', 'amount'],
+    ] as const)(
+        '%s → skipped, reported once without the amount',
+        (_name, amount, currency, reason) => {
+            const entry = unsafeEntry(amount, currency);
+
+            expect(legacyBalanceFromEntry(entry)).toBeNull();
+            expect(legacyBalanceFromEntry(entry)).toBeNull();
+            expect(Sentry.captureMessage).toHaveBeenCalledTimes(1);
+            expect(Sentry.captureMessage).toHaveBeenCalledWith('money.legacy_reject', {
+                level: 'error',
+                tags: { 'money.reason': reason },
+            });
+        },
+    );
 
     test('friend balances map the same way', () => {
-        expect(legacyBalanceFromFriend({ currency: 'jpy', netAmount: -0.4 }).net).toEqual({
+        expect(legacyBalanceFromFriend({ currency: 'jpy', netAmount: -0.4 })?.net).toEqual({
             minor: -4_000n,
             currency: 'JPY',
         });
@@ -120,32 +155,81 @@ test('legacyExpenseBalanceChange', () => {
 });
 
 describe('legacyRateLookup', () => {
-    const rateOf = legacyRateLookup({ EUR: 0.9, JPY: 150, BAD: 0 }, 'USD');
+    const rateOf = legacyRateLookup({ EUR: 0.9, JPY: 150, BAD: 0, NAN: Number.NaN }, 'USD');
     const code = currencyCode;
 
     test.each([
-        ['USD', 'EUR', '0.9'],
-        ['EUR', 'USD', String(1 / 0.9)],
-        ['EUR', 'JPY', String(150 / 0.9)],
+        ['USD', 'EUR', { from: '1', to: '0.9' }],
+        ['EUR', 'USD', { from: '0.9', to: '1' }],
+        ['EUR', 'JPY', { from: '0.9', to: '150' }],
         ['USD', 'SEK', null],
         ['BAD', 'USD', null],
+        ['NAN', 'USD', null],
     ] as const)('%s → %s', (from, to, expected) => {
-        expect(rateOf(code(from), code(to))).toBe(expected);
+        expect(rateOf(code(from), code(to))).toEqual(expected);
     });
 });
 
-test('legacySummarizeEntries keeps the legacy totals shape', () => {
+describe('legacySummarizeEntries (rate direction end to end)', () => {
+    const rates = { EUR: 0.9, JPY: 150 };
+
+    test('EUR → USD divides by the EUR rate', () => {
+        // −9 EUR / 0.9 = −10 USD.
+        expect(legacySummarizeEntries([entry(-9, 'EUR')], rates, 'USD', 'USD')).toEqual({
+            netTotalInBase: -10,
+            owedTotalInBase: 0,
+            owingTotalInBase: 10,
+        });
+    });
+
+    test('USD → JPY multiplies by the JPY rate', () => {
+        expect(legacySummarizeEntries([entry(2, 'USD')], rates, 'USD', 'JPY')).toEqual({
+            netTotalInBase: 300,
+            owedTotalInBase: 300,
+            owingTotalInBase: 0,
+        });
+    });
+
+    test('keeps the legacy totals shape; no rate → left out, zero → skipped', () => {
+        expect(
+            legacySummarizeEntries(
+                [entry(10.5, 'USD'), entry(-3.25, 'EUR'), entry(7, 'SEK'), entry(0, 'GBP')],
+                rates,
+                'USD',
+                'USD',
+            ),
+        ).toEqual({ netTotalInBase: 6.8889, owedTotalInBase: 10.5, owingTotalInBase: 3.6111 });
+    });
+
+    test('a balance in the target currency counts without any rate', () => {
+        expect(legacySummarizeEntries([entry(4, 'USD')], {}, 'EUR', 'USD')).toEqual({
+            netTotalInBase: 4,
+            owedTotalInBase: 4,
+            owingTotalInBase: 0,
+        });
+    });
+
+    test('invalid entries and an invalid target do not throw', () => {
+        expect(
+            legacySummarizeEntries(
+                [entry(5, 'USD'), unsafeEntry(1, null), unsafeEntry(Number.NaN, 'EUR')],
+                rates,
+                'USD',
+                'EURO',
+            ),
+        ).toEqual({ netTotalInBase: 5, owedTotalInBase: 5, owingTotalInBase: 0 });
+    });
+});
+
+test('legacyCurrencyOrDefault falls back to the default currency', () => {
+    expect(legacyCurrencyOrDefault('eur')).toBe('EUR');
+    expect(legacyCurrencyOrDefault('')).toBe('USD');
+    expect(legacyCurrencyOrDefault(null)).toBe('USD');
+    expect(legacyCurrencyOrDefault('EURO')).toBe('USD');
+});
+
+test('legacySumEntriesByCurrency skips invalid entries', () => {
     expect(
-        legacySummarizeEntries(
-            [
-                { currency: 'USD', netBalance: 10.5 },
-                { currency: 'EUR', netBalance: -3.25 },
-                { currency: 'SEK', netBalance: 7 },
-                { currency: 'GBP', netBalance: 0 },
-            ],
-            { EUR: 0.9 },
-            'USD',
-            'USD',
-        ),
-    ).toEqual({ netTotalInBase: 6.8889, owedTotalInBase: 10.5, owingTotalInBase: 3.6111 });
+        legacySumEntriesByCurrency([entry(0.1), entry(0.2), unsafeEntry(1, 'US'), entry(1, 'EUR')]),
+    ).toEqual([usd(3_000n), { minor: 10_000n, currency: 'EUR' }]);
 });

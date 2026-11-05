@@ -10,17 +10,17 @@ import {
     type GroupNetConversionState,
 } from 'constants/groups';
 import {
-    aggregateByCurrency,
     legacyAmountFromMoney,
-    legacyBalanceFromEntry,
+    legacyCurrencyOrDefault,
     legacyEntryFromMoney,
     legacyPartitionEntries,
     legacyRateLookup,
+    legacySumEntriesByCurrency,
     legacySummarizeEntries,
     summarizeBalances,
 } from 'entities/balance';
 import { sortBalancesByCurrency } from 'helpers/currencies';
-import { currencyCode, displaySign } from 'shared/money';
+import { displaySign } from 'shared/money';
 
 import type { GroupsStore } from './groupsStore';
 
@@ -78,15 +78,12 @@ export interface GroupBalances {
 const groupMemberBalances = (group: Group): BalanceEntry[] =>
     group.members.flatMap(member => Object.values(member.balancesByCurrency));
 
-const sumByCurrency = (entries: readonly BalanceEntry[]) =>
-    aggregateByCurrency(entries, entry => legacyBalanceFromEntry(entry).net);
-
 export const selectGroupBalances = (group: Group): GroupBalances => {
     const { owed, owe } = legacyPartitionEntries(groupMemberBalances(group));
 
     return {
-        owedEntries: sumByCurrency(owed).map(({ total }) => legacyEntryFromMoney(total)),
-        oweEntries: sumByCurrency(owe).map(({ total }) => legacyEntryFromMoney(total)),
+        owedEntries: legacySumEntriesByCurrency(owed).map(legacyEntryFromMoney),
+        oweEntries: legacySumEntriesByCurrency(owe).map(legacyEntryFromMoney),
     };
 };
 
@@ -178,7 +175,7 @@ export const selectGroupCardViewModel = (
 ): GroupCardViewModel => {
     // Currencies with at least one open member balance, each summed exactly.
     const { owed, owe } = legacyPartitionEntries(groupMemberBalances(group));
-    const totals = sumByCurrency([...owed, ...owe]).map(({ total }) => total);
+    const totals = legacySumEntriesByCurrency([...owed, ...owe]);
     const activeCurrencyCount = totals.length;
     const isSettled = activeCurrencyCount === 0;
     const [singleTotal] = totals;
@@ -186,7 +183,7 @@ export const selectGroupCardViewModel = (
         activeCurrencyCount === 1 && singleTotal ? legacyEntryFromMoney(singleTotal) : null;
     const summary = summarizeBalances(
         totals,
-        currencyCode(defaultCurrency),
+        legacyCurrencyOrDefault(defaultCurrency),
         legacyRateLookup(rates, baseCurrency),
     );
     let conversionState: GroupNetConversionState = GROUP_NET_CONVERSION_STATES.SAME_CURRENCY;

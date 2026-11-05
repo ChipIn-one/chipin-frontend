@@ -7,17 +7,56 @@
 //
 // Restrictions: every export is named `legacy*` and takes or returns a legacy DTO shape only; the
 // raw number → Money conversion is not exported. ESLint (`money-legacy-bridge`) forbids importing
-// `legacy*` names in `src/{app,shared,entities}/**`. Delete each adapter with its last caller.
+// `legacy*` names of this entity in `src/{app,shared,entities}/**` outside it, by alias or relative
+// path. Delete each adapter with its last caller.
+//
+// Bad legacy input (a currency that is not three letters, a non-finite or non-number amount) never
+// throws during render: the entry is skipped and `money.legacy_reject` is reported once per reason.
+// The strict throw stays in `shared/money` for the new wire path.
+import * as Sentry from '@sentry/react';
+
 import type { ExpenseActivityMetadata } from 'api/activity.types';
 import type { ApiFriendBalance, BalanceEntry, CurrenciesRates } from 'api/chipin.raw.types';
-import type { Money } from 'shared/money';
+import { DEFAULT_CURRENCY_CODE } from 'constants/currencies';
+import type { CurrencyCode, Money } from 'shared/money';
 import { abs, currencyCode, fromUnits, LEDGER_SCALE, sign, sub } from 'shared/money';
 
+import { aggregateByCurrency } from './aggregate';
 import type { Balance } from './balance';
 import type { BalancePartition } from './partition';
 import { partitionBalances } from './partition';
-import type { BalanceSummary, RateLookup } from './summary';
+import type { RateLookup } from './summary';
 import { summarizeBalances } from './summary';
+
+type RejectReason = 'currency' | 'amount';
+
+// Reasons already reported this session: one event per reason, never the amount or currency.
+const reportedReasons = new Set<RejectReason>();
+
+const reportReject = (reason: RejectReason): null => {
+    if (!reportedReasons.has(reason)) {
+        reportedReasons.add(reason);
+        Sentry.captureMessage('money.legacy_reject', {
+            level: 'error',
+            tags: { 'money.reason': reason },
+        });
+    }
+    return null;
+};
+
+/** Test support: forgets which reasons were reported. */
+export const resetLegacyRejectReports = (): void => {
+    reportedReasons.clear();
+};
+
+const CURRENCY_INPUT = /^[A-Za-z]{3}$/;
+
+const legacyCurrency = (value: unknown): CurrencyCode | null =>
+    typeof value === 'string' && CURRENCY_INPUT.test(value) ? currencyCode(value) : null;
+
+/** A legacy currency (the user's default, a rate target), or `DEFAULT_CURRENCY_CODE` if invalid. */
+export const legacyCurrencyOrDefault = (value: unknown): CurrencyCode =>
+    legacyCurrency(value) ?? currencyCode(DEFAULT_CURRENCY_CODE);
 
 // The shortest round-trip text of a double (`Number#toString`), optionally with an exponent.
 const NUMBER_TEXT = /^(-?)(\d+)(?:\.(\d+))?(?:e([+-]\d+))?$/;
@@ -25,18 +64,24 @@ const SCALE = BigInt(LEDGER_SCALE);
 
 /**
  * A legacy number amount as `Money`: its shortest decimal text rounded half-up (away from zero)
- * to scale 4, the same value `normalizeApiMoneyAmount` gives today.
+ * to scale 4, the same value `normalizeApiMoneyAmount` gives today; `null` (reported) for an
+ * invalid currency or a non-finite / non-number amount.
  *
  * Exactness: a wire literal of scale ≤ 4 with |v| < 1e11 has ≤ 15 significant digits, so
  * `JSON.parse` → `toString` returns that literal and the result equals the wire amount exactly.
  * Above 1e11 the double may already have lost the last digit (spec 03 §4.1 table); the result is
- * then the same as the legacy code shows, no worse. NaN/±Infinity throw.
+ * then the same as the legacy code shows, no worse.
  */
-const moneyFromLegacyNumber = (value: number, currency: string): Money => {
-    const match = NUMBER_TEXT.exec(String(value));
+const moneyFromLegacyNumber = (value: unknown, currency: unknown): Money | null => {
+    const code = legacyCurrency(currency);
+
+    if (!code) {
+        return reportReject('currency');
+    }
+    const match = typeof value === 'number' ? NUMBER_TEXT.exec(String(value)) : null;
 
     if (!match) {
-        throw new RangeError('Legacy amount is not a finite number');
+        return reportReject('amount');
     }
     const [, negative = '', integer = '', fraction = '', exponent = '0'] = match;
     // value = digits × 10^shift ledger units.
@@ -53,7 +98,7 @@ const moneyFromLegacyNumber = (value: number, currency: string): Money => {
         units = (digits % divisor) * 2n >= divisor ? quotient + 1n : quotient;
     }
     // BigInt has no -0: a negative value that rounds to zero is 0n.
-    return fromUnits(negative ? -units : units, currencyCode(currency));
+    return fromUnits(negative ? -units : units, code);
 };
 
 /** A legacy amount number for the number-based display components (`Amount`, `DebtAmount`). */
@@ -66,28 +111,55 @@ export const legacyAmountFromMoney = (money: Money): number => {
     return Number(`${sign(money) < 0 ? '-' : ''}${magnitude / unit}.${fraction}`);
 };
 
-export const legacyBalanceFromEntry = (entry: BalanceEntry): Balance => ({
-    net: moneyFromLegacyNumber(entry.netBalance, entry.currency),
-});
+/** `null` (reported) when the entry's currency or amount is invalid. */
+export const legacyBalanceFromEntry = (entry: BalanceEntry): Balance | null => {
+    const net = moneyFromLegacyNumber(entry.netBalance, entry.currency);
 
-export const legacyBalanceFromFriend = (balance: ApiFriendBalance): Balance => ({
-    net: moneyFromLegacyNumber(balance.netAmount, balance.currency),
-});
+    return net && { net };
+};
+
+/** `null` (reported) when the balance's currency or amount is invalid. */
+export const legacyBalanceFromFriend = (balance: ApiFriendBalance): Balance | null => {
+    const net = moneyFromLegacyNumber(balance.netAmount, balance.currency);
+
+    return net && { net };
+};
 
 export const legacyEntryFromMoney = (money: Money): BalanceEntry => ({
     currency: money.currency,
     netBalance: legacyAmountFromMoney(money),
 });
 
-/** Splits legacy entries by `displaySign` of their exact balance. */
+interface ValidEntry {
+    readonly entry: BalanceEntry;
+    readonly net: Money;
+}
+
+const validEntries = (entries: readonly BalanceEntry[]): ValidEntry[] =>
+    entries.flatMap(entry => {
+        const balance = legacyBalanceFromEntry(entry);
+
+        return balance ? [{ entry, net: balance.net }] : [];
+    });
+
+/** Splits legacy entries by `displaySign` of their exact balance; invalid entries are skipped. */
 export const legacyPartitionEntries = (
     entries: readonly BalanceEntry[],
-): BalancePartition<BalanceEntry> =>
-    partitionBalances(entries, entry => legacyBalanceFromEntry(entry).net);
+): BalancePartition<BalanceEntry> => {
+    const { owed, owe, settled } = partitionBalances(validEntries(entries), item => item.net);
+    const toEntries = (items: readonly ValidEntry[]) => items.map(item => item.entry);
+
+    return { owed: toEntries(owed), owe: toEntries(owe), settled: toEntries(settled) };
+};
+
+/** Exact per-currency sums of legacy entries (first-appearance order); invalid ones skipped. */
+export const legacySumEntriesByCurrency = (entries: readonly BalanceEntry[]): Money[] =>
+    aggregateByCurrency(validEntries(entries), item => item.net).map(({ total }) => total);
 
 /**
  * How an expense changed `userId`'s balance: the payer funded `amount − own share`, a participant
- * owes the own share. `undefined` without a share snapshot (it cannot tell what the payer funded).
+ * owes the own share. `undefined` without a share snapshot (it cannot tell what the payer funded)
+ * or with an invalid amount or currency.
  */
 export const legacyExpenseBalanceChange = (
     metadata: ExpenseActivityMetadata,
@@ -101,28 +173,26 @@ export const legacyExpenseBalanceChange = (
     const funded =
         metadata.payerId === userId
             ? moneyFromLegacyNumber(metadata.amount, metadata.currency)
-            : fromUnits(0n, share.currency);
+            : share && fromUnits(0n, share.currency);
 
-    return sub(funded, share);
+    return share && funded ? sub(funded, share) : undefined;
 };
+
+const legacyRate = (value: unknown): string | null =>
+    typeof value === 'number' && Number.isFinite(value) && value > 0 ? String(value) : null;
 
 /**
  * Rates of the legacy dashboard (`rates[c]` units of `c` per one `base`) as a `RateLookup`: the
- * cross rate `rates[to] / rates[from]` as decimal text. Rates are approximate by nature; the
- * conversion itself is exact half-up (`convert`).
+ * pair `rates[from]`, `rates[to]` as decimal text, so the cross rate is computed exactly by
+ * `summarizeBalances` (no rounded quotient).
  */
 export const legacyRateLookup =
     (rates: CurrenciesRates, baseCurrency: string): RateLookup =>
     (from, to) => {
-        const fromRate = from === baseCurrency ? 1 : rates[from];
-        const toRate = to === baseCurrency ? 1 : rates[to];
+        const fromRate = from === baseCurrency ? '1' : legacyRate(rates[from]);
+        const toRate = to === baseCurrency ? '1' : legacyRate(rates[to]);
 
-        if (!fromRate || !toRate) {
-            return null;
-        }
-        const rate = toRate / fromRate;
-
-        return Number.isFinite(rate) && rate > 0 ? String(rate) : null;
+        return fromRate && toRate ? { from: fromRate, to: toRate } : null;
     };
 
 export interface LegacyBalanceTotals {
@@ -138,9 +208,9 @@ export const legacySummarizeEntries = (
     baseCurrency: string,
     targetCurrency: string,
 ): LegacyBalanceTotals => {
-    const summary: BalanceSummary = summarizeBalances(
-        entries.map(entry => legacyBalanceFromEntry(entry).net),
-        currencyCode(targetCurrency),
+    const summary = summarizeBalances(
+        validEntries(entries).map(item => item.net),
+        legacyCurrencyOrDefault(targetCurrency),
         legacyRateLookup(rates, baseCurrency),
     );
 

@@ -325,6 +325,7 @@ export const layerImports = ({ appDir }) => {
     const numbers = appGlob(appDir, 'src/{helpers/numbers.ts,basics/numbers/**/*.{ts,tsx}}');
     // Layers of the target architecture (specs 03/04): new code there reads money from the wire.
     const newLayers = appGlob(appDir, 'src/{app,shared,entities}/**/*.{ts,tsx}');
+    const balanceEntity = appGlob(appDir, 'src/entities/balance/**');
 
     return [
         {
@@ -361,10 +362,16 @@ export const layerImports = ({ appDir }) => {
         },
         {
             // spec 03 §4.1 item 5: the number → Money bridge serves only the legacy `src/api/*`
-            // stores until they migrate; entities/balance itself imports it relatively.
+            // stores until they migrate; only entities/balance itself may use it in the new layers.
             id: 'money-legacy-bridge',
-            pattern: { group: ['entities/*'], importNamePattern: '^legacy' },
+            // The alias `entities/balance[/...]` and any relative path through a `balance` folder
+            // (`../balance`, `../../entities/balance/model/legacy`).
+            pattern: {
+                regex: '^(?:entities/balance|(?:\\.\\.?/)+(?:[^/]+/)*balance)(?:/.*)?$',
+                importNamePattern: '^legacy',
+            },
             files: [newLayers],
+            ignores: [balanceEntity],
             message:
                 'legacy* adapters are for not-yet-migrated stores; read amounts with moneyFromWire in an entities/*/model mapper.',
         },
