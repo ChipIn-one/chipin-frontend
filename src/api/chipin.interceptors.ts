@@ -10,12 +10,10 @@ import {
     refreshAuthSession,
 } from 'helpers/authSession';
 import { getChipInApiUrl } from 'helpers/env';
-import { getApiErrorPayload, isLikelyBackendOutageError } from 'helpers/errors';
-import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
+import { getApiErrorPayload } from 'helpers/errors';
 
 import { AUTH_API_PATH } from './auth.constants';
 import { apiInstance, publicApiInstance } from './chipin.instance';
-import { checkBackendHealth } from './healthApi';
 
 const AUTHORIZATION_BEARER_PREFIX = 'Bearer ';
 const AUTH_REQUEST_CANCELLED_MESSAGE = 'Auth request cancelled';
@@ -24,7 +22,12 @@ const HEALTH_PATH = '/health';
 
 let areChipInApiInterceptorsConfigured = false;
 let onUnauthorizedSession: (() => void) | undefined;
+let onRequestFailure: ((error: unknown, requestStartedAt?: number) => Promise<void>) | undefined;
+let onResponseSuccess: (() => void) | undefined;
 const requestAuthSessionVersions = new WeakMap<object, number>();
+// `performance.now()` when a request was sent: lets the store drop a classification older than its
+// last successful retry.
+const requestStartTimes = new WeakMap<object, number>();
 
 class AuthRequestCancelledError extends Error {
     readonly isStaleSession: boolean;
@@ -34,6 +37,9 @@ class AuthRequestCancelledError extends Error {
         this.isStaleSession = isStaleSession;
     }
 }
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null;
 
 const getRequestPathname = (url?: string): string => {
     if (!url) {
@@ -72,22 +78,20 @@ const isOwnedAuthFlowUnauthorizedError = (error: unknown): boolean => {
     );
 };
 
-const confirmBackendAvailability = (error: unknown): Promise<never> => {
-    return checkBackendHealth().then(
-        () => Promise.reject(error),
-        () => {
-            useBackendAvailabilityStore.getState().setUnavailable();
-            return Promise.reject(error);
-        },
-    );
-};
-
-const processBackendAvailabilityError = (error: unknown): Promise<never> => {
-    if (isLikelyBackendOutageError(error)) {
-        return confirmBackendAvailability(error);
+// The failure is classified (offline / backend down, spec 03 §1.8) before the caller sees it, so
+// the connectivity state is already set when its `catch` runs; the error itself is unchanged.
+const processConnectivityError = (error: unknown): Promise<never> => {
+    if (!onRequestFailure) {
+        return Promise.reject(error);
     }
 
-    return Promise.reject(error);
+    const config: unknown = isRecord(error) ? error.config : undefined;
+    const requestStartedAt = isRecord(config) ? requestStartTimes.get(config) : undefined;
+
+    return onRequestFailure(error, requestStartedAt).then(
+        () => Promise.reject(error),
+        () => Promise.reject(error),
+    );
 };
 
 const processApiResponseError = (error: unknown) => {
@@ -153,7 +157,7 @@ const processApiResponseError = (error: unknown) => {
         });
     }
 
-    return processBackendAvailabilityError(error);
+    return processConnectivityError(error);
 };
 
 const processPublicApiResponseError = (error: unknown): Promise<never> => {
@@ -161,11 +165,23 @@ const processPublicApiResponseError = (error: unknown): Promise<never> => {
         return Promise.reject(error);
     }
 
-    return processBackendAvailabilityError(error);
+    return processConnectivityError(error);
 };
 
-export const initChipInApiInterceptors = (onUnauthorizedSessionCallback?: () => void): void => {
+/**
+ * Installs the interceptors once. `onRequestFailureCallback` gets every failed response that is not
+ * an auth-flow outcome (and not the `/health` probe itself); the bootstrap wires it to the
+ * failed-request classification and the connectivity store. `onResponseSuccessCallback` gets every
+ * successful response of either instance: proof that the network is usable again.
+ */
+export const initChipInApiInterceptors = (
+    onUnauthorizedSessionCallback?: () => void,
+    onRequestFailureCallback?: (error: unknown, requestStartedAt?: number) => Promise<void>,
+    onResponseSuccessCallback?: () => void,
+): void => {
     onUnauthorizedSession = onUnauthorizedSessionCallback;
+    onRequestFailure = onRequestFailureCallback;
+    onResponseSuccess = onResponseSuccessCallback;
 
     if (areChipInApiInterceptorsConfigured) {
         return;
@@ -189,20 +205,26 @@ export const initChipInApiInterceptors = (onUnauthorizedSessionCallback?: () => 
             if (currentAccessToken) {
                 config.headers.Authorization = `Bearer ${currentAccessToken}`;
             }
+            requestStartTimes.set(config, performance.now());
 
             return config;
         });
     });
 
     apiInstance.interceptors.response.use(response => {
+        onResponseSuccess?.();
         const requestVersion = requestAuthSessionVersions.get(response.config);
         if (requestVersion !== undefined && !isAuthSessionCurrent(requestVersion)) {
             return Promise.reject(new AuthRequestCancelledError(true));
         }
         return response;
     }, processApiResponseError);
-    publicApiInstance.interceptors.response.use(
-        response => response,
-        processPublicApiResponseError,
-    );
+    publicApiInstance.interceptors.request.use(config => {
+        requestStartTimes.set(config, performance.now());
+        return config;
+    });
+    publicApiInstance.interceptors.response.use(response => {
+        onResponseSuccess?.();
+        return response;
+    }, processPublicApiResponseError);
 };

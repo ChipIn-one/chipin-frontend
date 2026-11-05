@@ -1,9 +1,11 @@
+import { onlineManager } from '@tanstack/react-query';
 import { act, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { beforeEach, expect, test } from 'vitest';
+import { afterEach, beforeEach, expect, test } from 'vitest';
 
 import type { SelfUser, UserSettings } from 'api/chipin.types';
 import { useAuthStore } from 'store/authStore';
+import { useConnectivityStore } from 'store/connectivityStore';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
 
@@ -122,4 +124,19 @@ test('waits for fetched settings instead of routing from a stale cached preferen
     });
 
     expect(screen.getByLabelText('Current route').textContent).toBe('/dashboard');
+});
+
+afterEach(() => {
+    onlineManager.setOnline(true);
+    useConnectivityStore.setState({ mode: 'online' });
+});
+
+test('an unresolved session offline shows the offline banner instead of a bare loader', () => {
+    useAuthStore.setState({ status: 'unknown' });
+    onlineManager.setOnline(false);
+
+    renderGuard();
+
+    expect(screen.getByRole('status')).toBeTruthy();
+    expect(screen.queryByLabelText('Current route')).toBeNull();
 });

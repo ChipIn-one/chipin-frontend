@@ -1,5 +1,5 @@
 // The typed `api()` wrapper over the generated OpenAPI types (spec 03 §5.4). It runs on the
-// configured `apiInstance` (interceptors: auth refresh, outage detection) and adds, per request,
+// configured `apiInstance` (interceptors: auth refresh, connectivity classification) and adds, per request,
 // the lossless transport (wireJson.ts); the instance's global defaults are not changed, so the
 // legacy `src/api/*` modules keep `JSON.parse`. `api()` never converts money to `Money`: the
 // `entities/*/model` mappers do that.
@@ -201,7 +201,7 @@ export type PublicMethodOf<P extends PublicPath> = PublicOperations[P] & MethodO
  * `api()` for the public operations only (`security: []` in the OpenAPI snapshot, e.g.
  * `GET /stats`): the same typing and transport, on the instance without the auth interceptors (no
  * token, no refresh, no sign-out on 401), so an anonymous visitor's request is sent; `api()`
- * cancels it. Outage detection still applies. A secured operation is a type error.
+ * cancels it. Connectivity classification still applies. A secured operation is a type error.
  */
 export function publicApi<P extends PublicPath, M extends PublicMethodOf<P>>(
     method: M,

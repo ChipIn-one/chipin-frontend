@@ -4,7 +4,7 @@ import { beforeEach, expect, test } from 'vitest';
 
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
-import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
+import { useConnectivityStore } from 'store/connectivityStore';
 
 import { BackendUnavailableGate } from './index';
 
@@ -12,7 +12,7 @@ const CONFIRMED_CLIENT_STATE = 'Confirmed client state';
 const PRESERVED_ACTION_LABEL = 'Preserved action';
 
 beforeEach(() => {
-    useBackendAvailabilityStore.setState({ isUnavailable: false });
+    useConnectivityStore.setState({ mode: 'online' });
     useAuthStore.setState({
         status: 'authenticated',
         unauthReason: undefined,
@@ -21,7 +21,7 @@ beforeEach(() => {
 });
 
 test('keeps existing app content and session state mounted while showing the fallback', () => {
-    useBackendAvailabilityStore.setState({ isUnavailable: true });
+    useConnectivityStore.setState({ mode: 'backend-down' });
 
     render(
         <ThemeProvider theme={lightThemeStyled}>
@@ -37,7 +37,7 @@ test('keeps existing app content and session state mounted while showing the fal
 });
 
 test('makes the preserved app subtree inert while unavailable and interactive after recovery', () => {
-    useBackendAvailabilityStore.setState({ isUnavailable: true });
+    useConnectivityStore.setState({ mode: 'backend-down' });
 
     render(
         <ThemeProvider theme={lightThemeStyled}>
@@ -52,8 +52,25 @@ test('makes the preserved app subtree inert while unavailable and interactive af
     expect(appContent?.hasAttribute('inert')).toBe(true);
 
     act(() => {
-        useBackendAvailabilityStore.getState().clearUnavailable();
+        useConnectivityStore.setState({ mode: 'online' });
     });
 
     expect(appContent?.hasAttribute('inert')).toBe(false);
+});
+
+test('does not block the app while offline', () => {
+    useConnectivityStore.setState({ mode: 'offline' });
+
+    render(
+        <ThemeProvider theme={lightThemeStyled}>
+            <BackendUnavailableGate>
+                <button type="button">{PRESERVED_ACTION_LABEL}</button>
+            </BackendUnavailableGate>
+        </ThemeProvider>,
+    );
+
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByText(PRESERVED_ACTION_LABEL).parentElement?.hasAttribute('inert')).toBe(
+        false,
+    );
 });

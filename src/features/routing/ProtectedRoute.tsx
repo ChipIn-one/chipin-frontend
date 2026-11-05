@@ -5,10 +5,9 @@ import { ROUTES } from 'constants/routes';
 import { getLastAccountLandingPath } from 'helpers/publicRoutes';
 import { UNAUTH_REASON } from 'store/authConstants';
 
-import PageLoader from 'basics/PageLoader';
 import { AuthModal } from 'components/modals/auth-modal';
 
-import { useConnect } from './internal';
+import { GuardLoader, useConnect } from './internal';
 
 interface Props {
     children: React.ReactNode;
@@ -19,7 +18,7 @@ export const ProtectedRoute = ({ children }: Props) => {
     const { isAuthResolved, isLoggedIn, unauthReason } = useConnect();
 
     if (!isAuthResolved) {
-        return <PageLoader />;
+        return <GuardLoader />;
     }
 
     if (!isLoggedIn) {

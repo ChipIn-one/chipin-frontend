@@ -1,4 +1,5 @@
-import { describe, expect, test } from 'vitest';
+import { onlineManager } from '@tanstack/react-query';
+import { afterEach, describe, expect, test } from 'vitest';
 
 import { ApiError, ApiResponseFormatError } from 'shared/lib/apiError';
 
@@ -47,6 +48,19 @@ describe('queryRetry (failureCount starts at 0: `< n` = n retries)', () => {
         expect(queryRetry(0, networkError())).toBe(true);
         expect(queryRetry(2, networkError())).toBe(true);
         expect(queryRetry(3, networkError())).toBe(false);
+    });
+
+    describe('while the network is not usable', () => {
+        afterEach(() => {
+            onlineManager.setOnline(true);
+        });
+
+        test('keeps a network error retryable (offlineFirst pauses it until reconnect)', () => {
+            onlineManager.setOnline(false);
+
+            expect(queryRetry(3, networkError())).toBe(true);
+            expect(queryRetry(2, apiError(503))).toBe(false);
+        });
     });
 
     test.each([

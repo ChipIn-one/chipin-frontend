@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { publicApiInstance } from './chipin.instance';
-import { BackendHealthCheckError, checkBackendHealth } from './healthApi';
+import { probeBackendHealth } from './healthApi';
 
 vi.mock('./chipin.instance', () => ({
     publicApiInstance: {
@@ -9,15 +9,26 @@ vi.mock('./chipin.instance', () => ({
     },
 }));
 
-describe('checkBackendHealth', () => {
+describe('probeBackendHealth', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
-    test('checks the public health endpoint and accepts a successful response', () => {
+    test.each([
+        [200, 'ok'],
+        [204, 'ok'],
+        [500, 'error'],
+        [503, 'error'],
+    ])('maps a %s health response to %s', (status, expected) => {
+        vi.mocked(publicApiInstance.get).mockResolvedValue({ status });
+
+        return expect(probeBackendHealth()).resolves.toBe(expected);
+    });
+
+    test('checks the public health endpoint with the 5 s timeout', () => {
         vi.mocked(publicApiInstance.get).mockResolvedValue({ status: 200 });
 
-        return checkBackendHealth().then(() => {
+        return probeBackendHealth().then(() => {
             expect(publicApiInstance.get).toHaveBeenCalledWith('/health', {
                 timeout: 5000,
                 validateStatus: expect.any(Function),
@@ -25,13 +36,7 @@ describe('checkBackendHealth', () => {
         });
     });
 
-    test('rejects a non-2xx health response', () => {
-        vi.mocked(publicApiInstance.get).mockResolvedValue({ status: 503 });
-
-        return expect(checkBackendHealth()).rejects.toBeInstanceOf(BackendHealthCheckError);
-    });
-
-    test('coalesces simultaneous health checks into one request', () => {
+    test('coalesces simultaneous probes into one request', () => {
         let resolveRequest: ((value: { status: number }) => void) | undefined;
         vi.mocked(publicApiInstance.get).mockReturnValue(
             new Promise(resolve => {
@@ -39,12 +44,18 @@ describe('checkBackendHealth', () => {
             }),
         );
 
-        const firstCheck = checkBackendHealth();
-        const secondCheck = checkBackendHealth();
+        const first = probeBackendHealth();
+        const second = probeBackendHealth();
 
         expect(publicApiInstance.get).toHaveBeenCalledOnce();
         resolveRequest?.({ status: 204 });
 
-        return Promise.all([firstCheck, secondCheck]);
+        return Promise.all([first, second]);
+    });
+
+    test('reports a health request without a response as unreachable, never rejects', () => {
+        vi.mocked(publicApiInstance.get).mockRejectedValue(new Error('Network Error'));
+
+        return expect(probeBackendHealth()).resolves.toBe('unreachable');
     });
 });

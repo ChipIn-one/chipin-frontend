@@ -2,6 +2,7 @@ import { Box, Flex } from '@radix-ui/themes';
 import type { ReactNode } from 'react';
 
 import { DESKTOP_SHELL_MAX_WIDTH, DesktopSidebar, MobileNavBar } from 'components/nav-bars';
+import { OfflineBanner } from 'components/offline-banner';
 
 interface Props {
     children: ReactNode;
@@ -14,6 +15,7 @@ const InternalPageLayout = ({ children }: Props) => (
                 <DesktopSidebar />
 
                 <Box flexGrow="1" minWidth="0">
+                    <OfflineBanner />
                     {children}
                 </Box>
             </Flex>

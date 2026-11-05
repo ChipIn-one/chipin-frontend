@@ -3,7 +3,7 @@ import { Dialog } from '@radix-ui/themes';
 import { RefreshCwIcon, TriangleAlertIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
+import { useConnectivityStore } from 'store/connectivityStore';
 
 import {
     BackendUnavailableActions,
@@ -18,7 +18,7 @@ import {
 
 const BackendUnavailablePage = () => {
     const { t } = useTranslation('errors');
-    const retryBackendHealth = useBackendAvailabilityStore(state => state.retryBackendHealth);
+    const retryBackendHealth = useConnectivityStore(state => state.retryBackendHealth);
     const [isChecking, setIsChecking] = useState(false);
     const [hasRetryFailed, setHasRetryFailed] = useState(false);
     const isMountedRef = useRef(true);

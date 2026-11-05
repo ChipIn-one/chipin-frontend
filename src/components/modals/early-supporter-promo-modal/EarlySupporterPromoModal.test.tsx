@@ -4,7 +4,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
 import { useAuthStore } from 'store/authStore';
-import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
+import { useConnectivityStore } from 'store/connectivityStore';
 import { useUsersStore } from 'store/users-store';
 
 import { EarlySupporterPromoModal } from './EarlySupporterPromoModal';
@@ -96,7 +96,7 @@ beforeEach(() => {
         status: 'unauthenticated',
         unauthReason: 'missing',
     });
-    useBackendAvailabilityStore.setState({ isUnavailable: false });
+    useConnectivityStore.setState({ mode: 'online' });
 });
 
 test('shows the promo for a newly registered user with backend Premium', () => {
@@ -200,7 +200,7 @@ test('suppresses the promo while the backend unavailable fallback is active', ()
     expect(screen.getByRole('dialog', { name: 'Welcome to ChipIn' })).toBeTruthy();
 
     act(() => {
-        useBackendAvailabilityStore.setState({ isUnavailable: true });
+        useConnectivityStore.setState({ mode: 'backend-down' });
     });
 
     expect(screen.queryByRole('dialog')).toBeNull();

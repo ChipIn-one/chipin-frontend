@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
+import { useConnectivityStore } from 'store/connectivityStore';
 
 import { BackendUnavailablePage } from './BackendUnavailablePage';
 import { AppContent } from './styled';
@@ -10,7 +10,8 @@ interface BackendUnavailableGateProps {
 }
 
 const BackendUnavailableGate = ({ children }: BackendUnavailableGateProps) => {
-    const isUnavailable = useBackendAvailabilityStore(state => state.isUnavailable);
+    // Only a confirmed backend outage blocks the app; offline is the non-blocking OfflineBanner.
+    const isUnavailable = useConnectivityStore(state => state.mode === 'backend-down');
 
     return (
         <>

@@ -102,27 +102,3 @@ export const getApiErrorStatus = (error: unknown): number | undefined => {
 
     return typeof status === 'number' ? status : undefined;
 };
-
-export const isNetworkApiError = (error: unknown): boolean => {
-    return (
-        isRecord(error) && error.isAxiosError === true && getApiErrorResponse(error) === undefined
-    );
-};
-
-const isCancelledApiError = (error: unknown): boolean => {
-    return isRecord(error) && (error.__CANCEL__ === true || error.code === 'ERR_CANCELED');
-};
-
-export const isLikelyBackendOutageError = (error: unknown): boolean => {
-    if (isCancelledApiError(error)) {
-        return false;
-    }
-
-    const status = getApiErrorStatus(error);
-
-    if (status !== undefined) {
-        return status >= 500 && status < 600;
-    }
-
-    return isNetworkApiError(error);
-};

@@ -11,7 +11,7 @@ import {
     suppressPublicLocaleSuggestion,
 } from 'helpers/publicLocaleSuggestion';
 import { getPreferredModeRoute } from 'helpers/routes';
-import { useCheckOnlineStatus, useCheckPwa } from 'hooks/pwaHooks';
+import { useCheckPwa } from 'hooks/pwaHooks';
 import { updateSeoMetadata } from 'hooks/seoMetadata';
 import { useAuthToasts } from 'hooks/useAuthToasts';
 import { useCheckSignIn } from 'hooks/useCheckSignIn';
@@ -25,7 +25,6 @@ const PublicEffects = ({ route, isDark }: { route: PublicRoute; isDark: boolean 
     useAuthToasts();
     useScrollToTop();
     useCheckPwa();
-    useCheckOnlineStatus();
 
     const { t, i18n } = useTranslation('meta');
     const { isAuthResolved, isLoggedIn, isUserFetched, settings, canAccessSolo } = useConnect();

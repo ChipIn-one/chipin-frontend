@@ -4,14 +4,15 @@ import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import { lightThemeStyled } from 'constants/styled-themes';
-import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
+import { useConnectivityStore } from 'store/connectivityStore';
 
 const healthMocks = vi.hoisted(() => ({
-    checkBackendHealth: vi.fn<() => Promise<void>>(),
+    probeBackendHealth: vi.fn<() => Promise<'ok' | 'error' | 'unreachable'>>(),
 }));
 
-vi.mock('api/healthApi', () => ({
-    checkBackendHealth: healthMocks.checkBackendHealth,
+vi.mock('api/healthApi', async importOriginal => ({
+    ...(await importOriginal<typeof import('api/healthApi')>()),
+    probeBackendHealth: healthMocks.probeBackendHealth,
 }));
 
 vi.mock('react-i18next', () => ({
@@ -32,8 +33,8 @@ const renderPage = () => {
 
 beforeEach(() => {
     vi.clearAllMocks();
-    healthMocks.checkBackendHealth.mockResolvedValue(undefined);
-    useBackendAvailabilityStore.setState({ isUnavailable: true });
+    healthMocks.probeBackendHealth.mockResolvedValue('ok');
+    useConnectivityStore.setState({ mode: 'backend-down' });
 });
 
 test('renders a blocking localized dialog with an accessible retry action', () => {
@@ -56,10 +57,10 @@ test('reserves retry feedback space before the first failed retry', () => {
 
 test('shows a stable loading state and prevents duplicate retries', async () => {
     let resolveHealth: (() => void) | undefined;
-    healthMocks.checkBackendHealth.mockImplementationOnce(
+    healthMocks.probeBackendHealth.mockImplementationOnce(
         () =>
-            new Promise<void>(resolve => {
-                resolveHealth = resolve;
+            new Promise(resolve => {
+                resolveHealth = () => resolve('ok');
             }),
     );
     const user = userEvent.setup();
@@ -74,7 +75,7 @@ test('shows a stable loading state and prevents duplicate retries', async () => 
     expect(screen.getByRole('button', { name: 'backendUnavailable.tryAgain' })).toBe(retryButton);
 
     await user.click(retryButton);
-    expect(healthMocks.checkBackendHealth).toHaveBeenCalledOnce();
+    expect(healthMocks.probeBackendHealth).toHaveBeenCalledOnce();
 
     resolveHealth?.();
 
@@ -85,7 +86,7 @@ test('shows a stable loading state and prevents duplicate retries', async () => 
 });
 
 test('keeps the page visible when a retry remains unhealthy', () => {
-    healthMocks.checkBackendHealth.mockRejectedValueOnce(new Error('still offline'));
+    healthMocks.probeBackendHealth.mockResolvedValueOnce('error');
     const user = userEvent.setup();
 
     renderPage();
@@ -93,13 +94,13 @@ test('keeps the page visible when a retry remains unhealthy', () => {
     return user
         .click(screen.getByRole('button', { name: 'backendUnavailable.tryAgain' }))
         .then(() => {
-            expect(healthMocks.checkBackendHealth).toHaveBeenCalledOnce();
+            expect(healthMocks.probeBackendHealth).toHaveBeenCalledOnce();
             expect(screen.getByRole('dialog')).toBeTruthy();
             expect(screen.getByText('backendUnavailable.retryFailed')).toBeTruthy();
             expect(
                 screen.getByText('backendUnavailable.retryFailed').getAttribute('aria-hidden'),
             ).toBe('false');
-            expect(useBackendAvailabilityStore.getState().isUnavailable).toBe(true);
+            expect(useConnectivityStore.getState().mode).toBe('backend-down');
         });
 });
 
@@ -111,7 +112,7 @@ test('clears unavailable state and restores normal rendering after a healthy ret
     return user
         .click(screen.getByRole('button', { name: 'backendUnavailable.tryAgain' }))
         .then(() => {
-            expect(healthMocks.checkBackendHealth).toHaveBeenCalledOnce();
-            expect(useBackendAvailabilityStore.getState().isUnavailable).toBe(false);
+            expect(healthMocks.probeBackendHealth).toHaveBeenCalledOnce();
+            expect(useConnectivityStore.getState().mode).toBe('online');
         });
 });

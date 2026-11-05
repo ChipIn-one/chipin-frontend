@@ -8,7 +8,7 @@ import { hasAuthSessionHint } from 'helpers/localStorage';
 import { AUTH_STATUS, UNAUTH_REASON } from 'store/authConstants';
 import { selectAuthStatus } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
-import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
+import { useConnectivityStore } from 'store/connectivityStore';
 import { useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useUsersStore } from 'store/users-store';
@@ -16,7 +16,8 @@ import { useUsersStore } from 'store/users-store';
 export const useCheckSignIn = () => {
     const location = useLocation();
     const status = useAuthStore(selectAuthStatus);
-    const isBackendUnavailable = useBackendAvailabilityStore(state => state.isUnavailable);
+    // Offline or backend down: the session check waits for connectivity instead of signing out.
+    const isDisconnected = useConnectivityStore(state => state.mode !== 'online');
     const { fetchSetDashboardData, setDefaultAppMode } = useDashboardStore(
         useShallow(state => ({
             fetchSetDashboardData: state.fetchSetDashboardData,
@@ -54,7 +55,7 @@ export const useCheckSignIn = () => {
         if (
             location.pathname === ROUTES.OAUTH_CALLBACK ||
             status !== AUTH_STATUS.UNKNOWN ||
-            isBackendUnavailable
+            isDisconnected
         ) {
             return;
         }
@@ -79,7 +80,7 @@ export const useCheckSignIn = () => {
                 ]).then(() => undefined);
             })
             .catch(() => {
-                if (useBackendAvailabilityStore.getState().isUnavailable) {
+                if (useConnectivityStore.getState().mode !== 'online') {
                     return;
                 }
 
@@ -93,7 +94,7 @@ export const useCheckSignIn = () => {
         fetchSetGroups,
         fetchSetUser,
         hasCachedUser,
-        isBackendUnavailable,
+        isDisconnected,
         location.pathname,
         refreshAuthTokens,
         setAuthenticated,

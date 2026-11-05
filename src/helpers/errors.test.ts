@@ -18,7 +18,6 @@ import { ApiError, ApiResponseFormatError } from 'shared/lib/apiError';
 import {
     getApiErrorPayload,
     getApiErrorStatus,
-    isLikelyBackendOutageError,
     isUnauthorizedApiError,
     normalizeApiError,
     resolveApiErrorMessage,
@@ -86,36 +85,6 @@ test('keeps a useful message for payload-less request failures', () => {
     });
 });
 
-test.each([
-    { response: { status: 500 } },
-    { response: { status: 503 } },
-    { code: 'ECONNABORTED' },
-    {},
-])('identifies likely backend outage candidates %#', error => {
-    expect(isLikelyBackendOutageError({ isAxiosError: true, ...error })).toBe(true);
-});
-
-test.each([400, 401, 403, 404, 429])(
-    'does not identify an application %s response as a backend outage candidate',
-    status => {
-        expect(
-            isLikelyBackendOutageError({
-                isAxiosError: true,
-                response: { status },
-            }),
-        ).toBe(false);
-    },
-);
-
-test('does not identify a cancelled request as a backend outage candidate', () => {
-    expect(
-        isLikelyBackendOutageError({
-            isAxiosError: true,
-            __CANCEL__: true,
-        }),
-    ).toBe(false);
-});
-
 describe('an ApiError from api()', () => {
     const apiError = (status: number, code?: string, details?: Record<string, unknown>) =>
         new ApiError({
@@ -147,7 +116,6 @@ describe('an ApiError from api()', () => {
         expect(getApiErrorStatus(apiError(401))).toBe(401);
         expect(isUnauthorizedApiError(apiError(401))).toBe(true);
         expect(isUnauthorizedApiError(apiError(403))).toBe(false);
-        expect(isLikelyBackendOutageError(apiError(502))).toBe(true);
     });
 
     test('an unknown code falls back to the generic request message, not the ApiError text', () => {

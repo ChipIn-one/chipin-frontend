@@ -1,4 +1,4 @@
-import { useCheckOnlineStatus, useCheckPwa } from 'hooks/pwaHooks';
+import { useCheckPwa } from 'hooks/pwaHooks';
 import { useAuthToasts } from 'hooks/useAuthToasts';
 import { useCheckSignIn } from 'hooks/useCheckSignIn';
 import { useRoutesMeta } from 'hooks/useRoutesMeta';
@@ -10,7 +10,6 @@ const GlobalHooks = () => {
     // Permanent hooks
     useRoutesMeta();
     useScrollToTop();
-    useCheckOnlineStatus();
     useCheckPwa();
     useSyncUserSettings();
     useSyncAppMode();

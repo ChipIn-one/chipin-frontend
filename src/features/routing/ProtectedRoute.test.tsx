@@ -1,11 +1,13 @@
+import { onlineManager } from '@tanstack/react-query';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router-dom';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { LS_KEY_USER } from 'constants/localstorage';
 import { getLocalUser, LocalStorage } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
+import { useConnectivityStore } from 'store/connectivityStore';
 
 import { ProtectedRoute } from './ProtectedRoute';
 
@@ -45,6 +47,45 @@ beforeEach(() => {
         status: 'authenticated',
         unauthReason: undefined,
     });
+});
+
+afterEach(() => {
+    onlineManager.setOnline(true);
+    useConnectivityStore.setState({ mode: 'online' });
+});
+
+test('an unresolved session offline shows the offline banner with the loader', () => {
+    useAuthStore.setState({ status: 'unknown' });
+    onlineManager.setOnline(false);
+
+    render(
+        <MemoryRouter initialEntries={['/dashboard']}>
+            <ProtectedRoute>
+                <div data-testid="protected-content" />
+            </ProtectedRoute>
+        </MemoryRouter>,
+    );
+
+    // Offline: one screen with the banner and its Retry above the loader, not the 100vh PageLoader.
+    expect(screen.queryByTestId('page-loader')).toBeNull();
+    expect(screen.getByRole('status')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'network.retry' })).toBeTruthy();
+    expect(screen.queryByTestId('protected-content')).toBeNull();
+});
+
+test('an unresolved session online shows only the loader', () => {
+    useAuthStore.setState({ status: 'unknown' });
+
+    render(
+        <MemoryRouter initialEntries={['/dashboard']}>
+            <ProtectedRoute>
+                <div />
+            </ProtectedRoute>
+        </MemoryRouter>,
+    );
+
+    expect(screen.getByTestId('page-loader')).toBeTruthy();
+    expect(screen.queryByRole('status')).toBeNull();
 });
 
 test('shows the auth modal on an unauthenticated protected deep link without changing the URL', () => {

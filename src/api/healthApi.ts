@@ -8,28 +8,37 @@ export class BackendHealthCheckError extends Error {
     }
 }
 
+/**
+ * The outcome of one `GET /health`: `ok` (2xx), `error` (the backend or its proxy answered with
+ * another status) or `unreachable` (no HTTP response: network error or the 5 s timeout).
+ */
+export type BackendHealth = 'ok' | 'error' | 'unreachable';
+
 const isSuccessfulHealthStatus = (status: number): boolean => {
     return status >= 200 && status < 300;
 };
 
-let healthCheckPromise: Promise<void> | null = null;
+let healthProbePromise: Promise<BackendHealth> | null = null;
 
-export const checkBackendHealth = (): Promise<void> => {
-    if (!healthCheckPromise) {
-        healthCheckPromise = publicApiInstance
+/** Probes `/health`; simultaneous probes share one request. Never rejects. */
+export const probeBackendHealth = (): Promise<BackendHealth> => {
+    if (!healthProbePromise) {
+        healthProbePromise = publicApiInstance
+            // Every HTTP answer resolves, so it also passes the success interceptor and marks the
+            // network usable (`onResponseSuccess`): intended, an answer proves the network.
             .get<unknown>('/health', {
                 timeout: HEALTH_CHECK_TIMEOUT_MS,
                 validateStatus: () => true,
             })
-            .then(response => {
-                if (!isSuccessfulHealthStatus(response.status)) {
-                    return Promise.reject(new BackendHealthCheckError());
-                }
-            })
+            .then(
+                (response): BackendHealth =>
+                    isSuccessfulHealthStatus(response.status) ? 'ok' : 'error',
+                (): BackendHealth => 'unreachable',
+            )
             .finally(() => {
-                healthCheckPromise = null;
+                healthProbePromise = null;
             });
     }
 
-    return healthCheckPromise;
+    return healthProbePromise;
 };
