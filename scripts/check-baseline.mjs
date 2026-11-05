@@ -114,10 +114,17 @@ export const findBaselineGrowth = async ({
     return errors;
 };
 
-const ENTRY_ID = /\[([a-z0-9]+(?:-[a-z0-9]+)*)\] /;
+const ENTRY_ID = '\\[([a-z0-9]+(?:-[a-z0-9]+)*)\\] ';
+const ENTRY_PREFIX = new RegExp(`^${ENTRY_ID}`);
+const ENTRY_ANYWHERE = new RegExp(ENTRY_ID, 'g');
 
-/** `[id]` of a restricted-entry message: a prefix (syntax) or inside ESLint's text (imports). */
-export const messageId = message => message.match(ENTRY_ID)?.[1];
+/**
+ * `[id]` of a restricted-entry message. A restricted-syntax message starts with it. ESLint puts its
+ * own text, which quotes the import source (`'routes/[id] x' import is restricted…`), before a
+ * restricted-import message, and our message comes last: there the id is the last `[id] `.
+ */
+export const messageId = message =>
+    message.match(ENTRY_PREFIX)?.[1] ?? [...message.matchAll(ENTRY_ANYWHERE)].at(-1)?.[1];
 
 /** Lints a file with the repository config and no suppressions (the ESLint API never applies them). */
 export const eslintNewIdCounter = () => {

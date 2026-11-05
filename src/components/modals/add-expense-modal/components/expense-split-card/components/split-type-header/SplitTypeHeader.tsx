@@ -5,6 +5,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import {
     selectAllUsersSelected,
+    selectAmountPrecision,
     selectSplitSummary,
     selectYourShareColor,
 } from 'store/expenseModalSelectors';
@@ -20,6 +21,7 @@ const SplitTypeHeader = () => {
         yourShareAmount,
         yourShareTone,
         currency,
+        precision,
         toggleAllParticipants,
     } = useExpenseModalStore(
         useShallow(state => ({
@@ -28,6 +30,7 @@ const SplitTypeHeader = () => {
             yourShareAmount: selectSplitSummary(state).yourShareAmount,
             yourShareTone: selectYourShareColor(state),
             currency: state.currency,
+            precision: selectAmountPrecision(state),
             toggleAllParticipants: state.toggleAllParticipants,
         })),
     );
@@ -59,7 +62,7 @@ const SplitTypeHeader = () => {
                     {yourShareTitle}
                 </Text>
                 <Text size="2" weight="bold" color={yourShareTone}>
-                    <Amount value={yourShareAmount} tokenCode={currency} />
+                    <Amount value={yourShareAmount} tokenCode={currency} precision={precision} />
                 </Text>
             </Flex>
         </Flex>

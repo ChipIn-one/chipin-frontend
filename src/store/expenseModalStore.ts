@@ -3,10 +3,26 @@ import { create } from 'zustand';
 import type { User } from 'api/chipin.types';
 import { DEFAULT_EXPENSE_CATEGORY } from 'constants/category';
 import { EXPENSE_SPLIT_MODES, type ExpenseSplitMode } from 'constants/chipin';
-import { MONEY_INPUT_PRECISION, parseAmountInput, roundHalfUp } from 'helpers/numbers';
+import { parseAmountInput } from 'helpers/numbers';
 import { getUnixTimestampInSec } from 'helpers/time';
+import {
+    add,
+    fromUnits,
+    LEDGER_SCALE,
+    minorUnits,
+    type Money,
+    roundToMinor,
+    sign,
+    toUnits,
+} from 'shared/money';
 
-import { selectAllUsersSelected, selectIncludedUsers, selectUsers } from './expenseModalSelectors';
+import {
+    selectAllUsersSelected,
+    selectAmountShare,
+    selectIncludedUsers,
+    selectInputFractionDigits,
+    selectUsers,
+} from './expenseModalSelectors';
 import type { ExpenseModalOriginalState } from './expenseModalUpdate';
 
 export type ExpenseTargetMode = 'group' | 'friends';
@@ -290,6 +306,23 @@ const getInitializedState = (source: ExpenseModalSource): ExpenseModalState => {
     };
 };
 
+const LEDGER_UNIT = 10n ** BigInt(LEDGER_SCALE);
+
+/**
+ * `amount + delta` whole currency units, not below zero, rounded to the currency minor units and
+ * written as input text with exactly that many fraction digits ("2.25", "3", "1.250").
+ */
+const stepAmount = (amount: Money, delta: number): string => {
+    const stepped = add(amount, fromUnits(BigInt(delta) * LEDGER_UNIT, amount.currency));
+    const units = toUnits(
+        roundToMinor(sign(stepped) < 0 ? fromUnits(0n, amount.currency) : stepped),
+    );
+    const digits = minorUnits(amount.currency);
+    const fraction = (units % LEDGER_UNIT).toString().padStart(LEDGER_SCALE, '0').slice(0, digits);
+
+    return digits > 0 ? `${units / LEDGER_UNIT}.${fraction}` : `${units / LEDGER_UNIT}`;
+};
+
 export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
     ...INITIAL_EXPENSE_MODAL_STATE,
     open: options => {
@@ -485,7 +518,13 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
         }
 
         if (splitMode === EXPENSE_SPLIT_MODES.AMOUNTS) {
-            const parsedValue = parseAmountInput(value);
+            // Input is limited to the currency minor units (spec 03 §4.2 `parseMoneyInput`), or to
+            // the digits the current text already has, so an edit-loaded value can be erased.
+            const draft = get();
+            const parsedValue = parseAmountInput(
+                value,
+                selectInputFractionDigits(draft, draft.amountShares[participantId]),
+            );
 
             if (parsedValue === null) {
                 return;
@@ -513,24 +552,27 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
     },
     stepSplitValue: (participantId, delta) => {
         const state = get();
+
+        if (state.splitMode === EXPENSE_SPLIT_MODES.AMOUNTS) {
+            if (Number.isSafeInteger(delta)) {
+                state.setSplitValue(
+                    participantId,
+                    stepAmount(selectAmountShare(state, participantId), delta),
+                );
+            }
+            return;
+        }
+
         let currentValue = 0;
 
         if (state.splitMode === EXPENSE_SPLIT_MODES.PERCENT) {
             currentValue = Number(state.percentShares[participantId]) || 0;
-        } else if (state.splitMode === EXPENSE_SPLIT_MODES.AMOUNTS) {
-            currentValue = Number(state.amountShares[participantId]) || 0;
         } else if (state.splitMode === EXPENSE_SPLIT_MODES.SHARES) {
             currentValue = Number(state.shareWeights[participantId]) || 0;
         } else {
             return;
         }
 
-        const nextValue = Math.max(0, currentValue + delta);
-        const formattedValue =
-            state.splitMode === EXPENSE_SPLIT_MODES.AMOUNTS
-                ? roundHalfUp(nextValue, MONEY_INPUT_PRECISION).toFixed(MONEY_INPUT_PRECISION)
-                : String(nextValue);
-
-        state.setSplitValue(participantId, formattedValue);
+        state.setSplitValue(participantId, String(Math.max(0, currentValue + delta)));
     },
 }));

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
 import {
+    selectAmountPrecision,
     selectAmountStep,
     selectExpenseParticipant,
     selectIsDirectExpense,
@@ -35,6 +36,7 @@ const ExpenseUserRow = memo(({ participantId }: ExpenseUserRowProps) => {
         isCheckSpacerHidden,
         calculatedAmount,
         currency,
+        precision,
         splitMode,
         percentValue,
         amountValue,
@@ -51,6 +53,7 @@ const ExpenseUserRow = memo(({ participantId }: ExpenseUserRowProps) => {
             isCheckSpacerHidden: selectIsDirectExpense(state),
             calculatedAmount: selectUserAmount(state, participantId),
             currency: state.currency,
+            precision: selectAmountPrecision(state),
             splitMode: state.splitMode,
             percentValue: state.percentShares[participantId] ?? '0',
             amountValue: state.amountShares[participantId] ?? '0',
@@ -117,7 +120,11 @@ const ExpenseUserRow = memo(({ participantId }: ExpenseUserRowProps) => {
                         {member.displayName}
                     </Text>
                     <Text size="1" color="gray">
-                        <Amount value={calculatedAmount} tokenCode={currency} />
+                        <Amount
+                            value={calculatedAmount}
+                            tokenCode={currency}
+                            precision={precision}
+                        />
                     </Text>
                 </Flex>
             </ParticipantLabel>

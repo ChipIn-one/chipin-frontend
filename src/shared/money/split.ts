@@ -3,7 +3,7 @@
 // the shares the backend stores for AUTO (all weights '1'), SHARES and PERCENTAGE.
 import type { Decimal } from './decimal';
 import { parseDecimal } from './decimal';
-import type { Money } from './money';
+import type { ApproxMoney, Money } from './money';
 import { fromUnits } from './money';
 
 // toCommonScaleIntegers: scales every weight by the same power of ten so all become integers;
@@ -26,9 +26,12 @@ export interface SplitEntry {
 /**
  * Splits `total` by `entries` (in the exact order of the request's `participantIds`): each gets
  * floor(units × w / W); the units floor dropped go one each to the largest exact remainders, ties
- * by entry order. Zero weights are allowed; an empty list is `[]`; W ≤ 0 throws.
+ * by entry order. Zero weights are allowed; an empty list is `[]`; W ≤ 0 throws. The shares of an
+ * `ApproxMoney` total are `ApproxMoney`.
  */
-export const split = (total: Money, entries: readonly SplitEntry[]): Money[] => {
+export function split(total: ApproxMoney, entries: readonly SplitEntry[]): ApproxMoney[];
+export function split(total: Money, entries: readonly SplitEntry[]): Money[];
+export function split(total: Money, entries: readonly SplitEntry[]): Money[] {
     if (entries.length === 0) {
         return [];
     }
@@ -64,5 +67,5 @@ export const split = (total: Money, entries: readonly SplitEntry[]): Money[] => 
         allocated[index] = (allocated[index] ?? 0n) + 1n;
     }
 
-    return allocated.map(units => fromUnits(units, total.currency));
-};
+    return allocated.map(units => fromUnits(units, total));
+}

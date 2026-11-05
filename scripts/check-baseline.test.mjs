@@ -131,6 +131,15 @@ describe('check-baseline growth', () => {
             "'shared/money/split' import is restricted from being used by a pattern. [money-deep-import] Import from shared/money only.",
             'money-deep-import',
         ],
+        [
+            "'pages/[group-id] view' import is restricted from being used by a pattern. [money-deep-import] Import from shared/money only.",
+            'money-deep-import',
+        ],
+        [
+            "'format' import from 'pages/[legacy-id] x' is restricted. [money-wire-import] Wire↔Money conversion only in mappers.",
+            'money-wire-import',
+        ],
+        ['[money-to-fixed] Money: see [other-id] below.', 'money-to-fixed'],
         ['Unexpected debugger statement.', undefined],
     ])('messageId(%j) → %s', (message, id) => {
         expect(messageId(message)).toBe(id);

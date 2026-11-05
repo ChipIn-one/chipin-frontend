@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'vitest';
 
+import { convert } from './convert';
 import { parseDecimal } from './decimal';
 import type { Money } from './money';
-import { currencyCode, fromUnits, LEDGER_SCALE } from './money';
+import { currencyCode, fromUnits, isApprox, LEDGER_SCALE } from './money';
 import { split } from './split';
 
 const USD = currencyCode('USD');
@@ -168,4 +169,13 @@ describe('parseDecimal (BigDecimal(String) grammar)', () => {
             expect(() => parseDecimal(text)).toThrow(RangeError);
         },
     );
+});
+
+describe('split keeps the ApproxMoney mark', () => {
+    test('shares of an approximate total are approximate, of an exact one exact', () => {
+        const approx = convert(usd('10'), '1', USD);
+
+        expect(split(approx, entries(['1', '2'])).map(isApprox)).toEqual([true, true]);
+        expect(split(usd('10'), entries(['1', '2'])).map(isApprox)).toEqual([false, false]);
+    });
 });

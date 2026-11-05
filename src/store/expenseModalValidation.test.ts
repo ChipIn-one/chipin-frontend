@@ -222,25 +222,30 @@ test.each([
     },
 );
 
-test.each(['0.9991', '1.0009'])(
-    'EXP-064 / EXP-011 does not reject exact totals within the existing tolerance: %s',
-    value => {
+test.each([
+    { value: '0.9991', reason: 'amountsUnder' },
+    { value: '1.0009', reason: 'amountsOver' },
+])(
+    'EXP-064 / EXP-011 rejects a total off by less than a cent like the backend: $value',
+    ({ value, reason }) => {
         initialize();
         const store = useExpenseModalStore.getState();
         store.setAmount('1');
         store.setSplitMode(EXPENSE_SPLIT_MODES.AMOUNTS);
-        // Existing edits may contain API precision beyond the two-decimal input parser.
+        // Existing edits may contain API precision beyond the two-decimal input parser. The
+        // backend requires the EXACT shares to equal the amount (`compareTo`), with no tolerance.
         const state = {
             ...useExpenseModalStore.getState(),
             amountShares: { [currentUser.id]: value },
         };
 
-        expect(selectExpenseSubmitFeedback(state)).toBeNull();
-        expect(selectIsSubmitDisabled(state)).toBe(false);
-        expect(selectExpensePayload(state)?.sharingMode).toEqual({
-            type: 'EXACT',
-            customShares: { [currentUser.id]: Number(value), [friend.id]: 0, [other.id]: 0 },
+        expect(selectExpenseSubmitFeedback(state)).toEqual({
+            reason,
+            current: Number(value),
+            required: 1,
+            difference: 0.0009,
         });
+        expectBlocked(state);
     },
 );
 
@@ -401,4 +406,73 @@ test('EXP-064 / EXP-044 distinguishes unchanged edits from invalid input and cle
     expect(selectExpenseSubmitFeedback({ ...editState, amount: '' })).toEqual({ reason: 'amount' });
     expect(selectExpenseSubmitFeedback({ ...editState, description: 'Dinner' })).toBeNull();
     expect(selectIsSubmitDisabled({ ...editState, description: 'Dinner' })).toBe(false);
+});
+
+test.each([
+    { mode: EXPENSE_SPLIT_MODES.AMOUNTS, field: 'amountShares', value: '1e3' },
+    { mode: EXPENSE_SPLIT_MODES.PERCENT, field: 'percentShares', value: '.' },
+    { mode: EXPENSE_SPLIT_MODES.SHARES, field: 'shareWeights', value: '1.23456' },
+    { mode: EXPENSE_SPLIT_MODES.AMOUNTS, field: 'amountShares', value: '0.00001' },
+] as const)(
+    'EXP-064 blocks a $mode value the backend cannot read: $value',
+    ({ mode, field, value }) => {
+        initialize();
+        useExpenseModalStore.getState().setSplitMode(mode);
+        // Edits and future inputs can carry such text; the form cannot type it.
+        const loaded = useExpenseModalStore.getState();
+        const state = { ...loaded, [field]: { ...loaded[field], [currentUser.id]: value } };
+
+        expect(selectExpenseSubmitFeedback(state)).toEqual({ reason: 'invalidValue' });
+        expectBlocked(state);
+    },
+);
+
+test('EXP-064 counts a cleared split field as zero and sends numbers only', () => {
+    initialize();
+    const store = useExpenseModalStore.getState();
+    store.setSplitMode(EXPENSE_SPLIT_MODES.AMOUNTS);
+    store.setSplitValue(currentUser.id, '100');
+    store.setSplitValue(friend.id, '');
+    const payload = selectExpensePayload(useExpenseModalStore.getState());
+
+    expect(payload?.sharingMode).toEqual({
+        type: 'EXACT',
+        customShares: { [currentUser.id]: 100, [friend.id]: 0, [other.id]: 0 },
+    });
+    expect(JSON.stringify(payload)).not.toMatch(/null|NaN/);
+});
+
+test.each(['48566857961384.45', '999999999999.9999'])(
+    'EXP-064 writes the payload amount %s as the typed decimal (one rounding)',
+    text => {
+        initialize();
+        const store = useExpenseModalStore.getState();
+        store.setAmount(text);
+        store.setSplitMode(EXPENSE_SPLIT_MODES.AMOUNTS);
+        // Edit-loaded scale-4 values (the form itself types at most the currency minor units).
+        const loaded = useExpenseModalStore.getState();
+        const state = {
+            ...loaded,
+            amountShares: { [currentUser.id]: text, [friend.id]: '0', [other.id]: '0' },
+        };
+        const body = JSON.stringify(selectExpensePayload(state));
+
+        // The literal `Number(text)` gives, never `Number(units) / 1e4` (…384.445, 1000000000000).
+        expect(body).toContain(`"amount":${JSON.stringify(Number(text))}`);
+        expect(body).toContain(`"${currentUser.id}":${JSON.stringify(Number(text))}`);
+    },
+);
+
+test('EXP-064 writes decimal percentages from the parsed digits', () => {
+    initialize();
+    useExpenseModalStore.getState().setSplitMode(EXPENSE_SPLIT_MODES.PERCENT);
+    const loaded = useExpenseModalStore.getState();
+    const state = {
+        ...loaded,
+        percentShares: { [currentUser.id]: '33.335', [friend.id]: '33.335', [other.id]: '33.33' },
+    };
+
+    expect(JSON.stringify(selectExpensePayload(state)?.sharingMode)).toBe(
+        `{"type":"PERCENTAGE","percentageShares":{"${currentUser.id}":33.335,"${friend.id}":33.335,"${other.id}":33.33}}`,
+    );
 });

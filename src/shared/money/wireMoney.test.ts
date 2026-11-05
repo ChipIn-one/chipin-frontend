@@ -3,7 +3,18 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { convert } from './convert';
 import type { Money } from './money';
-import { abs, add, currencyCode, fromUnits, negate, roundToMinor, sub, sum } from './money';
+import {
+    abs,
+    add,
+    currencyCode,
+    fromUnits,
+    negate,
+    roundToMinor,
+    sub,
+    sum,
+    toUnits,
+} from './money';
+import { split } from './split';
 import { createWireAmount, isWireAmount, MoneyWireError, wireAmountText } from './wire';
 import { mapItems, moneyFromWire, moneyToWire, resetReportedItems } from './wireMoney';
 
@@ -164,6 +175,10 @@ describe('moneyToWire', () => {
             () => moneyToWire(roundToMinor(approx)),
             // @ts-expect-error -- a sum of approximate amounts is approximate.
             () => moneyToWire(sum([approx, approx], USD)),
+            // @ts-expect-error -- units back in the currency of an approximate amount stay approximate.
+            () => moneyToWire(fromUnits(toUnits(approx), approx)),
+            // @ts-expect-error -- the shares of an approximate total are approximate.
+            () => split(approx, [{ userId: 'a', weight: '1' }]).map(share => moneyToWire(share)),
         ];
 
         // At runtime the flag survives too, so even a call that slipped past the types throws.

@@ -7,7 +7,23 @@ import {
     type ExpenseSubmitBlocker,
     MIN_GROUP_EXPENSE_PARTICIPANTS,
 } from 'constants/chipin';
-import { MONEY_INPUT_PRECISION, roundHalfUp } from 'helpers/numbers';
+import {
+    abs,
+    compare,
+    type CurrencyCode,
+    currencyCode,
+    fromUnits,
+    isZero,
+    LEDGER_SCALE,
+    type MinorUnits,
+    minorUnits,
+    type Money,
+    roundToMinor,
+    sign,
+    split as splitMoney,
+    sub,
+    toUnits,
+} from 'shared/money';
 
 import type { ExpenseModalState, ExpenseModalStore, ExpenseParticipant } from './expenseModalStore';
 import { buildExpenseUpdateParams } from './expenseModalUpdate';
@@ -91,66 +107,277 @@ const getPayerId = (state: ExpenseModalStore, users: ExpenseParticipant[]) => {
 export const selectPayerId = (state: ExpenseModalStore) =>
     getPayerId(state, selectPayerUsers(state));
 
-const getTotalAmount = (state: ExpenseModalStore) => {
-    const amount = Number(state.amount);
+// The share preview runs on `shared/money` (spec 03 §4.1, §4.4): ledger units of scale 4 and the
+// backend's own `distributeAmount` (`split`), so each previewed share equals the `participantShares`
+// the backend stores for the same request. Display numbers are `roundToMinor` of the exact shares.
+// The backend takes amounts and share weights with at most 4 decimals ("must not have more than 4
+// decimal places") and percentages with any (it only needs them to total exactly 100).
+const MAX_PERCENT_SCALE = 30;
+// Like the wire boundary (decimal(19,4)): at most 15 integer digits; non-negative.
+const MAX_INTEGER_DIGITS = 15;
+const DECIMAL_TEXT = /^(\d*)(?:\.(\d*))?$/;
+const FALLBACK_CURRENCY = 'XXX';
 
-    return Number.isFinite(amount) ? amount : 0;
+const fractionDigits = (text: string | undefined): number =>
+    DECIMAL_TEXT.exec((text ?? '').trim())?.[2]?.length ?? 0;
+
+/** A non-negative decimal text as an integer at `scale` ("1.5", 4 → 15000n), or null. */
+const parseScaled = (text: string | undefined, scale: number): bigint | null => {
+    const match = DECIMAL_TEXT.exec((text ?? '').trim());
+    const [, integer = '', fraction = ''] = match ?? [];
+
+    if (
+        !match ||
+        integer + fraction === '' ||
+        integer.length > MAX_INTEGER_DIGITS ||
+        fraction.length > scale
+    ) {
+        return null;
+    }
+
+    return BigInt(`${integer || '0'}${fraction.padEnd(scale, '0')}`);
 };
 
-const getUserAmount = (
+/** Empty input (a cleared field) counts as zero. */
+const isBlank = (text: string | undefined): boolean => (text ?? '').trim() === '';
+
+/** Zero when empty or unparseable; callers that validate check `parseScaled` themselves. */
+const scaledOrZero = (text: string | undefined, scale: number): bigint =>
+    parseScaled(text, scale) ?? 0n;
+
+/** An integer at `scale` as the decimal text `split` takes as a weight (3333n, 2 → "33.33"). */
+const scaledToText = (value: bigint, scale: number): string => {
+    const unit = 10n ** BigInt(scale);
+
+    return scale === 0
+        ? value.toString()
+        : `${value / unit}.${(value % unit).toString().padStart(scale, '0')}`;
+};
+
+/**
+ * A plain number from the decimal text: one rounding, the same double `Number(text)` gives, so a
+ * payload literal is unchanged (never `Number(units) / 10 ** scale`, which rounds twice).
+ */
+const scaledToNumber = (value: bigint, scale: number = LEDGER_SCALE): number =>
+    Number(scaledToText(value, scale));
+
+const percentTotal = (scale: number): bigint => 100n * 10n ** BigInt(scale);
+
+const absValue = (value: bigint): bigint => (value < 0n ? -value : value);
+
+/**
+ * A number for the legacy number-based `Amount` (rendered with `precision = minorUnits`): the
+ * amount rounded to the currency minor units (`roundToMinor`). A non-zero amount that rounds to
+ * zero is passed exactly, so it is not shown as a settled 0: `Amount` renders it as "< 0.01 USD"
+ * ("< 1 JPY"), its own too-small notation. Display only; `formatMoney`'s "< $0.01" comes when
+ * `Amount` moves to `formatMoneyParts` (spec 03 §4.4).
+ */
+const toDisplayNumber = (money: Money): number => {
+    const rounded = roundToMinor(money);
+
+    return scaledToNumber(toUnits(isZero(rounded) ? money : rounded));
+};
+
+/** The expense currency; before one is chosen, 'XXX' (shares do not depend on it, only rounding). */
+export const selectCurrencyCode = (state: ExpenseModalState): CurrencyCode => {
+    try {
+        return currencyCode(state.currency);
+    } catch {
+        return currencyCode(FALLBACK_CURRENCY);
+    }
+};
+
+/** `precision` for the legacy `Amount` that renders preview numbers: the currency minor units. */
+export const selectAmountPrecision = (state: ExpenseModalState): MinorUnits =>
+    minorUnits(selectCurrencyCode(state));
+
+/**
+ * Fraction digits a money input accepts: the currency minor units, or more while `current` already
+ * has more (an edit-loaded scale-4 value, a currency switch), so such a value can still be erased.
+ */
+export const selectInputFractionDigits = (
+    state: ExpenseModalState,
+    current: string | undefined,
+): number => Math.max(minorUnits(selectCurrencyCode(state)), fractionDigits(current));
+
+/** The EXACT-mode amount entered for `userId` (zero when empty or not a decimal). */
+export const selectAmountShare = (state: ExpenseModalState, userId: string): Money =>
+    fromUnits(scaledOrZero(state.amountShares[userId], LEDGER_SCALE), selectCurrencyCode(state));
+
+const getTotalMoney = (state: ExpenseModalStore): Money =>
+    fromUnits(scaledOrZero(state.amount, LEDGER_SCALE), selectCurrencyCode(state));
+
+const getTotalAmount = (state: ExpenseModalStore) => scaledToNumber(toUnits(getTotalMoney(state)));
+
+/** The per-user values of the split mode as integers at one `scale`, and their sum. */
+interface SplitValues {
+    readonly scale: number;
+    readonly byUserId: ReadonlyMap<string, bigint>;
+    readonly total: bigint;
+    /** Some non-empty value is not a decimal the backend accepts ("1e3", ".", > 4 decimals). */
+    readonly hasInvalid: boolean;
+}
+
+const getSplitValues = (
     state: ExpenseModalStore,
-    userId: string,
-    includedUserCount: number,
-    totalAmount: number,
-    totalShares: number,
-    isIncluded: boolean,
-) => {
-    if (!isIncluded) {
-        return 0;
+    includedUsers: readonly ExpenseParticipant[],
+): SplitValues => {
+    let texts: Record<string, string> = {};
+    let scale = LEDGER_SCALE;
+
+    switch (state.splitMode) {
+        case EXPENSE_SPLIT_MODES.PERCENT:
+            texts = state.percentShares;
+            scale = Math.min(
+                MAX_PERCENT_SCALE,
+                Math.max(0, ...includedUsers.map(user => fractionDigits(texts[user.id]))),
+            );
+            break;
+        case EXPENSE_SPLIT_MODES.AMOUNTS:
+            texts = state.amountShares;
+            break;
+        case EXPENSE_SPLIT_MODES.SHARES:
+            texts = state.shareWeights;
+            break;
+        case EXPENSE_SPLIT_MODES.EQUAL:
+            break;
+    }
+
+    const byUserId = new Map<string, bigint>();
+    let total = 0n;
+    let hasInvalid = false;
+
+    for (const user of includedUsers) {
+        const text = texts[user.id];
+        const value = parseScaled(text, scale);
+
+        hasInvalid ||= value === null && !isBlank(text);
+        byUserId.set(user.id, value ?? 0n);
+        total += value ?? 0n;
+    }
+
+    return { scale, byUserId, total, hasInvalid };
+};
+
+/** `money × percent / 100`, floored to a ledger unit: a percentage split that is not 100 % in total. */
+const percentOf = (money: Money, percent: bigint, scale: number): Money =>
+    fromUnits((toUnits(money) * percent) / percentTotal(scale), money.currency);
+
+/**
+ * The share of every included user (backend `ShareCalculationStrategies.kt`): AUTO splits by
+ * weights '1', SHARES by the weights, PERCENTAGE by the percentages (when they total exactly 100),
+ * EXACT takes the entered amounts. An invalid split previews what it can: zero shares without a
+ * positive weight, `total × p / 100` per user when the percentages do not total 100.
+ */
+const getShares = (
+    state: ExpenseModalStore,
+    total: Money,
+    includedUsers: readonly ExpenseParticipant[],
+    values: SplitValues,
+): Map<string, Money> => {
+    const zero = fromUnits(0n, total.currency);
+    const valueOf = (userId: string) => values.byUserId.get(userId) ?? 0n;
+    // `includedUsers` is the order of the payload's `participantIds`: the tie-break order.
+    const byWeights = (weight: (userId: string) => string) => {
+        const shares = splitMoney(
+            total,
+            includedUsers.map(user => ({ userId: user.id, weight: weight(user.id) })),
+        );
+
+        return new Map(includedUsers.map((user, index) => [user.id, shares[index] ?? zero]));
+    };
+    const byWeightValues = () => byWeights(userId => scaledToText(valueOf(userId), values.scale));
+
+    if (includedUsers.length === 0) {
+        return new Map();
     }
 
     switch (state.splitMode) {
         case EXPENSE_SPLIT_MODES.EQUAL:
-            return roundHalfUp(totalAmount / includedUserCount, MONEY_INPUT_PRECISION);
-        case EXPENSE_SPLIT_MODES.PERCENT:
-            return roundHalfUp(
-                (totalAmount * (Number(state.percentShares[userId]) || 0)) / 100,
-                MONEY_INPUT_PRECISION,
-            );
-        case EXPENSE_SPLIT_MODES.AMOUNTS:
-            return roundHalfUp(Number(state.amountShares[userId]) || 0, MONEY_INPUT_PRECISION);
+            return byWeights(() => '1');
         case EXPENSE_SPLIT_MODES.SHARES:
-            return totalShares > 0
-                ? roundHalfUp(
-                      (totalAmount * (Number(state.shareWeights[userId]) || 0)) / totalShares,
-                      MONEY_INPUT_PRECISION,
-                  )
-                : 0;
+            return values.total > 0n
+                ? byWeightValues()
+                : new Map(includedUsers.map(user => [user.id, zero]));
+        case EXPENSE_SPLIT_MODES.PERCENT:
+            return values.total === percentTotal(values.scale)
+                ? byWeightValues()
+                : new Map(
+                      includedUsers.map(user => [
+                          user.id,
+                          percentOf(total, valueOf(user.id), values.scale),
+                      ]),
+                  );
+        case EXPENSE_SPLIT_MODES.AMOUNTS:
+            return new Map(
+                includedUsers.map(user => [user.id, fromUnits(valueOf(user.id), total.currency)]),
+            );
     }
 };
 
-const getSplitStatus = (assignedAmount: number, totalAmount: number): ExpenseSplitStatus => {
-    if (assignedAmount === totalAmount) {
+const getSplitStatus = (assigned: Money, total: Money): ExpenseSplitStatus => {
+    const difference = compare(assigned, total);
+
+    if (difference === 0) {
         return EXPENSE_SPLIT_STATUSES.EXACT;
     }
 
-    return assignedAmount < totalAmount
-        ? EXPENSE_SPLIT_STATUSES.UNDER
-        : EXPENSE_SPLIT_STATUSES.OVER;
+    return difference < 0 ? EXPENSE_SPLIT_STATUSES.UNDER : EXPENSE_SPLIT_STATUSES.OVER;
+};
+
+const getAssigned = (
+    state: ExpenseModalStore,
+    total: Money,
+    includedUserCount: number,
+    values: SplitValues,
+): Money => {
+    const zero = fromUnits(0n, total.currency);
+
+    if (includedUserCount === 0) {
+        return zero;
+    }
+
+    switch (state.splitMode) {
+        case EXPENSE_SPLIT_MODES.EQUAL:
+            return total;
+        case EXPENSE_SPLIT_MODES.SHARES:
+            return values.total > 0n ? total : zero;
+        case EXPENSE_SPLIT_MODES.PERCENT:
+            return values.total === percentTotal(values.scale)
+                ? total
+                : percentOf(total, values.total, values.scale);
+        case EXPENSE_SPLIT_MODES.AMOUNTS:
+            return fromUnits(values.total, total.currency);
+    }
+};
+
+const isSplitValid = (state: ExpenseModalStore, total: Money, values: SplitValues): boolean => {
+    if (values.hasInvalid) {
+        return false;
+    }
+
+    switch (state.splitMode) {
+        case EXPENSE_SPLIT_MODES.EQUAL:
+            return true;
+        case EXPENSE_SPLIT_MODES.PERCENT:
+            return values.total === percentTotal(values.scale);
+        case EXPENSE_SPLIT_MODES.AMOUNTS:
+            // The backend compares with `compareTo`: the sum must equal the amount exactly.
+            return values.total === toUnits(total);
+        case EXPENSE_SPLIT_MODES.SHARES:
+            return values.total > 0n;
+    }
 };
 
 const calculateSplit = (state: ExpenseModalStore) => {
     const users = selectUsers(state);
     const includedUsers: ExpenseParticipant[] = [];
-    const totalAmount = getTotalAmount(state);
+    const total = getTotalMoney(state);
     const currentUserId = state.source.currentUser?.id;
     const includedUserIds = new Set<string>();
     const userIds: string[] = [];
     const usersById = new Map<string, ExpenseParticipant>();
     let directFriend: ExpenseParticipant | undefined;
-    let totalPercent = 0;
-    let totalCustomAmount = 0;
-    let totalShares = 0;
 
     for (const user of users) {
         userIds.push(user.id);
@@ -162,9 +389,6 @@ const calculateSplit = (state: ExpenseModalStore) => {
 
         includedUsers.push(user);
         includedUserIds.add(user.id);
-        totalPercent += Number(state.percentShares[user.id]) || 0;
-        totalCustomAmount += Number(state.amountShares[user.id]) || 0;
-        totalShares += Number(state.shareWeights[user.id]) || 0;
 
         if (user.id !== currentUserId) {
             directFriend = user;
@@ -175,45 +399,28 @@ const calculateSplit = (state: ExpenseModalStore) => {
         state.targetMode !== 'friends' ||
         (includedUsers.length === 2 &&
             Boolean(currentUserId && includedUserIds.has(currentUserId)));
-    let assignedAmount = totalAmount;
-
-    if (!isDirectExpenseReady) {
-        assignedAmount = 0;
-    } else if (state.splitMode === EXPENSE_SPLIT_MODES.EQUAL) {
-        assignedAmount = includedUsers.length > 0 ? totalAmount : 0;
-    } else if (state.splitMode === EXPENSE_SPLIT_MODES.PERCENT) {
-        assignedAmount = roundHalfUp((totalAmount * totalPercent) / 100, MONEY_INPUT_PRECISION);
-    } else if (state.splitMode === EXPENSE_SPLIT_MODES.AMOUNTS) {
-        assignedAmount = roundHalfUp(totalCustomAmount, MONEY_INPUT_PRECISION);
-    } else if (state.splitMode === EXPENSE_SPLIT_MODES.SHARES) {
-        assignedAmount = totalShares > 0 ? totalAmount : 0;
-    }
+    const zero = fromUnits(0n, total.currency);
+    const values = getSplitValues(state, includedUsers);
+    const shares = getShares(state, total, includedUsers, values);
+    const assigned = isDirectExpenseReady
+        ? getAssigned(state, total, includedUsers.length, values)
+        : zero;
+    const yourShare =
+        isDirectExpenseReady && currentUserId ? (shares.get(currentUserId) ?? zero) : zero;
+    const totalAmount = scaledToNumber(toUnits(total));
 
     return {
         includedUsers,
+        total,
         totalAmount,
-        assignedAmount,
-        status: getSplitStatus(assignedAmount, totalAmount),
-        progressPercent: totalAmount > 0 ? (assignedAmount / totalAmount) * 100 : 0,
-        yourShareAmount:
-            isDirectExpenseReady && currentUserId
-                ? getUserAmount(
-                      state,
-                      currentUserId,
-                      includedUsers.length,
-                      totalAmount,
-                      totalShares,
-                      includedUserIds.has(currentUserId),
-                  )
-                : 0,
-        isValid:
-            (state.splitMode !== EXPENSE_SPLIT_MODES.PERCENT || totalPercent === 100) &&
-            (state.splitMode !== EXPENSE_SPLIT_MODES.AMOUNTS ||
-                Math.abs(totalCustomAmount - totalAmount) < 0.001) &&
-            (state.splitMode !== EXPENSE_SPLIT_MODES.SHARES || totalShares > 0),
-        totalPercent,
-        totalCustomAmount,
-        totalShares,
+        assigned,
+        shares,
+        yourShare,
+        values,
+        status: getSplitStatus(assigned, total),
+        progressPercent:
+            sign(total) > 0 ? (scaledToNumber(toUnits(assigned)) / totalAmount) * 100 : 0,
+        isValid: isSplitValid(state, total, values),
         includedUserIds,
         directFriend,
         userIds,
@@ -249,15 +456,45 @@ export const selectAllUsersSelected = (state: ExpenseModalStore) => {
 
 export const selectUserAmount = (state: ExpenseModalStore, userId: string) => {
     const split = getSplit(state);
+    const share = split.shares.get(userId);
 
-    return getUserAmount(
-        state,
-        userId,
-        split.includedUsers.length,
-        split.totalAmount,
-        split.totalShares,
-        split.includedUserIds.has(userId),
-    );
+    return share ? toDisplayNumber(share) : 0;
+};
+
+/** One previewed share, in the order of the request body's `participantIds`. */
+export interface PreviewShare {
+    readonly userId: string;
+    readonly share: Money;
+}
+
+/**
+ * The exact share preview at ledger scale 4: what the backend will store as `participantShares`
+ * for the payload this form submits (same participants, order, sharing mode and weights).
+ */
+export interface SharePreview {
+    readonly total: Money;
+    readonly assigned: Money;
+    readonly yourShare: Money;
+    readonly status: ExpenseSplitStatus;
+    readonly isValid: boolean;
+    readonly shares: readonly PreviewShare[];
+}
+
+export const selectSharePreview = (state: ExpenseModalStore): SharePreview => {
+    const split = getSplit(state);
+    const zero = fromUnits(0n, split.total.currency);
+
+    return {
+        total: split.total,
+        assigned: split.assigned,
+        yourShare: split.yourShare,
+        status: split.status,
+        isValid: split.isValid,
+        shares: split.includedUsers.map(user => ({
+            userId: user.id,
+            share: split.shares.get(user.id) ?? zero,
+        })),
+    };
 };
 
 export const selectIsUserLocked = (state: ExpenseModalStore, userId: string) =>
@@ -307,18 +544,15 @@ const isDirectExpenseValid = (
     );
 };
 
-/**
- * Mirrors the backend's largest-remainder allocation at four decimal places.
- * In a two-participant split, equal remainders go to the first participant.
- */
-const getDirectNonPayerUnits = (
+/** The previewed share of the non-payer of a valid direct expense (what they will owe), or null. */
+const getDirectNonPayerShare = (
     state: ExpenseModalStore,
     split: ReturnType<typeof getSplit>,
     payerId: string,
-): number | null => {
+): Money | null => {
     if (
         state.targetMode !== 'friends' ||
-        split.totalAmount <= 0 ||
+        sign(split.total) <= 0 ||
         !split.isValid ||
         !isDirectExpenseValid(state, split, payerId)
     ) {
@@ -331,65 +565,7 @@ const getDirectNonPayerUnits = (
         return null;
     }
 
-    const nonPayerId = payerId === first.id ? second.id : first.id;
-
-    if (state.splitMode === EXPENSE_SPLIT_MODES.AMOUNTS) {
-        const amount = Number(state.amountShares[nonPayerId] ?? 0);
-        return Number.isFinite(amount) && amount >= 0 ? Math.round(amount * 10_000) : null;
-    }
-
-    const getWeight = (userId: string): number => {
-        switch (state.splitMode) {
-            case EXPENSE_SPLIT_MODES.EQUAL:
-                return 1;
-            case EXPENSE_SPLIT_MODES.PERCENT:
-                return Number(state.percentShares[userId] ?? 0);
-            case EXPENSE_SPLIT_MODES.SHARES:
-                return Number(state.shareWeights[userId] ?? 0);
-            default:
-                return 0;
-        }
-    };
-
-    const firstWeight = getWeight(first.id);
-    const secondWeight = getWeight(second.id);
-    const totalWeight = firstWeight + secondWeight;
-
-    if (
-        !Number.isFinite(totalWeight) ||
-        !Number.isFinite(firstWeight) ||
-        !Number.isFinite(secondWeight) ||
-        firstWeight < 0 ||
-        secondWeight < 0 ||
-        totalWeight <= 0
-    ) {
-        return null;
-    }
-
-    // A zero counterparty weight creates no debt regardless of total magnitude.
-    // In particular, do not skip this check when amount * 10_000 is unsafe.
-    const nonPayerWeight = nonPayerId === first.id ? firstWeight : secondWeight;
-
-    if (nonPayerWeight === 0) {
-        return 0;
-    }
-
-    const totalUnits = Math.round(split.totalAmount * 10_000);
-
-    if (!Number.isSafeInteger(totalUnits)) {
-        return null;
-    }
-
-    const firstRawUnits = (totalUnits * firstWeight) / totalWeight;
-    const secondRawUnits = (totalUnits * secondWeight) / totalWeight;
-    const firstFloor = Math.floor(firstRawUnits);
-    const secondFloor = Math.floor(secondRawUnits);
-    const leftover = totalUnits - firstFloor - secondFloor;
-    const firstUnits =
-        firstFloor +
-        (leftover > 0 && firstRawUnits - firstFloor >= secondRawUnits - secondFloor ? 1 : 0);
-
-    return payerId === first.id ? totalUnits - firstUnits : firstUnits;
+    return split.shares.get(payerId === first.id ? second.id : first.id) ?? null;
 };
 
 const getSubmitState = (state: ExpenseModalStore) => {
@@ -398,11 +574,12 @@ const getSubmitState = (state: ExpenseModalStore) => {
         state,
         state.targetMode === 'friends' ? split.includedUsers : split.users,
     );
-    const hasNoDebt = getDirectNonPayerUnits(state, split, payerId) === 0;
+    const nonPayerShare = getDirectNonPayerShare(state, split, payerId);
+    const hasNoDebt = nonPayerShare !== null && isZero(nonPayerShare);
     const isDirectValid = isDirectExpenseValid(state, split, payerId);
     const isDisabled =
         hasNoDebt ||
-        split.totalAmount <= 0 ||
+        sign(split.total) <= 0 ||
         !payerId ||
         (state.targetMode === 'group' && !state.groupId) ||
         (state.targetMode === 'group' && split.users.length < MIN_GROUP_EXPENSE_PARTICIPANTS) ||
@@ -446,7 +623,7 @@ export const selectExpenseSubmitFeedback = (
 ): ExpenseSubmitFeedback | null => {
     const { split, payerId, hasNoDebt, isDirectValid } = getSubmitState(state);
 
-    if (split.totalAmount <= 0) {
+    if (sign(split.total) <= 0) {
         return { reason: EXPENSE_SUBMIT_BLOCKERS.AMOUNT };
     }
 
@@ -467,31 +644,39 @@ export const selectExpenseSubmitFeedback = (
     }
 
     if (!split.isValid) {
+        const { scale, total, hasInvalid } = split.values;
+
+        if (hasInvalid) {
+            return { reason: EXPENSE_SUBMIT_BLOCKERS.INVALID_VALUE };
+        }
+
         if (state.splitMode === EXPENSE_SPLIT_MODES.PERCENT) {
             return {
                 reason:
-                    split.totalPercent < 100
+                    total < percentTotal(scale)
                         ? EXPENSE_SUBMIT_BLOCKERS.PERCENT_UNDER
                         : EXPENSE_SUBMIT_BLOCKERS.PERCENT_OVER,
-                current: split.totalPercent,
+                current: scaledToNumber(total, scale),
                 required: 100,
-                difference: Math.abs(split.totalPercent - 100),
+                difference: scaledToNumber(absValue(total - percentTotal(scale)), scale),
             };
         }
 
         if (state.splitMode === EXPENSE_SPLIT_MODES.AMOUNTS) {
+            const assigned = fromUnits(total, split.total.currency);
+
             return {
                 reason:
-                    split.totalCustomAmount < split.totalAmount
+                    compare(assigned, split.total) < 0
                         ? EXPENSE_SUBMIT_BLOCKERS.AMOUNTS_UNDER
                         : EXPENSE_SUBMIT_BLOCKERS.AMOUNTS_OVER,
-                current: split.totalCustomAmount,
+                current: scaledToNumber(total),
                 required: split.totalAmount,
-                difference: Math.abs(split.totalCustomAmount - split.totalAmount),
+                difference: scaledToNumber(toUnits(abs(sub(assigned, split.total)))),
             };
         }
 
-        return { reason: EXPENSE_SUBMIT_BLOCKERS.SHARES, current: split.totalShares };
+        return { reason: EXPENSE_SUBMIT_BLOCKERS.SHARES, current: scaledToNumber(total) };
     }
 
     if (hasNoDebt) {
@@ -503,31 +688,16 @@ export const selectExpenseSubmitFeedback = (
 
 const getPayloadParticipants = (
     state: ExpenseModalStore,
-    users: ExpenseParticipant[],
+    split: ReturnType<typeof getSplit>,
 ): { participantIds: string[]; sharingMode: SharingMode } => {
-    const participantIds: string[] = [];
-    const values: Record<string, number> = {};
-    let sourceValues: Record<string, string> | undefined;
-
-    switch (state.splitMode) {
-        case EXPENSE_SPLIT_MODES.PERCENT:
-            sourceValues = state.percentShares;
-            break;
-        case EXPENSE_SPLIT_MODES.AMOUNTS:
-            sourceValues = state.amountShares;
-            break;
-        case EXPENSE_SPLIT_MODES.SHARES:
-            sourceValues = state.shareWeights;
-            break;
-    }
-
-    for (const user of users) {
-        participantIds.push(user.id);
-
-        if (sourceValues) {
-            values[user.id] = Number(sourceValues[user.id] ?? 0);
-        }
-    }
+    const participantIds = split.includedUsers.map(user => user.id);
+    // The same parsed integers the preview split, as decimal-text numbers (no `Number(text)`).
+    const values = Object.fromEntries(
+        participantIds.map(userId => [
+            userId,
+            scaledToNumber(split.values.byUserId.get(userId) ?? 0n, split.values.scale),
+        ]),
+    );
 
     switch (state.splitMode) {
         case EXPENSE_SPLIT_MODES.PERCENT:
@@ -554,7 +724,7 @@ export const selectExpensePayload = (
         return null;
     }
 
-    const { participantIds, sharingMode } = getPayloadParticipants(state, split.includedUsers);
+    const { participantIds, sharingMode } = getPayloadParticipants(state, split);
 
     return {
         ...(state.targetMode === 'group' ? { groupId: state.groupId } : {}),
@@ -573,10 +743,10 @@ export const selectSplitSummary = (state: ExpenseModalStore) => {
     const split = getSplit(state);
 
     return {
-        assignedAmount: split.assignedAmount,
-        totalAmount: split.totalAmount,
+        assignedAmount: toDisplayNumber(split.assigned),
+        totalAmount: toDisplayNumber(split.total),
         status: split.status,
         progressPercent: split.progressPercent,
-        yourShareAmount: split.yourShareAmount,
+        yourShareAmount: toDisplayNumber(split.yourShare),
     };
 };

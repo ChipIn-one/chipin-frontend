@@ -124,9 +124,13 @@ describe('money entries (spec 03 §4.3) merged with the existing selector entrie
         '    row.minor > 0,',
         '    row?.amount >= 0,',
         '    row.amount! < b,',
+        '    (row?.amount ?? 0) > 1,',
+        '    b <= (row.minor || 0),',
         // Not money fields or not a direct operand: not reported.
         '    Number(row.count),',
         '    row.amount.length > 0,',
+        '    (row.count ?? 0) > 1,',
+        '    (b && row.amount) > 1,',
         '    split,',
         '];',
     ].join('\n');
@@ -140,6 +144,8 @@ describe('money entries (spec 03 §4.3) merged with the existing selector entrie
         'money-to-fixed',
         'money-math-round',
         'money-intl-number-format',
+        'money-compare-field',
+        'money-compare-field',
         'money-compare-field',
         'money-compare-field',
         'money-compare-field',
