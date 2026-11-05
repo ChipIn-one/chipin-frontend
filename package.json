@@ -32,7 +32,9 @@
         "test:contract:full": "vitest run --config vitest.contract.config.ts contract-tests/core-api.contract.ts",
         "prerender:public": "node scripts/prerender-public.mjs",
         "verify:public-precache": "node scripts/verify-public-precache.mjs",
-        "build:ds-gallery": "vite build --config ds-gallery/vite.config.ts && node ds-gallery/build-html.mjs"
+        "build:ds-gallery": "vite build --config ds-gallery/vite.config.ts && node ds-gallery/build-html.mjs",
+        "api:fetch": "node scripts/api/fetch-openapi.mjs",
+        "api:fetch:staging": "node scripts/api/fetch-openapi.mjs --staging"
     },
     "lint-staged": {
         "*.{ts,tsx,mts,cts,js,jsx,mjs,cjs}": [
