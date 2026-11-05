@@ -347,3 +347,59 @@ describe('query-key-literal (spec 03 §1.3)', () => {
         ).toEqual(ids);
     });
 });
+
+describe('store-object-without-shallow: fallbacks, nested conditionals, returns in if (#625)', () => {
+    const config = [
+        {
+            files: ['**/*.{ts,tsx}'],
+            languageOptions: { parser: tseslint.parser },
+        },
+        ...restrictedSyntax([
+            ...projectSyntax({ appDir: '.' }),
+            ...projectRules({ appDir: '.' }),
+            ...reactSyntax({ appDir: '.' }),
+        ]),
+    ];
+    const flagged = [
+        'useAuthStore(s => s.list ?? [])',
+        'useAuthStore(s => s.x || {})',
+        'useAuthStore(s => s.a ?? s.b ?? [])',
+        'useAuthStore(s => (s.c ? (s.d ? s.a : {}) : s.b))',
+        'useAuthStore(s => (s.c ? s.a : s.list ?? []))',
+        'useAuthStore(s => (s.c ? s.a : s.d ? s.b : s.e ? s.f : []))',
+        'useStore(authStore, s => s.list || [])',
+        'useAuthStore(s => { if (s.c) { return []; } return s.a; })',
+        'useAuthStore(s => { if (s.c) return {}; return s.a; })',
+        'useAuthStore(function (s) { if (s.c) { return s.a; } else { return s.list ?? []; } })',
+        'useAuthStore(s => { if (s.c) { return s.a; } else if (s.d) { return []; } return s.b; })',
+    ];
+    const fine = [
+        'useAuthStore(s => s.list ?? EMPTY)',
+        'useAuthStore(s => s.a && s.b)',
+        'useAuthStore(s => s.a ?? 0)',
+        'useAuthStore(useShallow(s => s.list ?? []))',
+        'useAuthStore(s => (s.c ? (s.d ? s.a : s.e) : s.b))',
+        'useAuthStore(s => { const f = () => { if (s.c) { return []; } return null; }; return f; })',
+        'useAuthStore(s => { if (s.c) { return s.a; } return s.b; })',
+    ];
+
+    test.each(flagged)('flags %s', async expression => {
+        const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
+        const [result] = await eslint.lintText(`export const v = ${expression};`, {
+            filePath: 'src/components/A.tsx',
+        });
+
+        expect(result.messages.map(message => message.message.slice(0, 30))).toEqual([
+            '[store-object-without-shallow]',
+        ]);
+    });
+
+    test.each(fine)('accepts %s', async expression => {
+        const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
+        const [result] = await eslint.lintText(`export const v = ${expression};`, {
+            filePath: 'src/components/A.tsx',
+        });
+
+        expect(result.messages).toEqual([]);
+    });
+});

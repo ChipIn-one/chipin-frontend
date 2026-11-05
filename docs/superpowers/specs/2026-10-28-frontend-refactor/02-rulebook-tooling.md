@@ -67,7 +67,7 @@ Consequences:
 | `no-restricted-syntax` `<img>`/`styled.img`/`createElement('img')` (`#img-element`, 02-C12) | b | boundary: only `basics/Image` |
 | `no-restricted-syntax` `localStorage.clear` | b | wipes the language/theme settings |
 | `no-restricted-syntax` `CancelToken` | b | deprecated cancellation API |
-| `no-restricted-syntax` `use*Store()` / Zustand `useStore(store)` without a selector (`#store-without-selector`), an object or array literal (or a conditional with a literal branch) returned by a selector without `useShallow` (`#store-object-without-shallow`; 02-C12). A heuristic: derived values (`.map`/`.filter`, `Object.assign`), named selectors and aliased hooks are not detected | b | extra re-renders / an infinite loop in Zustand 5 |
+| `no-restricted-syntax` `use*Store()` / Zustand `useStore(store)` without a selector (`#store-without-selector`), an object or array literal (or a conditional branch or a `??`/`||` fallback, up to three levels, that yields one; also a `return` inside `if`/`else`) returned by a selector without `useShallow` (`#store-object-without-shallow`; 02-C12, #625). A heuristic: derived values (`.map`/`.filter`, `Object.assign`), named selectors and aliased hooks are not detected | b | extra re-renders / an infinite loop in Zustand 5 |
 | `no-restricted-syntax` `TemplateLiteral` in the URL of `apiInstance.*` | b | path safety (01-1 `apiPath`) |
 | money selectors (spec 03 §4.3; 03-1 — immediately `error` + suppressions, no `warn`) | b | money |
 | `no-restricted-imports` `shared/money/*` (only the module root; 03-1) and `moneyFromWire`/`moneyToWire` only in `entities/*/model/**` (03-4b) | b | money: one place of conversion (inv. 3) |
@@ -142,7 +142,7 @@ Measurements of this spec (read-only, on `src` = `master`):
 - Prettier with the current `.prettierrc.cjs`: **317 of 737** `src` files differ;
 - `export default`: 172 files, 314 places of `import X from '<local module>'`, 14 `React.lazy`, 25 tests with `vi.mock(..., () => ({ default }))`;
 - `index.ts`: 147 files; 38 at slice level (`src/<layer>/<slice>/index.ts`), 4 root ones for a layer, **105 nested** (re-measured in 02-C12; was 144/37/103) (#573, 2026-11-02, added 2 nested `index.ts` and 2 `useConnect.ts` after this spec was written);
-- `useConnect`: 19 files (re-measured in 02-C12; was 17), 47 references; `useShallow`: 40 files;
+- `useConnect`: 19 files (re-measured in 02-C12; was 17); 34 prod files reference them (19 call the hook, 15 `index.ts` re-export it; re-measured in 03-5 / #625, the earlier "47 references" was the count when the spec was written); `useShallow`: 40 files;
 - `Number(`/`parseFloat(` in prod code: 21 calls in 5 files.
 
 ## Decision
@@ -301,7 +301,7 @@ Notation: `L:<rule>` — LINT, `CI:<script>`, `R` — REVIEW (invariant N), `RW`
 | 40.Choice.* (8) | when to use Zustand | RW (D3): "Zustand = UI state; server state = Query" |
 | 40.Loading.* (8) | loadingStore/errorsStore | RW (D3): in effect until the store is migrated; deleted after migration |
 | 40.Sel.1 | no `useStore()` without a selector | `L:no-restricted-syntax CallExpression[callee.name=/^use\w+Store$/][arguments.length=0]` |
-| 40.Sel.2–3 | one value — a selector, several — an object + `useShallow` | **keep (D12)**; `L:` — the same selector: an object literal in the argument of `use*Store` without a `useShallow` wrapper. The ban on `useConnect.ts*` files — `CI:check-file-layout` with a baseline of 19 files |
+| 40.Sel.2–3 | one value — a selector, several — an object + `useShallow` | **keep (D12)**; `L:` — `no-restricted-syntax#store-object-without-shallow`, as defined in the §D0 row (not restated here). The ban on `useConnect.ts*` files — `CI:check-file-layout` with a baseline of 19 files |
 | 40.Sel.4–8 | do not group unrelated, named selectors in `selectors.ts`, stability | R/DEL: stability — R; the rest DEL |
 | 40.Sel.9 | no `getState()` in render | DEL (the react-hooks compiler `purity` partly catches it) |
 | 40.Updates.* (5) | immutability, functional `set` | DEL (after D3 there are no server updates in Zustand) |
@@ -552,7 +552,7 @@ A new `tsconfig.base.json` with the shared options: `strict`, `noUnused*`, `eras
 | default exports | 172 files, 314 imports, 14 lazy, 25 `vi.mock` | codemod `scripts/codemods/named-exports.mjs` (ts-morph, a temporary devDep): `export default X` → `export { X }`, `import X from` → `import { X } from`, lazy → `.then(m => ({ default: m.X }))`. `vi.mock` with `default` — by hand | 02-D2a basics(24), 02-D2b–c components(80), 02-D2d features(24), 02-D2e pages(42)+i18n+main |
 | nested barrels | 105 + 3 root ones (`basics/index.ts`, `i18n/index.ts`, `public-routes/index.ts`; `store/index.ts` is removed by 03-5 — the only owner, C2-28); 147 `index.ts` in total, 38 at slice level (#573, 2026-11-02, added 2 nested `index.ts` and 2 `useConnect.ts` after this spec was written) | codemod `scripts/codemods/inline-barrels.mjs`: an import through a nested index → an import of the file; delete the index. `vi.mock('<barrel>')` is split by hand into mocks of files | 02-D3a–02-D3e by layer |
 | `export *` / inline re-export in index | 9 | disappear together with 02-D3 | 02-D3 |
-| `useConnect` | 19 `useConnect.ts` files (47 prod files reference them; #573, 2026-11-02, added 2 nested `index.ts` and 2 `useConnect.ts` after this spec was written) | removal — **only spec 03** (in the migration PR of its store; the remainder — 03-18). This spec gives only the ban on new ones: `CI:check-file-layout` with a baseline of 19 files (02-C12) | 03-* |
+| `useConnect` | 19 `useConnect.ts` files (34 prod files reference them, re-measured in 03-5 / #625; 47 when the spec was written; #573, 2026-11-02, added 2 nested `index.ts` and 2 `useConnect.ts` after this spec was written) | removal — **only spec 03** (in the migration PR of its store; the remainder — 03-18). This spec gives only the ban on new ones: `CI:check-file-layout` with a baseline of 19 files (02-C12) | 03-* |
 | money `Number(`/`parseFloat(` | 21 in 5 files | after `src/shared/money/` appears (D21); the rule and the migration — spec 03 §4.3–4.4 | 03-1, 03-3 |
 | `noUncheckedIndexedAccess` | 39 | by hand | 02-C11 |
 

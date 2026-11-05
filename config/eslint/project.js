@@ -214,10 +214,49 @@ const ZUSTAND_USE_STORE = "CallExpression[callee.name='useStore']";
 const STORE_HOOK = `:matches(${NAMED_STORE_HOOK}, ${ZUSTAND_USE_STORE})`;
 // A selector function passed straight to a store hook (not wrapped in `useShallow(...)`).
 const STORE_SELECTOR = `${STORE_HOOK} > :matches(ArrowFunctionExpression, FunctionExpression)`;
-// A new object/array on every call: a literal, or a conditional with a literal branch.
+// A new object/array on every call: a literal, or an expression that may evaluate to one through
+// up to three levels of conditional branches and `??`/`||` fallbacks (`s.list ?? []`,
+// `c ? (d ? s.a : {}) : s.b`). esquery has no recursion, so the paths are enumerated.
 const LITERAL = 'ObjectExpression, ArrayExpression';
 const LITERAL_TYPE = '/^(?:ObjectExpression|ArrayExpression)$/';
-const NEW_VALUE = `:matches(${LITERAL}, ConditionalExpression[consequent.type=${LITERAL_TYPE}], ConditionalExpression[alternate.type=${LITERAL_TYPE}])`;
+const FALLBACK_OPERATOR = '/^(?:\\?\\?|\\|\\|)$/';
+const VALUE_STEPS = [
+    { type: 'ConditionalExpression', field: 'consequent' },
+    { type: 'ConditionalExpression', field: 'alternate' },
+    { type: 'LogicalExpression', field: 'right', operator: FALLBACK_OPERATOR },
+];
+const MAX_VALUE_DEPTH = 3;
+// Attribute chains `[a.type=X][a.operator=Y][a.b.type=...]` from the root node to a literal.
+const valuePaths = (depth, prefix = '') =>
+    VALUE_STEPS.flatMap(({ type, field, operator }) => {
+        const self = `${prefix ? `[${prefix}type='${type}']` : ''}${operator ? `[${prefix}operator=${operator}]` : ''}`;
+        const path = `${prefix}${field}.`;
+        const leaf = {
+            root: prefix ? undefined : type,
+            attrs: `${self}[${path}type=${LITERAL_TYPE}]`,
+        };
+        const deeper =
+            depth > 1
+                ? valuePaths(depth - 1, path).map(({ attrs }) => ({
+                      root: prefix ? undefined : type,
+                      attrs: `${self}${attrs}`,
+                  }))
+                : [];
+
+        return [leaf, ...deeper];
+    });
+const NEW_VALUE = `:matches(${[
+    LITERAL,
+    ...valuePaths(MAX_VALUE_DEPTH).map(({ root, attrs }) => `${root}${attrs}`),
+].join(', ')})`;
+// Where a function body returns: directly, or inside `if`/`else` (with or without braces).
+const RETURN_CONTAINERS = [
+    '',
+    'IfStatement > ',
+    'IfStatement > BlockStatement > ',
+    'IfStatement > IfStatement > ',
+    'IfStatement > IfStatement > BlockStatement > ',
+];
 
 /**
  * ChipIn project `no-restricted-syntax` entries (spec 02 §D0 "project"; 02-C12): images only
@@ -260,11 +299,16 @@ export const projectRules = ({ appDir }) => [
     {
         id: 'store-object-without-shallow',
         // `useXStore(s => ({ … }))`, `s => [a, b]`, `s => (c ? { … } : { … })`,
-        // `useXStore(s => { return { … }; })`, `useXStore({ … })`; the same for `useStore(store, s => …)`.
+        // `s => s.list ?? []`, `s => s.x || {}`, `c ? (d ? s.a : {}) : s.b` (NEW_VALUE),
+        // `useXStore(s => { return { … }; })` (also inside `if`/`else`), `useXStore({ … })`; the
+        // same for `useStore(store, s => …)`.
         // A function's other children are params (patterns, never these expressions).
         selector: [
             `${STORE_SELECTOR} > ${NEW_VALUE}`,
-            `${STORE_SELECTOR} > BlockStatement > ReturnStatement > ${NEW_VALUE}`,
+            ...RETURN_CONTAINERS.map(
+                container =>
+                    `${STORE_SELECTOR} > BlockStatement > ${container}ReturnStatement > ${NEW_VALUE}`,
+            ),
             `${STORE_HOOK} > :matches(${LITERAL})`,
         ].join(', '),
         message:
