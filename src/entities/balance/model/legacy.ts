@@ -22,11 +22,11 @@ import type { CurrencyCode, Money } from 'shared/money';
 import { abs, currencyCode, fromUnits, LEDGER_SCALE, sign, sub } from 'shared/money';
 
 import { aggregateByCurrency } from './aggregate';
-import type { Balance } from './balance';
 import type { BalancePartition } from './partition';
 import { partitionBalances } from './partition';
 import type { RateLookup } from './summary';
 import { summarizeBalances } from './summary';
+import type { Balance } from './types';
 
 type RejectReason = 'currency' | 'amount';
 

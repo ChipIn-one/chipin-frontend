@@ -75,6 +75,10 @@ jobs:
         env:
           BASE_SHA: ${{ steps.gate.outputs.base_sha }}
         run: node scripts/check-file-layout.mjs --base "$BASE_SHA"
+      - name: Check generated API types
+        if: steps.gate.outputs.mode == 'full'
+        # Offline: regenerates from the committed openapi/chipin.yaml and fails on any diff (spec 03 §5.5).
+        run: npm run api:check
       - name: Verify frontend
         if: steps.gate.outputs.mode == 'full'
         # Step timeout (not only the job's) so a hang counts as a failure and notifies #chipin-ci.

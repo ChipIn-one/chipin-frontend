@@ -34,7 +34,8 @@ export const appGlob = (appDir, pattern) => posix.join(appDir, pattern);
 /** JS + typescript-eslint recommended, unused imports, import sorting. */
 export const baseConfig = ({ appDir }) =>
     tseslint.config(
-        { ignores: [appGlob(appDir, 'dist')] },
+        // Generated API types (spec 03 §5.2): written by `npm run api:gen`, checked by `api:check`.
+        { ignores: [appGlob(appDir, 'dist'), appGlob(appDir, 'src/shared/api/generated')] },
         {
             extends: [js.configs.recommended, ...tseslint.configs.recommended],
             files: [LINT_FILES],

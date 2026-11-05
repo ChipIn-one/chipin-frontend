@@ -78,7 +78,7 @@ PR ids in spec 04 changed; update issue bodies when the coordinator/owner syncs 
 
 - BE-03-1 (#199): `version` is an opaque **string** (seq of last event), not `Long`; `X-Client-Op-Id` on PATCH/DELETE, checked **before** `If-Match`; DELETE of a deleted entry = 204 regardless of `If-Match`; separate `LedgerConflictResponse` 409 schema; `/health.capabilities` += `ledger.entryVersion`.
 - BE-03-2 (#200): same id + same author → 200 **regardless of payload** (the old "other payload → 409" removed); `/health.capabilities` += `ledger.clientEntryId`.
-- BE-03-4 (#201): no release tags exist → artifact `openapi-documentation` per `develop` SHA, FE `BACKEND_VERSION` = prod deployment SHA; `x-chipin-money` / `x-chipin-decimal` extensions + `multipleOf` snapshot test.
+- BE-03-4 (#201): release tags mark versions, not deploys → artifact `openapi-documentation` per `develop` SHA, FE `BACKEND_VERSION` = prod deployment SHA; `x-chipin-money` / `x-chipin-decimal` extensions + `multipleOf` snapshot test.
 - BE-03-5 (#202): 426 body = `ErrorResponse { code, details.minVersion }`; semver-core compare; `/health.capabilities` += `client.minVersion`.
 - BE-03-6 (#203): acceptance now includes DELETE-of-deleted with stale `If-Match` → 204 after #199.
 - `/health` gets `capabilities: string[]` (always present) from whichever of #199/#200/#202 lands first.
