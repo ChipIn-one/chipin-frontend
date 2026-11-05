@@ -70,6 +70,11 @@ jobs:
         env:
           BASE_SHA: ${{ steps.gate.outputs.base_sha }}
         run: node scripts/check-baseline.mjs --base "$BASE_SHA"
+      - name: Check file layout baseline does not grow
+        if: github.event_name == 'pull_request' && steps.gate.outputs.mode == 'full'
+        env:
+          BASE_SHA: ${{ steps.gate.outputs.base_sha }}
+        run: node scripts/check-file-layout.mjs --base "$BASE_SHA"
       - name: Verify frontend
         if: steps.gate.outputs.mode == 'full'
         # Step timeout (not only the job's) so a hang counts as a failure and notifies #chipin-ci.

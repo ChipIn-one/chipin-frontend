@@ -9,11 +9,7 @@ import { beforeAll, describe, expect, test } from 'vitest';
 const repoRoot = resolve(import.meta.dirname, '../..');
 
 // The rules this guard is about; every other rule (unused vars, sorting) is ignored.
-const LAYER_RULES = new Set([
-    'boundaries/dependencies',
-    'boundaries/no-unknown-files',
-    'import-x/no-internal-modules',
-]);
+const LAYER_RULES = new Set(['boundaries/dependencies', 'boundaries/no-unknown-files']);
 
 let eslint;
 
@@ -58,8 +54,18 @@ describe('layer boundaries (config/eslint/layers.js)', () => {
                 'export const x = getDailyExpenseSummary;\n',
         );
 
-        expect(errors).toContain('boundaries/dependencies');
-        expect(errors).toContain('import-x/no-internal-modules');
+        // D27: `boundaries` is the only slice-entry check (import-x/no-internal-modules is removed).
+        expect(errors).toEqual(['boundaries/dependencies']);
+    });
+
+    test('a file inside a slice may import its own nested files directly (D27)', async () => {
+        const errors = await layerErrors(
+            'src/features/activity/ActivityList.tsx',
+            "import { ActivityEvent } from './components/activity-event/ActivityEvent';\n" +
+                'export const x = ActivityEvent;\n',
+        );
+
+        expect(errors).toEqual([]);
     });
 
     test('a features slice may import another slice through its index', async () => {

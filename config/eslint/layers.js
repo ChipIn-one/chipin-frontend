@@ -4,7 +4,6 @@ import { createTypeScriptImportResolver } from 'eslint-import-resolver-typescrip
 import boundaries from 'eslint-plugin-boundaries';
 import importX from 'eslint-plugin-import-x';
 
-import { readAliases } from './aliases.js';
 import { appGlob, isFastMode } from './base.js';
 
 // Layer boundaries (spec 02 §D5, invariant 1). This module is the only source of the layer
@@ -260,27 +259,12 @@ export const boundaryFiles = ({ appDir }) =>
         category: TEST_TYPE,
     }));
 
-const repoRoot = resolve(import.meta.dirname, '../..');
-
-// External packages may be imported by subpath (`react-dom/client`): they are allowed by their
-// resolved path. The path is absolute because `**` does not match dot directories (`.worktrees`).
-// Alias imports stop at the slice: `<alias>/<slice or root file>`. Relative imports stay inside the
-// slice by convention (10-architecture.md "Index Files And Import Boundaries").
-const internalModulesAllow = appDir => [
-    ...new Set([repoRoot, resolve(repoRoot, appDir)].map(root => `${root}/node_modules/**`)),
-    ...readAliases({ appDir }).map(alias => `${alias}/*`),
-    // Inside a slice: `./internal/<file>` (and `./components/<file>`, covered by the alias glob).
-    'internal/*',
-    // Data and test support, not modules with a public API: locale JSON of i18n, test fixtures.
-    'locales/*/*.json',
-    'test/fixtures/*',
-];
-
 // FAST mode (pre-commit) never runs the whole-project `no-cycle`, even if FULL is also set.
 const FULL_MODE = process.env.CHIPIN_ESLINT_FULL === '1' && !isFastMode;
 
 /**
- * The layer graph (`boundaries/dependencies`), slice boundaries (`import-x/no-internal-modules`)
+ * The layer graph and slice entry (`boundaries/dependencies`: another `features`/`entities` slice
+ * only through its `index.ts`; D27: file imports inside a slice and in plain layers are allowed)
  * and, in the full mode only (`lint:full`, CI), `import-x/no-cycle`.
  */
 export const layersConfig = ({ appDir }) => {
@@ -322,7 +306,6 @@ export const layersConfig = ({ appDir }) => {
                 // Every file under src/ belongs to an element: a new top-level folder must be
                 // classified in LAYER_ELEMENTS (and get its tsconfig `paths` alias).
                 'boundaries/no-unknown-files': 'error',
-                'import-x/no-internal-modules': ['error', { allow: internalModulesAllow(appDir) }],
                 ...(FULL_MODE
                     ? { 'import-x/no-cycle': ['error', { maxDepth: 3, ignoreExternal: true }] }
                     : {}),

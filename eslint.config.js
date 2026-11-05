@@ -8,6 +8,7 @@ import { layerImports, layersConfig } from './config/eslint/layers.js';
 import {
     projectConfig,
     projectImports,
+    projectRules,
     projectSyntax,
     restrictedImports,
     restrictedSyntax,
@@ -27,6 +28,7 @@ export default [
     ...restrictedImports([...layerImports({ appDir: APP_DIR }), ...projectImports()]),
     ...restrictedSyntax([
         ...projectSyntax({ appDir: APP_DIR }),
+        ...projectRules({ appDir: APP_DIR }),
         ...reactSyntax({ appDir: APP_DIR }),
     ]),
     ...formattingConfig(),

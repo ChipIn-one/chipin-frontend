@@ -5,6 +5,7 @@ import { describe, expect, test } from 'vitest';
 import {
     PENDING_IDS,
     projectImports,
+    projectRules,
     projectSyntax,
     restrictedImports,
     restrictedSyntax,
@@ -154,6 +155,104 @@ describe('money entries (spec 03 §4.3) merged with the existing selector entrie
     ])('%s reports exactly %j', async (file, ids) => {
         const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
         const source = file.endsWith('.tsx') ? tsxSource : tsSource;
+        const [result] = await eslint.lintText(source, { filePath: file });
+
+        expect(
+            result.messages.map(message => message.message.match(/\[([a-z0-9-]+)\]/)?.[1]),
+        ).toEqual(ids);
+    });
+});
+
+describe('project entries (02-C12) merged with the money and i18n entries', () => {
+    // The same single helper call as eslint.config.js: the project, money and i18n entries share
+    // one `no-restricted-syntax` rule key, so no block may drop another module's selectors.
+    const config = [
+        {
+            files: ['**/*.{ts,tsx}'],
+            languageOptions: {
+                parser: tseslint.parser,
+                parserOptions: { ecmaFeatures: { jsx: true } },
+            },
+        },
+        ...restrictedSyntax([
+            ...projectSyntax({ appDir: '.' }),
+            ...projectRules({ appDir: '.' }),
+            ...reactSyntax({ appDir: '.' }),
+        ]),
+    ];
+    const source = [
+        'export const C = () => {',
+        '    const all = useAuthStore();',
+        '    const arrow = useAuthStore(state => ({ user: state.user }));',
+        '    const fn = useAuthStore(function (state) { return { user: state.user }; });',
+        '    const literal = useAuthStore({ user: 1 });',
+        // Selectors that are fine: one value, useShallow-wrapped object, React's own hook,
+        // getState, an object built by a nested function, an object nested in an array.
+        '    const one = useAuthStore(state => state.user);',
+        '    const shallow = useAuthStore(useShallow(state => ({ user: state.user })));',
+        '    const named = useAuthStore(useShallow(selectUser));',
+        '    const external = useSyncExternalStore(subscribe, () => ({}));',
+        '    const snapshot = useAuthStore.getState();',
+        '    const nested = useAuthStore(state => { const f = () => ({ a: 1 }); return f(); });',
+        '    const arr = useAuthStore(state => [state.a, state.b]);',
+        '    const cond = useAuthStore(state => (state.c ? { a: 1 } : { b: 2 }));',
+        '    const condOne = useAuthStore(state => (state.c ? state.a : [state.b]));',
+        '    const fnArr = useAuthStore(function (state) { return state.c ? [] : null; });',
+        '    const zAll = useStore(authStore);',
+        '    const zNone = useStore();',
+        '    const zObj = useStore(authStore, state => ({ a: state.a }));',
+        '    const zArr = useStore(authStore, state => [state.a]);',
+        // Fine: a conditional of plain values, Zustand useStore with a value selector or useShallow,
+        // derived arrays (not detected: the heuristic covers only literals).
+        '    const condValue = useAuthStore(state => (state.c ? state.a : state.b));',
+        '    const zOne = useStore(authStore, state => state.a);',
+        '    const zShallow = useStore(authStore, useShallow(state => ({ a: state.a })));',
+        '    const derived = useAuthStore(state => state.items.map(item => item.id));',
+        "    const amount = parseFloat('1.5');",
+        '    return [all, arrow, fn, literal, one, shallow, named, external, snapshot, nested, arr,',
+        '        cond, condOne, fnArr, zAll, zNone, zObj, zArr, condValue, zOne, zShallow, derived, amount];',
+        '};',
+        'const Picture = styled.img``;',
+        "const Avatar = styled('img')``;",
+        "const Created = createElement('img', { src: 'a.png' });",
+        "const ReactCreated = React.createElement('img', { src: 'a.png' });",
+        "const Div = React.createElement('div');",
+        'export const D = () => <img src="a.png" alt="" placeholder="Type here" />;',
+        'export { Avatar, Created, Div, Picture, ReactCreated };',
+    ].join('\n');
+    const PROJECT = [
+        'store-without-selector',
+        'store-object-without-shallow',
+        'store-object-without-shallow',
+        'store-object-without-shallow',
+        'store-object-without-shallow',
+        'store-object-without-shallow',
+        'store-object-without-shallow',
+        'store-object-without-shallow',
+        'store-without-selector',
+        'store-without-selector',
+        'store-object-without-shallow',
+        'store-object-without-shallow',
+        'money-parse-float',
+        'img-element',
+        'img-element',
+        'img-element',
+        'img-element',
+        'img-element',
+    ];
+
+    test.each([
+        ['src/components/A.tsx', [...PROJECT, 'i18n-attributes']],
+        // basics/Image is the one place that renders <img>.
+        [
+            'src/basics/Image.tsx',
+            [...PROJECT.filter(id => id !== 'img-element'), 'i18n-attributes'],
+        ],
+        // Tests keep the project entries; money and i18n attributes are exempt there.
+        ['src/components/A.test.tsx', PROJECT.filter(id => !id.startsWith('money'))],
+        ['ds-gallery/gallery.tsx', PROJECT.filter(id => !id.startsWith('money'))],
+    ])('%s reports exactly %j', async (file, ids) => {
+        const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
         const [result] = await eslint.lintText(source, { filePath: file });
 
         expect(
