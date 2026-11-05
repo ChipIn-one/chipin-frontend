@@ -1,4 +1,4 @@
-import { expect, test, vi } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
 const i18nMock = vi.hoisted(() => ({
     exists: vi.fn((key: string) => key === 'errors:apiErrors.GROUP.MEMBER_NOT_FOUND'),
@@ -13,8 +13,13 @@ const i18nMock = vi.hoisted(() => ({
 
 vi.mock('i18next', () => ({ default: i18nMock }));
 
+import { ApiError, ApiResponseFormatError } from 'shared/lib/apiError';
+
 import {
+    getApiErrorPayload,
+    getApiErrorStatus,
     isLikelyBackendOutageError,
+    isUnauthorizedApiError,
     normalizeApiError,
     resolveApiErrorMessage,
     resolveApiErrorMessageFromError,
@@ -109,4 +114,53 @@ test('does not identify a cancelled request as a backend outage candidate', () =
             __CANCEL__: true,
         }),
     ).toBe(false);
+});
+
+describe('an ApiError from api()', () => {
+    const apiError = (status: number, code?: string, details?: Record<string, unknown>) =>
+        new ApiError({
+            status,
+            payload: { ...(code && { code }), ...(details && { details }) },
+            cause: undefined,
+        });
+
+    test('produces the localized apiErrors.<code> message with its details', () => {
+        const error = apiError(404, 'GROUP.MEMBER_NOT_FOUND', {
+            memberId: 'Member no longer belongs to this group',
+        });
+
+        expect(resolveApiErrorMessageFromError(error, 'Could not remove member')).toBe(
+            'Group member was not found, Member no longer belongs to this group',
+        );
+        expect(normalizeApiError(error)).toEqual({
+            code: 'GROUP.MEMBER_NOT_FOUND',
+            details: { memberId: 'Member no longer belongs to this group' },
+            message: 'Group member was not found, Member no longer belongs to this group',
+        });
+    });
+
+    test('reads code, details and status directly', () => {
+        expect(getApiErrorPayload(apiError(409, 'LEDGER.VERSION_CONFLICT'))).toEqual({
+            code: 'LEDGER.VERSION_CONFLICT',
+        });
+        expect(getApiErrorPayload(apiError(500))).toBeUndefined();
+        expect(getApiErrorStatus(apiError(401))).toBe(401);
+        expect(isUnauthorizedApiError(apiError(401))).toBe(true);
+        expect(isUnauthorizedApiError(apiError(403))).toBe(false);
+        expect(isLikelyBackendOutageError(apiError(502))).toBe(true);
+    });
+
+    test('an unknown code falls back to the generic request message, not the ApiError text', () => {
+        expect(normalizeApiError(apiError(400, 'NEW.CODE')).message).toBe(
+            'toasts:common.requestFailed',
+        );
+    });
+
+    test('an ApiResponseFormatError maps to the generic localized message, not its English text', () => {
+        const error = new ApiResponseFormatError(200);
+
+        expect(error.message).toContain('not valid JSON');
+        expect(normalizeApiError(error)).toEqual({ message: 'toasts:common.requestFailed' });
+        expect(getApiErrorStatus(error)).toBeUndefined();
+    });
 });

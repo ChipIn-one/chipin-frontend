@@ -97,7 +97,7 @@ export const restrictedImports = entries =>
     });
 
 /** ChipIn `no-restricted-imports` entries that are not layer boundaries. */
-export const projectImports = () => [
+export const projectImports = ({ appDir = '.' } = {}) => [
     {
         // lucide-react icons are imported only by their `<Name>Icon` export (no `Lucide<Name>`
         // aliases, no bare names, no namespace import): one import surface for icons.
@@ -113,6 +113,24 @@ export const projectImports = () => [
         id: 'money-deep-import',
         pattern: { group: ['shared/money/*'] },
         message: 'Import from shared/money only (its index.ts is the public API).',
+    },
+    {
+        // spec 03 §4.3 (C1-11): WireAmount <-> Money conversion happens only in the
+        // entities/*/model mappers `toX()`/`toXWire()`; the transport and the rest never convert.
+        // One ignore glob (the scope limit of restrictedImports): the mappers, the money module
+        // itself and every test.
+        id: 'money-wire-conversion',
+        pattern: {
+            // The alias and any relative path to the money folder, with or without a subpath
+            // (`../../shared/money/index`, `../money/wireMoney`).
+            regex: '^(?:shared/money|(?:\\.\\.?/)+(?:[^/]+/)*money)(?:/.*)?$',
+            importNames: ['moneyFromWire', 'moneyToWire'],
+        },
+        ignores: [
+            appGlob(appDir, '{src/entities/*/model/**,src/shared/money/**,**/*.test.{ts,tsx}}'),
+        ],
+        message:
+            'Wire<->Money conversion only in entities/*/model mappers (toX()/toXWire()); pass the WireAmount there.',
     },
 ];
 

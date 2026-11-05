@@ -319,8 +319,12 @@ const RUNTIME_API_MODULE =
 
 /** `no-restricted-imports` entries for the layer boundaries. */
 export const layerImports = ({ appDir }) => {
-    // These modules own the configured Axios instance and interceptors.
-    const axiosOwners = appGlob(appDir, 'src/api/chipin.{instance,interceptors}.ts');
+    // These modules own the configured Axios instance and interceptors, and the `api()` wrapper
+    // over it (its test drives the real Axios pipeline with a stub adapter).
+    const axiosOwners = appGlob(
+        appDir,
+        'src/{api/chipin.{instance,interceptors}.ts,shared/api/client{,.test}.ts}',
+    );
     const ui = appGlob(appDir, 'src/{pages,features,components,basics}/**/*.{ts,tsx}');
     const numbers = appGlob(appDir, 'src/{helpers/numbers.ts,basics/numbers/**/*.{ts,tsx}}');
     // Layers of the target architecture (specs 03/04): new code there reads money from the wire.

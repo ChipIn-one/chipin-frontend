@@ -1,9 +1,10 @@
 import i18n from 'i18next';
 
-export interface ApiErrorPayload {
-    code?: string;
-    details?: Record<string, unknown>;
-}
+import type { ApiErrorPayload } from 'shared/lib/apiError';
+import { ApiError, ApiResponseFormatError, getApiErrorPayload } from 'shared/lib/apiError';
+
+export type { ApiErrorPayload };
+export { getApiErrorPayload };
 
 export interface RequestError extends ApiErrorPayload {
     message: string;
@@ -15,19 +16,6 @@ const isRecord = (value: unknown): value is Record<string, unknown> => {
 
 const getApiErrorResponse = (error: unknown): Record<string, unknown> | undefined => {
     return isRecord(error) && isRecord(error.response) ? error.response : undefined;
-};
-
-export const getApiErrorPayload = (error: unknown): ApiErrorPayload | undefined => {
-    const payload = getApiErrorResponse(error)?.data;
-
-    if (!isRecord(payload)) {
-        return undefined;
-    }
-
-    const code = typeof payload.code === 'string' ? payload.code : undefined;
-    const details = isRecord(payload.details) ? payload.details : undefined;
-
-    return code || details ? { ...(code && { code }), ...(details && { details }) } : undefined;
 };
 
 const getErrorMessage = (error: unknown): string | undefined => {
@@ -82,8 +70,15 @@ export const normalizeApiError = (error: unknown): RequestError => {
     const defaultMessage = i18n.t('toasts:common.requestFailed', {
         defaultValue: 'Request failed',
     });
-    const fallbackMessage =
-        response === undefined ? (getErrorMessage(error) ?? defaultMessage) : defaultMessage;
+    // `ApiError` and `ApiResponseFormatError` are backend responses too: their own (English)
+    // messages are not user-facing.
+    const hasResponse =
+        response !== undefined ||
+        error instanceof ApiError ||
+        error instanceof ApiResponseFormatError;
+    const fallbackMessage = hasResponse
+        ? defaultMessage
+        : (getErrorMessage(error) ?? defaultMessage);
 
     return {
         ...(payload ?? {}),
@@ -96,6 +91,9 @@ export const isUnauthorizedApiError = (error: unknown): boolean => {
 };
 
 export const getApiErrorStatus = (error: unknown): number | undefined => {
+    if (error instanceof ApiError) {
+        return error.status;
+    }
     if (!isRecord(error) || error.isAxiosError !== true) {
         return undefined;
     }

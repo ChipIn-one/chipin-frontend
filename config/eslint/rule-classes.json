@@ -73,6 +73,7 @@
     "no-restricted-imports#axios-in-ui": "b",
     "no-restricted-imports#lucide-icon-names": "b",
     "no-restricted-imports#money-legacy-bridge": "b",
+    "no-restricted-imports#money-wire-conversion": "b",
     "no-restricted-imports#money-deep-import": "b",
     "no-restricted-imports#runtime-api-in-numbers": "b",
     "no-restricted-imports#runtime-api-in-ui": "b",

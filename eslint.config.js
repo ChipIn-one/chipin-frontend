@@ -25,7 +25,10 @@ export default [
     ...projectConfig({ appDir: APP_DIR }),
     ...layersConfig({ appDir: APP_DIR }),
     // Each helper is called once with every entry of its rule (see config/eslint/project.js).
-    ...restrictedImports([...layerImports({ appDir: APP_DIR }), ...projectImports()]),
+    ...restrictedImports([
+        ...layerImports({ appDir: APP_DIR }),
+        ...projectImports({ appDir: APP_DIR }),
+    ]),
     ...restrictedSyntax([
         ...projectSyntax({ appDir: APP_DIR }),
         ...projectRules({ appDir: APP_DIR }),
