@@ -1,7 +1,7 @@
 import { onlineManager } from '@tanstack/react-query';
 import { create } from 'zustand';
 
-import { checkBackendHealth } from 'api/healthApi';
+import { BackendHealthCheckError, probeBackendHealth } from 'api/healthApi';
 import type { RequestErrorClass } from 'shared/api/errors';
 import { isNetworkUsable } from 'shared/offline/network';
 
@@ -26,11 +26,21 @@ let lastRecoveryAt = Number.NEGATIVE_INFINITY;
 
 export const useConnectivityStore = create<ConnectivityStore>(set => ({
     mode: networkMode(),
+    // Resolves on a 2xx `/health`, otherwise rejects (the caller shows its failure text).
     retryBackendHealth: () => {
-        return checkBackendHealth().then(() => {
-            lastRecoveryAt = performance.now();
-            // `/health` answered 2xx: the network is usable whatever `onlineManager` last heard.
+        return probeBackendHealth().then(health => {
+            if (health === 'unreachable') {
+                // Still no network (or a hanging backend): the mode stays as it is.
+                return Promise.reject(new BackendHealthCheckError());
+            }
+            // Any `/health` answer: the network is usable whatever `onlineManager` last heard.
             onlineManager.setOnline(true);
+            if (health === 'error') {
+                // Reachable but not serving: the blocking backend-down page, not the banner.
+                set({ mode: 'backend-down' });
+                return Promise.reject(new BackendHealthCheckError());
+            }
+            lastRecoveryAt = performance.now();
             set({ mode: 'online' });
         });
     },
@@ -53,6 +63,8 @@ export const onConnectivityChange = (
     classification: RequestErrorClass,
     requestStartedAt?: number,
 ): void => {
+    // Trade-off: a long request sent before a successful retry that fails after a new outage is
+    // dropped too; the next request catches that outage.
     if (requestStartedAt !== undefined && requestStartedAt < lastRecoveryAt) {
         return;
     }

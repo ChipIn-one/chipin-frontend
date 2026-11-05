@@ -2,23 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Button, Callout, Flex } from '@radix-ui/themes';
 import { WifiOffIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useShallow } from 'zustand/react/shallow';
 
 import { useConnectivityStore } from 'store/connectivityStore';
 
-/**
- * Non-blocking notice while the network is not usable (spec 03 §1.8); the app stays usable. Retry
- * probes `/health`: the way out when the browser never fires `online` (DNS/TLS failure, captive
- * portal) and nothing else sends a request.
- */
-const OfflineBanner = () => {
+// Mounted only while offline, so every offline episode starts with fresh retry state.
+const OfflineNotice = () => {
     const { t } = useTranslation('errors');
-    const { isOffline, retryBackendHealth } = useConnectivityStore(
-        useShallow(state => ({
-            isOffline: state.mode === 'offline',
-            retryBackendHealth: state.retryBackendHealth,
-        })),
-    );
+    const retryBackendHealth = useConnectivityStore(state => state.retryBackendHealth);
     const [isChecking, setIsChecking] = useState(false);
     const [hasRetryFailed, setHasRetryFailed] = useState(false);
     const isMountedRef = useRef(true);
@@ -29,10 +19,6 @@ const OfflineBanner = () => {
             isMountedRef.current = false;
         };
     }, []);
-
-    if (!isOffline) {
-        return null;
-    }
 
     const onRetry = (): void => {
         if (isChecking) {
@@ -80,6 +66,17 @@ const OfflineBanner = () => {
             </Flex>
         </Callout.Root>
     );
+};
+
+/**
+ * Non-blocking notice while the network is not usable (spec 03 §1.8); the app stays usable. Retry
+ * probes `/health`: the way out when the browser never fires `online` (DNS/TLS failure, captive
+ * portal) and nothing else sends a request.
+ */
+const OfflineBanner = () => {
+    const isOffline = useConnectivityStore(state => state.mode === 'offline');
+
+    return isOffline ? <OfflineNotice /> : null;
 };
 
 export { OfflineBanner };

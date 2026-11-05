@@ -42,12 +42,3 @@ export const probeBackendHealth = (): Promise<BackendHealth> => {
 
     return healthProbePromise;
 };
-
-/** Resolves when `/health` answers 2xx, otherwise rejects with `BackendHealthCheckError`. */
-export const checkBackendHealth = (): Promise<void> => {
-    return probeBackendHealth().then(health => {
-        if (health !== 'ok') {
-            return Promise.reject(new BackendHealthCheckError());
-        }
-    });
-};

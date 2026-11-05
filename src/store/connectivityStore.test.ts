@@ -1,21 +1,24 @@
 import { onlineManager } from '@tanstack/react-query';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
+import { BackendHealthCheckError } from 'api/healthApi';
+
 import { useAuthStore } from './authStore';
 import { onConnectivityChange, onResponseSuccess, useConnectivityStore } from './connectivityStore';
 
 const healthMocks = vi.hoisted(() => ({
-    checkBackendHealth: vi.fn<() => Promise<void>>(),
+    probeBackendHealth: vi.fn<() => Promise<'ok' | 'error' | 'unreachable'>>(),
 }));
 
-vi.mock('api/healthApi', () => ({
-    checkBackendHealth: healthMocks.checkBackendHealth,
+vi.mock('api/healthApi', async importOriginal => ({
+    ...(await importOriginal<typeof import('api/healthApi')>()),
+    probeBackendHealth: healthMocks.probeBackendHealth,
 }));
 
 beforeEach(() => {
     onlineManager.setOnline(true);
     useConnectivityStore.setState({ mode: 'online' });
-    healthMocks.checkBackendHealth.mockResolvedValue(undefined);
+    healthMocks.probeBackendHealth.mockResolvedValue('ok');
     useAuthStore.setState({
         status: 'authenticated',
         unauthReason: undefined,
@@ -74,12 +77,36 @@ test('clears backend-down after a successful health retry', async () => {
     expect(useConnectivityStore.getState().mode).toBe('online');
 });
 
-test('keeps backend-down when the health retry fails', async () => {
+test('keeps backend-down when /health still answers non-2xx', async () => {
     useConnectivityStore.setState({ mode: 'backend-down' });
-    healthMocks.checkBackendHealth.mockRejectedValueOnce(new Error('down'));
+    healthMocks.probeBackendHealth.mockResolvedValueOnce('error');
 
-    await expect(useConnectivityStore.getState().retryBackendHealth()).rejects.toThrow('down');
+    await expect(useConnectivityStore.getState().retryBackendHealth()).rejects.toBeInstanceOf(
+        BackendHealthCheckError,
+    );
     expect(useConnectivityStore.getState().mode).toBe('backend-down');
+});
+
+test('offline retry, /health non-2xx: the network is back, the backend is down (blocking page)', async () => {
+    onConnectivityChange('offline');
+    healthMocks.probeBackendHealth.mockResolvedValueOnce('error');
+
+    await expect(useConnectivityStore.getState().retryBackendHealth()).rejects.toBeInstanceOf(
+        BackendHealthCheckError,
+    );
+    expect(onlineManager.isOnline()).toBe(true);
+    expect(useConnectivityStore.getState().mode).toBe('backend-down');
+});
+
+test('offline retry, /health unreachable: stays offline and rejects (failure text)', async () => {
+    onConnectivityChange('offline');
+    healthMocks.probeBackendHealth.mockResolvedValueOnce('unreachable');
+
+    await expect(useConnectivityStore.getState().retryBackendHealth()).rejects.toBeInstanceOf(
+        BackendHealthCheckError,
+    );
+    expect(onlineManager.isOnline()).toBe(false);
+    expect(useConnectivityStore.getState().mode).toBe('offline');
 });
 
 test('a successful response after an offline classification brings the network back', () => {
@@ -100,7 +127,7 @@ test('a successful response keeps backend-down while the network is usable', () 
     expect(useConnectivityStore.getState().mode).toBe('backend-down');
 });
 
-test('a successful retry brings the network back after an offline classification', async () => {
+test('offline retry, /health 2xx: brings the network back', async () => {
     onConnectivityChange('offline');
 
     await useConnectivityStore.getState().retryBackendHealth();
