@@ -313,7 +313,8 @@ export function prQaSteps(body) {
             continue;
         }
         // Any indent: a fence nested in a list item sits at 4+ spaces.
-        const open = /^\s*(`{3,}|~{3,})/.exec(line)?.[1];
+        // A backtick fence's info string has no backticks; otherwise it is an inline code span.
+        const open = /^\s*(`{3,}(?=[^`]*$)|~{3,})/.exec(line)?.[1];
         if (open) {
             fence = open;
             parent = null;

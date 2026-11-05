@@ -682,12 +682,16 @@ describe('scope and canonical QA identity', () => {
         ).toEqual([{ step: 'after the fences' }]);
     });
 
-    test('PR QA parsing finds fences nested in list items; an unclosed fence ends the steps like GitHub renders it', () => {
+    test('PR QA parsing finds fences nested in list items, ignores inline code spans and stops at an unclosed fence', () => {
         expect(
             prQaSteps(
                 '## QA\n- a\n  - b\n    ```bash\n    npm run x\n    - fake\n    ```\n- c\n- - -\n',
             ),
         ).toEqual([{ step: 'a; b' }, { step: 'c' }]);
+        expect(prQaSteps('## QA\n- a\n  ```npm run x``` then check\n- b')).toEqual([
+            { step: 'a; ```npm run x``` then check' },
+            { step: 'b' },
+        ]);
         expect(prQaSteps('## QA\n- a\n```\n- b\n## Other\n- [ ] QA: later => x')).toEqual([
             { step: 'a' },
         ]);
