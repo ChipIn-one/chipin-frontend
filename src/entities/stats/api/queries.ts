@@ -16,6 +16,8 @@ export const statsQueryOptions = () =>
     queryOptions({
         queryKey: statsKeys.all,
         staleTime: STATS_STALE_TIME,
+        // Public landing data: never written to a user's persisted cache (spec 03 §1.2).
+        meta: { persist: false },
         queryFn: ({ signal }) => publicApi('get', '/stats', { signal }).then(toStats),
     });
 

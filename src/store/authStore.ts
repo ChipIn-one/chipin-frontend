@@ -12,7 +12,7 @@ import {
     validateAuthSession,
 } from 'helpers/authSession';
 import { isUnauthorizedApiError, normalizeApiError } from 'helpers/errors';
-import { clearLocalUserRole } from 'helpers/localStorage';
+import { clearLocalUserIdentity, clearLocalUserRole } from 'helpers/localStorage';
 
 import { useActivityStore } from './activity-store';
 import { AUTH_STATUS, type AuthStatus, UNAUTH_REASON, type UnauthReason } from './authConstants';
@@ -38,10 +38,19 @@ export interface AuthStore {
 }
 
 let signOutPromise: Promise<void> | null = null;
+let lastOAuthExchange: { code: string; promise: Promise<void> } | null = null;
 
-const resetAuthScopedStores = () => {
+// `signedOut`: a sign-out (this tab or remote) also drops the cached user `id` (spec 03 §1.5);
+// any other reason (expiry, missing, error) keeps it with the user's cache.
+const resetAuthScopedStores = (signedOut = false) => {
     // Before setInitialUsersStore(), which re-reads the cached user from localStorage.
-    clearLocalUserRole();
+    if (signedOut) {
+        // A later sign-in with the same code must reach the server, not this session's result.
+        lastOAuthExchange = null;
+        clearLocalUserIdentity();
+    } else {
+        clearLocalUserRole();
+    }
     useActivityStore.getState().resetActivity();
     useDashboardStore.getState().setInitialDashboardStore();
     useExpenseModalStore.getState().reset();
@@ -60,7 +69,7 @@ export const useAuthStore = create<AuthStore>(set => ({
     },
 
     setUnauthenticated: reason => {
-        resetAuthScopedStores();
+        resetAuthScopedStores(reason === UNAUTH_REASON.SIGNED_OUT);
         set({ status: AUTH_STATUS.UNAUTHENTICATED, unauthReason: reason, isNewUser: null });
     },
 
@@ -75,8 +84,14 @@ export const useAuthStore = create<AuthStore>(set => ({
     },
 
     exchangeGoogleOAuthCode: code => {
+        // An OAuth code is single-use. The first `LocalUser.id` written during the exchange
+        // (`fetchSetUser`) remounts the app on the user's QueryClient (spec 03 §1.5), and the
+        // remounted callback page asks again: it gets this exchange, not a second request.
+        if (lastOAuthExchange?.code === code) {
+            return lastOAuthExchange.promise;
+        }
         useErrorsStore.getState().clearError('auth', 'login');
-        return exchangeApiGoogleOAuthCode(code)
+        const promise = exchangeApiGoogleOAuthCode(code)
             .then(({ token, is_new_user: isNewUser }) => {
                 establishAuthSession(token);
                 set({ status: AUTH_STATUS.AUTHENTICATED, unauthReason: undefined, isNewUser });
@@ -118,6 +133,15 @@ export const useAuthStore = create<AuthStore>(set => ({
                     return Promise.reject(error);
                 });
             });
+
+        lastOAuthExchange = { code, promise };
+        // A failed exchange is not cached: a retry sends a new request.
+        promise.catch(() => {
+            if (lastOAuthExchange?.promise === promise) {
+                lastOAuthExchange = null;
+            }
+        });
+        return promise;
     },
 
     refreshAuthTokens: () => {
@@ -163,7 +187,7 @@ export const useAuthStore = create<AuthStore>(set => ({
 
         // Start the best-effort server logout, but leave protected UI immediately.
         const logoutRequest = startAuthLogout();
-        resetAuthScopedStores();
+        resetAuthScopedStores(true);
         set({
             status: AUTH_STATUS.UNAUTHENTICATED,
             unauthReason: UNAUTH_REASON.SIGNED_OUT,

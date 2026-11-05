@@ -109,7 +109,7 @@ describe('authStore', () => {
 
         return useAuthStore
             .getState()
-            .exchangeGoogleOAuthCode('oauth-code')
+            .exchangeGoogleOAuthCode('oauth-code-1')
             .then(() => {
                 expect(authSession.establishAuthSession).toHaveBeenCalledWith('access-token');
                 expect(setDefaultAppMode).toHaveBeenCalledWith(true);
@@ -126,7 +126,7 @@ describe('authStore', () => {
             throw persistenceError;
         });
 
-        return expect(useAuthStore.getState().exchangeGoogleOAuthCode('oauth-code'))
+        return expect(useAuthStore.getState().exchangeGoogleOAuthCode('oauth-code-2'))
             .rejects.toBe(persistenceError)
             .then(() => {
                 expect(authSession.startAuthLogout).toHaveBeenCalledOnce();
@@ -149,7 +149,7 @@ describe('authStore', () => {
 
         return useAuthStore
             .getState()
-            .exchangeGoogleOAuthCode('oauth-code')
+            .exchangeGoogleOAuthCode('oauth-code-3')
             .then(() => {
                 expect(fetchSetPremiumPromoRemaining).toHaveBeenCalledOnce();
             });
@@ -331,5 +331,90 @@ describe('authStore', () => {
 
         expect(getLocalUser()).toEqual({ settings: user.settings });
         expect(selectIsUserAdmin(useUsersStore.getState())).toBe(false);
+    });
+
+    // Spec 03 §1.5 table, invariant 12: a sign-out drops the cached user `id`; any other
+    // transition to unauthenticated keeps it (the user's cache survives an expiry).
+    test.each([
+        ['signOut (this tab)', () => void useAuthStore.getState().signOut()],
+        [
+            'remote logout (signed_out)',
+            () => useAuthStore.getState().setUnauthenticated('signed_out'),
+        ],
+    ])('%s drops the cached id and role, keeps settings', (_name, onSignOut) => {
+        saveLocalUser({ id: user.id, role: 'ADMIN', settings: user.settings });
+
+        onSignOut();
+
+        expect(getLocalUser()).toEqual({ settings: user.settings });
+        expect(useUsersStore.getState().localUser?.id).toBeUndefined();
+    });
+
+    test.each([
+        ['expireSession', () => useAuthStore.getState().expireSession()],
+        ['invalid', () => useAuthStore.getState().setUnauthenticated('invalid')],
+        ['expired', () => useAuthStore.getState().setUnauthenticated('expired')],
+        ['missing', () => useAuthStore.getState().setUnauthenticated('missing')],
+        ['error', () => useAuthStore.getState().setUnauthenticated('error')],
+    ])('%s keeps the cached id, drops only the role', (_name, onReset) => {
+        saveLocalUser({ id: user.id, role: 'ADMIN', settings: user.settings });
+
+        onReset();
+
+        expect(getLocalUser()).toEqual({ id: user.id, settings: user.settings });
+        expect(useUsersStore.getState().localUser?.id).toBe(user.id);
+    });
+
+    describe('OAuth code dedupe (the remount on the first user id)', () => {
+        const tokens = { token: 'access-token', is_new_user: false };
+
+        test('the same code while it is exchanged: one request, one promise', () => {
+            vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue(tokens);
+            mockAuthenticatedDataFetches();
+            const { exchangeGoogleOAuthCode } = useAuthStore.getState();
+
+            const first = exchangeGoogleOAuthCode('dedupe-code');
+            const second = exchangeGoogleOAuthCode('dedupe-code');
+
+            expect(second).toBe(first);
+            return first.then(() => {
+                expect(exchangeApiGoogleOAuthCode).toHaveBeenCalledOnce();
+            });
+        });
+
+        test('a failed exchange is not cached: a retry sends a new request', () => {
+            vi.mocked(exchangeApiGoogleOAuthCode)
+                .mockRejectedValueOnce(new Error('exchange failed'))
+                .mockResolvedValueOnce(tokens);
+            mockAuthenticatedDataFetches();
+            const { exchangeGoogleOAuthCode } = useAuthStore.getState();
+
+            return expect(exchangeGoogleOAuthCode('retried-code'))
+                .rejects.toThrow('exchange failed')
+                .then(() => exchangeGoogleOAuthCode('retried-code'))
+                .then(() => {
+                    expect(exchangeApiGoogleOAuthCode).toHaveBeenCalledTimes(2);
+                    expect(useAuthStore.getState().status).toBe('authenticated');
+                });
+        });
+
+        test.each([
+            ['signOut', () => void useAuthStore.getState().signOut()],
+            ['remote logout', () => useAuthStore.getState().setUnauthenticated('signed_out')],
+        ])('after %s the same code is not served from the cache', (_name, onSignOut) => {
+            vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue(tokens);
+            mockAuthenticatedDataFetches();
+            const { exchangeGoogleOAuthCode } = useAuthStore.getState();
+            const code = `signed-out-code-${_name}`;
+
+            return exchangeGoogleOAuthCode(code)
+                .then(() => {
+                    onSignOut();
+                    return exchangeGoogleOAuthCode(code);
+                })
+                .then(() => {
+                    expect(exchangeApiGoogleOAuthCode).toHaveBeenCalledTimes(2);
+                });
+        });
     });
 });

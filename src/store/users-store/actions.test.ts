@@ -430,6 +430,7 @@ test('uploads an avatar and replaces the current user with the response', () => 
         expect(useUsersStore.getState().user).toEqual(updatedUser);
         expect(useLoadingStore.getState().users.avatar).toBe('fetched');
         expect(LocalStorage.get(LS_KEY_USER, { role: 'USER', settings })).toEqual({
+            id: updatedUser.id,
             role: updatedUser.role,
             settings: updatedUser.settings,
         });

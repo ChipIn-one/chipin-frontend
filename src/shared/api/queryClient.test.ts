@@ -4,7 +4,7 @@ import { afterEach, describe, expect, test } from 'vitest';
 import { ApiError, ApiResponseFormatError } from 'shared/lib/apiError';
 
 import { InvalidPathSegmentError } from './client';
-import { createQueryClient, queryRetry } from './queryClient';
+import { createQueryClient, PERSIST_MAX_AGE, queryRetry } from './queryClient';
 
 const apiError = (status: number, code?: string): ApiError =>
     new ApiError({ status, payload: code ? { code } : undefined, cause: undefined });
@@ -85,6 +85,8 @@ describe('createQueryClient', () => {
         expect(queries).toMatchObject({
             networkMode: 'offlineFirst',
             staleTime: 30_000,
+            // In the browser gcTime >= the persisted maxAge (14 days).
+            gcTime: PERSIST_MAX_AGE,
             retry: queryRetry,
             refetchOnWindowFocus: true,
             refetchOnReconnect: true,

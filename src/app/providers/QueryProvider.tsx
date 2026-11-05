@@ -8,7 +8,10 @@ interface QueryProviderProps {
     children: ReactNode;
 }
 
-/** One QueryClient per app instance, without persistence (spec 03 §1.5: per-user in 03-7b). */
+/**
+ * One QueryClient without persistence: the landing (and its prerender) and the signed-out app.
+ * It imports nothing of the persister, so the landing bundle stays without IndexedDB code.
+ */
 export const QueryProvider = ({ children }: QueryProviderProps) => {
     const [client] = useState(createQueryClient);
 

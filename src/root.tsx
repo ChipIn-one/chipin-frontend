@@ -4,9 +4,11 @@ import { SpeedInsights } from '@vercel/speed-insights/react';
 import { ThemeProvider } from 'next-themes';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 
+import { persistedUserId } from 'app/providers/persistedUserId';
 import { initializeApi } from 'bootstrap/initializeApi';
 import { initializeSentry } from 'bootstrap/initializeSentry';
 import { LS_KEY_THEME } from 'constants/localstorage';
+import { getLocalUser } from 'helpers/localStorage';
 import { getPublicRoute } from 'helpers/publicRoutes';
 import { sanitizeTelemetryEvent } from 'helpers/telemetry';
 import { resolveStoredTheme } from 'helpers/theme';
@@ -54,8 +56,11 @@ if (prerenderedRoute) {
         )
         .catch(error => Sentry.captureException(error));
 } else {
-    import('main')
-        .then(({ default: Main }) => {
+    // The user's query cache is restored from IndexedDB before the app (and its router) renders;
+    // the public SSG branch above never touches IndexedDB.
+    Promise.all([import('main'), import('shared/offline/restore')])
+        .then(([{ default: Main }, { startCacheRestore }]) => {
+            startCacheRestore(persistedUserId(getLocalUser()?.id));
             createRoot(rootElement).render(
                 <GlobalErrorBoundary>
                     <ThemeProvider

@@ -55,9 +55,8 @@ onlineManager.subscribe(online => {
  * The connectivity callback of the API interceptors, wired in `bootstrap/initializeApi`. A request
  * classified `offline` while `onlineManager` still says online (e.g. an offline cold start) marks
  * the network unusable; the `online` window event or the next successful response
- * (`onResponseSuccess`) brings it back.
- * TODO(03-7a): the 15 s `/health` re-check (shared/offline/network.ts) for a network that does
- * neither.
+ * (`onResponseSuccess`) brings it back, and for a network that does neither, the 15 s `/health`
+ * re-check of `bootstrapNetwork` (shared/offline/network.ts).
  */
 export const onConnectivityChange = (
     classification: RequestErrorClass,

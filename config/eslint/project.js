@@ -332,7 +332,7 @@ export const projectRules = ({ appDir }) => [
     },
 ];
 
-/** Storage boundary: localStorage only through helpers/localStorage.ts. */
+/** Storage boundary: localStorage only through helpers/localStorage.ts; `navigator.onLine` below. */
 export const projectConfig = ({ appDir }) => [
     {
         files: [LINT_FILES],
@@ -350,6 +350,22 @@ export const projectConfig = ({ appDir }) => [
         files: [appGlob(appDir, 'src/helpers/localStorage.ts')],
         rules: {
             'no-restricted-globals': 'off',
+        },
+    },
+    {
+        // spec 03 §1.7: TanStack `onlineManager` is the single source of "network is usable";
+        // `navigator.onLine` is read only by its bootstrap and probe in shared/offline.
+        files: [LINT_FILES],
+        ignores: [appGlob(appDir, 'src/shared/offline/**')],
+        rules: {
+            'no-restricted-properties': [
+                'error',
+                {
+                    object: 'navigator',
+                    property: 'onLine',
+                    message: 'Use isNetworkUsable() (shared/offline/network).',
+                },
+            ],
         },
     },
 ];

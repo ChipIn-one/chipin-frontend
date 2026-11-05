@@ -97,7 +97,7 @@ From review C (specs 01/03 are edited by another executor; here — what 02/04/0
 
 ## Phase plan
 
-An honest estimate of parallelism (C2-14): tracks run in parallel only between freeze windows and only if they do not touch the same files. The critical path of offline is **16 sequential PRs**: 01-3 → 03-1 → 03-4a → 03-4b → 03-5 → 03-9 → 03-10 → 03-11 → 03-12 → 03-13 → 03-15a → 03-15b → 03-15c → 03-16a → 03-16b → 03-17 (plus 03-20, which needs 04-2d, and backend BE-03-1/2/5). At 2–3 merges a week on this chain that is ≈ 5–7 weeks, not counting waiting for the backend. The router chain up to 04-2d: 04-0a → 04-2a1 → 04-2a2 (+03-5) → 04-2d.
+An honest estimate of parallelism (C2-14): tracks run in parallel only between freeze windows and only if they do not touch the same files. The critical path of offline is **18 sequential PRs**: 01-3 → 03-1 → 03-4a → 03-4b → 03-5 → 03-7a → 03-7b → 03-9 → 03-10 → 03-11 → 03-12 → 03-13 → 03-15a → 03-15b → 03-15c → 03-16a → 03-16b → 03-17 (plus 03-20, which needs 04-2d, and backend BE-03-1/2/5). At 2–3 merges a week on this chain that is ≈ 5–7 weeks, not counting waiting for the backend. The router chain up to 04-2d: 04-0a → 04-2a1 → 04-2a2 (+03-5) → 04-2d.
 
 **Freeze windows (calendar, recorded in the epic Issue):**
 1. 02-C2a–c — one day, no open feature PRs (Prettier across all of `src`).

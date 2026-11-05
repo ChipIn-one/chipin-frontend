@@ -245,11 +245,14 @@ is silently lost. Therefore:
 
 #### 1.5 Binding to the user, logout, account switch
 
-- `LocalUser` (`helpers/localStorage.ts`) gets `id: string`, read through the zod `LocalUserSchema`
-  (invalid → fallback): `userId` is needed before restore, and offline `users/self` cannot be loaded.
-- `app/providers/QueryProvider.tsx`: no `userId` → `QueryClientProvider` without persistence; with one →
+- `LocalUser` (`helpers/localStorage.ts`) gets `id: string`, read through a typed hand-written reader
+  (not zod: it is on the landing path, §5.7; per-field fallback, a broken record → absent): `userId` is needed before restore, and offline `users/self` cannot be loaded.
+- `app/providers/UserQueryProvider.tsx`: no `userId` → `QueryClientProvider` without persistence; with one →
   `<QueryClientProvider key={userId} client={clientFor(userId)}>`, and restore/subscribe with `persistOptions(userId)` happen outside
   React before the router is created (§1.6, `bootstrapUserCache`). Two users never share one `QueryClient`.
+  `userId` is set only while the session hint is true (`usePersistedUserId`, re-read on every auth transition):
+  after an expiry or a sign-out the app runs on the anonymous client; the user's client stays in memory and its
+  cache in IndexedDB (deleted only by `clearUserData`, 03-7b).
   `onRestored` resolves `restoreReady` (§1.6). The outbox is restored and started **only by the leader tab** on acquiring the
   lock (§2.3): `restoreOutbox(client, userId).then(() => client.resumePausedMutations())`.
 - `clearUserData(userId)` (`shared/offline/clearUserData.ts`), strictly in this order: (1) unsubscribe the persister
@@ -308,6 +311,11 @@ The "reason → what is deleted" table (C3-08; real constants `store/authConstan
   are preserved — restart the app", the key is **not deleted**, Sentry `outbox.restore_failed`. Individual invalid
   operations → failed `unreadable`, and the restore is still `ok`.
 - Therefore the provider is a plain `QueryClientProvider` (not `PersistQueryClientProvider`, which starts restore itself on mount): `bootstrapUserCache(userId)` = `persistQueryClientRestore` → `persistQueryClientSubscribe` (the unsubscribe is stored for `clearUserData`), `onRestored` from §1.5 is its continuation. Until `restoreReady` is resolved, the shell (header + skeleton) is rendered, not the routes (`useRestoreReady()` instead of `useIsRestoring()`).
+- `restoreReady` covers only the user known at boot (`LocalUser.id` + session hint). A sign-in after boot creates
+  that user's client then, and its restore runs per client (`useRestoreReady()` gates the render). Loaders (04-2a2)
+  must not read that client's cache before its own restore has settled: 04-2a2 exposes the per-client readiness (the
+  promise `bootstrapUserCache(userId)` already returns) and awaits it instead of `restoreReady` for a user other than
+  the boot user.
 - Offline cold start (PR 03-7b): `useCheckSignIn` (`hooks/useCheckSignIn.tsx:55-91`), on a network error during refresh and
   when `LocalUser.id` + session hint `=== true` are present (the hint is stored as JSON `true`/`false`, `helpers/localStorage.ts`),
   sets `AUTHENTICATED` + a new field `sessionMode = 'offline-cached'`; guards (spec 04 §2.3, `requireSession`) let the user through to
@@ -929,10 +937,10 @@ export function api<P extends keyof paths, M extends Method & keyof paths[P]>(
 
 #### 5.7 zod only at the boundaries
 
-zod schemas exist for exactly: `LocalUserSchema` (localStorage), `OutboxStateSchema` (the whole outbox key), `OutboxOpSchema`,
+zod schemas exist for exactly: `OutboxStateSchema` (the whole outbox key), `OutboxOpSchema`,
 `FailedOpSchema`, `OutboxInboxSchema` (IDB), `BroadcastChannel` messages for logout and outbox (`OutboxChannelMessageSchema`:
 `state | state-request | command | ack | heartbeat | settled`, §2.3), the 409 body `LedgerConflictResponseSchema` (§2.5;
-money fields — `z.custom<WireAmount>(isWireAmount)`). API responses are **not** validated by zod: the format is guaranteed
+money fields — `z.custom<WireAmount>(isWireAmount)`). The localStorage `LocalUser` uses a typed hand-written reader instead: zod on the landing path costs ~24 KB gz. API responses are **not** validated by zod: the format is guaranteed
 by generation + drift check + the field registry. The query cache in IDB is protected by the buster = the shape of the domain model (§1.4).
 
 ### 6. Store migration (order and risks)
@@ -1162,10 +1170,10 @@ Each PR ≤ ~400 lines of diff (excluding the generated file) and is released in
 | 03-4b | the transport `shared/api/wireJson.ts` (`lossless-json`, reviver by `wireFields.ts`, stringify), the `api()` wrapper on `encodePathSegment` + per-request transforms, `client.test.ts`, sweep §8; lint (C1-11, §4.3): `moneyFromWire`/`moneyToWire` are imported only in `entities/*/model/**` (`no-restricted-imports` `importNames` for the other paths, `error`) | 03-4a |
 | 03-5 | QueryClient, provider without persistence, `renderWithQueryClient`, eslint-plugin-query, landing-stats pilot, delete `store/index.ts` | 03-4b |
 | 03-6 | `connectivityStore` (from `onlineManager`), error classification, `OfflineBanner`, a page for backend-down only | 03-5 |
-| 03-7a | the cache persister (string-storage + `persistCodec`, `retry`→Sentry, `trimmingPersister`), buster §1.4, `LocalUser.id` + zod, `restoreReady` + the hydration gate, `shared/offline/network.ts` (`isNetworkUsable`, `setOnline`, probe, lint `navigator.onLine`), stubs `isEntryWithPendingOp = () => false` and a no-op `outboxGate` | 03-5 |
+| 03-7a | the cache persister (string-storage + `persistCodec`, `retry`→Sentry, `trimmingPersister`), buster §1.4, `LocalUser.id` + a typed hand-written reader, `restoreReady` + the hydration gate, `shared/offline/network.ts` (`isNetworkUsable`, `setOnline`, probe, lint `navigator.onLine`), stubs `isEntryWithPendingOp = () => false` and a no-op `outboxGate` | 03-5 |
 | 03-7b | `clearUserData` (order §1.5, including legacy stores and the draft), the "reason → what is deleted" table + a test per row, the draft with `ownerId`, expiry: only `role`, offline cold start + `sessionMode`, the account-switch dialog (without the outbox part) | 03-7a |
-| 03-8 | dashboard + currency rates; **the first PR of 03-8/03-9 that migrates a user-scoped query clears the query cache on every transition to unauthenticated** (`queryClient.clear()` bridged from `resetAuthScopedStores`): until 03-7b, 03-5 keeps one `QueryClient` for the app lifetime, not cleared on sign-out. Not needed if 03-7b is merged first | 03-5 |
-| 03-9 | users-store; the cache-clear rule of 03-8 applies if 03-9 lands first | 03-5 |
+| 03-8 | dashboard + currency rates. Lands only after 03-7b: since 03-7a every user has a persisted client of their own (`clientFor`); after a sign-out the tree runs on a fresh anonymous client while X's client and IDB key survive until `clearUserData` (03-7b), so clearing one client from `resetAuthScopedStores` (the earlier bridge) no longer reaches them | 03-7b |
+| 03-9 | users-store; after 03-7b for the same reason as 03-8 | 03-7b |
 | 03-10/11 | groups queries / groups mutations | 03-9 |
 | 03-12 | activity + removal of `resourceRequests.ts` | 03-11 |
 | 03-13 | expense modal: network → `entities/ledger/api/mutations.ts` (`ledgerOnlineMutationKeys`, no `id` in the body), `capabilitiesQueryOptions`; registers saving the expense draft into `sessionStorage` via `onBeforeAppReload` (`ServiceWorkerManager`, spec 04 §2.11 item 4) + restoring at startup | 03-12 |
