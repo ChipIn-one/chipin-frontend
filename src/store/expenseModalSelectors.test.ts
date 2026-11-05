@@ -68,3 +68,30 @@ test('steps an AMOUNTS value and keeps two decimals', () => {
 
     expect(useExpenseModalStore.getState().amountShares[user.id]).toBe('2.25');
 });
+
+test.each([
+    { currency: 'KWD', value: '1.235', delta: 1, expected: '2.235' },
+    { currency: 'JPY', value: '5', delta: 2, expected: '7' },
+    { currency: 'USD', value: '0.5', delta: -1, expected: '0.00' },
+])(
+    'steps an AMOUNTS value in $currency minor units: $value + $delta -> $expected',
+    ({ currency, value, delta, expected }) => {
+        initializeGroup('10');
+        useExpenseModalStore.getState().setCurrency(currency);
+        useExpenseModalStore.getState().setSplitMode(EXPENSE_SPLIT_MODES.AMOUNTS);
+        useExpenseModalStore.getState().setSplitValue(user.id, value);
+        useExpenseModalStore.getState().stepSplitValue(user.id, delta);
+
+        expect(useExpenseModalStore.getState().amountShares[user.id]).toBe(expected);
+    },
+);
+
+test('limits AMOUNTS input to the currency minor units', () => {
+    initializeGroup('10');
+    useExpenseModalStore.getState().setCurrency('JPY');
+    useExpenseModalStore.getState().setSplitMode(EXPENSE_SPLIT_MODES.AMOUNTS);
+    useExpenseModalStore.getState().setSplitValue(user.id, '5');
+    useExpenseModalStore.getState().setSplitValue(user.id, '5.5');
+
+    expect(useExpenseModalStore.getState().amountShares[user.id]).toBe('5');
+});

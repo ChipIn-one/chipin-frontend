@@ -222,25 +222,30 @@ test.each([
     },
 );
 
-test.each(['0.9991', '1.0009'])(
-    'EXP-064 / EXP-011 does not reject exact totals within the existing tolerance: %s',
-    value => {
+test.each([
+    { value: '0.9991', reason: 'amountsUnder' },
+    { value: '1.0009', reason: 'amountsOver' },
+])(
+    'EXP-064 / EXP-011 rejects a total off by less than a cent like the backend: $value',
+    ({ value, reason }) => {
         initialize();
         const store = useExpenseModalStore.getState();
         store.setAmount('1');
         store.setSplitMode(EXPENSE_SPLIT_MODES.AMOUNTS);
-        // Existing edits may contain API precision beyond the two-decimal input parser.
+        // Existing edits may contain API precision beyond the two-decimal input parser. The
+        // backend requires the EXACT shares to equal the amount (`compareTo`), with no tolerance.
         const state = {
             ...useExpenseModalStore.getState(),
             amountShares: { [currentUser.id]: value },
         };
 
-        expect(selectExpenseSubmitFeedback(state)).toBeNull();
-        expect(selectIsSubmitDisabled(state)).toBe(false);
-        expect(selectExpensePayload(state)?.sharingMode).toEqual({
-            type: 'EXACT',
-            customShares: { [currentUser.id]: Number(value), [friend.id]: 0, [other.id]: 0 },
+        expect(selectExpenseSubmitFeedback(state)).toEqual({
+            reason,
+            current: Number(value),
+            required: 1,
+            difference: 0.0009,
         });
+        expectBlocked(state);
     },
 );
 

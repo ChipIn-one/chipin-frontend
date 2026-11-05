@@ -126,10 +126,19 @@ const moneyScope = appDir => ({
     ignores: [appGlob(appDir, 'src/shared/{money/**,lib/formatNumber.ts}'), '**/*.test.{ts,tsx}'],
 });
 
+const FIELD_WRAPPERS = ['', 'ChainExpression > ', 'TSNonNullExpression > '];
+
 // A money field as a direct operand of `parent`: `x.amount`, `x?.amount` (ChainExpression) and
-// `x.amount!` (TSNonNullExpression).
-const fieldOperand = (parent, names) =>
-    ['', 'ChainExpression > ', 'TSNonNullExpression > ']
+// `x.amount!` (TSNonNullExpression). With `defaulted`, also a side of a `??`/`||` operand:
+// `(x?.amount ?? 0) > 1`.
+const fieldOperand = (parent, names, { defaulted = false } = {}) =>
+    (defaulted
+        ? [
+              ...FIELD_WRAPPERS,
+              ...FIELD_WRAPPERS.map(w => `LogicalExpression[operator=/^(\\?\\?|\\|\\|)$/] > ${w}`),
+          ]
+        : FIELD_WRAPPERS
+    )
         .map(wrapper => `${parent} > ${wrapper}MemberExpression[property.name=/^(${names})$/]`)
         .join(', ');
 
@@ -170,7 +179,9 @@ export const projectSyntax = ({ appDir }) =>
         },
         {
             id: 'money-compare-field',
-            selector: fieldOperand('BinaryExpression[operator=/^[<>]=?$/]', 'amount|minor'),
+            selector: fieldOperand('BinaryExpression[operator=/^[<>]=?$/]', 'amount|minor', {
+                defaulted: true,
+            }),
             message: 'Money: compare via compare/sign from shared/money.',
         },
     ].map(entry => ({ ...entry, ...moneyScope(appDir) }));

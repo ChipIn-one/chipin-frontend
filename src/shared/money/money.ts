@@ -79,13 +79,6 @@ export const minorUnits = (currency: CurrencyCode): MinorUnits => {
 export const ledgerUnitsPerMinor = (currency: CurrencyCode): bigint =>
     10n ** BigInt(LEDGER_SCALE - minorUnits(currency));
 
-export const fromUnits = (units: bigint, currency: CurrencyCode): Money => ({
-    minor: units,
-    currency,
-});
-
-export const toUnits = (money: Money): bigint => money.minor;
-
 /**
  * A converted, approximate amount (`convert`): still a `Money` for arithmetic and display, but
  * `moneyToWire` does not accept it, and arithmetic keeps it approximate (`add(approx, exact)` is
@@ -95,6 +88,24 @@ export type ApproxMoney = Money & { readonly approx: true };
 
 export const isApprox = (money: Money): money is ApproxMoney =>
     'approx' in money && money.approx === true;
+
+/**
+ * `units` ledger units in `currency`, or in the currency of `like`, keeping its `ApproxMoney` mark:
+ * `fromUnits(toUnits(approx), approx)` is still approximate.
+ */
+export function fromUnits(units: bigint, like: ApproxMoney): ApproxMoney;
+export function fromUnits(units: bigint, currencyOrLike: CurrencyCode | Money): Money;
+export function fromUnits(units: bigint, currencyOrLike: CurrencyCode | Money): Money {
+    if (typeof currencyOrLike === 'string') {
+        return { minor: units, currency: currencyOrLike };
+    }
+    const exact: Money = { minor: units, currency: currencyOrLike.currency };
+    const approximate: ApproxMoney = { ...exact, approx: true };
+
+    return isApprox(currencyOrLike) ? approximate : exact;
+}
+
+export const toUnits = (money: Money): bigint => money.minor;
 
 /** An amount with the exactness of its inputs: approximate if any input is. */
 const derived = (minor: bigint, currency: CurrencyCode, approx: boolean): Money => {

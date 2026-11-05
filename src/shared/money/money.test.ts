@@ -206,8 +206,15 @@ describe('ApproxMoney survives arithmetic', () => {
         ['abs', () => abs(negate(approx))],
         ['roundToMinor', () => roundToMinor(approx)],
         ['sum', () => sum([usd('1'), approx], USD)],
+        ['fromUnits(units, approx)', () => fromUnits(5n, approx)],
     ])('%s is approximate at runtime', (_, run) => {
         expect(isApprox(run())).toBe(true);
+    });
+
+    test('fromUnits takes the currency of its template', () => {
+        expect(fromUnits(5n, approx)).toEqual({ minor: 5n, currency: USD, approx: true });
+        expect(fromUnits(5n, usd('1'))).toEqual({ minor: 5n, currency: USD });
+        expect(isApprox(fromUnits(5n, usd('1')))).toBe(false);
     });
 
     test('exact inputs stay exact', () => {

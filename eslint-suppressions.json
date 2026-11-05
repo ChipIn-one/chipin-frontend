@@ -335,16 +335,6 @@
       "count": 1
     }
   },
-  "src/store/expenseModalSelectors.ts": {
-    "no-restricted-syntax": {
-      "count": 3
-    }
-  },
-  "src/store/expenseModalStore.ts": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "src/store/groupsStore.ts": {
     "import-x/no-cycle": {
       "count": 1
