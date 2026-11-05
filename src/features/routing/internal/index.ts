@@ -1,3 +1,4 @@
+import { GuardLoader } from './GuardLoader';
 import { useConnect } from './useConnect';
 
-export { useConnect };
+export { GuardLoader, useConnect };

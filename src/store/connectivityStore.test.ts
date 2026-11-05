@@ -99,3 +99,27 @@ test('a successful response keeps backend-down while the network is usable', () 
 
     expect(useConnectivityStore.getState().mode).toBe('backend-down');
 });
+
+test('a successful retry brings the network back after an offline classification', async () => {
+    onConnectivityChange('offline');
+
+    await useConnectivityStore.getState().retryBackendHealth();
+
+    expect(onlineManager.isOnline()).toBe(true);
+    expect(useConnectivityStore.getState().mode).toBe('online');
+});
+
+test('drops a classification of a request that started before the last successful retry', async () => {
+    const startedBeforeRetry = performance.now();
+    useConnectivityStore.setState({ mode: 'backend-down' });
+
+    await useConnectivityStore.getState().retryBackendHealth();
+    onConnectivityChange('backend-down', startedBeforeRetry);
+    onConnectivityChange('offline', startedBeforeRetry);
+
+    expect(useConnectivityStore.getState().mode).toBe('online');
+    expect(onlineManager.isOnline()).toBe(true);
+
+    onConnectivityChange('backend-down', performance.now());
+    expect(useConnectivityStore.getState().mode).toBe('backend-down');
+});

@@ -8,7 +8,10 @@ const initializeApi = () => {
         () => {
             useAuthStore.getState().expireSession();
         },
-        error => classifyRequestError(error).then(onConnectivityChange),
+        (error, requestStartedAt) =>
+            classifyRequestError(error).then(classification => {
+                onConnectivityChange(classification, requestStartedAt);
+            }),
         onResponseSuccess,
     );
 };

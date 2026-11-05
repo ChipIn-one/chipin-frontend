@@ -22,9 +22,12 @@ const HEALTH_PATH = '/health';
 
 let areChipInApiInterceptorsConfigured = false;
 let onUnauthorizedSession: (() => void) | undefined;
-let onRequestFailure: ((error: unknown) => Promise<void>) | undefined;
+let onRequestFailure: ((error: unknown, requestStartedAt?: number) => Promise<void>) | undefined;
 let onResponseSuccess: (() => void) | undefined;
 const requestAuthSessionVersions = new WeakMap<object, number>();
+// `performance.now()` when a request was sent: lets the store drop a classification older than its
+// last successful retry.
+const requestStartTimes = new WeakMap<object, number>();
 
 class AuthRequestCancelledError extends Error {
     readonly isStaleSession: boolean;
@@ -34,6 +37,9 @@ class AuthRequestCancelledError extends Error {
         this.isStaleSession = isStaleSession;
     }
 }
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === 'object' && value !== null;
 
 const getRequestPathname = (url?: string): string => {
     if (!url) {
@@ -79,7 +85,10 @@ const processConnectivityError = (error: unknown): Promise<never> => {
         return Promise.reject(error);
     }
 
-    return onRequestFailure(error).then(
+    const config: unknown = isRecord(error) ? error.config : undefined;
+    const requestStartedAt = isRecord(config) ? requestStartTimes.get(config) : undefined;
+
+    return onRequestFailure(error, requestStartedAt).then(
         () => Promise.reject(error),
         () => Promise.reject(error),
     );
@@ -167,7 +176,7 @@ const processPublicApiResponseError = (error: unknown): Promise<never> => {
  */
 export const initChipInApiInterceptors = (
     onUnauthorizedSessionCallback?: () => void,
-    onRequestFailureCallback?: (error: unknown) => Promise<void>,
+    onRequestFailureCallback?: (error: unknown, requestStartedAt?: number) => Promise<void>,
     onResponseSuccessCallback?: () => void,
 ): void => {
     onUnauthorizedSession = onUnauthorizedSessionCallback;
@@ -196,6 +205,7 @@ export const initChipInApiInterceptors = (
             if (currentAccessToken) {
                 config.headers.Authorization = `Bearer ${currentAccessToken}`;
             }
+            requestStartTimes.set(config, performance.now());
 
             return config;
         });
@@ -209,6 +219,10 @@ export const initChipInApiInterceptors = (
         }
         return response;
     }, processApiResponseError);
+    publicApiInstance.interceptors.request.use(config => {
+        requestStartTimes.set(config, performance.now());
+        return config;
+    });
     publicApiInstance.interceptors.response.use(response => {
         onResponseSuccess?.();
         return response;

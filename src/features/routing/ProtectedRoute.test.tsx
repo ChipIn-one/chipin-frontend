@@ -66,8 +66,10 @@ test('an unresolved session offline shows the offline banner with the loader', (
         </MemoryRouter>,
     );
 
-    expect(screen.getByTestId('page-loader')).toBeTruthy();
+    // Offline: one screen with the banner and its Retry above the loader, not the 100vh PageLoader.
+    expect(screen.queryByTestId('page-loader')).toBeNull();
     expect(screen.getByRole('status')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'network.retry' })).toBeTruthy();
     expect(screen.queryByTestId('protected-content')).toBeNull();
 });
 

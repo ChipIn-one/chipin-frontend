@@ -5,7 +5,7 @@ import { apiInstance, publicApiInstance } from './chipin.instance';
 import { initChipInApiInterceptors } from './chipin.interceptors';
 
 const onUnauthorizedSession = vi.fn();
-const onRequestFailure = vi.fn<(error: unknown) => Promise<void>>();
+const onRequestFailure = vi.fn<(error: unknown, requestStartedAt?: number) => Promise<void>>();
 const onResponseSuccess = vi.fn();
 
 const authSessionMocks = vi.hoisted(() => ({
@@ -303,6 +303,7 @@ test('hands a failed response to the connectivity callback before rejecting it',
         .then(() => {
             expect(onRequestFailure).toHaveBeenCalledWith(
                 expect.objectContaining({ response: expect.objectContaining({ status: 503 }) }),
+                expect.any(Number),
             );
             expect(settled).toBe(false);
             finishClassification?.();
@@ -365,6 +366,31 @@ test('reports every successful response of both instances, never a failed one', 
         response: { status: 503 },
     });
     expect(onResponseSuccess).toHaveBeenCalledTimes(2);
+});
+
+test('passes when the failed request was sent, for the store to drop stale classifications', async () => {
+    const before = performance.now();
+
+    await expect(rejectPublicRequest('/stats', 503)).rejects.toMatchObject({
+        response: { status: 503 },
+    });
+
+    const startedAt = onRequestFailure.mock.calls[0]?.[1];
+    expect(startedAt).toBeGreaterThanOrEqual(before);
+    expect(startedAt).toBeLessThanOrEqual(performance.now());
+});
+
+test('a non-2xx /health probe answer is a successful response: it marks the network usable', async () => {
+    // Intended: the probe resolves every HTTP answer (`validateStatus: () => true`), and any answer
+    // proves the network, not the backend.
+    await publicApiInstance.get('/health', {
+        validateStatus: () => true,
+        adapter: config =>
+            Promise.resolve({ config, data: {}, headers: {}, status: 503, statusText: '' }),
+    });
+
+    expect(onResponseSuccess).toHaveBeenCalledOnce();
+    expect(onRequestFailure).not.toHaveBeenCalled();
 });
 
 test('rejects a stale successful protected response after logout', () => {

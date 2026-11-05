@@ -5,11 +5,9 @@ import { ROUTES } from 'constants/routes';
 import { getLastAccountLandingPath } from 'helpers/publicRoutes';
 import { UNAUTH_REASON } from 'store/authConstants';
 
-import PageLoader from 'basics/PageLoader';
 import { AuthModal } from 'components/modals/auth-modal';
-import { OfflineBanner } from 'components/offline-banner';
 
-import { useConnect } from './internal';
+import { GuardLoader, useConnect } from './internal';
 
 interface Props {
     children: React.ReactNode;
@@ -20,13 +18,7 @@ export const ProtectedRoute = ({ children }: Props) => {
     const { isAuthResolved, isLoggedIn, unauthReason } = useConnect();
 
     if (!isAuthResolved) {
-        // An offline cold start waits here for the session check: say why instead of a bare loader.
-        return (
-            <>
-                <OfflineBanner />
-                <PageLoader />
-            </>
-        );
+        return <GuardLoader />;
     }
 
     if (!isLoggedIn) {

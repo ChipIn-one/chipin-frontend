@@ -49,7 +49,9 @@
     },
     "network": {
         "offline": "No internet connection",
-        "offlineBanner": "No network. Saved data is shown"
+        "offlineBanner": "No network. Saved data is shown",
+        "retry": "Retry",
+        "retryFailed": "Still no network. Saved data is shown"
     },
     "oauth": {
         "missing_code": "Google sign-in could not be completed. Please try again."

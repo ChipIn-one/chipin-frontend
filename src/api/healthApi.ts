@@ -24,6 +24,8 @@ let healthProbePromise: Promise<BackendHealth> | null = null;
 export const probeBackendHealth = (): Promise<BackendHealth> => {
     if (!healthProbePromise) {
         healthProbePromise = publicApiInstance
+            // Every HTTP answer resolves, so it also passes the success interceptor and marks the
+            // network usable (`onResponseSuccess`): intended, an answer proves the network.
             .get<unknown>('/health', {
                 timeout: HEALTH_CHECK_TIMEOUT_MS,
                 validateStatus: () => true,
