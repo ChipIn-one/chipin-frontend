@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/react';
+
 import { AUTH_API_PATH } from 'api/auth.constants';
 import * as authApi from 'api/authApi';
 import { logoutApiAuthTokens, refreshApiAuthTokens } from 'api/chipin';
@@ -237,6 +239,19 @@ export const setAccessTokenRefreshListener = (listener: ((token: string) => void
     accessTokenRefreshListener = listener;
 };
 
+// A failing listener must not turn a successful refresh into a rejection. Only the error name is
+// reported: no token, no user data.
+const notifyAccessTokenRefreshed = (token: string): void => {
+    try {
+        accessTokenRefreshListener?.(token);
+    } catch (error: unknown) {
+        Sentry.captureMessage('auth.token_listener_failed', {
+            level: 'error',
+            tags: { 'auth.error': error instanceof Error ? error.name : typeof error },
+        });
+    }
+};
+
 const refreshAccessToken = (): Promise<string | null> => {
     if (!refreshPromise) {
         const version = authSessionVersion;
@@ -255,7 +270,7 @@ const refreshAccessToken = (): Promise<string | null> => {
             return refreshApiAuthTokens().then(({ token }) => {
                 assertCurrentAuthSession(version);
                 accessToken = token;
-                accessTokenRefreshListener?.(token);
+                notifyAccessTokenRefreshed(token);
                 return token;
             });
         })
@@ -316,14 +331,23 @@ export const prepareAuthRequest = (url?: string): Promise<string | null | undefi
     return getFreshAccessToken();
 };
 
-export const startAuthLogout = (): Promise<void> => {
+/**
+ * Ends the session here and on the server. `broadcast: false` (a failed sign-in) does not sign the
+ * other tabs out: a remote logout deletes the user's data there (spec 03 §1.5), and a
+ * `persistence_error` keeps everything.
+ */
+export const startAuthLogout = ({
+    broadcast = true,
+}: { broadcast?: boolean } = {}): Promise<void> => {
     if (logoutPromise) {
         return logoutPromise;
     }
 
     isLogoutInProgress = true;
     markAuthSessionSignedOut();
-    broadcastAuthLogout();
+    if (broadcast) {
+        broadcastAuthLogout();
+    }
 
     logoutPromise = logoutApiAuthTokens()
         .catch(() => {

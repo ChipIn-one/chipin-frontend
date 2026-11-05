@@ -3,6 +3,8 @@
 // for the auth store, which is on the landing path.
 import type { QueryClient } from '@tanstack/react-query';
 
+import { queryCacheKey } from './constants';
+
 export interface UserCache {
     client: QueryClient;
     ready: Promise<void>;
@@ -28,7 +30,28 @@ export const unblockCacheWrites = (key: string): void => {
     blockedWriteKeys.delete(key);
 };
 
-export const isCacheWriteBlocked = (key: string): boolean => blockedWriteKeys.has(key);
+// The shared cached user (`LocalUser.id`), wired by `bootstrap/initializeApi`: `shared` cannot read
+// `helpers/localStorage` itself. Another tab that switched the account changes it, so a tab still
+// holding the previous user's client does not rewrite that user's cache. The id survives an
+// expiry, so an expired session keeps saving its own cache.
+let readCacheOwner: (() => string | undefined) | null = null;
+
+export const setCacheOwnerReader = (reader: (() => string | undefined) | null): void => {
+    readCacheOwner = reader;
+};
+
+/** Whether a query cache write to `key` may happen (no reader wired: only the block applies). */
+export const isCacheWriteAllowed = (key: string): boolean => {
+    if (blockedWriteKeys.has(key)) {
+        return false;
+    }
+    if (!readCacheOwner) {
+        return true;
+    }
+    const owner = readCacheOwner();
+
+    return owner !== undefined && key === queryCacheKey(owner);
+};
 
 // `offline.persist_failed` is reported once per session, by the persister and `clearUserData` alike.
 let persistFailureReported = false;

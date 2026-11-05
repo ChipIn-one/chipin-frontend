@@ -569,3 +569,39 @@ test('a connectivity flap during the reconnect refresh: one refresh, data loaded
             });
         });
 });
+
+test('a boot refresh that found another user applies that user default app mode', () => {
+    cacheSignedInUser();
+    useDashboardStore.setState({ appMode: APP_MODES.GROUP });
+    const setDefaultAppMode = vi.spyOn(useDashboardStore.getState(), 'setDefaultAppMode');
+    // As the refresh listener after another tab switched to Y: LocalUser = { id: Y, settings }.
+    const refreshAuthTokens = vi.fn(() => {
+        localStorageHelpers.saveLocalUser({ id: 'user-y', settings: user.settings });
+        useUsersStore.getState().setInitialUsersStore();
+        return Promise.resolve('y-access-token');
+    });
+    useAuthStore.setState({ refreshAuthTokens });
+    mockAuthenticatedDataFetches();
+
+    renderHook();
+
+    return waitFor(() => {
+        expect(setDefaultAppMode).toHaveBeenCalledWith(true);
+    });
+});
+
+test('a boot refresh of the same cached user keeps the active app mode', () => {
+    cacheSignedInUser();
+    const setDefaultAppMode = vi.spyOn(useDashboardStore.getState(), 'setDefaultAppMode');
+    useAuthStore.setState({ refreshAuthTokens: vi.fn(() => Promise.resolve('x-access-token')) });
+    mockAuthenticatedDataFetches();
+    const fetchSetUser = vi.mocked(useUsersStore.getState().fetchSetUser);
+
+    renderHook();
+
+    return waitFor(() => {
+        expect(fetchSetUser).toHaveBeenCalledOnce();
+    }).then(() => {
+        expect(setDefaultAppMode).not.toHaveBeenCalled();
+    });
+});

@@ -56,13 +56,15 @@ export const useCheckSignIn = () => {
         });
     }, []);
 
+    // `switchedUser`: the refresh found another user (§1.5, the refresh listener dropped the cached
+    // one), so that user's default app mode applies as for a fresh sign-in.
     const loadSessionData = useCallback(
-        () =>
+        (switchedUser = false) =>
             Promise.all([
                 fetchSetDashboardData(),
                 fetchSetGroups(),
                 fetchSetUser().then(user => {
-                    if (user && !hasCachedUser) {
+                    if (user && (switchedUser || !hasCachedUser)) {
                         setDefaultAppMode(user.settings.soloModeByDefault);
                     }
                 }),
@@ -97,10 +99,14 @@ export const useCheckSignIn = () => {
             return;
         }
 
+        const cachedIdBefore = useUsersStore.getState().localUser?.id;
         refreshAuthTokens()
             .then(() => {
                 setAuthenticated();
-                return loadSessionData();
+                return loadSessionData(
+                    cachedIdBefore !== undefined &&
+                        useUsersStore.getState().localUser?.id !== cachedIdBefore,
+                );
             })
             .catch((error: unknown) => {
                 if (useAuthStore.getState().status !== AUTH_STATUS.UNKNOWN) {
@@ -152,8 +158,9 @@ export const useCheckSignIn = () => {
         }
 
         isReconnecting.current = true;
+        const cachedIdBefore = useUsersStore.getState().localUser?.id;
         refreshAuthTokens()
-            .then(loadSessionData)
+            .then(() => loadSessionData(useUsersStore.getState().localUser?.id !== cachedIdBefore))
             .catch(() => {
                 // A 401 has already expired the session; a network error keeps the cached
                 // session, and the next reconnect (a connectivity change) tries again.

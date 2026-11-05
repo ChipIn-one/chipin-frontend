@@ -140,6 +140,8 @@ describe('authStore', () => {
             .rejects.toBe(persistenceError)
             .then(() => {
                 expect(authSession.startAuthLogout).toHaveBeenCalledOnce();
+                // A persistence_error keeps X's data in the other tabs too: no logout broadcast.
+                expect(authSession.startAuthLogout).toHaveBeenCalledWith({ broadcast: false });
                 expect(useAuthStore.getState()).toMatchObject({
                     status: 'unauthenticated',
                     unauthReason: 'persistence_error',

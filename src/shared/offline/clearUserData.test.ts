@@ -1,11 +1,11 @@
 import * as Sentry from '@sentry/react';
 import { del, get, set } from 'idb-keyval';
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { clearUserData } from './clearUserData';
 import { outboxKeys, queryCacheKey } from './constants';
 import { bootstrapUserCache, clientFor } from './restore';
-import { cachesByUser, resetPersistFailureFlag } from './userCaches';
+import { cachesByUser, resetPersistFailureFlag, setCacheOwnerReader } from './userCaches';
 
 import 'fake-indexeddb/auto';
 
@@ -150,5 +150,34 @@ describe('clearUserData (spec 03 §1.5)', () => {
             level: 'warning',
             tags: { 'offline.error': 'UnknownError' },
         });
+    });
+});
+
+describe('only the shared cached user is written (spec 03 §1.5, another tab)', () => {
+    afterEach(() => {
+        setCacheOwnerReader(null);
+    });
+
+    test('another tab switched LocalUser to Y: a later write from X client is dropped', async () => {
+        let owner = 'owner-x';
+        setCacheOwnerReader(() => owner);
+        await bootstrapUserCache('owner-x');
+
+        owner = 'owner-y';
+        clientFor('owner-x').setQueryData(GROUPS_KEY, ['x-after-switch']);
+        await wait(THROTTLE_WINDOW_MS);
+
+        expect(await get(queryCacheKey('owner-x'))).toBeUndefined();
+    });
+
+    test('the cached user writes its own cache (an expiry keeps the id)', async () => {
+        setCacheOwnerReader(() => 'owner-same');
+        await bootstrapUserCache('owner-same');
+
+        clientFor('owner-same').setQueryData(GROUPS_KEY, ['own']);
+
+        await vi.waitFor(async () => {
+            expect(await get<string>(queryCacheKey('owner-same'))).toContain('own');
+        }, 3000);
     });
 });

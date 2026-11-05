@@ -224,7 +224,7 @@ export const useAuthStore = create<AuthStore>(set => ({
             .catch((error: unknown) => {
                 const cleanup =
                     error instanceof AuthSessionPersistenceError
-                        ? startAuthLogout()
+                        ? startAuthLogout({ broadcast: false })
                         : Promise.resolve();
 
                 return cleanup.then(() => {

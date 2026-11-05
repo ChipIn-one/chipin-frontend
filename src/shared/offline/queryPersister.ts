@@ -19,7 +19,7 @@ import { isEntryWithPendingOp } from './pendingOps';
 import { persistCodec } from './persistCodec';
 import {
     claimPersistFailureReport,
-    isCacheWriteBlocked,
+    isCacheWriteAllowed,
     resetPersistFailureFlag,
 } from './userCaches';
 
@@ -28,8 +28,9 @@ export const QUERY_CACHE_BUSTER = `${QUERY_CACHE_EPOCH}:${MODEL_SHAPE_HASH}`;
 
 const idbStringStorage: AsyncStorage<string> = {
     getItem: key => get<string>(key).then(value => (typeof value === 'string' ? value : null)),
-    // A key cleared by `clearUserData` takes no late (throttled) write until its user is back.
-    setItem: (key, value) => (isCacheWriteBlocked(key) ? Promise.resolve() : set(key, value)),
+    // A key cleared by `clearUserData` takes no late (throttled) write until its user is back, and
+    // only the shared cached user's key is written (another tab may have switched the account).
+    setItem: (key, value) => (isCacheWriteAllowed(key) ? set(key, value) : Promise.resolve()),
     removeItem: key => del(key),
 };
 
