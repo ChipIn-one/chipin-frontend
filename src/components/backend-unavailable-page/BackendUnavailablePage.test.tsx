@@ -4,7 +4,7 @@ import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import { lightThemeStyled } from 'constants/styled-themes';
-import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
+import { useConnectivityStore } from 'store/connectivityStore';
 
 const healthMocks = vi.hoisted(() => ({
     checkBackendHealth: vi.fn<() => Promise<void>>(),
@@ -33,7 +33,7 @@ const renderPage = () => {
 beforeEach(() => {
     vi.clearAllMocks();
     healthMocks.checkBackendHealth.mockResolvedValue(undefined);
-    useBackendAvailabilityStore.setState({ isUnavailable: true });
+    useConnectivityStore.setState({ mode: 'backend-down' });
 });
 
 test('renders a blocking localized dialog with an accessible retry action', () => {
@@ -99,7 +99,7 @@ test('keeps the page visible when a retry remains unhealthy', () => {
             expect(
                 screen.getByText('backendUnavailable.retryFailed').getAttribute('aria-hidden'),
             ).toBe('false');
-            expect(useBackendAvailabilityStore.getState().isUnavailable).toBe(true);
+            expect(useConnectivityStore.getState().mode).toBe('backend-down');
         });
 });
 
@@ -112,6 +112,6 @@ test('clears unavailable state and restores normal rendering after a healthy ret
         .click(screen.getByRole('button', { name: 'backendUnavailable.tryAgain' }))
         .then(() => {
             expect(healthMocks.checkBackendHealth).toHaveBeenCalledOnce();
-            expect(useBackendAvailabilityStore.getState().isUnavailable).toBe(false);
+            expect(useConnectivityStore.getState().mode).toBe('online');
         });
 });

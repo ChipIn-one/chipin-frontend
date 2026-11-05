@@ -31,7 +31,7 @@ const auth = vi.hoisted(() => {
             state.token = 'next-access-token';
             return Promise.resolve(state.token);
         }),
-        checkBackendHealth: vi.fn(() => Promise.resolve()),
+        onRequestFailure: vi.fn((_error: unknown) => Promise.resolve()),
     };
 });
 
@@ -43,8 +43,6 @@ vi.mock('helpers/authSession', () => ({
     prepareAuthRequest: auth.prepareAuthRequest,
     refreshAuthSession: auth.refreshAuthSession,
 }));
-
-vi.mock('api/healthApi', () => ({ checkBackendHealth: auth.checkBackendHealth }));
 
 const UUID = '11111111-1111-1111-1111-111111111111';
 const USD = currencyCode('USD');
@@ -345,9 +343,9 @@ describe('ApiError', () => {
     });
 });
 
-describe('through the installed interceptors (auth refresh, outage detection)', () => {
+describe('through the installed interceptors (auth refresh, connectivity classification)', () => {
     beforeAll(() => {
-        initChipInApiInterceptors(vi.fn());
+        initChipInApiInterceptors(vi.fn(), auth.onRequestFailure);
     });
 
     afterAll(() => {
@@ -383,14 +381,17 @@ describe('through the installed interceptors (auth refresh, outage detection)', 
         expect(result).toEqual({ id: 'e1', amount: createWireAmount('899999999999.9997') });
     });
 
-    test('an HTML 502 goes through the health check and is rejected as ApiError 502', async () => {
-        auth.checkBackendHealth.mockRejectedValueOnce(new Error('health unavailable'));
+    test('an HTML 502 goes through the connectivity callback and is rejected as ApiError 502', async () => {
+        auth.onRequestFailure.mockClear();
         reply = { status: 502, data: '<html>Bad gateway</html>', contentType: 'text/html' };
 
         await expect(
             api('get', '/ledger/entries/{id}', { params: { id: UUID } }),
         ).rejects.toMatchObject({ name: 'ApiError', status: 502, code: undefined });
-        expect(auth.checkBackendHealth).toHaveBeenCalledOnce();
+        expect(auth.onRequestFailure).toHaveBeenCalledOnce();
+        expect(auth.onRequestFailure.mock.calls[0]?.[0]).toMatchObject({
+            response: { status: 502 },
+        });
     });
 });
 
@@ -421,7 +422,7 @@ describe('isNetworkError', () => {
 
 // The interceptors are installed once per module (`initChipInApiInterceptors` is idempotent): the
 // describe above installed them and cleared only the apiInstance ones, so publicApiInstance keeps
-// its outage-detection response interceptor here, as in the app.
+// its connectivity response interceptor here, as in the app.
 describe('publicApi() for public endpoints', () => {
     const originalPublicAdapter = publicApiInstance.defaults.adapter;
 
@@ -455,7 +456,8 @@ describe('publicApi() for public endpoints', () => {
         expect(lastRequest().headers.Authorization).toBeUndefined();
     });
 
-    test('a 5xx goes through the outage health check and is an ApiError, as with api()', async () => {
+    test('a 5xx goes through the connectivity callback and is an ApiError, as with api()', async () => {
+        auth.onRequestFailure.mockClear();
         reply = {
             status: 500,
             data: '{"code":"SYSTEM.INTERNAL"}',
@@ -467,7 +469,7 @@ describe('publicApi() for public endpoints', () => {
             status: 500,
             code: 'SYSTEM.INTERNAL',
         });
-        expect(auth.checkBackendHealth).toHaveBeenCalledOnce();
+        expect(auth.onRequestFailure).toHaveBeenCalledOnce();
     });
 });
 

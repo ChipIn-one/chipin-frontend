@@ -7,6 +7,7 @@ import { UNAUTH_REASON } from 'store/authConstants';
 
 import PageLoader from 'basics/PageLoader';
 import { AuthModal } from 'components/modals/auth-modal';
+import { OfflineBanner } from 'components/offline-banner';
 
 import { useConnect } from './internal';
 
@@ -19,7 +20,13 @@ export const ProtectedRoute = ({ children }: Props) => {
     const { isAuthResolved, isLoggedIn, unauthReason } = useConnect();
 
     if (!isAuthResolved) {
-        return <PageLoader />;
+        // An offline cold start waits here for the session check: say why instead of a bare loader.
+        return (
+            <>
+                <OfflineBanner />
+                <PageLoader />
+            </>
+        );
     }
 
     if (!isLoggedIn) {

@@ -5,45 +5,12 @@ import { useShallow } from 'zustand/react/shallow';
 
 import type { Group } from 'api/chipin.types';
 import { SECOND } from 'constants/time';
-import { TOASTS_IDS } from 'constants/toasts';
 import { copyTextToClipboard } from 'helpers/clipboard';
 import { detectNativeShare, type InviteShareContent, shareInvite } from 'helpers/share';
 import { buildFriendInviteLink, buildGroupInviteLink } from 'helpers/url';
-import { useOnlineStatus } from 'hooks/useOnlineStatus';
 import { usePwaStore } from 'store/pwaStore';
 
 const INVITE_FEEDBACK_DELAY_MS = 1.5 * SECOND;
-const CONNECTION_RESTORED_TOAST_DURATION = 4 * SECOND;
-
-export const useCheckOnlineStatus = () => {
-    const online = useOnlineStatus();
-    const previousOnline = useRef<boolean | undefined>(undefined);
-
-    useEffect(() => {
-        const previousOnlineValue = previousOnline.current;
-        previousOnline.current = online;
-
-        if (previousOnlineValue === undefined || previousOnlineValue === online) {
-            return;
-        }
-
-        if (!online) {
-            toast.warning(i18n.t('toasts:common.disconnect'), {
-                id: TOASTS_IDS.connectionStatus,
-                description: i18n.t('toasts:common.disconnectDescription'),
-                duration: Infinity,
-            });
-            return;
-        }
-
-        toast.success(i18n.t('toasts:common.reconnected'), {
-            description: null,
-            duration: CONNECTION_RESTORED_TOAST_DURATION,
-            icon: null,
-            id: TOASTS_IDS.connectionStatus,
-        });
-    }, [online]);
-};
 
 export const useCheckPwa = () => {
     const { setIsPwaInstalled, setPwaInstallPrompt } = usePwaStore(

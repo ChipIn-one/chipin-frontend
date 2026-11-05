@@ -1,12 +1,12 @@
 import { toast } from 'sonner';
 import { beforeAll, beforeEach, expect, test, vi } from 'vitest';
 
-import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
-
 import { apiInstance, publicApiInstance } from './chipin.instance';
 import { initChipInApiInterceptors } from './chipin.interceptors';
 
 const onUnauthorizedSession = vi.fn();
+const onRequestFailure = vi.fn<(error: unknown) => Promise<void>>();
+const onResponseSuccess = vi.fn();
 
 const authSessionMocks = vi.hoisted(() => ({
     accessToken: 'current-access-token',
@@ -15,10 +15,6 @@ const authSessionMocks = vi.hoisted(() => ({
     prepareAuthRequest: vi.fn<() => Promise<string | null | undefined>>(),
     hasAuthAccessTokenRotated: vi.fn<(previousAccessToken: string) => boolean>(),
     refreshAuthSession: vi.fn<() => Promise<string | null>>(),
-}));
-
-const backendAvailabilityMocks = vi.hoisted(() => ({
-    checkBackendHealth: vi.fn<() => Promise<void>>(),
 }));
 
 vi.mock('sonner', () => ({
@@ -40,12 +36,8 @@ vi.mock('helpers/env', () => ({
     getChipInApiUrl: () => 'https://api.example.test',
 }));
 
-vi.mock('./healthApi', () => ({
-    checkBackendHealth: backendAvailabilityMocks.checkBackendHealth,
-}));
-
 beforeAll(() => {
-    initChipInApiInterceptors(onUnauthorizedSession);
+    initChipInApiInterceptors(onUnauthorizedSession, onRequestFailure, onResponseSuccess);
 });
 
 beforeEach(() => {
@@ -63,8 +55,7 @@ beforeEach(() => {
         authSessionMocks.accessToken = 'next-access-token';
         return Promise.resolve('next-access-token');
     });
-    backendAvailabilityMocks.checkBackendHealth.mockResolvedValue(undefined);
-    useBackendAvailabilityStore.setState({ isUnavailable: false });
+    onRequestFailure.mockResolvedValue(undefined);
 });
 
 const unauthorizedResponse = (config: object) => ({
@@ -292,56 +283,88 @@ test('leaves retryable validation feedback to the owning UI flow', () => {
         });
 });
 
-test('confirms a likely outage through health before entering unavailable state', () => {
-    backendAvailabilityMocks.checkBackendHealth.mockRejectedValueOnce(
-        new Error('health unavailable'),
+test('hands a failed response to the connectivity callback before rejecting it', () => {
+    let finishClassification: (() => void) | undefined;
+    let settled = false;
+    onRequestFailure.mockReturnValueOnce(
+        new Promise<void>(resolve => {
+            finishClassification = resolve;
+        }),
     );
 
-    return expect(rejectRequest('/dashboard', 503))
-        .rejects.toMatchObject({
-            response: { status: 503 },
+    const request = rejectRequest('/dashboard', 503).finally(() => {
+        settled = true;
+    });
+
+    return vi
+        .waitFor(() => {
+            expect(onRequestFailure).toHaveBeenCalledOnce();
         })
         .then(() => {
-            expect(backendAvailabilityMocks.checkBackendHealth).toHaveBeenCalledOnce();
-            expect(useBackendAvailabilityStore.getState().isUnavailable).toBe(true);
+            expect(onRequestFailure).toHaveBeenCalledWith(
+                expect.objectContaining({ response: expect.objectContaining({ status: 503 }) }),
+            );
+            expect(settled).toBe(false);
+            finishClassification?.();
+
+            return expect(request).rejects.toMatchObject({ response: { status: 503 } });
         });
 });
 
-test('keeps the normal error path when health confirms the backend is available', () => {
-    return expect(rejectRequest('/dashboard', 503))
-        .rejects.toMatchObject({
-            response: { status: 503 },
-        })
-        .then(() => {
-            expect(backendAvailabilityMocks.checkBackendHealth).toHaveBeenCalledOnce();
-            expect(useBackendAvailabilityStore.getState().isUnavailable).toBe(false);
-        });
+test('keeps the original error when the connectivity callback fails', () => {
+    onRequestFailure.mockRejectedValueOnce(new Error('classification failed'));
+
+    return expect(rejectRequest('/dashboard', 503)).rejects.toMatchObject({
+        response: { status: 503 },
+    });
 });
 
-test('does not confirm health or enter unavailable state for an application 4xx', () => {
+test('hands an application 4xx to the callback too (it classifies it as a client error)', () => {
     return expect(rejectRequest('/dashboard', 404))
-        .rejects.toMatchObject({
-            response: { status: 404 },
-        })
+        .rejects.toMatchObject({ response: { status: 404 } })
         .then(() => {
-            expect(backendAvailabilityMocks.checkBackendHealth).not.toHaveBeenCalled();
-            expect(useBackendAvailabilityStore.getState().isUnavailable).toBe(false);
+            expect(onRequestFailure).toHaveBeenCalledOnce();
         });
 });
 
-test('also confirms a likely outage from the public API path', () => {
-    backendAvailabilityMocks.checkBackendHealth.mockRejectedValueOnce(
-        new Error('health unavailable'),
-    );
+test('does not hand an owned auth-flow 401 to the connectivity callback', () => {
+    return expect(rejectRequest('/auth/logout', 401))
+        .rejects.toMatchObject({ response: { status: 401 } })
+        .then(() => {
+            expect(onRequestFailure).not.toHaveBeenCalled();
+        });
+});
 
+test('hands a public API failure to the callback, but never the /health probe itself', () => {
     return expect(rejectPublicRequest('/stats', 503))
-        .rejects.toMatchObject({
-            response: { status: 503 },
+        .rejects.toMatchObject({ response: { status: 503 } })
+        .then(() => {
+            expect(onRequestFailure).toHaveBeenCalledOnce();
+
+            return expect(rejectPublicRequest('/health', 503)).rejects.toMatchObject({
+                response: { status: 503 },
+            });
         })
         .then(() => {
-            expect(backendAvailabilityMocks.checkBackendHealth).toHaveBeenCalledOnce();
-            expect(useBackendAvailabilityStore.getState().isUnavailable).toBe(true);
+            expect(onRequestFailure).toHaveBeenCalledOnce();
         });
+});
+
+test('reports every successful response of both instances, never a failed one', async () => {
+    const ok = (instance: typeof apiInstance, url: string) =>
+        instance.get(url, {
+            adapter: config =>
+                Promise.resolve({ config, data: {}, headers: {}, status: 200, statusText: 'OK' }),
+        });
+
+    await ok(apiInstance, '/dashboard');
+    await ok(publicApiInstance, '/stats');
+    expect(onResponseSuccess).toHaveBeenCalledTimes(2);
+
+    await expect(rejectPublicRequest('/stats', 503)).rejects.toMatchObject({
+        response: { status: 503 },
+    });
+    expect(onResponseSuccess).toHaveBeenCalledTimes(2);
 });
 
 test('rejects a stale successful protected response after logout', () => {

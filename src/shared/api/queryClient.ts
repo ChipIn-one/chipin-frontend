@@ -4,6 +4,7 @@
 import { QueryClient } from '@tanstack/react-query';
 
 import { ApiError } from 'shared/lib/apiError';
+import { isNetworkUsable } from 'shared/offline/network';
 
 import { isNetworkError } from './client';
 
@@ -14,8 +15,8 @@ const SERVER_RETRIES = 2;
 
 /**
  * Retry policy of every query: a network error (no HTTP response, not a cancellation) gets 3
- * retries (4 attempts, ~7 s of default backoff); 5xx and 409 `SYSTEM.CONFLICT` get 2 retries
- * (3 attempts, ~3 s). Everything else is final: other 4xx, a non-JSON 2xx
+ * retries (4 attempts, ~7 s of default backoff), unlimited while the network is not usable;
+ * 5xx and 409 `SYSTEM.CONFLICT` get 2 retries (3 attempts, ~3 s). Everything else is final: other 4xx, a non-JSON 2xx
  * (`ApiResponseFormatError`), an invalid path segment, a mapper error, a cancelled auth request.
  */
 export const queryRetry = (failureCount: number, error: unknown): boolean => {
@@ -25,8 +26,8 @@ export const queryRetry = (failureCount: number, error: unknown): boolean => {
             : false;
     }
     if (isNetworkError(error)) {
-        // TODO(03-7a): `!isNetworkUsable() || failureCount < 3` once shared/offline/network.ts exists.
-        return failureCount < NETWORK_RETRIES;
+        // Offline the retries do not count down: `offlineFirst` pauses them until reconnect.
+        return !isNetworkUsable() || failureCount < NETWORK_RETRIES;
     }
     return false;
 };

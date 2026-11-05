@@ -8,6 +8,7 @@ import { useLoadingStore } from 'store/loadingStore';
 import { selectCanAccessSolo, selectUserSettings, useUsersStore } from 'store/users-store';
 
 import PageLoader from 'basics/PageLoader';
+import { OfflineBanner } from 'components/offline-banner';
 
 interface Props {
     children: React.ReactNode;
@@ -21,7 +22,13 @@ const HomeRouteGuard = ({ children }: Props) => {
     const isUserFetched = useLoadingStore(selectUserSelfFetched);
 
     if (!isAuthResolved || (isLoggedIn && !isUserFetched)) {
-        return <PageLoader />;
+        // An offline cold start waits here for the session check: say why instead of a bare loader.
+        return (
+            <>
+                <OfflineBanner />
+                <PageLoader />
+            </>
+        );
     }
 
     if (isLoggedIn) {

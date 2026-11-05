@@ -1,3 +1,4 @@
+import { onlineManager } from '@tanstack/react-query';
 import { act, render, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
@@ -7,7 +8,7 @@ import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
 import { invalidateAuthSession, isAuthSessionSignedOut } from 'helpers/authSession';
 import * as localStorageHelpers from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
-import { useBackendAvailabilityStore } from 'store/backendAvailabilityStore';
+import { useConnectivityStore } from 'store/connectivityStore';
 import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { useGroupsStore } from 'store/groupsStore';
@@ -68,7 +69,8 @@ beforeEach(() => {
     invalidateAuthSession();
     localStorageHelpers.LocalStorage.remove(LS_KEY_AUTH_SESSION_HINT);
     localStorageHelpers.LocalStorage.remove(LS_KEY_USER);
-    useBackendAvailabilityStore.setState({ isUnavailable: false });
+    onlineManager.setOnline(true);
+    useConnectivityStore.setState({ mode: 'online' });
     useDashboardStore.getState().setInitialDashboardStore();
     useUsersStore.getState().setInitialUsersStore();
     useAuthStore.setState({
@@ -80,6 +82,7 @@ beforeEach(() => {
 
 afterEach(() => {
     vi.unstubAllGlobals();
+    onlineManager.setOnline(true);
 });
 
 test('keeps a signed-out cold start unauthenticated and skips refresh', () => {
@@ -111,47 +114,59 @@ test('attempts cookie-backed session restore on cold start without persisted aut
     });
 });
 
-test('retries cookie-backed restoration after confirmed backend recovery', () => {
-    markRestorableAuthSession();
-    let rejectFirstRestore: ((reason: Error) => void) | undefined;
-    const firstRestore = new Promise<string>((_resolve, reject) => {
-        rejectFirstRestore = reject;
-    });
-    const refreshAuthTokens = vi
-        .fn<() => Promise<string>>()
-        .mockReturnValueOnce(firstRestore)
-        .mockResolvedValueOnce('next-access-token');
-    useAuthStore.setState({ refreshAuthTokens });
-    mockAuthenticatedDataFetches();
+const disconnect = {
+    'backend-down': () => useConnectivityStore.setState({ mode: 'backend-down' }),
+    offline: () => onlineManager.setOnline(false),
+};
+const reconnect = {
+    'backend-down': () => useConnectivityStore.setState({ mode: 'online' }),
+    offline: () => onlineManager.setOnline(true),
+};
 
-    renderHook();
-
-    return waitFor(() => {
-        expect(refreshAuthTokens).toHaveBeenCalledOnce();
-    })
-        .then(() => {
-            act(() => {
-                useBackendAvailabilityStore.getState().setUnavailable();
-                rejectFirstRestore?.(new Error('backend unavailable'));
-            });
-
-            return waitFor(() => {
-                expect(useBackendAvailabilityStore.getState().isUnavailable).toBe(true);
-                expect(useAuthStore.getState().status).toBe('unknown');
-                expect(refreshAuthTokens).toHaveBeenCalledOnce();
-            });
-        })
-        .then(() => {
-            act(() => {
-                useBackendAvailabilityStore.getState().clearUnavailable();
-            });
-
-            return waitFor(() => {
-                expect(refreshAuthTokens).toHaveBeenCalledTimes(2);
-                expect(useAuthStore.getState().status).toBe('authenticated');
-            });
+test.each(['backend-down', 'offline'] as const)(
+    'waits while %s and retries cookie-backed restoration after recovery',
+    mode => {
+        markRestorableAuthSession();
+        let rejectFirstRestore: ((reason: Error) => void) | undefined;
+        const firstRestore = new Promise<string>((_resolve, reject) => {
+            rejectFirstRestore = reject;
         });
-});
+        const refreshAuthTokens = vi
+            .fn<() => Promise<string>>()
+            .mockReturnValueOnce(firstRestore)
+            .mockResolvedValueOnce('next-access-token');
+        useAuthStore.setState({ refreshAuthTokens });
+        mockAuthenticatedDataFetches();
+
+        renderHook();
+
+        return waitFor(() => {
+            expect(refreshAuthTokens).toHaveBeenCalledOnce();
+        })
+            .then(() => {
+                act(() => {
+                    disconnect[mode]();
+                    rejectFirstRestore?.(new Error('backend unavailable'));
+                });
+
+                return waitFor(() => {
+                    expect(useConnectivityStore.getState().mode).toBe(mode);
+                    expect(useAuthStore.getState().status).toBe('unknown');
+                    expect(refreshAuthTokens).toHaveBeenCalledOnce();
+                });
+            })
+            .then(() => {
+                act(() => {
+                    reconnect[mode]();
+                });
+
+                return waitFor(() => {
+                    expect(refreshAuthTokens).toHaveBeenCalledTimes(2);
+                    expect(useAuthStore.getState().status).toBe('authenticated');
+                });
+            });
+    },
+);
 
 test('initializes the app mode from the fetched preference without a cached user', () => {
     markRestorableAuthSession();

@@ -19,14 +19,9 @@
       "count": 2
     }
   },
-  "src/api/chipin.interceptors.test.ts": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/api/chipin.interceptors.ts": {
     "boundaries/dependencies": {
-      "count": 4
+      "count": 3
     }
   },
   "src/api/groupsApi.ts": {

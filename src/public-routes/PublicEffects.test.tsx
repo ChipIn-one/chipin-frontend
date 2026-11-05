@@ -20,7 +20,6 @@ vi.mock('hooks/useScrollToTop', () => ({ useScrollToTop: vi.fn() }));
 vi.mock('hooks/useCheckSignIn', () => ({ useCheckSignIn: vi.fn() }));
 vi.mock('hooks/pwaHooks', () => ({
     useCheckPwa: vi.fn(),
-    useCheckOnlineStatus: vi.fn(),
 }));
 vi.mock('hooks/seoMetadata', () => ({ updateSeoMetadata: vi.fn() }));
 vi.mock('react-i18next', () => ({

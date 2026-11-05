@@ -48,7 +48,8 @@
         }
     },
     "network": {
-        "offline": "No internet connection"
+        "offline": "No internet connection",
+        "offlineBanner": "No network. Saved data is shown"
     },
     "oauth": {
         "missing_code": "Google sign-in could not be completed. Please try again."

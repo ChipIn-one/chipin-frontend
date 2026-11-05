@@ -5,7 +5,6 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import GlobalHooks from './GlobalHooks';
 
 vi.mock('hooks/pwaHooks', () => ({
-    useCheckOnlineStatus: vi.fn(),
     useCheckPwa: vi.fn(),
 }));
 
