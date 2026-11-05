@@ -257,48 +257,104 @@ function qaSteps(body, issueNumber) {
 
 const MAX_PR_STEPS = 20;
 const MAX_TEXT_LENGTH = 300;
+// GitHub rejects Issue bodies above 65,536 characters; PR steps share this budget across the release.
+const MAX_PR_TEXT_TOTAL = 40000;
 const QA_HEADING = /^QA(?:\s*\([^)]*\))?$/i;
-const NO_STEP = /^(?:none|n\/a|no qa(?: needed)?)\b/i;
+const NO_STEP = /^(?:none|n\/a|no qa(?: needed)?)(?:\s*[.!]?|\s*[(—–-].*)$/i;
+const LIST_ITEM = /^(\s*)(?:[-*+]|\d+[.)])\s+(.*)$/;
 
 // PR bodies and titles are free text that reaches the QA Issue: drop anything that could fake the QA
-// marker or render HTML, and break @mentions so a release round never notifies anyone.
+// marker or render HTML, break @mentions and #references so a release round never notifies anyone or
+// adds cross-references, and cut by code point so an emoji is never split.
 function safeText(value) {
-    return String(value ?? '')
+    const text = String(value ?? '')
         .replace(/[<>]/g, '')
         .replace(/@(?=[A-Za-z0-9])/g, '@\u200b')
+        .replace(/#(?=\d)/g, '#\u200b')
         .replace(/\s+/g, ' ')
-        .trim()
-        .slice(0, MAX_TEXT_LENGTH);
+        .trim();
+    return Array.from(text).slice(0, MAX_TEXT_LENGTH).join('').trim();
+}
+
+// The text of a step item without its checkbox and `QA:` prefix; empty for an unfilled `- [ ]`.
+function itemText(text) {
+    return text
+        .replace(/^\[[ xX]\](?:\s+|$)/, '')
+        .replace(/^QA:\s*/i, '')
+        .trim();
+}
+
+function toStep(text) {
+    const at = text.indexOf('=>');
+    const step = safeText(at < 0 ? text : text.slice(0, at));
+    const expected = at < 0 ? '' : safeText(text.slice(at + 2));
+    return expected ? { step, expected } : { step };
 }
 
 // Steps from a merged PR body: every list item of a `## QA` / `## QA (owner)` section, plus any
 // `- [ ] QA:` line elsewhere. `step => expected` splits; a plain item is a step with no expected result.
+// Nested items and continuation lines join their parent step; code blocks and HTML comments are skipped.
 export function prQaSteps(body) {
-    const steps = [];
-    const seen = new Set();
+    const items = [];
     let inSection = false;
-    let fenced = false;
-    for (const line of (body ?? '').split('\n')) {
-        if (/^\s*(?:```|~~~)/.test(line)) {
-            fenced = !fenced;
+    let fence = null;
+    let comment = false;
+    let parent = null;
+    for (const raw of (body ?? '').split('\n')) {
+        const line = raw.replace(/\r$/, '');
+        if (fence) {
+            const close = /^\s{0,3}(`{3,}|~{3,})\s*$/.exec(line)?.[1];
+            if (close && close[0] === fence[0] && close.length >= fence.length) fence = null;
             continue;
         }
-        if (fenced) continue;
+        if (comment) {
+            if (line.includes('-->')) comment = false;
+            continue;
+        }
+        const open = /^\s{0,3}(`{3,}|~{3,})/.exec(line)?.[1];
+        if (open) {
+            fence = open;
+            parent = null;
+            continue;
+        }
+        if (/^\s*<!--/.test(line)) {
+            comment = !line.includes('-->');
+            continue;
+        }
         const heading = /^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line);
         if (heading) {
             if (heading[1].length <= 2) inSection = QA_HEADING.test(heading[2]);
+            parent = null;
             continue;
         }
-        const item = inSection
-            ? /^\s*[-*]\s+(?:\[[ xX]\]\s+)?(?:QA:\s*)?(.+?)\s*$/.exec(line)
-            : /^\s*-\s*\[[ xX]\]\s*QA:\s*(.+?)\s*$/.exec(line);
-        if (!item || NO_STEP.test(item[1])) continue;
-        const at = item[1].indexOf('=>');
-        const step = safeText(at < 0 ? item[1] : item[1].slice(0, at));
-        const expected = at < 0 ? '' : safeText(item[1].slice(at + 2));
-        if (!step || seen.has(`${step}=>${expected}`)) continue;
-        seen.add(`${step}=>${expected}`);
-        steps.push(expected ? { step, expected } : { step });
+        if (!line.trim()) {
+            parent = null;
+            continue;
+        }
+        const listed = LIST_ITEM.exec(line);
+        if (inSection) {
+            if (listed && (!parent || listed[1].length <= parent.indent)) {
+                parent = { indent: listed[1].length, text: itemText(listed[2]) };
+                items.push(parent);
+            } else if (parent) {
+                // A nested item or an indented continuation line belongs to its parent step.
+                const extra = itemText(listed ? listed[2] : line.trim());
+                if (extra) parent.text = parent.text ? `${parent.text}; ${extra}` : extra;
+            }
+            continue;
+        }
+        const qaLine = /^\s*-\s*\[[ xX]\]\s*QA:\s*(.+?)\s*$/.exec(line);
+        if (qaLine) items.push({ text: qaLine[1] });
+    }
+    const steps = [];
+    const seen = new Set();
+    for (const { text } of items) {
+        if (!text || NO_STEP.test(text)) continue;
+        const item = toStep(text);
+        const key = `${item.step}=>${item.expected ?? ''}`;
+        if (!item.step || seen.has(key)) continue;
+        seen.add(key);
+        steps.push(item);
         if (steps.length === MAX_PR_STEPS) break;
     }
     return steps;
@@ -395,6 +451,7 @@ export function buildChecklist({
     const checks = [];
     const missingSteps = [];
     const titles = { issues: {}, pulls: {} };
+    let prTextBudget = MAX_PR_TEXT_TOTAL;
     for (const [issueNumber, linked] of included) {
         if (!linked.needsManualQa) continue;
         const issue = byIssue.get(issueNumber);
@@ -403,8 +460,20 @@ export function buildChecklist({
         const pullSteps = [];
         for (const pull of [...linked.uiPulls].sort((a, b) => a.number - b.number)) {
             if (pull.title) titles.pulls[pull.number] = safeText(pull.title);
-            for (const item of prQaSteps(pull.body))
+            for (const item of prQaSteps(pull.body)) {
+                prTextBudget -= item.step.length + (item.expected?.length ?? 0) + 24;
+                if (prTextBudget < 0) {
+                    pullSteps.push({
+                        issue: issueNumber,
+                        pull: pull.number,
+                        step: `more QA steps are in the body of PR #${pull.number}`,
+                        expected:
+                            pull.html_url ?? `https://github.com/${REPOSITORY}/pull/${pull.number}`,
+                    });
+                    break;
+                }
                 pullSteps.push({ issue: issueNumber, pull: pull.number, ...item });
+            }
         }
         // The Acceptance fallback only when neither the Issue nor any of its UI PRs has QA steps.
         if (steps.length === 0 && pullSteps.length === 0) {

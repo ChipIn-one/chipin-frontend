@@ -670,6 +670,83 @@ describe('scope and canonical QA identity', () => {
         expect(steps).toHaveLength(20);
     });
 
+    test('PR QA parsing skips unfilled items, HTML comments and matched code fences', () => {
+        expect(prQaSteps('## QA (owner)\r\n- [ ]\r\n- [ ] \r\n- [ ] QA:\r\n')).toEqual([]);
+        expect(prQaSteps('## QA\n<!--\n- hidden example\n-->\n<!-- one line -->\n- real')).toEqual([
+            { step: 'real' },
+        ]);
+        expect(
+            prQaSteps(
+                '## QA\n````\n```\n- in a four-backtick fence\n```\n````\n```\n~~~\n- in a fence\n```\n- after the fences',
+            ),
+        ).toEqual([{ step: 'after the fences' }]);
+    });
+
+    test('PR QA parsing keeps numbered items, joins nested items to their parent and drops only whole None items', () => {
+        expect(
+            prQaSteps(
+                [
+                    '## QA',
+                    '1. Open Settings',
+                    '   - Expected: toggle visible',
+                    '2) Switch theme',
+                    '   then reload => theme survives',
+                    '+ Plus bullet',
+                    '- None of the rows overflow at 320px',
+                    '- N/A for desktop: check mobile',
+                    '- None (CI only)',
+                    '- None.',
+                ].join('\n'),
+            ),
+        ).toEqual([
+            { step: 'Open Settings; Expected: toggle visible' },
+            { step: 'Switch theme; then reload', expected: 'theme survives' },
+            { step: 'Plus bullet' },
+            { step: 'None of the rows overflow at 320px' },
+            { step: 'N/A for desktop: check mobile' },
+        ]);
+    });
+
+    test('PR text never cross-references Issues and is cut by code point', () => {
+        const [ref, emoji] = prQaSteps(
+            `## QA\n- see #12 and other/repo#3\n- ${'a'.repeat(299)}😀😀`,
+        );
+        expect(ref.step).toBe('see #\u200b12 and other/repo#\u200b3');
+        expect(Array.from(emoji.step)).toHaveLength(300);
+        expect(emoji.step.endsWith('😀')).toBe(true);
+    });
+
+    test('PR steps share one size budget; past it each PR gets one pointer to its body', () => {
+        const long = Array.from(
+            { length: 20 },
+            (_, i) => `- ${i} ${'s'.repeat(290)} => ${'e'.repeat(290)}`,
+        ).join('\n');
+        const pulls = Array.from({ length: 6 }, (_, i) => ({
+            ...pull,
+            number: 30 + i,
+            commits: [String(i)],
+            html_url: `https://github.com/ChipIn-one/chipin-frontend/pull/${30 + i}`,
+            body: `## QA\n${long}`,
+        }));
+        const plan = buildChecklist({
+            files: ['src/App.tsx'],
+            commits: pulls.map(item => item.commits[0]),
+            pulls,
+            issues: [{ ...issue, body: '' }],
+        });
+        const pointers = plan.checks.filter(item => item.step.startsWith('more QA steps'));
+        expect(pointers.map(item => item.pull)).toEqual([33, 34, 35]);
+        expect(pointers[0].expected).toBe('https://github.com/ChipIn-one/chipin-frontend/pull/33');
+        const body = buildIssueBody({
+            sha: SHA,
+            baselineSha: BASE,
+            deploymentId: 42,
+            url: status.environment_url,
+            plan,
+        });
+        expect(body.length).toBeLessThan(65536);
+    });
+
     test('an Issue without QA lines uses the QA steps of its UI PRs, grouped per PR, and skips the Acceptance fallback', () => {
         const epic = {
             number: 12,
