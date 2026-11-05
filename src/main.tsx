@@ -5,7 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from 'styled-components';
 
-import { persistedUserId } from 'app/providers/persistedUserId';
+import { usePersistedUserId } from 'app/providers/persistedUserId';
 import { RestoreGate } from 'app/providers/RestoreGate';
 import { UserQueryProvider } from 'app/providers/UserQueryProvider';
 import { darkThemeStyled, lightThemeStyled } from 'constants/styled-themes';
@@ -13,7 +13,6 @@ import AppRouter from 'features/routing';
 import { isThemeDark } from 'helpers/theme';
 import { useIsMobile } from 'hooks/common';
 import GlobalHooks from 'pages/GlobalHooks';
-import { useUsersStore } from 'store/users-store';
 
 import BackgroundBox from 'basics/BackgroundBox';
 import PWABadge from 'basics/PWABadge';
@@ -36,8 +35,7 @@ const Main = () => {
     const themeName = isDarkTheme ? 'dark' : 'light';
     const styledThemeParams = isDarkTheme ? darkThemeStyled : lightThemeStyled;
     const isMobile = useIsMobile();
-    // Re-read on every users-store change: sign-in, sign-out and expiry all update it.
-    const userId = useUsersStore(state => persistedUserId(state.localUser?.id));
+    const userId = usePersistedUserId();
 
     return (
         <UserQueryProvider userId={userId}>

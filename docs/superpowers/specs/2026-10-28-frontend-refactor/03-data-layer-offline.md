@@ -250,6 +250,9 @@ is silently lost. Therefore:
 - `app/providers/UserQueryProvider.tsx`: no `userId` → `QueryClientProvider` without persistence; with one →
   `<QueryClientProvider key={userId} client={clientFor(userId)}>`, and restore/subscribe with `persistOptions(userId)` happen outside
   React before the router is created (§1.6, `bootstrapUserCache`). Two users never share one `QueryClient`.
+  `userId` is set only while the session hint is true (`usePersistedUserId`, re-read on every auth transition):
+  after an expiry or a sign-out the app runs on the anonymous client; the user's client stays in memory and its
+  cache in IndexedDB (deleted only by `clearUserData`, 03-7b).
   `onRestored` resolves `restoreReady` (§1.6). The outbox is restored and started **only by the leader tab** on acquiring the
   lock (§2.3): `restoreOutbox(client, userId).then(() => client.resumePausedMutations())`.
 - `clearUserData(userId)` (`shared/offline/clearUserData.ts`), strictly in this order: (1) unsubscribe the persister
@@ -1167,7 +1170,7 @@ Each PR ≤ ~400 lines of diff (excluding the generated file) and is released in
 | 03-4b | the transport `shared/api/wireJson.ts` (`lossless-json`, reviver by `wireFields.ts`, stringify), the `api()` wrapper on `encodePathSegment` + per-request transforms, `client.test.ts`, sweep §8; lint (C1-11, §4.3): `moneyFromWire`/`moneyToWire` are imported only in `entities/*/model/**` (`no-restricted-imports` `importNames` for the other paths, `error`) | 03-4a |
 | 03-5 | QueryClient, provider without persistence, `renderWithQueryClient`, eslint-plugin-query, landing-stats pilot, delete `store/index.ts` | 03-4b |
 | 03-6 | `connectivityStore` (from `onlineManager`), error classification, `OfflineBanner`, a page for backend-down only | 03-5 |
-| 03-7a | the cache persister (string-storage + `persistCodec`, `retry`→Sentry, `trimmingPersister`), buster §1.4, `LocalUser.id` + zod, `restoreReady` + the hydration gate, `shared/offline/network.ts` (`isNetworkUsable`, `setOnline`, probe, lint `navigator.onLine`), stubs `isEntryWithPendingOp = () => false` and a no-op `outboxGate` | 03-5 |
+| 03-7a | the cache persister (string-storage + `persistCodec`, `retry`→Sentry, `trimmingPersister`), buster §1.4, `LocalUser.id` + a typed hand-written reader, `restoreReady` + the hydration gate, `shared/offline/network.ts` (`isNetworkUsable`, `setOnline`, probe, lint `navigator.onLine`), stubs `isEntryWithPendingOp = () => false` and a no-op `outboxGate` | 03-5 |
 | 03-7b | `clearUserData` (order §1.5, including legacy stores and the draft), the "reason → what is deleted" table + a test per row, the draft with `ownerId`, expiry: only `role`, offline cold start + `sessionMode`, the account-switch dialog (without the outbox part) | 03-7a |
 | 03-8 | dashboard + currency rates. Lands only after 03-7b: since 03-7a every user has a persisted client of their own (`clientFor`); after a sign-out the tree runs on a fresh anonymous client while X's client and IDB key survive until `clearUserData` (03-7b), so clearing one client from `resetAuthScopedStores` (the earlier bridge) no longer reaches them | 03-7b |
 | 03-9 | users-store; after 03-7b for the same reason as 03-8 | 03-7b |

@@ -3,19 +3,23 @@
 // sign-in check must not refresh the session, and the callback page must not exchange the code, twice.
 import { useEffect } from 'react';
 import { Theme } from '@radix-ui/themes';
-import { render, screen, waitFor } from '@testing-library/react';
+import type { QueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { get } from 'idb-keyval';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import { exchangeApiGoogleOAuthCode } from 'api/chipin';
 import type { SelfUser } from 'api/chipin.types';
-import { persistedUserId } from 'app/providers/persistedUserId';
+import { usePersistedUserId } from 'app/providers/persistedUserId';
 import { UserQueryProvider } from 'app/providers/UserQueryProvider';
 import { LS_KEY_AUTH_SESSION_HINT, LS_KEY_USER } from 'constants/localstorage';
-import { LocalStorage, saveLocalUser } from 'helpers/localStorage';
+import { establishAuthSession } from 'helpers/authSession';
+import { hasAuthSessionHint, LocalStorage, saveLocalUser } from 'helpers/localStorage';
 import { useCheckSignIn } from 'hooks/useCheckSignIn';
 import { OAuthCallbackPage } from 'pages/oauth-callback-page';
+import { clientFor } from 'shared/offline/restore';
 import { useAuthStore } from 'store/authStore';
 import { useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
@@ -75,13 +79,20 @@ const MountCounter = () => {
     return null;
 };
 
+const clients: QueryClient[] = [];
+const ClientProbe = () => {
+    clients.push(useQueryClient());
+    return null;
+};
+const currentClient = (): QueryClient | undefined => clients[clients.length - 1];
+
 const DESTINATION_TEXT = 'destination';
 const Destination = () => <p>{DESTINATION_TEXT}</p>;
 
 // What main.tsx does: the provider follows `localUser.id` from the users store, the router is
 // inside it (a MemoryRouter even restarts at its initial entry on the remount).
 const App = ({ initialEntry = '/' }: { initialEntry?: string }) => {
-    const userId = useUsersStore(state => persistedUserId(state.localUser?.id));
+    const userId = usePersistedUserId();
 
     return (
         <Theme>
@@ -89,6 +100,7 @@ const App = ({ initialEntry = '/' }: { initialEntry?: string }) => {
                 <MemoryRouter initialEntries={[initialEntry]}>
                     <RestoreGate>
                         <MountCounter />
+                        <ClientProbe />
                         <SignInCheck />
                         <Routes>
                             <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
@@ -118,6 +130,7 @@ const mockSignedInFetches = (id: string) => {
 
 beforeEach(() => {
     mounts = 0;
+    clients.length = 0;
     LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
     // A user cached before 03-7a: settings, no id.
     LocalStorage.remove(LS_KEY_USER);
@@ -150,7 +163,16 @@ test('the first id after boot: one session refresh, then the user client with it
     expect(fetchSetUser).toHaveBeenCalledOnce();
 });
 
+// `establishAuthSession` is mocked; like the real one it writes the session hint.
+const establishWritesHint = () => {
+    vi.mocked(establishAuthSession).mockImplementation(() => {
+        LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
+    });
+};
+
 test('a fresh OAuth sign-in: the remounted callback page does not exchange the code twice', async () => {
+    LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, false);
+    establishWritesHint();
     useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'missing' });
     LocalStorage.remove(LS_KEY_USER);
     useUsersStore.getState().setInitialUsersStore();
@@ -167,7 +189,9 @@ test('a fresh OAuth sign-in: the remounted callback page does not exchange the c
     await waitFor(() => {
         expect(get).toHaveBeenCalledWith('chipin:rq:oauth-user');
     });
+    // Hint false → true and the first id: one remount onto the user's client.
     expect(mounts).toBe(2);
+    expect(currentClient()).toBe(clientFor('oauth-user'));
     expect(exchangeApiGoogleOAuthCode).toHaveBeenCalledOnce();
     expect(fetchSetUser).toHaveBeenCalledOnce();
     expect(refresh).not.toHaveBeenCalled();
@@ -185,4 +209,57 @@ test('a cached id without a session hint: no IndexedDB read, no persisted client
     expect(await screen.findByText(DESTINATION_TEXT)).not.toBeNull();
     expect(get).not.toHaveBeenCalled();
     expect(mounts).toBe(1);
+});
+
+test('OAuth sign-in of a cached user whose user/friends fetches change nothing: the hint switch alone remounts', async () => {
+    LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, false);
+    establishWritesHint();
+    saveLocalUser({ id: 'cached-user', role: 'USER', settings: user.settings });
+    useUsersStore.getState().setInitialUsersStore();
+    useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'expired' });
+    vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue({
+        token: 'access-token',
+        is_new_user: false,
+    });
+    vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockResolvedValue();
+    vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
+    // The real actions swallow their errors and leave the users store as it is.
+    vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockResolvedValue(null);
+    vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockResolvedValue();
+
+    render(<App initialEntry="/oauth/callback?code=cached-user-code" />);
+
+    expect(await screen.findByText(DESTINATION_TEXT)).not.toBeNull();
+    expect(useAuthStore.getState().status).toBe('authenticated');
+    expect(currentClient()).toBe(clientFor('cached-user'));
+    expect(get).toHaveBeenCalledWith('chipin:rq:cached-user');
+    expect(exchangeApiGoogleOAuthCode).toHaveBeenCalledOnce();
+});
+
+test("expiry: X's client → anonymous; the hint back with the same id → X's memoized client", async () => {
+    saveLocalUser({ id: 'expiring-user', role: 'USER', settings: user.settings });
+    useUsersStore.getState().setInitialUsersStore();
+    useAuthStore.setState({ status: 'authenticated', unauthReason: undefined });
+
+    render(<App />);
+    await screen.findByText(DESTINATION_TEXT);
+    const userClient = clientFor('expiring-user');
+    expect(currentClient()).toBe(userClient);
+
+    act(() => {
+        useAuthStore.getState().expireSession();
+    });
+    await screen.findByText(DESTINATION_TEXT);
+
+    expect(hasAuthSessionHint()).toBe(false);
+    expect(useUsersStore.getState().localUser?.id).toBe('expiring-user');
+    expect(currentClient()).not.toBe(userClient);
+
+    act(() => {
+        LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
+        useAuthStore.setState({ status: 'authenticated', unauthReason: undefined });
+    });
+    await screen.findByText(DESTINATION_TEXT);
+
+    expect(currentClient()).toBe(userClient);
 });
