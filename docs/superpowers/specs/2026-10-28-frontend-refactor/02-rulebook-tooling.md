@@ -99,7 +99,7 @@ Consequences:
 | `react-refresh/only-export-components` | c | HMR DX only |
 | the other `jsx-a11y/recommended` rules | c | no autofix, noise on Radix |
 | the other `recommendedTypeChecked` rules (`unbound-method`, `restrict-template-expressions`, etc.) | c | noise without benefit |
-| `check-file-layout`: kebab-case/PascalCase names, `__tests__`, `*Props` in `types.ts` | c | no autofix; the script keeps only the `index.ts` depth and the ban on new `useConnect.ts` (b) |
+| `check-file-layout`: kebab-case/PascalCase names, `__tests__`, `*Props` in `types.ts` | c | no autofix; the script keeps only the `index.ts` depth (where an `index.ts` may exist; not an import rule, see D27) and the ban on new `useConnect.ts` (b) |
 
 Stylelint (introduced by 05-5, spec 05 §3; the same registry, C1-14):
 
@@ -259,7 +259,7 @@ Notation: `L:<rule>` — LINT, `CI:<script>`, `R` — REVIEW (invariant N), `RW`
 | 10.Recursive.* | recursive structure `components/ internal/ styled.ts types.ts` | RW (D11): `internal/` and `components/` without their own index.ts; `types.ts` only for types with ≥2 consumers; `styled.ts` stays until D14 |
 | 10.DirNaming.* | kebab-case, no parent compat files | DEL (§D0) |
 | 10.Ownership(dir).* | Props in `types.ts`, `internal/useConnect.ts` | **RW** (conflicts R3, R4): Props in the component file; delete `useConnect` |
-| 10.Index.* (9) | index in every directory, deep imports forbidden | RW (D11): only `src/<layer>/<slice>/index.ts`; inside a slice — relative imports of files; from outside — only the slice index or a file at the layer root |
+| 10.Index.* (9) | index in every directory, deep imports forbidden | RW (D11, D27): only `src/<layer>/<slice>/index.ts`; inside a slice — relative imports of files; another slice (`features/*`, `entities/*`) — only through its index; plain layers (`basics`, `components`, `helpers`, …) — direct file imports |
 | 10.InternalExports | helpers by name, `import * as helpers` forbidden | DEL (§D0) |
 | 10.Tests.* | co-location, no `__tests__` | DEL (§D0) |
 | 10.Adoption | rules for new/touched code | RW → 70 §Legacy |
@@ -545,7 +545,7 @@ A new `tsconfig.base.json` with the shared options: `strict`, `noUnused*`, `eras
 | `jsx-a11y` (6 rules), `jsx-no-literals`, the i18n attribute selector | 0 / 0 / 0, measured in 02-C8 (the 39 attribute hits were all test-harness markup in `*.test.tsx`; tests are excluded from the attribute selector) | new rules are immediately error; current violations — `--suppress-rule` in the same PR, fixed by slices | 02-C8 + per-slice PRs |
 | boundaries | ~30 | suppressions; the fix — 05-6 (basics → components/store/hooks/api, including `NavButton`, `BalanceSummaryText`), 04-5a (public-routes); routing → pages is not counted as a violation (element `app`) | 02-C9 |
 | `import-x/no-cycle` | known cycles `groupsStore`↔`activity-store`, `expenseModalStore`↔selectors (03:50) | suppressions; broken by 03-10/03-12 and 03-14 (C2-05) | 02-C9 |
-| `import-x/no-internal-modules` (allow-list) | 103 nested barrels | suppressions; before 02-D3a the rule is narrowed to slice entry points (D27: from outside a slice only through its `index.ts`, file imports allowed elsewhere), then the entries go away with 02-D3a–e (C2-05) | 02-C9 |
+| `import-x/no-internal-modules` (allow-list) | 103 nested barrels | suppressions; removed with its entries by 02-C12 (D27: slice entry stays enforced by the `boundaries` policies; file imports are allowed inside a slice and in plain layers), before 02-D3a–e | 02-C9 |
 | type-aware (`no-floating-promises`, `no-misused-promises`, `no-unsafe-*`) | 36 / 30 (incl. JSX) / 10 (5 assignment, 4 member-access, 1 return), measured in 02-C6 | suppressions in 02-C6; fix 02-C7a/b (C2-05) | 02-C6 |
 | `no-non-null-assertion` | 9 in 5 files | suppressions in 02-C6; fixed when the file is touched | 02-C6 |
 | default exports | 172 files, 314 imports, 14 lazy, 25 `vi.mock` | codemod `scripts/codemods/named-exports.mjs` (ts-morph, a temporary devDep): `export default X` → `export { X }`, `import X from` → `import { X } from`, lazy → `.then(m => ({ default: m.X }))`. `vi.mock` with `default` — by hand | 02-D2a basics(24), 02-D2b–c components(80), 02-D2d features(24), 02-D2e pages(42)+i18n+main |
@@ -610,9 +610,9 @@ Each PR releases independently. The size is a guideline, not a rule: one PR = on
 | **02-C9** | boundaries (with `shared-api`/`shared-lib`) + resolver + `import-x/no-cycle` + `import-x/no-internal-modules` + suppressions (~30 + cycles + barrels) + `generate-layers-doc.mjs` + probe fixtures | 02-C4 (`config/eslint/layers.js` appears when the config is split, A-39) |
 | **02-C10** | husky pre-commit + lint-staged (`--fix`, does not block) + FAST mode; delete pre-push; `fix`, `eslint-fix-staged.mjs`; the CI version-policy step; the `version-check.mjs` extension; the release section in release-qa.md. Amended (owner, 2026-11-05): the version comes from the git tag per ChipIn-one/.github#172; the release-branch version policy, the `version-check.mjs` extension and the release section in release-qa.md (the release order belongs to #172) are dropped from 02-C10. | 02-C4 |
 | **02-C11** | T4 `noUncheckedIndexedAccess` (39) | 02-C6 |
-| **02-C12** | project rules: `<img>`, `useStore()`/`useShallow`, `check-file-layout.mjs` (`index.ts` depth, ban on new `useConnect.ts`, baseline 17). The money rules are **not** included here — they are introduced by 03-1 (§4.3 of spec 03) | 02-C4 |
+| **02-C12** | project rules: `<img>`, `useStore()`/`useShallow`, `check-file-layout.mjs` (`index.ts` depth, ban on new `useConnect.ts`, baseline 17); removal of `import-x/no-internal-modules` and its suppression entries (D27). The money rules are **not** included here — they are introduced by 03-1 (§4.3 of spec 03) | 02-C4 |
 | **02-D2a–e** | default → named (codemod). Executed **after** 04-0 (the monorepo move), so as not to conflict with the rename. The codemod skips the files `src/store/expenseModal*` (`--exclude`) until 03-14 is merged (file-lock in `00-overview.md`); a layer is taken into work only when it has no open PRs of spec 03 (C2-14) | 02-C4, 04-0 |
-| **02-D3a–e** | nested barrels (codemod; removes the `no-internal-modules` entries from suppressions and adds none — needs the D27 narrowing first); `src/store/expenseModal*` — as in 02-D2, after 03-14 | 02-D2 of the corresponding layer |
+| **02-D3a–e** | nested barrels (codemod; adds no suppressions; needs 02-C12, which removes `no-internal-modules` per D27); `src/store/expenseModal*` — as in 02-D2, after 03-14 | 02-D2 of the corresponding layer |
 
 ## Tests / acceptance criteria
 
