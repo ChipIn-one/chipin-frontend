@@ -322,20 +322,19 @@ describe('query-key-literal (spec 03 §1.3)', () => {
         "export const a = useQuery({ queryKey: ['stats'], queryFn });",
         "export const b = queryOptions({ queryKey: ['groups', id] as const, queryFn });",
         "export const c = client.invalidateQueries({ queryKey: ['groups'] satisfies unknown[] });",
-        // Fine: keys from a factory, a spread of a factory key, another property's array.
+        "export const f = client.getQueryData(['stats']);",
+        "export const g = client.setQueryData(['stats'] as const, data);",
+        "export const h = client.getQueryState(['stats']);",
+        // Fine: keys from a factory (property and argument), an array in another property or
+        // in a later argument.
         'export const d = useQuery({ queryKey: statsKeys.all, queryFn });',
         "export const e = useQuery({ queryKey: groupKeys.detail(id), meta: { tags: ['x'] } });",
+        "export const i = client.setQueryData(statsKeys.all, ['x']);",
     ].join('\n');
 
     test.each([
-        [
-            'src/features/landing/A.tsx',
-            ['query-key-literal', 'query-key-literal', 'query-key-literal'],
-        ],
-        [
-            'src/entities/stats/A.test.tsx',
-            ['query-key-literal', 'query-key-literal', 'query-key-literal'],
-        ],
+        ['src/features/landing/A.tsx', Array(6).fill('query-key-literal')],
+        ['src/entities/stats/A.test.tsx', Array(6).fill('query-key-literal')],
         // The key factories themselves.
         ['src/entities/stats/api/queries.ts', []],
     ])('%s reports exactly %j', async (file, ids) => {
@@ -372,6 +371,11 @@ describe('store-object-without-shallow: fallbacks, nested conditionals, returns 
         'useAuthStore(s => { if (s.c) return {}; return s.a; })',
         'useAuthStore(function (s) { if (s.c) { return s.a; } else { return s.list ?? []; } })',
         'useAuthStore(s => { if (s.c) { return s.a; } else if (s.d) { return []; } return s.b; })',
+        'useAuthStore(s => s.list ?? ([] as Item[]))',
+        'useAuthStore(s => (s.list ?? []) as Item[])',
+        'useAuthStore(s => (s.c ? s.a : ({} satisfies Partial<Item>)))',
+        'useAuthStore(s => ({}) as Item)',
+        'useAuthStore(s => { return (s.list || []) as Item[]; })',
     ];
     const fine = [
         'useAuthStore(s => s.list ?? EMPTY)',
@@ -381,6 +385,8 @@ describe('store-object-without-shallow: fallbacks, nested conditionals, returns 
         'useAuthStore(s => (s.c ? (s.d ? s.a : s.e) : s.b))',
         'useAuthStore(s => { const f = () => { if (s.c) { return []; } return null; }; return f; })',
         'useAuthStore(s => { if (s.c) { return s.a; } return s.b; })',
+        'useAuthStore(s => s.list as Item[])',
+        'useAuthStore(s => (s.list ?? EMPTY) as Item[])',
     ];
 
     test.each(flagged)('flags %s', async expression => {

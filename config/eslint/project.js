@@ -226,15 +226,17 @@ const VALUE_STEPS = [
     { type: 'LogicalExpression', field: 'right', operator: FALLBACK_OPERATOR },
 ];
 const MAX_VALUE_DEPTH = 3;
+const TYPE_ASSERTION = '/^(?:TSAsExpression|TSSatisfiesExpression)$/';
 // Attribute chains `[a.type=X][a.operator=Y][a.b.type=...]` from the root node to a literal.
 const valuePaths = (depth, prefix = '') =>
     VALUE_STEPS.flatMap(({ type, field, operator }) => {
         const self = `${prefix ? `[${prefix}type='${type}']` : ''}${operator ? `[${prefix}operator=${operator}]` : ''}`;
         const path = `${prefix}${field}.`;
-        const leaf = {
-            root: prefix ? undefined : type,
-            attrs: `${self}[${path}type=${LITERAL_TYPE}]`,
-        };
+        // The literal, bare or under a type assertion (`s.list ?? ([] as Item[])`).
+        const leaves = [
+            `[${path}type=${LITERAL_TYPE}]`,
+            `[${path}type=${TYPE_ASSERTION}][${path}expression.type=${LITERAL_TYPE}]`,
+        ].map(leaf => ({ root: prefix ? undefined : type, attrs: `${self}${leaf}` }));
         const deeper =
             depth > 1
                 ? valuePaths(depth - 1, path).map(({ attrs }) => ({
@@ -243,12 +245,13 @@ const valuePaths = (depth, prefix = '') =>
                   }))
                 : [];
 
-        return [leaf, ...deeper];
+        return [...leaves, ...deeper];
     });
 const NEW_VALUE = `:matches(${[
     LITERAL,
     ...valuePaths(MAX_VALUE_DEPTH).map(({ root, attrs }) => `${root}${attrs}`),
 ].join(', ')})`;
+const ASSERTED = ':matches(TSAsExpression, TSSatisfiesExpression) > ';
 // Where a function body returns: directly, or inside `if`/`else` (with or without braces).
 const RETURN_CONTAINERS = [
     '',
@@ -280,11 +283,21 @@ export const projectRules = ({ appDir }) => [
     },
     {
         // spec 03 §1.3: query keys come only from the entity key factories.
+        // Its ignore glob is the 6th of MAX_SCOPES (6/6) of `no-restricted-syntax`: a new scoped
+        // entry must reuse an existing glob.
         id: 'query-key-literal',
-        // `queryKey: [...]`, `queryKey: [...] as const`, `queryKey: [...] satisfies ...`.
-        selector: ['', 'TSAsExpression > ', 'TSSatisfiesExpression > ']
-            .map(wrapper => `Property[key.name='queryKey'] > ${wrapper}ArrayExpression`)
-            .join(', '),
+        // `queryKey: [...]` (also `as const` / `satisfies`), and a literal key as the first
+        // argument of the QueryClient methods that take a key: `getQueryData([...])`, ...
+        selector: [
+            ...['', 'TSAsExpression > ', 'TSSatisfiesExpression > '].map(
+                wrapper => `Property[key.name='queryKey'] > ${wrapper}ArrayExpression`,
+            ),
+            // `:first-child` must be on the argument itself (the wrapper when there is one).
+            ...['ArrayExpression', 'TSAsExpression', 'TSSatisfiesExpression'].map(
+                argument =>
+                    `CallExpression[callee.property.name=/^(?:getQueryData|setQueryData|getQueryState)$/] > ${argument}:first-child${argument === 'ArrayExpression' ? '' : ' > ArrayExpression'}`,
+            ),
+        ].join(', '),
         ignores: [appGlob(appDir, 'src/entities/*/api/queries.ts')],
         message:
             'Build query keys with the entity key factory (`statsKeys.all`, `groupKeys.detail(id)`) from entities/<entity>/api/queries.ts.',
@@ -304,11 +317,14 @@ export const projectRules = ({ appDir }) => [
         // same for `useStore(store, s => …)`.
         // A function's other children are params (patterns, never these expressions).
         selector: [
-            `${STORE_SELECTOR} > ${NEW_VALUE}`,
-            ...RETURN_CONTAINERS.map(
-                container =>
-                    `${STORE_SELECTOR} > BlockStatement > ${container}ReturnStatement > ${NEW_VALUE}`,
-            ),
+            // The whole returned value may itself be asserted: `(s.list ?? []) as Item[]`.
+            ...['', ASSERTED].flatMap(asserted => [
+                `${STORE_SELECTOR} > ${asserted}${NEW_VALUE}`,
+                ...RETURN_CONTAINERS.map(
+                    container =>
+                        `${STORE_SELECTOR} > BlockStatement > ${container}ReturnStatement > ${asserted}${NEW_VALUE}`,
+                ),
+            ]),
             `${STORE_HOOK} > :matches(${LITERAL})`,
         ].join(', '),
         message:
@@ -338,13 +354,23 @@ export const projectConfig = ({ appDir }) => [
     },
 ];
 
-// There is no `warn` level (spec 02 §D0): the preset's warnings become errors.
+// There is no `warn` level (spec 02 §D0): the preset's warnings become errors, with or without
+// options (`'warn'`, `1`, `['warn', ...options]`); an unknown value shape fails the config load.
+const asError = (name, value) => {
+    const [severity, ...options] = Array.isArray(value) ? value : [value];
+
+    if (!['off', 'warn', 'error', 0, 1, 2].includes(severity)) {
+        throw new Error(
+            `@tanstack/query preset: unexpected severity for ${name}: ${JSON.stringify(value)}`,
+        );
+    }
+    const level = severity === 'warn' || severity === 1 ? 'error' : severity;
+
+    return options.length > 0 ? [level, ...options] : level;
+};
 const queryRecommendedRules = Object.fromEntries(
     pluginQuery.configs['flat/recommended'].flatMap(block =>
-        Object.entries(block.rules ?? {}).map(([name, value]) => [
-            name,
-            value === 'warn' || value === 1 ? 'error' : value,
-        ]),
+        Object.entries(block.rules ?? {}).map(([name, value]) => [name, asError(name, value)]),
     ),
 );
 

@@ -5,22 +5,30 @@ import { QueryClient } from '@tanstack/react-query';
 
 import { ApiError } from 'shared/lib/apiError';
 
-const MAX_NETWORK_RETRIES = 3;
-const MAX_SERVER_RETRIES = 2;
+import { isNetworkError } from './client';
+
+// TanStack calls `retry(failureCount, error)` after a failed attempt, `failureCount` from 0:
+// `failureCount < n` allows n retries, n + 1 attempts in all.
+const NETWORK_RETRIES = 3;
+const SERVER_RETRIES = 2;
 
 /**
- * Retry policy of every query: a network error (no HTTP response) up to 3 attempts; 5xx and
- * 409 `SYSTEM.CONFLICT` up to 2 (the default TanStack backoff); any other 4xx is final.
+ * Retry policy of every query: a network error (no HTTP response, not a cancellation) gets 3
+ * retries (4 attempts, ~7 s of default backoff); 5xx and 409 `SYSTEM.CONFLICT` get 2 retries
+ * (3 attempts, ~3 s). Everything else is final: other 4xx, a non-JSON 2xx
+ * (`ApiResponseFormatError`), an invalid path segment, a mapper error, a cancelled auth request.
  */
 export const queryRetry = (failureCount: number, error: unknown): boolean => {
     if (error instanceof ApiError) {
-        if (error.status >= 500 || (error.status === 409 && error.code === 'SYSTEM.CONFLICT')) {
-            return failureCount < MAX_SERVER_RETRIES;
-        }
-        return false;
+        return error.status >= 500 || (error.status === 409 && error.code === 'SYSTEM.CONFLICT')
+            ? failureCount < SERVER_RETRIES
+            : false;
     }
-    // TODO(03-7a): `!isNetworkUsable() || failureCount < 3` once shared/offline/network.ts exists.
-    return failureCount < MAX_NETWORK_RETRIES;
+    if (isNetworkError(error)) {
+        // TODO(03-7a): `!isNetworkUsable() || failureCount < 3` once shared/offline/network.ts exists.
+        return failureCount < NETWORK_RETRIES;
+    }
+    return false;
 };
 
 /** A new client for one app instance (03-7b: one client per user). */

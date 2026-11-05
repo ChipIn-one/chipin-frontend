@@ -49,7 +49,8 @@ export const SMOKE_SHORT = {
         // store bootstrap
         'src/root.tsx',
         'src/main.tsx',
-        'src/store/index.ts',
+        'src/app/providers/QueryProvider.tsx',
+        'src/shared/api/queryClient.ts',
         'src/pages/GlobalHooks.tsx',
         'src/hooks/useSyncUserSettings.tsx',
         // service worker / PWA

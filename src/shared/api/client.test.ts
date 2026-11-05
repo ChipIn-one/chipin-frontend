@@ -1,5 +1,5 @@
 import type { AxiosAdapter, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
-import { AxiosError, AxiosHeaders } from 'axios';
+import { AxiosError, AxiosHeaders, CanceledError } from 'axios';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { createWireAmount, currencyCode, isWireAmount, moneyFromWire } from 'shared/money';
@@ -11,6 +11,7 @@ import {
     ApiError,
     ApiResponseFormatError,
     InvalidPathSegmentError,
+    isNetworkError,
     publicApi,
 } from './client';
 import { apiInstance, initChipInApiInterceptors, publicApiInstance } from './http';
@@ -393,16 +394,38 @@ describe('through the installed interceptors (auth refresh, outage detection)', 
     });
 });
 
+describe('isNetworkError', () => {
+    test('is true only for an Axios error without a response that is not a cancellation', () => {
+        const response: AxiosResponse = {
+            data: '',
+            status: 503,
+            statusText: '',
+            headers: new AxiosHeaders(),
+            config: { headers: new AxiosHeaders() },
+        };
+
+        expect(isNetworkError(new AxiosError('Network Error', AxiosError.ERR_NETWORK))).toBe(true);
+        expect(isNetworkError(new AxiosError('timeout', AxiosError.ECONNABORTED))).toBe(true);
+        expect(isNetworkError(new CanceledError())).toBe(false);
+        expect(
+            isNetworkError(
+                new AxiosError('Bad', AxiosError.ERR_BAD_RESPONSE, undefined, {}, response),
+            ),
+        ).toBe(false);
+        expect(isNetworkError(new ApiError({ status: 503, payload: undefined, cause: null }))).toBe(
+            false,
+        );
+        expect(isNetworkError(new TypeError('x'))).toBe(false);
+    });
+});
+
+// The interceptors are installed once per module (`initChipInApiInterceptors` is idempotent): the
+// describe above installed them and cleared only the apiInstance ones, so publicApiInstance keeps
+// its outage-detection response interceptor here, as in the app.
 describe('publicApi() for public endpoints', () => {
     const originalPublicAdapter = publicApiInstance.defaults.adapter;
 
-    beforeAll(() => {
-        initChipInApiInterceptors(vi.fn());
-    });
-
     afterAll(() => {
-        apiInstance.interceptors.request.clear();
-        apiInstance.interceptors.response.clear();
         publicApiInstance.interceptors.response.clear();
     });
 
@@ -432,7 +455,7 @@ describe('publicApi() for public endpoints', () => {
         expect(lastRequest().headers.Authorization).toBeUndefined();
     });
 
-    test('an HTTP error is an ApiError, as with api()', async () => {
+    test('a 5xx goes through the outage health check and is an ApiError, as with api()', async () => {
         reply = {
             status: 500,
             data: '{"code":"SYSTEM.INTERNAL"}',
@@ -444,6 +467,7 @@ describe('publicApi() for public endpoints', () => {
             status: 500,
             code: 'SYSTEM.INTERNAL',
         });
+        expect(auth.checkBackendHealth).toHaveBeenCalledOnce();
     });
 });
 
@@ -452,6 +476,10 @@ describe('publicApi() for public endpoints', () => {
 export const typeChecks = (): void => {
     // @ts-expect-error -- /health defines no PUT (`put?: never`).
     void api('put', '/health');
+    // @ts-expect-error -- publicApi() accepts only `security: []` operations; /groups is secured.
+    void publicApi('get', '/groups');
+    // @ts-expect-error -- /auth/refresh is public only for POST (and defines no GET).
+    void publicApi('get', '/auth/refresh');
     // @ts-expect-error -- the required path param is missing (no opts).
     void api('get', '/groups/{groupId}/activities');
     // @ts-expect-error -- the required path param is missing (empty opts).
