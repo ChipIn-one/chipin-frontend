@@ -141,10 +141,12 @@ test('a refetch in flight does not overwrite a newer seeded user', async () => {
     await new Promise(resolve => setTimeout(resolve, 10));
     const fresh = { ...userWith(id, 'Fresh'), settings: { ...stale.settings, language: 'ru' } };
 
+    // As the store does: the new user goes to LocalUser, then into the query.
+    saveLocalUser({ id, role: 'USER', settings: fresh.settings });
     seedSelfUser(fresh);
     respond();
     await refetch;
 
     expect(client.getQueryData(usersKeys.self())).toEqual(fresh);
-    expect(getLocalUser()?.settings.language).toBe('en');
+    expect(getLocalUser()?.settings.language).toBe('ru');
 });

@@ -62,6 +62,7 @@ test("the users keys start with 'users' and follow the defaults table", () => {
     expect(options.refetchOnMount).toBe(false);
     // A reconnect reloads it through the store as well (`useCheckSignIn`): one request.
     expect(options.refetchOnReconnect).toBe(false);
+    expect(selfUserQueryOptions().refetchOnReconnect).toBe(false);
 });
 
 test('loads the self user as the domain model and keeps it in the persisted cache', async () => {

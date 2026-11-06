@@ -10,8 +10,9 @@ export const seedSelfUser = (user: SelfUser): void => {
     const updatedAt = Date.now();
 
     seedUserCache(user.id, client => {
-        // A refetch still in flight read the user before this change: cancelled (its state
-        // reverts synchronously), it can neither overwrite the entry nor write `LocalUser`.
+        // A refetch still in flight read the user before this change: cancelled, its state
+        // reverts synchronously, so it cannot overwrite the entry; and since the abort lands
+        // before its response resolves, its `queryFn` never writes `LocalUser`.
         void client.cancelQueries({ queryKey: usersKeys.self() });
         client.setQueryData(usersKeys.self(), user, { updatedAt });
     });
