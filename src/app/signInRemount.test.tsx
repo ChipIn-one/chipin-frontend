@@ -21,7 +21,6 @@ import { useCheckSignIn } from 'hooks/useCheckSignIn';
 import { OAuthCallbackPage } from 'pages/oauth-callback-page';
 import { clientFor } from 'shared/offline/restore';
 import { useAuthStore } from 'store/authStore';
-import { useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useUsersStore } from 'store/users-store';
 import { fakeAccessToken } from 'test/fakeAccessToken';
@@ -115,7 +114,6 @@ const App = ({ initialEntry = '/' }: { initialEntry?: string }) => {
 };
 
 const mockSignedInFetches = (id: string) => {
-    vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockResolvedValue();
     vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
     vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockResolvedValue();
     return vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockImplementation(() => {
@@ -222,7 +220,6 @@ test('OAuth sign-in of a cached user whose user/friends fetches change nothing: 
         token: fakeAccessToken('cached-user'),
         is_new_user: false,
     });
-    vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockResolvedValue();
     vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
     // The real actions swallow their errors and leave the users store as it is.
     vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockResolvedValue(null);

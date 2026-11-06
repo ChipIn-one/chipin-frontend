@@ -6,7 +6,7 @@ import { beforeEach, expect, test } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
-import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
+import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { useUsersStore } from 'store/users-store';
 
 import HeaderNav from './HeaderNav';
@@ -45,7 +45,7 @@ test.each([
     { appMode: APP_MODES.GROUP, expectedRoute: '/dashboard' },
 ])('opens $expectedRoute from the home link in $appMode mode', ({ appMode, expectedRoute }) => {
     const interaction = userEvent.setup();
-    useDashboardStore.setState({ appMode });
+    useUiPrefsStore.setState({ appMode });
 
     render(
         <MemoryRouter initialEntries={['/settings']}>

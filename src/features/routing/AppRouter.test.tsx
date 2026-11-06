@@ -7,7 +7,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { lightThemeStyled } from 'constants/styled-themes';
 import i18n from 'i18n';
 import { useAuthStore } from 'store/authStore';
-import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
+import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 
 import AppRouter from './AppRouter';
 
@@ -31,7 +31,7 @@ vi.mock('pages/GroupJoinPage', () => ({
 beforeEach(() => {
     document.documentElement.lang = 'en';
     useAuthStore.setState({ status: 'authenticated' });
-    useDashboardStore.setState({ appMode: APP_MODES.GROUP });
+    useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
     return i18n.changeLanguage('en');
 });
 

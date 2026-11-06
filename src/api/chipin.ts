@@ -2,12 +2,10 @@ import { apiPath } from './apiPath';
 import { AUTH_API_PATH, AUTH_CSRF_HEADERS } from './auth.constants';
 import { apiInstance } from './chipin.instance';
 import type {
-    ApiCurrencyRatesResponse,
     ApiGroupsResponse,
     ApiOAuthTokenPairResponse,
     ApiRefreshTokenPairResponse,
     CreateGroupParams,
-    Dashboard,
     Group,
     InviteToGroupParams,
     KickGroupMemberParams,
@@ -87,19 +85,4 @@ export const inviteApiUserToGroup = ({ inviteToken }: InviteToGroupParams): Prom
     return Promise.resolve()
         .then(() => apiInstance.post<Group>(apiPath`/groups/invite/${inviteToken}`))
         .then(response => response.data);
-};
-
-export const fetchApiDashboard = (signal?: AbortSignal): Promise<Dashboard> => {
-    return apiInstance.get<Dashboard>('/dashboard', { signal }).then(result => result.data);
-};
-
-export const fetchApiCurrencyRates = (signal?: AbortSignal): Promise<ApiCurrencyRatesResponse> => {
-    return apiInstance
-        .get<ApiCurrencyRatesResponse>('/currency-rates', {
-            params: {
-                base: 'USD',
-            },
-            signal,
-        })
-        .then(result => result.data);
 };

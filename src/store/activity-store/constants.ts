@@ -1,3 +1,0 @@
-const ACTIVITY_API_LIMIT = 20;
-
-export { ACTIVITY_API_LIMIT };

@@ -1,3 +1,6 @@
+/** Page size of the activity feeds (the server's dashboard preview has the same size). */
+const ACTIVITY_API_LIMIT = 20;
+
 const ACTIVITY_ACTIONS = {
     EXPENSE_CREATED: 'EXPENSE_CREATED',
     EXPENSE_UPDATED: 'EXPENSE_UPDATED',
@@ -43,7 +46,7 @@ type MemberKickedAction = typeof ACTIVITY_ACTIONS.MEMBER_KICKED;
 type MemberLeftAction = typeof ACTIVITY_ACTIONS.MEMBER_LEFT;
 type MembersAddedAction = typeof ACTIVITY_ACTIONS.MEMBERS_ADDED;
 
-export { ACTIVITY_ACTIONS, ACTIVITY_CATEGORIES };
+export { ACTIVITY_ACTIONS, ACTIVITY_API_LIMIT, ACTIVITY_CATEGORIES };
 export type {
     ActivityAction,
     ActivityCategory,

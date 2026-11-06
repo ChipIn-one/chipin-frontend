@@ -12,6 +12,7 @@ export {
     legacyExpenseBalanceChange,
     legacyPartitionEntries,
     legacyRateLookup,
+    legacyRatesFromDecimals,
     legacySumEntriesByCurrency,
     legacySummarizeEntries,
 } from './model/legacy';

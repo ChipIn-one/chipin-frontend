@@ -4,8 +4,7 @@ import { useLocation } from 'react-router-dom';
 
 import { PROJECT_NAME } from 'constants/chipin';
 import { getPreferredModeRoute, isNavigationRouteActive } from 'helpers/routes';
-import { selectIsSoloMode } from 'store/dashboardSelectors';
-import { useDashboardStore } from 'store/dashboardStore';
+import { selectIsSoloMode, useUiPrefsStore } from 'store/ui-prefs';
 import { selectCanAccessSolo, selectIsUserAdmin, useUsersStore } from 'store/users-store';
 
 import { NavButton } from 'basics/buttons';
@@ -24,7 +23,7 @@ const DesktopSidebar = () => {
     const location = useLocation();
     const { t } = useTranslation('common');
     const canAccessSolo = useUsersStore(selectCanAccessSolo);
-    const isSoloModeFromStore = useDashboardStore(selectIsSoloMode);
+    const isSoloModeFromStore = useUiPrefsStore(selectIsSoloMode);
     const isSoloMode = canAccessSolo && isSoloModeFromStore;
     const canShowDevMenu = useUsersStore(selectIsUserAdmin);
     const homeRoute = getPreferredModeRoute(isSoloMode);

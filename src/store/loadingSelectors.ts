@@ -5,11 +5,6 @@ export const selectAuthSignOutLoading = (s: LoadingStore) => s.auth.signOut === 
 export const selectAuthLogoutOtherDevicesLoading = (s: LoadingStore) =>
     s.auth.logoutOtherDevices === 'loading';
 
-export const selectDashboardLoading = (s: LoadingStore) => s.dashboard.data === 'loading';
-export const selectDashboardFetched = (s: LoadingStore) => s.dashboard.data === 'fetched';
-export const selectDashboardNextPageLoading = (s: LoadingStore) =>
-    s.dashboard.nextPage === 'loading';
-
 export const selectActivityLoading = (s: LoadingStore) => s.activity.data === 'loading';
 export const selectActivityFetched = (s: LoadingStore) => s.activity.data === 'fetched';
 export const selectActivityNextPageLoading = (s: LoadingStore) => s.activity.nextPage === 'loading';

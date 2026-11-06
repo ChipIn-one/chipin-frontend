@@ -30,11 +30,11 @@ import {
     UNAUTH_REASON,
     type UnauthReason,
 } from './authConstants';
-import { useDashboardStore } from './dashboardStore';
 import { useErrorsStore } from './errorsStore';
 import { useExpenseModalStore } from './expenseModalStore';
 import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
+import { useUiPrefsStore } from './ui-prefs';
 import { useUsersStore } from './users-store';
 
 export interface AuthStore {
@@ -63,7 +63,7 @@ let lastOAuthExchange: { code: string; promise: Promise<void> } | null = null;
 // cached user from localStorage, so a caller changes `LS_KEY_USER` before it.
 const resetAuthScopedStores = () => {
     useActivityStore.getState().resetActivity();
-    useDashboardStore.getState().setInitialDashboardStore();
+    useUiPrefsStore.getState().resetUiPrefs();
     useGroupsStore.getState().setInitialGroupsStore();
     useUsersStore.getState().setInitialUsersStore();
     useLoadingStore.getState().setInitialLoadingStore();
@@ -127,13 +127,12 @@ const dropOtherUserData = (nextUserId: string | null): boolean => {
 };
 
 const loadSignedInData = (isNewUser: boolean | null): Promise<void> => {
-    const { fetchSetDashboardData, setDefaultAppMode } = useDashboardStore.getState();
+    const { setDefaultAppMode } = useUiPrefsStore.getState();
     const { fetchSetGroups } = useGroupsStore.getState();
     const { fetchSetPremiumPromoRemaining, fetchSetUser, fetchSetFriends } =
         useUsersStore.getState();
 
     return Promise.all([
-        fetchSetDashboardData(),
         fetchSetGroups(),
         fetchSetUser().then(user => {
             if (user) {

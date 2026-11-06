@@ -5,8 +5,6 @@ import { ROUTES } from 'constants/routes';
 import { hasGroupExpenseTarget, isGroupExpenseTarget } from 'helpers/expenseTargets';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
-import { selectIsSoloMode } from 'store/dashboardSelectors';
-import { useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
 import {
     selectFriendsFetched,
@@ -15,6 +13,7 @@ import {
     selectUserSelfFetched,
 } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
+import { selectIsSoloMode, useUiPrefsStore } from 'store/ui-prefs';
 import { selectCanAccessSolo, useUsersStore } from 'store/users-store';
 
 const useAddExpenseAvailability = (pathname: string) => {
@@ -22,7 +21,7 @@ const useAddExpenseAvailability = (pathname: string) => {
         .groupId;
     const isFriendsPage = pathname === ROUTES.FRIENDS;
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
-    const isSoloModeFromStore = useDashboardStore(selectIsSoloMode);
+    const isSoloModeFromStore = useUiPrefsStore(selectIsSoloMode);
     const { groups, selectedGroup, hasConfirmedGroups } = useGroupsStore(
         useShallow(state => ({
             groups: state.groups,

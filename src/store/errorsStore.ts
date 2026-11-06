@@ -20,11 +20,6 @@ interface RequestErrors {
         kick: RequestError | null;
         cover: RequestError | null;
     };
-    dashboard: {
-        data: RequestError | null;
-        rates: RequestError | null;
-        nextPage: RequestError | null;
-    };
     activity: {
         data: RequestError | null;
         nextPage: RequestError | null;
@@ -79,7 +74,6 @@ const initialErrors: RequestErrors = {
         kick: null,
         cover: null,
     },
-    dashboard: { data: null, rates: null, nextPage: null },
     activity: {
         data: null,
         nextPage: null,

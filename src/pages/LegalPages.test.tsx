@@ -8,7 +8,7 @@ import type { UserSettings } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
-import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
+import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { useUsersStore } from 'store/users-store';
 
 import PrivacyPage from './PrivacyPage';
@@ -40,7 +40,7 @@ beforeEach(() => {
         localUser: { role: 'ADMIN', settings },
         friends: [],
     });
-    useDashboardStore.setState({ appMode: APP_MODES.GROUP });
+    useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
 });
 
 test.each([

@@ -16,7 +16,6 @@ import { outboxKeys, queryCacheKey } from 'shared/offline/constants';
 import { fakeAccessToken } from 'test/fakeAccessToken';
 
 import { onAccessTokenRefreshed, useAuthStore } from './authStore';
-import { useDashboardStore } from './dashboardStore';
 import { useExpenseModalStore } from './expenseModalStore';
 import { useGroupsStore } from './groupsStore';
 import { useUsersStore } from './users-store';
@@ -111,7 +110,6 @@ const expectDraftKept = (): void => {
 };
 
 const mockSignedInFetches = (id: string): void => {
-    vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockResolvedValue();
     vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
     vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockResolvedValue();
     vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockImplementation(() => {

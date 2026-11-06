@@ -5,7 +5,7 @@ import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { beforeEach, expect, test } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
-import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
+import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { useUsersStore } from 'store/users-store';
 
 import { useSyncAppMode } from './useSyncAppMode';
@@ -42,7 +42,7 @@ const TestHarness = () => {
 };
 
 beforeEach(() => {
-    useDashboardStore.setState({ appMode: APP_MODES.GROUP });
+    useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
     useUsersStore.setState({ user: null, localUser: null, friends: [] });
 });
 
@@ -61,14 +61,14 @@ test.each(['USER', 'ADMIN'] as const)(
             </MemoryRouter>,
         );
 
-        expect(useDashboardStore.getState().appMode).toBe(APP_MODES.GROUP);
+        expect(useUiPrefsStore.getState().appMode).toBe(APP_MODES.GROUP);
     },
 );
 
 test('sets Group mode when navigation reaches the dashboard route', () => {
     const interaction = userEvent.setup();
 
-    useDashboardStore.setState({ appMode: APP_MODES.SOLO });
+    useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
 
     render(
         <MemoryRouter initialEntries={['/settings']}>
@@ -77,12 +77,12 @@ test('sets Group mode when navigation reaches the dashboard route', () => {
     );
 
     return interaction.click(screen.getByRole('button', { name: DASHBOARD_LABEL })).then(() => {
-        expect(useDashboardStore.getState().appMode).toBe(APP_MODES.GROUP);
+        expect(useUiPrefsStore.getState().appMode).toBe(APP_MODES.GROUP);
     });
 });
 
 test('preserves the active mode on a route without its own mode', () => {
-    useDashboardStore.setState({ appMode: APP_MODES.SOLO });
+    useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
 
     render(
         <MemoryRouter initialEntries={['/settings']}>
@@ -90,5 +90,5 @@ test('preserves the active mode on a route without its own mode', () => {
         </MemoryRouter>,
     );
 
-    expect(useDashboardStore.getState().appMode).toBe(APP_MODES.SOLO);
+    expect(useUiPrefsStore.getState().appMode).toBe(APP_MODES.SOLO);
 });

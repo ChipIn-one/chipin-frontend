@@ -1,9 +1,10 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, test } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
-import { useDashboardStore } from 'store/dashboardStore';
+import { currencyRatesKeys } from 'entities/currency-rates';
 import { useUsersStore } from 'store/users-store';
+import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
 
 import ExpensePreferencesSection from './ExpensePreferencesSection';
 
@@ -35,18 +36,16 @@ const user = {
 
 test('keeps the selected default category visible but disabled when categories are skipped', () => {
     useUsersStore.setState({ user, localUser: null, friends: [] });
-    useDashboardStore.setState(state => ({
-        ...state,
-        currencies: {
-            base: 'USD',
-            timestamp: 1,
-            fetchedAt: 1,
-            stale: false,
-            rates: { USD: 1, EUR: 0.9 },
-        },
-    }));
+    const client = createTestQueryClient();
 
-    render(<ExpensePreferencesSection isLoading={false} />);
+    client.setQueryData(currencyRatesKeys.all, {
+        base: 'USD',
+        timestamp: 1,
+        fetchedAt: 1,
+        stale: false,
+        rates: { USD: '1', EUR: '0.9' },
+    });
+    renderWithQueryClient(<ExpensePreferencesSection isLoading={false} />, client);
 
     const categoryButton = screen.getByRole('button', { name: /Food/i });
 

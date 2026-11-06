@@ -2,13 +2,14 @@ import { create } from 'zustand';
 
 import * as activityApi from 'api/activityApi';
 import * as ledgerApi from 'api/ledgerApi';
+import { ACTIVITY_API_LIMIT } from 'constants/activity';
 import { normalizeApiError } from 'helpers/errors';
 
-import { useDashboardStore } from '../dashboardStore';
 import { useErrorsStore } from '../errorsStore';
 import { mapActivityExpenseToModalState } from '../expenseModalEditMapping';
 import type { ExpenseModalEditInitialization, ExpenseModalSource } from '../expenseModalStore';
 import { useGroupsStore } from '../groupsStore';
+import { invalidateDashboard } from '../internal/dashboardQueryBridge';
 import { createRequestChannel } from '../internal/resourceRequests';
 import { useLoadingStore } from '../loadingStore';
 import {
@@ -18,7 +19,6 @@ import {
     useUsersStore,
 } from '../users-store';
 
-import { ACTIVITY_API_LIMIT } from './constants';
 import { initialState } from './initialState';
 import type {
     ActivityStore,
@@ -44,7 +44,7 @@ const refreshFinancialData = (
     { groupId, parentActivityId }: FinancialRefreshContext,
 ): Promise<void> => {
     const requests: Promise<unknown>[] = [
-        useDashboardStore.getState().fetchSetDashboard(true),
+        invalidateDashboard(),
         activityState.fetchSetActivity(true),
     ];
 

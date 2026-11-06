@@ -1,16 +1,26 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { expect, test, vi } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
+import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
 import { useUsersStore } from 'store/users-store';
 import { getOrThrow } from 'test/getOrThrow';
+import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
 
 import SettingsPage from './SettingsPage';
 
 import 'i18n/index';
+
+// Rates already loaded: the currency picker does not request them.
+const ratesClient = () => {
+    const client = createTestQueryClient();
+
+    client.setQueryData(currencyRatesKeys.all, EMPTY_CURRENCY_RATES);
+    return client;
+};
 
 vi.mock('helpers/pwa', () => ({
     checkIsPwaInstalled: () => false,
@@ -38,12 +48,13 @@ const settings = {
 } satisfies UserSettings;
 
 const renderSettings = () => {
-    render(
+    renderWithQueryClient(
         <MemoryRouter>
             <ThemeProvider theme={lightThemeStyled}>
                 <SettingsPage />
             </ThemeProvider>
         </MemoryRouter>,
+        ratesClient(),
     );
 };
 
