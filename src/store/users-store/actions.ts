@@ -259,7 +259,7 @@ const useUsersStore = create<UsersStore>((set, get) => ({
     },
     extendUserSubscriptionByDay: () => {
         // The UI reads the query: extend the user it shows.
-        const user = getCachedSelfUser() ?? get().user;
+        const user = getCachedSelfUser(get().localUser?.id) ?? get().user;
 
         if (!user) {
             return;

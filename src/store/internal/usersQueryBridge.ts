@@ -10,13 +10,20 @@ export const seedSelfUser = (user: SelfUser): void => {
     const updatedAt = Date.now();
 
     seedUserCache(user.id, client => {
+        // A refetch still in flight read the user before this change: cancelled (its state
+        // reverts synchronously), it can neither overwrite the entry nor write `LocalUser`.
+        void client.cancelQueries({ queryKey: usersKeys.self() });
         client.setQueryData(usersKeys.self(), user, { updatedAt });
     });
 };
 
-/** The cached self user of the signed-in user (`LocalUser.id`), for legacy store actions. */
-export const getCachedSelfUser = (): SelfUser | undefined => {
-    const userId = getLocalUser()?.id;
+/**
+ * The cached self user of this tab's user, for legacy store actions: the users store's in-memory
+ * id first (another tab may switch the shared `LocalUser`), then `LocalUser.id`. The id comes in
+ * as an argument: the bridge does not import the users store (a cycle).
+ */
+export const getCachedSelfUser = (inMemoryUserId: string | undefined): SelfUser | undefined => {
+    const userId = inMemoryUserId ?? getLocalUser()?.id;
     const client = userId === undefined ? undefined : cachesByUser.get(userId)?.client;
 
     return client?.getQueryData<SelfUser>(usersKeys.self());

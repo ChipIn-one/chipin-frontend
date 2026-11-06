@@ -22,11 +22,16 @@ export const usersKeys = {
     premiumPromo: () => [...usersKeys.all, 'premiumPromo'] as const,
 };
 
-// A refetch keeps the cached `LocalUser` (settings, role) in step, but only for the user it
-// belongs to: after an account switch the previous user's response writes nothing.
+// A refetch keeps the cached `LocalUser` in step, but only for the user it belongs to (after an
+// account switch the previous user's response writes nothing), and it never brings back a role
+// the cache dropped (an expiry clears it, spec 03 §1.5).
 const syncLocalUser = (user: SelfUser): SelfUser => {
-    if (getLocalUser()?.id === user.id) {
-        saveLocalUser(toLocalUser(user));
+    const cached = getLocalUser();
+
+    if (cached?.id === user.id) {
+        const next = toLocalUser(user);
+
+        saveLocalUser(cached.role === undefined ? { id: next.id, settings: next.settings } : next);
     }
     return user;
 };
@@ -37,8 +42,10 @@ export const selfUserQueryOptions = () =>
         staleTime: USERS_QUERY_DEFAULTS.self.staleTime,
         // LEGACY until 03-9b: the users store loads the self user at session start (it learns the
         // user id that picks the QueryClient) and seeds this entry, so a mount with data does not
-        // send a second request. Focus and reconnect still refetch a stale entry.
+        // send a second request; it reloads it on reconnect too (`useCheckSignIn`). A focus still
+        // refetches a stale entry.
         refetchOnMount: false,
+        refetchOnReconnect: false,
         queryFn: ({ signal }) =>
             api('get', '/users/self', { signal }).then(toSelfUser).then(syncLocalUser),
     });

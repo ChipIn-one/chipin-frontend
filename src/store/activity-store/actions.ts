@@ -96,7 +96,7 @@ const createExpense = (get: () => ActivityStore, params: CreateExpenseParams): P
 const getExpenseEditSource = (): ExpenseModalSource => {
     const usersState = useUsersStore.getState();
     const groupsState = useGroupsStore.getState();
-    const currentUser = getCachedSelfUser() ?? null;
+    const currentUser = getCachedSelfUser(usersState.localUser?.id) ?? null;
     // The self query's settings once it has data, else the cached user's (as the UI reads them).
     const settings = currentUser?.settings ?? getLocalUser()?.settings ?? null;
 

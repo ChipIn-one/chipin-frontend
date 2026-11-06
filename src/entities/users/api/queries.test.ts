@@ -60,6 +60,8 @@ test("the users keys start with 'users' and follow the defaults table", () => {
     expect(options.staleTime).toBe(5 * 60_000);
     // The users store loads the self user at session start and seeds the entry (03-9b removes it).
     expect(options.refetchOnMount).toBe(false);
+    // A reconnect reloads it through the store as well (`useCheckSignIn`): one request.
+    expect(options.refetchOnReconnect).toBe(false);
 });
 
 test('loads the self user as the domain model and keeps it in the persisted cache', async () => {
@@ -111,4 +113,13 @@ test("a refetch updates the cached LocalUser of the same user, never another use
     await new QueryClient().fetchQuery(selfUserQueryOptions());
 
     expect(getLocalUser()).toEqual({ id: 'user-2', role: 'USER', settings: otherSettings });
+});
+
+test('a refetch never brings back a role the cached user dropped (session expiry)', async () => {
+    serveSelf(wireUser);
+    saveLocalUser({ id: 'user-1', settings: wireSettings });
+
+    await new QueryClient().fetchQuery(selfUserQueryOptions());
+
+    expect(getLocalUser()).toEqual({ id: 'user-1', settings: wireSettings });
 });
