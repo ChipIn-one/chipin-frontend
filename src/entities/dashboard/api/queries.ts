@@ -2,17 +2,20 @@
 // persisted (the feed as its first page only, `trimmingPersister`). `dashboardKeys.all`
 // invalidates both after a ledger or group change. The feed key stays `['dashboard','activity']`
 // until 03-12 moves it to `activity.self` (spec 03 §1.2, §6 row 2).
+import { useEffect } from 'react';
 import type { InfiniteData, Query, QueryClient } from '@tanstack/react-query';
 import {
     infiniteQueryOptions,
     queryOptions,
     useInfiniteQuery,
     useQuery,
+    useQueryClient,
 } from '@tanstack/react-query';
 
 import { fetchActivityPreviews } from 'api/activityApi';
 import { ACTIVITY_API_LIMIT } from 'constants/activity';
 import { api } from 'shared/api/client';
+import { isNetworkUsable } from 'shared/offline/network';
 
 import { toDashboardBalances } from '../model/toDashboardBalances';
 import type { DashboardActivityPage } from '../model/types';
@@ -63,11 +66,17 @@ const firstPageOnly = <P>(
 
 // A refetch of an infinite query reloads every loaded page in turn. The feed is cut back to its
 // first page before a refetch, so a refetch is one request, as the legacy store's reload was.
-// The cut keeps the data's age and invalidation, so whether it refetches does not change.
+// The cut keeps the data's age and invalidation, so whether it refetches does not change. Offline
+// nothing is cut: the loaded pages stay readable until the network is back.
 const trimBeforeRefetch = (query: FeedQuery): boolean => {
     const { data, dataUpdatedAt, isInvalidated } = query.state;
 
-    if (data && data.pages.length > 1 && query.isStaleByTime(DASHBOARD_STALE_TIME)) {
+    if (
+        isNetworkUsable() &&
+        data &&
+        data.pages.length > 1 &&
+        query.isStaleByTime(DASHBOARD_STALE_TIME)
+    ) {
         // `manual`: a paused fetch keeps its status.
         query.setData(firstPageOnly(data), { updatedAt: dataUpdatedAt, manual: true });
         if (isInvalidated) {
@@ -85,7 +94,8 @@ export const dashboardActivityQueryOptions = () =>
         initialPageParam: firstPageParam(),
         queryFn: ({ pageParam, signal }) => fetchActivityPage(pageParam, signal),
         getNextPageParam: lastPage => lastPage.nextCursor,
-        // Focus and reconnect run these outside render, so they may cut the cache.
+        // Pinned to TanStack Query 5.105: these callbacks run only in `onFocus`/`onOnline`, never
+        // during render, so they may cut the cache (re-check on a TanStack upgrade).
         refetchOnWindowFocus: trimBeforeRefetch,
         refetchOnReconnect: trimBeforeRefetch,
     });
@@ -107,4 +117,19 @@ export const trimDashboardFeed = (client: QueryClient): void => {
 
 export const useDashboardBalancesQuery = () => useQuery(dashboardBalancesQueryOptions());
 
-export const useDashboardActivityQuery = () => useInfiniteQuery(dashboardActivityQueryOptions());
+/**
+ * The feed of the dashboard page. When the page unmounts, the feed is cut to its first page: the
+ * stale refetch of the next mount (`refetchOnMount` runs during render, it cannot cut) is then one
+ * request, not one per page loaded before.
+ */
+export const useDashboardActivityQuery = () => {
+    const client = useQueryClient();
+
+    useEffect(
+        () => () => {
+            trimDashboardFeed(client);
+        },
+        [client],
+    );
+    return useInfiniteQuery(dashboardActivityQueryOptions());
+};

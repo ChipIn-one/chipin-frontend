@@ -1,4 +1,10 @@
-import { dehydrate, focusManager, InfiniteQueryObserver, QueryClient } from '@tanstack/react-query';
+import {
+    dehydrate,
+    focusManager,
+    InfiniteQueryObserver,
+    onlineManager,
+    QueryClient,
+} from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { expect, test, vi } from 'vitest';
 
@@ -157,6 +163,42 @@ test('a focus while the feed is fresh keeps every loaded page', () => {
     } finally {
         unsubscribe();
         client.unmount();
+        focusManager.setFocused(undefined);
+    }
+});
+
+test('offline, a focus keeps every loaded page of a stale feed', async () => {
+    server.use(http.get('*/users/self/activity-previews', () => HttpResponse.error()));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const options = dashboardActivityQueryOptions();
+
+    client.setQueryData(
+        options.queryKey,
+        {
+            pages: [
+                { items: [preview('a')], nextCursor: 40 },
+                { items: [preview('b')], nextCursor: null },
+            ],
+            pageParams: [null, 40],
+        },
+        { updatedAt: Date.now() - 60_000 },
+    );
+    const observer = new InfiniteQueryObserver(client, { ...options, refetchOnMount: false });
+    const unsubscribe = observer.subscribe(() => undefined);
+
+    client.mount();
+    onlineManager.setOnline(false);
+    try {
+        focusManager.setFocused(false);
+        focusManager.setFocused(true);
+        // The client handles focus after resuming paused mutations (a microtask later).
+        await new Promise(resolve => setTimeout(resolve, 0));
+
+        expect(client.getQueryData(options.queryKey)?.pages).toHaveLength(2);
+    } finally {
+        unsubscribe();
+        client.unmount();
+        onlineManager.setOnline(true);
         focusManager.setFocused(undefined);
     }
 });

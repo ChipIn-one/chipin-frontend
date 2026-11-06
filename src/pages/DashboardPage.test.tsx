@@ -6,7 +6,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { ActivityFeedItem, Group, SelfUser } from 'api/chipin.types';
 import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
-import { dashboardKeys } from 'entities/dashboard';
+import { dashboardActivityQueryOptions, dashboardKeys } from 'entities/dashboard';
 import { useErrorsStore } from 'store/errorsStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
@@ -652,6 +652,37 @@ test('ACT-023 a failed next page keeps the feed with its inline Retry and no pag
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.getByTestId('activity-list').contains(retry)).toBe(true);
     expect(screen.queryByText('errors.loadTitle')).toBeNull();
+});
+
+test('ACT-023 a remount after 30 s refetches a feed of five loaded pages with one request', async () => {
+    resolveDashboardOnboardingData();
+    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    const page = (nextCursor: number | null) => ({ items: [activityItem], nextCursor });
+    client.setQueryData(dashboardActivityQueryOptions().queryKey, {
+        pages: [page(50), page(40), page(30), page(20), page(10)],
+        pageParams: [null, 50, 40, 30, 20],
+    });
+    const activityRequests = countRequests(ACTIVITY_URL, () => HttpResponse.json(page(50)));
+    countRequests(BALANCES_URL, () => HttpResponse.json({ balances: {} }));
+
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+        renderPage().unmount();
+        // Back on the dashboard after the 30 s staleTime: the mount refetches the feed.
+        vi.setSystemTime(Date.now() + 31_000);
+        renderPage();
+
+        await waitFor(() => {
+            expect(activityRequests).toHaveLength(1);
+        });
+        expect(activityRequests[0]?.searchParams.get('cursor')).toBeNull();
+        await waitFor(() => {
+            expect(client.getQueryState(dashboardKeys.activity())?.fetchStatus).toBe('idle');
+        });
+        expect(activityRequests).toHaveLength(1);
+    } finally {
+        vi.useRealTimers();
+    }
 });
 
 test('renders the shared profile greeting directly in the dashboard side panel at all breakpoints', () => {
