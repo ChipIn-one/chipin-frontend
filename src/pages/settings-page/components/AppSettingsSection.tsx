@@ -7,8 +7,8 @@ import { userTheme } from 'entities/users';
 import { applySwUpdate } from 'helpers/swUpdates';
 import type { ThemeName } from 'helpers/theme';
 import { useUserSetting } from 'hooks/useSelfUser';
+import { useUpdateSelf } from 'hooks/useUserMutations';
 import { usePwaStore } from 'store/pwaStore';
-import { useUsersStore } from 'store/users-store';
 
 import SegmentedControl from 'components/SegmentedControl';
 
@@ -19,13 +19,13 @@ interface Props {
 const AppSettingsSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
     const isSwUpdateAvailable = usePwaStore(s => s.isSwUpdateAvailable);
-    const setUserSettings = useUsersStore(state => state.setUserSettings);
+    const { updateSelf } = useUpdateSelf();
     const theme = useUserSetting(userTheme);
 
     const onChangeTheme = (value: string) => {
         const nextTheme = value as ThemeName;
 
-        void setUserSettings({ settings: { theme: nextTheme } });
+        void updateSelf({ settings: { theme: nextTheme } });
     };
 
     return (

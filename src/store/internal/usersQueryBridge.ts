@@ -1,8 +1,8 @@
-// Bridge (spec 03 §6 row 3): the users store still loads the self user at session start and runs
-// the profile and friend mutations (until 03-9b); what it gets lands in `users.self` on that
+// Bridge (spec 03 §6 row 3): the users store still loads the self user at session start (until
+// 03-9b2; the profile and friend mutations are `entities/users` mutations); what it gets lands in `users.self` on that
 // user's QueryClient, which the UI reads, and a legacy change of the friends or their balances
 // invalidates `users.known` there. Never the reverse direction.
-import { type KnownUser, type SelfUser, usersKeys } from 'entities/users';
+import { isSelfWritePending, type KnownUser, type SelfUser, usersKeys } from 'entities/users';
 import { getLocalUser } from 'helpers/localStorage';
 import { cachesByUser, seedUserCache } from 'shared/offline/userCaches';
 
@@ -15,7 +15,10 @@ export const seedSelfUser = (user: SelfUser): void => {
         // reverts synchronously, so it cannot overwrite the entry; and since the abort lands
         // before its response resolves, its `queryFn` never writes `LocalUser`.
         void client.cancelQueries({ queryKey: usersKeys.self() });
-        client.setQueryData(usersKeys.self(), user, { updatedAt });
+        // A settings or avatar write still pending sets the user from its own (newer) response.
+        if (!isSelfWritePending(client)) {
+            client.setQueryData(usersKeys.self(), user, { updatedAt });
+        }
     });
 };
 

@@ -26,7 +26,7 @@ export const usersKeys = {
 // A refetch keeps the cached `LocalUser` in step, but only for the user it belongs to (after an
 // account switch the previous user's response writes nothing), and it never brings back a role
 // the cache dropped (an expiry clears it, spec 03 §1.5).
-const syncLocalUser = (user: SelfUser): SelfUser => {
+export const syncLocalUser = (user: SelfUser): SelfUser => {
     const cached = getLocalUser();
 
     if (cached?.id === user.id) {

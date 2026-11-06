@@ -39,9 +39,6 @@ interface RequestErrors {
     };
     users: {
         self: RequestError | null;
-        settings: RequestError | null;
-        removeFriend: RequestError | null;
-        avatar: RequestError | null;
     };
 }
 
@@ -82,7 +79,7 @@ const initialErrors: RequestErrors = {
     expense: { add: null, edit: null, update: null },
     ledger: { remove: null },
     settlement: { add: null },
-    users: { self: null, settings: null, removeFriend: null, avatar: null },
+    users: { self: null },
 };
 
 export const useErrorsStore = create<ErrorsStore>((set, get) => ({

@@ -1,12 +1,5 @@
-import { apiPath } from './apiPath';
 import { apiInstance } from './chipin.instance';
-import type { ApiSelfUserResponse, ApiUserResponse } from './chipin.raw.types';
-import type {
-    AcceptUserInviteParams,
-    RemoveKnownUserParams,
-    UpdateUserParams,
-    UploadUserAvatarParams,
-} from './chipin.types';
+import type { ApiSelfUserResponse } from './chipin.raw.types';
 
 const fetchUser = (signal?: AbortSignal): Promise<ApiSelfUserResponse> => {
     return apiInstance
@@ -14,46 +7,4 @@ const fetchUser = (signal?: AbortSignal): Promise<ApiSelfUserResponse> => {
         .then(response => response.data);
 };
 
-const updateUser = (params: UpdateUserParams): Promise<ApiSelfUserResponse> => {
-    return apiInstance
-        .patch<ApiSelfUserResponse>('/users/self', params)
-        .then(response => response.data);
-};
-
-const uploadUserAvatar = ({
-    file,
-    onProgress,
-}: UploadUserAvatarParams): Promise<ApiSelfUserResponse> => {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    return apiInstance
-        .put<ApiSelfUserResponse>('/users/self/avatar', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-            onUploadProgress: event => {
-                if (!event.total) {
-                    return;
-                }
-
-                const progress = Math.round((event.loaded * 100) / event.total);
-                onProgress?.(Math.min(Math.max(progress, 0), 100));
-            },
-        })
-        .then(response => response.data);
-};
-
-const acceptKnownUserInvite = ({
-    inviteToken,
-}: AcceptUserInviteParams): Promise<ApiUserResponse> => {
-    return Promise.resolve()
-        .then(() => apiInstance.post<ApiUserResponse>(apiPath`/users/invite/${inviteToken}`))
-        .then(response => response.data);
-};
-
-const removeKnownUser = ({ userId }: RemoveKnownUserParams): Promise<void> => {
-    return Promise.resolve()
-        .then(() => apiInstance.delete<void>(apiPath`/users/known-users/${userId}`))
-        .then(() => undefined);
-};
-
-export { acceptKnownUserInvite, fetchUser, removeKnownUser, updateUser, uploadUserAvatar };
+export { fetchUser };

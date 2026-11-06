@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { userSex } from 'entities/users';
 import { useSelfUser, useUserSetting } from 'hooks/useSelfUser';
-import { useUsersStore } from 'store/users-store';
+import { useUpdateSelf } from 'hooks/useUserMutations';
 
 import { RadioCards, TextInput } from 'basics';
 import { UserAvatarModal } from 'components/modals/user-avatar-modal';
@@ -19,14 +19,14 @@ const AccountSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
     const user = useSelfUser();
     const sex = useUserSetting(userSex);
-    const setUserSettings = useUsersStore(state => state.setUserSettings);
+    const { updateSelf } = useUpdateSelf();
 
     const onDisplayNameCommit = (displayName: string) => {
         if (displayName === user?.displayName) {
             return;
         }
 
-        void setUserSettings({ displayName });
+        void updateSelf({ displayName });
     };
 
     const onSexChange = (value: string) => {
@@ -34,7 +34,7 @@ const AccountSection = ({ isLoading }: Props) => {
             return;
         }
 
-        void setUserSettings({ settings: { sex: value } });
+        void updateSelf({ settings: { sex: value } });
     };
 
     return (

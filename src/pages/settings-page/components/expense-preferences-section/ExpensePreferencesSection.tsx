@@ -9,7 +9,7 @@ import {
     userSkipCategory,
 } from 'entities/users';
 import { useUserSetting } from 'hooks/useSelfUser';
-import { useUsersStore } from 'store/users-store';
+import { useUpdateSelf } from 'hooks/useUserMutations';
 
 import CurrencySelect from 'components/CurrencySelect';
 import { CategorySearchSelect } from 'components/search-select';
@@ -24,22 +24,22 @@ const ExpensePreferencesSection = ({ isLoading }: Props) => {
     const defaultCategory = useUserSetting(userDefaultCategory);
     const skipCategory = useUserSetting(userSkipCategory);
     const simplifyDebts = useUserSetting(userSimplifyDebts);
-    const setUserSettings = useUsersStore(state => state.setUserSettings);
+    const { updateSelf } = useUpdateSelf();
 
     const onDefaultCurrencyChange = (value: string) => {
-        void setUserSettings({ settings: { defaultCurrency: value } });
+        void updateSelf({ settings: { defaultCurrency: value } });
     };
 
     const onDefaultCategoryChange = (value: string) => {
-        void setUserSettings({ settings: { defaultCategory: value } });
+        void updateSelf({ settings: { defaultCategory: value } });
     };
 
     const onSkipCategoryChange = (isEnabled: boolean) => {
-        void setUserSettings({ settings: { skipCategory: isEnabled } });
+        void updateSelf({ settings: { skipCategory: isEnabled } });
     };
 
     const onSimplifyDebtsChange = (isEnabled: boolean) => {
-        void setUserSettings({ settings: { simplifyDebts: isEnabled } });
+        void updateSelf({ settings: { simplifyDebts: isEnabled } });
     };
 
     return (

@@ -1,11 +1,12 @@
 import { Theme } from '@radix-ui/themes';
+import type { QueryClient } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { beforeEach, expect, test } from 'vitest';
 
-import type { SelfUser } from 'api/chipin.types';
-import type { UsersStoreActions } from 'store/users-store';
-import { useUsersStore } from 'store/users-store';
+import { type SelfUser, usersKeys } from 'entities/users';
+import { setupMswServer } from 'test/mswServer';
+import { serveSelfUpdates, signInWithSelf } from 'test/selfUser';
 
 import RegionalSection from './RegionalSection';
 
@@ -35,31 +36,17 @@ const user = {
     updatedAt: 1,
 } satisfies SelfUser;
 
-const setUserSettings = vi.fn((params: Parameters<UsersStoreActions['setUserSettings']>[0]) => {
-    useUsersStore.setState(state => ({
-        user: state.user
-            ? {
-                  ...state.user,
-                  settings: { ...state.user.settings, ...params.settings },
-              }
-            : null,
-    }));
-
-    return Promise.resolve();
-});
-const actualSetUserSettings = useUsersStore.getState().setUserSettings;
+const server = setupMswServer();
+let client: QueryClient;
+let updates: unknown[];
 
 beforeEach(() => {
-    setUserSettings.mockClear();
     Object.defineProperty(navigator, 'languages', {
         configurable: true,
         value: ['de-DE', 'ru-RU'],
     });
-    useUsersStore.setState({ user, localUser: null, setUserSettings });
-});
-
-afterEach(() => {
-    useUsersStore.setState({ setUserSettings: actualSetUserSettings });
+    client = signInWithSelf(user);
+    updates = serveSelfUpdates(server, client);
 });
 
 test('resets the interface language to the first supported browser language', () => {
@@ -73,14 +60,15 @@ test('resets the interface language to the first supported browser language', ()
 
     return interaction.click(screen.getByRole('button', { name: 'Reset language' })).then(() =>
         waitFor(() => {
-            expect(useUsersStore.getState().user?.settings.language).toBe('ru');
+            expect(updates).toEqual([{ settings: { language: 'ru' } }]);
+            expect(client.getQueryData<SelfUser>(usersKeys.self())?.settings.language).toBe('ru');
         }),
     );
 });
 
 // #609: a backend setting that still holds a removed locale shows English.
 test.each(['es', 'pt-BR', 'pt-PT'])('shows English for the removed saved language %s', language => {
-    useUsersStore.setState({ user: { ...user, settings: { ...user.settings, language } } });
+    client.setQueryData(usersKeys.self(), { ...user, settings: { ...user.settings, language } });
 
     render(
         <Theme>
@@ -89,5 +77,5 @@ test.each(['es', 'pt-BR', 'pt-PT'])('shows English for the removed saved languag
     );
 
     expect(screen.getByRole('button', { name: 'English' })).toBeTruthy();
-    expect(setUserSettings).not.toHaveBeenCalled();
+    expect(updates).toEqual([]);
 });

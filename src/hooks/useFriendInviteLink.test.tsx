@@ -1,14 +1,19 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import { toast } from 'sonner';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import { ROUTES } from 'constants/routes';
+import { useAuthStore } from 'store/authStore';
 import { TEST_INVITE_TOKEN } from 'test/fixtures/inviteToken';
+import { setupMswServer } from 'test/mswServer';
+import { mountAsUserClient } from 'test/userClient';
 
 import { useFriendInviteLink } from './useFriendInviteLink';
 
 const mocks = vi.hoisted(() => ({
-    acceptFriendInvite: vi.fn(),
+    acceptFriendInvite:
+        vi.fn<(params: { inviteToken: unknown }) => Promise<Record<string, unknown>>>(),
     authSessionVersion: 1,
     inviteToken: 'AbCdEfGhIjKlMnOpQrStUvWxYz012345',
     navigate: vi.fn(),
@@ -17,12 +22,6 @@ const mocks = vi.hoisted(() => ({
 vi.mock('react-router-dom', () => ({
     useNavigate: () => mocks.navigate,
     useParams: () => ({ inviteToken: mocks.inviteToken }),
-}));
-
-vi.mock('store/users-store', () => ({
-    useUsersStore: (
-        selector: (state: { acceptFriendInvite: typeof mocks.acceptFriendInvite }) => unknown,
-    ) => selector({ acceptFriendInvite: mocks.acceptFriendInvite }),
 }));
 
 vi.mock('helpers/authSession', () => ({
@@ -49,8 +48,24 @@ vi.mock('sonner', () => ({
     },
 }));
 
+const server = setupMswServer();
+
+// The real accept (`POST /users/invite/{token}`) on the signed-in user's client; the handler
+// answers with what `mocks.acceptFriendInvite` resolves, and a rejection is a 400.
 beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
+    mountAsUserClient();
+    server.use(
+        http.post('*/users/invite/:inviteToken', ({ params }) =>
+            Promise.resolve()
+                .then(() => mocks.acceptFriendInvite({ inviteToken: params.inviteToken }))
+                .then(
+                    friend => HttpResponse.json(friend),
+                    () => HttpResponse.json({ code: 'USER.INVALID_INVITE' }, { status: 400 }),
+                ),
+        ),
+    );
     mocks.authSessionVersion = 1;
     mocks.inviteToken = TEST_INVITE_TOKEN;
 });

@@ -1,9 +1,6 @@
-import { useEffect } from 'react';
 import { Box, Container, Flex, Grid } from '@radix-ui/themes';
-import { toast } from 'sonner';
 
 import { useCanAccessSolo } from 'hooks/useSelfUser';
-import { useErrorsStore } from 'store/errorsStore';
 import { selectUserSelfFetched, selectUserSelfLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
@@ -20,15 +17,8 @@ import {
 const SettingsPage = () => {
     const isUserLoading = useLoadingStore(selectUserSelfLoading);
     const isUserFetched = useLoadingStore(selectUserSelfFetched);
-    const settingsError = useErrorsStore(state => state.errors.users.settings);
     const isLoading = isUserLoading || !isUserFetched;
     const canAccessSolo = useCanAccessSolo();
-
-    useEffect(() => {
-        if (settingsError) {
-            toast.error(settingsError.message);
-        }
-    }, [settingsError]);
 
     return (
         <Container size="4" pb={{ initial: '9', sm: '4' }}>

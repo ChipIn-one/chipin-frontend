@@ -1,76 +1,18 @@
 import { create } from 'zustand';
 
-import type { UpdateUserParams } from 'api/chipin.types';
 import * as usersApi from 'api/usersApi';
-import { DAY, SECOND } from 'constants/time';
-import { getAuthSessionVersion, isAuthSessionCurrent } from 'helpers/authSession';
 import { normalizeApiError } from 'helpers/errors';
 import { saveLocalUser, toLocalUser } from 'helpers/localStorage';
-import { getUnixTimestampInSec } from 'helpers/time';
 
 import { useErrorsStore } from '../errorsStore';
 import { createRequestChannel } from '../internal/resourceRequests';
-import {
-    getCachedSelfUser,
-    invalidateKnownUsers,
-    seedSelfUser,
-} from '../internal/usersQueryBridge';
+import { invalidateKnownUsers, seedSelfUser } from '../internal/usersQueryBridge';
 import { useLoadingStore } from '../loadingStore';
 
 import { createInitialState } from './initialState';
 import type { UsersStore } from './types';
 
 const userChannel = createRequestChannel();
-let profileMutationQueue = Promise.resolve();
-let profileMutationGeneration = 0;
-let settingsMutationId = 0;
-let avatarMutationId = 0;
-
-class ProfileMutationCancelledError extends Error {}
-
-interface ProfileMutationHandle<T> {
-    promise: Promise<T>;
-    isCurrent: () => boolean;
-}
-
-const enqueueProfileMutation = <T>(loader: () => Promise<T>): ProfileMutationHandle<T> => {
-    const generation = profileMutationGeneration;
-    const authSessionVersion = getAuthSessionVersion();
-    const isCurrent = () => {
-        return generation === profileMutationGeneration && isAuthSessionCurrent(authSessionVersion);
-    };
-    const promise = profileMutationQueue
-        .then(() => {
-            if (!isCurrent()) {
-                return Promise.reject(new ProfileMutationCancelledError());
-            }
-
-            return loader();
-        })
-        .then(
-            result => {
-                if (!isCurrent()) {
-                    return Promise.reject(new ProfileMutationCancelledError());
-                }
-
-                return result;
-            },
-            (error: unknown) => {
-                if (!isCurrent()) {
-                    return Promise.reject(new ProfileMutationCancelledError());
-                }
-
-                return Promise.reject(error);
-            },
-        );
-
-    profileMutationQueue = promise.then(
-        () => undefined,
-        () => undefined,
-    );
-
-    return { promise, isCurrent };
-};
 
 const useUsersStore = create<UsersStore>((set, get) => ({
     ...createInitialState(),
@@ -108,136 +50,9 @@ const useUsersStore = create<UsersStore>((set, get) => ({
                 }
             });
     },
-    acceptFriendInvite: ({ inviteToken }) => {
-        return (
-            usersApi
-                .acceptKnownUserInvite({ inviteToken })
-                // The invite is already accepted once the POST succeeds: the friends refresh never
-                // rejects, so it cannot turn into a retry.
-                .then(friend =>
-                    get()
-                        .invalidateKnownUsers()
-                        .then(() => friend),
-                )
-        );
-    },
     invalidateKnownUsers: options => invalidateKnownUsers(get().localUser?.id, options),
-    removeFriend: ({ userId }) => {
-        const { setLoading } = useLoadingStore.getState();
-        const { clearError, setError } = useErrorsStore.getState();
-        clearError('users', 'removeFriend');
-        setLoading('users', 'removeFriend', 'loading');
-
-        return usersApi
-            .removeKnownUser({ userId })
-            .catch((error: unknown) => {
-                setError('users', 'removeFriend', normalizeApiError(error));
-                return Promise.reject(error);
-            })
-            .then(() => get().invalidateKnownUsers())
-            .finally(() => {
-                setLoading('users', 'removeFriend', 'fetched');
-            });
-    },
-    setUserSettings: params => {
-        const { setLoading } = useLoadingStore.getState();
-        const { clearError, setError } = useErrorsStore.getState();
-        const request = {
-            ...(params.displayName !== undefined && { displayName: params.displayName }),
-            ...(params.settings && { settings: params.settings }),
-        } satisfies UpdateUserParams;
-        const mutationId = ++settingsMutationId;
-        clearError('users', 'settings');
-        setLoading('users', 'settings', 'loading');
-
-        const mutation = enqueueProfileMutation(() => usersApi.updateUser(request));
-
-        return mutation.promise
-            .then(user => {
-                if (!mutation.isCurrent()) {
-                    return;
-                }
-
-                const nextLocalUser = toLocalUser(user);
-                saveLocalUser(nextLocalUser);
-                set({ user, localUser: nextLocalUser });
-                seedSelfUser(user);
-            })
-            .catch((error: unknown) => {
-                if (error instanceof ProfileMutationCancelledError) {
-                    return;
-                }
-                if (mutationId === settingsMutationId && mutation.isCurrent()) {
-                    setError('users', 'settings', normalizeApiError(error));
-                }
-            })
-            .finally(() => {
-                if (mutationId === settingsMutationId) {
-                    setLoading('users', 'settings', 'fetched');
-                }
-            });
-    },
-    uploadUserAvatar: params => {
-        const { setLoading } = useLoadingStore.getState();
-        const { clearError, setError } = useErrorsStore.getState();
-        const mutationId = ++avatarMutationId;
-        clearError('users', 'avatar');
-        setLoading('users', 'avatar', 'loading');
-
-        const mutation = enqueueProfileMutation(() => usersApi.uploadUserAvatar(params));
-
-        return mutation.promise
-            .then(user => {
-                if (!mutation.isCurrent()) {
-                    return Promise.reject(new ProfileMutationCancelledError());
-                }
-
-                const nextLocalUser = toLocalUser(user);
-                saveLocalUser(nextLocalUser);
-                set({ user, localUser: nextLocalUser });
-                seedSelfUser(user);
-
-                return user;
-            })
-            .catch((error: unknown) => {
-                if (
-                    !(error instanceof ProfileMutationCancelledError) &&
-                    mutationId === avatarMutationId &&
-                    mutation.isCurrent()
-                ) {
-                    setError('users', 'avatar', normalizeApiError(error));
-                }
-                return Promise.reject(error);
-            })
-            .finally(() => {
-                if (mutationId === avatarMutationId) {
-                    setLoading('users', 'avatar', 'fetched');
-                }
-            });
-    },
-    extendUserSubscriptionByDay: () => {
-        // The UI reads the query: extend the user it shows.
-        const user = getCachedSelfUser(get().localUser?.id) ?? get().user;
-
-        if (!user) {
-            return;
-        }
-
-        const dayInSeconds = DAY / SECOND;
-        const baseTimestamp =
-            typeof user.subscriptionUntil === 'number'
-                ? user.subscriptionUntil
-                : getUnixTimestampInSec();
-        const nextUser = { ...user, subscriptionUntil: baseTimestamp + dayInSeconds };
-
-        set({ user: nextUser });
-        seedSelfUser(nextUser);
-    },
     setInitialUsersStore: () => {
         userChannel.abort();
-        profileMutationGeneration += 1;
-        settingsMutationId += 1;
-        avatarMutationId += 1;
         set(createInitialState());
         useErrorsStore.getState().resetErrors();
     },

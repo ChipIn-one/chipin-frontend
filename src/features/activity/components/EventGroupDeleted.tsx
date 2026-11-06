@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 
 import type { AppEvent } from 'api/activity.types';
 import type { GroupDeletedAction } from 'constants/activity';
+import { isUserTime24H } from 'entities/users';
+import { useUserSetting } from 'hooks/useSelfUser';
 
 import { RelativeTime } from 'basics';
 
@@ -14,6 +16,7 @@ interface Props {
 }
 
 const EventGroupDeleted = ({ event }: Props) => {
+    const isTime24H = useUserSetting(isUserTime24H);
     const { t } = useTranslation('activity');
 
     return (
@@ -45,7 +48,7 @@ const EventGroupDeleted = ({ event }: Props) => {
                     </Flex>
                 </Flex>
 
-                <RelativeTime createdAt={event.createdAt} />
+                <RelativeTime createdAt={event.createdAt} isTime24H={isTime24H} />
             </Flex>
         </Card>
     );

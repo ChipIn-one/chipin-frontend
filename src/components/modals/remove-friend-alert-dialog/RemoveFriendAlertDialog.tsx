@@ -4,10 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import type { FriendUser } from 'api/chipin.types';
-import { resolveApiErrorMessageFromError } from 'helpers/errors';
-import { selectFriendRemoving } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
+import { useRemoveKnownUser } from 'hooks/useUserMutations';
 
 import { UserAvatar } from 'basics';
 
@@ -21,26 +18,17 @@ interface Props {
 
 const RemoveFriendAlertDialog = ({ friend, isOpened, setIsOpened }: Props) => {
     const { t } = useTranslation(['common', 'friends', 'toasts']);
-    const isRemovingFriend = useLoadingStore(selectFriendRemoving);
+    const { removeKnownUser, isPending: isRemovingFriend } = useRemoveKnownUser();
 
-    const onRemoveFriend = () => {
-        return useUsersStore
-            .getState()
-            .removeFriend({ userId: friend.id })
-            .then(() => {
-                toast.success(
-                    t('toasts:friend.removed', {
-                        name: friend.displayName,
-                    }),
-                );
-            })
-            .catch(error => {
-                toast.error(
-                    resolveApiErrorMessageFromError(error, t('toasts:common.requestFailed')),
-                );
-                return Promise.reject(error);
-            });
-    };
+    // A failure is a toast from the hook; the rejection keeps the dialog open.
+    const onRemoveFriend = () =>
+        removeKnownUser(friend.id).then(() => {
+            toast.success(
+                t('toasts:friend.removed', {
+                    name: friend.displayName,
+                }),
+            );
+        });
 
     return (
         <BaseAlertDialog
