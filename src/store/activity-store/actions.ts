@@ -4,11 +4,11 @@ import * as activityApi from 'api/activityApi';
 import * as ledgerApi from 'api/ledgerApi';
 import { normalizeApiError } from 'helpers/errors';
 
-import { useDashboardStore } from '../dashboardStore';
 import { useErrorsStore } from '../errorsStore';
 import { mapActivityExpenseToModalState } from '../expenseModalEditMapping';
 import type { ExpenseModalEditInitialization, ExpenseModalSource } from '../expenseModalStore';
 import { useGroupsStore } from '../groupsStore';
+import { invalidateDashboard } from '../internal/dashboardQueryBridge';
 import { createRequestChannel } from '../internal/resourceRequests';
 import { useLoadingStore } from '../loadingStore';
 import {
@@ -44,7 +44,7 @@ const refreshFinancialData = (
     { groupId, parentActivityId }: FinancialRefreshContext,
 ): Promise<void> => {
     const requests: Promise<unknown>[] = [
-        useDashboardStore.getState().fetchSetDashboard(true),
+        invalidateDashboard(),
         activityState.fetchSetActivity(true),
     ];
 

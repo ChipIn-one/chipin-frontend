@@ -14,6 +14,7 @@ import {
     legacyExpenseBalanceChange,
     legacyPartitionEntries,
     legacyRateLookup,
+    legacyRatesFromDecimals,
     legacySumEntriesByCurrency,
     legacySummarizeEntries,
     resetLegacyRejectReports,
@@ -152,6 +153,12 @@ test('legacyExpenseBalanceChange', () => {
     expect(
         legacyExpenseBalanceChange({ ...metadata('me'), shares: undefined }, 'me'),
     ).toBeUndefined();
+});
+
+test('legacyRatesFromDecimals reads decimal-text rates as numbers and drops unusable ones', () => {
+    expect(
+        legacyRatesFromDecimals({ EUR: '0.92', VND: '25900', ZERO: '0', BAD: 'x', EMPTY: '' }),
+    ).toEqual({ EUR: 0.92, VND: 25_900 });
 });
 
 describe('legacyRateLookup', () => {

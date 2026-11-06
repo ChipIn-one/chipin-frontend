@@ -1,12 +1,16 @@
 import { Theme } from '@radix-ui/themes';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
-import { useDashboardStore } from 'store/dashboardStore';
+import { currencyRatesKeys } from 'entities/currency-rates';
+import type { DashboardBalances } from 'entities/dashboard';
+import { dashboardKeys } from 'entities/dashboard';
+import { currencyCode, fromUnits } from 'shared/money';
 import { useUsersStore } from 'store/users-store';
+import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
 
 import DashboardSummary from './DashboardSummary';
 
@@ -25,32 +29,40 @@ const settings = {
     sex: 'male',
 } satisfies UserSettings;
 
-const renderSummary = (isLoading = false, hasExpenseHistory = false) =>
-    render(
+const money = (amount: number, currency: string) =>
+    fromUnits(BigInt(amount) * 10_000n, currencyCode(currency));
+
+let balances: DashboardBalances;
+let rates: Record<string, string>;
+
+const renderSummary = (isLoading = false, hasExpenseHistory = false) => {
+    const client = createTestQueryClient();
+
+    client.setQueryData(dashboardKeys.balances(), balances);
+    client.setQueryData(currencyRatesKeys.all, {
+        base: 'USD',
+        timestamp: 1,
+        fetchedAt: 1,
+        stale: false,
+        rates,
+    });
+    return renderWithQueryClient(
         <ThemeProvider theme={lightThemeStyled}>
             <Theme>
                 <DashboardSummary isLoading={isLoading} hasExpenseHistory={hasExpenseHistory} />
             </Theme>
         </ThemeProvider>,
+        client,
     );
+};
 
 beforeEach(() => {
     useUsersStore.setState({
         user: null,
         localUser: { role: 'USER', settings },
     });
-    useDashboardStore.setState({
-        balances: {
-            USD: { currency: 'USD', netBalance: 25 },
-        },
-        currencies: {
-            base: 'USD',
-            timestamp: 1,
-            fetchedAt: 1,
-            stale: false,
-            rates: { USD: 1 },
-        },
-    });
+    balances = [money(25, 'USD')];
+    rates = { USD: '1' };
 });
 
 test('renders a confirmed summary without entering a store snapshot update loop', () => {
@@ -67,19 +79,8 @@ test('uses one outer skeleton for the whole summary card while loading', () => {
 });
 
 test('keeps per-currency balances collapsed until the summary is expanded', () => {
-    useDashboardStore.setState({
-        balances: {
-            USD: { currency: 'USD', netBalance: 25 },
-            EUR: { currency: 'EUR', netBalance: -10 },
-        },
-        currencies: {
-            base: 'USD',
-            timestamp: 1,
-            fetchedAt: 1,
-            stale: false,
-            rates: { USD: 1, EUR: 2 },
-        },
-    });
+    balances = [money(25, 'USD'), money(-10, 'EUR')];
+    rates = { USD: '1', EUR: '2' };
 
     renderSummary();
 
@@ -110,11 +111,7 @@ test('keeps per-currency balances collapsed until the summary is expanded', () =
 });
 
 test('does not render zero-value debt directions or an empty details toggle', () => {
-    useDashboardStore.setState({
-        balances: {
-            USD: { currency: 'USD', netBalance: 0 },
-        },
-    });
+    balances = [money(0, 'USD')];
 
     renderSummary();
 
@@ -139,11 +136,7 @@ test('starts collapsed again after the Dashboard summary remounts', () => {
 });
 
 test('DSH-012 hides a resolved zero Total balance without groups', () => {
-    useDashboardStore.setState({
-        balances: {
-            USD: { currency: 'USD', netBalance: 0 },
-        },
-    });
+    balances = [money(0, 'USD')];
 
     renderSummary();
 
@@ -152,11 +145,7 @@ test('DSH-012 hides a resolved zero Total balance without groups', () => {
 });
 
 test('DSH-012 shows All settled for a zero balance when groups exist', () => {
-    useDashboardStore.setState({
-        balances: {
-            USD: { currency: 'USD', netBalance: 0 },
-        },
-    });
+    balances = [money(0, 'USD')];
 
     renderSummary(false, true);
 
@@ -166,19 +155,8 @@ test('DSH-012 shows All settled for a zero balance when groups exist', () => {
 });
 
 test('DSH-012 preserves debt detail when opposing balances net to zero', () => {
-    useDashboardStore.setState({
-        balances: {
-            USD: { currency: 'USD', netBalance: 20 },
-            EUR: { currency: 'EUR', netBalance: -40 },
-        },
-        currencies: {
-            base: 'USD',
-            timestamp: 1,
-            fetchedAt: 1,
-            stale: false,
-            rates: { USD: 1, EUR: 2 },
-        },
-    });
+    balances = [money(20, 'USD'), money(-40, 'EUR')];
+    rates = { USD: '1', EUR: '2' };
 
     renderSummary();
 

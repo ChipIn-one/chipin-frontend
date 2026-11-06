@@ -3,8 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 
 import { getPreferredModeRoute, isNavigationRouteActive } from 'helpers/routes';
-import { selectIsSoloMode } from 'store/dashboardSelectors';
-import { useDashboardStore } from 'store/dashboardStore';
+import { selectIsSoloMode, useUiPrefsStore } from 'store/ui-prefs';
 import { selectCanAccessSolo, useUsersStore } from 'store/users-store';
 
 import { NavButton } from 'basics/buttons';
@@ -15,7 +14,7 @@ const HeaderNav = () => {
     const location = useLocation();
     const { t } = useTranslation('common');
     const canAccessSolo = useUsersStore(selectCanAccessSolo);
-    const isSoloModeFromStore = useDashboardStore(selectIsSoloMode);
+    const isSoloModeFromStore = useUiPrefsStore(selectIsSoloMode);
     const isSoloMode = canAccessSolo && isSoloModeFromStore;
     const activeColor = isSoloMode ? 'violet' : 'green';
     const navElements = getNavElements(getPreferredModeRoute(isSoloMode));

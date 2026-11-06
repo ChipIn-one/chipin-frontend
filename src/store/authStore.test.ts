@@ -6,10 +6,10 @@ import * as authSession from 'helpers/authSession';
 import { getLocalUser, saveLocalUser } from 'helpers/localStorage';
 
 import { useAuthStore } from './authStore';
-import { APP_MODES, useDashboardStore } from './dashboardStore';
 import { useExpenseModalStore } from './expenseModalStore';
 import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
+import { APP_MODES, useUiPrefsStore } from './ui-prefs';
 import { useUsersStore } from './users-store';
 import { selectIsUserAdmin } from './users-store/selectors';
 
@@ -64,7 +64,6 @@ vi.mock('api/chipin', () => ({
 }));
 
 const mockAuthenticatedDataFetches = (): void => {
-    vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockResolvedValue();
     vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
     vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockResolvedValue(user);
     vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockResolvedValue();
@@ -113,8 +112,8 @@ describe('authStore', () => {
             token: 'access-token',
             is_new_user: false,
         });
-        useDashboardStore.setState({ appMode: APP_MODES.GROUP });
-        const setDefaultAppMode = vi.spyOn(useDashboardStore.getState(), 'setDefaultAppMode');
+        useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
+        const setDefaultAppMode = vi.spyOn(useUiPrefsStore.getState(), 'setDefaultAppMode');
         mockAuthenticatedDataFetches();
 
         return useAuthStore
@@ -403,6 +402,36 @@ describe('authStore', () => {
         onReset();
 
         expect(getLocalUser()).toEqual({ id: user.id, role: 'ADMIN', settings: user.settings });
+    });
+
+    // The app mode is UI state, but it follows the session: every transition to unauthenticated
+    // resets it to the cached user's default (`resetAuthScopedStores`), as before 03-8.
+    test.each([
+        ['signOut', () => void useAuthStore.getState().signOut()],
+        ['remote logout', () => useAuthStore.getState().setUnauthenticated('signed_out')],
+        ['expireSession', () => useAuthStore.getState().expireSession()],
+        ['invalid', () => useAuthStore.getState().setUnauthenticated('invalid')],
+        ['missing', () => useAuthStore.getState().setUnauthenticated('missing')],
+        ['error', () => useAuthStore.getState().setUnauthenticated('error')],
+    ])('%s resets the app mode to the cached default', (_name, onReset) => {
+        saveLocalUser({
+            id: user.id,
+            settings: { ...user.settings, soloModeByDefault: false },
+        });
+        useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
+
+        onReset();
+
+        expect(useUiPrefsStore.getState().appMode).toBe(APP_MODES.GROUP);
+    });
+
+    test('the reset applies a Solo default of the cached settings', () => {
+        saveLocalUser({ id: user.id, settings: { ...user.settings, soloModeByDefault: true } });
+        useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
+
+        useAuthStore.getState().expireSession();
+
+        expect(useUiPrefsStore.getState().appMode).toBe(APP_MODES.SOLO);
     });
 
     describe('OAuth code dedupe (the remount on the first user id)', () => {

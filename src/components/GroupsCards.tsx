@@ -13,11 +13,17 @@ import { useTranslation } from 'react-i18next';
 
 import type { Group } from 'api/chipin.types';
 import { GROUP_DEBT_FILTERS, type GroupDebtFilter } from 'constants/groups';
+import { legacyRatesFromDecimals } from 'entities/balance';
+import { EMPTY_CURRENCY_RATES, useCurrencyRatesQuery } from 'entities/currency-rates';
+import { getUnixTimestampInSec } from 'helpers/time';
+import { selectGroupsCardsView } from 'store/groupsSelectors';
+import { selectGroupListFetched } from 'store/loadingSelectors';
+import { useLoadingStore } from 'store/loadingStore';
+import { selectUserCurrency, useUsersStore } from 'store/users-store';
 
 import { EmptyState } from 'basics/empty-states';
 
 import { GroupCard } from './group-card';
-import { useConnect } from './groups-cards/internal';
 import {
     SearchButtonShell,
     SearchFieldShell,
@@ -42,11 +48,22 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
     const searchButtonRef = useRef<HTMLButtonElement>(null);
     const shouldRestoreSearchButtonFocusRef = useRef(false);
     const { t } = useTranslation('dashboard');
-    const { displayedGroups, hiddenSettledGroups, settledCount, isReady } = useConnect({
-        groups,
+    const [nowTimestamp] = useState(() => getUnixTimestampInSec());
+    const isGroupListFetched = useLoadingStore(selectGroupListFetched);
+    const defaultCurrency = useUsersStore(selectUserCurrency);
+    const { data: currencyRates = EMPTY_CURRENCY_RATES, isLoading: isRatesLoading } =
+        useCurrencyRatesQuery();
+    // The cards convert group balances with the rates: wait for their first load (failed or
+    // paused offline counts as done), as for the list.
+    const isReady = isGroupListFetched && !isRatesLoading;
+    const { displayedGroups, hiddenSettledGroups, settledCount } = selectGroupsCardsView(groups, {
         filter: activeFilter,
         query: searchQuery,
         selectedGroupId,
+        rates: legacyRatesFromDecimals(currencyRates.rates),
+        baseCurrency: currencyRates.base,
+        defaultCurrency,
+        nowTimestamp,
     });
     const hasSearchQuery = searchQuery.trim().length > 0;
     const showSettledSection =

@@ -1,13 +1,23 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
 import { lightThemeStyled } from 'constants/styled-themes';
+import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
 import { useExpenseModalStore } from 'store/expenseModalStore';
+import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
 
 import ExpenseDetailsSection from './ExpenseDetailsSection';
 
 import 'i18n/index';
+
+// Rates already loaded: the currency picker does not request them.
+const ratesClient = () => {
+    const client = createTestQueryClient();
+
+    client.setQueryData(currencyRatesKeys.all, EMPTY_CURRENCY_RATES);
+    return client;
+};
 
 const currentUser = {
     id: 'user-1',
@@ -20,10 +30,11 @@ beforeEach(() => {
 });
 
 const renderSection = () =>
-    render(
+    renderWithQueryClient(
         <ThemeProvider theme={lightThemeStyled}>
             <ExpenseDetailsSection />
         </ThemeProvider>,
+        ratesClient(),
     );
 
 test('hides the business date field when creating an expense', () => {

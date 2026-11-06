@@ -3,13 +3,13 @@ import { useLocation } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
 import { ROUTES } from 'constants/routes';
-import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
+import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { selectCanAccessSolo, useUsersStore } from 'store/users-store';
 
 const useSyncAppMode = () => {
     const location = useLocation();
     const canAccessSolo = useUsersStore(selectCanAccessSolo);
-    const { appMode, setAppMode } = useDashboardStore(
+    const { appMode, setAppMode } = useUiPrefsStore(
         useShallow(state => ({
             appMode: state.appMode,
             setAppMode: state.setAppMode,

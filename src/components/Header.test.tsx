@@ -13,7 +13,7 @@ import { LocalStorage } from 'helpers/localStorage';
 import { isPublicLocaleSuggestionSuppressed } from 'helpers/publicLocaleSuggestion';
 import i18n from 'i18n';
 import { useAuthStore } from 'store/authStore';
-import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
+import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { useUsersStore } from 'store/users-store';
 
 import Header from './Header';
@@ -50,7 +50,7 @@ beforeEach(() => {
         localUser: { role: 'ADMIN', settings },
         friends: [],
     });
-    useDashboardStore.setState({ appMode: APP_MODES.SOLO });
+    useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
     LocalStorage.remove(LS_KEY_LOCALE);
     window.sessionStorage.clear();
 
@@ -106,7 +106,7 @@ test('opens the Group route for a user with stale Solo state', () => {
 test('opens the Group route when the logo is clicked from another page with stale Solo state', () => {
     const interaction = userEvent.setup();
 
-    useDashboardStore.setState({ appMode: APP_MODES.SOLO });
+    useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
     useUsersStore.setState({
         localUser: {
             role: 'ADMIN',

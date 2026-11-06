@@ -10,8 +10,8 @@ import { AUTH_STATUS, SESSION_MODE, UNAUTH_REASON } from 'store/authConstants';
 import { selectAuthStatus, selectSessionMode } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { useConnectivityStore } from 'store/connectivityStore';
-import { useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
+import { useUiPrefsStore } from 'store/ui-prefs';
 import { useUsersStore } from 'store/users-store';
 
 export const useCheckSignIn = () => {
@@ -21,12 +21,7 @@ export const useCheckSignIn = () => {
     // Offline or backend down: the session check waits for connectivity instead of signing out.
     const isDisconnected = useConnectivityStore(state => state.mode !== 'online');
     const isOffline = useConnectivityStore(state => state.mode === 'offline');
-    const { fetchSetDashboardData, setDefaultAppMode } = useDashboardStore(
-        useShallow(state => ({
-            fetchSetDashboardData: state.fetchSetDashboardData,
-            setDefaultAppMode: state.setDefaultAppMode,
-        })),
-    );
+    const setDefaultAppMode = useUiPrefsStore(state => state.setDefaultAppMode);
     const fetchSetGroups = useGroupsStore(s => s.fetchSetGroups);
     const { fetchSetUser, fetchSetFriends, hasCachedUser, hasCachedUserId } = useUsersStore(
         useShallow(state => ({
@@ -61,7 +56,6 @@ export const useCheckSignIn = () => {
     const loadSessionData = useCallback(
         (switchedUser = false) =>
             Promise.all([
-                fetchSetDashboardData(),
                 fetchSetGroups(),
                 fetchSetUser().then(user => {
                     if (user && (switchedUser || !hasCachedUser)) {
@@ -70,14 +64,7 @@ export const useCheckSignIn = () => {
                 }),
                 fetchSetFriends(),
             ]).then(() => undefined),
-        [
-            fetchSetDashboardData,
-            fetchSetFriends,
-            fetchSetGroups,
-            fetchSetUser,
-            hasCachedUser,
-            setDefaultAppMode,
-        ],
+        [fetchSetFriends, fetchSetGroups, fetchSetUser, hasCachedUser, setDefaultAppMode],
     );
 
     useEffect(() => {

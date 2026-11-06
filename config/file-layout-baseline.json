@@ -2,8 +2,6 @@
     "index-depth": [
         "src/basics/index.ts",
         "src/basics/numbers/amount/index.ts",
-        "src/components/dashboard-summary/internal/index.ts",
-        "src/components/groups-cards/internal/index.ts",
         "src/components/modals/add-expense-modal/components/expense-buttons/index.ts",
         "src/components/modals/add-expense-modal/components/expense-buttons/internal/index.ts",
         "src/components/modals/add-expense-modal/components/expense-details-section/components/expense-amount-fields/index.ts",
@@ -100,10 +98,8 @@
         "src/pages/friends-page/components/index.ts",
         "src/pages/group-page/components/index.ts",
         "src/pages/group-page/components/internal/group-settings/index.ts",
-        "src/pages/group-page/components/internal/group-summary/index.ts",
         "src/pages/group-page/internal/index.ts",
         "src/pages/internal/activity-page/index.ts",
-        "src/pages/internal/dashboard-page/index.ts",
         "src/pages/settings-page/components/expense-preferences-section/index.ts",
         "src/pages/settings-page/components/index.ts",
         "src/pages/settings-page/components/solo-preferences-section/index.ts",
@@ -112,9 +108,6 @@
     "use-connect": [
         "src/components/add-expense-button/internal/useConnect.ts",
         "src/components/dashboard-onboarding/internal/useConnect.ts",
-        "src/components/dashboard-summary/internal/useConnect.ts",
-        "src/components/groups-cards/internal/useConnect.ts",
-        "src/components/header/internal/useConnect.ts",
         "src/components/modals/add-expense-modal/components/expense-buttons/internal/useConnect.ts",
         "src/components/modals/add-expense-modal/components/expense-payer-search-select/internal/useConnect.ts",
         "src/components/modals/early-supporter-promo-modal/internal/useConnect.ts",
@@ -124,10 +117,8 @@
         "src/pages/activity-subevents-page/components/activity-subevents-buttons/internal/useConnect.ts",
         "src/pages/activity-subevents-page/components/activity-subevents-feed/internal/useConnect.ts",
         "src/pages/group-page/components/internal/group-settings/useConnect.ts",
-        "src/pages/group-page/components/internal/group-summary/useConnect.ts",
         "src/pages/group-page/internal/useConnect.ts",
         "src/pages/internal/activity-page/useConnect.ts",
-        "src/pages/internal/dashboard-page/useConnect.ts",
         "src/public-routes/internal/useConnect.ts"
     ]
 }

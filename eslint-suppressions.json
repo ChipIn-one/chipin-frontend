@@ -280,11 +280,6 @@
       "count": 1
     }
   },
-  "src/pages/DashboardPage.tsx": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/pages/FriendJoinPage.test.tsx": {
     "boundaries/dependencies": {
       "count": 2
