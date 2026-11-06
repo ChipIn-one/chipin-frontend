@@ -1,13 +1,14 @@
 import { Avatar, Button, Card, Code, Flex, Separator, Skeleton, Text } from '@radix-ui/themes';
 import { MonitorIcon, MoonIcon, RefreshCwIcon, Settings2Icon, SunIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useShallow } from 'zustand/react/shallow';
 
 import { APP_VERSION } from 'constants/version';
+import { userTheme } from 'entities/users';
 import { applySwUpdate } from 'helpers/swUpdates';
 import type { ThemeName } from 'helpers/theme';
+import { useUserSetting } from 'hooks/useSelfUser';
 import { usePwaStore } from 'store/pwaStore';
-import { selectUserTheme, useUsersStore } from 'store/users-store';
+import { useUsersStore } from 'store/users-store';
 
 import SegmentedControl from 'components/SegmentedControl';
 
@@ -18,12 +19,8 @@ interface Props {
 const AppSettingsSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
     const isSwUpdateAvailable = usePwaStore(s => s.isSwUpdateAvailable);
-    const { setUserSettings, theme } = useUsersStore(
-        useShallow(state => ({
-            setUserSettings: state.setUserSettings,
-            theme: selectUserTheme(state),
-        })),
-    );
+    const setUserSettings = useUsersStore(state => state.setUserSettings);
+    const theme = useUserSetting(userTheme);
 
     const onChangeTheme = (value: string) => {
         const nextTheme = value as ThemeName;

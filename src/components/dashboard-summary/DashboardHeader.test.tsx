@@ -7,12 +7,14 @@ import { beforeEach, expect, test } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
+import { useAuthStore } from 'store/authStore';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
 
 import DashboardHeader from './DashboardHeader';
 
 import 'i18n/index';
+import 'test/selfUserMirror';
 
 const admin = {
     id: 'user-1',
@@ -39,6 +41,7 @@ const admin = {
 } satisfies SelfUser;
 
 beforeEach(() => {
+    useAuthStore.setState({ status: 'authenticated' });
     useLoadingStore.getState().setLoading('users', 'self', 'fetched');
     useUsersStore.setState({ user: admin });
 });

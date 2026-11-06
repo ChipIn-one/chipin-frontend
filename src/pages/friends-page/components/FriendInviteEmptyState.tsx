@@ -1,10 +1,10 @@
 import { useFriendInvite } from 'hooks/pwaHooks';
-import { useUsersStore } from 'store/users-store';
+import { useSelfUser } from 'hooks/useSelfUser';
 
 import { InviteOnboarding } from 'components/invite-onboarding';
 
 const FriendInviteEmptyState = () => {
-    const inviteToken = useUsersStore(state => state.user?.inviteToken);
+    const inviteToken = useSelfUser()?.inviteToken;
     const invite = useFriendInvite(inviteToken ?? '');
 
     if (!inviteToken) {

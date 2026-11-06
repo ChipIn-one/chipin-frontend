@@ -18,9 +18,8 @@ vi.mock('react-i18next', () => ({
     }),
 }));
 
-vi.mock('store/users-store', () => ({
-    selectIsUserTime24H: () => true,
-    useUsersStore: (selector: () => unknown) => selector(),
+vi.mock('helpers/localStorage', () => ({
+    getLocalUser: () => ({ settings: { timeFormat: '24h' } }),
 }));
 
 import RelativeTime from './RelativeTime';

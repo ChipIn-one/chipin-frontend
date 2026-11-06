@@ -1,37 +1,11 @@
-import type { KnownUser, ThemeName, UserSettings } from 'api/chipin.types';
-import { DEFAULT_EXPENSE_CATEGORY } from 'constants/category';
-import { DEFAULT_CURRENCY_CODE } from 'constants/currencies';
+import type { KnownUser } from 'api/chipin.types';
 import { aggregateByCurrency, legacyBalanceFromFriend } from 'entities/balance';
 import { getFilterFunction } from 'helpers/text';
 import type { Money } from 'shared/money';
 
 import type { FriendCurrencyGroup, FriendsView, UsersStore } from './types';
 
-export const selectUserSettings = (s: UsersStore): UserSettings | null =>
-    s.user?.settings ?? s.localUser?.settings ?? null;
-export const selectUserCurrency = (s: UsersStore) =>
-    selectUserSettings(s)?.defaultCurrency || DEFAULT_CURRENCY_CODE;
-export const selectUserDisplayName = (s: UsersStore) => s.user?.displayName ?? '';
-export const selectIsUserTime24H = (s: UsersStore) => selectUserSettings(s)?.timeFormat === '24h';
-export const selectUserLanguage = (s: UsersStore) => selectUserSettings(s)?.language ?? 'en';
-export const selectUserTheme = (s: UsersStore): ThemeName =>
-    selectUserSettings(s)?.theme ?? 'system';
-export const selectUserSimplifyDebts = (s: UsersStore) =>
-    selectUserSettings(s)?.simplifyDebts ?? true;
-export const selectUserDefaultCategory = (s: UsersStore) =>
-    selectUserSettings(s)?.defaultCategory ?? DEFAULT_EXPENSE_CATEGORY;
-export const selectUserSkipCategory = (s: UsersStore) =>
-    selectUserSettings(s)?.skipCategory ?? false;
-export const selectUserSoloModeByDefault = (s: UsersStore) =>
-    selectUserSettings(s)?.soloModeByDefault ?? false;
-export const selectUserSaveGroupExpensesToSolo = (s: UsersStore) =>
-    selectUserSettings(s)?.saveGroupExpensesToSolo ?? false;
-export const selectUserSex = (s: UsersStore) => selectUserSettings(s)?.sex ?? 'male';
 export const selectFriends = (s: UsersStore): KnownUser[] => s.friends;
-export const selectIsUserAdmin = (s: UsersStore) => (s.user?.role ?? s.localUser?.role) === 'ADMIN';
-const IS_SOLO_MODE_RELEASED = false;
-export const selectCanAccessSolo = (s: UsersStore): boolean =>
-    IS_SOLO_MODE_RELEASED && selectIsUserAdmin(s);
 
 type FriendEntry = FriendCurrencyGroup['friends'][number];
 

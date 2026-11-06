@@ -10,6 +10,7 @@ import {
     type ImageFileValidationError,
     validateImageFile,
 } from 'helpers/imageFile';
+import { useSelfUser } from 'hooks/useSelfUser';
 import { selectUserAvatarUploading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
@@ -28,7 +29,7 @@ interface Props {
 
 const UserAvatarModal = ({ children }: Props) => {
     const { t } = useTranslation('settings');
-    const user = useUsersStore(state => state.user);
+    const user = useSelfUser();
     const uploadUserAvatar = useUsersStore(state => state.uploadUserAvatar);
     const isUploading = useLoadingStore(selectUserAvatarUploading);
     const pickerHintId = useId();

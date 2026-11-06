@@ -15,11 +15,12 @@ import type { Group } from 'api/chipin.types';
 import { GROUP_DEBT_FILTERS, type GroupDebtFilter } from 'constants/groups';
 import { legacyRatesFromDecimals } from 'entities/balance';
 import { EMPTY_CURRENCY_RATES, useCurrencyRatesQuery } from 'entities/currency-rates';
+import { userCurrency } from 'entities/users';
 import { getUnixTimestampInSec } from 'helpers/time';
+import { useUserSetting } from 'hooks/useSelfUser';
 import { selectGroupsCardsView } from 'store/groupsSelectors';
 import { selectGroupListFetched } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
-import { selectUserCurrency, useUsersStore } from 'store/users-store';
 
 import { EmptyState } from 'basics/empty-states';
 
@@ -50,7 +51,7 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
     const { t } = useTranslation('dashboard');
     const [nowTimestamp] = useState(() => getUnixTimestampInSec());
     const isGroupListFetched = useLoadingStore(selectGroupListFetched);
-    const defaultCurrency = useUsersStore(selectUserCurrency);
+    const defaultCurrency = useUserSetting(userCurrency);
     const { data: currencyRates = EMPTY_CURRENCY_RATES, isLoading: isRatesLoading } =
         useCurrencyRatesQuery();
     // The cards convert group balances with the rates: wait for their first load (failed or

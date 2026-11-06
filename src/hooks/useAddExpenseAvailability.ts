@@ -10,11 +10,12 @@ import {
     selectFriendsFetched,
     selectGroupDataFetched,
     selectGroupListFetched,
-    selectUserSelfFetched,
 } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 import { selectIsSoloMode, useUiPrefsStore } from 'store/ui-prefs';
-import { selectCanAccessSolo, useUsersStore } from 'store/users-store';
+import { useUsersStore } from 'store/users-store';
+
+import { useCanAccessSolo, useSelfUser } from './useSelfUser';
 
 const useAddExpenseAvailability = (pathname: string) => {
     const groupId = matchPath({ path: `${ROUTES.GROUP}/:groupId`, end: true }, pathname)?.params
@@ -29,25 +30,22 @@ const useAddExpenseAvailability = (pathname: string) => {
             hasConfirmedGroups: state.hasConfirmedGroups,
         })),
     );
-    const { friends, canAccessSolo, currentUser, hasFriendsSnapshot, hasConfirmedUser } =
-        useUsersStore(
-            useShallow(state => ({
-                friends: state.friends,
-                canAccessSolo: selectCanAccessSolo(state),
-                currentUser: state.user,
-                hasFriendsSnapshot: state.hasFriendsSnapshot,
-                hasConfirmedUser: state.hasConfirmedUser,
-            })),
-        );
-    const { isFriendsFetched, isGroupDataFetched, isGroupListFetched, isUserSelfFetched } =
-        useLoadingStore(
-            useShallow(state => ({
-                isFriendsFetched: selectFriendsFetched(state),
-                isGroupDataFetched: selectGroupDataFetched(state),
-                isGroupListFetched: selectGroupListFetched(state),
-                isUserSelfFetched: selectUserSelfFetched(state),
-            })),
-        );
+    const { friends, hasFriendsSnapshot } = useUsersStore(
+        useShallow(state => ({
+            friends: state.friends,
+            hasFriendsSnapshot: state.hasFriendsSnapshot,
+        })),
+    );
+    const canAccessSolo = useCanAccessSolo();
+    // Data (loaded, seeded or restored from the cache) is a confirmed user.
+    const currentUser = useSelfUser();
+    const { isFriendsFetched, isGroupDataFetched, isGroupListFetched } = useLoadingStore(
+        useShallow(state => ({
+            isFriendsFetched: selectFriendsFetched(state),
+            isGroupDataFetched: selectGroupDataFetched(state),
+            isGroupListFetched: selectGroupListFetched(state),
+        })),
+    );
 
     const hasResolvedFriendTarget = (isFriendsFetched || hasFriendsSnapshot) && friends.length > 0;
     const hasResolvedGroupTarget =
@@ -72,11 +70,7 @@ const useAddExpenseAvailability = (pathname: string) => {
 
     return {
         isSoloMode: canAccessSolo && isSoloModeFromStore,
-        isVisible:
-            isLoggedIn &&
-            (isUserSelfFetched || hasConfirmedUser) &&
-            currentUser !== null &&
-            isTargetAvailable,
+        isVisible: isLoggedIn && currentUser !== null && isTargetAvailable,
     };
 };
 

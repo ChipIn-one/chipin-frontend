@@ -37,7 +37,7 @@ vi.mock('./internal/useConnect', () => ({
         isAuthResolved: true,
         isLoggedIn: false,
         isUserFetched: false,
-        settings: null,
+        soloModeByDefault: false,
         canAccessSolo: false,
     }),
 }));

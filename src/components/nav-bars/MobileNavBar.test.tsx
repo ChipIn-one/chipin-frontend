@@ -16,6 +16,7 @@ import { useUsersStore } from 'store/users-store';
 import MobileNavBar from './MobileNavBar';
 
 import 'i18n/index';
+import 'test/selfUserMirror';
 
 const LocationPath = () => {
     const location = useLocation();

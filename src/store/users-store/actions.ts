@@ -10,6 +10,7 @@ import { getUnixTimestampInSec } from 'helpers/time';
 
 import { useErrorsStore } from '../errorsStore';
 import { createRequestChannel } from '../internal/resourceRequests';
+import { getCachedSelfUser, seedSelfUser } from '../internal/usersQueryBridge';
 import { useLoadingStore } from '../loadingStore';
 
 import { createInitialState } from './initialState';
@@ -89,6 +90,7 @@ const useUsersStore = create<UsersStore>((set, get) => ({
                 const nextLocalUser = toLocalUser(user);
                 saveLocalUser(nextLocalUser);
                 set({ user, localUser: nextLocalUser, hasConfirmedUser: true });
+                seedSelfUser(user);
 
                 return user;
             })
@@ -201,6 +203,7 @@ const useUsersStore = create<UsersStore>((set, get) => ({
                 const nextLocalUser = toLocalUser(user);
                 saveLocalUser(nextLocalUser);
                 set({ user, localUser: nextLocalUser });
+                seedSelfUser(user);
             })
             .catch((error: unknown) => {
                 if (error instanceof ProfileMutationCancelledError) {
@@ -234,6 +237,7 @@ const useUsersStore = create<UsersStore>((set, get) => ({
                 const nextLocalUser = toLocalUser(user);
                 saveLocalUser(nextLocalUser);
                 set({ user, localUser: nextLocalUser });
+                seedSelfUser(user);
 
                 return user;
             })
@@ -254,24 +258,22 @@ const useUsersStore = create<UsersStore>((set, get) => ({
             });
     },
     extendUserSubscriptionByDay: () => {
-        set(state => {
-            if (!state.user) {
-                return state;
-            }
+        // The UI reads the query: extend the user it shows.
+        const user = getCachedSelfUser(get().localUser?.id) ?? get().user;
 
-            const dayInSeconds = DAY / SECOND;
-            const baseTimestamp =
-                typeof state.user.subscriptionUntil === 'number'
-                    ? state.user.subscriptionUntil
-                    : getUnixTimestampInSec();
+        if (!user) {
+            return;
+        }
 
-            return {
-                user: {
-                    ...state.user,
-                    subscriptionUntil: baseTimestamp + dayInSeconds,
-                },
-            };
-        });
+        const dayInSeconds = DAY / SECOND;
+        const baseTimestamp =
+            typeof user.subscriptionUntil === 'number'
+                ? user.subscriptionUntil
+                : getUnixTimestampInSec();
+        const nextUser = { ...user, subscriptionUntil: baseTimestamp + dayInSeconds };
+
+        set({ user: nextUser });
+        seedSelfUser(nextUser);
     },
     setInitialUsersStore: () => {
         userChannel.abort();

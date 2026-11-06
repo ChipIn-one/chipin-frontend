@@ -1,83 +1,9 @@
 import { expect, test } from 'vitest';
 
-import type { KnownUser, UserRole, UserSettings } from 'api/chipin.types';
+import type { KnownUser } from 'api/chipin.types';
 import { getOrThrow } from 'test/getOrThrow';
 
-import { useUsersStore } from './actions';
-import {
-    getFriendsView,
-    selectCanAccessSolo,
-    selectUserDefaultCategory,
-    selectUserSaveGroupExpensesToSolo,
-    selectUserSex,
-    selectUserSkipCategory,
-    selectUserSoloModeByDefault,
-} from './selectors';
-
-const createState = (settings: UserSettings, role: UserRole = 'USER') => {
-    useUsersStore.setState({
-        user: {
-            id: 'user-1',
-            email: 'user@example.com',
-            displayName: 'User',
-            picture: null,
-            role,
-            subscriptionUntil: null,
-            inviteToken: 'invite-token-user',
-            settings,
-            createdAt: 1,
-            updatedAt: 1,
-        },
-        localUser: null,
-        friends: [],
-    });
-
-    return useUsersStore.getState();
-};
-
-test.each([
-    { role: 'USER' as const, expected: false },
-    { role: 'ADMIN' as const, expected: false },
-])('keeps Solo unavailable for the $role role', ({ role, expected }) => {
-    const state = createState(
-        {
-            defaultCurrency: 'USD',
-            timeFormat: '24h',
-            language: 'en',
-            theme: 'system',
-            simplifyDebts: true,
-            defaultCategory: 'food',
-            skipCategory: false,
-            soloModeByDefault: true,
-            saveGroupExpensesToSolo: false,
-            sex: 'male',
-        },
-        role,
-    );
-
-    expect(selectCanAccessSolo(state)).toBe(expected);
-});
-
-test('selects expense and profile preferences from user settings', () => {
-    const state = createState({
-        defaultCurrency: 'USD',
-        timeFormat: '24h',
-        language: 'en',
-        theme: 'system',
-        simplifyDebts: true,
-        defaultCategory: 'transport',
-        skipCategory: true,
-        soloModeByDefault: true,
-        saveGroupExpensesToSolo: false,
-        sex: 'female',
-    });
-
-    expect(selectUserDefaultCategory(state)).toBe('transport');
-    expect(selectUserSkipCategory(state)).toBe(true);
-    expect(selectUserSoloModeByDefault(state)).toBe(true);
-    expect(selectUserSaveGroupExpensesToSolo(state)).toBe(false);
-    expect(selectUserSex(state)).toBe('female');
-});
+import { getFriendsView } from './selectors';
 
 test('builds the friends page view in one coordinated derivation', () => {
     const createFriend = (

@@ -6,7 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { EMPTY_CURRENCY_RATES, useCurrencyRatesQuery } from 'entities/currency-rates';
 import type { DashboardBalances } from 'entities/dashboard';
 import { useDashboardBalancesQuery } from 'entities/dashboard';
-import { selectUserCurrency, useUsersStore } from 'store/users-store';
+import { userCurrency } from 'entities/users';
+import { useUserSetting } from 'hooks/useSelfUser';
 
 import { BalanceBadges } from 'basics';
 import DebtAmount from 'basics/DebtAmount';
@@ -27,7 +28,7 @@ const NO_BALANCES: DashboardBalances = [];
 const DashBoardSummary = ({ isLoading = false, hasExpenseHistory = false }: Props) => {
     const { t } = useTranslation('dashboard');
     const [isExpanded, setIsExpanded] = useState(false);
-    const defaultCurrency = useUsersStore(selectUserCurrency);
+    const defaultCurrency = useUserSetting(userCurrency);
     const { data: balances = NO_BALANCES } = useDashboardBalancesQuery();
     const { data: currencyRates = EMPTY_CURRENCY_RATES } = useCurrencyRatesQuery();
     const { netTotalInBase, owedTotalInBase, owingTotalInBase, owedBadgeItems, oweBadgeItems } =

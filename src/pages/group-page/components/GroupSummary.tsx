@@ -1,8 +1,9 @@
 import { legacyRatesFromDecimals } from 'entities/balance';
 import { EMPTY_CURRENCY_RATES, useCurrencyRatesQuery } from 'entities/currency-rates';
+import { userCurrency } from 'entities/users';
+import { useUserSetting } from 'hooks/useSelfUser';
 import { calcGroupSummary, selectGroupBalances } from 'store/groupsSelectors';
 import { useGroupsStore } from 'store/groupsStore';
-import { selectUserCurrency, useUsersStore } from 'store/users-store';
 
 import { SummaryDebtCards } from 'components/summary-debt-cards';
 
@@ -20,7 +21,7 @@ interface Props {
 
 const GroupSummary = ({ isLoading }: Props) => {
     const selectedGroup = useGroupsStore(state => state.selectedGroup);
-    const defaultCurrency = useUsersStore(selectUserCurrency);
+    const defaultCurrency = useUserSetting(userCurrency);
     const { data: currencyRates = EMPTY_CURRENCY_RATES } = useCurrencyRatesQuery();
     const { owedTotalInBase, owingTotalInBase, owedEntries, oweEntries } = selectedGroup
         ? calcGroupSummary(

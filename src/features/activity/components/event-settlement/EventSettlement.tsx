@@ -8,7 +8,7 @@ import {
     type SettlementCreatedAction,
     type SettlementReversedAction,
 } from 'constants/activity';
-import { useUsersStore } from 'store/users-store';
+import { useSelfUser } from 'hooks/useSelfUser';
 
 import { Amount, LedgerScopeBadge } from 'basics';
 
@@ -23,7 +23,7 @@ interface Props {
 
 const EventSettlement = ({ event }: Props) => {
     const { t } = useTranslation('activity');
-    const user = useUsersStore(state => state.user);
+    const user = useSelfUser();
     const { amount, currency, fromDisplayName, groupId, groupName, payerId, toDisplayName } =
         event.metadata;
     const isReversed = event.action === ACTIVITY_ACTIONS.SETTLEMENT_REVERSED;

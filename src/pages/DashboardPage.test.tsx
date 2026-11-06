@@ -16,6 +16,8 @@ import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQue
 
 import DashboardPage from './DashboardPage';
 
+import 'test/selfUserMirror';
+
 const useInfiniteScrollMock = vi.hoisted(() =>
     vi.fn<(params: { hasMore: boolean; isLoading: boolean; onLoadMore: () => void }) => () => void>(
         () => vi.fn(),
@@ -541,6 +543,8 @@ test('DSH-007 keeps loading while connection inputs resolve', () => {
     seedRates();
     useLoadingStore.getState().setLoading('group', 'list', 'fetched');
     useLoadingStore.getState().setLoading('users', 'friends', 'fetched');
+    // The self user is not loaded yet: no `users.self` entry.
+    useUsersStore.setState({ user: null });
 
     renderPage();
 

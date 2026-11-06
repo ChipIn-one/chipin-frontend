@@ -3,12 +3,14 @@ import { expect, test } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
 import { currencyRatesKeys } from 'entities/currency-rates';
+import { useAuthStore } from 'store/authStore';
 import { useUsersStore } from 'store/users-store';
 import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
 
 import ExpensePreferencesSection from './ExpensePreferencesSection';
 
 import 'i18n/index';
+import 'test/selfUserMirror';
 
 const user = {
     id: 'user-1',
@@ -35,6 +37,8 @@ const user = {
 } satisfies SelfUser;
 
 test('keeps the selected default category visible but disabled when categories are skipped', () => {
+    // Settings are a signed-in page: the self query's settings apply.
+    useAuthStore.setState({ status: 'authenticated' });
     useUsersStore.setState({ user, localUser: null, friends: [] });
     const client = createTestQueryClient();
 

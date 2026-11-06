@@ -3,7 +3,9 @@ import { create } from 'zustand';
 import * as activityApi from 'api/activityApi';
 import * as ledgerApi from 'api/ledgerApi';
 import { ACTIVITY_API_LIMIT } from 'constants/activity';
+import { userCurrency, userDefaultCategory, userSkipCategory } from 'entities/users';
 import { normalizeApiError } from 'helpers/errors';
+import { getLocalUser } from 'helpers/localStorage';
 
 import { useErrorsStore } from '../errorsStore';
 import { mapActivityExpenseToModalState } from '../expenseModalEditMapping';
@@ -11,13 +13,9 @@ import type { ExpenseModalEditInitialization, ExpenseModalSource } from '../expe
 import { useGroupsStore } from '../groupsStore';
 import { invalidateDashboard } from '../internal/dashboardQueryBridge';
 import { createRequestChannel } from '../internal/resourceRequests';
+import { getCachedSelfUser } from '../internal/usersQueryBridge';
 import { useLoadingStore } from '../loadingStore';
-import {
-    selectUserCurrency,
-    selectUserDefaultCategory,
-    selectUserSkipCategory,
-    useUsersStore,
-} from '../users-store';
+import { useUsersStore } from '../users-store';
 
 import { initialState } from './initialState';
 import type {
@@ -98,13 +96,16 @@ const createExpense = (get: () => ActivityStore, params: CreateExpenseParams): P
 const getExpenseEditSource = (): ExpenseModalSource => {
     const usersState = useUsersStore.getState();
     const groupsState = useGroupsStore.getState();
+    const currentUser = getCachedSelfUser(usersState.localUser?.id) ?? null;
+    // The self query's settings once it has data, else the cached user's (as the UI reads them).
+    const settings = currentUser?.settings ?? getLocalUser()?.settings ?? null;
 
     return {
         context: 'dashboard',
-        currentUser: usersState.user,
-        defaultCurrency: selectUserCurrency(usersState),
-        defaultCategory: selectUserDefaultCategory(usersState),
-        skipCategory: selectUserSkipCategory(usersState),
+        currentUser,
+        defaultCurrency: userCurrency(settings),
+        defaultCategory: userDefaultCategory(settings),
+        skipCategory: userSkipCategory(settings),
         groups: groupsState.groups.map(group => ({
             id: group.id,
             name: group.name,

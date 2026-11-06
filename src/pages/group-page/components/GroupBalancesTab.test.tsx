@@ -7,6 +7,8 @@ import { getOrThrow } from 'test/getOrThrow';
 
 import GroupBalancesTab from './GroupBalancesTab';
 
+import 'test/selfUserMirror';
+
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),
 }));

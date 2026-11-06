@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { Group } from 'api/chipin.types';
 import { buildGroupInviteLink } from 'helpers/url';
-import { useUsersStore } from 'store/users-store';
+import { useSelfUser } from 'hooks/useSelfUser';
 
 import GroupRoleBadge from 'basics/GroupRoleBadge';
 
@@ -14,7 +14,7 @@ interface Props {
 
 const GroupMembersTab = ({ group }: Props) => {
     const { t } = useTranslation('group');
-    const user = useUsersStore(s => s.user);
+    const user = useSelfUser();
     const inviteLink = buildGroupInviteLink({ inviteToken: group.inviteToken });
 
     return (

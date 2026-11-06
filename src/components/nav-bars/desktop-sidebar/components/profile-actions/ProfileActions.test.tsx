@@ -13,6 +13,7 @@ import { useUsersStore } from 'store/users-store';
 import ProfileActions from './ProfileActions';
 
 import 'i18n/index';
+import 'test/selfUserMirror';
 
 const user = {
     id: 'user-1',

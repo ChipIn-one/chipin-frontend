@@ -107,7 +107,6 @@
     ],
     "use-connect": [
         "src/components/add-expense-button/internal/useConnect.ts",
-        "src/components/dashboard-onboarding/internal/useConnect.ts",
         "src/components/modals/add-expense-modal/components/expense-buttons/internal/useConnect.ts",
         "src/components/modals/add-expense-modal/components/expense-payer-search-select/internal/useConnect.ts",
         "src/components/modals/early-supporter-promo-modal/internal/useConnect.ts",
