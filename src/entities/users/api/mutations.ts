@@ -1,12 +1,13 @@
 // The users entity mutations (spec 03 §6 row 3): the self user's profile and settings, the avatar,
-// removing a friend and accepting a friend invite. Online only (spec 03 §2.9): `networkMode:
-// 'online'`, no retry, and the hooks refuse them offline before `mutate`. Every lifecycle callback
+// removing a friend and accepting a friend invite. Online only (spec 03 §2.9): no retry, and the
+// hooks refuse them offline before `mutate`. Every lifecycle callback
 // lives here (spec 03 §2.1): the hooks pass only the variables.
 import type { MutationFunctionContext, QueryClient } from '@tanstack/react-query';
 import { mutationOptions } from '@tanstack/react-query';
 
-import { getAuthSessionVersion, isAuthSessionCurrent } from 'helpers/authSession';
+import { isAuthSessionCurrent } from 'helpers/authSession';
 import { api } from 'shared/api/client';
+import { isNetworkUsable } from 'shared/offline/network';
 
 import { toSelfUser } from '../model/toSelfUser';
 import type { SelfUser, SelfUserSettings } from '../model/types';
@@ -33,11 +34,40 @@ export interface UpdateSelfParams {
     settings?: Partial<SelfUserSettings>;
 }
 
+/**
+ * Why a write was not sent: `session` — the auth session it was made in has ended (expired,
+ * signed out, switched) before its turn in the queue; `offline` — the network went away before
+ * its turn (spec 03 §2.9: these writes are never queued for a reconnect).
+ */
+export type UserWriteRefusal = 'session' | 'offline';
+
+/** A users write refused before it was sent. */
+export class UserWriteRefusedError extends Error {
+    readonly reason: UserWriteRefusal;
+
+    constructor(reason: UserWriteRefusal) {
+        super(`User write refused: ${reason}`);
+        this.reason = reason;
+    }
+}
+
+/** The variables of a self write: the auth session it was made in is checked before it is sent. */
+interface SessionBound {
+    /** `getAuthSessionVersion()` when the write was made. */
+    sessionVersion: number;
+}
+
+export interface UpdateSelfVariables extends SessionBound {
+    changes: UpdateSelfParams;
+}
+
 export interface UploadAvatarParams {
     file: File;
     /** Upload progress, 0–100. */
     onProgress?: (progress: number) => void;
 }
+
+export type UploadAvatarVariables = UploadAvatarParams & SessionBound;
 
 /** The friend whose invite was accepted. */
 export interface AcceptedFriend {
@@ -45,26 +75,46 @@ export interface AcceptedFriend {
     displayName: string;
 }
 
+// A queued self write runs after the previous one settles: by then its session may have ended, or
+// the network gone. It is refused then, never sent with another session's token or held paused.
+const refuseIfStale = ({ sessionVersion }: SessionBound): Promise<void> => {
+    if (!isAuthSessionCurrent(sessionVersion)) {
+        return Promise.reject(new UserWriteRefusedError('session'));
+    }
+    return isNetworkUsable()
+        ? Promise.resolve()
+        : Promise.reject(new UserWriteRefusedError('offline'));
+};
+
 const withChanges = (user: SelfUser, changes: UpdateSelfParams): SelfUser => ({
     ...user,
     ...(changes.displayName !== undefined && { displayName: changes.displayName }),
     settings: { ...user.settings, ...changes.settings },
 });
 
+const isUpdateSelfVariables = (variables: unknown): variables is UpdateSelfVariables =>
+    typeof variables === 'object' && variables !== null && 'changes' in variables;
+
 // The settings writes still waiting (optimistic in the cache), except `current`, in call order.
-const pendingChanges = (client: QueryClient, current: UpdateSelfParams): UpdateSelfParams[] =>
+const pendingChanges = (
+    client: QueryClient,
+    current: UpdateSelfVariables | null,
+): UpdateSelfParams[] =>
     client
         .getMutationCache()
         .findAll({ mutationKey: usersMutationKeys.updateSelf, status: 'pending' })
         .map(mutation => mutation.state.variables)
-        .filter((variables): variables is UpdateSelfParams => {
-            return typeof variables === 'object' && variables !== null && variables !== current;
-        });
+        .filter(isUpdateSelfVariables)
+        .filter(variables => variables !== current)
+        .map(variables => variables.changes);
 
-// A confirmed user from the server, with the writes still pending applied over it: a response
-// never hides a later optimistic change.
-const withPending = (client: QueryClient, user: SelfUser, current: UpdateSelfParams): SelfUser =>
-    pendingChanges(client, current).reduce(withChanges, user);
+// A user (confirmed by the server, or rolled back) with the writes still pending applied over it:
+// nothing hides a later optimistic change.
+const withPending = (
+    client: QueryClient,
+    user: SelfUser,
+    current: UpdateSelfVariables | null,
+): SelfUser => pendingChanges(client, current).reduce(withChanges, user);
 
 // Cancel before set: a refetch still in flight read the user before this write, and would
 // overwrite it when it lands.
@@ -82,24 +132,20 @@ const setSelf = (client: QueryClient, update: (user: SelfUser) => SelfUser): Pro
 const writeConfirmedSelf = (
     client: QueryClient,
     user: SelfUser,
-    sessionVersion: number,
-    current?: UpdateSelfParams,
+    variables: SessionBound,
+    current: UpdateSelfVariables | null,
 ): Promise<void> => {
-    if (!isAuthSessionCurrent(sessionVersion)) {
+    if (!isAuthSessionCurrent(variables.sessionVersion)) {
         return Promise.resolve();
     }
     syncLocalUser(user);
     return client.cancelQueries({ queryKey: usersKeys.self() }).then(() => {
-        client.setQueryData(
-            usersKeys.self(),
-            current === undefined ? user : withPending(client, user, current),
-        );
+        client.setQueryData(usersKeys.self(), withPending(client, user, current));
     });
 };
 
 interface UpdateSelfContext {
     previous: SelfUser | undefined;
-    sessionVersion: number;
 }
 
 // The fields `changes` wrote, back to their values before it.
@@ -114,40 +160,54 @@ const revertChanges = (user: SelfUser, changes: UpdateSelfParams, previous: Self
     });
 };
 
-/** `PATCH /users/self`: optimistic, rolled back on an error. */
-export const updateSelfMutationOptions = () =>
-    mutationOptions<SelfUser, Error, UpdateSelfParams, UpdateSelfContext>({
-        mutationKey: usersMutationKeys.updateSelf,
-        scope: SELF_SCOPE,
-        networkMode: 'online',
-        retry: false,
-        mutationFn: (changes: UpdateSelfParams) =>
-            api('patch', '/users/self', {
-                body: {
-                    ...(changes.displayName !== undefined && { displayName: changes.displayName }),
-                    ...(changes.settings && { settings: changes.settings }),
-                },
-            }).then(toSelfUser),
-        onMutate: (changes, { client }: MutationFunctionContext) => {
-            const previous = client.getQueryData<SelfUser>(usersKeys.self());
-            const sessionVersion = getAuthSessionVersion();
+// The two self writes run in the scope queue and check the network themselves before they are
+// sent (`refuseIfStale`): `networkMode: 'always'`, so a write whose turn comes offline fails at
+// once (rolled back, a toast) instead of waiting paused for a reconnect.
+const SELF_WRITE_DEFAULTS = { scope: SELF_SCOPE, networkMode: 'always', retry: false } as const;
 
-            return setSelf(client, user => withChanges(user, changes)).then(() => ({
-                previous,
-                sessionVersion,
-            }));
+/** `PATCH /users/self`: optimistic, rolled back on an error or a refusal. */
+export const updateSelfMutationOptions = () =>
+    mutationOptions<SelfUser, Error, UpdateSelfVariables, UpdateSelfContext>({
+        ...SELF_WRITE_DEFAULTS,
+        mutationKey: usersMutationKeys.updateSelf,
+        mutationFn: variables =>
+            refuseIfStale(variables)
+                .then(() =>
+                    api('patch', '/users/self', {
+                        body: {
+                            ...(variables.changes.displayName !== undefined && {
+                                displayName: variables.changes.displayName,
+                            }),
+                            ...(variables.changes.settings && {
+                                settings: variables.changes.settings,
+                            }),
+                        },
+                    }),
+                )
+                .then(toSelfUser),
+        onMutate: ({ changes }, { client }: MutationFunctionContext) => {
+            const previous = client.getQueryData<SelfUser>(usersKeys.self());
+
+            return setSelf(client, user => withChanges(user, changes)).then(() => ({ previous }));
         },
-        onSuccess: (user, changes, context, { client }) =>
-            writeConfirmedSelf(client, user, context.sessionVersion, changes),
-        onError: (_error, changes, context, { client }) => {
+        onSuccess: (user, variables, _context, { client }) =>
+            writeConfirmedSelf(client, user, variables, variables),
+        // Rolled back in this user's own client even after the session ended (the change was
+        // never confirmed); a client cleared by `clearUserData` has nothing to roll back.
+        onError: (_error, variables, context, { client }) => {
             const previous = context?.previous;
 
-            if (!previous || !context || !isAuthSessionCurrent(context.sessionVersion)) {
+            if (!previous) {
                 return undefined;
             }
-            return setSelf(client, user => revertChanges(user, changes, previous)).then(() => {
-                // Nothing else pending: reload what the server holds now.
-                if (pendingChanges(client, changes).length === 0) {
+            return setSelf(client, user =>
+                withPending(client, revertChanges(user, variables.changes, previous), variables),
+            ).then(() => {
+                // Nothing else pending in the same session: reload what the server holds now.
+                if (
+                    isAuthSessionCurrent(variables.sessionVersion) &&
+                    pendingChanges(client, variables).length === 0
+                ) {
                     return client.invalidateQueries({ queryKey: usersKeys.self() });
                 }
                 return undefined;
@@ -161,27 +221,28 @@ const toProgress = (loaded: number, total: number): number =>
 
 /** `PUT /users/self/avatar` (multipart, with upload progress); never optimistic. */
 export const uploadAvatarMutationOptions = () =>
-    mutationOptions<SelfUser, Error, UploadAvatarParams, { sessionVersion: number }>({
+    mutationOptions<SelfUser, Error, UploadAvatarVariables>({
+        ...SELF_WRITE_DEFAULTS,
         mutationKey: usersMutationKeys.uploadAvatar,
-        scope: SELF_SCOPE,
-        networkMode: 'online',
-        retry: false,
-        mutationFn: ({ file, onProgress }: UploadAvatarParams) => {
-            const body = new FormData();
+        mutationFn: variables =>
+            refuseIfStale(variables)
+                .then(() => {
+                    const body = new FormData();
 
-            body.append('file', file);
-            return api('put', '/users/self/avatar', {
-                body,
-                onUploadProgress: event => {
-                    if (event.total) {
-                        onProgress?.(toProgress(event.loaded, event.total));
-                    }
-                },
-            }).then(toSelfUser);
-        },
-        onMutate: () => ({ sessionVersion: getAuthSessionVersion() }),
-        onSuccess: (user, _params, context, { client }) =>
-            writeConfirmedSelf(client, user, context.sessionVersion),
+                    body.append('file', variables.file);
+                    return api('put', '/users/self/avatar', {
+                        body,
+                        onUploadProgress: event => {
+                            if (event.total) {
+                                variables.onProgress?.(toProgress(event.loaded, event.total));
+                            }
+                        },
+                    });
+                })
+                .then(toSelfUser),
+        // The settings writes still pending stay shown over the new picture.
+        onSuccess: (user, variables, _context, { client }) =>
+            writeConfirmedSelf(client, user, variables, null),
     });
 
 // After a change of the friends: a running load may predate it, so it is cancelled and restarted.

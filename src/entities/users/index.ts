@@ -1,6 +1,11 @@
 // Public entry of entities/users: the self user (and its settings), the known users (friends) and
 // the premium promo queries, and the profile, avatar and friend mutations.
-export type { AcceptedFriend, UpdateSelfParams, UploadAvatarParams } from './api/mutations';
+export type {
+    AcceptedFriend,
+    UpdateSelfParams,
+    UploadAvatarParams,
+    UserWriteRefusal,
+} from './api/mutations';
 export {
     acceptFriendInviteMutationOptions,
     isSelfWritePending,
@@ -8,6 +13,7 @@ export {
     updateSelfMutationOptions,
     uploadAvatarMutationOptions,
     usersMutationKeys,
+    UserWriteRefusedError,
 } from './api/mutations';
 export {
     knownUsersQueryOptions,

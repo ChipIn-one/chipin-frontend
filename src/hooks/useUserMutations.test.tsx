@@ -4,7 +4,7 @@ import { http, HttpResponse } from 'msw';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
-import { type KnownUser, type SelfUser, usersKeys } from 'entities/users';
+import { type KnownUser, type SelfUser, usersKeys, UserWriteRefusedError } from 'entities/users';
 import { invalidateAuthSession } from 'helpers/authSession';
 import { clearLocalUserIdentity, getLocalUser, saveLocalUser } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
@@ -17,7 +17,6 @@ import {
     useAcceptFriendInvite,
     useExtendSubscriptionByDay,
     useRemoveKnownUser,
-    UserWriteRefusedError,
     useUpdateSelf,
     useUploadAvatar,
 } from './useUserMutations';
@@ -235,17 +234,121 @@ test('a response after the session ended writes neither the cache nor LocalUser'
 
     let done: Promise<void> = Promise.resolve();
     act(() => {
-        done = result.current.updateSelf({ displayName: 'Renamed' });
+        done = result.current.updateSelf({ settings: { theme: 'dark' } });
     });
     await waitFor(() => {
-        expect(selfInCache()?.displayName).toBe('Renamed');
+        expect(selfInCache()?.settings.theme).toBe('dark');
     });
     invalidateAuthSession();
     getDefaultTestQueryClient().setQueryData(usersKeys.self(), selfUser);
     gate.resolve();
     await act(() => done);
 
-    expect(selfInCache()?.displayName).toBe('User');
+    expect(selfInCache()?.settings.theme).toBe('light');
+    expect(getLocalUser()?.settings.theme).toBe('light');
+    // Not this write's error: the session that made it has ended.
+    expect(toast.error).not.toHaveBeenCalled();
+});
+
+test('a write queued behind another is not sent once its session has ended', async () => {
+    signInWithCachedSelf();
+    const first = deferred();
+    const bodies = servePatch([first]);
+    const { result } = renderHook(() => useUpdateSelf());
+
+    let done: Promise<void>[] = [];
+    act(() => {
+        done = [
+            result.current.updateSelf({ settings: { theme: 'dark' } }),
+            result.current.updateSelf({ settings: { sex: 'female' } }),
+        ];
+    });
+    await waitFor(() => {
+        expect(bodies).toHaveLength(1);
+    });
+    // An expiry (then possibly a sign-in as another user) before the queued write's turn.
+    invalidateAuthSession();
+    first.resolve();
+    await act(() => Promise.all(done));
+
+    expect(bodies).toEqual([{ settings: { theme: 'dark' } }]);
+    // Never confirmed: rolled back in this user's own client, no toast.
+    expect(selfInCache()?.settings.sex).toBe('male');
+    expect(toast.error).not.toHaveBeenCalled();
+});
+
+test('a write queued behind another is not left paused when the network goes away', async () => {
+    signInWithCachedSelf();
+    const first = deferred();
+    const bodies = servePatch([first]);
+    const { result } = renderHook(() => useUpdateSelf());
+
+    let done: Promise<void>[] = [];
+    act(() => {
+        done = [
+            result.current.updateSelf({ settings: { theme: 'dark' } }),
+            result.current.updateSelf({ settings: { sex: 'female' } }),
+        ];
+    });
+    await waitFor(() => {
+        expect(bodies).toHaveLength(1);
+    });
+    onlineManager.setOnline(false);
+    first.resolve();
+    await act(() => Promise.all(done));
+
+    expect(bodies).toEqual([{ settings: { theme: 'dark' } }]);
+    await waitFor(() => {
+        expect(result.current.isPending).toBe(false);
+    });
+    expect(selfInCache()?.settings).toMatchObject({ theme: 'dark', sex: 'male' });
+    expect(toast.error).toHaveBeenCalledWith('errors:network.offline');
+    // Nothing is sent on reconnect.
+    onlineManager.setOnline(true);
+    await act(() => new Promise(resolve => setTimeout(resolve, 0)));
+    expect(bodies).toHaveLength(1);
+});
+
+test('a failed write rolls back its field to the pending later value, not the old one', async () => {
+    signInWithCachedSelf();
+    const first = deferred();
+    const answers = [400, 200];
+    const bodies: unknown[] = [];
+    server.use(
+        http.patch('*/users/self', async ({ request }) => {
+            bodies.push(await request.json());
+            const status = answers[bodies.length - 1];
+
+            if (bodies.length === 1) {
+                await first.promise;
+            }
+            return status === 400
+                ? HttpResponse.json({ code: 'SYSTEM.INTERNAL' }, { status: 400 })
+                : HttpResponse.json(
+                      toWire({ ...selfUser, settings: { ...selfUser.settings, theme: 'system' } }),
+                  );
+        }),
+    );
+    const { result } = renderHook(() => useUpdateSelf());
+
+    let done: Promise<void>[] = [];
+    act(() => {
+        done = [
+            result.current.updateSelf({ settings: { theme: 'dark' } }),
+            result.current.updateSelf({ settings: { theme: 'system' } }),
+        ];
+    });
+    await waitFor(() => {
+        expect(bodies).toHaveLength(1);
+    });
+    first.resolve();
+    // The first failed while the second (same field) is pending: the second value stays shown.
+    await waitFor(() => {
+        expect(bodies).toHaveLength(2);
+    });
+    expect(selfInCache()?.settings.theme).toBe('system');
+    await act(() => Promise.all(done));
+    expect(selfInCache()?.settings.theme).toBe('system');
 });
 
 test('settings are refused offline: no request, a toast, nothing changes', async () => {
@@ -303,6 +406,42 @@ test('uploadAvatar sends the file as multipart data and keeps the new picture', 
     expect(contentTypes[0]).toContain('multipart/form-data');
     expect(onProgress).toHaveBeenLastCalledWith(100);
     expect(selfInCache()?.picture).toBe(picture);
+});
+
+test('the avatar response keeps a settings change still pending behind it', async () => {
+    signInWithCachedSelf();
+    const upload = deferred();
+    const patch = deferred();
+    const picture = 'https://cdn.example.com/a.webp';
+    server.use(
+        http.put('*/users/self/avatar', async () => {
+            await upload.promise;
+            return HttpResponse.json(toWire({ ...selfUser, picture }));
+        }),
+    );
+    const bodies = servePatch([patch]);
+    const { result } = renderHook(() => ({ avatar: useUploadAvatar(), self: useUpdateSelf() }));
+
+    let done: Promise<unknown>[] = [];
+    act(() => {
+        done = [
+            result.current.avatar.uploadAvatar({ file: new File(['a'], 'a.png') }),
+            result.current.self.updateSelf({ settings: { theme: 'dark' } }),
+        ];
+    });
+    await waitFor(() => {
+        expect(selfInCache()?.settings.theme).toBe('dark');
+    });
+    upload.resolve();
+    // The settings write starts once the avatar has settled.
+    await waitFor(() => {
+        expect(bodies).toHaveLength(1);
+    });
+    // The avatar response does not know the pending theme change: it stays shown.
+    expect(selfInCache()).toMatchObject({ picture, settings: { theme: 'dark' } });
+    patch.resolve();
+    await act(() => Promise.all(done));
+    expect(bodies).toEqual([{ settings: { theme: 'dark' } }]);
 });
 
 test('a failed avatar upload rejects with a toast and keeps the picture', async () => {
@@ -386,11 +525,42 @@ test('a failed friend removal rejects with a toast and keeps the friends', async
     expect(toast.error).toHaveBeenCalledTimes(1);
 });
 
+test('a network failure of a friend removal shows the translated generic error', async () => {
+    signInWithCachedSelf();
+    server.use(http.delete('*/users/known-users/:id', () => HttpResponse.error()));
+    const { result } = renderHook(() => useRemoveKnownUser());
+
+    await expect(act(() => result.current.removeKnownUser('friend-1'))).rejects.toBeTruthy();
+    expect(toast.error).toHaveBeenCalledWith('toasts:common.requestFailed');
+});
+
+test('a friend removal failing after the session ended shows no error', async () => {
+    signInWithCachedSelf();
+    const gate = deferred();
+    server.use(
+        http.delete('*/users/known-users/:id', async () => {
+            await gate.promise;
+            return HttpResponse.json({ code: 'SYSTEM.INTERNAL' }, { status: 400 });
+        }),
+    );
+    const { result } = renderHook(() => useRemoveKnownUser());
+
+    let done: Promise<void> = Promise.resolve();
+    act(() => {
+        done = result.current.removeKnownUser('friend-1');
+    });
+    invalidateAuthSession();
+    gate.resolve();
+    await expect(act(() => done)).rejects.toBeTruthy();
+    expect(toast.error).not.toHaveBeenCalled();
+});
+
 test('removing a friend is refused offline and with an invalid id', async () => {
     signInWithCachedSelf();
     const { result } = renderHook(() => useRemoveKnownUser());
 
     await expect(act(() => result.current.removeKnownUser('a/b'))).rejects.toBeTruthy();
+    expect(toast.error).toHaveBeenLastCalledWith('toasts:common.requestFailed');
     onlineManager.setOnline(false);
     await expect(result.current.removeKnownUser('friend-1')).rejects.toBeInstanceOf(
         UserWriteRefusedError,

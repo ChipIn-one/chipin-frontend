@@ -18,16 +18,17 @@ import {
     uploadAvatarMutationOptions,
     type UploadAvatarParams,
     usersKeys,
+    type UserWriteRefusal,
+    UserWriteRefusedError,
 } from 'entities/users';
+import { getAuthSessionVersion, isAuthSessionCurrent } from 'helpers/authSession';
 import { normalizeApiError } from 'helpers/errors';
 import { getUnixTimestampInSec } from 'helpers/time';
+import { ApiError } from 'shared/lib/apiError';
 import { isNetworkUsable } from 'shared/offline/network';
 import { isUserCacheClient } from 'shared/offline/userCaches';
 import { AUTH_STATUS } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
-
-/** A users write refused before it was sent: offline, or no signed-in user on this client. */
-export class UserWriteRefusedError extends Error {}
 
 const useIsUserWriteEnabled = (): boolean => {
     const isSignedIn = useAuthStore(state => state.status === AUTH_STATUS.AUTHENTICATED);
@@ -36,19 +37,47 @@ const useIsUserWriteEnabled = (): boolean => {
     return isSignedIn && isUserClient;
 };
 
-const refuse = (): Promise<never> => Promise.reject(new UserWriteRefusedError());
+const refuse = (reason: UserWriteRefusal): Promise<never> =>
+    Promise.reject(new UserWriteRefusedError(reason));
 
+const offlineMessage = (): string => i18n.t('errors:network.offline');
+
+// TODO(spec 03 §2.9): disable the controls offline with `useRequiresOnline()` / `<OnlineOnly>`
+// once they exist; until then an offline write is refused here with a toast.
 const refuseOffline = (): Promise<never> => {
-    toast.error(i18n.t('errors:network.offline'));
-    return refuse();
+    toast.error(offlineMessage());
+    return refuse('offline');
 };
 
-const toastError = (error: unknown): Promise<never> => {
-    if (!(error instanceof UserWriteRefusedError)) {
-        toast.error(normalizeApiError(error).message);
+// Refused before `mutate`: signed out or on the anonymous client (no toast), or offline.
+const refusalBeforeMutate = (isEnabled: boolean): Promise<never> | null => {
+    if (!isEnabled) {
+        return refuse('session');
     }
-    return Promise.reject(error);
+    return isNetworkUsable() ? null : refuseOffline();
 };
+
+// A failure of a write made in `sessionVersion`: nothing is shown once that session has ended (a
+// sign-out or an account switch is not this write's error). A backend error has its translated
+// message; anything else (network, timeout, an invalid path segment) the generic one.
+const toastError =
+    (sessionVersion: number) =>
+    (error: unknown): Promise<never> => {
+        if (isAuthSessionCurrent(sessionVersion)) {
+            if (error instanceof UserWriteRefusedError) {
+                if (error.reason === 'offline') {
+                    toast.error(offlineMessage());
+                }
+            } else {
+                toast.error(
+                    error instanceof ApiError
+                        ? normalizeApiError(error).message
+                        : i18n.t('toasts:common.requestFailed'),
+                );
+            }
+        }
+        return Promise.reject(error);
+    };
 
 /** `updateSelf` never rejects: a failure is a toast and the change is rolled back. */
 export const useUpdateSelf = () => {
@@ -56,9 +85,12 @@ export const useUpdateSelf = () => {
     const { mutateAsync, isPending } = useMutation(updateSelfMutationOptions());
     const updateSelf = useCallback(
         (changes: UpdateSelfParams): Promise<void> => {
-            const write = !isEnabled ? refuse() : !isNetworkUsable() ? refuseOffline() : null;
+            const sessionVersion = getAuthSessionVersion();
+            const write =
+                refusalBeforeMutate(isEnabled) ??
+                mutateAsync({ changes, sessionVersion }).catch(toastError(sessionVersion));
 
-            return (write ?? mutateAsync(changes).catch(toastError)).then(
+            return write.then(
                 () => undefined,
                 () => undefined,
             );
@@ -75,10 +107,12 @@ export const useUploadAvatar = () => {
     const { mutateAsync, isPending } = useMutation(uploadAvatarMutationOptions());
     const uploadAvatar = useCallback(
         (params: UploadAvatarParams): Promise<SelfUser> => {
-            if (!isEnabled) {
-                return refuse();
-            }
-            return isNetworkUsable() ? mutateAsync(params).catch(toastError) : refuseOffline();
+            const sessionVersion = getAuthSessionVersion();
+
+            return (
+                refusalBeforeMutate(isEnabled) ??
+                mutateAsync({ ...params, sessionVersion }).catch(toastError(sessionVersion))
+            );
         },
         [isEnabled, mutateAsync],
     );
@@ -92,10 +126,12 @@ export const useRemoveKnownUser = () => {
     const { mutateAsync, isPending } = useMutation(removeKnownUserMutationOptions());
     const removeKnownUser = useCallback(
         (userId: string): Promise<void> => {
-            if (!isEnabled) {
-                return refuse();
-            }
-            return isNetworkUsable() ? mutateAsync({ userId }).catch(toastError) : refuseOffline();
+            const sessionVersion = getAuthSessionVersion();
+
+            return (
+                refusalBeforeMutate(isEnabled) ??
+                mutateAsync({ userId }).catch(toastError(sessionVersion))
+            );
         },
         [isEnabled, mutateAsync],
     );
@@ -110,7 +146,9 @@ export const useAcceptFriendInvite = () => {
 
     return useCallback(
         (inviteToken: string): Promise<AcceptedFriend> =>
-            isEnabled && isNetworkUsable() ? mutateAsync({ inviteToken }) : refuse(),
+            isEnabled && isNetworkUsable()
+                ? mutateAsync({ inviteToken })
+                : refuse(isEnabled ? 'offline' : 'session'),
         [isEnabled, mutateAsync],
     );
 };
