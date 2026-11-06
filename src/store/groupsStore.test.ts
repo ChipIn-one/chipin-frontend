@@ -11,11 +11,11 @@ import { mountUserDashboardCache } from 'test/userDashboardCache';
 import { useActivityStore } from './activity-store';
 import { useErrorsStore } from './errorsStore';
 import { useGroupsStore } from './groupsStore';
-import { invalidateKnownUsers } from './internal/sessionUser';
 import { useLoadingStore } from './loadingStore';
+import { invalidateKnownUsers } from './sessionUser';
 
-vi.mock('./internal/sessionUser', async importOriginal => ({
-    ...(await importOriginal<typeof import('./internal/sessionUser')>()),
+vi.mock('./sessionUser', async importOriginal => ({
+    ...(await importOriginal<typeof import('./sessionUser')>()),
     invalidateKnownUsers: vi.fn(() => Promise.resolve()),
 }));
 

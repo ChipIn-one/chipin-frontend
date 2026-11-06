@@ -1,5 +1,5 @@
 import { onlineManager } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, expect, test } from 'vitest';
@@ -9,6 +9,7 @@ import { saveLocalUser } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
 import { useConnectivityStore } from 'store/connectivityStore';
 import { useLoadingStore } from 'store/loadingStore';
+import { loadSelfUserForSession, resetSessionSelfLoad } from 'store/sessionUser';
 import { setupMswServer } from 'test/mswServer';
 import { signInWithSelf } from 'test/selfUser';
 import { mountAsUserClient } from 'test/userClient';
@@ -82,6 +83,7 @@ const serveSelf = (respond?: () => Response): { count: number } => {
 };
 
 beforeEach(() => {
+    resetSessionSelfLoad();
     useAuthStore.setState({ status: 'unknown', sessionMode: 'online' });
     useLoadingStore.getState().setInitialLoadingStore();
     saveLocalUser({ id: 'user-1', role: 'ADMIN', settings });
@@ -121,6 +123,18 @@ test('waits on the anonymous client of a first sign-in, sending nothing', async 
     await new Promise(resolve => setTimeout(resolve, 10));
     expect(screen.queryByLabelText('Current route')).toBeNull();
     expect(requests.count).toBe(0);
+});
+
+test('a first sign-in whose self load failed routes from the cached user instead of waiting', async () => {
+    useAuthStore.setState({ status: 'authenticated' });
+    saveLocalUser({ settings });
+    serveSelf(() => HttpResponse.json({}, { status: 500 }));
+
+    renderGuard();
+    expect(screen.queryByLabelText('Current route')).toBeNull();
+    await act(() => loadSelfUserForSession());
+
+    expect(screen.getByLabelText('Current route').textContent).toBe('/dashboard');
 });
 
 test('routes from the cached user when the self load fails', async () => {

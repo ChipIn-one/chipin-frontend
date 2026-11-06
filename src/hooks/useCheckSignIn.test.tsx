@@ -15,7 +15,7 @@ import { useAuthStore } from 'store/authStore';
 import { useConnectivityStore } from 'store/connectivityStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { useGroupsStore } from 'store/groupsStore';
-import { loadKnownUsersForSession, loadSelfUserForSession } from 'store/internal/sessionUser';
+import { loadKnownUsersForSession, loadSelfUserForSession } from 'store/sessionUser';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 
 import { useCheckSignIn } from './useCheckSignIn';
@@ -27,8 +27,8 @@ vi.mock('helpers/authSession', async importOriginal => {
     return { ...actual, validateAuthSession: vi.fn(actual.validateAuthSession) };
 });
 
-vi.mock('store/internal/sessionUser', async importOriginal => ({
-    ...(await importOriginal<typeof import('store/internal/sessionUser')>()),
+vi.mock('store/sessionUser', async importOriginal => ({
+    ...(await importOriginal<typeof import('store/sessionUser')>()),
     loadKnownUsersForSession: vi.fn(),
     loadSelfUserForSession: vi.fn(),
 }));

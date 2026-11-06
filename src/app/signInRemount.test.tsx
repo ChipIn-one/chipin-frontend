@@ -1,11 +1,11 @@
 // Spec 03 §1.5: the first `LocalUser.id` after boot (a fresh sign-in, or the first session load
 // for a stored user written before 03-7a) remounts the app on that user's client. The remounted
 // sign-in check must not refresh the session, and the callback page must not exchange the code, twice.
-import { useEffect } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { Theme } from '@radix-ui/themes';
 import type { QueryClient } from '@tanstack/react-query';
 import { useQueryClient } from '@tanstack/react-query';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { get } from 'idb-keyval';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, expect, test, vi } from 'vitest';
@@ -24,10 +24,12 @@ import {
     saveLocalUser,
 } from 'helpers/localStorage';
 import { useCheckSignIn } from 'hooks/useCheckSignIn';
+import { useSelfUserState } from 'hooks/useSelfUser';
 import { OAuthCallbackPage } from 'pages/oauth-callback-page';
 import { clientFor } from 'shared/offline/restore';
 import { useAuthStore } from 'store/authStore';
 import { useGroupsStore } from 'store/groupsStore';
+import { resetSessionSelfLoad } from 'store/sessionUser';
 import { fakeAccessToken } from 'test/fakeAccessToken';
 
 import { RestoreGate } from './providers/RestoreGate';
@@ -101,7 +103,7 @@ const Destination = () => <p>{DESTINATION_TEXT}</p>;
 
 // What main.tsx does: the provider follows this tab's user (`usePersistedUserId`), the router is
 // inside it (a MemoryRouter even restarts at its initial entry on the remount).
-const App = ({ initialEntry = '/' }: { initialEntry?: string }) => {
+const App = ({ initialEntry = '/', probe }: { initialEntry?: string; probe?: ReactNode }) => {
     const userId = usePersistedUserId();
 
     return (
@@ -112,6 +114,7 @@ const App = ({ initialEntry = '/' }: { initialEntry?: string }) => {
                         <MountCounter />
                         <ClientProbe />
                         <SignInCheck />
+                        {probe}
                         <Routes>
                             <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
                             <Route path="*" element={<Destination />} />
@@ -137,6 +140,7 @@ beforeEach(() => {
     LocalStorage.remove(LS_KEY_USER);
     saveLocalUser({ role: 'USER', settings: user.settings });
     vi.mocked(fetchSelfUser).mockReset();
+    resetSessionSelfLoad();
     useAuthStore.setState({ status: 'unknown', unauthReason: undefined });
 });
 
@@ -257,4 +261,48 @@ test("expiry: X's client → anonymous; the hint back with the same id → X's m
     await screen.findByText(DESTINATION_TEXT);
 
     expect(currentClient()).toBe(userClient);
+});
+
+const RETRY_TEXT = 'retry-self';
+
+// Signed in on the anonymous client after a failed first load: the state settles, Retry reloads.
+const SelfRetry = () => {
+    const { isError, refetch } = useSelfUserState();
+
+    return isError ? (
+        <button type="button" onClick={() => void refetch()}>
+            {RETRY_TEXT}
+        </button>
+    ) : null;
+};
+
+test('a fresh OAuth sign-in whose self load fails: an error, then Retry loads once and remounts', async () => {
+    LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, false);
+    establishWritesHint();
+    useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'missing' });
+    LocalStorage.remove(LS_KEY_USER);
+    vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue({
+        token: 'access-token',
+        is_new_user: false,
+    });
+    vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
+    const loadSelf = vi
+        .mocked(fetchSelfUser)
+        .mockRejectedValueOnce(new Error('Network Error'))
+        .mockResolvedValue({ ...user, id: 'retry-user' });
+
+    render(<App initialEntry="/oauth/callback?code=retry-code" probe={<SelfRetry />} />);
+
+    const retry = await screen.findByRole('button', { name: RETRY_TEXT });
+    expect(mounts).toBe(1);
+    expect(getTabUserId()).toBeUndefined();
+
+    fireEvent.click(retry);
+
+    await waitFor(() => {
+        expect(currentClient()).toBe(clientFor('retry-user'));
+    });
+    expect(mounts).toBe(2);
+    expect(loadSelf).toHaveBeenCalledTimes(2);
+    expect(exchangeApiGoogleOAuthCode).toHaveBeenCalledOnce();
 });

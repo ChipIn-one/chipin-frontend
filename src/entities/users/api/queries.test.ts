@@ -67,7 +67,7 @@ test("the users keys start with 'users' and follow the defaults table", () => {
     expect(options.queryKey).toEqual(usersKeys.self());
     expect(options.staleTime).toBe(5 * 60_000);
     // The query defaults decide: a mount and a reconnect refetch a stale entry (the session
-    // loader joins or reuses that load, `store/internal/sessionUser`).
+    // loader joins or reuses that load, `store/sessionUser`).
     expect(options.refetchOnMount).toBeUndefined();
     expect(options.refetchOnReconnect).toBeUndefined();
 });

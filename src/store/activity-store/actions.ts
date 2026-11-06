@@ -13,12 +13,8 @@ import type { ExpenseModalEditInitialization, ExpenseModalSource } from '../expe
 import { useGroupsStore } from '../groupsStore';
 import { invalidateDashboard } from '../internal/dashboardQueryBridge';
 import { createRequestChannel } from '../internal/resourceRequests';
-import {
-    getCachedKnownUsers,
-    getCachedSelfUser,
-    invalidateKnownUsers,
-} from '../internal/sessionUser';
 import { useLoadingStore } from '../loadingStore';
+import { getCachedKnownUsers, getCachedSelfUser, invalidateKnownUsers } from '../sessionUser';
 
 import { initialState } from './initialState';
 import type {

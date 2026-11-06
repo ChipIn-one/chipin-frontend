@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast, Toaster } from 'sonner';
 
 import { DEFAULT_LOCALE } from 'constants/locales';
-import { userSoloModeByDefault } from 'entities/users';
+import { canRoleAccessSolo, userSoloModeByDefault } from 'entities/users';
 import { resolveBrowserLocale } from 'helpers/locale';
 import {
     getPublicLocaleSuggestionTarget,
@@ -17,7 +17,7 @@ import { updateSeoMetadata } from 'hooks/seoMetadata';
 import { useAuthToasts } from 'hooks/useAuthToasts';
 import { useCheckSignIn } from 'hooks/useCheckSignIn';
 import { useScrollToTop } from 'hooks/useScrollToTop';
-import { useCanAccessSolo, useUserSetting } from 'hooks/useSelfUser';
+import { useCanAccessSolo, useSessionSelfLoad, useUserSetting } from 'hooks/useSelfUser';
 import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import type { PublicRoute } from 'types/publicRoutes';
@@ -31,10 +31,18 @@ const PublicEffects = ({ route, isDark }: { route: PublicRoute; isDark: boolean 
     const { t, i18n } = useTranslation('meta');
     const isAuthResolved = useAuthStore(selectIsAuthResolved);
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
-    // The public pages run on the anonymous client and read the cached user (spec 03 §1.5): a
-    // signed-in visitor goes to the app as soon as the session is confirmed.
-    const soloModeByDefault = useUserSetting(userSoloModeByDefault);
-    const canAccessSolo = useCanAccessSolo();
+    // The public pages run on the anonymous client: a signed-in visitor goes to the app once the
+    // session's self load has settled, by the loaded user, else the cached one (spec 03 §1.5).
+    const sessionLoad = useSessionSelfLoad();
+    const isSessionLoadSettled = sessionLoad.status === 'loaded' || sessionLoad.status === 'failed';
+    const cachedSoloModeByDefault = useUserSetting(userSoloModeByDefault);
+    const cachedCanAccessSolo = useCanAccessSolo();
+    const soloModeByDefault = sessionLoad.user
+        ? userSoloModeByDefault(sessionLoad.user.settings)
+        : cachedSoloModeByDefault;
+    const canAccessSolo = sessionLoad.user
+        ? canRoleAccessSolo(sessionLoad.user.role)
+        : cachedCanAccessSolo;
 
     useEffect(() => {
         if (i18n.resolvedLanguage !== route.locale) {
@@ -59,11 +67,18 @@ const PublicEffects = ({ route, isDark }: { route: PublicRoute; isDark: boolean 
     }, [i18n.resolvedLanguage, route.metaKey, route.path, t]);
 
     useEffect(() => {
-        if (isAuthResolved && isLoggedIn && route.page === 'home') {
+        if (isAuthResolved && isLoggedIn && isSessionLoadSettled && route.page === 'home') {
             // Existing authenticated app routing remains unchanged.
             window.location.replace(getPreferredModeRoute(canAccessSolo && soloModeByDefault));
         }
-    }, [canAccessSolo, isAuthResolved, isLoggedIn, route.page, soloModeByDefault]);
+    }, [
+        canAccessSolo,
+        isAuthResolved,
+        isLoggedIn,
+        isSessionLoadSettled,
+        route.page,
+        soloModeByDefault,
+    ]);
 
     useEffect(() => {
         if (!isAuthResolved || isLoggedIn || route.locale !== DEFAULT_LOCALE) {

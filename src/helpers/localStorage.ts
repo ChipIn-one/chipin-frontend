@@ -158,15 +158,17 @@ const getLocalUser = (): LocalUser | null => {
 // The user of this tab (spec 03 §1.5): it picks the tab's QueryClient. Read from `LocalUser.id` on
 // first use, then changed only by this tab's own writes (`saveLocalUser`, `clearLocalUserIdentity`):
 // another tab that switches the shared `LocalUser` does not move this tab onto that user's cache,
-// so no `storage` listener. `null`: not read yet.
-let tabUserId: string | undefined | null = null;
+// so no `storage` listener. Once read or written, a cleared id (a sign-out) stays cleared.
+let tabUserId: string | undefined;
+let isTabUserIdKnown = false;
 const tabUserIdListeners = new Set<() => void>();
 
 const setTabUserId = (userId: string | undefined): void => {
-    if (tabUserId === userId) {
+    if (isTabUserIdKnown && tabUserId === userId) {
         return;
     }
     tabUserId = userId;
+    isTabUserIdKnown = true;
     tabUserIdListeners.forEach(listener => {
         listener();
     });
@@ -174,7 +176,10 @@ const setTabUserId = (userId: string | undefined): void => {
 
 /** The signed-in (or last) user of this tab; undefined after a sign-out or before any sign-in. */
 const getTabUserId = (): string | undefined => {
-    tabUserId ??= getLocalUser()?.id;
+    if (!isTabUserIdKnown) {
+        tabUserId = getLocalUser()?.id;
+        isTabUserIdKnown = true;
+    }
     return tabUserId;
 };
 
@@ -188,7 +193,8 @@ const subscribeTabUserId = (listener: () => void): (() => void) => {
 
 /** Tests only: forget this tab's user, the next read takes `LocalUser.id` again. */
 const resetTabUserId = (): void => {
-    tabUserId = null;
+    tabUserId = undefined;
+    isTabUserIdKnown = false;
 };
 
 /** Writes the cached user; its `id` becomes this tab's user. */

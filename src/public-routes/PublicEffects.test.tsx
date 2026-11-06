@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
@@ -15,6 +15,32 @@ vi.mock('sonner', () => ({
         <output aria-label="Public toast theme">{theme}</output>
     ),
     toast: { message: vi.fn() },
+}));
+// The session self load the public home waits for, set by each test.
+const sessionLoad = vi.hoisted(() => {
+    let state: { status: string; user: null } = { status: 'idle', user: null };
+    const listeners = new Set<() => void>();
+
+    return {
+        get: () => state,
+        set: (next: typeof state) => {
+            state = next;
+            listeners.forEach(listener => {
+                listener();
+            });
+        },
+        subscribe: (listener: () => void) => {
+            listeners.add(listener);
+            return () => {
+                listeners.delete(listener);
+            };
+        },
+    };
+});
+vi.mock('store/sessionUser', async importOriginal => ({
+    ...(await importOriginal<typeof import('store/sessionUser')>()),
+    getSessionSelfLoad: sessionLoad.get,
+    subscribeSessionSelfLoad: sessionLoad.subscribe,
 }));
 vi.mock('hooks/useAuthToasts', () => ({ useAuthToasts: vi.fn() }));
 vi.mock('hooks/useScrollToTop', () => ({ useScrollToTop: vi.fn() }));
@@ -34,6 +60,7 @@ vi.mock('react-i18next', () => ({
     }),
 }));
 beforeEach(() => {
+    sessionLoad.set({ status: 'idle', user: null });
     window.sessionStorage.clear();
     vi.clearAllMocks();
     useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'missing' });
@@ -98,7 +125,7 @@ test('Sonner follows the public cached-theme snapshot including updates', () => 
     expect(screen.getByRole('status', { name: 'Public toast theme' }).textContent).toBe('light');
 });
 
-test('a signed-in visitor on the public home goes to the app at once, from the cached user', () => {
+const goHome = () => {
     const replace = vi.fn();
     vi.stubGlobal('location', { ...window.location, replace });
     useAuthStore.setState({ status: 'authenticated', unauthReason: undefined });
@@ -108,7 +135,23 @@ test('a signed-in visitor on the public home goes to the app at once, from the c
     );
 
     render(<PublicEffects route={home} isDark={false} />);
+    return replace;
+};
 
-    expect(replace).toHaveBeenCalledExactlyOnceWith('/dashboard');
-    vi.unstubAllGlobals();
-});
+test.each(['loaded', 'failed'] as const)(
+    'a signed-in visitor on the public home goes to the app once the session load has %s',
+    status => {
+        sessionLoad.set({ status: 'loading', user: null });
+        const replace = goHome();
+
+        // The redirect would abort the session requests still in flight.
+        expect(replace).not.toHaveBeenCalled();
+
+        act(() => {
+            sessionLoad.set({ status, user: null });
+        });
+
+        expect(replace).toHaveBeenCalledExactlyOnceWith('/dashboard');
+        vi.unstubAllGlobals();
+    },
+);

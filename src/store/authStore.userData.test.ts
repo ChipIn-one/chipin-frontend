@@ -18,7 +18,7 @@ import { fakeAccessToken } from 'test/fakeAccessToken';
 import { onAccessTokenRefreshed, useAuthStore } from './authStore';
 import { useExpenseModalStore } from './expenseModalStore';
 import { useGroupsStore } from './groupsStore';
-import { loadKnownUsersForSession, loadSelfUserForSession } from './internal/sessionUser';
+import { loadKnownUsersForSession, loadSelfUserForSession } from './sessionUser';
 
 import 'fake-indexeddb/auto';
 
@@ -27,8 +27,8 @@ vi.mock('api/chipin', () => ({
     exchangeApiGoogleOAuthCode: vi.fn(),
     refreshApiAuthTokens: vi.fn(),
 }));
-vi.mock('./internal/sessionUser', async importOriginal => ({
-    ...(await importOriginal<typeof import('./internal/sessionUser')>()),
+vi.mock('./sessionUser', async importOriginal => ({
+    ...(await importOriginal<typeof import('./sessionUser')>()),
     loadKnownUsersForSession: vi.fn(),
     loadSelfUserForSession: vi.fn(),
 }));

@@ -13,6 +13,7 @@ import {
 } from 'entities/users';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import {
+    clearLocalUserIdentity,
     getLocalUser,
     getTabUserId,
     LocalStorage,
@@ -24,7 +25,7 @@ import { setupMswServer } from 'test/mswServer';
 import { createTestQueryClient } from 'test/renderWithQueryClient';
 import { mountAsUserClient } from 'test/userClient';
 
-import { loadSelfUserForSession } from './sessionUser';
+import { getSessionSelfLoad, loadSelfUserForSession, resetSessionSelfLoad } from './sessionUser';
 
 const server = setupMswServer();
 
@@ -300,4 +301,55 @@ test("this tab's user follows only this tab's writes, and notifies its readers",
     expect(getTabUserId()).toBe('user-y');
     expect(notified).toBe(1);
     unsubscribe();
+});
+
+test("after this tab's sign-out, another tab's sign-in does not become this tab's user", () => {
+    saveLocalUser({ id: 'user-x', settings });
+    clearLocalUserIdentity();
+
+    LocalStorage.set(LS_KEY_USER, { id: 'user-y', settings });
+
+    expect(getTabUserId()).toBeUndefined();
+});
+
+test('with a self write pending the load is skipped, but the role still comes back', async () => {
+    const self = serveSelf(() => userOf('user-x'));
+    const serverUser = { current: userOf('user-x') };
+    let answerPatch: () => void = () => undefined;
+    server.use(
+        http.patch('*/users/self', async () => {
+            await new Promise<void>(resolve => {
+                answerPatch = resolve;
+            });
+            return HttpResponse.json({ ...serverUser.current, isPremium: false });
+        }),
+    );
+    saveLocalUser({ id: 'user-x', settings });
+    const client = mountAsUserClient('user-x', createTestQueryClient());
+    client.setQueryData(usersKeys.self(), userOf('user-x'));
+    const write = writeTheme(client, 'dark');
+    await settle();
+
+    const loaded = await loadSelfUserForSession();
+
+    expect(loaded?.settings.theme).toBe('dark');
+    expect(getLocalUser()?.role).toBe('ADMIN');
+    expect(self.count()).toBe(0);
+    answerPatch();
+    await write;
+});
+
+test('the session load state: loading, then loaded or failed (latest load only)', async () => {
+    resetSessionSelfLoad();
+    server.use(http.get('*/users/self', () => HttpResponse.json({}, { status: 500 })));
+    saveLocalUser({ settings });
+
+    const failed = loadSelfUserForSession();
+    expect(getSessionSelfLoad().status).toBe('loading');
+    await failed;
+    expect(getSessionSelfLoad()).toEqual({ status: 'failed', user: null });
+
+    serveSelf(() => userOf('user-x'));
+    await loadSelfUserForSession();
+    expect(getSessionSelfLoad()).toMatchObject({ status: 'loaded', user: { id: 'user-x' } });
 });

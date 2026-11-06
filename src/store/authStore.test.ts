@@ -9,8 +9,8 @@ import { getLocalUser, getTabUserId, saveLocalUser } from 'helpers/localStorage'
 import { useAuthStore } from './authStore';
 import { useExpenseModalStore } from './expenseModalStore';
 import { useGroupsStore } from './groupsStore';
-import { loadKnownUsersForSession, loadSelfUserForSession } from './internal/sessionUser';
 import { useLoadingStore } from './loadingStore';
+import { loadKnownUsersForSession, loadSelfUserForSession } from './sessionUser';
 import { APP_MODES, useUiPrefsStore } from './ui-prefs';
 
 import 'fake-indexeddb/auto';
@@ -62,8 +62,8 @@ vi.mock('@sentry/react', () => ({ captureMessage: vi.fn(), captureException: vi.
 vi.mock('api/chipin', () => ({
     exchangeApiGoogleOAuthCode: vi.fn(),
 }));
-vi.mock('./internal/sessionUser', async importOriginal => ({
-    ...(await importOriginal<typeof import('./internal/sessionUser')>()),
+vi.mock('./sessionUser', async importOriginal => ({
+    ...(await importOriginal<typeof import('./sessionUser')>()),
     loadKnownUsersForSession: vi.fn(),
     loadSelfUserForSession: vi.fn(),
 }));

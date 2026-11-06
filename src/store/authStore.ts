@@ -33,12 +33,8 @@ import {
 import { useErrorsStore } from './errorsStore';
 import { useExpenseModalStore } from './expenseModalStore';
 import { useGroupsStore } from './groupsStore';
-import {
-    cachedUserId,
-    loadKnownUsersForSession,
-    loadSelfUserForSession,
-} from './internal/sessionUser';
 import { useLoadingStore } from './loadingStore';
+import { cachedUserId, loadKnownUsersForSession, loadSelfUserForSession } from './sessionUser';
 import { useUiPrefsStore } from './ui-prefs';
 
 export interface AuthStore {
@@ -80,9 +76,10 @@ const resetUserStores = () => {
 };
 
 // The rows of the "reason → what is deleted" table that delete the user's data (spec 03 §1.5).
-// Synchronous: `LS_KEY_USER` is set first (the store reset re-reads it), then `clearUserData`, whose
-// IDB deletes are not awaited (writes are blocked already, a failure is reported). Without a cached
-// id there is no user cache to delete; the stores and the draft are reset all the same.
+// Synchronous: `LS_KEY_USER` is set first (it moves this tab's user, and the app-mode reset reads
+// its settings), then `clearUserData`, whose IDB deletes are not awaited (writes are blocked
+// already, a failure is reported). Without a cached id there is no user cache to delete; the
+// stores and the draft are reset all the same.
 const dropUserData = (userId: string | undefined, nextUserId: string | null = null): void => {
     const settings = getLocalUser()?.settings;
 

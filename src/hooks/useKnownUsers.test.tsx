@@ -6,7 +6,7 @@ import { afterEach, beforeEach, expect, test } from 'vitest';
 import { usersKeys } from 'entities/users';
 import { saveLocalUser } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
-import { loadKnownUsersForSession } from 'store/internal/sessionUser';
+import { loadKnownUsersForSession } from 'store/sessionUser';
 import { createKnownUser } from 'test/knownUsers';
 import { setupMswServer } from 'test/mswServer';
 import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';

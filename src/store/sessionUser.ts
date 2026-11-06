@@ -50,7 +50,12 @@ const loadIntoClient = (
     const cached = (): SelfUser | null => client.getQueryData<SelfUser>(usersKeys.self()) ?? null;
 
     if (isSelfWritePending(client)) {
-        return Promise.resolve(cached());
+        const user = cached();
+
+        if (user && isAuthSessionCurrent(sessionVersion)) {
+            restoreLocalRole(user);
+        }
+        return Promise.resolve(user);
     }
     return client
         .fetchQuery({ ...selfUserQueryOptions(), staleTime: Math.max(Date.now() - since, 0) })
@@ -115,7 +120,13 @@ const loadBeforeClient = (
             // eslint-disable-next-line @tanstack/query/exhaustive-deps -- `request` is the session load in flight, handed to the new client; the key is the user's entry.
             void created.prefetchQuery({
                 queryKey: usersKeys.self(),
-                queryFn: () => request,
+                // Another user's answer (the token's `sub` was not this user) is not this entry.
+                queryFn: () =>
+                    request.then(user =>
+                        user.id === expectedUserId
+                            ? user
+                            : Promise.reject(new Error('Self user of another account')),
+                    ),
                 retry: false,
             });
         });
@@ -123,20 +134,61 @@ const loadBeforeClient = (
     return loaded.catch(() => null);
 };
 
+export interface SessionSelfLoad {
+    /** `idle` before any session load of this tab; `failed`: no user (the load failed). */
+    status: 'idle' | 'loading' | 'loaded' | 'failed';
+    /** The user the last load resolved with (or the cached one it fell back to). */
+    user: SelfUser | null;
+}
+
+// The latest session load, for the readers that have no user client to ask: a first sign-in
+// whose load failed stays on the anonymous client (no id to remount onto), and the public pages
+// run there. Only the latest load writes it.
+let sessionSelfLoad: SessionSelfLoad = { status: 'idle', user: null };
+let sessionLoadGeneration = 0;
+const sessionLoadListeners = new Set<() => void>();
+
+const setSessionSelfLoad = (next: SessionSelfLoad): void => {
+    sessionSelfLoad = next;
+    sessionLoadListeners.forEach(listener => {
+        listener();
+    });
+};
+
+/** The state of the latest session self load (a stable object until it changes). */
+export const getSessionSelfLoad = (): SessionSelfLoad => sessionSelfLoad;
+
+/** Calls `listener` when the session self load changes; returns the unsubscribe. */
+export const subscribeSessionSelfLoad = (listener: () => void): (() => void) => {
+    sessionLoadListeners.add(listener);
+    return () => {
+        sessionLoadListeners.delete(listener);
+    };
+};
+
 /**
  * Loads the self user once per session start (sign-in, the startup session check, the reconnect
- * of an offline-cached session, another tab's account switch). `since`: when this session start
- * began; a load finished after it is reused. Resolves with the user (null when the load failed and
- * nothing is cached); never rejects.
+ * of an offline-cached session, another tab's account switch), and on a Retry before the user's
+ * client exists. `since`: when this session start began; a load finished after it is reused.
+ * Resolves with the user (null when the load failed and nothing is cached); never rejects.
  */
 export const loadSelfUserForSession = (since: number = Date.now()): Promise<SelfUser | null> => {
     const sessionVersion = getAuthSessionVersion();
     const userId = getTabUserId();
     const client = userClient(userId);
+    const generation = ++sessionLoadGeneration;
 
-    return client
+    setSessionSelfLoad({ status: 'loading', user: null });
+    const loaded = client
         ? loadIntoClient(client, since, sessionVersion)
         : loadBeforeClient(userId, sessionVersion);
+
+    return loaded.then(user => {
+        if (generation === sessionLoadGeneration) {
+            setSessionSelfLoad({ status: user ? 'loaded' : 'failed', user });
+        }
+        return user;
+    });
 };
 
 /**
@@ -178,3 +230,9 @@ export const getCachedSelfUser = (): SelfUser | undefined =>
 /** The cached known users of this tab's user, for legacy store actions (the expense editor). */
 export const getCachedKnownUsers = (): KnownUser[] | undefined =>
     tabUserClient()?.getQueryData<KnownUser[]>(usersKeys.known());
+
+/** Tests only: forget the session self load. */
+export const resetSessionSelfLoad = (): void => {
+    sessionLoadGeneration += 1;
+    sessionSelfLoad = { status: 'idle', user: null };
+};

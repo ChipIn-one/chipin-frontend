@@ -3,11 +3,11 @@
 // their next mount. Never the reverse direction. Goes with the last legacy caller (03-11, 03-12).
 import { dashboardKeys, trimDashboardFeed } from 'entities/dashboard';
 
-import { tabUserClient } from './sessionUser';
+import { tabUserClient } from '../sessionUser';
 
 /** Settles when the active dashboard queries have refetched; never rejects. */
 export const invalidateDashboard = (): Promise<void> => {
-    // The user of this tab as `authStore` reads it: this tab's user, then the cached `LocalUser`.
+    // This tab's user (`cachedUserId`): its own writes, then the cached `LocalUser`.
     const client = tabUserClient();
 
     if (!client) {

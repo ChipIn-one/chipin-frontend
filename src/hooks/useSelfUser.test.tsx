@@ -4,11 +4,11 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 
 import { type SelfUser, userLanguage, usersKeys } from 'entities/users';
-import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
+import { clearLocalUserIdentity, getTabUserId, saveLocalUser } from 'helpers/localStorage';
 import { cachesByUser, takePendingSeed } from 'shared/offline/userCaches';
 import { useAuthStore } from 'store/authStore';
-import { loadSelfUserForSession } from 'store/internal/sessionUser';
 import { useLoadingStore } from 'store/loadingStore';
+import { loadSelfUserForSession, resetSessionSelfLoad } from 'store/sessionUser';
 import { setupMswServer } from 'test/mswServer';
 import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
 
@@ -71,6 +71,7 @@ afterEach(() => {
 });
 
 beforeEach(() => {
+    resetSessionSelfLoad();
     clearLocalUserIdentity();
     saveLocalUser({ id: 'user-1', role: 'USER', settings });
     useLoadingStore.getState().setInitialLoadingStore();
@@ -169,8 +170,41 @@ describe('useSelfUserState', () => {
         expect(result.current).toMatchObject({ user: null, isLoading: true, isFetched: false });
         await new Promise(resolve => setTimeout(resolve, 10));
         expect(requests.count).toBe(0);
-        // Retry does not bypass the gate.
+    });
+
+    test('a failed first sign-in settles with an error; Retry loads the user once and writes its id', async () => {
+        // A first sign-in: no cached id, so the app stays on the anonymous client.
+        clearLocalUserIdentity();
+        server.use(http.get('*/users/self', () => HttpResponse.json({}, { status: 500 })));
+        useAuthStore.setState({ status: 'authenticated' });
+        const { result } = renderHook(() => useSelfUserState());
+
+        await act(() => loadSelfUserForSession());
+
+        expect(result.current).toMatchObject({
+            user: null,
+            isLoading: false,
+            isFetched: true,
+            isError: true,
+        });
+        expect(getTabUserId()).toBeUndefined();
+
+        const requests = countSelfRequests();
+        await act(() => result.current.refetch());
+
+        expect(requests.count).toBe(1);
+        // The id written: the app remounts onto the user's client.
+        expect(getTabUserId()).toBe('user-1');
+        expect(result.current.isError).toBe(false);
+        takePendingSeed('user-1');
+    });
+
+    test('signed out Retry sends nothing', async () => {
+        const requests = countSelfRequests();
+        const { result } = renderHook(() => useSelfUserState());
+
         await result.current.refetch();
+
         expect(requests.count).toBe(0);
     });
 

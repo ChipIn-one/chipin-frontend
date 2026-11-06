@@ -1,9 +1,10 @@
 // The self user for the UI (spec 03 §6 row 3): the `users.self` query, requested only while signed
 // in (online, or `offline-cached` reading the cache) and on the user's persisted client: the
 // public pages and the anonymous client of a first sign-in read the cached user instead (the
-// session loader, `store/internal/sessionUser`, hands the user to the new client). Settings and
+// session loader, `store/sessionUser`, hands the user to the new client). Settings and
 // role fall back to the cached `LocalUser` until the query has data: signed out, the landing reads
 // the language and theme there (spec 03 §1.5).
+import { useSyncExternalStore } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { type SelfUser, type SelfUserSettings, useSelfUserQuery } from 'entities/users';
@@ -12,6 +13,12 @@ import { getLocalUser, type LocalUser } from 'helpers/localStorage';
 import { isUserCacheClient } from 'shared/offline/userCaches';
 import { AUTH_STATUS } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
+import {
+    getSessionSelfLoad,
+    loadSelfUserForSession,
+    type SessionSelfLoad,
+    subscribeSessionSelfLoad,
+} from 'store/sessionUser';
 
 const useIsSignedIn = (): boolean =>
     useAuthStore(state => state.status === AUTH_STATUS.AUTHENTICATED);
@@ -42,22 +49,38 @@ export interface SelfUserState {
     isError: boolean;
     /** A reload failed while the user is shown (not a paused one: offline the banner says so). */
     hasRefreshError: boolean;
-    /** Reloads the user; does nothing while the query is disabled (signed out, another client). */
+    /**
+     * Reloads the user: the query on the user's client, the session load on the anonymous client
+     * of a first sign-in; does nothing signed out.
+     */
     refetch: () => Promise<unknown>;
 }
 
 const skipRefetch = (): Promise<undefined> => Promise.resolve(undefined);
 
+const retrySessionLoad = (): Promise<unknown> => loadSelfUserForSession();
+
+/** The latest session self load (`store/sessionUser`), for readers without the user's client. */
+export const useSessionSelfLoad = (): SessionSelfLoad =>
+    useSyncExternalStore(subscribeSessionSelfLoad, getSessionSelfLoad, getSessionSelfLoad);
+
 /**
  * The self user with the state a guard or a page needs. An offline-cached session reads the cache
- * and never waits for the network: a load paused offline without data counts as settled.
+ * and never waits for the network: a load paused offline without data counts as settled. Signed
+ * in on the anonymous client (a first sign-in before the remount), the session load decides: a
+ * failed one settles with an error, and Retry runs it again (success remounts onto the user's
+ * client).
  */
 export const useSelfUserState = (): SelfUserState => {
     const isSignedIn = useIsSignedIn();
     const isEnabled = useIsSelfUserQueryEnabled();
     const query = useSelfUserQueryResult();
+    const sessionLoad = useSessionSelfLoad();
+    const isOnAnonymousClient = isSignedIn && !isEnabled;
     const user = isEnabled ? (query.data ?? null) : null;
-    const isError = isEnabled && user === null && (query.isError || query.isPaused);
+    const isError = isEnabled
+        ? user === null && (query.isError || query.isPaused)
+        : isOnAnonymousClient && sessionLoad.status === 'failed';
 
     return {
         user,
@@ -65,7 +88,7 @@ export const useSelfUserState = (): SelfUserState => {
         isFetched: user !== null || isError,
         isError,
         hasRefreshError: user !== null && query.isError,
-        refetch: isEnabled ? query.refetch : skipRefetch,
+        refetch: isEnabled ? query.refetch : isOnAnonymousClient ? retrySessionLoad : skipRefetch,
     };
 };
 

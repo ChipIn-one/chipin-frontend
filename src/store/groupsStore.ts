@@ -20,8 +20,8 @@ import { useActivityStore } from './activity-store/actions';
 import { useErrorsStore } from './errorsStore';
 import { invalidateDashboard } from './internal/dashboardQueryBridge';
 import { createRequestChannel } from './internal/resourceRequests';
-import { invalidateKnownUsers } from './internal/sessionUser';
 import { useLoadingStore } from './loadingStore';
+import { invalidateKnownUsers } from './sessionUser';
 
 const groupsChannel = createRequestChannel();
 const groupDetailChannel = createRequestChannel();

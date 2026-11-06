@@ -10,7 +10,7 @@ import { selectAuthStatus, selectSessionMode } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { useConnectivityStore } from 'store/connectivityStore';
 import { useGroupsStore } from 'store/groupsStore';
-import { loadKnownUsersForSession, loadSelfUserForSession } from 'store/internal/sessionUser';
+import { loadKnownUsersForSession, loadSelfUserForSession } from 'store/sessionUser';
 import { useUiPrefsStore } from 'store/ui-prefs';
 
 import { useTabUserId } from './useTabUserId';

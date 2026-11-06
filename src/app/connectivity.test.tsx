@@ -18,14 +18,14 @@ import { publicApi } from 'shared/api/client';
 import { useAuthStore } from 'store/authStore';
 import { useConnectivityStore } from 'store/connectivityStore';
 import { useGroupsStore } from 'store/groupsStore';
-import { loadKnownUsersForSession, loadSelfUserForSession } from 'store/internal/sessionUser';
+import { loadKnownUsersForSession, loadSelfUserForSession } from 'store/sessionUser';
 import { setupMswServer } from 'test/mswServer';
 
 import { BackendUnavailableGate } from 'components/backend-unavailable-page';
 import { InternalPageLayout } from 'components/internal-page-layout';
 
-vi.mock('store/internal/sessionUser', async importOriginal => ({
-    ...(await importOriginal<typeof import('store/internal/sessionUser')>()),
+vi.mock('store/sessionUser', async importOriginal => ({
+    ...(await importOriginal<typeof import('store/sessionUser')>()),
     loadKnownUsersForSession: vi.fn(),
     loadSelfUserForSession: vi.fn(),
 }));
