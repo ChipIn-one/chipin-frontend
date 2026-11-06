@@ -75,6 +75,13 @@ test('shows the skeleton before the first load and the invite state for no frien
     expect(screen.getByRole('status').textContent).toBe('empty');
 });
 
+test('signed in on the anonymous client (before the remount) shows the skeleton', () => {
+    // No user client registered: the query is disabled and its data is never read.
+    render(<FriendsPage />);
+
+    expect(screen.getByRole('status').textContent).toBe('loading');
+});
+
 test('a first load waiting for the network shows the invite state, as before', async () => {
     server.use(http.get('*/users/known-users', () => HttpResponse.json({ friends: [] })));
     mountAsUserClient();

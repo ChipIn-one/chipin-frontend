@@ -42,6 +42,7 @@ const skipRefetch = (): Promise<undefined> => Promise.resolve(undefined);
  * a fetch paused offline without data counts as an error (§1.8).
  */
 export const useKnownUsers = (): KnownUsersResult => {
+    const isSignedIn = useIsSignedIn();
     const isEnabled = useIsUserQueryEnabled();
     const isOnlineSession = useAuthStore(state => state.sessionMode === SESSION_MODE.ONLINE);
     const query = useKnownUsersQuery({
@@ -56,7 +57,9 @@ export const useKnownUsers = (): KnownUsersResult => {
     return {
         friends,
         isError,
-        isLoading: isWaiting && !isError,
+        // Signed in on the anonymous client (a first sign-in before the remount onto the user's
+        // client) the friends are still to come: loading, never read from that client.
+        isLoading: isSignedIn && friends === undefined && !isError,
         hasRefreshError: friends !== undefined && query.isError,
         refetch: isEnabled ? query.refetch : skipRefetch,
     };

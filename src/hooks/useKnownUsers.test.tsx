@@ -70,7 +70,8 @@ test('signed in on a client without persistence it sends no request and reads no
 
     const { result } = renderHook(() => useKnownUsers());
 
-    expect(result.current).toMatchObject({ friends: undefined, isLoading: false, isError: false });
+    // Before the remount onto the user's client the friends are still to come.
+    expect(result.current).toMatchObject({ friends: undefined, isLoading: true, isError: false });
     // A Retry there (DashboardPage) does not reach the server either.
     await act(() => result.current.refetch());
     await settle();
