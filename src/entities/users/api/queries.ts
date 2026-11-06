@@ -64,11 +64,6 @@ export const knownUsersQueryOptions = () =>
     queryOptions({
         queryKey: usersKeys.known(),
         staleTime: USERS_QUERY_DEFAULTS.known.staleTime,
-        // LEGACY until 03-9b: the session start and the reconnect of an offline-cached session
-        // invalidate this entry once the session is refreshed (`useCheckSignIn`, through the users
-        // store bridge); a reconnect refetch of its own would be a second request. A paused load
-        // still resumes on reconnect, and a focus refetches a stale entry.
-        refetchOnReconnect: false,
         queryFn: ({ signal }) => api('get', '/users/known-users', { signal }).then(toKnownUsers),
     });
 
@@ -76,10 +71,21 @@ interface KnownUsersQueryParams<T> {
     select: (friends: KnownUser[]) => T;
     /** False while signed out: the known users are never requested without a session. */
     enabled: boolean;
+    /**
+     * LEGACY until 03-9b: false for an offline-cached session, whose reconnect `useCheckSignIn`
+     * handles: once the session is refreshed it invalidates this entry through the users store
+     * bridge, and a reconnect refetch of its own would be a second request. An online session
+     * refetches a stale entry on reconnect (like the dashboard balances).
+     */
+    refetchOnReconnect: boolean;
 }
 
-export const useKnownUsersQuery = <T>({ select, enabled }: KnownUsersQueryParams<T>) =>
-    useQuery({ ...knownUsersQueryOptions(), select, enabled });
+export const useKnownUsersQuery = <T>({
+    select,
+    enabled,
+    refetchOnReconnect,
+}: KnownUsersQueryParams<T>) =>
+    useQuery({ ...knownUsersQueryOptions(), select, enabled, refetchOnReconnect });
 
 /** Unused first-user premium promo places; not persisted (spec 03 §1.4). */
 export const premiumPromoQueryOptions = () =>
@@ -87,6 +93,9 @@ export const premiumPromoQueryOptions = () =>
         queryKey: usersKeys.premiumPromo(),
         staleTime: USERS_QUERY_DEFAULTS.premiumPromo.staleTime,
         meta: { persist: USERS_QUERY_DEFAULTS.premiumPromo.persist },
+        // Read once for a new user's welcome modal: no reloads while it stays mounted.
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
         queryFn: ({ signal }) =>
             api('get', '/users/premium-promo', { signal }).then(
                 response => response.premiumPromoRemaining,

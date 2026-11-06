@@ -158,6 +158,12 @@ test('a refetch in flight does not overwrite a newer seeded user', async () => {
     expect(getLocalUser()?.settings.language).toBe('ru');
 });
 
+const wireFriend = (id: string) => ({
+    user: { id, email: `${id}@example.com`, displayName: id, createdAt: 1, updatedAt: 1 },
+    balances: [],
+    lastUsedCurrency: null,
+});
+
 const countKnownRequests = (): { count: number } => {
     const counter = { count: 0 };
 
@@ -206,6 +212,34 @@ test('a session start joins a known users load already running: one request', as
     await load;
 
     expect(requests.count).toBe(1);
+    stop();
+});
+
+test('after a change a running FIRST load is cancelled and reloaded: the second result wins', async () => {
+    const id = freshId('first-load');
+    const client = clientFor(id);
+    let count = 0;
+    server.use(
+        http.get('*/users/known-users', async () => {
+            count += 1;
+            const call = count;
+
+            // The pre-change load answers last: it must not win.
+            await new Promise(resolve => setTimeout(resolve, call === 1 ? 30 : 0));
+            return HttpResponse.json({
+                friends: call === 1 ? [] : [wireFriend('friend-new')],
+            });
+        }),
+    );
+    const stop = new QueryObserver(client, knownUsersQueryOptions()).subscribe(() => undefined);
+
+    await invalidateKnownUsers(id);
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    expect(count).toBe(2);
+    expect(
+        client.getQueryData(knownUsersQueryOptions().queryKey)?.map(friend => friend.user.id),
+    ).toEqual(['friend-new']);
     stop();
 });
 

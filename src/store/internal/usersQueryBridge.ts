@@ -38,6 +38,8 @@ export interface InvalidateKnownUsersOptions {
 /**
  * Marks the user's `users.known` stale: an active query refetches now, an inactive one on its next
  * mount; no client yet (a first sign-in) is a no-op, its first mount loads them. Never rejects.
+ * After a change a running load is cancelled first: `cancelRefetch` alone restarts it only when
+ * the entry has data, so a first load would otherwise be joined and show the pre-change list.
  */
 export const invalidateKnownUsers = (
     inMemoryUserId: string | undefined,
@@ -48,9 +50,11 @@ export const invalidateKnownUsers = (
     if (!client) {
         return Promise.resolve();
     }
-    return client.invalidateQueries(
-        { queryKey: usersKeys.known() },
-        { cancelRefetch: !joinRunning },
+    const queryKey = usersKeys.known();
+    const cancelled = joinRunning ? Promise.resolve() : client.cancelQueries({ queryKey });
+
+    return cancelled.then(() =>
+        client.invalidateQueries({ queryKey }, { cancelRefetch: !joinRunning }),
     );
 };
 

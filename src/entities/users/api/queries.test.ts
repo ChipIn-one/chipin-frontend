@@ -139,12 +139,15 @@ test('the known users and premium promo options follow the defaults table', () =
 
     expect(known.queryKey).toEqual(['users', 'known']);
     expect(known.staleTime).toBe(60_000);
-    // The session start and an offline-cached reconnect invalidate it through the store bridge.
-    expect(known.refetchOnReconnect).toBe(false);
+    // The reconnect refetch is decided per session mode by `useKnownUsers`.
+    expect(known.refetchOnReconnect).toBeUndefined();
     expect(known.meta?.persist).toBeUndefined();
     expect(promo.queryKey).toEqual(['users', 'premiumPromo']);
     expect(promo.staleTime).toBe(10 * 60_000);
     expect(promo.meta).toEqual({ persist: false });
+    // Read once for the welcome modal: never reloaded by a focus or a reconnect.
+    expect(promo.refetchOnWindowFocus).toBe(false);
+    expect(promo.refetchOnReconnect).toBe(false);
 });
 
 test('loads the known users with exact Money, persisted; the promo counter is never persisted', async () => {

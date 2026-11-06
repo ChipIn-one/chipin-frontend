@@ -62,6 +62,8 @@ test('renders the friends grouped by currency with exact Money totals and the se
 });
 
 test('shows the skeleton before the first load and the invite state for no friends', () => {
+    server.use(http.get('*/users/known-users', () => new Promise<never>(() => undefined)));
+    mountAsUserClient();
     const { unmount } = render(<FriendsPage />);
 
     expect(screen.getByRole('status').textContent).toBe('loading');

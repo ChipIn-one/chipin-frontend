@@ -16,6 +16,7 @@ import { useUsersStore } from 'store/users-store';
 import { createKnownUser } from 'test/knownUsers';
 import { setupMswServer } from 'test/mswServer';
 import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
+import { mountAsUserClient } from 'test/userClient';
 
 import DashboardPage from './DashboardPage';
 
@@ -216,6 +217,7 @@ const renderPage = () => renderWithQueryClient(<DashboardPage />, client);
 beforeEach(() => {
     vi.clearAllMocks();
     client = createTestQueryClient();
+    mountAsUserClient('user-1', client);
     useGroupsStore.getState().setInitialGroupsStore();
     useAuthStore.setState({ status: 'authenticated' });
     useUsersStore.setState({ user: currentUser });
@@ -458,9 +460,10 @@ test('DSH-007 never mistakes a load failure for new-user welcome', async () => {
     await failFriendsLoad();
     renderPage();
 
+    // The mount retries the failed first load once; it fails again.
+    expect(await screen.findByText('errors.loadTitle')).toBeTruthy();
     expect(screen.queryByTestId('dashboard-onboarding')).toBeNull();
     expect(screen.queryByTestId('activity-list')).toBeNull();
-    expect(screen.getByText('errors.loadTitle')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'activity:retryAction' })).toBeTruthy();
 });
 

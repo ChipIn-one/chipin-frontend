@@ -1,3 +1,4 @@
+import { focusManager, onlineManager } from '@tanstack/react-query';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -95,10 +96,10 @@ const setSession = (
     user: SelfUser | null,
     promo: number | 'failed' | 'pending' = 417,
 ) => {
+    mountAsUserClient();
     if (typeof promo === 'number') {
         getDefaultTestQueryClient().setQueryData(usersKeys.premiumPromo(), promo);
     } else {
-        mountAsUserClient();
         servePromo(promo);
     }
     act(() => {
@@ -182,6 +183,35 @@ test("requests the counter once for a new user, on the user's client", async () 
         getDefaultTestQueryClient().getQueryCache().find({ queryKey: usersKeys.premiumPromo() })
             ?.meta,
     ).toEqual({ persist: false });
+});
+
+test('requests the counter once per session: no focus, reconnect or post-dismissal reload', async () => {
+    const user = userEvent.setup();
+    mountAsUserClient();
+    const requests = servePromo(417);
+    act(() => {
+        useAuthStore.setState({ isNewUser: true, status: 'authenticated' });
+        useUsersStore.setState({ user: createUser('once-user', 1_820_000_000) });
+    });
+    render(<EarlySupporterPromoModal />);
+    await screen.findByRole('dialog', { name: 'Welcome to ChipIn' });
+    const client = getDefaultTestQueryClient();
+    // Stale, then a focus and a reconnect: neither reloads it.
+    client.setQueryData(usersKeys.premiumPromo(), 417, { updatedAt: 0 });
+
+    act(() => {
+        focusManager.setFocused(false);
+        focusManager.setFocused(true);
+        onlineManager.setOnline(false);
+        onlineManager.setOnline(true);
+    });
+    await user.click(screen.getByRole('button', { name: 'Thank you' }));
+    // Dismissed: the query is disabled, an invalidation sends nothing.
+    await act(() => client.invalidateQueries({ queryKey: usersKeys.premiumPromo() }));
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    expect(requests.count).toBe(1);
+    focusManager.setFocused(undefined);
 });
 
 test.each([

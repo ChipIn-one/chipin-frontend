@@ -63,15 +63,18 @@ test('signed out it sends no request and reads nothing, even with friends in the
     expect(result.current).toMatchObject({ friends: undefined, isLoading: false, isError: false });
 });
 
-test('signed in on a client without persistence it sends no request', async () => {
+test('signed in on a client without persistence it sends no request and reads nothing', async () => {
     const requests = serveKnownUsers();
     useAuthStore.setState({ status: 'authenticated' });
+    getDefaultTestQueryClient().setQueryData(usersKeys.known(), [createKnownUser('friend-1')]);
 
     const { result } = renderHook(() => useKnownUsers());
 
+    expect(result.current).toMatchObject({ friends: undefined, isLoading: false, isError: false });
+    // A Retry there (DashboardPage) does not reach the server either.
+    await act(() => result.current.refetch());
     await settle();
     expect(requests.count).toBe(0);
-    expect(result.current).toMatchObject({ friends: undefined, isLoading: true });
 });
 
 test("a session start loads the friends once on the user's client, with the bridge invalidation", async () => {
@@ -97,6 +100,7 @@ test("a session start loads the friends once on the user's client, with the brid
 });
 
 test('an offline-cached session renders the cached friends', () => {
+    mountAsUserClient();
     useAuthStore.setState({ status: 'authenticated', sessionMode: 'offline-cached' });
     getDefaultTestQueryClient().setQueryData(usersKeys.known(), [createKnownUser('friend-1')]);
 
@@ -152,3 +156,33 @@ test('waiting for the network without data counts as an error; with data it does
     });
     expect(result.current.friends).toHaveLength(1);
 });
+
+test.each([
+    { sessionMode: 'online', expected: 1 },
+    // The legacy reconnect load (`useCheckSignIn`) invalidates it there: one request.
+    { sessionMode: 'offline-cached', expected: 0 },
+] as const)(
+    'a reconnect refetches stale friends only in an $sessionMode session ($expected)',
+    async ({ sessionMode, expected }) => {
+        const requests = serveKnownUsers();
+        mountAsUserClient();
+        useAuthStore.setState({ status: 'authenticated', sessionMode });
+        // Mounted with fresh data (no load), then the entry turns stale while offline.
+        getDefaultTestQueryClient().setQueryData(usersKeys.known(), [createKnownUser('f')]);
+        renderHook(() => useKnownUsers());
+        await settle();
+        onlineManager.setOnline(false);
+        getDefaultTestQueryClient().setQueryData(usersKeys.known(), [createKnownUser('f')], {
+            updatedAt: Date.now() - 61_000,
+        });
+        await settle();
+        const beforeReconnect = requests.count;
+
+        act(() => {
+            onlineManager.setOnline(true);
+        });
+        await settle();
+
+        expect(requests.count - beforeReconnect).toBe(expected);
+    },
+);

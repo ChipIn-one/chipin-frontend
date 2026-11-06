@@ -1,6 +1,7 @@
 // Test support for `users.known`: domain friends built from short specs, and a seed that writes them
-// into every test QueryClient of the running test (also those created later in it). Reset after
-// each test of a file that imports this module.
+// into every test QueryClient of the running test (also those created later in it) and registers
+// each as a signed-in user's client: the friends are read only there. Reset after each test of a
+// file that imports this module.
 import type { QueryClient } from '@tanstack/react-query';
 import { afterEach } from 'vitest';
 
@@ -8,6 +9,7 @@ import { type KnownUser, usersKeys } from 'entities/users';
 import { currencyCode, fromUnits } from 'shared/money';
 
 import { liveTestQueryClients, onTestQueryClientCreated } from './renderWithQueryClient';
+import { mountAsUserClient } from './userClient';
 
 /** `[currency, ledger units]`: `['USD', 255_000n]` is 25.50 USD the friend owes you. */
 type BalanceSpec = readonly [string, bigint];
@@ -36,9 +38,12 @@ export const createKnownUser = (
 });
 
 let seeded: KnownUser[] | undefined;
+let seededClients = 0;
 
 const applySeed = (client: QueryClient): void => {
     if (seeded) {
+        seededClients += 1;
+        mountAsUserClient(`seeded-user-${String(seededClients)}`, client);
         client.setQueryData(usersKeys.known(), seeded);
     }
 };
@@ -53,4 +58,5 @@ export const seedKnownUsers = (friends: KnownUser[]): void => {
 
 afterEach(() => {
     seeded = undefined;
+    seededClients = 0;
 });

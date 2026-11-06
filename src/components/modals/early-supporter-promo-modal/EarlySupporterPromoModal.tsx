@@ -19,12 +19,14 @@ const EarlySupporterPromoModal = () => {
     const isNewUser = useAuthStore(state => state.isNewUser);
     const isBackendUnavailable = useConnectivityStore(state => state.mode === 'backend-down');
     const user = useSelfUser();
-    // Requested only for a new user's first sign-in, as before the migration.
-    const { remaining: premiumPromoRemaining, isResolved: isPremiumPromoResolved } =
-        usePremiumPromo(isNewUser === true);
     const subscriptionUntil = user?.subscriptionUntil ?? null;
     const userId = user?.id ?? null;
     const [dismissedUserId, setDismissedUserId] = useState<string | null>(null);
+    const isDismissed = dismissedUserId !== null && dismissedUserId === userId;
+    // Requested only for a new user's first sign-in, as before the migration, and not again once
+    // the modal is dismissed.
+    const { remaining: premiumPromoRemaining, isResolved: isPremiumPromoResolved } =
+        usePremiumPromo(isNewUser === true && !isDismissed);
 
     if (
         isBackendUnavailable ||
@@ -32,7 +34,7 @@ const EarlySupporterPromoModal = () => {
         !isPremiumPromoResolved ||
         userId === null ||
         subscriptionUntil === null ||
-        dismissedUserId === userId
+        isDismissed
     ) {
         return null;
     }
