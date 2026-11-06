@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast, Toaster } from 'sonner';
 
 import { DEFAULT_LOCALE } from 'constants/locales';
+import { userSoloModeByDefault } from 'entities/users';
 import { resolveBrowserLocale } from 'helpers/locale';
 import {
     getPublicLocaleSuggestionTarget,
@@ -16,9 +17,10 @@ import { updateSeoMetadata } from 'hooks/seoMetadata';
 import { useAuthToasts } from 'hooks/useAuthToasts';
 import { useCheckSignIn } from 'hooks/useCheckSignIn';
 import { useScrollToTop } from 'hooks/useScrollToTop';
+import { useCanAccessSolo, useUserSetting } from 'hooks/useSelfUser';
+import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
+import { useAuthStore } from 'store/authStore';
 import type { PublicRoute } from 'types/publicRoutes';
-
-import { useConnect } from './internal/useConnect';
 
 const PublicEffects = ({ route, isDark }: { route: PublicRoute; isDark: boolean }) => {
     useCheckSignIn();
@@ -27,8 +29,12 @@ const PublicEffects = ({ route, isDark }: { route: PublicRoute; isDark: boolean 
     useCheckPwa();
 
     const { t, i18n } = useTranslation('meta');
-    const { isAuthResolved, isLoggedIn, isUserFetched, soloModeByDefault, canAccessSolo } =
-        useConnect();
+    const isAuthResolved = useAuthStore(selectIsAuthResolved);
+    const isLoggedIn = useAuthStore(selectIsLoggedIn);
+    // The public pages run on the anonymous client and read the cached user (spec 03 §1.5): a
+    // signed-in visitor goes to the app as soon as the session is confirmed.
+    const soloModeByDefault = useUserSetting(userSoloModeByDefault);
+    const canAccessSolo = useCanAccessSolo();
 
     useEffect(() => {
         if (i18n.resolvedLanguage !== route.locale) {
@@ -53,11 +59,11 @@ const PublicEffects = ({ route, isDark }: { route: PublicRoute; isDark: boolean 
     }, [i18n.resolvedLanguage, route.metaKey, route.path, t]);
 
     useEffect(() => {
-        if (isAuthResolved && isLoggedIn && isUserFetched && route.page === 'home') {
+        if (isAuthResolved && isLoggedIn && route.page === 'home') {
             // Existing authenticated app routing remains unchanged.
             window.location.replace(getPreferredModeRoute(canAccessSolo && soloModeByDefault));
         }
-    }, [canAccessSolo, isAuthResolved, isLoggedIn, isUserFetched, route.page, soloModeByDefault]);
+    }, [canAccessSolo, isAuthResolved, isLoggedIn, route.page, soloModeByDefault]);
 
     useEffect(() => {
         if (!isAuthResolved || isLoggedIn || route.locale !== DEFAULT_LOCALE) {

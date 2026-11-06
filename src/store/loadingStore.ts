@@ -37,9 +37,6 @@ export interface LoadingStore {
     settlement: {
         add: LoadingState;
     };
-    users: {
-        self: LoadingState;
-    };
 
     setLoading: <S extends keyof LoadingStore, F extends keyof LoadingStore[S]>(
         section: S,
@@ -73,9 +70,6 @@ const initialLoadingStore: LoadingSlices = {
         leave: 'initial',
         kick: 'initial',
         cover: 'initial',
-    },
-    users: {
-        self: 'initial',
     },
 };
 

@@ -15,8 +15,8 @@ import { useAuthStore } from 'store/authStore';
 import { useConnectivityStore } from 'store/connectivityStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { useGroupsStore } from 'store/groupsStore';
+import { loadKnownUsersForSession, loadSelfUserForSession } from 'store/internal/sessionUser';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
-import { useUsersStore } from 'store/users-store';
 
 import { useCheckSignIn } from './useCheckSignIn';
 
@@ -26,6 +26,12 @@ vi.mock('helpers/authSession', async importOriginal => {
 
     return { ...actual, validateAuthSession: vi.fn(actual.validateAuthSession) };
 });
+
+vi.mock('store/internal/sessionUser', async importOriginal => ({
+    ...(await importOriginal<typeof import('store/internal/sessionUser')>()),
+    loadKnownUsersForSession: vi.fn(),
+    loadSelfUserForSession: vi.fn(),
+}));
 
 const storeRefreshAuthTokens = useAuthStore.getState().refreshAuthTokens;
 
@@ -68,8 +74,8 @@ const renderHook = () => {
 
 const mockAuthenticatedDataFetches = (): void => {
     vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
-    vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockResolvedValue(user);
-    vi.spyOn(useUsersStore.getState(), 'invalidateKnownUsers').mockResolvedValue();
+    vi.mocked(loadSelfUserForSession).mockResolvedValue(user);
+    vi.mocked(loadKnownUsersForSession).mockResolvedValue();
 };
 
 const markRestorableAuthSession = (): void => {
@@ -84,7 +90,9 @@ beforeEach(() => {
     onlineManager.setOnline(true);
     useConnectivityStore.setState({ mode: 'online' });
     useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
-    useUsersStore.getState().setInitialUsersStore();
+    localStorageHelpers.resetTabUserId();
+    vi.mocked(loadSelfUserForSession).mockReset();
+    vi.mocked(loadKnownUsersForSession).mockReset();
     useAuthStore.setState({
         isNewUser: null,
         status: 'unknown',
@@ -205,25 +213,21 @@ test('preserves the active app mode when a cached user initialized it', () => {
         role: groupDefaultUser.role,
         settings: groupDefaultUser.settings,
     });
-    useUsersStore.getState().setInitialUsersStore();
+    localStorageHelpers.resetTabUserId();
     useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
     const setDefaultAppMode = vi.spyOn(useUiPrefsStore.getState(), 'setDefaultAppMode');
     vi.spyOn(useAuthStore.getState(), 'refreshAuthTokens').mockResolvedValue('next-access-token');
     vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
-    const fetchSetUser = vi
-        .spyOn(useUsersStore.getState(), 'fetchSetUser')
-        .mockResolvedValue(groupDefaultUser);
-    const invalidateKnownUsers = vi
-        .spyOn(useUsersStore.getState(), 'invalidateKnownUsers')
-        .mockResolvedValue();
+    const loadSelf = vi.mocked(loadSelfUserForSession).mockResolvedValue(groupDefaultUser);
+    const invalidateKnownUsers = vi.mocked(loadKnownUsersForSession).mockResolvedValue();
 
     renderHook();
 
     return waitFor(() => {
-        expect(fetchSetUser).toHaveBeenCalledOnce();
+        expect(loadSelf).toHaveBeenCalledOnce();
     }).then(() => {
-        // The session start's friends refresh is the bridge invalidation of `users.known`.
-        expect(invalidateKnownUsers).toHaveBeenCalledExactlyOnceWith({ joinRunning: true });
+        // The session start marks `users.known` stale once.
+        expect(invalidateKnownUsers).toHaveBeenCalledOnce();
         expect(setDefaultAppMode).not.toHaveBeenCalled();
         expect(useUiPrefsStore.getState().appMode).toBe(APP_MODES.SOLO);
     });
@@ -334,7 +338,7 @@ const cacheSignedInUser = (): void => {
         role: user.role,
         settings: user.settings,
     });
-    useUsersStore.getState().setInitialUsersStore();
+    localStorageHelpers.resetTabUserId();
 };
 
 const networkError = Object.assign(new Error('Network Error'), {
@@ -415,7 +419,7 @@ test('reconnect: a successful refresh makes the session online and loads the dat
     vi.mocked(validateAuthSession).mockResolvedValue('next-access-token');
     mockAuthenticatedDataFetches();
     const fetchSetGroups = vi.mocked(useGroupsStore.getState().fetchSetGroups);
-    const invalidateKnownUsers = vi.mocked(useUsersStore.getState().invalidateKnownUsers);
+    const invalidateKnownUsers = vi.mocked(loadKnownUsersForSession);
 
     renderHook();
 
@@ -435,9 +439,8 @@ test('reconnect: a successful refresh makes the session online and loads the dat
         })
         .then(() => {
             expect(fetchSetGroups).toHaveBeenCalledOnce();
-            // The friends reload on reconnect is the bridge invalidation (the query itself does
-            // not refetch on reconnect): one request.
-            expect(invalidateKnownUsers).toHaveBeenCalledExactlyOnceWith({ joinRunning: true });
+            // The session start of the reconnect reloads the friends once.
+            expect(invalidateKnownUsers).toHaveBeenCalledOnce();
         });
 });
 
@@ -583,7 +586,7 @@ test('a boot refresh that found another user applies that user default app mode'
     // As the refresh listener after another tab switched to Y: LocalUser = { id: Y, settings }.
     const refreshAuthTokens = vi.fn(() => {
         localStorageHelpers.saveLocalUser({ id: 'user-y', settings: user.settings });
-        useUsersStore.getState().setInitialUsersStore();
+        localStorageHelpers.resetTabUserId();
         return Promise.resolve('y-access-token');
     });
     useAuthStore.setState({ refreshAuthTokens });
@@ -601,12 +604,12 @@ test('a boot refresh of the same cached user keeps the active app mode', () => {
     const setDefaultAppMode = vi.spyOn(useUiPrefsStore.getState(), 'setDefaultAppMode');
     useAuthStore.setState({ refreshAuthTokens: vi.fn(() => Promise.resolve('x-access-token')) });
     mockAuthenticatedDataFetches();
-    const fetchSetUser = vi.mocked(useUsersStore.getState().fetchSetUser);
+    const loadSelf = vi.mocked(loadSelfUserForSession);
 
     renderHook();
 
     return waitFor(() => {
-        expect(fetchSetUser).toHaveBeenCalledOnce();
+        expect(loadSelf).toHaveBeenCalledOnce();
     }).then(() => {
         expect(setDefaultAppMode).not.toHaveBeenCalled();
     });

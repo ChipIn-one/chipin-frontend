@@ -8,14 +8,11 @@ import type { SelfUser } from 'api/chipin.types';
 import { usersKeys } from 'entities/users';
 import { useAuthStore } from 'store/authStore';
 import { useConnectivityStore } from 'store/connectivityStore';
-import { useUsersStore } from 'store/users-store';
 import { setupMswServer } from 'test/mswServer';
 import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
 import { mountAsUserClient } from 'test/userClient';
 
 import { EarlySupporterPromoModal } from './EarlySupporterPromoModal';
-
-import 'test/selfUserMirror';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
@@ -72,6 +69,17 @@ const createUser = (id: string, subscriptionUntil: number | null): SelfUser => (
 
 const server = setupMswServer();
 
+/** The self user in the test client's `users.self` (none: the entry is removed). */
+const seedSelfUser = (user: SelfUser | null): void => {
+    const client = getDefaultTestQueryClient();
+
+    if (user) {
+        client.setQueryData(usersKeys.self(), user);
+    } else {
+        client.removeQueries({ queryKey: usersKeys.self() });
+    }
+};
+
 /** Serves `GET /users/premium-promo` (`failed`: a 500, `pending`: never answers). */
 const servePromo = (promo: number | 'failed' | 'pending'): { count: number } => {
     const counter = { count: 0 };
@@ -108,13 +116,12 @@ const setSession = (
             status: user ? 'authenticated' : 'unauthenticated',
             unauthReason: user ? undefined : 'missing',
         });
-        useUsersStore.setState({ user });
+        seedSelfUser(user);
     });
 };
 
 beforeEach(() => {
     vi.clearAllMocks();
-    useUsersStore.setState({ localUser: null, user: null });
     useAuthStore.setState({
         isNewUser: null,
         status: 'unauthenticated',
@@ -171,7 +178,7 @@ test("requests the counter once for a new user, on the user's client", async () 
     const requests = servePromo(4_999);
     act(() => {
         useAuthStore.setState({ isNewUser: true, status: 'authenticated' });
-        useUsersStore.setState({ user: createUser('requesting-user', 1_820_000_000) });
+        seedSelfUser(createUser('requesting-user', 1_820_000_000));
     });
 
     render(<EarlySupporterPromoModal />);
@@ -191,7 +198,7 @@ test('requests the counter once per session: no focus, reconnect or post-dismiss
     const requests = servePromo(417);
     act(() => {
         useAuthStore.setState({ isNewUser: true, status: 'authenticated' });
-        useUsersStore.setState({ user: createUser('once-user', 1_820_000_000) });
+        seedSelfUser(createUser('once-user', 1_820_000_000));
     });
     render(<EarlySupporterPromoModal />);
     await screen.findByRole('dialog', { name: 'Welcome to ChipIn' });
@@ -230,7 +237,7 @@ test.each([
                 isNewUser,
                 status: signedIn ? 'authenticated' : 'unauthenticated',
             });
-            useUsersStore.setState({ user: createUser('quiet-user', 1_820_000_000) });
+            seedSelfUser(createUser('quiet-user', 1_820_000_000));
         });
 
         render(<EarlySupporterPromoModal />);

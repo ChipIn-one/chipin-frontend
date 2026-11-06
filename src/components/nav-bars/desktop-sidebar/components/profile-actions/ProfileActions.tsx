@@ -3,9 +3,9 @@ import { Button, Flex } from '@radix-ui/themes';
 import { LogOutIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { useSelfUser } from 'hooks/useSelfUser';
+import { useSelfUserState } from 'hooks/useSelfUser';
 import { useAuthStore } from 'store/authStore';
-import { selectAuthSignOutLoading, selectUserSelfLoading } from 'store/loadingSelectors';
+import { selectAuthSignOutLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 
 import { UserProfileSummary } from 'components/user-profile-summary';
@@ -19,10 +19,9 @@ interface Props {
 const ProfileActions = ({ isSoloMode }: Props) => {
     const { t } = useTranslation('common');
     const [isExpanded, setIsExpanded] = useState(false);
-    const isUserLoading = useLoadingStore(selectUserSelfLoading);
     const isSigningOut = useLoadingStore(selectAuthSignOutLoading);
     const signOut = useAuthStore(state => state.signOut);
-    const user = useSelfUser();
+    const { user, isLoading: isUserLoading } = useSelfUserState();
     const activeColor = isSoloMode ? 'violet' : 'green';
 
     const onToggle = () => {

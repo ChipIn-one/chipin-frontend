@@ -155,17 +155,56 @@ const getLocalUser = (): LocalUser | null => {
     return parseLocalUser(getStorageValue<unknown>(LS_KEY_USER));
 };
 
+// The user of this tab (spec 03 §1.5): it picks the tab's QueryClient. Read from `LocalUser.id` on
+// first use, then changed only by this tab's own writes (`saveLocalUser`, `clearLocalUserIdentity`):
+// another tab that switches the shared `LocalUser` does not move this tab onto that user's cache,
+// so no `storage` listener. `null`: not read yet.
+let tabUserId: string | undefined | null = null;
+const tabUserIdListeners = new Set<() => void>();
+
+const setTabUserId = (userId: string | undefined): void => {
+    if (tabUserId === userId) {
+        return;
+    }
+    tabUserId = userId;
+    tabUserIdListeners.forEach(listener => {
+        listener();
+    });
+};
+
+/** The signed-in (or last) user of this tab; undefined after a sign-out or before any sign-in. */
+const getTabUserId = (): string | undefined => {
+    tabUserId ??= getLocalUser()?.id;
+    return tabUserId;
+};
+
+/** Calls `listener` when this tab's user changes; returns the unsubscribe. */
+const subscribeTabUserId = (listener: () => void): (() => void) => {
+    tabUserIdListeners.add(listener);
+    return () => {
+        tabUserIdListeners.delete(listener);
+    };
+};
+
+/** Tests only: forget this tab's user, the next read takes `LocalUser.id` again. */
+const resetTabUserId = (): void => {
+    tabUserId = null;
+};
+
+/** Writes the cached user; its `id` becomes this tab's user. */
 const saveLocalUser = (user: LocalUser) => {
     LocalStorage.set(LS_KEY_USER, user);
+    setTabUserId(user.id);
 };
 
 // Drop only the cached role; settings (language/theme) must survive. The `id` stays (spec 03
-// §1.5: session expiry keeps the user's cache).
+// §1.5: session expiry keeps the user's cache), and so does this tab's user.
 const clearLocalUserRole = () => {
     const localUser = getLocalUser();
 
     if (localUser) {
-        saveLocalUser(
+        LocalStorage.set(
+            LS_KEY_USER,
             localUser.id === undefined
                 ? { settings: localUser.settings }
                 : { id: localUser.id, settings: localUser.settings },
@@ -174,12 +213,14 @@ const clearLocalUserRole = () => {
 };
 
 // Sign-out (spec 03 §1.5, invariant 12): only `{ settings }` remains, the landing language/theme.
+// This tab has no user from now on.
 const clearLocalUserIdentity = () => {
     const localUser = getLocalUser();
 
     if (localUser) {
-        saveLocalUser({ settings: localUser.settings });
+        LocalStorage.set(LS_KEY_USER, { settings: localUser.settings });
     }
+    setTabUserId(undefined);
 };
 
 // Only a stored JSON `true` is a hint (spec 03 §1.6: the offline cold start checks `=== true`).
@@ -218,10 +259,13 @@ export {
     clearLocalUserIdentity,
     clearLocalUserRole,
     getLocalUser,
+    getTabUserId,
     hasAuthSessionHint,
     LocalStorage,
+    resetTabUserId,
     saveLocalUser,
     setAuthSessionHint,
+    subscribeTabUserId,
     toLocalUser,
 };
 export type { StorageKey, StorageSchema };

@@ -1,9 +1,8 @@
 import type { QueryClient } from '@tanstack/react-query';
 
 import { dashboardKeys } from 'entities/dashboard';
-import { clearLocalUserIdentity, getLocalUser, saveLocalUser } from 'helpers/localStorage';
+import { clearLocalUserIdentity, resetTabUserId, saveLocalUser } from 'helpers/localStorage';
 import { cachesByUser } from 'shared/offline/userCaches';
-import { useUsersStore } from 'store/users-store';
 
 import { createTestQueryClient } from './renderWithQueryClient';
 
@@ -43,9 +42,6 @@ export const mountUserDashboardCache = (): UserDashboardCache => {
             sex: 'male',
         },
     });
-    const previousLocalUser = useUsersStore.getState().localUser;
-
-    useUsersStore.setState({ localUser: getLocalUser() });
     cachesByUser.set(USER_ID, {
         client,
         ready: Promise.resolve(),
@@ -65,7 +61,7 @@ export const mountUserDashboardCache = (): UserDashboardCache => {
             cachesByUser.delete(USER_ID);
             client.clear();
             clearLocalUserIdentity();
-            useUsersStore.setState({ localUser: previousLocalUser });
+            resetTabUserId();
         },
     };
 };

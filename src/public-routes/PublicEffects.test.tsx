@@ -5,6 +5,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { PUBLIC_ROUTE_ENTRIES } from 'constants/publicRouteManifest';
 import { useAuthToasts } from 'hooks/useAuthToasts';
 import { useScrollToTop } from 'hooks/useScrollToTop';
+import { useAuthStore } from 'store/authStore';
 import { getOrThrow } from 'test/getOrThrow';
 
 import { PublicEffects } from './PublicEffects';
@@ -32,19 +33,10 @@ vi.mock('react-i18next', () => ({
         },
     }),
 }));
-vi.mock('./internal/useConnect', () => ({
-    useConnect: () => ({
-        isAuthResolved: true,
-        isLoggedIn: false,
-        isUserFetched: false,
-        soloModeByDefault: false,
-        canAccessSolo: false,
-    }),
-}));
-
 beforeEach(() => {
     window.sessionStorage.clear();
     vi.clearAllMocks();
+    useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'missing' });
 });
 afterEach(() => {
     vi.restoreAllMocks();
@@ -104,4 +96,19 @@ test('Sonner follows the public cached-theme snapshot including updates', () => 
     expect(screen.getByRole('status', { name: 'Public toast theme' }).textContent).toBe('dark');
     mounted.rerender(<PublicEffects route={route} isDark={false} />);
     expect(screen.getByRole('status', { name: 'Public toast theme' }).textContent).toBe('light');
+});
+
+test('a signed-in visitor on the public home goes to the app at once, from the cached user', () => {
+    const replace = vi.fn();
+    vi.stubGlobal('location', { ...window.location, replace });
+    useAuthStore.setState({ status: 'authenticated', unauthReason: undefined });
+    const home = getOrThrow(
+        PUBLIC_ROUTE_ENTRIES.filter(item => item.page === 'home' && item.locale === 'en'),
+        0,
+    );
+
+    render(<PublicEffects route={home} isDark={false} />);
+
+    expect(replace).toHaveBeenCalledExactlyOnceWith('/dashboard');
+    vi.unstubAllGlobals();
 });

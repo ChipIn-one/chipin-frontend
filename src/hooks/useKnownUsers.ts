@@ -7,7 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 import { type KnownUser, useKnownUsersQuery, usePremiumPromoQuery } from 'entities/users';
 import { isUserCacheClient } from 'shared/offline/userCaches';
-import { AUTH_STATUS, SESSION_MODE } from 'store/authConstants';
+import { AUTH_STATUS } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
 
 const useIsSignedIn = (): boolean =>
@@ -44,12 +44,7 @@ const skipRefetch = (): Promise<undefined> => Promise.resolve(undefined);
 export const useKnownUsers = (): KnownUsersResult => {
     const isSignedIn = useIsSignedIn();
     const isEnabled = useIsUserQueryEnabled();
-    const isOnlineSession = useAuthStore(state => state.sessionMode === SESSION_MODE.ONLINE);
-    const query = useKnownUsersQuery({
-        select: identity,
-        enabled: isEnabled,
-        refetchOnReconnect: isOnlineSession,
-    });
+    const query = useKnownUsersQuery({ select: identity, enabled: isEnabled });
     const friends = isEnabled ? query.data : undefined;
     const isWaiting = isEnabled && friends === undefined;
     const isError = isWaiting && (query.isError || query.isPaused);

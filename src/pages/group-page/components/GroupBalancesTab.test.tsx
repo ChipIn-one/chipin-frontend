@@ -2,12 +2,10 @@ import { render, screen } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group, SelfUser } from 'api/chipin.types';
-import { useUsersStore } from 'store/users-store';
 import { getOrThrow } from 'test/getOrThrow';
+import { seedSelfUser } from 'test/selfUserSeed';
 
 import GroupBalancesTab from './GroupBalancesTab';
-
-import 'test/selfUserMirror';
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),
@@ -97,7 +95,7 @@ const group: Group = {
 };
 
 beforeEach(() => {
-    useUsersStore.setState({ user: currentUser });
+    seedSelfUser(currentUser);
 });
 
 test('shows invite onboarding for an empty single-member group', () => {

@@ -37,18 +37,22 @@ export const syncLocalUser = (user: SelfUser): SelfUser => {
     return user;
 };
 
+// A load cancelled while its response was on the way (a self write confirmed after it started, a
+// sign-out) writes nothing: the cancel aborts the signal before the response is handled.
+const syncUnlessCancelled =
+    (signal: AbortSignal) =>
+    (user: SelfUser): SelfUser =>
+        signal.aborted ? user : syncLocalUser(user);
+
+/** `GET /users/self`, without the `LocalUser` sync (the session loader writes it itself). */
+export const fetchSelfUser = (signal?: AbortSignal): Promise<SelfUser> =>
+    api('get', '/users/self', { signal }).then(toSelfUser);
+
 export const selfUserQueryOptions = () =>
     queryOptions({
         queryKey: usersKeys.self(),
         staleTime: USERS_QUERY_DEFAULTS.self.staleTime,
-        // LEGACY until 03-9b: the users store loads the self user at session start (it learns the
-        // user id that picks the QueryClient) and seeds this entry, so a mount with data does not
-        // send a second request; it reloads it on reconnect too (`useCheckSignIn`). A focus still
-        // refetches a stale entry.
-        refetchOnMount: false,
-        refetchOnReconnect: false,
-        queryFn: ({ signal }) =>
-            api('get', '/users/self', { signal }).then(toSelfUser).then(syncLocalUser),
+        queryFn: ({ signal }) => fetchSelfUser(signal).then(syncUnlessCancelled(signal)),
     });
 
 interface SelfUserQueryParams<T> {
@@ -71,21 +75,10 @@ interface KnownUsersQueryParams<T> {
     select: (friends: KnownUser[]) => T;
     /** False while signed out: the known users are never requested without a session. */
     enabled: boolean;
-    /**
-     * LEGACY until 03-9b: false for an offline-cached session, whose reconnect `useCheckSignIn`
-     * handles: once the session is refreshed it invalidates this entry through the users store
-     * bridge, and a reconnect refetch of its own would be a second request. An online session
-     * refetches a stale entry on reconnect (like the dashboard balances).
-     */
-    refetchOnReconnect: boolean;
 }
 
-export const useKnownUsersQuery = <T>({
-    select,
-    enabled,
-    refetchOnReconnect,
-}: KnownUsersQueryParams<T>) =>
-    useQuery({ ...knownUsersQueryOptions(), select, enabled, refetchOnReconnect });
+export const useKnownUsersQuery = <T>({ select, enabled }: KnownUsersQueryParams<T>) =>
+    useQuery({ ...knownUsersQueryOptions(), select, enabled });
 
 /** Unused first-user premium promo places; not persisted (spec 03 §1.4). */
 export const premiumPromoQueryOptions = () =>

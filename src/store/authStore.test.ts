@@ -4,14 +4,14 @@ import { exchangeApiGoogleOAuthCode } from 'api/chipin';
 import type { SelfUser } from 'api/chipin.types';
 import { isAdminRole } from 'entities/users';
 import * as authSession from 'helpers/authSession';
-import { getLocalUser, saveLocalUser } from 'helpers/localStorage';
+import { getLocalUser, getTabUserId, saveLocalUser } from 'helpers/localStorage';
 
 import { useAuthStore } from './authStore';
 import { useExpenseModalStore } from './expenseModalStore';
 import { useGroupsStore } from './groupsStore';
+import { loadKnownUsersForSession, loadSelfUserForSession } from './internal/sessionUser';
 import { useLoadingStore } from './loadingStore';
 import { APP_MODES, useUiPrefsStore } from './ui-prefs';
-import { useUsersStore } from './users-store';
 
 import 'fake-indexeddb/auto';
 
@@ -62,11 +62,16 @@ vi.mock('@sentry/react', () => ({ captureMessage: vi.fn(), captureException: vi.
 vi.mock('api/chipin', () => ({
     exchangeApiGoogleOAuthCode: vi.fn(),
 }));
+vi.mock('./internal/sessionUser', async importOriginal => ({
+    ...(await importOriginal<typeof import('./internal/sessionUser')>()),
+    loadKnownUsersForSession: vi.fn(),
+    loadSelfUserForSession: vi.fn(),
+}));
 
 const mockAuthenticatedDataFetches = (): void => {
     vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
-    vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockResolvedValue(user);
-    vi.spyOn(useUsersStore.getState(), 'invalidateKnownUsers').mockResolvedValue();
+    vi.mocked(loadSelfUserForSession).mockResolvedValue(user);
+    vi.mocked(loadKnownUsersForSession).mockResolvedValue();
 };
 
 describe('authStore', () => {
@@ -148,19 +153,22 @@ describe('authStore', () => {
             });
     });
 
-    test('marks the known users stale once after a sign-in (bridge to users.known)', () => {
+    test('loads the self user and the known users once after a sign-in', () => {
         vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue({
             token: 'access-token',
             is_new_user: true,
         });
         mockAuthenticatedDataFetches();
-        const invalidateKnownUsers = vi.mocked(useUsersStore.getState().invalidateKnownUsers);
 
         return useAuthStore
             .getState()
             .exchangeGoogleOAuthCode('oauth-code-3')
             .then(() => {
-                expect(invalidateKnownUsers).toHaveBeenCalledExactlyOnceWith({ joinRunning: true });
+                expect(loadSelfUserForSession).toHaveBeenCalledOnce();
+                expect(loadKnownUsersForSession).toHaveBeenCalledOnce();
+                // One session start: both reuse what loaded after the same moment.
+                const [since] = vi.mocked(loadSelfUserForSession).mock.calls[0] ?? [];
+                expect(loadKnownUsersForSession).toHaveBeenCalledWith(since);
                 expect(useAuthStore.getState().isNewUser).toBe(true);
             });
     });
@@ -357,7 +365,6 @@ describe('authStore', () => {
         expect(getLocalUser()).toEqual({ settings: user.settings });
         // Signed out, the UI reads the role from the cached user.
         expect(isAdminRole(getLocalUser()?.role)).toBe(false);
-        expect(useUsersStore.getState().user).toBeNull();
     });
 
     // Spec 03 §1.5 table, invariant 12: a sign-out drops the cached user `id`; any other
@@ -374,7 +381,7 @@ describe('authStore', () => {
         onSignOut();
 
         expect(getLocalUser()).toEqual({ settings: user.settings });
-        expect(useUsersStore.getState().localUser?.id).toBeUndefined();
+        expect(getTabUserId()).toBeUndefined();
     });
 
     test.each([
@@ -387,7 +394,7 @@ describe('authStore', () => {
         onReset();
 
         expect(getLocalUser()).toEqual({ id: user.id, settings: user.settings });
-        expect(useUsersStore.getState().localUser?.id).toBe(user.id);
+        expect(getTabUserId()).toBe(user.id);
     });
 
     test.each([

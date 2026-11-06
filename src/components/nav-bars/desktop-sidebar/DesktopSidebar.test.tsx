@@ -10,15 +10,14 @@ import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
 import { useLoadingStore } from 'store/loadingStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
-import { useUsersStore } from 'store/users-store';
 import { createKnownUser, seedKnownUsers } from 'test/knownUsers';
+import { seedSelfUser } from 'test/selfUserSeed';
 
 import DesktopSidebar from './DesktopSidebar';
 
 import '@radix-ui/themes/styles.css';
 
 import 'i18n/index';
-import 'test/selfUserMirror';
 
 vi.mock('assets/logo.svg?react', () => ({
     default: () => <svg aria-hidden />,
@@ -54,8 +53,7 @@ beforeEach(() => {
     useAuthStore.setState({ status: 'authenticated' });
     useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
     useLoadingStore.getState().setInitialLoadingStore();
-    useLoadingStore.getState().setLoading('users', 'self', 'fetched');
-    useUsersStore.setState({ user, localUser: null });
+    seedSelfUser(user);
 });
 
 test('shows the Add expense action on Settings when a valid target exists', () => {
@@ -101,10 +99,7 @@ test('shows the authenticated navigation and profile actions', () => {
 
 test('shows Group branding when Solo mode is stale for an admin', () => {
     useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
-    useUsersStore.setState({
-        user: { ...user, role: 'ADMIN' },
-        localUser: null,
-    });
+    seedSelfUser({ ...user, role: 'ADMIN' });
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
@@ -137,10 +132,7 @@ test('renders Group branding for a non-admin with stale Solo state', () => {
 });
 
 test('shows the developer menu for an admin', () => {
-    useUsersStore.setState({
-        user: { ...user, role: 'ADMIN' },
-        localUser: null,
-    });
+    seedSelfUser({ ...user, role: 'ADMIN' });
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>

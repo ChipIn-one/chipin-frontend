@@ -33,9 +33,13 @@ import {
 import { useErrorsStore } from './errorsStore';
 import { useExpenseModalStore } from './expenseModalStore';
 import { useGroupsStore } from './groupsStore';
+import {
+    cachedUserId,
+    loadKnownUsersForSession,
+    loadSelfUserForSession,
+} from './internal/sessionUser';
 import { useLoadingStore } from './loadingStore';
 import { useUiPrefsStore } from './ui-prefs';
-import { useUsersStore } from './users-store';
 
 export interface AuthStore {
     status: AuthStatus;
@@ -65,7 +69,7 @@ const resetAuthScopedStores = () => {
     useActivityStore.getState().resetActivity();
     useUiPrefsStore.getState().resetUiPrefs();
     useGroupsStore.getState().setInitialGroupsStore();
-    useUsersStore.getState().setInitialUsersStore();
+    useErrorsStore.getState().resetErrors();
     useLoadingStore.getState().setInitialLoadingStore();
 };
 
@@ -74,10 +78,6 @@ const resetUserStores = () => {
     resetAuthScopedStores();
     useExpenseModalStore.getState().reset();
 };
-
-/** The signed-in (or last) user of this tab: in memory first, a remote logout already cleared it. */
-const cachedUserId = (): string | undefined =>
-    useUsersStore.getState().localUser?.id ?? getLocalUser()?.id;
 
 // The rows of the "reason → what is deleted" table that delete the user's data (spec 03 §1.5).
 // Synchronous: `LS_KEY_USER` is set first (the store reset re-reads it), then `clearUserData`, whose
@@ -127,18 +127,18 @@ const dropOtherUserData = (nextUserId: string | null): boolean => {
 };
 
 const loadSignedInData = (): Promise<void> => {
+    const since = Date.now();
     const { setDefaultAppMode } = useUiPrefsStore.getState();
     const { fetchSetGroups } = useGroupsStore.getState();
-    const { fetchSetUser, invalidateKnownUsers } = useUsersStore.getState();
 
     return Promise.all([
         fetchSetGroups(),
-        fetchSetUser().then(user => {
+        loadSelfUserForSession(since).then(user => {
             if (user) {
                 setDefaultAppMode(user.settings.soloModeByDefault);
             }
         }),
-        invalidateKnownUsers({ joinRunning: true }),
+        loadKnownUsersForSession(since),
     ]).then(() => undefined);
 };
 
@@ -198,7 +198,7 @@ export const useAuthStore = create<AuthStore>(set => ({
 
     exchangeGoogleOAuthCode: code => {
         // An OAuth code is single-use. The first `LocalUser.id` written during the exchange
-        // (`fetchSetUser`) remounts the app on the user's QueryClient (spec 03 §1.5), and the
+        // (`loadSelfUserForSession`) remounts the app on the user's QueryClient (spec 03 §1.5), and the
         // remounted callback page asks again: it gets this exchange, not a second request.
         if (lastOAuthExchange?.code === code) {
             return lastOAuthExchange.promise;

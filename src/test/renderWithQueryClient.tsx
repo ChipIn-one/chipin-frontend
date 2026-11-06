@@ -6,7 +6,7 @@ import type { ReactElement, ReactNode } from 'react';
 const liveClients = new Set<QueryClient>();
 const createdListeners = new Set<(client: QueryClient) => void>();
 
-/** Runs `listener` for every test client created from now on (see `test/selfUserMirror`). */
+/** Runs `listener` for every test client created from now on. */
 export const onTestQueryClientCreated = (listener: (client: QueryClient) => void): void => {
     createdListeners.add(listener);
 };

@@ -9,12 +9,11 @@ import type { UserSettings } from 'api/chipin.types';
 import { PROJECT_NAME } from 'constants/chipin';
 import { LS_KEY_LOCALE } from 'constants/localstorage';
 import { lightThemeStyled } from 'constants/styled-themes';
-import { LocalStorage } from 'helpers/localStorage';
+import { LocalStorage, saveLocalUser } from 'helpers/localStorage';
 import { isPublicLocaleSuggestionSuppressed } from 'helpers/publicLocaleSuggestion';
 import i18n from 'i18n';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
-import { useUsersStore } from 'store/users-store';
 
 import Header from './Header';
 
@@ -45,10 +44,7 @@ const LocationPath = () => {
 
 beforeEach(() => {
     useAuthStore.setState({ status: 'authenticated' });
-    useUsersStore.setState({
-        user: null,
-        localUser: { role: 'ADMIN', settings },
-    });
+    saveLocalUser({ role: 'ADMIN', settings });
     useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
     LocalStorage.remove(LS_KEY_LOCALE);
     window.sessionStorage.clear();
@@ -78,10 +74,7 @@ test('opens the Group route when an authenticated user clicks the logo', () => {
 test('opens the Group route for a user with stale Solo state', () => {
     const interaction = userEvent.setup();
 
-    useUsersStore.setState({
-        user: null,
-        localUser: { role: 'USER', settings },
-    });
+    saveLocalUser({ role: 'USER', settings });
 
     render(
         <MemoryRouter initialEntries={['/settings']}>
@@ -105,11 +98,9 @@ test('opens the Group route when the logo is clicked from another page with stal
     const interaction = userEvent.setup();
 
     useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
-    useUsersStore.setState({
-        localUser: {
-            role: 'ADMIN',
-            settings: { ...settings, soloModeByDefault: false },
-        },
+    saveLocalUser({
+        role: 'ADMIN',
+        settings: { ...settings, soloModeByDefault: false },
     });
 
     render(

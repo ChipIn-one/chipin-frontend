@@ -115,7 +115,6 @@
         "src/pages/activity-subevents-page/components/activity-subevents-feed/internal/useConnect.ts",
         "src/pages/group-page/components/internal/group-settings/useConnect.ts",
         "src/pages/group-page/internal/useConnect.ts",
-        "src/pages/internal/activity-page/useConnect.ts",
-        "src/public-routes/internal/useConnect.ts"
+        "src/pages/internal/activity-page/useConnect.ts"
     ]
 }

@@ -16,6 +16,7 @@ export {
     UserWriteRefusedError,
 } from './api/mutations';
 export {
+    fetchSelfUser,
     knownUsersQueryOptions,
     premiumPromoQueryOptions,
     selfUserQueryOptions,

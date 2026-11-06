@@ -6,12 +6,11 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
 import type { BalanceEntry, BalancesMap } from 'api/chipin.raw.types';
-import type { Group, SelfUser } from 'api/chipin.types';
+import type { Group } from 'api/chipin.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { currencyRatesKeys } from 'entities/currency-rates';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
 import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
 
 import GroupsCards from './GroupsCards';
@@ -61,25 +60,6 @@ const creator = {
     createdAt: 1,
     updatedAt: 1,
 };
-
-const currentUser = {
-    ...creator,
-    role: 'USER',
-    subscriptionUntil: null,
-    inviteToken: 'invite-token-user',
-    settings: {
-        defaultCurrency: 'USD',
-        defaultCategory: 'food',
-        timeFormat: '12h',
-        language: 'en',
-        theme: 'system',
-        simplifyDebts: true,
-        skipCategory: false,
-        soloModeByDefault: false,
-        saveGroupExpensesToSolo: false,
-        sex: 'male',
-    },
-} satisfies SelfUser;
 
 const balance = (currency: string, netBalance: number): BalanceEntry => ({
     currency,
@@ -174,7 +154,6 @@ beforeEach(() => {
 
     useLoadingStore.getState().setInitialLoadingStore();
     useLoadingStore.getState().setLoading('group', 'list', 'fetched');
-    useUsersStore.setState({ user: currentUser });
 });
 
 afterEach(() => {

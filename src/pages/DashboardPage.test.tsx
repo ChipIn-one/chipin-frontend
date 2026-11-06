@@ -12,15 +12,12 @@ import { useAuthStore } from 'store/authStore';
 import { useErrorsStore } from 'store/errorsStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
 import { createKnownUser } from 'test/knownUsers';
 import { setupMswServer } from 'test/mswServer';
 import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
 import { mountAsUserClient } from 'test/userClient';
 
 import DashboardPage from './DashboardPage';
-
-import 'test/selfUserMirror';
 
 const useInfiniteScrollMock = vi.hoisted(() =>
     vi.fn<(params: { hasMore: boolean; isLoading: boolean; onLoadMore: () => void }) => () => void>(
@@ -159,6 +156,7 @@ const BALANCES_URL = '*/dashboard/balances';
 const ACTIVITY_URL = '*/users/self/activity-previews';
 const RATES_URL = '*/currency-rates';
 const KNOWN_USERS_URL = '*/users/known-users';
+const SELF_URL = '*/users/self';
 const badRequest = () =>
     HttpResponse.json({ code: 'SYSTEM.BAD_REQUEST', message: 'Unavailable' }, { status: 400 });
 
@@ -209,7 +207,6 @@ const resolveDashboardOnboardingData = () => {
     seedRates();
     seedFriends();
     useLoadingStore.getState().setLoading('group', 'list', 'fetched');
-    useLoadingStore.getState().setLoading('users', 'self', 'fetched');
 };
 
 const renderPage = () => renderWithQueryClient(<DashboardPage />, client);
@@ -220,7 +217,7 @@ beforeEach(() => {
     mountAsUserClient('user-1', client);
     useGroupsStore.getState().setInitialGroupsStore();
     useAuthStore.setState({ status: 'authenticated' });
-    useUsersStore.setState({ user: currentUser });
+    client.setQueryData(usersKeys.self(), currentUser);
     useLoadingStore.getState().setInitialLoadingStore();
     useErrorsStore.getState().resetErrors();
 });
@@ -467,13 +464,34 @@ test('DSH-007 never mistakes a load failure for new-user welcome', async () => {
     expect(screen.getByRole('button', { name: 'activity:retryAction' })).toBeTruthy();
 });
 
-test('DSH-007 requires a successfully resolved user before welcome', () => {
+test('DSH-007 requires a successfully resolved user before welcome', async () => {
     resolveDashboardOnboardingData();
-    useUsersStore.setState({ user: null });
+    client.removeQueries({ queryKey: usersKeys.self() });
+    const selfRequests = countRequests(SELF_URL, badRequest);
     renderPage();
 
+    expect(await screen.findByText('errors.loadTitle')).toBeTruthy();
     expect(screen.queryByTestId('dashboard-onboarding')).toBeNull();
-    expect(screen.getByText('errors.loadTitle')).toBeTruthy();
+    expect(selfRequests).toHaveLength(1);
+});
+
+test('DSH-007 Retry reloads a self user that failed to load', async () => {
+    resolveDashboardOnboardingData();
+    client.removeQueries({ queryKey: usersKeys.self() });
+    const selfRequests = countRequests(SELF_URL, badRequest);
+    renderPage();
+    await screen.findByText('errors.loadTitle');
+
+    const retried = countRequests(SELF_URL, () =>
+        HttpResponse.json({ ...currentUser, isPremium: false }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'activity:retryAction' }));
+
+    await waitFor(() => {
+        expect(client.getQueryData(usersKeys.self())).toBeDefined();
+    });
+    expect(selfRequests).toHaveLength(1);
+    expect(retried).toHaveLength(1);
 });
 
 test('DSH-007 derives welcome from connections, not group lifecycle activity', () => {
@@ -534,8 +552,9 @@ test('DSH-007 keeps loading while connection inputs resolve', () => {
     seedRates();
     useLoadingStore.getState().setLoading('group', 'list', 'fetched');
     seedFriends();
-    // The self user is not loaded yet: no `users.self` entry.
-    useUsersStore.setState({ user: null });
+    // The self user is not loaded yet: no `users.self` entry, its load still running.
+    client.removeQueries({ queryKey: usersKeys.self() });
+    countRequests(SELF_URL, () => new Promise<never>(() => undefined));
 
     renderPage();
 

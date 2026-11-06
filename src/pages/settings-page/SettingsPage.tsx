@@ -1,8 +1,6 @@
 import { Box, Container, Flex, Grid } from '@radix-ui/themes';
 
-import { useCanAccessSolo } from 'hooks/useSelfUser';
-import { selectUserSelfFetched, selectUserSelfLoading } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
+import { useCanAccessSolo, useSelfUserState } from 'hooks/useSelfUser';
 
 import {
     AccountSection,
@@ -15,9 +13,7 @@ import {
 } from './components';
 
 const SettingsPage = () => {
-    const isUserLoading = useLoadingStore(selectUserSelfLoading);
-    const isUserFetched = useLoadingStore(selectUserSelfFetched);
-    const isLoading = isUserLoading || !isUserFetched;
+    const isLoading = !useSelfUserState().isFetched;
     const canAccessSolo = useCanAccessSolo();
 
     return (

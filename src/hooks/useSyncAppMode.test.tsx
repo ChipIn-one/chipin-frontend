@@ -5,8 +5,8 @@ import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { beforeEach, expect, test } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
+import { saveLocalUser } from 'helpers/localStorage';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
-import { useUsersStore } from 'store/users-store';
 
 import { useSyncAppMode } from './useSyncAppMode';
 
@@ -43,16 +43,12 @@ const TestHarness = () => {
 
 beforeEach(() => {
     useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
-    useUsersStore.setState({ user: null, localUser: null });
 });
 
 test.each(['USER', 'ADMIN'] as const)(
     'does not activate Solo mode for a $role direct Solo route',
     role => {
-        useUsersStore.setState({
-            user: null,
-            localUser: { role, settings },
-        });
+        saveLocalUser({ role, settings });
 
         render(
             <MemoryRouter initialEntries={['/solo']}>

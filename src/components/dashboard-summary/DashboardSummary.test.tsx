@@ -8,8 +8,8 @@ import { lightThemeStyled } from 'constants/styled-themes';
 import { currencyRatesKeys } from 'entities/currency-rates';
 import type { DashboardBalances } from 'entities/dashboard';
 import { dashboardKeys } from 'entities/dashboard';
+import { saveLocalUser } from 'helpers/localStorage';
 import { currencyCode, fromUnits } from 'shared/money';
-import { useUsersStore } from 'store/users-store';
 import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
 
 import DashboardSummary from './DashboardSummary';
@@ -57,10 +57,7 @@ const renderSummary = (isLoading = false, hasExpenseHistory = false) => {
 };
 
 beforeEach(() => {
-    useUsersStore.setState({
-        user: null,
-        localUser: { role: 'USER', settings },
-    });
+    saveLocalUser({ role: 'USER', settings });
     balances = [money(25, 'USD')];
     rates = { USD: '1' };
 });

@@ -92,7 +92,7 @@ test('a user id that appears after boot (sign-in) gets its own restore and save 
     const view = renderApp();
     expect(get).not.toHaveBeenCalled();
 
-    // `fetchSetUser` wrote `LocalUser.id`: the tree remounts on that user's client.
+    // The session load wrote `LocalUser.id`: the tree remounts on that user's client.
     view.rerender(
         <Theme>
             <UserQueryProvider userId="late-user">

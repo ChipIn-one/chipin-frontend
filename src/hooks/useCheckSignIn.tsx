@@ -1,18 +1,25 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useShallow } from 'zustand/react/shallow';
 
 import { ROUTES } from 'constants/routes';
 import { markAuthSessionSignedOut, subscribeToRemoteAuthLogout } from 'helpers/authSession';
-import { hasAuthSessionHint } from 'helpers/localStorage';
+import { getLocalUser, getTabUserId, hasAuthSessionHint } from 'helpers/localStorage';
 import { isNetworkError } from 'shared/api/client';
 import { AUTH_STATUS, SESSION_MODE, UNAUTH_REASON } from 'store/authConstants';
 import { selectAuthStatus, selectSessionMode } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { useConnectivityStore } from 'store/connectivityStore';
 import { useGroupsStore } from 'store/groupsStore';
+import { loadKnownUsersForSession, loadSelfUserForSession } from 'store/internal/sessionUser';
 import { useUiPrefsStore } from 'store/ui-prefs';
-import { useUsersStore } from 'store/users-store';
+
+import { useTabUserId } from './useTabUserId';
+
+interface SessionStart {
+    since: number;
+    hadCachedUser: boolean;
+    switchedUser: boolean;
+}
 
 export const useCheckSignIn = () => {
     const location = useLocation();
@@ -23,14 +30,7 @@ export const useCheckSignIn = () => {
     const isOffline = useConnectivityStore(state => state.mode === 'offline');
     const setDefaultAppMode = useUiPrefsStore(state => state.setDefaultAppMode);
     const fetchSetGroups = useGroupsStore(s => s.fetchSetGroups);
-    const { fetchSetUser, invalidateKnownUsers, hasCachedUser, hasCachedUserId } = useUsersStore(
-        useShallow(state => ({
-            fetchSetUser: state.fetchSetUser,
-            invalidateKnownUsers: state.invalidateKnownUsers,
-            hasCachedUser: state.localUser !== null,
-            hasCachedUserId: state.localUser?.id !== undefined,
-        })),
-    );
+    const hasCachedUserId = useTabUserId() !== undefined;
     const setAuthenticated = useAuthStore(s => s.setAuthenticated);
     const setOfflineCachedSession = useAuthStore(s => s.setOfflineCachedSession);
     const setUnauthenticated = useAuthStore(s => s.setUnauthenticated);
@@ -51,20 +51,21 @@ export const useCheckSignIn = () => {
         });
     }, []);
 
-    // `switchedUser`: the refresh found another user (§1.5, the refresh listener dropped the cached
-    // one), so that user's default app mode applies as for a fresh sign-in.
+    // `since`: when this session start began (before its refresh); `hadCachedUser`: a cached user
+    // existed then. `switchedUser`: the refresh found another user (§1.5, the refresh listener
+    // dropped the cached one), so that user's default app mode applies as for a fresh sign-in.
     const loadSessionData = useCallback(
-        (switchedUser = false) =>
+        ({ since, hadCachedUser, switchedUser }: SessionStart) =>
             Promise.all([
                 fetchSetGroups(),
-                fetchSetUser().then(user => {
-                    if (user && (switchedUser || !hasCachedUser)) {
+                loadSelfUserForSession(since).then(user => {
+                    if (user && (switchedUser || !hadCachedUser)) {
                         setDefaultAppMode(user.settings.soloModeByDefault);
                     }
                 }),
-                invalidateKnownUsers({ joinRunning: true }),
+                loadKnownUsersForSession(since),
             ]).then(() => undefined),
-        [fetchSetGroups, fetchSetUser, hasCachedUser, invalidateKnownUsers, setDefaultAppMode],
+        [fetchSetGroups, setDefaultAppMode],
     );
 
     useEffect(() => {
@@ -86,14 +87,17 @@ export const useCheckSignIn = () => {
             return;
         }
 
-        const cachedIdBefore = useUsersStore.getState().localUser?.id;
+        const since = Date.now();
+        const hadCachedUser = getLocalUser() !== null;
+        const cachedIdBefore = getTabUserId();
         refreshAuthTokens()
             .then(() => {
                 setAuthenticated();
-                return loadSessionData(
-                    cachedIdBefore !== undefined &&
-                        useUsersStore.getState().localUser?.id !== cachedIdBefore,
-                );
+                return loadSessionData({
+                    since,
+                    hadCachedUser,
+                    switchedUser: cachedIdBefore !== undefined && getTabUserId() !== cachedIdBefore,
+                });
             })
             .catch((error: unknown) => {
                 if (useAuthStore.getState().status !== AUTH_STATUS.UNKNOWN) {
@@ -145,9 +149,16 @@ export const useCheckSignIn = () => {
         }
 
         isReconnecting.current = true;
-        const cachedIdBefore = useUsersStore.getState().localUser?.id;
+        const since = Date.now();
+        const cachedIdBefore = getTabUserId();
         refreshAuthTokens()
-            .then(() => loadSessionData(useUsersStore.getState().localUser?.id !== cachedIdBefore))
+            .then(() =>
+                loadSessionData({
+                    since,
+                    hadCachedUser: true,
+                    switchedUser: getTabUserId() !== cachedIdBefore,
+                }),
+            )
             .catch(() => {
                 // A 401 has already expired the session; a network error keeps the cached
                 // session, and the next reconnect (a connectivity change) tries again.

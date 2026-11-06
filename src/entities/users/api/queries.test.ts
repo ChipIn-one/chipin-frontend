@@ -66,11 +66,10 @@ test("the users keys start with 'users' and follow the defaults table", () => {
 
     expect(options.queryKey).toEqual(usersKeys.self());
     expect(options.staleTime).toBe(5 * 60_000);
-    // The users store loads the self user at session start and seeds the entry (03-9b removes it).
-    expect(options.refetchOnMount).toBe(false);
-    // A reconnect reloads it through the store as well (`useCheckSignIn`): one request.
-    expect(options.refetchOnReconnect).toBe(false);
-    expect(selfUserQueryOptions().refetchOnReconnect).toBe(false);
+    // The query defaults decide: a mount and a reconnect refetch a stale entry (the session
+    // loader joins or reuses that load, `store/internal/sessionUser`).
+    expect(options.refetchOnMount).toBeUndefined();
+    expect(options.refetchOnReconnect).toBeUndefined();
 });
 
 test('loads the self user as the domain model and keeps it in the persisted cache', async () => {
@@ -139,7 +138,6 @@ test('the known users and premium promo options follow the defaults table', () =
 
     expect(known.queryKey).toEqual(['users', 'known']);
     expect(known.staleTime).toBe(60_000);
-    // The reconnect refetch is decided per session mode by `useKnownUsers`.
     expect(known.refetchOnReconnect).toBeUndefined();
     expect(known.meta?.persist).toBeUndefined();
     expect(promo.queryKey).toEqual(['users', 'premiumPromo']);

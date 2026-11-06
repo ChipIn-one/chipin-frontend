@@ -277,6 +277,36 @@ test('a write queued behind another is not sent once its session has ended', asy
     expect(toast.error).not.toHaveBeenCalled();
 });
 
+test('after the session ended, a rolled-back entry is marked stale for the next session, no request', async () => {
+    signInWithCachedSelf();
+    let selfLoads = 0;
+    server.use(
+        http.get('*/users/self', () => {
+            selfLoads += 1;
+            return HttpResponse.json(toWire(selfUser));
+        }),
+    );
+    const first = deferred();
+    servePatch([first]);
+    const { result } = renderHook(() => useUpdateSelf());
+
+    let done: Promise<void>[] = [];
+    act(() => {
+        done = [
+            result.current.updateSelf({ settings: { theme: 'dark' } }),
+            result.current.updateSelf({ settings: { theme: 'light' } }),
+        ];
+    });
+    invalidateAuthSession();
+    first.resolve();
+    await act(() => Promise.all(done));
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    // The next session start of this user reloads it instead of showing an unconfirmed value.
+    expect(getDefaultTestQueryClient().getQueryState(usersKeys.self())?.isInvalidated).toBe(true);
+    expect(selfLoads).toBe(0);
+});
+
 test('a write queued behind another is not left paused when the network goes away', async () => {
     signInWithCachedSelf();
     const first = deferred();

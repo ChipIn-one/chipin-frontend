@@ -203,11 +203,10 @@ export const updateSelfMutationOptions = () =>
             return setSelf(client, user =>
                 withPending(client, revertChanges(user, variables.changes, previous), variables),
             ).then(() => {
-                // Nothing else pending in the same session: reload what the server holds now.
-                if (
-                    isAuthSessionCurrent(variables.sessionVersion) &&
-                    pendingChanges(client, variables).length === 0
-                ) {
+                // Nothing else pending: reload what the server holds now. After the session ended
+                // the entry is only marked stale (a disabled query sends nothing): the next
+                // session of this user reloads it instead of showing an unconfirmed value.
+                if (pendingChanges(client, variables).length === 0) {
                     return client.invalidateQueries({ queryKey: usersKeys.self() });
                 }
                 return undefined;

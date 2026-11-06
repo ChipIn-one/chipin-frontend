@@ -8,7 +8,6 @@ import type { Group, SelfUser } from 'api/chipin.types';
 import type { GroupsStore } from 'store/groupsStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
 
 import GroupSettingsTab from './GroupSettingsTab';
 
@@ -132,7 +131,6 @@ beforeEach(() => {
     vi.clearAllMocks();
     useGroupsStore.getState().setInitialGroupsStore();
     useLoadingStore.getState().setInitialLoadingStore();
-    useUsersStore.setState({ user: owner });
 });
 
 test('lets the owner toggle simplify debts through the store action', () => {

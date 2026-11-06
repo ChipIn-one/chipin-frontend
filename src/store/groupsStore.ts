@@ -20,8 +20,8 @@ import { useActivityStore } from './activity-store/actions';
 import { useErrorsStore } from './errorsStore';
 import { invalidateDashboard } from './internal/dashboardQueryBridge';
 import { createRequestChannel } from './internal/resourceRequests';
+import { invalidateKnownUsers } from './internal/sessionUser';
 import { useLoadingStore } from './loadingStore';
-import { useUsersStore } from './users-store';
 
 const groupsChannel = createRequestChannel();
 const groupDetailChannel = createRequestChannel();
@@ -139,7 +139,7 @@ const refreshAfterGroupRemoval = (
 ): Promise<void> => {
     return Promise.all([
         fetchSetGroups(true),
-        useUsersStore.getState().invalidateKnownUsers(),
+        invalidateKnownUsers(),
         invalidateDashboard(),
         useActivityStore.getState().fetchSetActivity(true),
     ]).then(() => undefined);
@@ -151,7 +151,7 @@ const refreshAfterGroupMemberChange = (
 ): Promise<void> => {
     return Promise.all([
         fetchSetGroupById(groupId, true),
-        useUsersStore.getState().invalidateKnownUsers(),
+        invalidateKnownUsers(),
         invalidateDashboard(),
         useActivityStore.getState().fetchSetActivity(true),
     ]).then(() => undefined);

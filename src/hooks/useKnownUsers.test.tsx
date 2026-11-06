@@ -4,8 +4,9 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 
 import { usersKeys } from 'entities/users';
+import { saveLocalUser } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
-import { invalidateKnownUsers } from 'store/internal/usersQueryBridge';
+import { loadKnownUsersForSession } from 'store/internal/sessionUser';
 import { createKnownUser } from 'test/knownUsers';
 import { setupMswServer } from 'test/mswServer';
 import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
@@ -40,6 +41,19 @@ const serveKnownUsers = (status = 200): { count: number } => {
     );
     return counter;
 };
+
+const SETTINGS = {
+    defaultCurrency: 'USD',
+    defaultCategory: 'food',
+    timeFormat: '24h',
+    language: 'en',
+    theme: 'system',
+    simplifyDebts: true,
+    skipCategory: false,
+    soloModeByDefault: false,
+    saveGroupExpensesToSolo: false,
+    sex: 'male',
+} as const;
 
 const settle = () => new Promise(resolve => setTimeout(resolve, 10));
 
@@ -78,8 +92,9 @@ test('signed in on a client without persistence it sends no request and reads no
     expect(requests.count).toBe(0);
 });
 
-test("a session start loads the friends once on the user's client, with the bridge invalidation", async () => {
+test("a session start loads the friends once on the user's client", async () => {
     const requests = serveKnownUsers();
+    saveLocalUser({ id: 'user-1', settings: SETTINGS });
     mountAsUserClient();
     useAuthStore.setState({ status: 'unknown' });
     const { result } = renderHook(() => useKnownUsers());
@@ -87,10 +102,11 @@ test("a session start loads the friends once on the user's client, with the brid
     await settle();
     expect(requests.count).toBe(0);
 
-    // `loadSessionData`: authenticated, then the legacy refresh call site invalidates.
+    // `loadSessionData`: authenticated, then the session start marks the friends stale.
     await act(async () => {
+        const since = Date.now();
         useAuthStore.setState({ status: 'authenticated' });
-        await invalidateKnownUsers('user-1', { joinRunning: true });
+        await loadKnownUsersForSession(since);
     });
 
     await waitFor(() => {
@@ -158,14 +174,11 @@ test('waiting for the network without data counts as an error; with data it does
     expect(result.current.friends).toHaveLength(1);
 });
 
-test.each([
-    { sessionMode: 'online', expected: 1 },
-    // The legacy reconnect load (`useCheckSignIn`) invalidates it there: one request.
-    { sessionMode: 'offline-cached', expected: 0 },
-] as const)(
-    'a reconnect refetches stale friends only in an $sessionMode session ($expected)',
-    async ({ sessionMode, expected }) => {
+test.each(['online', 'offline-cached'] as const)(
+    'a reconnect of an %s session loads stale friends once, the session start included',
+    async sessionMode => {
         const requests = serveKnownUsers();
+        saveLocalUser({ id: 'user-1', settings: SETTINGS });
         mountAsUserClient();
         useAuthStore.setState({ status: 'authenticated', sessionMode });
         // Mounted with fresh data (no load), then the entry turns stale while offline.
@@ -178,12 +191,18 @@ test.each([
         });
         await settle();
         const beforeReconnect = requests.count;
+        const since = Date.now();
 
         act(() => {
             onlineManager.setOnline(true);
         });
+        // The reconnect of an offline-cached session refreshes the session, then starts it: the
+        // reconnect refetch is joined (or reused once it finished).
+        await act(() => loadKnownUsersForSession(since));
+        await settle();
+        await act(() => loadKnownUsersForSession(since));
         await settle();
 
-        expect(requests.count - beforeReconnect).toBe(expected);
+        expect(requests.count - beforeReconnect).toBe(1);
     },
 );
