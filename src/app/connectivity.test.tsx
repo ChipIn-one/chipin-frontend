@@ -219,7 +219,7 @@ describe('offline cold start through /auth/refresh', () => {
         useAuthStore.setState({ status: 'unknown', unauthReason: undefined, isNewUser: null });
         vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
         vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockResolvedValue(null);
-        vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockResolvedValue();
+        vi.spyOn(useUsersStore.getState(), 'invalidateKnownUsers').mockResolvedValue();
     });
 
     afterEach(() => {

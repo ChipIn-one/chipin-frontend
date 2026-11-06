@@ -33,7 +33,7 @@ const user = {
 } satisfies SelfUser;
 
 test('renders the two Solo preference switches in their own section', () => {
-    useUsersStore.setState({ user, localUser: null, friends: [] });
+    useUsersStore.setState({ user, localUser: null });
 
     render(<SoloPreferencesSection isLoading={false} />);
 

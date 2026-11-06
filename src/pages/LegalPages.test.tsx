@@ -38,7 +38,6 @@ beforeEach(() => {
     useUsersStore.setState({
         user: null,
         localUser: { role: 'ADMIN', settings },
-        friends: [],
     });
     useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
 });

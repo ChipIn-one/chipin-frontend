@@ -115,7 +115,7 @@ const App = ({ initialEntry = '/' }: { initialEntry?: string }) => {
 
 const mockSignedInFetches = (id: string) => {
     vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
-    vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockResolvedValue();
+    vi.spyOn(useUsersStore.getState(), 'invalidateKnownUsers').mockResolvedValue();
     return vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockImplementation(() => {
         // As the real action: `saveLocalUser(toLocalUser(user))` and `localUser` in the store.
         saveLocalUser({ id, role: user.role, settings: user.settings });
@@ -223,7 +223,7 @@ test('OAuth sign-in of a cached user whose user/friends fetches change nothing: 
     vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
     // The real actions swallow their errors and leave the users store as it is.
     vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockResolvedValue(null);
-    vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockResolvedValue();
+    vi.spyOn(useUsersStore.getState(), 'invalidateKnownUsers').mockResolvedValue();
 
     render(<App initialEntry="/oauth/callback?code=cached-user-code" />);
 

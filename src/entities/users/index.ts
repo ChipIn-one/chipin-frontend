@@ -1,10 +1,17 @@
-// Public entry of entities/users: the self user query and the settings it carries.
+// Public entry of entities/users: the self user (and its settings), the known users (friends) and
+// the premium promo queries.
 export {
+    knownUsersQueryOptions,
+    premiumPromoQueryOptions,
     selfUserQueryOptions,
+    useKnownUsersQuery,
+    usePremiumPromoQuery,
     USERS_QUERY_DEFAULTS,
     usersKeys,
     useSelfUserQuery,
 } from './api/queries';
+export type { FriendCurrencyGroup, FriendsView } from './model/friendsView';
+export { getFriendsView, hasOutstandingDebt } from './model/friendsView';
 export {
     canRoleAccessSolo,
     isAdminRole,
@@ -19,4 +26,4 @@ export {
     userSoloModeByDefault,
     userTheme,
 } from './model/settings';
-export type { SelfUser, SelfUserSettings } from './model/types';
+export type { KnownUser, KnownUserProfile, SelfUser, SelfUserSettings } from './model/types';

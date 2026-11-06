@@ -7,12 +7,16 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import type { ActivityFeedItem, Group, SelfUser } from 'api/chipin.types';
 import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
 import { dashboardActivityQueryOptions, dashboardKeys } from 'entities/dashboard';
+import { type KnownUser, knownUsersQueryOptions, usersKeys } from 'entities/users';
+import { useAuthStore } from 'store/authStore';
 import { useErrorsStore } from 'store/errorsStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
+import { createKnownUser } from 'test/knownUsers';
 import { setupMswServer } from 'test/mswServer';
 import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
+import { mountAsUserClient } from 'test/userClient';
 
 import DashboardPage from './DashboardPage';
 
@@ -154,6 +158,7 @@ let client: QueryClient;
 const BALANCES_URL = '*/dashboard/balances';
 const ACTIVITY_URL = '*/users/self/activity-previews';
 const RATES_URL = '*/currency-rates';
+const KNOWN_USERS_URL = '*/users/known-users';
 const badRequest = () =>
     HttpResponse.json({ code: 'SYSTEM.BAD_REQUEST', message: 'Unavailable' }, { status: 400 });
 
@@ -186,11 +191,24 @@ const seedRates = () => {
     client.setQueryData(currencyRatesKeys.all, EMPTY_CURRENCY_RATES);
 };
 
+const seedFriends = (friends: KnownUser[] = []) => {
+    client.setQueryData(usersKeys.known(), friends);
+};
+
+// A load of the known users that fails (a 500): with seeded friends it is a failed refresh.
+const failFriendsLoad = async () => {
+    countRequests(KNOWN_USERS_URL, badRequest);
+    await client.prefetchQuery({ ...knownUsersQueryOptions(), staleTime: 0 });
+};
+
+const friend = (lastUsedCurrency: string | null = null) =>
+    createKnownUser('friend-1', [], { lastUsedCurrency });
+
 const resolveDashboardOnboardingData = () => {
     seedDashboard();
     seedRates();
+    seedFriends();
     useLoadingStore.getState().setLoading('group', 'list', 'fetched');
-    useLoadingStore.getState().setLoading('users', 'friends', 'fetched');
     useLoadingStore.getState().setLoading('users', 'self', 'fetched');
 };
 
@@ -199,8 +217,10 @@ const renderPage = () => renderWithQueryClient(<DashboardPage />, client);
 beforeEach(() => {
     vi.clearAllMocks();
     client = createTestQueryClient();
+    mountAsUserClient('user-1', client);
     useGroupsStore.getState().setInitialGroupsStore();
-    useUsersStore.setState({ user: currentUser, friends: [], hasFriendsSnapshot: false });
+    useAuthStore.setState({ status: 'authenticated' });
+    useUsersStore.setState({ user: currentUser });
     useLoadingStore.getState().setInitialLoadingStore();
     useErrorsStore.getState().resetErrors();
 });
@@ -229,9 +249,7 @@ test('DSH-011 hides the redundant No groups empty state on mobile Welcome, not d
 
 test('DSH-011 keeps No groups visible on mobile once a friend exists', () => {
     resolveDashboardOnboardingData();
-    useUsersStore.setState({
-        friends: [{ user: creator, balances: [], lastUsedCurrency: null }],
-    });
+    seedFriends([friend()]);
 
     renderPage();
 
@@ -243,7 +261,7 @@ test('DSH-011 keeps No groups visible on mobile once a friend exists', () => {
 
 test('DSH-013 puts the Create group action below No groups yet at full width', () => {
     resolveDashboardOnboardingData();
-    useUsersStore.setState({ friends: [{ user: creator, balances: [], lastUsedCurrency: null }] });
+    seedFriends([friend()]);
 
     renderPage();
 
@@ -273,15 +291,7 @@ test('DSH-012 does not reserve vertical space when the Dashboard summary is empt
 
 test('DSH-012 shows settled summary after direct-friend expense history', () => {
     resolveDashboardOnboardingData();
-    useUsersStore.setState({
-        friends: [
-            {
-                user: { ...creator, id: 'friend-1' },
-                balances: [],
-                lastUsedCurrency: 'USD',
-            },
-        ],
-    });
+    seedFriends([friend('USD')]);
 
     renderPage();
 
@@ -291,15 +301,7 @@ test('DSH-012 shows settled summary after direct-friend expense history', () => 
 
 test('DSH-012 hides settled summary without direct-friend or group history', () => {
     resolveDashboardOnboardingData();
-    useUsersStore.setState({
-        friends: [
-            {
-                user: { ...creator, id: 'friend-1' },
-                balances: [],
-                lastUsedCurrency: null,
-            },
-        ],
-    });
+    seedFriends([friend()]);
 
     renderPage();
 
@@ -320,7 +322,7 @@ test('DSH-009 renders normal Dashboard for a one-member group with empty activit
 
 test('DSH-009 renders normal Dashboard for a connected friend with no activity', () => {
     resolveDashboardOnboardingData();
-    useUsersStore.setState({ friends: [{ user: creator, balances: [], lastUsedCurrency: null }] });
+    seedFriends([friend()]);
     renderPage();
 
     expect(screen.queryByTestId('dashboard-onboarding')).toBeNull();
@@ -394,22 +396,10 @@ test('DSH-007 keeps confirmed group snapshot visible after list refresh fails', 
     expect(screen.queryByText('errors.loadTitle')).toBeNull();
 });
 
-test('DSH-007 keeps confirmed friend snapshot visible after friends refresh fails', () => {
+test('DSH-007 keeps confirmed friend snapshot visible after friends refresh fails', async () => {
     resolveDashboardOnboardingData();
-    useUsersStore.setState({
-        hasFriendsSnapshot: true,
-        friends: [
-            {
-                user: { ...creator, id: 'friend-1' },
-                balances: [],
-                lastUsedCurrency: null,
-            },
-        ],
-    });
-    useLoadingStore.getState().setLoading('users', 'friends', 'loading');
-    useErrorsStore.getState().setError('users', 'friends', {
-        message: 'Friends refresh unavailable',
-    });
+    seedFriends([friend()]);
+    await failFriendsLoad();
 
     renderPage();
 
@@ -418,13 +408,10 @@ test('DSH-007 keeps confirmed friend snapshot visible after friends refresh fail
     expect(screen.queryByText('errors.loadTitle')).toBeNull();
 });
 
-test('DSH-007 preserves a confirmed empty connection list without inventing a new-user state from failure', () => {
+test('DSH-007 preserves a confirmed empty connection list without inventing a new-user state from failure', async () => {
     resolveDashboardOnboardingData();
-    useUsersStore.setState({ hasFriendsSnapshot: true, friends: [] });
     useGroupsStore.setState({ hasConfirmedGroups: true, groups: [] });
-    useErrorsStore.getState().setError('users', 'friends', {
-        message: 'Friends refresh unavailable',
-    });
+    await failFriendsLoad();
 
     renderPage();
 
@@ -448,9 +435,11 @@ test('DSH-007 treats an initial group failure without confirmed data as blocking
 test('DSH-007 Retry fetches both dashboard data and currency rates', async () => {
     resolveDashboardOnboardingData();
     client.clear();
+    seedFriends();
     const balanceRequests = countRequests(BALANCES_URL, badRequest);
     const activityRequests = countRequests(ACTIVITY_URL, badRequest);
     const rateRequests = countRequests(RATES_URL, badRequest);
+    const friendRequests = countRequests(KNOWN_USERS_URL, () => HttpResponse.json({ friends: [] }));
 
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'activity:retryAction' }));
@@ -459,20 +448,22 @@ test('DSH-007 Retry fetches both dashboard data and currency rates', async () =>
         expect(balanceRequests).toHaveLength(2);
         expect(activityRequests).toHaveLength(2);
         expect(rateRequests).toHaveLength(2);
+        // The friends were cached: Retry reloads them too.
+        expect(friendRequests).toHaveLength(1);
     });
     expect(screen.getByText('errors.loadTitle')).toBeTruthy();
 });
 
-test('DSH-007 never mistakes a load failure for new-user welcome', () => {
+test('DSH-007 never mistakes a load failure for new-user welcome', async () => {
     resolveDashboardOnboardingData();
-    useErrorsStore.getState().setError('users', 'friends', {
-        message: 'Friends unavailable',
-    });
+    client.removeQueries({ queryKey: usersKeys.known() });
+    await failFriendsLoad();
     renderPage();
 
+    // The mount retries the failed first load once; it fails again.
+    expect(await screen.findByText('errors.loadTitle')).toBeTruthy();
     expect(screen.queryByTestId('dashboard-onboarding')).toBeNull();
     expect(screen.queryByTestId('activity-list')).toBeNull();
-    expect(screen.getByText('errors.loadTitle')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'activity:retryAction' })).toBeTruthy();
 });
 
@@ -542,7 +533,7 @@ test('DSH-007 keeps loading while connection inputs resolve', () => {
     seedDashboard();
     seedRates();
     useLoadingStore.getState().setLoading('group', 'list', 'fetched');
-    useLoadingStore.getState().setLoading('users', 'friends', 'fetched');
+    seedFriends();
     // The self user is not loaded yet: no `users.self` entry.
     useUsersStore.setState({ user: null });
 

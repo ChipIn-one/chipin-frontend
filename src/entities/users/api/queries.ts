@@ -1,12 +1,13 @@
-// The users entity (spec 03 §1.2, §6 row 3). `users.self` is wired; `users.known` and
-// `users.premiumPromo` join in 03-9a2, with the defaults below.
+// The users entity (spec 03 §1.2, §6 row 3): the self user, the known users (friends) and the
+// premium promo counter, with the defaults below.
 import { queryOptions, useQuery } from '@tanstack/react-query';
 
 import { getLocalUser, saveLocalUser, toLocalUser } from 'helpers/localStorage';
 import { api } from 'shared/api/client';
 
+import { toKnownUsers } from '../model/toKnownUsers';
 import { toSelfUser } from '../model/toSelfUser';
-import type { SelfUser } from '../model/types';
+import type { KnownUser, SelfUser } from '../model/types';
 
 /** The defaults table (spec 03 §1.2): fresh time and whether the entry is persisted. */
 export const USERS_QUERY_DEFAULTS = {
@@ -58,3 +59,48 @@ interface SelfUserQueryParams<T> {
 
 export const useSelfUserQuery = <T>({ select, enabled }: SelfUserQueryParams<T>) =>
     useQuery({ ...selfUserQueryOptions(), select, enabled });
+
+export const knownUsersQueryOptions = () =>
+    queryOptions({
+        queryKey: usersKeys.known(),
+        staleTime: USERS_QUERY_DEFAULTS.known.staleTime,
+        queryFn: ({ signal }) => api('get', '/users/known-users', { signal }).then(toKnownUsers),
+    });
+
+interface KnownUsersQueryParams<T> {
+    select: (friends: KnownUser[]) => T;
+    /** False while signed out: the known users are never requested without a session. */
+    enabled: boolean;
+    /**
+     * LEGACY until 03-9b: false for an offline-cached session, whose reconnect `useCheckSignIn`
+     * handles: once the session is refreshed it invalidates this entry through the users store
+     * bridge, and a reconnect refetch of its own would be a second request. An online session
+     * refetches a stale entry on reconnect (like the dashboard balances).
+     */
+    refetchOnReconnect: boolean;
+}
+
+export const useKnownUsersQuery = <T>({
+    select,
+    enabled,
+    refetchOnReconnect,
+}: KnownUsersQueryParams<T>) =>
+    useQuery({ ...knownUsersQueryOptions(), select, enabled, refetchOnReconnect });
+
+/** Unused first-user premium promo places; not persisted (spec 03 §1.4). */
+export const premiumPromoQueryOptions = () =>
+    queryOptions({
+        queryKey: usersKeys.premiumPromo(),
+        staleTime: USERS_QUERY_DEFAULTS.premiumPromo.staleTime,
+        meta: { persist: USERS_QUERY_DEFAULTS.premiumPromo.persist },
+        // Read once for a new user's welcome modal: no reloads while it stays mounted.
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        queryFn: ({ signal }) =>
+            api('get', '/users/premium-promo', { signal }).then(
+                response => response.premiumPromoRemaining,
+            ),
+    });
+
+export const usePremiumPromoQuery = ({ enabled }: { enabled: boolean }) =>
+    useQuery({ ...premiumPromoQueryOptions(), enabled });

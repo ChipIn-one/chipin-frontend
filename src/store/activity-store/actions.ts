@@ -13,7 +13,7 @@ import type { ExpenseModalEditInitialization, ExpenseModalSource } from '../expe
 import { useGroupsStore } from '../groupsStore';
 import { invalidateDashboard } from '../internal/dashboardQueryBridge';
 import { createRequestChannel } from '../internal/resourceRequests';
-import { getCachedSelfUser } from '../internal/usersQueryBridge';
+import { getCachedKnownUsers, getCachedSelfUser } from '../internal/usersQueryBridge';
 import { useLoadingStore } from '../loadingStore';
 import { useUsersStore } from '../users-store';
 
@@ -49,7 +49,7 @@ const refreshFinancialData = (
     if (groupId) {
         requests.push(useGroupsStore.getState().fetchSetGroupById(groupId, true));
     } else {
-        requests.push(useUsersStore.getState().fetchSetFriends(true));
+        requests.push(useUsersStore.getState().invalidateKnownUsers());
     }
 
     if (parentActivityId) {
@@ -111,7 +111,8 @@ const getExpenseEditSource = (): ExpenseModalSource => {
             name: group.name,
             members: group.members.map(member => member.user),
         })),
-        knownFriends: usersState.friends.map(friend => friend.user),
+        knownFriends:
+            getCachedKnownUsers(usersState.localUser?.id)?.map(friend => friend.user) ?? [],
         defaultGroupId: groupsState.selectedGroup?.id ?? groupsState.groups[0]?.id,
     };
 };

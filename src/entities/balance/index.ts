@@ -6,7 +6,6 @@ export type { LegacyBalanceTotals } from './model/legacy';
 export {
     legacyAmountFromMoney,
     legacyBalanceFromEntry,
-    legacyBalanceFromFriend,
     legacyCurrencyOrDefault,
     legacyEntryFromMoney,
     legacyExpenseBalanceChange,

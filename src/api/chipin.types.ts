@@ -1,6 +1,5 @@
 import type {
     ApiActivityFeedItemResponse,
-    ApiFriend,
     ApiFriendBalance,
     ApiGroupResponse,
     ApiSelfUserResponse,
@@ -20,14 +19,11 @@ export type {
     ApiActivityItemsResponse,
     ApiCreateLedgerResponse,
     ApiExpenseDetails,
-    ApiFriend,
     ApiFriendBalance,
-    ApiFriendsResponse,
     ApiGroupResponse,
     ApiGroupsResponse,
     ApiOAuthTokenPairResponse,
     ApiParticipantShare,
-    ApiPremiumPromoRemainingResponse,
     ApiRefreshTokenPairResponse,
     ApiSelfUserResponse,
     ApiSettlementDetails,
@@ -74,7 +70,6 @@ export type ThemeName = ApiUserTheme;
 export type UserSummary = ApiUserSummary;
 export type FriendUser = UserSummary;
 export type FriendBalance = ApiFriendBalance;
-export type KnownUser = ApiFriend;
 
 export type Group = ApiGroupResponse;
 export type GroupUser = UserSummary;

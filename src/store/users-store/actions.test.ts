@@ -7,6 +7,7 @@ import { usersKeys } from 'entities/users';
 import { LocalStorage } from 'helpers/localStorage';
 import { cachesByUser } from 'shared/offline/userCaches';
 import { useLoadingStore } from 'store/loadingStore';
+import { createKnownUser } from 'test/knownUsers';
 import { createTestQueryClient } from 'test/renderWithQueryClient';
 
 import { useErrorsStore } from '../errorsStore';
@@ -15,8 +16,6 @@ import { useUsersStore } from './actions';
 
 vi.mock('api/usersApi', () => ({
     acceptKnownUserInvite: vi.fn(),
-    fetchKnownUsers: vi.fn(),
-    fetchPremiumPromoRemaining: vi.fn(),
     fetchUser: vi.fn(),
     removeKnownUser: vi.fn(),
     updateUser: vi.fn(),
@@ -52,7 +51,6 @@ const user = {
 beforeEach(() => {
     LocalStorage.clear();
     vi.clearAllMocks();
-    vi.mocked(usersApi.fetchKnownUsers).mockReset();
     useUsersStore.getState().setInitialUsersStore();
     useErrorsStore.getState().resetErrors();
     useLoadingStore.getState().setInitialLoadingStore();
@@ -135,23 +133,6 @@ test('returns the fetched user after updating the store', () => {
     });
 });
 
-test('marks an empty friends list confirmed and keeps it after a failed refresh', async () => {
-    vi.mocked(usersApi.fetchKnownUsers)
-        .mockResolvedValueOnce({ friends: [] })
-        .mockRejectedValueOnce(new Error('Friends refresh failed'));
-
-    expect(useUsersStore.getState().hasFriendsSnapshot).toBe(false);
-    await useUsersStore.getState().fetchSetFriends();
-    expect(useUsersStore.getState()).toMatchObject({
-        friends: [],
-        hasFriendsSnapshot: true,
-    });
-    await useUsersStore.getState().fetchSetFriends(true);
-    expect(useUsersStore.getState().hasFriendsSnapshot).toBe(true);
-    useUsersStore.getState().setInitialUsersStore();
-    expect(useUsersStore.getState().hasFriendsSnapshot).toBe(false);
-});
-
 test('records a confirmed user after success and retains it on failed refresh', async () => {
     vi.mocked(usersApi.fetchUser)
         .mockResolvedValueOnce(user)
@@ -170,109 +151,52 @@ test('records a confirmed user after success and retains it on failed refresh', 
     expect(useUsersStore.getState().hasConfirmedUser).toBe(false);
 });
 
-test('stores the premium promo remaining counter', () => {
-    vi.mocked(usersApi.fetchPremiumPromoRemaining).mockResolvedValue({
-        premiumPromoRemaining: 417,
-    });
+const invite = {
+    id: 'friend-1',
+    email: 'friend@example.com',
+    displayName: 'Friend',
+    createdAt: 1,
+    updatedAt: 1,
+};
 
-    const fetchPromise = useUsersStore.getState().fetchSetPremiumPromoRemaining();
+// The user's client with cached friends, whose `users.known` the bridge marks stale.
+const mountClientWithFriends = () => {
+    const client = mountUserClient();
 
-    expect(useUsersStore.getState()).toMatchObject({
-        premiumPromoRemaining: null,
-        isPremiumPromoResolved: false,
-    });
+    useUsersStore.setState({ localUser: { id: user.id, role: user.role, settings } });
+    client.setQueryData(usersKeys.known(), [createKnownUser('friend-0')]);
+    return client;
+};
 
-    return fetchPromise.then(() => {
-        expect(useUsersStore.getState()).toMatchObject({
-            premiumPromoRemaining: 417,
-            isPremiumPromoResolved: true,
-        });
-    });
-});
+test('accepts a friend invite and marks the known users stale (the bridge)', async () => {
+    const client = mountClientWithFriends();
+    vi.mocked(usersApi.acceptKnownUserInvite).mockResolvedValue(invite);
 
-test('resolves the premium promo counter with fallback state after a request error', () => {
-    vi.mocked(usersApi.fetchPremiumPromoRemaining).mockRejectedValue(
-        new Error('promo counter unavailable'),
-    );
-
-    return useUsersStore
+    const result = await useUsersStore
         .getState()
-        .fetchSetPremiumPromoRemaining()
-        .then(() => {
-            expect(useUsersStore.getState()).toMatchObject({
-                premiumPromoRemaining: null,
-                isPremiumPromoResolved: true,
-            });
-        });
+        .acceptFriendInvite({ inviteToken: 'friend-token' });
+
+    expect(usersApi.acceptKnownUserInvite).toHaveBeenCalledWith({ inviteToken: 'friend-token' });
+    expect(client.getQueryState(usersKeys.known())?.isInvalidated).toBe(true);
+    expect(result).toEqual(invite);
 });
 
-test('accepts a friend invite and refreshes the canonical friends list', () => {
-    const friend = {
-        id: 'friend-1',
-        email: 'friend@example.com',
-        displayName: 'Friend',
-        createdAt: 1,
-        updatedAt: 1,
-    };
-    const knownFriend = {
-        user: friend,
-        balances: [],
-        lastUsedCurrency: null,
-    };
-    vi.mocked(usersApi.acceptKnownUserInvite).mockResolvedValue(friend);
-    vi.mocked(usersApi.fetchKnownUsers).mockResolvedValue({
-        friends: [knownFriend],
-    });
+test('accepts a friend invite before the user has a client (first sign-in)', async () => {
+    vi.mocked(usersApi.acceptKnownUserInvite).mockResolvedValue(invite);
 
-    return useUsersStore
-        .getState()
-        .acceptFriendInvite({ inviteToken: 'friend-token' })
-        .then(result => {
-            expect(usersApi.acceptKnownUserInvite).toHaveBeenCalledWith({
-                inviteToken: 'friend-token',
-            });
-            expect(usersApi.fetchKnownUsers).toHaveBeenCalledOnce();
-            expect(useUsersStore.getState().friends).toEqual([knownFriend]);
-            expect(result).toEqual(friend);
-        });
+    await expect(
+        useUsersStore.getState().acceptFriendInvite({ inviteToken: 'friend-token' }),
+    ).resolves.toEqual(invite);
 });
 
-test('resolves friend invite acceptance when the canonical friends refresh fails', () => {
-    const refreshError = new Error('friends refresh failed');
-    const friend = {
-        id: 'friend-1',
-        email: 'friend@example.com',
-        displayName: 'Friend',
-        createdAt: 1,
-        updatedAt: 1,
-    };
-    vi.mocked(usersApi.acceptKnownUserInvite).mockResolvedValue(friend);
-    vi.mocked(usersApi.fetchKnownUsers).mockRejectedValue(refreshError);
+test('a failed invite leaves the known users as they were', async () => {
+    const client = mountClientWithFriends();
+    vi.mocked(usersApi.acceptKnownUserInvite).mockRejectedValue(new Error('Invite failed'));
 
-    return useUsersStore
-        .getState()
-        .acceptFriendInvite({ inviteToken: 'friend-token' })
-        .then(result => {
-            expect(result).toEqual(friend);
-            expect(usersApi.acceptKnownUserInvite).toHaveBeenCalledOnce();
-            expect(usersApi.fetchKnownUsers).toHaveBeenCalledOnce();
-            expect(useErrorsStore.getState().errors.users.friends).toEqual(
-                expect.objectContaining({ message: expect.any(String) }),
-            );
-            expect(useLoadingStore.getState().users.friends).toBe('fetched');
-        });
-});
-
-test('returns the friends fetch promise', () => {
-    vi.mocked(usersApi.fetchKnownUsers).mockResolvedValue({ friends: [] });
-
-    const fetchPromise = useUsersStore.getState().fetchSetFriends();
-
-    expect(fetchPromise).toBeInstanceOf(Promise);
-
-    return Promise.resolve(fetchPromise).then(() => {
-        expect(useUsersStore.getState().friends).toEqual([]);
-    });
+    await expect(
+        useUsersStore.getState().acceptFriendInvite({ inviteToken: 'friend-token' }),
+    ).rejects.toThrow('Invite failed');
+    expect(client.getQueryState(usersKeys.known())?.isInvalidated).toBe(false);
 });
 
 test('returns the user settings update promise', () => {
@@ -575,45 +499,28 @@ test('ignores an avatar rejection that arrives after reset', () => {
         );
 });
 
-test('removes a friend and refetches the confirmed friends list', () => {
-    const fetchSetFriends = vi.fn().mockResolvedValue(undefined);
+test('removes a friend and marks the known users stale (the bridge)', async () => {
+    const client = mountClientWithFriends();
     vi.mocked(usersApi.removeKnownUser).mockResolvedValue(undefined);
-    useUsersStore.setState({ fetchSetFriends });
 
-    return useUsersStore
-        .getState()
-        .removeFriend({ userId: 'friend-1' })
-        .then(() => {
-            expect(usersApi.removeKnownUser).toHaveBeenCalledWith({ userId: 'friend-1' });
-            expect(fetchSetFriends).toHaveBeenCalledWith(true);
-        });
+    await expect(
+        useUsersStore.getState().removeFriend({ userId: 'friend-1' }),
+    ).resolves.toBeUndefined();
+
+    expect(usersApi.removeKnownUser).toHaveBeenCalledWith({ userId: 'friend-1' });
+    expect(client.getQueryState(usersKeys.known())?.isInvalidated).toBe(true);
+    expect(useLoadingStore.getState().users.removeFriend).toBe('fetched');
 });
 
-test('resolves after a confirmed removal and friends refresh', () => {
-    vi.mocked(usersApi.removeKnownUser).mockResolvedValue(undefined);
-    useUsersStore.setState({
-        fetchSetFriends: vi.fn().mockResolvedValue(undefined),
-    });
-
-    return useUsersStore
-        .getState()
-        .removeFriend({ userId: 'friend-1' })
-        .then(result => {
-            expect(result).toBeUndefined();
-            expect(usersApi.removeKnownUser).toHaveBeenCalledOnce();
-        });
-});
-
-test('rejects a failed friend removal without starting a refetch', () => {
+test('rejects a failed friend removal without marking the known users stale', () => {
+    const client = mountClientWithFriends();
     const mutationError = new Error('Removal failed');
-    const fetchSetFriends = vi.fn().mockResolvedValue(undefined);
     vi.mocked(usersApi.removeKnownUser).mockRejectedValue(mutationError);
-    useUsersStore.setState({ fetchSetFriends });
 
     return expect(useUsersStore.getState().removeFriend({ userId: 'friend-1' }))
         .rejects.toBe(mutationError)
         .then(() => {
-            expect(fetchSetFriends).not.toHaveBeenCalled();
+            expect(client.getQueryState(usersKeys.known())?.isInvalidated).toBe(false);
             expect(useErrorsStore.getState().errors.users.removeFriend).toEqual(
                 expect.objectContaining({ message: expect.any(String) }),
             );

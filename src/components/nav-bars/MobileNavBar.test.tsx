@@ -5,13 +5,14 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
-import type { Group, KnownUser, SelfUser, UserSettings } from 'api/chipin.types';
+import type { Group, SelfUser, UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { useUsersStore } from 'store/users-store';
+import { createKnownUser, seedKnownUsers } from 'test/knownUsers';
 
 import MobileNavBar from './MobileNavBar';
 
@@ -50,20 +51,7 @@ const currentUser = {
     updatedAt: 1,
 } satisfies SelfUser;
 
-const friend = {
-    user: {
-        id: 'friend-1',
-        email: 'friend@example.com',
-        displayName: 'Friend',
-        firstName: 'Friend',
-        lastName: null,
-        picture: null,
-        createdAt: 1,
-        updatedAt: 1,
-    },
-    balances: [],
-    lastUsedCurrency: null,
-} satisfies KnownUser;
+const friend = createKnownUser('friend-1');
 
 const soloGroup = {
     id: 'group-1',
@@ -84,7 +72,6 @@ const soloGroup = {
 
 const resolveGlobalTargets = () => {
     useLoadingStore.getState().setLoading('group', 'list', 'fetched');
-    useLoadingStore.getState().setLoading('users', 'friends', 'fetched');
 };
 
 beforeEach(() => {
@@ -95,8 +82,6 @@ beforeEach(() => {
     useUsersStore.setState({
         user: null,
         localUser: { role: 'ADMIN', settings },
-        friends: [],
-        hasFriendsSnapshot: false,
         hasConfirmedUser: false,
     });
 });
@@ -176,11 +161,10 @@ test('EXP-062 keeps four mobile items with only a one-member group', () => {
 test('EXP-062 keeps the center action during a confirmed friend refresh', () => {
     useUsersStore.setState({
         user: currentUser,
-        friends: [friend],
-        hasFriendsSnapshot: true,
         hasConfirmedUser: true,
     });
-    useLoadingStore.getState().setLoading('users', 'friends', 'loading');
+    // Cached friends stay a resolved target while the query refetches.
+    seedKnownUsers([friend]);
     useLoadingStore.getState().setLoading('users', 'self', 'loading');
 
     render(
@@ -199,7 +183,8 @@ test('EXP-062 keeps the center action during a confirmed friend refresh', () => 
 
 test('EXP-062 restores the lifted Add Expense slot for a valid target', () => {
     resolveGlobalTargets();
-    useUsersStore.setState({ user: currentUser, friends: [friend] });
+    useUsersStore.setState({ user: currentUser });
+    seedKnownUsers([friend]);
     useLoadingStore.getState().setLoading('users', 'self', 'fetched');
 
     render(

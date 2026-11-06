@@ -59,7 +59,7 @@ const renderSettings = () => {
 };
 
 test('does not render unfinished notifications settings', () => {
-    useUsersStore.setState({ user: null, localUser: { role: 'ADMIN', settings }, friends: [] });
+    useUsersStore.setState({ user: null, localUser: { role: 'ADMIN', settings } });
     renderSettings();
 
     const sectionTitles = SECTION_TITLES.map(title => screen.getByText(title));
@@ -79,7 +79,7 @@ test('does not render unfinished notifications settings', () => {
 });
 
 test.each(['USER', 'ADMIN'] as const)('hides Solo preferences for a $role user', role => {
-    useUsersStore.setState({ user: null, localUser: { role, settings }, friends: [] });
+    useUsersStore.setState({ user: null, localUser: { role, settings } });
 
     renderSettings();
 

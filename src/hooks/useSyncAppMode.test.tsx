@@ -43,7 +43,7 @@ const TestHarness = () => {
 
 beforeEach(() => {
     useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
-    useUsersStore.setState({ user: null, localUser: null, friends: [] });
+    useUsersStore.setState({ user: null, localUser: null });
 });
 
 test.each(['USER', 'ADMIN'] as const)(
@@ -52,7 +52,6 @@ test.each(['USER', 'ADMIN'] as const)(
         useUsersStore.setState({
             user: null,
             localUser: { role, settings },
-            friends: [],
         });
 
         render(

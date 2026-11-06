@@ -111,7 +111,7 @@ const expectDraftKept = (): void => {
 
 const mockSignedInFetches = (id: string): void => {
     vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
-    vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockResolvedValue();
+    vi.spyOn(useUsersStore.getState(), 'invalidateKnownUsers').mockResolvedValue();
     vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockImplementation(() => {
         // As the real action: `saveLocalUser(toLocalUser(user))`.
         const localUser = { id, role: 'USER' as const, settings };

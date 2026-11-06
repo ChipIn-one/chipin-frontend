@@ -64,7 +64,6 @@ test('opens the dashboard for a non-admin user regardless of the Solo default', 
             role: 'USER',
             settings,
         },
-        friends: [],
     });
 
     renderGuard();
@@ -81,7 +80,6 @@ test('opens the dashboard for an admin user regardless of the Solo default', () 
             role: 'ADMIN',
             settings,
         },
-        friends: [],
     });
 
     renderGuard();
@@ -98,7 +96,6 @@ test('waits for fetched settings instead of routing from a stale cached preferen
             role: 'USER',
             settings: { ...settings, soloModeByDefault: false },
         },
-        friends: [],
     });
 
     renderGuard();

@@ -1,8 +1,7 @@
 import { Flex } from '@radix-ui/themes';
 import type { ReactNode } from 'react';
 
-import type { KnownUser } from 'api/chipin.types';
-import type { FriendCurrencyGroup } from 'store/users-store';
+import type { FriendCurrencyGroup, KnownUser } from 'entities/users';
 
 import { FriendsPageSkeleton } from 'components/skeletons';
 
@@ -11,10 +10,10 @@ import FriendInviteEmptyState from './FriendInviteEmptyState';
 import SettledUpCard from './SettledUpCard';
 
 interface Props {
-    currencyGroups: FriendCurrencyGroup[];
+    currencyGroups: readonly FriendCurrencyGroup[];
     isEmpty: boolean;
     isLoading: boolean;
-    settledFriends: KnownUser[];
+    settledFriends: readonly KnownUser[];
 }
 
 const FriendsList = ({ currencyGroups, isEmpty, isLoading, settledFriends }: Props) => {

@@ -36,7 +36,6 @@ beforeEach(() => {
     useUsersStore.setState({
         user: null,
         localUser: { role: 'ADMIN', settings },
-        friends: [],
     });
 });
 

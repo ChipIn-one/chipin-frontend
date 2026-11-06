@@ -9,7 +9,6 @@ import { currencyCode } from 'shared/money';
 import {
     legacyAmountFromMoney,
     legacyBalanceFromEntry,
-    legacyBalanceFromFriend,
     legacyCurrencyOrDefault,
     legacyExpenseBalanceChange,
     legacyPartitionEntries,
@@ -106,13 +105,6 @@ describe('number → Money bridge', () => {
             });
         },
     );
-
-    test('friend balances map the same way', () => {
-        expect(legacyBalanceFromFriend({ currency: 'jpy', netAmount: -0.4 })?.net).toEqual({
-            minor: -4_000n,
-            currency: 'JPY',
-        });
-    });
 });
 
 test('Money → number round-trips', () => {

@@ -29,7 +29,7 @@ const settings = {
 
 test('renders the preserved Solo dashboard layout without release mode controls', () => {
     useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
-    useUsersStore.setState({ user: null, localUser: { role: 'ADMIN', settings }, friends: [] });
+    useUsersStore.setState({ user: null, localUser: { role: 'ADMIN', settings } });
 
     render(
         <MemoryRouter initialEntries={['/solo']}>
@@ -52,7 +52,7 @@ test('renders the preserved Solo dashboard layout without release mode controls'
 test('uses the shared profile shortcut to open Settings from Solo', () => {
     const interaction = userEvent.setup();
     useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
-    useUsersStore.setState({ user: null, localUser: { role: 'ADMIN', settings }, friends: [] });
+    useUsersStore.setState({ user: null, localUser: { role: 'ADMIN', settings } });
 
     const CurrentRoute = () => {
         const location = useLocation();

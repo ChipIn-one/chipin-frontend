@@ -66,7 +66,7 @@ vi.mock('api/chipin', () => ({
 const mockAuthenticatedDataFetches = (): void => {
     vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
     vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockResolvedValue(user);
-    vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockResolvedValue();
+    vi.spyOn(useUsersStore.getState(), 'invalidateKnownUsers').mockResolvedValue();
 };
 
 describe('authStore', () => {
@@ -148,21 +148,20 @@ describe('authStore', () => {
             });
     });
 
-    test('loads the premium promo counter after a new registration', () => {
+    test('marks the known users stale once after a sign-in (bridge to users.known)', () => {
         vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue({
             token: 'access-token',
             is_new_user: true,
         });
         mockAuthenticatedDataFetches();
-        const fetchSetPremiumPromoRemaining = vi
-            .spyOn(useUsersStore.getState(), 'fetchSetPremiumPromoRemaining')
-            .mockResolvedValue();
+        const invalidateKnownUsers = vi.mocked(useUsersStore.getState().invalidateKnownUsers);
 
         return useAuthStore
             .getState()
             .exchangeGoogleOAuthCode('oauth-code-3')
             .then(() => {
-                expect(fetchSetPremiumPromoRemaining).toHaveBeenCalledOnce();
+                expect(invalidateKnownUsers).toHaveBeenCalledExactlyOnceWith({ joinRunning: true });
+                expect(useAuthStore.getState().isNewUser).toBe(true);
             });
     });
 
