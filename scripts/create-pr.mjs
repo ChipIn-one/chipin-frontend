@@ -57,7 +57,7 @@ export const buildCreatePullRequestArgs = (branch, identity, commitDescription =
     }
     // PR metadata blocks a UI-affecting PR without QA steps; the release QA Issue lists them. The prompt is an
     // HTML comment, so an unfilled section is not a step and the check still asks for real ones.
-    if (!/^## QA(?:\s*\([^)]*\))?\s*$/imu.test(body)) {
+    if (!/^[ \t]{0,3}#{1,2}[ \t]+QA(?:[ \t]*\([^)\n]*\))?[ \t]*#*[ \t]*$/imu.test(body)) {
         body +=
             '\n\n## QA\n<!-- UI change: checklist steps a tester can follow, e.g. "- [ ] Open Settings => the theme switch shows". No UI change: write None. -->';
     }

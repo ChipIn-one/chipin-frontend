@@ -313,13 +313,15 @@ test('new PR body adds one QA section whose unfilled prompt is not a QA step', (
     for (const own of [
         '## QA\n- [ ] Open Settings => theme switch shows',
         '## QA (owner)\n- [ ] Reload',
+        '# QA\n- [ ] Reload',
+        ' ##  qa ##\n- [ ] Reload',
     ]) {
         const kept = buildCreatePullRequestArgs(
             'feat/issue-71-test',
             'ChipIn-one/chipin-frontend#71',
             `Notes\n\n${own}`,
         ).at(-1);
-        expect(kept.match(/^## QA\b/gmu) || []).toHaveLength(1);
+        expect(kept.match(/^\s*#{1,2}\s+QA\b/gimu) || []).toHaveLength(1);
         expect(prQaSteps(kept)).toHaveLength(1);
     }
 });

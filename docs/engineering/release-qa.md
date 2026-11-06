@@ -2,7 +2,7 @@
 
 Manual QA checks one exact Vercel Preview built from `master` before the owner **Promotes** it. Only UI changes need a tester. QA never gates CI, merge or deployment; the owner makes the release decision.
 
-**Rule for every UI-affecting change:** the Issue carries 1–3 lines `- [ ] QA: <step> => <expected result>` (a `- [ ] When <action>, then <expected result>` line also works), or each UI-affecting PR body has a `## QA` section with checklist steps (`npm run pr:create` adds an empty one; PR metadata fails a UI-affecting PR without steps). An epic-level Issue that spans several PRs usually relies on its PRs' sections. A label such as `## QA (owner)` is allowed but chooses nobody: the tester is the `qa_login` of the QA round.
+**Rule for every UI-affecting change:** the Issue carries 1–3 lines `- [ ] QA: <step> => <expected result>` (a `- [ ] When <action>, then <expected result>` line also works), or each UI-affecting PR body has a `## QA` section with checklist steps (`npm run pr:create` adds it with a prompt; PR metadata fails a UI-affecting PR without steps). An epic-level Issue that spans several PRs usually relies on its PRs' sections. A label such as `## QA (owner)` is allowed but chooses nobody: the tester is the `qa_login` of the QA round.
 
 ## One-time setup
 
