@@ -3,10 +3,18 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, expect, test } from 'vitest';
 
 import { clearLocalUserIdentity, getLocalUser, saveLocalUser } from 'helpers/localStorage';
+import { currencyCode, fromUnits } from 'shared/money';
+import { persistCodec } from 'shared/offline/persistCodec';
 import { dehydrateOptions } from 'shared/offline/queryPersister';
 import { setupMswServer } from 'test/mswServer';
 
-import { selfUserQueryOptions, USERS_QUERY_DEFAULTS, usersKeys } from './queries';
+import {
+    knownUsersQueryOptions,
+    premiumPromoQueryOptions,
+    selfUserQueryOptions,
+    USERS_QUERY_DEFAULTS,
+    usersKeys,
+} from './queries';
 
 const server = setupMswServer();
 
@@ -123,4 +131,47 @@ test('a refetch never brings back a role the cached user dropped (session expiry
     await new QueryClient().fetchQuery(selfUserQueryOptions());
 
     expect(getLocalUser()).toEqual({ id: 'user-1', settings: wireSettings });
+});
+
+test('the known users and premium promo options follow the defaults table', () => {
+    const known = knownUsersQueryOptions();
+    const promo = premiumPromoQueryOptions();
+
+    expect(known.queryKey).toEqual(['users', 'known']);
+    expect(known.staleTime).toBe(60_000);
+    // The session start and an offline-cached reconnect invalidate it through the store bridge.
+    expect(known.refetchOnReconnect).toBe(false);
+    expect(known.meta?.persist).toBeUndefined();
+    expect(promo.queryKey).toEqual(['users', 'premiumPromo']);
+    expect(promo.staleTime).toBe(10 * 60_000);
+    expect(promo.meta).toEqual({ persist: false });
+});
+
+test('loads the known users with exact Money, persisted; the promo counter is never persisted', async () => {
+    server.use(
+        http.get('*/users/known-users', () =>
+            // The literal stays text in the transport: above 2^39 it is exact.
+            HttpResponse.text(
+                '{"friends":[{"user":{"id":"friend-1","email":"f@example.com","displayName":"F",' +
+                    '"createdAt":1,"updatedAt":1},"balances":[{"currency":"USD",' +
+                    '"netAmount":899999999999.9997}],"lastUsedCurrency":"USD"}]}',
+                { headers: { 'Content-Type': 'application/json' } },
+            ),
+        ),
+        http.get('*/users/premium-promo', () => HttpResponse.json({ premiumPromoRemaining: 417 })),
+    );
+    const client = new QueryClient();
+
+    const friends = await client.fetchQuery(knownUsersQueryOptions());
+    const remaining = await client.fetchQuery(premiumPromoQueryOptions());
+
+    expect(friends[0]?.balances).toEqual([
+        { net: fromUnits(8_999_999_999_999_997n, currencyCode('USD')) },
+    ]);
+    expect(remaining).toBe(417);
+    const dehydrated = dehydrate(client, dehydrateOptions);
+
+    expect(dehydrated.queries.map(query => query.queryKey)).toEqual([usersKeys.known()]);
+    // The persisted Money survives the codec as a bigint.
+    expect(persistCodec.parse(persistCodec.stringify(dehydrated))).toEqual(dehydrated);
 });

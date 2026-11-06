@@ -39,7 +39,7 @@ const user = {
 test('keeps the selected default category visible but disabled when categories are skipped', () => {
     // Settings are a signed-in page: the self query's settings apply.
     useAuthStore.setState({ status: 'authenticated' });
-    useUsersStore.setState({ user, localUser: null, friends: [] });
+    useUsersStore.setState({ user, localUser: null });
     const client = createTestQueryClient();
 
     client.setQueryData(currencyRatesKeys.all, {

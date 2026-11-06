@@ -126,11 +126,10 @@ const dropOtherUserData = (nextUserId: string | null): boolean => {
     return switched;
 };
 
-const loadSignedInData = (isNewUser: boolean | null): Promise<void> => {
+const loadSignedInData = (): Promise<void> => {
     const { setDefaultAppMode } = useUiPrefsStore.getState();
     const { fetchSetGroups } = useGroupsStore.getState();
-    const { fetchSetPremiumPromoRemaining, fetchSetUser, fetchSetFriends } =
-        useUsersStore.getState();
+    const { fetchSetUser, invalidateKnownUsers } = useUsersStore.getState();
 
     return Promise.all([
         fetchSetGroups(),
@@ -139,8 +138,7 @@ const loadSignedInData = (isNewUser: boolean | null): Promise<void> => {
                 setDefaultAppMode(user.settings.soloModeByDefault);
             }
         }),
-        fetchSetFriends(),
-        isNewUser ? fetchSetPremiumPromoRemaining() : Promise.resolve(),
+        invalidateKnownUsers({ joinRunning: true }),
     ]).then(() => undefined);
 };
 
@@ -218,7 +216,7 @@ export const useAuthStore = create<AuthStore>(set => ({
                     sessionMode: SESSION_MODE.ONLINE,
                 });
 
-                return loadSignedInData(isNewUser);
+                return loadSignedInData();
             })
             .catch((error: unknown) => {
                 const cleanup =
@@ -328,6 +326,6 @@ export const onAccessTokenRefreshed = (token: string): void => {
     const { status, sessionMode } = useAuthStore.getState();
 
     if (status === AUTH_STATUS.AUTHENTICATED && sessionMode === SESSION_MODE.ONLINE) {
-        void loadSignedInData(false);
+        void loadSignedInData();
     }
 };

@@ -2,7 +2,7 @@ import { Card, Flex, Separator, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
 import { balanceDirection, legacyAmountFromMoney } from 'entities/balance';
-import type { FriendCurrencyGroup } from 'store/users-store';
+import type { FriendCurrencyGroup } from 'entities/users';
 
 import DebtAmount from 'basics/DebtAmount';
 

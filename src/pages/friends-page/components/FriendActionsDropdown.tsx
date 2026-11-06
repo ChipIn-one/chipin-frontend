@@ -9,7 +9,9 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { FriendBalance, KnownUser } from 'api/chipin.types';
+import type { FriendBalance } from 'api/chipin.types';
+import { type Balance, legacyAmountFromMoney } from 'entities/balance';
+import { hasOutstandingDebt, type KnownUser } from 'entities/users';
 import { useActivityStore } from 'store/activity-store';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
@@ -17,9 +19,15 @@ import Dropdown from 'components/Dropdown';
 import { RemoveFriendAlertDialog } from 'components/modals/remove-friend-alert-dialog';
 import { SettleUpModal } from 'components/modals/settle-up-modal';
 
+// LEGACY until 03-21: the settle-up modal still reads number amounts.
+const toSettleUpBalance = ({ net }: Balance): FriendBalance => ({
+    currency: net.currency,
+    netAmount: legacyAmountFromMoney(net),
+});
+
 interface Props {
     friend: KnownUser;
-    balance?: FriendBalance;
+    balance?: Balance;
 }
 
 const FriendActionsDropdown = ({ friend, balance }: Props) => {
@@ -27,7 +35,7 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
     const [isSettleUpOpened, setIsSettleUpOpened] = useState(false);
     const [isRemoveFriendOpened, setIsRemoveFriendOpened] = useState(false);
     const openAddExpenseModal = useExpenseModalStore(state => state.open);
-    const hasOutstandingDebt = friend.balances.some(friendBalance => friendBalance.netAmount !== 0);
+    const isRemoveDisabled = hasOutstandingDebt(friend);
 
     const actions = useMemo(
         () => [
@@ -69,13 +77,13 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                 label: t('friends:actions.removeFriend'),
                 icon: <UserXIcon size={16} />,
                 color: 'red' as const,
-                isDisabled: hasOutstandingDebt,
+                isDisabled: isRemoveDisabled,
                 onSelect: () => {
                     setIsRemoveFriendOpened(true);
                 },
             },
         ],
-        [balance, friend.user.id, hasOutstandingDebt, openAddExpenseModal, t],
+        [balance, friend.user.id, isRemoveDisabled, openAddExpenseModal, t],
     );
 
     return (
@@ -95,8 +103,8 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                     isOpened={isSettleUpOpened}
                     onOpenChange={setIsSettleUpOpened}
                     friend={friend.user}
-                    balances={friend.balances}
-                    initialCurrency={balance.currency}
+                    balances={friend.balances.map(toSettleUpBalance)}
+                    initialCurrency={balance.net.currency}
                     onSubmit={params => useActivityStore.getState().createSettlement(params)}
                 />
             )}

@@ -7,6 +7,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { ROUTES } from 'constants/routes';
 import { userCurrency, userDefaultCategory, userSkipCategory } from 'entities/users';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
+import { useKnownUsers } from 'hooks/useKnownUsers';
 import { useSelfUser, useUserSetting } from 'hooks/useSelfUser';
 import { useActivityStore } from 'store/activity-store';
 import { selectExpensePayload, selectIsSubmitDisabled } from 'store/expenseModalSelectors';
@@ -15,7 +16,6 @@ import { buildExpenseUpdateParams } from 'store/expenseModalUpdate';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectExpenseAdding, selectExpenseUpdating } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
 
 export const useExpenseModalOpenChange = (isOpened: boolean, onOpenChange: () => void): void => {
     const previousIsOpened = useRef(false);
@@ -62,7 +62,7 @@ export const useExpenseModalSource = ({
 }: ExpenseModalSourceOptions): ExpenseModalSource => {
     const location = useLocation();
     const user = useSelfUser();
-    const friends = useUsersStore(state => state.friends);
+    const { friends } = useKnownUsers();
     const defaultCurrency = useUserSetting(userCurrency);
     const defaultCategory = useUserSetting(userDefaultCategory);
     const skipCategory = useUserSetting(userSkipCategory);
@@ -88,7 +88,7 @@ export const useExpenseModalSource = ({
                 members: group.members.map(member => member.user),
                 lastUsedCurrency: group.lastUsedCurrency,
             })),
-            knownFriends: friends.map(friend => friend.user),
+            knownFriends: friends?.map(friend => friend.user) ?? [],
             defaultGroupId: selectedGroup?.id ?? groups[0]?.id,
             preferredFriendId: friendId,
         }),

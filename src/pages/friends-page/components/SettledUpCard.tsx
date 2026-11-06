@@ -2,14 +2,14 @@ import { Card, Flex, Separator, Text } from '@radix-ui/themes';
 import { CircleCheckIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { KnownUser } from 'api/chipin.types';
+import type { KnownUser } from 'entities/users';
 
 import { UserAvatar } from 'basics/index';
 
 import FriendActionsDropdown from './FriendActionsDropdown';
 
 interface Props {
-    friends: KnownUser[];
+    friends: readonly KnownUser[];
 }
 
 const SettledUpCard = ({ friends }: Props) => {

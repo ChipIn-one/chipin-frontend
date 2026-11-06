@@ -1,7 +1,5 @@
 import type {
     AcceptUserInviteParams,
-    FriendBalance,
-    KnownUser,
     RemoveKnownUserParams,
     SelfUser,
     UploadUserAvatarParams,
@@ -9,23 +7,20 @@ import type {
     UserSettings,
 } from 'api/chipin.types';
 import type { LocalUser } from 'helpers/localStorage';
-import type { Money } from 'shared/money';
+
+import type { InvalidateKnownUsersOptions } from '../internal/usersQueryBridge';
 
 interface UsersStoreState {
     user: SelfUser | null;
     hasConfirmedUser: boolean;
     localUser: LocalUser | null;
-    friends: KnownUser[];
-    hasFriendsSnapshot: boolean;
-    premiumPromoRemaining: number | null;
-    isPremiumPromoResolved: boolean;
 }
 
 interface UsersStoreActions {
     acceptFriendInvite: (params: AcceptUserInviteParams) => Promise<User>;
-    fetchSetFriends: (force?: boolean, rejectOnError?: boolean) => Promise<void>;
-    fetchSetPremiumPromoRemaining: () => Promise<void>;
     fetchSetUser: (force?: boolean) => Promise<SelfUser | null>;
+    /** Bridge: a session start or a legacy change of the friends marks `users.known` stale. */
+    invalidateKnownUsers: (options?: InvalidateKnownUsersOptions) => Promise<void>;
     removeFriend: (params: RemoveKnownUserParams) => Promise<void>;
     setUserSettings: (params: {
         displayName?: string;
@@ -38,20 +33,4 @@ interface UsersStoreActions {
 
 type UsersStore = UsersStoreState & UsersStoreActions;
 
-interface FriendCurrencyGroup {
-    currency: string;
-    /** The exact sum of the friends' balances in `currency`. */
-    net: Money;
-    friends: {
-        friend: KnownUser;
-        balance: FriendBalance;
-    }[];
-}
-
-interface FriendsView {
-    currencies: string[];
-    currencyGroups: FriendCurrencyGroup[];
-    settledFriends: KnownUser[];
-}
-
-export type { FriendCurrencyGroup, FriendsView, UsersStore, UsersStoreActions, UsersStoreState };
+export type { UsersStore, UsersStoreActions, UsersStoreState };

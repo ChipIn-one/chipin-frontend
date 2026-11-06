@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
-import type { Group, KnownUser, SelfUser } from 'api/chipin.types';
+import type { Group, SelfUser } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
@@ -14,6 +14,7 @@ import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { useUsersStore } from 'store/users-store';
+import { createKnownUser, seedKnownUsers } from 'test/knownUsers';
 
 import AddExpenseButton from './AddExpenseButton';
 
@@ -22,20 +23,7 @@ import '@radix-ui/themes/styles.css';
 import 'i18n/index';
 import 'test/selfUserMirror';
 
-const friend = {
-    user: {
-        id: 'friend-1',
-        email: 'friend@example.com',
-        displayName: 'Friend',
-        firstName: 'Friend',
-        lastName: null,
-        picture: null,
-        createdAt: 1,
-        updatedAt: 1,
-    },
-    balances: [],
-    lastUsedCurrency: null,
-} satisfies KnownUser;
+const friend = createKnownUser('friend-1');
 
 const groupCreator = {
     id: 'user-1',
@@ -122,7 +110,6 @@ const renderButton = (pathname: string, type: 'mobile' | 'desktop' | 'sidebar' =
 
 const resolveGlobalTargets = () => {
     useLoadingStore.getState().setLoading('group', 'list', 'fetched');
-    useLoadingStore.getState().setLoading('users', 'friends', 'fetched');
 };
 
 beforeEach(() => {
@@ -134,8 +121,6 @@ beforeEach(() => {
     useUsersStore.setState({
         user: selfUser,
         localUser: null,
-        friends: [],
-        hasFriendsSnapshot: false,
         hasConfirmedUser: false,
     });
     useLoadingStore.getState().setInitialLoadingStore();
@@ -155,9 +140,7 @@ test.each(['mobile', 'desktop', 'sidebar'] as const)(
     },
 );
 
-test('EXP-061 hides a stale friend target while its data is unresolved', () => {
-    useUsersStore.setState({ friends: [friend] });
-
+test('EXP-061 hides the friend target while the known users have not loaded', () => {
     renderButton(ROUTES.DASHBOARD);
 
     expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
@@ -166,7 +149,8 @@ test('EXP-061 hides a stale friend target while its data is unresolved', () => {
 test('EXP-061 does not expose Add Expense before current user resolves', () => {
     resolveGlobalTargets();
     // Before the first self load the self query has no user.
-    useUsersStore.setState({ user: null, friends: [friend] });
+    useUsersStore.setState({ user: null });
+    seedKnownUsers([friend]);
     useLoadingStore.getState().setLoading('users', 'self', 'loading');
 
     renderButton(ROUTES.DASHBOARD);
@@ -176,7 +160,8 @@ test('EXP-061 does not expose Add Expense before current user resolves', () => {
 
 test('EXP-061 does not expose Add Expense when self request resolves without a user', () => {
     resolveGlobalTargets();
-    useUsersStore.setState({ user: null, friends: [friend] });
+    useUsersStore.setState({ user: null });
+    seedKnownUsers([friend]);
 
     renderButton(ROUTES.DASHBOARD);
 
@@ -187,7 +172,7 @@ test.each([ROUTES.DASHBOARD, ROUTES.ACTIVITY, ROUTES.SETTINGS])(
     'EXP-060 uses the global friend target rule on %s',
     route => {
         resolveGlobalTargets();
-        useUsersStore.setState({ friends: [friend] });
+        seedKnownUsers([friend]);
 
         renderButton(route);
 
@@ -234,8 +219,7 @@ test('EXP-060 Friends ignores a ready group when there is no friend', () => {
 });
 
 test('EXP-060 Friends shows Add Expense when a friend is resolved', () => {
-    useLoadingStore.getState().setLoading('users', 'friends', 'fetched');
-    useUsersStore.setState({ friends: [friend] });
+    seedKnownUsers([friend]);
 
     renderButton(ROUTES.FRIENDS);
 
@@ -262,9 +246,6 @@ test('EXP-060 Group shows Add Expense with enough members', () => {
 
 test('EXP-061 hides Add Expense after target-load failure without a valid target', () => {
     resolveGlobalTargets();
-    useErrorsStore.getState().setError('users', 'friends', {
-        message: 'Friends unavailable',
-    });
     useErrorsStore.getState().setError('group', 'list', {
         message: 'Groups unavailable',
     });
@@ -277,11 +258,8 @@ test('EXP-061 hides Add Expense after target-load failure without a valid target
 test.each([ROUTES.DASHBOARD, ROUTES.FRIENDS])(
     'EXP-061 retains confirmed friend action while refreshing on %s',
     route => {
-        useUsersStore.setState({
-            friends: [friend],
-            hasFriendsSnapshot: true,
-        });
-        useLoadingStore.getState().setLoading('users', 'friends', 'loading');
+        // Cached friends stay a resolved target while the query refetches.
+        seedKnownUsers([friend]);
 
         renderButton(route);
 
@@ -308,9 +286,9 @@ test('EXP-061 retains Add Expense during a confirmed user profile refresh', () =
     resolveGlobalTargets();
     useUsersStore.setState({
         user: selfUser,
-        friends: [friend],
         hasConfirmedUser: true,
     });
+    seedKnownUsers([friend]);
     useLoadingStore.getState().setLoading('users', 'self', 'loading');
 
     renderButton(ROUTES.DASHBOARD);
@@ -318,10 +296,7 @@ test('EXP-061 retains Add Expense during a confirmed user profile refresh', () =
     expect(screen.getByRole('button', { name: 'Add expense' })).toBeTruthy();
 });
 
-test('EXP-061 never trusts unconfirmed friend targets during initial loading', () => {
-    useUsersStore.setState({ friends: [friend], hasFriendsSnapshot: false });
-    useLoadingStore.getState().setLoading('users', 'friends', 'loading');
-
+test('EXP-061 never trusts friend targets before the first known users load', () => {
     renderButton(ROUTES.FRIENDS);
 
     expect(screen.queryByRole('button', { name: 'Add expense' })).toBeNull();
@@ -341,7 +316,7 @@ test('EXP-061 never trusts unconfirmed groups during initial loading', () => {
 
 test('opens Add Expense when a valid target exists', () => {
     resolveGlobalTargets();
-    useUsersStore.setState({ friends: [friend] });
+    seedKnownUsers([friend]);
 
     renderButton(ROUTES.DASHBOARD);
 
@@ -352,7 +327,7 @@ test('opens Add Expense when a valid target exists', () => {
 
 test('EXP-060 keeps global Add Expense for a friend even if a one-member group exists', () => {
     resolveGlobalTargets();
-    useUsersStore.setState({ friends: [friend] });
+    seedKnownUsers([friend]);
     useGroupsStore.setState({ groups: [singleMemberGroup] });
 
     renderButton(ROUTES.DASHBOARD);
@@ -362,7 +337,7 @@ test('EXP-060 keeps global Add Expense for a friend even if a one-member group e
 
 test('EXP-060 excludes a one-member group on its own route even with a direct friend', () => {
     resolveGlobalTargets();
-    useUsersStore.setState({ friends: [friend] });
+    seedKnownUsers([friend]);
     useGroupsStore.setState({ groups: [singleMemberGroup] });
 
     renderButton(`${ROUTES.GROUP}/group-1`);

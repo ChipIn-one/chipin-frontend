@@ -1,25 +1,12 @@
 import { apiPath } from './apiPath';
 import { apiInstance } from './chipin.instance';
-import type {
-    ApiFriendsResponse,
-    ApiPremiumPromoRemainingResponse,
-    ApiSelfUserResponse,
-    ApiUserResponse,
-} from './chipin.raw.types';
+import type { ApiSelfUserResponse, ApiUserResponse } from './chipin.raw.types';
 import type {
     AcceptUserInviteParams,
     RemoveKnownUserParams,
     UpdateUserParams,
     UploadUserAvatarParams,
 } from './chipin.types';
-
-const fetchPremiumPromoRemaining = (
-    signal?: AbortSignal,
-): Promise<ApiPremiumPromoRemainingResponse> => {
-    return apiInstance
-        .get<ApiPremiumPromoRemainingResponse>('/users/premium-promo', { signal })
-        .then(response => response.data);
-};
 
 const fetchUser = (signal?: AbortSignal): Promise<ApiSelfUserResponse> => {
     return apiInstance
@@ -55,12 +42,6 @@ const uploadUserAvatar = ({
         .then(response => response.data);
 };
 
-const fetchKnownUsers = (signal?: AbortSignal): Promise<ApiFriendsResponse> => {
-    return apiInstance
-        .get<ApiFriendsResponse>('/users/known-users', { signal })
-        .then(response => response.data);
-};
-
 const acceptKnownUserInvite = ({
     inviteToken,
 }: AcceptUserInviteParams): Promise<ApiUserResponse> => {
@@ -75,12 +56,4 @@ const removeKnownUser = ({ userId }: RemoveKnownUserParams): Promise<void> => {
         .then(() => undefined);
 };
 
-export {
-    acceptKnownUserInvite,
-    fetchKnownUsers,
-    fetchPremiumPromoRemaining,
-    fetchUser,
-    removeKnownUser,
-    updateUser,
-    uploadUserAvatar,
-};
+export { acceptKnownUserInvite, fetchUser, removeKnownUser, updateUser, uploadUserAvatar };

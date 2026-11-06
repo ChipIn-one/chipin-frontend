@@ -10,14 +10,11 @@ import { useDashboardActivityQuery, useDashboardBalancesQuery } from 'entities/d
 import { ActivityEventsList } from 'features/activity';
 import { getActivityPreviewEvents } from 'helpers/activityEvent';
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
+import { useKnownUsers } from 'hooks/useKnownUsers';
 import { useSelfUser } from 'hooks/useSelfUser';
 import { useErrorsStore } from 'store/errorsStore';
 import { useGroupsStore } from 'store/groupsStore';
-import {
-    selectFriendsFetched,
-    selectGroupListFetched,
-    selectUserSelfFetched,
-} from 'store/loadingSelectors';
+import { selectGroupListFetched, selectUserSelfFetched } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
 
@@ -60,24 +57,18 @@ const DashboardPage = () => {
             hasConfirmedGroups: state.hasConfirmedGroups,
         })),
     );
-    const { friends, hasFriendsSnapshot } = useUsersStore(
-        useShallow(state => ({
-            friends: state.friends,
-            hasFriendsSnapshot: state.hasFriendsSnapshot,
-        })),
-    );
+    const knownUsers = useKnownUsers();
+    const friends = knownUsers.friends ?? [];
     const currentUser = useSelfUser();
-    const { isGroupListFetched, isFriendsFetched, isUserSelfFetched } = useLoadingStore(
+    const { isGroupListFetched, isUserSelfFetched } = useLoadingStore(
         useShallow(state => ({
             isGroupListFetched: selectGroupListFetched(state),
-            isFriendsFetched: selectFriendsFetched(state),
             isUserSelfFetched: selectUserSelfFetched(state),
         })),
     );
-    const { groupListError, friendsError, userSelfError } = useErrorsStore(
+    const { groupListError, userSelfError } = useErrorsStore(
         useShallow(state => ({
             groupListError: state.errors.group.list,
-            friendsError: state.errors.users.friends,
             userSelfError: state.errors.users.self,
         })),
     );
@@ -110,9 +101,9 @@ const DashboardPage = () => {
             error: groupListError !== null,
         },
         {
-            fetched: isFriendsFetched,
-            snapshot: hasFriendsSnapshot,
-            error: friendsError !== null,
+            fetched: !knownUsers.isLoading,
+            snapshot: knownUsers.friends !== undefined,
+            error: knownUsers.isError || knownUsers.hasRefreshError,
         },
         {
             fetched: isUserSelfFetched,
@@ -139,9 +130,9 @@ const DashboardPage = () => {
         void balancesQuery.refetch();
         void activityQuery.refetch();
         void ratesQuery.refetch();
+        void knownUsers.refetch();
         Promise.all([
             useGroupsStore.getState().fetchSetGroups(true),
-            useUsersStore.getState().fetchSetFriends(true),
             useUsersStore.getState().fetchSetUser(true),
         ]).catch(() => undefined);
     };

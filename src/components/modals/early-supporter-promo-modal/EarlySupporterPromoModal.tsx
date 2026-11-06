@@ -4,24 +4,26 @@ import { Clock3Icon, CrownIcon, SparklesIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { SECOND } from 'constants/time';
+import { usePremiumPromo } from 'hooks/useKnownUsers';
+import { useSelfUser } from 'hooks/useSelfUser';
+import { useAuthStore } from 'store/authStore';
+import { useConnectivityStore } from 'store/connectivityStore';
 
 import { BaseModal } from '../base-modal';
 import { MODAL_SIZES, OverlayBody, OverlayFooter } from '../components';
-
-import { useConnect } from './internal';
 
 const PREMIUM_PROMO_LIMIT = 5000;
 
 const EarlySupporterPromoModal = () => {
     const { t, i18n } = useTranslation('landing');
-    const {
-        isBackendUnavailable,
-        isNewUser,
-        isPremiumPromoResolved,
-        premiumPromoRemaining,
-        subscriptionUntil,
-        userId,
-    } = useConnect();
+    const isNewUser = useAuthStore(state => state.isNewUser);
+    const isBackendUnavailable = useConnectivityStore(state => state.mode === 'backend-down');
+    const user = useSelfUser();
+    // Requested only for a new user's first sign-in, as before the migration.
+    const { remaining: premiumPromoRemaining, isResolved: isPremiumPromoResolved } =
+        usePremiumPromo(isNewUser === true);
+    const subscriptionUntil = user?.subscriptionUntil ?? null;
+    const userId = user?.id ?? null;
     const [dismissedUserId, setDismissedUserId] = useState<string | null>(null);
 
     if (

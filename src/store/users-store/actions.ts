@@ -10,15 +10,17 @@ import { getUnixTimestampInSec } from 'helpers/time';
 
 import { useErrorsStore } from '../errorsStore';
 import { createRequestChannel } from '../internal/resourceRequests';
-import { getCachedSelfUser, seedSelfUser } from '../internal/usersQueryBridge';
+import {
+    getCachedSelfUser,
+    invalidateKnownUsers,
+    seedSelfUser,
+} from '../internal/usersQueryBridge';
 import { useLoadingStore } from '../loadingStore';
 
 import { createInitialState } from './initialState';
 import type { UsersStore } from './types';
 
 const userChannel = createRequestChannel();
-const friendsChannel = createRequestChannel();
-const premiumPromoChannel = createRequestChannel();
 let profileMutationQueue = Promise.resolve();
 let profileMutationGeneration = 0;
 let settingsMutationId = 0;
@@ -106,64 +108,20 @@ const useUsersStore = create<UsersStore>((set, get) => ({
                 }
             });
     },
-    fetchSetPremiumPromoRemaining: () => {
-        const request = premiumPromoChannel.request(usersApi.fetchPremiumPromoRemaining);
-        set({ premiumPromoRemaining: null, isPremiumPromoResolved: false });
-
-        return request.promise
-            .then(({ premiumPromoRemaining }) => {
-                if (request.isCurrent()) {
-                    set({ premiumPromoRemaining, isPremiumPromoResolved: true });
-                }
-            })
-            .catch(() => {
-                if (request.isCurrent()) {
-                    set({ premiumPromoRemaining: null, isPremiumPromoResolved: true });
-                }
-            });
-    },
     acceptFriendInvite: ({ inviteToken }) => {
         return (
             usersApi
                 .acceptKnownUserInvite({ inviteToken })
-                // The invite is already accepted once the POST succeeds: a failed friends
-                // refresh is recorded in the errors store but must not turn into a retry.
+                // The invite is already accepted once the POST succeeds: the friends refresh never
+                // rejects, so it cannot turn into a retry.
                 .then(friend =>
                     get()
-                        .fetchSetFriends(true)
+                        .invalidateKnownUsers()
                         .then(() => friend),
                 )
         );
     },
-    fetchSetFriends: (force = false, rejectOnError = false) => {
-        const { setLoading } = useLoadingStore.getState();
-        const { clearError, setError } = useErrorsStore.getState();
-        clearError('users', 'friends');
-
-        const request = friendsChannel.request(usersApi.fetchKnownUsers, { force });
-        setLoading('users', 'friends', 'loading');
-
-        return request.promise
-            .then(({ friends }) => {
-                if (request.isCurrent()) {
-                    set({ friends, hasFriendsSnapshot: true });
-                }
-            })
-            .catch((error: unknown) => {
-                if (request.isCurrent()) {
-                    setError('users', 'friends', normalizeApiError(error));
-                }
-
-                if (rejectOnError) {
-                    return Promise.reject(error);
-                }
-            })
-            .finally(() => {
-                if (request.isCurrent()) {
-                    setLoading('users', 'friends', 'fetched');
-                }
-            });
-    },
+    invalidateKnownUsers: options => invalidateKnownUsers(get().localUser?.id, options),
     removeFriend: ({ userId }) => {
         const { setLoading } = useLoadingStore.getState();
         const { clearError, setError } = useErrorsStore.getState();
@@ -176,7 +134,7 @@ const useUsersStore = create<UsersStore>((set, get) => ({
                 setError('users', 'removeFriend', normalizeApiError(error));
                 return Promise.reject(error);
             })
-            .then(() => get().fetchSetFriends(true))
+            .then(() => get().invalidateKnownUsers())
             .finally(() => {
                 setLoading('users', 'removeFriend', 'fetched');
             });
@@ -277,8 +235,6 @@ const useUsersStore = create<UsersStore>((set, get) => ({
     },
     setInitialUsersStore: () => {
         userChannel.abort();
-        friendsChannel.abort();
-        premiumPromoChannel.abort();
         profileMutationGeneration += 1;
         settingsMutationId += 1;
         avatarMutationId += 1;

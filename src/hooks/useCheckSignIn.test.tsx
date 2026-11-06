@@ -69,7 +69,7 @@ const renderHook = () => {
 const mockAuthenticatedDataFetches = (): void => {
     vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
     vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockResolvedValue(user);
-    vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockResolvedValue();
+    vi.spyOn(useUsersStore.getState(), 'invalidateKnownUsers').mockResolvedValue();
 };
 
 const markRestorableAuthSession = (): void => {
@@ -213,13 +213,17 @@ test('preserves the active app mode when a cached user initialized it', () => {
     const fetchSetUser = vi
         .spyOn(useUsersStore.getState(), 'fetchSetUser')
         .mockResolvedValue(groupDefaultUser);
-    vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockResolvedValue();
+    const invalidateKnownUsers = vi
+        .spyOn(useUsersStore.getState(), 'invalidateKnownUsers')
+        .mockResolvedValue();
 
     renderHook();
 
     return waitFor(() => {
         expect(fetchSetUser).toHaveBeenCalledOnce();
     }).then(() => {
+        // The session start's friends refresh is the bridge invalidation of `users.known`.
+        expect(invalidateKnownUsers).toHaveBeenCalledExactlyOnceWith({ joinRunning: true });
         expect(setDefaultAppMode).not.toHaveBeenCalled();
         expect(useUiPrefsStore.getState().appMode).toBe(APP_MODES.SOLO);
     });
@@ -411,6 +415,7 @@ test('reconnect: a successful refresh makes the session online and loads the dat
     vi.mocked(validateAuthSession).mockResolvedValue('next-access-token');
     mockAuthenticatedDataFetches();
     const fetchSetGroups = vi.mocked(useGroupsStore.getState().fetchSetGroups);
+    const invalidateKnownUsers = vi.mocked(useUsersStore.getState().invalidateKnownUsers);
 
     renderHook();
 
@@ -430,6 +435,9 @@ test('reconnect: a successful refresh makes the session online and loads the dat
         })
         .then(() => {
             expect(fetchSetGroups).toHaveBeenCalledOnce();
+            // The friends reload on reconnect is the bridge invalidation (the query itself does
+            // not refetch on reconnect): one request.
+            expect(invalidateKnownUsers).toHaveBeenCalledExactlyOnceWith({ joinRunning: true });
         });
 });
 

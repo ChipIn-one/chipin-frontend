@@ -1,15 +1,22 @@
+import { QueryObserver } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { afterEach, expect, test } from 'vitest';
 
 import type { SelfUser } from 'entities/users';
-import { selfUserQueryOptions, usersKeys } from 'entities/users';
+import { knownUsersQueryOptions, selfUserQueryOptions, usersKeys } from 'entities/users';
 import { clearLocalUserIdentity, getLocalUser, saveLocalUser } from 'helpers/localStorage';
 import { clearUserData } from 'shared/offline/clearUserData';
 import { clientFor } from 'shared/offline/restore';
 import { cachesByUser } from 'shared/offline/userCaches';
+import { createKnownUser } from 'test/knownUsers';
 import { setupMswServer } from 'test/mswServer';
 
-import { getCachedSelfUser, seedSelfUser } from './usersQueryBridge';
+import {
+    getCachedKnownUsers,
+    getCachedSelfUser,
+    invalidateKnownUsers,
+    seedSelfUser,
+} from './usersQueryBridge';
 
 import 'fake-indexeddb/auto';
 
@@ -149,4 +156,84 @@ test('a refetch in flight does not overwrite a newer seeded user', async () => {
 
     expect(client.getQueryData(usersKeys.self())).toEqual(fresh);
     expect(getLocalUser()?.settings.language).toBe('ru');
+});
+
+const countKnownRequests = (): { count: number } => {
+    const counter = { count: 0 };
+
+    server.use(
+        http.get('*/users/known-users', () => {
+            counter.count += 1;
+            return HttpResponse.json({ friends: [] });
+        }),
+    );
+    return counter;
+};
+
+test('invalidating the known users without a client of the user is a no-op', async () => {
+    const requests = countKnownRequests();
+
+    await expect(invalidateKnownUsers(freshId('no-client'))).resolves.toBeUndefined();
+    expect(requests.count).toBe(0);
+});
+
+test("marks the user's inactive users.known stale without a request, the in-memory user first", async () => {
+    const id = freshId('inactive');
+    const other = freshId('other');
+    const client = clientFor(id);
+    const requests = countKnownRequests();
+    saveLocalUser({ id: other, role: 'USER', settings: userWith(other).settings });
+    client.setQueryData(usersKeys.known(), [createKnownUser('friend-1')]);
+
+    await invalidateKnownUsers(id);
+
+    expect(client.getQueryState(usersKeys.known())?.isInvalidated).toBe(true);
+    expect(requests.count).toBe(0);
+    expect(getCachedKnownUsers(id)).toEqual([createKnownUser('friend-1')]);
+    // Without the in-memory id the cached `LocalUser` decides: another user, no data.
+    expect(getCachedKnownUsers(undefined)).toBeUndefined();
+});
+
+test('a session start joins a known users load already running: one request', async () => {
+    const id = freshId('running');
+    const client = clientFor(id);
+    const requests = countKnownRequests();
+    client.setQueryData(usersKeys.known(), []);
+    const stop = new QueryObserver(client, knownUsersQueryOptions()).subscribe(() => undefined);
+
+    const load = client.refetchQueries({ queryKey: usersKeys.known() });
+    await invalidateKnownUsers(id, { joinRunning: true });
+    await load;
+
+    expect(requests.count).toBe(1);
+    stop();
+});
+
+test('after a change a running known users load is restarted: it may predate the change', async () => {
+    const id = freshId('restart');
+    const client = clientFor(id);
+    const requests = countKnownRequests();
+    client.setQueryData(usersKeys.known(), []);
+    const stop = new QueryObserver(client, knownUsersQueryOptions()).subscribe(() => undefined);
+
+    const load = client.refetchQueries({ queryKey: usersKeys.known() });
+    await invalidateKnownUsers(id);
+    await load;
+
+    expect(requests.count).toBe(2);
+    stop();
+});
+
+test('refetches an active users.known now', async () => {
+    const id = freshId('active');
+    const client = clientFor(id);
+    const requests = countKnownRequests();
+    client.setQueryData(usersKeys.known(), []);
+    // An active query: an enabled observer of fresh data (its mount sends nothing).
+    const stop = new QueryObserver(client, knownUsersQueryOptions()).subscribe(() => undefined);
+
+    await invalidateKnownUsers(id);
+
+    expect(requests.count).toBe(1);
+    stop();
 });

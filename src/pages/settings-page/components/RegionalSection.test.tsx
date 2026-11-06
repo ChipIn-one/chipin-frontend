@@ -55,7 +55,7 @@ beforeEach(() => {
         configurable: true,
         value: ['de-DE', 'ru-RU'],
     });
-    useUsersStore.setState({ user, localUser: null, friends: [], setUserSettings });
+    useUsersStore.setState({ user, localUser: null, setUserSettings });
 });
 
 afterEach(() => {

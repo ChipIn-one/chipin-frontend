@@ -1318,7 +1318,7 @@ describe('groupsStore', () => {
         useGroupsStore.getState().setSelectedGroup(group);
         vi.mocked(chipinApi.removeApiGroup).mockResolvedValue(undefined);
         useGroupsStore.setState({ fetchSetGroups: vi.fn().mockResolvedValue([]) });
-        useUsersStore.setState({ fetchSetFriends: vi.fn().mockResolvedValue(undefined) });
+        useUsersStore.setState({ invalidateKnownUsers: vi.fn().mockResolvedValue(undefined) });
         useActivityStore.setState({ fetchSetActivity: vi.fn().mockResolvedValue(undefined) });
 
         return useGroupsStore
@@ -1334,7 +1334,7 @@ describe('groupsStore', () => {
         useGroupsStore.getState().setSelectedGroup(current);
         vi.mocked(chipinApi.removeApiGroup).mockResolvedValue(undefined);
         useGroupsStore.setState({ fetchSetGroups: vi.fn().mockResolvedValue([]) });
-        useUsersStore.setState({ fetchSetFriends: vi.fn().mockResolvedValue(undefined) });
+        useUsersStore.setState({ invalidateKnownUsers: vi.fn().mockResolvedValue(undefined) });
         useActivityStore.setState({ fetchSetActivity: vi.fn().mockResolvedValue(undefined) });
 
         return useGroupsStore
@@ -1347,12 +1347,12 @@ describe('groupsStore', () => {
 
     test('removes a group and refetches every affected backend resource', () => {
         const fetchSetActivity = vi.fn().mockResolvedValue(undefined);
-        const fetchSetFriends = vi.fn().mockResolvedValue(undefined);
+        const invalidateKnownUsers = vi.fn().mockResolvedValue(undefined);
         const fetchSetGroups = vi.fn().mockResolvedValue([]);
         vi.mocked(chipinApi.removeApiGroup).mockResolvedValue(undefined);
         useActivityStore.setState({ fetchSetActivity });
         useGroupsStore.setState({ fetchSetGroups });
-        useUsersStore.setState({ fetchSetFriends });
+        useUsersStore.setState({ invalidateKnownUsers });
         const dashboardCache = mountUserDashboardCache();
 
         return useGroupsStore
@@ -1360,7 +1360,7 @@ describe('groupsStore', () => {
             .removeGroup({ groupId: group.id })
             .then(() => {
                 expect(fetchSetGroups).toHaveBeenCalledWith(true);
-                expect(fetchSetFriends).toHaveBeenCalledWith(true);
+                expect(invalidateKnownUsers).toHaveBeenCalledOnce();
                 expect(dashboardCache.isDashboardInvalidated()).toBe(true);
                 expect(fetchSetActivity).toHaveBeenCalledWith(true);
             })
@@ -1379,7 +1379,7 @@ describe('groupsStore', () => {
         vi.mocked(chipinApi.inviteApiUserToGroup).mockResolvedValue(rejoined);
         useGroupsStore.getState().setSelectedGroup(group);
         useGroupsStore.setState({ fetchSetGroups: vi.fn().mockResolvedValue([rejoined]) });
-        useUsersStore.setState({ fetchSetFriends: vi.fn().mockResolvedValue(undefined) });
+        useUsersStore.setState({ invalidateKnownUsers: vi.fn().mockResolvedValue(undefined) });
         useActivityStore.setState({ fetchSetActivity: vi.fn().mockResolvedValue(undefined) });
 
         const leaveRequest = useGroupsStore.getState().leaveGroup({ groupId: group.id });
@@ -1410,7 +1410,7 @@ describe('groupsStore', () => {
         vi.mocked(chipinApi.inviteApiUserToGroup).mockResolvedValue(otherGroup);
         useGroupsStore.getState().setSelectedGroup(group);
         useGroupsStore.setState({ fetchSetGroups: vi.fn().mockResolvedValue([otherGroup]) });
-        useUsersStore.setState({ fetchSetFriends: vi.fn().mockResolvedValue(undefined) });
+        useUsersStore.setState({ invalidateKnownUsers: vi.fn().mockResolvedValue(undefined) });
         useActivityStore.setState({ fetchSetActivity: vi.fn().mockResolvedValue(undefined) });
 
         const leaveRequest = useGroupsStore.getState().leaveGroup({ groupId: group.id });
@@ -1440,7 +1440,7 @@ describe('groupsStore', () => {
         const refreshed = { ...group, name: 'New detail snapshot' } satisfies Group;
         useGroupsStore.getState().setSelectedGroup(group);
         useGroupsStore.setState({ fetchSetGroups: vi.fn().mockResolvedValue([]) });
-        useUsersStore.setState({ fetchSetFriends: vi.fn().mockResolvedValue(undefined) });
+        useUsersStore.setState({ invalidateKnownUsers: vi.fn().mockResolvedValue(undefined) });
         useActivityStore.setState({ fetchSetActivity: vi.fn().mockResolvedValue(undefined) });
 
         const leaveRequest = useGroupsStore.getState().leaveGroup({ groupId: group.id });
@@ -1461,7 +1461,7 @@ describe('groupsStore', () => {
             fetchSetGroups: vi.fn().mockResolvedValue([]),
         });
         useUsersStore.setState({
-            fetchSetFriends: vi.fn().mockResolvedValue(undefined),
+            invalidateKnownUsers: vi.fn().mockResolvedValue(undefined),
         });
 
         return useGroupsStore
@@ -1487,7 +1487,7 @@ describe('groupsStore', () => {
             fetchSetGroups: vi.fn().mockResolvedValue([group]),
         });
         useUsersStore.setState({
-            fetchSetFriends: vi.fn().mockResolvedValue(undefined),
+            invalidateKnownUsers: vi.fn().mockResolvedValue(undefined),
         });
 
         return useGroupsStore
@@ -1512,7 +1512,7 @@ describe('groupsStore', () => {
             fetchSetActivity: vi.fn().mockResolvedValue(undefined),
         });
         useUsersStore.setState({
-            fetchSetFriends: vi.fn().mockResolvedValue(undefined),
+            invalidateKnownUsers: vi.fn().mockResolvedValue(undefined),
         });
 
         return useGroupsStore

@@ -139,7 +139,7 @@ const refreshAfterGroupRemoval = (
 ): Promise<void> => {
     return Promise.all([
         fetchSetGroups(true),
-        useUsersStore.getState().fetchSetFriends(true),
+        useUsersStore.getState().invalidateKnownUsers(),
         invalidateDashboard(),
         useActivityStore.getState().fetchSetActivity(true),
     ]).then(() => undefined);
@@ -151,7 +151,7 @@ const refreshAfterGroupMemberChange = (
 ): Promise<void> => {
     return Promise.all([
         fetchSetGroupById(groupId, true),
-        useUsersStore.getState().fetchSetFriends(true),
+        useUsersStore.getState().invalidateKnownUsers(),
         invalidateDashboard(),
         useActivityStore.getState().fetchSetActivity(true),
     ]).then(() => undefined);

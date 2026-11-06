@@ -55,7 +55,7 @@ beforeEach(() => {
     useAuthStore.setState({ signOut, status: 'authenticated' });
     useLoadingStore.getState().setInitialLoadingStore();
     useLoadingStore.getState().setLoading('users', 'self', 'fetched');
-    useUsersStore.setState({ user, localUser: null, friends: [] });
+    useUsersStore.setState({ user, localUser: null });
 });
 
 test('expands and collapses the profile actions', () => {

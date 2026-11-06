@@ -65,7 +65,6 @@ beforeEach(() => {
     useUsersStore.setState({
         user: currentUser,
         localUser: null,
-        friends: [],
         uploadUserAvatar,
     });
 

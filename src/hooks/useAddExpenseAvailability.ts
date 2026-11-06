@@ -6,15 +6,11 @@ import { hasGroupExpenseTarget, isGroupExpenseTarget } from 'helpers/expenseTarg
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { useGroupsStore } from 'store/groupsStore';
-import {
-    selectFriendsFetched,
-    selectGroupDataFetched,
-    selectGroupListFetched,
-} from 'store/loadingSelectors';
+import { selectGroupDataFetched, selectGroupListFetched } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 import { selectIsSoloMode, useUiPrefsStore } from 'store/ui-prefs';
-import { useUsersStore } from 'store/users-store';
 
+import { useKnownUsers } from './useKnownUsers';
 import { useCanAccessSolo, useSelfUser } from './useSelfUser';
 
 const useAddExpenseAvailability = (pathname: string) => {
@@ -30,24 +26,19 @@ const useAddExpenseAvailability = (pathname: string) => {
             hasConfirmedGroups: state.hasConfirmedGroups,
         })),
     );
-    const { friends, hasFriendsSnapshot } = useUsersStore(
-        useShallow(state => ({
-            friends: state.friends,
-            hasFriendsSnapshot: state.hasFriendsSnapshot,
-        })),
-    );
+    const { friends } = useKnownUsers();
     const canAccessSolo = useCanAccessSolo();
     // Data (loaded, seeded or restored from the cache) is a confirmed user.
     const currentUser = useSelfUser();
-    const { isFriendsFetched, isGroupDataFetched, isGroupListFetched } = useLoadingStore(
+    const { isGroupDataFetched, isGroupListFetched } = useLoadingStore(
         useShallow(state => ({
-            isFriendsFetched: selectFriendsFetched(state),
             isGroupDataFetched: selectGroupDataFetched(state),
             isGroupListFetched: selectGroupListFetched(state),
         })),
     );
 
-    const hasResolvedFriendTarget = (isFriendsFetched || hasFriendsSnapshot) && friends.length > 0;
+    // Loaded or restored from the cache: data is a resolved friend list.
+    const hasResolvedFriendTarget = (friends?.length ?? 0) > 0;
     const hasResolvedGroupTarget =
         (isGroupListFetched || hasConfirmedGroups) && hasGroupExpenseTarget(groups);
     const routeGroup = groupId

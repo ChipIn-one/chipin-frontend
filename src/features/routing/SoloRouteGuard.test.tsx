@@ -32,7 +32,6 @@ const renderGuard = (role: 'USER' | 'ADMIN') => {
     useUsersStore.setState({
         user: null,
         localUser: { role, settings },
-        friends: [],
     });
 
     render(

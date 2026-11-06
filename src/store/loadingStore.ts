@@ -39,7 +39,6 @@ export interface LoadingStore {
     };
     users: {
         self: LoadingState;
-        friends: LoadingState;
         settings: LoadingState;
         removeFriend: LoadingState;
         avatar: LoadingState;
@@ -80,7 +79,6 @@ const initialLoadingStore: LoadingSlices = {
     },
     users: {
         self: 'initial',
-        friends: 'initial',
         settings: 'initial',
         removeFriend: 'initial',
         avatar: 'initial',

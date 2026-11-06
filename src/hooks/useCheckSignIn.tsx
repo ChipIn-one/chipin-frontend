@@ -23,10 +23,10 @@ export const useCheckSignIn = () => {
     const isOffline = useConnectivityStore(state => state.mode === 'offline');
     const setDefaultAppMode = useUiPrefsStore(state => state.setDefaultAppMode);
     const fetchSetGroups = useGroupsStore(s => s.fetchSetGroups);
-    const { fetchSetUser, fetchSetFriends, hasCachedUser, hasCachedUserId } = useUsersStore(
+    const { fetchSetUser, invalidateKnownUsers, hasCachedUser, hasCachedUserId } = useUsersStore(
         useShallow(state => ({
             fetchSetUser: state.fetchSetUser,
-            fetchSetFriends: state.fetchSetFriends,
+            invalidateKnownUsers: state.invalidateKnownUsers,
             hasCachedUser: state.localUser !== null,
             hasCachedUserId: state.localUser?.id !== undefined,
         })),
@@ -62,9 +62,9 @@ export const useCheckSignIn = () => {
                         setDefaultAppMode(user.settings.soloModeByDefault);
                     }
                 }),
-                fetchSetFriends(),
+                invalidateKnownUsers({ joinRunning: true }),
             ]).then(() => undefined),
-        [fetchSetFriends, fetchSetGroups, fetchSetUser, hasCachedUser, setDefaultAppMode],
+        [fetchSetGroups, fetchSetUser, hasCachedUser, invalidateKnownUsers, setDefaultAppMode],
     );
 
     useEffect(() => {

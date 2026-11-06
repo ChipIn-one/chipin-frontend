@@ -48,7 +48,6 @@ beforeEach(() => {
     useUsersStore.setState({
         user: null,
         localUser: { role: 'ADMIN', settings },
-        friends: [],
     });
     useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
     LocalStorage.remove(LS_KEY_LOCALE);
@@ -82,7 +81,6 @@ test('opens the Group route for a user with stale Solo state', () => {
     useUsersStore.setState({
         user: null,
         localUser: { role: 'USER', settings },
-        friends: [],
     });
 
     render(

@@ -31,7 +31,7 @@ vi.mock('api/ledgerApi', () => ({
 const originalRefreshActions = {
     fetchSetActivity: useActivityStore.getState().fetchSetActivity,
     fetchSetActivitySubevents: useActivityStore.getState().fetchSetActivitySubevents,
-    fetchSetFriends: useUsersStore.getState().fetchSetFriends,
+    invalidateKnownUsers: useUsersStore.getState().invalidateKnownUsers,
     fetchSetGroupById: useGroupsStore.getState().fetchSetGroupById,
     fetchSetGroups: useGroupsStore.getState().fetchSetGroups,
 };
@@ -57,7 +57,7 @@ afterEach(() => {
         fetchSetGroups: originalRefreshActions.fetchSetGroups,
     });
     useUsersStore.setState({
-        fetchSetFriends: originalRefreshActions.fetchSetFriends,
+        invalidateKnownUsers: originalRefreshActions.invalidateKnownUsers,
     });
 });
 
@@ -415,10 +415,10 @@ test('accepts zero as a valid subevent pagination cursor', () => {
 
 test('creates a direct expense and refetches affected backend resources', () => {
     const fetchSetActivity = vi.fn().mockResolvedValue(undefined);
-    const fetchSetFriends = vi.fn().mockResolvedValue(undefined);
+    const invalidateKnownUsers = vi.fn().mockResolvedValue(undefined);
     vi.mocked(ledgerApi.createExpense).mockResolvedValue({} as never);
     useActivityStore.setState({ fetchSetActivity });
-    useUsersStore.setState({ fetchSetFriends });
+    useUsersStore.setState({ invalidateKnownUsers });
 
     return useActivityStore
         .getState()
@@ -432,7 +432,7 @@ test('creates a direct expense and refetches affected backend resources', () => 
         })
         .then(() => {
             expect(dashboardCache.isDashboardInvalidated()).toBe(true);
-            expect(fetchSetFriends).toHaveBeenCalledWith(true);
+            expect(invalidateKnownUsers).toHaveBeenCalledOnce();
             expect(fetchSetActivity).toHaveBeenCalledWith(true);
         });
 });
@@ -519,7 +519,7 @@ test('reverses a ledger entry without locally patching activity state', () => {
         fetchSetActivity: vi.fn().mockResolvedValue(undefined),
     });
     useUsersStore.setState({
-        fetchSetFriends: vi.fn().mockResolvedValue(undefined),
+        invalidateKnownUsers: vi.fn().mockResolvedValue(undefined),
     });
 
     return useActivityStore
@@ -561,7 +561,7 @@ test('resolves after a confirmed mutation when refreshes resolve', () => {
         fetchSetActivity: vi.fn().mockResolvedValue(undefined),
     });
     useUsersStore.setState({
-        fetchSetFriends: vi.fn().mockResolvedValue(undefined),
+        invalidateKnownUsers: vi.fn().mockResolvedValue(undefined),
     });
 
     return useActivityStore
@@ -719,7 +719,7 @@ test('updates an expense and refreshes the original group scope', () => {
 
 test('updates a direct expense and refreshes friends and visible subevents', () => {
     const fetchSetActivity = vi.fn().mockResolvedValue(undefined);
-    const fetchSetFriends = vi.fn().mockResolvedValue(undefined);
+    const invalidateKnownUsers = vi.fn().mockResolvedValue(undefined);
     const fetchSetActivitySubevents = vi.fn().mockResolvedValue(undefined);
     vi.mocked(ledgerApi.updateExpense).mockResolvedValue(editEntry);
     useActivityStore.setState({
@@ -728,7 +728,7 @@ test('updates a direct expense and refreshes friends and visible subevents', () 
         subeventsParent: createActivityEvent('parent-1', 0),
         subeventsCategory: ACTIVITY_CATEGORIES.EXPENSE,
     });
-    useUsersStore.setState({ fetchSetFriends });
+    useUsersStore.setState({ invalidateKnownUsers });
 
     return useActivityStore
         .getState()
@@ -741,7 +741,7 @@ test('updates a direct expense and refreshes friends and visible subevents', () 
             parentActivityId: 'parent-1',
         })
         .then(() => {
-            expect(fetchSetFriends).toHaveBeenCalledWith(true);
+            expect(invalidateKnownUsers).toHaveBeenCalledOnce();
             expect(fetchSetActivitySubevents).toHaveBeenCalledWith({
                 parentActivityId: 'parent-1',
                 category: ACTIVITY_CATEGORIES.EXPENSE,
@@ -781,7 +781,7 @@ test('does not reject a confirmed expense update when canonical refresh rejects'
         fetchSetActivity: vi.fn().mockRejectedValue(new Error('Activity unavailable')),
     });
     useUsersStore.setState({
-        fetchSetFriends: vi.fn().mockRejectedValue(new Error('Friends unavailable')),
+        invalidateKnownUsers: vi.fn().mockRejectedValue(new Error('Friends unavailable')),
     });
 
     return useActivityStore

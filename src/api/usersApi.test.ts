@@ -7,7 +7,6 @@ import { apiInstance } from './chipin.instance';
 import type { SelfUser } from './chipin.types';
 import {
     acceptKnownUserInvite,
-    fetchKnownUsers,
     fetchUser,
     removeKnownUser,
     updateUser,
@@ -128,22 +127,12 @@ describe('usersApi', () => {
         });
     });
 
-    test('fetches and removes known users', () => {
-        const controller = new AbortController();
-        vi.mocked(apiInstance.get).mockResolvedValue({ data: { friends: [] } });
+    test('removes a known user', () => {
         vi.mocked(apiInstance.delete).mockResolvedValue({ data: undefined });
 
-        return fetchKnownUsers(controller.signal)
-            .then(result => {
-                expect(apiInstance.get).toHaveBeenCalledWith('/users/known-users', {
-                    signal: controller.signal,
-                });
-                expect(result).toEqual({ friends: [] });
-                return removeKnownUser({ userId: 'friend-1' });
-            })
-            .then(() => {
-                expect(apiInstance.delete).toHaveBeenCalledWith('/users/known-users/friend-1');
-            });
+        return removeKnownUser({ userId: 'friend-1' }).then(() => {
+            expect(apiInstance.delete).toHaveBeenCalledWith('/users/known-users/friend-1');
+        });
     });
 });
 

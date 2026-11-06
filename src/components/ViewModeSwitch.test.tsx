@@ -28,7 +28,6 @@ beforeEach(() => {
     useUsersStore.setState({
         user: null,
         localUser: { role: 'ADMIN', settings },
-        friends: [],
     });
 });
 
@@ -36,7 +35,6 @@ test.each(['USER', 'ADMIN'] as const)('hides the mode switch for a $role user', 
     useUsersStore.setState({
         user: null,
         localUser: { role, settings },
-        friends: [],
     });
 
     render(

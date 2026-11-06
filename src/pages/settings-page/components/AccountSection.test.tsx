@@ -54,7 +54,7 @@ const actualSetUserSettings = useUsersStore.getState().setUserSettings;
 
 beforeEach(() => {
     setUserSettings.mockClear();
-    useUsersStore.setState({ user, localUser: null, friends: [], setUserSettings });
+    useUsersStore.setState({ user, localUser: null, setUserSettings });
 });
 
 afterEach(() => {
@@ -141,7 +141,7 @@ test('does not save a whitespace-only display name on blur', () => {
 });
 
 test('initializes the display name draft when the user fetch completes', () => {
-    useUsersStore.setState({ user: null, localUser: null, friends: [] });
+    useUsersStore.setState({ user: null, localUser: null });
 
     const view = render(
         <ThemeProvider theme={lightThemeStyled}>

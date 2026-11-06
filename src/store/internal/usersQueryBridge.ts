@@ -1,7 +1,8 @@
 // Bridge (spec 03 §6 row 3): the users store still loads the self user at session start and runs
-// the profile mutations (until 03-9b); what it gets lands in `users.self` on that user's
-// QueryClient, which the UI reads. Never the reverse direction.
-import { type SelfUser, usersKeys } from 'entities/users';
+// the profile and friend mutations (until 03-9b); what it gets lands in `users.self` on that
+// user's QueryClient, which the UI reads, and a legacy change of the friends or their balances
+// invalidates `users.known` there. Never the reverse direction.
+import { type KnownUser, type SelfUser, usersKeys } from 'entities/users';
 import { getLocalUser } from 'helpers/localStorage';
 import { cachesByUser, seedUserCache } from 'shared/offline/userCaches';
 
@@ -18,14 +19,49 @@ export const seedSelfUser = (user: SelfUser): void => {
     });
 };
 
+// The persisted client of this tab's user: the users store's in-memory id first (another tab may
+// switch the shared `LocalUser`), then `LocalUser.id`.
+const userClient = (inMemoryUserId: string | undefined) => {
+    const userId = inMemoryUserId ?? getLocalUser()?.id;
+
+    return userId === undefined ? undefined : cachesByUser.get(userId)?.client;
+};
+
+export interface InvalidateKnownUsersOptions {
+    /**
+     * Join a load already running instead of restarting it: a session start sends one request.
+     * After a change (the default) a running load may predate it, so it is restarted.
+     */
+    joinRunning?: boolean;
+}
+
+/**
+ * Marks the user's `users.known` stale: an active query refetches now, an inactive one on its next
+ * mount; no client yet (a first sign-in) is a no-op, its first mount loads them. Never rejects.
+ */
+export const invalidateKnownUsers = (
+    inMemoryUserId: string | undefined,
+    { joinRunning = false }: InvalidateKnownUsersOptions = {},
+): Promise<void> => {
+    const client = userClient(inMemoryUserId);
+
+    if (!client) {
+        return Promise.resolve();
+    }
+    return client.invalidateQueries(
+        { queryKey: usersKeys.known() },
+        { cancelRefetch: !joinRunning },
+    );
+};
+
 /**
  * The cached self user of this tab's user, for legacy store actions: the users store's in-memory
  * id first (another tab may switch the shared `LocalUser`), then `LocalUser.id`. The id comes in
  * as an argument: the bridge does not import the users store (a cycle).
  */
-export const getCachedSelfUser = (inMemoryUserId: string | undefined): SelfUser | undefined => {
-    const userId = inMemoryUserId ?? getLocalUser()?.id;
-    const client = userId === undefined ? undefined : cachesByUser.get(userId)?.client;
+export const getCachedSelfUser = (inMemoryUserId: string | undefined): SelfUser | undefined =>
+    userClient(inMemoryUserId)?.getQueryData<SelfUser>(usersKeys.self());
 
-    return client?.getQueryData<SelfUser>(usersKeys.self());
-};
+/** The cached known users of this tab's user, for legacy store actions (the expense editor). */
+export const getCachedKnownUsers = (inMemoryUserId: string | undefined): KnownUser[] | undefined =>
+    userClient(inMemoryUserId)?.getQueryData<KnownUser[]>(usersKeys.known());
