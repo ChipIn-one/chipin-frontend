@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import * as authApi from 'api/authApi';
@@ -13,6 +14,7 @@ import {
     invalidateAuthSession,
     isAuthSessionSignedOut,
     logoutOtherDevicesSession,
+    setAccessTokenRefreshListener,
     startAuthLogout,
     subscribeToRemoteAuthLogout,
     validateAuthSession,
@@ -23,6 +25,7 @@ const authApiMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('api/authApi', () => authApiMocks);
+vi.mock('@sentry/react', () => ({ captureMessage: vi.fn() }));
 
 vi.mock('api/chipin', () => ({
     logoutApiAuthTokens: vi.fn(),
@@ -376,6 +379,48 @@ describe('authSession', () => {
             });
             expect(close).toHaveBeenCalledOnce();
         });
+    });
+
+    test('a failed sign-in logout (broadcast: false) does not sign the other tabs out', () => {
+        const postMessage = vi.fn();
+        vi.stubGlobal(
+            'BroadcastChannel',
+            class {
+                postMessage = postMessage;
+                close = vi.fn();
+            },
+        );
+        vi.mocked(chipinApi.logoutApiAuthTokens).mockResolvedValue(undefined);
+
+        return startAuthLogout({ broadcast: false }).then(() => {
+            expect(postMessage).not.toHaveBeenCalled();
+            expect(isAuthSessionSignedOut()).toBe(true);
+            expect(chipinApi.logoutApiAuthTokens).toHaveBeenCalledOnce();
+        });
+    });
+
+    test('a throwing refresh listener: the refresh still resolves, Sentry gets no token', () => {
+        markRestorableAuthSession();
+        const token = createAccessToken(Date.now() / 1000 + 3_600);
+        vi.mocked(chipinApi.refreshApiAuthTokens).mockResolvedValue({ token });
+        setAccessTokenRefreshListener(() => {
+            throw new TypeError(`listener failed for ${token}`);
+        });
+
+        return validateAuthSession()
+            .then(result => {
+                expect(result).toBe(token);
+                expect(Sentry.captureMessage).toHaveBeenCalledWith('auth.token_listener_failed', {
+                    level: 'error',
+                    tags: { 'auth.error': 'TypeError' },
+                });
+                expect(JSON.stringify(vi.mocked(Sentry.captureMessage).mock.calls)).not.toContain(
+                    token,
+                );
+            })
+            .finally(() => {
+                setAccessTokenRefreshListener(null);
+            });
     });
 
     test('validates untrusted remote logout payloads before invalidating a tab', () => {

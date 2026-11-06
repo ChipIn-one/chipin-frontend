@@ -24,6 +24,7 @@ import { useAuthStore } from 'store/authStore';
 import { useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useUsersStore } from 'store/users-store';
+import { fakeAccessToken } from 'test/fakeAccessToken';
 
 import { RestoreGate } from './providers/RestoreGate';
 
@@ -218,7 +219,7 @@ test('OAuth sign-in of a cached user whose user/friends fetches change nothing: 
     useUsersStore.getState().setInitialUsersStore();
     useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'expired' });
     vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue({
-        token: 'access-token',
+        token: fakeAccessToken('cached-user'),
         is_new_user: false,
     });
     vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockResolvedValue();

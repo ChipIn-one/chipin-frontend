@@ -13,27 +13,30 @@ import { z } from 'zod';
 
 import { PERSIST_MAX_AGE } from 'shared/api/queryClient';
 
-import { QUERY_CACHE_EPOCH } from './constants';
+import { QUERY_CACHE_EPOCH, queryCacheKey } from './constants';
 import { MODEL_SHAPE_HASH } from './modelHash.generated';
 import { isEntryWithPendingOp } from './pendingOps';
 import { persistCodec } from './persistCodec';
-
-export const queryCacheKey = (userId: string): string => `chipin:rq:${userId}`;
+import {
+    claimPersistFailureReport,
+    isCacheWriteAllowed,
+    resetPersistFailureFlag,
+} from './userCaches';
 
 /** The single definition of the buster (C2-07): a model shape change resets the cache by itself. */
 export const QUERY_CACHE_BUSTER = `${QUERY_CACHE_EPOCH}:${MODEL_SHAPE_HASH}`;
 
 const idbStringStorage: AsyncStorage<string> = {
     getItem: key => get<string>(key).then(value => (typeof value === 'string' ? value : null)),
-    setItem: (key, value) => set(key, value),
+    // A key cleared by `clearUserData` takes no late (throttled) write until its user is back, and
+    // only the shared cached user's key is written (another tab may have switched the account).
+    setItem: (key, value) => (isCacheWriteAllowed(key) ? set(key, value) : Promise.resolve()),
     removeItem: key => del(key),
 };
 
-let persistFailureReported = false;
-
 /** Tests only: forget that this session already reported a persist failure. */
 export const resetPersistFailureReport = (): void => {
-    persistFailureReported = false;
+    resetPersistFailureFlag();
 };
 
 // `DOMException` (the IDB errors) is not an `Error` in every realm: read its `name` directly.
@@ -47,10 +50,9 @@ const errorName = (error: unknown): string =>
  * once per session, the app keeps working without persistence. Only the error name is sent.
  */
 export const reportPersistFailed = (error: unknown): void => {
-    if (persistFailureReported) {
+    if (!claimPersistFailureReport()) {
         return;
     }
-    persistFailureReported = true;
     Sentry.captureMessage('offline.persist_failed', {
         level: 'warning',
         tags: { 'offline.error': errorName(error) },

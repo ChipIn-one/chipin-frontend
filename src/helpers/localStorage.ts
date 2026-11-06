@@ -182,8 +182,9 @@ const clearLocalUserIdentity = () => {
     }
 };
 
+// Only a stored JSON `true` is a hint (spec 03 §1.6: the offline cold start checks `=== true`).
 const hasAuthSessionHint = (): boolean => {
-    return LocalStorage.get(LS_KEY_AUTH_SESSION_HINT, false);
+    return LocalStorage.getRaw(LS_KEY_AUTH_SESSION_HINT) === 'true';
 };
 
 const setAuthSessionHint = (hasSession: boolean): boolean => {

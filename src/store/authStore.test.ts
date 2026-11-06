@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { exchangeApiGoogleOAuthCode } from 'api/chipin';
 import type { SelfUser } from 'api/chipin.types';
@@ -12,6 +12,8 @@ import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
 import { useUsersStore } from './users-store';
 import { selectIsUserAdmin } from './users-store/selectors';
+
+import 'fake-indexeddb/auto';
 
 const user = {
     id: 'user-1',
@@ -46,6 +48,7 @@ const authSessionMocks = vi.hoisted(() => {
         AuthSessionPersistenceError,
         clearExpiredAuthSession: vi.fn(),
         establishAuthSession: vi.fn(),
+        getAccessTokenSubject: vi.fn(),
         getFreshAccessToken: vi.fn(),
         invalidateAuthSession: vi.fn(),
         logoutOtherDevicesSession: vi.fn(),
@@ -55,6 +58,7 @@ const authSessionMocks = vi.hoisted(() => {
 });
 
 vi.mock('helpers/authSession', () => authSessionMocks);
+vi.mock('@sentry/react', () => ({ captureMessage: vi.fn(), captureException: vi.fn() }));
 vi.mock('api/chipin', () => ({
     exchangeApiGoogleOAuthCode: vi.fn(),
 }));
@@ -67,11 +71,17 @@ const mockAuthenticatedDataFetches = (): void => {
 };
 
 describe('authStore', () => {
+    // A sign-out settles after its IndexedDB deletes: a test that does not wait for it must not
+    // leave a pending (deduplicated) sign-out to the next one.
+    afterEach(() => new Promise<void>(resolve => setTimeout(resolve, 30)));
+
     beforeEach(() => {
         vi.restoreAllMocks();
         vi.clearAllMocks();
         authSessionMocks.clearExpiredAuthSession.mockResolvedValue(undefined);
         authSessionMocks.establishAuthSession.mockImplementation(() => undefined);
+        // The token of the cached user: no account switch unless a test says so.
+        authSessionMocks.getAccessTokenSubject.mockReturnValue(user.id);
         authSessionMocks.startAuthLogout.mockResolvedValue(undefined);
         useExpenseModalStore.getState().reset();
         useLoadingStore.getState().setInitialLoadingStore();
@@ -130,6 +140,8 @@ describe('authStore', () => {
             .rejects.toBe(persistenceError)
             .then(() => {
                 expect(authSession.startAuthLogout).toHaveBeenCalledOnce();
+                // A persistence_error keeps X's data in the other tabs too: no logout broadcast.
+                expect(authSession.startAuthLogout).toHaveBeenCalledWith({ broadcast: false });
                 expect(useAuthStore.getState()).toMatchObject({
                     status: 'unauthenticated',
                     unauthReason: 'persistence_error',
@@ -218,6 +230,22 @@ describe('authStore', () => {
             });
     });
 
+    test('a successful refresh ends an offline-cached session (spec 03 §1.6)', () => {
+        useAuthStore.getState().setOfflineCachedSession();
+        expect(useAuthStore.getState()).toMatchObject({
+            status: 'authenticated',
+            sessionMode: 'offline-cached',
+        });
+        vi.mocked(authSession.validateAuthSession).mockResolvedValue('next-access-token');
+
+        return useAuthStore
+            .getState()
+            .refreshAuthTokens()
+            .then(() => {
+                expect(useAuthStore.getState().sessionMode).toBe('online');
+            });
+    });
+
     test('does not authenticate from stale client state when refresh is unavailable', () => {
         const validationError = new Error('Refresh unavailable');
         useAuthStore.setState({
@@ -250,7 +278,7 @@ describe('authStore', () => {
             });
     });
 
-    test('resets protected expense draft data when the session expires', () => {
+    test('keeps the expense draft when the session expires (expiry is not a logout)', () => {
         useExpenseModalStore.setState({
             isOpened: true,
             groupId: 'private-group',
@@ -261,10 +289,9 @@ describe('authStore', () => {
         useAuthStore.getState().expireSession();
 
         expect(useExpenseModalStore.getState()).toMatchObject({
-            isOpened: false,
-            groupId: '',
-            description: '',
-            includedParticipantIds: {},
+            groupId: 'private-group',
+            description: 'private expense',
+            includedParticipantIds: { 'user-1': true },
         });
     });
 
@@ -354,8 +381,6 @@ describe('authStore', () => {
         ['expireSession', () => useAuthStore.getState().expireSession()],
         ['invalid', () => useAuthStore.getState().setUnauthenticated('invalid')],
         ['expired', () => useAuthStore.getState().setUnauthenticated('expired')],
-        ['missing', () => useAuthStore.getState().setUnauthenticated('missing')],
-        ['error', () => useAuthStore.getState().setUnauthenticated('error')],
     ])('%s keeps the cached id, drops only the role', (_name, onReset) => {
         saveLocalUser({ id: user.id, role: 'ADMIN', settings: user.settings });
 
@@ -363,6 +388,21 @@ describe('authStore', () => {
 
         expect(getLocalUser()).toEqual({ id: user.id, settings: user.settings });
         expect(useUsersStore.getState().localUser?.id).toBe(user.id);
+    });
+
+    test.each([
+        ['missing', () => useAuthStore.getState().setUnauthenticated('missing')],
+        ['error', () => useAuthStore.getState().setUnauthenticated('error')],
+        [
+            'persistence_error',
+            () => useAuthStore.getState().setUnauthenticated('persistence_error'),
+        ],
+    ])('%s leaves the cached user unchanged', (_name, onReset) => {
+        saveLocalUser({ id: user.id, role: 'ADMIN', settings: user.settings });
+
+        onReset();
+
+        expect(getLocalUser()).toEqual({ id: user.id, role: 'ADMIN', settings: user.settings });
     });
 
     describe('OAuth code dedupe (the remount on the first user id)', () => {

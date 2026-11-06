@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import type { User } from 'api/chipin.types';
 import { DEFAULT_EXPENSE_CATEGORY } from 'constants/category';
 import { EXPENSE_SPLIT_MODES, type ExpenseSplitMode } from 'constants/chipin';
+import { getLocalUser } from 'helpers/localStorage';
 import { parseAmountInput } from 'helpers/numbers';
 import { getUnixTimestampInSec } from 'helpers/time';
 import {
@@ -86,6 +87,8 @@ export interface ExpenseModalState {
     includedParticipantIds: Record<string, boolean>;
     isPercentManuallyEdited: boolean;
     editContext: ExpenseModalEditContext | null;
+    /** The user the draft belongs to (spec 03 §1.5): another user's sign-in resets it. */
+    ownerId: string | null;
 }
 
 export interface ExpenseModalEditInitialization {
@@ -165,6 +168,7 @@ const INITIAL_EXPENSE_MODAL_STATE: ExpenseModalState = {
     includedParticipantIds: {},
     isPercentManuallyEdited: false,
     editContext: null,
+    ownerId: null,
 };
 
 const getDefaultFriendId = (source: ExpenseModalSource) => {
@@ -292,6 +296,7 @@ const getInitializedState = (source: ExpenseModalSource): ExpenseModalState => {
         openingContext: source.context === 'friends' ? 'friends' : undefined,
         openingFriendId: source.preferredFriendId,
         source,
+        ownerId: source.currentUser?.id ?? getLocalUser()?.id ?? null,
         targetMode,
         groupId,
         selectedFriendId,
@@ -361,6 +366,7 @@ export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
         set(state => ({
             ...state,
             ...initialization,
+            ownerId: initialization.source.currentUser?.id ?? getLocalUser()?.id ?? null,
             isOpened: true,
             isCurrencyManuallyEdited: true,
             openingContext: undefined,
