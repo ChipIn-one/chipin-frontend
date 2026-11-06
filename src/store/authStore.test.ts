@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { exchangeApiGoogleOAuthCode } from 'api/chipin';
 import type { SelfUser } from 'api/chipin.types';
+import { isAdminRole } from 'entities/users';
 import * as authSession from 'helpers/authSession';
 import { getLocalUser, saveLocalUser } from 'helpers/localStorage';
 
@@ -11,7 +12,6 @@ import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
 import { APP_MODES, useUiPrefsStore } from './ui-prefs';
 import { useUsersStore } from './users-store';
-import { selectIsUserAdmin } from './users-store/selectors';
 
 import 'fake-indexeddb/auto';
 
@@ -356,7 +356,9 @@ describe('authStore', () => {
         onReset();
 
         expect(getLocalUser()).toEqual({ settings: user.settings });
-        expect(selectIsUserAdmin(useUsersStore.getState())).toBe(false);
+        // Signed out, the UI reads the role from the cached user.
+        expect(isAdminRole(getLocalUser()?.role)).toBe(false);
+        expect(useUsersStore.getState().user).toBeNull();
     });
 
     // Spec 03 §1.5 table, invariant 12: a sign-out drops the cached user `id`; any other

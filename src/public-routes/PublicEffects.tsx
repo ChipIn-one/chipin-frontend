@@ -27,7 +27,8 @@ const PublicEffects = ({ route, isDark }: { route: PublicRoute; isDark: boolean 
     useCheckPwa();
 
     const { t, i18n } = useTranslation('meta');
-    const { isAuthResolved, isLoggedIn, isUserFetched, settings, canAccessSolo } = useConnect();
+    const { isAuthResolved, isLoggedIn, isUserFetched, soloModeByDefault, canAccessSolo } =
+        useConnect();
 
     useEffect(() => {
         if (i18n.resolvedLanguage !== route.locale) {
@@ -54,18 +55,9 @@ const PublicEffects = ({ route, isDark }: { route: PublicRoute; isDark: boolean 
     useEffect(() => {
         if (isAuthResolved && isLoggedIn && isUserFetched && route.page === 'home') {
             // Existing authenticated app routing remains unchanged.
-            window.location.replace(
-                getPreferredModeRoute(canAccessSolo && (settings?.soloModeByDefault ?? false)),
-            );
+            window.location.replace(getPreferredModeRoute(canAccessSolo && soloModeByDefault));
         }
-    }, [
-        canAccessSolo,
-        isAuthResolved,
-        isLoggedIn,
-        isUserFetched,
-        route.page,
-        settings?.soloModeByDefault,
-    ]);
+    }, [canAccessSolo, isAuthResolved, isLoggedIn, isUserFetched, route.page, soloModeByDefault]);
 
     useEffect(() => {
         if (!isAuthResolved || isLoggedIn || route.locale !== DEFAULT_LOCALE) {

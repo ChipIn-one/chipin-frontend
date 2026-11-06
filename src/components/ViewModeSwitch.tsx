@@ -4,16 +4,16 @@ import { useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 
 import { getPreferredModeRoute } from 'helpers/routes';
+import { useCanAccessSolo } from 'hooks/useSelfUser';
 import { selectUserSelfLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 import { APP_MODES, selectIsSoloMode, useUiPrefsStore } from 'store/ui-prefs';
-import { selectCanAccessSolo, useUsersStore } from 'store/users-store';
 
 const ViewModeSwitch = () => {
     const { t } = useTranslation('common');
     const navigate = useNavigate();
     const isUserLoading = useLoadingStore(selectUserSelfLoading);
-    const canAccessSolo = useUsersStore(selectCanAccessSolo);
+    const canAccessSolo = useCanAccessSolo();
     const { isSoloMode, setAppMode } = useUiPrefsStore(
         useShallow(state => ({
             isSoloMode: selectIsSoloMode(state),

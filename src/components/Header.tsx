@@ -14,10 +14,10 @@ import { matchLocale, type SupportedLocale } from 'helpers/locale';
 import { suppressPublicLocaleSuggestion } from 'helpers/publicLocaleSuggestion';
 import { getPublicPath, getPublicRoute } from 'helpers/publicRoutes';
 import { getHasDesktopSidebar, getPreferredModeRoute } from 'helpers/routes';
+import { useCanAccessSolo, useIsUserAdmin } from 'hooks/useSelfUser';
 import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { selectIsSoloMode, useUiPrefsStore } from 'store/ui-prefs';
-import { selectCanAccessSolo, selectIsUserAdmin, useUsersStore } from 'store/users-store';
 
 import { NavButton } from 'basics/buttons';
 import LanguageSelector from 'components/LanguageSelector';
@@ -46,12 +46,8 @@ const Header = () => {
             isLoggedIn: selectIsLoggedIn(state),
         })),
     );
-    const { canAccessSolo, canShowDevMenu } = useUsersStore(
-        useShallow(state => ({
-            canAccessSolo: selectCanAccessSolo(state),
-            canShowDevMenu: selectIsUserAdmin(state),
-        })),
-    );
+    const canAccessSolo = useCanAccessSolo();
+    const canShowDevMenu = useIsUserAdmin();
     const isSoloModeFromStore = useUiPrefsStore(selectIsSoloMode);
     const isSoloMode = canAccessSolo && isSoloModeFromStore;
     const location = useLocation();

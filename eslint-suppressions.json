@@ -44,11 +44,6 @@
       "count": 1
     }
   },
-  "src/basics/RelativeTime.tsx": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/basics/buttons/NavButton.tsx": {
     "boundaries/dependencies": {
       "count": 1

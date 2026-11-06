@@ -15,7 +15,7 @@ import { createQueryClient } from 'shared/api/queryClient';
 
 import { queryCacheKey } from './constants';
 import { persistOptions, reportPersistFailed } from './queryPersister';
-import { cachesByUser, unblockCacheWrites, type UserCache } from './userCaches';
+import { cachesByUser, takePendingSeed, unblockCacheWrites, type UserCache } from './userCaches';
 
 /** After this the app starts without the cache; a late IDB result is not applied. */
 export const RESTORE_TIMEOUT_MS = 3000;
@@ -88,6 +88,7 @@ const ensureUserCache = (userId: string): UserCache => {
     unblockCacheWrites(queryCacheKey(userId));
     cachesByUser.set(userId, entry);
     cachesByClient.set(entry.client, entry);
+    takePendingSeed(userId)?.(entry.client);
     entry.ready = restoreAndSubscribe(entry, userId).then(() => {
         entry.isReady = true;
         entry.listeners.forEach(listener => listener());

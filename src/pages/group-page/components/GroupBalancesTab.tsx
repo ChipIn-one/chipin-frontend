@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { Group } from 'api/chipin.types';
 import { legacyPartitionEntries } from 'entities/balance';
 import { buildGroupInviteLink } from 'helpers/url';
-import { useUsersStore } from 'store/users-store';
+import { useSelfUser } from 'hooks/useSelfUser';
 
 import BalanceSummaryText from 'basics/BalanceSummaryText';
 import { NoGroupMembersEmptyState } from 'basics/empty-states';
@@ -21,7 +21,7 @@ interface Props {
 
 const GroupBalancesTab = ({ group, showInviteOnboarding }: Props) => {
     const { t } = useTranslation('group');
-    const user = useUsersStore(s => s.user);
+    const user = useSelfUser();
 
     const otherMembers = group.members.filter(member => member.user.id !== user?.id);
     const inviteLink = buildGroupInviteLink({ inviteToken: group.inviteToken });

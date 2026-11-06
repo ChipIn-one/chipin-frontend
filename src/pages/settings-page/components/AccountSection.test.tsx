@@ -11,6 +11,7 @@ import { useUsersStore } from 'store/users-store';
 import AccountSection from './AccountSection';
 
 import 'i18n/index';
+import 'test/selfUserMirror';
 
 const user = {
     id: 'user-1',

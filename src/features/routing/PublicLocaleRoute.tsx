@@ -2,13 +2,16 @@ import { type ReactNode, useEffect, useRef } from 'react';
 import * as Sentry from '@sentry/react';
 import { useTranslation } from 'react-i18next';
 
+import type { SelfUserSettings } from 'entities/users';
 import { matchLocale } from 'helpers/locale';
+import { useUserSetting } from 'hooks/useSelfUser';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
-import { selectUserSettings, useUsersStore } from 'store/users-store';
 import type { PublicLocale } from 'types/publicRoutes';
 
 import PageLoader from 'basics/PageLoader';
+
+const pickLanguage = (settings: SelfUserSettings | null) => settings?.language;
 
 // SPA navigation can reach public URLs without reloading their SSG document.
 // Align each page with its URL; restore the authenticated user's preference
@@ -16,7 +19,7 @@ import PageLoader from 'basics/PageLoader';
 const PublicLocaleRoute = ({ locale, children }: { locale: PublicLocale; children: ReactNode }) => {
     const { i18n } = useTranslation();
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
-    const savedLanguage = useUsersStore(selectUserSettings)?.language;
+    const savedLanguage = useUserSetting(pickLanguage);
     const resolvedLanguage = i18n.resolvedLanguage;
     const isLoggedInRef = useRef(isLoggedIn);
     const savedLanguageRef = useRef(savedLanguage);

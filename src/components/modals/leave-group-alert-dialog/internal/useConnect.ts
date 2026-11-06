@@ -1,9 +1,9 @@
 import { useShallow } from 'zustand/react/shallow';
 
+import { useSelfUser } from 'hooks/useSelfUser';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupLeaving } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
 
 const useConnect = () => {
     const { leaveGroup, selectedGroup } = useGroupsStore(
@@ -12,7 +12,7 @@ const useConnect = () => {
             selectedGroup: state.selectedGroup,
         })),
     );
-    const user = useUsersStore(state => state.user);
+    const user = useSelfUser();
     const isLeavingGroup = useLoadingStore(selectGroupLeaving);
 
     return { leaveGroup, selectedGroup, user, isLeavingGroup };

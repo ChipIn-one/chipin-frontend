@@ -9,6 +9,7 @@ import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQue
 import ExpensePreferencesSection from './ExpensePreferencesSection';
 
 import 'i18n/index';
+import 'test/selfUserMirror';
 
 const user = {
     id: 'user-1',

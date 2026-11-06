@@ -3,7 +3,7 @@ import { UserPlusIcon, UsersIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useFriendInvite } from 'hooks/pwaHooks';
-import { useUsersStore } from 'store/users-store';
+import { useSelfUser } from 'hooks/useSelfUser';
 
 interface Props {
     isLoading: boolean;
@@ -11,7 +11,7 @@ interface Props {
 
 const FriendsPageHeader = ({ isLoading }: Props) => {
     const { t } = useTranslation(['friends', 'common']);
-    const inviteToken = useUsersStore(state => state.user?.inviteToken);
+    const inviteToken = useSelfUser()?.inviteToken;
     const invite = useFriendInvite(inviteToken ?? '');
     const addFriendLabel = t('common:buttons.addFriend');
 

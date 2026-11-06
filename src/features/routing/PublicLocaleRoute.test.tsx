@@ -2,6 +2,7 @@ import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
+import { saveLocalUser } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
 import { useUsersStore } from 'store/users-store';
 
@@ -60,7 +61,7 @@ beforeEach(() => {
     document.documentElement.lang = 'en';
     useAuthStore.setState({ status: 'authenticated' });
     useUsersStore.getState().setInitialUsersStore();
-    useUsersStore.setState({ localUser: { role: 'USER', settings } });
+    saveLocalUser({ role: 'USER', settings });
 });
 
 afterEach(() => {

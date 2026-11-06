@@ -2,10 +2,10 @@ import { useEffect } from 'react';
 import { Box, Container, Flex, Grid } from '@radix-ui/themes';
 import { toast } from 'sonner';
 
+import { useCanAccessSolo } from 'hooks/useSelfUser';
 import { useErrorsStore } from 'store/errorsStore';
 import { selectUserSelfFetched, selectUserSelfLoading } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
-import { selectCanAccessSolo, useUsersStore } from 'store/users-store';
 
 import {
     AccountSection,
@@ -22,7 +22,7 @@ const SettingsPage = () => {
     const isUserFetched = useLoadingStore(selectUserSelfFetched);
     const settingsError = useErrorsStore(state => state.errors.users.settings);
     const isLoading = isUserLoading || !isUserFetched;
-    const canAccessSolo = useUsersStore(selectCanAccessSolo);
+    const canAccessSolo = useCanAccessSolo();
 
     useEffect(() => {
         if (settingsError) {

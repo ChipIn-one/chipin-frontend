@@ -10,6 +10,8 @@ import { getOrThrow } from 'test/getOrThrow';
 
 import SettleUpModal from './SettleUpModal';
 
+import 'test/selfUserMirror';
+
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
         t: (key: string, options?: { name?: string }) =>

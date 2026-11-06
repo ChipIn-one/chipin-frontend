@@ -10,6 +10,7 @@ import { useDashboardActivityQuery, useDashboardBalancesQuery } from 'entities/d
 import { ActivityEventsList } from 'features/activity';
 import { getActivityPreviewEvents } from 'helpers/activityEvent';
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
+import { useSelfUser } from 'hooks/useSelfUser';
 import { useErrorsStore } from 'store/errorsStore';
 import { useGroupsStore } from 'store/groupsStore';
 import {
@@ -59,14 +60,13 @@ const DashboardPage = () => {
             hasConfirmedGroups: state.hasConfirmedGroups,
         })),
     );
-    const { friends, hasFriendsSnapshot, hasConfirmedUser, currentUser } = useUsersStore(
+    const { friends, hasFriendsSnapshot } = useUsersStore(
         useShallow(state => ({
             friends: state.friends,
             hasFriendsSnapshot: state.hasFriendsSnapshot,
-            hasConfirmedUser: state.hasConfirmedUser,
-            currentUser: state.user,
         })),
     );
+    const currentUser = useSelfUser();
     const { isGroupListFetched, isFriendsFetched, isUserSelfFetched } = useLoadingStore(
         useShallow(state => ({
             isGroupListFetched: selectGroupListFetched(state),
@@ -116,7 +116,7 @@ const DashboardPage = () => {
         },
         {
             fetched: isUserSelfFetched,
-            snapshot: hasConfirmedUser,
+            snapshot: currentUser !== null,
             error: userSelfError !== null,
         },
     ];

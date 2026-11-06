@@ -20,6 +20,7 @@ import AddExpenseButton from './AddExpenseButton';
 import '@radix-ui/themes/styles.css';
 
 import 'i18n/index';
+import 'test/selfUserMirror';
 
 const friend = {
     user: {
@@ -164,7 +165,8 @@ test('EXP-061 hides a stale friend target while its data is unresolved', () => {
 
 test('EXP-061 does not expose Add Expense before current user resolves', () => {
     resolveGlobalTargets();
-    useUsersStore.setState({ friends: [friend] });
+    // Before the first self load the self query has no user.
+    useUsersStore.setState({ user: null, friends: [friend] });
     useLoadingStore.getState().setLoading('users', 'self', 'loading');
 
     renderButton(ROUTES.DASHBOARD);

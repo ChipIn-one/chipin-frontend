@@ -9,6 +9,8 @@ import { useUsersStore } from 'store/users-store';
 
 import { EarlySupporterPromoModal } from './EarlySupporterPromoModal';
 
+import 'test/selfUserMirror';
+
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
         i18n: {
@@ -177,7 +179,8 @@ test('dismisses the promo for the current registration and allows a later regist
 
         setSession(true, createUser('second-new-user', 1_830_000_000));
 
-        expect(screen.getByRole('dialog', { name: 'Welcome to ChipIn' })).toBeTruthy();
+        // The new user reaches the self query on its next notify.
+        return screen.findByRole('dialog', { name: 'Welcome to ChipIn' });
     });
 });
 

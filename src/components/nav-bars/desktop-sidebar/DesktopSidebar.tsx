@@ -4,8 +4,8 @@ import { useLocation } from 'react-router-dom';
 
 import { PROJECT_NAME } from 'constants/chipin';
 import { getPreferredModeRoute, isNavigationRouteActive } from 'helpers/routes';
+import { useCanAccessSolo, useIsUserAdmin } from 'hooks/useSelfUser';
 import { selectIsSoloMode, useUiPrefsStore } from 'store/ui-prefs';
-import { selectCanAccessSolo, selectIsUserAdmin, useUsersStore } from 'store/users-store';
 
 import { NavButton } from 'basics/buttons';
 import AddExpenseButton from 'components/AddExpenseButton';
@@ -22,10 +22,10 @@ import { SidebarNavButton, SidebarSurface } from './styled';
 const DesktopSidebar = () => {
     const location = useLocation();
     const { t } = useTranslation('common');
-    const canAccessSolo = useUsersStore(selectCanAccessSolo);
+    const canAccessSolo = useCanAccessSolo();
     const isSoloModeFromStore = useUiPrefsStore(selectIsSoloMode);
     const isSoloMode = canAccessSolo && isSoloModeFromStore;
-    const canShowDevMenu = useUsersStore(selectIsUserAdmin);
+    const canShowDevMenu = useIsUserAdmin();
     const homeRoute = getPreferredModeRoute(isSoloMode);
     const activeColor = isSoloMode ? 'violet' : 'green';
     const navElements = getNavElements(homeRoute);

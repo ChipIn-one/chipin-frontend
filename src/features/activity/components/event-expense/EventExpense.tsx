@@ -8,7 +8,7 @@ import {
     type ExpenseReversedAction,
     type ExpenseUpdatedAction,
 } from 'constants/activity';
-import { useUsersStore } from 'store/users-store';
+import { useSelfUser } from 'hooks/useSelfUser';
 
 import { LedgerScopeBadge } from 'basics';
 
@@ -32,7 +32,7 @@ interface Props {
 
 const EventExpense = ({ event }: Props) => {
     const { t } = useTranslation('activity');
-    const user = useUsersStore(state => state.user);
+    const user = useSelfUser();
     const { amount } = event.metadata;
     const isReversed = event.action === ACTIVITY_ACTIONS.EXPENSE_REVERSED;
     const isCurrentUserPayer = event.metadata.payerId === user?.id;

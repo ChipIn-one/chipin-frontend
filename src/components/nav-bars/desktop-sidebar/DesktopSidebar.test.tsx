@@ -17,6 +17,7 @@ import DesktopSidebar from './DesktopSidebar';
 import '@radix-ui/themes/styles.css';
 
 import 'i18n/index';
+import 'test/selfUserMirror';
 
 vi.mock('assets/logo.svg?react', () => ({
     default: () => <svg aria-hidden />,

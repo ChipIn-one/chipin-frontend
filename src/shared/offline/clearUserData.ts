@@ -4,7 +4,12 @@ import * as Sentry from '@sentry/react';
 import { del } from 'idb-keyval';
 
 import { outboxKeys, queryCacheKey } from './constants';
-import { blockCacheWrites, cachesByUser, claimPersistFailureReport } from './userCaches';
+import {
+    blockCacheWrites,
+    cachesByUser,
+    claimPersistFailureReport,
+    takePendingSeed,
+} from './userCaches';
 
 const errorName = (error: unknown): string =>
     typeof error === 'object' && error !== null && 'name' in error && typeof error.name === 'string'
@@ -53,8 +58,9 @@ export const clearUserData = (userId: string, resetUserStores: () => void): Prom
                 });
             },
         );
-    // (4)
+    // (4) A seed still waiting for the client is the user's data too.
     cachesByUser.delete(userId);
+    takePendingSeed(userId);
 
     return deleted;
 };

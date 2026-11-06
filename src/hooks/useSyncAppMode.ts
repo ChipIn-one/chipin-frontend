@@ -4,11 +4,12 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { ROUTES } from 'constants/routes';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
-import { selectCanAccessSolo, useUsersStore } from 'store/users-store';
+
+import { useCanAccessSolo } from './useSelfUser';
 
 const useSyncAppMode = () => {
     const location = useLocation();
-    const canAccessSolo = useUsersStore(selectCanAccessSolo);
+    const canAccessSolo = useCanAccessSolo();
     const { appMode, setAppMode } = useUiPrefsStore(
         useShallow(state => ({
             appMode: state.appMode,

@@ -11,9 +11,8 @@ import { getOrThrow } from 'test/getOrThrow';
 
 import { ActivityEventsList } from './ActivityEventsList';
 
-vi.mock('store/users-store', () => ({
-    useUsersStore: (selector: (state: { user: { id: string } }) => unknown) =>
-        selector({ user: { id: 'me' } }),
+vi.mock('hooks/useSelfUser', () => ({
+    useSelfUser: () => ({ id: 'me' }),
 }));
 
 vi.mock('basics/empty-states', () => ({

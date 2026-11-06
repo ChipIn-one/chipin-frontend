@@ -1,15 +1,15 @@
 import { Avatar, Box, Card, Flex, Grid, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
 import { ReceiptTextIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useShallow } from 'zustand/react/shallow';
 
 import {
-    selectUserCurrency,
-    selectUserDefaultCategory,
-    selectUserSimplifyDebts,
-    selectUserSkipCategory,
-    useUsersStore,
-} from 'store/users-store';
+    userCurrency,
+    userDefaultCategory,
+    userSimplifyDebts,
+    userSkipCategory,
+} from 'entities/users';
+import { useUserSetting } from 'hooks/useSelfUser';
+import { useUsersStore } from 'store/users-store';
 
 import CurrencySelect from 'components/CurrencySelect';
 import { CategorySearchSelect } from 'components/search-select';
@@ -20,16 +20,11 @@ interface Props {
 
 const ExpensePreferencesSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
-    const { defaultCurrency, defaultCategory, skipCategory, simplifyDebts, setUserSettings } =
-        useUsersStore(
-            useShallow(state => ({
-                defaultCurrency: selectUserCurrency(state),
-                defaultCategory: selectUserDefaultCategory(state),
-                skipCategory: selectUserSkipCategory(state),
-                simplifyDebts: selectUserSimplifyDebts(state),
-                setUserSettings: state.setUserSettings,
-            })),
-        );
+    const defaultCurrency = useUserSetting(userCurrency);
+    const defaultCategory = useUserSetting(userDefaultCategory);
+    const skipCategory = useUserSetting(userSkipCategory);
+    const simplifyDebts = useUserSetting(userSimplifyDebts);
+    const setUserSettings = useUsersStore(state => state.setUserSettings);
 
     const onDefaultCurrencyChange = (value: string) => {
         void setUserSettings({ settings: { defaultCurrency: value } });

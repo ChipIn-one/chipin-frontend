@@ -13,6 +13,7 @@ import { useUsersStore } from 'store/users-store';
 import DashboardHeader from './DashboardHeader';
 
 import 'i18n/index';
+import 'test/selfUserMirror';
 
 const admin = {
     id: 'user-1',

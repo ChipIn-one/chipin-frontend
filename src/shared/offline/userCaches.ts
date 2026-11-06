@@ -18,6 +18,32 @@ export interface UserCache {
 
 export const cachesByUser = new Map<string, UserCache>();
 
+// Data the legacy stores load before the user's client exists (a first sign-in learns the user id
+// from `users/self`, and the client is created by the remount that id causes): applied when
+// `restore` creates the client, before its restore (a newer entry is not overwritten by it).
+type CacheSeed = (client: QueryClient) => void;
+
+const pendingSeeds = new Map<string, CacheSeed>();
+
+/** Writes into the user's client now, or when it is created; the latest seed per user wins. */
+export const seedUserCache = (userId: string, seed: CacheSeed): void => {
+    const entry = cachesByUser.get(userId);
+
+    if (entry) {
+        seed(entry.client);
+        return;
+    }
+    pendingSeeds.set(userId, seed);
+};
+
+/** The seed waiting for the user's new client, removed from the queue. */
+export const takePendingSeed = (userId: string): CacheSeed | undefined => {
+    const seed = pendingSeeds.get(userId);
+
+    pendingSeeds.delete(userId);
+    return seed;
+};
+
 // IndexedDB keys whose writes are dropped: a throttled persist scheduled before `clearUserData`
 // would otherwise bring the user's data back after the `del`.
 const blockedWriteKeys = new Set<string>();

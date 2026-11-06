@@ -1,9 +1,9 @@
 import { Navigate } from 'react-router-dom';
 
 import { ROUTES } from 'constants/routes';
+import { useCanAccessSolo } from 'hooks/useSelfUser';
 import { selectUserSelfFetched } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
-import { selectCanAccessSolo, useUsersStore } from 'store/users-store';
 
 import PageLoader from 'basics/PageLoader';
 
@@ -13,7 +13,7 @@ interface Props {
 
 const SoloRouteGuard = ({ children }: Props) => {
     const isUserFetched = useLoadingStore(selectUserSelfFetched);
-    const canAccessSolo = useUsersStore(selectCanAccessSolo);
+    const canAccessSolo = useCanAccessSolo();
 
     if (!isUserFetched) {
         return <PageLoader />;

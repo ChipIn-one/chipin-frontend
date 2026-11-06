@@ -1,10 +1,13 @@
-import { beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { SelfUser, UserSettings } from 'api/chipin.types';
 import * as usersApi from 'api/usersApi';
 import { LS_KEY_USER } from 'constants/localstorage';
+import { usersKeys } from 'entities/users';
 import { LocalStorage } from 'helpers/localStorage';
+import { cachesByUser } from 'shared/offline/userCaches';
 import { useLoadingStore } from 'store/loadingStore';
+import { createTestQueryClient } from 'test/renderWithQueryClient';
 
 import { useErrorsStore } from '../errorsStore';
 
@@ -53,6 +56,66 @@ beforeEach(() => {
     useUsersStore.getState().setInitialUsersStore();
     useErrorsStore.getState().resetErrors();
     useLoadingStore.getState().setInitialLoadingStore();
+});
+
+// The signed-in user's QueryClient, registered as `clientFor` does it.
+const mountUserClient = () => {
+    const client = createTestQueryClient();
+
+    cachesByUser.set(user.id, {
+        client,
+        ready: Promise.resolve(),
+        isReady: true,
+        listeners: new Set(),
+        unsubscribe: null,
+        disposed: false,
+    });
+    return client;
+};
+
+afterEach(() => {
+    cachesByUser.delete(user.id);
+});
+
+test("seeds the user's users.self with every user it loads or saves (the bridge)", async () => {
+    const client = mountUserClient();
+    const renamed = { ...user, displayName: 'Renamed' };
+    const withAvatar = { ...user, picture: 'https://example.com/a.png' };
+
+    vi.mocked(usersApi.fetchUser).mockResolvedValue(user);
+    await useUsersStore.getState().fetchSetUser();
+    expect(client.getQueryData(usersKeys.self())).toEqual(user);
+
+    vi.mocked(usersApi.updateUser).mockResolvedValue(renamed);
+    await useUsersStore.getState().setUserSettings({ displayName: 'Renamed' });
+    expect(client.getQueryData(usersKeys.self())).toEqual(renamed);
+
+    vi.mocked(usersApi.uploadUserAvatar).mockResolvedValue(withAvatar);
+    await useUsersStore.getState().uploadUserAvatar({ file: new File([], 'a.png') });
+    expect(client.getQueryData(usersKeys.self())).toEqual(withAvatar);
+});
+
+test('a failed settings update leaves users.self as it was', async () => {
+    const client = mountUserClient();
+
+    vi.mocked(usersApi.fetchUser).mockResolvedValue(user);
+    await useUsersStore.getState().fetchSetUser();
+    vi.mocked(usersApi.updateUser).mockRejectedValue(new Error('Update failed'));
+    await useUsersStore.getState().setUserSettings({ displayName: 'Renamed' });
+
+    expect(client.getQueryData(usersKeys.self())).toEqual(user);
+});
+
+test('extends the subscription of the user the UI shows by one day', async () => {
+    const client = mountUserClient();
+
+    vi.mocked(usersApi.fetchUser).mockResolvedValue({ ...user, subscriptionUntil: 1_000 });
+    await useUsersStore.getState().fetchSetUser();
+    useUsersStore.getState().extendUserSubscriptionByDay();
+
+    expect(client.getQueryData(usersKeys.self())).toMatchObject({
+        subscriptionUntil: 1_000 + 86_400,
+    });
 });
 
 test('returns the fetched user after updating the store', () => {

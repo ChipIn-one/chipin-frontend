@@ -59,9 +59,8 @@ vi.mock('react-i18next', () => ({
     }),
 }));
 
-vi.mock('store/users-store', () => ({
-    useUsersStore: (selector: (state: { user: { id: string } }) => unknown) =>
-        selector({ user: { id: 'current-user' } }),
+vi.mock('hooks/useSelfUser', () => ({
+    useSelfUser: () => ({ id: 'current-user' }),
 }));
 
 vi.mock('store/groupsStore', () => ({
