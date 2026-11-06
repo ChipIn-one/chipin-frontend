@@ -1,15 +1,20 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Card, Flex, Skeleton, Text, VisuallyHidden } from '@radix-ui/themes';
 import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+
+import { EMPTY_CURRENCY_RATES, useCurrencyRatesQuery } from 'entities/currency-rates';
+import type { DashboardBalances } from 'entities/dashboard';
+import { useDashboardBalancesQuery } from 'entities/dashboard';
+import { selectUserCurrency, useUsersStore } from 'store/users-store';
 
 import { BalanceBadges } from 'basics';
 import DebtAmount from 'basics/DebtAmount';
 import { NoDebtsEmptyState } from 'basics/empty-states';
 import { Amount } from 'basics/numbers';
 
-import { useConnect } from './internal';
 import { SummaryCardButton } from './styled';
+import { summarizeDashboard } from './summary';
 
 interface Props {
     isLoading?: boolean;
@@ -17,18 +22,19 @@ interface Props {
 }
 
 const SUMMARY_DETAILS_ID = 'dashboard-balance-summary-details';
+const NO_BALANCES: DashboardBalances = [];
 
 const DashBoardSummary = ({ isLoading = false, hasExpenseHistory = false }: Props) => {
     const { t } = useTranslation('dashboard');
     const [isExpanded, setIsExpanded] = useState(false);
-    const {
-        netTotalInBase,
-        owedTotalInBase,
-        owingTotalInBase,
-        owedBadgeItems,
-        oweBadgeItems,
-        defaultCurrency,
-    } = useConnect();
+    const defaultCurrency = useUsersStore(selectUserCurrency);
+    const { data: balances = NO_BALANCES } = useDashboardBalancesQuery();
+    const { data: currencyRates = EMPTY_CURRENCY_RATES } = useCurrencyRatesQuery();
+    const { netTotalInBase, owedTotalInBase, owingTotalInBase, owedBadgeItems, oweBadgeItems } =
+        useMemo(
+            () => summarizeDashboard(balances, currencyRates, defaultCurrency),
+            [balances, currencyRates, defaultCurrency],
+        );
     const hasOwed = owedBadgeItems.length > 0;
     const hasOwing = oweBadgeItems.length > 0;
     const hasDetails = hasOwed || hasOwing;

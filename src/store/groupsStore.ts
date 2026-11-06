@@ -12,13 +12,13 @@ import type {
     UploadGroupCoverParams,
 } from 'api/chipin.types';
 import * as groupsApi from 'api/groupsApi';
+import { ACTIVITY_API_LIMIT } from 'constants/activity';
 import { getAuthSessionVersion, isAuthSessionCurrent } from 'helpers/authSession';
 import { getApiErrorStatus, normalizeApiError } from 'helpers/errors';
 
 import { useActivityStore } from './activity-store/actions';
-import { ACTIVITY_API_LIMIT } from './activity-store/constants';
-import { useDashboardStore } from './dashboardStore';
 import { useErrorsStore } from './errorsStore';
+import { invalidateDashboard } from './internal/dashboardQueryBridge';
 import { createRequestChannel } from './internal/resourceRequests';
 import { useLoadingStore } from './loadingStore';
 import { useUsersStore } from './users-store';
@@ -140,7 +140,7 @@ const refreshAfterGroupRemoval = (
     return Promise.all([
         fetchSetGroups(true),
         useUsersStore.getState().fetchSetFriends(true),
-        useDashboardStore.getState().fetchSetDashboard(true),
+        invalidateDashboard(),
         useActivityStore.getState().fetchSetActivity(true),
     ]).then(() => undefined);
 };
@@ -152,7 +152,7 @@ const refreshAfterGroupMemberChange = (
     return Promise.all([
         fetchSetGroupById(groupId, true),
         useUsersStore.getState().fetchSetFriends(true),
-        useDashboardStore.getState().fetchSetDashboard(true),
+        invalidateDashboard(),
         useActivityStore.getState().fetchSetActivity(true),
     ]).then(() => undefined);
 };

@@ -195,6 +195,20 @@ export const legacyRateLookup =
         return fromRate && toRate ? { from: fromRate, to: toRate } : null;
     };
 
+/**
+ * Rates as decimal text (`entities/currency-rates`) as the legacy number map read by the
+ * not-yet-migrated group summaries and sorting; a malformed or non-positive rate is left out
+ * (a missing rate means "cannot convert" there).
+ */
+export const legacyRatesFromDecimals = (rates: Readonly<Record<string, string>>): CurrenciesRates =>
+    Object.fromEntries(
+        Object.entries(rates).flatMap(([currency, text]) => {
+            const rate = Number(text);
+
+            return Number.isFinite(rate) && rate > 0 ? [[currency, rate]] : [];
+        }),
+    );
+
 export interface LegacyBalanceTotals {
     readonly netTotalInBase: number;
     readonly owedTotalInBase: number;

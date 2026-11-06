@@ -13,9 +13,9 @@ import {
 import * as localStorageHelpers from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
 import { useConnectivityStore } from 'store/connectivityStore';
-import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { useGroupsStore } from 'store/groupsStore';
+import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { useUsersStore } from 'store/users-store';
 
 import { useCheckSignIn } from './useCheckSignIn';
@@ -67,7 +67,6 @@ const renderHook = () => {
 };
 
 const mockAuthenticatedDataFetches = (): void => {
-    vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockResolvedValue();
     vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
     vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockResolvedValue(user);
     vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockResolvedValue();
@@ -84,7 +83,7 @@ beforeEach(() => {
     localStorageHelpers.LocalStorage.remove(LS_KEY_USER);
     onlineManager.setOnline(true);
     useConnectivityStore.setState({ mode: 'online' });
-    useDashboardStore.getState().setInitialDashboardStore();
+    useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
     useUsersStore.getState().setInitialUsersStore();
     useAuthStore.setState({
         isNewUser: null,
@@ -184,8 +183,8 @@ test.each(['backend-down', 'offline'] as const)(
 
 test('initializes the app mode from the fetched preference without a cached user', () => {
     markRestorableAuthSession();
-    useDashboardStore.setState({ appMode: APP_MODES.GROUP });
-    const setDefaultAppMode = vi.spyOn(useDashboardStore.getState(), 'setDefaultAppMode');
+    useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
+    const setDefaultAppMode = vi.spyOn(useUiPrefsStore.getState(), 'setDefaultAppMode');
     vi.spyOn(useAuthStore.getState(), 'refreshAuthTokens').mockResolvedValue('next-access-token');
     mockAuthenticatedDataFetches();
 
@@ -207,10 +206,9 @@ test('preserves the active app mode when a cached user initialized it', () => {
         settings: groupDefaultUser.settings,
     });
     useUsersStore.getState().setInitialUsersStore();
-    useDashboardStore.setState({ appMode: APP_MODES.SOLO });
-    const setDefaultAppMode = vi.spyOn(useDashboardStore.getState(), 'setDefaultAppMode');
+    useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
+    const setDefaultAppMode = vi.spyOn(useUiPrefsStore.getState(), 'setDefaultAppMode');
     vi.spyOn(useAuthStore.getState(), 'refreshAuthTokens').mockResolvedValue('next-access-token');
-    vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockResolvedValue();
     vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
     const fetchSetUser = vi
         .spyOn(useUsersStore.getState(), 'fetchSetUser')
@@ -223,7 +221,7 @@ test('preserves the active app mode when a cached user initialized it', () => {
         expect(fetchSetUser).toHaveBeenCalledOnce();
     }).then(() => {
         expect(setDefaultAppMode).not.toHaveBeenCalled();
-        expect(useDashboardStore.getState().appMode).toBe(APP_MODES.SOLO);
+        expect(useUiPrefsStore.getState().appMode).toBe(APP_MODES.SOLO);
     });
 });
 
@@ -366,9 +364,9 @@ test('a network error during the startup refresh: offline-cached, nothing loaded
         return Promise.reject(networkError);
     });
     useAuthStore.setState({ refreshAuthTokens });
-    const fetchSetDashboardData = vi
-        .spyOn(useDashboardStore.getState(), 'fetchSetDashboardData')
-        .mockResolvedValue();
+    const fetchSetGroups = vi
+        .spyOn(useGroupsStore.getState(), 'fetchSetGroups')
+        .mockResolvedValue([]);
 
     renderHook();
 
@@ -378,7 +376,7 @@ test('a network error during the startup refresh: offline-cached, nothing loaded
             sessionMode: 'offline-cached',
         });
     }).then(() => {
-        expect(fetchSetDashboardData).not.toHaveBeenCalled();
+        expect(fetchSetGroups).not.toHaveBeenCalled();
     });
 });
 
@@ -412,7 +410,7 @@ test('reconnect: a successful refresh makes the session online and loads the dat
     useAuthStore.setState({ refreshAuthTokens: storeRefreshAuthTokens });
     vi.mocked(validateAuthSession).mockResolvedValue('next-access-token');
     mockAuthenticatedDataFetches();
-    const fetchSetDashboardData = vi.mocked(useDashboardStore.getState().fetchSetDashboardData);
+    const fetchSetGroups = vi.mocked(useGroupsStore.getState().fetchSetGroups);
 
     renderHook();
 
@@ -431,7 +429,7 @@ test('reconnect: a successful refresh makes the session online and loads the dat
             });
         })
         .then(() => {
-            expect(fetchSetDashboardData).toHaveBeenCalledOnce();
+            expect(fetchSetGroups).toHaveBeenCalledOnce();
         });
 });
 
@@ -538,7 +536,7 @@ test('a connectivity flap during the reconnect refresh: one refresh, data loaded
     );
     useAuthStore.setState({ refreshAuthTokens });
     mockAuthenticatedDataFetches();
-    const fetchSetDashboardData = vi.mocked(useDashboardStore.getState().fetchSetDashboardData);
+    const fetchSetGroups = vi.mocked(useGroupsStore.getState().fetchSetGroups);
 
     renderHook();
 
@@ -565,15 +563,15 @@ test('a connectivity flap during the reconnect refresh: one refresh, data loaded
                 finish('next-access-token');
             });
             return waitFor(() => {
-                expect(fetchSetDashboardData).toHaveBeenCalledOnce();
+                expect(fetchSetGroups).toHaveBeenCalledOnce();
             });
         });
 });
 
 test('a boot refresh that found another user applies that user default app mode', () => {
     cacheSignedInUser();
-    useDashboardStore.setState({ appMode: APP_MODES.GROUP });
-    const setDefaultAppMode = vi.spyOn(useDashboardStore.getState(), 'setDefaultAppMode');
+    useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
+    const setDefaultAppMode = vi.spyOn(useUiPrefsStore.getState(), 'setDefaultAppMode');
     // As the refresh listener after another tab switched to Y: LocalUser = { id: Y, settings }.
     const refreshAuthTokens = vi.fn(() => {
         localStorageHelpers.saveLocalUser({ id: 'user-y', settings: user.settings });
@@ -592,7 +590,7 @@ test('a boot refresh that found another user applies that user default app mode'
 
 test('a boot refresh of the same cached user keeps the active app mode', () => {
     cacheSignedInUser();
-    const setDefaultAppMode = vi.spyOn(useDashboardStore.getState(), 'setDefaultAppMode');
+    const setDefaultAppMode = vi.spyOn(useUiPrefsStore.getState(), 'setDefaultAppMode');
     useAuthStore.setState({ refreshAuthTokens: vi.fn(() => Promise.resolve('x-access-token')) });
     mockAuthenticatedDataFetches();
     const fetchSetUser = vi.mocked(useUsersStore.getState().fetchSetUser);

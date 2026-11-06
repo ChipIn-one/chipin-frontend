@@ -8,9 +8,9 @@ import { beforeEach, expect, test } from 'vitest';
 import type { Group, KnownUser, SelfUser, UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
-import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
+import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { useUsersStore } from 'store/users-store';
 
 import MobileNavBar from './MobileNavBar';
@@ -88,7 +88,7 @@ const resolveGlobalTargets = () => {
 
 beforeEach(() => {
     useAuthStore.setState({ status: 'authenticated' });
-    useDashboardStore.setState({ appMode: APP_MODES.GROUP });
+    useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
     useGroupsStore.getState().setInitialGroupsStore();
     useLoadingStore.getState().setInitialLoadingStore();
     useUsersStore.setState({
@@ -111,7 +111,7 @@ test.each([
     },
 ])('opens $expectedRoute from the home link in $appMode mode', ({ appMode, expectedRoute }) => {
     const interaction = userEvent.setup();
-    useDashboardStore.setState({ appMode });
+    useUiPrefsStore.setState({ appMode });
 
     render(
         <MemoryRouter initialEntries={['/settings']}>

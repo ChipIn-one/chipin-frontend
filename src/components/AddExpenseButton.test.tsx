@@ -8,11 +8,11 @@ import type { Group, KnownUser, SelfUser } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
-import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 import { useErrorsStore } from 'store/errorsStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
+import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { useUsersStore } from 'store/users-store';
 
 import AddExpenseButton from './AddExpenseButton';
@@ -126,7 +126,7 @@ const resolveGlobalTargets = () => {
 
 beforeEach(() => {
     useAuthStore.setState({ status: 'authenticated' });
-    useDashboardStore.setState({ appMode: APP_MODES.GROUP });
+    useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
     useExpenseModalStore.getState().reset();
     useGroupsStore.getState().setInitialGroupsStore();
     useErrorsStore.getState().resetErrors();

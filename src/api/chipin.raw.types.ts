@@ -31,14 +31,6 @@ export interface ApiUpdateUserRequest {
     settings?: Partial<ApiUserSettings>;
 }
 
-export interface ApiCurrencyRatesResponse {
-    base: string;
-    timestamp: number;
-    fetchedAt: number;
-    stale: boolean;
-    rates: CurrenciesRates;
-}
-
 export interface ApiUserResponse {
     id: string;
     email: string;
@@ -92,11 +84,6 @@ export interface ApiGroupResponse {
 export interface ApiGroupsResponse {
     items: ApiGroupResponse[];
     nextCursor: string | null;
-}
-
-export interface ApiDashboardResponse {
-    balances: BalancesMap;
-    activity: ApiActivityFeedResponse;
 }
 
 export interface ApiActivityFeedItemResponse {

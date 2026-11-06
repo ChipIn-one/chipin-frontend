@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
@@ -9,9 +9,10 @@ import type { BalanceEntry, BalancesMap } from 'api/chipin.raw.types';
 import type { Group, SelfUser } from 'api/chipin.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { lightThemeStyled } from 'constants/styled-themes';
-import { useDashboardStore } from 'store/dashboardStore';
+import { currencyRatesKeys } from 'entities/currency-rates';
 import { useLoadingStore } from 'store/loadingStore';
 import { useUsersStore } from 'store/users-store';
+import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
 
 import GroupsCards from './GroupsCards';
 
@@ -147,14 +148,25 @@ const createGroup = ({
     };
 };
 
-const renderGroups = (groups: Group[], selectedGroupId?: string) =>
-    render(
+const renderGroups = (groups: Group[], selectedGroupId?: string) => {
+    const client = createTestQueryClient();
+
+    client.setQueryData(currencyRatesKeys.all, {
+        base: 'USD',
+        timestamp: NOW,
+        fetchedAt: NOW,
+        stale: false,
+        rates: { EUR: '0.8', VND: '25900' },
+    });
+    return renderWithQueryClient(
         <MemoryRouter>
             <ThemeProvider theme={lightThemeStyled}>
                 <GroupsCards groups={groups} label="Groups" selectedGroupId={selectedGroupId} />
             </ThemeProvider>
         </MemoryRouter>,
+        client,
     );
+};
 
 beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -162,17 +174,6 @@ beforeEach(() => {
 
     useLoadingStore.getState().setInitialLoadingStore();
     useLoadingStore.getState().setLoading('group', 'list', 'fetched');
-    useLoadingStore.getState().setLoading('dashboard', 'data', 'fetched');
-    useDashboardStore.getState().setInitialDashboardStore();
-    useDashboardStore.setState({
-        currencies: {
-            base: 'USD',
-            timestamp: NOW,
-            fetchedAt: NOW,
-            stale: false,
-            rates: { EUR: 0.8, VND: 25_900 },
-        },
-    });
     useUsersStore.setState({ user: currentUser });
 });
 

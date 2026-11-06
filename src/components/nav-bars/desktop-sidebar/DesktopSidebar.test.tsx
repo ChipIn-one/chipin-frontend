@@ -8,8 +8,8 @@ import type { KnownUser, SelfUser } from 'api/chipin.types';
 import { PROJECT_NAME } from 'constants/chipin';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
-import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 import { useLoadingStore } from 'store/loadingStore';
+import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { useUsersStore } from 'store/users-store';
 
 import DesktopSidebar from './DesktopSidebar';
@@ -63,7 +63,7 @@ const friend = {
 
 beforeEach(() => {
     useAuthStore.setState({ status: 'authenticated' });
-    useDashboardStore.setState({ appMode: APP_MODES.GROUP });
+    useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
     useLoadingStore.getState().setInitialLoadingStore();
     useLoadingStore.getState().setLoading('users', 'self', 'fetched');
     useUsersStore.setState({ user, localUser: null, friends: [] });
@@ -112,7 +112,7 @@ test('shows the authenticated navigation and profile actions', () => {
 });
 
 test('shows Group branding when Solo mode is stale for an admin', () => {
-    useDashboardStore.setState({ appMode: APP_MODES.SOLO });
+    useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
     useUsersStore.setState({
         user: { ...user, role: 'ADMIN' },
         localUser: null,
@@ -133,7 +133,7 @@ test('shows Group branding when Solo mode is stale for an admin', () => {
 });
 
 test('renders Group branding for a non-admin with stale Solo state', () => {
-    useDashboardStore.setState({ appMode: APP_MODES.SOLO });
+    useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
 
     render(
         <MemoryRouter initialEntries={['/settings']}>

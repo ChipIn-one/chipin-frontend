@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, test } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
-import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
+import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { useUsersStore } from 'store/users-store';
 
 import ViewModeSwitch from './ViewModeSwitch';
@@ -24,7 +24,7 @@ const settings = {
 } satisfies UserSettings;
 
 beforeEach(() => {
-    useDashboardStore.setState({ appMode: APP_MODES.GROUP });
+    useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
     useUsersStore.setState({
         user: null,
         localUser: { role: 'ADMIN', settings },

@@ -17,7 +17,6 @@ import { useCheckSignIn } from 'hooks/useCheckSignIn';
 import { publicApi } from 'shared/api/client';
 import { useAuthStore } from 'store/authStore';
 import { useConnectivityStore } from 'store/connectivityStore';
-import { useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useUsersStore } from 'store/users-store';
 import { setupMswServer } from 'test/mswServer';
@@ -218,7 +217,6 @@ describe('offline cold start through /auth/refresh', () => {
         invalidateAuthSession();
         LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
         useAuthStore.setState({ status: 'unknown', unauthReason: undefined, isNewUser: null });
-        vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockResolvedValue();
         vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
         vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockResolvedValue(null);
         vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockResolvedValue();

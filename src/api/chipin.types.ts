@@ -1,6 +1,5 @@
 import type {
     ApiActivityFeedItemResponse,
-    ApiDashboardResponse,
     ApiFriend,
     ApiFriendBalance,
     ApiGroupResponse,
@@ -20,8 +19,6 @@ export type {
     ApiActivityFeedResponse,
     ApiActivityItemsResponse,
     ApiCreateLedgerResponse,
-    ApiCurrencyRatesResponse,
-    ApiDashboardResponse,
     ApiExpenseDetails,
     ApiFriend,
     ApiFriendBalance,
@@ -83,4 +80,3 @@ export type Group = ApiGroupResponse;
 export type GroupUser = UserSummary;
 
 export type ActivityFeedItem = ApiActivityFeedItemResponse;
-export type Dashboard = ApiDashboardResponse;
