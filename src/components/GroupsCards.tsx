@@ -1,4 +1,4 @@
-import { type FocusEvent, type KeyboardEvent, useEffect, useRef, useState } from 'react';
+import { type FocusEvent, type KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Flex, IconButton, Separator, Text, TextField } from '@radix-ui/themes';
 import {
     ChevronDownIcon,
@@ -56,11 +56,12 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
     // The cards convert group balances with the rates: wait for their first load (failed or
     // paused offline counts as done), as for the list.
     const isReady = isGroupListFetched && !isRatesLoading;
+    const rates = useMemo(() => legacyRatesFromDecimals(currencyRates.rates), [currencyRates]);
     const { displayedGroups, hiddenSettledGroups, settledCount } = selectGroupsCardsView(groups, {
         filter: activeFilter,
         query: searchQuery,
         selectedGroupId,
-        rates: legacyRatesFromDecimals(currencyRates.rates),
+        rates,
         baseCurrency: currencyRates.base,
         defaultCurrency,
         nowTimestamp,

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import * as activityApi from 'api/activityApi';
 import * as ledgerApi from 'api/ledgerApi';
+import { ACTIVITY_API_LIMIT } from 'constants/activity';
 import { normalizeApiError } from 'helpers/errors';
 
 import { useErrorsStore } from '../errorsStore';
@@ -18,7 +19,6 @@ import {
     useUsersStore,
 } from '../users-store';
 
-import { ACTIVITY_API_LIMIT } from './constants';
 import { initialState } from './initialState';
 import type {
     ActivityStore,

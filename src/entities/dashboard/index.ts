@@ -3,6 +3,7 @@ export {
     dashboardActivityQueryOptions,
     dashboardBalancesQueryOptions,
     dashboardKeys,
+    trimDashboardFeed,
     useDashboardActivityQuery,
     useDashboardBalancesQuery,
 } from './api/queries';

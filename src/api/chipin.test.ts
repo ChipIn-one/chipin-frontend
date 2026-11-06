@@ -3,8 +3,6 @@ import { describe, expect, test, vi } from 'vitest';
 import { InvalidPathSegmentError } from './apiPath';
 import {
     createApiGroup,
-    fetchApiCurrencyRates,
-    fetchApiDashboard,
     fetchApiUserGroupById,
     fetchApiUserGroups,
     inviteApiUserToGroup,
@@ -89,29 +87,6 @@ const groupResponse = {
 };
 
 describe('embedded activity feed responses', () => {
-    test('returns activity feed items from the dashboard response', () => {
-        const controller = new AbortController();
-        vi.mocked(apiInstance.get).mockResolvedValue({
-            data: {
-                balances: {},
-                activity: {
-                    items: [{ parent: parentEvent, lastEvent }],
-                    nextCursor: 1,
-                },
-            },
-        });
-
-        return fetchApiDashboard(controller.signal).then(result => {
-            expect(apiInstance.get).toHaveBeenCalledWith('/dashboard', {
-                signal: controller.signal,
-            });
-            expect(result.activity).toEqual({
-                items: [{ parent: parentEvent, lastEvent }],
-                nextCursor: 1,
-            });
-        });
-    });
-
     test('returns the complete paginated group list response', () => {
         const controller = new AbortController();
         const response = {
@@ -137,18 +112,6 @@ describe('embedded activity feed responses', () => {
                 signal: controller.signal,
             });
             expect(result).toEqual(groupResponse);
-        });
-    });
-
-    test('forwards cancellation to currency rates', () => {
-        const controller = new AbortController();
-        vi.mocked(apiInstance.get).mockResolvedValue({ data: { rates: {} } });
-
-        return fetchApiCurrencyRates(controller.signal).then(() => {
-            expect(apiInstance.get).toHaveBeenCalledWith('/currency-rates', {
-                params: { base: 'USD' },
-                signal: controller.signal,
-            });
         });
     });
 

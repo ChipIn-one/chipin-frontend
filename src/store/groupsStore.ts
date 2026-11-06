@@ -12,11 +12,11 @@ import type {
     UploadGroupCoverParams,
 } from 'api/chipin.types';
 import * as groupsApi from 'api/groupsApi';
+import { ACTIVITY_API_LIMIT } from 'constants/activity';
 import { getAuthSessionVersion, isAuthSessionCurrent } from 'helpers/authSession';
 import { getApiErrorStatus, normalizeApiError } from 'helpers/errors';
 
 import { useActivityStore } from './activity-store/actions';
-import { ACTIVITY_API_LIMIT } from './activity-store/constants';
 import { useErrorsStore } from './errorsStore';
 import { invalidateDashboard } from './internal/dashboardQueryBridge';
 import { createRequestChannel } from './internal/resourceRequests';

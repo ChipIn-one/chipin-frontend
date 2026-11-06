@@ -38,11 +38,12 @@ interface Resource {
     error: boolean;
 }
 
-// A query as a resource of the page: a failed load, or one waiting for the network (offline), is
-// an error; it blocks the page only while there is no data yet (spec 03 §1.2).
+// A query as a resource of the page: a failed load is an error; it blocks the page only while
+// there is no data yet (spec 03 §1.2). Waiting for the network (offline) is an error only without
+// data: with data, the offline banner alone says so (spec 03 §1.8).
 const queryResource = (query: { data: unknown; isError: boolean; isPaused: boolean }): Resource => {
     const snapshot = query.data !== undefined;
-    const error = query.isError || query.isPaused;
+    const error = query.isError || (query.isPaused && !snapshot);
 
     return { fetched: snapshot || error, snapshot, error };
 };
@@ -87,7 +88,12 @@ const DashboardPage = () => {
     );
     const activityEvents = useMemo(() => getActivityPreviewEvents(activityItems), [activityItems]);
     const balances = queryResource(balancesQuery);
-    const activity = queryResource(activityQuery);
+    // A failed next page keeps the feed and has its own inline Retry: not a page error.
+    const activity = queryResource({
+        data: activityQuery.data,
+        isError: activityQuery.isError && !activityQuery.isFetchNextPageError,
+        isPaused: activityQuery.isPaused,
+    });
     const hasGroups = groups.length > 0;
     const hasConnections = hasGroups || friends.length > 0;
     const hasExpenseHistory =

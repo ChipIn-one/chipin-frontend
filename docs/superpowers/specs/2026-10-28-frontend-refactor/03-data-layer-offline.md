@@ -148,7 +148,8 @@ staleTime per entity (set in the entity's `queryOptions`, not in components):
 | self user | `['users','self']` | 5 min | yes |
 | known users (friends) | `['users','known']` | 60 s | yes |
 | premium promo | `['users','premiumPromo']` | 10 min | no |
-| dashboard (balances) | `['dashboard']` | 30 s | yes |
+| dashboard (balances) | `['dashboard','balances']` | 30 s | yes |
+| dashboard activity feed (until 03-12) | `['dashboard','activity']` (infinite) | 30 s | yes, first page only |
 | groups list | `['groups','list']` | 60 s | yes |
 | group detail (+ group balances) | `['groups','detail',id]` | 30 s | yes |
 | group activity previews | `['groups','activity',id]` (infinite) | 30 s | yes, first page only |
@@ -951,7 +952,7 @@ While a store is alive, its action may call `queryClient.invalidateQueries` (a b
 | # | Store | What it becomes | Risk / notes |
 |---|---|---|---|
 | 1 | `landing-stats-store/` | `entities/stats/api/queries.ts` | low; a pilot of the pattern; after D8 goes to Astro |
-| 2 | `dashboardStore.ts` (198) | `dashboard`, `currencyRates` queries; `appMode` → `uiPrefsStore` (zustand) | medium: activity pagination on the dashboard → `useInfiniteQuery` |
+| 2 | `dashboardStore.ts` (198) | `dashboard`, `currencyRates` queries; `appMode` → `uiPrefsStore` (zustand) | medium: activity pagination on the dashboard → `useInfiniteQuery`. Deviation (03-8): the dashboard feed lives under `['dashboard','activity']` (persisted, first page only; `GET /users/self/activity-previews` through the legacy `src/api` layer, legacy `ActivityFeedItem` shape, so a change to that shape or its normalization bumps `QUERY_CACHE_EPOCH`) until 03-12 moves it to `activity.self`; balances come from `GET /dashboard/balances` |
 | 3 | `users-store/` (283) | `users.self`, `users.known`, `users.premiumPromo` + mutations `updateSelf`, `removeKnownUser`, `uploadAvatar`; `localUser` stays in `helpers/localStorage` | medium: `useSyncUserSettings` (`hooks/useSyncUserSettings.tsx:18-33`) writes the language — read it from `select`, without an effect on every `settings` object |
 | 4 | `groupsStore.ts` (660) — 2 PRs | (a) queries `groups.list` (cursor → infinite), `groups.detail`; (b) mutations create/update/leave/kick/remove/join/cover | **high**: module-level `inaccessibleGroupIds` and mutation generation (`groupsStore.ts:105-131`) → 403/404 on detail = `ApiError`, the route shows an errorElement (spec 04 §2.5). The cycle with activity disappears: group activity pagination moves to the `groups.activity` query |
 | 5 | `activity-store/` (443) | `activity.self` (infinite), `activity.children` | medium: cursor pagination, filters in the key |

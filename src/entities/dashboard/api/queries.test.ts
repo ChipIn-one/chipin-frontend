@@ -1,6 +1,6 @@
-import { dehydrate, InfiniteQueryObserver, QueryClient } from '@tanstack/react-query';
+import { dehydrate, focusManager, InfiniteQueryObserver, QueryClient } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
 
 import type { ActivityFeedItem } from 'api/chipin.types';
 import { currencyCode, fromUnits } from 'shared/money';
@@ -81,4 +81,82 @@ test('pages the feed by cursor and persists only its first page', async () => {
         pages: [{ items: [preview('a')], nextCursor: 40 }],
         pageParams: [null],
     });
+});
+
+test('a focus refetch of a stale feed reloads only its first page', async () => {
+    const cursors: (string | null)[] = [];
+
+    server.use(
+        http.get('*/users/self/activity-previews', ({ request }) => {
+            cursors.push(new URL(request.url).searchParams.get('cursor'));
+            return HttpResponse.json({ items: [preview('new')], nextCursor: 40 });
+        }),
+    );
+    const client = new QueryClient();
+    const options = dashboardActivityQueryOptions();
+
+    client.setQueryData(
+        options.queryKey,
+        {
+            pages: [
+                { items: [preview('a')], nextCursor: 40 },
+                { items: [preview('b')], nextCursor: 30 },
+                { items: [preview('c')], nextCursor: null },
+            ],
+            pageParams: [null, 40, 30],
+        },
+        // Older than the 30 s staleTime.
+        { updatedAt: Date.now() - 60_000 },
+    );
+    const observer = new InfiniteQueryObserver(client, { ...options, refetchOnMount: false });
+    const unsubscribe = observer.subscribe(() => undefined);
+
+    // Focus events reach the cache of a mounted client only.
+    client.mount();
+
+    try {
+        focusManager.setFocused(false);
+        focusManager.setFocused(true);
+
+        await vi.waitFor(() => {
+            expect(client.getQueryState(options.queryKey)?.fetchStatus).toBe('idle');
+            expect(cursors).toEqual([null]);
+        });
+        expect(client.getQueryData(options.queryKey)?.pages).toEqual([
+            { items: [preview('new')], nextCursor: 40 },
+        ]);
+    } finally {
+        unsubscribe();
+        client.unmount();
+        focusManager.setFocused(undefined);
+    }
+});
+
+test('a focus while the feed is fresh keeps every loaded page', () => {
+    const client = new QueryClient();
+    const options = dashboardActivityQueryOptions();
+    const data = {
+        pages: [
+            { items: [preview('a')], nextCursor: 40 },
+            { items: [preview('b')], nextCursor: null },
+        ],
+        pageParams: [null, 40],
+    };
+
+    client.setQueryData(options.queryKey, data);
+    const observer = new InfiniteQueryObserver(client, options);
+    const unsubscribe = observer.subscribe(() => undefined);
+
+    client.mount();
+
+    try {
+        focusManager.setFocused(false);
+        focusManager.setFocused(true);
+
+        expect(client.getQueryData(options.queryKey)?.pages).toHaveLength(2);
+    } finally {
+        unsubscribe();
+        client.unmount();
+        focusManager.setFocused(undefined);
+    }
 });

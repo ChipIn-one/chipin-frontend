@@ -586,26 +586,72 @@ test('ACT-023 connects dashboard infinite scroll to the next activity preview pa
     });
 });
 
-test('DSH-007 an offline session shows the cached dashboard and feed, with a non-blocking notice', async () => {
+test('DSH-007 an offline session shows the cached dashboard and feed without a load-failed notice', async () => {
     resolveDashboardOnboardingData();
     useGroupsStore.setState({ groups: [singleMemberGroup] });
     seedDashboard({ items: [activityItem] });
-    // The restored cache is older than the 30 s staleTime: the mount tries to refresh it.
+    // The restored cache is older than the 30 s staleTime: the mount tries to refresh it, the
+    // first attempt fails and the retry waits for the network (as `queryRetry` does offline).
     client.setQueryData(dashboardKeys.balances(), [], { updatedAt: 0 });
+    client.setQueryDefaults(dashboardKeys.all, { retry: 1, retryDelay: 0 });
     onlineManager.setOnline(false);
     server.use(http.get(BALANCES_URL, () => HttpResponse.error()));
 
     try {
         renderPage();
 
+        await waitFor(() => {
+            expect(client.getQueryState(dashboardKeys.balances())?.fetchStatus).toBe('paused');
+        });
         expect(screen.getByTestId('activity-list')).toBeTruthy();
         expect(screen.getByTestId('groups-cards')).toBeTruthy();
-        expect(await screen.findByRole('alert')).toBeTruthy();
+        // Only the OfflineBanner (in the layout) says that the data may be old.
+        expect(screen.queryByRole('alert')).toBeNull();
         expect(screen.queryByText('errors.loadTitle')).toBeNull();
         expect(screen.queryByTestId('activity-skeleton')).toBeNull();
     } finally {
         onlineManager.setOnline(true);
     }
+});
+
+test('DSH-007 offline without cached dashboard data shows the blocking load error', async () => {
+    resolveDashboardOnboardingData();
+    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    client.removeQueries({ queryKey: dashboardKeys.balances() });
+    client.setQueryDefaults(dashboardKeys.all, { retry: 1, retryDelay: 0 });
+    onlineManager.setOnline(false);
+    server.use(http.get(BALANCES_URL, () => HttpResponse.error()));
+
+    try {
+        renderPage();
+
+        expect(await screen.findByText('errors.loadTitle')).toBeTruthy();
+        expect(client.getQueryState(dashboardKeys.balances())?.fetchStatus).toBe('paused');
+    } finally {
+        onlineManager.setOnline(true);
+    }
+});
+
+test('ACT-023 a failed next page keeps the feed with its inline Retry and no page alert', async () => {
+    resolveDashboardOnboardingData();
+    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    seedDashboard({ items: [activityItem], nextCursor: 40 });
+    const activityRequests = countRequests(ACTIVITY_URL, badRequest);
+
+    renderPage();
+    const lastCall = useInfiniteScrollMock.mock.lastCall;
+
+    if (!lastCall) {
+        throw new Error('Infinite scroll was not initialized');
+    }
+    lastCall[0].onLoadMore();
+
+    const retry = await screen.findByRole('button', { name: 'activity:retryAction' });
+
+    expect(activityRequests).toHaveLength(1);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByTestId('activity-list').contains(retry)).toBe(true);
+    expect(screen.queryByText('errors.loadTitle')).toBeNull();
 });
 
 test('renders the shared profile greeting directly in the dashboard side panel at all breakpoints', () => {

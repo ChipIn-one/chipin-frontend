@@ -5,4 +5,5 @@ export {
     EMPTY_CURRENCY_RATES,
     useCurrencyRatesQuery,
 } from './api/queries';
+export { currencyRateLookup } from './model/rateLookup';
 export type { CurrencyRates } from './model/types';
