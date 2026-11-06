@@ -39,9 +39,6 @@ export interface LoadingStore {
     };
     users: {
         self: LoadingState;
-        settings: LoadingState;
-        removeFriend: LoadingState;
-        avatar: LoadingState;
     };
 
     setLoading: <S extends keyof LoadingStore, F extends keyof LoadingStore[S]>(
@@ -79,9 +76,6 @@ const initialLoadingStore: LoadingSlices = {
     },
     users: {
         self: 'initial',
-        settings: 'initial',
-        removeFriend: 'initial',
-        avatar: 'initial',
     },
 };
 

@@ -1,6 +1,7 @@
 import { Theme } from '@radix-ui/themes';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { beforeEach, expect, test, vi } from 'vitest';
@@ -10,18 +11,14 @@ import { ProtectedRoute } from 'features/routing/ProtectedRoute';
 import i18n from 'i18n';
 import { useAuthStore } from 'store/authStore';
 import { TEST_INVITE_TOKEN } from 'test/fixtures/inviteToken';
+import { setupMswServer } from 'test/mswServer';
+import { mountAsUserClient } from 'test/userClient';
 
 import FriendJoinPage from './FriendJoinPage';
 
 const mocks = vi.hoisted(() => ({
     authSessionVersion: 1,
-    acceptFriendInvite: vi.fn(),
-}));
-
-vi.mock('store/users-store', () => ({
-    useUsersStore: (
-        selector: (state: { acceptFriendInvite: typeof mocks.acceptFriendInvite }) => unknown,
-    ) => selector({ acceptFriendInvite: mocks.acceptFriendInvite }),
+    acceptFriendInvite: vi.fn<(params: { inviteToken: unknown }) => Promise<typeof FRIEND>>(),
 }));
 
 const FRIEND = {
@@ -97,10 +94,39 @@ const currentRoute = () => screen.getByLabelText('Current route').textContent;
 
 const apiError = (status: number) => ({ isAxiosError: true, response: { status, data: {} } });
 
+const server = setupMswServer();
+
+const failureStatus = (error: unknown): number | undefined => {
+    const response: unknown = Reflect.get(Object(error), 'response');
+    const status: unknown = Reflect.get(Object(response), 'status');
+
+    return typeof status === 'number' ? status : undefined;
+};
+
+// The real accept (`POST /users/invite/{token}`) on the signed-in user's client: the handler
+// answers with what `mocks.acceptFriendInvite` resolves; a rejection with a `response.status` is
+// that status, any other one a network error.
 beforeEach(() => {
     vi.clearAllMocks();
     mocks.authSessionVersion = 1;
     useAuthStore.setState({ status: 'authenticated', unauthReason: undefined });
+    mountAsUserClient();
+    server.use(
+        http.post('*/users/invite/:inviteToken', ({ params }) =>
+            Promise.resolve()
+                .then(() => mocks.acceptFriendInvite({ inviteToken: params.inviteToken }))
+                .then(
+                    friend => HttpResponse.json(friend),
+                    (error: unknown) => {
+                        const status = failureStatus(error);
+
+                        return status === undefined
+                            ? HttpResponse.error()
+                            : HttpResponse.json({}, { status });
+                    },
+                ),
+        ),
+    );
     return i18n.changeLanguage('en');
 });
 

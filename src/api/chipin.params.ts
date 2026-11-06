@@ -1,20 +1,8 @@
 import type { ActivityCategory } from 'constants/activity';
 
-import type { ApiUserSettings } from './chipin.raw.types';
-
 export interface CreateGroupParams {
     groupName: string;
     groupDescription?: string;
-}
-
-export interface UpdateUserParams {
-    displayName?: string;
-    settings?: Partial<ApiUserSettings>;
-}
-
-export interface UploadUserAvatarParams {
-    file: File;
-    onProgress?: (progress: number) => void;
 }
 
 export interface UploadGroupCoverParams {
@@ -32,14 +20,6 @@ export interface UpdateGroupParams {
 
 export interface RemoveGroupParams {
     groupId: string;
-}
-
-export interface RemoveKnownUserParams {
-    userId: string;
-}
-
-export interface AcceptUserInviteParams {
-    inviteToken: string;
 }
 
 export interface LeaveGroupParams {

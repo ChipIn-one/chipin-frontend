@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { userSaveGroupExpensesToSolo, userSoloModeByDefault } from 'entities/users';
 import { useUserSetting } from 'hooks/useSelfUser';
-import { useUsersStore } from 'store/users-store';
+import { useUpdateSelf } from 'hooks/useUserMutations';
 
 interface Props {
     isLoading: boolean;
@@ -14,14 +14,14 @@ const SoloPreferencesSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
     const soloModeByDefault = useUserSetting(userSoloModeByDefault);
     const saveGroupExpensesToSolo = useUserSetting(userSaveGroupExpensesToSolo);
-    const setUserSettings = useUsersStore(state => state.setUserSettings);
+    const { updateSelf } = useUpdateSelf();
 
     const onSoloModeByDefaultChange = (isEnabled: boolean) => {
-        void setUserSettings({ settings: { soloModeByDefault: isEnabled } });
+        void updateSelf({ settings: { soloModeByDefault: isEnabled } });
     };
 
     const onSaveGroupExpensesToSoloChange = (isEnabled: boolean) => {
-        void setUserSettings({ settings: { saveGroupExpensesToSolo: isEnabled } });
+        void updateSelf({ settings: { saveGroupExpensesToSolo: isEnabled } });
     };
 
     return (

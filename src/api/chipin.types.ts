@@ -27,13 +27,11 @@ export type {
     ApiRefreshTokenPairResponse,
     ApiSelfUserResponse,
     ApiSettlementDetails,
-    ApiUpdateUserRequest,
     ApiUserResponse,
 } from './chipin.raw.types';
 
 // ─── Re-exports: call param types ─────────────────────────────────────────
 export type {
-    AcceptUserInviteParams,
     CreateGroupParams,
     CreateLedgerEntryParams,
     CreateSettlementParams,
@@ -45,16 +43,13 @@ export type {
     KickGroupMemberParams,
     LeaveGroupParams,
     RemoveGroupParams,
-    RemoveKnownUserParams,
     RemoveLedgerEntryParams,
     SharingMode,
     SharingModeType,
     UpdateGroupParams,
     UpdateLedgerEntryParams,
     UpdateLedgerExpenseParams,
-    UpdateUserParams,
     UploadGroupCoverParams,
-    UploadUserAvatarParams,
 } from './chipin.params';
 
 // ─── Frontend types (used in components, store, hooks) ────────────────────

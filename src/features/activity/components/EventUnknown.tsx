@@ -3,6 +3,8 @@ import { AlertTriangleIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import type { AppEvent } from 'api/activity.types';
+import { isUserTime24H } from 'entities/users';
+import { useUserSetting } from 'hooks/useSelfUser';
 
 import { RelativeTime } from 'basics';
 
@@ -13,6 +15,7 @@ interface EventUnknownProps {
 }
 
 const EventUnknown = ({ event }: EventUnknownProps) => {
+    const isTime24H = useUserSetting(isUserTime24H);
     const { t } = useTranslation('activity');
     const eventType = [event.domain, event.action].join('_');
 
@@ -38,7 +41,7 @@ const EventUnknown = ({ event }: EventUnknownProps) => {
                     </Flex>
                 </Flex>
 
-                <RelativeTime createdAt={event.createdAt} />
+                <RelativeTime createdAt={event.createdAt} isTime24H={isTime24H} />
             </Flex>
         </Card>
     );

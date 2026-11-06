@@ -26,11 +26,6 @@ export interface ApiUserSettings {
     sex: ApiUserSex;
 }
 
-export interface ApiUpdateUserRequest {
-    displayName?: string;
-    settings?: Partial<ApiUserSettings>;
-}
-
 export interface ApiUserResponse {
     id: string;
     email: string;

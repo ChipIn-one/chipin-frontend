@@ -2,12 +2,11 @@ import { Avatar, Box, Button, Card, Flex, Separator, Skeleton, Text } from '@rad
 import { GlobeIcon, RotateCcwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { UserSettings } from 'api/chipin.types';
-import { isUserTime24H as isTime24H, userLanguage } from 'entities/users';
+import { isUserTime24H as isTime24H, type SelfUserSettings, userLanguage } from 'entities/users';
 import { matchLocale, resolveBrowserLocale, type SupportedLocale } from 'helpers/locale';
 import { detectDeviceTimezone, formatUtcOffset, getAmPm24Time } from 'helpers/time';
 import { useUserSetting } from 'hooks/useSelfUser';
-import { useUsersStore } from 'store/users-store';
+import { useUpdateSelf } from 'hooks/useUserMutations';
 
 import LanguageSelector from 'components/LanguageSelector';
 import SegmentedControl from 'components/SegmentedControl';
@@ -20,7 +19,7 @@ const RegionalSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
     const isUserTime24H = useUserSetting(isTime24H);
     const language = useUserSetting(userLanguage);
-    const setUserSettings = useUsersStore(state => state.setUserSettings);
+    const { updateSelf } = useUpdateSelf();
 
     const detectedTimezone = detectDeviceTimezone();
     const utcOffset = formatUtcOffset(new Date().getTimezoneOffset());
@@ -29,13 +28,13 @@ const RegionalSection = ({ isLoading }: Props) => {
     const selectedLanguage = matchLocale(language) ?? 'en';
 
     const onTimeFormatChange = (value: string) => {
-        void setUserSettings({
-            settings: { timeFormat: value as UserSettings['timeFormat'] },
+        void updateSelf({
+            settings: { timeFormat: value as SelfUserSettings['timeFormat'] },
         });
     };
 
     const onLanguageChange = (locale: SupportedLocale) => {
-        void setUserSettings({ settings: { language: locale } });
+        void updateSelf({ settings: { language: locale } });
     };
 
     const onUseSystemLanguage = () => {
