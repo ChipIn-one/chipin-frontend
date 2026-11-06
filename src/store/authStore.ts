@@ -34,7 +34,12 @@ import { useErrorsStore } from './errorsStore';
 import { useExpenseModalStore } from './expenseModalStore';
 import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
-import { cachedUserId, loadKnownUsersForSession, loadSelfUserForSession } from './sessionUser';
+import {
+    cachedUserId,
+    loadKnownUsersForSession,
+    loadSelfUserForSession,
+    resetSessionSelfLoad,
+} from './sessionUser';
 import { useUiPrefsStore } from './ui-prefs';
 
 export interface AuthStore {
@@ -66,6 +71,7 @@ const resetAuthScopedStores = () => {
     useUiPrefsStore.getState().resetUiPrefs();
     useGroupsStore.getState().setInitialGroupsStore();
     useErrorsStore.getState().resetErrors();
+    resetSessionSelfLoad();
     useLoadingStore.getState().setInitialLoadingStore();
 };
 

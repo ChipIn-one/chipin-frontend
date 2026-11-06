@@ -3,6 +3,8 @@ import { toast } from 'sonner';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { PUBLIC_ROUTE_ENTRIES } from 'constants/publicRouteManifest';
+import type { SelfUser } from 'entities/users';
+import { saveLocalUser } from 'helpers/localStorage';
 import { useAuthToasts } from 'hooks/useAuthToasts';
 import { useScrollToTop } from 'hooks/useScrollToTop';
 import { useAuthStore } from 'store/authStore';
@@ -18,7 +20,7 @@ vi.mock('sonner', () => ({
 }));
 // The session self load the public home waits for, set by each test.
 const sessionLoad = vi.hoisted(() => {
-    let state: { status: string; user: null } = { status: 'idle', user: null };
+    let state: { status: string; user: SelfUser | null } = { status: 'idle', user: null };
     const listeners = new Set<() => void>();
 
     return {
@@ -37,6 +39,11 @@ const sessionLoad = vi.hoisted(() => {
         },
     };
 });
+// Solo is not released: the test opens it to an admin, so the role and the preference decide.
+vi.mock('entities/users', async importOriginal => ({
+    ...(await importOriginal<typeof import('entities/users')>()),
+    canRoleAccessSolo: (role: string | undefined) => role === 'ADMIN',
+}));
 vi.mock('store/sessionUser', async importOriginal => ({
     ...(await importOriginal<typeof import('store/sessionUser')>()),
     getSessionSelfLoad: sessionLoad.get,
@@ -152,6 +159,53 @@ test.each(['loaded', 'failed'] as const)(
         });
 
         expect(replace).toHaveBeenCalledExactlyOnceWith('/dashboard');
+        vi.unstubAllGlobals();
+    },
+);
+
+const SETTINGS = {
+    defaultCurrency: 'USD',
+    defaultCategory: 'food',
+    timeFormat: '24h',
+    language: 'en',
+    theme: 'system',
+    simplifyDebts: true,
+    skipCategory: false,
+    soloModeByDefault: false,
+    saveGroupExpensesToSolo: false,
+    sex: 'male',
+} as const;
+
+const loadedUser = (role: 'USER' | 'ADMIN', soloModeByDefault: boolean): SelfUser => ({
+    id: 'user-1',
+    email: 'user@example.com',
+    displayName: 'User',
+    picture: null,
+    role,
+    subscriptionUntil: null,
+    inviteToken: 'invite',
+    settings: { ...SETTINGS, soloModeByDefault },
+    createdAt: 1,
+    updatedAt: 1,
+});
+
+test.each([
+    { cached: ['USER', false], loaded: ['ADMIN', true], expected: '/solo' },
+    { cached: ['ADMIN', true], loaded: ['USER', true], expected: '/dashboard' },
+    { cached: ['ADMIN', true], loaded: ['ADMIN', false], expected: '/dashboard' },
+] as const)(
+    'the loaded user ($loaded) decides over a stale cached one ($cached): $expected',
+    ({ cached, loaded, expected }) => {
+        saveLocalUser({
+            id: 'user-1',
+            role: cached[0],
+            settings: { ...SETTINGS, soloModeByDefault: cached[1] },
+        });
+        sessionLoad.set({ status: 'loaded', user: loadedUser(loaded[0], loaded[1]) });
+
+        const replace = goHome();
+
+        expect(replace).toHaveBeenCalledExactlyOnceWith(expected);
         vi.unstubAllGlobals();
     },
 );

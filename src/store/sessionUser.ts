@@ -231,8 +231,12 @@ export const getCachedSelfUser = (): SelfUser | undefined =>
 export const getCachedKnownUsers = (): KnownUser[] | undefined =>
     tabUserClient()?.getQueryData<KnownUser[]>(usersKeys.known());
 
-/** Tests only: forget the session self load. */
+/**
+ * Forgets the session self load on every transition to unauthenticated (`resetAuthScopedStores`):
+ * no user stays in memory after a sign-out (invariant 12), and a load still in flight can no longer
+ * set it.
+ */
 export const resetSessionSelfLoad = (): void => {
     sessionLoadGeneration += 1;
-    sessionSelfLoad = { status: 'idle', user: null };
+    setSessionSelfLoad({ status: 'idle', user: null });
 };

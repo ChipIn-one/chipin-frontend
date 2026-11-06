@@ -25,7 +25,10 @@ import { setupMswServer } from 'test/mswServer';
 import { createTestQueryClient } from 'test/renderWithQueryClient';
 import { mountAsUserClient } from 'test/userClient';
 
+import { useAuthStore } from './authStore';
 import { getSessionSelfLoad, loadSelfUserForSession, resetSessionSelfLoad } from './sessionUser';
+
+import 'fake-indexeddb/auto';
 
 const server = setupMswServer();
 
@@ -184,6 +187,24 @@ describe('one GET /users/self per session start', () => {
         expect(client.getQueryData(usersKeys.self())).toEqual(userOf('user-y'));
         expect(getLocalUser()?.role).toBe('ADMIN');
         expect(self.count()).toBe(1);
+    });
+
+    test("the token's user differs from the answer: the joined client never gets the other account", async () => {
+        const self = serveSelf(() => userOf('user-z'), { hold: true });
+        saveLocalUser({ id: 'user-y', settings });
+
+        const loaded = loadSelfUserForSession();
+        await settle();
+        const client = createTestQueryClient();
+        takePendingSeed('user-y')?.(client);
+        mountAsUserClient('user-y', client);
+        self.release();
+        await loaded;
+        await settle();
+
+        expect(client.getQueryData(usersKeys.self())).toBeUndefined();
+        expect(self.count()).toBe(1);
+        takePendingSeed('user-z');
     });
 
     test.each([
@@ -352,4 +373,34 @@ test('the session load state: loading, then loaded or failed (latest load only)'
     serveSelf(() => userOf('user-x'));
     await loadSelfUserForSession();
     expect(getSessionSelfLoad()).toMatchObject({ status: 'loaded', user: { id: 'user-x' } });
+});
+
+describe('the session load state ends with the session', () => {
+    test.each([
+        ['a remote sign-out', () => useAuthStore.getState().setUnauthenticated('signed_out')],
+        ['an expiry', () => useAuthStore.getState().expireSession()],
+    ])('%s forgets the loaded user', async (_name, end) => {
+        serveSelf(() => userOf('user-x'));
+        saveLocalUser({ id: 'user-x', settings });
+        mountAsUserClient('user-x', createTestQueryClient());
+        await loadSelfUserForSession();
+        expect(getSessionSelfLoad().user?.id).toBe('user-x');
+
+        end();
+
+        expect(getSessionSelfLoad()).toEqual({ status: 'idle', user: null });
+    });
+
+    test('a load in flight at the sign-out cannot set it afterwards', async () => {
+        const self = serveSelf(() => userOf('user-x'), { hold: true });
+        saveLocalUser({ settings });
+        const loaded = loadSelfUserForSession();
+        await settle();
+
+        useAuthStore.getState().setUnauthenticated('signed_out');
+        self.release();
+        await loaded;
+
+        expect(getSessionSelfLoad()).toEqual({ status: 'idle', user: null });
+    });
 });
