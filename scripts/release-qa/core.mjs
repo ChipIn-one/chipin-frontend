@@ -255,13 +255,122 @@ function qaSteps(body, issueNumber) {
     return checks;
 }
 
+const MAX_PR_STEPS = 20;
+const MAX_TEXT_LENGTH = 300;
+// GitHub rejects Issue bodies above 65,536 characters; PR steps share this budget across the release.
+const MAX_PR_TEXT_TOTAL = 40000;
+const QA_HEADING = /^QA(?:\s*\([^)]*\))?$/i;
+const NO_STEP = /^(?:none|n\/a|no qa(?: needed)?)(?:\s*[.!]?|\s*(?:[(—–,:;-]|=>).*)$/i;
+const THEMATIC_BREAK = /^\s*(?:[-*_]\s*){3,}$/;
+const LIST_ITEM = /^(\s*)(?:[-*+]|\d+[.)])\s+(.*)$/;
+
+// PR bodies and titles are free text that reaches the QA Issue: drop anything that could fake the QA
+// marker or render HTML, break @mentions and #references so a release round never notifies anyone or
+// adds cross-references, and cut by code point so an emoji is never split.
+function safeText(value) {
+    const text = String(value ?? '')
+        .replace(/[<>]/g, '')
+        .replace(/@(?=[A-Za-z0-9])/g, '@\u200b')
+        .replace(/#(?=\d)/g, '#\u200b')
+        .replace(/\s+/g, ' ')
+        .trim();
+    return Array.from(text).slice(0, MAX_TEXT_LENGTH).join('').trim();
+}
+
+// The text of a step item without its checkbox and `QA:` prefix; empty for an unfilled `- [ ]`.
+function itemText(text) {
+    return text
+        .replace(/^\[[ xX]\](?:\s+|$)/, '')
+        .replace(/^QA:\s*/i, '')
+        .trim();
+}
+
+function toStep(text) {
+    const at = text.indexOf('=>');
+    const step = safeText(at < 0 ? text : text.slice(0, at));
+    const expected = at < 0 ? '' : safeText(text.slice(at + 2));
+    return expected ? { step, expected } : { step };
+}
+
+// Steps from a merged PR body: every list item of a `## QA` / `## QA (owner)` section, plus any
+// `- [ ] QA:` line elsewhere. `step => expected` splits; a plain item is a step with no expected result.
+// Nested items and continuation lines join their parent step; code blocks and HTML comments are skipped.
+export function prQaSteps(body) {
+    const items = [];
+    let inSection = false;
+    let fence = null;
+    let comment = false;
+    let parent = null;
+    for (const raw of (body ?? '').split('\n')) {
+        const line = raw.replace(/\r$/, '');
+        if (fence) {
+            const close = /^\s*(`{3,}|~{3,})\s*$/.exec(line)?.[1];
+            if (close && close[0] === fence[0] && close.length >= fence.length) fence = null;
+            continue;
+        }
+        if (comment) {
+            if (line.includes('-->')) comment = false;
+            continue;
+        }
+        // Any indent: a fence nested in a list item sits at 4+ spaces.
+        // A backtick fence's info string has no backticks; otherwise it is an inline code span.
+        const open = /^\s*(`{3,}(?=[^`]*$)|~{3,})/.exec(line)?.[1];
+        if (open) {
+            fence = open;
+            parent = null;
+            continue;
+        }
+        if (/^\s*<!--/.test(line)) {
+            comment = !line.includes('-->');
+            continue;
+        }
+        const heading = /^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line);
+        if (heading) {
+            if (heading[1].length <= 2) inSection = QA_HEADING.test(heading[2]);
+            parent = null;
+            continue;
+        }
+        if (!line.trim() || THEMATIC_BREAK.test(line)) {
+            parent = null;
+            continue;
+        }
+        const listed = LIST_ITEM.exec(line);
+        if (inSection) {
+            if (listed && (!parent || listed[1].length <= parent.indent)) {
+                parent = { indent: listed[1].length, text: itemText(listed[2]) };
+                items.push(parent);
+            } else if (parent) {
+                // A nested item or an indented continuation line belongs to its parent step.
+                const extra = itemText(listed ? listed[2] : line.trim());
+                if (extra) parent.text = parent.text ? `${parent.text}; ${extra}` : extra;
+            }
+            continue;
+        }
+        const qaLine = /^\s*-\s*\[[ xX]\]\s*QA:\s*(.+?)\s*$/.exec(line);
+        if (qaLine) items.push({ text: qaLine[1] });
+    }
+    const steps = [];
+    const seen = new Set();
+    for (const { text } of items) {
+        if (!text || NO_STEP.test(text)) continue;
+        const item = toStep(text);
+        const key = `${item.step}=>${item.expected ?? ''}`;
+        if (!item.step || seen.has(key)) continue;
+        seen.add(key);
+        steps.push(item);
+        if (steps.length === MAX_PR_STEPS) break;
+    }
+    return steps;
+}
+
 function issueUrl(issue) {
     return issue.html_url ?? `https://github.com/${REPOSITORY}/issues/${issue.number}`;
 }
 
 // The Production-to-candidate compare decides whether manual QA is needed at all: only UI-affecting
 // paths (scripts/release-qa/ui-paths.mjs) do. Work without one canonical Issue link blocks only when
-// it touches those paths; an included UI Issue without QA lines gets a check-against-Acceptance line.
+// it touches those paths. QA steps come from the Issue and the bodies of its UI PRs in the compare; an
+// included UI Issue where neither has any gets a check-against-Acceptance line.
 export function buildChecklist({
     files,
     commits,
@@ -303,10 +412,14 @@ export function buildChecklist({
         const linked = included.get(issueNumber) ?? {
             pulls: new Set(),
             needsManualQa: false,
+            uiPulls: [],
             paths: new Set(),
         };
         linked.pulls.add(pull.number);
-        if (touchesUi) linked.needsManualQa = true;
+        if (touchesUi) {
+            linked.needsManualQa = true;
+            linked.uiPulls.push(pull);
+        }
         for (const path of pull.files) linked.paths.add(path);
         included.set(issueNumber, linked);
     }
@@ -340,11 +453,35 @@ export function buildChecklist({
     const smoke = buildAffecting.length > 0 || touchesSmokePath(files);
     const checks = [];
     const missingSteps = [];
+    const titles = { issues: {}, pulls: {} };
+    let prTextBudget = MAX_PR_TEXT_TOTAL;
     for (const [issueNumber, linked] of included) {
         if (!linked.needsManualQa) continue;
         const issue = byIssue.get(issueNumber);
+        if (issue.title) titles.issues[issueNumber] = safeText(issue.title);
         const steps = qaSteps(issue.body, issueNumber);
-        if (steps.length === 0) {
+        const pullSteps = [];
+        for (const pull of [...linked.uiPulls].sort((a, b) => a.number - b.number)) {
+            if (pull.title) titles.pulls[pull.number] = safeText(pull.title);
+            // The group heading costs about its title plus the label.
+            prTextBudget -= (titles.pulls[pull.number]?.length ?? 0) + 40;
+            for (const item of prQaSteps(pull.body)) {
+                prTextBudget -= item.step.length + (item.expected?.length ?? 0) + 24;
+                if (prTextBudget < 0) {
+                    pullSteps.push({
+                        issue: issueNumber,
+                        pull: pull.number,
+                        step: `more QA steps are in the body of PR #${pull.number}`,
+                        expected:
+                            pull.html_url ?? `https://github.com/${REPOSITORY}/pull/${pull.number}`,
+                    });
+                    break;
+                }
+                pullSteps.push({ issue: issueNumber, pull: pull.number, ...item });
+            }
+        }
+        // The Acceptance fallback only when neither the Issue nor any of its UI PRs has QA steps.
+        if (steps.length === 0 && pullSteps.length === 0) {
             missingSteps.push(issueNumber);
             checks.push({
                 issue: issueNumber,
@@ -357,6 +494,7 @@ export function buildChecklist({
         }
         // SMOKE-SHORT already ends with AUTH-041; never add the same check twice.
         if (!smoke) checks.push(...impactChecks([...linked.paths], issueNumber));
+        checks.push(...pullSteps);
     }
     if (smoke) checks.push(...smokeChecks());
     if (checks.length === 0)
@@ -370,16 +508,43 @@ export function buildChecklist({
         noQa,
         smoke,
         buildAffecting,
+        titles,
     };
 }
 
 function renderCheck(item) {
-    const label = item.smoke ? 'SMOKE-SHORT' : `#${item.issue}`;
+    const label = item.smoke ? 'SMOKE-SHORT' : item.pull ? `PR #${item.pull}` : `#${item.issue}`;
     const source =
         item.source && item.source !== 'SMOKE-SHORT'
             ? ` ([${item.source}](${item.sourceUrl}))`
             : '';
-    return `- [ ] ${label}: ${item.step} => ${item.expected}${source}`;
+    const expected = item.expected ? ` => ${item.expected}` : '';
+    return `- [ ] ${label}: ${item.step}${expected}${source}`;
+}
+
+const titled = (label, title) => (title ? `${label}: ${title}` : label);
+
+function groupHeading(item, titles) {
+    if (item.smoke) return '#### SMOKE-SHORT';
+    if (item.pull)
+        return `#### ${titled(`PR #${item.pull}`, titles?.pulls?.[item.pull])} (#${item.issue})`;
+    return `#### ${titled(`#${item.issue}`, titles?.issues?.[item.issue])}`;
+}
+
+// Checks grouped per Issue and per PR, so a tester sees which change every step belongs to.
+function renderChecks(checks, titles) {
+    const lines = [];
+    let current = null;
+    for (const item of checks) {
+        const heading = groupHeading(item, titles);
+        if (heading !== current) {
+            if (current !== null) lines.push('');
+            lines.push(heading);
+            current = heading;
+        }
+        lines.push(renderCheck(item));
+    }
+    return lines.join('\n');
 }
 
 function renderNoQa(item) {
@@ -400,9 +565,9 @@ export function buildIssueBody({ sha, baselineSha, deploymentId, url, plan }) {
                     `- #${item.issue} via ${item.pulls.map(number => `PR #${number}`).join(', ')}`,
             )
             .join('\n') || '- None';
-    const checks = plan.checks.map(renderCheck).join('\n');
+    const checks = renderChecks(plan.checks, plan.titles);
     const missing = plan.missingSteps?.length
-        ? `\n\n### Missing QA steps\n${plan.missingSteps.map(number => `- #${number} has no \`- [ ] QA:\` lines; check it against its Acceptance.`).join('\n')}`
+        ? `\n\n### Missing QA steps\n${plan.missingSteps.map(number => `- Neither #${number} nor its PRs in this release have QA steps; check it against its Acceptance.`).join('\n')}`
         : '';
     const noQa = plan.noQa?.length
         ? `\n\n### No QA needed\n${plan.noQa.map(renderNoQa).join('\n')}`

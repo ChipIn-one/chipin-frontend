@@ -11,6 +11,7 @@ import {
     hasGreenFrontendCiRun,
     isNearMissResult,
     parseQaResult,
+    prQaSteps,
     resultOutcome,
     slackLink,
     validateDeployment,
@@ -19,6 +20,7 @@ import {
 
 const SHA = 'a'.repeat(40);
 const BASE = 'b'.repeat(40);
+const HEAD = 'c'.repeat(40);
 const preview = {
     id: 42,
     sha: SHA,
@@ -624,6 +626,247 @@ describe('scope and canonical QA identity', () => {
         );
         expect(body.match(/- \[ \] SMOKE-SHORT: /g) ?? []).toHaveLength(5);
         expect(body).toMatch(/QA PASS/);
+    });
+
+    test('PR QA steps come from the QA section and from QA: lines, never from other sections or code blocks', () => {
+        const body = [
+            '## Summary',
+            '- [ ] Not a QA step',
+            '- [ ] QA: Open the landing => Stats load',
+            '## QA (owner)',
+            '- [ ] Create an expense 1000 JPY split among 3 → each share 333.',
+            '- [x] QA: Reload the app => No flash',
+            '* Plain bullet step',
+            '### Offline',
+            '- [ ] Go offline: the banner appears',
+            '```',
+            '- [ ] inside a code block',
+            '```',
+            '- [ ] Create an expense 1000 JPY split among 3 → each share 333.',
+            '- None',
+            '## Tests',
+            '- [ ] npm run verify:full',
+        ].join('\n');
+        expect(prQaSteps(body)).toEqual([
+            { step: 'Open the landing', expected: 'Stats load' },
+            { step: 'Create an expense 1000 JPY split among 3 → each share 333.' },
+            { step: 'Reload the app', expected: 'No flash' },
+            { step: 'Plain bullet step' },
+            { step: 'Go offline: the banner appears' },
+        ]);
+        expect(prQaSteps('## QA\n- n/a (CI only)\n')).toEqual([]);
+        expect(prQaSteps(undefined)).toEqual([]);
+    });
+
+    test('PR text cannot fake the QA marker, render HTML or mention anyone, and is bounded', () => {
+        const marker = `<!-- chipin-release-qa:v1 repo=ChipIn-one/chipin-frontend sha=${SHA} deployment=1 -->`;
+        const steps = prQaSteps(
+            `## QA\n- [ ] ${marker} ping @syllik <img src=x> => ok\n- [ ] ${'x'.repeat(400)}\n${Array.from({ length: 30 }, (_, i) => `- [ ] step ${i}`).join('\n')}`,
+        );
+        expect(steps[0].step).not.toMatch(/[<>]/);
+        expect(steps[0].step).toContain('@\u200bsyllik');
+        expect(steps[0].expected).toBe('ok');
+        expect(steps[1].step).toHaveLength(300);
+        expect(steps).toHaveLength(20);
+    });
+
+    test('PR QA parsing skips unfilled items, HTML comments and matched code fences', () => {
+        expect(prQaSteps('## QA (owner)\r\n- [ ]\r\n- [ ] \r\n- [ ] QA:\r\n')).toEqual([]);
+        expect(prQaSteps('## QA\n<!--\n- hidden example\n-->\n<!-- one line -->\n- real')).toEqual([
+            { step: 'real' },
+        ]);
+        expect(
+            prQaSteps(
+                '## QA\n````\n```\n- in a four-backtick fence\n```\n````\n```\n~~~\n- in a fence\n```\n- after the fences',
+            ),
+        ).toEqual([{ step: 'after the fences' }]);
+    });
+
+    test('PR QA parsing finds fences nested in list items, ignores inline code spans and stops at an unclosed fence', () => {
+        expect(
+            prQaSteps(
+                '## QA\n- a\n  - b\n    ```bash\n    npm run x\n    - fake\n    ```\n- c\n- - -\n',
+            ),
+        ).toEqual([{ step: 'a; b' }, { step: 'c' }]);
+        expect(prQaSteps('## QA\n- a\n  ```npm run x``` then check\n- b')).toEqual([
+            { step: 'a; ```npm run x``` then check' },
+            { step: 'b' },
+        ]);
+        expect(prQaSteps('## QA\n- a\n```\n- b\n## Other\n- [ ] QA: later => x')).toEqual([
+            { step: 'a' },
+        ]);
+        expect(
+            prQaSteps('## QA\n- None, docs only\n- No QA needed: CI\n- None => nothing\n'),
+        ).toEqual([]);
+    });
+
+    test('PR QA parsing keeps numbered items, joins nested items to their parent and drops only whole None items', () => {
+        expect(
+            prQaSteps(
+                [
+                    '## QA',
+                    '1. Open Settings',
+                    '   - Expected: toggle visible',
+                    '2) Switch theme',
+                    '   then reload => theme survives',
+                    '+ Plus bullet',
+                    '- None of the rows overflow at 320px',
+                    '- N/A for desktop: check mobile',
+                    '- None (CI only)',
+                    '- None.',
+                ].join('\n'),
+            ),
+        ).toEqual([
+            { step: 'Open Settings; Expected: toggle visible' },
+            { step: 'Switch theme; then reload', expected: 'theme survives' },
+            { step: 'Plus bullet' },
+            { step: 'None of the rows overflow at 320px' },
+            { step: 'N/A for desktop: check mobile' },
+        ]);
+    });
+
+    test('PR text never cross-references Issues and is cut by code point', () => {
+        const [ref, emoji] = prQaSteps(
+            `## QA\n- see #12 and other/repo#3\n- ${'a'.repeat(299)}😀😀`,
+        );
+        expect(ref.step).toBe('see #\u200b12 and other/repo#\u200b3');
+        expect(Array.from(emoji.step)).toHaveLength(300);
+        expect(emoji.step.endsWith('😀')).toBe(true);
+    });
+
+    test('PR steps share one size budget; past it each PR gets one pointer to its body', () => {
+        const long = Array.from(
+            { length: 20 },
+            (_, i) => `- ${i} ${'s'.repeat(290)} => ${'e'.repeat(290)}`,
+        ).join('\n');
+        const pulls = Array.from({ length: 6 }, (_, i) => ({
+            ...pull,
+            number: 30 + i,
+            commits: [String(i)],
+            html_url: `https://github.com/ChipIn-one/chipin-frontend/pull/${30 + i}`,
+            body: `## QA\n${long}`,
+        }));
+        const plan = buildChecklist({
+            files: ['src/App.tsx'],
+            commits: pulls.map(item => item.commits[0]),
+            pulls,
+            issues: [{ ...issue, body: '' }],
+        });
+        const pointers = plan.checks.filter(item => item.step.startsWith('more QA steps'));
+        expect(pointers.map(item => item.pull)).toEqual([33, 34, 35]);
+        expect(pointers[0].expected).toBe('https://github.com/ChipIn-one/chipin-frontend/pull/33');
+        const body = buildIssueBody({
+            sha: SHA,
+            baselineSha: BASE,
+            deploymentId: 42,
+            url: status.environment_url,
+            plan,
+        });
+        expect(body.length).toBeLessThan(65536);
+    });
+
+    test('an Issue without QA lines uses the QA steps of its UI PRs, grouped per PR, and skips the Acceptance fallback', () => {
+        const epic = {
+            number: 12,
+            title: 'Money module',
+            html_url: 'https://github.com/ChipIn-one/chipin-frontend/issues/12',
+            body: '## Acceptance\n- [ ] Works',
+        };
+        const plan = buildChecklist({
+            files: ['src/App.tsx', 'docs/help.md'],
+            commits: [SHA, BASE, HEAD],
+            pulls: [
+                {
+                    ...pull,
+                    number: 22,
+                    title: 'Money parser @syllik',
+                    commits: [SHA],
+                    body: '## QA (owner)\n- [ ] Split 1000 JPY among 3 => each share 333\n',
+                },
+                {
+                    ...pull,
+                    number: 21,
+                    title: 'Balances',
+                    commits: [BASE],
+                    body: '## QA (owner)\n- [ ] Open Balances: totals match\n',
+                },
+                {
+                    ...pull,
+                    number: 23,
+                    commits: [HEAD],
+                    files: ['docs/help.md'],
+                    body: '## QA (owner)\n- [ ] Docs only step\n',
+                },
+            ],
+            issues: [epic],
+        });
+        expect(plan.missingSteps).toEqual([]);
+        expect(plan.checks).toEqual([
+            { issue: 12, pull: 21, step: 'Open Balances: totals match' },
+            { issue: 12, pull: 22, step: 'Split 1000 JPY among 3', expected: 'each share 333' },
+        ]);
+        const body = buildIssueBody({
+            sha: SHA,
+            baselineSha: BASE,
+            deploymentId: 42,
+            url: status.environment_url,
+            plan,
+        });
+        expect(body).toContain(
+            '### Checks (step => expected)\n#### PR #21: Balances (#12)\n- [ ] PR #21: Open Balances: totals match\n\n#### PR #22: Money parser @\u200bsyllik (#12)\n- [ ] PR #22: Split 1000 JPY among 3 => each share 333\n',
+        );
+        expect(body).not.toContain('Docs only step');
+        expect(body).not.toContain('Acceptance of #12');
+        expect(body).not.toContain('### Missing QA steps');
+    });
+
+    test('Issue QA lines come first under the Issue, then its PR steps; the fallback needs neither', () => {
+        const withPr = buildChecklist({
+            files: ['src/App.tsx'],
+            commits: [SHA],
+            pulls: [
+                {
+                    ...pull,
+                    commits: [SHA],
+                    title: 'Settings',
+                    body: '## QA\n- [ ] Toggle theme => Theme applies',
+                },
+            ],
+            issues: [{ ...issue, title: 'Settings page' }],
+        });
+        expect(withPr.checks).toEqual([
+            primary,
+            { issue: 12, pull: 20, step: 'Toggle theme', expected: 'Theme applies' },
+        ]);
+        const body = buildIssueBody({
+            sha: SHA,
+            baselineSha: BASE,
+            deploymentId: 42,
+            url: status.environment_url,
+            plan: withPr,
+        });
+        expect(body).toContain(
+            '#### #12: Settings page\n- [ ] #12: Open settings => Settings page appears\n\n#### PR #20: Settings (#12)\n',
+        );
+        const none = buildChecklist({
+            files: ['src/App.tsx'],
+            commits: [SHA],
+            pulls: [{ ...pull, commits: [SHA], body: '## Summary\n- [ ] Not QA' }],
+            issues: [{ ...issue, body: '## Acceptance\n- [ ] Works' }],
+        });
+        expect(none.missingSteps).toEqual([12]);
+        expect(none.checks).toEqual([expect.objectContaining({ issue: 12, missing: true })]);
+        expect(
+            buildIssueBody({
+                sha: SHA,
+                baselineSha: BASE,
+                deploymentId: 42,
+                url: status.environment_url,
+                plan: none,
+            }),
+        ).toContain(
+            '- Neither #12 nor its PRs in this release have QA steps; check it against its Acceptance.',
+        );
     });
 
     test('the QA Issue links the Russian tester guide on master next to the QA result section', () => {
