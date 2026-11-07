@@ -20,7 +20,6 @@ import { useActivityStore } from './activity-store/actions';
 import { useErrorsStore } from './errorsStore';
 import {
     dropGroupFromList,
-    getCachedGroups,
     invalidateGroupsList,
     putGroupInList,
     reloadGroupsListWith,
@@ -166,18 +165,16 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             set({ selectedGroup: null });
         }
 
-        const cachedGroup =
-            selectedGroup?.id === groupId
-                ? selectedGroup
-                : getCachedGroups()?.find(group => group.id === groupId);
-
-        if (cachedGroup && !force) {
-            set({ selectedGroup: cachedGroup });
-            return Promise.resolve(cachedGroup);
+        // Every caller forces a read today; without `force` only the selected group is reused (the
+        // list is not a detail cache: its entries may be older than the page needs).
+        if (selectedGroup?.id === groupId && !force) {
+            return Promise.resolve(selectedGroup);
         }
 
         const { setLoading } = useLoadingStore.getState();
         const { clearError, setError } = useErrorsStore.getState();
+        // A list loaded after this read was sent is newer than its answer (see `putGroupInList`).
+        const readStartedAt = Date.now();
         const request = groupDetailChannel.request(
             signal => chipinApi.fetchApiUserGroupById(groupId, signal),
             { force, identity: groupId },
@@ -192,7 +189,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     return get().selectedGroup;
                 }
                 set({ selectedGroup: group });
-                void putGroupInList(group);
+                void putGroupInList(group, readStartedAt);
                 return group;
             })
             .catch((error: unknown) => {
@@ -204,7 +201,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                         if (get().selectedGroup?.id === groupId) {
                             resetGroupActivityPagination();
                         }
-                        void dropGroupFromList(groupId);
+                        void dropGroupFromList(groupId, readStartedAt);
                         set(state => ({
                             selectedGroup:
                                 state.selectedGroup?.id === groupId ? null : state.selectedGroup,

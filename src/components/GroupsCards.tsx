@@ -17,10 +17,9 @@ import { legacyRatesFromDecimals } from 'entities/balance';
 import { EMPTY_CURRENCY_RATES, useCurrencyRatesQuery } from 'entities/currency-rates';
 import { userCurrency } from 'entities/users';
 import { getUnixTimestampInSec } from 'helpers/time';
+import { useGroupsList } from 'hooks/useGroupsList';
 import { useUserSetting } from 'hooks/useSelfUser';
 import { selectGroupsCardsView } from 'store/groupsSelectors';
-import { selectGroupListFetched } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
 
 import { EmptyState } from 'basics/empty-states';
 
@@ -50,13 +49,14 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
     const shouldRestoreSearchButtonFocusRef = useRef(false);
     const { t } = useTranslation('dashboard');
     const [nowTimestamp] = useState(() => getUnixTimestampInSec());
-    const isGroupListFetched = useLoadingStore(selectGroupListFetched);
+    // The list has data, or its first load has settled (a failed one included).
+    const { isLoading: isGroupListLoading } = useGroupsList();
     const defaultCurrency = useUserSetting(userCurrency);
     const { data: currencyRates = EMPTY_CURRENCY_RATES, isLoading: isRatesLoading } =
         useCurrencyRatesQuery();
     // The cards convert group balances with the rates: wait for their first load (failed or
     // paused offline counts as done), as for the list.
-    const isReady = isGroupListFetched && !isRatesLoading;
+    const isReady = !isGroupListLoading && !isRatesLoading;
     const rates = useMemo(() => legacyRatesFromDecimals(currencyRates.rates), [currencyRates]);
     const { displayedGroups, hiddenSettledGroups, settledCount } = selectGroupsCardsView(groups, {
         filter: activeFilter,

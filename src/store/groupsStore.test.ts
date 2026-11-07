@@ -97,9 +97,12 @@ let refetchList: () => Promise<unknown>;
 // The tab user's cached groups list.
 const listGroups = (): Group[] | undefined => cachedGroupsList(userCache.client);
 
-// The list as a finished load leaves it: fresh, no request.
+// The list as a load finished a moment before the test leaves it: fresh, no request, and older
+// than any group detail the test reads.
 const seedList = (groups: Group[]): void => {
-    userCache.client.setQueryData(groupsKeys.list(), groupsListData(groups));
+    userCache.client.setQueryData(groupsKeys.list(), groupsListData(groups), {
+        updatedAt: Date.now() - 1_000,
+    });
 };
 
 describe('groupsStore', () => {
@@ -674,6 +677,35 @@ describe('groupsStore', () => {
                 expect(listGroups()).toEqual([updated]);
                 expect(useGroupsStore.getState().selectedGroup).toBe(updated);
                 expect(useErrorsStore.getState().errors.group.data).toBeNull();
+            });
+    });
+
+    test('a detail answer older than the last list load does not change the list', () => {
+        let resolveDetail: ((value: Group) => void) | undefined;
+        const listCopy = { ...group, name: 'From the newer list' } satisfies Group;
+        seedList([group]);
+        vi.mocked(chipinApi.fetchApiUserGroupById).mockImplementationOnce(
+            () =>
+                new Promise(resolve => {
+                    resolveDetail = resolve;
+                }),
+        );
+        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({
+            items: [listCopy],
+            nextCursor: null,
+        });
+
+        const detail = useGroupsStore.getState().fetchSetGroupById(group.id, true);
+
+        // The list loads after the detail read was sent, then the older detail answers.
+        return refetchList()
+            .then(() => {
+                resolveDetail?.({ ...group, name: 'Older detail' });
+                return detail;
+            })
+            .then(() => {
+                expect(listGroups()).toEqual([listCopy]);
+                expect(useGroupsStore.getState().selectedGroup?.name).toBe('Older detail');
             });
     });
 

@@ -66,7 +66,10 @@ test('replaces the cached group after a forced detail refresh', () => {
         updatedAt: 2,
     } satisfies Group;
 
-    userCache.client.setQueryData(groupsKeys.list(), groupsListData([group]));
+    // Loaded before the detail read below.
+    userCache.client.setQueryData(groupsKeys.list(), groupsListData([group]), {
+        updatedAt: Date.now() - 1_000,
+    });
     useGroupsStore.setState({ selectedGroup: group });
     vi.mocked(chipinApi.fetchApiUserGroupById).mockResolvedValue(refreshedGroup);
 

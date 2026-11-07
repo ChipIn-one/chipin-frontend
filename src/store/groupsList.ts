@@ -66,7 +66,8 @@ const editGroupsList = (
     client: QueryClient,
     edit: (data: GroupsListData) => GroupsListData,
 ): ListDebt => {
-    const wasFetching = client.isFetching({ queryKey: listKey }) > 0;
+    // A load paused offline counts too: the cancel below cancels it as well.
+    const wasFetching = (client.getQueryState(listKey)?.fetchStatus ?? 'idle') !== 'idle';
 
     void client.cancelQueries({ queryKey: listKey });
     const state = client.getQueryState<GroupsListData>(listKey);
@@ -92,15 +93,24 @@ const settleDebt = (client: QueryClient, debt: ListDebt): Promise<void> => {
     });
 };
 
+// A read that started before the list's last load is older than the list: it must not change it
+// (a stale response never overwrites newer state). The edits keep the list's age, so only a list
+// load moves it.
+const isListNewerThan = (client: QueryClient, readStartedAt: number | undefined): boolean =>
+    readStartedAt !== undefined &&
+    (client.getQueryState(listKey)?.dataUpdatedAt ?? 0) >= readStartedAt;
+
 /**
- * Puts a group read by a legacy action (the group detail) into the cached list, without a request
- * of its own. Never rejects.
+ * Puts a group read or written by a legacy action into the cached list, without a request of its
+ * own. `readStartedAt`: when a read (the group detail) was sent; a list loaded since then is kept
+ * as it is. Without it the group is a write the server just confirmed (a created group). Never
+ * rejects.
  */
 // TODO(03-11): the group detail (03-10b) writes its own entry.
-export const putGroupInList = (group: Group): Promise<void> => {
+export const putGroupInList = (group: Group, readStartedAt?: number): Promise<void> => {
     const client = tabUserClient();
 
-    return client
+    return client && !isListNewerThan(client, readStartedAt)
         ? settleDebt(
               client,
               editGroupsList(client, data => upsertGroupInList(data, group)),
@@ -108,12 +118,15 @@ export const putGroupInList = (group: Group): Promise<void> => {
         : Promise.resolve();
 };
 
-/** Drops a group the user can no longer read from the cached list. Never rejects. */
+/**
+ * Drops a group the user can no longer read from the cached list; a list loaded since the read
+ * (`readStartedAt`) is kept as it is. Never rejects.
+ */
 // TODO(03-11): the group detail (03-10b) writes its own entry.
-export const dropGroupFromList = (groupId: string): Promise<void> => {
+export const dropGroupFromList = (groupId: string, readStartedAt: number): Promise<void> => {
     const client = tabUserClient();
 
-    return client
+    return client && !isListNewerThan(client, readStartedAt)
         ? settleDebt(
               client,
               editGroupsList(client, data => removeGroupFromList(data, groupId)),

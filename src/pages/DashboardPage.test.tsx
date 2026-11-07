@@ -1,10 +1,14 @@
+import { Theme } from '@radix-ui/themes';
 import type { QueryClient } from '@tanstack/react-query';
 import { onlineManager } from '@tanstack/react-query';
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { delay, http, HttpResponse } from 'msw';
+import { MemoryRouter } from 'react-router-dom';
+import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { ActivityFeedItem, Group, SelfUser } from 'api/chipin.types';
+import { lightThemeStyled } from 'constants/styled-themes';
 import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
 import { dashboardActivityQueryOptions, dashboardKeys } from 'entities/dashboard';
 import { groupsKeys, groupsListQueryOptions } from 'entities/groups';
@@ -47,10 +51,39 @@ vi.mock('components/dashboard-summary', () => ({
         hasExpenseHistory ? <div data-testid="dashboard-summary" /> : null,
 }));
 
-vi.mock('components/GroupsCards', () => ({
-    default: ({ groups }: { groups: Group[] }) => (
-        <div data-testid="groups-cards" data-count={groups.length} />
-    ),
+// The PWA store reads the display mode when its module loads (jsdom has no `matchMedia`); the
+// real group cards below load it.
+vi.hoisted(() => {
+    Object.defineProperty(window, 'matchMedia', {
+        configurable: true,
+        value: (query: string) => ({
+            matches: false,
+            media: query,
+            addEventListener: () => undefined,
+            removeEventListener: () => undefined,
+        }),
+    });
+});
+
+// A stand-in for the group cards, or the real ones for a test that sets `real`.
+const groupsCardsMode = vi.hoisted(() => ({ real: false }));
+
+vi.mock('components/GroupsCards', async importOriginal => {
+    const { default: RealGroupsCards } =
+        await importOriginal<typeof import('components/GroupsCards')>();
+
+    return {
+        default: (props: { groups: Group[]; label: string }) =>
+            groupsCardsMode.real ? (
+                <RealGroupsCards {...props} />
+            ) : (
+                <div data-testid="groups-cards" data-count={props.groups.length} />
+            ),
+    };
+});
+
+vi.mock('components/modals', () => ({
+    CreateUpdateGroupModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 vi.mock('components/internal-page-layout', () => ({
@@ -227,6 +260,7 @@ const renderPage = () => renderWithQueryClient(<DashboardPage />, client);
 
 beforeEach(() => {
     vi.clearAllMocks();
+    groupsCardsMode.real = false;
     client = createTestQueryClient();
     mountAsUserClient('user-1', client);
     useGroupsStore.getState().setInitialGroupsStore();
@@ -723,4 +757,39 @@ test('renders the shared profile greeting directly in the dashboard side panel a
     const greeting = within(sidePanel).getByTestId('dashboard-header');
 
     expect(greeting.parentElement).toBe(sidePanel.firstElementChild);
+});
+
+test('DSH-007 a loaded groups list shows the real group cards, not their skeleton', () => {
+    groupsCardsMode.real = true;
+    resolveDashboardOnboardingData();
+    seedGroups([
+        {
+            ...singleMemberGroup,
+            name: 'Weekend Trip',
+            // An open balance: the card is listed, not auto-hidden as settled.
+            members: [
+                ...singleMemberGroup.members,
+                {
+                    user: { ...creator, id: 'user-2', displayName: 'Bob' },
+                    balancesByCurrency: { USD: { currency: 'USD', netBalance: 5 } },
+                },
+            ],
+        },
+    ]);
+
+    renderWithQueryClient(
+        <MemoryRouter>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <DashboardPage />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+        client,
+    );
+
+    const sidePanel = screen.getByTestId('dashboard-side-panel');
+
+    expect(within(sidePanel).getByText('Weekend Trip')).toBeTruthy();
+    expect(within(sidePanel).getByRole('group', { name: 'groups.filtersLabel' })).toBeTruthy();
 });
