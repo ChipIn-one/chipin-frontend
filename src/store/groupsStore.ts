@@ -173,7 +173,8 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
 
         const { setLoading } = useLoadingStore.getState();
         const { clearError, setError } = useErrorsStore.getState();
-        // A list loaded after this read was sent is newer than its answer (see `putGroupInList`).
+        // A list loaded after this read was sent may be older or newer than its answer: the
+        // list loads again instead (see `putGroupInList`).
         const readStartedAt = Date.now();
         const request = groupDetailChannel.request(
             signal => chipinApi.fetchApiUserGroupById(groupId, signal),
@@ -201,7 +202,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                         if (get().selectedGroup?.id === groupId) {
                             resetGroupActivityPagination();
                         }
-                        void dropGroupFromList(groupId, readStartedAt);
+                        void dropGroupFromList(groupId);
                         set(state => ({
                             selectedGroup:
                                 state.selectedGroup?.id === groupId ? null : state.selectedGroup,

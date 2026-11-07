@@ -680,9 +680,11 @@ describe('groupsStore', () => {
             });
     });
 
-    test('a detail answer older than the last list load does not change the list', () => {
+    test('a detail answer racing a list load reloads the list instead of trusting either', async () => {
         let resolveDetail: ((value: Group) => void) | undefined;
-        const listCopy = { ...group, name: 'From the newer list' } satisfies Group;
+        let resolveFirstList: ((value: { items: Group[]; nextCursor: null }) => void) | undefined;
+        const preExpense = { ...group, name: 'Before the expense' } satisfies Group;
+        const postExpense = { ...group, name: 'After the expense' } satisfies Group;
         seedList([group]);
         vi.mocked(chipinApi.fetchApiUserGroupById).mockImplementationOnce(
             () =>
@@ -690,23 +692,29 @@ describe('groupsStore', () => {
                     resolveDetail = resolve;
                 }),
         );
-        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({
-            items: [listCopy],
-            nextCursor: null,
-        });
+        vi.mocked(chipinApi.fetchApiUserGroups)
+            .mockImplementationOnce(
+                () =>
+                    new Promise(resolve => {
+                        resolveFirstList = resolve;
+                    }),
+            )
+            .mockResolvedValue({ items: [postExpense], nextCursor: null });
 
+        // A list load starts before the detail read and finishes after it was sent.
+        const listLoad = refetchList();
         const detail = useGroupsStore.getState().fetchSetGroupById(group.id, true);
+        resolveFirstList?.({ items: [preExpense], nextCursor: null });
+        await listLoad;
+        resolveDetail?.(postExpense);
+        await detail;
 
-        // The list loads after the detail read was sent, then the older detail answers.
-        return refetchList()
-            .then(() => {
-                resolveDetail?.({ ...group, name: 'Older detail' });
-                return detail;
-            })
-            .then(() => {
-                expect(listGroups()).toEqual([listCopy]);
-                expect(useGroupsStore.getState().selectedGroup?.name).toBe('Older detail');
-            });
+        // The detail answer is not written over the list; one more list load settles it.
+        await vi.waitFor(() => {
+            expect(chipinApi.fetchApiUserGroups).toHaveBeenCalledTimes(2);
+            expect(listGroups()).toEqual([postExpense]);
+        });
+        expect(useGroupsStore.getState().selectedGroup).toBe(postExpense);
     });
 
     test('preserves last-confirmed group on transient detail failure', () => {

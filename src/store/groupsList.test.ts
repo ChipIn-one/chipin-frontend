@@ -173,14 +173,28 @@ test('a group read by a legacy action replaces its list entry without a request,
     expect(listState()?.dataUpdatedAt).toBe(updatedAt);
 });
 
-test('a group read sent before the last list load does not change the list', async () => {
+test('a group read sent before the last list load loads the list again instead of writing', async () => {
+    const requests = serveGroups([group('a', 'Server copy'), group('b')]);
     const readStartedAt = Date.now() - 5_000;
     seed([group('a', 'From the list'), group('b')]);
+    watchList();
 
-    await putGroupInList(group('a', 'Older detail'), readStartedAt);
-    await dropGroupFromList('b', readStartedAt);
+    await putGroupInList(group('a', 'Detail answer'), readStartedAt);
 
-    expect(listed()).toEqual([group('a', 'From the list'), group('b')]);
+    // Neither copy is trusted: the server decides with one more list load.
+    expect(requests.count).toBe(1);
+    expect(listed()).toEqual([group('a', 'Server copy'), group('b')]);
+});
+
+test('a denied group leaves the list even when the list loaded after the read was sent', async () => {
+    const requests = serveGroups([]);
+    seed([group('a'), group('b')]);
+    watchList();
+
+    await dropGroupFromList('a');
+
+    expect(requests.count).toBe(0);
+    expect(listed()).toEqual([group('b')]);
 });
 
 test('a group written during a list load cancels that load and loads the list again', async () => {
@@ -227,11 +241,10 @@ test('a group written while a list load waits offline puts the load back in line
 
 test('a group the user can no longer read leaves the list without a request', async () => {
     const requests = serveGroups([]);
-    const updatedAt = Date.now() - 1_000;
-    seed([group('a'), group('b')], updatedAt);
+    seed([group('a'), group('b')], Date.now() - 1_000);
     watchList();
 
-    await dropGroupFromList('a', updatedAt + 1);
+    await dropGroupFromList('a');
 
     expect(requests.count).toBe(0);
     expect(listed()).toEqual([group('b')]);
