@@ -28,7 +28,6 @@ import { useSelfUserState } from 'hooks/useSelfUser';
 import { OAuthCallbackPage } from 'pages/oauth-callback-page';
 import { clientFor } from 'shared/offline/restore';
 import { useAuthStore } from 'store/authStore';
-import { useGroupsStore } from 'store/groupsStore';
 import { resetSessionSelfLoad } from 'store/sessionUser';
 import { fakeAccessToken } from 'test/fakeAccessToken';
 
@@ -128,7 +127,6 @@ const App = ({ initialEntry = '/', probe }: { initialEntry?: string; probe?: Rea
 
 /** `GET /users/self` answers the user `id`; returns the mock that counts the requests. */
 const mockSignedInFetches = (id: string) => {
-    vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
     return vi.mocked(fetchSelfUser).mockResolvedValue({ ...user, id });
 };
 
@@ -223,7 +221,6 @@ test('OAuth sign-in of a cached user whose user/friends fetches change nothing: 
         token: fakeAccessToken('cached-user'),
         is_new_user: false,
     });
-    vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
     // The self load fails: the loader writes nothing.
     vi.mocked(fetchSelfUser).mockRejectedValue(new Error('Network Error'));
 
@@ -285,7 +282,6 @@ test('a fresh OAuth sign-in whose self load fails: an error, then Retry loads on
         token: 'access-token',
         is_new_user: false,
     });
-    vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
     const loadSelf = vi
         .mocked(fetchSelfUser)
         .mockRejectedValueOnce(new Error('Network Error'))

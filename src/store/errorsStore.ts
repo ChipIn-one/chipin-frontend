@@ -9,7 +9,6 @@ interface RequestErrors {
         logoutOtherDevices: RequestError | null;
     };
     group: {
-        list: RequestError | null;
         data: RequestError | null;
         nextPage: RequestError | null;
         add: RequestError | null;
@@ -56,7 +55,6 @@ export interface ErrorsStore {
 const initialErrors: RequestErrors = {
     auth: { login: null, signOut: null, logoutOtherDevices: null },
     group: {
-        list: null,
         data: null,
         nextPage: null,
         add: null,

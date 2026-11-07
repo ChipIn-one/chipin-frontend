@@ -7,6 +7,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { ROUTES } from 'constants/routes';
 import { userCurrency, userDefaultCategory, userSkipCategory } from 'entities/users';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
+import { useGroups } from 'hooks/useGroupsList';
 import { useKnownUsers } from 'hooks/useKnownUsers';
 import { useSelfUser, useUserSetting } from 'hooks/useSelfUser';
 import { useActivityStore } from 'store/activity-store';
@@ -67,12 +68,8 @@ export const useExpenseModalSource = ({
     const defaultCategory = useUserSetting(userDefaultCategory);
     const skipCategory = useUserSetting(userSkipCategory);
 
-    const { groups, selectedGroup } = useGroupsStore(
-        useShallow(state => ({
-            groups: state.groups,
-            selectedGroup: state.selectedGroup,
-        })),
-    );
+    const groups = useGroups();
+    const selectedGroupId = useGroupsStore(state => state.selectedGroup?.id);
     const openingContext = getExpenseModalContext(context, location.pathname);
 
     return useMemo(
@@ -89,7 +86,7 @@ export const useExpenseModalSource = ({
                 lastUsedCurrency: group.lastUsedCurrency,
             })),
             knownFriends: friends?.map(friend => friend.user) ?? [],
-            defaultGroupId: selectedGroup?.id ?? groups[0]?.id,
+            defaultGroupId: selectedGroupId ?? groups[0]?.id,
             preferredFriendId: friendId,
         }),
         [
@@ -99,7 +96,7 @@ export const useExpenseModalSource = ({
             friends,
             groups,
             openingContext,
-            selectedGroup?.id,
+            selectedGroupId,
             skipCategory,
             user,
         ],

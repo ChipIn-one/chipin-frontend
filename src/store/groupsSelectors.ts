@@ -24,7 +24,6 @@ import { displaySign } from 'shared/money';
 
 import type { GroupsStore } from './groupsStore';
 
-export const selectGroups = (s: GroupsStore) => s.groups;
 export const selectSelectedGroup = (s: GroupsStore) => s.selectedGroup;
 
 export interface GroupSettlementOption {

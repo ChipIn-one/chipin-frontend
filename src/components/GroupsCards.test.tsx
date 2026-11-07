@@ -1,5 +1,6 @@
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http } from 'msw';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
@@ -10,8 +11,12 @@ import type { Group } from 'api/chipin.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { currencyRatesKeys } from 'entities/currency-rates';
-import { useLoadingStore } from 'store/loadingStore';
+import { groupsKeys } from 'entities/groups';
+import { useAuthStore } from 'store/authStore';
+import { seedGroupsList } from 'test/groupsList';
+import { setupMswServer } from 'test/mswServer';
 import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
+import { mountAsUserClient } from 'test/userClient';
 
 import GroupsCards from './GroupsCards';
 
@@ -128,7 +133,11 @@ const createGroup = ({
     };
 };
 
+const server = setupMswServer();
+
 const renderGroups = (groups: Group[], selectedGroupId?: string) => {
+    // A signed-in user whose groups list has loaded: the cards wait for nothing.
+    seedGroupsList(groups);
     const client = createTestQueryClient();
 
     client.setQueryData(currencyRatesKeys.all, {
@@ -152,8 +161,7 @@ beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(NOW * 1000);
 
-    useLoadingStore.getState().setInitialLoadingStore();
-    useLoadingStore.getState().setLoading('group', 'list', 'fetched');
+    useAuthStore.setState({ status: 'authenticated' });
 });
 
 afterEach(() => {
@@ -535,4 +543,31 @@ test('returns focus to the search trigger on Escape', () => {
             expect(screen.queryByRole('textbox', { name: 'groups.searchLabel' })).toBeNull();
             expect(document.activeElement).toBe(searchButton);
         });
+});
+
+test('shows the skeleton while the first load of the groups list is pending', () => {
+    const client = createTestQueryClient();
+
+    mountAsUserClient('user-1', client);
+    client.setQueryData(currencyRatesKeys.all, {
+        base: 'USD',
+        timestamp: NOW,
+        fetchedAt: NOW,
+        stale: false,
+        rates: {},
+    });
+    // The list's first load never answers.
+    server.use(http.get('*/groups', () => new Promise<never>(() => undefined)));
+
+    renderWithQueryClient(
+        <MemoryRouter>
+            <ThemeProvider theme={lightThemeStyled}>
+                <GroupsCards groups={[]} label="Groups" />
+            </ThemeProvider>
+        </MemoryRouter>,
+        client,
+    );
+
+    expect(screen.queryByRole('group', { name: 'groups.filtersLabel' })).toBeNull();
+    expect(client.getQueryState(groupsKeys.list())?.fetchStatus).toBe('fetching');
 });

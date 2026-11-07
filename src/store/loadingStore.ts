@@ -9,7 +9,6 @@ export interface LoadingStore {
         logoutOtherDevices: LoadingState;
     };
     group: {
-        list: LoadingState;
         data: LoadingState;
         nextPage: LoadingState;
         add: LoadingState;
@@ -60,7 +59,6 @@ const initialLoadingStore: LoadingSlices = {
     ledger: { remove: 'initial' },
     settlement: { add: 'initial' },
     group: {
-        list: 'initial',
         data: 'initial',
         nextPage: 'initial',
         add: 'initial',

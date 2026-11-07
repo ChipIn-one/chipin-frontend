@@ -17,7 +17,6 @@ import { fakeAccessToken } from 'test/fakeAccessToken';
 
 import { onAccessTokenRefreshed, useAuthStore } from './authStore';
 import { useExpenseModalStore } from './expenseModalStore';
-import { useGroupsStore } from './groupsStore';
 import { loadKnownUsersForSession, loadSelfUserForSession } from './sessionUser';
 
 import 'fake-indexeddb/auto';
@@ -112,7 +111,6 @@ const expectDraftKept = (): void => {
 };
 
 const mockSignedInFetches = (id: string): void => {
-    vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
     vi.mocked(loadKnownUsersForSession).mockResolvedValue();
     vi.mocked(loadSelfUserForSession).mockImplementation(() => {
         // As the real loader of a new user: `saveLocalUser(toLocalUser(user))`.

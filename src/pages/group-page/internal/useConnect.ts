@@ -13,7 +13,6 @@ import { useLoadingStore } from 'store/loadingStore';
 const useConnect = () => {
     const groupsState = useGroupsStore(
         useShallow(state => ({
-            groups: state.groups,
             selectedGroup: state.selectedGroup,
             fetchSetGroupById: state.fetchSetGroupById,
             fetchMoreGroupActivity: state.fetchMoreGroupActivity,

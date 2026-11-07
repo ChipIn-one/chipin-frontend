@@ -1,15 +1,15 @@
 import { matchPath } from 'react-router-dom';
-import { useShallow } from 'zustand/react/shallow';
 
 import { ROUTES } from 'constants/routes';
 import { hasGroupExpenseTarget, isGroupExpenseTarget } from 'helpers/expenseTargets';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { useGroupsStore } from 'store/groupsStore';
-import { selectGroupDataFetched, selectGroupListFetched } from 'store/loadingSelectors';
+import { selectGroupDataFetched } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
 import { selectIsSoloMode, useUiPrefsStore } from 'store/ui-prefs';
 
+import { useGroupsList } from './useGroupsList';
 import { useKnownUsers } from './useKnownUsers';
 import { useCanAccessSolo, useSelfUser } from './useSelfUser';
 
@@ -19,28 +19,20 @@ const useAddExpenseAvailability = (pathname: string) => {
     const isFriendsPage = pathname === ROUTES.FRIENDS;
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
     const isSoloModeFromStore = useUiPrefsStore(selectIsSoloMode);
-    const { groups, selectedGroup, hasConfirmedGroups } = useGroupsStore(
-        useShallow(state => ({
-            groups: state.groups,
-            selectedGroup: state.selectedGroup,
-            hasConfirmedGroups: state.hasConfirmedGroups,
-        })),
-    );
+    const selectedGroup = useGroupsStore(state => state.selectedGroup);
+    // Loaded or restored from the cache: data is a resolved group list.
+    const listedGroups = useGroupsList().groups;
+    const isGroupListResolved = listedGroups !== undefined;
+    const groups = listedGroups ?? [];
     const { friends } = useKnownUsers();
     const canAccessSolo = useCanAccessSolo();
     // Data (loaded, seeded or restored from the cache) is a confirmed user.
     const currentUser = useSelfUser();
-    const { isGroupDataFetched, isGroupListFetched } = useLoadingStore(
-        useShallow(state => ({
-            isGroupDataFetched: selectGroupDataFetched(state),
-            isGroupListFetched: selectGroupListFetched(state),
-        })),
-    );
+    const isGroupDataFetched = useLoadingStore(selectGroupDataFetched);
 
     // Loaded or restored from the cache: data is a resolved friend list.
     const hasResolvedFriendTarget = (friends?.length ?? 0) > 0;
-    const hasResolvedGroupTarget =
-        (isGroupListFetched || hasConfirmedGroups) && hasGroupExpenseTarget(groups);
+    const hasResolvedGroupTarget = isGroupListResolved && hasGroupExpenseTarget(groups);
     const routeGroup = groupId
         ? selectedGroup?.id === groupId
             ? selectedGroup
@@ -53,8 +45,7 @@ const useAddExpenseAvailability = (pathname: string) => {
         isTargetAvailable = hasResolvedFriendTarget;
     } else if (groupId) {
         isTargetAvailable =
-            (isGroupListFetched || hasConfirmedGroups || isGroupDataFetched) &&
-            isGroupExpenseTarget(routeGroup);
+            (isGroupListResolved || isGroupDataFetched) && isGroupExpenseTarget(routeGroup);
     } else {
         isTargetAvailable = hasResolvedFriendTarget || hasResolvedGroupTarget;
     }

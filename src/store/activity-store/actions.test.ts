@@ -37,7 +37,6 @@ const originalRefreshActions = {
     fetchSetActivity: useActivityStore.getState().fetchSetActivity,
     fetchSetActivitySubevents: useActivityStore.getState().fetchSetActivitySubevents,
     fetchSetGroupById: useGroupsStore.getState().fetchSetGroupById,
-    fetchSetGroups: useGroupsStore.getState().fetchSetGroups,
 };
 
 let dashboardCache: UserDashboardCache;
@@ -58,7 +57,6 @@ afterEach(() => {
     });
     useGroupsStore.setState({
         fetchSetGroupById: originalRefreshActions.fetchSetGroupById,
-        fetchSetGroups: originalRefreshActions.fetchSetGroups,
     });
 });
 

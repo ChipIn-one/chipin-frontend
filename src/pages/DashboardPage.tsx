@@ -3,19 +3,16 @@ import { Button, Container, Flex, Spinner, Text } from '@radix-ui/themes';
 import { ChevronsDownIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { useShallow } from 'zustand/react/shallow';
 
+import type { Group } from 'api/chipin.types';
 import { useCurrencyRatesQuery } from 'entities/currency-rates';
 import { useDashboardActivityQuery, useDashboardBalancesQuery } from 'entities/dashboard';
 import { ActivityEventsList } from 'features/activity';
 import { getActivityPreviewEvents } from 'helpers/activityEvent';
+import { useGroupsList } from 'hooks/useGroupsList';
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 import { useKnownUsers } from 'hooks/useKnownUsers';
 import { useSelfUserState } from 'hooks/useSelfUser';
-import { useErrorsStore } from 'store/errorsStore';
-import { useGroupsStore } from 'store/groupsStore';
-import { selectGroupListFetched } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
 
 import { EmptyState, NoGroupsEmptyState } from 'basics/empty-states';
 import { DashboardOnboarding } from 'components/dashboard-onboarding';
@@ -24,6 +21,8 @@ import GroupsCards from 'components/GroupsCards';
 import { InternalPageColumnsFromSm } from 'components/internal-page-layout';
 import { CreateUpdateGroupModal } from 'components/modals/create-update-group-modal';
 import { ActivityFeedSkeleton } from 'components/skeletons';
+
+const NO_GROUPS: Group[] = [];
 
 const FullWidthButton = styled(Button)`
     width: 100%;
@@ -50,18 +49,12 @@ const DashboardPage = () => {
     const balancesQuery = useDashboardBalancesQuery();
     const activityQuery = useDashboardActivityQuery();
     const ratesQuery = useCurrencyRatesQuery();
-    const { groups, hasConfirmedGroups } = useGroupsStore(
-        useShallow(state => ({
-            groups: state.groups,
-            hasConfirmedGroups: state.hasConfirmedGroups,
-        })),
-    );
+    const groupsList = useGroupsList();
+    const groups = groupsList.groups ?? NO_GROUPS;
     const knownUsers = useKnownUsers();
     const friends = knownUsers.friends ?? [];
     const selfUser = useSelfUserState();
     const currentUser = selfUser.user;
-    const isGroupListFetched = useLoadingStore(selectGroupListFetched);
-    const groupListError = useErrorsStore(state => state.errors.group.list);
 
     const activityItems = useMemo(
         () => activityQuery.data?.pages.flatMap(page => page.items) ?? [],
@@ -86,9 +79,9 @@ const DashboardPage = () => {
         balances,
         activity,
         {
-            fetched: isGroupListFetched,
-            snapshot: hasConfirmedGroups,
-            error: groupListError !== null,
+            fetched: !groupsList.isLoading,
+            snapshot: groupsList.groups !== undefined,
+            error: groupsList.isError || groupsList.hasRefreshError,
         },
         {
             fetched: !knownUsers.isLoading,
@@ -122,10 +115,7 @@ const DashboardPage = () => {
         void ratesQuery.refetch();
         void knownUsers.refetch();
         void selfUser.refetch();
-        useGroupsStore
-            .getState()
-            .fetchSetGroups(true)
-            .catch(() => undefined);
+        void groupsList.refetch();
     };
     const { fetchNextPage } = activityQuery;
 
@@ -162,9 +152,7 @@ const DashboardPage = () => {
                     }
                     data-testid="dashboard-groups-section"
                 >
-                    {!isDashboardFetched ||
-                    !(isGroupListFetched || hasConfirmedGroups) ||
-                    hasGroups ? (
+                    {!isDashboardFetched || groupsList.isLoading || hasGroups ? (
                         <GroupsCards groups={groups} label={t('groups.title')} />
                     ) : (
                         <NoGroupsEmptyState

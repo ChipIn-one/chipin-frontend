@@ -8,7 +8,6 @@ import { getLocalUser, getTabUserId, saveLocalUser } from 'helpers/localStorage'
 
 import { useAuthStore } from './authStore';
 import { useExpenseModalStore } from './expenseModalStore';
-import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
 import { loadKnownUsersForSession, loadSelfUserForSession } from './sessionUser';
 import { APP_MODES, useUiPrefsStore } from './ui-prefs';
@@ -69,7 +68,6 @@ vi.mock('./sessionUser', async importOriginal => ({
 }));
 
 const mockAuthenticatedDataFetches = (): void => {
-    vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
     vi.mocked(loadSelfUserForSession).mockResolvedValue(user);
     vi.mocked(loadKnownUsersForSession).mockResolvedValue();
 };

@@ -14,7 +14,7 @@ import * as localStorageHelpers from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
 import { useConnectivityStore } from 'store/connectivityStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
-import { useGroupsStore } from 'store/groupsStore';
+import { loadGroupsListForSession } from 'store/groupsList';
 import { loadKnownUsersForSession, loadSelfUserForSession } from 'store/sessionUser';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 
@@ -26,6 +26,11 @@ vi.mock('helpers/authSession', async importOriginal => {
 
     return { ...actual, validateAuthSession: vi.fn(actual.validateAuthSession) };
 });
+
+vi.mock('store/groupsList', async importOriginal => ({
+    ...(await importOriginal<typeof import('store/groupsList')>()),
+    loadGroupsListForSession: vi.fn(),
+}));
 
 vi.mock('store/sessionUser', async importOriginal => ({
     ...(await importOriginal<typeof import('store/sessionUser')>()),
@@ -73,7 +78,7 @@ const renderHook = () => {
 };
 
 const mockAuthenticatedDataFetches = (): void => {
-    vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
+    vi.mocked(loadGroupsListForSession).mockResolvedValue();
     vi.mocked(loadSelfUserForSession).mockResolvedValue(user);
     vi.mocked(loadKnownUsersForSession).mockResolvedValue();
 };
@@ -217,7 +222,7 @@ test('preserves the active app mode when a cached user initialized it', () => {
     useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
     const setDefaultAppMode = vi.spyOn(useUiPrefsStore.getState(), 'setDefaultAppMode');
     vi.spyOn(useAuthStore.getState(), 'refreshAuthTokens').mockResolvedValue('next-access-token');
-    vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
+    vi.mocked(loadGroupsListForSession).mockResolvedValue();
     const loadSelf = vi.mocked(loadSelfUserForSession).mockResolvedValue(groupDefaultUser);
     const invalidateKnownUsers = vi.mocked(loadKnownUsersForSession).mockResolvedValue();
 
@@ -372,9 +377,7 @@ test('a network error during the startup refresh: offline-cached, nothing loaded
         return Promise.reject(networkError);
     });
     useAuthStore.setState({ refreshAuthTokens });
-    const fetchSetGroups = vi
-        .spyOn(useGroupsStore.getState(), 'fetchSetGroups')
-        .mockResolvedValue([]);
+    const loadGroupsList = vi.mocked(loadGroupsListForSession).mockResolvedValue();
 
     renderHook();
 
@@ -384,7 +387,7 @@ test('a network error during the startup refresh: offline-cached, nothing loaded
             sessionMode: 'offline-cached',
         });
     }).then(() => {
-        expect(fetchSetGroups).not.toHaveBeenCalled();
+        expect(loadGroupsList).not.toHaveBeenCalled();
     });
 });
 
@@ -418,7 +421,7 @@ test('reconnect: a successful refresh makes the session online and loads the dat
     useAuthStore.setState({ refreshAuthTokens: storeRefreshAuthTokens });
     vi.mocked(validateAuthSession).mockResolvedValue('next-access-token');
     mockAuthenticatedDataFetches();
-    const fetchSetGroups = vi.mocked(useGroupsStore.getState().fetchSetGroups);
+    const loadGroupsList = vi.mocked(loadGroupsListForSession);
     const invalidateKnownUsers = vi.mocked(loadKnownUsersForSession);
 
     renderHook();
@@ -438,7 +441,7 @@ test('reconnect: a successful refresh makes the session online and loads the dat
             });
         })
         .then(() => {
-            expect(fetchSetGroups).toHaveBeenCalledOnce();
+            expect(loadGroupsList).toHaveBeenCalledOnce();
             // The session start of the reconnect reloads the friends once.
             expect(invalidateKnownUsers).toHaveBeenCalledOnce();
         });
@@ -547,7 +550,7 @@ test('a connectivity flap during the reconnect refresh: one refresh, data loaded
     );
     useAuthStore.setState({ refreshAuthTokens });
     mockAuthenticatedDataFetches();
-    const fetchSetGroups = vi.mocked(useGroupsStore.getState().fetchSetGroups);
+    const loadGroupsList = vi.mocked(loadGroupsListForSession);
 
     renderHook();
 
@@ -574,7 +577,7 @@ test('a connectivity flap during the reconnect refresh: one refresh, data loaded
                 finish('next-access-token');
             });
             return waitFor(() => {
-                expect(fetchSetGroups).toHaveBeenCalledOnce();
+                expect(loadGroupsList).toHaveBeenCalledOnce();
             });
         });
 });

@@ -6,9 +6,11 @@ import { beforeEach, expect, test } from 'vitest';
 import type { Group } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
+import { useAuthStore } from 'store/authStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
+import { seedGroupsList } from 'test/groupsList';
 import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
 
 import AddExpenseModal from './AddExpenseModal';
@@ -58,7 +60,9 @@ beforeEach(() => {
     useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
     useExpenseModalStore.getState().reset();
     useGroupsStore.getState().setInitialGroupsStore();
-    useGroupsStore.setState({ groups: [group], selectedGroup: group });
+    useAuthStore.setState({ status: 'authenticated' });
+    useGroupsStore.setState({ selectedGroup: group });
+    seedGroupsList([group]);
     useExpenseModalStore.getState().open();
 });
 

@@ -4,8 +4,10 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
+import { useAuthStore } from 'store/authStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { useGroupsStore } from 'store/groupsStore';
+import { seedGroupsList } from 'test/groupsList';
 
 import ExpenseGroupSearchSelect from './ExpenseGroupSearchSelect';
 
@@ -50,7 +52,8 @@ beforeEach(() => {
     useExpenseModalStore.getState().reset();
     useExpenseModalStore.setState({ groupId: group.id });
     useGroupsStore.getState().setInitialGroupsStore();
-    useGroupsStore.setState({ groups: [group] });
+    useAuthStore.setState({ status: 'authenticated' });
+    seedGroupsList([group]);
 });
 
 afterEach(() => {

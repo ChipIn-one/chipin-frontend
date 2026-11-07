@@ -79,7 +79,6 @@ beforeEach(() => {
     useGroupsStore.getState().setInitialGroupsStore();
     useGroupsStore.setState({
         selectedGroup: group,
-        groups: [group],
         createGroup,
         updateGroup,
         uploadGroupCover,
