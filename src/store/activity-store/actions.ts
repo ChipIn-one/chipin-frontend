@@ -10,6 +10,7 @@ import { getLocalUser } from 'helpers/localStorage';
 import { useErrorsStore } from '../errorsStore';
 import { mapActivityExpenseToModalState } from '../expenseModalEditMapping';
 import type { ExpenseModalEditInitialization, ExpenseModalSource } from '../expenseModalStore';
+import { getCachedGroups } from '../groupsList';
 import { useGroupsStore } from '../groupsStore';
 import { invalidateDashboard } from '../internal/dashboardQueryBridge';
 import { createRequestChannel } from '../internal/resourceRequests';
@@ -94,6 +95,7 @@ const createExpense = (get: () => ActivityStore, params: CreateExpenseParams): P
 
 const getExpenseEditSource = (): ExpenseModalSource => {
     const groupsState = useGroupsStore.getState();
+    const groups = getCachedGroups() ?? [];
     const currentUser = getCachedSelfUser() ?? null;
     // The self query's settings once it has data, else the cached user's (as the UI reads them).
     const settings = currentUser?.settings ?? getLocalUser()?.settings ?? null;
@@ -104,13 +106,13 @@ const getExpenseEditSource = (): ExpenseModalSource => {
         defaultCurrency: userCurrency(settings),
         defaultCategory: userDefaultCategory(settings),
         skipCategory: userSkipCategory(settings),
-        groups: groupsState.groups.map(group => ({
+        groups: groups.map(group => ({
             id: group.id,
             name: group.name,
             members: group.members.map(member => member.user),
         })),
         knownFriends: getCachedKnownUsers()?.map(friend => friend.user) ?? [],
-        defaultGroupId: groupsState.selectedGroup?.id ?? groupsState.groups[0]?.id,
+        defaultGroupId: groupsState.selectedGroup?.id ?? groups[0]?.id,
     };
 };
 

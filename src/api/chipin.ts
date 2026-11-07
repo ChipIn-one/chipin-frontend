@@ -37,8 +37,16 @@ export const exchangeApiGoogleOAuthCode = (code: string): Promise<ApiOAuthTokenP
         .then(response => response.data);
 };
 
-export const fetchApiUserGroups = (signal?: AbortSignal): Promise<ApiGroupsResponse> => {
-    return apiInstance.get<ApiGroupsResponse>('/groups', { signal }).then(result => result.data);
+export const fetchApiUserGroups = (
+    signal?: AbortSignal,
+    cursor?: string,
+): Promise<ApiGroupsResponse> => {
+    return apiInstance
+        .get<ApiGroupsResponse>('/groups', {
+            signal,
+            ...(cursor !== undefined && { params: { cursor } }),
+        })
+        .then(result => result.data);
 };
 
 export const fetchApiUserGroupById = (groupId: string, signal?: AbortSignal): Promise<Group> => {

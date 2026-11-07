@@ -32,6 +32,7 @@ import {
 } from './authConstants';
 import { useErrorsStore } from './errorsStore';
 import { useExpenseModalStore } from './expenseModalStore';
+import { loadGroupsListForSession } from './groupsList';
 import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
 import {
@@ -132,10 +133,9 @@ const dropOtherUserData = (nextUserId: string | null): boolean => {
 const loadSignedInData = (): Promise<void> => {
     const since = Date.now();
     const { setDefaultAppMode } = useUiPrefsStore.getState();
-    const { fetchSetGroups } = useGroupsStore.getState();
 
     return Promise.all([
-        fetchSetGroups(),
+        loadGroupsListForSession(since),
         loadSelfUserForSession(since).then(user => {
             if (user) {
                 setDefaultAppMode(user.settings.soloModeByDefault);

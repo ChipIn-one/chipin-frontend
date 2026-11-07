@@ -7,11 +7,13 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import type { ActivityFeedItem, Group, SelfUser } from 'api/chipin.types';
 import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
 import { dashboardActivityQueryOptions, dashboardKeys } from 'entities/dashboard';
+import { groupsKeys, groupsListQueryOptions } from 'entities/groups';
 import { type KnownUser, knownUsersQueryOptions, usersKeys } from 'entities/users';
 import { useAuthStore } from 'store/authStore';
 import { useErrorsStore } from 'store/errorsStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
+import { groupsListData } from 'test/groupsList';
 import { createKnownUser } from 'test/knownUsers';
 import { setupMswServer } from 'test/mswServer';
 import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
@@ -157,6 +159,7 @@ const ACTIVITY_URL = '*/users/self/activity-previews';
 const RATES_URL = '*/currency-rates';
 const KNOWN_USERS_URL = '*/users/known-users';
 const SELF_URL = '*/users/self';
+const GROUPS_URL = '*/groups';
 const badRequest = () =>
     HttpResponse.json({ code: 'SYSTEM.BAD_REQUEST', message: 'Unavailable' }, { status: 400 });
 
@@ -199,6 +202,17 @@ const failFriendsLoad = async () => {
     await client.prefetchQuery({ ...knownUsersQueryOptions(), staleTime: 0 });
 };
 
+// The groups list as a restored cache or a finished load leaves it: fresh, no request.
+const seedGroups = (groups: Group[] = []) => {
+    client.setQueryData(groupsKeys.list(), groupsListData(groups));
+};
+
+// A load of the groups list that fails (a 400): with seeded groups it is a failed refresh.
+const failGroupsLoad = async () => {
+    countRequests(GROUPS_URL, badRequest);
+    await client.prefetchInfiniteQuery({ ...groupsListQueryOptions(), staleTime: 0 });
+};
+
 const friend = (lastUsedCurrency: string | null = null) =>
     createKnownUser('friend-1', [], { lastUsedCurrency });
 
@@ -206,7 +220,7 @@ const resolveDashboardOnboardingData = () => {
     seedDashboard();
     seedRates();
     seedFriends();
-    useLoadingStore.getState().setLoading('group', 'list', 'fetched');
+    seedGroups();
 };
 
 const renderPage = () => renderWithQueryClient(<DashboardPage />, client);
@@ -274,7 +288,7 @@ test('DSH-013 puts the Create group action below No groups yet at full width', (
 
 test('DSH-012 does not reserve vertical space when the Dashboard summary is empty', () => {
     resolveDashboardOnboardingData();
-    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    seedGroups([singleMemberGroup]);
 
     renderPage();
 
@@ -307,7 +321,7 @@ test('DSH-012 hides settled summary without direct-friend or group history', () 
 
 test('DSH-009 renders normal Dashboard for a one-member group with empty activity', () => {
     resolveDashboardOnboardingData();
-    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    seedGroups([singleMemberGroup]);
     renderPage();
 
     const main = screen.getByTestId('dashboard-main');
@@ -328,7 +342,7 @@ test('DSH-009 renders normal Dashboard for a connected friend with no activity',
 
 test('DSH-010 keeps normal Dashboard with a connection and activity', () => {
     resolveDashboardOnboardingData();
-    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    seedGroups([singleMemberGroup]);
     seedDashboard({ items: [activityItem] });
     renderPage();
 
@@ -338,7 +352,7 @@ test('DSH-010 keeps normal Dashboard with a connection and activity', () => {
 
 test('DSH-007 preserves an existing dashboard after a failed background refresh', async () => {
     resolveDashboardOnboardingData();
-    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    seedGroups([singleMemberGroup]);
     seedDashboard({ items: [activityItem] });
     const balanceRequests = countRequests(BALANCES_URL, badRequest);
     countRequests(ACTIVITY_URL, () => HttpResponse.json({ items: [], nextCursor: null }));
@@ -359,7 +373,7 @@ test('DSH-007 preserves an existing dashboard after a failed background refresh'
 
 test('DSH-007 preserves a confirmed dashboard during background refresh loading', () => {
     resolveDashboardOnboardingData();
-    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    seedGroups([singleMemberGroup]);
     server.use(
         http.get(BALANCES_URL, async () => {
             await delay('infinite');
@@ -374,16 +388,10 @@ test('DSH-007 preserves a confirmed dashboard during background refresh loading'
     expect(screen.queryByTestId('activity-skeleton')).toBeNull();
 });
 
-test('DSH-007 keeps confirmed group snapshot visible after list refresh fails', () => {
+test('DSH-007 keeps confirmed group snapshot visible after list refresh fails', async () => {
     resolveDashboardOnboardingData();
-    useGroupsStore.setState({
-        groups: [singleMemberGroup],
-        hasConfirmedGroups: true,
-    });
-    useLoadingStore.getState().setLoading('group', 'list', 'loading');
-    useErrorsStore.getState().setError('group', 'list', {
-        message: 'Group refresh unavailable',
-    });
+    seedGroups([singleMemberGroup]);
+    await failGroupsLoad();
 
     renderPage();
 
@@ -407,7 +415,7 @@ test('DSH-007 keeps confirmed friend snapshot visible after friends refresh fail
 
 test('DSH-007 preserves a confirmed empty connection list without inventing a new-user state from failure', async () => {
     resolveDashboardOnboardingData();
-    useGroupsStore.setState({ hasConfirmedGroups: true, groups: [] });
+    seedGroups([]);
     await failFriendsLoad();
 
     renderPage();
@@ -417,16 +425,16 @@ test('DSH-007 preserves a confirmed empty connection list without inventing a ne
     expect(screen.queryByText('errors.loadTitle')).toBeNull();
 });
 
-test('DSH-007 treats an initial group failure without confirmed data as blocking', () => {
+test('DSH-007 treats an initial group failure without confirmed data as blocking', async () => {
     resolveDashboardOnboardingData();
-    useErrorsStore.getState().setError('group', 'list', {
-        message: 'No group snapshot',
-    });
+    client.removeQueries({ queryKey: groupsKeys.list() });
+    await failGroupsLoad();
 
     renderPage();
 
+    // The mount retries the failed first load once; it fails again.
+    expect(await screen.findByText('errors.loadTitle')).toBeTruthy();
     expect(screen.queryByTestId('activity-list')).toBeNull();
-    expect(screen.getByText('errors.loadTitle')).toBeTruthy();
 });
 
 test('DSH-007 Retry fetches both dashboard data and currency rates', async () => {
@@ -437,8 +445,14 @@ test('DSH-007 Retry fetches both dashboard data and currency rates', async () =>
     const activityRequests = countRequests(ACTIVITY_URL, badRequest);
     const rateRequests = countRequests(RATES_URL, badRequest);
     const friendRequests = countRequests(KNOWN_USERS_URL, () => HttpResponse.json({ friends: [] }));
+    const groupRequests = countRequests(GROUPS_URL, () =>
+        HttpResponse.json({ items: [], nextCursor: null }),
+    );
 
     renderPage();
+    await waitFor(() => {
+        expect(groupRequests).toHaveLength(1);
+    });
     fireEvent.click(await screen.findByRole('button', { name: 'activity:retryAction' }));
 
     await waitFor(() => {
@@ -447,6 +461,8 @@ test('DSH-007 Retry fetches both dashboard data and currency rates', async () =>
         expect(rateRequests).toHaveLength(2);
         // The friends were cached: Retry reloads them too.
         expect(friendRequests).toHaveLength(1);
+        // The mount loaded the groups; Retry reloads them.
+        expect(groupRequests).toHaveLength(2);
     });
     expect(screen.getByText('errors.loadTitle')).toBeTruthy();
 });
@@ -520,7 +536,7 @@ test('DSH-007 ignores currency-rate failure when onboarding data is resolved', a
 
 test('DSH-007 surfaces a rates-only failure without hiding confirmed Dashboard content', async () => {
     resolveDashboardOnboardingData();
-    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    seedGroups([singleMemberGroup]);
     const rateRequests = failRates();
 
     renderPage();
@@ -550,7 +566,7 @@ test('DSH-007 preserves Welcome with a rates-only failure and offers retry', asy
 test('DSH-007 keeps loading while connection inputs resolve', () => {
     seedDashboard();
     seedRates();
-    useLoadingStore.getState().setLoading('group', 'list', 'fetched');
+    seedGroups();
     seedFriends();
     // The self user is not loaded yet: no `users.self` entry, its load still running.
     client.removeQueries({ queryKey: usersKeys.self() });
@@ -564,7 +580,7 @@ test('DSH-007 keeps loading while connection inputs resolve', () => {
 });
 
 test('ACT-023 connects dashboard infinite scroll to the next activity preview page', async () => {
-    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    seedGroups([singleMemberGroup]);
     resolveDashboardOnboardingData();
     seedDashboard({ items: [activityItem], nextCursor: 40 });
     const activityRequests = countRequests(ACTIVITY_URL, () =>
@@ -602,7 +618,7 @@ test('ACT-023 connects dashboard infinite scroll to the next activity preview pa
 
 test('DSH-007 an offline session shows the cached dashboard and feed without a load-failed notice', async () => {
     resolveDashboardOnboardingData();
-    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    seedGroups([singleMemberGroup]);
     seedDashboard({ items: [activityItem] });
     // The restored cache is older than the 30 s staleTime: the mount tries to refresh it, the
     // first attempt fails and the retry waits for the network (as `queryRetry` does offline).
@@ -630,7 +646,7 @@ test('DSH-007 an offline session shows the cached dashboard and feed without a l
 
 test('DSH-007 offline without cached dashboard data shows the blocking load error', async () => {
     resolveDashboardOnboardingData();
-    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    seedGroups([singleMemberGroup]);
     client.removeQueries({ queryKey: dashboardKeys.balances() });
     client.setQueryDefaults(dashboardKeys.all, { retry: 1, retryDelay: 0 });
     onlineManager.setOnline(false);
@@ -648,7 +664,7 @@ test('DSH-007 offline without cached dashboard data shows the blocking load erro
 
 test('ACT-023 a failed next page keeps the feed with its inline Retry and no page alert', async () => {
     resolveDashboardOnboardingData();
-    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    seedGroups([singleMemberGroup]);
     seedDashboard({ items: [activityItem], nextCursor: 40 });
     const activityRequests = countRequests(ACTIVITY_URL, badRequest);
 
@@ -670,7 +686,7 @@ test('ACT-023 a failed next page keeps the feed with its inline Retry and no pag
 
 test('ACT-023 a remount after 30 s refetches a feed of five loaded pages with one request', async () => {
     resolveDashboardOnboardingData();
-    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    seedGroups([singleMemberGroup]);
     const page = (nextCursor: number | null) => ({ items: [activityItem], nextCursor });
     client.setQueryData(dashboardActivityQueryOptions().queryKey, {
         pages: [page(50), page(40), page(30), page(20), page(10)],

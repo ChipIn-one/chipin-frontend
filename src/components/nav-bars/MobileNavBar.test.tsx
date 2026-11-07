@@ -11,6 +11,7 @@ import { useAuthStore } from 'store/authStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
+import { seedGroupsList } from 'test/groupsList';
 import { createKnownUser, seedKnownUsers } from 'test/knownUsers';
 import { seedSelfUser } from 'test/selfUserSeed';
 
@@ -69,8 +70,9 @@ const soloGroup = {
     recentActivities: { items: [], nextCursor: null },
 } satisfies Group;
 
+// The groups list has loaded without a group.
 const resolveGlobalTargets = () => {
-    useLoadingStore.getState().setLoading('group', 'list', 'fetched');
+    seedGroupsList([]);
 };
 
 beforeEach(() => {
@@ -135,7 +137,7 @@ test('EXP-062 removes the center slot and leaves four navigation items', () => {
 test('EXP-062 keeps four mobile items with only a one-member group', () => {
     resolveGlobalTargets();
     seedSelfUser(currentUser);
-    useGroupsStore.setState({ groups: [soloGroup] });
+    seedGroupsList([soloGroup]);
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>

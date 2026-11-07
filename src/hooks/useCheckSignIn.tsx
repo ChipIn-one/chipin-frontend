@@ -9,7 +9,7 @@ import { AUTH_STATUS, SESSION_MODE, UNAUTH_REASON } from 'store/authConstants';
 import { selectAuthStatus, selectSessionMode } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
 import { useConnectivityStore } from 'store/connectivityStore';
-import { useGroupsStore } from 'store/groupsStore';
+import { loadGroupsListForSession } from 'store/groupsList';
 import { loadKnownUsersForSession, loadSelfUserForSession } from 'store/sessionUser';
 import { useUiPrefsStore } from 'store/ui-prefs';
 
@@ -29,7 +29,6 @@ export const useCheckSignIn = () => {
     const isDisconnected = useConnectivityStore(state => state.mode !== 'online');
     const isOffline = useConnectivityStore(state => state.mode === 'offline');
     const setDefaultAppMode = useUiPrefsStore(state => state.setDefaultAppMode);
-    const fetchSetGroups = useGroupsStore(s => s.fetchSetGroups);
     const hasCachedUserId = useTabUserId() !== undefined;
     const setAuthenticated = useAuthStore(s => s.setAuthenticated);
     const setOfflineCachedSession = useAuthStore(s => s.setOfflineCachedSession);
@@ -57,7 +56,7 @@ export const useCheckSignIn = () => {
     const loadSessionData = useCallback(
         ({ since, hadCachedUser, switchedUser }: SessionStart) =>
             Promise.all([
-                fetchSetGroups(),
+                loadGroupsListForSession(since),
                 loadSelfUserForSession(since).then(user => {
                     if (user && (switchedUser || !hadCachedUser)) {
                         setDefaultAppMode(user.settings.soloModeByDefault);
@@ -65,7 +64,7 @@ export const useCheckSignIn = () => {
                 }),
                 loadKnownUsersForSession(since),
             ]).then(() => undefined),
-        [fetchSetGroups, setDefaultAppMode],
+        [setDefaultAppMode],
     );
 
     useEffect(() => {
