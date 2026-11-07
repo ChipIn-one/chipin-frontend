@@ -37,9 +37,6 @@ interface RequestErrors {
     settlement: {
         add: RequestError | null;
     };
-    users: {
-        self: RequestError | null;
-    };
 }
 
 type ErrorSection = keyof RequestErrors;
@@ -79,7 +76,6 @@ const initialErrors: RequestErrors = {
     expense: { add: null, edit: null, update: null },
     ledger: { remove: null },
     settlement: { add: null },
-    users: { self: null },
 };
 
 export const useErrorsStore = create<ErrorsStore>((set, get) => ({

@@ -34,8 +34,13 @@ import { useErrorsStore } from './errorsStore';
 import { useExpenseModalStore } from './expenseModalStore';
 import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
+import {
+    cachedUserId,
+    loadKnownUsersForSession,
+    loadSelfUserForSession,
+    resetSessionSelfLoad,
+} from './sessionUser';
 import { useUiPrefsStore } from './ui-prefs';
-import { useUsersStore } from './users-store';
 
 export interface AuthStore {
     status: AuthStatus;
@@ -65,7 +70,8 @@ const resetAuthScopedStores = () => {
     useActivityStore.getState().resetActivity();
     useUiPrefsStore.getState().resetUiPrefs();
     useGroupsStore.getState().setInitialGroupsStore();
-    useUsersStore.getState().setInitialUsersStore();
+    useErrorsStore.getState().resetErrors();
+    resetSessionSelfLoad();
     useLoadingStore.getState().setInitialLoadingStore();
 };
 
@@ -75,14 +81,11 @@ const resetUserStores = () => {
     useExpenseModalStore.getState().reset();
 };
 
-/** The signed-in (or last) user of this tab: in memory first, a remote logout already cleared it. */
-const cachedUserId = (): string | undefined =>
-    useUsersStore.getState().localUser?.id ?? getLocalUser()?.id;
-
 // The rows of the "reason → what is deleted" table that delete the user's data (spec 03 §1.5).
-// Synchronous: `LS_KEY_USER` is set first (the store reset re-reads it), then `clearUserData`, whose
-// IDB deletes are not awaited (writes are blocked already, a failure is reported). Without a cached
-// id there is no user cache to delete; the stores and the draft are reset all the same.
+// Synchronous: `LS_KEY_USER` is set first (it moves this tab's user, and the app-mode reset reads
+// its settings), then `clearUserData`, whose IDB deletes are not awaited (writes are blocked
+// already, a failure is reported). Without a cached id there is no user cache to delete; the
+// stores and the draft are reset all the same.
 const dropUserData = (userId: string | undefined, nextUserId: string | null = null): void => {
     const settings = getLocalUser()?.settings;
 
@@ -127,18 +130,18 @@ const dropOtherUserData = (nextUserId: string | null): boolean => {
 };
 
 const loadSignedInData = (): Promise<void> => {
+    const since = Date.now();
     const { setDefaultAppMode } = useUiPrefsStore.getState();
     const { fetchSetGroups } = useGroupsStore.getState();
-    const { fetchSetUser, invalidateKnownUsers } = useUsersStore.getState();
 
     return Promise.all([
         fetchSetGroups(),
-        fetchSetUser().then(user => {
+        loadSelfUserForSession(since).then(user => {
             if (user) {
                 setDefaultAppMode(user.settings.soloModeByDefault);
             }
         }),
-        invalidateKnownUsers({ joinRunning: true }),
+        loadKnownUsersForSession(since),
     ]).then(() => undefined);
 };
 
@@ -198,7 +201,7 @@ export const useAuthStore = create<AuthStore>(set => ({
 
     exchangeGoogleOAuthCode: code => {
         // An OAuth code is single-use. The first `LocalUser.id` written during the exchange
-        // (`fetchSetUser`) remounts the app on the user's QueryClient (spec 03 §1.5), and the
+        // (`loadSelfUserForSession`) remounts the app on the user's QueryClient (spec 03 §1.5), and the
         // remounted callback page asks again: it gets this exchange, not a second request.
         if (lastOAuthExchange?.code === code) {
             return lastOAuthExchange.promise;

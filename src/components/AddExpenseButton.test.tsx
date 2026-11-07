@@ -13,15 +13,14 @@ import { useExpenseModalStore } from 'store/expenseModalStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
-import { useUsersStore } from 'store/users-store';
 import { createKnownUser, seedKnownUsers } from 'test/knownUsers';
+import { clearSeededSelfUser, seedSelfUser } from 'test/selfUserSeed';
 
 import AddExpenseButton from './AddExpenseButton';
 
 import '@radix-ui/themes/styles.css';
 
 import 'i18n/index';
-import 'test/selfUserMirror';
 
 const friend = createKnownUser('friend-1');
 
@@ -118,13 +117,8 @@ beforeEach(() => {
     useExpenseModalStore.getState().reset();
     useGroupsStore.getState().setInitialGroupsStore();
     useErrorsStore.getState().resetErrors();
-    useUsersStore.setState({
-        user: selfUser,
-        localUser: null,
-        hasConfirmedUser: false,
-    });
+    seedSelfUser(selfUser);
     useLoadingStore.getState().setInitialLoadingStore();
-    useLoadingStore.getState().setLoading('users', 'self', 'fetched');
 });
 
 test.each(['mobile', 'desktop', 'sidebar'] as const)(
@@ -149,9 +143,8 @@ test('EXP-061 hides the friend target while the known users have not loaded', ()
 test('EXP-061 does not expose Add Expense before current user resolves', () => {
     resolveGlobalTargets();
     // Before the first self load the self query has no user.
-    useUsersStore.setState({ user: null });
+    clearSeededSelfUser();
     seedKnownUsers([friend]);
-    useLoadingStore.getState().setLoading('users', 'self', 'loading');
 
     renderButton(ROUTES.DASHBOARD);
 
@@ -160,7 +153,7 @@ test('EXP-061 does not expose Add Expense before current user resolves', () => {
 
 test('EXP-061 does not expose Add Expense when self request resolves without a user', () => {
     resolveGlobalTargets();
-    useUsersStore.setState({ user: null });
+    clearSeededSelfUser();
     seedKnownUsers([friend]);
 
     renderButton(ROUTES.DASHBOARD);
@@ -284,12 +277,8 @@ test.each([ROUTES.DASHBOARD, `${ROUTES.GROUP}/group-1`])(
 
 test('EXP-061 retains Add Expense during a confirmed user profile refresh', () => {
     resolveGlobalTargets();
-    useUsersStore.setState({
-        user: selfUser,
-        hasConfirmedUser: true,
-    });
+    seedSelfUser(selfUser);
     seedKnownUsers([friend]);
-    useLoadingStore.getState().setLoading('users', 'self', 'loading');
 
     renderButton(ROUTES.DASHBOARD);
 

@@ -3,13 +3,12 @@ import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
-import type { Group, SelfUser } from 'api/chipin.types';
+import type { Group } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
-import { useUsersStore } from 'store/users-store';
 import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
 
 import AddExpenseModal from './AddExpenseModal';
@@ -55,31 +54,11 @@ const group = {
     },
 } satisfies Group;
 
-const currentUser = {
-    ...creator,
-    role: 'USER',
-    subscriptionUntil: null,
-    inviteToken: 'invite-token-user',
-    settings: {
-        defaultCurrency: 'USD',
-        defaultCategory: 'food',
-        timeFormat: '12h',
-        language: 'en',
-        theme: 'system',
-        simplifyDebts: true,
-        skipCategory: false,
-        soloModeByDefault: false,
-        saveGroupExpensesToSolo: false,
-        sex: 'male',
-    },
-} satisfies SelfUser;
-
 beforeEach(() => {
     useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
     useExpenseModalStore.getState().reset();
     useGroupsStore.getState().setInitialGroupsStore();
     useGroupsStore.setState({ groups: [group], selectedGroup: group });
-    useUsersStore.setState({ user: currentUser });
     useExpenseModalStore.getState().open();
 });
 

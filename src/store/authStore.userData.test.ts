@@ -11,14 +11,14 @@ import {
     establishAuthSession,
     setAccessTokenRefreshListener,
 } from 'helpers/authSession';
-import { getLocalUser, LocalStorage, saveLocalUser } from 'helpers/localStorage';
+import { getLocalUser, getTabUserId, LocalStorage, saveLocalUser } from 'helpers/localStorage';
 import { outboxKeys, queryCacheKey } from 'shared/offline/constants';
 import { fakeAccessToken } from 'test/fakeAccessToken';
 
 import { onAccessTokenRefreshed, useAuthStore } from './authStore';
 import { useExpenseModalStore } from './expenseModalStore';
 import { useGroupsStore } from './groupsStore';
-import { useUsersStore } from './users-store';
+import { loadKnownUsersForSession, loadSelfUserForSession } from './sessionUser';
 
 import 'fake-indexeddb/auto';
 
@@ -26,6 +26,11 @@ vi.mock('@sentry/react', () => ({ captureMessage: vi.fn(), captureException: vi.
 vi.mock('api/chipin', () => ({
     exchangeApiGoogleOAuthCode: vi.fn(),
     refreshApiAuthTokens: vi.fn(),
+}));
+vi.mock('./sessionUser', async importOriginal => ({
+    ...(await importOriginal<typeof import('./sessionUser')>()),
+    loadKnownUsersForSession: vi.fn(),
+    loadSelfUserForSession: vi.fn(),
 }));
 vi.mock('idb-keyval', async importOriginal => {
     const actual = await importOriginal<typeof import('idb-keyval')>();
@@ -82,9 +87,6 @@ const settleIdb = (): Promise<void> => new Promise(resolve => setTimeout(resolve
 const signInX = async (): Promise<void> => {
     await Promise.all(userKeys(USER_X).map(key => set(key, 'x-data')));
     saveLocalUser({ id: USER_X, role: 'ADMIN', settings });
-    useUsersStore.getState().setInitialUsersStore();
-    // A legacy store with X's server data in memory.
-    useUsersStore.setState({ user: selfUser(USER_X) });
     useExpenseModalStore.setState({
         description: 'x expense',
         groupId: 'x-group',
@@ -111,12 +113,10 @@ const expectDraftKept = (): void => {
 
 const mockSignedInFetches = (id: string): void => {
     vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
-    vi.spyOn(useUsersStore.getState(), 'invalidateKnownUsers').mockResolvedValue();
-    vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockImplementation(() => {
-        // As the real action: `saveLocalUser(toLocalUser(user))`.
-        const localUser = { id, role: 'USER' as const, settings };
-        saveLocalUser(localUser);
-        useUsersStore.setState({ user: selfUser(id), localUser });
+    vi.mocked(loadKnownUsersForSession).mockResolvedValue();
+    vi.mocked(loadSelfUserForSession).mockImplementation(() => {
+        // As the real loader of a new user: `saveLocalUser(toLocalUser(user))`.
+        saveLocalUser({ id, role: 'USER', settings });
         return Promise.resolve(selfUser(id));
     });
 };
@@ -149,22 +149,23 @@ describe('reason → what is deleted (spec 03 §1.5)', () => {
 
         expect(await storedKeys(USER_X)).toEqual([]);
         expectDraftReset();
-        expect(useUsersStore.getState().user).toBeNull();
+        expect(getTabUserId()).toBeUndefined();
         expect(getLocalUser()).toEqual({ settings });
         expect(useAuthStore.getState().unauthReason).toBe('signed_out');
     });
 
     test('remote logout (signed_out): clearUserData of the in-memory user, draft reset', async () => {
         await signInX();
-        // The initiating tab has already left only `{ settings }` in the shared localStorage.
-        saveLocalUser({ settings });
+        // The initiating tab has already left only `{ settings }` in the shared localStorage (a
+        // write of another tab: this tab's user stays X).
+        LocalStorage.set(LS_KEY_USER, { settings });
 
         useAuthStore.getState().setUnauthenticated('signed_out');
         await settleIdb();
 
         expect(await storedKeys(USER_X)).toEqual([]);
         expectDraftReset();
-        expect(useUsersStore.getState().user).toBeNull();
+        expect(getTabUserId()).toBeUndefined();
         expect(getLocalUser()).toEqual({ settings });
     });
 
@@ -182,8 +183,8 @@ describe('reason → what is deleted (spec 03 §1.5)', () => {
 
         expect(await storedKeys(USER_X)).toEqual(userKeys(USER_X));
         expectDraftKept();
-        // Legacy stores are reset and reloaded after sign-in.
-        expect(useUsersStore.getState().user).toBeNull();
+        // This tab keeps its user: the cache stays the one an online sign-in continues.
+        expect(getTabUserId()).toBe(USER_X);
         expect(getLocalUser()).toEqual({ id: USER_X, settings });
     });
 
@@ -264,7 +265,7 @@ describe('reason → what is deleted (spec 03 §1.5)', () => {
         // No X data in any store, in the draft, or in IDB (C1-02).
         expect(await storedKeys(USER_X)).toEqual([]);
         expectDraftReset();
-        expect(useUsersStore.getState().user?.id).toBe(USER_Y);
+        expect(getTabUserId()).toBe(USER_Y);
         expect(getLocalUser()).toEqual({ id: USER_Y, role: 'USER', settings });
         expect(useAuthStore.getState().status).toBe('authenticated');
     });
@@ -325,7 +326,7 @@ describe('another tab switched the account (a refreshed token of Y)', () => {
 
         expect(await storedKeys(USER_X)).toEqual([]);
         expectDraftReset();
-        expect(useUsersStore.getState().user?.id).toBe(USER_Y);
+        expect(getTabUserId()).toBe(USER_Y);
         expect(getLocalUser()).toEqual({ id: USER_Y, role: 'USER', settings });
     });
 
@@ -368,7 +369,6 @@ describe('the session continues for the same user', () => {
 
     test('a draft of another user is reset on sign-in even without a cached id', async () => {
         saveLocalUser({ settings });
-        useUsersStore.getState().setInitialUsersStore();
         useExpenseModalStore.setState({ description: 'x expense', ownerId: USER_X });
 
         await signInWith(USER_Y, 'draft-owner-code');

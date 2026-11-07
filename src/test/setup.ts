@@ -2,6 +2,8 @@ import { createElement, type JSXElementConstructor, type ReactNode } from 'react
 import { cleanup, type RenderHookOptions, type RenderOptions } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 
+import { resetTabUserId } from 'helpers/localStorage';
+
 import { DefaultTestQueryProvider, resetTestQueryClients } from './renderWithQueryClient';
 
 type Wrapper = JSXElementConstructor<{ children: ReactNode }>;
@@ -72,4 +74,6 @@ Object.defineProperties(HTMLElement.prototype, {
 afterEach(() => {
     cleanup();
     resetTestQueryClients();
+    // The next test reads this tab's user from the `LocalUser` it sets up.
+    resetTabUserId();
 });

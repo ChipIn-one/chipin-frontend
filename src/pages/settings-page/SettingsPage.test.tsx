@@ -6,7 +6,7 @@ import { expect, test, vi } from 'vitest';
 import type { UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
-import { useUsersStore } from 'store/users-store';
+import { saveLocalUser } from 'helpers/localStorage';
 import { getOrThrow } from 'test/getOrThrow';
 import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
 
@@ -59,7 +59,7 @@ const renderSettings = () => {
 };
 
 test('does not render unfinished notifications settings', () => {
-    useUsersStore.setState({ user: null, localUser: { role: 'ADMIN', settings } });
+    saveLocalUser({ role: 'ADMIN', settings });
     renderSettings();
 
     const sectionTitles = SECTION_TITLES.map(title => screen.getByText(title));
@@ -79,7 +79,7 @@ test('does not render unfinished notifications settings', () => {
 });
 
 test.each(['USER', 'ADMIN'] as const)('hides Solo preferences for a $role user', role => {
-    useUsersStore.setState({ user: null, localUser: { role, settings } });
+    saveLocalUser({ role, settings });
 
     renderSettings();
 

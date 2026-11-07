@@ -1,10 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import type { Group, SelfUser } from 'api/chipin.types';
+import type { Group } from 'api/chipin.types';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
 import { getOrThrow } from 'test/getOrThrow';
 
 import GroupPage from './GroupPage';
@@ -79,32 +78,12 @@ const group = {
     },
 } satisfies Group;
 
-const currentUser = {
-    ...creator,
-    role: 'USER',
-    subscriptionUntil: null,
-    inviteToken: 'invite-token-user',
-    settings: {
-        defaultCurrency: 'USD',
-        defaultCategory: 'food',
-        timeFormat: '12h',
-        language: 'en',
-        theme: 'system',
-        simplifyDebts: true,
-        skipCategory: false,
-        soloModeByDefault: false,
-        saveGroupExpensesToSolo: false,
-        sex: 'male',
-    },
-} satisfies SelfUser;
-
 beforeEach(() => {
     useGroupsStore.getState().setInitialGroupsStore();
     useGroupsStore.setState({ groups: [group] });
     useGroupsStore.getState().setSelectedGroup(group);
     useGroupsStore.setState({ fetchSetGroupById: vi.fn(() => Promise.resolve(group)) });
     useLoadingStore.getState().setInitialLoadingStore();
-    useUsersStore.setState({ user: currentUser });
 });
 
 test('composes summaries without viewport-specific component props', () => {

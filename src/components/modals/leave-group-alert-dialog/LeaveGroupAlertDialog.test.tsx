@@ -6,7 +6,6 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import type { Group, SelfUser } from 'api/chipin.types';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
 
 import LeaveGroupAlertDialog from './LeaveGroupAlertDialog';
 
@@ -67,7 +66,6 @@ const group = {
 beforeEach(() => {
     vi.clearAllMocks();
     useLoadingStore.getState().setInitialLoadingStore();
-    useUsersStore.setState({ user: currentUser });
 });
 
 test('waits for confirmation before leaving a group', () => {

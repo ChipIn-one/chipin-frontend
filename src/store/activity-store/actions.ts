@@ -13,9 +13,8 @@ import type { ExpenseModalEditInitialization, ExpenseModalSource } from '../expe
 import { useGroupsStore } from '../groupsStore';
 import { invalidateDashboard } from '../internal/dashboardQueryBridge';
 import { createRequestChannel } from '../internal/resourceRequests';
-import { getCachedKnownUsers, getCachedSelfUser } from '../internal/usersQueryBridge';
 import { useLoadingStore } from '../loadingStore';
-import { useUsersStore } from '../users-store';
+import { getCachedKnownUsers, getCachedSelfUser, invalidateKnownUsers } from '../sessionUser';
 
 import { initialState } from './initialState';
 import type {
@@ -49,7 +48,7 @@ const refreshFinancialData = (
     if (groupId) {
         requests.push(useGroupsStore.getState().fetchSetGroupById(groupId, true));
     } else {
-        requests.push(useUsersStore.getState().invalidateKnownUsers());
+        requests.push(invalidateKnownUsers());
     }
 
     if (parentActivityId) {
@@ -94,9 +93,8 @@ const createExpense = (get: () => ActivityStore, params: CreateExpenseParams): P
 };
 
 const getExpenseEditSource = (): ExpenseModalSource => {
-    const usersState = useUsersStore.getState();
     const groupsState = useGroupsStore.getState();
-    const currentUser = getCachedSelfUser(usersState.localUser?.id) ?? null;
+    const currentUser = getCachedSelfUser() ?? null;
     // The self query's settings once it has data, else the cached user's (as the UI reads them).
     const settings = currentUser?.settings ?? getLocalUser()?.settings ?? null;
 
@@ -111,8 +109,7 @@ const getExpenseEditSource = (): ExpenseModalSource => {
             name: group.name,
             members: group.members.map(member => member.user),
         })),
-        knownFriends:
-            getCachedKnownUsers(usersState.localUser?.id)?.map(friend => friend.user) ?? [],
+        knownFriends: getCachedKnownUsers()?.map(friend => friend.user) ?? [],
         defaultGroupId: groupsState.selectedGroup?.id ?? groupsState.groups[0]?.id,
     };
 };

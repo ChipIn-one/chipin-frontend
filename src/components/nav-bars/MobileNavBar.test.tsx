@@ -11,13 +11,12 @@ import { useAuthStore } from 'store/authStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
-import { useUsersStore } from 'store/users-store';
 import { createKnownUser, seedKnownUsers } from 'test/knownUsers';
+import { seedSelfUser } from 'test/selfUserSeed';
 
 import MobileNavBar from './MobileNavBar';
 
 import 'i18n/index';
-import 'test/selfUserMirror';
 
 const LocationPath = () => {
     const location = useLocation();
@@ -79,11 +78,6 @@ beforeEach(() => {
     useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
     useGroupsStore.getState().setInitialGroupsStore();
     useLoadingStore.getState().setInitialLoadingStore();
-    useUsersStore.setState({
-        user: null,
-        localUser: { role: 'ADMIN', settings },
-        hasConfirmedUser: false,
-    });
 });
 
 test.each([
@@ -140,9 +134,8 @@ test('EXP-062 removes the center slot and leaves four navigation items', () => {
 
 test('EXP-062 keeps four mobile items with only a one-member group', () => {
     resolveGlobalTargets();
-    useUsersStore.setState({ user: currentUser });
+    seedSelfUser(currentUser);
     useGroupsStore.setState({ groups: [soloGroup] });
-    useLoadingStore.getState().setLoading('users', 'self', 'fetched');
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
@@ -159,13 +152,9 @@ test('EXP-062 keeps four mobile items with only a one-member group', () => {
 });
 
 test('EXP-062 keeps the center action during a confirmed friend refresh', () => {
-    useUsersStore.setState({
-        user: currentUser,
-        hasConfirmedUser: true,
-    });
+    seedSelfUser(currentUser);
     // Cached friends stay a resolved target while the query refetches.
     seedKnownUsers([friend]);
-    useLoadingStore.getState().setLoading('users', 'self', 'loading');
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
@@ -183,9 +172,8 @@ test('EXP-062 keeps the center action during a confirmed friend refresh', () => 
 
 test('EXP-062 restores the lifted Add Expense slot for a valid target', () => {
     resolveGlobalTargets();
-    useUsersStore.setState({ user: currentUser });
+    seedSelfUser(currentUser);
     seedKnownUsers([friend]);
-    useLoadingStore.getState().setLoading('users', 'self', 'fetched');
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>

@@ -4,7 +4,6 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import type { UserSettings } from 'api/chipin.types';
 import { saveLocalUser } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
-import { useUsersStore } from 'store/users-store';
 
 import { PublicLocaleRoute } from './PublicLocaleRoute';
 
@@ -60,7 +59,6 @@ beforeEach(() => {
     i18nMock.instance.resolvedLanguage = 'en';
     document.documentElement.lang = 'en';
     useAuthStore.setState({ status: 'authenticated' });
-    useUsersStore.getState().setInitialUsersStore();
     saveLocalUser({ role: 'USER', settings });
 });
 

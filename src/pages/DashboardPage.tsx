@@ -11,12 +11,11 @@ import { ActivityEventsList } from 'features/activity';
 import { getActivityPreviewEvents } from 'helpers/activityEvent';
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 import { useKnownUsers } from 'hooks/useKnownUsers';
-import { useSelfUser } from 'hooks/useSelfUser';
+import { useSelfUserState } from 'hooks/useSelfUser';
 import { useErrorsStore } from 'store/errorsStore';
 import { useGroupsStore } from 'store/groupsStore';
-import { selectGroupListFetched, selectUserSelfFetched } from 'store/loadingSelectors';
+import { selectGroupListFetched } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
 
 import { EmptyState, NoGroupsEmptyState } from 'basics/empty-states';
 import { DashboardOnboarding } from 'components/dashboard-onboarding';
@@ -59,19 +58,10 @@ const DashboardPage = () => {
     );
     const knownUsers = useKnownUsers();
     const friends = knownUsers.friends ?? [];
-    const currentUser = useSelfUser();
-    const { isGroupListFetched, isUserSelfFetched } = useLoadingStore(
-        useShallow(state => ({
-            isGroupListFetched: selectGroupListFetched(state),
-            isUserSelfFetched: selectUserSelfFetched(state),
-        })),
-    );
-    const { groupListError, userSelfError } = useErrorsStore(
-        useShallow(state => ({
-            groupListError: state.errors.group.list,
-            userSelfError: state.errors.users.self,
-        })),
-    );
+    const selfUser = useSelfUserState();
+    const currentUser = selfUser.user;
+    const isGroupListFetched = useLoadingStore(selectGroupListFetched);
+    const groupListError = useErrorsStore(state => state.errors.group.list);
 
     const activityItems = useMemo(
         () => activityQuery.data?.pages.flatMap(page => page.items) ?? [],
@@ -106,9 +96,9 @@ const DashboardPage = () => {
             error: knownUsers.isError || knownUsers.hasRefreshError,
         },
         {
-            fetched: isUserSelfFetched,
+            fetched: selfUser.isFetched,
             snapshot: currentUser !== null,
-            error: userSelfError !== null,
+            error: selfUser.isError || selfUser.hasRefreshError,
         },
     ];
     const isOnboardingDataSettled = resources.every(({ fetched, snapshot }) => fetched || snapshot);
@@ -131,10 +121,11 @@ const DashboardPage = () => {
         void activityQuery.refetch();
         void ratesQuery.refetch();
         void knownUsers.refetch();
-        Promise.all([
-            useGroupsStore.getState().fetchSetGroups(true),
-            useUsersStore.getState().fetchSetUser(true),
-        ]).catch(() => undefined);
+        void selfUser.refetch();
+        useGroupsStore
+            .getState()
+            .fetchSetGroups(true)
+            .catch(() => undefined);
     };
     const { fetchNextPage } = activityQuery;
 

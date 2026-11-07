@@ -6,8 +6,8 @@ import { beforeEach, expect, test } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
+import { saveLocalUser } from 'helpers/localStorage';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
-import { useUsersStore } from 'store/users-store';
 
 import HeaderNav from './HeaderNav';
 
@@ -33,10 +33,7 @@ const settings = {
 } satisfies UserSettings;
 
 beforeEach(() => {
-    useUsersStore.setState({
-        user: null,
-        localUser: { role: 'ADMIN', settings },
-    });
+    saveLocalUser({ role: 'ADMIN', settings });
 });
 
 test.each([
