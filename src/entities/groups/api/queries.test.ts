@@ -1,6 +1,6 @@
 import { dehydrate, InfiniteQueryObserver, QueryClient } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
 
 import type { Group } from 'api/chipin.types';
 import { ApiError } from 'shared/api/client';
@@ -135,22 +135,60 @@ test('a group detail read replaces its list entry', async () => {
     ).toEqual([read, group('b')]);
 });
 
-test('a seed becomes the first activity page only while nothing is cached or loading', () => {
+test('a seed becomes the first activity page, as old as the detail read that carried it', () => {
     const client = new QueryClient();
     const page = { items: [preview('p1')], nextCursor: 7 };
 
-    seedGroupActivity(client, 'a', page);
+    seedGroupActivity(client, 'a', page, 1_000);
     expect(client.getQueryData(groupsKeys.activity('a'))).toEqual({
         pages: [page],
         pageParams: [null],
     });
+    expect(client.getQueryState(groupsKeys.activity('a'))?.dataUpdatedAt).toBe(1_000);
 
     // Cached activity (a newer read) is never replaced.
-    seedGroupActivity(client, 'a', { items: [preview('p2')], nextCursor: null });
+    seedGroupActivity(client, 'a', { items: [preview('p2')], nextCursor: null }, Date.now());
     expect(client.getQueryData(groupsKeys.activity('a'))).toEqual({
         pages: [page],
         pageParams: [null],
     });
+});
+
+test('a seed does nothing while the first activity page is loading', async () => {
+    let answer: (() => void) | undefined;
+    server.use(
+        http.get(
+            '*/groups/a/activity-previews',
+            () =>
+                new Promise<Response>(resolve => {
+                    answer = () => {
+                        resolve(
+                            HttpResponse.json({ items: [wirePreview('read')], nextCursor: null }),
+                        );
+                    };
+                }),
+        ),
+    );
+    const client = new QueryClient();
+    const loading = client.fetchInfiniteQuery(groupActivityQueryOptions('a'));
+
+    expect(client.getQueryState(groupsKeys.activity('a'))?.fetchStatus).toBe('fetching');
+    seedGroupActivity(client, 'a', { items: [preview('seed')], nextCursor: 7 }, Date.now());
+    expect(client.getQueryData(groupsKeys.activity('a'))).toBeUndefined();
+
+    await vi.waitFor(() => {
+        expect(answer).toBeDefined();
+    });
+    answer?.();
+    await loading;
+    expect(
+        flattenGroupActivity(
+            client.getQueryData<GroupActivityData>(groupsKeys.activity('a')) ?? {
+                pages: [],
+                pageParams: [],
+            },
+        ),
+    ).toEqual([preview('read')]);
 });
 
 test.each([403, 404])(

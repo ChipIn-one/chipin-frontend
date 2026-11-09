@@ -75,12 +75,14 @@ export const isGroupDeniedError = (error: unknown): boolean =>
 /**
  * Seeds the first page of a group's activity from the page its detail carries, when the activity
  * has nothing cached and is not loading, so opening a group sends one request. A seed never
- * replaces cached or loading activity (a newer read wins).
+ * replaces cached or loading activity (a newer read wins). It is as old as the detail read that
+ * carried it (`updatedAt`): a seed from an old detail is stale, so the first page loads again.
  */
 export const seedGroupActivity = (
     client: QueryClient,
     groupId: string,
     page: GroupActivityPage,
+    updatedAt: number,
 ): void => {
     const queryKey = groupsKeys.activity(groupId);
     const state = client.getQueryState(queryKey);
@@ -88,10 +90,11 @@ export const seedGroupActivity = (
     if (state?.data !== undefined || (state?.fetchStatus ?? 'idle') !== 'idle') {
         return;
     }
-    client.setQueryData<GroupActivityData>(queryKey, {
-        pages: [page],
-        pageParams: [firstActivityPageParam()],
-    });
+    client.setQueryData<GroupActivityData>(
+        queryKey,
+        { pages: [page], pageParams: [firstActivityPageParam()] },
+        { updatedAt },
+    );
 };
 
 // A group read keeps the cached list current (03-10a race rules, `putGroupInCachedList`), and a

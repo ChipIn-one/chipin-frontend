@@ -9,6 +9,7 @@ import type { ActivityPreview } from 'entities/activity';
 import { legacyActivityPreview } from 'entities/balance';
 import {
     type GroupActivityPage,
+    groupsKeys,
     isGroupDeniedError,
     seedGroupActivity,
     useGroupActivityQuery,
@@ -100,10 +101,13 @@ export const useGroupActivity = (
     const embedded = useMemo(() => recent && toEmbeddedPage(recent), [recent]);
 
     // Declared before the query: React runs effects in order, so the seed lands before the
-    // enabled query decides whether to fetch its first page.
+    // enabled query decides whether to fetch its first page. The seed keeps the age of the detail
+    // read that carried it (a detail restored from the cache gives a stale seed, then a fetch).
     useEffect(() => {
-        if (isEnabled && embedded) {
-            seedGroupActivity(client, groupId, embedded);
+        const detailUpdatedAt = client.getQueryState(groupsKeys.detail(groupId))?.dataUpdatedAt;
+
+        if (isEnabled && embedded && detailUpdatedAt) {
+            seedGroupActivity(client, groupId, embedded, detailUpdatedAt);
         }
     }, [client, embedded, groupId, isEnabled]);
 
