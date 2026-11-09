@@ -5,15 +5,20 @@ import * as activityApi from 'api/activityApi';
 import type { ApiExpenseLedgerEntry } from 'api/chipin.raw.types';
 import * as ledgerApi from 'api/ledgerApi';
 import { ACTIVITY_ACTIONS, ACTIVITY_CATEGORIES } from 'constants/activity';
+import { mountUserDashboardCache, type UserDashboardCache } from 'test/userDashboardCache';
 
-import { useDashboardStore } from '../dashboardStore';
 import { useErrorsStore } from '../errorsStore';
 import { useGroupsStore } from '../groupsStore';
 import { useLoadingStore } from '../loadingStore';
-import { useUsersStore } from '../users-store';
+import { invalidateKnownUsers } from '../sessionUser';
 
 import { useActivityStore } from './actions';
 import { initialState } from './initialState';
+
+vi.mock('../sessionUser', async importOriginal => ({
+    ...(await importOriginal<typeof import('../sessionUser')>()),
+    invalidateKnownUsers: vi.fn(() => Promise.resolve()),
+}));
 
 vi.mock('api/activityApi', () => ({
     fetchActivities: vi.fn(),
@@ -31,33 +36,27 @@ vi.mock('api/ledgerApi', () => ({
 const originalRefreshActions = {
     fetchSetActivity: useActivityStore.getState().fetchSetActivity,
     fetchSetActivitySubevents: useActivityStore.getState().fetchSetActivitySubevents,
-    fetchSetDashboard: useDashboardStore.getState().fetchSetDashboard,
-    fetchSetFriends: useUsersStore.getState().fetchSetFriends,
     fetchSetGroupById: useGroupsStore.getState().fetchSetGroupById,
-    fetchSetGroups: useGroupsStore.getState().fetchSetGroups,
 };
+
+let dashboardCache: UserDashboardCache;
 
 beforeEach(() => {
     vi.clearAllMocks();
+    dashboardCache = mountUserDashboardCache();
     useActivityStore.setState(initialState);
     useErrorsStore.getState().resetErrors();
     useLoadingStore.getState().setInitialLoadingStore();
 });
 
 afterEach(() => {
+    dashboardCache.dispose();
     useActivityStore.setState({
         fetchSetActivity: originalRefreshActions.fetchSetActivity,
         fetchSetActivitySubevents: originalRefreshActions.fetchSetActivitySubevents,
     });
-    useDashboardStore.setState({
-        fetchSetDashboard: originalRefreshActions.fetchSetDashboard,
-    });
     useGroupsStore.setState({
         fetchSetGroupById: originalRefreshActions.fetchSetGroupById,
-        fetchSetGroups: originalRefreshActions.fetchSetGroups,
-    });
-    useUsersStore.setState({
-        fetchSetFriends: originalRefreshActions.fetchSetFriends,
     });
 });
 
@@ -415,12 +414,9 @@ test('accepts zero as a valid subevent pagination cursor', () => {
 
 test('creates a direct expense and refetches affected backend resources', () => {
     const fetchSetActivity = vi.fn().mockResolvedValue(undefined);
-    const fetchSetDashboard = vi.fn().mockResolvedValue(undefined);
-    const fetchSetFriends = vi.fn().mockResolvedValue(undefined);
     vi.mocked(ledgerApi.createExpense).mockResolvedValue({} as never);
     useActivityStore.setState({ fetchSetActivity });
-    useDashboardStore.setState({ fetchSetDashboard });
-    useUsersStore.setState({ fetchSetFriends });
+    vi.mocked(invalidateKnownUsers).mockResolvedValue(undefined);
 
     return useActivityStore
         .getState()
@@ -433,19 +429,17 @@ test('creates a direct expense and refetches affected backend resources', () => 
             currency: 'USD',
         })
         .then(() => {
-            expect(fetchSetDashboard).toHaveBeenCalledWith(true);
-            expect(fetchSetFriends).toHaveBeenCalledWith(true);
+            expect(dashboardCache.isDashboardInvalidated()).toBe(true);
+            expect(invalidateKnownUsers).toHaveBeenCalledOnce();
             expect(fetchSetActivity).toHaveBeenCalledWith(true);
         });
 });
 
 test('creates a group settlement and refetches the affected group', () => {
     const fetchSetActivity = vi.fn().mockResolvedValue(undefined);
-    const fetchSetDashboard = vi.fn().mockResolvedValue(undefined);
     const fetchSetGroupById = vi.fn().mockResolvedValue(null);
     vi.mocked(ledgerApi.createSettlement).mockResolvedValue({} as never);
     useActivityStore.setState({ fetchSetActivity });
-    useDashboardStore.setState({ fetchSetDashboard });
     useGroupsStore.setState({ fetchSetGroupById });
 
     return useActivityStore
@@ -467,9 +461,6 @@ test('does not reject a confirmed group expense when canonical refresh rejects',
     vi.mocked(ledgerApi.createExpense).mockResolvedValue({} as never);
     useActivityStore.setState({
         fetchSetActivity: vi.fn().mockResolvedValue(undefined),
-    });
-    useDashboardStore.setState({
-        fetchSetDashboard: vi.fn().mockResolvedValue(undefined),
     });
     const fetchSetGroupById = vi.fn().mockRejectedValue(refreshError);
     useGroupsStore.setState({
@@ -498,9 +489,6 @@ test('does not reject a confirmed settlement when canonical refresh rejects', ()
     useActivityStore.setState({
         fetchSetActivity: vi.fn().mockResolvedValue(undefined),
     });
-    useDashboardStore.setState({
-        fetchSetDashboard: vi.fn().mockResolvedValue(undefined),
-    });
     const fetchSetGroupById = vi.fn().mockRejectedValue(new Error('Group refresh unavailable'));
     useGroupsStore.setState({
         fetchSetGroupById,
@@ -528,12 +516,7 @@ test('reverses a ledger entry without locally patching activity state', () => {
         items: confirmedItems,
         fetchSetActivity: vi.fn().mockResolvedValue(undefined),
     });
-    useDashboardStore.setState({
-        fetchSetDashboard: vi.fn().mockResolvedValue(undefined),
-    });
-    useUsersStore.setState({
-        fetchSetFriends: vi.fn().mockResolvedValue(undefined),
-    });
+    vi.mocked(invalidateKnownUsers).mockResolvedValue(undefined);
 
     return useActivityStore
         .getState()
@@ -550,9 +533,6 @@ test('does not reject a confirmed ledger reversal when canonical refresh rejects
     vi.mocked(ledgerApi.removeLedgerEntry).mockResolvedValue(undefined);
     useActivityStore.setState({
         fetchSetActivity: vi.fn().mockResolvedValue(undefined),
-    });
-    useDashboardStore.setState({
-        fetchSetDashboard: vi.fn().mockResolvedValue(undefined),
     });
     const fetchSetGroupById = vi.fn().mockRejectedValue(new Error('Group refresh unavailable'));
     useGroupsStore.setState({
@@ -576,12 +556,7 @@ test('resolves after a confirmed mutation when refreshes resolve', () => {
     useActivityStore.setState({
         fetchSetActivity: vi.fn().mockResolvedValue(undefined),
     });
-    useDashboardStore.setState({
-        fetchSetDashboard: vi.fn().mockResolvedValue(undefined),
-    });
-    useUsersStore.setState({
-        fetchSetFriends: vi.fn().mockResolvedValue(undefined),
-    });
+    vi.mocked(invalidateKnownUsers).mockResolvedValue(undefined);
 
     return useActivityStore
         .getState()
@@ -601,9 +576,7 @@ test('resolves after a confirmed mutation when refreshes resolve', () => {
 
 test('does not refetch when an expense mutation fails', () => {
     const mutationError = new Error('Create failed');
-    const fetchSetDashboard = vi.fn().mockResolvedValue(undefined);
     vi.mocked(ledgerApi.createExpense).mockRejectedValue(mutationError);
-    useDashboardStore.setState({ fetchSetDashboard });
 
     return expect(
         useActivityStore.getState().createExpense({
@@ -617,7 +590,7 @@ test('does not refetch when an expense mutation fails', () => {
     )
         .rejects.toBe(mutationError)
         .then(() => {
-            expect(fetchSetDashboard).not.toHaveBeenCalled();
+            expect(dashboardCache.isDashboardInvalidated()).toBe(false);
         });
 });
 
@@ -705,11 +678,9 @@ test('ACT-004 prepares an expense edit from the latest Activity snapshot without
 
 test('updates an expense and refreshes the original group scope', () => {
     const fetchSetActivity = vi.fn().mockResolvedValue(undefined);
-    const fetchSetDashboard = vi.fn().mockResolvedValue(undefined);
     const fetchSetGroupById = vi.fn().mockResolvedValue(undefined);
     vi.mocked(ledgerApi.updateExpense).mockResolvedValue(editEntry);
     useActivityStore.setState({ fetchSetActivity });
-    useDashboardStore.setState({ fetchSetDashboard });
     useGroupsStore.setState({ fetchSetGroupById });
 
     const entry = {
@@ -733,7 +704,7 @@ test('updates an expense and refreshes the original group scope', () => {
                 entry,
             });
             expect(fetchSetGroupById).toHaveBeenCalledWith('group-1', true);
-            expect(fetchSetDashboard).toHaveBeenCalledWith(true);
+            expect(dashboardCache.isDashboardInvalidated()).toBe(true);
             expect(fetchSetActivity).toHaveBeenCalledWith(true);
             expect(useLoadingStore.getState().expense.update).toBe('fetched');
             expect(useActivityStore.getState().items).toEqual(confirmedItems);
@@ -742,8 +713,6 @@ test('updates an expense and refreshes the original group scope', () => {
 
 test('updates a direct expense and refreshes friends and visible subevents', () => {
     const fetchSetActivity = vi.fn().mockResolvedValue(undefined);
-    const fetchSetDashboard = vi.fn().mockResolvedValue(undefined);
-    const fetchSetFriends = vi.fn().mockResolvedValue(undefined);
     const fetchSetActivitySubevents = vi.fn().mockResolvedValue(undefined);
     vi.mocked(ledgerApi.updateExpense).mockResolvedValue(editEntry);
     useActivityStore.setState({
@@ -752,8 +721,7 @@ test('updates a direct expense and refreshes friends and visible subevents', () 
         subeventsParent: createActivityEvent('parent-1', 0),
         subeventsCategory: ACTIVITY_CATEGORIES.EXPENSE,
     });
-    useDashboardStore.setState({ fetchSetDashboard });
-    useUsersStore.setState({ fetchSetFriends });
+    vi.mocked(invalidateKnownUsers).mockResolvedValue(undefined);
 
     return useActivityStore
         .getState()
@@ -766,22 +734,20 @@ test('updates a direct expense and refreshes friends and visible subevents', () 
             parentActivityId: 'parent-1',
         })
         .then(() => {
-            expect(fetchSetFriends).toHaveBeenCalledWith(true);
+            expect(invalidateKnownUsers).toHaveBeenCalledOnce();
             expect(fetchSetActivitySubevents).toHaveBeenCalledWith({
                 parentActivityId: 'parent-1',
                 category: ACTIVITY_CATEGORIES.EXPENSE,
                 force: true,
             });
             expect(fetchSetActivity).toHaveBeenCalledWith(true);
-            expect(fetchSetDashboard).toHaveBeenCalledWith(true);
+            expect(dashboardCache.isDashboardInvalidated()).toBe(true);
         });
 });
 
 test('records and rejects an expense update failure without refreshing', () => {
     const mutationError = new Error('Update failed');
-    const fetchSetDashboard = vi.fn().mockResolvedValue(undefined);
     vi.mocked(ledgerApi.updateExpense).mockRejectedValue(mutationError);
-    useDashboardStore.setState({ fetchSetDashboard });
 
     return expect(
         useActivityStore.getState().updateExpense({
@@ -798,7 +764,7 @@ test('records and rejects an expense update failure without refreshing', () => {
                 expect.objectContaining({ message: expect.any(String) }),
             );
             expect(useLoadingStore.getState().expense.update).toBe('fetched');
-            expect(fetchSetDashboard).not.toHaveBeenCalled();
+            expect(dashboardCache.isDashboardInvalidated()).toBe(false);
         });
 });
 
@@ -807,12 +773,7 @@ test('does not reject a confirmed expense update when canonical refresh rejects'
     useActivityStore.setState({
         fetchSetActivity: vi.fn().mockRejectedValue(new Error('Activity unavailable')),
     });
-    useDashboardStore.setState({
-        fetchSetDashboard: vi.fn().mockRejectedValue(new Error('Dashboard unavailable')),
-    });
-    useUsersStore.setState({
-        fetchSetFriends: vi.fn().mockRejectedValue(new Error('Friends unavailable')),
-    });
+    vi.mocked(invalidateKnownUsers).mockRejectedValue(new Error('Friends unavailable'));
 
     return useActivityStore
         .getState()

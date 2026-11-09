@@ -7,8 +7,8 @@ import { expect, test } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
-import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
-import { useUsersStore } from 'store/users-store';
+import { saveLocalUser } from 'helpers/localStorage';
+import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 
 import SoloPage from './SoloPage';
 
@@ -28,8 +28,8 @@ const settings = {
 } satisfies UserSettings;
 
 test('renders the preserved Solo dashboard layout without release mode controls', () => {
-    useDashboardStore.setState({ appMode: APP_MODES.SOLO });
-    useUsersStore.setState({ user: null, localUser: { role: 'ADMIN', settings }, friends: [] });
+    useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
+    saveLocalUser({ role: 'ADMIN', settings });
 
     render(
         <MemoryRouter initialEntries={['/solo']}>
@@ -51,8 +51,8 @@ test('renders the preserved Solo dashboard layout without release mode controls'
 
 test('uses the shared profile shortcut to open Settings from Solo', () => {
     const interaction = userEvent.setup();
-    useDashboardStore.setState({ appMode: APP_MODES.SOLO });
-    useUsersStore.setState({ user: null, localUser: { role: 'ADMIN', settings }, friends: [] });
+    useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
+    saveLocalUser({ role: 'ADMIN', settings });
 
     const CurrentRoute = () => {
         const location = useLocation();

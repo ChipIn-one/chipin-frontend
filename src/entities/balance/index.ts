@@ -6,12 +6,12 @@ export type { LegacyBalanceTotals } from './model/legacy';
 export {
     legacyAmountFromMoney,
     legacyBalanceFromEntry,
-    legacyBalanceFromFriend,
     legacyCurrencyOrDefault,
     legacyEntryFromMoney,
     legacyExpenseBalanceChange,
     legacyPartitionEntries,
     legacyRateLookup,
+    legacyRatesFromDecimals,
     legacySumEntriesByCurrency,
     legacySummarizeEntries,
 } from './model/legacy';

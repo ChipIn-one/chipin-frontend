@@ -6,7 +6,7 @@ import type { Group, SelfUser } from 'api/chipin.types';
 import { useActivityStore } from 'store/activity-store';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
+import { seedSelfUser } from 'test/selfUserSeed';
 
 import SettleUpModal from './SettleUpModal';
 
@@ -104,7 +104,7 @@ const group: Group = {
 beforeEach(() => {
     vi.clearAllMocks();
     useGroupsStore.getState().setInitialGroupsStore();
-    useUsersStore.setState({ user: currentUser });
+    seedSelfUser(currentUser);
     useLoadingStore.getState().setInitialLoadingStore();
 });
 

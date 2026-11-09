@@ -45,8 +45,8 @@ vi.mock('hooks/pwaHooks', () => ({
     }),
 }));
 
-vi.mock('./internal/useConnect', () => ({
-    useConnect: () => connectorMocks,
+vi.mock('hooks/useSelfUser', () => ({
+    useSelfUser: () => connectorMocks,
 }));
 
 const renderOnboarding = () =>

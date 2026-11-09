@@ -1,58 +1,38 @@
 import { matchPath } from 'react-router-dom';
-import { useShallow } from 'zustand/react/shallow';
 
 import { ROUTES } from 'constants/routes';
 import { hasGroupExpenseTarget, isGroupExpenseTarget } from 'helpers/expenseTargets';
 import { selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
-import { selectIsSoloMode } from 'store/dashboardSelectors';
-import { useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
-import {
-    selectFriendsFetched,
-    selectGroupDataFetched,
-    selectGroupListFetched,
-    selectUserSelfFetched,
-} from 'store/loadingSelectors';
+import { selectGroupDataFetched } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
-import { selectCanAccessSolo, useUsersStore } from 'store/users-store';
+import { selectIsSoloMode, useUiPrefsStore } from 'store/ui-prefs';
+
+import { useGroupsList } from './useGroupsList';
+import { useKnownUsers } from './useKnownUsers';
+import { useCanAccessSolo, useSelfUser } from './useSelfUser';
 
 const useAddExpenseAvailability = (pathname: string) => {
     const groupId = matchPath({ path: `${ROUTES.GROUP}/:groupId`, end: true }, pathname)?.params
         .groupId;
     const isFriendsPage = pathname === ROUTES.FRIENDS;
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
-    const isSoloModeFromStore = useDashboardStore(selectIsSoloMode);
-    const { groups, selectedGroup, hasConfirmedGroups } = useGroupsStore(
-        useShallow(state => ({
-            groups: state.groups,
-            selectedGroup: state.selectedGroup,
-            hasConfirmedGroups: state.hasConfirmedGroups,
-        })),
-    );
-    const { friends, canAccessSolo, currentUser, hasFriendsSnapshot, hasConfirmedUser } =
-        useUsersStore(
-            useShallow(state => ({
-                friends: state.friends,
-                canAccessSolo: selectCanAccessSolo(state),
-                currentUser: state.user,
-                hasFriendsSnapshot: state.hasFriendsSnapshot,
-                hasConfirmedUser: state.hasConfirmedUser,
-            })),
-        );
-    const { isFriendsFetched, isGroupDataFetched, isGroupListFetched, isUserSelfFetched } =
-        useLoadingStore(
-            useShallow(state => ({
-                isFriendsFetched: selectFriendsFetched(state),
-                isGroupDataFetched: selectGroupDataFetched(state),
-                isGroupListFetched: selectGroupListFetched(state),
-                isUserSelfFetched: selectUserSelfFetched(state),
-            })),
-        );
+    const isSoloModeFromStore = useUiPrefsStore(selectIsSoloMode);
+    const selectedGroup = useGroupsStore(state => state.selectedGroup);
+    // Loaded or restored from the cache: data is a resolved group list.
+    const listedGroups = useGroupsList().groups;
+    const isGroupListResolved = listedGroups !== undefined;
+    const groups = listedGroups ?? [];
+    const { friends } = useKnownUsers();
+    const canAccessSolo = useCanAccessSolo();
+    // Data (loaded, seeded or restored from the cache) is a confirmed user.
+    const currentUser = useSelfUser();
+    const isGroupDataFetched = useLoadingStore(selectGroupDataFetched);
 
-    const hasResolvedFriendTarget = (isFriendsFetched || hasFriendsSnapshot) && friends.length > 0;
-    const hasResolvedGroupTarget =
-        (isGroupListFetched || hasConfirmedGroups) && hasGroupExpenseTarget(groups);
+    // Loaded or restored from the cache: data is a resolved friend list.
+    const hasResolvedFriendTarget = (friends?.length ?? 0) > 0;
+    const hasResolvedGroupTarget = isGroupListResolved && hasGroupExpenseTarget(groups);
     const routeGroup = groupId
         ? selectedGroup?.id === groupId
             ? selectedGroup
@@ -65,19 +45,14 @@ const useAddExpenseAvailability = (pathname: string) => {
         isTargetAvailable = hasResolvedFriendTarget;
     } else if (groupId) {
         isTargetAvailable =
-            (isGroupListFetched || hasConfirmedGroups || isGroupDataFetched) &&
-            isGroupExpenseTarget(routeGroup);
+            (isGroupListResolved || isGroupDataFetched) && isGroupExpenseTarget(routeGroup);
     } else {
         isTargetAvailable = hasResolvedFriendTarget || hasResolvedGroupTarget;
     }
 
     return {
         isSoloMode: canAccessSolo && isSoloModeFromStore,
-        isVisible:
-            isLoggedIn &&
-            (isUserSelfFetched || hasConfirmedUser) &&
-            currentUser !== null &&
-            isTargetAvailable,
+        isVisible: isLoggedIn && currentUser !== null && isTargetAvailable,
     };
 };
 

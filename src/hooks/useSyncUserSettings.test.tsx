@@ -1,9 +1,11 @@
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
+import { type SelfUser, usersKeys } from 'entities/users';
+import { saveLocalUser } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
-import { useUsersStore } from 'store/users-store';
+import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
 
 import { useSyncUserSettings } from './useSyncUserSettings';
 
@@ -47,11 +49,27 @@ const settings = {
 
 beforeEach(() => {
     vi.clearAllMocks();
-    useUsersStore.setState({
-        user: null,
-        localUser: { role: 'ADMIN', settings },
-    });
+    saveLocalUser({ role: 'ADMIN', settings });
 });
+
+const selfUser = (overrides: Partial<UserSettings>): SelfUser => ({
+    id: 'user-1',
+    email: 'user@example.com',
+    displayName: 'User',
+    picture: null,
+    role: 'USER',
+    subscriptionUntil: null,
+    inviteToken: 'invite-token',
+    settings: { ...settings, ...overrides },
+    createdAt: 1,
+    updatedAt: 1,
+});
+
+const seedSelfUser = (user: SelfUser) => {
+    act(() => {
+        getDefaultTestQueryClient().setQueryData(usersKeys.self(), user);
+    });
+};
 
 test('does not reapply cached user settings after logout', () => {
     useAuthStore.setState({ status: 'unauthenticated' });
@@ -94,9 +112,7 @@ test.each(['es', 'pt-BR', 'pt-PT', 'pt'])(
             .importActual<{ matchLocale: (raw: string) => string | null }>('helpers/locale')
             .then(actual => {
                 locale.matchLocale.mockImplementationOnce(actual.matchLocale);
-                useUsersStore.setState({
-                    localUser: { role: 'USER', settings: { ...settings, language } },
-                });
+                saveLocalUser({ role: 'USER', settings: { ...settings, language } });
                 useAuthStore.setState({ status: 'authenticated' });
 
                 renderHook(() => useSyncUserSettings());
@@ -107,3 +123,37 @@ test.each(['es', 'pt-BR', 'pt-PT', 'pt'])(
                 expect(captureException).not.toHaveBeenCalled();
             }),
 );
+
+test('applies the self query settings over the cached user', () => {
+    useAuthStore.setState({ status: 'authenticated' });
+    locale.matchLocale.mockImplementation(raw => raw);
+    seedSelfUser(selfUser({ language: 'ru', theme: 'dark' }));
+
+    renderHook(() => useSyncUserSettings());
+
+    expect(setTheme).toHaveBeenCalledWith('dark');
+    expect(changeLanguage).toHaveBeenCalledWith('ru');
+});
+
+// Spec 03 §6 row 3: the language comes from `select`, so a new settings object with the same
+// language does not run the language sync again.
+test('changes the language only when the language changes', () =>
+    Promise.resolve().then(() => {
+        useAuthStore.setState({ status: 'authenticated' });
+        locale.matchLocale.mockImplementation(raw => raw);
+        seedSelfUser(selfUser({ language: 'ru' }));
+        renderHook(() => useSyncUserSettings());
+        expect(changeLanguage).toHaveBeenCalledTimes(1);
+
+        seedSelfUser(selfUser({ language: 'ru', defaultCurrency: 'EUR' }));
+        return new Promise(resolve => setTimeout(resolve, 0)).then(() => {
+            expect(changeLanguage).toHaveBeenCalledTimes(1);
+            expect(setTheme).toHaveBeenCalledTimes(1);
+
+            seedSelfUser(selfUser({ language: 'en' }));
+            return new Promise(resolve => setTimeout(resolve, 0)).then(() => {
+                expect(changeLanguage).toHaveBeenCalledTimes(2);
+                expect(changeLanguage).toHaveBeenLastCalledWith('en');
+            });
+        });
+    }));

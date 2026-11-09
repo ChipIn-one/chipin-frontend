@@ -1,17 +1,18 @@
-import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { exchangeApiGoogleOAuthCode } from 'api/chipin';
 import type { SelfUser } from 'api/chipin.types';
+import { isAdminRole } from 'entities/users';
 import * as authSession from 'helpers/authSession';
-import { getLocalUser, saveLocalUser } from 'helpers/localStorage';
+import { getLocalUser, getTabUserId, saveLocalUser } from 'helpers/localStorage';
 
 import { useAuthStore } from './authStore';
-import { APP_MODES, useDashboardStore } from './dashboardStore';
 import { useExpenseModalStore } from './expenseModalStore';
-import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
-import { useUsersStore } from './users-store';
-import { selectIsUserAdmin } from './users-store/selectors';
+import { loadKnownUsersForSession, loadSelfUserForSession } from './sessionUser';
+import { APP_MODES, useUiPrefsStore } from './ui-prefs';
+
+import 'fake-indexeddb/auto';
 
 const user = {
     id: 'user-1',
@@ -46,6 +47,7 @@ const authSessionMocks = vi.hoisted(() => {
         AuthSessionPersistenceError,
         clearExpiredAuthSession: vi.fn(),
         establishAuthSession: vi.fn(),
+        getAccessTokenSubject: vi.fn(),
         getFreshAccessToken: vi.fn(),
         invalidateAuthSession: vi.fn(),
         logoutOtherDevicesSession: vi.fn(),
@@ -55,23 +57,33 @@ const authSessionMocks = vi.hoisted(() => {
 });
 
 vi.mock('helpers/authSession', () => authSessionMocks);
+vi.mock('@sentry/react', () => ({ captureMessage: vi.fn(), captureException: vi.fn() }));
 vi.mock('api/chipin', () => ({
     exchangeApiGoogleOAuthCode: vi.fn(),
 }));
+vi.mock('./sessionUser', async importOriginal => ({
+    ...(await importOriginal<typeof import('./sessionUser')>()),
+    loadKnownUsersForSession: vi.fn(),
+    loadSelfUserForSession: vi.fn(),
+}));
 
 const mockAuthenticatedDataFetches = (): void => {
-    vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockResolvedValue();
-    vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
-    vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockResolvedValue(user);
-    vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockResolvedValue();
+    vi.mocked(loadSelfUserForSession).mockResolvedValue(user);
+    vi.mocked(loadKnownUsersForSession).mockResolvedValue();
 };
 
 describe('authStore', () => {
+    // A sign-out settles after its IndexedDB deletes: a test that does not wait for it must not
+    // leave a pending (deduplicated) sign-out to the next one.
+    afterEach(() => new Promise<void>(resolve => setTimeout(resolve, 30)));
+
     beforeEach(() => {
         vi.restoreAllMocks();
         vi.clearAllMocks();
         authSessionMocks.clearExpiredAuthSession.mockResolvedValue(undefined);
         authSessionMocks.establishAuthSession.mockImplementation(() => undefined);
+        // The token of the cached user: no account switch unless a test says so.
+        authSessionMocks.getAccessTokenSubject.mockReturnValue(user.id);
         authSessionMocks.startAuthLogout.mockResolvedValue(undefined);
         useExpenseModalStore.getState().reset();
         useLoadingStore.getState().setInitialLoadingStore();
@@ -103,8 +115,8 @@ describe('authStore', () => {
             token: 'access-token',
             is_new_user: false,
         });
-        useDashboardStore.setState({ appMode: APP_MODES.GROUP });
-        const setDefaultAppMode = vi.spyOn(useDashboardStore.getState(), 'setDefaultAppMode');
+        useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
+        const setDefaultAppMode = vi.spyOn(useUiPrefsStore.getState(), 'setDefaultAppMode');
         mockAuthenticatedDataFetches();
 
         return useAuthStore
@@ -130,6 +142,8 @@ describe('authStore', () => {
             .rejects.toBe(persistenceError)
             .then(() => {
                 expect(authSession.startAuthLogout).toHaveBeenCalledOnce();
+                // A persistence_error keeps X's data in the other tabs too: no logout broadcast.
+                expect(authSession.startAuthLogout).toHaveBeenCalledWith({ broadcast: false });
                 expect(useAuthStore.getState()).toMatchObject({
                     status: 'unauthenticated',
                     unauthReason: 'persistence_error',
@@ -137,21 +151,23 @@ describe('authStore', () => {
             });
     });
 
-    test('loads the premium promo counter after a new registration', () => {
+    test('loads the self user and the known users once after a sign-in', () => {
         vi.mocked(exchangeApiGoogleOAuthCode).mockResolvedValue({
             token: 'access-token',
             is_new_user: true,
         });
         mockAuthenticatedDataFetches();
-        const fetchSetPremiumPromoRemaining = vi
-            .spyOn(useUsersStore.getState(), 'fetchSetPremiumPromoRemaining')
-            .mockResolvedValue();
 
         return useAuthStore
             .getState()
             .exchangeGoogleOAuthCode('oauth-code-3')
             .then(() => {
-                expect(fetchSetPremiumPromoRemaining).toHaveBeenCalledOnce();
+                expect(loadSelfUserForSession).toHaveBeenCalledOnce();
+                expect(loadKnownUsersForSession).toHaveBeenCalledOnce();
+                // One session start: both reuse what loaded after the same moment.
+                const [since] = vi.mocked(loadSelfUserForSession).mock.calls[0] ?? [];
+                expect(loadKnownUsersForSession).toHaveBeenCalledWith(since);
+                expect(useAuthStore.getState().isNewUser).toBe(true);
             });
     });
 
@@ -218,6 +234,22 @@ describe('authStore', () => {
             });
     });
 
+    test('a successful refresh ends an offline-cached session (spec 03 §1.6)', () => {
+        useAuthStore.getState().setOfflineCachedSession();
+        expect(useAuthStore.getState()).toMatchObject({
+            status: 'authenticated',
+            sessionMode: 'offline-cached',
+        });
+        vi.mocked(authSession.validateAuthSession).mockResolvedValue('next-access-token');
+
+        return useAuthStore
+            .getState()
+            .refreshAuthTokens()
+            .then(() => {
+                expect(useAuthStore.getState().sessionMode).toBe('online');
+            });
+    });
+
     test('does not authenticate from stale client state when refresh is unavailable', () => {
         const validationError = new Error('Refresh unavailable');
         useAuthStore.setState({
@@ -250,7 +282,7 @@ describe('authStore', () => {
             });
     });
 
-    test('resets protected expense draft data when the session expires', () => {
+    test('keeps the expense draft when the session expires (expiry is not a logout)', () => {
         useExpenseModalStore.setState({
             isOpened: true,
             groupId: 'private-group',
@@ -261,10 +293,9 @@ describe('authStore', () => {
         useAuthStore.getState().expireSession();
 
         expect(useExpenseModalStore.getState()).toMatchObject({
-            isOpened: false,
-            groupId: '',
-            description: '',
-            includedParticipantIds: {},
+            groupId: 'private-group',
+            description: 'private expense',
+            includedParticipantIds: { 'user-1': true },
         });
     });
 
@@ -330,7 +361,8 @@ describe('authStore', () => {
         onReset();
 
         expect(getLocalUser()).toEqual({ settings: user.settings });
-        expect(selectIsUserAdmin(useUsersStore.getState())).toBe(false);
+        // Signed out, the UI reads the role from the cached user.
+        expect(isAdminRole(getLocalUser()?.role)).toBe(false);
     });
 
     // Spec 03 §1.5 table, invariant 12: a sign-out drops the cached user `id`; any other
@@ -347,22 +379,65 @@ describe('authStore', () => {
         onSignOut();
 
         expect(getLocalUser()).toEqual({ settings: user.settings });
-        expect(useUsersStore.getState().localUser?.id).toBeUndefined();
+        expect(getTabUserId()).toBeUndefined();
     });
 
     test.each([
         ['expireSession', () => useAuthStore.getState().expireSession()],
         ['invalid', () => useAuthStore.getState().setUnauthenticated('invalid')],
         ['expired', () => useAuthStore.getState().setUnauthenticated('expired')],
-        ['missing', () => useAuthStore.getState().setUnauthenticated('missing')],
-        ['error', () => useAuthStore.getState().setUnauthenticated('error')],
     ])('%s keeps the cached id, drops only the role', (_name, onReset) => {
         saveLocalUser({ id: user.id, role: 'ADMIN', settings: user.settings });
 
         onReset();
 
         expect(getLocalUser()).toEqual({ id: user.id, settings: user.settings });
-        expect(useUsersStore.getState().localUser?.id).toBe(user.id);
+        expect(getTabUserId()).toBe(user.id);
+    });
+
+    test.each([
+        ['missing', () => useAuthStore.getState().setUnauthenticated('missing')],
+        ['error', () => useAuthStore.getState().setUnauthenticated('error')],
+        [
+            'persistence_error',
+            () => useAuthStore.getState().setUnauthenticated('persistence_error'),
+        ],
+    ])('%s leaves the cached user unchanged', (_name, onReset) => {
+        saveLocalUser({ id: user.id, role: 'ADMIN', settings: user.settings });
+
+        onReset();
+
+        expect(getLocalUser()).toEqual({ id: user.id, role: 'ADMIN', settings: user.settings });
+    });
+
+    // The app mode is UI state, but it follows the session: every transition to unauthenticated
+    // resets it to the cached user's default (`resetAuthScopedStores`), as before 03-8.
+    test.each([
+        ['signOut', () => void useAuthStore.getState().signOut()],
+        ['remote logout', () => useAuthStore.getState().setUnauthenticated('signed_out')],
+        ['expireSession', () => useAuthStore.getState().expireSession()],
+        ['invalid', () => useAuthStore.getState().setUnauthenticated('invalid')],
+        ['missing', () => useAuthStore.getState().setUnauthenticated('missing')],
+        ['error', () => useAuthStore.getState().setUnauthenticated('error')],
+    ])('%s resets the app mode to the cached default', (_name, onReset) => {
+        saveLocalUser({
+            id: user.id,
+            settings: { ...user.settings, soloModeByDefault: false },
+        });
+        useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
+
+        onReset();
+
+        expect(useUiPrefsStore.getState().appMode).toBe(APP_MODES.GROUP);
+    });
+
+    test('the reset applies a Solo default of the cached settings', () => {
+        saveLocalUser({ id: user.id, settings: { ...user.settings, soloModeByDefault: true } });
+        useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
+
+        useAuthStore.getState().expireSession();
+
+        expect(useUiPrefsStore.getState().appMode).toBe(APP_MODES.SOLO);
     });
 
     describe('OAuth code dedupe (the remount on the first user id)', () => {

@@ -5,7 +5,7 @@ import { beforeEach, expect, test } from 'vitest';
 import type { UserSettings } from 'api/chipin.types';
 import { useAuthStore } from 'store/authStore';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
+import { signInWithSelf } from 'test/selfUser';
 
 import SoloRouteGuard from './SoloRouteGuard';
 
@@ -28,13 +28,21 @@ const LocationPath = () => {
     return <output aria-label="Current route">{location.pathname}</output>;
 };
 
-const renderGuard = (role: 'USER' | 'ADMIN') => {
-    useUsersStore.setState({
-        user: null,
-        localUser: { role, settings },
-        friends: [],
-    });
-
+const renderGuard = (role: 'USER' | 'ADMIN' | null) => {
+    if (role) {
+        signInWithSelf({
+            id: 'user-1',
+            email: 'user@example.com',
+            displayName: 'Alex',
+            picture: null,
+            role,
+            subscriptionUntil: null,
+            inviteToken: 'invite-token-user',
+            settings,
+            createdAt: 1,
+            updatedAt: 1,
+        });
+    }
     render(
         <MemoryRouter initialEntries={['/solo']}>
             <Routes>
@@ -55,8 +63,6 @@ const renderGuard = (role: 'USER' | 'ADMIN') => {
 beforeEach(() => {
     useAuthStore.setState({ status: 'authenticated' });
     useLoadingStore.getState().setInitialLoadingStore();
-    useLoadingStore.getState().setLoading('users', 'self', 'fetched');
-    useUsersStore.getState().setInitialUsersStore();
 });
 
 test.each(['USER', 'ADMIN'] as const)(
@@ -67,3 +73,9 @@ test.each(['USER', 'ADMIN'] as const)(
         expect(screen.getByLabelText('Current route').textContent).toBe('/dashboard');
     },
 );
+
+test('waits while the self user is still to come', () => {
+    renderGuard(null);
+
+    expect(screen.queryByLabelText('Current route')).toBeNull();
+});

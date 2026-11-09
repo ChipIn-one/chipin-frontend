@@ -1,8 +1,9 @@
 import { Button, Card, Flex, Grid, Separator, Skeleton, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
-import { useShallow } from 'zustand/react/shallow';
 
-import { selectUserSex, useUsersStore } from 'store/users-store';
+import { userSex } from 'entities/users';
+import { useSelfUser, useUserSetting } from 'hooks/useSelfUser';
+import { useUpdateSelf } from 'hooks/useUserMutations';
 
 import { RadioCards, TextInput } from 'basics';
 import { UserAvatarModal } from 'components/modals/user-avatar-modal';
@@ -16,20 +17,16 @@ const DISPLAY_NAME_MAX_LENGTH = 64;
 
 const AccountSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
-    const { user, sex, setUserSettings } = useUsersStore(
-        useShallow(state => ({
-            user: state.user,
-            sex: selectUserSex(state),
-            setUserSettings: state.setUserSettings,
-        })),
-    );
+    const user = useSelfUser();
+    const sex = useUserSetting(userSex);
+    const { updateSelf } = useUpdateSelf();
 
     const onDisplayNameCommit = (displayName: string) => {
         if (displayName === user?.displayName) {
             return;
         }
 
-        void setUserSettings({ displayName });
+        void updateSelf({ displayName });
     };
 
     const onSexChange = (value: string) => {
@@ -37,7 +34,7 @@ const AccountSection = ({ isLoading }: Props) => {
             return;
         }
 
-        void setUserSettings({ settings: { sex: value } });
+        void updateSelf({ settings: { sex: value } });
     };
 
     return (

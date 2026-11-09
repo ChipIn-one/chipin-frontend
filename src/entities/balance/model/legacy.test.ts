@@ -9,11 +9,11 @@ import { currencyCode } from 'shared/money';
 import {
     legacyAmountFromMoney,
     legacyBalanceFromEntry,
-    legacyBalanceFromFriend,
     legacyCurrencyOrDefault,
     legacyExpenseBalanceChange,
     legacyPartitionEntries,
     legacyRateLookup,
+    legacyRatesFromDecimals,
     legacySumEntriesByCurrency,
     legacySummarizeEntries,
     resetLegacyRejectReports,
@@ -105,13 +105,6 @@ describe('number → Money bridge', () => {
             });
         },
     );
-
-    test('friend balances map the same way', () => {
-        expect(legacyBalanceFromFriend({ currency: 'jpy', netAmount: -0.4 })?.net).toEqual({
-            minor: -4_000n,
-            currency: 'JPY',
-        });
-    });
 });
 
 test('Money → number round-trips', () => {
@@ -152,6 +145,12 @@ test('legacyExpenseBalanceChange', () => {
     expect(
         legacyExpenseBalanceChange({ ...metadata('me'), shares: undefined }, 'me'),
     ).toBeUndefined();
+});
+
+test('legacyRatesFromDecimals reads decimal-text rates as numbers and drops unusable ones', () => {
+    expect(
+        legacyRatesFromDecimals({ EUR: '0.92', VND: '25900', ZERO: '0', BAD: 'x', EMPTY: '' }),
+    ).toEqual({ EUR: 0.92, VND: 25_900 });
 });
 
 describe('legacyRateLookup', () => {

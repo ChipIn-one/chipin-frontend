@@ -1,16 +1,26 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { expect, test, vi } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
-import { useUsersStore } from 'store/users-store';
+import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
+import { saveLocalUser } from 'helpers/localStorage';
 import { getOrThrow } from 'test/getOrThrow';
+import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
 
 import SettingsPage from './SettingsPage';
 
 import 'i18n/index';
+
+// Rates already loaded: the currency picker does not request them.
+const ratesClient = () => {
+    const client = createTestQueryClient();
+
+    client.setQueryData(currencyRatesKeys.all, EMPTY_CURRENCY_RATES);
+    return client;
+};
 
 vi.mock('helpers/pwa', () => ({
     checkIsPwaInstalled: () => false,
@@ -38,17 +48,18 @@ const settings = {
 } satisfies UserSettings;
 
 const renderSettings = () => {
-    render(
+    renderWithQueryClient(
         <MemoryRouter>
             <ThemeProvider theme={lightThemeStyled}>
                 <SettingsPage />
             </ThemeProvider>
         </MemoryRouter>,
+        ratesClient(),
     );
 };
 
 test('does not render unfinished notifications settings', () => {
-    useUsersStore.setState({ user: null, localUser: { role: 'ADMIN', settings }, friends: [] });
+    saveLocalUser({ role: 'ADMIN', settings });
     renderSettings();
 
     const sectionTitles = SECTION_TITLES.map(title => screen.getByText(title));
@@ -68,7 +79,7 @@ test('does not render unfinished notifications settings', () => {
 });
 
 test.each(['USER', 'ADMIN'] as const)('hides Solo preferences for a $role user', role => {
-    useUsersStore.setState({ user: null, localUser: { role, settings }, friends: [] });
+    saveLocalUser({ role, settings });
 
     renderSettings();
 

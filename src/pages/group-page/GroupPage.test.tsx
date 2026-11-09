@@ -1,11 +1,14 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import type { Group, SelfUser } from 'api/chipin.types';
+import type { Group } from 'api/chipin.types';
+import { groupsKeys } from 'entities/groups';
+import { useAuthStore } from 'store/authStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
 import { getOrThrow } from 'test/getOrThrow';
+import { groupsListData, seedGroupsList } from 'test/groupsList';
+import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
 
 import GroupPage from './GroupPage';
 
@@ -79,32 +82,13 @@ const group = {
     },
 } satisfies Group;
 
-const currentUser = {
-    ...creator,
-    role: 'USER',
-    subscriptionUntil: null,
-    inviteToken: 'invite-token-user',
-    settings: {
-        defaultCurrency: 'USD',
-        defaultCategory: 'food',
-        timeFormat: '12h',
-        language: 'en',
-        theme: 'system',
-        simplifyDebts: true,
-        skipCategory: false,
-        soloModeByDefault: false,
-        saveGroupExpensesToSolo: false,
-        sex: 'male',
-    },
-} satisfies SelfUser;
-
 beforeEach(() => {
     useGroupsStore.getState().setInitialGroupsStore();
-    useGroupsStore.setState({ groups: [group] });
+    useAuthStore.setState({ status: 'authenticated' });
+    seedGroupsList([group]);
     useGroupsStore.getState().setSelectedGroup(group);
     useGroupsStore.setState({ fetchSetGroupById: vi.fn(() => Promise.resolve(group)) });
     useLoadingStore.getState().setInitialLoadingStore();
-    useUsersStore.setState({ user: currentUser });
 });
 
 test('composes summaries without viewport-specific component props', () => {
@@ -150,7 +134,7 @@ test('fetches direct route detail independently of the cached list', () => {
 });
 
 test('renders confirmed current detail when groups list is not fetched', () => {
-    useGroupsStore.setState({ groups: [] });
+    getDefaultTestQueryClient().removeQueries({ queryKey: groupsKeys.list() });
 
     render(<GroupPage />);
 
@@ -159,18 +143,23 @@ test('renders confirmed current detail when groups list is not fetched', () => {
 
 test('does not overwrite selected detail after cached groups change', () => {
     const detail = { ...group, name: 'Canonical detail' } satisfies Group;
-    useGroupsStore.setState({ groups: [group], selectedGroup: detail });
+    useGroupsStore.setState({ selectedGroup: detail });
 
     const { rerender } = render(<GroupPage />);
-    useGroupsStore.setState({ groups: [{ ...group, name: 'Stale list' }] });
+    act(() => {
+        getDefaultTestQueryClient().setQueryData(
+            groupsKeys.list(),
+            groupsListData([{ ...group, name: 'Stale list' }]),
+        );
+    });
     rerender(<GroupPage />);
 
     expect(useGroupsStore.getState().selectedGroup).toBe(detail);
 });
 
 test('does not render a previously selected group for a different route', () => {
+    getDefaultTestQueryClient().removeQueries({ queryKey: groupsKeys.list() });
     useGroupsStore.setState({
-        groups: [],
         selectedGroup: { ...group, id: 'group-2' },
         fetchSetGroupById: vi.fn(() => Promise.resolve(null)),
     });

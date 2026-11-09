@@ -1,6 +1,7 @@
 import { Flex, Text } from '@radix-ui/themes';
 
-import type { FriendBalance, KnownUser } from 'api/chipin.types';
+import { type Balance, legacyAmountFromMoney } from 'entities/balance';
+import type { KnownUser } from 'entities/users';
 
 import DebtAmount from 'basics/DebtAmount';
 import UserAvatar from 'basics/UserAvatar';
@@ -9,7 +10,7 @@ import FriendActionsDropdown from './FriendActionsDropdown';
 
 interface Props {
     friend: KnownUser;
-    balance: FriendBalance;
+    balance: Balance;
 }
 
 const FriendListItem = ({ friend, balance }: Props) => {
@@ -23,8 +24,8 @@ const FriendListItem = ({ friend, balance }: Props) => {
             </Flex>
             <Flex align="center" gap="4">
                 <DebtAmount
-                    amount={balance.netAmount}
-                    currency={balance.currency}
+                    amount={legacyAmountFromMoney(balance.net)}
+                    currency={balance.net.currency}
                     weight="medium"
                     size="2"
                 />

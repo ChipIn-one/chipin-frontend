@@ -5,11 +5,6 @@ export const selectAuthSignOutLoading = (s: LoadingStore) => s.auth.signOut === 
 export const selectAuthLogoutOtherDevicesLoading = (s: LoadingStore) =>
     s.auth.logoutOtherDevices === 'loading';
 
-export const selectDashboardLoading = (s: LoadingStore) => s.dashboard.data === 'loading';
-export const selectDashboardFetched = (s: LoadingStore) => s.dashboard.data === 'fetched';
-export const selectDashboardNextPageLoading = (s: LoadingStore) =>
-    s.dashboard.nextPage === 'loading';
-
 export const selectActivityLoading = (s: LoadingStore) => s.activity.data === 'loading';
 export const selectActivityFetched = (s: LoadingStore) => s.activity.data === 'fetched';
 export const selectActivityNextPageLoading = (s: LoadingStore) => s.activity.nextPage === 'loading';
@@ -22,8 +17,6 @@ export const selectActivitySubeventsNextPageLoading = (s: LoadingStore) =>
 
 export const selectGroupDataLoading = (s: LoadingStore) => s.group.data === 'loading';
 export const selectGroupDataFetched = (s: LoadingStore) => s.group.data === 'fetched';
-export const selectGroupListLoading = (s: LoadingStore) => s.group.list === 'loading';
-export const selectGroupListFetched = (s: LoadingStore) => s.group.list === 'fetched';
 export const selectGroupNextPageLoading = (s: LoadingStore) => s.group.nextPage === 'loading';
 
 export const selectGroupAdding = (s: LoadingStore) => s.group.add === 'loading';
@@ -33,13 +26,6 @@ export const selectGroupJoining = (s: LoadingStore) => s.group.join === 'loading
 export const selectGroupLeaving = (s: LoadingStore) => s.group.leave === 'loading';
 export const selectGroupKicking = (s: LoadingStore) => s.group.kick === 'loading';
 export const selectGroupCoverUploading = (s: LoadingStore) => s.group.cover === 'loading';
-
-export const selectUserSelfLoading = (s: LoadingStore) => s.users.self === 'loading';
-export const selectUserSelfFetched = (s: LoadingStore) => s.users.self === 'fetched';
-export const selectFriendsFetched = (s: LoadingStore) => s.users.friends === 'fetched';
-export const selectUserSettingsLoading = (s: LoadingStore) => s.users.settings === 'loading';
-export const selectFriendRemoving = (s: LoadingStore) => s.users.removeFriend === 'loading';
-export const selectUserAvatarUploading = (s: LoadingStore) => s.users.avatar === 'loading';
 
 export const selectExpenseAdding = (s: LoadingStore) => s.expense.add === 'loading';
 export const selectExpenseEditing = (s: LoadingStore) => s.expense.edit === 'loading';

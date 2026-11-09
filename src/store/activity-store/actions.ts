@@ -2,23 +2,21 @@ import { create } from 'zustand';
 
 import * as activityApi from 'api/activityApi';
 import * as ledgerApi from 'api/ledgerApi';
+import { ACTIVITY_API_LIMIT } from 'constants/activity';
+import { userCurrency, userDefaultCategory, userSkipCategory } from 'entities/users';
 import { normalizeApiError } from 'helpers/errors';
+import { getLocalUser } from 'helpers/localStorage';
 
-import { useDashboardStore } from '../dashboardStore';
 import { useErrorsStore } from '../errorsStore';
 import { mapActivityExpenseToModalState } from '../expenseModalEditMapping';
 import type { ExpenseModalEditInitialization, ExpenseModalSource } from '../expenseModalStore';
+import { getCachedGroups } from '../groupsList';
 import { useGroupsStore } from '../groupsStore';
+import { invalidateDashboard } from '../internal/dashboardQueryBridge';
 import { createRequestChannel } from '../internal/resourceRequests';
 import { useLoadingStore } from '../loadingStore';
-import {
-    selectUserCurrency,
-    selectUserDefaultCategory,
-    selectUserSkipCategory,
-    useUsersStore,
-} from '../users-store';
+import { getCachedKnownUsers, getCachedSelfUser, invalidateKnownUsers } from '../sessionUser';
 
-import { ACTIVITY_API_LIMIT } from './constants';
 import { initialState } from './initialState';
 import type {
     ActivityStore,
@@ -44,14 +42,14 @@ const refreshFinancialData = (
     { groupId, parentActivityId }: FinancialRefreshContext,
 ): Promise<void> => {
     const requests: Promise<unknown>[] = [
-        useDashboardStore.getState().fetchSetDashboard(true),
+        invalidateDashboard(),
         activityState.fetchSetActivity(true),
     ];
 
     if (groupId) {
         requests.push(useGroupsStore.getState().fetchSetGroupById(groupId, true));
     } else {
-        requests.push(useUsersStore.getState().fetchSetFriends(true));
+        requests.push(invalidateKnownUsers());
     }
 
     if (parentActivityId) {
@@ -96,22 +94,25 @@ const createExpense = (get: () => ActivityStore, params: CreateExpenseParams): P
 };
 
 const getExpenseEditSource = (): ExpenseModalSource => {
-    const usersState = useUsersStore.getState();
     const groupsState = useGroupsStore.getState();
+    const groups = getCachedGroups() ?? [];
+    const currentUser = getCachedSelfUser() ?? null;
+    // The self query's settings once it has data, else the cached user's (as the UI reads them).
+    const settings = currentUser?.settings ?? getLocalUser()?.settings ?? null;
 
     return {
         context: 'dashboard',
-        currentUser: usersState.user,
-        defaultCurrency: selectUserCurrency(usersState),
-        defaultCategory: selectUserDefaultCategory(usersState),
-        skipCategory: selectUserSkipCategory(usersState),
-        groups: groupsState.groups.map(group => ({
+        currentUser,
+        defaultCurrency: userCurrency(settings),
+        defaultCategory: userDefaultCategory(settings),
+        skipCategory: userSkipCategory(settings),
+        groups: groups.map(group => ({
             id: group.id,
             name: group.name,
             members: group.members.map(member => member.user),
         })),
-        knownFriends: usersState.friends.map(friend => friend.user),
-        defaultGroupId: groupsState.selectedGroup?.id ?? groupsState.groups[0]?.id,
+        knownFriends: getCachedKnownUsers()?.map(friend => friend.user) ?? [],
+        defaultGroupId: groupsState.selectedGroup?.id ?? groups[0]?.id,
     };
 };
 

@@ -1,13 +1,10 @@
 import { Avatar, Card, Flex, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
 import { CircleUserRoundIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useShallow } from 'zustand/react/shallow';
 
-import {
-    selectUserSaveGroupExpensesToSolo,
-    selectUserSoloModeByDefault,
-    useUsersStore,
-} from 'store/users-store';
+import { userSaveGroupExpensesToSolo, userSoloModeByDefault } from 'entities/users';
+import { useUserSetting } from 'hooks/useSelfUser';
+import { useUpdateSelf } from 'hooks/useUserMutations';
 
 interface Props {
     isLoading: boolean;
@@ -15,20 +12,16 @@ interface Props {
 
 const SoloPreferencesSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
-    const { soloModeByDefault, saveGroupExpensesToSolo, setUserSettings } = useUsersStore(
-        useShallow(state => ({
-            soloModeByDefault: selectUserSoloModeByDefault(state),
-            saveGroupExpensesToSolo: selectUserSaveGroupExpensesToSolo(state),
-            setUserSettings: state.setUserSettings,
-        })),
-    );
+    const soloModeByDefault = useUserSetting(userSoloModeByDefault);
+    const saveGroupExpensesToSolo = useUserSetting(userSaveGroupExpensesToSolo);
+    const { updateSelf } = useUpdateSelf();
 
     const onSoloModeByDefaultChange = (isEnabled: boolean) => {
-        void setUserSettings({ settings: { soloModeByDefault: isEnabled } });
+        void updateSelf({ settings: { soloModeByDefault: isEnabled } });
     };
 
     const onSaveGroupExpensesToSoloChange = (isEnabled: boolean) => {
-        void setUserSettings({ settings: { saveGroupExpensesToSolo: isEnabled } });
+        void updateSelf({ settings: { saveGroupExpensesToSolo: isEnabled } });
     };
 
     return (

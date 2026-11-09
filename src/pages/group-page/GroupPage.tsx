@@ -3,6 +3,8 @@ import { Box, Card, Container, Flex, Grid, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 
+import { useGroups } from 'hooks/useGroupsList';
+
 import GroupsCards from 'components/GroupsCards';
 
 import { GroupCoverSection, GroupSummary, GroupTabsContent } from './components';
@@ -11,8 +13,8 @@ import { GroupCoverBox } from './styled';
 
 const GroupPage = () => {
     const { t } = useTranslation(['group', 'common', 'dashboard']);
+    const groups = useGroups();
     const {
-        groups,
         selectedGroup,
         fetchSetGroupById,
         fetchMoreGroupActivity,

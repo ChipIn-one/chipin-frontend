@@ -1,11 +1,10 @@
 import { Navigate } from 'react-router-dom';
 
+import { userSoloModeByDefault } from 'entities/users';
 import { getPreferredModeRoute } from 'helpers/routes';
+import { useCanAccessSolo, useSelfUserState, useUserSetting } from 'hooks/useSelfUser';
 import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
-import { selectUserSelfFetched } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
-import { selectCanAccessSolo, selectUserSettings, useUsersStore } from 'store/users-store';
 
 import { GuardLoader } from './internal';
 
@@ -16,21 +15,16 @@ interface Props {
 const HomeRouteGuard = ({ children }: Props) => {
     const isAuthResolved = useAuthStore(selectIsAuthResolved);
     const isLoggedIn = useAuthStore(selectIsLoggedIn);
-    const settings = useUsersStore(selectUserSettings);
-    const canAccessSolo = useUsersStore(selectCanAccessSolo);
-    const isUserFetched = useLoadingStore(selectUserSelfFetched);
+    const soloModeByDefault = useUserSetting(userSoloModeByDefault);
+    const canAccessSolo = useCanAccessSolo();
+    const isUserFetched = useSelfUserState().isFetched;
 
     if (!isAuthResolved || (isLoggedIn && !isUserFetched)) {
         return <GuardLoader />;
     }
 
     if (isLoggedIn) {
-        return (
-            <Navigate
-                to={getPreferredModeRoute(canAccessSolo && (settings?.soloModeByDefault ?? false))}
-                replace
-            />
-        );
+        return <Navigate to={getPreferredModeRoute(canAccessSolo && soloModeByDefault)} replace />;
     }
 
     return <>{children}</>;

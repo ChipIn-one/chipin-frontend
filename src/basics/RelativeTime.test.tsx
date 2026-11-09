@@ -18,15 +18,14 @@ vi.mock('react-i18next', () => ({
     }),
 }));
 
-vi.mock('store/users-store', () => ({
-    selectIsUserTime24H: () => true,
-    useUsersStore: (selector: () => unknown) => selector(),
-}));
-
 import RelativeTime from './RelativeTime';
 
-test('formats time using the user 24-hour preference', () => {
-    render(<RelativeTime createdAt={1_785_328_628} />);
+test('formats time with the time format it is given, and follows a change of it', () => {
+    const view = render(<RelativeTime createdAt={1_785_328_628} isTime24H />);
 
-    expect(formatRelativeTimeMock).toHaveBeenCalledWith(1_785_328_628, 'en-US', true);
+    expect(formatRelativeTimeMock).toHaveBeenLastCalledWith(1_785_328_628, 'en-US', true);
+
+    view.rerender(<RelativeTime createdAt={1_785_328_628} isTime24H={false} />);
+
+    expect(formatRelativeTimeMock).toHaveBeenLastCalledWith(1_785_328_628, 'en-US', false);
 });

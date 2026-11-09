@@ -1,12 +1,27 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { Theme } from '@radix-ui/themes';
+import type { QueryClient } from '@tanstack/react-query';
+import { onlineManager } from '@tanstack/react-query';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { delay, http, HttpResponse } from 'msw';
+import { MemoryRouter } from 'react-router-dom';
+import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { ActivityFeedItem, Group, SelfUser } from 'api/chipin.types';
-import { useDashboardStore } from 'store/dashboardStore';
+import { lightThemeStyled } from 'constants/styled-themes';
+import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
+import { dashboardActivityQueryOptions, dashboardKeys } from 'entities/dashboard';
+import { groupsKeys, groupsListQueryOptions } from 'entities/groups';
+import { type KnownUser, knownUsersQueryOptions, usersKeys } from 'entities/users';
+import { useAuthStore } from 'store/authStore';
 import { useErrorsStore } from 'store/errorsStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
+import { groupsListData } from 'test/groupsList';
+import { createKnownUser } from 'test/knownUsers';
+import { setupMswServer } from 'test/mswServer';
+import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
+import { mountAsUserClient } from 'test/userClient';
 
 import DashboardPage from './DashboardPage';
 
@@ -36,10 +51,39 @@ vi.mock('components/dashboard-summary', () => ({
         hasExpenseHistory ? <div data-testid="dashboard-summary" /> : null,
 }));
 
-vi.mock('components/GroupsCards', () => ({
-    default: ({ groups }: { groups: Group[] }) => (
-        <div data-testid="groups-cards" data-count={groups.length} />
-    ),
+// The PWA store reads the display mode when its module loads (jsdom has no `matchMedia`); the
+// real group cards below load it.
+vi.hoisted(() => {
+    Object.defineProperty(window, 'matchMedia', {
+        configurable: true,
+        value: (query: string) => ({
+            matches: false,
+            media: query,
+            addEventListener: () => undefined,
+            removeEventListener: () => undefined,
+        }),
+    });
+});
+
+// A stand-in for the group cards, or the real ones for a test that sets `real`.
+const groupsCardsMode = vi.hoisted(() => ({ real: false }));
+
+vi.mock('components/GroupsCards', async importOriginal => {
+    const { default: RealGroupsCards } =
+        await importOriginal<typeof import('components/GroupsCards')>();
+
+    return {
+        default: (props: { groups: Group[]; label: string }) =>
+            groupsCardsMode.real ? (
+                <RealGroupsCards {...props} />
+            ) : (
+                <div data-testid="groups-cards" data-count={props.groups.length} />
+            ),
+    };
+});
+
+vi.mock('components/modals', () => ({
+    CreateUpdateGroupModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 vi.mock('components/internal-page-layout', () => ({
@@ -140,32 +184,95 @@ const activityItem = {
     },
 } as ActivityFeedItem;
 
-const resolveDashboardOnboardingData = () => {
-    useLoadingStore.getState().setLoading('dashboard', 'data', 'fetched');
-    useLoadingStore.getState().setLoading('group', 'list', 'fetched');
-    useLoadingStore.getState().setLoading('users', 'friends', 'fetched');
-    useLoadingStore.getState().setLoading('users', 'self', 'fetched');
+const server = setupMswServer();
+let client: QueryClient;
+
+const BALANCES_URL = '*/dashboard/balances';
+const ACTIVITY_URL = '*/users/self/activity-previews';
+const RATES_URL = '*/currency-rates';
+const KNOWN_USERS_URL = '*/users/known-users';
+const SELF_URL = '*/users/self';
+const GROUPS_URL = '*/groups';
+const badRequest = () =>
+    HttpResponse.json({ code: 'SYSTEM.BAD_REQUEST', message: 'Unavailable' }, { status: 400 });
+
+/** Answers `url` with `respond` and counts its requests. */
+const countRequests = (url: string, respond: () => Response | Promise<Response>) => {
+    const requests: URL[] = [];
+
+    server.use(
+        http.get(url, ({ request }) => {
+            requests.push(new URL(request.url));
+            return respond();
+        }),
+    );
+    return requests;
 };
 
-const originalFetchSetDashboard = useDashboardStore.getState().fetchSetDashboard;
-const originalFetchSetDashboardData = useDashboardStore.getState().fetchSetDashboardData;
+/** The dashboard queries as a restored cache or a finished load leaves them: fresh, no request. */
+const seedDashboard = ({
+    items = [],
+    nextCursor = null,
+}: { items?: ActivityFeedItem[]; nextCursor?: number | null } = {}) => {
+    client.setQueryData(dashboardKeys.balances(), []);
+    client.setQueryData(dashboardKeys.activity(), {
+        pages: [{ items, nextCursor }],
+        pageParams: [null],
+    });
+};
+
+const seedRates = () => {
+    client.setQueryData(currencyRatesKeys.all, EMPTY_CURRENCY_RATES);
+};
+
+const seedFriends = (friends: KnownUser[] = []) => {
+    client.setQueryData(usersKeys.known(), friends);
+};
+
+// A load of the known users that fails (a 500): with seeded friends it is a failed refresh.
+const failFriendsLoad = async () => {
+    countRequests(KNOWN_USERS_URL, badRequest);
+    await client.prefetchQuery({ ...knownUsersQueryOptions(), staleTime: 0 });
+};
+
+// The groups list as a restored cache or a finished load leaves it: fresh, no request.
+const seedGroups = (groups: Group[] = []) => {
+    client.setQueryData(groupsKeys.list(), groupsListData(groups));
+};
+
+// A load of the groups list that fails (a 400): with seeded groups it is a failed refresh.
+const failGroupsLoad = async () => {
+    countRequests(GROUPS_URL, badRequest);
+    await client.prefetchInfiniteQuery({ ...groupsListQueryOptions(), staleTime: 0 });
+};
+
+const friend = (lastUsedCurrency: string | null = null) =>
+    createKnownUser('friend-1', [], { lastUsedCurrency });
+
+const resolveDashboardOnboardingData = () => {
+    seedDashboard();
+    seedRates();
+    seedFriends();
+    seedGroups();
+};
+
+const renderPage = () => renderWithQueryClient(<DashboardPage />, client);
 
 beforeEach(() => {
     vi.clearAllMocks();
-    useDashboardStore.setState({
-        fetchSetDashboard: originalFetchSetDashboard,
-        fetchSetDashboardData: originalFetchSetDashboardData,
-    });
-    useDashboardStore.getState().setInitialDashboardStore();
+    groupsCardsMode.real = false;
+    client = createTestQueryClient();
+    mountAsUserClient('user-1', client);
     useGroupsStore.getState().setInitialGroupsStore();
-    useUsersStore.setState({ user: currentUser, friends: [], hasFriendsSnapshot: false });
+    useAuthStore.setState({ status: 'authenticated' });
+    client.setQueryData(usersKeys.self(), currentUser);
     useLoadingStore.getState().setInitialLoadingStore();
     useErrorsStore.getState().resetErrors();
 });
 
 test('DSH-007 renders welcome only for no friends and no groups', () => {
     resolveDashboardOnboardingData();
-    render(<DashboardPage />);
+    renderPage();
 
     const main = screen.getByTestId('dashboard-main');
     expect(within(main).getByTestId('dashboard-onboarding')).toBeTruthy();
@@ -175,7 +282,7 @@ test('DSH-007 renders welcome only for no friends and no groups', () => {
 test('DSH-011 hides the redundant No groups empty state on mobile Welcome, not desktop', () => {
     resolveDashboardOnboardingData();
 
-    render(<DashboardPage />);
+    renderPage();
 
     const groupsSection = screen.getByTestId('dashboard-groups-section');
     const sidePanel = screen.getByTestId('dashboard-side-panel');
@@ -187,11 +294,9 @@ test('DSH-011 hides the redundant No groups empty state on mobile Welcome, not d
 
 test('DSH-011 keeps No groups visible on mobile once a friend exists', () => {
     resolveDashboardOnboardingData();
-    useUsersStore.setState({
-        friends: [{ user: creator, balances: [], lastUsedCurrency: null }],
-    });
+    seedFriends([friend()]);
 
-    render(<DashboardPage />);
+    renderPage();
 
     const groupsSection = screen.getByTestId('dashboard-groups-section');
     expect(groupsSection.className).not.toContain('rt-r-display-none');
@@ -201,9 +306,9 @@ test('DSH-011 keeps No groups visible on mobile once a friend exists', () => {
 
 test('DSH-013 puts the Create group action below No groups yet at full width', () => {
     resolveDashboardOnboardingData();
-    useUsersStore.setState({ friends: [{ user: creator, balances: [], lastUsedCurrency: null }] });
+    seedFriends([friend()]);
 
-    render(<DashboardPage />);
+    renderPage();
 
     const side = screen.getByTestId('dashboard-side-panel');
     const label = within(side).getByText('groups.emptyTitle');
@@ -217,9 +322,9 @@ test('DSH-013 puts the Create group action below No groups yet at full width', (
 
 test('DSH-012 does not reserve vertical space when the Dashboard summary is empty', () => {
     resolveDashboardOnboardingData();
-    useGroupsStore.setState({ groups: [singleMemberGroup] });
+    seedGroups([singleMemberGroup]);
 
-    render(<DashboardPage />);
+    renderPage();
 
     const side = screen.getByTestId('dashboard-side-panel');
     const groups = within(side).getByTestId('groups-cards');
@@ -231,17 +336,9 @@ test('DSH-012 does not reserve vertical space when the Dashboard summary is empt
 
 test('DSH-012 shows settled summary after direct-friend expense history', () => {
     resolveDashboardOnboardingData();
-    useUsersStore.setState({
-        friends: [
-            {
-                user: { ...creator, id: 'friend-1' },
-                balances: [],
-                lastUsedCurrency: 'USD',
-            },
-        ],
-    });
+    seedFriends([friend('USD')]);
 
-    render(<DashboardPage />);
+    renderPage();
 
     expect(screen.getByTestId('dashboard-summary')).toBeTruthy();
     expect(screen.getByTestId('activity-list')).toBeTruthy();
@@ -249,25 +346,17 @@ test('DSH-012 shows settled summary after direct-friend expense history', () => 
 
 test('DSH-012 hides settled summary without direct-friend or group history', () => {
     resolveDashboardOnboardingData();
-    useUsersStore.setState({
-        friends: [
-            {
-                user: { ...creator, id: 'friend-1' },
-                balances: [],
-                lastUsedCurrency: null,
-            },
-        ],
-    });
+    seedFriends([friend()]);
 
-    render(<DashboardPage />);
+    renderPage();
 
     expect(screen.queryByTestId('dashboard-summary')).toBeNull();
 });
 
 test('DSH-009 renders normal Dashboard for a one-member group with empty activity', () => {
     resolveDashboardOnboardingData();
-    useGroupsStore.setState({ groups: [singleMemberGroup] });
-    render(<DashboardPage />);
+    seedGroups([singleMemberGroup]);
+    renderPage();
 
     const main = screen.getByTestId('dashboard-main');
     const sidePanel = screen.getByTestId('dashboard-side-panel');
@@ -278,8 +367,8 @@ test('DSH-009 renders normal Dashboard for a one-member group with empty activit
 
 test('DSH-009 renders normal Dashboard for a connected friend with no activity', () => {
     resolveDashboardOnboardingData();
-    useUsersStore.setState({ friends: [{ user: creator, balances: [], lastUsedCurrency: null }] });
-    render(<DashboardPage />);
+    seedFriends([friend()]);
+    renderPage();
 
     expect(screen.queryByTestId('dashboard-onboarding')).toBeNull();
     expect(screen.getByTestId('activity-list')).toBeTruthy();
@@ -287,28 +376,23 @@ test('DSH-009 renders normal Dashboard for a connected friend with no activity',
 
 test('DSH-010 keeps normal Dashboard with a connection and activity', () => {
     resolveDashboardOnboardingData();
-    useGroupsStore.setState({ groups: [singleMemberGroup] });
-    useDashboardStore.setState({ activityItems: [activityItem] });
-    render(<DashboardPage />);
+    seedGroups([singleMemberGroup]);
+    seedDashboard({ items: [activityItem] });
+    renderPage();
 
     expect(screen.queryByTestId('dashboard-onboarding')).toBeNull();
     expect(screen.getByTestId('activity-list')).toBeTruthy();
 });
 
-test('DSH-007 preserves an existing dashboard after a failed background refresh', () => {
+test('DSH-007 preserves an existing dashboard after a failed background refresh', async () => {
     resolveDashboardOnboardingData();
-    useGroupsStore.setState({ groups: [singleMemberGroup] });
-    useDashboardStore.setState({
-        hasConfirmedDashboardData: true,
-        activityItems: [activityItem],
-    });
-    useErrorsStore.getState().setError('dashboard', 'data', {
-        message: 'Background refresh failed',
-    });
-    const refreshData = vi.fn(() => Promise.resolve());
-    useDashboardStore.setState({ fetchSetDashboardData: refreshData });
+    seedGroups([singleMemberGroup]);
+    seedDashboard({ items: [activityItem] });
+    const balanceRequests = countRequests(BALANCES_URL, badRequest);
+    countRequests(ACTIVITY_URL, () => HttpResponse.json({ items: [], nextCursor: null }));
+    await client.refetchQueries({ queryKey: dashboardKeys.balances() });
 
-    render(<DashboardPage />);
+    renderPage();
 
     expect(screen.getByTestId('activity-list')).toBeTruthy();
     expect(screen.getByTestId('groups-cards')).toBeTruthy();
@@ -316,33 +400,34 @@ test('DSH-007 preserves an existing dashboard after a failed background refresh'
     expect(screen.getByRole('alert')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'activity:retryAction' }));
-    expect(refreshData).toHaveBeenCalledOnce();
+    await waitFor(() => {
+        expect(balanceRequests).toHaveLength(2);
+    });
 });
 
 test('DSH-007 preserves a confirmed dashboard during background refresh loading', () => {
     resolveDashboardOnboardingData();
-    useGroupsStore.setState({ groups: [singleMemberGroup] });
-    useDashboardStore.setState({ hasConfirmedDashboardData: true });
-    useLoadingStore.getState().setLoading('dashboard', 'data', 'loading');
+    seedGroups([singleMemberGroup]);
+    server.use(
+        http.get(BALANCES_URL, async () => {
+            await delay('infinite');
+            return HttpResponse.json({ balances: {} });
+        }),
+    );
+    void client.refetchQueries({ queryKey: dashboardKeys.balances() });
 
-    render(<DashboardPage />);
+    renderPage();
 
     expect(screen.getByTestId('activity-list')).toBeTruthy();
     expect(screen.queryByTestId('activity-skeleton')).toBeNull();
 });
 
-test('DSH-007 keeps confirmed group snapshot visible after list refresh fails', () => {
+test('DSH-007 keeps confirmed group snapshot visible after list refresh fails', async () => {
     resolveDashboardOnboardingData();
-    useGroupsStore.setState({
-        groups: [singleMemberGroup],
-        hasConfirmedGroups: true,
-    });
-    useLoadingStore.getState().setLoading('group', 'list', 'loading');
-    useErrorsStore.getState().setError('group', 'list', {
-        message: 'Group refresh unavailable',
-    });
+    seedGroups([singleMemberGroup]);
+    await failGroupsLoad();
 
-    render(<DashboardPage />);
+    renderPage();
 
     expect(screen.getByTestId('groups-cards')).toBeTruthy();
     expect(screen.getByTestId('activity-list')).toBeTruthy();
@@ -350,177 +435,193 @@ test('DSH-007 keeps confirmed group snapshot visible after list refresh fails', 
     expect(screen.queryByText('errors.loadTitle')).toBeNull();
 });
 
-test('DSH-007 keeps confirmed friend snapshot visible after friends refresh fails', () => {
+test('DSH-007 keeps confirmed friend snapshot visible after friends refresh fails', async () => {
     resolveDashboardOnboardingData();
-    useUsersStore.setState({
-        hasFriendsSnapshot: true,
-        friends: [
-            {
-                user: { ...creator, id: 'friend-1' },
-                balances: [],
-                lastUsedCurrency: null,
-            },
-        ],
-    });
-    useLoadingStore.getState().setLoading('users', 'friends', 'loading');
-    useErrorsStore.getState().setError('users', 'friends', {
-        message: 'Friends refresh unavailable',
-    });
+    seedFriends([friend()]);
+    await failFriendsLoad();
 
-    render(<DashboardPage />);
+    renderPage();
 
     expect(screen.getByTestId('activity-list')).toBeTruthy();
     expect(screen.getByRole('alert')).toBeTruthy();
     expect(screen.queryByText('errors.loadTitle')).toBeNull();
 });
 
-test('DSH-007 preserves a confirmed empty connection list without inventing a new-user state from failure', () => {
+test('DSH-007 preserves a confirmed empty connection list without inventing a new-user state from failure', async () => {
     resolveDashboardOnboardingData();
-    useUsersStore.setState({ hasFriendsSnapshot: true, friends: [] });
-    useGroupsStore.setState({ hasConfirmedGroups: true, groups: [] });
-    useErrorsStore.getState().setError('users', 'friends', {
-        message: 'Friends refresh unavailable',
-    });
+    seedGroups([]);
+    await failFriendsLoad();
 
-    render(<DashboardPage />);
+    renderPage();
 
     expect(screen.getByTestId('dashboard-onboarding')).toBeTruthy();
     expect(screen.getByRole('alert')).toBeTruthy();
     expect(screen.queryByText('errors.loadTitle')).toBeNull();
 });
 
-test('DSH-007 treats an initial group failure without confirmed data as blocking', () => {
+test('DSH-007 treats an initial group failure without confirmed data as blocking', async () => {
     resolveDashboardOnboardingData();
-    useErrorsStore.getState().setError('group', 'list', {
-        message: 'No group snapshot',
-    });
+    client.removeQueries({ queryKey: groupsKeys.list() });
+    await failGroupsLoad();
 
-    render(<DashboardPage />);
+    renderPage();
 
+    // The mount retries the failed first load once; it fails again.
+    expect(await screen.findByText('errors.loadTitle')).toBeTruthy();
     expect(screen.queryByTestId('activity-list')).toBeNull();
+});
+
+test('DSH-007 Retry fetches both dashboard data and currency rates', async () => {
+    resolveDashboardOnboardingData();
+    client.clear();
+    seedFriends();
+    const balanceRequests = countRequests(BALANCES_URL, badRequest);
+    const activityRequests = countRequests(ACTIVITY_URL, badRequest);
+    const rateRequests = countRequests(RATES_URL, badRequest);
+    const friendRequests = countRequests(KNOWN_USERS_URL, () => HttpResponse.json({ friends: [] }));
+    const groupRequests = countRequests(GROUPS_URL, () =>
+        HttpResponse.json({ items: [], nextCursor: null }),
+    );
+
+    renderPage();
+    await waitFor(() => {
+        expect(groupRequests).toHaveLength(1);
+    });
+    fireEvent.click(await screen.findByRole('button', { name: 'activity:retryAction' }));
+
+    await waitFor(() => {
+        expect(balanceRequests).toHaveLength(2);
+        expect(activityRequests).toHaveLength(2);
+        expect(rateRequests).toHaveLength(2);
+        // The friends were cached: Retry reloads them too.
+        expect(friendRequests).toHaveLength(1);
+        // The mount loaded the groups; Retry reloads them.
+        expect(groupRequests).toHaveLength(2);
+    });
     expect(screen.getByText('errors.loadTitle')).toBeTruthy();
 });
 
-test('DSH-007 Retry fetches both dashboard data and currency rates', () => {
+test('DSH-007 never mistakes a load failure for new-user welcome', async () => {
     resolveDashboardOnboardingData();
-    useErrorsStore.getState().setError('dashboard', 'data', {
-        message: 'Dashboard unavailable',
-    });
-    useErrorsStore.getState().setError('dashboard', 'rates', {
-        message: 'Rates unavailable',
-    });
-    const refreshData = vi.fn(() => Promise.resolve());
-    const refreshDashboardOnly = vi.fn(() => Promise.resolve());
-    useDashboardStore.setState({
-        fetchSetDashboardData: refreshData,
-        fetchSetDashboard: refreshDashboardOnly,
-    });
+    client.removeQueries({ queryKey: usersKeys.known() });
+    await failFriendsLoad();
+    renderPage();
 
-    render(<DashboardPage />);
-    fireEvent.click(screen.getByRole('button', { name: 'activity:retryAction' }));
-
-    expect(refreshData).toHaveBeenCalledOnce();
-    expect(refreshDashboardOnly).not.toHaveBeenCalled();
-});
-
-test('DSH-007 never mistakes a load failure for new-user welcome', () => {
-    resolveDashboardOnboardingData();
-    useErrorsStore.getState().setError('users', 'friends', {
-        message: 'Friends unavailable',
-    });
-    render(<DashboardPage />);
-
+    // The mount retries the failed first load once; it fails again.
+    expect(await screen.findByText('errors.loadTitle')).toBeTruthy();
     expect(screen.queryByTestId('dashboard-onboarding')).toBeNull();
     expect(screen.queryByTestId('activity-list')).toBeNull();
-    expect(screen.getByText('errors.loadTitle')).toBeTruthy();
     expect(screen.getByRole('button', { name: 'activity:retryAction' })).toBeTruthy();
 });
 
-test('DSH-007 requires a successfully resolved user before welcome', () => {
+test('DSH-007 requires a successfully resolved user before welcome', async () => {
     resolveDashboardOnboardingData();
-    useUsersStore.setState({ user: null });
-    render(<DashboardPage />);
+    client.removeQueries({ queryKey: usersKeys.self() });
+    const selfRequests = countRequests(SELF_URL, badRequest);
+    renderPage();
 
+    expect(await screen.findByText('errors.loadTitle')).toBeTruthy();
     expect(screen.queryByTestId('dashboard-onboarding')).toBeNull();
-    expect(screen.getByText('errors.loadTitle')).toBeTruthy();
+    expect(selfRequests).toHaveLength(1);
+});
+
+test('DSH-007 Retry reloads a self user that failed to load', async () => {
+    resolveDashboardOnboardingData();
+    client.removeQueries({ queryKey: usersKeys.self() });
+    const selfRequests = countRequests(SELF_URL, badRequest);
+    renderPage();
+    await screen.findByText('errors.loadTitle');
+
+    const retried = countRequests(SELF_URL, () =>
+        HttpResponse.json({ ...currentUser, isPremium: false }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'activity:retryAction' }));
+
+    await waitFor(() => {
+        expect(client.getQueryData(usersKeys.self())).toBeDefined();
+    });
+    expect(selfRequests).toHaveLength(1);
+    expect(retried).toHaveLength(1);
 });
 
 test('DSH-007 derives welcome from connections, not group lifecycle activity', () => {
     resolveDashboardOnboardingData();
-    useDashboardStore.setState({ activityItems: [activityItem] });
-    render(<DashboardPage />);
+    seedDashboard({ items: [activityItem] });
+    renderPage();
 
     expect(screen.getByTestId('dashboard-onboarding')).toBeTruthy();
 });
 
-test('DSH-007 ignores currency-rate failure when onboarding data is resolved', () => {
+// The rates of a resolved dashboard fail to load (no cached rates).
+const failRates = () => {
+    client.removeQueries({ queryKey: currencyRatesKeys.all });
+    return countRequests(RATES_URL, badRequest);
+};
+
+test('DSH-007 ignores currency-rate failure when onboarding data is resolved', async () => {
     resolveDashboardOnboardingData();
-    useErrorsStore.getState().setError('dashboard', 'rates', {
-        message: 'Rates unavailable',
-    });
+    failRates();
 
-    render(<DashboardPage />);
+    renderPage();
 
+    expect(await screen.findByRole('alert')).toBeTruthy();
     expect(screen.getByTestId('dashboard-onboarding')).toBeTruthy();
 });
 
-test('DSH-007 surfaces a rates-only failure without hiding confirmed Dashboard content', () => {
+test('DSH-007 surfaces a rates-only failure without hiding confirmed Dashboard content', async () => {
     resolveDashboardOnboardingData();
-    useGroupsStore.setState({ groups: [singleMemberGroup] });
-    useDashboardStore.setState({ hasConfirmedDashboardData: true });
-    useErrorsStore.getState().setError('dashboard', 'rates', {
-        message: 'Currency rates unavailable',
-    });
-    const retry = vi.fn(() => Promise.resolve());
-    useDashboardStore.setState({ fetchSetDashboardData: retry });
+    seedGroups([singleMemberGroup]);
+    const rateRequests = failRates();
 
-    render(<DashboardPage />);
+    renderPage();
 
+    expect(await screen.findByRole('alert')).toBeTruthy();
     expect(screen.getByTestId('activity-list')).toBeTruthy();
     expect(screen.getByTestId('groups-cards')).toBeTruthy();
     expect(screen.queryByText('errors.loadTitle')).toBeNull();
-    expect(screen.getByRole('alert')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'activity:retryAction' }));
-    expect(retry).toHaveBeenCalledOnce();
+    await waitFor(() => {
+        expect(rateRequests).toHaveLength(2);
+    });
 });
 
-test('DSH-007 preserves Welcome with a rates-only failure and offers retry', () => {
+test('DSH-007 preserves Welcome with a rates-only failure and offers retry', async () => {
     resolveDashboardOnboardingData();
-    useErrorsStore.getState().setError('dashboard', 'rates', {
-        message: 'Currency rates unavailable',
-    });
+    failRates();
 
-    render(<DashboardPage />);
+    renderPage();
 
+    expect(await screen.findByRole('alert')).toBeTruthy();
     expect(screen.getByTestId('dashboard-onboarding')).toBeTruthy();
-    expect(screen.getByRole('alert')).toBeTruthy();
     expect(screen.queryByText('errors.loadTitle')).toBeNull();
 });
 
 test('DSH-007 keeps loading while connection inputs resolve', () => {
-    useLoadingStore.getState().setLoading('dashboard', 'data', 'fetched');
-    useLoadingStore.getState().setLoading('group', 'list', 'fetched');
-    useLoadingStore.getState().setLoading('users', 'friends', 'fetched');
+    seedDashboard();
+    seedRates();
+    seedGroups();
+    seedFriends();
+    // The self user is not loaded yet: no `users.self` entry, its load still running.
+    client.removeQueries({ queryKey: usersKeys.self() });
+    countRequests(SELF_URL, () => new Promise<never>(() => undefined));
 
-    render(<DashboardPage />);
+    renderPage();
 
     expect(screen.getByTestId('activity-skeleton')).toBeTruthy();
     expect(screen.queryByTestId('dashboard-onboarding')).toBeNull();
     expect(screen.queryByTestId('activity-list')).toBeNull();
 });
 
-test('ACT-023 connects dashboard infinite scroll to the next activity preview page', () => {
-    useGroupsStore.setState({ groups: [singleMemberGroup] });
-    const fetchMoreDashboardActivity = vi.fn(() => Promise.resolve());
+test('ACT-023 connects dashboard infinite scroll to the next activity preview page', async () => {
+    seedGroups([singleMemberGroup]);
     resolveDashboardOnboardingData();
-    useDashboardStore.setState({
-        activityItems: [activityItem],
-        activityNextCursor: 40,
-        fetchMoreDashboardActivity,
-    });
+    seedDashboard({ items: [activityItem], nextCursor: 40 });
+    const activityRequests = countRequests(ACTIVITY_URL, () =>
+        HttpResponse.json({ items: [], nextCursor: null }),
+    );
 
-    render(<DashboardPage />);
+    renderPage();
 
     expect(useInfiniteScrollMock).toHaveBeenLastCalledWith(
         expect.objectContaining({
@@ -537,15 +638,158 @@ test('ACT-023 connects dashboard infinite scroll to the next activity preview pa
 
     lastCall[0].onLoadMore();
 
-    expect(fetchMoreDashboardActivity).toHaveBeenCalledOnce();
+    await waitFor(() => {
+        expect(activityRequests).toHaveLength(1);
+    });
+    expect(activityRequests[0]?.searchParams.get('cursor')).toBe('40');
+    expect(activityRequests[0]?.searchParams.get('limit')).toBe('20');
+    await waitFor(() => {
+        expect(useInfiniteScrollMock).toHaveBeenLastCalledWith(
+            expect.objectContaining({ hasMore: false }),
+        );
+    });
+});
+
+test('DSH-007 an offline session shows the cached dashboard and feed without a load-failed notice', async () => {
+    resolveDashboardOnboardingData();
+    seedGroups([singleMemberGroup]);
+    seedDashboard({ items: [activityItem] });
+    // The restored cache is older than the 30 s staleTime: the mount tries to refresh it, the
+    // first attempt fails and the retry waits for the network (as `queryRetry` does offline).
+    client.setQueryData(dashboardKeys.balances(), [], { updatedAt: 0 });
+    client.setQueryDefaults(dashboardKeys.all, { retry: 1, retryDelay: 0 });
+    onlineManager.setOnline(false);
+    server.use(http.get(BALANCES_URL, () => HttpResponse.error()));
+
+    try {
+        renderPage();
+
+        await waitFor(() => {
+            expect(client.getQueryState(dashboardKeys.balances())?.fetchStatus).toBe('paused');
+        });
+        expect(screen.getByTestId('activity-list')).toBeTruthy();
+        expect(screen.getByTestId('groups-cards')).toBeTruthy();
+        // Only the OfflineBanner (in the layout) says that the data may be old.
+        expect(screen.queryByRole('alert')).toBeNull();
+        expect(screen.queryByText('errors.loadTitle')).toBeNull();
+        expect(screen.queryByTestId('activity-skeleton')).toBeNull();
+    } finally {
+        onlineManager.setOnline(true);
+    }
+});
+
+test('DSH-007 offline without cached dashboard data shows the blocking load error', async () => {
+    resolveDashboardOnboardingData();
+    seedGroups([singleMemberGroup]);
+    client.removeQueries({ queryKey: dashboardKeys.balances() });
+    client.setQueryDefaults(dashboardKeys.all, { retry: 1, retryDelay: 0 });
+    onlineManager.setOnline(false);
+    server.use(http.get(BALANCES_URL, () => HttpResponse.error()));
+
+    try {
+        renderPage();
+
+        expect(await screen.findByText('errors.loadTitle')).toBeTruthy();
+        expect(client.getQueryState(dashboardKeys.balances())?.fetchStatus).toBe('paused');
+    } finally {
+        onlineManager.setOnline(true);
+    }
+});
+
+test('ACT-023 a failed next page keeps the feed with its inline Retry and no page alert', async () => {
+    resolveDashboardOnboardingData();
+    seedGroups([singleMemberGroup]);
+    seedDashboard({ items: [activityItem], nextCursor: 40 });
+    const activityRequests = countRequests(ACTIVITY_URL, badRequest);
+
+    renderPage();
+    const lastCall = useInfiniteScrollMock.mock.lastCall;
+
+    if (!lastCall) {
+        throw new Error('Infinite scroll was not initialized');
+    }
+    lastCall[0].onLoadMore();
+
+    const retry = await screen.findByRole('button', { name: 'activity:retryAction' });
+
+    expect(activityRequests).toHaveLength(1);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByTestId('activity-list').contains(retry)).toBe(true);
+    expect(screen.queryByText('errors.loadTitle')).toBeNull();
+});
+
+test('ACT-023 a remount after 30 s refetches a feed of five loaded pages with one request', async () => {
+    resolveDashboardOnboardingData();
+    seedGroups([singleMemberGroup]);
+    const page = (nextCursor: number | null) => ({ items: [activityItem], nextCursor });
+    client.setQueryData(dashboardActivityQueryOptions().queryKey, {
+        pages: [page(50), page(40), page(30), page(20), page(10)],
+        pageParams: [null, 50, 40, 30, 20],
+    });
+    const activityRequests = countRequests(ACTIVITY_URL, () => HttpResponse.json(page(50)));
+    countRequests(BALANCES_URL, () => HttpResponse.json({ balances: {} }));
+
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+        renderPage().unmount();
+        // Back on the dashboard after the 30 s staleTime: the mount refetches the feed.
+        vi.setSystemTime(Date.now() + 31_000);
+        renderPage();
+
+        await waitFor(() => {
+            expect(activityRequests).toHaveLength(1);
+        });
+        expect(activityRequests[0]?.searchParams.get('cursor')).toBeNull();
+        await waitFor(() => {
+            expect(client.getQueryState(dashboardKeys.activity())?.fetchStatus).toBe('idle');
+        });
+        expect(activityRequests).toHaveLength(1);
+    } finally {
+        vi.useRealTimers();
+    }
 });
 
 test('renders the shared profile greeting directly in the dashboard side panel at all breakpoints', () => {
     resolveDashboardOnboardingData();
-    render(<DashboardPage />);
+    renderPage();
 
     const sidePanel = screen.getByTestId('dashboard-side-panel');
     const greeting = within(sidePanel).getByTestId('dashboard-header');
 
     expect(greeting.parentElement).toBe(sidePanel.firstElementChild);
+});
+
+test('DSH-007 a loaded groups list shows the real group cards, not their skeleton', () => {
+    groupsCardsMode.real = true;
+    resolveDashboardOnboardingData();
+    seedGroups([
+        {
+            ...singleMemberGroup,
+            name: 'Weekend Trip',
+            // An open balance: the card is listed, not auto-hidden as settled.
+            members: [
+                ...singleMemberGroup.members,
+                {
+                    user: { ...creator, id: 'user-2', displayName: 'Bob' },
+                    balancesByCurrency: { USD: { currency: 'USD', netBalance: 5 } },
+                },
+            ],
+        },
+    ]);
+
+    renderWithQueryClient(
+        <MemoryRouter>
+            <ThemeProvider theme={lightThemeStyled}>
+                <Theme>
+                    <DashboardPage />
+                </Theme>
+            </ThemeProvider>
+        </MemoryRouter>,
+        client,
+    );
+
+    const sidePanel = screen.getByTestId('dashboard-side-panel');
+
+    expect(within(sidePanel).getByText('Weekend Trip')).toBeTruthy();
+    expect(within(sidePanel).getByRole('group', { name: 'groups.filtersLabel' })).toBeTruthy();
 });

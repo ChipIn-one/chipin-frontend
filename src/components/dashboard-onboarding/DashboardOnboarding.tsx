@@ -4,12 +4,11 @@ import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
 import { useFriendInvite } from 'hooks/pwaHooks';
+import { useSelfUser } from 'hooks/useSelfUser';
 
 import { CreateUpdateGroupModal } from 'components/modals/create-update-group-modal';
 
 import DashboardOnboardingIllustration from 'assets/dashboard-onboarding.png';
-
-import { useConnect } from './internal/useConnect';
 
 const ActionButton = styled(Button)`
     height: auto;
@@ -20,7 +19,7 @@ const ActionButton = styled(Button)`
 
 const DashboardOnboarding = () => {
     const { t } = useTranslation(['dashboard', 'common']);
-    const { inviteToken } = useConnect();
+    const inviteToken = useSelfUser()?.inviteToken ?? null;
     const invite = useFriendInvite(inviteToken ?? '');
 
     const onInviteFriend = (): Promise<void> => {

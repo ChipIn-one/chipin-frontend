@@ -1,12 +1,15 @@
 import { Theme } from '@radix-ui/themes';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
+import { saveLocalUser } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
-import { useUsersStore } from 'store/users-store';
+import { setupMswServer } from 'test/mswServer';
+import { mountAsUserClient } from 'test/userClient';
 
 import DevMenu from './DevMenu';
 
@@ -37,15 +40,21 @@ vi.mock('react-i18next', () => ({
     Trans: ({ children }: { children: ReactNode }) => children,
 }));
 
+const server = setupMswServer();
+let patches: unknown[] = [];
+
 beforeEach(() => {
     vi.clearAllMocks();
     theme.resolvedTheme = 'light';
     useAuthStore.setState({ status: 'unauthenticated' });
-    useUsersStore.setState({
-        user: null,
-        localUser: { role: 'ADMIN', settings },
-        setUserSettings: vi.fn().mockResolvedValue(undefined),
-    });
+    saveLocalUser({ id: 'user-1', role: 'ADMIN', settings });
+    patches = [];
+    server.use(
+        http.patch('*/users/self', async ({ request }) => {
+            patches.push(await request.json());
+            return HttpResponse.json({ code: 'SYSTEM.INTERNAL' }, { status: 400 });
+        }),
+    );
 });
 
 test('switches the local theme without saving user settings on the landing page', () => {
@@ -62,13 +71,14 @@ test('switches the local theme without saving user settings on the landing page'
         .then(() => user.click(screen.getByRole('menuitem', { name: 'header.switchTheme' })))
         .then(() => {
             expect(theme.setTheme).toHaveBeenCalledWith('dark');
-            expect(useUsersStore.getState().setUserSettings).not.toHaveBeenCalled();
+            expect(patches).toEqual([]);
         });
 });
 
 test('persists the theme while an authenticated user is still loading', () => {
     const user = userEvent.setup();
     useAuthStore.setState({ status: 'authenticated' });
+    mountAsUserClient();
 
     render(
         <Theme>
@@ -79,10 +89,10 @@ test('persists the theme while an authenticated user is still loading', () => {
     return user
         .click(screen.getByRole('button', { name: 'header.devMenu' }))
         .then(() => user.click(screen.getByRole('menuitem', { name: 'header.switchTheme' })))
-        .then(() => {
-            expect(useUsersStore.getState().setUserSettings).toHaveBeenCalledWith({
-                settings: { theme: 'dark' },
-            });
-            expect(theme.setTheme).not.toHaveBeenCalled();
-        });
+        .then(() =>
+            waitFor(() => {
+                expect(patches).toEqual([{ settings: { theme: 'dark' } }]);
+                expect(theme.setTheme).not.toHaveBeenCalled();
+            }),
+        );
 });

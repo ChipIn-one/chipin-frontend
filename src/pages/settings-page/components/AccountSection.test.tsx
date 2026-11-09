@@ -1,12 +1,13 @@
+import type { QueryClient } from '@tanstack/react-query';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'styled-components';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { beforeEach, expect, test } from 'vitest';
 
-import type { SelfUser } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
-import type { UsersStoreActions } from 'store/users-store';
-import { useUsersStore } from 'store/users-store';
+import { type SelfUser, usersKeys } from 'entities/users';
+import { setupMswServer } from 'test/mswServer';
+import { serveSelfUpdates, signInWithSelf } from 'test/selfUser';
 
 import AccountSection from './AccountSection';
 
@@ -36,29 +37,16 @@ const user = {
     updatedAt: 1,
 } satisfies SelfUser;
 
-const setUserSettings = vi.fn((params: Parameters<UsersStoreActions['setUserSettings']>[0]) => {
-    useUsersStore.setState(state => ({
-        user: state.user
-            ? {
-                  ...state.user,
-                  ...(params.displayName !== undefined && { displayName: params.displayName }),
-                  settings: { ...state.user.settings, ...params.settings },
-              }
-            : null,
-    }));
-
-    return Promise.resolve();
-});
-const actualSetUserSettings = useUsersStore.getState().setUserSettings;
+const server = setupMswServer();
+let client: QueryClient;
+let updates: unknown[];
 
 beforeEach(() => {
-    setUserSettings.mockClear();
-    useUsersStore.setState({ user, localUser: null, friends: [], setUserSettings });
+    client = signInWithSelf(user);
+    updates = serveSelfUpdates(server, client);
 });
 
-afterEach(() => {
-    useUsersStore.setState({ setUserSettings: actualSetUserSettings });
-});
+const selfInCache = () => client.getQueryData<SelfUser>(usersKeys.self());
 
 test('saves gender immediately without a page-level save action', () => {
     const interaction = userEvent.setup();
@@ -78,9 +66,8 @@ test('saves gender immediately without a page-level save action', () => {
 
     return interaction.click(femaleRadio).then(() =>
         waitFor(() => {
-            expect(setUserSettings).toHaveBeenCalledTimes(1);
-            expect(setUserSettings).toHaveBeenCalledWith({ settings: { sex: 'female' } });
-            expect(useUsersStore.getState().user?.settings.sex).toBe('female');
+            expect(updates).toEqual([{ settings: { sex: 'female' } }]);
+            expect(selfInCache()?.settings.sex).toBe('female');
         }),
     );
 });
@@ -105,14 +92,13 @@ test('starts with the current display name and saves it on blur', () => {
         .clear(displayNameInput)
         .then(() => interaction.type(displayNameInput, 'Sam'))
         .then(() => {
-            expect(setUserSettings).not.toHaveBeenCalled();
+            expect(updates).toEqual([]);
             return interaction.tab();
         })
         .then(() =>
             waitFor(() => {
-                expect(setUserSettings).toHaveBeenCalledTimes(1);
-                expect(setUserSettings).toHaveBeenCalledWith({ displayName: 'Sam' });
-                expect(useUsersStore.getState().user?.displayName).toBe('Sam');
+                expect(updates).toEqual([{ displayName: 'Sam' }]);
+                expect(selfInCache()?.displayName).toBe('Sam');
             }),
         );
 });
@@ -135,12 +121,12 @@ test('does not save a whitespace-only display name on blur', () => {
         .then(() => {
             expect(displayNameInput.getAttribute('aria-invalid')).toBe('true');
             expect(screen.getByText('Display name is required.')).toBeTruthy();
-            expect(setUserSettings).not.toHaveBeenCalled();
+            expect(updates).toEqual([]);
         });
 });
 
 test('initializes the display name draft when the user fetch completes', () => {
-    useUsersStore.setState({ user: null, localUser: null, friends: [] });
+    client.removeQueries({ queryKey: usersKeys.self() });
 
     const view = render(
         <ThemeProvider theme={lightThemeStyled}>
@@ -149,7 +135,7 @@ test('initializes the display name draft when the user fetch completes', () => {
     );
 
     act(() => {
-        useUsersStore.setState({ user });
+        client.setQueryData(usersKeys.self(), user);
     });
 
     view.rerender(

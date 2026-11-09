@@ -1,13 +1,15 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
-import { useLoadingStore } from 'store/loadingStore';
-import type { UsersStoreActions } from 'store/users-store';
-import { useUsersStore } from 'store/users-store';
+import { usersKeys } from 'entities/users';
+import { useAuthStore } from 'store/authStore';
+import { setupMswServer } from 'test/mswServer';
+import { mountAsUserClient } from 'test/userClient';
 
 import UserAvatarModal from './UserAvatarModal';
 
@@ -47,7 +49,8 @@ const currentUser = {
 } satisfies SelfUser;
 
 const OPEN_MODAL_LABEL = 'Open avatar modal';
-const uploadUserAvatar = vi.fn<UsersStoreActions['uploadUserAvatar']>();
+const server = setupMswServer();
+let uploads = 0;
 
 const renderModal = () => {
     return render(
@@ -61,13 +64,9 @@ const renderModal = () => {
 
 beforeEach(() => {
     vi.clearAllMocks();
-    useLoadingStore.getState().setInitialLoadingStore();
-    useUsersStore.setState({
-        user: currentUser,
-        localUser: null,
-        friends: [],
-        uploadUserAvatar,
-    });
+    uploads = 0;
+    useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
+    mountAsUserClient().setQueryData(usersKeys.self(), currentUser);
 
     Object.defineProperties(URL, {
         createObjectURL: {
@@ -97,26 +96,26 @@ test('rejects an unsupported file before starting an upload', () => {
             expect(
                 screen.getByRole('button', { name: 'avatarModal.actions.upload' }),
             ).toHaveProperty('disabled', true);
-            expect(uploadUserAvatar).not.toHaveBeenCalled();
+            expect(uploads).toBe(0);
         });
 });
 
-test('previews a valid file, shows upload progress, and closes after success', () => {
+test('previews a valid file, shows the upload in progress, and closes after success', () => {
     const interaction = userEvent.setup();
     const file = new File(['avatar'], 'new-avatar.webp', { type: 'image/webp' });
     const updatedUser = { ...currentUser, picture: 'https://cdn.example.com/new-avatar.webp' };
-    let resolveUpload: ((user: SelfUser) => void) | undefined;
-    const uploadPromise = new Promise<SelfUser>(resolve => {
+    let resolveUpload: (() => void) | undefined;
+    const uploadGate = new Promise<void>(resolve => {
         resolveUpload = resolve;
     });
 
-    uploadUserAvatar.mockImplementation(params => {
-        useLoadingStore.getState().setLoading('users', 'avatar', 'loading');
-        params.onProgress?.(42);
-        return uploadPromise.finally(() => {
-            useLoadingStore.getState().setLoading('users', 'avatar', 'fetched');
-        });
-    });
+    server.use(
+        http.put('*/users/self/avatar', async () => {
+            uploads += 1;
+            await uploadGate;
+            return HttpResponse.json({ ...updatedUser, isPremium: false });
+        }),
+    );
 
     renderModal();
 
@@ -142,13 +141,12 @@ test('previews a valid file, shows upload progress, and closes after success', (
                 screen.getByRole('button', { name: 'avatarModal.actions.upload' }),
             );
         })
+        .then(() => waitFor(() => expect(uploads).toBe(1)))
         .then(() => {
-            expect(screen.getByText('avatarModal.progress:42')).toBeTruthy();
+            expect(screen.getByText('avatarModal.uploading')).toBeTruthy();
             expect(
-                screen
-                    .getByRole('progressbar', { name: 'avatarModal.progressLabel' })
-                    .getAttribute('aria-valuenow'),
-            ).toBe('42');
+                screen.getByRole('progressbar', { name: 'avatarModal.progressLabel' }),
+            ).toBeTruthy();
             expect(screen.getByRole('button', { name: 'buttons.close' })).toHaveProperty(
                 'disabled',
                 true,
@@ -162,7 +160,7 @@ test('previews a valid file, shows upload progress, and closes after success', (
                 throw new Error('Upload resolver was not initialized');
             }
 
-            resolveUpload(updatedUser);
+            resolveUpload();
 
             return waitFor(() => {
                 expect(screen.queryByRole('dialog')).toBeNull();

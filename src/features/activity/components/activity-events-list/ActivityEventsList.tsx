@@ -3,7 +3,7 @@ import { Flex } from '@radix-ui/themes';
 
 import { type ActivityListItem, isActivityPreview } from 'helpers/activityEvent';
 import { getActivityDateKey } from 'helpers/time';
-import { useUsersStore } from 'store/users-store';
+import { useSelfUser } from 'hooks/useSelfUser';
 
 import { NoActivityEmptyState } from 'basics/empty-states';
 
@@ -28,7 +28,7 @@ const ActivityEventsList = ({
     isNavigable = false,
     isFullActivityFeed = false,
 }: Props) => {
-    const userId = useUsersStore(state => state.user?.id);
+    const userId = useSelfUser()?.id;
     const dailyExpenseSummaries = useMemo(
         () => (isShowSummary ? selectors.getDailyExpenseSummary(events, userId) : {}),
         [events, isShowSummary, userId],

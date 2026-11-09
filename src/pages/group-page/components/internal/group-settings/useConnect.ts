@@ -1,10 +1,10 @@
+import { useSelfUser } from 'hooks/useSelfUser';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupUpdating } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
 
 const useConnect = () => {
-    const user = useUsersStore(state => state.user);
+    const user = useSelfUser();
     const updateGroup = useGroupsStore(state => state.updateGroup);
     const isGroupUpdatePending = useLoadingStore(selectGroupUpdating);
 

@@ -1,18 +1,29 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
-import type { Group, SelfUser } from 'api/chipin.types';
+import type { Group } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
-import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
+import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
+import { useAuthStore } from 'store/authStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 import { useGroupsStore } from 'store/groupsStore';
-import { useUsersStore } from 'store/users-store';
+import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
+import { seedGroupsList } from 'test/groupsList';
+import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
 
 import AddExpenseModal from './AddExpenseModal';
 
 import 'i18n/index';
+
+// Rates already loaded: the currency picker does not request them.
+const ratesClient = () => {
+    const client = createTestQueryClient();
+
+    client.setQueryData(currencyRatesKeys.all, EMPTY_CURRENCY_RATES);
+    return client;
+};
 
 const creator = {
     id: 'user-1',
@@ -45,41 +56,24 @@ const group = {
     },
 } satisfies Group;
 
-const currentUser = {
-    ...creator,
-    role: 'USER',
-    subscriptionUntil: null,
-    inviteToken: 'invite-token-user',
-    settings: {
-        defaultCurrency: 'USD',
-        defaultCategory: 'food',
-        timeFormat: '12h',
-        language: 'en',
-        theme: 'system',
-        simplifyDebts: true,
-        skipCategory: false,
-        soloModeByDefault: false,
-        saveGroupExpensesToSolo: false,
-        sex: 'male',
-    },
-} satisfies SelfUser;
-
 beforeEach(() => {
-    useDashboardStore.setState({ appMode: APP_MODES.GROUP });
+    useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
     useExpenseModalStore.getState().reset();
     useGroupsStore.getState().setInitialGroupsStore();
-    useGroupsStore.setState({ groups: [group], selectedGroup: group });
-    useUsersStore.setState({ user: currentUser });
+    useAuthStore.setState({ status: 'authenticated' });
+    useGroupsStore.setState({ selectedGroup: group });
+    seedGroupsList([group]);
     useExpenseModalStore.getState().open();
 });
 
 test('does not render a single-member notice in the modal', () => {
-    render(
+    renderWithQueryClient(
         <MemoryRouter initialEntries={['/group/group-1']}>
             <ThemeProvider theme={lightThemeStyled}>
                 <AddExpenseModal />
             </ThemeProvider>
         </MemoryRouter>,
+        ratesClient(),
     );
 
     expect(screen.getByRole('status').textContent).toBe('Enter an amount greater than zero.');
@@ -90,12 +84,13 @@ test('does not render a single-member notice in the modal', () => {
 test('uses the edit title and Save action in edit mode', () => {
     useExpenseModalStore.setState({ mode: 'edit', isOpened: true });
 
-    render(
+    renderWithQueryClient(
         <MemoryRouter initialEntries={['/activity']}>
             <ThemeProvider theme={lightThemeStyled}>
                 <AddExpenseModal />
             </ThemeProvider>
         </MemoryRouter>,
+        ratesClient(),
     );
 
     expect(screen.getByText('Edit expense')).not.toBeNull();

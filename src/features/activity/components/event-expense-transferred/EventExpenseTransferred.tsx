@@ -8,6 +8,8 @@ import {
     type ExpenseTransferredFromAction,
     type ExpenseTransferredToAction,
 } from 'constants/activity';
+import { isUserTime24H } from 'entities/users';
+import { useUserSetting } from 'hooks/useSelfUser';
 
 import { RelativeTime } from 'basics';
 
@@ -31,6 +33,7 @@ const getDescriptionKey = (reason: string): string => {
 };
 
 const EventExpenseTransferred = ({ event }: Props) => {
+    const isTime24H = useUserSetting(isUserTime24H);
     const { t } = useTranslation('activity');
     const isTransferredFrom = event.action === ACTIVITY_ACTIONS.EXPENSE_TRANSFERRED_FROM;
     const titleKey = isTransferredFrom
@@ -71,7 +74,7 @@ const EventExpenseTransferred = ({ event }: Props) => {
                             count: event.metadata.transfers.length,
                         })}
                     </Text>
-                    <RelativeTime createdAt={event.createdAt} />
+                    <RelativeTime createdAt={event.createdAt} isTime24H={isTime24H} />
                 </Flex>
             </Flex>
         </Card>

@@ -6,8 +6,8 @@ import { beforeEach, expect, test } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
-import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
-import { useUsersStore } from 'store/users-store';
+import { saveLocalUser } from 'helpers/localStorage';
+import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 
 import HeaderNav from './HeaderNav';
 
@@ -33,11 +33,7 @@ const settings = {
 } satisfies UserSettings;
 
 beforeEach(() => {
-    useUsersStore.setState({
-        user: null,
-        localUser: { role: 'ADMIN', settings },
-        friends: [],
-    });
+    saveLocalUser({ role: 'ADMIN', settings });
 });
 
 test.each([
@@ -45,7 +41,7 @@ test.each([
     { appMode: APP_MODES.GROUP, expectedRoute: '/dashboard' },
 ])('opens $expectedRoute from the home link in $appMode mode', ({ appMode, expectedRoute }) => {
     const interaction = userEvent.setup();
-    useDashboardStore.setState({ appMode });
+    useUiPrefsStore.setState({ appMode });
 
     render(
         <MemoryRouter initialEntries={['/settings']}>

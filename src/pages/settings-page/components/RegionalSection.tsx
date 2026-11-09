@@ -1,12 +1,12 @@
 import { Avatar, Box, Button, Card, Flex, Separator, Skeleton, Text } from '@radix-ui/themes';
 import { GlobeIcon, RotateCcwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useShallow } from 'zustand/react/shallow';
 
-import type { UserSettings } from 'api/chipin.types';
+import { isUserTime24H as isTime24H, type SelfUserSettings, userLanguage } from 'entities/users';
 import { matchLocale, resolveBrowserLocale, type SupportedLocale } from 'helpers/locale';
 import { detectDeviceTimezone, formatUtcOffset, getAmPm24Time } from 'helpers/time';
-import { selectIsUserTime24H, selectUserLanguage, useUsersStore } from 'store/users-store';
+import { useUserSetting } from 'hooks/useSelfUser';
+import { useUpdateSelf } from 'hooks/useUserMutations';
 
 import LanguageSelector from 'components/LanguageSelector';
 import SegmentedControl from 'components/SegmentedControl';
@@ -17,13 +17,9 @@ interface Props {
 
 const RegionalSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
-    const { isUserTime24H, language, setUserSettings } = useUsersStore(
-        useShallow(state => ({
-            isUserTime24H: selectIsUserTime24H(state),
-            language: selectUserLanguage(state),
-            setUserSettings: state.setUserSettings,
-        })),
-    );
+    const isUserTime24H = useUserSetting(isTime24H);
+    const language = useUserSetting(userLanguage);
+    const { updateSelf } = useUpdateSelf();
 
     const detectedTimezone = detectDeviceTimezone();
     const utcOffset = formatUtcOffset(new Date().getTimezoneOffset());
@@ -32,13 +28,13 @@ const RegionalSection = ({ isLoading }: Props) => {
     const selectedLanguage = matchLocale(language) ?? 'en';
 
     const onTimeFormatChange = (value: string) => {
-        void setUserSettings({
-            settings: { timeFormat: value as UserSettings['timeFormat'] },
+        void updateSelf({
+            settings: { timeFormat: value as SelfUserSettings['timeFormat'] },
         });
     };
 
     const onLanguageChange = (locale: SupportedLocale) => {
-        void setUserSettings({ settings: { language: locale } });
+        void updateSelf({ settings: { language: locale } });
     };
 
     const onUseSystemLanguage = () => {

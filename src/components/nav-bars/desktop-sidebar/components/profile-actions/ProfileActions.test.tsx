@@ -8,7 +8,7 @@ import type { SelfUser } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
+import { seedSelfUser } from 'test/selfUserSeed';
 
 import ProfileActions from './ProfileActions';
 
@@ -53,8 +53,7 @@ const renderProfileActions = (isSoloMode = false) => {
 beforeEach(() => {
     useAuthStore.setState({ signOut, status: 'authenticated' });
     useLoadingStore.getState().setInitialLoadingStore();
-    useLoadingStore.getState().setLoading('users', 'self', 'fetched');
-    useUsersStore.setState({ user, localUser: null, friends: [] });
+    seedSelfUser(user);
 });
 
 test('expands and collapses the profile actions', () => {

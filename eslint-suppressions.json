@@ -29,22 +29,12 @@
       "count": 1
     }
   },
-  "src/api/usersApi.ts": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "src/basics/BalanceBadges.tsx": {
     "boundaries/dependencies": {
       "count": 1
     }
   },
   "src/basics/BalanceSummaryText.tsx": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/basics/RelativeTime.tsx": {
     "boundaries/dependencies": {
       "count": 1
     }
@@ -276,11 +266,6 @@
     }
   },
   "src/pages/DashboardPage.test.tsx": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
-  "src/pages/DashboardPage.tsx": {
     "boundaries/dependencies": {
       "count": 1
     }

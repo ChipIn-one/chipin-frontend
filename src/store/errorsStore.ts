@@ -9,7 +9,6 @@ interface RequestErrors {
         logoutOtherDevices: RequestError | null;
     };
     group: {
-        list: RequestError | null;
         data: RequestError | null;
         nextPage: RequestError | null;
         add: RequestError | null;
@@ -19,11 +18,6 @@ interface RequestErrors {
         leave: RequestError | null;
         kick: RequestError | null;
         cover: RequestError | null;
-    };
-    dashboard: {
-        data: RequestError | null;
-        rates: RequestError | null;
-        nextPage: RequestError | null;
     };
     activity: {
         data: RequestError | null;
@@ -41,13 +35,6 @@ interface RequestErrors {
     };
     settlement: {
         add: RequestError | null;
-    };
-    users: {
-        self: RequestError | null;
-        friends: RequestError | null;
-        settings: RequestError | null;
-        removeFriend: RequestError | null;
-        avatar: RequestError | null;
     };
 }
 
@@ -68,7 +55,6 @@ export interface ErrorsStore {
 const initialErrors: RequestErrors = {
     auth: { login: null, signOut: null, logoutOtherDevices: null },
     group: {
-        list: null,
         data: null,
         nextPage: null,
         add: null,
@@ -79,7 +65,6 @@ const initialErrors: RequestErrors = {
         kick: null,
         cover: null,
     },
-    dashboard: { data: null, rates: null, nextPage: null },
     activity: {
         data: null,
         nextPage: null,
@@ -89,7 +74,6 @@ const initialErrors: RequestErrors = {
     expense: { add: null, edit: null, update: null },
     ledger: { remove: null },
     settlement: { add: null },
-    users: { self: null, friends: null, settings: null, removeFriend: null, avatar: null },
 };
 
 export const useErrorsStore = create<ErrorsStore>((set, get) => ({

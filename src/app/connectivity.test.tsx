@@ -17,13 +17,17 @@ import { useCheckSignIn } from 'hooks/useCheckSignIn';
 import { publicApi } from 'shared/api/client';
 import { useAuthStore } from 'store/authStore';
 import { useConnectivityStore } from 'store/connectivityStore';
-import { useDashboardStore } from 'store/dashboardStore';
-import { useGroupsStore } from 'store/groupsStore';
-import { useUsersStore } from 'store/users-store';
+import { loadKnownUsersForSession, loadSelfUserForSession } from 'store/sessionUser';
 import { setupMswServer } from 'test/mswServer';
 
 import { BackendUnavailableGate } from 'components/backend-unavailable-page';
 import { InternalPageLayout } from 'components/internal-page-layout';
+
+vi.mock('store/sessionUser', async importOriginal => ({
+    ...(await importOriginal<typeof import('store/sessionUser')>()),
+    loadKnownUsersForSession: vi.fn(),
+    loadSelfUserForSession: vi.fn(),
+}));
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),
@@ -218,10 +222,8 @@ describe('offline cold start through /auth/refresh', () => {
         invalidateAuthSession();
         LocalStorage.set(LS_KEY_AUTH_SESSION_HINT, true);
         useAuthStore.setState({ status: 'unknown', unauthReason: undefined, isNewUser: null });
-        vi.spyOn(useDashboardStore.getState(), 'fetchSetDashboardData').mockResolvedValue();
-        vi.spyOn(useGroupsStore.getState(), 'fetchSetGroups').mockResolvedValue([]);
-        vi.spyOn(useUsersStore.getState(), 'fetchSetUser').mockResolvedValue(null);
-        vi.spyOn(useUsersStore.getState(), 'fetchSetFriends').mockResolvedValue();
+        vi.mocked(loadSelfUserForSession).mockResolvedValue(null);
+        vi.mocked(loadKnownUsersForSession).mockResolvedValue();
     });
 
     afterEach(() => {

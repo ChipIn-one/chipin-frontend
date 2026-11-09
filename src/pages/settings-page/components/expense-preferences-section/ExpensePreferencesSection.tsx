@@ -1,15 +1,15 @@
 import { Avatar, Box, Card, Flex, Grid, Separator, Skeleton, Switch, Text } from '@radix-ui/themes';
 import { ReceiptTextIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useShallow } from 'zustand/react/shallow';
 
 import {
-    selectUserCurrency,
-    selectUserDefaultCategory,
-    selectUserSimplifyDebts,
-    selectUserSkipCategory,
-    useUsersStore,
-} from 'store/users-store';
+    userCurrency,
+    userDefaultCategory,
+    userSimplifyDebts,
+    userSkipCategory,
+} from 'entities/users';
+import { useUserSetting } from 'hooks/useSelfUser';
+import { useUpdateSelf } from 'hooks/useUserMutations';
 
 import CurrencySelect from 'components/CurrencySelect';
 import { CategorySearchSelect } from 'components/search-select';
@@ -20,31 +20,26 @@ interface Props {
 
 const ExpensePreferencesSection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
-    const { defaultCurrency, defaultCategory, skipCategory, simplifyDebts, setUserSettings } =
-        useUsersStore(
-            useShallow(state => ({
-                defaultCurrency: selectUserCurrency(state),
-                defaultCategory: selectUserDefaultCategory(state),
-                skipCategory: selectUserSkipCategory(state),
-                simplifyDebts: selectUserSimplifyDebts(state),
-                setUserSettings: state.setUserSettings,
-            })),
-        );
+    const defaultCurrency = useUserSetting(userCurrency);
+    const defaultCategory = useUserSetting(userDefaultCategory);
+    const skipCategory = useUserSetting(userSkipCategory);
+    const simplifyDebts = useUserSetting(userSimplifyDebts);
+    const { updateSelf } = useUpdateSelf();
 
     const onDefaultCurrencyChange = (value: string) => {
-        void setUserSettings({ settings: { defaultCurrency: value } });
+        void updateSelf({ settings: { defaultCurrency: value } });
     };
 
     const onDefaultCategoryChange = (value: string) => {
-        void setUserSettings({ settings: { defaultCategory: value } });
+        void updateSelf({ settings: { defaultCategory: value } });
     };
 
     const onSkipCategoryChange = (isEnabled: boolean) => {
-        void setUserSettings({ settings: { skipCategory: isEnabled } });
+        void updateSelf({ settings: { skipCategory: isEnabled } });
     };
 
     const onSimplifyDebtsChange = (isEnabled: boolean) => {
-        void setUserSettings({ settings: { simplifyDebts: isEnabled } });
+        void updateSelf({ settings: { simplifyDebts: isEnabled } });
     };
 
     return (

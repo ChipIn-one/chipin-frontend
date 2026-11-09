@@ -1,6 +1,6 @@
 // The hydration gate (spec 03 §1.5, §1.6): one QueryClient per user, its cache restored from IDB
 // outside React before the router renders, then subscribed for saving. Not part of it: the outbox
-// (restored separately by the leader, 03-15b) and the offline cold start (03-7b).
+// (restored separately by the leader, 03-15b) and the offline cold start (`useCheckSignIn`).
 import { useCallback, useSyncExternalStore } from 'react';
 import * as Sentry from '@sentry/react';
 import type { QueryClient } from '@tanstack/react-query';
@@ -13,21 +13,13 @@ import {
 
 import { createQueryClient } from 'shared/api/queryClient';
 
+import { queryCacheKey } from './constants';
 import { persistOptions, reportPersistFailed } from './queryPersister';
+import { cachesByUser, takePendingSeed, unblockCacheWrites, type UserCache } from './userCaches';
 
 /** After this the app starts without the cache; a late IDB result is not applied. */
 export const RESTORE_TIMEOUT_MS = 3000;
 
-interface UserCache {
-    client: QueryClient;
-    ready: Promise<void>;
-    isReady: boolean;
-    listeners: Set<() => void>;
-    /** Stops saving the cache (03-7b `clearUserData`); null until the restore has settled. */
-    unsubscribe: (() => void) | null;
-}
-
-const cachesByUser = new Map<string, UserCache>();
 const cachesByClient = new WeakMap<QueryClient, UserCache>();
 
 const restoreAndSubscribe = (entry: UserCache, userId: string): Promise<void> => {
@@ -54,6 +46,10 @@ const restoreAndSubscribe = (entry: UserCache, userId: string): Promise<void> =>
         .catch(reportPersistFailed)
         .then(() => {
             clearTimeout(timer);
+            if (entry.disposed) {
+                // `clearUserData` ran during the restore: nothing of this user is saved again.
+                return;
+            }
             entry.unsubscribe = persistQueryClientSubscribe({
                 queryClient: entry.client,
                 persister: options.persister,
@@ -85,10 +81,14 @@ const ensureUserCache = (userId: string): UserCache => {
         isReady: false,
         listeners: new Set(),
         unsubscribe: null,
+        disposed: false,
     };
 
+    // A cleared user signs in again: their new cache is saved.
+    unblockCacheWrites(queryCacheKey(userId));
     cachesByUser.set(userId, entry);
     cachesByClient.set(entry.client, entry);
+    takePendingSeed(userId)?.(entry.client);
     entry.ready = restoreAndSubscribe(entry, userId).then(() => {
         entry.isReady = true;
         entry.listeners.forEach(listener => listener());

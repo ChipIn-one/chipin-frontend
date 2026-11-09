@@ -2,10 +2,8 @@ import { useMemo, useState } from 'react';
 import { Button, Flex, Text } from '@radix-ui/themes';
 import { ChevronDownIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useShallow } from 'zustand/react/shallow';
 
-import { selectAvailableCurrencies, selectDefaultCurrency } from 'store/dashboardSelectors';
-import { useDashboardStore } from 'store/dashboardStore';
+import { EMPTY_CURRENCY_RATES, useCurrencyRatesQuery } from 'entities/currency-rates';
 
 import type { SearchSelectProps } from 'components/search-select';
 import { SearchSelect } from 'components/search-select';
@@ -29,8 +27,9 @@ const CurrencySelect = ({
     contentMinWidth,
     contentMaxWidth,
 }: Props) => {
-    const availableCurrencies = useDashboardStore(useShallow(selectAvailableCurrencies));
-    const defaultCurrency = useDashboardStore(useShallow(selectDefaultCurrency));
+    const { data: currencyRates = EMPTY_CURRENCY_RATES } = useCurrencyRatesQuery();
+    const availableCurrencies = useMemo(() => Object.keys(currencyRates.rates), [currencyRates]);
+    const defaultCurrency = currencyRates.base;
 
     const { t } = useTranslation('currencies');
     const [internalCurrency, setInternalCurrency] = useState(currency ?? defaultCurrency ?? '');

@@ -4,13 +4,12 @@ import { BugIcon, CalendarPlusIcon, FlaskConicalIcon, MoonIcon, SunIcon } from '
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
-import { useShallow } from 'zustand/react/shallow';
 
 import { isThemeDark } from 'helpers/theme';
+import { useExtendSubscriptionByDay, useUpdateSelf } from 'hooks/useUserMutations';
 import { AUTH_STATUS } from 'store/authConstants';
 import { selectAuthStatus } from 'store/authSelectors';
 import { useAuthStore } from 'store/authStore';
-import { useUsersStore } from 'store/users-store';
 
 import Dropdown from './Dropdown';
 
@@ -28,12 +27,8 @@ const DevMenu = ({ isShowLabel = false }: Props) => {
     const { resolvedTheme, setTheme } = useTheme();
     const { t } = useTranslation();
     const authStatus = useAuthStore(selectAuthStatus);
-    const { extendUserSubscriptionByDay, setUserSettings } = useUsersStore(
-        useShallow(state => ({
-            extendUserSubscriptionByDay: state.extendUserSubscriptionByDay,
-            setUserSettings: state.setUserSettings,
-        })),
-    );
+    const { updateSelf } = useUpdateSelf();
+    const extendSubscriptionByDay = useExtendSubscriptionByDay();
 
     if (shouldCrash) {
         throw new Error('Manual test error triggered from the header crash button.');
@@ -48,7 +43,7 @@ const DevMenu = ({ isShowLabel = false }: Props) => {
             return;
         }
 
-        void setUserSettings({ settings: { theme: nextTheme } });
+        void updateSelf({ settings: { theme: nextTheme } });
     };
 
     const items = [
@@ -62,7 +57,7 @@ const DevMenu = ({ isShowLabel = false }: Props) => {
             value: 'extendSubscription',
             label: t('header.addSubscriptionDay'),
             icon: <CalendarPlusIcon size={16} />,
-            onSelect: extendUserSubscriptionByDay,
+            onSelect: extendSubscriptionByDay,
         },
         {
             value: 'testError',

@@ -5,13 +5,15 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test } from 'vitest';
 
-import type { Group, KnownUser, SelfUser, UserSettings } from 'api/chipin.types';
+import type { Group, SelfUser, UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
-import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
+import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
+import { seedGroupsList } from 'test/groupsList';
+import { createKnownUser, seedKnownUsers } from 'test/knownUsers';
+import { seedSelfUser } from 'test/selfUserSeed';
 
 import MobileNavBar from './MobileNavBar';
 
@@ -49,20 +51,7 @@ const currentUser = {
     updatedAt: 1,
 } satisfies SelfUser;
 
-const friend = {
-    user: {
-        id: 'friend-1',
-        email: 'friend@example.com',
-        displayName: 'Friend',
-        firstName: 'Friend',
-        lastName: null,
-        picture: null,
-        createdAt: 1,
-        updatedAt: 1,
-    },
-    balances: [],
-    lastUsedCurrency: null,
-} satisfies KnownUser;
+const friend = createKnownUser('friend-1');
 
 const soloGroup = {
     id: 'group-1',
@@ -81,23 +70,16 @@ const soloGroup = {
     recentActivities: { items: [], nextCursor: null },
 } satisfies Group;
 
+// The groups list has loaded without a group.
 const resolveGlobalTargets = () => {
-    useLoadingStore.getState().setLoading('group', 'list', 'fetched');
-    useLoadingStore.getState().setLoading('users', 'friends', 'fetched');
+    seedGroupsList([]);
 };
 
 beforeEach(() => {
     useAuthStore.setState({ status: 'authenticated' });
-    useDashboardStore.setState({ appMode: APP_MODES.GROUP });
+    useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
     useGroupsStore.getState().setInitialGroupsStore();
     useLoadingStore.getState().setInitialLoadingStore();
-    useUsersStore.setState({
-        user: null,
-        localUser: { role: 'ADMIN', settings },
-        friends: [],
-        hasFriendsSnapshot: false,
-        hasConfirmedUser: false,
-    });
 });
 
 test.each([
@@ -111,7 +93,7 @@ test.each([
     },
 ])('opens $expectedRoute from the home link in $appMode mode', ({ appMode, expectedRoute }) => {
     const interaction = userEvent.setup();
-    useDashboardStore.setState({ appMode });
+    useUiPrefsStore.setState({ appMode });
 
     render(
         <MemoryRouter initialEntries={['/settings']}>
@@ -154,9 +136,8 @@ test('EXP-062 removes the center slot and leaves four navigation items', () => {
 
 test('EXP-062 keeps four mobile items with only a one-member group', () => {
     resolveGlobalTargets();
-    useUsersStore.setState({ user: currentUser });
-    useGroupsStore.setState({ groups: [soloGroup] });
-    useLoadingStore.getState().setLoading('users', 'self', 'fetched');
+    seedSelfUser(currentUser);
+    seedGroupsList([soloGroup]);
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
@@ -173,14 +154,9 @@ test('EXP-062 keeps four mobile items with only a one-member group', () => {
 });
 
 test('EXP-062 keeps the center action during a confirmed friend refresh', () => {
-    useUsersStore.setState({
-        user: currentUser,
-        friends: [friend],
-        hasFriendsSnapshot: true,
-        hasConfirmedUser: true,
-    });
-    useLoadingStore.getState().setLoading('users', 'friends', 'loading');
-    useLoadingStore.getState().setLoading('users', 'self', 'loading');
+    seedSelfUser(currentUser);
+    // Cached friends stay a resolved target while the query refetches.
+    seedKnownUsers([friend]);
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
@@ -198,8 +174,8 @@ test('EXP-062 keeps the center action during a confirmed friend refresh', () => 
 
 test('EXP-062 restores the lifted Add Expense slot for a valid target', () => {
     resolveGlobalTargets();
-    useUsersStore.setState({ user: currentUser, friends: [friend] });
-    useLoadingStore.getState().setLoading('users', 'self', 'fetched');
+    seedSelfUser(currentUser);
+    seedKnownUsers([friend]);
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>

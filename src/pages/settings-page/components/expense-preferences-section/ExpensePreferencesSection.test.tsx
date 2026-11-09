@@ -1,9 +1,11 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { expect, test } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
-import { useDashboardStore } from 'store/dashboardStore';
-import { useUsersStore } from 'store/users-store';
+import { currencyRatesKeys } from 'entities/currency-rates';
+import { useAuthStore } from 'store/authStore';
+import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
+import { seedSelfUser } from 'test/selfUserSeed';
 
 import ExpensePreferencesSection from './ExpensePreferencesSection';
 
@@ -34,19 +36,19 @@ const user = {
 } satisfies SelfUser;
 
 test('keeps the selected default category visible but disabled when categories are skipped', () => {
-    useUsersStore.setState({ user, localUser: null, friends: [] });
-    useDashboardStore.setState(state => ({
-        ...state,
-        currencies: {
-            base: 'USD',
-            timestamp: 1,
-            fetchedAt: 1,
-            stale: false,
-            rates: { USD: 1, EUR: 0.9 },
-        },
-    }));
+    // Settings are a signed-in page: the self query's settings apply.
+    useAuthStore.setState({ status: 'authenticated' });
+    seedSelfUser(user);
+    const client = createTestQueryClient();
 
-    render(<ExpensePreferencesSection isLoading={false} />);
+    client.setQueryData(currencyRatesKeys.all, {
+        base: 'USD',
+        timestamp: 1,
+        fetchedAt: 1,
+        stale: false,
+        rates: { USD: '1', EUR: '0.9' },
+    });
+    renderWithQueryClient(<ExpensePreferencesSection isLoading={false} />, client);
 
     const categoryButton = screen.getByRole('button', { name: /Food/i });
 

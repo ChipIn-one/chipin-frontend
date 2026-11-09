@@ -2,8 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
 import type { Group } from 'api/chipin.types';
+import { useGroups } from 'hooks/useGroupsList';
 import { useExpenseModalStore } from 'store/expenseModalStore';
-import { useGroupsStore } from 'store/groupsStore';
 
 import GroupAvatar from 'components/GroupAvatar';
 import { SearchSelect, type SearchSelectItem } from 'components/search-select';
@@ -12,7 +12,7 @@ import { ExpenseSearchSelectContent } from '../../../expense-search-select-conte
 
 const ExpenseGroupSearchSelect = () => {
     const { t } = useTranslation('group');
-    const groups = useGroupsStore(state => state.groups);
+    const groups = useGroups();
     const { groupId, setGroupId } = useExpenseModalStore(
         useShallow(state => ({
             groupId: state.groupId,

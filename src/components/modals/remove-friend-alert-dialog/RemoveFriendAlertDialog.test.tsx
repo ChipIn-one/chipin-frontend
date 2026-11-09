@@ -1,10 +1,13 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
+import { toast } from 'sonner';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { FriendUser } from 'api/chipin.types';
-import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
+import { useAuthStore } from 'store/authStore';
+import { setupMswServer } from 'test/mswServer';
+import { mountAsUserClient } from 'test/userClient';
 
 import RemoveFriendAlertDialog from './RemoveFriendAlertDialog';
 
@@ -30,27 +33,57 @@ const friend = {
     updatedAt: 1,
 } satisfies FriendUser;
 
+const server = setupMswServer();
+
 beforeEach(() => {
     vi.clearAllMocks();
-    useLoadingStore.getState().setInitialLoadingStore();
+    useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
+    mountAsUserClient();
 });
 
 test('waits for explicit confirmation before removing a friend', () => {
-    const removeFriend = vi.fn().mockResolvedValue(true);
+    const removed: string[] = [];
     const user = userEvent.setup();
 
-    useUsersStore.setState({ removeFriend });
+    server.use(
+        http.delete('*/users/known-users/:id', ({ params }) => {
+            removed.push(String(params.id));
+            return new HttpResponse(null, { status: 204 });
+        }),
+    );
 
     render(<RemoveFriendAlertDialog friend={friend} isOpened setIsOpened={vi.fn()} />);
 
     expect(screen.getByRole('alertdialog')).toBeTruthy();
-    expect(removeFriend).not.toHaveBeenCalled();
+    expect(removed).toEqual([]);
 
     return user
         .click(screen.getByRole('button', { name: 'friends:actions.removeFriend' }))
         .then(() => {
             return waitFor(() => {
-                expect(removeFriend).toHaveBeenCalledWith({ userId: friend.id });
+                expect(removed).toEqual([friend.id]);
+                expect(toast.success).toHaveBeenCalledWith('toasts:friend.removed:Friend One');
             });
         });
+});
+
+test('a failed removal shows one error toast and no success', () => {
+    const user = userEvent.setup();
+
+    server.use(
+        http.delete('*/users/known-users/:id', () =>
+            HttpResponse.json({ code: 'SYSTEM.INTERNAL' }, { status: 400 }),
+        ),
+    );
+
+    render(<RemoveFriendAlertDialog friend={friend} isOpened setIsOpened={vi.fn()} />);
+
+    return user
+        .click(screen.getByRole('button', { name: 'friends:actions.removeFriend' }))
+        .then(() =>
+            waitFor(() => {
+                expect(toast.error).toHaveBeenCalledTimes(1);
+                expect(toast.success).not.toHaveBeenCalled();
+            }),
+        );
 });

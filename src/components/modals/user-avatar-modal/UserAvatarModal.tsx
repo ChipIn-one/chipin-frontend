@@ -10,9 +10,8 @@ import {
     type ImageFileValidationError,
     validateImageFile,
 } from 'helpers/imageFile';
-import { selectUserAvatarUploading } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
+import { useSelfUser } from 'hooks/useSelfUser';
+import { useUploadAvatar } from 'hooks/useUserMutations';
 
 import { UserAvatar } from 'basics';
 import { ProgressBar } from 'components/progress-bar';
@@ -28,9 +27,8 @@ interface Props {
 
 const UserAvatarModal = ({ children }: Props) => {
     const { t } = useTranslation('settings');
-    const user = useUsersStore(state => state.user);
-    const uploadUserAvatar = useUsersStore(state => state.uploadUserAvatar);
-    const isUploading = useLoadingStore(selectUserAvatarUploading);
+    const user = useSelfUser();
+    const { uploadAvatar, isPending: isUploading } = useUploadAvatar();
     const pickerHintId = useId();
     const [isOpened, setIsOpened] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File>();
@@ -118,7 +116,7 @@ const UserAvatarModal = ({ children }: Props) => {
 
         setUploadProgress(0);
 
-        uploadUserAvatar({ file: selectedFile, onProgress: setUploadProgress })
+        uploadAvatar({ file: selectedFile, onProgress: setUploadProgress })
             .then(() => {
                 toast.success(t('toasts:settings.avatarUpdated'));
                 onResetUploadDraft();

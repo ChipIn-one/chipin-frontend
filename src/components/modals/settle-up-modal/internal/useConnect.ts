@@ -1,9 +1,9 @@
+import { useSelfUser } from 'hooks/useSelfUser';
 import { selectSettlementAdding } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
 
 const useConnect = () => {
-    const user = useUsersStore(state => state.user);
+    const user = useSelfUser();
     const isSubmitting = useLoadingStore(selectSettlementAdding);
 
     return { user, isSubmitting };

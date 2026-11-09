@@ -1,11 +1,18 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Button, Container, Flex, Spinner, Text } from '@radix-ui/themes';
 import { ChevronsDownIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
+import type { Group } from 'api/chipin.types';
+import { useCurrencyRatesQuery } from 'entities/currency-rates';
+import { useDashboardActivityQuery, useDashboardBalancesQuery } from 'entities/dashboard';
 import { ActivityEventsList } from 'features/activity';
+import { getActivityPreviewEvents } from 'helpers/activityEvent';
+import { useGroupsList } from 'hooks/useGroupsList';
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
+import { useKnownUsers } from 'hooks/useKnownUsers';
+import { useSelfUserState } from 'hooks/useSelfUser';
 
 import { EmptyState, NoGroupsEmptyState } from 'basics/empty-states';
 import { DashboardOnboarding } from 'components/dashboard-onboarding';
@@ -15,39 +22,111 @@ import { InternalPageColumnsFromSm } from 'components/internal-page-layout';
 import { CreateUpdateGroupModal } from 'components/modals/create-update-group-modal';
 import { ActivityFeedSkeleton } from 'components/skeletons';
 
-import { useConnect } from './internal/dashboard-page';
+const NO_GROUPS: Group[] = [];
 
 const FullWidthButton = styled(Button)`
     width: 100%;
 `;
 
+interface Resource {
+    fetched: boolean;
+    snapshot: boolean;
+    error: boolean;
+}
+
+// A query as a resource of the page: a failed load is an error; it blocks the page only while
+// there is no data yet (spec 03 §1.2). Waiting for the network (offline) is an error only without
+// data: with data, the offline banner alone says so (spec 03 §1.8).
+const queryResource = (query: { data: unknown; isError: boolean; isPaused: boolean }): Resource => {
+    const snapshot = query.data !== undefined;
+    const error = query.isError || (query.isPaused && !snapshot);
+
+    return { fetched: snapshot || error, snapshot, error };
+};
+
 const DashboardPage = () => {
     const { t } = useTranslation(['dashboard', 'activity']);
-    const {
-        activityEvents,
-        fetchMoreDashboardActivity,
-        groups,
-        dashboardView,
-        hasGroups,
-        hasExpenseHistory,
-        hasMoreActivity,
-        isDashboardFetched,
-        isDashboardLoading,
-        hasNonBlockingRefreshError,
-        isEndOfFeed,
-        isGroupListFetched,
-        isNextPageError,
-        isNextPageLoading,
-        onRetryLoad,
-    } = useConnect();
+    const balancesQuery = useDashboardBalancesQuery();
+    const activityQuery = useDashboardActivityQuery();
+    const ratesQuery = useCurrencyRatesQuery();
+    const groupsList = useGroupsList();
+    const groups = groupsList.groups ?? NO_GROUPS;
+    const knownUsers = useKnownUsers();
+    const friends = knownUsers.friends ?? [];
+    const selfUser = useSelfUserState();
+    const currentUser = selfUser.user;
+
+    const activityItems = useMemo(
+        () => activityQuery.data?.pages.flatMap(page => page.items) ?? [],
+        [activityQuery.data],
+    );
+    const activityEvents = useMemo(() => getActivityPreviewEvents(activityItems), [activityItems]);
+    const balances = queryResource(balancesQuery);
+    // A failed next page keeps the feed and has its own inline Retry: not a page error.
+    const activity = queryResource({
+        data: activityQuery.data,
+        isError: activityQuery.isError && !activityQuery.isFetchNextPageError,
+        isPaused: activityQuery.isPaused,
+    });
+    const hasGroups = groups.length > 0;
+    const hasConnections = hasGroups || friends.length > 0;
+    const hasExpenseHistory =
+        groups.some(group => group.lastUsedCurrency !== null) ||
+        friends.some(friend => friend.lastUsedCurrency !== null);
+    const { hasNextPage: hasMoreActivity, isFetchingNextPage: isNextPageLoading } = activityQuery;
+    const isNextPageError = activityQuery.isFetchNextPageError;
+    const resources: Resource[] = [
+        balances,
+        activity,
+        {
+            fetched: !groupsList.isLoading,
+            snapshot: groupsList.groups !== undefined,
+            error: groupsList.isError || groupsList.hasRefreshError,
+        },
+        {
+            fetched: !knownUsers.isLoading,
+            snapshot: knownUsers.friends !== undefined,
+            error: knownUsers.isError || knownUsers.hasRefreshError,
+        },
+        {
+            fetched: selfUser.isFetched,
+            snapshot: currentUser !== null,
+            error: selfUser.isError || selfUser.hasRefreshError,
+        },
+    ];
+    const isOnboardingDataSettled = resources.every(({ fetched, snapshot }) => fetched || snapshot);
+    const hasOnboardingDataError =
+        currentUser === null || resources.some(({ error, snapshot }) => error && !snapshot);
+    const hasNonBlockingRefreshError =
+        queryResource(ratesQuery).error ||
+        resources.some(({ error, snapshot }) => error && snapshot);
+    const dashboardView = !isOnboardingDataSettled
+        ? 'loading'
+        : hasOnboardingDataError
+          ? 'error'
+          : hasConnections
+            ? 'dashboard'
+            : 'welcome';
+    const isDashboardFetched = balances.fetched && activity.fetched;
+    const isEndOfFeed = !isNextPageLoading && !hasMoreActivity && activityItems.length > 0;
+    const onRetryLoad = () => {
+        void balancesQuery.refetch();
+        void activityQuery.refetch();
+        void ratesQuery.refetch();
+        void knownUsers.refetch();
+        void selfUser.refetch();
+        void groupsList.refetch();
+    };
+    const { fetchNextPage } = activityQuery;
 
     const onLoadMore = useCallback(() => {
-        void fetchMoreDashboardActivity();
-    }, [fetchMoreDashboardActivity]);
+        void fetchNextPage();
+    }, [fetchNextPage]);
 
+    // Any fetch of the feed holds the next page: a refetch replaces the pages it would extend.
     const sentinelRef = useInfiniteScroll({
         hasMore: hasMoreActivity && !isNextPageError,
-        isLoading: isNextPageLoading,
+        isLoading: activityQuery.isFetching,
         onLoadMore,
     });
 
@@ -61,7 +140,7 @@ const DashboardPage = () => {
                 <DashboardHeader />
 
                 <DashboardSummary
-                    isLoading={isDashboardLoading}
+                    isLoading={balancesQuery.isLoading}
                     hasExpenseHistory={hasExpenseHistory}
                 />
 
@@ -73,7 +152,7 @@ const DashboardPage = () => {
                     }
                     data-testid="dashboard-groups-section"
                 >
-                    {!isDashboardFetched || !isGroupListFetched || hasGroups ? (
+                    {!isDashboardFetched || groupsList.isLoading || hasGroups ? (
                         <GroupsCards groups={groups} label={t('groups.title')} />
                     ) : (
                         <NoGroupsEmptyState

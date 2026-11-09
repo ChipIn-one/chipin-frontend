@@ -9,7 +9,6 @@ export interface LoadingStore {
         logoutOtherDevices: LoadingState;
     };
     group: {
-        list: LoadingState;
         data: LoadingState;
         nextPage: LoadingState;
         add: LoadingState;
@@ -19,11 +18,6 @@ export interface LoadingStore {
         leave: LoadingState;
         kick: LoadingState;
         cover: LoadingState;
-    };
-    dashboard: {
-        data: LoadingState;
-        rates: LoadingState;
-        nextPage: LoadingState;
     };
     activity: {
         data: LoadingState;
@@ -42,13 +36,6 @@ export interface LoadingStore {
     settlement: {
         add: LoadingState;
     };
-    users: {
-        self: LoadingState;
-        friends: LoadingState;
-        settings: LoadingState;
-        removeFriend: LoadingState;
-        avatar: LoadingState;
-    };
 
     setLoading: <S extends keyof LoadingStore, F extends keyof LoadingStore[S]>(
         section: S,
@@ -62,7 +49,6 @@ type LoadingSlices = Omit<LoadingStore, 'setLoading' | 'setInitialLoadingStore'>
 
 const initialLoadingStore: LoadingSlices = {
     auth: { login: 'initial', signOut: 'initial', logoutOtherDevices: 'initial' },
-    dashboard: { data: 'initial', rates: 'initial', nextPage: 'initial' },
     activity: {
         data: 'initial',
         nextPage: 'initial',
@@ -73,7 +59,6 @@ const initialLoadingStore: LoadingSlices = {
     ledger: { remove: 'initial' },
     settlement: { add: 'initial' },
     group: {
-        list: 'initial',
         data: 'initial',
         nextPage: 'initial',
         add: 'initial',
@@ -83,13 +68,6 @@ const initialLoadingStore: LoadingSlices = {
         leave: 'initial',
         kick: 'initial',
         cover: 'initial',
-    },
-    users: {
-        self: 'initial',
-        friends: 'initial',
-        settings: 'initial',
-        removeFriend: 'initial',
-        avatar: 'initial',
     },
 };
 

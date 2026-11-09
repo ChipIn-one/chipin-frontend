@@ -26,19 +26,6 @@ export interface ApiUserSettings {
     sex: ApiUserSex;
 }
 
-export interface ApiUpdateUserRequest {
-    displayName?: string;
-    settings?: Partial<ApiUserSettings>;
-}
-
-export interface ApiCurrencyRatesResponse {
-    base: string;
-    timestamp: number;
-    fetchedAt: number;
-    stale: boolean;
-    rates: CurrenciesRates;
-}
-
 export interface ApiUserResponse {
     id: string;
     email: string;
@@ -94,11 +81,6 @@ export interface ApiGroupsResponse {
     nextCursor: string | null;
 }
 
-export interface ApiDashboardResponse {
-    balances: BalancesMap;
-    activity: ApiActivityFeedResponse;
-}
-
 export interface ApiActivityFeedItemResponse {
     parent: AppEvent;
     lastEvent: AppEvent;
@@ -120,21 +102,9 @@ export interface ApiActivityChildrenResponse {
     nextCursor: number | null;
 }
 
-export type ApiFriendUser = ApiUserSummary;
-
 export interface ApiFriendBalance {
     currency: string;
     netAmount: number;
-}
-
-export interface ApiFriend {
-    user: ApiFriendUser;
-    balances: ApiFriendBalance[];
-    lastUsedCurrency: string | null;
-}
-
-export interface ApiFriendsResponse {
-    friends: ApiFriend[];
 }
 
 export interface ApiParticipantShare {
@@ -198,10 +168,6 @@ export interface ApiSettlementLedgerEntry extends ApiLedgerEntryBase {
 }
 
 export type ApiCreateLedgerResponse = ApiExpenseLedgerEntry | ApiSettlementLedgerEntry;
-
-export interface ApiPremiumPromoRemainingResponse {
-    premiumPromoRemaining: number;
-}
 
 export interface ApiOAuthTokenPairResponse {
     token: string;

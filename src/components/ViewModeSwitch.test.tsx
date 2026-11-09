@@ -3,8 +3,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, test } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
-import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
-import { useUsersStore } from 'store/users-store';
+import { saveLocalUser } from 'helpers/localStorage';
+import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 
 import ViewModeSwitch from './ViewModeSwitch';
 
@@ -24,20 +24,12 @@ const settings = {
 } satisfies UserSettings;
 
 beforeEach(() => {
-    useDashboardStore.setState({ appMode: APP_MODES.GROUP });
-    useUsersStore.setState({
-        user: null,
-        localUser: { role: 'ADMIN', settings },
-        friends: [],
-    });
+    useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
+    saveLocalUser({ role: 'ADMIN', settings });
 });
 
 test.each(['USER', 'ADMIN'] as const)('hides the mode switch for a $role user', role => {
-    useUsersStore.setState({
-        user: null,
-        localUser: { role, settings },
-        friends: [],
-    });
+    saveLocalUser({ role, settings });
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>

@@ -1,26 +1,25 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Container } from '@radix-ui/themes';
 
-import { useLoadingStore } from 'store/loadingStore';
-import { getFriendsView, selectFriends, useUsersStore } from 'store/users-store';
+import { getFriendsView } from 'entities/users';
+import { useKnownUsers } from 'hooks/useKnownUsers';
 
 import { InternalPageColumnsFromSm } from 'components/internal-page-layout';
 
 import { FriendsList, FriendsSidebar } from './components';
 
 const FriendsPage = () => {
-    const friends = useUsersStore(selectFriends);
-    const isLoadingFriends = useLoadingStore(state => state.users.friends);
+    const { friends, isError, isLoading } = useKnownUsers();
     const [search, setSearch] = useState('');
     const [filterKey, setFilterKey] = useState('all');
 
-    const isSkeletonShown = isLoadingFriends === 'loading' && !friends.length;
-    const isEmptyFriends = isLoadingFriends === 'fetched' && friends.length === 0;
+    // As before the migration, a failed first load (or one waiting for the network) with nothing
+    // cached shows the invite empty state; with data, the offline banner alone says so.
+    const isEmptyFriends = isError || friends?.length === 0;
 
-    const { currencies, currencyGroups, settledFriends } = getFriendsView(
-        friends,
-        search,
-        filterKey,
+    const { currencies, currencyGroups, settledFriends } = useMemo(
+        () => getFriendsView(friends ?? [], search, filterKey),
+        [filterKey, friends, search],
     );
 
     return (
@@ -33,14 +32,14 @@ const FriendsPage = () => {
                         currencies={currencies}
                         filterKey={filterKey}
                         onFilterChange={setFilterKey}
-                        isLoading={isSkeletonShown}
+                        isLoading={isLoading}
                     />
                 }
             >
                 <FriendsList
                     currencyGroups={currencyGroups}
                     isEmpty={isEmptyFriends}
-                    isLoading={isSkeletonShown}
+                    isLoading={isLoading}
                     settledFriends={settledFriends}
                 />
             </InternalPageColumnsFromSm>

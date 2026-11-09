@@ -7,9 +7,9 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import type { UserSettings } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
 import { lightThemeStyled } from 'constants/styled-themes';
+import { saveLocalUser } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
-import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
-import { useUsersStore } from 'store/users-store';
+import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 
 import PrivacyPage from './PrivacyPage';
 import TermsPage from './TermsPage';
@@ -35,12 +35,8 @@ const settings = {
 
 beforeEach(() => {
     useAuthStore.setState({ status: 'authenticated' });
-    useUsersStore.setState({
-        user: null,
-        localUser: { role: 'ADMIN', settings },
-        friends: [],
-    });
-    useDashboardStore.setState({ appMode: APP_MODES.GROUP });
+    saveLocalUser({ role: 'ADMIN', settings });
+    useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
 });
 
 test.each([

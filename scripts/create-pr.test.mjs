@@ -2,6 +2,7 @@ import { expect, test } from 'vitest';
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { prQaSteps } from './release-qa/core.mjs';
 import {
     buildCreatePullRequestArgs,
     extractPullRequestUrl,
@@ -299,4 +300,28 @@ test('new PR body keeps human notes with one exact identity and standard section
     }
     expect(body).toContain('Human implementation notes');
     expect(body).toContain('CI run 123');
+});
+
+test('new PR body adds one QA section whose unfilled prompt is not a QA step', () => {
+    const body = buildCreatePullRequestArgs(
+        'feat/issue-71-test',
+        'ChipIn-one/chipin-frontend#71',
+        'Notes',
+    ).at(-1);
+    expect(body.match(/^## QA$/gmu) || []).toHaveLength(1);
+    expect(prQaSteps(body)).toEqual([]);
+    for (const own of [
+        '## QA\n- [ ] Open Settings => theme switch shows',
+        '## QA (owner)\n- [ ] Reload',
+        '# QA\n- [ ] Reload',
+        ' ##  qa ##\n- [ ] Reload',
+    ]) {
+        const kept = buildCreatePullRequestArgs(
+            'feat/issue-71-test',
+            'ChipIn-one/chipin-frontend#71',
+            `Notes\n\n${own}`,
+        ).at(-1);
+        expect(kept.match(/^\s*#{1,2}\s+QA\b/gimu) || []).toHaveLength(1);
+        expect(prQaSteps(kept)).toHaveLength(1);
+    }
 });

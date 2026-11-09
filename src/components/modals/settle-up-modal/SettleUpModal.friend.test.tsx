@@ -5,8 +5,8 @@ import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { CreateSettlementParams, SelfUser } from 'api/chipin.types';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
 import { getOrThrow } from 'test/getOrThrow';
+import { seedSelfUser } from 'test/selfUserSeed';
 
 import SettleUpModal from './SettleUpModal';
 
@@ -58,7 +58,7 @@ const friend = {
 
 beforeEach(() => {
     vi.clearAllMocks();
-    useUsersStore.setState({ user: currentUser });
+    seedSelfUser(currentUser);
     useLoadingStore.getState().setInitialLoadingStore();
 });
 

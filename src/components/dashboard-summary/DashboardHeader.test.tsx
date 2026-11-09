@@ -7,8 +7,8 @@ import { beforeEach, expect, test } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
-import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
+import { useAuthStore } from 'store/authStore';
+import { clearSeededSelfUser, seedSelfUser } from 'test/selfUserSeed';
 
 import DashboardHeader from './DashboardHeader';
 
@@ -39,8 +39,8 @@ const admin = {
 } satisfies SelfUser;
 
 beforeEach(() => {
-    useLoadingStore.getState().setLoading('users', 'self', 'fetched');
-    useUsersStore.setState({ user: admin });
+    useAuthStore.setState({ status: 'authenticated' });
+    seedSelfUser(admin);
 });
 
 test('keeps the developer menu available in the mobile dashboard header for an admin', () => {
@@ -93,7 +93,8 @@ test('opens Settings from the shared profile avatar shortcut', () => {
 });
 
 test('retains the Settings shortcut while the current user is loading', () => {
-    useLoadingStore.getState().setLoading('users', 'self', 'loading');
+    // Signed in before the remount onto the user's client: the user is still to come.
+    clearSeededSelfUser();
     renderDashboardHeader();
 
     expect(screen.getByRole('link', { name: 'Settings' })).toBeTruthy();

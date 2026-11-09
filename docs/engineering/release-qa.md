@@ -2,7 +2,7 @@
 
 Manual QA checks one exact Vercel Preview built from `master` before the owner **Promotes** it. Only UI changes need a tester. QA never gates CI, merge or deployment; the owner makes the release decision.
 
-**Rule for every UI-affecting Issue:** carry 1–3 lines `- [ ] QA: <step> => <expected result>` (a `- [ ] When <action>, then <expected result>` line also works).
+**Rule for every UI-affecting change:** the Issue carries 1–3 lines `- [ ] QA: <step> => <expected result>` (a `- [ ] When <action>, then <expected result>` line also works), or each UI-affecting PR body has a `## QA` section with checklist steps (`npm run pr:create` adds it with a prompt; PR metadata fails a UI-affecting PR without steps). An epic-level Issue that spans several PRs usually relies on its PRs' sections. A label such as `## QA (owner)` is allowed but chooses nobody: the tester is the `qa_login` of the QA round.
 
 ## One-time setup
 
@@ -36,8 +36,9 @@ Lint, test and types devDependency bumps are not build-affecting. If the two pac
 
 What goes into the QA Issue:
 
-- the explicit QA lines of every included Issue whose PR touched UI-affecting files;
-- for such an Issue without QA lines: `- [ ] #N: check against the Acceptance of #N => <issue link>` and a "Missing QA steps" section (Slack does not repeat it);
+- the explicit QA lines of every included Issue whose PR touched UI-affecting files, under a `#### #N: <Issue title>` heading;
+- the QA steps of every merged PR in the compare that touched UI-affecting files, under a `#### PR #M: <PR title> (#N)` heading per PR, as `- [ ] PR #M: <step>` (with ` => <expected>` when the step has one). Steps are every list item (`-`, `*`, `+` or numbered) of a `## QA` section (with or without a label in parentheses, such as `## QA (owner)`) and any `- [ ] QA:` line elsewhere in the body. Sub-headings stay in the section; nested items and indented continuation lines join their parent step; code blocks, HTML comments, unfilled `- [ ]` items and whole-item `None`/`n/a` are skipped. At most 20 steps of 300 characters per PR, and about 40,000 characters of PR steps and headings per QA Issue; past that budget each further PR gets one `more QA steps are in the body of PR #M` line. `<` and `>` are removed and `@mentions` and `#123` references are broken, so PR text cannot fake the QA marker or notify anyone, and short references add no cross-references (full Issue URLs still do);
+- only when neither the Issue nor any of its UI-affecting PRs in the compare has QA steps: `- [ ] #N: check against the Acceptance of #N => <issue link>` and a "Missing QA steps" section (Slack does not repeat it);
 - commits and PRs without a linked Issue that touch no UI-affecting file (Dependabot, docs, CI) are listed as "No QA needed";
 - a "Build-affecting changes" list when there are any;
 - **SMOKE-SHORT** (`scripts/release-qa/impact-rules.mjs`) when there is a build-affecting change or the compare touches routing, auth/session, `src/api/**`, store bootstrap, service worker/PWA, theme switching or `vercel.json`. Five checks are appended once: Google sign-in opens Dashboard; a group expense split equally is listed and changes the balance; the other participant sees the matching balance in Balances/Settle up; switching language and theme applies without a flash and survives reload; log out, then reload a protected page (fresh login required, [AUTH-041](https://github.com/ChipIn-one/chipin-knowledge-base/blob/681d392140f33d4a47e3059eb53f77a2ee2c72c8/common/specs/auth.md)). Without SMOKE-SHORT, the AUTH-041 rule alone adds that last check for changes to the auth store, auth session or protected route. It is never added twice.

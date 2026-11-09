@@ -1,6 +1,6 @@
 // LEGACY BRIDGE (spec 03 §4.1 item 5, §4.4). The legacy `src/api/*` layer still reads money with
-// `JSON.parse`, so its DTOs carry amounts as JS numbers (`BalanceEntry.netBalance`,
-// `ApiFriendBalance.netAmount`, activity `amount`/`shareAmount`) and rates as numbers. Until a
+// `JSON.parse`, so its DTOs carry amounts as JS numbers (`BalanceEntry.netBalance`, activity
+// `amount`/`shareAmount`) and rates as numbers. Until a
 // store is migrated to the generated types (`WireAmount` → `moneyFromWire`, 03-4a/03-4b and the
 // store PRs of §6), these adapters carry those numbers into `Money` and back for the
 // number-based display components.
@@ -16,7 +16,7 @@
 import * as Sentry from '@sentry/react';
 
 import type { ExpenseActivityMetadata } from 'api/activity.types';
-import type { ApiFriendBalance, BalanceEntry, CurrenciesRates } from 'api/chipin.raw.types';
+import type { BalanceEntry, CurrenciesRates } from 'api/chipin.raw.types';
 import { DEFAULT_CURRENCY_CODE } from 'constants/currencies';
 import type { CurrencyCode, Money } from 'shared/money';
 import { abs, currencyCode, fromUnits, LEDGER_SCALE, sign, sub } from 'shared/money';
@@ -118,13 +118,6 @@ export const legacyBalanceFromEntry = (entry: BalanceEntry): Balance | null => {
     return net && { net };
 };
 
-/** `null` (reported) when the balance's currency or amount is invalid. */
-export const legacyBalanceFromFriend = (balance: ApiFriendBalance): Balance | null => {
-    const net = moneyFromLegacyNumber(balance.netAmount, balance.currency);
-
-    return net && { net };
-};
-
 export const legacyEntryFromMoney = (money: Money): BalanceEntry => ({
     currency: money.currency,
     netBalance: legacyAmountFromMoney(money),
@@ -194,6 +187,20 @@ export const legacyRateLookup =
 
         return fromRate && toRate ? { from: fromRate, to: toRate } : null;
     };
+
+/**
+ * Rates as decimal text (`entities/currency-rates`) as the legacy number map read by the
+ * not-yet-migrated group summaries and sorting; a malformed or non-positive rate is left out
+ * (a missing rate means "cannot convert" there).
+ */
+export const legacyRatesFromDecimals = (rates: Readonly<Record<string, string>>): CurrenciesRates =>
+    Object.fromEntries(
+        Object.entries(rates).flatMap(([currency, text]) => {
+            const rate = Number(text);
+
+            return Number.isFinite(rate) && rate > 0 ? [[currency, rate]] : [];
+        }),
+    );
 
 export interface LegacyBalanceTotals {
     readonly netTotalInBase: number;

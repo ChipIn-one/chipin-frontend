@@ -3,6 +3,7 @@ import { ArrowRightIcon, LogInIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import styled from 'styled-components';
+import { useShallow } from 'zustand/react/shallow';
 
 import { PROJECT_NAME } from 'constants/chipin';
 import { DEFAULT_LOCALE } from 'constants/locales';
@@ -13,13 +14,16 @@ import { matchLocale, type SupportedLocale } from 'helpers/locale';
 import { suppressPublicLocaleSuggestion } from 'helpers/publicLocaleSuggestion';
 import { getPublicPath, getPublicRoute } from 'helpers/publicRoutes';
 import { getHasDesktopSidebar, getPreferredModeRoute } from 'helpers/routes';
+import { useCanAccessSolo, useIsUserAdmin } from 'hooks/useSelfUser';
+import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
+import { useAuthStore } from 'store/authStore';
+import { selectIsSoloMode, useUiPrefsStore } from 'store/ui-prefs';
 
 import { NavButton } from 'basics/buttons';
 import LanguageSelector from 'components/LanguageSelector';
 import { ModeLogotype } from 'components/mode-logotype';
 
 import DevMenu from './DevMenu';
-import { useConnect } from './header/internal/useConnect';
 import { LandingMobileMenu } from './header/LandingMobileMenu';
 import { LandingNav } from './header/LandingNav';
 import { AuthModal } from './modals';
@@ -36,7 +40,16 @@ const StickyBox = styled(Box)`
 `;
 
 const Header = () => {
-    const { isAuthResolved, isLoggedIn, canShowDevMenu, isSoloMode } = useConnect();
+    const { isAuthResolved, isLoggedIn } = useAuthStore(
+        useShallow(state => ({
+            isAuthResolved: selectIsAuthResolved(state),
+            isLoggedIn: selectIsLoggedIn(state),
+        })),
+    );
+    const canAccessSolo = useCanAccessSolo();
+    const canShowDevMenu = useIsUserAdmin();
+    const isSoloModeFromStore = useUiPrefsStore(selectIsSoloMode);
+    const isSoloMode = canAccessSolo && isSoloModeFromStore;
     const location = useLocation();
     const { t, i18n } = useTranslation();
     const landingLocale = matchLocale(i18n.resolvedLanguage ?? i18n.language) ?? DEFAULT_LOCALE;

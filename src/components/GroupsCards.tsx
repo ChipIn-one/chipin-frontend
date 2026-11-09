@@ -1,4 +1,4 @@
-import { type FocusEvent, type KeyboardEvent, useEffect, useRef, useState } from 'react';
+import { type FocusEvent, type KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Flex, IconButton, Separator, Text, TextField } from '@radix-ui/themes';
 import {
     ChevronDownIcon,
@@ -13,11 +13,17 @@ import { useTranslation } from 'react-i18next';
 
 import type { Group } from 'api/chipin.types';
 import { GROUP_DEBT_FILTERS, type GroupDebtFilter } from 'constants/groups';
+import { legacyRatesFromDecimals } from 'entities/balance';
+import { EMPTY_CURRENCY_RATES, useCurrencyRatesQuery } from 'entities/currency-rates';
+import { userCurrency } from 'entities/users';
+import { getUnixTimestampInSec } from 'helpers/time';
+import { useGroupsList } from 'hooks/useGroupsList';
+import { useUserSetting } from 'hooks/useSelfUser';
+import { selectGroupsCardsView } from 'store/groupsSelectors';
 
 import { EmptyState } from 'basics/empty-states';
 
 import { GroupCard } from './group-card';
-import { useConnect } from './groups-cards/internal';
 import {
     SearchButtonShell,
     SearchFieldShell,
@@ -42,11 +48,24 @@ const GroupsCards = ({ groups, label, selectedGroupId }: Props) => {
     const searchButtonRef = useRef<HTMLButtonElement>(null);
     const shouldRestoreSearchButtonFocusRef = useRef(false);
     const { t } = useTranslation('dashboard');
-    const { displayedGroups, hiddenSettledGroups, settledCount, isReady } = useConnect({
-        groups,
+    const [nowTimestamp] = useState(() => getUnixTimestampInSec());
+    // The list has data, or its first load has settled (a failed one included).
+    const { isLoading: isGroupListLoading } = useGroupsList();
+    const defaultCurrency = useUserSetting(userCurrency);
+    const { data: currencyRates = EMPTY_CURRENCY_RATES, isLoading: isRatesLoading } =
+        useCurrencyRatesQuery();
+    // The cards convert group balances with the rates: wait for their first load (failed or
+    // paused offline counts as done), as for the list.
+    const isReady = !isGroupListLoading && !isRatesLoading;
+    const rates = useMemo(() => legacyRatesFromDecimals(currencyRates.rates), [currencyRates]);
+    const { displayedGroups, hiddenSettledGroups, settledCount } = selectGroupsCardsView(groups, {
         filter: activeFilter,
         query: searchQuery,
         selectedGroupId,
+        rates,
+        baseCurrency: currencyRates.base,
+        defaultCurrency,
+        nowTimestamp,
     });
     const hasSearchQuery = searchQuery.trim().length > 0;
     const showSettledSection =

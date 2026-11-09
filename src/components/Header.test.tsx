@@ -9,12 +9,11 @@ import type { UserSettings } from 'api/chipin.types';
 import { PROJECT_NAME } from 'constants/chipin';
 import { LS_KEY_LOCALE } from 'constants/localstorage';
 import { lightThemeStyled } from 'constants/styled-themes';
-import { LocalStorage } from 'helpers/localStorage';
+import { LocalStorage, saveLocalUser } from 'helpers/localStorage';
 import { isPublicLocaleSuggestionSuppressed } from 'helpers/publicLocaleSuggestion';
 import i18n from 'i18n';
 import { useAuthStore } from 'store/authStore';
-import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
-import { useUsersStore } from 'store/users-store';
+import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 
 import Header from './Header';
 
@@ -45,12 +44,8 @@ const LocationPath = () => {
 
 beforeEach(() => {
     useAuthStore.setState({ status: 'authenticated' });
-    useUsersStore.setState({
-        user: null,
-        localUser: { role: 'ADMIN', settings },
-        friends: [],
-    });
-    useDashboardStore.setState({ appMode: APP_MODES.SOLO });
+    saveLocalUser({ role: 'ADMIN', settings });
+    useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
     LocalStorage.remove(LS_KEY_LOCALE);
     window.sessionStorage.clear();
 
@@ -79,11 +74,7 @@ test('opens the Group route when an authenticated user clicks the logo', () => {
 test('opens the Group route for a user with stale Solo state', () => {
     const interaction = userEvent.setup();
 
-    useUsersStore.setState({
-        user: null,
-        localUser: { role: 'USER', settings },
-        friends: [],
-    });
+    saveLocalUser({ role: 'USER', settings });
 
     render(
         <MemoryRouter initialEntries={['/settings']}>
@@ -106,12 +97,10 @@ test('opens the Group route for a user with stale Solo state', () => {
 test('opens the Group route when the logo is clicked from another page with stale Solo state', () => {
     const interaction = userEvent.setup();
 
-    useDashboardStore.setState({ appMode: APP_MODES.SOLO });
-    useUsersStore.setState({
-        localUser: {
-            role: 'ADMIN',
-            settings: { ...settings, soloModeByDefault: false },
-        },
+    useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
+    saveLocalUser({
+        role: 'ADMIN',
+        settings: { ...settings, soloModeByDefault: false },
     });
 
     render(

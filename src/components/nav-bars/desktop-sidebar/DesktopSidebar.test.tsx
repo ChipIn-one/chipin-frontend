@@ -4,13 +4,14 @@ import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import type { KnownUser, SelfUser } from 'api/chipin.types';
+import type { SelfUser } from 'api/chipin.types';
 import { PROJECT_NAME } from 'constants/chipin';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
-import { APP_MODES, useDashboardStore } from 'store/dashboardStore';
 import { useLoadingStore } from 'store/loadingStore';
-import { useUsersStore } from 'store/users-store';
+import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
+import { createKnownUser, seedKnownUsers } from 'test/knownUsers';
+import { seedSelfUser } from 'test/selfUserSeed';
 
 import DesktopSidebar from './DesktopSidebar';
 
@@ -46,32 +47,17 @@ const user = {
     updatedAt: 1,
 } satisfies SelfUser;
 
-const friend = {
-    user: {
-        id: 'friend-1',
-        email: 'friend@example.com',
-        displayName: 'Friend',
-        firstName: 'Friend',
-        lastName: null,
-        picture: null,
-        createdAt: 1,
-        updatedAt: 1,
-    },
-    balances: [],
-    lastUsedCurrency: null,
-} satisfies KnownUser;
+const friend = createKnownUser('friend-1');
 
 beforeEach(() => {
     useAuthStore.setState({ status: 'authenticated' });
-    useDashboardStore.setState({ appMode: APP_MODES.GROUP });
+    useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
     useLoadingStore.getState().setInitialLoadingStore();
-    useLoadingStore.getState().setLoading('users', 'self', 'fetched');
-    useUsersStore.setState({ user, localUser: null, friends: [] });
+    seedSelfUser(user);
 });
 
 test('shows the Add expense action on Settings when a valid target exists', () => {
-    useLoadingStore.getState().setLoading('users', 'friends', 'fetched');
-    useUsersStore.setState({ friends: [friend] });
+    seedKnownUsers([friend]);
 
     render(
         <MemoryRouter initialEntries={['/settings']}>
@@ -112,12 +98,8 @@ test('shows the authenticated navigation and profile actions', () => {
 });
 
 test('shows Group branding when Solo mode is stale for an admin', () => {
-    useDashboardStore.setState({ appMode: APP_MODES.SOLO });
-    useUsersStore.setState({
-        user: { ...user, role: 'ADMIN' },
-        localUser: null,
-        friends: [],
-    });
+    useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
+    seedSelfUser({ ...user, role: 'ADMIN' });
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>
@@ -133,7 +115,7 @@ test('shows Group branding when Solo mode is stale for an admin', () => {
 });
 
 test('renders Group branding for a non-admin with stale Solo state', () => {
-    useDashboardStore.setState({ appMode: APP_MODES.SOLO });
+    useUiPrefsStore.setState({ appMode: APP_MODES.SOLO });
 
     render(
         <MemoryRouter initialEntries={['/settings']}>
@@ -150,11 +132,7 @@ test('renders Group branding for a non-admin with stale Solo state', () => {
 });
 
 test('shows the developer menu for an admin', () => {
-    useUsersStore.setState({
-        user: { ...user, role: 'ADMIN' },
-        localUser: null,
-        friends: [],
-    });
+    seedSelfUser({ ...user, role: 'ADMIN' });
 
     render(
         <MemoryRouter initialEntries={['/dashboard']}>

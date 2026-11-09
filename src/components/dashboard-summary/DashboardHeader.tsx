@@ -3,9 +3,7 @@ import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
 import { ROUTES } from 'constants/routes';
-import { selectUserSelfLoading } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
-import { selectIsUserAdmin, useUsersStore } from 'store/users-store';
+import { useIsUserAdmin, useSelfUserState } from 'hooks/useSelfUser';
 
 import { UserAvatar } from 'basics';
 import { NavButton } from 'basics/buttons';
@@ -20,10 +18,8 @@ const GreetingHeading = styled(Heading)`
 const DashboardHeader: React.FC = () => {
     const { t } = useTranslation('dashboard');
     const { t: tSkeletons } = useTranslation('skeletons');
-    const isUserLoading = useLoadingStore(selectUserSelfLoading);
-
-    const user = useUsersStore(s => s.user);
-    const canShowDevMenu = useUsersStore(selectIsUserAdmin);
+    const { user, isLoading: isUserLoading } = useSelfUserState();
+    const canShowDevMenu = useIsUserAdmin();
 
     return (
         <Flex justify="between" align="center" gap="2">

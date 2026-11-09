@@ -12,21 +12,25 @@ import type {
     UploadGroupCoverParams,
 } from 'api/chipin.types';
 import * as groupsApi from 'api/groupsApi';
+import { ACTIVITY_API_LIMIT } from 'constants/activity';
 import { getAuthSessionVersion, isAuthSessionCurrent } from 'helpers/authSession';
 import { getApiErrorStatus, normalizeApiError } from 'helpers/errors';
 
 import { useActivityStore } from './activity-store/actions';
-import { ACTIVITY_API_LIMIT } from './activity-store/constants';
-import { useDashboardStore } from './dashboardStore';
 import { useErrorsStore } from './errorsStore';
+import {
+    dropGroupFromList,
+    invalidateGroupsList,
+    putGroupInList,
+    reloadGroupsListWith,
+} from './groupsList';
+import { invalidateDashboard } from './internal/dashboardQueryBridge';
 import { createRequestChannel } from './internal/resourceRequests';
 import { useLoadingStore } from './loadingStore';
-import { useUsersStore } from './users-store';
+import { invalidateKnownUsers } from './sessionUser';
 
-const groupsChannel = createRequestChannel();
 const groupDetailChannel = createRequestChannel();
 const groupActivityPageChannel = createRequestChannel();
-const inaccessibleGroupIds = new Set<string>();
 let groupsMutationGeneration = 0;
 let successfulJoinVersions: Record<string, number> = Object.create(null) as Record<string, number>;
 let activeGroupUpdate:
@@ -79,25 +83,6 @@ const appendUniqueActivityPreviews = (
     return uniqueItems;
 };
 
-const uniqueGroups = (groups: Group[], incoming?: Group): Group[] => {
-    const seen = new Set<string>();
-    const result: Group[] = [];
-
-    for (const group of groups) {
-        if (seen.has(group.id)) {
-            continue;
-        }
-        seen.add(group.id);
-        result.push(incoming?.id === group.id ? incoming : group);
-    }
-
-    if (incoming && !seen.has(incoming.id)) {
-        result.push(incoming);
-    }
-
-    return result;
-};
-
 const createGroupsMutationGuard = () => {
     const generation = groupsMutationGeneration;
     const authSessionVersion = getAuthSessionVersion();
@@ -109,13 +94,9 @@ const createGroupsMutationGuard = () => {
 
 export interface GroupsStore {
     selectedGroup: Group | null;
-    groups: Group[];
-    groupsNextCursor: string | null;
-    hasConfirmedGroups: boolean;
 
     setInitialGroupsStore: () => void;
     setSelectedGroup: (group: Group | null) => void;
-    fetchSetGroups: (force?: boolean) => Promise<Group[]>;
     fetchSetGroupById: (groupId: string, force?: boolean) => Promise<Group | null>;
     fetchMoreGroupActivity: () => Promise<void>;
     createGroup: (params: { groupName: string; groupDescription?: string }) => Promise<Group>;
@@ -129,18 +110,13 @@ export interface GroupsStore {
 
 const initialGroupsStore = {
     selectedGroup: null,
-    groups: [],
-    groupsNextCursor: null,
-    hasConfirmedGroups: false,
 };
 
-const refreshAfterGroupRemoval = (
-    fetchSetGroups: (force?: boolean) => Promise<Group[]>,
-): Promise<void> => {
+const refreshAfterGroupRemoval = (): Promise<void> => {
     return Promise.all([
-        fetchSetGroups(true),
-        useUsersStore.getState().fetchSetFriends(true),
-        useDashboardStore.getState().fetchSetDashboard(true),
+        invalidateGroupsList(),
+        invalidateKnownUsers(),
+        invalidateDashboard(),
         useActivityStore.getState().fetchSetActivity(true),
     ]).then(() => undefined);
 };
@@ -151,8 +127,8 @@ const refreshAfterGroupMemberChange = (
 ): Promise<void> => {
     return Promise.all([
         fetchSetGroupById(groupId, true),
-        useUsersStore.getState().fetchSetFriends(true),
-        useDashboardStore.getState().fetchSetDashboard(true),
+        invalidateKnownUsers(),
+        invalidateDashboard(),
         useActivityStore.getState().fetchSetActivity(true),
     ]).then(() => undefined);
 };
@@ -161,11 +137,9 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
     ...initialGroupsStore,
 
     setInitialGroupsStore: () => {
-        groupsChannel.abort();
         groupDetailChannel.abort();
         resetGroupActivityPagination();
         groupsMutationGeneration += 1;
-        inaccessibleGroupIds.clear();
         successfulJoinVersions = Object.create(null) as Record<string, number>;
         activeGroupUpdate = undefined;
         set(initialGroupsStore);
@@ -180,60 +154,8 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         useLoadingStore.getState().setLoading('group', 'data', 'fetched');
         set({ selectedGroup: group });
     },
-    fetchSetGroups: (force = false) => {
-        const { setLoading } = useLoadingStore.getState();
-        const { clearError, setError } = useErrorsStore.getState();
-        clearError('group', 'list');
-        const selectedAtStart = get().selectedGroup;
-        const deniedAtStart = new Set(inaccessibleGroupIds);
-
-        const request = groupsChannel.request(chipinApi.fetchApiUserGroups, { force });
-        setLoading('group', 'list', 'loading');
-
-        return request.promise
-            .then(response => {
-                if (!request.isCurrent()) {
-                    return get().groups;
-                }
-
-                let groups = uniqueGroups(
-                    response.items.filter(
-                        group => !inaccessibleGroupIds.has(group.id) || deniedAtStart.has(group.id),
-                    ),
-                );
-
-                for (const group of groups) {
-                    inaccessibleGroupIds.delete(group.id);
-                }
-
-                const selectedGroup = get().selectedGroup;
-
-                if (selectedGroup && selectedGroup !== selectedAtStart) {
-                    groups = uniqueGroups(groups, selectedGroup);
-                }
-
-                set({
-                    groups,
-                    hasConfirmedGroups: true,
-                    groupsNextCursor: response.nextCursor,
-                });
-
-                return groups;
-            })
-            .catch((error: unknown) => {
-                if (request.isCurrent()) {
-                    setError('group', 'list', normalizeApiError(error));
-                }
-                return get().groups;
-            })
-            .finally(() => {
-                if (request.isCurrent()) {
-                    setLoading('group', 'list', 'fetched');
-                }
-            });
-    },
     fetchSetGroupById: (groupId, force = false) => {
-        const { groups, selectedGroup } = get();
+        const { selectedGroup } = get();
 
         if (force || selectedGroup?.id !== groupId) {
             resetGroupActivityPagination();
@@ -243,18 +165,17 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             set({ selectedGroup: null });
         }
 
-        const cachedGroup =
-            selectedGroup?.id === groupId
-                ? selectedGroup
-                : groups.find(group => group.id === groupId);
-
-        if (cachedGroup && !force) {
-            set({ selectedGroup: cachedGroup });
-            return Promise.resolve(cachedGroup);
+        // Every caller forces a read today; without `force` only the selected group is reused (the
+        // list is not a detail cache: its entries may be older than the page needs).
+        if (selectedGroup?.id === groupId && !force) {
+            return Promise.resolve(selectedGroup);
         }
 
         const { setLoading } = useLoadingStore.getState();
         const { clearError, setError } = useErrorsStore.getState();
+        // A list loaded after this read was sent may be older or newer than its answer: the
+        // list loads again instead (see `putGroupInList`).
+        const readStartedAt = Date.now();
         const request = groupDetailChannel.request(
             signal => chipinApi.fetchApiUserGroupById(groupId, signal),
             { force, identity: groupId },
@@ -268,11 +189,8 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 if (!request.isCurrent()) {
                     return get().selectedGroup;
                 }
-                inaccessibleGroupIds.delete(group.id);
-                set(state => ({
-                    groups: uniqueGroups(state.groups, group),
-                    selectedGroup: group,
-                }));
+                set({ selectedGroup: group });
+                void putGroupInList(group, readStartedAt);
                 return group;
             })
             .catch((error: unknown) => {
@@ -281,12 +199,11 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     const status = getApiErrorStatus(error);
 
                     if (status === 403 || status === 404) {
-                        inaccessibleGroupIds.add(groupId);
                         if (get().selectedGroup?.id === groupId) {
                             resetGroupActivityPagination();
                         }
+                        void dropGroupFromList(groupId);
                         set(state => ({
-                            groups: state.groups.filter(group => group.id !== groupId),
                             selectedGroup:
                                 state.selectedGroup?.id === groupId ? null : state.selectedGroup,
                         }));
@@ -383,10 +300,8 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             .then(newGroup => {
                 if (isCurrent()) {
                     resetGroupActivityPagination();
-                    set(state => ({
-                        groups: uniqueGroups(state.groups, newGroup),
-                        selectedGroup: newGroup,
-                    }));
+                    set({ selectedGroup: newGroup });
+                    void putGroupInList(newGroup);
                 }
                 return newGroup;
             })
@@ -436,9 +351,6 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                         setLoading('group', 'data', 'fetched');
                     }
                     set(state => ({
-                        groups: state.groups.map(group =>
-                            group.id === updatedGroup.id ? updatedGroup : group,
-                        ),
                         selectedGroup:
                             state.selectedGroup?.id === groupId
                                 ? updatedGroup
@@ -449,16 +361,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     return updatedGroup;
                 }
 
-                return get()
-                    .fetchSetGroups(true)
-                    .then(() => {
-                        if (isCurrent()) {
-                            set(state => ({
-                                groups: uniqueGroups(state.groups, updatedGroup),
-                            }));
-                        }
-                        return updatedGroup;
-                    });
+                return reloadGroupsListWith(updatedGroup, isCurrent).then(() => updatedGroup);
             })
             .catch((error: unknown) => {
                 if (isCurrent()) {
@@ -499,9 +402,6 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                         setLoading('group', 'data', 'fetched');
                     }
                     set(state => ({
-                        groups: state.groups.map(group =>
-                            group.id === updatedGroup.id ? updatedGroup : group,
-                        ),
                         selectedGroup:
                             state.selectedGroup?.id === updatedGroup.id
                                 ? updatedGroup
@@ -512,16 +412,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     return updatedGroup;
                 }
 
-                return get()
-                    .fetchSetGroups(true)
-                    .then(() => {
-                        if (isCurrent()) {
-                            set(state => ({
-                                groups: uniqueGroups(state.groups, updatedGroup),
-                            }));
-                        }
-                        return updatedGroup;
-                    });
+                return reloadGroupsListWith(updatedGroup, isCurrent).then(() => updatedGroup);
             })
             .catch((error: unknown) => {
                 if (isCurrent()) {
@@ -558,7 +449,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 if (get().selectedGroup?.id === groupId) {
                     get().setSelectedGroup(null);
                 }
-                return refreshAfterGroupRemoval(get().fetchSetGroups);
+                return refreshAfterGroupRemoval();
             })
             .finally(() => {
                 if (isCurrent()) {
@@ -594,7 +485,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 if (get().selectedGroup?.id === groupId) {
                     get().setSelectedGroup(null);
                 }
-                return refreshAfterGroupRemoval(get().fetchSetGroups);
+                return refreshAfterGroupRemoval();
             })
             .finally(() => {
                 if (isCurrent()) {
@@ -646,22 +537,9 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 setLoading('group', 'data', 'fetched');
                 successfulJoinVersions[joinedGroup.id] =
                     (successfulJoinVersions[joinedGroup.id] ?? 0) + 1;
-                inaccessibleGroupIds.delete(joinedGroup.id);
-                set(state => ({
-                    groups: uniqueGroups(state.groups, joinedGroup),
-                    selectedGroup: joinedGroup,
-                }));
+                set({ selectedGroup: joinedGroup });
 
-                return get()
-                    .fetchSetGroups(true)
-                    .then(() => {
-                        if (isCurrent()) {
-                            set(state => ({
-                                groups: uniqueGroups(state.groups, joinedGroup),
-                            }));
-                        }
-                        return joinedGroup;
-                    });
+                return reloadGroupsListWith(joinedGroup, isCurrent).then(() => joinedGroup);
             })
             .catch((error: unknown) => {
                 if (isCurrent()) {

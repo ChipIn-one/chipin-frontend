@@ -3,8 +3,9 @@ import { dehydrate, QueryClient } from '@tanstack/react-query';
 import { get, set } from 'idb-keyval';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
+import { queryCacheKey } from './constants';
 import { persistCodec } from './persistCodec';
-import { QUERY_CACHE_BUSTER, queryCacheKey, resetPersistFailureReport } from './queryPersister';
+import { QUERY_CACHE_BUSTER, resetPersistFailureReport } from './queryPersister';
 import {
     bootstrapUserCache,
     clientFor,

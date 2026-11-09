@@ -17,11 +17,8 @@ vi.mock('react-i18next', () => ({
     }),
 }));
 
-vi.mock('store/users-store', () => ({
-    useUsersStore: (selector: (state: { user: { inviteToken: string } }) => unknown) =>
-        selector({
-            user: { inviteToken: 'friend-token' },
-        }),
+vi.mock('hooks/useSelfUser', () => ({
+    useSelfUser: () => ({ inviteToken: 'friend-token' }),
 }));
 
 vi.mock('hooks/pwaHooks', () => ({
