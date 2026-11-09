@@ -53,7 +53,8 @@ const GroupTabsContent = ({ group, isGroupDataLoading, activity }: Props) => {
     };
     const sentinelRef = useInfiniteScroll({
         hasMore: activeTab === 'expenses' && hasMoreActivity && !isGroupActivityNextPageError,
-        isLoading: isGroupActivityNextPageLoading,
+        // Any load holds the trigger (`loadMore` ignores it meanwhile), not only a next page.
+        isLoading: activity.isFetching,
         onLoadMore,
     });
 

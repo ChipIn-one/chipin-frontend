@@ -30,13 +30,14 @@ import { useUiPrefsStore } from './ui-prefs';
 
 let groupsMutationGeneration = 0;
 let successfulJoinVersions: Record<string, number> = Object.create(null) as Record<string, number>;
-let activeGroupUpdate:
-    | {
-          groupId: string;
-          isCurrent: () => boolean;
-          promise: Promise<Group>;
-      }
-    | undefined;
+// The running update of each group: a second update of the same group joins it.
+const activeGroupUpdates = new Map<
+    string,
+    {
+        isCurrent: () => boolean;
+        promise: Promise<Group>;
+    }
+>();
 
 const createGroupsMutationGuard = () => {
     const generation = groupsMutationGeneration;
@@ -89,7 +90,7 @@ export const useGroupsStore = create<GroupsStore>(() => ({
     setInitialGroupsStore: () => {
         groupsMutationGeneration += 1;
         successfulJoinVersions = Object.create(null) as Record<string, number>;
-        activeGroupUpdate = undefined;
+        activeGroupUpdates.clear();
         useErrorsStore.getState().resetErrors();
     },
     createGroup: ({ groupName, groupDescription }) => {
@@ -125,8 +126,10 @@ export const useGroupsStore = create<GroupsStore>(() => ({
         const { clearError, setError } = useErrorsStore.getState();
         const isCurrent = createGroupsMutationGuard();
 
-        if (activeGroupUpdate?.isCurrent()) {
-            return activeGroupUpdate.promise;
+        const activeUpdate = activeGroupUpdates.get(groupId);
+
+        if (activeUpdate?.isCurrent()) {
+            return activeUpdate.promise;
         }
 
         clearError('group', 'update');
@@ -153,19 +156,15 @@ export const useGroupsStore = create<GroupsStore>(() => ({
                 return Promise.reject(error);
             })
             .finally(() => {
-                if (activeGroupUpdate?.promise === updatePromise) {
-                    activeGroupUpdate = undefined;
-                    if (isCurrent()) {
+                if (activeGroupUpdates.get(groupId)?.promise === updatePromise) {
+                    activeGroupUpdates.delete(groupId);
+                    if (isCurrent() && activeGroupUpdates.size === 0) {
                         setLoading('group', 'update', 'fetched');
                     }
                 }
             });
 
-        activeGroupUpdate = {
-            groupId,
-            isCurrent,
-            promise: updatePromise,
-        };
+        activeGroupUpdates.set(groupId, { isCurrent, promise: updatePromise });
 
         return updatePromise;
     },

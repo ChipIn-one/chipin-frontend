@@ -162,6 +162,7 @@ const activityOf = (
 ): GroupActivityResult => ({
     items: [...target.recentActivities.items],
     hasMore: target.recentActivities.nextCursor !== null,
+    isFetching: false,
     isNextPageLoading: false,
     isNextPageError: false,
     loadMore,
@@ -245,6 +246,14 @@ test('triggers group activity pagination from the active Expenses tab', () => {
     lastCall[0].onLoadMore();
 
     expect(loadMore).toHaveBeenCalledOnce();
+});
+
+test('holds the scroll trigger during any activity load, not only a next page', () => {
+    renderTabs(groupWithActivity, { isFetching: true, isNextPageLoading: false });
+
+    expect(useInfiniteScrollMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ hasMore: true, isLoading: true }),
+    );
 });
 
 test('suppresses group activity pagination while another tab is active', () => {

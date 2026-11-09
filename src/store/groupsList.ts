@@ -11,6 +11,7 @@ import {
     firstGroupActivityPage,
     flattenGroupsList,
     type GroupActivityData,
+    groupDetailQueryOptions,
     groupsKeys,
     type GroupsListData,
     putGroupInCachedList,
@@ -113,9 +114,10 @@ export const putGroupDetail = (group: Group): Promise<void> => {
 };
 
 /**
- * After a legacy change of a group (an expense, a settlement, a kicked member): its detail and
- * activity load again, a running load cancelled first; the detail read then updates the list.
- * Never rejects.
+ * After a legacy change of a group (an expense, a settlement, a kicked member), on any page: its
+ * detail is read again (a running read cancelled first) whether a group page shows it or not, so
+ * the read also updates the group in the list (its card's balances); its activity loads again.
+ * Never rejects (a failed read changes nothing; a denied one drops the group from the list).
  */
 // TODO(03-11): goes with the group mutations moving to entities/groups.
 export const invalidateGroup = (groupId: string): Promise<void> => {
@@ -129,19 +131,50 @@ export const invalidateGroup = (groupId: string): Promise<void> => {
     return Promise.all([
         client
             .cancelQueries({ queryKey })
-            .then(() => client.invalidateQueries({ queryKey }, { cancelRefetch: true })),
+            .then(() => client.fetchQuery({ ...groupDetailQueryOptions(groupId), staleTime: 0 }))
+            .catch(() => undefined),
         reloadGroupActivity(client, groupId),
     ]).then(() => undefined);
 };
 
-/** After the user removed or left a group: its cached detail and activity are dropped. */
+// Removes a cached query once nothing shows it: a group page still mounted would otherwise build
+// it again and read a group that is gone (a 404 flash before the page navigates away).
+const removeWhenUnobserved = (client: QueryClient, queryKey: readonly unknown[]): void => {
+    const cache = client.getQueryCache();
+    const query = cache.find({ queryKey, exact: true });
+
+    if (!query) {
+        return;
+    }
+    void client.cancelQueries({ queryKey, exact: true });
+    if (query.getObserversCount() === 0) {
+        cache.remove(query);
+        return;
+    }
+    const unsubscribe = cache.subscribe(event => {
+        if (event.query !== query) {
+            return;
+        }
+        if (event.type === 'removed') {
+            unsubscribe();
+        } else if (event.type === 'observerRemoved' && query.getObserversCount() === 0) {
+            unsubscribe();
+            cache.remove(query);
+        }
+    });
+};
+
+/**
+ * After the user removed or left a group: its cached detail and activity are dropped, once the
+ * page showing them is gone (nothing reads them again meanwhile).
+ */
 // TODO(03-11): goes with the group mutations moving to entities/groups.
 export const forgetGroup = (groupId: string): void => {
     const client = tabUserClient();
 
-    for (const queryKey of [groupsKeys.detail(groupId), groupsKeys.activity(groupId)]) {
-        void client?.cancelQueries({ queryKey });
-        client?.removeQueries({ queryKey });
+    if (client) {
+        removeWhenUnobserved(client, groupsKeys.detail(groupId));
+        removeWhenUnobserved(client, groupsKeys.activity(groupId));
     }
 };
 

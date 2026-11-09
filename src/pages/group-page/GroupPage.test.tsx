@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, expect, test, vi } from 'vitest';
 
@@ -216,4 +216,43 @@ test('never renders the detail of another group for the route group', async () =
 
     expect(await screen.findByText('group:page.notFound')).not.toBeNull();
     expect(screen.queryByTestId('group-tabs')).toBeNull();
+});
+
+test('a denial on a refetch replaces the shown group with the not-found card', async () => {
+    seedDetail(detail);
+    server.use(
+        http.get('*/groups/group-1', () =>
+            HttpResponse.json({ code: 'FORBIDDEN' }, { status: 403 }),
+        ),
+    );
+
+    render(<GroupPage />);
+    expect(screen.getByTestId('group-tabs').dataset.name).toBe(detail.name);
+    expect(useUiPrefsStore.getState().lastGroupId).toBe(group.id);
+
+    await act(() =>
+        getDefaultTestQueryClient().refetchQueries({ queryKey: groupsKeys.detail(group.id) }),
+    );
+
+    expect(await screen.findByText('group:page.notFound')).not.toBeNull();
+    expect(screen.queryByTestId('group-tabs')).toBeNull();
+    expect(useUiPrefsStore.getState().lastGroupId).toBeNull();
+});
+
+test('a failed detail read keeps showing the listed group and its recent activity', async () => {
+    const listedWithActivity = {
+        ...group,
+        recentActivities: { items: [preview('listed')], nextCursor: 4 },
+    } satisfies Group;
+    seedGroupsList([listedWithActivity]);
+    server.use(http.get('*/groups/group-1', () => HttpResponse.json({}, { status: 500 })));
+
+    render(<GroupPage />);
+
+    await waitFor(() => {
+        expect(screen.getByTestId('group-tabs').dataset.loading).toBe('false');
+    });
+    expect(screen.getByTestId('group-tabs').dataset.name).toBe(group.name);
+    expect(screen.getByTestId('group-tabs').dataset.activity).toBe('listed');
+    expect(screen.queryByText('group:page.notFound')).toBeNull();
 });

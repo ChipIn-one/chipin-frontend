@@ -2,12 +2,12 @@
 // detail with its balances (30 s) and a group's activity previews (30 s, infinite), all persisted
 // (the infinite ones as their first page only, `trimmingPersister`). All three come through the
 // legacy `src/api` layer in the legacy shapes (see `model/types.ts`) until 03-10c and 03-12.
-import type { Query, QueryClient } from '@tanstack/react-query';
+import type { Query, QueryClient, UseQueryOptions, UseQueryResult } from '@tanstack/react-query';
 import {
     infiniteQueryOptions,
     queryOptions,
     useInfiniteQuery,
-    useQuery,
+    useQueries,
 } from '@tanstack/react-query';
 
 import { fetchGroupActivityPreviews } from 'api/activityApi';
@@ -130,10 +130,30 @@ interface GroupDetailQueryParams extends EnabledParams {
     placeholder: Group | undefined;
 }
 
+type GroupDetailOptions = UseQueryOptions<
+    Group,
+    Error,
+    Group,
+    ReturnType<typeof groupsKeys.detail>
+>;
+
+const selectFirst = (results: UseQueryResult<Group>[]): UseQueryResult<Group> | undefined =>
+    results[0];
+
+/**
+ * No group (`undefined`): no query at all, not even an idle cache entry (the route has no group).
+ */
 export const useGroupDetailQuery = (
-    groupId: string,
+    groupId: string | undefined,
     { enabled, placeholder }: GroupDetailQueryParams,
-) => useQuery({ ...groupDetailQueryOptions(groupId), enabled, placeholderData: placeholder });
+) => {
+    const queries: GroupDetailOptions[] =
+        groupId === undefined
+            ? []
+            : [{ ...groupDetailQueryOptions(groupId), enabled, placeholderData: placeholder }];
+
+    return useQueries({ queries, combine: selectFirst });
+};
 
 const fetchGroupActivityPage = (
     groupId: string,
@@ -143,7 +163,11 @@ const fetchGroupActivityPage = (
     fetchGroupActivityPreviews(
         { groupId, limit: ACTIVITY_API_LIMIT, cursor: cursor ?? undefined },
         signal,
-    ).then(({ items, nextCursor }) => ({ items, nextCursor }));
+    ).then(
+        ({ items, nextCursor }) => ({ items, nextCursor }),
+        // An `ApiError`, as the detail's: a 5xx is retried, other 4xx are final (`queryRetry`).
+        (error: unknown) => Promise.reject(toApiError(error)),
+    );
 
 type ActivityQuery = Query<
     GroupActivityPage,

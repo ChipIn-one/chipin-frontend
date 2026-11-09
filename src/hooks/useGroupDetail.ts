@@ -22,13 +22,16 @@ const useIsGroupQueryEnabled = (): boolean => {
 };
 
 export interface GroupDetailResult {
-    /** The group: its detail, or the group as listed while the detail loads for the first time. */
+    /**
+     * The group: its detail, else the group as listed (while the detail loads, waits for the
+     * network or failed), never a group the user may not read.
+     */
     group: Group | undefined;
-    /** No detail yet and no error: the group shown (if any) is the listed one. */
+    /** The detail is loaded (not the listed group standing in for it). */
+    hasDetail: boolean;
+    /** No detail yet, and it is still loading. */
     isLoading: boolean;
-    /** No detail, and the load failed or waits for the network (spec 03 §1.2, §1.8). */
-    isError: boolean;
-    /** The load failed with a 403/404: the user may not read the group. */
+    /** The last read failed with a 403/404: the user may not read the group (cached data too). */
     isDenied: boolean;
 }
 
@@ -37,22 +40,27 @@ export const useGroupDetail = (groupId: string | undefined): GroupDetailResult =
     const isEnabled = useIsGroupQueryEnabled() && groupId !== undefined;
     const { groups } = useGroupsList();
     const listed = groupId === undefined ? undefined : groups?.find(item => item.id === groupId);
-    const query = useGroupDetailQuery(groupId ?? '', { enabled: isEnabled, placeholder: listed });
-    const group = isEnabled ? query.data : undefined;
-    const hasDetail = group !== undefined && !query.isPlaceholderData;
-    const isError = isEnabled && !hasDetail && (query.isError || query.isPaused);
+    const query = useGroupDetailQuery(groupId, { enabled: isEnabled, placeholder: listed });
+    // A denial wins over the data TanStack keeps from an earlier read.
+    const isDenied = isEnabled && query?.isError === true && isGroupDeniedError(query.error);
+    const detail =
+        isEnabled && !isDenied && query?.isPlaceholderData !== true ? query?.data : undefined;
+    const hasDetail = detail !== undefined;
+    const isSettled = query?.isError === true || query?.isPaused === true;
 
     return {
-        group,
-        isLoading: groupId !== undefined && !hasDetail && !isError,
-        isError,
-        isDenied: isError && isGroupDeniedError(query.error),
+        group: isEnabled && !isDenied ? (detail ?? listed) : undefined,
+        hasDetail,
+        isLoading: groupId !== undefined && !hasDetail && !isDenied && !isSettled,
+        isDenied,
     };
 };
 
 export interface GroupActivityResult {
-    items: ActivityFeedItem[];
+    items: readonly ActivityFeedItem[];
     hasMore: boolean;
+    /** Any load runs (a refetch or the next page): a scroll trigger waits for it to end. */
+    isFetching: boolean;
     isNextPageLoading: boolean;
     isNextPageError: boolean;
     /** Loads the next page; a fetch running (a refetch replaces the pages) holds it. */
@@ -61,9 +69,14 @@ export interface GroupActivityResult {
 
 /**
  * The activity of `groupId`, read once its detail is loaded (`hasDetail`): the detail seeds the
- * first page, so opening a group sends one request.
+ * first page, so opening a group sends one request. Until the activity has data, `fallback` (the
+ * listed group's recent activity) is shown, without more pages.
  */
-export const useGroupActivity = (groupId: string, hasDetail: boolean): GroupActivityResult => {
+export const useGroupActivity = (
+    groupId: string,
+    hasDetail: boolean,
+    fallback?: Group['recentActivities'],
+): GroupActivityResult => {
     const isEnabled = useIsGroupQueryEnabled() && hasDetail;
     const query = useGroupActivityQuery(groupId, { enabled: isEnabled });
     const { fetchNextPage, isFetching } = query;
@@ -72,10 +85,12 @@ export const useGroupActivity = (groupId: string, hasDetail: boolean): GroupActi
             void fetchNextPage();
         }
     }, [fetchNextPage, isEnabled, isFetching]);
+    const items = isEnabled ? query.data : undefined;
 
     return {
-        items: (isEnabled ? query.data : undefined) ?? NO_ACTIVITY,
-        hasMore: isEnabled && query.hasNextPage,
+        items: items ?? fallback?.items ?? NO_ACTIVITY,
+        hasMore: items !== undefined && query.hasNextPage,
+        isFetching: isEnabled && isFetching,
         isNextPageLoading: query.isFetchingNextPage,
         isNextPageError: query.isFetchNextPageError,
         loadMore,

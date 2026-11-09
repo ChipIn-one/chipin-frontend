@@ -18,7 +18,11 @@ const GroupPage = () => {
     const { groupId } = useParams<{ groupId: string }>();
     const detail = useGroupDetail(groupId);
     const routeGroup = detail.group;
-    const activity = useGroupActivity(groupId ?? '', routeGroup !== undefined && !detail.isLoading);
+    const activity = useGroupActivity(
+        groupId ?? '',
+        detail.hasDetail,
+        routeGroup?.recentActivities,
+    );
     const setLastGroupId = useUiPrefsStore(state => state.setLastGroupId);
     const isGroupDataLoading = detail.isLoading;
 
@@ -51,7 +55,8 @@ const GroupPage = () => {
         }
 
         // TODO(04): the route's errorElement (spec 04 §2.5) once the data router lands; until then
-        // a failed or denied (403/404) detail shows this card, and the list drops a denied group.
+        // a denied (403/404) detail, or a failed one of an unlisted group, shows this card, and the
+        // list drops a denied group.
         return (
             <Container size="4" py="6">
                 <Card>

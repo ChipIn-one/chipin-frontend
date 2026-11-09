@@ -256,3 +256,17 @@ test('ACT-021 ACT-022 group activity lists each parent once, its newest event in
 
     expect(flattenGroupActivity(data)).toEqual([preview('p1', 3), preview('p2'), preview('p3')]);
 });
+
+test('a failed activity page is an ApiError, retried like the detail on a 5xx', async () => {
+    server.use(
+        http.get('*/groups/a/activity-previews', () => HttpResponse.json({}, { status: 503 })),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+    const error: unknown = await client
+        .fetchInfiniteQuery(groupActivityQueryOptions('a'))
+        .catch((reason: unknown) => reason);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error instanceof ApiError && error.status).toBe(503);
+});

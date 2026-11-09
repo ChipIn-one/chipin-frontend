@@ -1,10 +1,11 @@
-import { InfiniteQueryObserver, onlineManager } from '@tanstack/react-query';
+import { InfiniteQueryObserver, onlineManager, QueryObserver } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group } from 'api/chipin.types';
 import {
     dropGroupFromCachedList,
+    groupDetailQueryOptions,
     groupsKeys,
     groupsListQueryOptions,
     putGroupInCachedList,
@@ -343,15 +344,33 @@ test('a written group cancels a running detail read: its older answer is never a
     expect(userCache.client.getQueryData(detailKey)).toEqual(group('a', 'Written'));
 });
 
-test('a changed group marks its detail and activity stale, the activity cut to one page', async () => {
-    userCache.client.setQueryData(detailKey, group('a'));
+test('a changed group is read again on any page: no group page needed, its list entry updates', async () => {
+    let detailReads = 0;
+    server.use(
+        http.get('*/groups/a', () => {
+            detailReads += 1;
+            return HttpResponse.json(group('a', 'New balances'));
+        }),
+    );
+    seed([group('a'), group('b')], Date.now() - 1_000);
     seedActivity(2);
 
+    // No observer of the detail (the dashboard, the friends page).
     await invalidateGroup('a');
 
-    expect(userCache.client.getQueryState(detailKey)?.isInvalidated).toBe(true);
+    expect(detailReads).toBe(1);
+    expect(userCache.client.getQueryData(detailKey)).toEqual(group('a', 'New balances'));
+    expect(listed()).toEqual([group('a', 'New balances'), group('b')]);
     expect(userCache.client.getQueryState(activityKey)?.isInvalidated).toBe(true);
     expect(userCache.client.getQueryData<{ pages: unknown[] }>(activityKey)?.pages).toHaveLength(1);
+});
+
+test('a failed read after a change keeps the list and never rejects', async () => {
+    server.use(http.get('*/groups/a', () => HttpResponse.json({}, { status: 500 })));
+    seed([group('a')], Date.now() - 1_000);
+
+    await expect(invalidateGroup('a')).resolves.toBeUndefined();
+    expect(listed()).toEqual([group('a')]);
 });
 
 test('a removed or left group loses its cached detail and activity', () => {
@@ -362,4 +381,24 @@ test('a removed or left group loses its cached detail and activity', () => {
 
     expect(userCache.client.getQueryState(detailKey)).toBeUndefined();
     expect(userCache.client.getQueryState(activityKey)).toBeUndefined();
+});
+
+test('a group page still showing a removed group keeps it, unread, until it unmounts', () => {
+    let detailReads = 0;
+    server.use(
+        http.get('*/groups/a', () => {
+            detailReads += 1;
+            return HttpResponse.json({}, { status: 404 });
+        }),
+    );
+    userCache.client.setQueryData(detailKey, group('a'));
+    const page = new QueryObserver(userCache.client, { ...groupDetailQueryOptions('a') });
+    const unmount = page.subscribe(() => undefined);
+
+    forgetGroup('a');
+
+    expect(userCache.client.getQueryData(detailKey)).toEqual(group('a'));
+    unmount();
+    expect(userCache.client.getQueryState(detailKey)).toBeUndefined();
+    expect(detailReads).toBe(0);
 });

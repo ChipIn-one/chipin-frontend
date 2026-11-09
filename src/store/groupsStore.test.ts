@@ -278,6 +278,45 @@ describe('groupsStore', () => {
         return first;
     });
 
+    test('an update of another group never joins a pending one and keeps its own result', () => {
+        const other = { ...group, id: 'group-2', name: 'Other' } satisfies Group;
+        let resolveFirst: ((value: Group) => void) | undefined;
+        vi.mocked(groupsApi.updateGroup)
+            .mockReturnValueOnce(
+                new Promise<Group>(resolve => {
+                    resolveFirst = resolve;
+                }),
+            )
+            .mockResolvedValueOnce({ ...other, name: 'Other renamed' });
+
+        const first = useGroupsStore
+            .getState()
+            .updateGroup({ groupId: group.id, groupName: 'Renamed' });
+        const second = useGroupsStore
+            .getState()
+            .updateGroup({ groupId: other.id, groupName: 'Other renamed' });
+
+        expect(second).not.toBe(first);
+        expect(groupsApi.updateGroup).toHaveBeenCalledTimes(2);
+        expect(groupsApi.updateGroup).toHaveBeenLastCalledWith({
+            groupId: other.id,
+            groupName: 'Other renamed',
+        });
+
+        return second
+            .then(result => {
+                expect(result.id).toBe(other.id);
+                // The first update still runs: the shared loading slot waits for it.
+                expect(useLoadingStore.getState().group.update).toBe('loading');
+                resolveFirst?.({ ...group, name: 'Renamed' });
+                return first;
+            })
+            .then(result => {
+                expect(result.id).toBe(group.id);
+                expect(useLoadingStore.getState().group.update).toBe('fetched');
+            });
+    });
+
     test('a successful rejoin restores the group after a definitive detail denial', () => {
         seedList([group]);
         seedDetail(group);
