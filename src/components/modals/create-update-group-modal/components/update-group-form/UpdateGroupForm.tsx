@@ -16,14 +16,15 @@ import { GroupCoverField, GroupCoverPickerControl } from '../group-cover-field';
 import { GroupDetailsFields } from '../group-details-fields';
 
 interface Props {
+    /** The group being edited. */
+    group: Group;
     onClose: () => void;
 }
 
-const UpdateGroupForm = ({ onClose }: Props) => {
+const UpdateGroupForm = ({ group: editedGroup, onClose }: Props) => {
     const { t } = useTranslation('group');
-    const { selectedGroup, updateGroup, uploadGroupCover } = useGroupsStore(
+    const { updateGroup, uploadGroupCover } = useGroupsStore(
         useShallow(state => ({
-            selectedGroup: state.selectedGroup,
             updateGroup: state.updateGroup,
             uploadGroupCover: state.uploadGroupCover,
         })),
@@ -31,8 +32,8 @@ const UpdateGroupForm = ({ onClose }: Props) => {
     const isUpdatingGroup = useLoadingStore(selectGroupUpdating);
     const isUploadingCover = useLoadingStore(selectGroupCoverUploading);
     const isSaving = isUpdatingGroup || isUploadingCover;
-    const [inputName, setInputName] = useState(selectedGroup?.name ?? '');
-    const [inputDescription, setInputDescription] = useState(selectedGroup?.description ?? '');
+    const [inputName, setInputName] = useState(editedGroup.name);
+    const [inputDescription, setInputDescription] = useState(editedGroup.description ?? '');
     const {
         coverPreviewUrl,
         coverValidationError,
@@ -41,9 +42,6 @@ const UpdateGroupForm = ({ onClose }: Props) => {
         onCoverChange,
         setUploadProgress,
     } = useGroupCoverDraft(isSaving);
-    if (!selectedGroup) {
-        return null;
-    }
 
     const uploadSelectedCover = (group: Group): Promise<Group> => {
         if (!selectedCoverFile) {
@@ -78,6 +76,7 @@ const UpdateGroupForm = ({ onClose }: Props) => {
         }
 
         updateGroup({
+            groupId: editedGroup.id,
             groupName: normalizedGroupName,
             groupDescription: normalizedDescription,
         })
@@ -92,7 +91,7 @@ const UpdateGroupForm = ({ onClose }: Props) => {
             });
     };
 
-    const coverUrl = coverPreviewUrl ?? selectedGroup.coverUrl;
+    const coverUrl = coverPreviewUrl ?? editedGroup.coverUrl;
     const coverPicker = (
         <GroupCoverPickerControl
             isOverlay={Boolean(coverUrl)}

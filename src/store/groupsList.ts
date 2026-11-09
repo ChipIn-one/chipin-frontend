@@ -1,14 +1,20 @@
-// The groups list query seen from the legacy stores (spec 03 §6 row 4): the session start loads it
-// on the tab user's QueryClient, the legacy group actions keep it correct after their writes, and
-// the expense editor reads the cached groups. Never the reverse direction.
+// The group queries seen from the legacy stores (spec 03 §6 row 4): the session start loads the
+// list on the tab user's QueryClient, the legacy group and ledger actions keep the list, a group's
+// detail and its activity correct after their writes, and the expense editor reads the cached
+// groups. Never the reverse direction. A group's detail read keeps the list current itself
+// (`entities/groups`).
 import type { QueryClient } from '@tanstack/react-query';
 
 import type { Group } from 'api/chipin.types';
 import {
+    editGroupsList,
+    firstGroupActivityPage,
     flattenGroupsList,
+    type GroupActivityData,
     groupsKeys,
     type GroupsListData,
-    removeGroupFromList,
+    putGroupInCachedList,
+    settleListDebt,
     upsertGroupInList,
 } from 'entities/groups';
 
@@ -54,89 +60,89 @@ export const invalidateGroupsList = (): Promise<void> => {
         .then(() => client.invalidateQueries({ queryKey: listKey }, { cancelRefetch: true }));
 };
 
-// What an edit of the cached list leaves owed: a load it cancelled must run again (`reload`), and
-// an entry already marked stale stays stale (`stale`), without a request now.
-type ListDebt = 'none' | 'stale' | 'reload';
+/**
+ * Puts a group a legacy action just wrote (a created group, confirmed by the server) into the
+ * cached list, without a request of its own. Never rejects.
+ */
+// TODO(03-11): goes with the group mutations moving to entities/groups.
+export const putGroupInList = (group: Group): Promise<void> => {
+    const client = tabUserClient();
 
-// Edits the cached list in place, without a request. A running load may predate the change: it is
-// cancelled before the write (the cancel restores the entry synchronously, so the write is not
-// undone). The list keeps its age: one group read from the server does not make the rest of it
-// fresh.
-const editGroupsList = (
-    client: QueryClient,
-    edit: (data: GroupsListData) => GroupsListData,
-): ListDebt => {
-    // A load paused offline counts too: the cancel below cancels it as well.
-    const wasFetching = (client.getQueryState(listKey)?.fetchStatus ?? 'idle') !== 'idle';
+    return client ? putGroupInCachedList(client, group) : Promise.resolve();
+};
 
-    void client.cancelQueries({ queryKey: listKey });
-    const state = client.getQueryState<GroupsListData>(listKey);
+// Cuts a group's cached activity to its first page, keeping its age: its refetch is one request.
+const trimGroupActivity = (client: QueryClient, groupId: string): void => {
+    const queryKey = groupsKeys.activity(groupId);
+    const state = client.getQueryState<GroupActivityData>(queryKey);
 
-    if (state?.data !== undefined) {
-        client.setQueryData<GroupsListData>(listKey, edit(state.data), {
+    if (state?.data && state.data.pages.length > 1) {
+        client.setQueryData<GroupActivityData>(queryKey, firstGroupActivityPage(state.data), {
             updatedAt: state.dataUpdatedAt,
         });
     }
-    if (wasFetching) {
-        return 'reload';
-    }
-    return state?.isInvalidated === true ? 'stale' : 'none';
 };
 
-const settleDebt = (client: QueryClient, debt: ListDebt): Promise<void> => {
-    if (debt === 'none') {
-        return Promise.resolve();
-    }
-    return client.invalidateQueries({
-        queryKey: listKey,
-        refetchType: debt === 'reload' ? 'active' : 'none',
+// A change of the group: a running load of its activity may predate it, so it is cancelled first.
+const reloadGroupActivity = (client: QueryClient, groupId: string): Promise<void> => {
+    const queryKey = groupsKeys.activity(groupId);
+
+    return client.cancelQueries({ queryKey }).then(() => {
+        trimGroupActivity(client, groupId);
+        return client.invalidateQueries({ queryKey });
     });
 };
 
-// Whether the list loaded since a read was sent. Its load may have started before the read, so it
-// can be older than the read's answer or newer: neither may overwrite the other (a stale response
-// never overwrites newer state), and the server decides with one more list load. The edits keep
-// the list's age, so only a list load moves it.
-const isListLoadedSince = (client: QueryClient, readStartedAt: number | undefined): boolean =>
-    readStartedAt !== undefined &&
-    (client.getQueryState(listKey)?.dataUpdatedAt ?? 0) >= readStartedAt;
-
 /**
- * Puts a group read or written by a legacy action into the cached list, without a request of its
- * own. `readStartedAt`: when a read (the group detail) was sent; when the list loaded since then,
- * the group is not written and the list loads again instead (one more request). Without it the
- * group is a write the server just confirmed (a created group). Never rejects.
+ * After a legacy write that returned the group (an update, a cover, a join): the group becomes its
+ * detail at once (a running detail read may predate the write: it is cancelled first), and its
+ * activity loads again. The list is the caller's (`reloadGroupsListWith`). Never rejects.
  */
-// TODO(03-11): the group detail (03-10b) writes its own entry.
-export const putGroupInList = (group: Group, readStartedAt?: number): Promise<void> => {
+// TODO(03-11): goes with the group mutations moving to entities/groups.
+export const putGroupDetail = (group: Group): Promise<void> => {
     const client = tabUserClient();
 
     if (!client) {
         return Promise.resolve();
     }
-    if (isListLoadedSince(client, readStartedAt)) {
-        return settleDebt(client, 'reload');
-    }
-    return settleDebt(
-        client,
-        editGroupsList(client, data => upsertGroupInList(data, group)),
-    );
+    const queryKey = groupsKeys.detail(group.id);
+
+    void client.cancelQueries({ queryKey });
+    client.setQueryData<Group>(queryKey, group);
+    return reloadGroupActivity(client, group.id);
 };
 
 /**
- * Drops a group the user can no longer read (a 403/404 on its detail) from the cached list: a
- * denial always applies, whenever the list loaded. Never rejects.
+ * After a legacy change of a group (an expense, a settlement, a kicked member): its detail and
+ * activity load again, a running load cancelled first; the detail read then updates the list.
+ * Never rejects.
  */
-// TODO(03-11): the group detail (03-10b) writes its own entry.
-export const dropGroupFromList = (groupId: string): Promise<void> => {
+// TODO(03-11): goes with the group mutations moving to entities/groups.
+export const invalidateGroup = (groupId: string): Promise<void> => {
     const client = tabUserClient();
 
-    return client
-        ? settleDebt(
-              client,
-              editGroupsList(client, data => removeGroupFromList(data, groupId)),
-          )
-        : Promise.resolve();
+    if (!client) {
+        return Promise.resolve();
+    }
+    const queryKey = groupsKeys.detail(groupId);
+
+    return Promise.all([
+        client
+            .cancelQueries({ queryKey })
+            .then(() => client.invalidateQueries({ queryKey }, { cancelRefetch: true })),
+        reloadGroupActivity(client, groupId),
+    ]).then(() => undefined);
+};
+
+/** After the user removed or left a group: its cached detail and activity are dropped. */
+// TODO(03-11): goes with the group mutations moving to entities/groups.
+export const forgetGroup = (groupId: string): void => {
+    const client = tabUserClient();
+
+    for (const queryKey of [groupsKeys.detail(groupId), groupsKeys.activity(groupId)]) {
+        void client?.cancelQueries({ queryKey });
+        client?.removeQueries({ queryKey });
+    }
 };
 
 /**
@@ -157,7 +163,7 @@ export const reloadGroupsListWith = (group: Group, isCurrent: () => boolean): Pr
     editGroupsList(client, upsert);
     return client.invalidateQueries({ queryKey: listKey }).then(() => {
         if (isCurrent()) {
-            return settleDebt(client, editGroupsList(client, upsert));
+            return settleListDebt(client, editGroupsList(client, upsert));
         }
         return undefined;
     });

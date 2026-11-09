@@ -19,7 +19,8 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('store/groupsStore', () => ({
-    useGroupsStore: () => ({ joinGroup: mocks.joinGroup }),
+    useGroupsStore: (selector: (state: { joinGroup: typeof mocks.joinGroup }) => unknown) =>
+        selector({ joinGroup: mocks.joinGroup }),
 }));
 
 vi.mock('helpers/authSession', () => ({

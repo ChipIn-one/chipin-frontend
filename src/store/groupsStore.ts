@@ -1,9 +1,7 @@
 import { create } from 'zustand';
 
-import * as activityApi from 'api/activityApi';
 import * as chipinApi from 'api/chipin';
 import type {
-    ActivityFeedItem,
     Group,
     KickGroupMemberParams,
     LeaveGroupParams,
@@ -12,25 +10,24 @@ import type {
     UploadGroupCoverParams,
 } from 'api/chipin.types';
 import * as groupsApi from 'api/groupsApi';
-import { ACTIVITY_API_LIMIT } from 'constants/activity';
 import { getAuthSessionVersion, isAuthSessionCurrent } from 'helpers/authSession';
-import { getApiErrorStatus, normalizeApiError } from 'helpers/errors';
+import { normalizeApiError } from 'helpers/errors';
 
 import { useActivityStore } from './activity-store/actions';
 import { useErrorsStore } from './errorsStore';
 import {
-    dropGroupFromList,
+    forgetGroup,
+    invalidateGroup,
     invalidateGroupsList,
+    putGroupDetail,
     putGroupInList,
     reloadGroupsListWith,
 } from './groupsList';
 import { invalidateDashboard } from './internal/dashboardQueryBridge';
-import { createRequestChannel } from './internal/resourceRequests';
 import { useLoadingStore } from './loadingStore';
 import { invalidateKnownUsers } from './sessionUser';
+import { useUiPrefsStore } from './ui-prefs';
 
-const groupDetailChannel = createRequestChannel();
-const groupActivityPageChannel = createRequestChannel();
 let groupsMutationGeneration = 0;
 let successfulJoinVersions: Record<string, number> = Object.create(null) as Record<string, number>;
 let activeGroupUpdate:
@@ -41,48 +38,6 @@ let activeGroupUpdate:
       }
     | undefined;
 
-const resetGroupActivityPagination = (): void => {
-    groupActivityPageChannel.abort();
-    useLoadingStore.getState().setLoading('group', 'nextPage', 'fetched');
-    useErrorsStore.getState().clearError('group', 'nextPage');
-};
-
-const appendUniqueActivityPreviews = (
-    confirmedItems: ActivityFeedItem[],
-    incomingItems: ActivityFeedItem[],
-): ActivityFeedItem[] => {
-    const uniqueItems: ActivityFeedItem[] = [];
-    const parentIndexes = new Map<string, number>();
-    const confirmedItemCount = confirmedItems.length;
-    const totalItemCount = confirmedItemCount + incomingItems.length;
-
-    for (let index = 0; index < totalItemCount; index += 1) {
-        const item =
-            index < confirmedItemCount
-                ? confirmedItems[index]
-                : incomingItems[index - confirmedItemCount];
-        if (item === undefined) {
-            continue;
-        }
-        const parentId = item.parent.id;
-        const existingIndex = parentIndexes.get(parentId);
-
-        if (existingIndex !== undefined) {
-            const existingItem = uniqueItems[existingIndex];
-            // Keep a newer edit or reversal, including reversals needed as tombstones.
-            if (existingItem === undefined || item.lastEvent.seq > existingItem.lastEvent.seq) {
-                uniqueItems[existingIndex] = item;
-            }
-            continue;
-        }
-
-        parentIndexes.set(parentId, uniqueItems.length);
-        uniqueItems.push(item);
-    }
-
-    return uniqueItems;
-};
-
 const createGroupsMutationGuard = () => {
     const generation = groupsMutationGeneration;
     const authSessionVersion = getAuthSessionVersion();
@@ -92,27 +47,27 @@ const createGroupsMutationGuard = () => {
     };
 };
 
+// The group mutations until 03-11 moves them to entities/groups; the group data itself is read
+// from the `groups.list`, `groups.detail` and `groups.activity` queries (03-10a, 03-10b).
 export interface GroupsStore {
-    selectedGroup: Group | null;
-
     setInitialGroupsStore: () => void;
-    setSelectedGroup: (group: Group | null) => void;
-    fetchSetGroupById: (groupId: string, force?: boolean) => Promise<Group | null>;
-    fetchMoreGroupActivity: () => Promise<void>;
     createGroup: (params: { groupName: string; groupDescription?: string }) => Promise<Group>;
     removeGroup: (params: RemoveGroupParams) => Promise<void>;
     leaveGroup: (params: LeaveGroupParams) => Promise<void>;
     kickGroupMember: (params: KickGroupMemberParams) => Promise<void>;
-    updateGroup: (params: Omit<UpdateGroupParams, 'groupId'>) => Promise<Group>;
+    updateGroup: (params: UpdateGroupParams) => Promise<Group>;
     uploadGroupCover: (params: UploadGroupCoverParams) => Promise<Group>;
     joinGroup: ({ inviteToken }: { inviteToken: string }) => Promise<Group>;
 }
 
-const initialGroupsStore = {
-    selectedGroup: null,
-};
+// The group is gone for this user: its cached detail and activity, and the last-group default.
+const refreshAfterGroupRemoval = (groupId: string): Promise<void> => {
+    forgetGroup(groupId);
+    const { lastGroupId, setLastGroupId } = useUiPrefsStore.getState();
 
-const refreshAfterGroupRemoval = (): Promise<void> => {
+    if (lastGroupId === groupId) {
+        setLastGroupId(null);
+    }
     return Promise.all([
         invalidateGroupsList(),
         invalidateKnownUsers(),
@@ -121,172 +76,21 @@ const refreshAfterGroupRemoval = (): Promise<void> => {
     ]).then(() => undefined);
 };
 
-const refreshAfterGroupMemberChange = (
-    groupId: string,
-    fetchSetGroupById: GroupsStore['fetchSetGroupById'],
-): Promise<void> => {
+const refreshAfterGroupMemberChange = (groupId: string): Promise<void> => {
     return Promise.all([
-        fetchSetGroupById(groupId, true),
+        invalidateGroup(groupId),
         invalidateKnownUsers(),
         invalidateDashboard(),
         useActivityStore.getState().fetchSetActivity(true),
     ]).then(() => undefined);
 };
 
-export const useGroupsStore = create<GroupsStore>((set, get) => ({
-    ...initialGroupsStore,
-
+export const useGroupsStore = create<GroupsStore>(() => ({
     setInitialGroupsStore: () => {
-        groupDetailChannel.abort();
-        resetGroupActivityPagination();
         groupsMutationGeneration += 1;
         successfulJoinVersions = Object.create(null) as Record<string, number>;
         activeGroupUpdate = undefined;
-        set(initialGroupsStore);
         useErrorsStore.getState().resetErrors();
-    },
-    setSelectedGroup: group => {
-        if (get().selectedGroup?.id !== group?.id) {
-            groupDetailChannel.abort();
-            resetGroupActivityPagination();
-        }
-        useErrorsStore.getState().clearError('group', 'data');
-        useLoadingStore.getState().setLoading('group', 'data', 'fetched');
-        set({ selectedGroup: group });
-    },
-    fetchSetGroupById: (groupId, force = false) => {
-        const { selectedGroup } = get();
-
-        if (force || selectedGroup?.id !== groupId) {
-            resetGroupActivityPagination();
-        }
-
-        if (selectedGroup && selectedGroup.id !== groupId) {
-            set({ selectedGroup: null });
-        }
-
-        // Every caller forces a read today; without `force` only the selected group is reused (the
-        // list is not a detail cache: its entries may be older than the page needs).
-        if (selectedGroup?.id === groupId && !force) {
-            return Promise.resolve(selectedGroup);
-        }
-
-        const { setLoading } = useLoadingStore.getState();
-        const { clearError, setError } = useErrorsStore.getState();
-        // A list loaded after this read was sent may be older or newer than its answer: the
-        // list loads again instead (see `putGroupInList`).
-        const readStartedAt = Date.now();
-        const request = groupDetailChannel.request(
-            signal => chipinApi.fetchApiUserGroupById(groupId, signal),
-            { force, identity: groupId },
-        );
-
-        clearError('group', 'data');
-        setLoading('group', 'data', 'loading');
-
-        return request.promise
-            .then(group => {
-                if (!request.isCurrent()) {
-                    return get().selectedGroup;
-                }
-                set({ selectedGroup: group });
-                void putGroupInList(group, readStartedAt);
-                return group;
-            })
-            .catch((error: unknown) => {
-                if (request.isCurrent()) {
-                    setError('group', 'data', normalizeApiError(error));
-                    const status = getApiErrorStatus(error);
-
-                    if (status === 403 || status === 404) {
-                        if (get().selectedGroup?.id === groupId) {
-                            resetGroupActivityPagination();
-                        }
-                        void dropGroupFromList(groupId);
-                        set(state => ({
-                            selectedGroup:
-                                state.selectedGroup?.id === groupId ? null : state.selectedGroup,
-                        }));
-                    }
-                }
-                return get().selectedGroup?.id === groupId ? get().selectedGroup : null;
-            })
-            .finally(() => {
-                if (request.isCurrent()) {
-                    setLoading('group', 'data', 'fetched');
-                }
-            });
-    },
-    fetchMoreGroupActivity: () => {
-        const selectedGroup = get().selectedGroup;
-        const groupId = selectedGroup?.id;
-        const nextCursor = selectedGroup?.recentActivities.nextCursor;
-        const { setLoading, group } = useLoadingStore.getState();
-        const { clearError, setError } = useErrorsStore.getState();
-
-        if (
-            !groupId ||
-            nextCursor === null ||
-            nextCursor === undefined ||
-            group.nextPage === 'loading'
-        ) {
-            return Promise.resolve();
-        }
-
-        clearError('group', 'nextPage');
-        setLoading('group', 'nextPage', 'loading');
-
-        const request = groupActivityPageChannel.request(
-            signal =>
-                activityApi.fetchGroupActivityPreviews(
-                    {
-                        groupId,
-                        limit: ACTIVITY_API_LIMIT,
-                        cursor: nextCursor,
-                    },
-                    signal,
-                ),
-            { identity: `${groupId}:${nextCursor}` },
-        );
-
-        return request.promise
-            .then(data => {
-                if (!request.isCurrent() || get().selectedGroup?.id !== groupId) {
-                    return;
-                }
-
-                set(state => {
-                    const currentGroup = state.selectedGroup;
-
-                    if (!currentGroup || currentGroup.id !== groupId) {
-                        return {};
-                    }
-
-                    return {
-                        selectedGroup: {
-                            ...currentGroup,
-                            recentActivities: {
-                                ...currentGroup.recentActivities,
-                                items: appendUniqueActivityPreviews(
-                                    currentGroup.recentActivities.items,
-                                    data.items,
-                                ),
-                                nextCursor: data.nextCursor,
-                            },
-                        },
-                    };
-                });
-            })
-            .catch((error: unknown) => {
-                if (request.isCurrent()) {
-                    setError('group', 'nextPage', normalizeApiError(error));
-                }
-            })
-            .finally(() => {
-                if (request.isCurrent()) {
-                    setLoading('group', 'nextPage', 'fetched');
-                }
-            });
     },
     createGroup: ({ groupName, groupDescription }) => {
         const { setLoading } = useLoadingStore.getState();
@@ -299,8 +103,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
             .createApiGroup({ groupName, groupDescription })
             .then(newGroup => {
                 if (isCurrent()) {
-                    resetGroupActivityPagination();
-                    set({ selectedGroup: newGroup });
+                    void putGroupDetail(newGroup);
                     void putGroupInList(newGroup);
                 }
                 return newGroup;
@@ -317,17 +120,10 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 }
             });
     },
-    updateGroup: ({ groupName, groupDescription, simplifyDebts }) => {
-        const selectedGroup = get().selectedGroup;
+    updateGroup: ({ groupId, groupName, groupDescription, simplifyDebts }) => {
         const { setLoading } = useLoadingStore.getState();
         const { clearError, setError } = useErrorsStore.getState();
         const isCurrent = createGroupsMutationGuard();
-
-        if (!selectedGroup) {
-            const error = new Error('No selected group');
-            setError('group', 'update', normalizeApiError(error));
-            return Promise.reject(error);
-        }
 
         if (activeGroupUpdate?.isCurrent()) {
             return activeGroupUpdate.promise;
@@ -336,7 +132,6 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         clearError('group', 'update');
         setLoading('group', 'update', 'loading');
 
-        const groupId = selectedGroup.id;
         const updatePromise = groupsApi
             .updateGroup({
                 groupId,
@@ -345,22 +140,10 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 ...(simplifyDebts !== undefined && { simplifyDebts }),
             })
             .then(updatedGroup => {
-                if (isCurrent()) {
-                    if (get().selectedGroup?.id === groupId) {
-                        groupDetailChannel.abort();
-                        setLoading('group', 'data', 'fetched');
-                    }
-                    set(state => ({
-                        selectedGroup:
-                            state.selectedGroup?.id === groupId
-                                ? updatedGroup
-                                : state.selectedGroup,
-                    }));
-                }
                 if (!isCurrent()) {
                     return updatedGroup;
                 }
-
+                void putGroupDetail(updatedGroup);
                 return reloadGroupsListWith(updatedGroup, isCurrent).then(() => updatedGroup);
             })
             .catch((error: unknown) => {
@@ -396,22 +179,10 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
         return groupsApi
             .uploadGroupCover(params)
             .then(updatedGroup => {
-                if (isCurrent()) {
-                    if (get().selectedGroup?.id === updatedGroup.id) {
-                        groupDetailChannel.abort();
-                        setLoading('group', 'data', 'fetched');
-                    }
-                    set(state => ({
-                        selectedGroup:
-                            state.selectedGroup?.id === updatedGroup.id
-                                ? updatedGroup
-                                : state.selectedGroup,
-                    }));
-                }
                 if (!isCurrent()) {
                     return updatedGroup;
                 }
-
+                void putGroupDetail(updatedGroup);
                 return reloadGroupsListWith(updatedGroup, isCurrent).then(() => updatedGroup);
             })
             .catch((error: unknown) => {
@@ -446,10 +217,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     return;
                 }
 
-                if (get().selectedGroup?.id === groupId) {
-                    get().setSelectedGroup(null);
-                }
-                return refreshAfterGroupRemoval();
+                return refreshAfterGroupRemoval(groupId);
             })
             .finally(() => {
                 if (isCurrent()) {
@@ -482,10 +250,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     return;
                 }
 
-                if (get().selectedGroup?.id === groupId) {
-                    get().setSelectedGroup(null);
-                }
-                return refreshAfterGroupRemoval();
+                return refreshAfterGroupRemoval(groupId);
             })
             .finally(() => {
                 if (isCurrent()) {
@@ -509,9 +274,7 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                 return Promise.reject(error);
             })
             .then(() => {
-                return isCurrent()
-                    ? refreshAfterGroupMemberChange(groupId, get().fetchSetGroupById)
-                    : undefined;
+                return isCurrent() ? refreshAfterGroupMemberChange(groupId) : undefined;
             })
             .finally(() => {
                 if (isCurrent()) {
@@ -532,12 +295,9 @@ export const useGroupsStore = create<GroupsStore>((set, get) => ({
                     return joinedGroup;
                 }
 
-                groupDetailChannel.abort();
-                resetGroupActivityPagination();
-                setLoading('group', 'data', 'fetched');
                 successfulJoinVersions[joinedGroup.id] =
                     (successfulJoinVersions[joinedGroup.id] ?? 0) + 1;
-                set({ selectedGroup: joinedGroup });
+                void putGroupDetail(joinedGroup);
 
                 return reloadGroupsListWith(joinedGroup, isCurrent).then(() => joinedGroup);
             })

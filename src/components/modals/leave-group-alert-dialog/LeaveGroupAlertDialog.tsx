@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import type { Group } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
 
@@ -16,48 +17,43 @@ import { useConnect } from './internal';
 
 interface Props {
     children: ReactNode;
+    group: Group;
 }
 
-const LeaveGroupAlertDialog = ({ children }: Props) => {
+const LeaveGroupAlertDialog = ({ children, group }: Props) => {
     const { t } = useTranslation(['common', 'group', 'toasts']);
     const navigate = useNavigate();
-    const { leaveGroup, selectedGroup, user, isLeavingGroup } = useConnect();
+    const { leaveGroup, user, isLeavingGroup } = useConnect();
     const [isOpened, setIsOpened] = useState(false);
     const [newOwnerId, setNewOwnerId] = useState('');
-    const isOwner = Boolean(user && selectedGroup && selectedGroup.creator.id === user.id);
+    const isOwner = Boolean(user && group.creator.id === user.id);
     const ownerItems: SelectItem[] = [];
-    const membersById = new Map<string, NonNullable<typeof selectedGroup>['members'][number]>();
+    const membersById = new Map<string, Group['members'][number]>();
 
-    if (selectedGroup) {
-        for (const member of selectedGroup.members) {
-            if (member.user.id === user?.id) {
-                continue;
-            }
-
-            membersById.set(member.user.id, member);
-            ownerItems.push({
-                value: member.user.id,
-                label: member.user.displayName,
-            });
+    for (const member of group.members) {
+        if (member.user.id === user?.id) {
+            continue;
         }
+
+        membersById.set(member.user.id, member);
+        ownerItems.push({
+            value: member.user.id,
+            label: member.user.displayName,
+        });
     }
 
     const mustTransfer = isOwner && ownerItems.length > 0;
     const canConfirm = !mustTransfer || Boolean(newOwnerId);
 
     const onLeaveGroup = () => {
-        if (!selectedGroup) {
-            return Promise.reject(new Error('No selected group'));
-        }
-
         return leaveGroup({
-            groupId: selectedGroup.id,
+            groupId: group.id,
             ...(mustTransfer && { newOwnerId }),
         })
             .then(() => {
                 toast.success(
                     t('toasts:group.left', {
-                        name: selectedGroup.name,
+                        name: group.name,
                     }),
                 );
                 void navigate(ROUTES.DASHBOARD, { replace: true });

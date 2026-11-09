@@ -120,7 +120,8 @@ const buildPath = (path: string, params: unknown): string =>
         throw new InvalidPathSegmentError();
     });
 
-const toApiError = (error: unknown): unknown => {
+/** An Axios error with a response as an `ApiError`; anything else as is (also for the legacy layer). */
+export const toApiError = (error: unknown): unknown => {
     if (!isAxiosError(error) || !error.response) {
         return error;
     }

@@ -1,16 +1,20 @@
-import { act, render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import type { Group } from 'api/chipin.types';
-import { groupsKeys } from 'entities/groups';
+import type { ActivityFeedItem, Group } from 'api/chipin.types';
+import { type GroupActivityData, groupsKeys } from 'entities/groups';
+import type { GroupActivityResult } from 'hooks/useGroupDetail';
 import { useAuthStore } from 'store/authStore';
-import { useGroupsStore } from 'store/groupsStore';
-import { useLoadingStore } from 'store/loadingStore';
+import { useUiPrefsStore } from 'store/ui-prefs';
 import { getOrThrow } from 'test/getOrThrow';
-import { groupsListData, seedGroupsList } from 'test/groupsList';
+import { cachedGroupsList, seedGroupsList } from 'test/groupsList';
+import { setupMswServer } from 'test/mswServer';
 import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
 
 import GroupPage from './GroupPage';
+
+const server = setupMswServer();
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),
@@ -20,34 +24,46 @@ vi.mock('react-router-dom', () => ({
     useParams: () => ({ groupId: 'group-1' }),
 }));
 
-vi.mock('components/modals', () => ({
-    AddExpenseModal: ({ children }: { children: React.ReactNode }) => children,
-    SettleUpModal: () => null,
-}));
-
 vi.mock('components/GroupsCards', () => ({
-    default: () => null,
-}));
-
-vi.mock('components/GroupsSectionHeader', () => ({
-    default: () => null,
-}));
-
-vi.mock('components/nav-bars', () => ({
-    MobileNavBar: () => null,
-}));
-
-vi.mock('components/UsersRow', () => ({
-    default: () => null,
-}));
-
-vi.mock('./components', () => ({
-    GroupCoverSection: () => <div data-testid="group-cover-hero" />,
-    GroupSummary: (props: Record<string, unknown>) => (
-        <div data-testid="group-summary" data-has-layout={String('layout' in props)} />
+    default: ({ groups, selectedGroupId }: { groups: Group[]; selectedGroupId?: string }) => (
+        <div
+            data-testid="groups-cards"
+            data-count={String(groups.length)}
+            data-selected={selectedGroupId}
+        />
     ),
-    GroupTabsContent: ({ group }: { group: Group }) => (
-        <div data-testid="group-tabs" data-group-id={group.id} />
+}));
+
+// The sections render what the page hands them: the page's own readers (the detail and activity
+// queries) run for real.
+vi.mock('./components', () => ({
+    GroupCoverSection: ({ group }: { group: Group }) => (
+        <div data-testid="group-cover-hero" data-name={group.name} />
+    ),
+    GroupSummary: (props: { group: Group }) => (
+        <div
+            data-testid="group-summary"
+            data-name={props.group.name}
+            data-has-layout={String('layout' in props)}
+        />
+    ),
+    GroupTabsContent: ({
+        group,
+        isGroupDataLoading,
+        activity,
+    }: {
+        group: Group;
+        isGroupDataLoading: boolean;
+        activity: GroupActivityResult;
+    }) => (
+        <div
+            data-testid="group-tabs"
+            data-group-id={group.id}
+            data-name={group.name}
+            data-loading={String(isGroupDataLoading)}
+            data-activity={activity.items.map(item => item.parent.id).join(',')}
+            data-has-more={String(activity.hasMore)}
+        />
     ),
 }));
 
@@ -82,89 +98,122 @@ const group = {
     },
 } satisfies Group;
 
+const preview = (parentId: string): ActivityFeedItem =>
+    ({
+        parent: { id: parentId },
+        lastEvent: { id: `${parentId}-1`, seq: 1 },
+    }) as unknown as ActivityFeedItem;
+
+const detail = {
+    ...group,
+    name: 'Vietnam detail',
+    recentActivities: { items: [preview('p1')], nextCursor: 5 },
+} satisfies Group;
+
+const seedDetail = (seeded: Group): void => {
+    const client = getDefaultTestQueryClient();
+
+    client.setQueryData(groupsKeys.detail(seeded.id), seeded);
+    client.setQueryData<GroupActivityData>(groupsKeys.activity(seeded.id), {
+        pages: [{ ...seeded.recentActivities }],
+        pageParams: [null],
+    });
+};
+
 beforeEach(() => {
-    useGroupsStore.getState().setInitialGroupsStore();
     useAuthStore.setState({ status: 'authenticated' });
+    useUiPrefsStore.getState().resetUiPrefs();
     seedGroupsList([group]);
-    useGroupsStore.getState().setSelectedGroup(group);
-    useGroupsStore.setState({ fetchSetGroupById: vi.fn(() => Promise.resolve(group)) });
-    useLoadingStore.getState().setInitialLoadingStore();
 });
 
-test('composes summaries without viewport-specific component props', () => {
+test('renders the seeded group detail and its activity without a request', () => {
+    seedDetail(detail);
+
     render(<GroupPage />);
 
     const summaries = screen.getAllByTestId('group-summary');
-    const mobileSummary = getOrThrow(summaries, 1);
     const tabs = screen.getByTestId('group-tabs');
 
     expect(summaries).toHaveLength(2);
     summaries.forEach(summary => {
+        expect(summary.dataset.name).toBe(detail.name);
         expect(summary.dataset.hasLayout).toBe('false');
     });
     expect(
-        mobileSummary.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING,
+        getOrThrow(summaries, 1).compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+    expect(screen.getByTestId('group-cover-hero').dataset.name).toBe(detail.name);
+    expect(tabs.dataset.name).toBe(detail.name);
+    expect(tabs.dataset.loading).toBe('false');
+    expect(tabs.dataset.activity).toBe('p1');
+    expect(tabs.dataset.hasMore).toBe('true');
+    expect(screen.getByTestId('groups-cards').dataset.selected).toBe(group.id);
+    expect(useUiPrefsStore.getState().lastGroupId).toBe(group.id);
 });
 
-test('delegates group details and actions to the responsive cover hero', () => {
+test('shows the listed group while its detail loads, then the detail and its first activity page', async () => {
+    const requests: string[] = [];
+    server.use(
+        http.get('*/groups/group-1', () => {
+            requests.push('detail');
+            return HttpResponse.json(detail);
+        }),
+        http.get('*/groups/group-1/activity-previews', () => {
+            requests.push('activity');
+            return HttpResponse.json({ items: [], nextCursor: null });
+        }),
+    );
+
     render(<GroupPage />);
 
-    expect(screen.getAllByTestId('group-cover-hero')).toHaveLength(1);
-    expect(screen.queryByRole('button', { name: 'common:buttons.addExpense' })).toBeNull();
+    expect(screen.getByTestId('group-tabs').dataset.name).toBe(group.name);
+    expect(screen.getByTestId('group-tabs').dataset.loading).toBe('true');
+
+    await waitFor(() => {
+        expect(screen.getByTestId('group-tabs').dataset.name).toBe(detail.name);
+    });
+    expect(screen.getByTestId('group-tabs').dataset.loading).toBe('false');
+    expect(screen.getByTestId('group-tabs').dataset.activity).toBe('p1');
+    // The detail seeds the first activity page: opening a group sends one request.
+    expect(requests).toEqual(['detail']);
 });
 
-test('revalidates a preselected list group through the canonical detail endpoint', () => {
-    const fetchSetGroupById = vi.fn(() => Promise.resolve(group));
-    useGroupsStore.setState({ fetchSetGroupById });
-
-    render(<GroupPage />);
-
-    expect(fetchSetGroupById).toHaveBeenCalledTimes(1);
-    expect(fetchSetGroupById).toHaveBeenCalledWith(group.id, true);
-});
-
-test('fetches direct route detail independently of the cached list', () => {
-    const fetchSetGroupById = vi.fn(() => Promise.resolve(group));
-    useGroupsStore.setState({ selectedGroup: null, fetchSetGroupById });
-
-    render(<GroupPage />);
-
-    expect(fetchSetGroupById).toHaveBeenCalledWith(group.id, true);
-});
-
-test('renders confirmed current detail when groups list is not fetched', () => {
+test('renders nothing while an unlisted group loads for the first time', () => {
     getDefaultTestQueryClient().removeQueries({ queryKey: groupsKeys.list() });
+    server.use(http.get('*/groups/group-1', () => new Promise<never>(() => undefined)));
 
     render(<GroupPage />);
 
-    expect(screen.getByTestId('group-tabs').dataset.groupId).toBe(group.id);
+    expect(screen.queryByTestId('group-tabs')).toBeNull();
+    expect(screen.queryByText('group:page.notFound')).toBeNull();
 });
 
-test('does not overwrite selected detail after cached groups change', () => {
-    const detail = { ...group, name: 'Canonical detail' } satisfies Group;
-    useGroupsStore.setState({ selectedGroup: detail });
-
-    const { rerender } = render(<GroupPage />);
-    act(() => {
-        getDefaultTestQueryClient().setQueryData(
-            groupsKeys.list(),
-            groupsListData([{ ...group, name: 'Stale list' }]),
+test.each([403, 404])(
+    'shows the not-found card on a %i detail and drops the group from the list',
+    async status => {
+        useUiPrefsStore.getState().setLastGroupId(group.id);
+        server.use(
+            http.get('*/groups/group-1', () =>
+                HttpResponse.json({ code: 'GROUP_NOT_FOUND' }, { status }),
+            ),
         );
-    });
-    rerender(<GroupPage />);
 
-    expect(useGroupsStore.getState().selectedGroup).toBe(detail);
-});
+        render(<GroupPage />);
 
-test('does not render a previously selected group for a different route', () => {
+        expect(await screen.findByText('group:page.notFound')).not.toBeNull();
+        expect(screen.queryByTestId('group-tabs')).toBeNull();
+        expect(cachedGroupsList(getDefaultTestQueryClient())).toEqual([]);
+        expect(useUiPrefsStore.getState().lastGroupId).toBeNull();
+    },
+);
+
+test('never renders the detail of another group for the route group', async () => {
     getDefaultTestQueryClient().removeQueries({ queryKey: groupsKeys.list() });
-    useGroupsStore.setState({
-        selectedGroup: { ...group, id: 'group-2' },
-        fetchSetGroupById: vi.fn(() => Promise.resolve(null)),
-    });
+    seedDetail({ ...detail, id: 'group-2' });
+    server.use(http.get('*/groups/group-1', () => HttpResponse.json({}, { status: 404 })));
 
     render(<GroupPage />);
 
+    expect(await screen.findByText('group:page.notFound')).not.toBeNull();
     expect(screen.queryByTestId('group-tabs')).toBeNull();
 });

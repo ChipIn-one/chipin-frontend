@@ -53,11 +53,11 @@ test('waits for confirmation before removing a group', () => {
         recentActivities: { items: [], nextCursor: null },
     } satisfies Group;
 
-    useGroupsStore.setState({ removeGroup, selectedGroup });
+    useGroupsStore.setState({ removeGroup });
 
     render(
         <MemoryRouter>
-            <RemoveGroupAlertDialog>
+            <RemoveGroupAlertDialog group={selectedGroup}>
                 <button type="button">{OPEN_REMOVE_LABEL}</button>
             </RemoveGroupAlertDialog>
         </MemoryRouter>,

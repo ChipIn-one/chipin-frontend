@@ -3,16 +3,23 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group } from 'api/chipin.types';
-import { groupsKeys, groupsListQueryOptions } from 'entities/groups';
+import {
+    dropGroupFromCachedList,
+    groupsKeys,
+    groupsListQueryOptions,
+    putGroupInCachedList,
+} from 'entities/groups';
 import { cachedGroupsList, groupsListData } from 'test/groupsList';
 import { setupMswServer } from 'test/mswServer';
 import { mountUserDashboardCache, type UserDashboardCache } from 'test/userDashboardCache';
 
 import {
-    dropGroupFromList,
+    forgetGroup,
     getCachedGroups,
+    invalidateGroup,
     invalidateGroupsList,
     loadGroupsListForSession,
+    putGroupDetail,
     putGroupInList,
     reloadGroupsListWith,
 } from './groupsList';
@@ -166,7 +173,7 @@ test('a group read by a legacy action replaces its list entry without a request,
     seed([group('a'), group('b')], updatedAt);
     watchList();
 
-    await putGroupInList(group('a', 'Renamed'), updatedAt + 1);
+    await putGroupInCachedList(userCache.client, group('a', 'Renamed'), updatedAt + 1);
 
     expect(requests.count).toBe(0);
     expect(listed()).toEqual([group('a', 'Renamed'), group('b')]);
@@ -179,7 +186,7 @@ test('a group read sent before the last list load loads the list again instead o
     seed([group('a', 'From the list'), group('b')]);
     watchList();
 
-    await putGroupInList(group('a', 'Detail answer'), readStartedAt);
+    await putGroupInCachedList(userCache.client, group('a', 'Detail answer'), readStartedAt);
 
     // Neither copy is trusted: the server decides with one more list load.
     expect(requests.count).toBe(1);
@@ -191,7 +198,7 @@ test('a denied group leaves the list even when the list loaded after the read wa
     seed([group('a'), group('b')]);
     watchList();
 
-    await dropGroupFromList('a');
+    await dropGroupFromCachedList(userCache.client, 'a');
 
     expect(requests.count).toBe(0);
     expect(listed()).toEqual([group('b')]);
@@ -244,7 +251,7 @@ test('a group the user can no longer read leaves the list without a request', as
     seed([group('a'), group('b')], Date.now() - 1_000);
     watchList();
 
-    await dropGroupFromList('a');
+    await dropGroupFromCachedList(userCache.client, 'a');
 
     expect(requests.count).toBe(0);
     expect(listed()).toEqual([group('b')]);
@@ -284,4 +291,75 @@ test("the legacy actions read the tab user's cached groups", () => {
     seed([group('a'), group('b')]);
 
     expect(getCachedGroups()).toEqual([group('a'), group('b')]);
+});
+
+const activityKey = groupsKeys.activity('a');
+const detailKey = groupsKeys.detail('a');
+const activityPage = (parentId: string, nextCursor: number | null) => ({
+    items: [{ parent: { id: parentId }, lastEvent: { id: `e-${parentId}`, seq: 1 } }],
+    nextCursor,
+});
+const seedActivity = (pages: number) => {
+    userCache.client.setQueryData(
+        activityKey,
+        {
+            pages: Array.from({ length: pages }, (_item, index) =>
+                activityPage(`p${String(index)}`, index + 1),
+            ),
+            pageParams: Array.from({ length: pages }, (_item, index) =>
+                index === 0 ? null : index,
+            ),
+        },
+        { updatedAt: Date.now() - 1_000 },
+    );
+};
+
+test('a written group becomes its detail and its activity, cut to one page, is marked stale', async () => {
+    seedActivity(3);
+
+    await putGroupDetail(group('a', 'Written'));
+
+    expect(userCache.client.getQueryData(detailKey)).toEqual(group('a', 'Written'));
+    expect(userCache.client.getQueryState(activityKey)?.isInvalidated).toBe(true);
+    expect(userCache.client.getQueryData<{ pages: unknown[] }>(activityKey)?.pages).toHaveLength(1);
+});
+
+test('a written group cancels a running detail read: its older answer is never applied', async () => {
+    let answerRead: ((value: Group) => void) | undefined;
+    const read = userCache.client
+        .fetchQuery({
+            queryKey: detailKey,
+            queryFn: () =>
+                new Promise<Group>(resolve => {
+                    answerRead = resolve;
+                }),
+        })
+        .catch(() => undefined);
+
+    await putGroupDetail(group('a', 'Written'));
+    answerRead?.(group('a', 'Older read'));
+    await read;
+
+    expect(userCache.client.getQueryData(detailKey)).toEqual(group('a', 'Written'));
+});
+
+test('a changed group marks its detail and activity stale, the activity cut to one page', async () => {
+    userCache.client.setQueryData(detailKey, group('a'));
+    seedActivity(2);
+
+    await invalidateGroup('a');
+
+    expect(userCache.client.getQueryState(detailKey)?.isInvalidated).toBe(true);
+    expect(userCache.client.getQueryState(activityKey)?.isInvalidated).toBe(true);
+    expect(userCache.client.getQueryData<{ pages: unknown[] }>(activityKey)?.pages).toHaveLength(1);
+});
+
+test('a removed or left group loses its cached detail and activity', () => {
+    userCache.client.setQueryData(detailKey, group('a'));
+    seedActivity(1);
+
+    forgetGroup('a');
+
+    expect(userCache.client.getQueryState(detailKey)).toBeUndefined();
+    expect(userCache.client.getQueryState(activityKey)).toBeUndefined();
 });

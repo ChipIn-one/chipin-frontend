@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useGroupsStore } from 'store/groupsStore';
+import type { Group } from 'api/chipin.types';
 import {
     selectGroupAdding,
     selectGroupCoverUploading,
@@ -13,26 +13,20 @@ import { BaseModal, MODAL_SIZES } from '../base-modal';
 
 import { CreateGroupForm, UpdateGroupForm } from './components';
 
-interface Props {
-    children: React.ReactNode;
-    type: 'create' | 'update';
-}
+type Props = { children: React.ReactNode } & (
+    { type: 'create' } | { type: 'update'; /** The group being edited. */ group: Group }
+);
 
-const CreateUpdateGroupModal = ({ children, type }: Props) => {
+const CreateUpdateGroupModal = ({ children, ...target }: Props) => {
     const { t } = useTranslation('group');
-    const selectedGroup = useGroupsStore(state => state.selectedGroup);
-    const isCreateMode = type === 'create';
+    const isCreateMode = target.type === 'create';
     const isCreatingGroup = useLoadingStore(selectGroupAdding);
     const isUpdatingGroup = useLoadingStore(selectGroupUpdating);
     const isUploadingCover = useLoadingStore(selectGroupCoverUploading);
     const isSaving = isCreatingGroup || isUpdatingGroup || isUploadingCover;
     const [isModalOpened, setIsModalOpened] = useState(false);
 
-    const formKey = isModalOpened
-        ? isCreateMode
-            ? 'create'
-            : (selectedGroup?.id ?? 'update')
-        : null;
+    const formKey = isModalOpened ? (target.type === 'create' ? 'create' : target.group.id) : null;
 
     const onOpenChange = (isOpen: boolean) => {
         if (!isOpen && isSaving) {
@@ -54,7 +48,7 @@ const CreateUpdateGroupModal = ({ children, type }: Props) => {
             maxWidth={MODAL_SIZES.default}
             isCloseDisabled={isSaving}
             content={
-                isCreateMode ? (
+                target.type === 'create' ? (
                     <CreateGroupForm
                         key={String(formKey)}
                         onClose={() => setIsModalOpened(false)}
@@ -62,6 +56,7 @@ const CreateUpdateGroupModal = ({ children, type }: Props) => {
                 ) : (
                     <UpdateGroupForm
                         key={String(formKey)}
+                        group={target.group}
                         onClose={() => setIsModalOpened(false)}
                     />
                 )

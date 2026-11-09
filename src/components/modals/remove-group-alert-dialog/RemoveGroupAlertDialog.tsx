@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
+import type { Group } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { useGroupsStore } from 'store/groupsStore';
@@ -15,26 +16,23 @@ import { BaseAlertDialog } from '../base-alert-dialog';
 
 interface Props {
     children: ReactNode;
+    group: Group;
 }
 
-const RemoveGroupAlertDialog = ({ children }: Props) => {
+const RemoveGroupAlertDialog = ({ children, group }: Props) => {
     const { t } = useTranslation(['common', 'group', 'toasts']);
     const navigate = useNavigate();
     const isRemovingGroup = useLoadingStore(selectGroupRemoving);
     const [isOpened, setIsOpened] = useState(false);
 
     const onRemoveGroup = () => {
-        const { removeGroup, selectedGroup } = useGroupsStore.getState();
-
-        if (!selectedGroup) {
-            return Promise.reject(new Error('No selected group'));
-        }
-
-        return removeGroup({ groupId: selectedGroup.id })
+        return useGroupsStore
+            .getState()
+            .removeGroup({ groupId: group.id })
             .then(() => {
                 toast.success(
                     t('toasts:group.removed', {
-                        name: selectedGroup.name,
+                        name: group.name,
                     }),
                 );
                 void navigate(ROUTES.DASHBOARD, { replace: true });

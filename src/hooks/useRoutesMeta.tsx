@@ -2,15 +2,18 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { matchPath, useLocation } from 'react-router-dom';
 
-import { ROUTE_META } from 'constants/routes';
-import { selectSelectedGroup } from 'store/groupsSelectors';
-import { useGroupsStore } from 'store/groupsStore';
+import { ROUTE_META, ROUTES } from 'constants/routes';
 
 import { updateSeoMetadata } from './seoMetadata';
+import { useGroupDetail } from './useGroupDetail';
 
 export const useRoutesMeta = () => {
     const location = useLocation();
-    const selectedGroup = useGroupsStore(selectSelectedGroup);
+    const routeGroupId = matchPath(
+        { path: `${ROUTES.GROUP}/:groupId`, end: true },
+        location.pathname,
+    )?.params.groupId;
+    const selectedGroup = useGroupDetail(routeGroupId).group;
     const { i18n, t } = useTranslation('meta');
 
     useEffect(() => {

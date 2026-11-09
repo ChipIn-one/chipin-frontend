@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import * as chipinApi from 'api/chipin';
 import type { Group } from 'api/chipin.types';
-import { groupsKeys } from 'entities/groups';
+import { groupDetailQueryOptions, groupsKeys } from 'entities/groups';
 import { cachedGroupsList, groupsListData } from 'test/groupsList';
 import { mountUserDashboardCache, type UserDashboardCache } from 'test/userDashboardCache';
 
@@ -59,7 +59,7 @@ afterEach(() => {
     userCache.dispose();
 });
 
-test('replaces the cached group after a forced detail refresh', () => {
+test('a detail refresh replaces the cached group, its last used currency included', () => {
     const refreshedGroup = {
         ...group,
         lastUsedCurrency: 'KHR',
@@ -70,15 +70,16 @@ test('replaces the cached group after a forced detail refresh', () => {
     userCache.client.setQueryData(groupsKeys.list(), groupsListData([group]), {
         updatedAt: Date.now() - 1_000,
     });
-    useGroupsStore.setState({ selectedGroup: group });
+    userCache.client.setQueryData(groupsKeys.detail(group.id), group);
     vi.mocked(chipinApi.fetchApiUserGroupById).mockResolvedValue(refreshedGroup);
 
-    return useGroupsStore
-        .getState()
-        .fetchSetGroupById(group.id, true)
+    return userCache.client
+        .fetchQuery({ ...groupDetailQueryOptions(group.id), staleTime: 0 })
         .then(result => {
-            expect(result).toBe(refreshedGroup);
+            expect(result).toEqual(refreshedGroup);
             expect(cachedGroupsList(userCache.client)).toEqual([refreshedGroup]);
-            expect(useGroupsStore.getState().selectedGroup).toBe(refreshedGroup);
+            expect(userCache.client.getQueryData(groupsKeys.detail(group.id))).toEqual(
+                refreshedGroup,
+            );
         });
 });

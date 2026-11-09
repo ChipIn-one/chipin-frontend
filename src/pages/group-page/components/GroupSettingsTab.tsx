@@ -43,7 +43,7 @@ const GroupSettingsTab = ({ group }: Props) => {
             return;
         }
 
-        updateGroup({ simplifyDebts: nextValue }).catch((error: unknown) => {
+        updateGroup({ groupId: group.id, simplifyDebts: nextValue }).catch((error: unknown) => {
             toast.error(resolveApiErrorMessageFromError(error, t('toasts:group.updateError')));
         });
     };
@@ -97,7 +97,10 @@ const GroupSettingsTab = ({ group }: Props) => {
                                     </Flex>
                                 </Flex>
                                 {isUserOwner && !isCurrentUser && (
-                                    <KickGroupMemberAlertDialog member={member.user}>
+                                    <KickGroupMemberAlertDialog
+                                        groupId={group.id}
+                                        member={member.user}
+                                    >
                                         <Button variant="soft" color="orange" size="1">
                                             <UserMinusIcon size={13} />
                                             {t('common:buttons.kickMember')}
@@ -164,7 +167,7 @@ const GroupSettingsTab = ({ group }: Props) => {
             <Flex direction="column" gap="1">
                 <Separator size="4" mb="1" />
 
-                <LeaveGroupAlertDialog>
+                <LeaveGroupAlertDialog group={group}>
                     <Box width="100%" asChild>
                         <Button variant="ghost" color="orange" size="3">
                             <LogOutIcon size={16} />
@@ -177,7 +180,7 @@ const GroupSettingsTab = ({ group }: Props) => {
                     <>
                         <Separator size="4" my="1" />
 
-                        <RemoveGroupAlertDialog>
+                        <RemoveGroupAlertDialog group={group}>
                             <Box width="100%" asChild>
                                 <Button variant="ghost" color="red" size="3">
                                     <Trash2Icon size={16} />

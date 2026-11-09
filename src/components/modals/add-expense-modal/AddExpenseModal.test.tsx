@@ -57,11 +57,10 @@ const group = {
 } satisfies Group;
 
 beforeEach(() => {
-    useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
+    useUiPrefsStore.setState({ appMode: APP_MODES.GROUP, lastGroupId: group.id });
     useExpenseModalStore.getState().reset();
     useGroupsStore.getState().setInitialGroupsStore();
     useAuthStore.setState({ status: 'authenticated' });
-    useGroupsStore.setState({ selectedGroup: group });
     seedGroupsList([group]);
     useExpenseModalStore.getState().open();
 });

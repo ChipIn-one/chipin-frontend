@@ -1,26 +1,42 @@
-// The groups entity (spec 03 §1.2, §6 row 4): the user's groups list, 60 s fresh, persisted (its
-// first page only, `trimmingPersister`). The detail and activity keys are reserved for 03-10b; the
-// group page still reads them through the legacy `groupsStore` until then.
-import { infiniteQueryOptions, useInfiniteQuery } from '@tanstack/react-query';
+// The groups entity (spec 03 §1.2, §6 row 4): the user's groups list (60 s fresh), a group's
+// detail with its balances (30 s) and a group's activity previews (30 s, infinite), all persisted
+// (the infinite ones as their first page only, `trimmingPersister`). All three come through the
+// legacy `src/api` layer in the legacy shapes (see `model/types.ts`) until 03-10c and 03-12.
+import type { Query, QueryClient } from '@tanstack/react-query';
+import {
+    infiniteQueryOptions,
+    queryOptions,
+    useInfiniteQuery,
+    useQuery,
+} from '@tanstack/react-query';
 
-import { fetchApiUserGroups } from 'api/chipin';
+import { fetchGroupActivityPreviews } from 'api/activityApi';
+import { fetchApiUserGroupById, fetchApiUserGroups } from 'api/chipin';
 import type { Group } from 'api/chipin.types';
+import { ACTIVITY_API_LIMIT } from 'constants/activity';
+import { ApiError, toApiError } from 'shared/api/client';
+import { isNetworkUsable } from 'shared/offline/network';
 
+import {
+    firstGroupActivityPage,
+    flattenGroupActivity,
+    type GroupActivityData,
+} from '../model/groupActivity';
 import { flattenGroupsList, type GroupsListData } from '../model/groupsList';
-import type { GroupsListPage } from '../model/types';
+import type { GroupActivityPage, GroupsListPage } from '../model/types';
+
+import { groupsKeys } from './keys';
+import { dropGroupFromCachedList, putGroupInCachedList } from './listCache';
+
+export { groupsKeys };
 
 export const GROUPS_LIST_STALE_TIME = 60_000;
-// The first page has no cursor (a function: a typed constant would narrow to `null`).
+export const GROUP_DETAIL_STALE_TIME = 30_000;
+
+// The first page has no cursor (functions: a typed constant would narrow to `null`).
 const firstPageParam = (): string | null => null;
+const firstActivityPageParam = (): number | null => null;
 
-export const groupsKeys = {
-    all: ['groups'] as const,
-    list: () => [...groupsKeys.all, 'list'] as const,
-    detail: (groupId: string) => [...groupsKeys.all, 'detail', groupId] as const,
-    activity: (groupId: string) => [...groupsKeys.all, 'activity', groupId] as const,
-};
-
-// LEGACY until 03-10b/03-12: the list comes through the legacy `src/api` layer, see `GroupsListPage`.
 const fetchGroupsPage = (cursor: string | null, signal: AbortSignal): Promise<GroupsListPage> =>
     fetchApiUserGroups(signal, cursor ?? undefined).then(({ items, nextCursor }) => ({
         items,
@@ -42,11 +58,142 @@ export const groupsListQueryOptions = () =>
 
 const selectGroups = (data: GroupsListData): Group[] => flattenGroupsList(data);
 
-interface GroupsListQueryParams {
-    /** False while signed out: the groups are never requested without a session. */
+interface EnabledParams {
+    /** False while signed out: nothing is requested without a session. */
     enabled: boolean;
 }
 
 /** The groups of all loaded pages as one list without duplicates. */
-export const useGroupsListQuery = ({ enabled }: GroupsListQueryParams) =>
+export const useGroupsListQuery = ({ enabled }: EnabledParams) =>
     useInfiniteQuery({ ...groupsListQueryOptions(), select: selectGroups, enabled });
+
+/** Whether a failed detail read means the user may not read the group (not a member, removed). */
+export const isGroupDeniedError = (error: unknown): boolean =>
+    error instanceof ApiError && (error.status === 403 || error.status === 404);
+
+// The detail carries the first page of the group's activity: it becomes that query's first page
+// when the activity has nothing cached and is not loading, so opening a group sends one request.
+const seedGroupActivity = (client: QueryClient, group: Group): void => {
+    const queryKey = groupsKeys.activity(group.id);
+    const state = client.getQueryState(queryKey);
+
+    if (state?.data !== undefined || (state?.fetchStatus ?? 'idle') !== 'idle') {
+        return;
+    }
+    const { items, nextCursor } = group.recentActivities;
+
+    client.setQueryData<GroupActivityData>(queryKey, {
+        pages: [{ items, nextCursor }],
+        pageParams: [firstActivityPageParam()],
+    });
+};
+
+// A group read keeps the cached list current (03-10a race rules, `putGroupInCachedList`), and a
+// denied read drops the group from it. A cancelled read writes nothing, not even a denial: a write
+// confirmed meanwhile (an edit, a rejoin) is newer.
+const fetchGroupDetail = (
+    client: QueryClient,
+    groupId: string,
+    signal: AbortSignal,
+): Promise<Group> => {
+    const readStartedAt = Date.now();
+
+    return fetchApiUserGroupById(groupId, signal).then(
+        group => {
+            if (!signal.aborted) {
+                seedGroupActivity(client, group);
+                void putGroupInCachedList(client, group, readStartedAt);
+            }
+            return group;
+        },
+        (error: unknown) => {
+            const apiError = toApiError(error);
+
+            if (!signal.aborted && isGroupDeniedError(apiError)) {
+                void dropGroupFromCachedList(client, groupId);
+            }
+            return Promise.reject(apiError);
+        },
+    );
+};
+
+/** A group with its members' balances; a 403/404 fails with an `ApiError` (never retried). */
+export const groupDetailQueryOptions = (groupId: string) =>
+    queryOptions({
+        queryKey: groupsKeys.detail(groupId),
+        staleTime: GROUP_DETAIL_STALE_TIME,
+        queryFn: ({ client, signal }) => fetchGroupDetail(client, groupId, signal),
+    });
+
+interface GroupDetailQueryParams extends EnabledParams {
+    /** Shown while the detail loads for the first time (the group as listed). */
+    placeholder: Group | undefined;
+}
+
+export const useGroupDetailQuery = (
+    groupId: string,
+    { enabled, placeholder }: GroupDetailQueryParams,
+) => useQuery({ ...groupDetailQueryOptions(groupId), enabled, placeholderData: placeholder });
+
+const fetchGroupActivityPage = (
+    groupId: string,
+    cursor: number | null,
+    signal: AbortSignal,
+): Promise<GroupActivityPage> =>
+    fetchGroupActivityPreviews(
+        { groupId, limit: ACTIVITY_API_LIMIT, cursor: cursor ?? undefined },
+        signal,
+    ).then(({ items, nextCursor }) => ({ items, nextCursor }));
+
+type ActivityQuery = Query<
+    GroupActivityPage,
+    Error,
+    GroupActivityData,
+    ReturnType<typeof groupsKeys.activity>
+>;
+
+// As the dashboard feed: a focus/reconnect refetch of a stale feed is cut back to its first page
+// first, so it is one request (the cut keeps the data's age and invalidation). Offline nothing is
+// cut: the loaded pages stay readable until the network is back.
+const trimBeforeRefetch = (query: ActivityQuery): boolean => {
+    const { data, dataUpdatedAt, isInvalidated } = query.state;
+
+    if (
+        isNetworkUsable() &&
+        data &&
+        data.pages.length > 1 &&
+        query.isStaleByTime(GROUP_DETAIL_STALE_TIME)
+    ) {
+        // `manual`: a paused fetch keeps its status.
+        query.setData(firstGroupActivityPage(data), { updatedAt: dataUpdatedAt, manual: true });
+        if (isInvalidated) {
+            query.invalidate();
+        }
+    }
+    return true;
+};
+
+/** A group's activity previews, newest first, by `nextCursor` until null. */
+export const groupActivityQueryOptions = (groupId: string) =>
+    infiniteQueryOptions({
+        queryKey: groupsKeys.activity(groupId),
+        staleTime: GROUP_DETAIL_STALE_TIME,
+        initialPageParam: firstActivityPageParam(),
+        queryFn: ({ pageParam, signal }) => fetchGroupActivityPage(groupId, pageParam, signal),
+        getNextPageParam: lastPage => lastPage.nextCursor,
+        // Pinned to TanStack Query 5.105: these callbacks run only in `onFocus`/`onOnline`, never
+        // during render, so they may cut the cache (re-check on a TanStack upgrade).
+        refetchOnWindowFocus: trimBeforeRefetch,
+        refetchOnReconnect: trimBeforeRefetch,
+    });
+
+/**
+ * The previews of all loaded pages, each parent once. Enable it once the detail is loaded: the
+ * detail then has seeded the first page, and no second request is sent for it.
+ */
+export const useGroupActivityQuery = (groupId: string, { enabled }: EnabledParams) =>
+    useInfiniteQuery({
+        ...groupActivityQueryOptions(groupId),
+        select: flattenGroupActivity,
+        enabled,
+    });

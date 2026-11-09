@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { GROUP_NET_CONVERSION_STATES } from 'constants/groups';
 import { ROUTES } from 'constants/routes';
 import type { GroupCardViewModel } from 'store/groupsSelectors';
-import { useGroupsStore } from 'store/groupsStore';
+import { useUiPrefsStore } from 'store/ui-prefs';
 
 import { Amount } from 'basics/numbers';
 import GroupAvatar from 'components/GroupAvatar';
@@ -17,7 +17,7 @@ interface Props {
 }
 
 const GroupCard = ({ model, isSelected = false }: Props) => {
-    const setSelectedGroup = useGroupsStore(state => state.setSelectedGroup);
+    const setLastGroupId = useUiPrefsStore(state => state.setLastGroupId);
     const { t } = useTranslation('dashboard');
     const { t: tCommon } = useTranslation('common');
     const { group } = model;
@@ -70,7 +70,7 @@ const GroupCard = ({ model, isSelected = false }: Props) => {
         <GroupNavButton
             to={`${ROUTES.GROUP}/${group.id}`}
             unsetStyles
-            onClick={() => setSelectedGroup(group)}
+            onClick={() => setLastGroupId(group.id)}
             aria-current={isSelected ? 'page' : undefined}
         >
             <GroupCardSurface

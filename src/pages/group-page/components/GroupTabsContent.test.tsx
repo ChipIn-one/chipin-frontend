@@ -6,6 +6,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import type { AppEvent } from 'api/activity.types';
 import type { Group } from 'api/chipin.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
+import type { GroupActivityResult } from 'hooks/useGroupDetail';
 
 import GroupTabsContent from './GroupTabsContent';
 
@@ -152,19 +153,44 @@ const groupWithLifecycleActivity = {
     },
 } satisfies Group;
 
-const defaultProps = {
-    isGroupDataLoading: false,
-    fetchMoreGroupActivity: vi.fn(() => Promise.resolve()),
-    isGroupActivityNextPageLoading: false,
-    isGroupActivityNextPageError: false,
-};
+const loadMore = vi.fn();
+
+// The group's activity as `useGroupActivity` returns it: its first page loaded.
+const activityOf = (
+    target: Group,
+    overrides: Partial<GroupActivityResult> = {},
+): GroupActivityResult => ({
+    items: [...target.recentActivities.items],
+    hasMore: target.recentActivities.nextCursor !== null,
+    isNextPageLoading: false,
+    isNextPageError: false,
+    loadMore,
+    ...overrides,
+});
+
+const renderTabs = (
+    target: Group,
+    {
+        isGroupDataLoading = false,
+        ...overrides
+    }: Partial<GroupActivityResult> & {
+        isGroupDataLoading?: boolean;
+    } = {},
+) =>
+    render(
+        <GroupTabsContent
+            group={target}
+            isGroupDataLoading={isGroupDataLoading}
+            activity={activityOf(target, overrides)}
+        />,
+    );
 
 beforeEach(() => {
     vi.clearAllMocks();
 });
 
 test('renders member actions on the left and settle up on the right before tabs', () => {
-    render(<GroupTabsContent group={group} {...defaultProps} />);
+    renderTabs(group);
 
     const settleUp = screen.getByRole('button', {
         name: group.id,
@@ -190,7 +216,7 @@ test('renders member actions on the left and settle up on the right before tabs'
 
 test('starts the existing invite flow from the member action button', () => {
     const user = userEvent.setup();
-    render(<GroupTabsContent group={groupWithTwoMembers} {...defaultProps} />);
+    renderTabs(groupWithTwoMembers);
 
     return user
         .click(
@@ -204,7 +230,7 @@ test('starts the existing invite flow from the member action button', () => {
 });
 
 test('triggers group activity pagination from the active Expenses tab', () => {
-    render(<GroupTabsContent group={groupWithActivity} {...defaultProps} />);
+    renderTabs(groupWithActivity);
 
     expect(useInfiniteScrollMock).toHaveBeenLastCalledWith(
         expect.objectContaining({ hasMore: true, isLoading: false }),
@@ -218,12 +244,12 @@ test('triggers group activity pagination from the active Expenses tab', () => {
 
     lastCall[0].onLoadMore();
 
-    expect(defaultProps.fetchMoreGroupActivity).toHaveBeenCalledOnce();
+    expect(loadMore).toHaveBeenCalledOnce();
 });
 
 test('suppresses group activity pagination while another tab is active', () => {
     const user = userEvent.setup();
-    render(<GroupTabsContent group={groupWithActivity} {...defaultProps} />);
+    renderTabs(groupWithActivity);
 
     return user.click(screen.getByRole('tab', { name: /page\.tabs\.balances/ })).then(() => {
         expect(useInfiniteScrollMock).toHaveBeenLastCalledWith(
@@ -233,40 +259,27 @@ test('suppresses group activity pagination while another tab is active', () => {
 });
 
 test('renders the retained activity list retry action after an incremental failure', () => {
-    const fetchMoreGroupActivity = vi.fn(() => Promise.resolve());
-    render(
-        <GroupTabsContent
-            group={groupWithActivity}
-            {...defaultProps}
-            fetchMoreGroupActivity={fetchMoreGroupActivity}
-            isGroupActivityNextPageError
-        />,
-    );
+    renderTabs(groupWithActivity, { isNextPageError: true });
 
     return userEvent
         .setup()
         .click(screen.getByRole('button', { name: 'activity:retryAction' }))
         .then(() => {
-            expect(fetchMoreGroupActivity).toHaveBeenCalledOnce();
+            expect(loadMore).toHaveBeenCalledOnce();
         });
 });
 
 test('renders the group activity exhausted marker after the last page', () => {
-    render(
-        <GroupTabsContent
-            group={{
-                ...groupWithActivity,
-                recentActivities: { items: [activityItem], nextCursor: null },
-            }}
-            {...defaultProps}
-        />,
-    );
+    renderTabs({
+        ...groupWithActivity,
+        recentActivities: { items: [activityItem], nextCursor: null },
+    });
 
     expect(screen.getByText('activity:endOfFeed')).not.toBeNull();
 });
 
 test('renders shared illustrated invite onboarding instead of No expenses for a single-member group', () => {
-    render(<GroupTabsContent group={group} {...defaultProps} />);
+    renderTabs(group);
 
     expect(screen.getByText('page.expenses.inviteTitle')).not.toBeNull();
     expect(screen.getByText('page.expenses.inviteDescription')).not.toBeNull();
@@ -281,7 +294,7 @@ test('renders shared illustrated invite onboarding instead of No expenses for a 
 });
 
 test('keeps shared invite onboarding when the feed only contains group lifecycle activity', () => {
-    render(<GroupTabsContent group={groupWithLifecycleActivity} {...defaultProps} />);
+    renderTabs(groupWithLifecycleActivity);
 
     expect(screen.getByText('page.expenses.inviteTitle')).not.toBeNull();
     expect(screen.getByText('page.expenses.inviteDescription')).not.toBeNull();
@@ -290,21 +303,21 @@ test('keeps shared invite onboarding when the feed only contains group lifecycle
 });
 
 test('renders the group expenses empty state once the group has another member', () => {
-    render(<GroupTabsContent group={groupWithTwoMembers} {...defaultProps} />);
+    renderTabs(groupWithTwoMembers);
 
     expect(screen.getByText('page.expenses.emptyTitle')).not.toBeNull();
     expect(screen.queryByText('page.expenses.inviteTitle')).toBeNull();
 });
 
 test('keeps the invite hint in a single-member group with existing activity', () => {
-    render(<GroupTabsContent group={groupWithActivity} {...defaultProps} />);
+    renderTabs(groupWithActivity);
 
     expect(screen.getByText('page.expenses.inviteTitle')).not.toBeNull();
     expect(screen.queryByText('page.expenses.emptyTitle')).toBeNull();
 });
 
 test('keeps the full skeleton for initial group loading', () => {
-    render(<GroupTabsContent group={group} {...defaultProps} isGroupDataLoading />);
+    renderTabs(group, { isGroupDataLoading: true });
 
     expect(screen.getByTestId('activity-skeleton')).not.toBeNull();
 });

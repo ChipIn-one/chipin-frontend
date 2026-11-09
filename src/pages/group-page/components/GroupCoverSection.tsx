@@ -65,18 +65,20 @@ const GroupCoverSection = ({ group, isLoading }: Props) => {
                     <BackButton />
                 </Box>
 
-                <Box ml="auto">
-                    <CreateUpdateGroupModal type="update">
-                        <IconButton
-                            variant="solid"
-                            color="gray"
-                            size="2"
-                            aria-label={t('modal.titleEdit')}
-                        >
-                            <PencilIcon size={16} />
-                        </IconButton>
-                    </CreateUpdateGroupModal>
-                </Box>
+                {group && (
+                    <Box ml="auto">
+                        <CreateUpdateGroupModal type="update" group={group}>
+                            <IconButton
+                                variant="solid"
+                                color="gray"
+                                size="2"
+                                aria-label={t('modal.titleEdit')}
+                            >
+                                <PencilIcon size={16} />
+                            </IconButton>
+                        </CreateUpdateGroupModal>
+                    </Box>
+                )}
             </Flex>
         </CoverWrapper>
     );

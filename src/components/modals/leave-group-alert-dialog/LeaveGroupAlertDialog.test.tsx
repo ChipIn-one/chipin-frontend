@@ -72,11 +72,11 @@ test('waits for confirmation before leaving a group', () => {
     const leaveGroup = vi.fn().mockResolvedValue(true);
     const user = userEvent.setup();
 
-    useGroupsStore.setState({ leaveGroup, selectedGroup: group });
+    useGroupsStore.setState({ leaveGroup });
 
     render(
         <MemoryRouter>
-            <LeaveGroupAlertDialog>
+            <LeaveGroupAlertDialog group={group}>
                 <button type="button">{OPEN_LEAVE_LABEL}</button>
             </LeaveGroupAlertDialog>
         </MemoryRouter>,

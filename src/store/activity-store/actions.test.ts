@@ -8,7 +8,7 @@ import { ACTIVITY_ACTIONS, ACTIVITY_CATEGORIES } from 'constants/activity';
 import { mountUserDashboardCache, type UserDashboardCache } from 'test/userDashboardCache';
 
 import { useErrorsStore } from '../errorsStore';
-import { useGroupsStore } from '../groupsStore';
+import { invalidateGroup } from '../groupsList';
 import { useLoadingStore } from '../loadingStore';
 import { invalidateKnownUsers } from '../sessionUser';
 
@@ -18,6 +18,11 @@ import { initialState } from './initialState';
 vi.mock('../sessionUser', async importOriginal => ({
     ...(await importOriginal<typeof import('../sessionUser')>()),
     invalidateKnownUsers: vi.fn(() => Promise.resolve()),
+}));
+
+vi.mock('../groupsList', async importOriginal => ({
+    ...(await importOriginal<typeof import('../groupsList')>()),
+    invalidateGroup: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock('api/activityApi', () => ({
@@ -36,7 +41,6 @@ vi.mock('api/ledgerApi', () => ({
 const originalRefreshActions = {
     fetchSetActivity: useActivityStore.getState().fetchSetActivity,
     fetchSetActivitySubevents: useActivityStore.getState().fetchSetActivitySubevents,
-    fetchSetGroupById: useGroupsStore.getState().fetchSetGroupById,
 };
 
 let dashboardCache: UserDashboardCache;
@@ -54,9 +58,6 @@ afterEach(() => {
     useActivityStore.setState({
         fetchSetActivity: originalRefreshActions.fetchSetActivity,
         fetchSetActivitySubevents: originalRefreshActions.fetchSetActivitySubevents,
-    });
-    useGroupsStore.setState({
-        fetchSetGroupById: originalRefreshActions.fetchSetGroupById,
     });
 });
 
@@ -437,10 +438,8 @@ test('creates a direct expense and refetches affected backend resources', () => 
 
 test('creates a group settlement and refetches the affected group', () => {
     const fetchSetActivity = vi.fn().mockResolvedValue(undefined);
-    const fetchSetGroupById = vi.fn().mockResolvedValue(null);
     vi.mocked(ledgerApi.createSettlement).mockResolvedValue({} as never);
     useActivityStore.setState({ fetchSetActivity });
-    useGroupsStore.setState({ fetchSetGroupById });
 
     return useActivityStore
         .getState()
@@ -452,7 +451,7 @@ test('creates a group settlement and refetches the affected group', () => {
             groupId: 'group-1',
         })
         .then(() => {
-            expect(fetchSetGroupById).toHaveBeenCalledWith('group-1', true);
+            expect(invalidateGroup).toHaveBeenCalledWith('group-1');
         });
 });
 
@@ -462,10 +461,7 @@ test('does not reject a confirmed group expense when canonical refresh rejects',
     useActivityStore.setState({
         fetchSetActivity: vi.fn().mockResolvedValue(undefined),
     });
-    const fetchSetGroupById = vi.fn().mockRejectedValue(refreshError);
-    useGroupsStore.setState({
-        fetchSetGroupById,
-    });
+    vi.mocked(invalidateGroup).mockRejectedValueOnce(refreshError);
 
     return useActivityStore
         .getState()
@@ -480,7 +476,7 @@ test('does not reject a confirmed group expense when canonical refresh rejects',
         })
         .then(() => {
             expect(ledgerApi.createExpense).toHaveBeenCalledOnce();
-            expect(fetchSetGroupById).toHaveBeenCalledWith('group-1', true);
+            expect(invalidateGroup).toHaveBeenCalledWith('group-1');
         });
 });
 
@@ -489,10 +485,7 @@ test('does not reject a confirmed settlement when canonical refresh rejects', ()
     useActivityStore.setState({
         fetchSetActivity: vi.fn().mockResolvedValue(undefined),
     });
-    const fetchSetGroupById = vi.fn().mockRejectedValue(new Error('Group refresh unavailable'));
-    useGroupsStore.setState({
-        fetchSetGroupById,
-    });
+    vi.mocked(invalidateGroup).mockRejectedValueOnce(new Error('Group refresh unavailable'));
 
     return useActivityStore
         .getState()
@@ -505,7 +498,7 @@ test('does not reject a confirmed settlement when canonical refresh rejects', ()
         })
         .then(() => {
             expect(ledgerApi.createSettlement).toHaveBeenCalledOnce();
-            expect(fetchSetGroupById).toHaveBeenCalledWith('group-1', true);
+            expect(invalidateGroup).toHaveBeenCalledWith('group-1');
         });
 });
 
@@ -534,10 +527,7 @@ test('does not reject a confirmed ledger reversal when canonical refresh rejects
     useActivityStore.setState({
         fetchSetActivity: vi.fn().mockResolvedValue(undefined),
     });
-    const fetchSetGroupById = vi.fn().mockRejectedValue(new Error('Group refresh unavailable'));
-    useGroupsStore.setState({
-        fetchSetGroupById,
-    });
+    vi.mocked(invalidateGroup).mockRejectedValueOnce(new Error('Group refresh unavailable'));
 
     return useActivityStore
         .getState()
@@ -547,7 +537,7 @@ test('does not reject a confirmed ledger reversal when canonical refresh rejects
         })
         .then(() => {
             expect(ledgerApi.removeLedgerEntry).toHaveBeenCalledWith({ entryId: 'expense-1' });
-            expect(fetchSetGroupById).toHaveBeenCalledWith('group-1', true);
+            expect(invalidateGroup).toHaveBeenCalledWith('group-1');
         });
 });
 
@@ -678,10 +668,8 @@ test('ACT-004 prepares an expense edit from the latest Activity snapshot without
 
 test('updates an expense and refreshes the original group scope', () => {
     const fetchSetActivity = vi.fn().mockResolvedValue(undefined);
-    const fetchSetGroupById = vi.fn().mockResolvedValue(undefined);
     vi.mocked(ledgerApi.updateExpense).mockResolvedValue(editEntry);
     useActivityStore.setState({ fetchSetActivity });
-    useGroupsStore.setState({ fetchSetGroupById });
 
     const entry = {
         type: 'EXPENSE' as const,
@@ -703,7 +691,7 @@ test('updates an expense and refreshes the original group scope', () => {
                 entryId: editEntry.id,
                 entry,
             });
-            expect(fetchSetGroupById).toHaveBeenCalledWith('group-1', true);
+            expect(invalidateGroup).toHaveBeenCalledWith('group-1');
             expect(dashboardCache.isDashboardInvalidated()).toBe(true);
             expect(fetchSetActivity).toHaveBeenCalledWith(true);
             expect(useLoadingStore.getState().expense.update).toBe('fetched');
