@@ -3,10 +3,16 @@ import { expect, test } from 'vitest';
 import type { AppEvent } from 'api/activity.types';
 import type { ActivityFeedItem } from 'api/chipin.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
-import { getActivityPreviewEvents } from 'helpers/activityEvent';
+import { type ActivityListItem, getActivityPreviewEvents } from 'helpers/activityEvent';
 import { getActivityDateKey } from 'helpers/time';
+import { domainPreview } from 'test/activityFixtures';
 
-import { getDailyExpenseSummary } from './selectors';
+import { legacyActivityRows, previewRows } from './rows';
+import { getDailyExpenseSummary as summarizeRows } from './selectors';
+
+// The legacy feeds reach the summary through the legacy rows (`ActivityEventsList`).
+const getDailyExpenseSummary = (items: readonly ActivityListItem[], userId?: string) =>
+    summarizeRows(legacyActivityRows(items), userId);
 
 const CURRENT_USER_ID = 'current-user';
 const CREATED_AT = 1_785_328_628;
@@ -511,5 +517,17 @@ test('ACT-022 removes a previously loaded debt when an overlapping page returns 
     expect(currentPreviews).toEqual([createPreview(unaffected)]);
     expect(getDailyExpenseSummary(currentPreviews, CURRENT_USER_ID)).toEqual({
         [getActivityDateKey(CREATED_AT)]: [{ currency: 'USD', netBalance: -1000 }],
+    });
+});
+
+test('summarizes the domain previews of the group feed by their parent day', () => {
+    const preview = domainPreview('p1');
+
+    // user-2 owes the 6 USD share of the 10 USD that user-1 paid.
+    expect(summarizeRows(previewRows([preview]), 'user-2')).toEqual({
+        [getActivityDateKey(preview.parent.createdAt)]: [{ currency: 'USD', netBalance: -6 }],
+    });
+    expect(summarizeRows(previewRows([preview]), 'user-1')).toEqual({
+        [getActivityDateKey(preview.parent.createdAt)]: [{ currency: 'USD', netBalance: 6 }],
     });
 });

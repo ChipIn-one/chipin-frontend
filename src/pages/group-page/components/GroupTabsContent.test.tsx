@@ -6,7 +6,10 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import type { AppEvent } from 'api/activity.types';
 import type { Group } from 'api/chipin.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
+import type { ActivityPreview } from 'entities/activity';
+import { legacyActivityPreview } from 'entities/balance';
 import type { GroupActivityResult } from 'hooks/useGroupDetail';
+import { legacyPreview } from 'test/activityFixtures';
 
 import GroupTabsContent from './GroupTabsContent';
 
@@ -58,12 +61,12 @@ vi.mock('features/activity', () => ({
     ActivityEventsList: ({
         children,
         emptyState,
-        events,
+        previews,
     }: {
         children?: ReactNode;
         emptyState?: ReactNode;
-        events: AppEvent[];
-    }) => (events.length === 0 ? <>{emptyState}</> : <>{children}</>),
+        previews: readonly ActivityPreview[];
+    }) => (previews.length === 0 ? <>{emptyState}</> : <>{children}</>),
 }));
 
 vi.mock('./GroupBalancesTab', () => ({ default: () => null }));
@@ -110,10 +113,7 @@ const groupWithTwoMembers = {
     members: [...group.members, { user: secondMember, balancesByCurrency: {} }],
 } satisfies Group;
 
-const activityItem = {
-    parent: { id: 'parent-1' } as AppEvent,
-    lastEvent: { id: 'event-1' } as AppEvent,
-};
+const activityItem = legacyPreview('parent-1');
 
 const groupWithActivity = {
     ...group,
@@ -160,7 +160,7 @@ const activityOf = (
     target: Group,
     overrides: Partial<GroupActivityResult> = {},
 ): GroupActivityResult => ({
-    items: [...target.recentActivities.items],
+    items: target.recentActivities.items.map(legacyActivityPreview),
     hasMore: target.recentActivities.nextCursor !== null,
     isFetching: false,
     isNextPageLoading: false,

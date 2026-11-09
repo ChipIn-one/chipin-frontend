@@ -3,6 +3,7 @@ import { expect, test, vi } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
+import { domainExpenseEvent } from 'test/activityFixtures';
 
 import { EventExpense } from './EventExpense';
 
@@ -120,10 +121,12 @@ const createExpenseEvent = (
 test('shows the group name for a group expense', () => {
     render(
         <EventExpense
-            event={createExpenseEvent({
-                groupId: 'group-1',
-                groupName: 'Vietnam',
-            })}
+            event={domainExpenseEvent(
+                createExpenseEvent({
+                    groupId: 'group-1',
+                    groupName: 'Vietnam',
+                }),
+            )}
         />,
     );
 
@@ -156,7 +159,7 @@ test('uses two-decimal precision for fractional user debt', () => {
         },
     ];
 
-    render(<EventExpense event={event} />);
+    render(<EventExpense event={domainExpenseEvent(event)} />);
 
     expect(screen.getByText('You borrowed')).toBeTruthy();
 
@@ -172,7 +175,7 @@ test('uses You when the current user paid the expense', () => {
     });
     event.metadata.payerId = 'current-user';
 
-    render(<EventExpense event={event} />);
+    render(<EventExpense event={domainExpenseEvent(event)} />);
 
     expect(screen.getByText('You paid')).toBeTruthy();
     expect(screen.getByText('You lent')).toBeTruthy();
@@ -183,10 +186,12 @@ test('uses You when the current user paid the expense', () => {
 test('shows between friends for a direct expense', () => {
     render(
         <EventExpense
-            event={createExpenseEvent({
-                groupId: null,
-                groupName: null,
-            })}
+            event={domainExpenseEvent(
+                createExpenseEvent({
+                    groupId: null,
+                    groupName: null,
+                }),
+            )}
         />,
     );
 
@@ -196,12 +201,14 @@ test('shows between friends for a direct expense', () => {
 test('renders only the payment summary without an expense description', () => {
     render(
         <EventExpense
-            event={createExpenseEvent(
-                {
-                    groupId: 'group-1',
-                    groupName: 'Vietnam',
-                },
-                null,
+            event={domainExpenseEvent(
+                createExpenseEvent(
+                    {
+                        groupId: 'group-1',
+                        groupName: 'Vietnam',
+                    },
+                    null,
+                ),
             )}
         />,
     );
@@ -214,13 +221,15 @@ test('renders only the payment summary without an expense description', () => {
 test('shows reversed expense context and strikes through monetary values', () => {
     render(
         <EventExpense
-            event={createExpenseEvent(
-                {
-                    groupId: null,
-                    groupName: null,
-                },
-                'Dinner',
-                ACTIVITY_ACTIONS.EXPENSE_REVERSED,
+            event={domainExpenseEvent(
+                createExpenseEvent(
+                    {
+                        groupId: null,
+                        groupName: null,
+                    },
+                    'Dinner',
+                    ACTIVITY_ACTIONS.EXPENSE_REVERSED,
+                ),
             )}
         />,
     );

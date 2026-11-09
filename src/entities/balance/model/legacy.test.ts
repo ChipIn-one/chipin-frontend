@@ -1,16 +1,17 @@
 import * as Sentry from '@sentry/react';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
-import type { ExpenseActivityMetadata } from 'api/activity.types';
+import type { AppEvent } from 'api/activity.types';
 import type { BalanceEntry } from 'api/chipin.raw.types';
 import { normalizeApiMoneyAmount } from 'helpers/numbers';
 import { currencyCode } from 'shared/money';
 
 import {
+    legacyActivityEvent,
+    legacyActivityPreview,
     legacyAmountFromMoney,
     legacyBalanceFromEntry,
     legacyCurrencyOrDefault,
-    legacyExpenseBalanceChange,
     legacyPartitionEntries,
     legacyRateLookup,
     legacyRatesFromDecimals,
@@ -128,23 +129,58 @@ test('legacyPartitionEntries: zero is settled, sub-minor is a debt', () => {
     expect(settled.map(entry => entry.currency)).toEqual(['GBP', 'JPY']);
 });
 
-test('legacyExpenseBalanceChange', () => {
-    const metadata = (payerId: string): ExpenseActivityMetadata => ({
+const legacyExpense = (amount: number, shareAmount: number, currency = 'USD'): AppEvent => ({
+    id: 'e1',
+    seq: 4,
+    domain: 'LEDGER',
+    action: 'EXPENSE_UPDATED',
+    actorUserId: 'me',
+    actorSnapshot: { displayName: 'Me' },
+    subjectType: 'expense',
+    subjectId: 'entry',
+    createdAt: 1_700_000_000,
+    parentActivityId: 'p1',
+    metadata: {
         type: 'expense',
         entryId: 'entry',
-        amount: 10,
-        currency: 'USD',
-        payerId,
-        payerDisplayName: 'Payer',
-        shares: [{ userId: 'me', displayName: 'Me', shareAmount: 3.3333, currency: 'USD' }],
-    });
+        amount,
+        currency,
+        payerId: 'me',
+        payerDisplayName: 'Me',
+        shares: [{ userId: 'me', displayName: 'Me', shareAmount, currency }],
+    },
+});
 
-    expect(legacyExpenseBalanceChange(metadata('me'), 'me')?.minor).toBe(66_667n);
-    expect(legacyExpenseBalanceChange(metadata('other'), 'me')?.minor).toBe(-33_333n);
-    expect(legacyExpenseBalanceChange(metadata('other'), 'stranger')?.minor).toBe(0n);
-    expect(
-        legacyExpenseBalanceChange({ ...metadata('me'), shares: undefined }, 'me'),
-    ).toBeUndefined();
+test('legacyActivityEvent carries legacy amounts into Money, the rest as is', () => {
+    const event = legacyActivityEvent(legacyExpense(10, 3.3333));
+
+    expect(event).toMatchObject({
+        id: 'e1',
+        seq: 4,
+        action: 'EXPENSE_UPDATED',
+        parentActivityId: 'p1',
+    });
+    expect(event.metadata?.type === 'expense' && event.metadata.amount).toEqual(usd(100_000n));
+    expect(event.metadata?.type === 'expense' && event.metadata.shares?.[0]?.shareAmount).toEqual(
+        usd(33_333n),
+    );
+});
+
+test('legacyActivityEvent shows an event with an unreadable amount as an unknown event', () => {
+    const event = legacyActivityEvent(legacyExpense(Number.NaN, 1));
+
+    expect(event).toMatchObject({ id: 'e1', action: 'EXPENSE_UPDATED', metadata: null });
+    expect(Sentry.captureMessage).toHaveBeenCalledWith('money.legacy_reject', expect.anything());
+});
+
+test('legacyActivityPreview maps both events of a preview', () => {
+    const item = { parent: legacyExpense(5, 5), lastEvent: legacyExpense(10, 3.3333) };
+    const preview = legacyActivityPreview(item);
+
+    expect(preview.parent.metadata?.type === 'expense' && preview.parent.metadata.amount).toEqual(
+        usd(50_000n),
+    );
+    expect(preview.lastEvent.seq).toBe(4);
 });
 
 test('legacyRatesFromDecimals reads decimal-text rates as numbers and drops unusable ones', () => {

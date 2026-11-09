@@ -3,6 +3,7 @@ import { InfoIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import type { AppEvent } from 'api/activity.types';
+import { legacyActivityEvent } from 'entities/balance';
 import { ActivityEvent } from 'features/activity';
 
 import { EmptyState } from 'basics/empty-states';
@@ -44,7 +45,7 @@ const ActivitySubeventsHeader = ({ parentEvent, isLoading, isUnavailable = false
 
     return (
         <Box mb="4">
-            <ActivityEvent event={parentEvent} isNavigable={false} />
+            <ActivityEvent event={legacyActivityEvent(parentEvent)} isNavigable={false} />
         </Box>
     );
 };

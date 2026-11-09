@@ -1,14 +1,11 @@
 import { Card, Flex, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
-import type { AppEvent } from 'api/activity.types';
-import {
-    ACTIVITY_ACTIONS,
-    type ExpenseCreatedAction,
-    type ExpenseReversedAction,
-    type ExpenseUpdatedAction,
-} from 'constants/activity';
+import { ACTIVITY_ACTIONS } from 'constants/activity';
+import type { ExpenseActivityEvent } from 'entities/activity';
+import { legacyAmountFromMoney } from 'entities/balance';
 import { useSelfUser } from 'hooks/useSelfUser';
+import { abs, fromUnits, isZero, negate, sign, sub } from 'shared/money';
 
 import { LedgerScopeBadge } from 'basics';
 
@@ -24,10 +21,7 @@ import {
 } from './styled';
 
 interface Props {
-    event: Extract<
-        AppEvent,
-        { action: ExpenseCreatedAction | ExpenseUpdatedAction | ExpenseReversedAction }
-    >;
+    event: ExpenseActivityEvent;
 }
 
 const EventExpense = ({ event }: Props) => {
@@ -38,12 +32,14 @@ const EventExpense = ({ event }: Props) => {
     const isCurrentUserPayer = event.metadata.payerId === user?.id;
 
     const userShareAmount =
-        event.metadata.shares?.find(share => share.userId === user?.id)?.shareAmount ?? 0;
+        event.metadata.shares?.find(share => share.userId === user?.id)?.shareAmount ??
+        fromUnits(0n, amount);
 
+    // Shares are in the expense currency (checked when mapped).
     const userExpenseDebt = isCurrentUserPayer
-        ? event.metadata.amount - userShareAmount
-        : userShareAmount * -1;
-    const isUserLender = userExpenseDebt > 0;
+        ? sub(amount, userShareAmount)
+        : negate(userShareAmount);
+    const isUserLender = sign(userExpenseDebt) > 0;
     const debtColor = isUserLender ? 'green' : 'red';
     const description = event.metadata.description;
 
@@ -80,8 +76,8 @@ const EventExpense = ({ event }: Props) => {
                                 })}{' '}
                                 <ExpenseAmount
                                     $isReversed={isReversed}
-                                    value={amount}
-                                    tokenCode={event.metadata.currency}
+                                    value={legacyAmountFromMoney(amount)}
+                                    tokenCode={amount.currency}
                                     type="summary"
                                 />
                             </ExpensePaidAmountText>
@@ -97,7 +93,7 @@ const EventExpense = ({ event }: Props) => {
                 </Flex>
 
                 <Flex direction="column" gap="1" align="end" flexShrink="0" maxWidth="50%">
-                    {userExpenseDebt ? (
+                    {isZero(userExpenseDebt) ? null : (
                         <>
                             <ExpenseDebtText $isReversed={isReversed} color={debtColor} size="1">
                                 {t(isUserLender ? 'event.youLent' : 'event.youBorrowed')}
@@ -105,14 +101,14 @@ const EventExpense = ({ event }: Props) => {
                             <ExpenseDebtText $isReversed={isReversed} color={debtColor} size="2">
                                 <ExpenseDebtAmount
                                     $isReversed={isReversed}
-                                    value={Math.abs(userExpenseDebt)}
-                                    tokenCode={event.metadata.currency}
+                                    value={legacyAmountFromMoney(abs(userExpenseDebt))}
+                                    tokenCode={amount.currency}
                                     precision={2}
                                     type="summary"
                                 />
                             </ExpenseDebtText>
                         </>
-                    ) : null}
+                    )}
                     <LedgerScopeBadge
                         groupId={event.metadata.groupId ?? null}
                         groupName={event.metadata.groupName ?? null}

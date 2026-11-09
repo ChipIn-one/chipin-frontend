@@ -15,6 +15,7 @@ export {
     groupsKeys,
     groupsListQueryOptions,
     isGroupDeniedError,
+    seedGroupActivity,
     useGroupActivityQuery,
     useGroupDetailQuery,
     useGroupsListQuery,

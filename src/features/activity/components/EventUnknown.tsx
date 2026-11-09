@@ -2,7 +2,7 @@ import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 import { AlertTriangleIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { AppEvent } from 'api/activity.types';
+import type { ActivityEvent } from 'entities/activity';
 import { isUserTime24H } from 'entities/users';
 import { useUserSetting } from 'hooks/useSelfUser';
 
@@ -11,7 +11,7 @@ import { RelativeTime } from 'basics';
 import { EventIcon } from './activity-event';
 
 interface EventUnknownProps {
-    event: AppEvent;
+    event: ActivityEvent;
 }
 
 const EventUnknown = ({ event }: EventUnknownProps) => {

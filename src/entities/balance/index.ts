@@ -4,11 +4,12 @@ export type { CurrencyTotal } from './model/aggregate';
 export { aggregateByCurrency } from './model/aggregate';
 export type { LegacyBalanceTotals } from './model/legacy';
 export {
+    legacyActivityEvent,
+    legacyActivityPreview,
     legacyAmountFromMoney,
     legacyBalanceFromEntry,
     legacyCurrencyOrDefault,
     legacyEntryFromMoney,
-    legacyExpenseBalanceChange,
     legacyPartitionEntries,
     legacyRateLookup,
     legacyRatesFromDecimals,

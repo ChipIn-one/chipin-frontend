@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
-import type { AppEvent } from 'api/activity.types';
+import type { ActivityEvent } from 'entities/activity';
 
 import { UserAvatar } from 'basics';
 
@@ -26,7 +26,7 @@ const ActorAvatarImage = styled(UserAvatar)`
     box-shadow: 0 0 0 2px var(--gray-1);
 `;
 
-type EventActor = Pick<AppEvent, 'actorSnapshot' | 'actorUserId'>;
+type EventActor = Pick<ActivityEvent, 'actorSnapshot' | 'actorUserId'>;
 
 interface ActorAvatarProps {
     event: EventActor;
@@ -60,7 +60,7 @@ const ActorAvatar = ({ event, isActorInText }: ActorAvatarProps) => {
 };
 
 interface EventActorInlineAvatarProps {
-    event: Pick<AppEvent, 'actorSnapshot'>;
+    event: Pick<ActivityEvent, 'actorSnapshot'>;
 }
 
 const EventActorInlineAvatar = ({ event }: EventActorInlineAvatarProps) => {

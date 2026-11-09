@@ -15,11 +15,14 @@
 // The strict throw stays in `shared/money` for the new wire path.
 import * as Sentry from '@sentry/react';
 
-import type { ExpenseActivityMetadata } from 'api/activity.types';
+import type { AppEvent } from 'api/activity.types';
 import type { BalanceEntry, CurrenciesRates } from 'api/chipin.raw.types';
+import type { ActivityFeedItem } from 'api/chipin.types';
 import { DEFAULT_CURRENCY_CODE } from 'constants/currencies';
+import type { ActivityEvent, ActivityPreview, MoneyReader } from 'entities/activity';
+import { toActivityEventWith } from 'entities/activity';
 import type { CurrencyCode, Money } from 'shared/money';
-import { abs, currencyCode, fromUnits, LEDGER_SCALE, sign, sub } from 'shared/money';
+import { abs, currencyCode, fromUnits, LEDGER_SCALE, MoneyWireError, sign } from 'shared/money';
 
 import { aggregateByCurrency } from './aggregate';
 import type { BalancePartition } from './partition';
@@ -149,27 +152,33 @@ export const legacyPartitionEntries = (
 export const legacySumEntriesByCurrency = (entries: readonly BalanceEntry[]): Money[] =>
     aggregateByCurrency(validEntries(entries), item => item.net).map(({ total }) => total);
 
-/**
- * How an expense changed `userId`'s balance: the payer funded `amount − own share`, a participant
- * owes the own share. `undefined` without a share snapshot (it cannot tell what the payer funded)
- * or with an invalid amount or currency.
- */
-export const legacyExpenseBalanceChange = (
-    metadata: ExpenseActivityMetadata,
-    userId: string,
-): Money | undefined => {
-    if (!metadata.shares) {
-        return undefined;
-    }
-    const shareAmount = metadata.shares.find(share => share.userId === userId)?.shareAmount ?? 0;
-    const share = moneyFromLegacyNumber(shareAmount, metadata.currency);
-    const funded =
-        metadata.payerId === userId
-            ? moneyFromLegacyNumber(metadata.amount, metadata.currency)
-            : share && fromUnits(0n, share.currency);
+// A legacy amount that cannot be read makes its event an unknown event (reported once per reason).
+const readLegacyAmount: MoneyReader<number> = (amount, currency) => {
+    const money = moneyFromLegacyNumber(amount, currency);
 
-    return share && funded ? sub(funded, share) : undefined;
+    if (!money) {
+        throw new MoneyWireError('shape');
+    }
+    return money;
 };
+
+/** A legacy activity event as the domain event (amounts as `Money`) for the shared activity cards. */
+export const legacyActivityEvent = (event: AppEvent): ActivityEvent => {
+    try {
+        return toActivityEventWith(event, readLegacyAmount);
+    } catch (error) {
+        if (!(error instanceof MoneyWireError)) {
+            throw error;
+        }
+        return toActivityEventWith({ ...event, metadata: null }, readLegacyAmount);
+    }
+};
+
+/** A legacy preview (`{ parent, lastEvent }`) as the domain preview. */
+export const legacyActivityPreview = (item: ActivityFeedItem): ActivityPreview => ({
+    parent: legacyActivityEvent(item.parent),
+    lastEvent: legacyActivityEvent(item.lastEvent),
+});
 
 const legacyRate = (value: unknown): string | null =>
     typeof value === 'number' && Number.isFinite(value) && value > 0 ? String(value) : null;

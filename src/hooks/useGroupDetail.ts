@@ -1,18 +1,26 @@
 // A group's detail and activity for the UI (spec 03 §6 row 4). Like the groups list
 // (`useGroupsList`), the queries send a request only while signed in and on the user's persisted
 // client: signed out or on another client nothing is read.
-import { useCallback } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
-import type { ActivityFeedItem, Group } from 'api/chipin.types';
-import { isGroupDeniedError, useGroupActivityQuery, useGroupDetailQuery } from 'entities/groups';
+import type { Group } from 'api/chipin.types';
+import type { ActivityPreview } from 'entities/activity';
+import { legacyActivityPreview } from 'entities/balance';
+import {
+    type GroupActivityPage,
+    isGroupDeniedError,
+    seedGroupActivity,
+    useGroupActivityQuery,
+    useGroupDetailQuery,
+} from 'entities/groups';
 import { isUserCacheClient } from 'shared/offline/userCaches';
 import { AUTH_STATUS } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
 
 import { useGroupsList } from './useGroupsList';
 
-const NO_ACTIVITY: ActivityFeedItem[] = [];
+const NO_ACTIVITY: ActivityPreview[] = [];
 
 const useIsGroupQueryEnabled = (): boolean => {
     const isSignedIn = useAuthStore(state => state.status === AUTH_STATUS.AUTHENTICATED);
@@ -57,7 +65,7 @@ export const useGroupDetail = (groupId: string | undefined): GroupDetailResult =
 };
 
 export interface GroupActivityResult {
-    items: readonly ActivityFeedItem[];
+    items: readonly ActivityPreview[];
     hasMore: boolean;
     /** Any load runs (a refetch or the next page): a scroll trigger waits for it to end. */
     isFetching: boolean;
@@ -67,17 +75,38 @@ export interface GroupActivityResult {
     loadMore: () => void;
 }
 
+// LEGACY until 03-10c: the group (detail or listed) still comes through the legacy `src/api` layer,
+// so the activity page it carries has number amounts; the legacy bridge carries it into the domain.
+const toEmbeddedPage = (
+    recent: Group['recentActivities'],
+): GroupActivityPage & { items: ActivityPreview[] } => ({
+    items: recent.items.map(legacyActivityPreview),
+    nextCursor: recent.nextCursor,
+});
+
 /**
- * The activity of `groupId`, read once its detail is loaded (`hasDetail`): the detail seeds the
- * first page, so opening a group sends one request. Until the activity has data, `fallback` (the
- * listed group's recent activity) is shown, without more pages.
+ * The activity of `groupId`, read once its detail is loaded (`hasDetail`): the page the detail
+ * carries (`recent`) seeds the first page, so opening a group sends one request. Until the
+ * activity has data, `recent` (then the listed group's recent activity) is shown, without more
+ * pages.
  */
 export const useGroupActivity = (
     groupId: string,
     hasDetail: boolean,
-    fallback?: Group['recentActivities'],
+    recent?: Group['recentActivities'],
 ): GroupActivityResult => {
+    const client = useQueryClient();
     const isEnabled = useIsGroupQueryEnabled() && hasDetail;
+    const embedded = useMemo(() => recent && toEmbeddedPage(recent), [recent]);
+
+    // Declared before the query: React runs effects in order, so the seed lands before the
+    // enabled query decides whether to fetch its first page.
+    useEffect(() => {
+        if (isEnabled && embedded) {
+            seedGroupActivity(client, groupId, embedded);
+        }
+    }, [client, embedded, groupId, isEnabled]);
+
     const query = useGroupActivityQuery(groupId, { enabled: isEnabled });
     const { fetchNextPage, isFetching } = query;
     const loadMore = useCallback(() => {
@@ -88,7 +117,7 @@ export const useGroupActivity = (
     const items = isEnabled ? query.data : undefined;
 
     return {
-        items: items ?? fallback?.items ?? NO_ACTIVITY,
+        items: items ?? embedded?.items ?? NO_ACTIVITY,
         hasMore: items !== undefined && query.hasNextPage,
         isFetching: isEnabled && isFetching,
         isNextPageLoading: query.isFetchingNextPage,

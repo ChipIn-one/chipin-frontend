@@ -4,6 +4,7 @@ import { expect, test, vi } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
+import { domainSettlementEvent } from 'test/activityFixtures';
 
 import { EventSettlement } from './EventSettlement';
 
@@ -111,10 +112,12 @@ const createSettlementEvent = ({
 test('shows participants and group scope', () => {
     render(
         <EventSettlement
-            event={createSettlementEvent({
-                groupId: 'group-1',
-                groupName: 'Vietnam',
-            })}
+            event={domainSettlementEvent(
+                createSettlementEvent({
+                    groupId: 'group-1',
+                    groupName: 'Vietnam',
+                }),
+            )}
         />,
     );
 
@@ -135,7 +138,7 @@ test('uses You when the current user paid the settlement', () => {
     });
     event.metadata.payerId = 'current-user';
 
-    render(<EventSettlement event={event} />);
+    render(<EventSettlement event={domainSettlementEvent(event)} />);
 
     expect(screen.getByText('You paid')).toBeTruthy();
     expect(screen.getAllByTestId('settlement-full-amount')).toHaveLength(1);
@@ -144,10 +147,12 @@ test('uses You when the current user paid the settlement', () => {
 test('shows between friends for a direct settlement', () => {
     render(
         <EventSettlement
-            event={createSettlementEvent({
-                groupId: null,
-                groupName: null,
-            })}
+            event={domainSettlementEvent(
+                createSettlementEvent({
+                    groupId: null,
+                    groupName: null,
+                }),
+            )}
         />,
     );
 
@@ -157,11 +162,13 @@ test('shows between friends for a direct settlement', () => {
 test('strikes reversed settlement values and shows deletion context', () => {
     render(
         <EventSettlement
-            event={createSettlementEvent({
-                groupId: null,
-                groupName: null,
-                action: ACTIVITY_ACTIONS.SETTLEMENT_REVERSED,
-            })}
+            event={domainSettlementEvent(
+                createSettlementEvent({
+                    groupId: null,
+                    groupName: null,
+                    action: ACTIVITY_ACTIONS.SETTLEMENT_REVERSED,
+                }),
+            )}
         />,
     );
 

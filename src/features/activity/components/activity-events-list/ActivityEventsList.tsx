@@ -1,26 +1,33 @@
 import { Fragment, type ReactNode, useMemo } from 'react';
 import { Flex } from '@radix-ui/themes';
 
-import { type ActivityListItem, isActivityPreview } from 'helpers/activityEvent';
+import type { ActivityPreview } from 'entities/activity';
+import type { ActivityListItem } from 'helpers/activityEvent';
 import { getActivityDateKey } from 'helpers/time';
 import { useSelfUser } from 'hooks/useSelfUser';
 
 import { NoActivityEmptyState } from 'basics/empty-states';
 
-import { selectors } from '../../internal';
+import { legacyActivityRows, previewRows, selectors } from '../../internal';
 import { ActivityEvent, FullActivityFeedContext } from '../activity-event';
 import ActivityDateDivider from '../ActivityDateDivider';
 
-interface Props {
-    events: ActivityListItem[];
+// One source: the domain previews of the group feed, or the legacy items of the dashboard feed and
+// the activity store (carried into the domain here until 12b/12c migrate them).
+type Source =
+    | { previews: readonly ActivityPreview[]; events?: never }
+    | { events: readonly ActivityListItem[]; previews?: never };
+
+type Props = Source & {
     emptyState?: ReactNode;
     children?: ReactNode;
     isShowSummary?: boolean;
     isNavigable?: boolean;
     isFullActivityFeed?: boolean;
-}
+};
 
 const ActivityEventsList = ({
+    previews,
     events,
     emptyState = <NoActivityEmptyState />,
     children,
@@ -29,12 +36,16 @@ const ActivityEventsList = ({
     isFullActivityFeed = false,
 }: Props) => {
     const userId = useSelfUser()?.id;
+    const rows = useMemo(
+        () => (previews ? previewRows(previews) : legacyActivityRows(events ?? [])),
+        [events, previews],
+    );
     const dailyExpenseSummaries = useMemo(
-        () => (isShowSummary ? selectors.getDailyExpenseSummary(events, userId) : {}),
-        [events, isShowSummary, userId],
+        () => (isShowSummary ? selectors.getDailyExpenseSummary(rows, userId) : {}),
+        [rows, isShowSummary, userId],
     );
 
-    if (events.length === 0) {
+    if (rows.length === 0) {
         // Pagination/retry controls must remain mounted when a preview page filters to empty.
         return (
             <>
@@ -47,15 +58,9 @@ const ActivityEventsList = ({
     return (
         <FullActivityFeedContext.Provider value={isFullActivityFeed}>
             <Flex direction="column" gap="2">
-                {events.map((item, index) => {
-                    const isPreview = isActivityPreview(item);
-                    const originalEvent = isPreview ? item.parent : item;
-                    const event = isPreview ? item.lastEvent : item;
+                {rows.map(({ original: originalEvent, event, isPreview }, index) => {
                     const dateKey = getActivityDateKey(originalEvent.createdAt);
-                    const previousItem = events[index - 1];
-                    const previousEvent =
-                        previousItem &&
-                        (isActivityPreview(previousItem) ? previousItem.parent : previousItem);
+                    const previousEvent = rows[index - 1]?.original;
                     const shouldRenderDivider =
                         previousEvent === undefined ||
                         dateKey !== getActivityDateKey(previousEvent.createdAt);
