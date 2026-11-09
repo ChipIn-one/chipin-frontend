@@ -9,7 +9,7 @@ import { type InviteConfirmationState, useInviteConfirmation } from './useInvite
 
 export const useJoinInviteLink = (): InviteConfirmationState => {
     const navigate = useNavigate();
-    const { joinGroup } = useGroupsStore();
+    const joinGroup = useGroupsStore(state => state.joinGroup);
     const { inviteToken } = useParams<{ inviteToken: string }>();
 
     const onAccept = useCallback((token: string) => joinGroup({ inviteToken: token }), [joinGroup]);

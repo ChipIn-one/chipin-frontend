@@ -14,22 +14,19 @@ import { BaseAlertDialog } from '../base-alert-dialog';
 
 interface Props {
     children: ReactNode;
+    groupId: string;
     member: GroupUser;
 }
 
-const KickGroupMemberAlertDialog = ({ children, member }: Props) => {
+const KickGroupMemberAlertDialog = ({ children, groupId, member }: Props) => {
     const { t } = useTranslation(['common', 'group', 'toasts']);
     const isKickingMember = useLoadingStore(selectGroupKicking);
     const [isOpened, setIsOpened] = useState(false);
 
     const onKickGroupMember = () => {
-        const { kickGroupMember, selectedGroup } = useGroupsStore.getState();
-
-        if (!selectedGroup) {
-            return Promise.reject(new Error('No selected group'));
-        }
-
-        return kickGroupMember({ groupId: selectedGroup.id, userId: member.id })
+        return useGroupsStore
+            .getState()
+            .kickGroupMember({ groupId, userId: member.id })
             .then(() => {
                 toast.success(
                     t('toasts:group.kicked', {

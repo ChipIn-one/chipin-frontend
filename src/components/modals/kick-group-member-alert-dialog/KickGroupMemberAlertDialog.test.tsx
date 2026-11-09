@@ -57,10 +57,10 @@ test('waits for confirmation before kicking a group member', () => {
         recentActivities: { items: [], nextCursor: null },
     } satisfies Group;
 
-    useGroupsStore.setState({ kickGroupMember, selectedGroup: group });
+    useGroupsStore.setState({ kickGroupMember });
 
     render(
-        <KickGroupMemberAlertDialog member={member}>
+        <KickGroupMemberAlertDialog groupId={group.id} member={member}>
             <button type="button">{OPEN_KICK_LABEL}</button>
         </KickGroupMemberAlertDialog>,
     );

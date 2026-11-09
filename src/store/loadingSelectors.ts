@@ -15,10 +15,6 @@ export const selectActivitySubeventsFetched = (s: LoadingStore) =>
 export const selectActivitySubeventsNextPageLoading = (s: LoadingStore) =>
     s.activity.subeventsNextPage === 'loading';
 
-export const selectGroupDataLoading = (s: LoadingStore) => s.group.data === 'loading';
-export const selectGroupDataFetched = (s: LoadingStore) => s.group.data === 'fetched';
-export const selectGroupNextPageLoading = (s: LoadingStore) => s.group.nextPage === 'loading';
-
 export const selectGroupAdding = (s: LoadingStore) => s.group.add === 'loading';
 export const selectGroupUpdating = (s: LoadingStore) => s.group.update === 'loading';
 export const selectGroupRemoving = (s: LoadingStore) => s.group.remove === 'loading';

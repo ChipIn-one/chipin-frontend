@@ -61,13 +61,19 @@ const LocationProbe = () => {
     return <output data-testid="location">{location.pathname}</output>;
 };
 
-const renderModal = (type: 'create' | 'update') => {
+const renderModal = (type: 'create' | 'update', editedGroup: Group = group) => {
+    const trigger = <button type="button">{OPEN_MODAL_LABEL}</button>;
+
     return render(
         <MemoryRouter initialEntries={['/dashboard']}>
             <ThemeProvider theme={lightThemeStyled}>
-                <CreateUpdateGroupModal type={type}>
-                    <button type="button">{OPEN_MODAL_LABEL}</button>
-                </CreateUpdateGroupModal>
+                {type === 'create' ? (
+                    <CreateUpdateGroupModal type="create">{trigger}</CreateUpdateGroupModal>
+                ) : (
+                    <CreateUpdateGroupModal type="update" group={editedGroup}>
+                        {trigger}
+                    </CreateUpdateGroupModal>
+                )}
                 <LocationProbe />
             </ThemeProvider>
         </MemoryRouter>,
@@ -78,7 +84,6 @@ beforeEach(() => {
     vi.clearAllMocks();
     useGroupsStore.getState().setInitialGroupsStore();
     useGroupsStore.setState({
-        selectedGroup: group,
         createGroup,
         updateGroup,
         uploadGroupCover,
@@ -175,8 +180,7 @@ test('shows the description textarea immediately in update mode when it is empty
     const interaction = userEvent.setup();
     const groupWithoutDescription = { ...group, description: null } satisfies Group;
 
-    useGroupsStore.setState({ selectedGroup: groupWithoutDescription });
-    renderModal('update');
+    renderModal('update', groupWithoutDescription);
 
     return interaction.click(screen.getByRole('button', { name: OPEN_MODAL_LABEL })).then(() => {
         expect(screen.queryByRole('button', { name: 'modal.fields.addDescription' })).toBeNull();
@@ -191,8 +195,7 @@ test('keeps the cover picker in the field row when the update cover is null', ()
     const interaction = userEvent.setup();
     const groupWithoutCover = { ...group, coverUrl: null } satisfies Group;
 
-    useGroupsStore.setState({ selectedGroup: groupWithoutCover });
-    renderModal('update');
+    renderModal('update', groupWithoutCover);
 
     return interaction.click(screen.getByRole('button', { name: OPEN_MODAL_LABEL })).then(() => {
         const picker = screen.getByLabelText('modal.cover.pickerLabel');
@@ -392,6 +395,7 @@ test('clears an existing group description', () => {
         )
         .then(() => {
             expect(updateGroup).toHaveBeenCalledWith({
+                groupId: group.id,
                 groupName: group.name,
                 groupDescription: '',
             });

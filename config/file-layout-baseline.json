@@ -97,7 +97,6 @@
         "src/pages/friends-page/components/index.ts",
         "src/pages/group-page/components/index.ts",
         "src/pages/group-page/components/internal/group-settings/index.ts",
-        "src/pages/group-page/internal/index.ts",
         "src/pages/internal/activity-page/index.ts",
         "src/pages/settings-page/components/expense-preferences-section/index.ts",
         "src/pages/settings-page/components/index.ts",
@@ -114,7 +113,6 @@
         "src/pages/activity-subevents-page/components/activity-subevents-buttons/internal/useConnect.ts",
         "src/pages/activity-subevents-page/components/activity-subevents-feed/internal/useConnect.ts",
         "src/pages/group-page/components/internal/group-settings/useConnect.ts",
-        "src/pages/group-page/internal/useConnect.ts",
         "src/pages/internal/activity-page/useConnect.ts"
     ]
 }

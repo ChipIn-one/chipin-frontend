@@ -1,40 +1,43 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { Box, Card, Container, Flex, Grid, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 
+import { useGroupActivity, useGroupDetail } from 'hooks/useGroupDetail';
 import { useGroups } from 'hooks/useGroupsList';
+import { useUiPrefsStore } from 'store/ui-prefs';
 
 import GroupsCards from 'components/GroupsCards';
 
 import { GroupCoverSection, GroupSummary, GroupTabsContent } from './components';
-import { useConnect } from './internal';
 import { GroupCoverBox } from './styled';
 
 const GroupPage = () => {
     const { t } = useTranslation(['group', 'common', 'dashboard']);
     const groups = useGroups();
-    const {
-        selectedGroup,
-        fetchSetGroupById,
-        fetchMoreGroupActivity,
-        isGroupDataLoading,
-        isGroupActivityNextPageLoading,
-        isGroupActivityNextPageError,
-        isGroupDataFetched,
-    } = useConnect();
     const { groupId } = useParams<{ groupId: string }>();
-    const routeGroup = selectedGroup?.id === groupId ? selectedGroup : null;
-    const requestedRouteId = useRef<string | null>(null);
+    const detail = useGroupDetail(groupId);
+    const routeGroup = detail.group;
+    const activity = useGroupActivity(
+        groupId ?? '',
+        detail.hasDetail,
+        routeGroup?.recentActivities,
+    );
+    const setLastGroupId = useUiPrefsStore(state => state.setLastGroupId);
+    const isGroupDataLoading = detail.isLoading;
 
+    // The opened group is the expense editor's default; a group the user may not read is not.
     useEffect(() => {
-        if (!groupId || requestedRouteId.current === groupId) {
-            return;
+        if (groupId && routeGroup) {
+            setLastGroupId(groupId);
+        } else if (
+            groupId &&
+            detail.isDenied &&
+            useUiPrefsStore.getState().lastGroupId === groupId
+        ) {
+            setLastGroupId(null);
         }
-
-        requestedRouteId.current = groupId;
-        void fetchSetGroupById(groupId, true);
-    }, [fetchSetGroupById, groupId]);
+    }, [detail.isDenied, groupId, routeGroup, setLastGroupId]);
 
     if (!groupId) {
         return (
@@ -47,10 +50,13 @@ const GroupPage = () => {
     }
 
     if (!routeGroup) {
-        if (!isGroupDataFetched || isGroupDataLoading) {
+        if (isGroupDataLoading) {
             return null;
         }
 
+        // TODO(04): the route's errorElement (spec 04 §2.5) once the data router lands; until then
+        // a denied (403/404) detail, or a failed one of an unlisted group, shows this card, and the
+        // list drops a denied group.
         return (
             <Container size="4" py="6">
                 <Card>
@@ -71,7 +77,7 @@ const GroupPage = () => {
                     mb="6"
                     display={{ initial: 'none', sm: 'flex' }}
                 >
-                    <GroupSummary isLoading={isGroupDataLoading} />
+                    <GroupSummary group={routeGroup} isLoading={isGroupDataLoading} />
                     <GroupsCards
                         groups={groups}
                         label={t('dashboard:groups.otherTitle')}
@@ -85,15 +91,13 @@ const GroupPage = () => {
                     </GroupCoverBox>
 
                     <Box display={{ initial: 'block', sm: 'none' }} mb="4">
-                        <GroupSummary isLoading={isGroupDataLoading} />
+                        <GroupSummary group={routeGroup} isLoading={isGroupDataLoading} />
                     </Box>
 
                     <GroupTabsContent
                         group={routeGroup}
                         isGroupDataLoading={isGroupDataLoading}
-                        fetchMoreGroupActivity={fetchMoreGroupActivity}
-                        isGroupActivityNextPageLoading={isGroupActivityNextPageLoading}
-                        isGroupActivityNextPageError={isGroupActivityNextPageError}
+                        activity={activity}
                     />
                 </Box>
             </Grid>

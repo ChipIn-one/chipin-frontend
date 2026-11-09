@@ -250,11 +250,6 @@
       "count": 1
     }
   },
-  "src/hooks/useJoinInviteLink.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "src/i18n/index.ts": {
     "boundaries/dependencies": {
       "count": 1
@@ -307,16 +302,6 @@
   },
   "src/root.tsx": {
     "@typescript-eslint/no-non-null-assertion": {
-      "count": 1
-    }
-  },
-  "src/store/activity-store/actions.ts": {
-    "import-x/no-cycle": {
-      "count": 1
-    }
-  },
-  "src/store/groupsStore.ts": {
-    "import-x/no-cycle": {
       "count": 1
     }
   }

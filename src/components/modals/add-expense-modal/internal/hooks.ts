@@ -14,9 +14,9 @@ import { useActivityStore } from 'store/activity-store';
 import { selectExpensePayload, selectIsSubmitDisabled } from 'store/expenseModalSelectors';
 import { type ExpenseModalSource, useExpenseModalStore } from 'store/expenseModalStore';
 import { buildExpenseUpdateParams } from 'store/expenseModalUpdate';
-import { useGroupsStore } from 'store/groupsStore';
 import { selectExpenseAdding, selectExpenseUpdating } from 'store/loadingSelectors';
 import { useLoadingStore } from 'store/loadingStore';
+import { selectLastGroupId, useUiPrefsStore } from 'store/ui-prefs';
 
 export const useExpenseModalOpenChange = (isOpened: boolean, onOpenChange: () => void): void => {
     const previousIsOpened = useRef(false);
@@ -69,7 +69,7 @@ export const useExpenseModalSource = ({
     const skipCategory = useUserSetting(userSkipCategory);
 
     const groups = useGroups();
-    const selectedGroupId = useGroupsStore(state => state.selectedGroup?.id);
+    const selectedGroupId = useUiPrefsStore(selectLastGroupId);
     const openingContext = getExpenseModalContext(context, location.pathname);
 
     return useMemo(

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 import { Box, Button, Flex, IconButton, Spinner, Tabs, Text } from '@radix-ui/themes';
 import { ChevronsDownIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +7,7 @@ import type { Group } from 'api/chipin.types';
 import { ActivityEventsList } from 'features/activity';
 import { getActivityPreviewEvents } from 'helpers/activityEvent';
 import { useGroupInvite } from 'hooks/pwaHooks';
+import type { GroupActivityResult } from 'hooks/useGroupDetail';
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 
 import { NoGroupExpensesEmptyState } from 'basics/empty-states';
@@ -21,31 +22,25 @@ import GroupSettingsTab from './GroupSettingsTab';
 interface Props {
     group: Group;
     isGroupDataLoading: boolean;
-    fetchMoreGroupActivity: () => Promise<void>;
-    isGroupActivityNextPageLoading: boolean;
-    isGroupActivityNextPageError: boolean;
+    activity: GroupActivityResult;
 }
 
-const GroupTabsContent = ({
-    group,
-    isGroupDataLoading,
-    fetchMoreGroupActivity,
-    isGroupActivityNextPageLoading,
-    isGroupActivityNextPageError,
-}: Props) => {
+const GroupTabsContent = ({ group, isGroupDataLoading, activity }: Props) => {
     const { t } = useTranslation(['group', 'common', 'activity']);
     const invite = useGroupInvite(group);
     const [activeTab, setActiveTab] = useState('expenses');
-    const activityItems = getActivityPreviewEvents(group.recentActivities.items);
+    const activityItems = getActivityPreviewEvents(activity.items);
     const members = group.members.map(member => member.user);
     const isSingleMemberGroup = group.members.length === 1;
     const shouldShowInviteOnboarding = isSingleMemberGroup;
-    const hasMoreActivity = group.recentActivities.nextCursor !== null;
+    const {
+        hasMore: hasMoreActivity,
+        isNextPageLoading: isGroupActivityNextPageLoading,
+        isNextPageError: isGroupActivityNextPageError,
+        loadMore: onLoadMore,
+    } = activity;
     const isEndOfFeed =
         !isGroupActivityNextPageLoading && !hasMoreActivity && activityItems.length > 0;
-    const onLoadMore = useCallback(() => {
-        void fetchMoreGroupActivity();
-    }, [fetchMoreGroupActivity]);
     const onRetryNextPage = () => {
         onLoadMore();
     };
@@ -58,7 +53,8 @@ const GroupTabsContent = ({
     };
     const sentinelRef = useInfiniteScroll({
         hasMore: activeTab === 'expenses' && hasMoreActivity && !isGroupActivityNextPageError,
-        isLoading: isGroupActivityNextPageLoading,
+        // Any load holds the trigger (`loadMore` ignores it meanwhile), not only a next page.
+        isLoading: activity.isFetching,
         onLoadMore,
     });
 

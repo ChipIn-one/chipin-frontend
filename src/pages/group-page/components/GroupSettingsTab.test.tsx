@@ -144,7 +144,7 @@ test('lets the owner toggle simplify debts through the store action', () => {
     render(<GroupSettingsTab group={group} />);
 
     return user.click(screen.getByRole('switch', { name: 'Simplify group debts' })).then(() => {
-        expect(updateGroup).toHaveBeenCalledWith({ simplifyDebts: false });
+        expect(updateGroup).toHaveBeenCalledWith({ groupId: 'group-1', simplifyDebts: false });
     });
 });
 
