@@ -23,8 +23,11 @@ concurrency:
 jobs:
   openapi-drift:
     name: openapi-drift
-    # Fork PRs get no secrets: skip them cleanly instead of failing the fetch.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # Fork and Dependabot PRs get no Actions secrets: skip them cleanly instead of failing the fetch (#655).
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
