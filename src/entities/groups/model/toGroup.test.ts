@@ -105,3 +105,17 @@ test('maps a page of the groups list, keeping its opaque cursor', () => {
         nextCursor: 'opaque',
     });
 });
+
+test('keys member balances by their normalized currency', () => {
+    const group = toGroup(
+        response({
+            members: [
+                { user: wireUser('friend'), balancesByCurrency: { usd: balance('usd', '3') } },
+            ],
+        }),
+    );
+
+    expect(group.members[0]?.balancesByCurrency).toEqual({
+        USD: { net: fromUnits(30_000n, currencyCode('USD')) },
+    });
+});

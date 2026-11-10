@@ -10,13 +10,12 @@ import type { Group, GroupMember } from 'entities/groups';
 const toMember = (member: LegacyGroup['members'][number]): GroupMember => ({
     user: member.user,
     balancesByCurrency: Object.fromEntries(
-        Object.entries(member.balancesByCurrency).flatMap(
-            ([currency, entry]): [string, Balance][] => {
-                const balance = legacyBalanceFromEntry(entry);
+        // Keyed by the normalized currency of each balance, as `toGroup` keys them.
+        Object.values(member.balancesByCurrency).flatMap((entry): [string, Balance][] => {
+            const balance = legacyBalanceFromEntry(entry);
 
-                return balance ? [[currency, balance]] : [];
-            },
-        ),
+            return balance ? [[balance.net.currency, balance]] : [];
+        }),
     ),
 });
 

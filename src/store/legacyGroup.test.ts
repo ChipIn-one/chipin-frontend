@@ -61,3 +61,20 @@ test('leaves an unreadable legacy balance out and reports it', () => {
         expect.objectContaining({ tags: { 'money.reason': 'currency' } }),
     );
 });
+
+test('keys member balances by their normalized currency, as toGroup does', () => {
+    const group = domainGroupFromLegacy(
+        wireGroup('g-1', {
+            members: [
+                {
+                    user: groupUser('friend'),
+                    balancesByCurrency: { usd: { currency: 'usd', netBalance: 3 } },
+                },
+            ],
+        }),
+    );
+
+    expect(group.members[0]?.balancesByCurrency).toEqual({
+        USD: { net: fromUnits(30_000n, currencyCode('USD')) },
+    });
+});

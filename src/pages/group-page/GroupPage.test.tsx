@@ -4,8 +4,10 @@ import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group } from 'api/chipin.types';
 import { type GroupActivityData, groupsKeys } from 'entities/groups';
+import { clearLocalUserIdentity, resetTabUserId, saveLocalUser } from 'helpers/localStorage';
 import type { GroupActivityResult } from 'hooks/useGroupDetail';
 import { useAuthStore } from 'store/authStore';
+import { putGroupDetail } from 'store/groupsList';
 import { useUiPrefsStore } from 'store/ui-prefs';
 import { domainPreview, legacyPreview } from 'test/activityFixtures';
 import { getOrThrow } from 'test/getOrThrow';
@@ -13,6 +15,7 @@ import { toTestGroup } from 'test/groupFixtures';
 import { cachedGroupsList, seedGroupsList } from 'test/groupsList';
 import { setupMswServer } from 'test/mswServer';
 import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
+import { mountAsUserClient } from 'test/userClient';
 
 import GroupPage from './GroupPage';
 
@@ -122,6 +125,20 @@ const seedDetail = (seeded: Group): void => {
         pageParams: [null],
     });
 };
+
+const TAB_USER_ID = 'tab-user';
+const SETTINGS = {
+    defaultCurrency: 'USD',
+    defaultCategory: 'food',
+    timeFormat: '24h',
+    language: 'en',
+    theme: 'system',
+    simplifyDebts: true,
+    skipCategory: false,
+    soloModeByDefault: false,
+    saveGroupExpensesToSolo: false,
+    sex: 'male',
+} as const;
 
 beforeEach(() => {
     useAuthStore.setState({ status: 'authenticated' });
@@ -258,4 +275,36 @@ test('a failed detail read keeps showing the listed group and its recent activit
     expect(screen.getByTestId('group-tabs').dataset.name).toBe(group.name);
     expect(screen.getByTestId('group-tabs').dataset.activity).toBe('listed');
     expect(screen.queryByText('group:page.notFound')).toBeNull();
+});
+
+test('a group just joined opens without a detail or activity request', async () => {
+    const requests: string[] = [];
+    server.use(
+        http.get('*/groups/group-1', () => {
+            requests.push('detail');
+            return HttpResponse.json(detail);
+        }),
+        http.get('*/groups/group-1/activity-previews', () => {
+            requests.push('activity');
+            return HttpResponse.json({ items: [], nextCursor: null });
+        }),
+    );
+    // This tab's user owns the default client: the legacy join writes there.
+    mountAsUserClient(TAB_USER_ID);
+    saveLocalUser({ id: TAB_USER_ID, settings: SETTINGS });
+    try {
+        // What a join does with the group it returned.
+        await putGroupDetail(detail);
+
+        render(<GroupPage />);
+
+        expect(screen.getByTestId('group-tabs').dataset.name).toBe(detail.name);
+        expect(screen.getByTestId('group-tabs').dataset.activity).toBe('p1');
+        expect(screen.getByTestId('group-tabs').dataset.hasMore).toBe('true');
+        await new Promise(resolve => setTimeout(resolve, 20));
+        expect(requests).toEqual([]);
+    } finally {
+        clearLocalUserIdentity();
+        resetTabUserId();
+    }
 });

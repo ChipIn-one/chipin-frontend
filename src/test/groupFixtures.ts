@@ -49,7 +49,7 @@ export const toTestGroup = (group: LegacyGroup): Group => domainGroupFromLegacy(
 export const testGroup = (id: string, overrides: Partial<LegacyGroup> = {}): Group =>
     toTestGroup(wireGroup(id, overrides));
 
-/** Member balances keyed by currency, from legacy numbers: `{ USD: 5, EUR: -2.5 }`. */
+/** Member balances keyed by their normalized currency, from legacy numbers: `{ USD: 5, EUR: -2.5 }`. */
 export const groupBalances = (
     nets: Readonly<Record<string, number>>,
 ): Readonly<Record<string, Balance>> =>
@@ -58,7 +58,7 @@ export const groupBalances = (
             const entry: BalanceEntry = { currency, netBalance };
             const balance = legacyBalanceFromEntry(entry);
 
-            return balance ? [[currency, balance]] : [];
+            return balance ? [[balance.net.currency, balance]] : [];
         }),
     );
 

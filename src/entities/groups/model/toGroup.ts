@@ -23,16 +23,11 @@ const toCurrency = (code: string): CurrencyCode => {
     }
 };
 
-interface CurrencyNet extends Balance {
-    readonly currency: string;
-}
-
-const toCurrencyNet = (balance: CurrencyBalance): CurrencyNet => ({
-    currency: balance.currency,
+const toBalance = (balance: CurrencyBalance): Balance => ({
     net: moneyFromWire(balance.netBalance, toCurrency(balance.currency)),
 });
 
-const isCurrencyNet = (item: CurrencyNet | InvalidItem): item is CurrencyNet => !('kind' in item);
+const isBalance = (item: Balance | InvalidItem): item is Balance => !('kind' in item);
 
 const toGroupUser = (user: UserResponse): GroupUser => ({
     id: user.id,
@@ -47,15 +42,16 @@ const toGroupUser = (user: UserResponse): GroupUser => ({
 
 const toGroupMember = (member: GroupMemberInfo): GroupMember => ({
     user: toGroupUser(member.user),
-    // Reported once per currency: never a user id or an amount.
+    // Keyed by the normalized currency of each balance (as `domainGroupFromLegacy`). Reported once
+    // per currency: never a user id or an amount.
     balancesByCurrency: Object.fromEntries(
         mapItems(
             Object.values(member.balancesByCurrency),
-            toCurrencyNet,
+            toBalance,
             balance => `group-member:${balance.currency}`,
         )
-            .filter(isCurrencyNet)
-            .map(({ currency, net }) => [currency, { net }]),
+            .filter(isBalance)
+            .map(balance => [balance.net.currency, balance]),
     ),
 });
 

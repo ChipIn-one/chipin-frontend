@@ -16,6 +16,7 @@ import {
     groupsKeys,
     type GroupsListData,
     putGroupInCachedList,
+    seedGroupActivity,
     settleListDebt,
     upsertGroupInList,
 } from 'entities/groups';
@@ -99,7 +100,8 @@ const reloadGroupActivity = (client: QueryClient, groupId: string): Promise<void
 /**
  * After a legacy write that returned the group (an update, a cover, a join): the group becomes its
  * detail at once (a running detail read may predate the write: it is cancelled first), and its
- * activity loads again. The list is the caller's (`reloadGroupsListWith`). Never rejects.
+ * activity loads again, or, with none cached, is seeded from the page the group carries. The list
+ * is the caller's (`reloadGroupsListWith`). Never rejects.
  */
 // TODO(03-11): goes with the group mutations moving to entities/groups.
 export const putGroupDetail = (group: LegacyGroup): Promise<void> => {
@@ -109,10 +111,16 @@ export const putGroupDetail = (group: LegacyGroup): Promise<void> => {
         return Promise.resolve();
     }
     const queryKey = groupsKeys.detail(group.id);
+    const detail = domainGroupFromLegacy(group);
+    const writtenAt = Date.now();
 
     void client.cancelQueries({ queryKey });
-    client.setQueryData<Group>(queryKey, domainGroupFromLegacy(group));
-    return reloadGroupActivity(client, group.id);
+    client.setQueryData<Group>(queryKey, detail, { updatedAt: writtenAt });
+    // A fresh detail is not read again, so its activity page seeds the activity here (as a read
+    // would): opening the group then sends no activity request. Cached or loading activity wins.
+    return reloadGroupActivity(client, group.id).then(() => {
+        seedGroupActivity(client, group.id, detail.recentActivities, writtenAt);
+    });
 };
 
 /**
