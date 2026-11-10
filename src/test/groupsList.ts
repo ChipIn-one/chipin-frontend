@@ -4,7 +4,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { afterEach } from 'vitest';
 
-import type { Group } from 'api/chipin.types';
+import type { Group } from 'entities/groups';
 import { flattenGroupsList, groupsKeys, type GroupsListData } from 'entities/groups';
 
 import { liveTestQueryClients, onTestQueryClientCreated } from './renderWithQueryClient';

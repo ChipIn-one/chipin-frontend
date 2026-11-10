@@ -1,11 +1,19 @@
 import { InfiniteQueryObserver } from '@tanstack/react-query';
+import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import * as chipinApi from 'api/chipin';
-import type { Group } from 'api/chipin.types';
+import type { ApiGroupsResponse, Group } from 'api/chipin.types';
 import * as groupsApi from 'api/groupsApi';
-import { groupDetailQueryOptions, groupsKeys, groupsListQueryOptions } from 'entities/groups';
+import {
+    type Group as DomainGroup,
+    groupDetailQueryOptions,
+    groupsKeys,
+    groupsListQueryOptions,
+} from 'entities/groups';
+import { toTestGroup } from 'test/groupFixtures';
 import { cachedGroupsList, groupsListData } from 'test/groupsList';
+import { setupMswServer } from 'test/mswServer';
 import { mountUserDashboardCache, type UserDashboardCache } from 'test/userDashboardCache';
 
 import { useActivityStore } from './activity-store';
@@ -22,8 +30,6 @@ vi.mock('./sessionUser', async importOriginal => ({
 
 vi.mock('api/chipin', () => ({
     createApiGroup: vi.fn(),
-    fetchApiUserGroupById: vi.fn(),
-    fetchApiUserGroups: vi.fn(),
     inviteApiUserToGroup: vi.fn(),
     kickApiGroupMember: vi.fn(),
     leaveApiGroup: vi.fn(),
@@ -41,6 +47,36 @@ vi.mock('api/groupsApi', () => ({
     updateGroup: vi.fn(),
     uploadGroupCover: vi.fn(),
 }));
+
+const server = setupMswServer();
+
+// The server's answers to the group reads (`GET /groups`, `GET /groups/{id}`), as the test sets
+// them: a rejection with a `response.status` answers that status, any other one fails the request.
+const readList = vi.fn<() => Promise<ApiGroupsResponse>>();
+const readGroup = vi.fn<(groupId: string) => Promise<Group>>();
+
+const statusOf = (error: unknown): number | undefined =>
+    typeof error === 'object' &&
+    error !== null &&
+    'response' in error &&
+    typeof error.response === 'object' &&
+    error.response !== null &&
+    'status' in error.response &&
+    typeof error.response.status === 'number'
+        ? error.response.status
+        : undefined;
+
+const answer = (read: () => Promise<ApiGroupsResponse | Group>): Promise<Response> =>
+    read().then(
+        body => HttpResponse.json(body),
+        (error: unknown) => {
+            const status = statusOf(error);
+
+            return status === undefined
+                ? HttpResponse.error()
+                : HttpResponse.json({ code: 'DENIED' }, { status });
+        },
+    );
 
 const creator = {
     id: 'user-1',
@@ -79,14 +115,16 @@ let stopWatchingList: () => void;
 let refetchList: () => Promise<unknown>;
 
 // The tab user's cached groups list.
-const listGroups = (): Group[] | undefined => cachedGroupsList(userCache.client);
+const listGroups = () => cachedGroupsList(userCache.client);
+// The domain groups the cache holds for groups the server (or a legacy write) gave.
+const cached = (groups: Group[]) => groups.map(toTestGroup);
 
 // The tab user's cached detail of a group.
-const detailOf = (groupId: string): Group | undefined =>
-    userCache.client.getQueryData<Group>(groupsKeys.detail(groupId));
+const detailOf = (groupId: string) =>
+    userCache.client.getQueryData<DomainGroup>(groupsKeys.detail(groupId));
 // A group page showing `group` (its detail read before the test).
 const seedDetail = (shown: Group): void => {
-    userCache.client.setQueryData(groupsKeys.detail(shown.id), shown, {
+    userCache.client.setQueryData(groupsKeys.detail(shown.id), toTestGroup(shown), {
         updatedAt: Date.now() - 1_000,
     });
 };
@@ -99,7 +137,7 @@ const readDetail = (groupId: string): Promise<unknown> =>
 // The list as a load finished a moment before the test leaves it: fresh, no request, and older
 // than any group detail the test reads.
 const seedList = (groups: Group[]): void => {
-    userCache.client.setQueryData(groupsKeys.list(), groupsListData(groups), {
+    userCache.client.setQueryData(groupsKeys.list(), groupsListData(groups.map(toTestGroup)), {
         updatedAt: Date.now() - 1_000,
     });
 };
@@ -108,12 +146,20 @@ describe('groupsStore', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         userCache = mountUserDashboardCache();
+        readList.mockReset();
+        readGroup.mockReset();
+        server.use(
+            http.get('*/groups', () => answer(() => readList())),
+            http.get('*/groups/:groupId', ({ params }) =>
+                answer(() => readGroup(String(params.groupId))),
+            ),
+        );
         seedList([]);
         // A mounted reader: invalidating the list reloads it.
         const listObserver = new InfiniteQueryObserver(userCache.client, groupsListQueryOptions());
         stopWatchingList = listObserver.subscribe(() => undefined);
         refetchList = () => listObserver.refetch();
-        vi.mocked(chipinApi.fetchApiUserGroups)
+        vi.mocked(readList)
             .mockReset()
             .mockResolvedValue({
                 items: [group],
@@ -151,8 +197,8 @@ describe('groupsStore', () => {
 
         return request.then(result => {
             expect(result).toEqual(updatedGroup);
-            expect(listGroups()).toEqual([updatedGroup]);
-            expect(detailOf(group.id)).toEqual(updatedGroup);
+            expect(listGroups()).toEqual(cached([updatedGroup]));
+            expect(detailOf(group.id)).toEqual(toTestGroup(updatedGroup));
             expect(useLoadingStore.getState().group.cover).toBe('fetched');
         });
     });
@@ -165,7 +211,7 @@ describe('groupsStore', () => {
         seedList([group, otherGroup]);
         seedDetail(otherGroup);
         vi.mocked(groupsApi.uploadGroupCover).mockResolvedValue(updatedGroup);
-        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({
+        vi.mocked(readList).mockResolvedValue({
             items: [group, otherGroup],
             nextCursor: null,
         });
@@ -174,9 +220,9 @@ describe('groupsStore', () => {
             .getState()
             .uploadGroupCover({ groupId: group.id, file })
             .then(() => {
-                expect(listGroups()).toEqual([updatedGroup, otherGroup]);
-                expect(detailOf(otherGroup.id)).toEqual(otherGroup);
-                expect(detailOf(group.id)).toEqual(updatedGroup);
+                expect(listGroups()).toEqual(cached([updatedGroup, otherGroup]));
+                expect(detailOf(otherGroup.id)).toEqual(toTestGroup(otherGroup));
+                expect(detailOf(group.id)).toEqual(toTestGroup(updatedGroup));
             });
     });
 
@@ -227,8 +273,8 @@ describe('groupsStore', () => {
             .updateGroup({ groupId: group.id, simplifyDebts: false })
             .then(result => {
                 expect(result).toBe(updatedGroup);
-                expect(listGroups()).toEqual([updatedGroup]);
-                expect(detailOf(group.id)).toEqual(updatedGroup);
+                expect(listGroups()).toEqual(cached([updatedGroup]));
+                expect(detailOf(group.id)).toEqual(toTestGroup(updatedGroup));
                 expect(useLoadingStore.getState().group.update).toBe('fetched');
             });
     });
@@ -244,8 +290,8 @@ describe('groupsStore', () => {
         )
             .rejects.toBe(requestError)
             .then(() => {
-                expect(listGroups()).toEqual([group]);
-                expect(detailOf(group.id)).toEqual(group);
+                expect(listGroups()).toEqual(cached([group]));
+                expect(detailOf(group.id)).toEqual(toTestGroup(group));
                 expect(useErrorsStore.getState().errors.group.update).toEqual(
                     expect.objectContaining({ message: expect.any(String) }),
                 );
@@ -320,13 +366,13 @@ describe('groupsStore', () => {
     test('a successful rejoin restores the group after a definitive detail denial', () => {
         seedList([group]);
         seedDetail(group);
-        vi.mocked(chipinApi.fetchApiUserGroupById).mockRejectedValue({
+        vi.mocked(readGroup).mockRejectedValue({
             isAxiosError: true,
             response: { status: 403 },
         });
         const rejoined = { ...group, role: 'MEMBER' } satisfies Group;
         vi.mocked(chipinApi.inviteApiUserToGroup).mockResolvedValue(rejoined);
-        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({
+        vi.mocked(readList).mockResolvedValue({
             items: [rejoined],
             nextCursor: null,
         });
@@ -337,28 +383,28 @@ describe('groupsStore', () => {
                 return useGroupsStore.getState().joinGroup({ inviteToken: group.inviteToken });
             })
             .then(() => {
-                expect(listGroups()).toEqual([rejoined]);
-                expect(detailOf(group.id)).toEqual(rejoined);
+                expect(listGroups()).toEqual(cached([rejoined]));
+                expect(detailOf(group.id)).toEqual(toTestGroup(rejoined));
             });
     });
 
     test('resolves a successful join when the groups refresh after it fails', () => {
         const joined = { ...group, role: 'MEMBER' } satisfies Group;
         vi.mocked(chipinApi.inviteApiUserToGroup).mockResolvedValue(joined);
-        vi.mocked(chipinApi.fetchApiUserGroups).mockRejectedValueOnce(new Error('list failed'));
+        vi.mocked(readList).mockRejectedValueOnce(new Error('list failed'));
 
         return useGroupsStore
             .getState()
             .joinGroup({ inviteToken: group.inviteToken })
             .then(result => {
                 expect(result).toBe(joined);
-                expect(listGroups()).toContainEqual(joined);
+                expect(listGroups()).toContainEqual(toTestGroup(joined));
             });
     });
 
     test('ignores an old detail success after a newer canonical rejoin', () => {
         let resolveDetail: ((result: Group) => void) | undefined;
-        vi.mocked(chipinApi.fetchApiUserGroupById).mockImplementationOnce(
+        vi.mocked(readGroup).mockImplementationOnce(
             () =>
                 new Promise(resolve => {
                     resolveDetail = resolve;
@@ -366,7 +412,7 @@ describe('groupsStore', () => {
         );
         const rejoined = { ...group, role: 'MEMBER', name: 'Joined again' } satisfies Group;
         vi.mocked(chipinApi.inviteApiUserToGroup).mockResolvedValue(rejoined);
-        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({
+        vi.mocked(readList).mockResolvedValue({
             items: [rejoined],
             nextCursor: null,
         });
@@ -382,14 +428,14 @@ describe('groupsStore', () => {
                 return oldDetail;
             })
             .then(() => {
-                expect(listGroups()).toEqual([rejoined]);
-                expect(detailOf(group.id)).toEqual(rejoined);
+                expect(listGroups()).toEqual(cached([rejoined]));
+                expect(detailOf(group.id)).toEqual(toTestGroup(rejoined));
             });
     });
 
     test('ignores an old detail denial after a successful rejoin of the same group', () => {
         let rejectDetail: ((reason: unknown) => void) | undefined;
-        vi.mocked(chipinApi.fetchApiUserGroupById).mockImplementationOnce(
+        vi.mocked(readGroup).mockImplementationOnce(
             () =>
                 new Promise((_resolve, reject) => {
                     rejectDetail = reject;
@@ -397,7 +443,7 @@ describe('groupsStore', () => {
         );
         const rejoined = { ...group, role: 'MEMBER' } satisfies Group;
         vi.mocked(chipinApi.inviteApiUserToGroup).mockResolvedValue(rejoined);
-        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({
+        vi.mocked(readList).mockResolvedValue({
             items: [rejoined],
             nextCursor: null,
         });
@@ -413,14 +459,14 @@ describe('groupsStore', () => {
                 return oldDetail;
             })
             .then(() => {
-                expect(listGroups()).toEqual([rejoined]);
-                expect(detailOf(group.id)).toEqual(rejoined);
+                expect(listGroups()).toEqual(cached([rejoined]));
+                expect(detailOf(group.id)).toEqual(toTestGroup(rejoined));
             });
     });
 
     test('reconciles an old list with a newer group edit while retaining other groups', () => {
         let resolveList: ((data: { items: Group[]; nextCursor: null }) => void) | undefined;
-        vi.mocked(chipinApi.fetchApiUserGroups).mockImplementationOnce(
+        vi.mocked(readList).mockImplementationOnce(
             () =>
                 new Promise(resolve => {
                     resolveList = resolve;
@@ -429,7 +475,7 @@ describe('groupsStore', () => {
         const otherGroup = { ...group, id: 'other-group' } satisfies Group;
         const updated = { ...group, name: 'Updated group' } satisfies Group;
         vi.mocked(groupsApi.updateGroup).mockResolvedValue(updated);
-        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValueOnce({
+        vi.mocked(readList).mockResolvedValueOnce({
             items: [{ ...group, name: 'Old name' }, otherGroup],
             nextCursor: null,
         });
@@ -448,15 +494,15 @@ describe('groupsStore', () => {
                 return oldList;
             })
             .then(() => {
-                expect(detailOf(group.id)).toEqual(updated);
-                expect(listGroups()).toEqual([updated, otherGroup]);
+                expect(detailOf(group.id)).toEqual(toTestGroup(updated));
+                expect(listGroups()).toEqual(cached([updated, otherGroup]));
             });
     });
 
     test('keeps an edited group while an old list request is pending', () => {
         const otherGroup = { ...group, id: 'group-2' } satisfies Group;
         const updated = { ...group, name: 'Canonical update' } satisfies Group;
-        vi.mocked(chipinApi.fetchApiUserGroups)
+        vi.mocked(readList)
             .mockImplementationOnce(() => new Promise(() => undefined))
             .mockResolvedValueOnce({
                 items: [{ ...group, name: 'Outdated list copy' }, otherGroup],
@@ -471,15 +517,15 @@ describe('groupsStore', () => {
             .updateGroup({ groupId: group.id, groupName: updated.name });
 
         return Promise.all([staleList, pendingUpdate]).then(() => {
-            expect(chipinApi.fetchApiUserGroups).toHaveBeenCalledTimes(2);
-            expect(listGroups()).toEqual([updated, otherGroup]);
+            expect(readList).toHaveBeenCalledTimes(2);
+            expect(listGroups()).toEqual(cached([updated, otherGroup]));
         });
     });
 
     test('keeps an uploaded cover while an old list request is pending', () => {
         const otherGroup = { ...group, id: 'group-2' } satisfies Group;
         const updated = { ...group, coverUrl: 'https://cdn.example.com/new.webp' } satisfies Group;
-        vi.mocked(chipinApi.fetchApiUserGroups)
+        vi.mocked(readList)
             .mockImplementationOnce(() => new Promise(() => undefined))
             .mockResolvedValueOnce({
                 items: [group, otherGroup],
@@ -495,14 +541,14 @@ describe('groupsStore', () => {
         });
 
         return Promise.all([staleList, pendingCover]).then(() => {
-            expect(chipinApi.fetchApiUserGroups).toHaveBeenCalledTimes(2);
-            expect(listGroups()).toEqual([updated, otherGroup]);
+            expect(readList).toHaveBeenCalledTimes(2);
+            expect(listGroups()).toEqual(cached([updated, otherGroup]));
         });
     });
 
     test('keeps a successful edit over an older in-flight group detail GET', () => {
         let resolveDetail: ((group: Group) => void) | undefined;
-        vi.mocked(chipinApi.fetchApiUserGroupById).mockImplementationOnce(
+        vi.mocked(readGroup).mockImplementationOnce(
             () =>
                 new Promise(resolve => {
                     resolveDetail = resolve;
@@ -510,7 +556,7 @@ describe('groupsStore', () => {
         );
         const updated = { ...group, name: 'Edited' } satisfies Group;
         vi.mocked(groupsApi.updateGroup).mockResolvedValue(updated);
-        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({
+        vi.mocked(readList).mockResolvedValue({
             items: [updated],
             nextCursor: null,
         });
@@ -526,14 +572,14 @@ describe('groupsStore', () => {
                 return oldDetail;
             })
             .then(() => {
-                expect(listGroups()).toEqual([updated]);
-                expect(detailOf(group.id)).toEqual(updated);
+                expect(listGroups()).toEqual(cached([updated]));
+                expect(detailOf(group.id)).toEqual(toTestGroup(updated));
             });
     });
 
     test('keeps a successful cover upload over an older in-flight group detail GET', () => {
         let resolveDetail: ((group: Group) => void) | undefined;
-        vi.mocked(chipinApi.fetchApiUserGroupById).mockImplementationOnce(
+        vi.mocked(readGroup).mockImplementationOnce(
             () =>
                 new Promise(resolve => {
                     resolveDetail = resolve;
@@ -544,7 +590,7 @@ describe('groupsStore', () => {
             coverUrl: 'https://cdn.example.com/edited.webp',
         } satisfies Group;
         vi.mocked(groupsApi.uploadGroupCover).mockResolvedValue(updated);
-        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({
+        vi.mocked(readList).mockResolvedValue({
             items: [updated],
             nextCursor: null,
         });
@@ -563,14 +609,14 @@ describe('groupsStore', () => {
                 return oldDetail;
             })
             .then(() => {
-                expect(listGroups()).toEqual([updated]);
-                expect(detailOf(group.id)).toEqual(updated);
+                expect(listGroups()).toEqual(cached([updated]));
+                expect(detailOf(group.id)).toEqual(toTestGroup(updated));
             });
     });
 
     test('ignores a late detail 404 after successful group edit', () => {
         let rejectDetail: ((error: unknown) => void) | undefined;
-        vi.mocked(chipinApi.fetchApiUserGroupById).mockImplementationOnce(
+        vi.mocked(readGroup).mockImplementationOnce(
             () =>
                 new Promise((_resolve, reject) => {
                     rejectDetail = reject;
@@ -578,7 +624,7 @@ describe('groupsStore', () => {
         );
         const updated = { ...group, name: 'Edited' } satisfies Group;
         vi.mocked(groupsApi.updateGroup).mockResolvedValue(updated);
-        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({
+        vi.mocked(readList).mockResolvedValue({
             items: [updated],
             nextCursor: null,
         });
@@ -594,8 +640,8 @@ describe('groupsStore', () => {
                 return oldDetail;
             })
             .then(() => {
-                expect(listGroups()).toEqual([updated]);
-                expect(detailOf(group.id)).toEqual(updated);
+                expect(listGroups()).toEqual(cached([updated]));
+                expect(detailOf(group.id)).toEqual(toTestGroup(updated));
             });
     });
 
@@ -606,12 +652,12 @@ describe('groupsStore', () => {
         });
         const otherGroup = { ...group, id: 'other-group' } satisfies Group;
         seedList([group, otherGroup]);
-        vi.mocked(chipinApi.fetchApiUserGroups)
+        vi.mocked(readList)
             .mockImplementationOnce(() => listRequest)
             // The server no longer lists the group the detail denied.
             .mockResolvedValueOnce({ items: [otherGroup], nextCursor: null })
             .mockResolvedValue({ items: [group, otherGroup], nextCursor: null });
-        vi.mocked(chipinApi.fetchApiUserGroupById).mockRejectedValue({
+        vi.mocked(readGroup).mockRejectedValue({
             isAxiosError: true,
             response: { status: 404 },
         });
@@ -625,14 +671,14 @@ describe('groupsStore', () => {
             .then(() =>
                 vi.waitFor(() => {
                     // The old list was cancelled; the reload after the denial read the server.
-                    expect(chipinApi.fetchApiUserGroups).toHaveBeenCalledTimes(2);
-                    expect(listGroups()).toEqual([otherGroup]);
+                    expect(readList).toHaveBeenCalledTimes(2);
+                    expect(listGroups()).toEqual(cached([otherGroup]));
                 }),
             )
             .then(() =>
                 // A later list read decides again (the group can come back).
                 refetchList().then(() => {
-                    expect(listGroups()).toEqual([group, otherGroup]);
+                    expect(listGroups()).toEqual(cached([group, otherGroup]));
                 }),
             );
     });
@@ -643,13 +689,13 @@ describe('groupsStore', () => {
         const preExpense = { ...group, name: 'Before the expense' } satisfies Group;
         const postExpense = { ...group, name: 'After the expense' } satisfies Group;
         seedList([group]);
-        vi.mocked(chipinApi.fetchApiUserGroupById).mockImplementationOnce(
+        vi.mocked(readGroup).mockImplementationOnce(
             () =>
                 new Promise(resolve => {
                     resolveDetail = resolve;
                 }),
         );
-        vi.mocked(chipinApi.fetchApiUserGroups)
+        vi.mocked(readList)
             .mockImplementationOnce(
                 () =>
                     new Promise(resolve => {
@@ -661,6 +707,11 @@ describe('groupsStore', () => {
         // A list load starts before the detail read and finishes after it was sent.
         const listLoad = refetchList();
         const detail = readDetail(group.id);
+        // Both requests reached the server.
+        await vi.waitFor(() => {
+            expect(resolveFirstList).toBeDefined();
+            expect(resolveDetail).toBeDefined();
+        });
         resolveFirstList?.({ items: [preExpense], nextCursor: null });
         await listLoad;
         resolveDetail?.(postExpense);
@@ -668,10 +719,10 @@ describe('groupsStore', () => {
 
         // The detail answer is not written over the list; one more list load settles it.
         await vi.waitFor(() => {
-            expect(chipinApi.fetchApiUserGroups).toHaveBeenCalledTimes(2);
-            expect(listGroups()).toEqual([postExpense]);
+            expect(readList).toHaveBeenCalledTimes(2);
+            expect(listGroups()).toEqual(cached([postExpense]));
         });
-        expect(detailOf(group.id)).toEqual(postExpense);
+        expect(detailOf(group.id)).toEqual(toTestGroup(postExpense));
     });
 
     test('a created group is listed once and becomes its detail', () => {
@@ -684,8 +735,8 @@ describe('groupsStore', () => {
             .getState()
             .createGroup({ groupName: created.name })
             .then(() => {
-                expect(listGroups()).toEqual([created]);
-                expect(detailOf(created.id)).toEqual(created);
+                expect(listGroups()).toEqual(cached([created]));
+                expect(detailOf(created.id)).toEqual(toTestGroup(created));
             });
     });
 
@@ -694,7 +745,7 @@ describe('groupsStore', () => {
         const joined = { ...group, role: 'MEMBER', name: 'Current name' } satisfies Group;
         seedList([alreadyListed, alreadyListed]);
         vi.mocked(chipinApi.inviteApiUserToGroup).mockResolvedValue(joined);
-        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({
+        vi.mocked(readList).mockResolvedValue({
             items: [joined],
             nextCursor: null,
         });
@@ -705,8 +756,8 @@ describe('groupsStore', () => {
 
         return request.then(result => {
             expect(result).toEqual(joined);
-            expect(listGroups()).toEqual([joined]);
-            expect(detailOf(group.id)).toEqual(joined);
+            expect(listGroups()).toEqual(cached([joined]));
+            expect(detailOf(group.id)).toEqual(toTestGroup(joined));
             expect(useLoadingStore.getState().group.join).toBe('fetched');
         });
     });
@@ -777,7 +828,7 @@ describe('groupsStore', () => {
             .removeGroup({ groupId: group.id })
             .then(() => {
                 expect(detailOf(group.id)).toBeUndefined();
-                expect(detailOf(other.id)).toEqual(other);
+                expect(detailOf(other.id)).toEqual(toTestGroup(other));
                 expect(useUiPrefsStore.getState().lastGroupId).toBeNull();
             });
     });
@@ -798,7 +849,7 @@ describe('groupsStore', () => {
     test('removes a group and refetches every affected backend resource', () => {
         const fetchSetActivity = vi.fn().mockResolvedValue(undefined);
         seedList([group]);
-        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({ items: [], nextCursor: null });
+        vi.mocked(readList).mockResolvedValue({ items: [], nextCursor: null });
         vi.mocked(chipinApi.removeApiGroup).mockResolvedValue(undefined);
         useActivityStore.setState({ fetchSetActivity });
         vi.mocked(invalidateKnownUsers).mockResolvedValue(undefined);
@@ -807,7 +858,7 @@ describe('groupsStore', () => {
             .getState()
             .removeGroup({ groupId: group.id })
             .then(() => {
-                expect(chipinApi.fetchApiUserGroups).toHaveBeenCalledOnce();
+                expect(readList).toHaveBeenCalledOnce();
                 expect(listGroups()).toEqual([]);
                 expect(invalidateKnownUsers).toHaveBeenCalledOnce();
                 expect(userCache.isDashboardInvalidated()).toBe(true);
@@ -826,7 +877,7 @@ describe('groupsStore', () => {
         const rejoined = { ...group, role: 'MEMBER', name: 'Rejoined group' } satisfies Group;
         vi.mocked(chipinApi.inviteApiUserToGroup).mockResolvedValue(rejoined);
         seedDetail(group);
-        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({
+        vi.mocked(readList).mockResolvedValue({
             items: [rejoined],
             nextCursor: null,
         });
@@ -839,13 +890,13 @@ describe('groupsStore', () => {
             .getState()
             .joinGroup({ inviteToken: group.inviteToken })
             .then(() => {
-                expect(detailOf(group.id)).toEqual(rejoined);
+                expect(detailOf(group.id)).toEqual(toTestGroup(rejoined));
                 resolveLeave?.();
                 return leaveRequest;
             })
             .then(() => {
-                expect(detailOf(group.id)).toEqual(rejoined);
-                expect(listGroups()).toEqual([rejoined]);
+                expect(detailOf(group.id)).toEqual(toTestGroup(rejoined));
+                expect(listGroups()).toEqual(cached([rejoined]));
             });
     });
 
@@ -860,7 +911,7 @@ describe('groupsStore', () => {
         const otherGroup = { ...group, id: 'group-2', name: 'Other group' } satisfies Group;
         vi.mocked(chipinApi.inviteApiUserToGroup).mockResolvedValue(otherGroup);
         seedDetail(group);
-        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({
+        vi.mocked(readList).mockResolvedValue({
             items: [otherGroup],
             nextCursor: null,
         });
@@ -878,7 +929,7 @@ describe('groupsStore', () => {
             })
             .then(() => {
                 expect(detailOf(group.id)).toBeUndefined();
-                expect(detailOf(otherGroup.id)).toEqual(otherGroup);
+                expect(detailOf(otherGroup.id)).toEqual(toTestGroup(otherGroup));
             });
     });
 
@@ -887,7 +938,7 @@ describe('groupsStore', () => {
         useActivityStore.setState({
             fetchSetActivity: vi.fn().mockResolvedValue(undefined),
         });
-        vi.mocked(chipinApi.fetchApiUserGroups).mockResolvedValue({
+        vi.mocked(readList).mockResolvedValue({
             items: [],
             nextCursor: null,
         });

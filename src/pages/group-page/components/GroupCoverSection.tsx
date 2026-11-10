@@ -2,7 +2,7 @@ import { Badge, Box, Flex, Heading, IconButton, Skeleton, Text } from '@radix-ui
 import { PencilIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { Group } from 'api/chipin.types';
+import type { Group } from 'entities/groups';
 
 import { BackButton } from 'basics';
 import { CreateUpdateGroupModal } from 'components/modals/create-update-group-modal';

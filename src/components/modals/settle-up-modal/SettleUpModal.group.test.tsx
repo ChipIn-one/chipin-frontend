@@ -2,10 +2,12 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import type { Group, SelfUser } from 'api/chipin.types';
+import type { SelfUser } from 'api/chipin.types';
+import type { Group } from 'entities/groups';
 import { useActivityStore } from 'store/activity-store';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
+import { groupBalances } from 'test/groupFixtures';
 import { seedSelfUser } from 'test/selfUserSeed';
 
 import SettleUpModal from './SettleUpModal';
@@ -69,9 +71,7 @@ const group: Group = {
                 displayName: 'Owed Person Full',
                 firstName: 'Owed',
             },
-            balancesByCurrency: {
-                EUR: { currency: 'EUR', netBalance: 25 },
-            },
+            balancesByCurrency: groupBalances({ EUR: 25 }),
         },
         {
             user: {
@@ -80,12 +80,12 @@ const group: Group = {
                 displayName: 'Debtor Person Full',
                 firstName: 'Debtor',
             },
-            balancesByCurrency: {
-                USD: { currency: 'USD', netBalance: -823_226.67 },
-                EUR: { currency: 'EUR', netBalance: -30.1234 },
-                BDT: { currency: 'BDT', netBalance: -90 },
-                AFN: { currency: 'AFN', netBalance: -6 },
-            },
+            balancesByCurrency: groupBalances({
+                USD: -823_226.67,
+                EUR: -30.1234,
+                BDT: -90,
+                AFN: -6,
+            }),
         },
     ],
     createdAt: 1,

@@ -10,6 +10,7 @@ import type { ActivityPreview } from 'entities/activity';
 import { legacyActivityPreview } from 'entities/balance';
 import type { GroupActivityResult } from 'hooks/useGroupDetail';
 import { legacyPreview } from 'test/activityFixtures';
+import { toTestGroup } from 'test/groupFixtures';
 
 import GroupTabsContent from './GroupTabsContent';
 
@@ -180,7 +181,7 @@ const renderTabs = (
 ) =>
     render(
         <GroupTabsContent
-            group={target}
+            group={toTestGroup(target)}
             isGroupDataLoading={isGroupDataLoading}
             activity={activityOf(target, overrides)}
         />,

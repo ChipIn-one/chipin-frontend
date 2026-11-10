@@ -1,6 +1,6 @@
-import type { Group } from 'api/chipin.types';
 import { legacyRatesFromDecimals } from 'entities/balance';
 import { EMPTY_CURRENCY_RATES, useCurrencyRatesQuery } from 'entities/currency-rates';
+import type { Group } from 'entities/groups';
 import { userCurrency } from 'entities/users';
 import { useUserSetting } from 'hooks/useSelfUser';
 import { calcGroupSummary, selectGroupBalances } from 'store/groupsSelectors';

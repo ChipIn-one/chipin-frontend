@@ -1,7 +1,8 @@
 import { expect, test } from 'vitest';
 
-import type { Group } from 'api/chipin.types';
+import type { Group } from 'entities/groups';
 import { getOrThrow } from 'test/getOrThrow';
+import { groupBalances } from 'test/groupFixtures';
 
 import { selectGroupBalances, selectGroupSettlementOptions } from './groupsSelectors';
 
@@ -25,16 +26,11 @@ test('aggregates group member balances by currency and direction', () => {
         members: [
             {
                 user,
-                balancesByCurrency: {
-                    USD: { currency: 'USD', netBalance: 40 },
-                },
+                balancesByCurrency: groupBalances({ USD: 40 }),
             },
             {
                 user: { ...user, id: 'user-2' },
-                balancesByCurrency: {
-                    USD: { currency: 'USD', netBalance: 2.75 },
-                    EUR: { currency: 'EUR', netBalance: -10 },
-                },
+                balancesByCurrency: groupBalances({ USD: 2.75, EUR: -10 }),
             },
         ],
         createdAt: 1,
@@ -77,15 +73,11 @@ test('keeps opposite balances in the same currency as separate debts', () => {
             { user: currentUser, balancesByCurrency: {} },
             {
                 user: { ...currentUser, id: 'user-2' },
-                balancesByCurrency: {
-                    USD: { currency: 'USD', netBalance: 20 },
-                },
+                balancesByCurrency: groupBalances({ USD: 20 }),
             },
             {
                 user: { ...currentUser, id: 'user-3' },
-                balancesByCurrency: {
-                    USD: { currency: 'USD', netBalance: -20 },
-                },
+                balancesByCurrency: groupBalances({ USD: -20 }),
             },
         ],
         createdAt: 1,
@@ -127,28 +119,19 @@ test('groups settlement options by direction and splits mixed member balances', 
         members: [
             {
                 user: currentUser,
-                balancesByCurrency: {
-                    USD: { currency: 'USD', netBalance: -100 },
-                },
+                balancesByCurrency: groupBalances({ USD: -100 }),
             },
             {
                 user: { ...currentUser, id: 'user-2', displayName: 'Owes Alice' },
-                balancesByCurrency: {
-                    EUR: { currency: 'EUR', netBalance: 25 },
-                },
+                balancesByCurrency: groupBalances({ EUR: 25 }),
             },
             {
                 user: { ...currentUser, id: 'user-3', displayName: 'Settled' },
-                balancesByCurrency: {
-                    USD: { currency: 'USD', netBalance: 0 },
-                },
+                balancesByCurrency: groupBalances({ USD: 0 }),
             },
             {
                 user: { ...currentUser, id: 'user-4', displayName: 'Alice Owes' },
-                balancesByCurrency: {
-                    USD: { currency: 'USD', netBalance: -12 },
-                    EUR: { currency: 'EUR', netBalance: 8 },
-                },
+                balancesByCurrency: groupBalances({ USD: -12, EUR: 8 }),
             },
         ],
         createdAt: 1,
@@ -204,28 +187,19 @@ test('groups settlement options by direction and splits mixed member balances', 
         members: [
             {
                 user: currentUser,
-                balancesByCurrency: {
-                    USD: { currency: 'USD', netBalance: -100 },
-                },
+                balancesByCurrency: groupBalances({ USD: -100 }),
             },
             {
                 user: { ...currentUser, id: 'user-2', displayName: 'Owes Alice' },
-                balancesByCurrency: {
-                    EUR: { currency: 'EUR', netBalance: 25 },
-                },
+                balancesByCurrency: groupBalances({ EUR: 25 }),
             },
             {
                 user: { ...currentUser, id: 'user-3', displayName: 'Settled' },
-                balancesByCurrency: {
-                    USD: { currency: 'USD', netBalance: 0 },
-                },
+                balancesByCurrency: groupBalances({ USD: 0 }),
             },
             {
                 user: { ...currentUser, id: 'user-4', displayName: 'Alice Owes' },
-                balancesByCurrency: {
-                    USD: { currency: 'USD', netBalance: -12 },
-                    EUR: { currency: 'EUR', netBalance: 8 },
-                },
+                balancesByCurrency: groupBalances({ USD: -12, EUR: 8 }),
             },
         ],
         createdAt: 1,
@@ -281,18 +255,11 @@ test('keeps non-zero group balances and skips float-noise zero balances', () => 
         members: [
             {
                 user,
-                balancesByCurrency: {
-                    USD: { currency: 'USD', netBalance: 0.1 },
-                    GBP: { currency: 'GBP', netBalance: 5.5e-17 },
-                },
+                balancesByCurrency: groupBalances({ USD: 0.1, GBP: 5.5e-17 }),
             },
             {
                 user: { ...user, id: 'user-2' },
-                balancesByCurrency: {
-                    USD: { currency: 'USD', netBalance: 0.2 },
-                    EUR: { currency: 'EUR', netBalance: -10 },
-                    GBP: { currency: 'GBP', netBalance: -0.00004 },
-                },
+                balancesByCurrency: groupBalances({ USD: 0.2, EUR: -10, GBP: -0.00004 }),
             },
         ],
         createdAt: 1,

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { Group } from 'api/chipin.types';
+import type { Group } from 'entities/groups';
 import {
     selectGroupAdding,
     selectGroupCoverUploading,

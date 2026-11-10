@@ -1,8 +1,13 @@
-import type { Group } from 'api/chipin.types';
+// Any group shape with members (the domain group of `entities/groups`, a test fixture).
+interface GroupWithMembers {
+    readonly members: readonly unknown[];
+}
 
-const isGroupExpenseTarget = (group: Group | null | undefined): group is Group =>
-    Boolean(group && group.members.length >= 2);
+const isGroupExpenseTarget = <G extends GroupWithMembers>(
+    group: G | null | undefined,
+): group is G => Boolean(group && group.members.length >= 2);
 
-const hasGroupExpenseTarget = (groups: Group[]): boolean => groups.some(isGroupExpenseTarget);
+const hasGroupExpenseTarget = (groups: readonly GroupWithMembers[]): boolean =>
+    groups.some(isGroupExpenseTarget);
 
 export { hasGroupExpenseTarget, isGroupExpenseTarget };

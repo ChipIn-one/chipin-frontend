@@ -2,9 +2,9 @@ import type {
     CreateSettlementParams,
     FriendBalance,
     FriendUser,
-    Group,
     UserSummary,
 } from 'api/chipin.types';
+import type { Group } from 'entities/groups';
 
 export type SettlementUser = Pick<UserSummary, 'id' | 'displayName' | 'picture'>;
 

@@ -1,4 +1,4 @@
-import type { Group } from 'api/chipin.types';
+import type { Group } from 'entities/groups';
 import { useGroupInvite } from 'hooks/pwaHooks';
 
 import { InviteOnboarding } from 'components/invite-onboarding';

@@ -1,17 +1,15 @@
 // A group's detail and activity for the UI (spec 03 §6 row 4). Like the groups list
 // (`useGroupsList`), the queries send a request only while signed in and on the user's persisted
 // client: signed out or on another client nothing is read.
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
-import type { Group } from 'api/chipin.types';
 import type { ActivityPreview } from 'entities/activity';
-import { legacyActivityPreview } from 'entities/balance';
 import {
+    flattenGroupActivity,
+    type Group,
     type GroupActivityPage,
-    groupsKeys,
     isGroupDeniedError,
-    seedGroupActivity,
     useGroupActivityQuery,
     useGroupDetailQuery,
 } from 'entities/groups';
@@ -76,41 +74,23 @@ export interface GroupActivityResult {
     loadMore: () => void;
 }
 
-// LEGACY until 03-10c: the group (detail or listed) still comes through the legacy `src/api` layer,
-// so the activity page it carries has number amounts; the legacy bridge carries it into the domain.
-const toEmbeddedPage = (
-    recent: Group['recentActivities'],
-): GroupActivityPage & { items: ActivityPreview[] } => ({
-    items: recent.items.map(legacyActivityPreview),
-    nextCursor: recent.nextCursor,
-});
+// The previews of the page a group carries (each parent once, invalid items left out).
+const embeddedPreviews = (recent: GroupActivityPage): ActivityPreview[] =>
+    flattenGroupActivity({ pages: [recent], pageParams: [null] });
 
 /**
- * The activity of `groupId`, read once its detail is loaded (`hasDetail`): the page the detail
- * carries (`recent`) seeds the first page, so opening a group sends one request. Until the
- * activity has data, `recent` (then the listed group's recent activity) is shown, without more
- * pages.
+ * The activity of `groupId`, read once its detail is loaded (`hasDetail`): the detail read has
+ * seeded the first page with the page it carries (`recent`), so opening a group sends one request.
+ * Until the activity has data, `recent` (then the listed group's recent activity) is shown, without
+ * more pages.
  */
 export const useGroupActivity = (
     groupId: string,
     hasDetail: boolean,
-    recent?: Group['recentActivities'],
+    recent?: GroupActivityPage,
 ): GroupActivityResult => {
-    const client = useQueryClient();
     const isEnabled = useIsGroupQueryEnabled() && hasDetail;
-    const embedded = useMemo(() => recent && toEmbeddedPage(recent), [recent]);
-
-    // Declared before the query: React runs effects in order, so the seed lands before the
-    // enabled query decides whether to fetch its first page. The seed keeps the age of the detail
-    // read that carried it (a detail restored from the cache gives a stale seed, then a fetch).
-    useEffect(() => {
-        const detailUpdatedAt = client.getQueryState(groupsKeys.detail(groupId))?.dataUpdatedAt;
-
-        if (isEnabled && embedded && detailUpdatedAt) {
-            seedGroupActivity(client, groupId, embedded, detailUpdatedAt);
-        }
-    }, [client, embedded, groupId, isEnabled]);
-
+    const embedded = useMemo(() => recent && embeddedPreviews(recent), [recent]);
     const query = useGroupActivityQuery(groupId, { enabled: isEnabled });
     const { fetchNextPage, isFetching } = query;
     const loadMore = useCallback(() => {
@@ -121,7 +101,7 @@ export const useGroupActivity = (
     const items = isEnabled ? query.data : undefined;
 
     return {
-        items: items ?? embedded?.items ?? NO_ACTIVITY,
+        items: items ?? embedded ?? NO_ACTIVITY,
         hasMore: items !== undefined && query.hasNextPage,
         isFetching: isEnabled && isFetching,
         isNextPageLoading: query.isFetchingNextPage,

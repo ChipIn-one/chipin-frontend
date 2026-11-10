@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
 
-import type { Group } from 'api/chipin.types';
+import type { Group as LegacyGroup } from 'api/chipin.types';
+import type { Group } from 'entities/groups';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupCoverUploading, selectGroupUpdating } from 'store/loadingSelectors';
@@ -43,7 +44,7 @@ const UpdateGroupForm = ({ group: editedGroup, onClose }: Props) => {
         setUploadProgress,
     } = useGroupCoverDraft(isSaving);
 
-    const uploadSelectedCover = (group: Group): Promise<Group> => {
+    const uploadSelectedCover = (group: LegacyGroup): Promise<LegacyGroup> => {
         if (!selectedCoverFile) {
             return Promise.resolve(group);
         }
@@ -62,7 +63,7 @@ const UpdateGroupForm = ({ group: editedGroup, onClose }: Props) => {
         });
     };
 
-    const onSaveSuccess = (savedGroup: Group) => {
+    const onSaveSuccess = (savedGroup: LegacyGroup) => {
         onClose();
         toast.success(t('toasts:group.updated', { name: savedGroup.name }));
     };

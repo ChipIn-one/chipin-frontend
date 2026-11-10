@@ -14,7 +14,7 @@ import { LogOutIcon, Trash2Icon, UserMinusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
-import type { Group } from 'api/chipin.types';
+import type { Group } from 'entities/groups';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
 
 import GroupRoleBadge from 'basics/GroupRoleBadge';

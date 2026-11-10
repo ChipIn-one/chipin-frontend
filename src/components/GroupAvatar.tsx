@@ -1,7 +1,7 @@
 import { Avatar } from '@radix-ui/themes';
 import { UsersIcon } from 'lucide-react';
 
-import type { Group } from 'api/chipin.types';
+import type { Group } from 'entities/groups';
 
 interface Props {
     group: Pick<Group, 'coverUrl' | 'name'>;

@@ -1,5 +1,4 @@
 import type { BalanceEntry, CurrenciesRates } from 'api/chipin.raw.types';
-import type { Group, GroupUser } from 'api/chipin.types';
 import {
     GROUP_CARD_FILTER_BUCKETS,
     GROUP_DEBT_FILTERS,
@@ -9,18 +8,22 @@ import {
     type GroupDebtFilter,
     type GroupNetConversionState,
 } from 'constants/groups';
+import type { ActivityItem, ActivityPreview } from 'entities/activity';
 import {
+    aggregateByCurrency,
+    type Balance,
+    type BalancePartition,
     legacyAmountFromMoney,
     legacyCurrencyOrDefault,
     legacyEntryFromMoney,
-    legacyPartitionEntries,
     legacyRateLookup,
-    legacySumEntriesByCurrency,
     legacySummarizeEntries,
+    partitionBalances,
     summarizeBalances,
 } from 'entities/balance';
+import type { Group, GroupMember, GroupUser } from 'entities/groups';
 import { sortBalancesByCurrency } from 'helpers/currencies';
-import { displaySign } from 'shared/money';
+import { displaySign, type Money } from 'shared/money';
 
 export interface GroupSettlementOption {
     user: GroupUser;
@@ -31,6 +34,25 @@ export interface GroupSettlementOptions {
     youOwe: GroupSettlementOption[];
     owedToYou: GroupSettlementOption[];
 }
+
+const memberBalances = (member: GroupMember): Balance[] => Object.values(member.balancesByCurrency);
+
+const netOf = (balance: Balance): Money => balance.net;
+
+// Exact per-currency sums (first-appearance order).
+const sumByCurrency = (balances: readonly Balance[]): Money[] =>
+    aggregateByCurrency(balances, netOf).map(({ total }) => total);
+
+/** A member's balances split by `displaySign`, as legacy entries for the number-based display. */
+export const selectMemberBalancePartition = (
+    member: GroupMember,
+): BalancePartition<BalanceEntry> => {
+    const { owed, owe, settled } = partitionBalances(memberBalances(member), netOf);
+    const toEntries = (balances: readonly Balance[]) =>
+        balances.map(balance => legacyEntryFromMoney(balance.net));
+
+    return { owed: toEntries(owed), owe: toEntries(owe), settled: toEntries(settled) };
+};
 
 export const selectGroupSettlementOptions = (
     group: Group,
@@ -43,9 +65,8 @@ export const selectGroupSettlementOptions = (
             return;
         }
 
-        const { owe: balancesYouOwe, owed: balancesOwedToYou } = legacyPartitionEntries(
-            Object.values(member.balancesByCurrency),
-        );
+        const { owe: balancesYouOwe, owed: balancesOwedToYou } =
+            selectMemberBalancePartition(member);
 
         if (balancesYouOwe.length > 0) {
             settlementOptions.youOwe.push({
@@ -70,15 +91,14 @@ export interface GroupBalances {
     oweEntries: BalanceEntry[];
 }
 
-const groupMemberBalances = (group: Group): BalanceEntry[] =>
-    group.members.flatMap(member => Object.values(member.balancesByCurrency));
+const groupMemberBalances = (group: Group): Balance[] => group.members.flatMap(memberBalances);
 
 export const selectGroupBalances = (group: Group): GroupBalances => {
-    const { owed, owe } = legacyPartitionEntries(groupMemberBalances(group));
+    const { owed, owe } = partitionBalances(groupMemberBalances(group), netOf);
 
     return {
-        owedEntries: legacySumEntriesByCurrency(owed).map(legacyEntryFromMoney),
-        oweEntries: legacySumEntriesByCurrency(owe).map(legacyEntryFromMoney),
+        owedEntries: sumByCurrency(owed).map(legacyEntryFromMoney),
+        oweEntries: sumByCurrency(owe).map(legacyEntryFromMoney),
     };
 };
 
@@ -152,10 +172,12 @@ export interface GroupsCardsView {
     settledCount: number;
 }
 
+const isPreview = (item: ActivityItem): item is ActivityPreview => !('kind' in item);
+
 const getLatestGroupActivityAt = (group: Group): number => {
     let latestActivityAt = group.createdAt;
 
-    for (const item of group.recentActivities.items) {
+    for (const item of group.recentActivities.items.filter(isPreview)) {
         if (item.lastEvent.createdAt > latestActivityAt) {
             latestActivityAt = item.lastEvent.createdAt;
         }
@@ -169,8 +191,8 @@ export const selectGroupCardViewModel = (
     { rates, baseCurrency, defaultCurrency, nowTimestamp }: GroupCardViewOptions,
 ): GroupCardViewModel => {
     // Currencies with at least one open member balance, each summed exactly.
-    const { owed, owe } = legacyPartitionEntries(groupMemberBalances(group));
-    const totals = legacySumEntriesByCurrency([...owed, ...owe]);
+    const { owed, owe } = partitionBalances(groupMemberBalances(group), netOf);
+    const totals = sumByCurrency([...owed, ...owe]);
     const activeCurrencyCount = totals.length;
     const isSettled = activeCurrencyCount === 0;
     const [singleTotal] = totals;

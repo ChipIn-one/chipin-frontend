@@ -9,6 +9,7 @@ import { useAuthStore } from 'store/authStore';
 import { useUiPrefsStore } from 'store/ui-prefs';
 import { domainPreview, legacyPreview } from 'test/activityFixtures';
 import { getOrThrow } from 'test/getOrThrow';
+import { toTestGroup } from 'test/groupFixtures';
 import { cachedGroupsList, seedGroupsList } from 'test/groupsList';
 import { setupMswServer } from 'test/mswServer';
 import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
@@ -110,7 +111,7 @@ const detail = {
 const seedDetail = (seeded: Group): void => {
     const client = getDefaultTestQueryClient();
 
-    client.setQueryData(groupsKeys.detail(seeded.id), seeded);
+    client.setQueryData(groupsKeys.detail(seeded.id), toTestGroup(seeded));
     client.setQueryData<GroupActivityData>(groupsKeys.activity(seeded.id), {
         pages: [
             {
@@ -246,7 +247,7 @@ test('a failed detail read keeps showing the listed group and its recent activit
         ...group,
         recentActivities: { items: [preview('listed')], nextCursor: 4 },
     } satisfies Group;
-    seedGroupsList([listedWithActivity]);
+    seedGroupsList([toTestGroup(listedWithActivity)]);
     server.use(http.get('*/groups/group-1', () => HttpResponse.json({}, { status: 500 })));
 
     render(<GroupPage />);

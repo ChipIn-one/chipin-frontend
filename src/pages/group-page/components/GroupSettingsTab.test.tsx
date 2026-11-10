@@ -8,6 +8,7 @@ import type { Group, SelfUser } from 'api/chipin.types';
 import type { GroupsStore } from 'store/groupsStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
+import { toTestGroup } from 'test/groupFixtures';
 
 import GroupSettingsTab from './GroupSettingsTab';
 
@@ -141,7 +142,7 @@ test('lets the owner toggle simplify debts through the store action', () => {
     });
     useGroupsStore.setState({ updateGroup });
 
-    render(<GroupSettingsTab group={group} />);
+    render(<GroupSettingsTab group={toTestGroup(group)} />);
 
     return user.click(screen.getByRole('switch', { name: 'Simplify group debts' })).then(() => {
         expect(updateGroup).toHaveBeenCalledWith({ groupId: 'group-1', simplifyDebts: false });
@@ -151,7 +152,7 @@ test('lets the owner toggle simplify debts through the store action', () => {
 test('shows the setting as disabled for a group member', () => {
     const memberGroup = { ...group, role: 'MEMBER' as const };
 
-    render(<GroupSettingsTab group={memberGroup} />);
+    render(<GroupSettingsTab group={toTestGroup(memberGroup)} />);
 
     expect(screen.getByRole('switch', { name: 'Simplify group debts' })).toHaveProperty(
         'disabled',
@@ -163,7 +164,7 @@ test('shows the setting as disabled for a group member', () => {
 test('disables the setting and exposes loading feedback while the update is pending', () => {
     useLoadingStore.getState().setLoading('group', 'update', 'loading');
 
-    render(<GroupSettingsTab group={group} />);
+    render(<GroupSettingsTab group={toTestGroup(group)} />);
 
     expect(screen.getByRole('switch', { name: 'Simplify group debts' })).toHaveProperty(
         'disabled',
@@ -178,7 +179,7 @@ test('disables the setting and explains an unsupported runtime response', () => 
         simplifyDebts: undefined,
     } as unknown as Group;
 
-    render(<GroupSettingsTab group={unsupportedGroup} />);
+    render(<GroupSettingsTab group={toTestGroup(unsupportedGroup)} />);
 
     expect(screen.getByRole('switch', { name: 'Simplify group debts' })).toHaveProperty(
         'disabled',
@@ -194,7 +195,7 @@ test('shows one localized toast and keeps the confirmed value after update failu
         .mockRejectedValue(new Error('Update failed'));
     useGroupsStore.setState({ updateGroup });
 
-    render(<GroupSettingsTab group={group} />);
+    render(<GroupSettingsTab group={toTestGroup(group)} />);
 
     return user.click(screen.getByRole('switch', { name: 'Simplify group debts' })).then(() =>
         waitFor(() => {
@@ -211,7 +212,7 @@ test('shows one localized toast and keeps the confirmed value after update failu
 });
 
 test('keeps supported invite actions and hides the unfinished add people control', () => {
-    render(<GroupSettingsTab group={group} />);
+    render(<GroupSettingsTab group={toTestGroup(group)} />);
 
     expect(screen.getByRole('button', { name: /Copy invite link/ })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Show QR code/ })).toBeTruthy();
@@ -219,7 +220,7 @@ test('keeps supported invite actions and hides the unfinished add people control
 });
 
 test('GRP-050 shows the delete group action for the owner', () => {
-    render(<GroupSettingsTab group={group} />);
+    render(<GroupSettingsTab group={toTestGroup(group)} />);
 
     expect(screen.getByRole('button', { name: 'Remove group' })).toBeTruthy();
 });
@@ -227,7 +228,7 @@ test('GRP-050 shows the delete group action for the owner', () => {
 test('GRP-050 hides the delete group action for a non-owner member', () => {
     const memberGroup = { ...group, role: 'MEMBER' as const };
 
-    render(<GroupSettingsTab group={memberGroup} />);
+    render(<GroupSettingsTab group={toTestGroup(memberGroup)} />);
 
     expect(screen.queryByRole('button', { name: 'Remove group' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Leave group' })).toBeTruthy();

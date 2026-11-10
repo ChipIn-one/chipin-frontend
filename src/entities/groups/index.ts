@@ -1,5 +1,5 @@
-// Public entry of entities/groups: the groups list, group detail and group activity queries, and
-// the edits of their cached data.
+// Public entry of entities/groups: the domain group, the groups list, group detail and group
+// activity queries, and the edits of their cached data.
 export type { ListDebt } from './api/listCache';
 export {
     dropGroupFromCachedList,
@@ -24,4 +24,11 @@ export type { GroupActivityData } from './model/groupActivity';
 export { firstGroupActivityPage, flattenGroupActivity } from './model/groupActivity';
 export type { GroupsListData } from './model/groupsList';
 export { flattenGroupsList, removeGroupFromList, upsertGroupInList } from './model/groupsList';
-export type { GroupActivityPage, GroupsListPage } from './model/types';
+export { toGroup } from './model/toGroup';
+export type {
+    Group,
+    GroupActivityPage,
+    GroupMember,
+    GroupsListPage,
+    GroupUser,
+} from './model/types';

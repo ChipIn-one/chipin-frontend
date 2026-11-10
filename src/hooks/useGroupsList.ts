@@ -4,7 +4,7 @@
 // exists, never requests it. Signed out or on another client nothing is read.
 import { useQueryClient } from '@tanstack/react-query';
 
-import type { Group } from 'api/chipin.types';
+import type { Group } from 'entities/groups';
 import { useGroupsListQuery } from 'entities/groups';
 import { isUserCacheClient } from 'shared/offline/userCaches';
 import { AUTH_STATUS } from 'store/authConstants';

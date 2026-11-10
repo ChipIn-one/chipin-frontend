@@ -2,9 +2,7 @@
 // duplicates, and the legacy group writes (03-11) replace, add or drop one group in place.
 import type { InfiniteData } from '@tanstack/react-query';
 
-import type { Group } from 'api/chipin.types';
-
-import type { GroupsListPage } from './types';
+import type { Group, GroupsListPage } from './types';
 
 export type GroupsListData = InfiniteData<GroupsListPage, string | null>;
 

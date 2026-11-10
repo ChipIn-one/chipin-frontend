@@ -5,11 +5,12 @@
 // (`entities/groups`).
 import type { QueryClient } from '@tanstack/react-query';
 
-import type { Group } from 'api/chipin.types';
+import type { Group as LegacyGroup } from 'api/chipin.types';
 import {
     editGroupsList,
     firstGroupActivityPage,
     flattenGroupsList,
+    type Group,
     type GroupActivityData,
     groupDetailQueryOptions,
     groupsKeys,
@@ -19,6 +20,7 @@ import {
     upsertGroupInList,
 } from 'entities/groups';
 
+import { domainGroupFromLegacy } from './legacyGroup';
 import { tabUserClient } from './sessionUser';
 
 const listKey = groupsKeys.list();
@@ -66,10 +68,10 @@ export const invalidateGroupsList = (): Promise<void> => {
  * cached list, without a request of its own. Never rejects.
  */
 // TODO(03-11): goes with the group mutations moving to entities/groups.
-export const putGroupInList = (group: Group): Promise<void> => {
+export const putGroupInList = (group: LegacyGroup): Promise<void> => {
     const client = tabUserClient();
 
-    return client ? putGroupInCachedList(client, group) : Promise.resolve();
+    return client ? putGroupInCachedList(client, domainGroupFromLegacy(group)) : Promise.resolve();
 };
 
 // Cuts a group's cached activity to its first page, keeping its age: its refetch is one request.
@@ -100,7 +102,7 @@ const reloadGroupActivity = (client: QueryClient, groupId: string): Promise<void
  * activity loads again. The list is the caller's (`reloadGroupsListWith`). Never rejects.
  */
 // TODO(03-11): goes with the group mutations moving to entities/groups.
-export const putGroupDetail = (group: Group): Promise<void> => {
+export const putGroupDetail = (group: LegacyGroup): Promise<void> => {
     const client = tabUserClient();
 
     if (!client) {
@@ -109,7 +111,7 @@ export const putGroupDetail = (group: Group): Promise<void> => {
     const queryKey = groupsKeys.detail(group.id);
 
     void client.cancelQueries({ queryKey });
-    client.setQueryData<Group>(queryKey, group);
+    client.setQueryData<Group>(queryKey, domainGroupFromLegacy(group));
     return reloadGroupActivity(client, group.id);
 };
 
@@ -184,12 +186,16 @@ export const forgetGroup = (groupId: string): void => {
  * unless the write is no longer current (a sign-out, a reset). Never rejects.
  */
 // TODO(03-11): goes with the group mutations moving to entities/groups.
-export const reloadGroupsListWith = (group: Group, isCurrent: () => boolean): Promise<void> => {
+export const reloadGroupsListWith = (
+    legacyGroup: LegacyGroup,
+    isCurrent: () => boolean,
+): Promise<void> => {
     const client = tabUserClient();
 
     if (!client) {
         return Promise.resolve();
     }
+    const group = domainGroupFromLegacy(legacyGroup);
     const upsert = (data: GroupsListData): GroupsListData => upsertGroupInList(data, group);
 
     // Any load running is cancelled by the write: the reload below replaces it.

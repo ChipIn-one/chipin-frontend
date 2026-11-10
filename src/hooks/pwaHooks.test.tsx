@@ -2,8 +2,8 @@ import { act, renderHook } from '@testing-library/react';
 import { toast } from 'sonner';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import type { Group } from 'api/chipin.types';
 import { SECOND } from 'constants/time';
+import type { Group } from 'entities/groups';
 
 import { useFriendInvite, useGroupInvite } from './pwaHooks';
 

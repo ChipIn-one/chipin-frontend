@@ -10,6 +10,7 @@ import { IMAGE_FILE_ACCEPT } from 'helpers/imageFile';
 import type { GroupsStore } from 'store/groupsStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
+import { toTestGroup } from 'test/groupFixtures';
 
 import CreateUpdateGroupModal from './CreateUpdateGroupModal';
 
@@ -70,7 +71,7 @@ const renderModal = (type: 'create' | 'update', editedGroup: Group = group) => {
                 {type === 'create' ? (
                     <CreateUpdateGroupModal type="create">{trigger}</CreateUpdateGroupModal>
                 ) : (
-                    <CreateUpdateGroupModal type="update" group={editedGroup}>
+                    <CreateUpdateGroupModal type="update" group={toTestGroup(editedGroup)}>
                         {trigger}
                     </CreateUpdateGroupModal>
                 )}

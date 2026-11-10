@@ -1,8 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import type { Group, SelfUser } from 'api/chipin.types';
+import type { SelfUser } from 'api/chipin.types';
+import type { Group } from 'entities/groups';
 import { getOrThrow } from 'test/getOrThrow';
+import { groupBalances } from 'test/groupFixtures';
 import { seedSelfUser } from 'test/selfUserSeed';
 
 import GroupBalancesTab from './GroupBalancesTab';
@@ -65,11 +67,7 @@ const group: Group = {
                 displayName: 'Alex',
                 firstName: 'Alex',
             },
-            balancesByCurrency: {
-                USD: { currency: 'USD', netBalance: -20 },
-                EUR: { currency: 'EUR', netBalance: 15 },
-                BZD: { currency: 'BZD', netBalance: 0 },
-            },
+            balancesByCurrency: groupBalances({ USD: -20, EUR: 15, BZD: 0 }),
         },
         {
             user: {

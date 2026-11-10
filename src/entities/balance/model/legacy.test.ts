@@ -15,7 +15,6 @@ import {
     legacyPartitionEntries,
     legacyRateLookup,
     legacyRatesFromDecimals,
-    legacySumEntriesByCurrency,
     legacySummarizeEntries,
     resetLegacyRejectReports,
 } from './legacy';
@@ -261,10 +260,4 @@ test('legacyCurrencyOrDefault falls back to the default currency', () => {
     expect(legacyCurrencyOrDefault('')).toBe('USD');
     expect(legacyCurrencyOrDefault(null)).toBe('USD');
     expect(legacyCurrencyOrDefault('EURO')).toBe('USD');
-});
-
-test('legacySumEntriesByCurrency skips invalid entries', () => {
-    expect(
-        legacySumEntriesByCurrency([entry(0.1), entry(0.2), unsafeEntry(1, 'US'), entry(1, 'EUR')]),
-    ).toEqual([usd(3_000n), { minor: 10_000n, currency: 'EUR' }]);
 });

@@ -2,10 +2,10 @@ import { Avatar, Button, Card, Flex, Text } from '@radix-ui/themes';
 import { UserPlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { Group } from 'api/chipin.types';
-import { legacyPartitionEntries } from 'entities/balance';
+import type { Group } from 'entities/groups';
 import { buildGroupInviteLink } from 'helpers/url';
 import { useSelfUser } from 'hooks/useSelfUser';
+import { selectMemberBalancePartition } from 'store/groupsSelectors';
 
 import BalanceSummaryText from 'basics/BalanceSummaryText';
 import { NoGroupMembersEmptyState } from 'basics/empty-states';
@@ -48,8 +48,6 @@ const GroupBalancesTab = ({ group, showInviteOnboarding }: Props) => {
     return (
         <Flex direction="column" gap="2">
             {otherMembers.map(member => {
-                const balances = Object.values(member.balancesByCurrency);
-
                 return (
                     <Card key={member.user.id} size="2">
                         <Flex
@@ -76,7 +74,7 @@ const GroupBalancesTab = ({ group, showInviteOnboarding }: Props) => {
                                         />
                                     </Flex>
                                     <BalanceSummaryText
-                                        balances={legacyPartitionEntries(balances)}
+                                        balances={selectMemberBalancePartition(member)}
                                         size="1"
                                         align="left"
                                     />
