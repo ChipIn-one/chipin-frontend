@@ -5,6 +5,7 @@ import { expect, test, vi } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
+import { legacyActivityEvent } from 'entities/balance';
 
 import { ActivityEvent } from './ActivityEvent';
 
@@ -125,7 +126,7 @@ const settlementMetadata = {
 test('makes supported events navigable by default', () => {
     render(
         <MemoryRouter>
-            <ActivityEvent event={expenseCreatedEvent} />
+            <ActivityEvent event={legacyActivityEvent(expenseCreatedEvent)} />
         </MemoryRouter>,
     );
 
@@ -135,7 +136,7 @@ test('makes supported events navigable by default', () => {
 test('renders supported events without a link when navigation is disabled', () => {
     render(
         <MemoryRouter>
-            <ActivityEvent event={expenseCreatedEvent} isNavigable={false} />
+            <ActivityEvent event={legacyActivityEvent(expenseCreatedEvent)} isNavigable={false} />
         </MemoryRouter>,
     );
 
@@ -146,7 +147,7 @@ test('renders supported events without a link when navigation is disabled', () =
 test('ACT-005 renders an updated expense and links it to its parent activity', () => {
     render(
         <MemoryRouter>
-            <ActivityEvent event={expenseUpdatedEvent} />
+            <ActivityEvent event={legacyActivityEvent(expenseUpdatedEvent)} />
         </MemoryRouter>,
     );
 
@@ -176,7 +177,7 @@ test.each([
 
     render(
         <MemoryRouter>
-            <ActivityEvent event={event} />
+            <ActivityEvent event={legacyActivityEvent(event)} />
         </MemoryRouter>,
     );
 
@@ -202,7 +203,7 @@ test.each([
         metadata: transferMetadata,
     } satisfies AppEvent;
 
-    render(<ActivityEvent event={event} />);
+    render(<ActivityEvent event={legacyActivityEvent(event)} />);
 
     expect(screen.getByText(expectedTitle)).toBeTruthy();
     expect(screen.getByText('event.expenseTransferKickDescription')).toBeTruthy();
@@ -221,7 +222,7 @@ test('explains that balances moved because a member left the group', () => {
         },
     } satisfies AppEvent;
 
-    render(<ActivityEvent event={event} />);
+    render(<ActivityEvent event={legacyActivityEvent(event)} />);
 
     expect(screen.getByText('event.expenseTransferLeaveDescription')).toBeTruthy();
 });
@@ -241,7 +242,7 @@ test('renders member kicked activity', () => {
         },
     } satisfies AppEvent;
 
-    render(<ActivityEvent event={event} />);
+    render(<ActivityEvent event={legacyActivityEvent(event)} />);
 
     expect(screen.getByText('event.memberKickedDescription')).toBeTruthy();
 });

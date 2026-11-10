@@ -1,18 +1,15 @@
-import type { AppEvent } from 'api/activity.types';
 import type { BalanceEntry } from 'api/chipin.raw.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
-import {
-    aggregateByCurrency,
-    legacyEntryFromMoney,
-    legacyExpenseBalanceChange,
-} from 'entities/balance';
-import { type ActivityListItem, isActivityPreview } from 'helpers/activityEvent';
+import { expenseBalanceChange } from 'entities/activity';
+import { aggregateByCurrency, legacyEntryFromMoney } from 'entities/balance';
 import { getActivityDateKey } from 'helpers/time';
 import type { Money } from 'shared/money';
 import { isZero } from 'shared/money';
 
+import type { ActivityRow } from './rows';
+
 export const getDailyExpenseSummary = (
-    events: readonly ActivityListItem[],
+    rows: readonly ActivityRow[],
     userId?: string,
 ): Record<string, BalanceEntry[]> => {
     const changesByDate = new Map<string, Money[]>();
@@ -21,10 +18,7 @@ export const getDailyExpenseSummary = (
         return {};
     }
 
-    for (const item of events) {
-        const isPreview = isActivityPreview(item);
-        const event: AppEvent = isPreview ? item.lastEvent : item;
-
+    for (const { event, original, isPreview } of rows) {
         // Flat history remains event-based; only previews represent the current chain state.
         if (
             event.action !== ACTIVITY_ACTIONS.EXPENSE_CREATED &&
@@ -33,17 +27,17 @@ export const getDailyExpenseSummary = (
             continue;
         }
 
-        if (!event.metadata) {
+        if (event.metadata?.type !== 'expense') {
             continue;
         }
 
-        const change = legacyExpenseBalanceChange(event.metadata, userId);
+        const change = expenseBalanceChange(event.metadata, userId);
 
         if (!change || isZero(change)) {
             continue;
         }
 
-        const dateKey = getActivityDateKey(isPreview ? item.parent.createdAt : event.createdAt);
+        const dateKey = getActivityDateKey(original.createdAt);
         const changes = changesByDate.get(dateKey);
 
         if (changes) {

@@ -1,7 +1,8 @@
 // The groups entity (spec 03 §1.2, §6 row 4): the user's groups list (60 s fresh), a group's
 // detail with its balances (30 s) and a group's activity previews (30 s, infinite), all persisted
-// (the infinite ones as their first page only, `trimmingPersister`). All three come through the
-// legacy `src/api` layer in the legacy shapes (see `model/types.ts`) until 03-10c and 03-12.
+// (the infinite ones as their first page only, `trimmingPersister`). The list and the detail come
+// through the legacy `src/api` layer in the legacy shapes (see `model/types.ts`) until 03-10c; the
+// activity comes through `api()` as domain items (`toActivityItems`, amounts as `Money`).
 import type { Query, QueryClient, UseQueryOptions, UseQueryResult } from '@tanstack/react-query';
 import {
     infiniteQueryOptions,
@@ -10,11 +11,11 @@ import {
     useQueries,
 } from '@tanstack/react-query';
 
-import { fetchGroupActivityPreviews } from 'api/activityApi';
 import { fetchApiUserGroupById, fetchApiUserGroups } from 'api/chipin';
 import type { Group } from 'api/chipin.types';
 import { ACTIVITY_API_LIMIT } from 'constants/activity';
-import { ApiError, toApiError } from 'shared/api/client';
+import { toActivityItems } from 'entities/activity';
+import { api, ApiError, toApiError } from 'shared/api/client';
 import { isNetworkUsable } from 'shared/offline/network';
 
 import {
@@ -71,21 +72,29 @@ export const useGroupsListQuery = ({ enabled }: EnabledParams) =>
 export const isGroupDeniedError = (error: unknown): boolean =>
     error instanceof ApiError && (error.status === 403 || error.status === 404);
 
-// The detail carries the first page of the group's activity: it becomes that query's first page
-// when the activity has nothing cached and is not loading, so opening a group sends one request.
-const seedGroupActivity = (client: QueryClient, group: Group): void => {
-    const queryKey = groupsKeys.activity(group.id);
+/**
+ * Seeds the first page of a group's activity from the page its detail carries, when the activity
+ * has nothing cached and is not loading, so opening a group sends one request. A seed never
+ * replaces cached or loading activity (a newer read wins). It is as old as the detail read that
+ * carried it (`updatedAt`): a seed from an old detail is stale, so the first page loads again.
+ */
+export const seedGroupActivity = (
+    client: QueryClient,
+    groupId: string,
+    page: GroupActivityPage,
+    updatedAt: number,
+): void => {
+    const queryKey = groupsKeys.activity(groupId);
     const state = client.getQueryState(queryKey);
 
     if (state?.data !== undefined || (state?.fetchStatus ?? 'idle') !== 'idle') {
         return;
     }
-    const { items, nextCursor } = group.recentActivities;
-
-    client.setQueryData<GroupActivityData>(queryKey, {
-        pages: [{ items, nextCursor }],
-        pageParams: [firstActivityPageParam()],
-    });
+    client.setQueryData<GroupActivityData>(
+        queryKey,
+        { pages: [page], pageParams: [firstActivityPageParam()] },
+        { updatedAt },
+    );
 };
 
 // A group read keeps the cached list current (03-10a race rules, `putGroupInCachedList`), and a
@@ -101,7 +110,6 @@ const fetchGroupDetail = (
     return fetchApiUserGroupById(groupId, signal).then(
         group => {
             if (!signal.aborted) {
-                seedGroupActivity(client, group);
                 void putGroupInCachedList(client, group, readStartedAt);
             }
             return group;
@@ -155,19 +163,17 @@ export const useGroupDetailQuery = (
     return useQueries({ queries, combine: selectFirst });
 };
 
+// `api()` rejects with an `ApiError`, as the detail's: a 5xx is retried, other 4xx are final.
 const fetchGroupActivityPage = (
     groupId: string,
     cursor: number | null,
     signal: AbortSignal,
 ): Promise<GroupActivityPage> =>
-    fetchGroupActivityPreviews(
-        { groupId, limit: ACTIVITY_API_LIMIT, cursor: cursor ?? undefined },
+    api('get', '/groups/{groupId}/activity-previews', {
+        params: { groupId },
+        query: { limit: ACTIVITY_API_LIMIT, ...(cursor === null ? {} : { cursor }) },
         signal,
-    ).then(
-        ({ items, nextCursor }) => ({ items, nextCursor }),
-        // An `ApiError`, as the detail's: a 5xx is retried, other 4xx are final (`queryRetry`).
-        (error: unknown) => Promise.reject(toApiError(error)),
-    );
+    }).then(({ items, nextCursor }) => ({ items: toActivityItems(items), nextCursor }));
 
 type ActivityQuery = Query<
     GroupActivityPage,

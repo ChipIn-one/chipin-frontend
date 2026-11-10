@@ -1,10 +1,11 @@
 import { dehydrate, InfiniteQueryObserver, QueryClient } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
-import { expect, test } from 'vitest';
+import { expect, test, vi } from 'vitest';
 
-import type { ActivityFeedItem, Group } from 'api/chipin.types';
+import type { Group } from 'api/chipin.types';
 import { ApiError } from 'shared/api/client';
 import { dehydrateOptions, trimInfinitePages } from 'shared/offline/queryPersister';
+import { domainPreview, wirePreview } from 'test/activityFixtures';
 import { setupMswServer } from 'test/mswServer';
 
 import { flattenGroupActivity, type GroupActivityData } from '../model/groupActivity';
@@ -21,6 +22,7 @@ import {
     groupsKeys,
     groupsListQueryOptions,
     isGroupDeniedError,
+    seedGroupActivity,
 } from './queries';
 
 const server = setupMswServer();
@@ -109,14 +111,10 @@ test('drops a group from every page', () => {
     ]);
 });
 
-const detailGroup = (id: string, name: string, activity: ActivityFeedItem[] = []): Group =>
-    ({ id, name, recentActivities: { items: activity, nextCursor: 7 } }) as unknown as Group;
+const detailGroup = (id: string, name: string): Group =>
+    ({ id, name, recentActivities: { items: [], nextCursor: 7 } }) as unknown as Group;
 
-const preview = (parentId: string, seq = 1): ActivityFeedItem =>
-    ({
-        parent: { id: parentId },
-        lastEvent: { id: `${parentId}-${String(seq)}`, seq },
-    }) as unknown as ActivityFeedItem;
+const preview = (parentId: string, seq = 1) => domainPreview(parentId, { seq });
 
 const seededListClient = (groups: Group[], updatedAt: number): QueryClient => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -124,10 +122,8 @@ const seededListClient = (groups: Group[], updatedAt: number): QueryClient => {
     return client;
 };
 
-test('a group detail read replaces its list entry and seeds the first activity page', async () => {
-    server.use(
-        http.get('*/groups/a', () => HttpResponse.json(detailGroup('a', 'Read', [preview('p1')]))),
-    );
+test('a group detail read replaces its list entry', async () => {
+    server.use(http.get('*/groups/a', () => HttpResponse.json(detailGroup('a', 'Read'))));
     const client = seededListClient([group('a'), group('b')], Date.now() - 1_000);
 
     const read = await client.fetchQuery(groupDetailQueryOptions('a'));
@@ -137,24 +133,62 @@ test('a group detail read replaces its list entry and seeds the first activity p
     expect(
         flattenGroupsList(client.getQueryData<GroupsListData>(groupsKeys.list()) ?? listData()),
     ).toEqual([read, group('b')]);
+});
+
+test('a seed becomes the first activity page, as old as the detail read that carried it', () => {
+    const client = new QueryClient();
+    const page = { items: [preview('p1')], nextCursor: 7 };
+
+    seedGroupActivity(client, 'a', page, 1_000);
     expect(client.getQueryData(groupsKeys.activity('a'))).toEqual({
-        pages: [{ items: [preview('p1')], nextCursor: 7 }],
+        pages: [page],
+        pageParams: [null],
+    });
+    expect(client.getQueryState(groupsKeys.activity('a'))?.dataUpdatedAt).toBe(1_000);
+
+    // Cached activity (a newer read) is never replaced.
+    seedGroupActivity(client, 'a', { items: [preview('p2')], nextCursor: null }, Date.now());
+    expect(client.getQueryData(groupsKeys.activity('a'))).toEqual({
+        pages: [page],
         pageParams: [null],
     });
 });
 
-test('a detail read never replaces activity already cached', async () => {
-    server.use(http.get('*/groups/a', () => HttpResponse.json(detailGroup('a', 'Read'))));
-    const client = seededListClient([], 0);
-    const cached = {
-        pages: [{ items: [preview('cached')], nextCursor: null }],
-        pageParams: [null],
-    };
-    client.setQueryData(groupsKeys.activity('a'), cached);
+test('a seed does nothing while the first activity page is loading', async () => {
+    let answer: (() => void) | undefined;
+    server.use(
+        http.get(
+            '*/groups/a/activity-previews',
+            () =>
+                new Promise<Response>(resolve => {
+                    answer = () => {
+                        resolve(
+                            HttpResponse.json({ items: [wirePreview('read')], nextCursor: null }),
+                        );
+                    };
+                }),
+        ),
+    );
+    const client = new QueryClient();
+    const loading = client.fetchInfiniteQuery(groupActivityQueryOptions('a'));
 
-    await client.fetchQuery(groupDetailQueryOptions('a'));
+    expect(client.getQueryState(groupsKeys.activity('a'))?.fetchStatus).toBe('fetching');
+    seedGroupActivity(client, 'a', { items: [preview('seed')], nextCursor: 7 }, Date.now());
+    expect(client.getQueryData(groupsKeys.activity('a'))).toBeUndefined();
 
-    expect(client.getQueryData(groupsKeys.activity('a'))).toEqual(cached);
+    await vi.waitFor(() => {
+        expect(answer).toBeDefined();
+    });
+    answer?.();
+    await loading;
+    expect(
+        flattenGroupActivity(
+            client.getQueryData<GroupActivityData>(groupsKeys.activity('a')) ?? {
+                pages: [],
+                pageParams: [],
+            },
+        ),
+    ).toEqual([preview('read')]);
 });
 
 test.each([403, 404])(
@@ -194,7 +228,7 @@ test('ACT-023 a group activity continues from the cursor of its seeded first pag
     server.use(
         http.get('*/groups/a/activity-previews', ({ request }) => {
             cursors.push(new URL(request.url).searchParams.get('cursor'));
-            return HttpResponse.json({ items: [preview('p2')], nextCursor: null });
+            return HttpResponse.json({ items: [wirePreview('p2')], nextCursor: null });
         }),
     );
     const client = new QueryClient();
@@ -225,7 +259,7 @@ test('a failed next activity page keeps the loaded pages and retries the same cu
             cursors.push(new URL(request.url).searchParams.get('cursor'));
             return fail
                 ? HttpResponse.json({}, { status: 500 })
-                : HttpResponse.json({ items: [preview('p2')], nextCursor: null });
+                : HttpResponse.json({ items: [wirePreview('p2')], nextCursor: null });
         }),
     );
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -269,4 +303,27 @@ test('a failed activity page is an ApiError, retried like the detail on a 5xx', 
 
     expect(error).toBeInstanceOf(ApiError);
     expect(error instanceof ApiError && error.status).toBe(503);
+});
+
+test('a group activity page is read through api() into Money; an unreadable preview is left out', async () => {
+    const body = JSON.stringify({
+        items: [wirePreview('p1'), wirePreview('bad'), wirePreview('p2')],
+        nextCursor: null,
+    }).replace(/("entryId":"entry-bad"[^}]*?"amount":)10/g, '$11e-7');
+    server.use(
+        http.get(
+            '*/groups/a/activity-previews',
+            () => new HttpResponse(body, { headers: { 'Content-Type': 'application/json' } }),
+        ),
+    );
+    const client = new QueryClient();
+
+    const data = await client.fetchInfiniteQuery(groupActivityQueryOptions('a'));
+
+    expect(data.pages[0]?.items).toEqual([
+        preview('p1'),
+        { kind: 'invalid', id: 'bad' },
+        preview('p2'),
+    ]);
+    expect(flattenGroupActivity(data)).toEqual([preview('p1'), preview('p2')]);
 });

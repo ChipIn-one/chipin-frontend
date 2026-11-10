@@ -1,5 +1,5 @@
-import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
+import type { ActivityEvent as ActivityEventModel } from 'entities/activity';
 import { buildActivitySubeventsRoute } from 'helpers/url';
 
 import { EventExpense } from '../event-expense';
@@ -16,7 +16,7 @@ import EventUnknown from '../EventUnknown';
 import { ActivityEventLink } from './styled';
 
 interface Props {
-    event: AppEvent;
+    event: ActivityEventModel;
     isNavigable?: boolean;
     parentActivityId?: string;
 }

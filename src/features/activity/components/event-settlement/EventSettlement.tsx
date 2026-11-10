@@ -2,12 +2,9 @@ import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 import { ArrowLeftRightIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { AppEvent } from 'api/activity.types';
-import {
-    ACTIVITY_ACTIONS,
-    type SettlementCreatedAction,
-    type SettlementReversedAction,
-} from 'constants/activity';
+import { ACTIVITY_ACTIONS } from 'constants/activity';
+import type { SettlementActivityEvent } from 'entities/activity';
+import { legacyAmountFromMoney } from 'entities/balance';
 import { useSelfUser } from 'hooks/useSelfUser';
 
 import { Amount, LedgerScopeBadge } from 'basics';
@@ -18,14 +15,13 @@ import { SettlementParticipants } from './components';
 import { AmountText } from './styled';
 
 interface Props {
-    event: Extract<AppEvent, { action: SettlementCreatedAction | SettlementReversedAction }>;
+    event: SettlementActivityEvent;
 }
 
 const EventSettlement = ({ event }: Props) => {
     const { t } = useTranslation('activity');
     const user = useSelfUser();
-    const { amount, currency, fromDisplayName, groupId, groupName, payerId, toDisplayName } =
-        event.metadata;
+    const { amount, fromDisplayName, groupId, groupName, payerId, toDisplayName } = event.metadata;
     const isReversed = event.action === ACTIVITY_ACTIONS.SETTLEMENT_REVERSED;
     const isCurrentUserPayer = user?.id === payerId;
 
@@ -51,7 +47,11 @@ const EventSettlement = ({ event }: Props) => {
                             {t('event.paidAmount', {
                                 payer: isCurrentUserPayer ? t('event.you') : fromDisplayName,
                             })}{' '}
-                            <Amount value={amount} tokenCode={currency} type="summary" />
+                            <Amount
+                                value={legacyAmountFromMoney(amount)}
+                                tokenCode={amount.currency}
+                                type="summary"
+                            />
                         </AmountText>
                         {isReversed ? (
                             <Text size="2" color="gray">

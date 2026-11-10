@@ -98,7 +98,7 @@ const GroupTabsContent = ({ group, isGroupDataLoading, activity }: Props) => {
                                     </Box>
                                 )}
                                 <ActivityEventsList
-                                    events={activityItems}
+                                    previews={activityItems}
                                     emptyState={
                                         shouldShowInviteOnboarding ? null : (
                                             <NoGroupExpensesEmptyState />

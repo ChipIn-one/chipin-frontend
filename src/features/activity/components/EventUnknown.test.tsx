@@ -3,6 +3,7 @@ import { expect, test } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
+import { legacyActivityEvent } from 'entities/balance';
 import { type SelfUser, usersKeys } from 'entities/users';
 import { signInWithSelf } from 'test/selfUser';
 
@@ -49,7 +50,7 @@ const event: AppEvent = {
 test('the event time follows a change of the user time format', () => {
     const client = signInWithSelf(user);
 
-    render(<EventUnknown event={event} />);
+    render(<EventUnknown event={legacyActivityEvent(event)} />);
     expect(screen.getByText(/AM|PM/)).toBeTruthy();
 
     act(() => {

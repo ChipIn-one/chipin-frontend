@@ -43,10 +43,14 @@ export type ActivityListItem = AppEvent | ActivityFeedItem;
 export const isActivityPreview = (item: ActivityListItem): item is ActivityFeedItem =>
     'parent' in item && 'lastEvent' in item;
 
-export const getActivityPreviewEvents = (
-    items: readonly ActivityFeedItem[],
-): ActivityFeedItem[] => {
-    const latestByParent = new Map<string, ActivityFeedItem>();
+/** The fields of a preview this helper reads: legacy `ActivityFeedItem` and domain previews. */
+interface PreviewLike {
+    readonly parent: { readonly id: string };
+    readonly lastEvent: { readonly seq: number; readonly action: string };
+}
+
+export const getActivityPreviewEvents = <T extends PreviewLike>(items: readonly T[]): T[] => {
+    const latestByParent = new Map<string, T>();
 
     for (const item of items) {
         const existing = latestByParent.get(item.parent.id);
@@ -56,7 +60,7 @@ export const getActivityPreviewEvents = (
         }
     }
 
-    const previews: ActivityFeedItem[] = [];
+    const previews: T[] = [];
 
     for (const item of latestByParent.values()) {
         if (

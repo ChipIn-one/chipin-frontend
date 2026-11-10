@@ -2,8 +2,7 @@ import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 import { UserPenIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { AppEvent } from 'api/activity.types';
-import type { GroupUpdatedAction } from 'constants/activity';
+import type { GroupActivityEvent } from 'entities/activity';
 import { isUserTime24H } from 'entities/users';
 import { useUserSetting } from 'hooks/useSelfUser';
 
@@ -12,7 +11,7 @@ import { RelativeTime } from 'basics';
 import { EventActorInlineAvatar, EventIcon } from './activity-event';
 
 interface Props {
-    event: Extract<AppEvent, { action: GroupUpdatedAction }>;
+    event: GroupActivityEvent;
 }
 
 const EventGroupUpdated = ({ event }: Props) => {

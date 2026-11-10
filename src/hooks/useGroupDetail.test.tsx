@@ -1,11 +1,13 @@
+import { StrictMode } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, expect, test } from 'vitest';
 
-import type { ActivityFeedItem, Group, SelfUser } from 'api/chipin.types';
+import type { Group, SelfUser } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
 import { type GroupActivityData, groupsKeys } from 'entities/groups';
 import { useAuthStore } from 'store/authStore';
+import { domainPreview, legacyPreview, wirePreview } from 'test/activityFixtures';
 import { seedGroupsList } from 'test/groupsList';
 import { setupMswServer } from 'test/mswServer';
 import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
@@ -53,12 +55,6 @@ const selfUser = {
     },
 } satisfies SelfUser;
 
-const preview = (parentId: string): ActivityFeedItem =>
-    ({
-        parent: { id: parentId },
-        lastEvent: { id: `${parentId}-1`, seq: 1 },
-    }) as unknown as ActivityFeedItem;
-
 const group = {
     id: 'group-1',
     name: 'Trip',
@@ -76,7 +72,7 @@ const group = {
     role: 'OWNER',
     status: 'ACTIVE',
     lastUsedCurrency: null,
-    recentActivities: { items: [preview('listed')], nextCursor: 3 },
+    recentActivities: { items: [legacyPreview('listed')], nextCursor: 3 },
 } satisfies Group;
 
 const detailKey = groupsKeys.detail(group.id);
@@ -130,7 +126,7 @@ test('a failed detail read without a denial keeps the listed group and its recen
     expect(result.current.detail.isDenied).toBe(false);
     expect(result.current.detail.hasDetail).toBe(false);
     expect(result.current.detail.group).toEqual(group);
-    expect(result.current.activity.items).toEqual([preview('listed')]);
+    expect(result.current.activity.items).toEqual([domainPreview('listed')]);
     expect(result.current.activity.hasMore).toBe(false);
 });
 
@@ -157,15 +153,15 @@ test('a scroll trigger waits for a running refetch, then loads the next page', a
             if (cursor === null) {
                 return new Promise<Response>(resolve => {
                     answerRefetch = () => {
-                        resolve(HttpResponse.json({ items: [preview('p1')], nextCursor: 5 }));
+                        resolve(HttpResponse.json({ items: [wirePreview('p1')], nextCursor: 5 }));
                     };
                 });
             }
-            return HttpResponse.json({ items: [preview('p2')], nextCursor: null });
+            return HttpResponse.json({ items: [wirePreview('p2')], nextCursor: null });
         }),
     );
     getDefaultTestQueryClient().setQueryData<GroupActivityData>(activityKey, {
-        pages: [{ items: [preview('p1')], nextCursor: 5 }],
+        pages: [{ items: [domainPreview('p1')], nextCursor: 5 }],
         pageParams: [null],
     });
     const { result } = renderHook(() => useGroupActivity(group.id, true));
@@ -194,7 +190,151 @@ test('a scroll trigger waits for a running refetch, then loads the next page', a
         result.current.loadMore();
     });
     await waitFor(() => {
-        expect(result.current.items).toEqual([preview('p1'), preview('p2')]);
+        expect(result.current.items).toEqual([domainPreview('p1'), domainPreview('p2')]);
     });
     expect(cursors).toEqual([null, '5']);
+});
+
+// The detail and activity handlers of one opened group; `requests` lists what was sent.
+const serveGroup = (detail: Group, requests: string[]): void => {
+    server.use(
+        http.get('*/groups/group-1', () => {
+            requests.push('detail');
+            return HttpResponse.json(detail);
+        }),
+        http.get('*/groups/group-1/activity-previews', ({ request }) => {
+            requests.push(`activity:${String(new URL(request.url).searchParams.get('cursor'))}`);
+            return HttpResponse.json({ items: [wirePreview('d2')], nextCursor: null });
+        }),
+    );
+};
+
+const renderGroupActivity = (options?: { wrapper: typeof StrictMode }) =>
+    renderHook(() => {
+        const read = useGroupDetail(group.id);
+
+        return useGroupActivity(group.id, read.hasDetail, read.group?.recentActivities);
+    }, options);
+
+test.each([
+    ['', undefined],
+    [' (StrictMode)', { wrapper: StrictMode }],
+])(
+    'ACT-023 opening a group seeds its activity from the detail: one request, then the cursor%s',
+    async (_mode, options) => {
+        const requests: string[] = [];
+        serveGroup(
+            { ...group, recentActivities: { items: [legacyPreview('d1')], nextCursor: 9 } },
+            requests,
+        );
+        const { result } = renderGroupActivity(options);
+
+        await waitFor(() => {
+            expect(result.current.hasMore).toBe(true);
+        });
+        expect(result.current.items).toEqual([domainPreview('d1')]);
+        expect(requests).toEqual(['detail']);
+
+        act(() => {
+            result.current.loadMore();
+        });
+        await waitFor(() => {
+            expect(result.current.items).toEqual([domainPreview('d1'), domainPreview('d2')]);
+        });
+        expect(requests).toEqual(['detail', 'activity:9']);
+    },
+);
+
+test('a seed from an old cached detail is stale: the first activity page loads again', async () => {
+    const requests: string[] = [];
+    const detail = { ...group, recentActivities: { items: [legacyPreview('d1')], nextCursor: 9 } };
+    serveGroup(detail, requests);
+    getDefaultTestQueryClient().setQueryData(detailKey, detail, {
+        updatedAt: Date.now() - 600_000,
+    });
+
+    const { result } = renderGroupActivity();
+
+    await waitFor(() => {
+        expect(requests).toContain('activity:null');
+    });
+    await waitFor(() => {
+        expect(result.current.items).toEqual([domainPreview('d2')]);
+    });
+});
+
+test('a denied group neither seeds its activity nor shows the cached activity', async () => {
+    const requests: string[] = [];
+    server.use(
+        http.get('*/groups/group-1', () => {
+            requests.push('detail');
+            return HttpResponse.json({ code: 'FORBIDDEN' }, { status: 403 });
+        }),
+        http.get('*/groups/group-1/activity-previews', () => {
+            requests.push('activity');
+            return HttpResponse.json({ items: [], nextCursor: null });
+        }),
+    );
+    getDefaultTestQueryClient().setQueryData(detailKey, group, { updatedAt: 0 });
+    getDefaultTestQueryClient().setQueryData<GroupActivityData>(activityKey, {
+        pages: [{ items: [domainPreview('cached')], nextCursor: null }],
+        pageParams: [null],
+    });
+    const { result } = renderHook(() => {
+        const read = useGroupDetail(group.id);
+
+        return {
+            read,
+            activity: useGroupActivity(group.id, read.hasDetail, read.group?.recentActivities),
+        };
+    });
+
+    await waitFor(() => {
+        expect(result.current.read.isDenied).toBe(true);
+    });
+    expect(result.current.activity.items).toEqual([]);
+    expect(result.current.activity.hasMore).toBe(false);
+    expect(requests).not.toContain('activity');
+});
+
+test('a group denied on its first read seeds nothing and reads no activity', async () => {
+    const requests: string[] = [];
+    server.use(
+        http.get('*/groups/group-1', () => {
+            requests.push('detail');
+            return HttpResponse.json({ code: 'FORBIDDEN' }, { status: 403 });
+        }),
+        http.get('*/groups/group-1/activity-previews', () => {
+            requests.push('activity');
+            return HttpResponse.json({ items: [], nextCursor: null });
+        }),
+    );
+    const { result } = renderHook(() => {
+        const read = useGroupDetail(group.id);
+
+        return {
+            read,
+            activity: useGroupActivity(group.id, read.hasDetail, read.group?.recentActivities),
+        };
+    });
+
+    await waitFor(() => {
+        expect(result.current.read.isDenied).toBe(true);
+    });
+    expect(result.current.activity.items).toEqual([]);
+    expect(getDefaultTestQueryClient().getQueryData(activityKey)).toBeUndefined();
+    expect(requests).toEqual(['detail']);
+});
+
+test('the detail never replaces activity already cached', async () => {
+    getDefaultTestQueryClient().setQueryData<GroupActivityData>(activityKey, {
+        pages: [{ items: [domainPreview('cached')], nextCursor: null }],
+        pageParams: [null],
+    });
+    getDefaultTestQueryClient().setQueryData(detailKey, group);
+    const { result } = renderHook(() => useGroupActivity(group.id, true, group.recentActivities));
+
+    await waitFor(() => {
+        expect(result.current.items).toEqual([domainPreview('cached')]);
+    });
 });

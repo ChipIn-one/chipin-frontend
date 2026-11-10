@@ -2,11 +2,12 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import type { ActivityFeedItem, Group } from 'api/chipin.types';
+import type { Group } from 'api/chipin.types';
 import { type GroupActivityData, groupsKeys } from 'entities/groups';
 import type { GroupActivityResult } from 'hooks/useGroupDetail';
 import { useAuthStore } from 'store/authStore';
 import { useUiPrefsStore } from 'store/ui-prefs';
+import { domainPreview, legacyPreview } from 'test/activityFixtures';
 import { getOrThrow } from 'test/getOrThrow';
 import { cachedGroupsList, seedGroupsList } from 'test/groupsList';
 import { setupMswServer } from 'test/mswServer';
@@ -98,11 +99,7 @@ const group = {
     },
 } satisfies Group;
 
-const preview = (parentId: string): ActivityFeedItem =>
-    ({
-        parent: { id: parentId },
-        lastEvent: { id: `${parentId}-1`, seq: 1 },
-    }) as unknown as ActivityFeedItem;
+const preview = (parentId: string) => legacyPreview(parentId);
 
 const detail = {
     ...group,
@@ -115,7 +112,12 @@ const seedDetail = (seeded: Group): void => {
 
     client.setQueryData(groupsKeys.detail(seeded.id), seeded);
     client.setQueryData<GroupActivityData>(groupsKeys.activity(seeded.id), {
-        pages: [{ ...seeded.recentActivities }],
+        pages: [
+            {
+                items: seeded.recentActivities.items.map(item => domainPreview(item.parent.id)),
+                nextCursor: seeded.recentActivities.nextCursor,
+            },
+        ],
         pageParams: [null],
     });
 };

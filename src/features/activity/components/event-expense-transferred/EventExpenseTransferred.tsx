@@ -2,12 +2,8 @@ import { Avatar, Card, Flex, Text } from '@radix-ui/themes';
 import { Redo2Icon, Undo2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { AppEvent } from 'api/activity.types';
-import {
-    ACTIVITY_ACTIONS,
-    type ExpenseTransferredFromAction,
-    type ExpenseTransferredToAction,
-} from 'constants/activity';
+import { ACTIVITY_ACTIONS } from 'constants/activity';
+import type { ExpenseTransferActivityEvent } from 'entities/activity';
 import { isUserTime24H } from 'entities/users';
 import { useUserSetting } from 'hooks/useSelfUser';
 
@@ -16,7 +12,7 @@ import { RelativeTime } from 'basics';
 import { EventIcon } from '../activity-event';
 
 interface Props {
-    event: Extract<AppEvent, { action: ExpenseTransferredFromAction | ExpenseTransferredToAction }>;
+    event: ExpenseTransferActivityEvent;
 }
 
 const getDescriptionKey = (reason: string): string => {
