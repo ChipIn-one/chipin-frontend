@@ -23,12 +23,12 @@ describe('errors store', () => {
     });
 
     test('resets all request errors', () => {
-        useErrorsStore.getState().setError('group', 'update', {
-            message: 'Group unavailable',
+        useErrorsStore.getState().setError('expense', 'update', {
+            message: 'Expense unavailable',
         });
 
         useErrorsStore.getState().resetErrors();
 
-        expect(useErrorsStore.getState().errors.group.update).toBeNull();
+        expect(useErrorsStore.getState().errors.expense.update).toBeNull();
     });
 });

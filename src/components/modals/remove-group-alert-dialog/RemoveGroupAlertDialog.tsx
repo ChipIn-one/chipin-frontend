@@ -8,9 +8,7 @@ import { toast } from 'sonner';
 import { ROUTES } from 'constants/routes';
 import type { Group } from 'entities/groups';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
-import { useGroupsStore } from 'store/groupsStore';
-import { selectGroupRemoving } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
+import { useRemoveGroup } from 'hooks/useGroupMutations';
 
 import { BaseAlertDialog } from '../base-alert-dialog';
 
@@ -22,13 +20,11 @@ interface Props {
 const RemoveGroupAlertDialog = ({ children, group }: Props) => {
     const { t } = useTranslation(['common', 'group', 'toasts']);
     const navigate = useNavigate();
-    const isRemovingGroup = useLoadingStore(selectGroupRemoving);
+    const { removeGroup, isPending: isRemovingGroup } = useRemoveGroup();
     const [isOpened, setIsOpened] = useState(false);
 
     const onRemoveGroup = () => {
-        return useGroupsStore
-            .getState()
-            .removeGroup({ groupId: group.id })
+        return removeGroup(group.id)
             .then(() => {
                 toast.success(
                     t('toasts:group.removed', {

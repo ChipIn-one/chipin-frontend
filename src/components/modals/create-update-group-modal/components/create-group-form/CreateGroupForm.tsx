@@ -2,15 +2,12 @@ import { useState } from 'react';
 import { Button, Dialog, Flex } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { useShallow } from 'zustand/react/shallow';
 
-import type { Group } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
+import type { Group } from 'entities/groups';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { useAppNavigate } from 'hooks/useAppNavigate';
-import { useGroupsStore } from 'store/groupsStore';
-import { selectGroupAdding, selectGroupCoverUploading } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
+import { useCreateGroup, useUploadGroupCover } from 'hooks/useGroupMutations';
 
 import { OverlayBody, OverlayFooter } from '../../../components';
 import { useGroupCoverDraft } from '../../internal';
@@ -24,14 +21,8 @@ interface Props {
 const CreateGroupForm = ({ onClose }: Props) => {
     const { t } = useTranslation('group');
     const navigate = useAppNavigate();
-    const { createGroup, uploadGroupCover } = useGroupsStore(
-        useShallow(state => ({
-            createGroup: state.createGroup,
-            uploadGroupCover: state.uploadGroupCover,
-        })),
-    );
-    const isCreatingGroup = useLoadingStore(selectGroupAdding);
-    const isUploadingCover = useLoadingStore(selectGroupCoverUploading);
+    const { createGroup, isPending: isCreatingGroup } = useCreateGroup();
+    const { uploadGroupCover, isPending: isUploadingCover } = useUploadGroupCover();
     const isSaving = isCreatingGroup || isUploadingCover;
     const [inputName, setInputName] = useState('');
     const [inputDescription, setInputDescription] = useState('');

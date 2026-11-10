@@ -2,14 +2,10 @@ import { useState } from 'react';
 import { Button, Dialog, Flex } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { useShallow } from 'zustand/react/shallow';
 
-import type { Group as LegacyGroup } from 'api/chipin.types';
 import type { Group } from 'entities/groups';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
-import { useGroupsStore } from 'store/groupsStore';
-import { selectGroupCoverUploading, selectGroupUpdating } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
+import { useUpdateGroup, useUploadGroupCover } from 'hooks/useGroupMutations';
 
 import { OverlayBody, OverlayFooter } from '../../../components';
 import { useGroupCoverDraft } from '../../internal';
@@ -24,14 +20,8 @@ interface Props {
 
 const UpdateGroupForm = ({ group: editedGroup, onClose }: Props) => {
     const { t } = useTranslation('group');
-    const { updateGroup, uploadGroupCover } = useGroupsStore(
-        useShallow(state => ({
-            updateGroup: state.updateGroup,
-            uploadGroupCover: state.uploadGroupCover,
-        })),
-    );
-    const isUpdatingGroup = useLoadingStore(selectGroupUpdating);
-    const isUploadingCover = useLoadingStore(selectGroupCoverUploading);
+    const { updateGroup, isPending: isUpdatingGroup } = useUpdateGroup();
+    const { uploadGroupCover, isPending: isUploadingCover } = useUploadGroupCover();
     const isSaving = isUpdatingGroup || isUploadingCover;
     const [inputName, setInputName] = useState(editedGroup.name);
     const [inputDescription, setInputDescription] = useState(editedGroup.description ?? '');
@@ -44,7 +34,7 @@ const UpdateGroupForm = ({ group: editedGroup, onClose }: Props) => {
         setUploadProgress,
     } = useGroupCoverDraft(isSaving);
 
-    const uploadSelectedCover = (group: LegacyGroup): Promise<LegacyGroup> => {
+    const uploadSelectedCover = (group: Group): Promise<Group> => {
         if (!selectedCoverFile) {
             return Promise.resolve(group);
         }
@@ -63,7 +53,7 @@ const UpdateGroupForm = ({ group: editedGroup, onClose }: Props) => {
         });
     };
 
-    const onSaveSuccess = (savedGroup: LegacyGroup) => {
+    const onSaveSuccess = (savedGroup: Group) => {
         onClose();
         toast.success(t('toasts:group.updated', { name: savedGroup.name }));
     };

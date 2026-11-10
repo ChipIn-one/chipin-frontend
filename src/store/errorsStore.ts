@@ -8,15 +8,6 @@ interface RequestErrors {
         signOut: RequestError | null;
         logoutOtherDevices: RequestError | null;
     };
-    group: {
-        add: RequestError | null;
-        update: RequestError | null;
-        remove: RequestError | null;
-        join: RequestError | null;
-        leave: RequestError | null;
-        kick: RequestError | null;
-        cover: RequestError | null;
-    };
     activity: {
         data: RequestError | null;
         nextPage: RequestError | null;
@@ -52,15 +43,6 @@ export interface ErrorsStore {
 
 const initialErrors: RequestErrors = {
     auth: { login: null, signOut: null, logoutOtherDevices: null },
-    group: {
-        add: null,
-        update: null,
-        remove: null,
-        join: null,
-        leave: null,
-        kick: null,
-        cover: null,
-    },
     activity: {
         data: null,
         nextPage: null,

@@ -24,11 +24,6 @@
       "count": 3
     }
   },
-  "src/api/groupsApi.ts": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "src/basics/BalanceBadges.tsx": {
     "boundaries/dependencies": {
       "count": 1

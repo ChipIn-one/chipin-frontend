@@ -4,9 +4,8 @@
 import type { BalanceEntry, BalancesMap } from 'api/chipin.raw.types';
 import type { Group as LegacyGroup, GroupUser as LegacyGroupUser } from 'api/chipin.types';
 import type { Balance } from 'entities/balance';
-import { legacyBalanceFromEntry } from 'entities/balance';
+import { legacyActivityPreview, legacyBalanceFromEntry } from 'entities/balance';
 import type { Group, GroupMember } from 'entities/groups';
-import { domainGroupFromLegacy } from 'store/legacyGroup';
 
 export const groupUser = (id: string, displayName = `User ${id}`): LegacyGroupUser => ({
     id,
@@ -42,8 +41,41 @@ export const wireGroup = (id: string, overrides: Partial<LegacyGroup> = {}): Leg
     };
 };
 
-/** The domain group of a legacy (wire-shaped) group: what `toGroup` reads from the same JSON. */
-export const toTestGroup = (group: LegacyGroup): Group => domainGroupFromLegacy(group);
+const toTestMember = (member: LegacyGroup['members'][number]): GroupMember => ({
+    user: member.user,
+    // Keyed by the normalized currency of each balance, as `toGroup` keys them.
+    balancesByCurrency: Object.fromEntries(
+        Object.values(member.balancesByCurrency).flatMap((entry): [string, Balance][] => {
+            const balance = legacyBalanceFromEntry(entry);
+
+            return balance ? [[balance.net.currency, balance]] : [];
+        }),
+    ),
+});
+
+/**
+ * The domain group of a legacy (wire-shaped) group: what `toGroup` reads from the same JSON
+ * (balances through the `entities/balance` legacy bridge; an unreadable balance is left out).
+ */
+export const toTestGroup = (group: LegacyGroup): Group => ({
+    id: group.id,
+    name: group.name,
+    inviteToken: group.inviteToken,
+    description: group.description,
+    creator: group.creator,
+    members: group.members.map(toTestMember),
+    createdAt: group.createdAt,
+    updatedAt: group.updatedAt,
+    coverUrl: group.coverUrl,
+    simplifyDebts: group.simplifyDebts,
+    role: group.role,
+    status: group.status,
+    lastUsedCurrency: group.lastUsedCurrency,
+    recentActivities: {
+        items: group.recentActivities.items.map(legacyActivityPreview),
+        nextCursor: group.recentActivities.nextCursor,
+    },
+});
 
 /** A domain group (`wireGroup` with the same arguments, mapped). */
 export const testGroup = (id: string, overrides: Partial<LegacyGroup> = {}): Group =>

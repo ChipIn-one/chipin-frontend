@@ -1,41 +1,5 @@
 import type { ActivityCategory } from 'constants/activity';
 
-export interface CreateGroupParams {
-    groupName: string;
-    groupDescription?: string;
-}
-
-export interface UploadGroupCoverParams {
-    groupId: string;
-    file: File;
-    onProgress?: (progress: number) => void;
-}
-
-export interface UpdateGroupParams {
-    groupId: string;
-    groupName?: string;
-    groupDescription?: string;
-    simplifyDebts?: boolean;
-}
-
-export interface RemoveGroupParams {
-    groupId: string;
-}
-
-export interface LeaveGroupParams {
-    groupId: string;
-    newOwnerId?: string;
-}
-
-export interface KickGroupMemberParams {
-    groupId: string;
-    userId: string;
-}
-
-export interface InviteToGroupParams {
-    inviteToken: string;
-}
-
 export type SharingModeType = 'AUTO' | 'EXACT' | 'PERCENTAGE' | 'SHARES';
 
 export interface SharingMode {

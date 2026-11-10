@@ -1,25 +1,25 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { http, HttpResponse } from 'msw';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { ROUTES } from 'constants/routes';
+import { useAuthStore } from 'store/authStore';
 import { TEST_INVITE_TOKEN } from 'test/fixtures/inviteToken';
+import { wireGroup } from 'test/groupFixtures';
+import { setupMswServer } from 'test/mswServer';
+import { mountAsUserClient } from 'test/userClient';
 
 import { useJoinInviteLink } from './useJoinInviteLink';
 
 const mocks = vi.hoisted(() => ({
     inviteToken: 'AbCdEfGhIjKlMnOpQrStUvWxYz012345',
-    joinGroup: vi.fn(),
+    joinGroup: vi.fn<(params: { inviteToken: string }) => Promise<{ id: string }>>(),
     navigate: vi.fn(),
 }));
 
 vi.mock('react-router-dom', () => ({
     useNavigate: () => mocks.navigate,
     useParams: () => ({ inviteToken: mocks.inviteToken }),
-}));
-
-vi.mock('store/groupsStore', () => ({
-    useGroupsStore: (selector: (state: { joinGroup: typeof mocks.joinGroup }) => unknown) =>
-        selector({ joinGroup: mocks.joinGroup }),
 }));
 
 vi.mock('helpers/errors', () => ({
@@ -31,9 +31,45 @@ vi.mock('i18next', () => ({
     default: { t: (key: string) => key },
 }));
 
+const server = setupMswServer();
+
+const statusOf = (error: unknown): number =>
+    typeof error === 'object' &&
+    error !== null &&
+    'response' in error &&
+    typeof error.response === 'object' &&
+    error.response !== null &&
+    'status' in error.response &&
+    typeof error.response.status === 'number'
+        ? error.response.status
+        : 500;
+
+// `POST /groups/invite/{inviteToken}` answered by `mocks.joinGroup`: its `{ id }` becomes that
+// group, its rejection (`{ response: { status } }`) that status.
+const serveJoin = (): void => {
+    server.use(
+        http.post('*/groups/invite/:inviteToken', ({ params }) =>
+            Promise.resolve()
+                .then(() => mocks.joinGroup({ inviteToken: String(params.inviteToken) }))
+                .then(
+                    ({ id }) => HttpResponse.json(wireGroup(id)),
+                    (error: unknown) => HttpResponse.json({}, { status: statusOf(error) }),
+                ),
+        ),
+        http.get('*/groups', () => HttpResponse.json({ items: [], nextCursor: null })),
+    );
+};
+
 beforeEach(() => {
     vi.clearAllMocks();
     mocks.inviteToken = TEST_INVITE_TOKEN;
+    useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
+    mountAsUserClient();
+    serveJoin();
+});
+
+afterEach(() => {
+    useAuthStore.setState({ status: 'unknown' });
 });
 
 test('does not join on mount; confirm joins once and opens the group', () => {

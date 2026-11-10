@@ -1,5 +1,6 @@
 // Public entry of entities/groups: the domain group, the groups list, group detail and group
-// activity queries, and the edits of their cached data.
+// activity queries, the group mutations, and the edits of their cached data.
+export { refreshGroup } from './api/groupCache';
 export type { ListDebt } from './api/listCache';
 export {
     dropGroupFromCachedList,
@@ -7,6 +8,24 @@ export {
     putGroupInCachedList,
     settleListDebt,
 } from './api/listCache';
+export type {
+    CreateGroupParams,
+    GroupWriteEffects,
+    KickGroupMemberParams,
+    LeaveGroupParams,
+    UpdateGroupParams,
+    UploadGroupCoverParams,
+} from './api/mutations';
+export {
+    createGroupMutationOptions,
+    groupsMutationKeys,
+    joinGroupMutationOptions,
+    kickGroupMemberMutationOptions,
+    leaveGroupMutationOptions,
+    removeGroupMutationOptions,
+    updateGroupMutationOptions,
+    uploadGroupCoverMutationOptions,
+} from './api/mutations';
 export {
     GROUP_DETAIL_STALE_TIME,
     groupActivityQueryOptions,

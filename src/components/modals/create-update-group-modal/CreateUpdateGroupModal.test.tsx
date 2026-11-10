@@ -1,16 +1,17 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { IMAGE_FILE_ACCEPT } from 'helpers/imageFile';
-import type { GroupsStore } from 'store/groupsStore';
-import { useGroupsStore } from 'store/groupsStore';
-import { useLoadingStore } from 'store/loadingStore';
+import { useAuthStore } from 'store/authStore';
 import { toTestGroup } from 'test/groupFixtures';
+import { setupMswServer } from 'test/mswServer';
+import { mountAsUserClient } from 'test/userClient';
 
 import CreateUpdateGroupModal from './CreateUpdateGroupModal';
 
@@ -51,9 +52,18 @@ const group = {
     recentActivities: { items: [], nextCursor: null },
 } satisfies Group;
 
-const createGroup = vi.fn<GroupsStore['createGroup']>();
-const updateGroup = vi.fn<GroupsStore['updateGroup']>();
-const uploadGroupCover = vi.fn<GroupsStore['uploadGroupCover']>();
+const server = setupMswServer();
+
+// The server's group writes, as the test answers them (a rejection fails the request).
+const createGroup = vi.fn<(body: unknown) => Promise<Group>>();
+const updateGroup = vi.fn<(groupId: string, body: unknown) => Promise<Group>>();
+const uploadGroupCover = vi.fn<(groupId: string) => Promise<Group>>();
+
+const answer = (write: () => Promise<Group>): Promise<Response> =>
+    write().then(
+        body => HttpResponse.json(body),
+        () => HttpResponse.json({ code: 'SYSTEM.INTERNAL' }, { status: 500 }),
+    );
 const OPEN_MODAL_LABEL = 'Open group modal';
 
 const LocationProbe = () => {
@@ -83,13 +93,23 @@ const renderModal = (type: 'create' | 'update', editedGroup: Group = group) => {
 
 beforeEach(() => {
     vi.clearAllMocks();
-    useGroupsStore.getState().setInitialGroupsStore();
-    useGroupsStore.setState({
-        createGroup,
-        updateGroup,
-        uploadGroupCover,
-    });
-    useLoadingStore.getState().setInitialLoadingStore();
+    createGroup.mockReset();
+    updateGroup.mockReset();
+    uploadGroupCover.mockReset();
+    useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
+    mountAsUserClient();
+    server.use(
+        http.post('*/groups', ({ request }) =>
+            answer(() => request.json().then(body => createGroup(body))),
+        ),
+        http.patch('*/groups/:groupId', ({ params, request }) =>
+            answer(() => request.json().then(body => updateGroup(String(params.groupId), body))),
+        ),
+        http.put('*/groups/:groupId/cover', ({ params }) =>
+            answer(() => uploadGroupCover(String(params.groupId))),
+        ),
+        http.get('*/groups', () => HttpResponse.json({ items: [], nextCursor: null })),
+    );
 
     Object.defineProperties(URL, {
         createObjectURL: {
@@ -101,6 +121,10 @@ beforeEach(() => {
             value: vi.fn(),
         },
     });
+});
+
+afterEach(() => {
+    useAuthStore.setState({ status: 'unknown' });
 });
 
 test('hides the cover preview until a file is selected in create mode', () => {
@@ -218,13 +242,7 @@ test('creates a group before uploading the selected cover and closes after both 
     });
 
     createGroup.mockReturnValue(createPromise);
-    uploadGroupCover.mockImplementation(params => {
-        useLoadingStore.getState().setLoading('group', 'cover', 'loading');
-        params.onProgress?.(42);
-        return uploadPromise.finally(() => {
-            useLoadingStore.getState().setLoading('group', 'cover', 'fetched');
-        });
-    });
+    uploadGroupCover.mockReturnValue(uploadPromise);
 
     renderModal('create');
 
@@ -250,11 +268,12 @@ test('creates a group before uploading the selected cover and closes after both 
                 screen.getByRole('button', { name: 'common:buttons.createGroup' }),
             );
         })
+        .then(() =>
+            waitFor(() => {
+                expect(createGroup).toHaveBeenCalledWith({ name: 'New Trip' });
+            }),
+        )
         .then(() => {
-            expect(createGroup).toHaveBeenCalledWith({
-                groupName: 'New Trip',
-                groupDescription: undefined,
-            });
             expect(uploadGroupCover).not.toHaveBeenCalled();
 
             if (!resolveCreate) {
@@ -264,14 +283,10 @@ test('creates a group before uploading the selected cover and closes after both 
             resolveCreate({ ...group, name: 'New Trip' });
 
             return waitFor(() => {
-                expect(uploadGroupCover).toHaveBeenCalledWith({
-                    groupId: group.id,
-                    file,
-                    onProgress: expect.any(Function),
-                });
+                expect(uploadGroupCover).toHaveBeenCalledWith(group.id);
                 expect(screen.getByTestId('location').textContent).toBe('/dashboard');
                 expect(screen.getByRole('dialog')).toBeTruthy();
-                expect(screen.getByText('modal.cover.progress:42')).toBeTruthy();
+                expect(screen.getByText(/^modal\.cover\.progress:\d+$/)).toBeTruthy();
                 expect(screen.getByRole('button', { name: 'buttons.close' })).toHaveProperty(
                     'disabled',
                     true,
@@ -371,12 +386,14 @@ test('updates group fields without uploading when no new cover is selected', () 
         .then(() =>
             interaction.click(screen.getByRole('button', { name: 'common:buttons.saveGroup' })),
         )
-        .then(() => {
-            expect(updateGroup).toHaveBeenCalledOnce();
-            expect(uploadGroupCover).not.toHaveBeenCalled();
-            expect(screen.queryByRole('dialog')).toBeNull();
-            expect(screen.getByTestId('location').textContent).toBe('/dashboard');
-        });
+        .then(() =>
+            waitFor(() => {
+                expect(updateGroup).toHaveBeenCalledOnce();
+                expect(uploadGroupCover).not.toHaveBeenCalled();
+                expect(screen.queryByRole('dialog')).toBeNull();
+                expect(screen.getByTestId('location').textContent).toBe('/dashboard');
+            }),
+        );
 });
 
 test('clears an existing group description', () => {
@@ -394,13 +411,14 @@ test('clears an existing group description', () => {
         .then(() =>
             interaction.click(screen.getByRole('button', { name: 'common:buttons.saveGroup' })),
         )
-        .then(() => {
-            expect(updateGroup).toHaveBeenCalledWith({
-                groupId: group.id,
-                groupName: group.name,
-                groupDescription: '',
-            });
-        });
+        .then(() =>
+            waitFor(() => {
+                expect(updateGroup).toHaveBeenCalledWith(group.id, {
+                    name: group.name,
+                    description: '',
+                });
+            }),
+        );
 });
 
 test('updates group fields before uploading a newly selected cover', () => {
@@ -425,11 +443,7 @@ test('updates group fields before uploading a newly selected cover', () => {
         .then(() =>
             waitFor(() => {
                 expect(updateGroup).toHaveBeenCalledOnce();
-                expect(uploadGroupCover).toHaveBeenCalledWith({
-                    groupId: updatedGroup.id,
-                    file,
-                    onProgress: expect.any(Function),
-                });
+                expect(uploadGroupCover).toHaveBeenCalledWith(updatedGroup.id);
                 expect(screen.queryByRole('dialog')).toBeNull();
             }),
         );

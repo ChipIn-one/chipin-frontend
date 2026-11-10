@@ -1,11 +1,14 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group } from 'api/chipin.types';
-import { useGroupsStore } from 'store/groupsStore';
-import { useLoadingStore } from 'store/loadingStore';
+import { useActivityStore } from 'store/activity-store';
+import { useAuthStore } from 'store/authStore';
+import { setupMswServer } from 'test/mswServer';
+import { mountAsUserClient } from 'test/userClient';
 
 import RemoveGroupAlertDialog from './RemoveGroupAlertDialog';
 
@@ -19,13 +22,22 @@ vi.mock('sonner', () => ({
     toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
 }));
 
+const server = setupMswServer();
+
 beforeEach(() => {
     vi.clearAllMocks();
-    useLoadingStore.getState().setInitialLoadingStore();
+    useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
+    mountAsUserClient();
+    useActivityStore.setState({ fetchSetActivity: vi.fn(() => Promise.resolve()) });
+    server.use(http.get('*/groups', () => HttpResponse.json({ items: [], nextCursor: null })));
+});
+
+afterEach(() => {
+    useAuthStore.setState({ status: 'unknown' });
 });
 
 test('waits for confirmation before removing a group', () => {
-    const removeGroup = vi.fn().mockResolvedValue(true);
+    const removeGroup = vi.fn();
     const user = userEvent.setup();
     const selectedGroup = {
         id: 'group-1',
@@ -53,7 +65,12 @@ test('waits for confirmation before removing a group', () => {
         recentActivities: { items: [], nextCursor: null },
     } satisfies Group;
 
-    useGroupsStore.setState({ removeGroup });
+    server.use(
+        http.delete('*/groups/:groupId', ({ params }) => {
+            removeGroup({ groupId: params.groupId });
+            return new HttpResponse(null, { status: 204 });
+        }),
+    );
 
     render(
         <MemoryRouter>

@@ -16,7 +16,6 @@ import { groupsKeys, groupsListQueryOptions } from 'entities/groups';
 import { type KnownUser, knownUsersQueryOptions, usersKeys } from 'entities/users';
 import { useAuthStore } from 'store/authStore';
 import { useErrorsStore } from 'store/errorsStore';
-import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
 import { groupBalances } from 'test/groupFixtures';
 import { groupsListData } from 'test/groupsList';
@@ -265,7 +264,6 @@ beforeEach(() => {
     groupsCardsMode.real = false;
     client = createTestQueryClient();
     mountAsUserClient('user-1', client);
-    useGroupsStore.getState().setInitialGroupsStore();
     useAuthStore.setState({ status: 'authenticated' });
     client.setQueryData(usersKeys.self(), currentUser);
     useLoadingStore.getState().setInitialLoadingStore();

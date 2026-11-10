@@ -8,7 +8,6 @@ import { lightThemeStyled } from 'constants/styled-themes';
 import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
 import { useAuthStore } from 'store/authStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
-import { useGroupsStore } from 'store/groupsStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { seedGroupsList } from 'test/groupsList';
 import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
@@ -59,7 +58,6 @@ const group = {
 beforeEach(() => {
     useUiPrefsStore.setState({ appMode: APP_MODES.GROUP, lastGroupId: group.id });
     useExpenseModalStore.getState().reset();
-    useGroupsStore.getState().setInitialGroupsStore();
     useAuthStore.setState({ status: 'authenticated' });
     seedGroupsList([group]);
     useExpenseModalStore.getState().open();

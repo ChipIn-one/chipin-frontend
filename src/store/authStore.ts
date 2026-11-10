@@ -33,7 +33,6 @@ import {
 import { useErrorsStore } from './errorsStore';
 import { useExpenseModalStore } from './expenseModalStore';
 import { loadGroupsListForSession } from './groupsList';
-import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
 import {
     cachedUserId,
@@ -70,7 +69,6 @@ let lastOAuthExchange: { code: string; promise: Promise<void> } | null = null;
 const resetAuthScopedStores = () => {
     useActivityStore.getState().resetActivity();
     useUiPrefsStore.getState().resetUiPrefs();
-    useGroupsStore.getState().setInitialGroupsStore();
     useErrorsStore.getState().resetErrors();
     resetSessionSelfLoad();
     useLoadingStore.getState().setInitialLoadingStore();

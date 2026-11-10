@@ -1,13 +1,14 @@
+import { MutationObserver } from '@tanstack/react-query';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group } from 'api/chipin.types';
-import { type GroupActivityData, groupsKeys } from 'entities/groups';
+import { type GroupActivityData, groupsKeys, joinGroupMutationOptions } from 'entities/groups';
+import { getAuthSessionVersion } from 'helpers/authSession';
 import { clearLocalUserIdentity, resetTabUserId, saveLocalUser } from 'helpers/localStorage';
 import type { GroupActivityResult } from 'hooks/useGroupDetail';
 import { useAuthStore } from 'store/authStore';
-import { putGroupDetail } from 'store/groupsList';
 import { useUiPrefsStore } from 'store/ui-prefs';
 import { domainPreview, legacyPreview } from 'test/activityFixtures';
 import { getOrThrow } from 'test/getOrThrow';
@@ -288,13 +289,18 @@ test('a group just joined opens without a detail or activity request', async () 
             requests.push('activity');
             return HttpResponse.json({ items: [], nextCursor: null });
         }),
+        http.post('*/groups/invite/:inviteToken', () => HttpResponse.json(detail)),
+        http.get('*/groups', () => HttpResponse.json({ items: [detail], nextCursor: null })),
     );
-    // This tab's user owns the default client: the legacy join writes there.
-    mountAsUserClient(TAB_USER_ID);
+    // This tab's user owns the default client: the join writes there.
+    const client = mountAsUserClient(TAB_USER_ID);
     saveLocalUser({ id: TAB_USER_ID, settings: SETTINGS });
     try {
-        // What a join does with the group it returned.
-        await putGroupDetail(detail);
+        // The join mutation, as the invite page sends it.
+        await new MutationObserver(client, joinGroupMutationOptions()).mutate({
+            inviteToken: detail.inviteToken,
+            sessionVersion: getAuthSessionVersion(),
+        });
 
         render(<GroupPage />);
 

@@ -1,6 +1,7 @@
 import { Theme } from '@radix-ui/themes';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { beforeEach, expect, test, vi } from 'vitest';
@@ -10,17 +11,15 @@ import { ProtectedRoute } from 'features/routing/ProtectedRoute';
 import i18n from 'i18n';
 import { useAuthStore } from 'store/authStore';
 import { TEST_INVITE_TOKEN } from 'test/fixtures/inviteToken';
+import { wireGroup } from 'test/groupFixtures';
+import { setupMswServer } from 'test/mswServer';
+import { mountAsUserClient } from 'test/userClient';
 
 import GroupJoinPage from './GroupJoinPage';
 
 const mocks = vi.hoisted(() => ({
     authSessionVersion: 1,
-    joinGroup: vi.fn(),
-}));
-
-vi.mock('store/groupsStore', () => ({
-    useGroupsStore: (selector: (state: { joinGroup: typeof mocks.joinGroup }) => unknown) =>
-        selector({ joinGroup: mocks.joinGroup }),
+    joinGroup: vi.fn<(params: { inviteToken: string }) => Promise<{ id: string }>>(),
 }));
 
 vi.mock('helpers/authSession', () => ({
@@ -88,10 +87,41 @@ const currentRoute = () => screen.getByLabelText('Current route').textContent;
 
 const apiError = (status: number) => ({ isAxiosError: true, response: { status, data: {} } });
 
+const server = setupMswServer();
+
+const statusOf = (error: unknown): number =>
+    typeof error === 'object' &&
+    error !== null &&
+    'response' in error &&
+    typeof error.response === 'object' &&
+    error.response !== null &&
+    'status' in error.response &&
+    typeof error.response.status === 'number'
+        ? error.response.status
+        : 500;
+
+// `POST /groups/invite/{inviteToken}` answered by `mocks.joinGroup`: its `{ id }` becomes that
+// group, its rejection (`{ response: { status } }`) that status.
+const serveJoin = (): void => {
+    server.use(
+        http.post('*/groups/invite/:inviteToken', ({ params }) =>
+            Promise.resolve()
+                .then(() => mocks.joinGroup({ inviteToken: String(params.inviteToken) }))
+                .then(
+                    ({ id }) => HttpResponse.json(wireGroup(id)),
+                    (error: unknown) => HttpResponse.json({}, { status: statusOf(error) }),
+                ),
+        ),
+        http.get('*/groups', () => HttpResponse.json({ items: [], nextCursor: null })),
+    );
+};
+
 beforeEach(() => {
     vi.clearAllMocks();
     mocks.authSessionVersion = 1;
     useAuthStore.setState({ status: 'authenticated', unauthReason: undefined });
+    mountAsUserClient();
+    serveJoin();
     return i18n.changeLanguage('en');
 });
 

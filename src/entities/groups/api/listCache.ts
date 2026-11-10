@@ -1,6 +1,6 @@
 // Edits of the cached groups list on a given client: the group detail query writes the group it
-// read (or drops one it may not read), and the legacy group actions (`store/groupsList.ts`) write
-// the groups they changed. Never a request of its own, except the reload a race leaves owed.
+// read (or drops one it may not read), and the group mutations (`groupCache.ts`) write the groups
+// they changed. Never a request of its own, except the reload a race leaves owed.
 import type { QueryClient } from '@tanstack/react-query';
 
 import { type GroupsListData, removeGroupFromList, upsertGroupInList } from '../model/groupsList';

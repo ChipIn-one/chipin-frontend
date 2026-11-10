@@ -30,7 +30,8 @@ import { isUserCacheClient } from 'shared/offline/userCaches';
 import { AUTH_STATUS } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
 
-const useIsUserWriteEnabled = (): boolean => {
+/** Signed in on the user's persisted client: the only place user and group writes run. */
+export const useIsUserWriteEnabled = (): boolean => {
     const isSignedIn = useAuthStore(state => state.status === AUTH_STATUS.AUTHENTICATED);
     const isUserClient = isUserCacheClient(useQueryClient());
 

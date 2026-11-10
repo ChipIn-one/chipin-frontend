@@ -6,9 +6,7 @@ import { toast } from 'sonner';
 
 import type { GroupUser } from 'api/chipin.types';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
-import { useGroupsStore } from 'store/groupsStore';
-import { selectGroupKicking } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
+import { useKickGroupMember } from 'hooks/useGroupMutations';
 
 import { BaseAlertDialog } from '../base-alert-dialog';
 
@@ -20,13 +18,11 @@ interface Props {
 
 const KickGroupMemberAlertDialog = ({ children, groupId, member }: Props) => {
     const { t } = useTranslation(['common', 'group', 'toasts']);
-    const isKickingMember = useLoadingStore(selectGroupKicking);
+    const { kickGroupMember, isPending: isKickingMember } = useKickGroupMember();
     const [isOpened, setIsOpened] = useState(false);
 
     const onKickGroupMember = () => {
-        return useGroupsStore
-            .getState()
-            .kickGroupMember({ groupId, userId: member.id })
+        return kickGroupMember({ groupId, userId: member.id })
             .then(() => {
                 toast.success(
                     t('toasts:group.kicked', {
