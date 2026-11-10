@@ -76,15 +76,16 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
   Run `npx prettier --write <files>` on the files you changed. `npm run format:check` checks without
   writing; `verify`, `verify:full`, and CI run it, so CI enforces formatting.
 - `npm run lint` runs ESLint with `--max-warnings 0` and the rule registry check; `npm run lint:full`
-  runs ESLint in full mode (`CHIPIN_ESLINT_FULL=1`, for CI-only rules; there are none yet,
-  `import-x/no-cycle` arrives in 02-C9). The registry check always resolves the config in both
+  runs ESLint in full mode (`CHIPIN_ESLINT_FULL=1`, for CI-only rules such as
+  `import-x/no-cycle`). The registry check always resolves the config in both
   modes and checks their union, so a full-only rule must be registered and is not reported as
   dead in `lint`. Extra arguments go to ESLint: `npm run lint -- <args>`.
 - `npm run baseline:update` prunes fixed entries from `eslint-suppressions.json`; it never adds entries.
-- `npm run verify` is the fast local check: version check, format check, lint, and typecheck; it does not run
+- `npm run verify` is the fast local check: version check, format check, lint, `check:file-layout`, and
+  typecheck; it does not run
   Vitest or build.
-- `npm run verify:full` is the full gate and the same command CI runs: version check, format check, `lint:full`, the
-  complete Vitest suite, the production build, and the ds-gallery build. CI also runs
+- `npm run verify:full` is the full gate and the same command CI runs: version check, format check, `lint:full`,
+  `check:file-layout`, the complete Vitest suite, the production build, and the ds-gallery build. CI also runs
   `scripts/check-baseline.mjs` on pull requests. Husky `pre-commit` runs `lint-staged` with `CHIPIN_ESLINT_FAST=1`
   (no type-aware rules): `eslint --fix`, then Prettier, on staged files; remaining errors are printed
   and lint never blocks the commit (only a syntax error that Prettier cannot parse does). There is no `pre-push` hook.

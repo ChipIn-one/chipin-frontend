@@ -3,34 +3,47 @@
 ChipIn frontend on Vite 8, React 19, TS strict, Radix Themes, i18next, PWA.
 Do not change backend contracts without an explicit request. The full rulebook is only `docs/engineering/rules/*`.
 
-## Invariants
+## Applies now
 
-Invariants 1–6 and 9 describe the target state of specs 03/04 (the `app`, `entities`, and `shared` layers do not exist yet); until their PRs land, the current `src/` structure, the code, and the rules in `docs/engineering/rules/` apply (for money, `60-money-helpers.md`). Exception: the bans in item 9 (new server stores and new connector hooks) apply now (D12).
+These invariants hold on `master` today (lint, `check:file-layout`, CI, or the existing code) and bind every task.
 
-1. Layers import only downward along one graph: app → pages → features → components → hooks → store → entities → helpers → shared → api → base (constants, types, i18n, styles, assets); basics sits between components and helpers; `shared` splits into `shared-api` (`shared/api`, `shared/offline`: only hooks, store, entities, app) and `shared-lib`. Details: `docs/engineering/rules/10-architecture.md`.
-2. UI (pages, features, components, basics) and helpers do not call the runtime API, `axios`, `shared/api`, or `shared/offline`; server data comes through the query layer (`entities/*`) or a store. `no-restricted-imports` catches imports of `axios` and runtime `api/` modules from UI.
-3. Money in code is `Money { minor: bigint }` (ledger units, scale 4); on the wire it is a JSON number with scale 4 (D21). The wire boundary has two layers: the transport `shared/api/wireJson.ts` (only inside the `api()` wrapper) parses the body without doubles into an opaque `WireAmount` and writes outgoing amounts as decimal literals, but does not interpret amounts; `WireAmount` ↔ `Money` conversion happens only in `moneyFromWire`/`moneyToWire` inside the `entities/*/model` mappers (`toX()`/`toXWire()`). Input parsing, rounding, sums, and formatting live only in `src/shared/money/`; `parseFloat`/`Number()`/`JSON.parse` on money fields outside it are forbidden. Display is only `basics/numbers/amount/Amount.tsx`.
-4. The server is the source of truth for finances: do not patch balances/debts locally; only the outbox loop `runOutboxOp` repeats a mutation (spec 03 §2.4); every TanStack mutation has `retry: false`, the online path is `ledgerOnlineMutationKeys` (`networkMode: 'online'`); a stale response never overwrites newer state.
-5. Expenses are created/edited/deleted only through `entities/ledger/api/mutations.ts` (selected by `offlineWritesAvailable`: online keys or outbox); offline only through the outbox with a client UUID and `entryKind: 'expense'` (enabled by 03-17 behind a flag and backend capabilities; until then there are no offline writes). Settle-up and payments, including editing and deleting a settlement, are forbidden offline (`ONLINE_ONLY_ACTIONS`, `<OnlineOnly>`).
-6. Types: no `any`, `as any`, `@ts-ignore`, unjustified `as`, or `!`; type-only imports use `import type`. Data from IndexedDB, the outbox, and localStorage is validated on read (zod, except the landing-path `LocalUser` reader, which is hand-written for bundle size).
-7. Promises are never lost: every promise is returned, awaited, or explicitly marked `void`; errors are not swallowed. `await` or `.then` style is free (the owner lifted the async/await ban on 2026-10-28, D24). A JSX attribute never returns a promise: `onClick={() => void action()}`.
-8. Named exports only; at most one `index.ts` per slice, no `export *`. An `index.ts` outside `src/<layer>/<slice>/` or a new `useConnect.ts` fails `check:file-layout` (existing ones are baselined until codemod 02-D3 and spec 03 remove them); the rest is a review rule until 02-D2/02-D3 land, mandatory in new code. Do not rewrite existing files incidentally (codemod 02-D3 migrates them).
-9. Server state is TanStack Query; Zustand is UI state. Server stores that spec 03 has not migrated yet are transitional: do not create new ones and do not add new server-data fields to them. Read one value with a selector, several with one object selector wrapped in `useShallow`; `useStore()` without a selector and new `useConnect` hooks are forbidden.
-10. `npx eslint --fix <changed files>` fixes everything auto-fixable; do not fix style by hand. A lint error is about correctness or a boundary, and its message says how to fix it; `eslint-disable` only with a reason.
-11. All user-facing text, including `aria-*`, `placeholder`, `title`, and toasts, goes through i18n in every locale. Interactive elements are native elements or Radix; icon buttons have a translated name (review).
-12. `localStorage`/`sessionStorage` only through `helpers/localStorage.ts`. Tokens, invite tokens, and personal data never reach logs, Sentry, or URLs; logout clears all user data (cache, outbox, user `id`/`role`); only the language and theme UI settings survive.
-13. Import order is `simple-import-sort` (fixed by `--fix`), formatting is Prettier (`prettier.config.js`), enforced by `format:check` in CI; run `prettier --write` on the files you changed and do not reformat code the task does not change.
-14. Every task PR body has `## Version impact` (`none|patch|minor|major`); a task does not change `version` in `package.json`/`package-lock.json` and does not run `version:bump` (see Release).
-15. A change to the domain, API, or visible behavior starts in the KB: `chipin-knowledge-base/common/glossary.md` and `common/specs/<capability>.md`; tests are named by requirement IDs. New behavior lands in the KB spec first through a linked PR; a conflict with an ADR in `common/adr/` means stop and ask the owner. Take the KB from `../chipin-knowledge-base`, otherwise `git clone` it there, otherwise read it through GitHub; if the KB is unavailable both locally and through GitHub — BLOCKED.
+1. Imports follow `LAYER_GRAPH` in `config/eslint/layers.js`, the source of truth (table: `docs/engineering/rules/10-architecture.md`). `app` may import every layer; `features` and `entities` reach another slice of their own layer only through its `index.ts`.
+2. In short: pages → features → components → basics. Only `app`, `hooks`, `store` and `entities` see `shared-api` (`shared/api`, `shared/offline`); `entities` never import `store` or `hooks`; `basics` and `helpers` see only helpers, `shared-lib` and base; `api` sees only base.
+3. UI (pages, features, components, basics) does not import `axios` or runtime `api/` modules (`no-restricted-imports`; type imports are allowed). Server data reaches UI through `entities/*` queries, hooks, or a store.
+4. Money in code is `Money { minor: bigint }` (ledger units, scale 4) from `src/shared/money/`; parsing, rounding, sums and formatting live only there. `parseFloat`/`Number()`/`JSON.parse` on money fields elsewhere are forbidden. Display is only `basics/numbers/amount/Amount.tsx`.
+5. On the wire money is a JSON number of scale 4. `shared/api/wireJson.ts`, used only inside the `api()` wrapper, reads it without doubles into an opaque `WireAmount`; only `moneyFromWire`/`moneyToWire` in the `entities/*/model` mappers convert it. Legacy amounts: `60-money-helpers.md`.
+6. Types: no `any`, `as any`, `@ts-ignore`, unjustified `as`, or `!`; type-only imports use `import type`. Data read from IndexedDB and localStorage is validated (zod; the landing-path `LocalUser` reader is hand-written for bundle size).
+7. Promises are never lost: return, await, or mark them `void`; do not swallow errors. `await` and `.then` are both fine. A JSX attribute never returns a promise: `onClick={() => void action()}`.
+8. The server is the source of truth for finances: do not patch balances or debts locally, and a stale response never overwrites newer state. Every TanStack mutation has `retry: false`.
+9. There are no offline financial writes: `shared/offline/outboxGate.ts` and `pendingOps.ts` are stubs, and a task does not build an outbox unless it asks for one. Settle-up and payments, including editing or deleting a settlement, are online-only.
+10. An `index.ts` exists only at `src/<layer>/<slice>/index.ts`, and no new `useConnect.ts` is added: `check:file-layout` fails both (existing files are baselined). No `export *`; named exports in new code (review). Do not rewrite existing files incidentally.
+11. Server state is TanStack Query; Zustand is UI state. Legacy server stores remain until migrated: do not create new ones or add server-data fields. Read one value with a selector, several with one object selector in `useShallow`; `useStore()` without a selector is forbidden.
+12. `localStorage` and `sessionStorage` go only through `helpers/localStorage.ts` (lint checks `localStorage`; known exception `src/helpers/publicLocaleSuggestion.ts`, a follow-up). Logout clears all user data (cache, user `id`/`role`); only the language and theme settings survive.
+13. Tokens, invite tokens and personal data never reach logs, Sentry or URLs.
+14. `npx eslint --fix <changed files>` fixes everything auto-fixable; do not fix style by hand. A lint error is about correctness or a boundary, and its message says how to fix it; `eslint-disable` only with a reason.
+15. All user-facing text, including `aria-*`, `placeholder`, `title` and toasts, goes through i18n in every locale. Interactive elements are native elements or Radix; icon buttons have a translated name (review).
+16. Import order is `simple-import-sort` (fixed by `--fix`); formatting is Prettier (`prettier.config.js`), enforced by `format:check` in CI. Run `prettier --write` only on the files you changed.
+17. Every task PR body has `## Version impact` (`none|patch|minor|major`); a task does not change `version` in `package.json`/`package-lock.json` and does not run `version:bump` (see Release).
+18. A change to the domain, API or visible behavior starts in the KB (`chipin-knowledge-base/common/glossary.md`, `common/specs/<capability>.md`) through a linked PR; tests are named by requirement IDs. A conflict with an ADR in `common/adr/` means stop and ask the owner.
+19. Take the KB from `../chipin-knowledge-base`, otherwise `git clone` it there, otherwise read it through GitHub; if it is unavailable both locally and through GitHub, the task is BLOCKED.
+
+## Target (refactor in progress)
+
+Where the refactor goes: `docs/superpowers/specs/2026-10-28-frontend-refactor/00-overview.md`; owner decisions: `DECISIONS.md` in the same folder. A target item becomes a rule only when its PR lands; until then do not build it in an unrelated task.
+
+- All server state moves to TanStack Query in `entities/*`; Zustand keeps UI state only and the legacy server stores go away.
+- Expense create/edit/delete goes through an outbox (spec 03 §2): offline writes with a client UUID, replayed in order. Settle-up and payments stay online-only.
+- Named exports are enforced by `import-x/no-default-export`; existing default exports become lint suppressions that only shrink, with no codemods.
+- Legacy money helpers in `helpers/numbers.ts` go away as the code moves to `src/shared/money/`; route composition moves from `features/routing` into the `app` layer (spec 04).
 
 ## Commands
 
 - `npm run test:task -- <test paths>` — targeted tests; refuses to run without a path.
 - `npx eslint --fix <files>` — ESLint auto-fixes in changed files only.
 - `npx prettier --write <files>` — format the files you changed; never `npm run format` in a task.
-- `npm run verify` — version check, format check, lint (`--max-warnings 0`: every rule is error or off) and typecheck.
+- `npm run verify` — version check, format check, lint (`--max-warnings 0`: every rule is error or off), `check:file-layout`, typecheck.
 - `npm run baseline:update` — prune fixed entries from `eslint-suppressions.json`; the lint baseline only shrinks. Prune only through this script (it sets `CHIPIN_ESLINT_FULL=1`): a plain `eslint . --prune-suppressions` drops the `import-x/no-cycle` entries and CI `lint:full` goes red.
-- `npm run verify:full` — the full gate: version check, format check, `lint:full`, all tests, build, ds-gallery; CI runs the same. Run before `IMPLEMENTATION_COMPLETE`.
+- `npm run verify:full` — the full gate: version check, format check, `lint:full`, `check:file-layout`, all tests, build, ds-gallery; CI runs the same. Run before `IMPLEMENTATION_COMPLETE`.
 - `npm run typecheck` — `tsc -b`.
 - `npm run version:check` — the version in `package.json` and `package-lock.json` is valid and matches (read-only).
 - `npm run fix` — `eslint --fix`, then Prettier, over the whole repository (not in a task).
@@ -50,7 +63,7 @@ The release process owns releases: the owner runs Promote to Production for a ch
 
 ## Review
 
-An independent reviewer checks invariants 1–15 and that changed logic has regression tests. The reviewer does not comment on style, formatting, import order, or anything CI catches.
+An independent reviewer checks the "Applies now" invariants and that changed logic has regression tests. The reviewer does not comment on style, formatting, import order, or anything CI catches.
 Mandatory review focus: auth/session/refresh and tokens, interceptors and permissions, routing and auth composition, request races and cancellation, service worker/PWA, CI, security (CSP), and dependency updates.
 
 <!-- ai-workflow:agents-routing:start -->
