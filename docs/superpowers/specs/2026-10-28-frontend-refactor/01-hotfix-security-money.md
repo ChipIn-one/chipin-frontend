@@ -86,7 +86,7 @@ export const encodePathSegment = (segment: string): string => {
 - All API functions that call `apiPath` build the path **inside `.then`** — one form, no `async`: `` Promise.resolve().then(() => apiInstance.post(apiPath`/groups/invite/${inviteToken}`)) ``. This way `InvalidPathSegmentError` becomes a **rejected Promise**, not a synchronous throw: a route parameter `%2E` (RR decodes it to `.`) would otherwise throw inside a store action from `useEffect` and bring down the error boundary (review B, m1). We do not use `async`: until 02-C4, a warn selector "async without await" is in effect in `eslint.config.js:99-122` (its removal is PR 02-C4, spec 02).
 - The error text does not contain the segment value (it does not leak into Sentry).
 - All 14 call sites are rewritten to `` apiPath`/groups/${groupId}` `` etc.; `usersApi.ts:67` too (remove the manual `encodeURIComponent`, otherwise there will be double encoding).
-- We do **not** add UUID validation for `groupId`/`entryId`/`parentActivityId` to the API layer: the test fixtures use `group-1`, `activity-parent` (both pass the allowlist), and the backend already does `asValidUuid`. All 14 places are ids/tokens (checked by grep), there are no other characters in legitimate segments; a fixture that does not pass the allowlist is replaced with a valid one. Validation of route parameters moves to loaders (D6, spec 04, PR 04-2e).
+- We do **not** add UUID validation for `groupId`/`entryId`/`parentActivityId` to the API layer: the test fixtures use `group-1`, `activity-parent` (both pass the allowlist), and the backend already does `asValidUuid`. All 14 places are ids/tokens (checked by grep), there are no other characters in legitimate segments; a fixture that does not pass the allowlist is replaced with a valid one. Validation of route parameters moves to the route level (`validateUuidParam`, spec 04, PR 04-2a3; D31 withdrew the 04-2e loaders).
 
 ### 01-1.2 Invite token validation
 
@@ -221,7 +221,7 @@ Complete elimination of the multiple language "writers" (5 places) — spec 04 (
 ## What we do NOT do
 
 - PKCE/state for OAuth on the client (needs the backend, BE-01-1).
-- UUID validation of route parameters — spec 04 (04-2e); narrowing `img-src`, CSP reporting, Sentry tunnel — a follow-up issue outside the specs.
+- UUID validation of route parameters — spec 04 (`validateUuidParam`, 04-2a3); narrowing `img-src`, CSP reporting, Sentry tunnel — a follow-up issue outside the specs.
 - Minor units per currency, the `src/shared/money/` module, lint on `Number()`/`parseFloat` — D10, spec 03 (03-1, 03-3).
 - Merging the 5 language "writers" — spec 04 (04-2c, 04-5a).
 - Removing the D16 dependencies (dexie, sharp, etc.) and the vendor regex — spec 02 (02-B1, 02-B2).
