@@ -3,7 +3,7 @@ import { Box, Button, Flex, IconButton, Spinner, Tabs, Text } from '@radix-ui/th
 import { ChevronsDownIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { Group } from 'api/chipin.types';
+import type { Group } from 'entities/groups';
 import { ActivityEventsList } from 'features/activity';
 import { getActivityPreviewEvents } from 'helpers/activityEvent';
 import { useGroupInvite } from 'hooks/pwaHooks';

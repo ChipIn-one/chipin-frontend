@@ -7,12 +7,13 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
 import type { BalanceEntry, BalancesMap } from 'api/chipin.raw.types';
-import type { Group } from 'api/chipin.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { currencyRatesKeys } from 'entities/currency-rates';
+import type { Group } from 'entities/groups';
 import { groupsKeys } from 'entities/groups';
 import { useAuthStore } from 'store/authStore';
+import { groupBalancesFromMap } from 'test/groupFixtures';
 import { seedGroupsList } from 'test/groupsList';
 import { setupMswServer } from 'test/mswServer';
 import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
@@ -117,7 +118,7 @@ const createGroup = ({
                 id: `${id}-user-${index}`,
                 email: `${id}-user-${index}@example.com`,
             },
-            balancesByCurrency,
+            balancesByCurrency: groupBalancesFromMap(balancesByCurrency),
         })),
         createdAt,
         updatedAt: createdAt,

@@ -2,14 +2,16 @@ import { InfiniteQueryObserver, onlineManager, QueryObserver } from '@tanstack/r
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
-import type { Group } from 'api/chipin.types';
+import type { Group as LegacyGroup } from 'api/chipin.types';
 import {
     dropGroupFromCachedList,
+    type Group,
     groupDetailQueryOptions,
     groupsKeys,
     groupsListQueryOptions,
     putGroupInCachedList,
 } from 'entities/groups';
+import { testGroup, wireGroup } from 'test/groupFixtures';
 import { cachedGroupsList, groupsListData } from 'test/groupsList';
 import { setupMswServer } from 'test/mswServer';
 import { mountUserDashboardCache, type UserDashboardCache } from 'test/userDashboardCache';
@@ -27,18 +29,20 @@ import {
 
 const server = setupMswServer();
 
-const group = (id: string, name = `Group ${id}`) => ({ id, name }) as unknown as Group;
+// The domain group the queries cache, and the same group as the wire (and a legacy write) gives it.
+const group = (id: string, name = `Group ${id}`): Group => testGroup(id, { name });
+const wire = (id: string, name = `Group ${id}`): LegacyGroup => wireGroup(id, { name });
 
 interface ListServer {
     /** Requests received so far. */
     count: number;
     /** Answers the `index`-th request (0-based) with `groups`. */
-    answer: (index: number, groups: Group[]) => void;
+    answer: (index: number, groups: LegacyGroup[]) => void;
 }
 
 /** List loads that wait until the test answers them, in order of arrival. */
 const serveGroupsByHand = (): ListServer => {
-    const answers: ((groups: Group[]) => void)[] = [];
+    const answers: ((groups: LegacyGroup[]) => void)[] = [];
     const listServer: ListServer = {
         count: 0,
         answer: (index, groups) => {
@@ -60,7 +64,7 @@ const serveGroupsByHand = (): ListServer => {
 };
 
 /** List loads answered at once with `groups`, counted. */
-const serveGroups = (groups: Group[]): { count: number } => {
+const serveGroups = (groups: LegacyGroup[]): { count: number } => {
     const counter = { count: 0 };
 
     server.use(
@@ -112,7 +116,7 @@ afterEach(() => {
 });
 
 test('a session start without the user client sends no request', async () => {
-    const requests = serveGroups([group('a')]);
+    const requests = serveGroups([wire('a')]);
     userCache.dispose();
 
     await loadGroupsListForSession(Date.now() - 1_000);
@@ -121,7 +125,7 @@ test('a session start without the user client sends no request', async () => {
 });
 
 test('a session start reuses a list loaded after it began and reloads an older one', async () => {
-    const requests = serveGroups([group('fresh')]);
+    const requests = serveGroups([wire('fresh')]);
     const since = Date.now();
     watchList();
     seed([group('a')], since + 1);
@@ -143,7 +147,7 @@ test('a session start joins a list load already running: one request', async () 
     await requestsReach(listServer, 1);
 
     const sessionLoad = loadGroupsListForSession(Date.now());
-    listServer.answer(0, [group('a')]);
+    listServer.answer(0, [wire('a')]);
     await sessionLoad;
     await listSettled();
 
@@ -160,8 +164,8 @@ test('a change cancels a running list load and reloads: the older answer is neve
 
     const invalidation = invalidateGroupsList();
     await requestsReach(listServer, 2);
-    listServer.answer(0, [group('old')]);
-    listServer.answer(1, [group('new')]);
+    listServer.answer(0, [wire('old')]);
+    listServer.answer(1, [wire('new')]);
     await invalidation;
     await listSettled();
 
@@ -182,7 +186,7 @@ test('a group read by a legacy action replaces its list entry without a request,
 });
 
 test('a group read sent before the last list load loads the list again instead of writing', async () => {
-    const requests = serveGroups([group('a', 'Server copy'), group('b')]);
+    const requests = serveGroups([wire('a', 'Server copy'), wire('b')]);
     const readStartedAt = Date.now() - 5_000;
     seed([group('a', 'From the list'), group('b')]);
     watchList();
@@ -213,11 +217,11 @@ test('a group written during a list load cancels that load and loads the list ag
     await requestsReach(listServer, 1);
 
     // It settles once the restarted load has its answer.
-    const put = putGroupInList(group('a', 'Written'));
+    const put = putGroupInList(wire('a', 'Written'));
     expect(listed()).toEqual([group('a', 'Written')]);
     await requestsReach(listServer, 2);
-    listServer.answer(0, [group('a', 'Before the write')]);
-    listServer.answer(1, [group('a', 'Server copy'), group('b')]);
+    listServer.answer(0, [wire('a', 'Before the write')]);
+    listServer.answer(1, [wire('a', 'Server copy'), wire('b')]);
     await put;
     await listSettled();
 
@@ -225,7 +229,7 @@ test('a group written during a list load cancels that load and loads the list ag
 });
 
 test('a group written while a list load waits offline puts the load back in line', async () => {
-    const requests = serveGroups([group('a', 'Server copy')]);
+    const requests = serveGroups([wire('a', 'Server copy')]);
     seed([group('a')]);
     // No reconnect refetch: only the restarted load can reach the server.
     watchList({ refetchOnReconnect: false });
@@ -235,7 +239,7 @@ test('a group written while a list load waits offline puts the load back in line
     void startListLoad();
     expect(listState()?.fetchStatus).toBe('paused');
 
-    const put = putGroupInList(group('a', 'Written'));
+    const put = putGroupInList(wire('a', 'Written'));
 
     expect(listed()).toEqual([group('a', 'Written')]);
     expect(listState()?.fetchStatus).toBe('paused');
@@ -259,18 +263,18 @@ test('a group the user can no longer read leaves the list without a request', as
 });
 
 test('an edit of a list never loaded writes nothing', async () => {
-    await putGroupInList(group('a'));
+    await putGroupInList(wire('a'));
 
     expect(listed()).toBeUndefined();
     expect(getCachedGroups()).toBeUndefined();
 });
 
 test('a legacy group write shows at once, reloads the list and stays in it', async () => {
-    const requests = serveGroups([group('a', 'Server copy'), group('b')]);
+    const requests = serveGroups([wire('a', 'Server copy'), wire('b')]);
     seed([group('a')]);
     watchList();
 
-    const reload = reloadGroupsListWith(group('a', 'Written'), () => true);
+    const reload = reloadGroupsListWith(wire('a', 'Written'), () => true);
 
     expect(listed()).toEqual([group('a', 'Written')]);
     await reload;
@@ -279,11 +283,11 @@ test('a legacy group write shows at once, reloads the list and stays in it', asy
 });
 
 test('a legacy group write that is no longer current keeps what the reload read', async () => {
-    serveGroups([group('b')]);
+    serveGroups([wire('b')]);
     seed([]);
     watchList();
 
-    await reloadGroupsListWith(group('a'), () => false);
+    await reloadGroupsListWith(wire('a'), () => false);
 
     expect(listed()).toEqual([group('b')]);
 });
@@ -318,7 +322,7 @@ const seedActivity = (pages: number) => {
 test('a written group becomes its detail and its activity, cut to one page, is marked stale', async () => {
     seedActivity(3);
 
-    await putGroupDetail(group('a', 'Written'));
+    await putGroupDetail(wire('a', 'Written'));
 
     expect(userCache.client.getQueryData(detailKey)).toEqual(group('a', 'Written'));
     expect(userCache.client.getQueryState(activityKey)?.isInvalidated).toBe(true);
@@ -337,7 +341,7 @@ test('a written group cancels a running detail read: its older answer is never a
         })
         .catch(() => undefined);
 
-    await putGroupDetail(group('a', 'Written'));
+    await putGroupDetail(wire('a', 'Written'));
     answerRead?.(group('a', 'Older read'));
     await read;
 
@@ -349,7 +353,7 @@ test('a changed group is read again on any page: no group page needed, its list 
     server.use(
         http.get('*/groups/a', () => {
             detailReads += 1;
-            return HttpResponse.json(group('a', 'New balances'));
+            return HttpResponse.json(wire('a', 'New balances'));
         }),
     );
     seed([group('a'), group('b')], Date.now() - 1_000);

@@ -7,16 +7,18 @@ import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import type { ActivityFeedItem, Group, SelfUser } from 'api/chipin.types';
+import type { ActivityFeedItem, SelfUser } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
 import { dashboardActivityQueryOptions, dashboardKeys } from 'entities/dashboard';
+import type { Group } from 'entities/groups';
 import { groupsKeys, groupsListQueryOptions } from 'entities/groups';
 import { type KnownUser, knownUsersQueryOptions, usersKeys } from 'entities/users';
 import { useAuthStore } from 'store/authStore';
 import { useErrorsStore } from 'store/errorsStore';
 import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
+import { groupBalances } from 'test/groupFixtures';
 import { groupsListData } from 'test/groupsList';
 import { createKnownUser } from 'test/knownUsers';
 import { setupMswServer } from 'test/mswServer';
@@ -771,7 +773,7 @@ test('DSH-007 a loaded groups list shows the real group cards, not their skeleto
                 ...singleMemberGroup.members,
                 {
                     user: { ...creator, id: 'user-2', displayName: 'Bob' },
-                    balancesByCurrency: { USD: { currency: 'USD', netBalance: 5 } },
+                    balancesByCurrency: groupBalances({ USD: 5 }),
                 },
             ],
         },

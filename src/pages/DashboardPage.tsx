@@ -4,9 +4,9 @@ import { ChevronsDownIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
-import type { Group } from 'api/chipin.types';
 import { useCurrencyRatesQuery } from 'entities/currency-rates';
 import { useDashboardActivityQuery, useDashboardBalancesQuery } from 'entities/dashboard';
+import type { Group } from 'entities/groups';
 import { ActivityEventsList } from 'features/activity';
 import { getActivityPreviewEvents } from 'helpers/activityEvent';
 import { useGroupsList } from 'hooks/useGroupsList';

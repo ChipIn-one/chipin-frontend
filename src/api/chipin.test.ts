@@ -3,8 +3,6 @@ import { describe, expect, test, vi } from 'vitest';
 import { InvalidPathSegmentError } from './apiPath';
 import {
     createApiGroup,
-    fetchApiUserGroupById,
-    fetchApiUserGroups,
     inviteApiUserToGroup,
     kickApiGroupMember,
     leaveApiGroup,
@@ -87,34 +85,6 @@ const groupResponse = {
 };
 
 describe('embedded activity feed responses', () => {
-    test('returns the complete paginated group list response', () => {
-        const controller = new AbortController();
-        const response = {
-            items: [groupResponse],
-            nextCursor: 'cursor-2',
-        };
-        vi.mocked(apiInstance.get).mockResolvedValue({ data: response });
-
-        return fetchApiUserGroups(controller.signal).then(result => {
-            expect(apiInstance.get).toHaveBeenCalledWith('/groups', {
-                signal: controller.signal,
-            });
-            expect(result).toEqual(response);
-        });
-    });
-
-    test('fetches one canonical group by id with cancellation support', () => {
-        const controller = new AbortController();
-        vi.mocked(apiInstance.get).mockResolvedValue({ data: groupResponse });
-
-        return fetchApiUserGroupById(groupResponse.id, controller.signal).then(result => {
-            expect(apiInstance.get).toHaveBeenCalledWith(`/groups/${groupResponse.id}`, {
-                signal: controller.signal,
-            });
-            expect(result).toEqual(groupResponse);
-        });
-    });
-
     test('returns activity feed items from a created group response', () => {
         vi.mocked(apiInstance.post).mockResolvedValue({ data: groupResponse });
 
@@ -211,7 +181,6 @@ describe('cookie-backed auth transport', () => {
 
 describe('chipin path segment guard', () => {
     test.each([
-        ['fetchApiUserGroupById', () => fetchApiUserGroupById('a/b')],
         ['removeApiGroup', () => removeApiGroup({ groupId: 'a/b' })],
         ['leaveApiGroup', () => leaveApiGroup({ groupId: 'a/b' })],
         [

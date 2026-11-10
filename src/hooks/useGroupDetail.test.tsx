@@ -3,11 +3,12 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, expect, test } from 'vitest';
 
-import type { Group, SelfUser } from 'api/chipin.types';
+import type { Group as LegacyGroup, SelfUser } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
 import { type GroupActivityData, groupsKeys } from 'entities/groups';
 import { useAuthStore } from 'store/authStore';
 import { domainPreview, legacyPreview, wirePreview } from 'test/activityFixtures';
+import { toTestGroup } from 'test/groupFixtures';
 import { seedGroupsList } from 'test/groupsList';
 import { setupMswServer } from 'test/mswServer';
 import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
@@ -73,7 +74,10 @@ const group = {
     status: 'ACTIVE',
     lastUsedCurrency: null,
     recentActivities: { items: [legacyPreview('listed')], nextCursor: 3 },
-} satisfies Group;
+} satisfies LegacyGroup;
+
+// The same group as the queries cache it (domain).
+const cachedGroup = toTestGroup(group);
 
 const detailKey = groupsKeys.detail(group.id);
 const activityKey = groupsKeys.activity(group.id);
@@ -81,11 +85,11 @@ const activityKey = groupsKeys.activity(group.id);
 beforeEach(() => {
     useAuthStore.setState({ status: 'authenticated' });
     seedSelfUser(selfUser);
-    seedGroupsList([group]);
+    seedGroupsList([cachedGroup]);
 });
 
 test('a 403/404 refetch wins over the cached detail: no group, no Add Expense target', async () => {
-    getDefaultTestQueryClient().setQueryData(detailKey, group);
+    getDefaultTestQueryClient().setQueryData(detailKey, cachedGroup);
     server.use(
         http.get('*/groups/group-1', () =>
             HttpResponse.json({ code: 'FORBIDDEN' }, { status: 403 }),
@@ -96,7 +100,7 @@ test('a 403/404 refetch wins over the cached detail: no group, no Add Expense ta
         availability: useAddExpenseAvailability(`${ROUTES.GROUP}/${group.id}`),
     }));
 
-    expect(result.current.detail.group).toEqual(group);
+    expect(result.current.detail.group).toEqual(cachedGroup);
     expect(result.current.availability.isVisible).toBe(true);
 
     await act(() => getDefaultTestQueryClient().refetchQueries({ queryKey: detailKey }));
@@ -125,7 +129,7 @@ test('a failed detail read without a denial keeps the listed group and its recen
     });
     expect(result.current.detail.isDenied).toBe(false);
     expect(result.current.detail.hasDetail).toBe(false);
-    expect(result.current.detail.group).toEqual(group);
+    expect(result.current.detail.group).toEqual(cachedGroup);
     expect(result.current.activity.items).toEqual([domainPreview('listed')]);
     expect(result.current.activity.hasMore).toBe(false);
 });
@@ -196,7 +200,7 @@ test('a scroll trigger waits for a running refetch, then loads the next page', a
 });
 
 // The detail and activity handlers of one opened group; `requests` lists what was sent.
-const serveGroup = (detail: Group, requests: string[]): void => {
+const serveGroup = (detail: LegacyGroup, requests: string[]): void => {
     server.use(
         http.get('*/groups/group-1', () => {
             requests.push('detail');
@@ -249,7 +253,7 @@ test('a seed from an old cached detail is stale: the first activity page loads a
     const requests: string[] = [];
     const detail = { ...group, recentActivities: { items: [legacyPreview('d1')], nextCursor: 9 } };
     serveGroup(detail, requests);
-    getDefaultTestQueryClient().setQueryData(detailKey, detail, {
+    getDefaultTestQueryClient().setQueryData(detailKey, toTestGroup(detail), {
         updatedAt: Date.now() - 600_000,
     });
 
@@ -275,7 +279,7 @@ test('a denied group neither seeds its activity nor shows the cached activity', 
             return HttpResponse.json({ items: [], nextCursor: null });
         }),
     );
-    getDefaultTestQueryClient().setQueryData(detailKey, group, { updatedAt: 0 });
+    getDefaultTestQueryClient().setQueryData(detailKey, cachedGroup, { updatedAt: 0 });
     getDefaultTestQueryClient().setQueryData<GroupActivityData>(activityKey, {
         pages: [{ items: [domainPreview('cached')], nextCursor: null }],
         pageParams: [null],
@@ -331,8 +335,10 @@ test('the detail never replaces activity already cached', async () => {
         pages: [{ items: [domainPreview('cached')], nextCursor: null }],
         pageParams: [null],
     });
-    getDefaultTestQueryClient().setQueryData(detailKey, group);
-    const { result } = renderHook(() => useGroupActivity(group.id, true, group.recentActivities));
+    getDefaultTestQueryClient().setQueryData(detailKey, cachedGroup);
+    const { result } = renderHook(() =>
+        useGroupActivity(group.id, true, cachedGroup.recentActivities),
+    );
 
     await waitFor(() => {
         expect(result.current.items).toEqual([domainPreview('cached')]);

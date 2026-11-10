@@ -2,13 +2,14 @@ import { expect, test } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
 import type { BalanceEntry, BalancesMap } from 'api/chipin.raw.types';
-import type { Group } from 'api/chipin.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import {
     GROUP_CARD_FILTER_BUCKETS,
     GROUP_DEBT_FILTERS,
     GROUP_NET_CONVERSION_STATES,
 } from 'constants/groups';
+import type { Group } from 'entities/groups';
+import { groupBalancesFromMap } from 'test/groupFixtures';
 
 import {
     calcGroupSummary,
@@ -75,7 +76,7 @@ const createGroup = ({
                 id: `user-${index + 1}`,
                 email: `user-${index + 1}@example.com`,
             },
-            balancesByCurrency,
+            balancesByCurrency: groupBalancesFromMap(balancesByCurrency),
         })),
         createdAt,
         updatedAt: createdAt,

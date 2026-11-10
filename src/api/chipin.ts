@@ -2,7 +2,6 @@ import { apiPath } from './apiPath';
 import { AUTH_API_PATH, AUTH_CSRF_HEADERS } from './auth.constants';
 import { apiInstance } from './chipin.instance';
 import type {
-    ApiGroupsResponse,
     ApiOAuthTokenPairResponse,
     ApiRefreshTokenPairResponse,
     CreateGroupParams,
@@ -35,24 +34,6 @@ export const exchangeApiGoogleOAuthCode = (code: string): Promise<ApiOAuthTokenP
     return apiInstance
         .post<ApiOAuthTokenPairResponse>(AUTH_API_PATH.GOOGLE_OAUTH_EXCHANGE, { code })
         .then(response => response.data);
-};
-
-export const fetchApiUserGroups = (
-    signal?: AbortSignal,
-    cursor?: string,
-): Promise<ApiGroupsResponse> => {
-    return apiInstance
-        .get<ApiGroupsResponse>('/groups', {
-            signal,
-            ...(cursor !== undefined && { params: { cursor } }),
-        })
-        .then(result => result.data);
-};
-
-export const fetchApiUserGroupById = (groupId: string, signal?: AbortSignal): Promise<Group> => {
-    return Promise.resolve()
-        .then(() => apiInstance.get<Group>(apiPath`/groups/${groupId}`, { signal }))
-        .then(result => result.data);
 };
 
 export const createApiGroup = ({

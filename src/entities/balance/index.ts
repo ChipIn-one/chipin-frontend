@@ -13,7 +13,6 @@ export {
     legacyPartitionEntries,
     legacyRateLookup,
     legacyRatesFromDecimals,
-    legacySumEntriesByCurrency,
     legacySummarizeEntries,
 } from './model/legacy';
 export type { BalanceDirection, BalancePartition } from './model/partition';

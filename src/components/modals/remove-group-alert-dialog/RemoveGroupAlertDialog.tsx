@@ -5,8 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
-import type { Group } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
+import type { Group } from 'entities/groups';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { useGroupsStore } from 'store/groupsStore';
 import { selectGroupRemoving } from 'store/loadingSelectors';

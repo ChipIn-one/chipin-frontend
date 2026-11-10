@@ -11,10 +11,10 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { Group } from 'api/chipin.types';
 import { GROUP_DEBT_FILTERS, type GroupDebtFilter } from 'constants/groups';
 import { legacyRatesFromDecimals } from 'entities/balance';
 import { EMPTY_CURRENCY_RATES, useCurrencyRatesQuery } from 'entities/currency-rates';
+import type { Group } from 'entities/groups';
 import { userCurrency } from 'entities/users';
 import { getUnixTimestampInSec } from 'helpers/time';
 import { useGroupsList } from 'hooks/useGroupsList';

@@ -3,11 +3,11 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 
-import type { Group } from 'api/chipin.types';
-import { groupsKeys } from 'entities/groups';
+import { type Group, groupsKeys } from 'entities/groups';
 import { saveLocalUser } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
 import { loadGroupsListForSession } from 'store/groupsList';
+import { testGroup, wireGroup } from 'test/groupFixtures';
 import { groupsListData } from 'test/groupsList';
 import { setupMswServer } from 'test/mswServer';
 import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
@@ -17,7 +17,7 @@ import { useGroups, useGroupsList } from './useGroupsList';
 
 const server = setupMswServer();
 
-const group = (id: string) => ({ id, name: `Group ${id}` }) as unknown as Group;
+const group = (id: string): Group => testGroup(id);
 
 const serveGroups = (status = 200): { count: number } => {
     const counter = { count: 0 };
@@ -26,7 +26,7 @@ const serveGroups = (status = 200): { count: number } => {
         http.get('*/groups', () => {
             counter.count += 1;
             return status === 200
-                ? HttpResponse.json({ items: [group('a')], nextCursor: null })
+                ? HttpResponse.json({ items: [wireGroup('a')], nextCursor: null })
                 : HttpResponse.json({}, { status });
         }),
     );

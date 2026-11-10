@@ -3,9 +3,8 @@
 // the groups they changed. Never a request of its own, except the reload a race leaves owed.
 import type { QueryClient } from '@tanstack/react-query';
 
-import type { Group } from 'api/chipin.types';
-
 import { type GroupsListData, removeGroupFromList, upsertGroupInList } from '../model/groupsList';
+import type { Group } from '../model/types';
 
 import { groupsKeys } from './keys';
 

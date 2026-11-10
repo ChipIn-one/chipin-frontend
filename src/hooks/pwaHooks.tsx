@@ -3,8 +3,8 @@ import i18n from 'i18next';
 import { toast } from 'sonner';
 import { useShallow } from 'zustand/react/shallow';
 
-import type { Group } from 'api/chipin.types';
 import { SECOND } from 'constants/time';
+import type { Group } from 'entities/groups';
 import { copyTextToClipboard } from 'helpers/clipboard';
 import { detectNativeShare, type InviteShareContent, shareInvite } from 'helpers/share';
 import { buildFriendInviteLink, buildGroupInviteLink } from 'helpers/url';

@@ -24,7 +24,6 @@ import { toActivityEventWith } from 'entities/activity';
 import type { CurrencyCode, Money } from 'shared/money';
 import { abs, currencyCode, fromUnits, LEDGER_SCALE, MoneyWireError, sign } from 'shared/money';
 
-import { aggregateByCurrency } from './aggregate';
 import type { BalancePartition } from './partition';
 import { partitionBalances } from './partition';
 import type { RateLookup } from './summary';
@@ -147,10 +146,6 @@ export const legacyPartitionEntries = (
 
     return { owed: toEntries(owed), owe: toEntries(owe), settled: toEntries(settled) };
 };
-
-/** Exact per-currency sums of legacy entries (first-appearance order); invalid ones skipped. */
-export const legacySumEntriesByCurrency = (entries: readonly BalanceEntry[]): Money[] =>
-    aggregateByCurrency(validEntries(entries), item => item.net).map(({ total }) => total);
 
 // A legacy amount that cannot be read makes its event an unknown event (reported once per reason).
 const readLegacyAmount: MoneyReader<number> = (amount, currency) => {
