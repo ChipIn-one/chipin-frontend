@@ -52,9 +52,10 @@ slice rules are entries in `eslint-suppressions.json`; the baseline only shrinks
 
 ## Ownership
 
+- Now: new code follows the target below. Server stores that spec 03 has not migrated yet are transitional:
+  do not create new ones and do not add new server-data fields to them.
 - Target: Zustand holds UI state only (modals, drafts, UI preferences); server state belongs to TanStack
-  Query (spec 03). Now: new code follows the target. Server stores that spec 03 has not migrated yet are transitional: do not create new ones
-  and do not add new server-data fields to them.
+  Query (spec 03).
 - Runtime API calls never originate in pages, features, components, or basics.
 - Type-only DTO imports are allowed at mapping/store boundaries. UI should prefer domain types.
 - Side effects belong in store actions, focused hooks, event handlers, or explicit app-lifecycle orchestration.

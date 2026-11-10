@@ -10,29 +10,29 @@ These invariants hold on `master` today (lint, `check:file-layout`, CI, or the e
 1. Imports follow `LAYER_GRAPH` in `config/eslint/layers.js`, the source of truth (table: `docs/engineering/rules/10-architecture.md`). `app` may import every layer; `features` and `entities` reach another slice of their own layer only through its `index.ts`.
 2. In short: pages → features → components → basics. Only `app`, `hooks`, `store` and `entities` see `shared-api` (`shared/api`, `shared/offline`); `entities` never import `store` or `hooks`; `basics` and `helpers` see only helpers, `shared-lib` and base; `api` sees only base.
 3. UI (pages, features, components, basics) does not import `axios` or runtime `api/` modules (`no-restricted-imports`; type imports are allowed). Server data reaches UI through `entities/*` queries, hooks, or a store.
-4. Money in code is `Money { minor: bigint }` (ledger units, scale 4) from `src/shared/money/`; parsing, rounding, sums and formatting live only there. `parseFloat`/`Number()`/`JSON.parse` on money fields elsewhere are forbidden. Display is only `basics/numbers/amount/Amount.tsx`.
-5. On the wire money is a JSON number of scale 4. `shared/api/wireJson.ts`, used only inside the `api()` wrapper, reads it without doubles into an opaque `WireAmount`; only `moneyFromWire`/`moneyToWire` in the `entities/*/model` mappers convert it. Legacy amounts: `60-money-helpers.md`.
+4. New code: money is `Money { minor: bigint }` (ledger units, scale 4) from `src/shared/money/`. Legacy code keeps `helpers/numbers.ts` until it migrates (`60-money-helpers.md`); add no money parsing, rounding or arithmetic anywhere else. Display is only `basics/numbers/amount/Amount.tsx`.
+5. On the wire money is a JSON number of scale 4. `shared/api/wireJson.ts`, used only inside the `api()` wrapper, reads it without doubles into an opaque `WireAmount`; only `moneyFromWire`/`moneyToWire` in the `entities/*/model` mappers convert it.
 6. Types: no `any`, `as any`, `@ts-ignore`, unjustified `as`, or `!`; type-only imports use `import type`. Data read from IndexedDB and localStorage is validated (zod; the landing-path `LocalUser` reader is hand-written for bundle size).
 7. Promises are never lost: return, await, or mark them `void`; do not swallow errors. `await` and `.then` are both fine. A JSX attribute never returns a promise: `onClick={() => void action()}`.
 8. The server is the source of truth for finances: do not patch balances or debts locally, and a stale response never overwrites newer state. Every TanStack mutation has `retry: false`.
 9. There are no offline financial writes: `shared/offline/outboxGate.ts` and `pendingOps.ts` are stubs, and a task does not build an outbox unless it asks for one. Settle-up and payments, including editing or deleting a settlement, are online-only.
-10. An `index.ts` exists only at `src/<layer>/<slice>/index.ts`, and no new `useConnect.ts` is added: `check:file-layout` fails both (existing files are baselined). No `export *`; named exports in new code (review). Do not rewrite existing files incidentally.
+10. An `index.ts` exists only at `src/<layer>/<slice>/index.ts`, and no new `useConnect.ts` file or `useConnect` hook is added: `check:file-layout` fails both (existing files are baselined). No `export *`; named exports in new code (review). Do not rewrite existing files incidentally.
 11. Server state is TanStack Query; Zustand is UI state. Legacy server stores remain until migrated: do not create new ones or add server-data fields. Read one value with a selector, several with one object selector in `useShallow`; `useStore()` without a selector is forbidden.
-12. `localStorage` and `sessionStorage` go only through `helpers/localStorage.ts` (lint checks `localStorage`; known exception `src/helpers/publicLocaleSuggestion.ts`, a follow-up). Logout clears all user data (cache, user `id`/`role`); only the language and theme settings survive.
+12. `localStorage` and `sessionStorage` go only through `helpers/localStorage.ts` (lint checks `localStorage`; known exception `src/helpers/publicLocaleSuggestion.ts`, #675). Logout clears all user data (cache, user `id`/`role`); only the language and theme settings survive.
 13. Tokens, invite tokens and personal data never reach logs, Sentry or URLs.
 14. `npx eslint --fix <changed files>` fixes everything auto-fixable; do not fix style by hand. A lint error is about correctness or a boundary, and its message says how to fix it; `eslint-disable` only with a reason.
 15. All user-facing text, including `aria-*`, `placeholder`, `title` and toasts, goes through i18n in every locale. Interactive elements are native elements or Radix; icon buttons have a translated name (review).
-16. Import order is `simple-import-sort` (fixed by `--fix`); formatting is Prettier (`prettier.config.js`), enforced by `format:check` in CI. Run `prettier --write` only on the files you changed.
+16. Import order is `simple-import-sort` (fixed by `--fix`); formatting is Prettier (`prettier.config.js`), enforced by `format:check` in CI. Run `prettier --write` only on the files you changed; do not reformat code the task does not change.
 17. Every task PR body has `## Version impact` (`none|patch|minor|major`); a task does not change `version` in `package.json`/`package-lock.json` and does not run `version:bump` (see Release).
 18. A change to the domain, API or visible behavior starts in the KB (`chipin-knowledge-base/common/glossary.md`, `common/specs/<capability>.md`) through a linked PR; tests are named by requirement IDs. A conflict with an ADR in `common/adr/` means stop and ask the owner.
 19. Take the KB from `../chipin-knowledge-base`, otherwise `git clone` it there, otherwise read it through GitHub; if it is unavailable both locally and through GitHub, the task is BLOCKED.
 
 ## Target (refactor in progress)
 
-Where the refactor goes: `docs/superpowers/specs/2026-10-28-frontend-refactor/00-overview.md`; owner decisions: `DECISIONS.md` in the same folder. A target item becomes a rule only when its PR lands; until then do not build it in an unrelated task.
+Where the refactor goes: `docs/superpowers/specs/2026-10-28-frontend-refactor/00-overview.md`; owner decisions: `DECISIONS.md` in the same folder (D28–D31 of 2026-11-10 land through #662). A target item becomes a rule only when its PR lands; until then do not build it in an unrelated task.
 
 - All server state moves to TanStack Query in `entities/*`; Zustand keeps UI state only and the legacy server stores go away.
-- Expense create/edit/delete goes through an outbox (spec 03 §2): offline writes with a client UUID, replayed in order. Settle-up and payments stay online-only.
+- Expense create/edit/delete goes through an outbox (spec 03 §2): offline writes with a client UUID, sent in order; a failed op blocks only its own expense, and tabs coordinate only through `navigator.locks`. Settle-up and payments stay online-only.
 - Named exports are enforced by `import-x/no-default-export`; existing default exports become lint suppressions that only shrink, with no codemods.
 - Legacy money helpers in `helpers/numbers.ts` go away as the code moves to `src/shared/money/`; route composition moves from `features/routing` into the `app` layer (spec 04).
 
