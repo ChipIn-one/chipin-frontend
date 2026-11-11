@@ -467,7 +467,7 @@ D29 replaces the former leader election, `epoch` fencing, heartbeat/`steal` and 
 under a short write lock, one tab at a time sends under a separate drain lock. Files `shared/offline/outboxStore.ts` (keys,
 write lock), `outboxDrain.ts` (drain lock, adoption), `outboxChannel.ts` (ping).
 - **One key** `chipin:outbox:<userId>` = `OutboxState { nextSeq: number, ops: OutboxOp[] /* pending, by seq */,
-  versions: Record<entryId, version>, cancelled: opId[], retryRequested: opId[], sending: opId | null, conflictDrafts:
+  versions: Record<entryId, version>, cancelled: opId[], retryRequested: opId[], sending: { opId, session } | null, conflictDrafts:
   Record<entryId, ConflictDraft> }` (zod `OutboxStateSchema`, §5.7; `ConflictDraft` — 2.6). There is no `owner`/`epoch` field: the key and
   lock names carry `userId`, and every op carries `owner` (2.1). Failed ops live in `chipin:outbox-failed:<userId>` (2.5).
   The persisted `ops` **are** the queue: no tab dehydrates its `mutationCache` into the key, and an op leaves `ops` only
@@ -488,9 +488,10 @@ write lock), `outboxDrain.ts` (drain lock, adoption), `outboxChannel.ts` (ping).
   resolved, the op is on the device. (The former `offline:saveDelayed` toast is gone: saving no longer depends on another tab.)
 - **Drain lock** `chipin-outbox-drain:<userId>`. Each tab with a `userId` and `outboxRestore === 'ok'` calls
   `navigator.locks.request(drainName, () => drainSession())`; `drainSession` returns a promise that resolves on
-  logout/user change, on `freeze`/`pagehide` (an in-flight request is aborted first), and on `visibilitychange` to hidden once no op is `sending` (if one is — after it
+  logout/user change, on `freeze`/`pagehide` (an in-flight request is aborted first: `sendOutboxOp` gets the drain session's `AbortSignal`), and on `visibilitychange` to hidden once no op is `sending` (if one is — after it
   settles); the tab requests the lock again on `resume`/`pageshow`/visible. On release every waiting outbox mutation of the
-  tab resolves `STOPPED` without a request (2.4) and is settled, so a re-acquisition adopts its op again. Only the tab whose callback runs creates outbox mutations and sends: on acquisition it re-reads
+  tab resolves `STOPPED` without a request (2.4) and is settled, so a re-acquisition adopts its op again; `isStopped()` means
+  "this tab does not hold the drain lock now", so a run still sleeping in backoff when the lock comes back simply continues. Only the tab whose callback runs creates outbox mutations and sends: on acquisition it re-reads
   the keys and runs `restoreOutbox`; on every `changed` ping it re-reads them, runs `adoptOutboxOps` for new ops and applies
   `cancelled`/`retryRequested`. The other tabs wait in the lock queue and never send. When the holder closes or crashes, the
   browser releases the lock and the next tab adopts the queue from the same key — no orphans, no handover messages. There
@@ -511,9 +512,9 @@ write lock), `outboxDrain.ts` (drain lock, adoption), `outboxChannel.ts` (ping).
   check, no new event — a deep comparison of `current` with `patch` is not needed), DELETE of a deleted entry = 204. (3) Before
   each request the drain tab **claims** the op under the write lock (compare-and-set): the drain is not stopped (`isStopped()`
   under the lock, else `STOPPED`), the op is still in `ops` — or in failed with its `opId` in `retryRequested` (a Retry) — and
-  not in `cancelled` (else `CANCELLED`), then `sending = opId`; `discardOps` under the same lock refuses a claimed op ("Already sending"). So a discard never races a request:
+  not in `cancelled` (else `CANCELLED`), then `sending = { opId, session }` (`session` = this drain session's id); `discardOps` under the same lock refuses a claimed op ("Already sending"). So a discard never races a request:
   either it wins before the claim (0 requests) or the op is sent and processed normally. The claim is cleared — only while
-  `sending === opId` — by the write that processes the response, in the `catch` of a network/transient error before the
+  `sending` equals this run's `{ opId, session }`, so a stale holder never clears a new holder's claim — by the write that processes the response, in the `catch` of a network/transient error before the
   backoff (the retry claims again), or by `STOPPED`; a response write applies only while the op is still in `ops`/failed.
   Hence the server applies every op at most once whatever happens to the tabs, and at least once while a tab with the
   queue is open online.
@@ -529,7 +530,8 @@ write lock), `outboxDrain.ts` (drain lock, adoption), `outboxChannel.ts` (ping).
   ones → failed `unreadable`; skip `opId`s from `cancelled`, from the failed key (C3-05: an op in both — failed takes
   priority), those in the in-memory `pendingRemovals` (2.4) and those with a **pending** outbox mutation of the same `opId` in
   `mutationCache` (idempotent on remount/StrictMode/a repeated ping; settled ones linger until gc and do not count); **sort by
-  `seq`**; `hydrate` as paused mutations (no scope, 2.4); restore `outboxVersions`; clear a stale `sending` claim; for every `entryId` that has a failed op —
+  `seq`**; `hydrate` as paused mutations (no scope, 2.4); restore `outboxVersions` (not for an entry with an op in
+  `pendingRemovals`: its in-memory version is newer); clear a stale `sending` claim; for every `entryId` that has a failed op —
   `outboxGate.block(entryId)` **before** `resumePausedMutations()`. A failed op blocks only later ops of its own `entryId`
   (2.4, 2.5). The restore needs `outboxRestore === 'ok'` (§1.6) and never sets it.
 - **No `navigator.locks` or `BroadcastChannel`** (old browsers): offline writing is off
@@ -554,8 +556,8 @@ One op at a time, in global `seq` order, skipping blocked entries (D29): a faile
   ignoreEntryBlock? })`, which also waits until no global reason is closed. Persistent data (the failed key) only restores
   the blocked entries on restore; the decision "may we send" is never read from IDB.
 - **Success before the write.** On a 2xx the drain tab first updates `outboxVersions` in memory and adds the `opId` to
-  `pendingRemovals` (memory), releases the turn, then removes the op from the key with `retryWrite`; this removal needs only the write lock and keeps retrying after
-  the drain stops (not cut short by `isStopped()`), so a later `restoreOutbox` never reads a stale op or version. Adoption skips
+  `pendingRemovals` (memory), releases the turn, then removes the op from the key with `retryWrite(..., { ignoreStop: true })`; this removal needs only the write lock and
+  keeps retrying after the drain stops, until it succeeds or the user changes (a restore meanwhile keeps the in-memory version). Adoption skips
   `pendingRemovals`; the next op of the entry sends with the in-memory version. If the tab dies before the write, the next
   holder resends the op — idempotent (§2.3).
 
@@ -573,10 +575,11 @@ function runOutboxOp(op: OutboxOp, opts?: { ignoreEntryBlock?: boolean }, attemp
       return claimOp(op).then((noSend) => noSend ?? sendOutboxOp(op));  // §2.3 claim: null, or CANCELLED/STOPPED; 2xx and "success-no-op" rows of 2.5
     })
     .catch((error: unknown) => {                      // retry() is returned from catch — its reject does not land here
+      if (isStopped()) return clearClaim(op).then(() => STOPPED);   // aborted on release: no backoff
       const c = classifyOutboxError(error);           // table 2.5
       if (c.kind === 'network' || c.kind === 'transient') {  // compare-and-clear the claim (§2.3), then back off
         setStatus(op.opId, c.kind === 'network' ? 'waiting-network' : 'server-unavailable');
-        return clearClaim(op.opId).then(() => sleep(backoff(attempt))).then(retry);
+        return clearClaim(op).then(() => sleep(backoff(attempt))).then(retry);
       }
       if (c.kind === 'auth' || c.kind === 'outdated') { outboxGate.close(c.kind); return retry(); }
       // the server answered for good: from here only the IDB write is repeated, never the request (no 409/422 loop)
@@ -589,10 +592,11 @@ function runOutboxOp(op: OutboxOp, opts?: { ignoreEntryBlock?: boolean }, attemp
 }
 // a failed write: status 'failed-unsaved', Sentry, backoff; the op stays in ops (never "neither in the outbox nor in failed");
 // false = the drain stopped first: the op stays in ops and the next holder resends it (idempotent, §2.3)
-function retryWrite(op: OutboxOp, write: () => Promise<void>, n = 0): Promise<boolean> {
+function retryWrite(op: OutboxOp, write: () => Promise<void>, opts: { ignoreStop?: boolean } = {}, n = 0): Promise<boolean> {
   return write().then(() => true, () => {
     setStatus(op.opId, 'failed-unsaved'); reportPersistFailed();
-    return sleep(backoff(n)).then(() => (isStopped() ? false : retryWrite(op, write, n + 1)));
+    const stop = () => (opts.ignoreStop ? sessionUserId() !== op.owner : isStopped());
+    return sleep(backoff(n)).then(() => (stop() ? false : retryWrite(op, write, opts, n + 1)));
   });
 }
 const backoff = (n: number) => Math.min(1000 * 2 ** n, 60_000) * (0.8 + Math.random() * 0.4);
@@ -811,8 +815,8 @@ The previous claim "400k: 0 rejections, 0 wrong up to 9e11" was false: above 2³
    `money.wire_reject` — **a hard rejection, never a silent value**. The rejection is localized to the item (`mapItems`,
    §4.2), the page does not crash (C3-13). A backend amount limit is not needed: the DB column holds the boundary.
 3. **Outgoing bodies with money** are written by the same module: `lossless-json` `stringify(body, null, undefined,
-   [{ test: isWireAmount, stringify: w => w.__wireDecimal }])` plus a registry-driven replacer (§4.3) that writes the
-   `DECIMAL_MAP_FIELDS` values (`WireDecimal` strings) unquoted — a decimal literal without an exponent (verified: `{"amount":
+   [{ test: isWireAmount, stringify: w => w.__wireDecimal }])` plus a registry-driven replacer (§4.3) that maps each
+   `DECIMAL_MAP_FIELDS` value (a `WireDecimal` string, matched by the map's property name) to `new LosslessNumber(s)`, so it is written unquoted — a decimal literal without an exponent (verified: `{"amount":
    899999999999.9997}`). `JSON.stringify` for such bodies is forbidden: the backend accepts only `^-?\d+(\.\d+)?$`, while
    `JSON.stringify(1e-7) === '1e-7'`.
 4. **Cost:** a 4.1 MB JSON — `JSON.parse` 33 ms, `parseWireJson` 156 ms (Node 24, the same run); a typical response
@@ -1127,7 +1131,7 @@ Unit `shared/money/*.test.ts` (table-driven):
   `"999999999999999.9999"`→`9999999999999999999n` (the `decimal(19,4)` maximum); throw `MoneyWireError`:
   `"1000000000000000.0000"`, `"1.23456"`, `"0.00005"`, `"85.50001"`, `"1e3"`, `"-1E-7"`. `moneyToWire` for each
   ok vector → `stringifyWireJson({ amount })` contains exactly the original literal (no exponent). `parseWireJson` →
-  `stringifyWireJson` of `{"percentageShares":{"u1":33.3333},"rates":{"EUR":0.92150001}}` returns the same text: unquoted
+  `stringifyWireJson` of `{"percentageShares":{"u1":33.3333},"rates":{"EUR":0.9215}}` returns the same text: unquoted
   literals, no precision loss.
 - **Sweep (exact, C1-03):** PRNG `mulberry32(20261028)`; 400,000 cases; for each: order `e = floor(rnd()*19)`
   (0…18), `u = randBigInt(10^(e+1))` (4 × 32 bits `% 10^(e+1)`), sign `rnd() < 0.5 ? −u : u`; text `T` = a decimal with
@@ -1303,7 +1307,7 @@ Each PR ≤ ~400 lines of diff (excluding the generated file) and is released in
 | 03-14b | expense create/update payload on `Money` (§4.3): `selectExpensePayload`/`expenseModalSelectors.ts` and `api/chipin.params.ts` stop building amounts/shares as JS `number` (`Number(text)`, `expenseModalSelectors.ts:161-162, 695-699, 732`; `chipin.params.ts:43-51, 72, 80, 95`); the write goes through the `toXWire()`/`moneyToWire` mappers the outbox will use; check `buildExpenseUpdateParams` (`store/expenseModalUpdate.ts:95-130`), which never sends `date` in the PATCH although the type allows it. File-lock `src/store/expenseModal*` applies | 03-14 |
 | 03-15a | the outbox core, one tab, **in memory**: `ledgerOutboxMutationKeys` + defaults/callbacks, the path-choice hooks (§2.1), the "expenses only" registry, `seq`, the in-memory queue store behind the §2.3 interface (`enqueueOutboxOp`, `adoptOutboxOps`), `runOutboxOp` + `retryWrite` + the drain turn + gate (global + per-entry block; changes the 03-7a stub interface, §1.6) + `discardOps`/`cancelledOpIds` + `outboxVersions`/`pendingRemovals`, the `owner` check; flag `VITE_FEATURE_OFFLINE_WRITES=false`. Tests: `seq` order one at a time, a failed op of X does not block Y, error classes, discard, settlement guard, two create paths | 03-7b, 03-13, 03-14b; owner confirmation on D3 (00) |
 | 03-15b | outbox persistence: `OutboxState` + zod, the `outboxRestore` guard (§1.6), the IDB keys with explicit writes (§2.3), the failed key with an awaited write, the append write + toast, `storage.persist()`, limits 50 (pending + failed; drafts join in 03-16b)/14 days + `stale`, the `auth` gate by the token `sub`. Tests: reload, slow/failed restore, the failed window, quota, foreign session | 03-15a |
-| 03-15c | multiple tabs (D29, §2.3): the write lock around every read-modify-write of the outbox keys, append from any tab, the drain lock (released on hidden/freeze/pagehide, re-requested on resume) + adoption on acquisition and on ping, the `sending` claim, `BroadcastChannel` (`changed`/`status`/`status-request`/`settled { op, entry }`), re-read on ping and on lock acquisition, `retryRequested`/discard from any tab, the badge hint, no-Web-Locks fallback. Tests: two tabs (an op written in tab B is sent exactly once; the holder dies mid-request → the next holder resends with the same op-id, no duplicate; concurrent appends keep both ops; fresh version in a non-drain tab; hidden → visible in one tab still sends; release with a request in flight → aborted, no concurrent resend, no false conflict draft; claim cleared after a network error/5xx, discard then allowed; claim fails once stopped, a late removal clears only its own claim; removal after success finishes after a stop, restore sees no stale version; claim write rejected → transient retry; drain writes after `clearUserData` are no-ops; a version is deleted only inside the write-locked removal when no op of the entry remains; `whenTurn` of a Retry waits its turn, a hidden tab that gets the drain lock does not drain; `retryingOpIds` cleared after the run, `cancelled` cleaned for never-adopted folded ops; Retry of a failed op is claimed and sent, not `CANCELLED`) | 03-15b |
+| 03-15c | multiple tabs (D29, §2.3): the write lock around every read-modify-write of the outbox keys, append from any tab, the drain lock (released on hidden/freeze/pagehide, re-requested on resume) + adoption on acquisition and on ping, the `sending` claim, `BroadcastChannel` (`changed`/`status`/`status-request`/`settled { op, entry }`), re-read on ping and on lock acquisition, `retryRequested`/discard from any tab, the badge hint, no-Web-Locks fallback. Tests: two tabs (an op written in tab B is sent exactly once; the holder dies mid-request → the next holder resends with the same op-id, no duplicate; concurrent appends keep both ops; fresh version in a non-drain tab; hidden → visible in one tab still sends; release with a request in flight → aborted, no concurrent resend, no false conflict draft; claim cleared after a network error/5xx, discard then allowed; claim fails once stopped, a late removal clears only its own claim; removal after success finishes after a stop, restore sees no stale version; claim write rejected → transient retry; drain writes after `clearUserData` are no-ops; a version is deleted only inside the write-locked removal when no op of the entry remains; `whenTurn` of a Retry waits its turn, a hidden tab that gets the drain lock does not drain; `retryingOpIds` cleared after the run, `cancelled` cleaned for never-adopted folded ops; Retry of a failed op is claimed and sent, not `CANCELLED`; a stale holder's late clear leaves the new holder's claim; re-acquisition during a pending removal keeps the in-memory version, no false conflict; a run in backoff across hidden → visible continues and its op is sent once) | 03-15b |
 | 03-16a | `OutboxSheet`, `<OnlineOnly>` + `ONLINE_ONLY_ACTIONS` (including `settlement.delete`/`edit`), the caption at balances, confirm on `signOut` with a non-empty outbox and the outbox part of the account-switch dialog, banners `outboxUnavailable`/`storageNotPersisted`, i18n ×5 | 03-15c |
 | 03-16b | conflict handling per D28 (§2.6): `recordConflict` (fresh `current` into `ledger.entry(id)` and the list caches, later ops of the entry folded into a `ConflictDraft`), the toasts `offline:conflictChanged`/`offline:conflictNotDeleted`, reopening the draft in the edit form and resending with `baseVersion = current.version`, the draft rows in `OutboxSheet`, drafts in the limit of 50 and the sign-out count, i18n ×5; no dialog | 03-16a |
 | 03-17 | enable the flag for expenses | BE-03-1, BE-03-2, BE-03-5, 03-16b, 03-20, 04-4a2 in prod (D30: the queue lives in IndexedDB of the app-host origin and does not move between origins; after cutover step 1 the app origin is `app.chipin.one` and no longer changes, step 2 (04-4b) moves only the site, spec 04 §4.1) |
