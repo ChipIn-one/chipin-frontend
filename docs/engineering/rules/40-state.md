@@ -71,7 +71,7 @@ Names describe the business operation. Do not use vague names such as `setData`,
 ## Server Requests
 
 - Server reads and mutations are TanStack Query hooks (spec 03 §2); mutations use `retry: false`, and
-  a stale response never overwrites newer state (`AGENTS.md` invariant 4).
+  a stale response never overwrites newer state (`AGENTS.md` invariant 8).
 - Validate preconditions before starting a request. Cancellation is not a domain error.
 - Stores that still fetch keep request identity checks so an older Promise cannot settle a newer
   request's loading/error state, until they migrate.

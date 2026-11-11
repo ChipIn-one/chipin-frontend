@@ -7,10 +7,9 @@
 - Conversion between wire and domain happens only at the API boundary: `moneyFromWire`/`moneyToWire` in
   the `entities/*/model` mappers. Arithmetic runs on `bigint` ledger units; currency minor units are used
   only for display and input limits.
-- Parsing, rounding, sums, and formatting live only in `src/shared/money/`.
-- Until `src/shared/money/` exists, legacy code keeps its current amounts and the shared helpers in
-  `helpers/numbers.ts` (`parseAmountInput`, `roundHalfUp`, `normalizeApiMoneyAmount`); do not add new money
-  parsing, rounding, or arithmetic anywhere else.
+- New code parses, rounds, sums, and formats money only in `src/shared/money/`. Legacy code that has not migrated yet keeps its current amounts and the
+  shared helpers in `helpers/numbers.ts` (`parseAmountInput`, `roundHalfUp`, `normalizeApiMoneyAmount`); do
+  not add new money parsing, rounding, or arithmetic anywhere else.
 - Keep the public `Amount` component as the shared display boundary; backend-confirmed values remain the financial source of truth.
 - Backend is the source of confirmed financial results after synchronization.
 - Frontend may validate input, preview splits, convert display summaries, and maintain local pending offline results.
@@ -21,13 +20,15 @@
 
 ## Offline Financial Mutations
 
-No outbox and no offline writes exist until 03-17 (`AGENTS.md` invariant 5); a task does not build one.
-The rules below apply once it lands.
+Today there are no offline financial writes: `shared/offline/outboxGate.ts` and `shared/offline/pendingOps.ts`
+are no-op stubs that callers may already be wired against, and a task does not build the outbox unless it asks
+for one (`AGENTS.md` "Applies now"). The rules below describe the target (spec 03 §2) and apply once the
+outbox lands.
 
 - Offline expense create/edit/delete goes only through the outbox with a client-generated UUID
-  (`AGENTS.md` invariant 5, spec 03 §2). Settle-up and payments are never offline.
+  (spec 03 §2). Settle-up and payments are never offline.
 - Track local lifecycle explicitly, for example `pending`, `syncing`, `synced`, or `failed`.
-- On reconnect, the outbox replays queued work in order and reconciles local values with the backend response.
+- On reconnect, the outbox replays queued work in order per expense (a failed op blocks only its own expense) and reconciles local values with the backend response.
 - Failed synchronization remains retryable and is not silently marked successful.
 - Replay must not duplicate an expense; the client UUID is the idempotency key.
 - A stale backend fetch must not overwrite unsynchronized local changes.

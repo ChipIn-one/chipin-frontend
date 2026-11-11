@@ -36,8 +36,9 @@ import `test`; no production file may import it.
 - `features` own cohesive user capabilities and may compose shared components.
 - `components` are reusable project components without route ownership.
 - `basics` are the lowest reusable UI primitives and cannot import higher UI layers.
-- Stores own shared application/domain state and call resource API modules.
-  (Legacy until the entity is migrated to TanStack Query, spec 03; see §Ownership.)
+- Now: legacy server stores still hold server data and call resource API modules; do not add new ones.
+  Target (spec 03): server state lives in TanStack Query `entities/*` and stores hold UI state only
+  (§Ownership).
 - API modules own HTTP contracts and cannot import UI or stores.
 - Helpers are pure unless their module clearly represents a browser boundary.
 - Helpers never import or read Zustand stores, store hooks, or store selectors. Pass every required
@@ -51,9 +52,10 @@ slice rules are entries in `eslint-suppressions.json`; the baseline only shrinks
 
 ## Ownership
 
-- Zustand holds UI state only (modals, drafts, UI preferences); server state belongs to TanStack Query
-  (spec 03). Server stores that spec 03 has not migrated yet are transitional: do not create new ones
-  and do not add new server-data fields to them.
+- Now: new code follows the target below. Server stores that spec 03 has not migrated yet are transitional:
+  do not create new ones and do not add new server-data fields to them.
+- Target: Zustand holds UI state only (modals, drafts, UI preferences); server state belongs to TanStack
+  Query (spec 03).
 - Runtime API calls never originate in pages, features, components, or basics.
 - Type-only DTO imports are allowed at mapping/store boundaries. UI should prefer domain types.
 - Side effects belong in store actions, focused hooks, event handlers, or explicit app-lifecycle orchestration.
