@@ -13,7 +13,7 @@ const guardStep = guard.steps.find(step => step.id === 'guard');
 describe('release-on-production workflow', () => {
     test('runs only for a successful vercel[bot] status on a vercel[bot] Production deployment', () => {
         expect(Object.keys(workflow.on)).toEqual(['deployment_status']);
-        expect(Object.keys(workflow.jobs)).toEqual(['guard', 'release']);
+        expect(Object.keys(workflow.jobs)).toEqual(['guard', 'release', 'redeploy']);
         expect(guard.if).toContain("github.repository_owner == 'ChipIn-one'");
         expect(guard.if).toContain("github.event.deployment.environment == 'Production'");
         expect(guard.if).toContain("github.event.deployment_status.state == 'success'");

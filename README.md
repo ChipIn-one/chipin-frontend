@@ -26,14 +26,13 @@ npm install
 | `npm run format`                    | Format the repository with Prettier (`prettier --write .`)                                                             |
 | `npm run format:check`              | Check formatting with Prettier without writing; part of `verify` and `verify:full` (CI)                                |
 | `npm run typecheck`                 | Run the TypeScript compiler (`tsc -b`)                                                                                 |
-| `npm run verify`                    | Fast check: version check, format check, lint, then typecheck                                                          |
-| `npm run verify:full`               | Full gate, also run by CI: version check, format check, `lint:full`, full tests, production build, ds-gallery build    |
+| `npm run verify`                    | Fast check: format check, lint, then typecheck                                                                         |
+| `npm run verify:full`               | Full gate, also run by CI: format check, `lint:full`, full tests, production build, ds-gallery build                   |
 | `npm run build`                     | Typecheck and production build                                                                                         |
 | `npm run vercel-build`              | Vercel deployment build: production build and public precache check, no tests                                          |
 | `npm run preview`                   | Preview the production build locally                                                                                   |
-| `npm run version:check`             | Check that `package.json` and `package-lock.json` versions are valid and equal                                         |
 
-Feature PRs do not change the version; every PR body carries `## Version impact`. Release: see `AGENTS.md`, Release.
+Feature PRs never change the `version` field; every PR body carries `## Version impact`, which sets the release increment (the release tag is created at Promote to Production). Release: see `AGENTS.md`, Release.
 
 During implementation, pass the smallest set of test files that covers the change:
 
