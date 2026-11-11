@@ -10,10 +10,10 @@
     "heroDescription": "Create groups, add expenses, and see who owes whom — fast and fair. Perfect for trips, roommates, and group activities.",
     "stats": {
         "regionLabel": "Platform statistics",
-        "totalUsers": "Total users",
-        "expensesTracked": "Expenses tracked",
-        "groupsCreated": "Groups created",
-        "settlementsRecorded": "Settlements recorded"
+        "expensesSplit": "Expenses split",
+        "debtsTracked": "Debts tracked",
+        "activeGroups": "Active groups",
+        "peopleSharing": "People sharing"
     },
     "howItWorks": {
         "eyebrow": "Simple by design",

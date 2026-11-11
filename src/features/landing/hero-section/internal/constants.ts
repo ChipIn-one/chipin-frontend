@@ -1,25 +1,26 @@
 import { HandCoinsIcon, ReceiptIcon, UserCheckIcon, Users2Icon } from 'lucide-react';
 
+// The four metrics of `GET /stats` (chipin-backend#180), in the approved order.
 const LANDING_STATISTICS = [
     {
-        field: 'usersCount',
-        labelKey: 'totalUsers',
-        Icon: UserCheckIcon,
-    },
-    {
         field: 'expensesCount',
-        labelKey: 'expensesTracked',
+        labelKey: 'expensesSplit',
         Icon: ReceiptIcon,
     },
     {
-        field: 'groupsCount',
-        labelKey: 'groupsCreated',
+        field: 'debtsTracked',
+        labelKey: 'debtsTracked',
+        Icon: HandCoinsIcon,
+    },
+    {
+        field: 'activeGroupsCount',
+        labelKey: 'activeGroups',
         Icon: Users2Icon,
     },
     {
-        field: 'settlementsCount',
-        labelKey: 'settlementsRecorded',
-        Icon: HandCoinsIcon,
+        field: 'peopleSharingCount',
+        labelKey: 'peopleSharing',
+        Icon: UserCheckIcon,
     },
 ] as const;
 

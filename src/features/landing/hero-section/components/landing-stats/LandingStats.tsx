@@ -1,11 +1,14 @@
 import { Flex, Skeleton, Text } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
-import { useStatsQuery } from 'entities/stats';
+import { legacyAmountFromMoney } from 'entities/balance';
+import { type Stats, useStatsQuery } from 'entities/stats';
 
 import { Amount } from 'basics/numbers';
 
 import { LANDING_STATISTICS } from '../../internal';
+
+type Field = (typeof LANDING_STATISTICS)[number]['field'];
 
 const LandingStats = () => {
     const { data: stats, error } = useStatsQuery();
@@ -53,15 +56,7 @@ const LandingStats = () => {
                                 <Text size="5" weight="bold" color="green">
                                     <Flex align="center" gap="1">
                                         <Icon aria-hidden="true" />
-                                        {stats ? (
-                                            <Amount
-                                                type="summary"
-                                                value={stats[field]}
-                                                isAbsolute={false}
-                                            />
-                                        ) : (
-                                            '—'
-                                        )}
+                                        {stats ? renderValue(stats, field) : '—'}
                                     </Flex>
                                 </Text>
                                 <Text size="3" color="gray" align="center">
@@ -75,5 +70,18 @@ const LandingStats = () => {
         </Flex>
     );
 };
+
+// Counts and the USD total share the summary format ("1.20K", "1.25M USD").
+const renderValue = (stats: Stats, field: Field) =>
+    field === 'debtsTracked' ? (
+        <Amount
+            type="summary"
+            value={legacyAmountFromMoney(stats.debtsTracked)}
+            tokenCode={stats.debtsTracked.currency}
+            isAbsolute={false}
+        />
+    ) : (
+        <Amount type="summary" value={stats[field]} isAbsolute={false} />
+    );
 
 export default LandingStats;

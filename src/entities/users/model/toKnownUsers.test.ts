@@ -28,8 +28,14 @@ test('maps the known users to the domain with exact Money, also beyond 2^39', ()
                     user: { ...wireUser('friend-1'), picture: 'https://example.com/a.png' },
                     balances: [balance('USD', '899999999999.9997'), balance('EUR', '-25.5')],
                     lastUsedCurrency: 'USD',
+                    lastSelectedCurrency: null,
                 },
-                { user: wireUser('friend-2'), balances: [], lastUsedCurrency: null },
+                {
+                    user: wireUser('friend-2'),
+                    balances: [],
+                    lastUsedCurrency: null,
+                    lastSelectedCurrency: null,
+                },
             ],
         }),
     ).toEqual([
@@ -68,6 +74,7 @@ test('leaves an unreadable balance out, marks the friend and reports it without 
                     balance('JPY', '1.23456'),
                 ],
                 lastUsedCurrency: null,
+                lastSelectedCurrency: null,
             },
         ],
     });

@@ -13,7 +13,7 @@
 // plus: every listed field still exists in the snapshot (a stale entry is an error).
 
 /** Amounts: `WireAmount`. */
-export const MONEY_FIELDS = ['amount', 'netAmount', 'netBalance', 'shareAmount'];
+export const MONEY_FIELDS = ['amount', 'debtsTrackedUsd', 'netAmount', 'netBalance', 'shareAmount'];
 /** Amounts by key (`userId`): `Record<string, WireAmount>`. */
 export const MONEY_MAP_FIELDS = ['customShares'];
 /** Non-money decimals by key (percentages, weights, rates): `Record<string, WireDecimal>`. */
