@@ -193,6 +193,25 @@ test('an unknown or unsupported action, or details of another type, give an unkn
     });
 });
 
+test('a recurring expense event is an unknown event and reads no amount, even a malformed one', () => {
+    const recurring = {
+        type: 'recurring_expense',
+        recurringExpenseId: 'rec-1',
+        amount: createWireAmount('1.23456'),
+        currency: 'USD',
+        frequency: 'MONTHLY',
+        payerId: 'u1',
+        payerDisplayName: 'Ann',
+    } satisfies WireMetadata;
+    const event = wireEvent('p1', 'RECURRING_EXPENSE_CREATED', recurring);
+
+    expect(toActivityItem(preview(event)).parent).toMatchObject({
+        action: 'RECURRING_EXPENSE_CREATED',
+        metadata: null,
+    });
+    expect(Sentry.captureMessage).not.toHaveBeenCalled();
+});
+
 test('expenseBalanceChange: the payer funded amount − own share, a participant owes the share', () => {
     const event = toActivityItem(
         preview(wireEvent('p1', 'EXPENSE_CREATED', expense('10', 'USD', [['u1', '3.3333']]))),

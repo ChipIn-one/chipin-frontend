@@ -883,7 +883,7 @@ The main protection is the types, lint is a safety net:
 
   | List | Fields (backend `64f9dd8`) | Type in `schema.d.ts` | Runtime (transport §4.1) |
   |---|---|---|---|
-  | `MONEY_FIELDS` | `amount`, `netBalance`, `netAmount`, `shareAmount` (`CurrencyBalance.kt`, `ActivityDtos.kt`, `LedgerEntryDtos.kt`, `LedgerBalanceDtos.kt`, `LedgerCrudRequests.kt`, `LedgerExpenseDtos.kt`, `KnownUserDtos.kt`) | `WireAmount` | `{ __wireDecimal }` |
+  | `MONEY_FIELDS` | `amount`, `netBalance`, `netAmount`, `shareAmount` (`CurrencyBalance.kt`, `ActivityDtos.kt`, `LedgerEntryDtos.kt`, `LedgerBalanceDtos.kt`, `LedgerCrudRequests.kt`, `LedgerExpenseDtos.kt`, `KnownUserDtos.kt`); `debtsTrackedUsd` (`StatsResponse.kt`, added at backend `a308a90`, #682) | `WireAmount` | `{ __wireDecimal }` |
   | `MONEY_MAP_FIELDS` | `customShares` (EXACT, amounts by `userId`) | `Record<string, WireAmount>` | same for the values |
   | `DECIMAL_MAP_FIELDS` | `percentageShares`, `shares` (`LedgerSharing.kt`), `rates` (`CurrencyRatesDtos.kt:109`) | `Record<string, WireDecimal>` (`string & { __brand: 'WireDecimal' }`) | a decimal string; not passed to `moneyFromWire`, `split` takes the weights as strings |
 
