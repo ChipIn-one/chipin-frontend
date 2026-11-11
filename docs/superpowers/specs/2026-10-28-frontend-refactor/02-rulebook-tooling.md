@@ -1,12 +1,12 @@
 # Spec 02 — a single rulebook, tooling, dependency cleanup
 
-Decisions: D9, D11, D12, D13, D15, D16 (dependencies and build hygiene). Related decisions: D21 (the `money/` module; D10 withdrawn), D3 (TanStack Query), D6 (data router), D4 (zod at boundaries).
+Decisions: D9, D11, D12, D13, D15, D16 (dependencies and build hygiene), D27, D31 (no codemods: named exports via `import-x/no-default-export` + shrinking suppressions, 02-C13). Related decisions: D21 (the `money/` module; D10 withdrawn), D3 (TanStack Query), D6 (data router), D4 (zod at boundaries).
 Related specs: **01** (hotfix: `.gitignore`, CSP — already there), **03** (D3/D4/D21: `src/shared/money`, the Query layer, removal of `useConnect`, money lint rules), **04** (D6/D7: monorepo — configs move to the root, see §D9; data router and `src/app/`), **05** (D14: stylelint, styled allowlist, `no-raw-colors`).
-PR identifiers use the global scheme `<spec>-<n>`: `02-A0…02-A3`, `02-B1…02-B2`, `02-C1…02-C12`, `02-D2…02-D3` (02-D1 withdrawn, §D0) (see `00-overview.md`).
+PR identifiers use the global scheme `<spec>-<n>`: `02-A0…02-A3`, `02-B1…02-B2`, `02-C1…02-C13` (02-D1 withdrawn, §D0; the codemods 02-D2a–e/02-D3a–e withdrawn by D31) (see `00-overview.md`).
 
 Deviation from D11/D13 (owner review of PR #542, recorded in DECISIONS): rules without autofix and not about correctness are removed (§D0) — `handle*`, the `React.FC` ban, Props only in the component file as a check are dropped. Deviation from DECISIONS: D9 names `docs/codex/rules` as the full rulebook; on `master` the rulebook already lives in `docs/engineering/rules/` — D9 applies to it, no new `docs/codex/` is created. D12 (removal of `useConnect`) is carried out by spec 03; here only the ban on new ones. After review C (taken to the owner, `00-overview.md` "Confirmations"): (1) D9 "every rule is lint/CI or is deleted" is carried out with a fourth class `REVIEW` — a short list of semantic AGENTS.md invariants that a machine does not check (C1-16); (2) D21 "money conversion at the API boundary" is interpreted as "in the `entities/*/model` mappers", the `api()` wrapper does not touch money (C1-11, C2-06, C3-14; details — spec 03 §4.3).
 
-**Order relative to the monorepo move (04-0).** Before 04-0: 02-A0…A3, 02-B1, 02-B2, 02-C1…02-C5 (recommended — so that the mass formatting and `tsconfig.base.json` come before the rename). After 04-0: 02-C6…02-C12, 02-D2…02-D3 (codemods — strictly after 04-0). 02-A*/02-B*/02-C* are written through `APP_DIR` (§D9) and can also go after 04-0 if needed.
+**Order relative to the monorepo move (04-0).** Before 04-0: 02-A0…A3, 02-B1, 02-B2, 02-C1…02-C5 (recommended — so that the mass formatting and `tsconfig.base.json` come before the rename). After 04-0: 02-C6…02-C13 (02-C13 does not depend on 04-0; it only needs 02-C4). There are no codemods (D31). 02-A*/02-B*/02-C* are written through `APP_DIR` (§D9) and can also go after 04-0 if needed.
 
 ## Goal
 
@@ -54,7 +54,7 @@ Consequences:
 | `react-hooks` v7 `recommended` (`rules-of-hooks`, `exhaustive-deps`, compiler rules) | b | hook errors |
 | jsx-a11y — 6 rules: `alt-text`, `anchor-is-valid`, `aria-props`, `aria-role`, `role-has-required-aria-props`, `no-static-element-interactions` | b | invalid ARIA, an image without `alt`, a link without `href`, a clickable `div` — real accessibility defects; the other `recommended` rules — c |
 | `react/jsx-no-literals` + the i18n attribute selector | b | text bypassing i18n = a bug in 3 locales |
-| `import-x/no-default-export` | b | module boundary (D11); message: `export { X }` |
+| `import-x/no-default-export` (02-C13; exceptions in D5 "default export exceptions") | b | module boundary (D11); message: `export { X }`; the existing violations are suppressions that only shrink (D31) |
 | `import-x/no-self-import` | b | import error |
 | `import-x/no-cycle` (CI only) | b | boundary |
 | ~~`import-x/no-internal-modules` (allow-list)~~ — removed by 02-C12 (D27) | — | slice entry stays enforced by the `boundaries/dependencies` policies; file imports inside a slice and in plain layers are allowed |
@@ -82,7 +82,7 @@ Consequences:
 | ~~`no-restricted-syntax` a string literal `/…(png\|svg\|ico\|webp)` in `apps/app/src` (04-2g)~~ — withdrawn by D26 | — | Vite `base` stays `/` (spec 04 §2.1) |
 | `no-raw-colors` (spec 05 §3, 05-5; regex with anchors) | b | tokens |
 | `no-restricted-syntax` `style` with ordinary properties (05-5) | b | styles are Radix props or a CSS Module; custom `--x` are allowed |
-| `no-restricted-imports` `styled-components` outside the allowlist (05-5), `@radix-ui/colors` (05-4), `\.svg\?react$` outside the allowlist (05-5) | b | styled freeze, tokens, icons are lucide |
+| `no-restricted-imports` `styled-components` outside the allowlist (05-5), `@radix-ui/colors` (the PR that removes `styled-themes.ts` in the design phase, 05 §3), `\.svg\?react$` outside the allowlist (05-5) | b | styled freeze, tokens, icons are lucide |
 | `eslint-comments/require-description` | b | an exception without a reason |
 | ~~`no-restricted-syntax` `AwaitExpression`/async~~ (formerly inv. 7) | — | removed by the owner's decision 2026-10-28 (D24): the selector `eslint.config.js:99-122` (18 warnings) is removed by **02-C4** (C2-04, C1-26), the text in `docs/engineering/rules` — by 02-A2 |
 | `@typescript-eslint/naming-convention` `handle*` | c | no autofix (manual rename) |
@@ -140,7 +140,7 @@ Measurements of this spec (read-only, on `src` = `master`):
 - `tsc --verbatimModuleSyntax`: **31 errors**;
 - type-aware ESLint over `src`: `no-floating-promises` 35 (34 in prod code), `no-misused-promises` 28 (18), `consistent-type-imports` 34 (all autofix), `unbound-method` 70 (all in tests), `no-unsafe-assignment` 35 (29 in tests). Run time about 7 s;
 - Prettier with the current `.prettierrc.cjs`: **317 of 737** `src` files differ;
-- `export default`: 172 files, 314 places of `import X from '<local module>'`, 14 `React.lazy`, 25 tests with `vi.mock(..., () => ({ default }))`;
+- `export default`: 172 files (173 on `master` 2026-11-10), 314 places of `import X from '<local module>'`, 14 `React.lazy`, 25 tests with `vi.mock(..., () => ({ default }))`;
 - `index.ts`: 147 files; 38 at slice level (`src/<layer>/<slice>/index.ts`), 4 root ones for a layer, **105 nested** (re-measured in 02-C12; was 144/37/103) (#573, 2026-11-02, added 2 nested `index.ts` and 2 `useConnect.ts` after this spec was written);
 - `useConnect`: 19 files (re-measured in 02-C12; was 17); 34 prod files reference them (19 call the hook, 15 `index.ts` re-export it; re-measured in 03-5 / #625, the earlier "47 references" was the count when the spec was written); `useShallow`: 40 files;
 - `Number(`/`parseFloat(` in prod code: 21 calls in 5 files.
@@ -391,7 +391,7 @@ Rules (all `error` unless stated otherwise; the class of each is in §D0, class 
 | naming | none (§D0: `naming-convention` without autofix is removed, including the current `handle*` selector) |
 | project | `no-restricted-syntax`: `ExportAllDeclaration`, `<img>`, `localStorage.clear`, `CancelToken`, an object literal in `use*Store(...)` without `useShallow`, `use*Store()` without an argument; every selector has a `message` with a ready fix. The money selectors — spec 03 §4.3, the color ones — spec 05 (05-5); all `no-restricted-syntax`/`no-restricted-imports` blocks are assembled by the helpers `restrictedSyntax()`/`restrictedImports()` from `config/eslint/project.js` (introduced by 02-C4), because in a flat config a later block replaces the rule's options entirely |
 | globals | `no-restricted-globals`: `localStorage`, `sessionStorage` (except `helpers/localStorage.ts`) |
-| ignores (generated files) | ESLint and Prettier ignore `**/vercel.json`, `**/routing.generated.ts`, `packages/tokens/generated/**`, `src/shared/api/generated/**`, `eslint-suppressions.json`: the generator writes the result itself, `routes:check`/`tokens:check` compare it byte for byte (C1-20) |
+| ignores (generated files) | ESLint and Prettier ignore `src/shared/api/generated/**`, `eslint-suppressions.json`: the generator writes the result itself (C1-20). `vercel.json` and `packages/tokens/tokens.css` are hand-written (D31) and are formatted like any other file |
 | imports | `no-restricted-imports`: `axios` (except `src/api/chipin.{instance,interceptors}.ts`, after 03-4b — `src/shared/api/http.ts`), runtime `api/` from UI (as now, `allowTypeImports`), UI libraries (30.Radix.4). Delete the dead `authSession` override (03:58) |
 | eslint-comments | `require-description`; unneeded disables — `linterOptions.reportUnusedDisableDirectives: 'error'` (autofix) |
 
@@ -546,23 +546,23 @@ A new `tsconfig.base.json` with the shared options: `strict`, `noUnused*`, `eras
 | `jsx-a11y` (6 rules), `jsx-no-literals`, the i18n attribute selector | 0 / 0 / 0, measured in 02-C8 (the 39 attribute hits were all test-harness markup in `*.test.tsx`; tests are excluded from the attribute selector) | new rules are immediately error; current violations — `--suppress-rule` in the same PR, fixed by slices | 02-C8 + per-slice PRs |
 | boundaries | ~30 | suppressions; the fix — 05-6 (basics → components/store/hooks/api, including `NavButton`, `BalanceSummaryText`), 04-5a (public-routes); routing → pages is not counted as a violation (element `app`) | 02-C9 |
 | `import-x/no-cycle` | known cycles `groupsStore`↔`activity-store`, `expenseModalStore`↔selectors (03:50) | suppressions; broken by 03-10/03-12 and 03-14 (C2-05) | 02-C9 |
-| `import-x/no-internal-modules` (allow-list) | 105 nested barrels | suppressions; removed with its entries by 02-C12 (D27: slice entry stays enforced by the `boundaries` policies; file imports are allowed inside a slice and in plain layers), before 02-D3a–e | 02-C9 |
+| `import-x/no-internal-modules` (allow-list) | 105 nested barrels | suppressions; removed with its entries by 02-C12 (D27: slice entry stays enforced by the `boundaries` policies; file imports are allowed inside a slice and in plain layers) | 02-C9 |
 | type-aware (`no-floating-promises`, `no-misused-promises`, `no-unsafe-*`) | 36 / 30 (incl. JSX) / 10 (5 assignment, 4 member-access, 1 return), measured in 02-C6 | suppressions in 02-C6; fix 02-C7a/b (C2-05) | 02-C6 |
 | `no-non-null-assertion` | 9 in 5 files | suppressions in 02-C6; fixed when the file is touched | 02-C6 |
-| default exports | 172 files, 314 imports, 14 lazy, 25 `vi.mock` | codemod `scripts/codemods/named-exports.mjs` (ts-morph, a temporary devDep): `export default X` → `export { X }`, `import X from` → `import { X } from`, lazy → `.then(m => ({ default: m.X }))`. `vi.mock` with `default` — by hand | 02-D2a basics(24), 02-D2b–c components(80), 02-D2d features(24), 02-D2e pages(42)+i18n+main |
-| nested barrels | 105 + 3 root ones (`basics/index.ts`, `i18n/index.ts`, `public-routes/index.ts`; `store/index.ts` is removed by 03-5 — the only owner, C2-28); 147 `index.ts` in total, 38 at slice level (#573, 2026-11-02, added 2 nested `index.ts` and 2 `useConnect.ts` after this spec was written) | codemod `scripts/codemods/inline-barrels.mjs`: an import through a nested index → an import of the file; delete the index. `vi.mock('<barrel>')` is split by hand into mocks of files | 02-D3a–02-D3e by layer |
-| `export *` / inline re-export in index | 9 | disappear together with 02-D3 | 02-D3 |
+| default exports | 173 files with `export default` on `master` (re-measured 2026-11-10; was 172 files, 314 imports, 14 lazy, 25 `vi.mock`); the rule is not enabled anywhere yet | no codemod (D31): `import-x/no-default-export` immediately `error` + `eslint . --suppress-rule import-x/no-default-export`; the ratchet (§D0) only lets the entries shrink; a file leaves the baseline when it is touched (`export { X }`, importers and `vi.mock(..., () => ({ default }))` in the same PR) | 02-C13 |
+| nested barrels | 105 nested `index.ts` + 3 root ones (`basics/index.ts`, `i18n/index.ts`, `public-routes/index.ts`; `store/index.ts` is removed by 03-5 — the only owner, C2-28); 147 `index.ts` in total, 38 at slice level | no codemod (D31): D27 + the `boundaries` policies already enforce the slice entry and `check-file-layout` (02-C12) bans new nested `index.ts`; a remaining nested barrel is removed when a file in its folder is touched (importers switch to the file) | when touched |
+| `export *` in index | 9 in the audit, 0 on `master` (2026-11-10) | `no-restricted-syntax` `ExportAllDeclaration` enabled without suppressions | 02-C13 |
 | `useConnect` | 19 `useConnect.ts` files (34 prod files reference them, re-measured in 03-5 / #625; 47 when the spec was written; #573, 2026-11-02, added 2 nested `index.ts` and 2 `useConnect.ts` after this spec was written) | removal — **only spec 03** (in the migration PR of its store; the remainder — 03-18). This spec gives only the ban on new ones: `CI:check-file-layout` with a baseline of 19 files (02-C12) | 03-* |
 | money `Number(`/`parseFloat(` | 21 in 5 files | after `src/shared/money/` appears (D21); the rule and the migration — spec 03 §4.3–4.4 | 03-1, 03-3 |
 | `noUncheckedIndexedAccess` | 39 | by hand | 02-C11 |
 
-The order of `--max-warnings 0`: it is enabled in 02-C4, when the import-sort and `no-multiple-empty-lines` lines are zeroed, and the class c rules and the async selector are off. Everything added later (02-C6, C8, C9, 03-1, 05-5) comes in immediately as `error` + `--suppress-rule` in the same PR — the same before and after `--max-warnings 0`, so CI is never red by construction (C2-03, C2-05).
+The order of `--max-warnings 0`: it is enabled in 02-C4, when the import-sort and `no-multiple-empty-lines` lines are zeroed, and the class c rules and the async selector are off. Everything added later (02-C6, C8, C9, C13, 03-1, 05-5) comes in immediately as `error` + `--suppress-rule` in the same PR — the same before and after `--max-warnings 0`, so CI is never red by construction (C2-03, C2-05).
 
 ## Nuances and pitfalls
 
 - **`void` vs the current rule text.** 00.Promises.5 forbids `void` wrappers, while `no-floating-promises` requires them. The rule is rewritten in 02-C7a/b simultaneously with enabling lint, otherwise agents get a contradiction.
 - **Prettier PRs conflict with all open PRs.** 02-C2a–c are merged back to back on one day, in a window with no open feature PRs; after the merge the authors run `npm run format`. The SHAs go into `.git-blame-ignore-revs`. A mechanical PR with no size guideline: PR = the output of one command, review = repeat the command and compare.
-- **The default→named codemod and barrels break string `vi.mock` calls** (477 calls). A mock of a barrel and a mock of a file are different modules. The codemod prints a list of affected `vi.mock` calls, which are fixed by hand in the same PR. The criterion — 1230 tests green.
+- **default → named and barrel removal break string `vi.mock` calls** (477 calls). A mock of a barrel and a mock of a file are different modules, and `vi.mock(..., () => ({ default }))` must become a named key. When a touched file leaves the `no-default-export` baseline or a nested barrel is removed (02-C13, D31), the same PR updates its importers and their `vi.mock` calls; tests stay green.
 - **`no-misused-promises` in JSX.** `checksVoidReturn.attributes: true` (C1-22): `onClick={() => action()}` returns a promise to React, and `no-floating-promises` does not see it; the rule with the `void` hint closes this path. Existing places — suppressions 02-C6, fix 02-C7b.
 - **Attributes and i18n.** Technical attributes (`variant`, `size`, `type`…) are not checked: the D5 selector lists only user-facing ones (`aria-label`, `aria-description`, `placeholder`, `title`, `alt`), otherwise agents will start writing `{'primary'}`. Test files (`**/*.test.{ts,tsx}`) are not checked (02-C8).
 - **boundaries + aliases.** Without `eslint-import-resolver-typescript` the plugin does not recognize `components/...` and silently checks nothing. The 02-C9 acceptance criterion — a violating test file must produce an error.
@@ -590,7 +590,7 @@ The order of `--max-warnings 0`: it is enabled in 02-C4, when the import-sort an
 
 ## Phases / PRs
 
-Each PR releases independently. The size is a guideline, not a rule: one PR = one task, review in one pass, ~400 diff lines; the mechanical 02-C2 and the codemods 02-D2/02-D3 have no limit (lines produced by a command do not count).
+Each PR releases independently. The size is a guideline, not a rule: one PR = one task, review in one pass, ~400 diff lines; the mechanical 02-C2 has no limit (lines produced by a command do not count).
 
 | PR | Content | Depends on |
 |---|---|---|
@@ -612,8 +612,9 @@ Each PR releases independently. The size is a guideline, not a rule: one PR = on
 | **02-C10** | husky pre-commit + lint-staged (`--fix`, does not block) + FAST mode; delete pre-push; `fix`, `eslint-fix-staged.mjs`; the CI version-policy step; the `version-check.mjs` extension; the release section in release-qa.md. Amended (owner, 2026-11-05): the version comes from the git tag per ChipIn-one/.github#172; the release-branch version policy, the `version-check.mjs` extension and the release section in release-qa.md (the release order belongs to #172) are dropped from 02-C10. | 02-C4 |
 | **02-C11** | T4 `noUncheckedIndexedAccess` (39) | 02-C6 |
 | **02-C12** | project rules: `<img>`, `useStore()`/`useShallow`, `check-file-layout.mjs` (`index.ts` depth, ban on new `useConnect.ts`, baseline 19); removal of `import-x/no-internal-modules` and its suppression entries (D27). The money rules are **not** included here — they are introduced by 03-1 (§4.3 of spec 03) | 02-C4 |
-| **02-D2a–e** | default → named (codemod). Executed **after** 04-0 (the monorepo move), so as not to conflict with the rename. The codemod skips the files `src/store/expenseModal*` (`--exclude`) until 03-14 is merged (file-lock in `00-overview.md`); a layer is taken into work only when it has no open PRs of spec 03 (C2-14) | 02-C4, 04-0 |
-| **02-D3a–e** | nested barrels (codemod; adds no suppressions; needs 02-C12, which removes `no-internal-modules` per D27); `src/store/expenseModal*` — as in 02-D2, after 03-14 | 02-D2 of the corresponding layer |
+| **02-C13** | `no-restricted-syntax` `ExportAllDeclaration` (0 violations on `master`) and `import-x/no-default-export` = `error` (D31; exceptions per D5 "default export exceptions"), registry row in `rule-classes.json`, `eslint . --suppress-rule import-x/no-default-export` (173 files on `master`); the ratchet only lets the entries shrink; the rulebook text 00.Modules.1/20.Components.5 says "a touched file switches to `export { X }`, its importers and `vi.mock` in the same PR" | 02-C4 |
+| ~~02-D2a–e~~ | withdrawn (D31): no default → named codemod; replaced by 02-C13 | — |
+| ~~02-D3a–e~~ | withdrawn (D31): no nested-barrel codemod; D27 + `boundaries` enforce the slice entry, remaining nested barrels are removed when touched | — |
 
 ## Tests / acceptance criteria
 
@@ -629,6 +630,7 @@ Each PR releases independently. The size is a guideline, not a rule: one PR = on
 10. Pre-commit exits with 0 even with a remaining lint error (PR gate: a file with `no-floating-promises` is committed, CI is red). Owner QA, not a gate (C2-34): a measurement < 5 s on a one-file change (the owner's machine, M-series).
 11. **Check on agents** (owner QA, not a PR gate; C2-34). Before the merge of each 02-C PR that enables rules — two trial tasks by an agent on a branch with the new config: (1) a new component with i18n text and a handler, (2) an edit of a store action with a promise. We count the repeated runs caused by lint/format rules. Threshold: **0 repeats due to auto-fixable rules (a)**. Repeats due to (b) are recorded in the PR with the message text; if the message did not tell the agent how to fix, it is rewritten before the merge.
 12. The config has no `warn`-level rules and no class c rules: `scripts/check-rule-registry.mjs` (in `lint`) resolves every linted file in both lint modes (`lint` and `lint:full`) and finds every enabled rule in `config/eslint/rule-classes.json` with class a/b (stylelint coverage comes with spec 05); the rows of `rule-classes.json` match the §D0 registry (a test checks the ids).
+13. After 02-C13: a new file with `export default` (outside the D5 exceptions) fails `eslint`; `eslint-suppressions.json` has `import-x/no-default-export` entries only for files that had a default export on the base SHA, and `check-baseline.mjs` fails on any growth.
 
 ## Backend requirements
 

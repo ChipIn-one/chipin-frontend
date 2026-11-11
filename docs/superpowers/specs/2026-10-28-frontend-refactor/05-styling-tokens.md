@@ -1,16 +1,16 @@
 # Spec 05: styles, tokens, dark theme, assets
 
-Owner decisions: D14 (styles), D16 (assets, vendor regex), D7 (`packages/tokens`), D8 (the Astro site uses tokens).
+Owner decisions: D14 (styles), D16 (assets, vendor regex), D7 (`packages/tokens`), D8 (the Astro site uses tokens), D23, D31 (plan cuts: a hand-written `tokens.css`, no DTCG `tokens.json`/generator; no separate themeColor codemod PR).
 Based on DS v1: `docs/superpowers/specs/2026-10-22-design-system-v1-design.md` (on master since 01312ea).
 The DS v1 decisions are not revisited, except those listed in the section "Changes relative to DS v1".
-PR identifiers are `05-<n>` (global scheme, `00-overview.md`; after review C `05-2` is split into `05-2a`/`05-2b`). All lint/stylelint rules of this spec are rows of the spec 02 registry §D0 (C1-14). There are no deviations from DECISIONS; deviations from DS v1 are in a separate section.
+PR identifiers are `05-<n>` (global scheme, `00-overview.md`; after review C `05-2` is split into `05-2a`/`05-2b`; 05-4 withdrawn as a separate PR by D31). All lint/stylelint rules of this spec are rows of the spec 02 registry §D0 (C1-14). There are no deviations from DECISIONS; deviations from DS v1 are in a separate section.
 
-**Order relative to the monorepo (04-0):** 05-1 — before or after 04-0 (works in `src/`); 05-2a…05-7 — only after 04-0 (npm workspaces are needed). The codemod 05-4 goes after 04-0, so as not to conflict with the rename.
+**Order relative to the monorepo (04-0):** 05-1 — before or after 04-0 (works in `src/`); 05-2a…05-7 — only after 04-0 (npm workspaces are needed). The themeColor → `--cp-*` migration (formerly 05-4) happens file by file in the design phase (D31).
 **Ownership of overlapping topics:** vendor-regex and removal of `dexie` — 02-B1; lazy-loading of locales — 04-2c; SW registration (`PWABadge`) — 04-2d; the ESLint config and the `restrictedImports()` helper — 02-C4; boundaries — 02-C9; jsx-a11y — 02-C8; ds-gallery aliases — 02-C3; ds-gallery typecheck — 02-C5. This spec is the sole owner of `packages/tokens`, next-themes, stylelint, the styled allowlist, and `no-raw-colors`.
 
 ## Goal
 
-1. A single source of tokens for the app, the Astro site, and ds-gallery: `packages/tokens/tokens.json` (DTCG). From it the generator builds `tokens.css` and `tokens.ts`.
+1. A single source of tokens for the app, the Astro site, and ds-gallery: the hand-written `packages/tokens/tokens.css` (D31; no DTCG `tokens.json`, no generator).
 2. A single theme switching mechanism (light/dark/system); both themes stay.
    - Currently there are 4. One is needed: a value in the store → a class on `<html>` → `<Theme appearance>`.
    - No flicker on load (FOUC).
@@ -53,52 +53,43 @@ PR identifiers are `05-<n>` (global scheme, `00-overview.md`; after review C `05
 
 ### 1. `packages/tokens`
 
+D31: the package is hand-written. There is no DTCG `tokens.json`, no generator, no `generated/*`, no `manifest-colors.json`, no `tokens:check`; a later DTCG/Figma export is a separate decision (D17 amended).
+
 Structure (the package name `@chipin/tokens` — per the layout of spec 04 §1.1; all files below are new):
 
 ```
 packages/tokens/
-  package.json            # private, no build step for consumers; exports: ./tokens.css, ./radix-colors.css,
-                          # ./tokens (ts), ./theme-init (ts), ./assets/*
-  tokens.json             # SOURCE OF TRUTH, DTCG 2025.10 ($type, $value, aliases, light/dark modes)
-  scripts/build-tokens.mjs  # generator (~120 lines, no dependencies): tokens.json -> generated/*
-  scripts/check-tokens.mjs  # tokens:check — see "Checks"
-  generated/tokens.css    # DO NOT EDIT: --cp-* for light and dark
-  generated/tokens.ts     # DO NOT EDIT: RADIX_THEME, RADIX_PALETTES, PROP_COLOR, the CpToken type
-  generated/manifest-colors.json  # DO NOT EDIT: { theme_color, background_color } in hex (D23, item 6)
-  src/radix-colors.css    # 22 @imports of Radix scales (see item 5); the list is checked against RADIX_PALETTES
+  package.json            # private, no build step; exports: ./tokens.css, ./radix-colors.css, ./theme (ts),
+                          # ./theme-init (ts), ./assets/*
+  tokens.css              # SOURCE OF TRUTH, written by hand: --cp-* for light and dark
+  src/radix-colors.css    # 22 @imports of Radix scales (see item 5); the list equals RADIX_PALETTES
+  src/theme.ts            # by hand: RADIX_THEME, PROP_COLOR, RADIX_PALETTES, BRAND_COLORS (manifest/theme-color hex)
   src/theme-init.ts       # the anti-FOUC inline script string + its sha256 (item 2)
+  tokens.test.ts          # the sync checks, see "Checks"
   assets/logo.svg, assets/favicon.svg   # brand marks (moved from src/assets and public/)
 ```
 
-**Levels in `tokens.json`** (the same as in DS v1, "Token levels"):
+**Content of `tokens.css`** (the levels of DS v1 "Token levels", written as CSS custom properties):
 
-1. Primitives — aliases of Radix scales (`grass.1..12`, `olive.1..12`, alpha) and literals:
-   - `space.1..9` = 4, 8, 12, 16, 24, 32, 40, 48, 64 px (equal to Radix at scaling 100%);
-   - `radius.1..6` = 4.5, 6, 9, 12, 18, 24 px (Radix base × factor 1.5 for `radius="large"`) and `radius.pill` = 9999px;
-   - `font.family.sans` = the `--default-font-family` stack from Radix (system font, no webfont);
-   - `font.size.1..9` = 12, 14, 16, 18, 20, 24, 28, 35, 60 px; `font.weight.{regular 400, medium 500, bold 700}`;
-   - `shadow.{card,popover}` from `olive.a*` and `rgba` (a literal is allowed only in tokens.json);
-   - `z.{content 0, raised 1, floating 2}` — currently only these values are in the code; for modal windows the layers are set by Radix portals;
-   - `motion.duration.{fast 120ms, base 160ms}`, `motion.easing.{standard ease, out ease-out}` (currently the code has 120/150/160 ms, 150 is folded into 160);
-   - `brand.loader` = `#80c837` (a literal from `basics/ChipInLoader.tsx:10`, preserves the look);
-   - `brand.primary` = alias `grass.9` (D23) — the only source of the main brand color.
-2. Semantics with light/dark modes: `color.text.*`, `color.surface.*`, `color.border.*`, `color.fill.*`, `color.accent.*`, `color.status.*`, `color.debt.{owed,owing,settled}`, `color.selection.*`, `color.focus.ring`, `color.media.*`.
-3. Component tokens — the minimum, only what is needed for the codemod (the table in "Details"): `fab.border*`, `nav.highlight*`, `logo.mode.*`, `avatar.placeholder.*`, `landing.*`.
+1. Primitives — `--cp-space-1..9` = 4, 8, 12, 16, 24, 32, 40, 48, 64 px (equal to Radix at scaling 100%); `--cp-radius-1..6` = 4.5, 6, 9, 12, 18, 24 px (Radix base × factor 1.5 for `radius="large"`) and `--cp-radius-pill` = 9999px; `--cp-font-sans` = the `--default-font-family` stack from Radix (system font, no webfont); `--cp-font-size-1..9` = 12, 14, 16, 18, 20, 24, 28, 35, 60 px; `--cp-font-weight-{regular,medium,bold}` = 400/500/700; `--cp-shadow-{card,popover}` from `olive-a*` and `rgba` (a literal is allowed only in `packages/tokens`); `--cp-z-{content,raised,floating}` = 0/1/2 (only these values are in the code; modal layers are set by Radix portals); `--cp-duration-{fast,base}` = 120/160 ms, `--cp-easing-{standard,out}` (120/150/160 ms in the code today, 150 is folded into 160); `--cp-brand-loader` = `#80c837` (a literal from `basics/ChipInLoader.tsx:10`, preserves the look); `--cp-brand-primary: var(--grass-9)` (D23) — the only source of the main brand color.
+2. Semantic roles with light/dark: `--cp-text-*`, `--cp-surface-*`, `--cp-border-*`, `--cp-fill-*`, `--cp-accent-*`, `--cp-status-*`, `--cp-debt-{owed,owing,settled}`, `--cp-selection-*`, `--cp-focus-ring`, `--cp-media-*` (the roles in the migration table in "Details").
+3. Component tokens (`--cp-fab-border*`, `--cp-nav-highlight*`, `--cp-logo-mode-*`, `--cp-avatar-placeholder-*`, `--cp-landing-*`) are **not** in 05-2a: the design-phase PR that migrates the file adds the token it needs.
 
-**What the generator produces:**
+Rules for `tokens.css`:
 
-- `generated/tokens.css`. Each token becomes `--cp-<path joined with ->`: `color.text.secondary` → `--cp-text-secondary` (the prefix `color.` is dropped), `space.3` → `--cp-space-3`.
-  - Colors reference **a concrete scale**: `--cp-text-secondary: var(--olive-11)`. References to `--accent-*` and `--gray-*` are forbidden. Reason:
-    - `--accent-*` exists only inside `.radix-themes`, and the Astro site has no Radix Themes;
-    - a custom property declared on `:root` evaluates `var()` at the place of declaration and becomes invalid when it references a nonexistent variable.
-  - Declaration selector: `:root, .light, .light-theme, .dark, .dark-theme`. This way the token is recomputed in a nested theme, for example in `<Theme appearance="dark">` inside a light page.
-  - The `dark` mode in tokens.json is needed only where the value differs by more than the scale's own light/dark switch. Radix scales switch by `.dark` on their own.
-- `generated/tokens.ts`:
-  - `RADIX_THEME = { accentColor: 'grass', grayColor: 'olive', radius: 'large', panelBackground: 'solid', scaling: '100%' } as const`;
-  - `PROP_COLOR = { debtOwed: 'green', debtOwing: 'red', debtSettled: 'gray', danger: 'red', warning: 'amber', ... } as const` — roles for Radix `color` props, which do not accept CSS variables;
-  - `RADIX_PALETTES` — the list of scales imported by `radix-colors.css`;
-  - the type `CpToken` — a union of the `--cp-*` names.
-- `generated/manifest-colors.json` (D23): `theme_color` = `brand.primary` (= `grass.9`, light), `background_color` = the background role `color.surface.base` (light). The generator resolves aliases to hex — this is the only place where the brand hex appears outside `tokens.json`.
+- Colors reference **a concrete scale**: `--cp-text-secondary: var(--olive-11)`. References to `--accent-*` and `--gray-*` are forbidden. Reason:
+  - `--accent-*` exists only inside `.radix-themes`, and the Astro site has no Radix Themes;
+  - a custom property declared on `:root` evaluates `var()` at the place of declaration and becomes invalid when it references a nonexistent variable.
+- Declaration selector: `:root, .light, .light-theme, .dark, .dark-theme`. This way the token is recomputed in a nested theme, for example in `<Theme appearance="dark">` inside a light page.
+- A `.dark, .dark-theme` override block is needed only where the value differs by more than the scale's own light/dark switch. Radix scales switch by `.dark` on their own.
+- An `@media (prefers-reduced-motion: reduce)` block zeroes `--cp-duration-*`.
+
+**`src/theme.ts`** (by hand, no generation):
+
+- `RADIX_THEME = { accentColor: 'grass', grayColor: 'olive', radius: 'large', panelBackground: 'solid', scaling: '100%' } as const`;
+- `PROP_COLOR = { debtOwed: 'green', debtOwing: 'red', debtSettled: 'gray', danger: 'red', warning: 'amber', ... } as const` — roles for Radix `color` props, which do not accept CSS variables;
+- `RADIX_PALETTES` — the list of scales imported by `radix-colors.css`;
+- `BRAND_COLORS = { themeColor: '#46a758', backgroundColor: <hex of --cp-surface-base, light> } as const` (D23) — the only place where the brand hex appears outside `tokens.css`; `tokens.test.ts` checks it against `--cp-brand-primary` and the Radix scale files.
 
 **Wiring into the app** (`apps/app/src/styles/index.css`, the only CSS entry, imported from `root.tsx` instead of `@radix-ui/themes/styles.css`):
 
@@ -153,7 +144,7 @@ packages/tokens/
   - `dark` or (`system`/no value and `matchMedia` dark) → class `dark`, otherwise `light`;
   - on exception → `light`.
   - A Vite plugin in `apps/app/vite.config.ts` (`transformIndexHtml`, 10 lines) inserts the script as the first element of `<head>` in `app.html`. Astro inserts it like this: `<script is:inline set:html={THEME_INIT_SCRIPT} />`.
-  - CSP: `'sha256-<hash>'` is added to `script-src`. The test `theme-init.test.ts` computes the hash and checks that it is in the generated `vercel.json` (D6). On a mismatch the test prints the expected value.
+  - CSP: `'sha256-<hash>'` is added to `script-src` of the hand-written `apps/app/vercel.json` (D31; there is no `hosting.base.json`). The test `theme-init.test.ts` computes the hash and checks that it is in `apps/app/vercel.json`. On a mismatch the test prints the expected value.
   - The key is duplicated in the script string. The test checks that the string contains `LS_KEY_THEME`.
 - **Removed:**
   - `next-themes` (dependency) and `ThemeProvider` in `root.tsx`;
@@ -163,21 +154,17 @@ packages/tokens/
 
 ### 3. Retiring styled-components
 
-**Codemod `themeColor()` → `var(--cp-*)`.**
+**Migration `themeColor()` → `var(--cp-*)` (design phase, D31; formerly the separate PR 05-4).**
 
-- The script `scripts/codemods/theme-color-to-vars.mjs` runs once and is deleted in the same PR.
-- It replaces `${themeColor('k')}` with `var(--cp-…)`, and a bare `themeColor('k')` in an expression with `'var(--cp-…)'`.
-- Dynamic calls (`AddExpenseButton.tsx:17`, `desktop-sidebar/styled.ts:12`, `interactiveCardStyles.ts:41-56`) are fixed by hand using the table in "Details".
-- In the same files `var(--space-N)` → `var(--cp-space-N)` and `var(--radius-N)` → `var(--cp-radius-N)` are replaced (98 places, 1:1 by value), as well as 14 direct `var(--<palette>-N)`.
-
-Then removed:
-
-- `src/constants/styled-themes.ts`;
-- `src/helpers/colors.ts` (`hexToRgba` is not used);
-- `src/types/styled.d.ts`;
-- the styled-components `<ThemeProvider>` in `main.tsx`, `PublicApp.tsx`, and `ds-gallery/gallery.tsx`.
-
-The phantom `@radix-ui/colors` goes into `no-restricted-imports`.
+- There is no codemod PR. A file moves off `themeColor()` when the design phase (DS v1 tasks) touches it: `${themeColor('k')}` → `var(--cp-…)`, a bare `themeColor('k')` in an expression → `'var(--cp-…)'`, by the migration table in "Details"; in the same file `var(--space-N)` → `var(--cp-space-N)`, `var(--radius-N)` → `var(--cp-radius-N)` (1:1 by value) and direct `var(--<palette>-N)` → roles. A missing component token is added to `tokens.css` in the same PR.
+- Dynamic calls (`AddExpenseButton.tsx:17`, `desktop-sidebar/styled.ts:12`, `interactiveCardStyles.ts:41-56`) are fixed by hand by the same table; `interactiveCardStyles.ts` takes role names (`string` of the `--cp-*` name) instead of `ThemeColorToken`.
+- Every such PR changes pixels only on the screens it touches (gray → olive, ΔE ≈ 1–2); the touched screens' before/after screenshots are attached (acceptance item 1). The files `src/store/expenseModal*` and their styled files wait for 03-14 (file-lock, `00-overview.md`).
+- The PR that removes the last `themeColor()` caller also removes:
+  - `src/constants/styled-themes.ts`;
+  - `src/helpers/colors.ts` (`hexToRgba` is not used);
+  - `src/types/styled.d.ts`;
+  - the styled-components `<ThemeProvider>` in `main.tsx`, `PublicApp.tsx` (if still present), and `ds-gallery/gallery.tsx`;
+  - and adds the phantom `@radix-ui/colors` to `no-restricted-imports` (registry row in spec 02 §D0).
 
 **The rule "no new styled-components".**
 
@@ -187,7 +174,7 @@ The phantom `@radix-ui/colors` goes into `no-restricted-imports`.
 - `scripts/check-styled-allowlist.mjs` (in `lint`, about 60 lines):
   1. every entry exists and still imports `styled-components`, otherwise the error "remove the entry";
   2. the number of entries ≤ the number in `git show $BASE_SHA:config/eslint/styled-components-allowlist.json` (decrease only). The script accepts `--base "$BASE_SHA"`; CI passes `BASE_SHA` from `steps.gate.outputs.base_sha` (02 D7, C1-15), with `CI=true` and an empty `--base` in a PR the script fails; the ref `origin/master` does not exist in CI; locally the default is `git merge-base HEAD origin/master` (A-19);
-  3. the touch rule: if a PR changes a file from the allowlist and it is `**/styled.ts` or the added lines contain `styled[.(]`, `` css` ``, `` keyframes` ``, `createGlobalStyle`, then the file must leave the allowlist, i.e. be moved to CSS Modules. A diff in which all changed lines are `import …`/`export … from …` does not count as a touch (the codemods 02-D2/02-D3 change imports in 31 `styled.ts`, A-18);
+  3. the touch rule: if a PR changes a file from the allowlist and it is `**/styled.ts` or the added lines contain `styled[.(]`, `` css` ``, `` keyframes` ``, `createGlobalStyle`, then the file must leave the allowlist, i.e. be moved to CSS Modules. A diff in which all changed lines are `import …`/`export …` does not count as a touch (a default → named switch under 02-C13 or a barrel removal changes only imports/exports, A-18);
   4. an exception is an entry in `config/eslint/styled-touch-exempt.json` (`{path, reason, issue}`) in the same PR. Entries without `issue` are an error.
 
 **CSS Modules conventions.**
@@ -218,14 +205,14 @@ New devDeps: `stylelint`, `stylelint-value-no-unknown-custom-properties`. Rules:
 - `color-no-hex`, `color-named: 'never'`;
 - `function-disallowed-list: [rgb, rgba, hsl, hsla, hwb, lab, lch, oklch, color]`;
 - `declaration-property-value-disallowed-list: { '/.*/': ['/var\\(--(?!cp-|_)/'] }` — in CSS only `--cp-*` and local `--_*`;
-- `csstools/value-no-unknown-custom-properties` with `importFrom: packages/tokens/generated/tokens.css` (catches agents' typos);
+- `csstools/value-no-unknown-custom-properties` with `importFrom: packages/tokens/tokens.css` (catches agents' typos);
 - ~~`unit-disallowed-list` px~~ — not introduced (class c of 02 §D0: no autofix; C1-14); paddings and sizes — through `--cp-space-*`/`--cp-radius-*` as a convention;
 - `selector-disallowed-list: ['/\\.rt-/']`, the exception is `radixStylesOverwrite.css` via `overrides`;
 - `reportDescriptionlessDisables: true`.
 
-Exceptions to D23 "no raw hex" (A-29; recorded as an addition to D23 and raised to the owner in `00-overview.md` item 30): `brand.loader #80c837` and `media-on/scrim #fff/#000` live only in `tokens.json` (there is no hex outside it), and the file `components/global-error-boundary/styles.css`. Exception by file: `components/global-error-boundary/styles.css`. It intentionally uses system colors and fallback hex, because it must render even without the app CSS loaded. Its `.light`/`.dark` keep working from the class on `<html>`.
+Exceptions to D23 "no raw hex" (A-29; recorded as an addition to D23 and raised to the owner in `00-overview.md` item 30): `--cp-brand-loader #80c837` and `--cp-media-on/scrim #fff/#000` live only in `packages/tokens` (there is no hex outside it), and the file `components/global-error-boundary/styles.css`. Exception by file: `components/global-error-boundary/styles.css`. It intentionally uses system colors and fallback hex, because it must render even without the app CSS loaded. Its `.light`/`.dark` keep working from the class on `<html>`.
 
-For TS/TSX (all files, including frozen styled ones and `vite.config.ts`) and the frontmatter of `*.astro`, the ESLint `no-raw-colors` from DS v1 (rule 1) applies: hex/rgb/hsl and `var(--<palette>-N)` are an error; `packages/tokens/**` is excluded. The implementation (A-17) has no plugin of its own: a `no-restricted-syntax` block in `config/eslint/project.js` (through the `restrictedSyntax()` helper from 02-C4) with two selectors (C1-21: anchors, so that `'#add'`, `'#cafe'`, `'#feed'` as id/anchor are not caught): `Literal[value=/^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$|\b(?:rgba?|hsla?)\(|var\(--(?!cp-|_)[a-z]+-a?\d+\)/]` — the string is entirely a color or contains a color function/palette variable; `TemplateElement[value.raw=/(?:^|[\s:,(])#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b|\b(?:rgba?|hsla?)\(|var\(--(?!cp-|_)[a-z]+-a?\d+\)/]` — the CSS context of styled templates; message "[no-raw-colors] use var(--cp-*) from @chipin/tokens". Fixtures: `'#fff'`, `` `color: rgb(0 0 0)` ``, `` `border: 1px solid #ddd` ``, `'var(--gray-11)'` — 4 errors; `'var(--cp-text-primary)'`, `'#add-expense'`, `'#feedback'` — 0. A string that as a whole looks like hex but is not a color (`'#add'`) — `eslint-disable-next-line no-restricted-syntax -- not a color: <reason>`. For CSS and `<style>` in `.astro` — stylelint below (`color-no-hex`, `function-disallowed-list`, `declaration-property-value-disallowed-list`). Both are introduced by 05-5. The known places outside the 21 codemod files (C2-30) are converted or marked by 05-5 in the same PR: `OfflineQRCode.tsx:42,45` (canvas does not understand `var()`: the color is read with `getComputedStyle(document.documentElement).getPropertyValue('--cp-media-on' | '--cp-media-scrim')` through `helpers/cssToken.ts`), `ChipInLoader.tsx:10` (→ `var(--cp-brand-loader)`), direct `var(--gray-*)`/`var(--green-*)` in `EventIcon.tsx:26`, `InviteOnboarding.tsx:15,38`, `Icon404.tsx:8-20`, `auth-modal/styled.ts:11` (→ `--cp-*` roles; if the file is in the styled allowlist this is not a "touch", the edit is only of the color value). Stylelint for `.astro` — via `postcss-html` (`customSyntax`). `no-palette-theme-keys` is not needed (see "Changes").
+For TS/TSX (all files, including frozen styled ones and `vite.config.ts`) and the frontmatter of `*.astro`, the ESLint `no-raw-colors` from DS v1 (rule 1) applies: hex/rgb/hsl and `var(--<palette>-N)` are an error; `packages/tokens/**` is excluded. The implementation (A-17) has no plugin of its own: a `no-restricted-syntax` block in `config/eslint/project.js` (through the `restrictedSyntax()` helper from 02-C4) with two selectors (C1-21: anchors, so that `'#add'`, `'#cafe'`, `'#feed'` as id/anchor are not caught): `Literal[value=/^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$|\b(?:rgba?|hsla?)\(|var\(--(?!cp-|_)[a-z]+-a?\d+\)/]` — the string is entirely a color or contains a color function/palette variable; `TemplateElement[value.raw=/(?:^|[\s:,(])#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b|\b(?:rgba?|hsla?)\(|var\(--(?!cp-|_)[a-z]+-a?\d+\)/]` — the CSS context of styled templates; message "[no-raw-colors] use var(--cp-*) from @chipin/tokens". Fixtures: `'#fff'`, `` `color: rgb(0 0 0)` ``, `` `border: 1px solid #ddd` ``, `'var(--gray-11)'` — 4 errors; `'var(--cp-text-primary)'`, `'#add-expense'`, `'#feedback'` — 0. A string that as a whole looks like hex but is not a color (`'#add'`) — `eslint-disable-next-line no-restricted-syntax -- not a color: <reason>`. For CSS and `<style>` in `.astro` — stylelint below (`color-no-hex`, `function-disallowed-list`, `declaration-property-value-disallowed-list`). Both are introduced by 05-5 (after 05-2b; existing ESLint violations go into `eslint-suppressions.json` via `--suppress-rule`, they shrink as the design phase migrates files). The known places outside the 21 `themeColor()` files (C2-30) are converted or marked by 05-5 in the same PR: `OfflineQRCode.tsx:42,45` (canvas does not understand `var()`: the color is read with `getComputedStyle(document.documentElement).getPropertyValue('--cp-media-on' | '--cp-media-scrim')` through `helpers/cssToken.ts`), `ChipInLoader.tsx:10` (→ `var(--cp-brand-loader)`), direct `var(--gray-*)`/`var(--green-*)` in `EventIcon.tsx:26`, `InviteOnboarding.tsx:15,38`, `Icon404.tsx:8-20`, `auth-modal/styled.ts:11` (→ `--cp-*` roles; if the file is in the styled allowlist this is not a "touch", the edit is only of the color value). Stylelint for `.astro` — via `postcss-html` (`customSyntax`). `no-palette-theme-keys` is not needed (see "Changes").
 
 ### 4. The `basics` and `components` boundary
 
@@ -280,8 +267,8 @@ In PR 05-6, the 3 unchecked buttons from the audit are checked against these ite
 - 9 are not imported: `bronze iris lime mauve plum ruby sage sand slate`. The saving is about 44 KB raw.
 - A correction to the audit. The estimate of 120–140 KB was based on 8 palettes and did not account for the categories, which use 17 palettes. `base.css` (47 KB) contains the accent mapping for all 31 colors, and it can be trimmed only by a fork — we do not do this.
 - `components.css`/`utilities.css` are needed in full: the responsive props depend on them.
-- Protection: `tokens:check` looks in `src/**` for literals of Radix palette names in JSX/TS (`color="x"`, `color: 'x'`) and fails if the palette is not in `RADIX_PALETTES`. Without this check a missing scale would silently render transparent.
-- `RADIX_PALETTES` is set in `tokens.json` (`$extensions.chipin.radixPalettes`). The check compares this list with `radix-colors.css`.
+- Protection: `tokens.test.ts` looks in `apps/app/src/**` for literals of Radix palette names in JSX/TS (`color="x"`, `color: 'x'`) and fails if the palette is not in `RADIX_PALETTES`. Without this check a missing scale would silently render transparent.
+- `RADIX_PALETTES` is set by hand in `src/theme.ts`. The same test compares this list with the `@import`s of `radix-colors.css`.
 - The vendor regex and `vendor-misc` without `dexie` — PR 02-B1 (the sole owner). We do not touch them here.
 - Lazy loading of locales is done by spec 04 (04-2c). We do not touch it here.
 
@@ -299,9 +286,9 @@ In PR 05-6, the 3 unchecked buttons from the audit are checked against these ite
   - Serving by host (spec 04 §3.6, D26): the site on `chipin.one` sets `<link rel="icon">` to `@chipin/tokens/assets/favicon.svg?url`, the PWA manifest icons are served by the app project on `app.chipin.one` at the same paths `/pwa-*.png` (A-28). The source for `pwa-assets.config.ts:8` is `packages/tokens/assets/favicon.svg`.
 - PWA icons are no longer regenerated on every build: `create-pwa-icons` is removed from `build`/`vercel-build`, running it manually is spec 02 (02-B1, `icons:generate`). Here only the path to the source changes.
 - `theme_color: '#3e9b4f'` (`vite.config.ts:149`) is exactly Radix `grass-10` (`@radix-ui/themes/tokens/colors/grass.css`: `--grass-10: #3e9b4f`; A-24, the earlier text "does not match any step" is wrong).
-  - D23 (accepted by the owner 2026-10-28): `manifest` in `vite-plugin-pwa` (`theme_color`, `background_color`; after 04-2d — inside `buildPwaOptions()` in `apps/app/pwa.config.ts`, spec 04 §2.11) and `<meta name="theme-color">` in `app.html` (through the same `transformIndexHtml` plugin as theme-init) are read from `@chipin/tokens/generated/manifest-colors.json`; the Astro site (`BaseLayout`) reads the same file. There are no color literals in `vite.config.ts`, `app.html`, and `.astro`.
-  - A visible change: the PWA status bar color on Android (`#3e9b4f` → grass-9 `#46a758`) — accepted in D23, but on a false premise. Flag to the owner (`00-overview.md` item 26): `brand.primary` = alias `grass.10` keeps the current color with no visible change; by default grass-9 stays (D23, matches `accent-solid`).
-  - The main brand color is the same in styled code (`var(--cp-*)`), Radix `<Theme accentColor>` (`RADIX_THEME`), the PWA manifest/`theme-color`, and on the site, because all four are derived from one token `brand.primary` in `tokens.json`; a divergence is caught by `tokens:check` (item 5 of "Checks").
+  - D23 as amended by D31: `manifest` in `vite-plugin-pwa` (`theme_color`, `background_color`; after 04-2d — inside `buildPwaOptions()` in `apps/app/pwa.config.ts`, spec 04 §2.11) and `<meta name="theme-color">` in `app.html` (through the same `transformIndexHtml` plugin as theme-init) read `BRAND_COLORS` from `@chipin/tokens/theme`; the Astro site (`BaseLayout`) reads the same constant. There are no color literals in `vite.config.ts`, `app.html`, and `.astro`. The hex is written by hand once in `packages/tokens/src/theme.ts`; `tokens.test.ts` keeps it equal to the light value of `--cp-brand-primary` (resolved through the Radix scale file).
+  - A visible change: the PWA status bar color on Android (`#3e9b4f` → grass-9 `#46a758`) — accepted in D23, but on a false premise. Flag to the owner (`00-overview.md` item 26): `--cp-brand-primary: var(--grass-10)` keeps the current color with no visible change; by default grass-9 stays (D23, matches `accent-solid`).
+  - The main brand color is the same in styled code (`var(--cp-*)`), Radix `<Theme accentColor>` (`RADIX_THEME`), the PWA manifest/`theme-color`, and on the site, because all four come from `--cp-brand-primary`/`RADIX_THEME.accentColor`; a divergence is caught by `tokens.test.ts` (item 3 of "Checks").
 - Icons: all UI icons are taken from `lucide-react` by named import (size is set by the `size` prop, color — `currentColor`). svgr is used only for brand marks and third-party logos: `logo.svg` and `google-icon.svg`.
   - ESLint: `no-restricted-imports` with the pattern `regex: '\\.svg\\?react$'` and an allowlist of 3 files (`Footer.tsx`, `mode-logotype/styled.ts` or its future module, `AuthButtons.tsx`).
   - Drawing new SVG icons is forbidden. If lucide lacks the needed icon, the owner decides.
@@ -312,13 +299,14 @@ In PR 05-6, the 3 unchecked buttons from the audit are checked against these ite
   - imports `apps/app/src/styles/index.css`;
   - is wrapped in `AppTheme`;
   - switches the theme through `appearanceStore.setPreference`.
-- `ThemeProvider` and `styled-themes` are removed (`gallery.tsx:28,402`). The manual list of aliases in `ds-gallery/vite.config.ts` is removed by 02-C3 (not this spec).
-- The "Tokens" section: a table of samples of all `--cp-*` color roles in light/dark. Built from `generated/tokens.ts`, so a new token appears in the gallery automatically.
+- `ThemeProvider` and `styled-themes` are removed from the gallery (`gallery.tsx:28,402`) by the design-phase PR that removes `styled-themes.ts` (§3), not by 05-7. The manual list of aliases in `ds-gallery/vite.config.ts` is removed by 02-C3 (not this spec).
+- The "Tokens" section: a table of samples of all `--cp-*` color roles in light/dark. Built from the names found in `@chipin/tokens/tokens.css?raw` (a regex over `--cp-[a-z0-9-]+`), so a new token appears in the gallery automatically.
+- The styled `ThemeProvider` of the gallery stays until the design-phase PR that removes `styled-themes.ts` (§3).
 - **Visual regression harness — no.** This is YAGNI: DS v1 (owner decision 4) forbids cloud VR tools, and local Playwright with data fixtures for a single developer costs more than it is worth. The gallery stays the place for manual before/after comparison at the component level. Automatic VR is a DS v1 follow-up, not this spec.
 
 ## Details
 
-**Codemod table** (key `themeColor` → role → value in tokens.json). 15 scales: gray, grayA, grass, grassA, green, jade, jadeA, mint, violet, violetA, red, redA, amber, amberA, white/black.
+**Migration table** (key `themeColor` → role `--cp-*` → value in `tokens.css`; used by the design-phase PRs, D31). 15 scales: gray, grayA, grass, grassA, green, jade, jadeA, mint, violet, violetA, red, redA, amber, amberA, white/black.
 
 | Key | Role `--cp-*` | Alias |
 |---|---|---|
@@ -346,22 +334,20 @@ In PR 05-6, the 3 unchecked buttons from the audit are checked against these ite
 
 In addition, a DS v1 requirement: `debt-owed` → green-11, `debt-owing` → red-11, `debt-settled` → olive-11, `status-success` → green-11, `status-info` → blue-11, `text-inverse` → olive-1. For props the same roles are in `PROP_COLOR`.
 
-`interactiveCardStyles.ts` changes the parameter types from `ThemeColorToken` to `CpToken`, and the calls in `group-card/styled.ts` and `activity-event/styled.ts` — to role names.
+`interactiveCardStyles.ts` changes the parameter types from `ThemeColorToken` to role names, and the calls in `group-card/styled.ts` and `activity-event/styled.ts` — to role names (when the design phase touches them).
 
-**Checks** (one command `tokens:check` in `lint`, fits within the DS v1 budget of up to 30 s):
+**Checks** (one unit test `packages/tokens/tokens.test.ts`, ~60 lines, runs in `test`; no `tokens:check`, no generator, D31):
 
-1. The generator in dry-run, `generated/*` must match the committed files.
-2. Validation of `tokens.json`: known `$type`s, all aliases resolve, no unused semantic tokens (search for `--cp-x` across `apps/**`, `ds-gallery/**`).
-3. `RADIX_PALETTES` matches `radix-colors.css` and covers the palette literals in the code.
-4. The `accent`/`gray` scales in the semantics match `RADIX_THEME.accentColor`/`grayColor`.
-5. `manifest-colors.json.theme_color` = the hex of `brand.primary`, and `brand.primary` references the scale `RADIX_THEME.accentColor`. The brand is changed in tokens.json with one edit of `accentColor` plus the aliases in the accent group; the check catches forgotten places.
+1. `RADIX_PALETTES` equals the `@import`s of `radix-colors.css` and covers the palette literals in `apps/app/src/**`.
+2. Every color `--cp-*` in `tokens.css` references a concrete scale (`var(--<scale>-<n>)` or `-a<n>`) whose scale is in `RADIX_PALETTES`; no `--accent-*`/`--gray-*`; the only literals are the D23 exceptions.
+3. `BRAND_COLORS.themeColor` = the light hex of the scale step that `--cp-brand-primary` references (read from `@radix-ui/themes/tokens/colors/<scale>.css`), and that scale is `RADIX_THEME.accentColor`; `BRAND_COLORS.backgroundColor` likewise for `--cp-surface-base`. The brand is changed with one edit of `accentColor` plus the accent aliases in `tokens.css` and `BRAND_COLORS`; the test catches forgotten places.
 
 ## Nuances and pitfalls
 
-- A custom property on `:root` with `var(--accent-9)` is invalid (accent is declared only inside `.radix-themes`). Therefore the generator references only concrete scales.
+- A custom property on `:root` with `var(--accent-9)` is invalid (accent is declared only inside `.radix-themes`). Therefore `tokens.css` references only concrete scales (checked by `tokens.test.ts`).
 - The class on `<html>` is the main one. If `<Theme appearance>` diverges from it, `--cp-*` (computed on `:root`) and the Radix components will show different modes. Both values are taken from one `resolved`. The store test checks that the html class and `resolved` match after every `setPreference`.
 - The anti-FOUC script is inserted only into `app.html` (after 04-5a it is renamed to `index.html`; the plugin looks for the single html entry). The public `index.html` (SSG) is not touched until spec 04: it has its own logic in `PublicApp`, and double control of the class would give flicker.
-- The codemod is the only PR that changes pixels (gray → olive). It is isolated from other changes so that the screenshot diff is explained by one cause.
+- Pixel changes (gray → olive) come only with the design-phase PRs that migrate a file off `themeColor()`; each such PR explains its screenshot diff by the files it touches (D31; there is no single "pixel" PR any more).
 - Tests that mock `next-themes` (`DevMenu.test.tsx`, `ThemeSwitcherDev.test.tsx`, `useSyncUserSettings.test.tsx`) move to the real `appearanceStore` with `resetStore` in `beforeEach`.
 - jsdom has no `matchMedia`. The store must work without it (fallback `light`), like the current `PublicApp.tsx:24-27`.
 - The styled touch rule may inflate a small fix in a large styled file, for example `settle-up-modal/styled.ts`, beyond 400 lines. For this there is `styled-touch-exempt.json` with an Issue, not silent ignoring.
@@ -369,13 +355,13 @@ In addition, a DS v1 requirement: `debt-owed` → green-11, `debt-owing` → red
 
 ## Future extension
 
-- Brand change: `RADIX_THEME.accentColor` and the accent group aliases in tokens.json, then `tokens:build`.
-- Webfont: files in `packages/tokens/fonts/`, the generator produces `@font-face`, `font-src 'self'` (Google Fonts are removed from the CSP per D16).
-- Export to Figma and Pencil: see below. Style Dictionary may replace the generator without changing the input format (DS v1).
+- Brand change: `RADIX_THEME.accentColor`, the accent aliases in `tokens.css` and `BRAND_COLORS`; `tokens.test.ts` points at what is missing.
+- Webfont: files in `packages/tokens/fonts/` and a hand-written `@font-face` in `tokens.css`, `font-src 'self'` (Google Fonts are removed from the CSP per D16).
+- A DTCG `tokens.json` + generator (or Style Dictionary) when a designer or a Figma export appears — a separate owner decision (D31 amends D17).
 
 ### Pencil/Figma
 
-Mockups in Pencil or Figma are one-off: they are needed for discussion and are not the source of truth. There is one source — `packages/tokens/tokens.json`. When a designer appears, the tokens are exported to Figma Variables through a DTCG-compatible plugin or native import (the onboarding plan in DS v1, `process.md`). The reverse flow (Figma → code) is possible only as a PR into tokens.json, which goes through the same checks. No design tool becomes the master without a separate owner decision.
+Mockups in Pencil or Figma are one-off: they are needed for discussion and are not the source of truth. There is one source — `packages/tokens/tokens.css`. A Figma Variables export needs a DTCG file, which is not introduced now (D31); when a designer appears, the owner decides on it separately. The reverse flow (Figma → code) is possible only as a PR into `tokens.css`, which goes through the same checks. No design tool becomes the master without a separate owner decision.
 
 ## What we do NOT do
 
@@ -388,11 +374,11 @@ Mockups in Pencil or Figma are one-off: they are needed for discussion and are n
 
 ## Changes relative to DS v1
 
-1. Location of tokens: `design-system/tokens.json` and `src/design-system/generated/*` move to `packages/tokens/{tokens.json,generated/*}` (D7). The format (DTCG 2025.10), the dependency-free generator, and "code is the source of truth" do not change.
+1. Location and format of tokens (D7, D31): instead of DS v1 `design-system/tokens.json` (DTCG) + a generator into `src/design-system/generated/*`, a hand-written `packages/tokens/tokens.css`. "Code is the source of truth" does not change; DTCG and the generator are deferred to a separate decision.
 2. `themeColor()` with semantic keys is **not introduced but removed**. Styled code writes `var(--cp-*)` directly. The generated `DefaultTheme.colors` and `styled.d.ts` are not needed. The ESLint `no-palette-theme-keys` (rule 2) is cancelled, replaced by stylelint and `no-raw-colors`.
-3. The generator additionally emits `RADIX_THEME`, `PROP_COLOR`, `RADIX_PALETTES`, `CpToken`, and `manifest-colors.json` (D23, instead of `PWA_THEME_COLOR`). `src/design-system/theme.ts` is replaced by `AppTheme.tsx`.
+3. `RADIX_THEME`, `PROP_COLOR`, `RADIX_PALETTES` and `BRAND_COLORS` (D23, instead of `PWA_THEME_COLOR`) are hand-written in `packages/tokens/src/theme.ts`; there is no `CpToken` type. `src/design-system/theme.ts` is replaced by `AppTheme.tsx`.
 4. The semantics reference concrete scales (`--olive-11`), not `--gray-*`/`--accent-*`, otherwise the tokens do not work on the Astro site and outside `.radix-themes`.
-5. Added the primitives `z.*`, `motion.*`, `brand.loader` and the component tokens from the codemod table. In DS v1 motion was out of scope, here in a minimal volume: only existing values.
+5. Added the primitives `--cp-z-*`, `--cp-duration-*`/`--cp-easing-*`, `--cp-brand-loader`; component tokens come with the design-phase migration of their files. In DS v1 motion was out of scope, here in a minimal volume: only existing values.
 6. The long-term direction of styles is CSS Modules. DS v1 left styled-components among the allowed ones, now it is frozen by an allowlist (the answer to audit question 3).
 7. "Do not wrap primitives" is refined by a criterion: 2 wrappers are deleted, 4 become ChipIn components in `basics`.
 8. A fine refinement of the DS v1 "basics without store": added bans on importing `components/*` and on side effects.
@@ -402,16 +388,17 @@ Mockups in Pencil or Figma are one-off: they are needed for discussion and are n
 | PR | Content | Files (≈) | Depends on | In parallel with |
 |---|---|---|---|---|
 | 05-1 | Radix CSS import in parts (temporarily in the new `src/styles/index.css`, 22 scales), WebP ×2 + `webp` in `globPatterns`, `basics/Image` in onboarding, removal of `apple-icon.svg` | 8 | — | everything, including 02/03/04 |
-| 05-2a | `packages/tokens`: tokens.json, generator, `generated/*` (including `manifest-colors.json`), `radix-colors.css` (moved from 05-1), `tokens:check` + generator unit tests (C2-12) | 9 | 04-0 (npm workspaces) | 02, 03, 04-1a |
-| 05-2b | Wiring into the app: `styles/index.css` on `@chipin/tokens`, moving logo/favicon to `packages/tokens/assets`, `manifest-colors.json` → the VitePWA manifest and `<meta name="theme-color">` (D23) | 6 | 05-2a | 02, 03 |
-| 05-3 | `appearanceStore`, `AppTheme`, `theme-init` + Vite plugin + CSP hash + test, removal of next-themes (4 files + 3 tests), `RADIX_THEME` in `main`/`PublicApp`/gallery | 16 | 05-2b; the hash goes into `apps/app/hosting.base.json` if 04-2b is merged, otherwise into `apps/app/vercel.json` (the test checks the resulting `vercel.json`) | 03 |
-| 05-4 | The codemod `themeColor` → `--cp-*` (21 files + `interactiveCardStyles`; the files `src/store/expenseModal*` and their styled are skipped until 03-14 is merged — the ownership chain in `00-overview.md`), `--space/--radius` → `--cp-*` in styled files, removal of `styled-themes.ts`, `colors.ts`, `styled.d.ts`, three `ThemeProvider`s; ban on `@radix-ui/colors` | 30 (small diffs, ≈350 lines) | 05-2b | 05-3 (different files, except `main.tsx`: 05-4 merges second) |
-| 05-5 | stylelint + config, `lint:css`, `no-raw-colors` (`no-restricted-syntax`, §3) + fixtures, styled allowlist + `check-styled-allowlist.mjs --base`, the `style` rule, the svgr rule (blocks through the 02-C4 helpers), `css.modules` in Vite, `helpers/cx.ts`, the reference conversion of `mode-logotype/styled.ts` to a CSS Module, 6 inline styles | 14 | 05-4, 02-C4 | 02 (except 02-C4) |
-| 05-6 | The basics boundary: move RelativeTime, BalanceBadgesSkeleton (PWABadge — no, see 04-2d); NavButton, BalanceSummaryText (C1-24); removal of Checkbox/RadioGroup; moving SegmentedControl/Select/Dropdown/ProgressBar to basics with named exports; a11y check of 3 buttons; removes the boundaries entries from suppressions | 28 (imports) | — (the boundaries rule is enabled by 02-C9); not simultaneously with 02-D2a/b on the same `basics`/`components` files — before or after them (C2-31) | 05-2…05-5 |
-| 05-7 | ds-gallery: `AppTheme` + store, the Tokens section (the aliases are removed by 02-C3) | 4 | 05-3, 05-4 | 05-5, 05-6 |
+| 05-2a | `packages/tokens` (D31, hand-written): `tokens.css` (primitives + semantic roles, light/dark, reduced-motion), `src/theme.ts` (`RADIX_THEME`, `PROP_COLOR`, `RADIX_PALETTES`, `BRAND_COLORS`), `src/theme-init.ts`, `radix-colors.css` (moved from 05-1), `tokens.test.ts` ("Checks"); no `tokens.json`, no generator, no `generated/*`, no `manifest-colors.json`, no `tokens:check` | 7 | 04-0 (npm workspaces) | 02, 03, 04-1a |
+| 05-2b | Wiring into the app: `styles/index.css` on `@chipin/tokens`, moving logo/favicon to `packages/tokens/assets`, `BRAND_COLORS` → the VitePWA manifest and `<meta name="theme-color">` (D23 as amended by D31; no hex in `vite.config.ts`/`app.html`) | 6 | 05-2a | 02, 03 |
+| 05-3 | `appearanceStore`, `AppTheme`, `theme-init` + Vite plugin + CSP hash in `apps/app/vercel.json` + test, removal of next-themes (4 files + 3 tests), `RADIX_THEME` in `main`/`PublicApp`/gallery | 16 | 05-2b | 03 |
+| ~~05-4~~ | Withdrawn as a separate PR (D31): the `themeColor` → `--cp-*` migration and the removal of `styled-themes.ts`/`colors.ts`/`styled.d.ts`/`ThemeProvider`s/`@radix-ui/colors` happen file by file in the design phase (DS v1 tasks, §3) | — | — | — |
+| 05-5 | stylelint + config, `lint:css`, `no-raw-colors` (`no-restricted-syntax`, §3) + fixtures, existing ESLint violations → `--suppress-rule` (they shrink as the design phase migrates files), styled allowlist + `check-styled-allowlist.mjs --base`, the `style` rule, the svgr rule (blocks through the 02-C4 helpers), `css.modules` in Vite, `helpers/cx.ts`, the reference conversion of `mode-logotype/styled.ts` to a CSS Module, 6 inline styles | 14 | 05-2b, 02-C4 | 02 (except 02-C4) |
+| 05-6 | The basics boundary: move RelativeTime, BalanceBadgesSkeleton (PWABadge — no, see 04-2d); NavButton, BalanceSummaryText (C1-24); removal of Checkbox/RadioGroup; moving SegmentedControl/Select/Dropdown/ProgressBar to basics with named exports (they leave the 02-C13 baseline); a11y check of 3 buttons; removes the boundaries entries from suppressions | 28 (imports) | — (the boundaries rule is enabled by 02-C9) | 05-2…05-5 |
+| 05-7 | ds-gallery: `AppTheme` + store, the Tokens section from `tokens.css` (the aliases are removed by 02-C3; the styled `ThemeProvider` goes with `styled-themes.ts` in the design phase) | 4 | 05-3 | 05-5, 05-6 |
 
-- Every PR is released independently; the `Version impact` field is removed (the owner chooses the bump in the release PR, spec 02 D7). 05-4 visibly changes a shade (gray → olive) — note it in the release notes.
-- DS v1 tasks 3–8 (documentation, patterns, cards, routing, screen audit) come after 05-4 in the DS v1 order. Their PRs do not overlap with the files of 05-5…05-7.
+- Every PR is released independently; the `Version impact` field is removed (the owner chooses the bump in the release PR, spec 02 D7). A design-phase PR that migrates a file off `themeColor()` visibly changes a shade (gray → olive) — note it in the release notes.
+- DS v1 tasks 3–8 (documentation, patterns, cards, routing, screen audit) come after 05-2b/05-3 in the DS v1 order and carry the file-by-file `themeColor()` migration (D31). Their PRs do not overlap with the files of 05-5…05-7.
+- Why 05-5 stays after 05-2b (not in the design phase): it freezes styled-components and raw colors early, when it is cheapest; the existing violations are suppressions under the 02 §D0 ratchet, so it does not wait for the migration (D31).
 
 ## Tests/acceptance criteria
 
@@ -425,9 +412,9 @@ Gate PR (commands) — items 2–8; item 1 — owner QA, not a PR gate (C2-18, C
    - the Activity feed.
    - Procedure: the owner, `npm run dev` under their own dev account (`dev.chipin.one` backend), viewport 390×844 and 1280×800, the same data before and after. Screenshots before (master) and after (the PR branch). Comparison: `compare -metric AE -fuzz 1%` (ImageMagick). The pairs are attached to the PR.
    - For 05-1, 05-2a, 05-2b, 05-3, 05-5, 05-6, 05-7: 0 differing pixels beyond fuzz.
-   - For 05-4: differences are acceptable only in the areas drawn by the 21 converted files, and only as a shift of the gray shade. The owner confirms the pairs in the PR.
+   - For a design-phase PR that migrates files off `themeColor()`: differences are acceptable only in the areas drawn by the migrated files, and only as a shift of the gray shade. The owner confirms the pairs in the PR.
 2. After 05-3 a reload in dark (saved and system) does not show a light frame. Check: a performance recording or a screenshot under Slow 4G throttling. In addition, `document.documentElement.className` contains `dark` before `root.tsx` executes.
-3. `grep -rn "next-themes\|styled-themes\|themeColor\|@radix-ui/colors" apps` after 05-4 gives 0 lines (ds-gallery lives in `apps/app/ds-gallery`, C2-31).
+3. `grep -rn "next-themes" apps` after 05-3 gives 0 lines; `grep -rn "styled-themes\|themeColor\|@radix-ui/colors" apps` gives 0 lines after the design-phase PR that removes `styled-themes.ts` (ds-gallery lives in `apps/app/ds-gallery`, C2-31).
 4. `vendor-radix.css` after 05-1 is smaller than the current 683 KB by at least 40 KB raw. The `sw.js` precache includes `dashboard-onboarding.webp`.
 5. `dashboard-onboarding.webp` ≤ 40 KB.
 6. Lint fixtures:
@@ -435,7 +422,7 @@ Gate PR (commands) — items 2–8; item 1 — owner QA, not a PR gate (C2-18, C
    - a CSS Module with `#fff`, `var(--gray-11)`, `var(--cp-text-secndary)` — 3 errors; `16px` in `padding` — 0 (the px rule is not introduced, C1-14);
    - TS: the `no-raw-colors` fixtures from §3 (4 errors, 0 on `'#add-expense'`);
    - editing a `styled.ts` from the allowlist without converting it — a `check-styled-allowlist` error.
-7. Unit tests: the generator (a tokens.json fixture: aliases, modes, errors), `appearanceStore` (system/matchMedia, key migration, html class), `theme-init` (hash in CSP, key).
+7. Unit tests: `tokens.test.ts` ("Checks" 1–3, plus a negative fixture for each), `appearanceStore` (system/matchMedia, key migration, html class), `theme-init` (hash in CSP, key).
 8. The existing tests and `build:ds-gallery` are green.
 
 ## Backend requirements
@@ -444,7 +431,7 @@ None.
 
 ## Open questions
 
-1. Decided (D23, accepted by the owner 2026-10-28, implemented by the generator): the olive mapping gray → olive in 21 styled files (ΔE about 1–2), the 05-4 screenshots are a control, not a question.
-2. Decided (D23, accepted by the owner 2026-10-28, implemented by the generator): `theme_color` = grass-9 `#46a758` from `manifest-colors.json` instead of `#3e9b4f`.
+1. Decided (D23, accepted by the owner 2026-10-28): the olive mapping gray → olive in 21 styled files (ΔE about 1–2); the screenshots of the design-phase migration PRs are a control, not a question (D31).
+2. Decided (D23, accepted by the owner 2026-10-28; D31: by hand, no generator): `theme_color` = grass-9 `#46a758` from `BRAND_COLORS` instead of `#3e9b4f`.
 3. Withdrawn: the package name `@chipin/tokens` and the paths `apps/app`, `apps/site` are set by spec 04 §1.1; the UI store path `src/store/ui-prefs/` — by spec 03 §6.
-4. Withdrawn (a rule, not an assumption): the theme-init hash goes into `apps/app/hosting.base.json` if 04-2b is already merged, otherwise manually into `apps/app/vercel.json`; the test always checks the resulting `vercel.json`.
+4. Withdrawn (a rule, not an assumption): the theme-init hash goes by hand into `apps/app/vercel.json` (D31: 04-2b generates no hosting config, there is no `hosting.base.json`); the test checks that file.

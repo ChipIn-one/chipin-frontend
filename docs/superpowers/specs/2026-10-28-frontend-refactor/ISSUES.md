@@ -101,3 +101,19 @@ PR ids in spec 03 changed (sync FE issue bodies when the owner syncs GitHub): 03
 - #528 (04-B), #529 (04-C), #531 (04-E): Scope lines edited minimally (no `cutover` flag / `offline-root.html`; site prod domain via 04-4; 04-5a removes legacy hosts and compat redirects).
 - chipin-backend#207 (BE-04-2): now adds `https://app.chipin.one` / `https://app-dev.chipin.one` to `OAUTH_ALLOWED_REDIRECT_ORIGINS`, required before 04-2g in prod; title and body updated.
 - chipin-backend#206 (BE-04-1): dropped in spec (OpenAPI example already `https://app.chipin.one/oauth/callback`); body updated, issue left open for the coordinator to close as not planned; after that, active backend issues: 12.
+
+## Spec sync after D28–D31 (2026-11-10, owner review R1–R6; FE#662, specs only — GitHub not edited in this pass)
+
+Removed/renamed PR ids; the coordinator syncs the issue bodies (`gh issue edit --body-file`, headings kept) and the titles marked below:
+- 02-D (#520): 02-D2a–e and 02-D3a–e withdrawn (D31). The replacement 02-C13 (`import-x/no-default-export` + `ExportAllDeclaration`, shrinking suppressions) belongs to 02-C (#519). Close #520 as not planned; add 02-C13 to the #519 Scope.
+- 03-D (#524): +03-14b (expense create/update payload on `Money`; after 03-14, before 03-15a).
+- 03-E (#525): 03-15c rewritten (lock-based append + drain, BroadcastChannel ping, D29); 03-16b rewritten (conflict message + draft, no dialog, D28); 03-17 depends on 04-4a2 in prod, not on 04-4.
+- 04-B (#528): 04-2e withdrawn; route UUID validation `validateUuidParam` moves to 04-2a3; 04-2b rewritten without a generator (host-scoped catch-all rewrite + SW allowlist coverage test, D31); the title still says "generated vercel.json".
+- 04-E (#531): 04-5a deletes `sw-kill.js`, the `/sw.js` host rewrites and the step-1 redirects (they stay 302 until then, never 301); only the site's step-2 redirects switch 302 → 301.
+- 04-D (#530): 04-4 split into 04-4a1 (SW host gate + host-aware kill-switch `sw-kill.js`; built worker `dist/sw-app.js`, registration stays `/sw.js`), 04-4a2 (app host move, step 1, with the step-1 legacy redirect list; landing sign-in CTAs on the old hosts go to the app host; rollback = a targeted PR deleting only the legacy redirects) and 04-4b (the former 04-4, the site takes `chipin.one`, step 2) (D30). 04-2g scope = site-facing app links only, depends on 04-2a4 + 04-2d + 04-2f + 04-3c + 04-4a2 in prod. 04-3d depends on 04-2a1 + 04-3a (no longer on 04-2b).
+- chipin-backend#207 (BE-04-2): required on dev and prod before 04-4a2 is merged (was: before 04-2g in prod).
+- 05-B (#533): title "DTCG tokens and generator" is stale — `packages/tokens` is a hand-written `tokens.css` + `theme.ts` + assets + theme script (D31).
+- 05-D (#535): 05-4 withdrawn as a separate PR (the themeColor migration is file by file in the design phase, D31); 05-5 depends on 05-2b + 02-C4 (was 05-4).
+- The DS v1 overlap note above (#533 vs #487; #535 vs #488/#492) now leans further to DS v1: the themeColor migration moved into the DS v1 tasks.
+- Programme total: 83 PRs (01=3, 02=22, 03=26, 04=25, 05=7); was 91.
+
