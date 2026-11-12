@@ -42,9 +42,6 @@ interface ReverseLedgerEntryParams {
 }
 
 interface ActivityStoreState {
-    items: AppEvent[];
-    nextCursor: number | null;
-    hasMore: boolean;
     subevents: AppEvent[];
     subeventsParent: AppEvent | null;
     subeventsNextCursor: number | null;
@@ -58,8 +55,8 @@ interface ActivityStoreActions {
     updateExpense: (params: UpdateExpenseParams) => Promise<void>;
     createSettlement: (params: CreateSettlementActionParams) => Promise<void>;
     reverseLedgerEntry: (params: ReverseLedgerEntryParams) => Promise<void>;
+    /** Reloads the user's own activity feeds (the `activity.self` queries). */
     fetchSetActivity: (force?: boolean) => Promise<void>;
-    fetchMoreActivity: () => Promise<void>;
     fetchSetActivitySubevents: (params: FetchActivitySubeventsParams) => Promise<void>;
     fetchMoreActivitySubevents: () => Promise<void>;
     resetActivitySubevents: () => void;

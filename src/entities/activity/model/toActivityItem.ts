@@ -7,6 +7,7 @@ import { currencyCode, mapItems, moneyFromWire, MoneyWireError } from 'shared/mo
 import type {
     ActivityEvent,
     ActivityItem,
+    ActivityLogItem,
     ActivityPreview,
     ExpenseActivityDetails,
     ExpenseTransferActivityDetails,
@@ -15,6 +16,7 @@ import type {
 } from './types';
 
 type LedgerActivityPreview = components['schemas']['LedgerActivityPreview'];
+type ActivityEventResponse = components['schemas']['ActivityEventResponse'];
 
 /** Reads one amount of the source shape as `Money`; throws `MoneyWireError` when it cannot. */
 export type MoneyReader<A> = (amount: A, currency: string) => Money;
@@ -218,3 +220,11 @@ export const toActivityItem = (preview: LedgerActivityPreview): ActivityPreview 
 /** Previews (wire) → domain, in order; a preview with an unreadable amount is an invalid item. */
 export const toActivityItems = (previews: readonly LedgerActivityPreview[]): ActivityItem[] =>
     mapItems(previews, toActivityItem, preview => preview.parent.id);
+
+/** Flat events (wire) → domain, in order; an event with an unreadable amount is an invalid item. */
+export const toActivityLogItems = (events: readonly ActivityEventResponse[]): ActivityLogItem[] =>
+    mapItems(
+        events,
+        event => toActivityEventWith<WireAmount>(event, readWire),
+        event => event.id,
+    );

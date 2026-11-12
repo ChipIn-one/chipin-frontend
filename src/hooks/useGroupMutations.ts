@@ -72,7 +72,8 @@ const refusalBeforeMutate = (isEnabled: boolean): Promise<never> | null => {
 };
 
 // The legacy stores after a group write (spec 02 D5: the entity does not import them): the
-// last-group default of a lost group, and the legacy activity feed until 03-12.
+// last-group default of a lost group, and the user's activity feeds (the activity store's bridge to
+// the `activity.self` queries, TODO(12c)).
 const storeEffects: GroupWriteEffects = {
     onGroupGone: groupId => {
         const { lastGroupId, setLastGroupId } = useUiPrefsStore.getState();

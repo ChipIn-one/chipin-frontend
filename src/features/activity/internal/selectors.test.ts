@@ -7,10 +7,11 @@ import { type ActivityListItem, getActivityPreviewEvents } from 'helpers/activit
 import { getActivityDateKey } from 'helpers/time';
 import { domainPreview } from 'test/activityFixtures';
 
-import { legacyActivityRows, previewRows } from './rows';
+import { eventRows, legacyActivityRows, previewRows } from './rows';
 import { getDailyExpenseSummary as summarizeRows } from './selectors';
 
-// The legacy feeds reach the summary through the legacy rows (`ActivityEventsList`).
+// The legacy feed (the expense history) reaches the summary through the legacy rows
+// (`ActivityEventsList`).
 const getDailyExpenseSummary = (items: readonly ActivityListItem[], userId?: string) =>
     summarizeRows(legacyActivityRows(items), userId);
 
@@ -529,5 +530,19 @@ test('summarizes the domain previews of the group feed by their parent day', () 
     });
     expect(summarizeRows(previewRows([preview]), 'user-1')).toEqual({
         [getActivityDateKey(preview.parent.createdAt)]: [{ currency: 'USD', netBalance: 6 }],
+    });
+});
+
+test('ACT-020 the domain events of the flat log are rows of their own, summarized by their own day', () => {
+    const { parent, lastEvent } = domainPreview('p1', { seq: 2 });
+    const rows = eventRows([lastEvent, parent]);
+
+    expect(rows).toEqual([
+        { original: lastEvent, event: lastEvent, isPreview: false },
+        { original: parent, event: parent, isPreview: false },
+    ]);
+    // Flat history counts the creation only (the edit is not a new debt): user-2 owes 6 USD.
+    expect(summarizeRows(rows, 'user-2')).toEqual({
+        [getActivityDateKey(parent.createdAt)]: [{ currency: 'USD', netBalance: -6 }],
     });
 });

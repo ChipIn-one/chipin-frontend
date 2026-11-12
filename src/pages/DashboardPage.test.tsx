@@ -7,16 +7,19 @@ import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import type { ActivityFeedItem, SelfUser } from 'api/chipin.types';
+import type { SelfUser } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
+import type { ActivityPreview } from 'entities/activity';
+import { activityKeys } from 'entities/activity';
 import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
-import { dashboardActivityQueryOptions, dashboardKeys } from 'entities/dashboard';
+import { dashboardKeys } from 'entities/dashboard';
 import type { Group } from 'entities/groups';
 import { groupsKeys, groupsListQueryOptions } from 'entities/groups';
 import { type KnownUser, knownUsersQueryOptions, usersKeys } from 'entities/users';
 import { useAuthStore } from 'store/authStore';
 import { useErrorsStore } from 'store/errorsStore';
 import { useLoadingStore } from 'store/loadingStore';
+import { domainPreview, wirePreview } from 'test/activityFixtures';
 import { groupBalances } from 'test/groupFixtures';
 import { groupsListData } from 'test/groupsList';
 import { createKnownUser } from 'test/knownUsers';
@@ -176,14 +179,8 @@ const singleMemberGroup = {
     },
 } satisfies Group;
 
-const activityItem = {
-    parent: {
-        id: 'activity-1',
-    },
-    lastEvent: {
-        id: 'activity-1',
-    },
-} as ActivityFeedItem;
+const activityItem = domainPreview('activity-1');
+const FEED_KEY = activityKeys.self({ view: 'previews' });
 
 const server = setupMswServer();
 let client: QueryClient;
@@ -214,9 +211,9 @@ const countRequests = (url: string, respond: () => Response | Promise<Response>)
 const seedDashboard = ({
     items = [],
     nextCursor = null,
-}: { items?: ActivityFeedItem[]; nextCursor?: number | null } = {}) => {
+}: { items?: ActivityPreview[]; nextCursor?: number | null } = {}) => {
     client.setQueryData(dashboardKeys.balances(), []);
-    client.setQueryData(dashboardKeys.activity(), {
+    client.setQueryData(FEED_KEY, {
         pages: [{ items, nextCursor }],
         pageParams: [null],
     });
@@ -722,11 +719,13 @@ test('ACT-023 a remount after 30 s refetches a feed of five loaded pages with on
     resolveDashboardOnboardingData();
     seedGroups([singleMemberGroup]);
     const page = (nextCursor: number | null) => ({ items: [activityItem], nextCursor });
-    client.setQueryData(dashboardActivityQueryOptions().queryKey, {
+    client.setQueryData(FEED_KEY, {
         pages: [page(50), page(40), page(30), page(20), page(10)],
         pageParams: [null, 50, 40, 30, 20],
     });
-    const activityRequests = countRequests(ACTIVITY_URL, () => HttpResponse.json(page(50)));
+    const activityRequests = countRequests(ACTIVITY_URL, () =>
+        HttpResponse.json({ items: [wirePreview('activity-1')], nextCursor: 50 }),
+    );
     countRequests(BALANCES_URL, () => HttpResponse.json({ balances: {} }));
 
     vi.useFakeTimers({ toFake: ['Date'] });
@@ -741,7 +740,7 @@ test('ACT-023 a remount after 30 s refetches a feed of five loaded pages with on
         });
         expect(activityRequests[0]?.searchParams.get('cursor')).toBeNull();
         await waitFor(() => {
-            expect(client.getQueryState(dashboardKeys.activity())?.fetchStatus).toBe('idle');
+            expect(client.getQueryState(FEED_KEY)?.fetchStatus).toBe('idle');
         });
         expect(activityRequests).toHaveLength(1);
     } finally {

@@ -1,73 +1,35 @@
 import { Theme } from '@radix-ui/themes';
-import { render, screen } from '@testing-library/react';
+import type { QueryClient } from '@tanstack/react-query';
+import { onlineManager } from '@tanstack/react-query';
+import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { beforeEach, expect, test, vi } from 'vitest';
 
+import type { ActivityEvent, SelfActivityEventsData } from 'entities/activity';
+import { activityKeys } from 'entities/activity';
+import { currencyCode, fromUnits } from 'shared/money';
+import { useAuthStore } from 'store/authStore';
+import { domainPreview, wirePreview } from 'test/activityFixtures';
+import { setupMswServer } from 'test/mswServer';
+import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
+import { mountAsUserClient } from 'test/userClient';
+
+import type { ActivityFilter } from './ActivityHeader';
 import ActivityList from './ActivityList';
 
-const mocks = vi.hoisted(() => ({
-    activityState: {
-        items: [{ action: 'EXPENSE_CREATED' }],
-        hasMore: true,
-    },
-    loadingState: {
-        isLoading: false,
-        isNextPageLoading: false,
-    },
-    errorsState: {
-        isNextPageError: false,
-    },
-    fetchMoreActivity: vi.fn(() => Promise.resolve()),
-    useInfiniteScroll: vi.fn(() => vi.fn()),
-}));
+const useInfiniteScrollMock = vi.hoisted(() =>
+    vi.fn<(params: { hasMore: boolean; isLoading: boolean; onLoadMore: () => void }) => () => void>(
+        () => vi.fn(),
+    ),
+);
 
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock('zustand/react/shallow', () => ({
-    useShallow: <T,>(selector: T): T => selector,
-}));
-
-vi.mock('store/activity-store', () => ({
-    selectActivityFeed: (state: typeof mocks.activityState) => ({
-        items: state.items,
-        hasMore: state.hasMore,
-    }),
-    useActivityStore: (
-        selector: (
-            state: typeof mocks.activityState & {
-                fetchMoreActivity: typeof mocks.fetchMoreActivity;
-            },
-        ) => unknown,
-    ) =>
-        selector({
-            ...mocks.activityState,
-            fetchMoreActivity: mocks.fetchMoreActivity,
-        }),
-}));
-
-vi.mock('store/loadingSelectors', () => ({
-    selectActivityLoading: (state: typeof mocks.loadingState) => state.isLoading,
-    selectActivityNextPageLoading: (state: typeof mocks.loadingState) => state.isNextPageLoading,
-}));
-
-vi.mock('store/loadingStore', () => ({
-    useLoadingStore: (selector: (state: typeof mocks.loadingState) => unknown) =>
-        selector(mocks.loadingState),
-}));
-
-vi.mock('store/errorsSelectors', () => ({
-    selectActivityNextPageError: (state: typeof mocks.errorsState) => state.isNextPageError,
-}));
-
-vi.mock('store/errorsStore', () => ({
-    useErrorsStore: (selector: (state: typeof mocks.errorsState) => unknown) =>
-        selector(mocks.errorsState),
-}));
-
 vi.mock('hooks/useInfiniteScroll', () => ({
-    useInfiniteScroll: mocks.useInfiniteScroll,
+    useInfiniteScroll: useInfiniteScrollMock,
 }));
 
 vi.mock('components/skeletons', () => ({
@@ -75,51 +37,288 @@ vi.mock('components/skeletons', () => ({
 }));
 
 vi.mock('./components', () => ({
-    ActivityEventsList: ({ events }: { events: Array<{ action: string }> }) =>
-        events.length === 0 ? (
+    ActivityEventsList: ({ log }: { log: readonly ActivityEvent[] }) =>
+        log.length === 0 ? (
             <div data-testid="empty-state" />
         ) : (
-            <div data-testid="activity-list" />
+            <ul>
+                {log.map(event => (
+                    <li key={event.id} data-testid="event">
+                        {event.id}
+                    </li>
+                ))}
+            </ul>
         ),
 }));
 
-beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.activityState.hasMore = true;
-    mocks.loadingState.isLoading = false;
-    mocks.loadingState.isNextPageLoading = false;
-    mocks.errorsState.isNextPageError = false;
+const server = setupMswServer();
+const EVENTS_URL = '*/users/self/activities';
+const FEED_KEY = activityKeys.self({ view: 'events' });
+
+// A flat event on the wire and in the domain: the creation event of an expense chain.
+const wireEvent = (id: string) => wirePreview(id).parent;
+const expense = (id: string): ActivityEvent => domainPreview(id).parent;
+const settlement = (id: string): ActivityEvent => ({
+    ...expense(id),
+    action: 'SETTLEMENT_CREATED',
+    metadata: {
+        type: 'settlement',
+        entryId: `entry-${id}`,
+        amount: fromUnits(50_000n, currencyCode('USD')),
+        fromDisplayName: 'Member',
+        toDisplayName: 'Owner',
+    },
+});
+const groupCreated = (id: string): ActivityEvent => ({
+    ...expense(id),
+    domain: 'GROUP',
+    action: 'GROUP_CREATED',
+    metadata: { type: 'group', groupId: 'group-1', groupName: 'Trip' },
 });
 
-test('keeps pagination recovery available when the active filter has no loaded matches', () => {
-    const user = userEvent.setup();
-    mocks.errorsState.isNextPageError = true;
+let client: QueryClient;
 
-    render(
+beforeEach(() => {
+    vi.clearAllMocks();
+    client = createTestQueryClient();
+    mountAsUserClient('user-1', client);
+    useAuthStore.setState({ status: 'authenticated' });
+});
+
+/** The feed as a restored cache or a finished load leaves it (fresh unless `updatedAt` is old). */
+const seedFeed = (
+    items: ActivityEvent[],
+    nextCursor: number | null = null,
+    updatedAt: number = Date.now(),
+) => {
+    client.setQueryData<SelfActivityEventsData>(
+        FEED_KEY,
+        { pages: [{ items, nextCursor }], pageParams: [null] },
+        { updatedAt },
+    );
+};
+
+/** Answers the feed with `respond` and records its requests. */
+const serveFeed = (respond: (cursor: string | null) => Response | Promise<Response>) => {
+    const cursors: (string | null)[] = [];
+
+    server.use(
+        http.get(EVENTS_URL, ({ request }) => {
+            const cursor = new URL(request.url).searchParams.get('cursor');
+
+            cursors.push(cursor);
+            return respond(cursor);
+        }),
+    );
+    return cursors;
+};
+
+const badRequest = () =>
+    HttpResponse.json({ code: 'SYSTEM.BAD_REQUEST', message: 'Unavailable' }, { status: 400 });
+
+const renderList = (activeFilter: ActivityFilter = 'all', on: QueryClient = client) =>
+    renderWithQueryClient(
         <Theme>
-            <ActivityList activeFilter="settlements" />
+            <ActivityList activeFilter={activeFilter} />
         </Theme>,
+        on,
     );
 
-    expect(screen.getByTestId('empty-state')).toBeTruthy();
-    expect(mocks.useInfiniteScroll).toHaveBeenLastCalledWith({
-        hasMore: false,
-        isLoading: false,
-        onLoadMore: expect.any(Function),
-    });
+const shownEvents = () => screen.queryAllByTestId('event').map(item => item.textContent);
 
-    return user.click(screen.getByRole('button', { name: 'retryAction' })).then(() => {
-        expect(mocks.fetchMoreActivity).toHaveBeenCalledOnce();
+const loadMore = () => {
+    const lastCall = useInfiniteScrollMock.mock.lastCall;
 
-        const lastCall = mocks.useInfiniteScroll.mock.lastCall as
-            [{ onLoadMore: () => void }] | undefined;
-
-        if (!lastCall) {
-            throw new Error('Infinite scroll was not initialized');
-        }
-
+    if (!lastCall) {
+        throw new Error('Infinite scroll was not initialized');
+    }
+    act(() => {
         lastCall[0].onLoadMore();
-
-        expect(mocks.fetchMoreActivity).toHaveBeenCalledTimes(2);
     });
+};
+
+test('the first load shows the skeleton, then the feed as domain events', async () => {
+    const cursors = serveFeed(() =>
+        HttpResponse.json({ items: [wireEvent('a'), wireEvent('b')], nextCursor: null }),
+    );
+
+    renderList();
+
+    expect(screen.getByTestId('activity-skeleton')).toBeTruthy();
+    await waitFor(() => {
+        expect(shownEvents()).toEqual(['a', 'b']);
+    });
+    expect(screen.queryByTestId('activity-skeleton')).toBeNull();
+    expect(cursors).toEqual([null]);
+});
+
+test('a cached feed shows at once on reload and refreshes without a skeleton', async () => {
+    let answer: (() => void) | undefined;
+    const answered = new Promise<void>(resolve => {
+        answer = resolve;
+    });
+
+    // The restored cache is older than the 30 s staleTime: the mount refreshes it.
+    seedFeed([expense('cached')], null, 0);
+    serveFeed(async () => {
+        await answered;
+        return HttpResponse.json({ items: [wireEvent('fresh')], nextCursor: null });
+    });
+
+    renderList();
+
+    expect(shownEvents()).toEqual(['cached']);
+    expect(screen.queryByTestId('activity-skeleton')).toBeNull();
+    await waitFor(() => {
+        expect(client.getQueryState(FEED_KEY)?.fetchStatus).toBe('fetching');
+    });
+    // Still the cached feed while the refresh runs.
+    expect(shownEvents()).toEqual(['cached']);
+    expect(screen.queryByTestId('activity-skeleton')).toBeNull();
+
+    answer?.();
+    await waitFor(() => {
+        expect(shownEvents()).toEqual(['fresh']);
+    });
+    expect(screen.queryByTestId('activity-skeleton')).toBeNull();
+});
+
+test('ACT-020 scrolling loads the next page by its cursor and the last page shows the end of the feed', async () => {
+    seedFeed([expense('a')], 40);
+    const cursors = serveFeed(() =>
+        HttpResponse.json({ items: [wireEvent('b')], nextCursor: null }),
+    );
+
+    renderList();
+
+    expect(useInfiniteScrollMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ hasMore: true, isLoading: false }),
+    );
+    expect(screen.queryByText('endOfFeed')).toBeNull();
+
+    loadMore();
+
+    await waitFor(() => {
+        expect(shownEvents()).toEqual(['a', 'b']);
+    });
+    expect(cursors).toEqual(['40']);
+    expect(screen.getByText('endOfFeed')).toBeTruthy();
+    expect(useInfiniteScrollMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ hasMore: false }),
+    );
+});
+
+test('the Expenses and Settlements filters narrow the loaded events', () => {
+    seedFeed([expense('expense-1'), settlement('settlement-1'), groupCreated('group-created')]);
+
+    const all = renderList('all');
+
+    expect(shownEvents()).toEqual(['expense-1', 'settlement-1', 'group-created']);
+    all.unmount();
+
+    const expenses = renderList('expenses');
+
+    expect(shownEvents()).toEqual(['expense-1']);
+    expenses.unmount();
+
+    renderList('settlements');
+    expect(shownEvents()).toEqual(['settlement-1']);
+});
+
+test('keeps pagination recovery available when the active filter has no loaded matches', async () => {
+    const user = userEvent.setup();
+
+    seedFeed([expense('a')], 40);
+    const cursors = serveFeed(badRequest);
+
+    renderList('settlements');
+    expect(screen.getByTestId('empty-state')).toBeTruthy();
+
+    loadMore();
+
+    const retry = await screen.findByRole('button', { name: 'retryAction' });
+
+    // A failed next page stops the scroll trigger until Retry.
+    expect(useInfiniteScrollMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ hasMore: false, isLoading: false }),
+    );
+    expect(screen.getByTestId('empty-state')).toBeTruthy();
+
+    await user.click(retry);
+    await waitFor(() => {
+        expect(cursors).toEqual(['40', '40']);
+    });
+});
+
+test('a failed first load offers Retry, which loads the feed', async () => {
+    const user = userEvent.setup();
+    let requests = 0;
+
+    serveFeed(() => {
+        requests += 1;
+        return requests === 1
+            ? badRequest()
+            : HttpResponse.json({ items: [wireEvent('a')], nextCursor: null });
+    });
+
+    renderList();
+
+    await user.click(await screen.findByRole('button', { name: 'retryAction' }));
+    await waitFor(() => {
+        expect(shownEvents()).toEqual(['a']);
+    });
+    expect(screen.queryByRole('button', { name: 'retryAction' })).toBeNull();
+});
+
+test('offline, the cached feed shows without a skeleton or an error', async () => {
+    seedFeed([expense('cached')], 40, 0);
+    // The refresh of the mount fails and its retry waits for the network (as `queryRetry` does).
+    client.setQueryDefaults(activityKeys.all, { retry: 1, retryDelay: 0 });
+    onlineManager.setOnline(false);
+    serveFeed(() => HttpResponse.error());
+
+    try {
+        renderList();
+
+        await waitFor(() => {
+            expect(client.getQueryState(FEED_KEY)?.fetchStatus).toBe('paused');
+        });
+        expect(shownEvents()).toEqual(['cached']);
+        // Only the OfflineBanner (in the layout) says that the data may be old.
+        expect(screen.queryByTestId('activity-skeleton')).toBeNull();
+        expect(screen.queryByRole('button', { name: 'retryAction' })).toBeNull();
+    } finally {
+        onlineManager.setOnline(true);
+    }
+});
+
+test("signed out, the previous user's cached feed is not shown and nothing is requested", () => {
+    const cursors = serveFeed(() => HttpResponse.json({ items: [], nextCursor: null }));
+
+    seedFeed([expense('previous-user')], null, 0);
+    useAuthStore.setState({ status: 'unauthenticated' });
+
+    renderList();
+
+    expect(shownEvents()).toEqual([]);
+    expect(screen.queryByTestId('activity-skeleton')).toBeNull();
+    expect(cursors).toEqual([]);
+});
+
+test("after an account switch, a client that is not the user's own is never read or loaded", () => {
+    const cursors = serveFeed(() => HttpResponse.json({ items: [], nextCursor: null }));
+    // Not registered as a user's persisted client (the anonymous client, or another user's).
+    const otherClient = createTestQueryClient();
+
+    otherClient.setQueryData<SelfActivityEventsData>(FEED_KEY, {
+        pages: [{ items: [expense('previous-user')], nextCursor: null }],
+        pageParams: [null],
+    });
+
+    renderList('all', otherClient);
+
+    // The signed-in user's feed is still to come from their own client.
+    expect(shownEvents()).toEqual([]);
+    expect(screen.getByTestId('activity-skeleton')).toBeTruthy();
+    expect(cursors).toEqual([]);
 });

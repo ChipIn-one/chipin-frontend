@@ -1,0 +1,68 @@
+// The user's flat activity log for the Activity page (spec 03 §6 row 5). Like the friends
+// (`useKnownUsers`), the query sends a request only while signed in and on the user's persisted
+// client: signed out or on another client nothing is read.
+import { useCallback, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+
+import {
+    type ActivityEvent,
+    loadedActivityEvents,
+    useSelfActivityEventsQuery,
+} from 'entities/activity';
+import { isUserCacheClient } from 'shared/offline/userCaches';
+import { AUTH_STATUS } from 'store/authConstants';
+import { useAuthStore } from 'store/authStore';
+
+const NO_EVENTS: ActivityEvent[] = [];
+
+export interface SelfActivityLogResult {
+    /** The events of all loaded pages, newest first; empty until the first load. */
+    events: readonly ActivityEvent[];
+    /** Nothing cached yet and the first load is pending. */
+    isLoading: boolean;
+    /** The first load failed, or it waits for the network, with nothing cached. */
+    isError: boolean;
+    hasMore: boolean;
+    /** Any load runs (a refetch or the next page): a scroll trigger waits for it to end. */
+    isFetching: boolean;
+    isNextPageLoading: boolean;
+    isNextPageError: boolean;
+    /** Loads the next page; a fetch running (a refetch replaces the pages) holds it. */
+    loadMore: () => void;
+    /** Loads the feed again after a failed first load. */
+    reload: () => void;
+}
+
+export const useSelfActivityLog = (): SelfActivityLogResult => {
+    const isSignedIn = useAuthStore(state => state.status === AUTH_STATUS.AUTHENTICATED);
+    const isEnabled = isUserCacheClient(useQueryClient()) && isSignedIn;
+    const query = useSelfActivityEventsQuery({ enabled: isEnabled });
+    const { fetchNextPage, refetch, isFetching } = query;
+    const data = isEnabled ? query.data : undefined;
+    const events = useMemo(() => (data ? loadedActivityEvents(data) : NO_EVENTS), [data]);
+    const isError = isEnabled && data === undefined && (query.isError || query.isPaused);
+    const loadMore = useCallback(() => {
+        if (isEnabled && !isFetching) {
+            void fetchNextPage();
+        }
+    }, [fetchNextPage, isEnabled, isFetching]);
+    const reload = useCallback(() => {
+        if (isEnabled) {
+            void refetch();
+        }
+    }, [isEnabled, refetch]);
+
+    return {
+        events,
+        // Signed in on the anonymous client (before the remount onto the user's client) the feed
+        // is still to come: loading, never read from that client.
+        isLoading: isSignedIn && data === undefined && !isError,
+        isError,
+        hasMore: data !== undefined && query.hasNextPage,
+        isFetching: isEnabled && isFetching,
+        isNextPageLoading: query.isFetchingNextPage,
+        isNextPageError: data !== undefined && query.isFetchNextPageError,
+        loadMore,
+        reload,
+    };
+};

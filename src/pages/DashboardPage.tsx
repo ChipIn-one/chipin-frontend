@@ -4,8 +4,9 @@ import { ChevronsDownIcon, PlusIcon, RefreshCwIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 
+import { loadedActivityPreviews, useSelfActivityPreviewsQuery } from 'entities/activity';
 import { useCurrencyRatesQuery } from 'entities/currency-rates';
-import { useDashboardActivityQuery, useDashboardBalancesQuery } from 'entities/dashboard';
+import { useDashboardBalancesQuery } from 'entities/dashboard';
 import type { Group } from 'entities/groups';
 import { ActivityEventsList } from 'features/activity';
 import { getActivityPreviewEvents } from 'helpers/activityEvent';
@@ -47,7 +48,7 @@ const queryResource = (query: { data: unknown; isError: boolean; isPaused: boole
 const DashboardPage = () => {
     const { t } = useTranslation(['dashboard', 'activity']);
     const balancesQuery = useDashboardBalancesQuery();
-    const activityQuery = useDashboardActivityQuery();
+    const activityQuery = useSelfActivityPreviewsQuery();
     const ratesQuery = useCurrencyRatesQuery();
     const groupsList = useGroupsList();
     const groups = groupsList.groups ?? NO_GROUPS;
@@ -57,7 +58,7 @@ const DashboardPage = () => {
     const currentUser = selfUser.user;
 
     const activityItems = useMemo(
-        () => activityQuery.data?.pages.flatMap(page => page.items) ?? [],
+        () => loadedActivityPreviews(activityQuery.data),
         [activityQuery.data],
     );
     const activityEvents = useMemo(() => getActivityPreviewEvents(activityItems), [activityItems]);
@@ -212,7 +213,7 @@ const DashboardPage = () => {
                         }
                     />
                 ) : (
-                    <ActivityEventsList events={activityEvents} isShowSummary isNavigable>
+                    <ActivityEventsList previews={activityEvents} isShowSummary isNavigable>
                         <>
                             {isNextPageLoading && (
                                 <Flex justify="center" py="4">
