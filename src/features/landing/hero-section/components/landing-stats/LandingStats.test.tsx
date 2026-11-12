@@ -39,51 +39,70 @@ const region = () => screen.getByRole('region', { name: 'stats.regionLabel' });
 
 test('maps every response field to its corresponding landing metric', async () => {
     respondWithStats({
-        usersCount: 1_200,
         expensesCount: 2_300_000,
-        groupsCount: 34_000,
-        settlementsCount: 456_000,
+        debtsTrackedUsd: 456_000.5,
+        activeGroupsCount: 34_000,
+        peopleSharingCount: 1_200,
     });
 
     renderWithQueryClient(<LandingStats />);
 
     expect(
-        await within(screen.getByRole('group', { name: 'stats.totalUsers' })).findByText('1.20K'),
-    ).toBeTruthy();
-    expect(
-        within(screen.getByRole('group', { name: 'stats.expensesTracked' })).getByText('2.30M'),
-    ).toBeTruthy();
-    expect(
-        within(screen.getByRole('group', { name: 'stats.groupsCreated' })).getByText('34.00K'),
-    ).toBeTruthy();
-    expect(
-        within(screen.getByRole('group', { name: 'stats.settlementsRecorded' })).getByText(
-            '456.00K',
+        await within(screen.getByRole('group', { name: 'stats.expensesSplit' })).findByText(
+            '2.30M',
         ),
     ).toBeTruthy();
-    expect(screen.queryByText('stats.userRating')).toBeNull();
+    expect(
+        within(screen.getByRole('group', { name: 'stats.debtsTracked' })).getByText('456.00K USD'),
+    ).toBeTruthy();
+    expect(
+        within(screen.getByRole('group', { name: 'stats.activeGroups' })).getByText('34.00K'),
+    ).toBeTruthy();
+    expect(
+        within(screen.getByRole('group', { name: 'stats.peopleSharing' })).getByText('1.20K'),
+    ).toBeTruthy();
+    expect(
+        within(region())
+            .getAllByRole('group')
+            .map(group => group.getAttribute('aria-label')),
+    ).toEqual([
+        'stats.expensesSplit',
+        'stats.debtsTracked',
+        'stats.activeGroups',
+        'stats.peopleSharing',
+    ]);
 });
 
 test('renders zero values as zero', async () => {
-    respondWithStats({ usersCount: 0, expensesCount: 0, groupsCount: 0, settlementsCount: 0 });
+    respondWithStats({
+        expensesCount: 0,
+        debtsTrackedUsd: 0,
+        activeGroupsCount: 0,
+        peopleSharingCount: 0,
+    });
 
     renderWithQueryClient(<LandingStats />);
 
-    await waitFor(() => expect(screen.getAllByText('0')).toHaveLength(4));
+    await waitFor(() => expect(screen.getAllByText('0')).toHaveLength(3));
+    expect(
+        within(screen.getByRole('group', { name: 'stats.debtsTracked' })).getByText('0 USD'),
+    ).toBeTruthy();
 });
 
 test('keeps the minus sign for non-monetary landing statistics', async () => {
     respondWithStats({
-        usersCount: -1_200,
         expensesCount: 2_300_000,
-        groupsCount: 34_000,
-        settlementsCount: 456_000,
+        debtsTrackedUsd: 456_000.5,
+        activeGroupsCount: 34_000,
+        peopleSharingCount: -1_200,
     });
 
     renderWithQueryClient(<LandingStats />);
 
     expect(
-        await within(screen.getByRole('group', { name: 'stats.totalUsers' })).findByText('-1,200'),
+        await within(screen.getByRole('group', { name: 'stats.peopleSharing' })).findByText(
+            '-1,200',
+        ),
     ).toBeTruthy();
 });
 
@@ -115,10 +134,10 @@ test('shows a safe value in every metric block after failure', async () => {
 
 test('keeps cached statistics visible while a refetch fails', async () => {
     respondWithStats({
-        usersCount: 1_200,
         expensesCount: 2_300_000,
-        groupsCount: 34_000,
-        settlementsCount: 456_000,
+        debtsTrackedUsd: 456_000.5,
+        activeGroupsCount: 34_000,
+        peopleSharingCount: 1_200,
     });
 
     const { client } = renderWithQueryClient(<LandingStats />);
@@ -137,10 +156,10 @@ test('keeps cached statistics visible while a refetch fails', async () => {
 
 test('requests the statistics once when mounted in Strict Mode', async () => {
     const requests = respondWithStats({
-        usersCount: 1_200,
         expensesCount: 2_300_000,
-        groupsCount: 34_000,
-        settlementsCount: 456_000,
+        debtsTrackedUsd: 456_000.5,
+        activeGroupsCount: 34_000,
+        peopleSharingCount: 1_200,
     });
 
     renderWithQueryClient(

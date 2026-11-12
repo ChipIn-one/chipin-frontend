@@ -50,8 +50,17 @@ interface SourceSettlement<A> extends Omit<SettlementActivityDetails, 'amount'> 
     readonly currency: string;
 }
 
+/** Details of a kind the app does not show yet (recurring expenses): the event maps to unknown. */
+interface SourceUnshownDetails {
+    readonly type: 'recurring_expense';
+}
+
 type SourceMetadata<A> =
-    SourceExpense<A> | SourceExpenseTransfer<A> | SourceSettlement<A> | GroupActivityDetails;
+    | SourceExpense<A>
+    | SourceExpenseTransfer<A>
+    | SourceSettlement<A>
+    | GroupActivityDetails
+    | SourceUnshownDetails;
 
 /**
  * An activity event as the wire or the legacy layer gives it: the same fields, amounts of type
