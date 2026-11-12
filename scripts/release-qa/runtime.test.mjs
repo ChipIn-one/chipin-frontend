@@ -8,6 +8,7 @@ import {
     chooseProductionBaseline,
     prepareReleaseQa,
     readPackageBuildChanges,
+    readReleaseScope,
     readResultAndNotify,
     resolveCandidate,
     sendHandoff,
@@ -704,7 +705,7 @@ function evidenceApi({
                     commits: [{ sha: SHA }],
                     files: files.map(filename => ({ filename })),
                 });
-            if (path.endsWith(`/commits/${SHA}`))
+            if (path.endsWith(`/commits/${SHA}?per_page=100&page=1`))
                 return Promise.resolve({
                     sha: SHA,
                     files: commitFiles.map(filename => ({ filename })),
@@ -1818,4 +1819,138 @@ test('dispatch with qa_login=syllik and reassign_qa moves an existing QA Issue t
                 [`Релиз-кандидат ${COMMIT_LINK} — проверяет владелец`, ...LINK_LINES].join('\n'),
             ]);
         });
+});
+
+// FE#621: compares at or above the GitHub 300-file bound are rebuilt from per-commit file lists.
+const scopeSha = index => index.toString(16).padStart(40, 'c');
+
+function scopeApi({ compareFiles, commits, totalCommits = commits.length, perCommit = {} }) {
+    const requests = [];
+    return {
+        requests,
+        request: path => {
+            requests.push(path);
+            const page = Number(/[?&]page=(\d+)/.exec(path)?.[1] ?? 0);
+            if (path.includes(`/compare/${BASE}...${SHA}`)) {
+                const slice = commits.slice((page - 1) * 100, page * 100).map(sha => ({ sha }));
+                return Promise.resolve(
+                    page === 1
+                        ? {
+                              status: 'ahead',
+                              total_commits: totalCommits,
+                              commits: slice,
+                              files: compareFiles.map(filename => ({ filename })),
+                          }
+                        : { commits: slice },
+                );
+            }
+            const sha = /\/commits\/([0-9a-f]{40})\?per_page=100&page=\d+$/.exec(path)?.[1];
+            if (sha && Object.hasOwn(perCommit, sha)) {
+                const files = perCommit[sha];
+                if (files instanceof Error) return Promise.reject(files);
+                return Promise.resolve({ sha, files: files.slice((page - 1) * 100, page * 100) });
+            }
+            throw new Error(`Unexpected request ${path}`);
+        },
+    };
+}
+
+const named = paths => paths.map(filename => ({ filename }));
+
+test('FE#621: a compare under 300 files keeps the compare file list and reads no commit', () => {
+    const api = scopeApi({ compareFiles: ['src/App.tsx', 'docs/a.md'], commits: [scopeSha(1)] });
+    return readReleaseScope(api, BASE, SHA).then(scope => {
+        expect(scope.fileSource).toBe('compare');
+        expect(scope.files.map(item => item.filename)).toEqual(['src/App.tsx', 'docs/a.md']);
+        expect(scope.commits).toEqual([{ sha: scopeSha(1) }]);
+        expect(api.requests.some(path => /\/commits\/[0-9a-f]{40}\?/.test(path))).toBe(false);
+    });
+});
+
+test('FE#621: a compare with 300+ files is rebuilt from every paginated commit file list', () => {
+    const commits = Array.from({ length: 150 }, (_, index) => scopeSha(index + 1));
+    const perCommit = Object.fromEntries(
+        commits.map((sha, index) => [
+            sha,
+            index === 0
+                ? [
+                      { filename: 'src/new.tsx', previous_filename: 'src/old.tsx' },
+                      ...named(Array.from({ length: 361 }, (_, file) => `src/fmt-${file}.ts`)),
+                  ]
+                : named([`docs/file-${index % 120}.md`, `scripts/tool-${index}.mjs`]),
+        ]),
+    );
+    const api = scopeApi({
+        compareFiles: Array.from({ length: 300 }, (_, index) => `docs/cut-${index}.md`),
+        commits,
+        perCommit,
+    });
+    return readReleaseScope(api, BASE, SHA).then(scope => {
+        expect(scope.fileSource).toBe('commits');
+        expect(scope.commits).toHaveLength(150);
+        const paths = scope.files.map(item => item.filename);
+        expect(new Set(paths).size).toBe(paths.length);
+        expect(paths).toContain('src/new.tsx');
+        expect(paths).toContain('src/old.tsx');
+        expect(paths).toHaveLength(2 + 361 + 120 + 149);
+        expect(scope.commitPaths.size).toBe(150);
+        expect(scope.commitPaths.get(commits[0])).toHaveLength(2 + 361);
+        expect(scope.commitPaths.get(commits[0]).slice(0, 2)).toEqual([
+            'src/new.tsx',
+            'src/old.tsx',
+        ]);
+        expect(api.requests.filter(path => path.includes(`/commits/${commits[0]}?`))).toHaveLength(
+            4,
+        );
+        expect(api.requests.filter(path => path.includes('/compare/'))).toHaveLength(2);
+    });
+});
+
+test('FE#621: a commit at its own 3000-file bound or with unreadable files blocks the rebuild', () => {
+    const commits = [scopeSha(1), scopeSha(2)];
+    const big = scopeApi({
+        compareFiles: Array.from({ length: 300 }, (_, index) => `docs/cut-${index}.md`),
+        commits,
+        perCommit: {
+            [commits[0]]: named(['docs/a.md']),
+            [commits[1]]: named(Array.from({ length: 3000 }, (_, index) => `src/f-${index}.ts`)),
+        },
+    });
+    const unreadable = scopeApi({
+        compareFiles: Array.from({ length: 301 }, (_, index) => `docs/cut-${index}.md`),
+        commits,
+        perCommit: { [commits[0]]: named(['docs/a.md']), [commits[1]]: new Error('HTTP 502') },
+    });
+    return Promise.all([
+        expect(readReleaseScope(big, BASE, SHA)).rejects.toThrow(
+            `Commit ${commits[1]} files are unreadable or exceed complete evidence bounds.`,
+        ),
+        expect(readReleaseScope(unreadable, BASE, SHA)).rejects.toThrow('HTTP 502'),
+    ]);
+});
+
+test('FE#621: a compare commit count that differs from the commits read blocks the run', () => {
+    const files = Array.from({ length: 300 }, (_, index) => `docs/cut-${index}.md`);
+    const short = scopeApi({ compareFiles: files, commits: [scopeSha(1)], totalCommits: 2 });
+    const duplicated = scopeApi({
+        compareFiles: files,
+        commits: [scopeSha(1), scopeSha(1)],
+        perCommit: { [scopeSha(1)]: named(['docs/a.md']) },
+    });
+    const small = scopeApi({
+        compareFiles: ['docs/a.md'],
+        commits: [scopeSha(1)],
+        totalCommits: 2,
+    });
+    return Promise.all([
+        expect(readReleaseScope(short, BASE, SHA)).rejects.toThrow(
+            'Compare commit pagination incomplete.',
+        ),
+        expect(readReleaseScope(duplicated, BASE, SHA)).rejects.toThrow(
+            'Compare lists 2 commits but 1 distinct commits were read.',
+        ),
+        expect(readReleaseScope(small, BASE, SHA)).rejects.toThrow(
+            'Compare commit pagination incomplete.',
+        ),
+    ]);
 });
