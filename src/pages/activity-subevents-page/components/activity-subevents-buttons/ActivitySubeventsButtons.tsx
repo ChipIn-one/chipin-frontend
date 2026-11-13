@@ -10,7 +10,11 @@ import {
     getActivityLedgerEntryId,
     getActivitySubeventsView,
 } from 'helpers/activityEvent';
-import { resolveApiErrorMessageFromError } from 'helpers/errors';
+import {
+    isRepeatedLedgerWrite,
+    ledgerWriteErrorMessage,
+    useDeleteLedgerEntry,
+} from 'hooks/useLedgerMutations';
 
 import { RemoveLedgerEntryAlertDialog } from 'components/modals/remove-ledger-entry-alert-dialog';
 
@@ -28,14 +32,8 @@ const ActivitySubeventsButtons = ({
     childEvents: childEventsProp,
 }: Props) => {
     const { t } = useTranslation(['activity', 'toasts']);
-    const {
-        reverseLedgerEntry,
-        prepareExpenseEdit,
-        initializeEdit,
-        subevents,
-        isLoading,
-        isRemoving,
-    } = useConnect();
+    const { prepareExpenseEdit, initializeEdit, subevents, isLoading } = useConnect();
+    const { deleteLedgerEntry, isPending: isRemoving } = useDeleteLedgerEntry();
     const childEvents = childEventsProp ?? subevents;
     const currentEvent =
         currentEventProp ??
@@ -69,7 +67,7 @@ const ActivitySubeventsButtons = ({
             return Promise.reject(new Error('No ledger entry found to remove'));
         }
 
-        return reverseLedgerEntry({
+        return deleteLedgerEntry({
             entryId: parentEntryId,
             groupId: parentEvent.groupId ?? undefined,
             parentActivityId: rootActivityId,
@@ -77,10 +75,10 @@ const ActivitySubeventsButtons = ({
             .then(() => {
                 toast.success(t('toasts:ledger.entryDeleted'));
             })
-            .catch(error => {
-                toast.error(
-                    resolveApiErrorMessageFromError(error, t('toasts:common.requestFailed')),
-                );
+            .catch((error: unknown) => {
+                if (!isRepeatedLedgerWrite(error)) {
+                    toast.error(ledgerWriteErrorMessage(error, t('toasts:common.requestFailed')));
+                }
                 return Promise.reject(error);
             });
     };
