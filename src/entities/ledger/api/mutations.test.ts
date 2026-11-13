@@ -390,10 +390,38 @@ describe('a rejected or unanswered request', () => {
 
     test('a refresh that fails after a failed write is not an unhandled rejection', async () => {
         serveLedger(409);
-        onWriteFailed.mockRejectedValueOnce(new Error('reload failed'));
+        // A plain function: a rejection returned by a `vi.fn` never surfaces as unhandled.
+        const failingEffects: LedgerWriteEffects = {
+            onEntryWritten,
+            onWriteFailed: () => Promise.reject(new Error('reload failed')),
+        };
+        const unhandled: unknown[] = [];
+        const onUnhandled = (reason: unknown): void => {
+            unhandled.push(reason);
+        };
 
-        await expect(remove({ entryId: 'entry-1' })).rejects.toBeInstanceOf(ApiError);
-        expect(onWriteFailed).toHaveBeenCalledOnce();
+        // The app tsconfig has no Node types: the test runner's `process`, typed as far as used.
+        type RejectionEvents = Record<
+            'on' | 'off',
+            (event: 'unhandledRejection', listener: (reason: unknown) => void) => void
+        >;
+        const nodeProcess = (globalThis as unknown as { process: RejectionEvents }).process;
+
+        nodeProcess.on('unhandledRejection', onUnhandled);
+        try {
+            await expect(
+                run(deleteLedgerEntryMutationOptions(failingEffects), {
+                    entryId: 'entry-1',
+                    sessionVersion: getAuthSessionVersion(),
+                }),
+            ).rejects.toBeInstanceOf(ApiError);
+            // Node reports an unhandled rejection after the microtasks, before the next macrotask.
+            await new Promise(resolve => setTimeout(resolve, 0));
+        } finally {
+            nodeProcess.off('unhandledRejection', onUnhandled);
+        }
+
+        expect(unhandled).toEqual([]);
     });
 });
 
