@@ -1,6 +1,7 @@
-import { onlineManager, type QueryClient } from '@tanstack/react-query';
+import { onlineManager, type QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
+import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
@@ -10,6 +11,7 @@ import { usersKeys } from 'entities/users';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
 import { ApiError } from 'shared/api/client';
+import { createQueryClient } from 'shared/api/queryClient';
 import { useActivityStore } from 'store/activity-store';
 import { onAccessTokenRefreshed, useAuthStore } from 'store/authStore';
 import { legacyPreview } from 'test/activityFixtures';
@@ -66,8 +68,9 @@ const expense: CreateLedgerEntryParams = {
     sharingMode: { type: 'AUTO' },
 };
 
-// Signed in as `user-1` on its persisted client, with the dashboard and the friends cached.
-const signIn = (): QueryClient => {
+// Signed in as `user-1` on its persisted client (`ownClient`, or the test client), with the
+// dashboard and the friends cached.
+const signIn = (ownClient?: QueryClient): QueryClient => {
     useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
     saveLocalUser({
         id: 'user-1',
@@ -84,7 +87,7 @@ const signIn = (): QueryClient => {
             sex: 'male',
         },
     });
-    const client = mountAsUserClient('user-1');
+    const client = mountAsUserClient('user-1', ownClient);
 
     client.setQueryData(dashboardKeys.balances(), []);
     client.setQueryData(usersKeys.known(), []);
@@ -95,7 +98,8 @@ const isStale = (client: QueryClient, queryKey: readonly unknown[]): boolean =>
     client.getQueryState(queryKey)?.isInvalidated === true;
 
 // The ledger and the group endpoints; `sent` lists `METHOD path` of every request, in order.
-const serve = (gate?: Deferred, status = 200): string[] => {
+// `gate` holds the answer of a write, `groupGate` the answer of the group read.
+const serve = (gate?: Deferred, status = 200, groupGate?: Deferred): string[] => {
     const sent: string[] = [];
     const record = (request: Request): void => {
         sent.push(`${request.method} ${new URL(request.url).pathname.replace(/^\/api/, '')}`);
@@ -119,8 +123,9 @@ const serve = (gate?: Deferred, status = 200): string[] => {
             record(request);
             return HttpResponse.json({ items: [], nextCursor: null });
         }),
-        http.get('*/groups/group-1', ({ request }) => {
+        http.get('*/groups/group-1', async ({ request }) => {
             record(request);
+            await groupGate?.promise;
             return HttpResponse.json(wireGroup('group-1'));
         }),
     );
@@ -386,7 +391,6 @@ describe.each<[string, () => void]>([
             await act(async () => {
                 expect(await write).toEqual(new LedgerWriteRefusedError('session'));
             });
-            await new Promise(resolve => setTimeout(resolve, 50));
 
             expect(sent).toEqual([request]);
             expect(isStale(client, dashboardKeys.balances())).toBe(false);
@@ -450,6 +454,115 @@ describe.each<[string, number]>([
         await act(() => result.current.createExpense({ expense }).catch(() => undefined));
         expect(sentWrites(sent)).toHaveLength(2);
     });
+});
+
+test('a failed write rejects at once: its refresh starts but is not waited for', async () => {
+    const client = signIn();
+    const groupGate = deferred();
+    const sent = serve(undefined, 409, groupGate);
+    const { result } = renderHook(() => useUpdateExpense());
+    let failure: unknown = null;
+
+    await act(async () => {
+        failure = await result.current
+            .updateExpense({ entryId: 'entry-1', entry: patch, groupId: 'group-1' })
+            .then(
+                () => null,
+                (error: unknown) => error,
+            );
+    });
+
+    // Rejected while the group read is still unanswered.
+    expect(failure).toBeInstanceOf(ApiError);
+    await waitFor(() => {
+        expect(sent).toContain('GET /groups/group-1');
+    });
+    expect(isStale(client, dashboardKeys.balances())).toBe(true);
+    expect(isStale(client, usersKeys.known())).toBe(false);
+    expect(fetchSetActivity).toHaveBeenCalledWith(true);
+    await waitFor(() => {
+        expect(result.current.isPending).toBe(false);
+    });
+    groupGate.resolve();
+});
+
+// A forced reload of the history shows the page skeletons, which closes the open delete dialog.
+test('a failed write made from the activity history does not reload that history', async () => {
+    signIn();
+    serve(undefined, 403);
+    useActivityStore.setState({ subeventsParent: legacyPreview('activity-1').parent });
+    const { result } = renderHook(useWrites);
+
+    await act(async () => {
+        await expect(
+            result.current.remove.deleteLedgerEntry({
+                entryId: 'entry-1',
+                parentActivityId: 'activity-1',
+            }),
+        ).rejects.toBeInstanceOf(ApiError);
+        await expect(
+            result.current.update.updateExpense({
+                entryId: 'entry-1',
+                entry: patch,
+                parentActivityId: 'activity-1',
+            }),
+        ).rejects.toBeInstanceOf(ApiError);
+    });
+
+    expect(fetchSetActivity).toHaveBeenCalledTimes(2);
+    expect(fetchSetActivitySubevents).not.toHaveBeenCalled();
+});
+
+// The app's own client: `offlineFirst` queries with the app retry, which pause while offline. The
+// interceptor marks the network unusable before the write sees its error.
+test('a write cut off by a network drop rejects at once with its own error and is not left pending', async () => {
+    const client = signIn(createQueryClient());
+    const sent: string[] = [];
+    const drop = ({ request }: { request: Request }): Response => {
+        sent.push(request.method);
+        onlineManager.setOnline(false);
+        return HttpResponse.error();
+    };
+
+    server.use(
+        http.post('*/ledger/entries', drop),
+        http.get('*/groups/group-1/activity-previews', () => HttpResponse.error()),
+        http.get('*/groups/group-1', () => HttpResponse.error()),
+    );
+    const { result } = renderHook(() => useCreateExpense(), {
+        wrapper: ({ children }: { children: ReactNode }) => (
+            <QueryClientProvider client={client}>{children}</QueryClientProvider>
+        ),
+    });
+    const groupExpense = { expense: { ...expense, groupId: 'group-1' } };
+    let failure: unknown = null;
+
+    try {
+        await act(async () => {
+            failure = await result.current.createExpense(groupExpense).then(
+                () => null,
+                (error: unknown) => error,
+            );
+        });
+
+        expect(failure).toBeInstanceOf(Error);
+        expect(failure).not.toBeInstanceOf(ApiError);
+        expect(failure).not.toBeInstanceOf(LedgerWriteRefusedError);
+        await waitFor(() => {
+            expect(result.current.isPending).toBe(false);
+        });
+        // The queries are marked stale for the reconnect; the legacy feed is not force-reloaded.
+        expect(isStale(client, dashboardKeys.balances())).toBe(true);
+        expect(fetchSetActivity).not.toHaveBeenCalled();
+        // The next submit is refused as offline, not as a write that is still running.
+        await expect(result.current.createExpense(groupExpense)).rejects.toEqual(
+            new LedgerWriteRefusedError('offline'),
+        );
+        expect(sent).toEqual(['POST']);
+    } finally {
+        await client.cancelQueries();
+        client.clear();
+    }
 });
 
 test('a refused write was never sent and reloads nothing', async () => {

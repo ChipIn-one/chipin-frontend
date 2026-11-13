@@ -6,8 +6,9 @@
 // Nothing is written into a cache here (the server is the source of truth for finances): once a
 // sent write settles, what shows the entry is read again. Until the activity feed and the ledger
 // entry are queries, that refresh is passed in (`LedgerWriteEffects`): entities never import
-// `store`. A write whose auth session has ended (a sign-out, an account switch, an expired
-// session) refreshes nothing.
+// `store`. A successful write settles when the refresh has; a failed one rejects at once and its
+// refresh runs on its own. A write whose auth session has ended (a sign-out, an account switch,
+// an expired session) refreshes nothing.
 import type { QueryClient } from '@tanstack/react-query';
 import { mutationOptions } from '@tanstack/react-query';
 
@@ -61,8 +62,13 @@ export type DeleteLedgerEntryVariables = DeleteLedgerEntryParams & SessionBound;
 
 /** What the caller's stores and caches do after a ledger write, only while its session is current. */
 export interface LedgerWriteEffects {
-    /** Reads again what shows the entry, after a sent write; the write settles when it has. */
+    /** Reads again what shows the entry, after a successful write; the write settles when it has. */
     onEntryWritten: (context: LedgerWriteContext) => Promise<void>;
+    /**
+     * Reads again what may be stale after a sent write failed. Not awaited: the failure reaches
+     * the caller at once (offline this refresh waits for the reconnect).
+     */
+    onWriteFailed: (context: LedgerWriteContext) => Promise<void>;
 }
 
 const ONLINE_WRITE = { networkMode: 'online', retry: false } as const;
@@ -81,18 +87,26 @@ const wasNeverSent = (error: Error | null): boolean =>
 // Runs on settle (spec 03 §2.1): after a success, and after a rejected or unanswered request too
 // (a 404/409 means the entry on screen is stale; a timed-out write may be committed). A failed
 // refresh does not change the write's outcome (the feeds reload on their next focus or mount).
+// Only a successful write waits for its refresh: after a network drop the refresh is paused until
+// the reconnect, and the failure must not wait with it.
 const refreshAfterWrite = (
     effects: LedgerWriteEffects,
     client: QueryClient,
     error: Error | null,
     variables: SessionBound,
     context: LedgerWriteContext,
-): Promise<void> | undefined =>
-    isCurrent(client, variables) && !wasNeverSent(error)
-        ? effects.onEntryWritten(context).catch(() => undefined)
-        : undefined;
+): Promise<void> | undefined => {
+    if (!isCurrent(client, variables) || wasNeverSent(error)) {
+        return undefined;
+    }
+    if (error) {
+        void effects.onWriteFailed(context).catch(() => undefined);
+        return undefined;
+    }
+    return effects.onEntryWritten(context).catch(() => undefined);
+};
 
-/** `POST /ledger/entries` (an expense, no `id` in the body); settles once its views reloaded. */
+/** `POST /ledger/entries` (an expense, no `id` in the body); a success settles once its views reloaded. */
 export const createExpenseMutationOptions = (effects: LedgerWriteEffects) =>
     mutationOptions<void, Error, CreateExpenseVariables>({
         ...ONLINE_WRITE,
@@ -108,7 +122,7 @@ export const createExpenseMutationOptions = (effects: LedgerWriteEffects) =>
             }),
     });
 
-/** `PATCH /ledger/entries/{id}` (an expense); settles once its views reloaded. */
+/** `PATCH /ledger/entries/{id}` (an expense); a success settles once its views reloaded. */
 export const updateExpenseMutationOptions = (effects: LedgerWriteEffects) =>
     mutationOptions<void, Error, UpdateExpenseVariables>({
         ...ONLINE_WRITE,
@@ -125,7 +139,7 @@ export const updateExpenseMutationOptions = (effects: LedgerWriteEffects) =>
             }),
     });
 
-/** `DELETE /ledger/entries/{id}` (an expense or a settlement); settles once its views reloaded. */
+/** `DELETE /ledger/entries/{id}` (an expense or a settlement); a success settles once its views reloaded. */
 export const deleteLedgerEntryMutationOptions = (effects: LedgerWriteEffects) =>
     mutationOptions<void, Error, DeleteLedgerEntryVariables>({
         ...ONLINE_WRITE,

@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { CreateLedgerEntryParams, UpdateLedgerExpenseParams } from 'api/chipin.types';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
-import { ApiError } from 'shared/api/client';
+import { ApiError, InvalidPathSegmentError } from 'shared/api/client';
 import { MoneyWireError } from 'shared/money';
 import { clearUserData } from 'shared/offline/clearUserData';
 import { cachesByUser } from 'shared/offline/userCaches';
@@ -45,7 +45,8 @@ const deferred = (): Deferred => {
 };
 
 const onEntryWritten = vi.fn<LedgerWriteEffects['onEntryWritten']>();
-const effects: LedgerWriteEffects = { onEntryWritten };
+const onWriteFailed = vi.fn<LedgerWriteEffects['onWriteFailed']>();
+const effects: LedgerWriteEffects = { onEntryWritten, onWriteFailed };
 
 // The ledger endpoints: every request is recorded with its body text; `gate` holds the answer.
 const serveLedger = (status: number | 'no-response' = 200, gate?: Deferred): SentRequest[] => {
@@ -127,6 +128,7 @@ const legacyCreateText = ({ groupId, sharingMode, category, ...rest }: CreateLed
 beforeEach(() => {
     vi.clearAllMocks();
     onEntryWritten.mockResolvedValue(undefined);
+    onWriteFailed.mockResolvedValue(undefined);
 });
 
 test('the online ledger keys are the set of spec 03 §2.1; every mutation is online-only without retry', () => {
@@ -212,6 +214,7 @@ describe('create an expense', () => {
         ).rejects.toBeInstanceOf(MoneyWireError);
         expect(sent).toEqual([]);
         expect(onEntryWritten).not.toHaveBeenCalled();
+        expect(onWriteFailed).not.toHaveBeenCalled();
     });
 
     test('after a group expense the group and the open activity history are read again', async () => {
@@ -310,6 +313,18 @@ describe('delete a ledger entry', () => {
     });
 });
 
+test.each<[string, () => Promise<void>]>([
+    ['an update', () => update({ entryId: '', entry: { type: 'EXPENSE', expense: {} } })],
+    ['a delete', () => remove({ entryId: '', groupId: 'group-1' })],
+])('%s of an entry without a valid id is never sent and refreshes nothing', async (_name, send) => {
+    const sent = serveLedger();
+
+    await expect(send()).rejects.toBeInstanceOf(InvalidPathSegmentError);
+    expect(sent).toEqual([]);
+    expect(onEntryWritten).not.toHaveBeenCalled();
+    expect(onWriteFailed).not.toHaveBeenCalled();
+});
+
 const patch: UpdateLedgerExpenseParams = { type: 'EXPENSE', expense: { description: 'Lunch' } };
 
 // One write of each kind, in a group and from an open activity history.
@@ -333,13 +348,13 @@ const writes: [string, () => Promise<void>][] = [
 
 describe('a rejected or unanswered request', () => {
     // Spec 03 §2.1: the refresh runs on settle. A 404/409 means the entry on screen is stale, and
-    // a write without an answer may be committed.
+    // a write without an answer may be committed. The failure does not wait for that refresh.
     describe.each<[string, number | 'no-response']>([
         ['a 4xx answer', 404],
         ['a 5xx answer', 500],
         ['no response', 'no-response'],
     ])('%s', (_name, status) => {
-        test.each(writes)('a %s fails and its views are read again', async (_kind, send) => {
+        test.each(writes)('a %s fails and what may be stale is read again', async (_kind, send) => {
             serveLedger(status);
 
             const failure: unknown = await send().then(
@@ -354,29 +369,31 @@ describe('a rejected or unanswered request', () => {
                 expect(failure).toBeInstanceOf(ApiError);
                 expect(failure).toMatchObject({ status, code: 'LEDGER.ENTRY_NOT_FOUND' });
             }
-            expect(onEntryWritten.mock.calls).toEqual([
+            expect(onWriteFailed.mock.calls).toEqual([
                 [{ groupId: 'group-1', parentActivityId: 'activity-1' }],
             ]);
+            expect(onEntryWritten).not.toHaveBeenCalled();
         });
     });
 
-    test('the write fails only after its views have reloaded', async () => {
+    // After a network drop the refresh is paused until the reconnect: the failure does not wait.
+    test.each(writes)(
+        'a failed %s rejects with its own error while its refresh never settles',
+        async (_kind, send) => {
+            serveLedger(409);
+            onWriteFailed.mockReturnValueOnce(new Promise<void>(() => undefined));
+
+            await expect(send()).rejects.toMatchObject({ status: 409 });
+            expect(onWriteFailed).toHaveBeenCalledOnce();
+        },
+    );
+
+    test('a refresh that fails after a failed write is not an unhandled rejection', async () => {
         serveLedger(409);
-        const reload = deferred();
-        let isSettled = false;
+        onWriteFailed.mockRejectedValueOnce(new Error('reload failed'));
 
-        onEntryWritten.mockReturnValueOnce(reload.promise);
-        const write = remove({ entryId: 'entry-1' }).catch(() => {
-            isSettled = true;
-        });
-
-        await vi.waitFor(() => {
-            expect(onEntryWritten).toHaveBeenCalled();
-        });
-        expect(isSettled).toBe(false);
-        reload.resolve();
-        await write;
-        expect(isSettled).toBe(true);
+        await expect(remove({ entryId: 'entry-1' })).rejects.toBeInstanceOf(ApiError);
+        expect(onWriteFailed).toHaveBeenCalledOnce();
     });
 });
 
@@ -396,6 +413,7 @@ describe('a write whose session ended during the request', () => {
             await write;
 
             expect(onEntryWritten).not.toHaveBeenCalled();
+            expect(onWriteFailed).not.toHaveBeenCalled();
         },
     );
 
@@ -420,6 +438,7 @@ describe('a write whose session ended during the request', () => {
             await Promise.all(pending);
 
             expect(onEntryWritten).not.toHaveBeenCalled();
+            expect(onWriteFailed).not.toHaveBeenCalled();
         },
     );
 });
