@@ -129,6 +129,7 @@ const DashboardPage = () => {
         hasMore: hasMoreActivity && !isNextPageError,
         isLoading: activityQuery.isFetching,
         onLoadMore,
+        loadedKey: activityQuery.data?.pages.length ?? 0,
     });
 
     const onRetryNextPage = () => {

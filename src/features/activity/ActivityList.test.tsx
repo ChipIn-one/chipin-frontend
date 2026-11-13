@@ -294,6 +294,86 @@ test('offline with nothing cached, the first load shows the no-connection state 
     }
 });
 
+test('the offline first-load state clears by itself on reconnect: the skeleton, then the feed', async () => {
+    let isBack = false;
+    let answer: (() => void) | undefined;
+    const answered = new Promise<void>(resolve => {
+        answer = resolve;
+    });
+
+    client.setQueryDefaults(activityKeys.all, { retry: 1, retryDelay: 0 });
+    onlineManager.setOnline(false);
+    serveFeed(async () => {
+        if (!isBack) {
+            return HttpResponse.error();
+        }
+        await answered;
+        return HttpResponse.json({ items: [wireEvent('a')], nextCursor: null });
+    });
+
+    try {
+        renderList();
+        expect(await screen.findByText('errors:network.offline')).toBeTruthy();
+
+        isBack = true;
+        act(() => {
+            onlineManager.setOnline(true);
+        });
+
+        // The paused load resumes without a click.
+        expect(await screen.findByTestId('activity-skeleton')).toBeTruthy();
+        expect(screen.queryByText('errors:network.offline')).toBeNull();
+
+        answer?.();
+        await waitFor(() => {
+            expect(shownEvents()).toEqual(['a']);
+        });
+        expect(screen.queryByTestId('activity-skeleton')).toBeNull();
+    } finally {
+        onlineManager.setOnline(true);
+    }
+});
+
+test('a next page paused offline resumes on reconnect and is appended once', async () => {
+    let isBack = false;
+
+    seedFeed([expense('a')], 40);
+    client.setQueryDefaults(activityKeys.all, { retry: 1, retryDelay: 0 });
+    onlineManager.setOnline(false);
+    const cursors = serveFeed(() =>
+        isBack
+            ? HttpResponse.json({ items: [wireEvent('b')], nextCursor: null })
+            : HttpResponse.error(),
+    );
+
+    try {
+        renderList();
+        loadMore();
+
+        await waitFor(() => {
+            expect(client.getQueryState(FEED_KEY)?.fetchStatus).toBe('paused');
+        });
+        // The loaded page stays, with no error and no Retry: the load waits for the network.
+        expect(shownEvents()).toEqual(['a']);
+        expect(screen.queryByRole('button', { name: 'retryAction' })).toBeNull();
+
+        isBack = true;
+        act(() => {
+            onlineManager.setOnline(true);
+        });
+
+        await waitFor(() => {
+            expect(shownEvents()).toEqual(['a', 'b']);
+        });
+        // One answered request: the page is appended once.
+        expect(cursors.filter(cursor => cursor === '40').length).toBeGreaterThan(0);
+        expect(client.getQueryData<SelfActivityEventsData>(FEED_KEY)?.pages).toHaveLength(2);
+        expect(screen.getByText('endOfFeed')).toBeTruthy();
+    } finally {
+        onlineManager.setOnline(true);
+    }
+});
+
 test('a loaded feed without events shows "no activity", not an error', async () => {
     serveFeed(() => HttpResponse.json({ items: [], nextCursor: null }));
 

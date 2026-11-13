@@ -56,6 +56,7 @@ const GroupTabsContent = ({ group, isGroupDataLoading, activity }: Props) => {
         // Any load holds the trigger (`loadMore` ignores it meanwhile), not only a next page.
         isLoading: activity.isFetching,
         onLoadMore,
+        loadedKey: activity.loadedKey,
     });
 
     return (

@@ -66,6 +66,11 @@ export const useGroupDetail = (groupId: string | undefined): GroupDetailResult =
 export interface GroupActivityResult {
     items: readonly ActivityPreview[];
     hasMore: boolean;
+    /**
+     * Changes whenever a page was loaded (the load time and the item count: the flattened items
+     * carry no page count): it re-arms the scroll trigger (`useInfiniteScroll`).
+     */
+    loadedKey: string;
     /** Any load runs (a refetch or the next page): a scroll trigger waits for it to end. */
     isFetching: boolean;
     isNextPageLoading: boolean;
@@ -103,6 +108,7 @@ export const useGroupActivity = (
     return {
         items: items ?? embedded ?? NO_ACTIVITY,
         hasMore: items !== undefined && query.hasNextPage,
+        loadedKey: `${String(query.dataUpdatedAt)}:${String(items?.length ?? 0)}`,
         isFetching: isEnabled && isFetching,
         isNextPageLoading: query.isFetchingNextPage,
         isNextPageError: query.isFetchNextPageError,

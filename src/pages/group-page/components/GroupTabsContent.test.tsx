@@ -163,6 +163,7 @@ const activityOf = (
 ): GroupActivityResult => ({
     items: target.recentActivities.items.map(legacyActivityPreview),
     hasMore: target.recentActivities.nextCursor !== null,
+    loadedKey: '0:0',
     isFetching: false,
     isNextPageLoading: false,
     isNextPageError: false,

@@ -2,7 +2,7 @@
 // filter matches few of the loaded events, so the feed keeps loading.
 import { Theme } from '@radix-ui/themes';
 import { act, screen, waitFor } from '@testing-library/react';
-import { delay, http, HttpResponse } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { ActivityEvent } from 'entities/activity';
@@ -98,13 +98,11 @@ const serveFeed = (onRequest: (cursor: string | null) => void = () => undefined)
     const cursors: (string | null)[] = [];
 
     server.use(
-        http.get('*/users/self/activities', async ({ request }) => {
+        http.get('*/users/self/activities', ({ request }) => {
             const cursor = new URL(request.url).searchParams.get('cursor');
 
             cursors.push(cursor);
             onRequest(cursor);
-            // As a network does: the page shows its loading state before the answer arrives.
-            await delay(10);
             return HttpResponse.json(PAGES[cursor ?? 'first']);
         }),
     );
