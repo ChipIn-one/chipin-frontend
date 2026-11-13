@@ -1,4 +1,5 @@
 import { Theme } from '@radix-ui/themes';
+import type { QueryClient } from '@tanstack/react-query';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -57,6 +58,19 @@ const OpenOtherInvite = () => {
     );
 };
 
+const LEAVE_PAGE_LABEL = 'Leave page';
+const ELSEWHERE_ROUTE = '/elsewhere';
+
+const LeavePage = () => {
+    const navigate = useNavigate();
+
+    return (
+        <button type="button" onClick={() => void navigate(ELSEWHERE_ROUTE)}>
+            {LEAVE_PAGE_LABEL}
+        </button>
+    );
+};
+
 const renderPage = (inviteToken = TEST_INVITE_TOKEN, isProtected = false) =>
     render(
         <MemoryRouter initialEntries={[`${ROUTES.GROUP_JOIN}/${inviteToken}`]}>
@@ -78,6 +92,7 @@ const renderPage = (inviteToken = TEST_INVITE_TOKEN, isProtected = false) =>
                 </Routes>
                 <CurrentRoute />
                 <OpenOtherInvite />
+                <LeavePage />
             </Theme>
         </MemoryRouter>,
     );
@@ -88,6 +103,8 @@ const currentRoute = () => screen.getByLabelText('Current route').textContent;
 const apiError = (status: number) => ({ isAxiosError: true, response: { status, data: {} } });
 
 const server = setupMswServer();
+// The signed-in user's client of the running test (the join mutation runs on it).
+let client: QueryClient;
 
 const statusOf = (error: unknown): number | undefined =>
     typeof error === 'object' &&
@@ -127,7 +144,7 @@ beforeEach(() => {
     vi.clearAllMocks();
     mocks.authSessionVersion = 1;
     useAuthStore.setState({ status: 'authenticated', unauthReason: undefined });
-    mountAsUserClient();
+    client = mountAsUserClient();
     serveJoin();
     return i18n.changeLanguage('en');
 });
@@ -330,7 +347,7 @@ test('opening another invite on the same page starts from the ready screen', () 
         });
 });
 
-test('ignores a join response after the page unmounts', () => {
+test('ignores a join response after the page unmounts', async () => {
     const user = userEvent.setup();
     let resolveJoin: ((group: { id: string }) => void) | undefined;
     mocks.joinGroup.mockImplementation(
@@ -339,28 +356,32 @@ test('ignores a join response after the page unmounts', () => {
                 resolveJoin = resolve;
             }),
     );
+    const joins = () => client.getMutationCache().getAll();
 
-    const { unmount } = renderPage();
+    renderPage();
+    await user.click(joinButton());
+    await waitFor(() => {
+        expect(resolveJoin).toBeDefined();
+    });
+    // Only the page unmounts: the router and the route probe stay.
+    await user.click(screen.getByRole('button', { name: LEAVE_PAGE_LABEL }));
+    expect(currentRoute()).toBe(ELSEWHERE_ROUTE);
+    expect(screen.queryByRole('button', { name: i18n.t('group:join.confirm') })).toBeNull();
 
-    return user
-        .click(joinButton())
-        .then(() =>
-            waitFor(() => {
-                expect(resolveJoin).toBeDefined();
-            }),
-        )
-        .then(() => {
-            unmount();
+    await act(() => {
+        resolveJoin?.({ id: 'group-1' });
+        return Promise.resolve();
+    });
+    // The late answer has crossed the network and the join has settled.
+    await waitFor(() => {
+        expect(joins().map(join => join.state.status)).toEqual(['success']);
+    });
+    await act(() => new Promise(resolve => setTimeout(resolve, 50)));
 
-            return act(() => {
-                resolveJoin?.({ id: 'group-1' });
-                return Promise.resolve();
-            });
-        })
-        .then(() => {
-            expect(mocks.joinGroup).toHaveBeenCalledTimes(1);
-            expect(screen.queryByLabelText('Current route')).toBeNull();
-        });
+    expect(mocks.joinGroup).toHaveBeenCalledTimes(1);
+    expect(currentRoute()).toBe(ELSEWHERE_ROUTE);
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
 });
 
 // Known hotfix behaviour, changed deliberately by PR 04-2f (`/login?returnTo`).
