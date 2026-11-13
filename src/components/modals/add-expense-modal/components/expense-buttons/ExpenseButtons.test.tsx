@@ -1,11 +1,13 @@
-import { act, render, screen } from '@testing-library/react';
+import { MutationObserver } from '@tanstack/react-query';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
+import { ledgerOnlineMutationKeys } from 'entities/ledger';
 import i18n from 'i18n/index';
 import { useExpenseModalStore } from 'store/expenseModalStore';
-import { useLoadingStore } from 'store/loadingStore';
+import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
 
 import ExpenseButtons from './ExpenseButtons';
 
@@ -14,7 +16,6 @@ const friend = { id: 'friend', displayName: 'Friend', picture: null };
 const secondFriend = { id: 'secondFriend', displayName: 'Second friend', picture: null };
 
 beforeEach(() => {
-    useLoadingStore.getState().setInitialLoadingStore();
     useExpenseModalStore.getState().reset();
     useExpenseModalStore.getState().initialize({
         context: 'group',
@@ -224,7 +225,7 @@ test('EXP-064 explains a non-positive total share weight', () => {
     expect(screen.getByRole('button', { name: 'Add expense' })).toHaveProperty('disabled', false);
 });
 
-test('EXP-064 distinguishes an unchanged Save from invalid input and submission in progress', () => {
+test('EXP-064 distinguishes an unchanged Save from invalid input and submission in progress', async () => {
     useExpenseModalStore.setState({
         amount: '10',
         mode: 'edit',
@@ -252,15 +253,35 @@ test('EXP-064 distinguishes an unchanged Save from invalid input and submission 
     expect(status.textContent).toBe('');
     expect(button).toHaveProperty('disabled', false);
 
-    act(() => useLoadingStore.getState().setLoading('expense', 'update', 'loading'));
+    // A submission in progress is a running update mutation on the client (spec 03 §6 row 6).
+    let finishUpdate = (): void => undefined;
+    let update: Promise<void> = Promise.resolve();
+
+    act(() => {
+        update = new MutationObserver(getDefaultTestQueryClient(), {
+            mutationKey: ledgerOnlineMutationKeys.updateEntry,
+            mutationFn: () =>
+                new Promise<void>(resolve => {
+                    finishUpdate = resolve;
+                }),
+        }).mutate();
+    });
+    await waitFor(() => {
+        expect(button).toHaveProperty('disabled', true);
+    });
     expect(status.textContent).toBe('');
     expect(button.getAttribute('aria-describedby')).toBeNull();
     expect(button).toHaveProperty('disabled', true);
 
     act(() => useExpenseModalStore.getState().setAmount(''));
     expect(status.textContent).toBe('');
-    act(() => useLoadingStore.getState().setLoading('expense', 'update', 'fetched'));
-    expect(status.textContent).toBe('Enter an amount greater than zero.');
+    await act(async () => {
+        finishUpdate();
+        await update;
+    });
+    await waitFor(() => {
+        expect(status.textContent).toBe('Enter an amount greater than zero.');
+    });
     expect(button.getAttribute('aria-describedby')).toBe(status.id);
 });
 
