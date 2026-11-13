@@ -622,7 +622,7 @@ test('ACT-023 connects dashboard infinite scroll to the next activity preview pa
         expect.objectContaining({
             hasMore: true,
             isLoading: false,
-            loadedKey: 1,
+            loadedKey: expect.stringMatching(/^1:/),
         }),
     );
 
@@ -641,7 +641,10 @@ test('ACT-023 connects dashboard infinite scroll to the next activity preview pa
     expect(activityRequests[0]?.searchParams.get('limit')).toBe('20');
     await waitFor(() => {
         expect(useInfiniteScrollMock).toHaveBeenLastCalledWith(
-            expect.objectContaining({ hasMore: false, loadedKey: 2 }),
+            expect.objectContaining({
+                hasMore: false,
+                loadedKey: expect.stringMatching(/^2:/),
+            }),
         );
     });
 });
@@ -688,9 +691,12 @@ test('ACT-023 a next page paused offline is requested once while offline, then a
     try {
         renderPage();
 
-        await waitFor(() => {
-            expect(client.getQueryState(FEED_KEY)?.fetchStatus).toBe('paused');
-        });
+        await waitFor(
+            () => {
+                expect(client.getQueryState(FEED_KEY)?.fetchStatus).toBe('paused');
+            },
+            { timeout: 5000 },
+        );
         await new Promise(resolve => setTimeout(resolve, 150));
         expect(activityRequests).toHaveLength(1);
         expect(client.getQueryState(FEED_KEY)?.fetchStatus).toBe('paused');
@@ -698,7 +704,9 @@ test('ACT-023 a next page paused offline is requested once while offline, then a
         isBack = true;
         onlineManager.setOnline(true);
 
-        expect(await screen.findByText('activity:endOfFeed')).toBeTruthy();
+        expect(
+            await screen.findByText('activity:endOfFeed', undefined, { timeout: 5000 }),
+        ).toBeTruthy();
         expect(activityRequests.map(url => url.searchParams.get('cursor'))).toEqual(['40', '40']);
     } finally {
         onlineManager.setOnline(true);

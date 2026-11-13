@@ -25,7 +25,7 @@ const ActivityList = ({ activeFilter }: Props) => {
         isError,
         isOffline,
         hasMore,
-        loadedPages,
+        loadedKey,
         isFetching,
         isNextPageLoading,
         isNextPageError,
@@ -60,7 +60,7 @@ const ActivityList = ({ activeFilter }: Props) => {
         hasMore: hasMore && !isNextPageError,
         isLoading: isFetching,
         onLoadMore: loadMore,
-        loadedKey: loadedPages,
+        loadedKey,
     });
 
     if (isLoading) {

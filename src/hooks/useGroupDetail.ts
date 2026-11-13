@@ -66,8 +66,12 @@ export const useGroupDetail = (groupId: string | undefined): GroupDetailResult =
 export interface GroupActivityResult {
     items: readonly ActivityPreview[];
     hasMore: boolean;
-    /** How many pages are loaded: a change re-arms the scroll trigger (`useInfiniteScroll`). */
-    loadedKey: number;
+    /**
+     * The loaded page count and the time the data landed: a change re-arms the scroll trigger
+     * (`useInfiniteScroll`). The count covers a page load under a frozen clock, the time a
+     * refetch that keeps the count.
+     */
+    loadedKey: string;
     /**
      * A load runs or waits for the network (a refetch or the next page): a scroll trigger waits
      * for it to end. A load paused offline resumes by itself on reconnect.
@@ -112,7 +116,7 @@ export const useGroupActivity = (
     return {
         items: items ?? embedded ?? NO_ACTIVITY,
         hasMore: items !== undefined && query.hasNextPage,
-        loadedKey: data?.pageCount ?? 0,
+        loadedKey: `${data?.pageCount ?? 0}:${data ? query.dataUpdatedAt : 0}`,
         isFetching: isEnabled && isFetching,
         isNextPageLoading: query.isFetchingNextPage,
         isNextPageError: query.isFetchNextPageError,

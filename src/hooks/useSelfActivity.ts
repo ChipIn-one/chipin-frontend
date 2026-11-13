@@ -25,8 +25,12 @@ export interface SelfActivityLogResult {
     /** The first load waits for the network (offline) with nothing cached. */
     isOffline: boolean;
     hasMore: boolean;
-    /** How many pages are loaded: a change re-arms the scroll trigger (`useInfiniteScroll`). */
-    loadedPages: number;
+    /**
+     * The loaded page count and the time the data landed: a change re-arms the scroll trigger
+     * (`useInfiniteScroll`). The count covers a page load under a frozen clock, the time a
+     * refetch that keeps the count.
+     */
+    loadedKey: string;
     /**
      * A load runs or waits for the network (a refetch or the next page): a scroll trigger waits
      * for it to end. A load paused offline resumes by itself on reconnect.
@@ -73,7 +77,7 @@ export const useSelfActivityLog = (): SelfActivityLogResult => {
         isError,
         isOffline,
         hasMore: data !== undefined && query.hasNextPage,
-        loadedPages: data?.pages.length ?? 0,
+        loadedKey: `${data?.pages.length ?? 0}:${data ? query.dataUpdatedAt : 0}`,
         isFetching: isEnabled && isFetching,
         isNextPageLoading: query.isFetchingNextPage,
         isNextPageError: data !== undefined && query.isFetchNextPageError,

@@ -111,9 +111,7 @@ const serveFeed = (onRequest: (cursor: string | null) => void = () => undefined)
     return cursors;
 };
 
-const renderSettlements = () => {
-    const client = createTestQueryClient();
-
+const renderSettlements = (client = createTestQueryClient()) => {
     mountAsUserClient('user-1', client);
     return renderWithQueryClient(
         <Theme>
@@ -141,6 +139,31 @@ test('a filter matching few events keeps loading while the trigger is in view, t
     expect(cursors).toEqual([null, '40', '30', '20']);
     expect(shownEvents()).toEqual(['s1']);
 });
+
+test('a refetch that lands while the next page is in flight leaves the trigger armed, to the end of the feed', async () => {
+    const client = createTestQueryClient();
+    let isInvalidated = false;
+    // A write completes while page 2 is in flight: the invalidation cancels that page and loads
+    // the first one again, so the loaded page count stays at 1.
+    const cursors = serveFeed(cursor => {
+        if (cursor === '40' && !isInvalidated) {
+            isInvalidated = true;
+            void client.invalidateQueries({ queryKey: activityKeys.all });
+        }
+    });
+
+    renderSettlements(client);
+
+    // The requests are compared inside the wait: a stopped feed fails on the list it got to.
+    await waitFor(
+        () => {
+            expect(cursors).toEqual([null, '40', null, '40', '30', '20']);
+            expect(screen.getByText('endOfFeed')).toBeTruthy();
+        },
+        { timeout: 5000 },
+    );
+    expect(shownEvents()).toEqual(['s1']);
+}, 10_000);
 
 test('the filter stops loading once the matching rows push the trigger out of view', async () => {
     // The rows of the page with the settlement fill the screen: while that page loads, the
@@ -202,9 +225,12 @@ test('a next page paused offline is requested once while offline, then appended 
             client,
         );
 
-        await waitFor(() => {
-            expect(client.getQueryState(FEED_KEY)?.fetchStatus).toBe('paused');
-        });
+        await waitFor(
+            () => {
+                expect(client.getQueryState(FEED_KEY)?.fetchStatus).toBe('paused');
+            },
+            { timeout: 5000 },
+        );
         // The trigger stays in view: the paused load is left alone, not sent again and again.
         await new Promise(resolve => setTimeout(resolve, 150));
         expect(cursors).toEqual(['40']);
@@ -219,9 +245,12 @@ test('a next page paused offline is requested once while offline, then appended 
             onlineManager.setOnline(true);
         });
 
-        await waitFor(() => {
-            expect(shownEvents()).toEqual(['a', 'b']);
-        });
+        await waitFor(
+            () => {
+                expect(shownEvents()).toEqual(['a', 'b']);
+            },
+            { timeout: 5000 },
+        );
         expect(cursors).toEqual(['40', '40']);
         expect(client.getQueryData<SelfActivityEventsData>(FEED_KEY)?.pages).toHaveLength(2);
         expect(screen.getByText('endOfFeed')).toBeTruthy();

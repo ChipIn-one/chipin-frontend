@@ -130,7 +130,8 @@ const DashboardPage = () => {
         hasMore: hasMoreActivity && !isNextPageError,
         isLoading: activityQuery.fetchStatus !== 'idle',
         onLoadMore,
-        loadedKey: activityQuery.data?.pages.length ?? 0,
+        // The page count and the time the data landed: a refetch that keeps the count re-arms too.
+        loadedKey: `${activityQuery.data?.pages.length ?? 0}:${activityQuery.dataUpdatedAt}`,
     });
 
     const onRetryNextPage = () => {

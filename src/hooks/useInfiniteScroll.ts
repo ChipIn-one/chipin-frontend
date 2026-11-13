@@ -10,9 +10,10 @@ interface UseInfiniteScrollParams {
     isLoading: boolean;
     onLoadMore: () => void;
     /**
-     * Changes whenever a page was loaded (the loaded page count). A loaded page re-arms the
-     * trigger by itself: the answer may arrive before any render saw `isLoading` (TanStack
-     * notifies through a timer), and then no loading render is there to re-arm it.
+     * Changes whenever data landed: a loaded page or a refetch (the loaded page count with the
+     * time the data was updated). Landed data re-arms the trigger by itself: the answer may
+     * arrive before any render saw `isLoading` (TanStack notifies through a timer), and then no
+     * loading render is there to re-arm it.
      */
     loadedKey: string | number;
 }

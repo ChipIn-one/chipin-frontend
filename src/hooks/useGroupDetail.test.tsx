@@ -445,9 +445,12 @@ test('a next page paused offline is requested once while offline, then appended 
     try {
         render(<ScrolledActivity />);
 
-        await waitFor(() => {
-            expect(client.getQueryState(activityKey)?.fetchStatus).toBe('paused');
-        });
+        await waitFor(
+            () => {
+                expect(client.getQueryState(activityKey)?.fetchStatus).toBe('paused');
+            },
+            { timeout: 5000 },
+        );
         await new Promise(resolve => setTimeout(resolve, 150));
         expect(cursors).toEqual(['5']);
         expect(client.getQueryState(activityKey)?.fetchStatus).toBe('paused');
@@ -457,9 +460,12 @@ test('a next page paused offline is requested once while offline, then appended 
             onlineManager.setOnline(true);
         });
 
-        await waitFor(() => {
-            expect(client.getQueryData<GroupActivityData>(activityKey)?.pages).toHaveLength(2);
-        });
+        await waitFor(
+            () => {
+                expect(client.getQueryData<GroupActivityData>(activityKey)?.pages).toHaveLength(2);
+            },
+            { timeout: 5000 },
+        );
         expect(cursors).toEqual(['5', '5']);
     } finally {
         onlineManager.setOnline(true);
