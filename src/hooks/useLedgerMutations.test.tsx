@@ -1,31 +1,39 @@
 import { onlineManager, type QueryClient } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { toast } from 'sonner';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { CreateLedgerEntryParams } from 'api/chipin.types';
 import { dashboardKeys } from 'entities/dashboard';
 import { usersKeys } from 'entities/users';
-import { invalidateAuthSession } from 'helpers/authSession';
+import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
 import { ApiError } from 'shared/api/client';
 import { useActivityStore } from 'store/activity-store';
-import { useAuthStore } from 'store/authStore';
+import { onAccessTokenRefreshed, useAuthStore } from 'store/authStore';
 import { legacyPreview } from 'test/activityFixtures';
+import { fakeAccessToken } from 'test/fakeAccessToken';
 import { wireGroup } from 'test/groupFixtures';
 import { setupMswServer } from 'test/mswServer';
 import { mountAsUserClient } from 'test/userClient';
 
 import {
-    isRepeatedLedgerWrite,
-    ledgerWriteErrorMessage,
     LedgerWriteRefusedError,
+    toastLedgerWriteError,
     useCreateExpense,
     useDeleteLedgerEntry,
     useUpdateExpense,
 } from './useLedgerMutations';
 
 import 'i18n/index';
+
+vi.mock('sonner', () => ({
+    toast: {
+        error: vi.fn(),
+        success: vi.fn(),
+    },
+}));
 
 const server = setupMswServer();
 
@@ -95,6 +103,9 @@ const serve = (gate?: Deferred, status = 200): string[] => {
     const write = async ({ request }: { request: Request }): Promise<Response> => {
         record(request);
         await gate?.promise;
+        if (status === 0) {
+            return HttpResponse.error();
+        }
         return status === 200
             ? HttpResponse.json({ id: 'entry-1' })
             : HttpResponse.json({ code: 'VALIDATION.INVALID' }, { status });
@@ -197,7 +208,6 @@ test('a double submit sends one request: the repeated write is refused as busy w
     );
 
     expect(refusal).toEqual(new LedgerWriteRefusedError('busy'));
-    expect(isRepeatedLedgerWrite(refusal)).toBe(true);
     await act(async () => {
         gate.resolve();
         await first;
@@ -303,63 +313,203 @@ test('a write made from the activity history reloads that history in its open ca
     });
 });
 
-test('a sign-out or an account switch during the request reloads nothing in the next user caches', async () => {
-    const client = signIn();
-    const gate = deferred();
-    const sent = serve(gate);
-    const { result } = renderHook(() => useCreateExpense());
-    let write: Promise<void> = Promise.resolve();
+const patch = { type: 'EXPENSE' as const, expense: { description: 'Lunch' } };
 
+// One write of each kind in a group, sent through its hook.
+const useWrites = () => ({
+    create: useCreateExpense(),
+    update: useUpdateExpense(),
+    remove: useDeleteLedgerEntry(),
+});
+
+type Writes = ReturnType<typeof useWrites>;
+
+const groupWrites: [string, string, (writes: Writes) => Promise<void>][] = [
+    [
+        'create',
+        'POST /ledger/entries',
+        writes => writes.create.createExpense({ expense: { ...expense, groupId: 'group-1' } }),
+    ],
+    [
+        'update',
+        'PATCH /ledger/entries/entry-1',
+        writes =>
+            writes.update.updateExpense({ entryId: 'entry-1', entry: patch, groupId: 'group-1' }),
+    ],
+    [
+        'delete',
+        'DELETE /ledger/entries/entry-1',
+        writes => writes.remove.deleteLedgerEntry({ entryId: 'entry-1', groupId: 'group-1' }),
+    ],
+];
+
+// Another tab switched the account: this tab's token refresh returns the other user's token. The
+// auth session version stays, the previous user's data and client go (spec 03 §1.5).
+const switchAccountInAnotherTab = (): void => {
+    const sessionVersion = getAuthSessionVersion();
+
+    // The data of the next user, which the switch loads: none of it matters here.
+    server.use(
+        http.get('*/users/*', () => HttpResponse.json({}, { status: 500 })),
+        http.get('*/groups', () => HttpResponse.json({ items: [], nextCursor: null })),
+    );
     act(() => {
-        write = result.current.createExpense({ expense: { ...expense, groupId: 'group-1' } });
+        onAccessTokenRefreshed(fakeAccessToken('user-2'));
     });
-    await waitFor(() => {
-        expect(sent).toEqual(['POST /ledger/entries']);
-    });
-    invalidateAuthSession();
-    await act(async () => {
+    expect(getAuthSessionVersion()).toBe(sessionVersion);
+};
+
+describe.each<[string, () => void]>([
+    ['a sign-out', invalidateAuthSession],
+    ['an account switch in another tab', switchAccountInAnotherTab],
+])('a write answered after %s', (_name, endSession) => {
+    test.each(groupWrites)(
+        'a %s is refused as an ended session and reloads nothing in the next session',
+        async (_kind, request, send) => {
+            const client = signIn();
+            const gate = deferred();
+            const sent = serve(gate);
+            const { result } = renderHook(useWrites);
+            let write: Promise<unknown> = Promise.resolve();
+
+            act(() => {
+                write = send(result.current).then(
+                    () => null,
+                    (error: unknown) => error,
+                );
+            });
+            await waitFor(() => {
+                expect(sent).toEqual([request]);
+            });
+            endSession();
+            gate.resolve();
+            await act(async () => {
+                expect(await write).toEqual(new LedgerWriteRefusedError('session'));
+            });
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            expect(sent).toEqual([request]);
+            expect(isStale(client, dashboardKeys.balances())).toBe(false);
+            expect(fetchSetActivity).not.toHaveBeenCalled();
+            expect(fetchSetActivitySubevents).not.toHaveBeenCalled();
+        },
+    );
+
+    test("a failed write is refused as an ended session too: its error is not the next session's", async () => {
+        signIn();
+        const gate = deferred();
+        const sent = serve(gate, 400);
+        const { result } = renderHook(useWrites);
+        let write: Promise<unknown> = Promise.resolve();
+
+        act(() => {
+            write = result.current.remove.deleteLedgerEntry({ entryId: 'entry-1' }).then(
+                () => null,
+                (error: unknown) => error,
+            );
+        });
+        await waitFor(() => {
+            expect(sent).toHaveLength(1);
+        });
+        endSession();
         gate.resolve();
-        await write;
+        await act(async () => {
+            expect(await write).toEqual(new LedgerWriteRefusedError('session'));
+        });
+        expect(fetchSetActivity).not.toHaveBeenCalled();
     });
-
-    expect(sent).toEqual(['POST /ledger/entries']);
-    expect(isStale(client, dashboardKeys.balances())).toBe(false);
-    expect(isStale(client, usersKeys.known())).toBe(false);
-    expect(fetchSetActivity).not.toHaveBeenCalled();
 });
 
-test('a failed request rejects with ApiError, reloads nothing, and the next submit is sent', async () => {
+describe.each<[string, number]>([
+    ['a 4xx answer', 400],
+    ['a 5xx answer', 500],
+    ['no response', 0],
+])('a request with %s', (_name, status) => {
+    test('rejects, reads its views again (spec 03 §2.1: on settle), and the next submit is sent', async () => {
+        const client = signIn();
+        const sent = serve(undefined, status);
+        const { result } = renderHook(() => useCreateExpense());
+        let failure: unknown = null;
+
+        await act(async () => {
+            failure = await result.current.createExpense({ expense }).then(
+                () => null,
+                (error: unknown) => error,
+            );
+        });
+
+        expect(failure).toBeInstanceOf(Error);
+        expect(failure).not.toBeInstanceOf(LedgerWriteRefusedError);
+        expect(failure instanceof ApiError).toBe(status !== 0);
+        expect(isStale(client, dashboardKeys.balances())).toBe(true);
+        expect(isStale(client, usersKeys.known())).toBe(true);
+        expect(fetchSetActivity).toHaveBeenCalledWith(true);
+        await waitFor(() => {
+            expect(result.current.isPending).toBe(false);
+        });
+        await act(() => result.current.createExpense({ expense }).catch(() => undefined));
+        expect(sentWrites(sent)).toHaveLength(2);
+    });
+});
+
+test('a refused write was never sent and reloads nothing', async () => {
     const client = signIn();
-    const sent = serve(undefined, 400);
-    const { result } = renderHook(() => useCreateExpense());
-    let failure: unknown = null;
+    const sent = serve();
 
-    await act(async () => {
-        failure = await result.current.createExpense({ expense }).then(
-            () => null,
-            (error: unknown) => error,
-        );
-    });
+    onlineManager.setOnline(false);
+    const { result } = renderHook(useWrites);
 
-    expect(failure).toBeInstanceOf(ApiError);
-    expect(ledgerWriteErrorMessage(failure, 'Request failed')).toBe(
-        'Validation failed for the request',
-    );
+    for (const [, , send] of groupWrites) {
+        await expect(send(result.current)).rejects.toEqual(new LedgerWriteRefusedError('offline'));
+    }
+    expect(sent).toEqual([]);
     expect(isStale(client, dashboardKeys.balances())).toBe(false);
     expect(fetchSetActivity).not.toHaveBeenCalled();
-    expect(result.current.isPending).toBe(false);
-    await act(() => result.current.createExpense({ expense }).catch(() => undefined));
-    expect(sentWrites(sent)).toHaveLength(2);
 });
 
-test('the error text: offline is named, an API code is translated, anything else is the fallback', () => {
-    expect(ledgerWriteErrorMessage(new LedgerWriteRefusedError('offline'), 'Request failed')).toBe(
-        'No internet connection',
+test('deleting a settlement in a group reads the group again, not the friends', async () => {
+    const client = signIn();
+    const sent = serve();
+    const { result } = renderHook(() => useDeleteLedgerEntry());
+
+    await act(() =>
+        result.current.deleteLedgerEntry({ entryId: 'settlement-1', groupId: 'group-1' }),
     );
-    expect(ledgerWriteErrorMessage(new LedgerWriteRefusedError('session'), 'Request failed')).toBe(
+
+    expect(sent[0]).toBe('DELETE /ledger/entries/settlement-1');
+    expect(sent).toContain('GET /groups/group-1');
+    expect(isStale(client, dashboardKeys.balances())).toBe(true);
+    expect(isStale(client, usersKeys.known())).toBe(false);
+    expect(fetchSetActivity).toHaveBeenCalledWith(true);
+});
+
+test('deleting a settlement between friends reloads the friends balances and no group', async () => {
+    const client = signIn();
+    const sent = serve();
+    const { result } = renderHook(() => useDeleteLedgerEntry());
+
+    await act(() => result.current.deleteLedgerEntry({ entryId: 'settlement-1' }));
+
+    expect(sent).toEqual(['DELETE /ledger/entries/settlement-1']);
+    expect(isStale(client, dashboardKeys.balances())).toBe(true);
+    expect(isStale(client, usersKeys.known())).toBe(true);
+    expect(fetchSetActivity).toHaveBeenCalledWith(true);
+});
+
+test('the toast of a rejected write: offline is named, an ended session and a repeated submit show nothing, an API code is translated, anything else is the fallback', () => {
+    toastLedgerWriteError(new LedgerWriteRefusedError('session'), 'Request failed');
+    toastLedgerWriteError(new LedgerWriteRefusedError('busy'), 'Request failed');
+    expect(toast.error).not.toHaveBeenCalled();
+
+    toastLedgerWriteError(new LedgerWriteRefusedError('offline'), 'Request failed');
+    toastLedgerWriteError(
+        new ApiError({ status: 403, payload: { code: 'LEDGER.FORBIDDEN' }, cause: null }),
         'Request failed',
     );
-    expect(ledgerWriteErrorMessage(new Error('Network Error'), 'Request failed')).toBe(
-        'Request failed',
-    );
+    toastLedgerWriteError(new Error('Network Error'), 'Request failed');
+    expect(vi.mocked(toast.error).mock.calls).toEqual([
+        ['No internet connection'],
+        ['You do not have permission to access this ledger entry'],
+        ['Request failed'],
+    ]);
 });

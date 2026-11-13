@@ -6,8 +6,10 @@ import type { CreateLedgerEntryParams, UpdateLedgerExpenseParams } from 'api/chi
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import { ApiError } from 'shared/api/client';
 import { MoneyWireError } from 'shared/money';
+import { clearUserData } from 'shared/offline/clearUserData';
+import { cachesByUser } from 'shared/offline/userCaches';
 import { setupMswServer } from 'test/mswServer';
-import { createTestQueryClient } from 'test/renderWithQueryClient';
+import { mountAsUserClient } from 'test/userClient';
 
 import {
     createExpenseMutationOptions,
@@ -46,7 +48,7 @@ const onEntryWritten = vi.fn<LedgerWriteEffects['onEntryWritten']>();
 const effects: LedgerWriteEffects = { onEntryWritten };
 
 // The ledger endpoints: every request is recorded with its body text; `gate` holds the answer.
-const serveLedger = (status = 200, gate?: Deferred): SentRequest[] => {
+const serveLedger = (status: number | 'no-response' = 200, gate?: Deferred): SentRequest[] => {
     const sent: SentRequest[] = [];
     const answer = async ({ request }: { request: Request }): Promise<Response> => {
         sent.push({
@@ -55,6 +57,9 @@ const serveLedger = (status = 200, gate?: Deferred): SentRequest[] => {
             text: await request.text(),
         });
         await gate?.promise;
+        if (status === 'no-response') {
+            return HttpResponse.error();
+        }
         if (status >= 400) {
             return HttpResponse.json({ code: 'LEDGER.ENTRY_NOT_FOUND' }, { status });
         }
@@ -71,10 +76,11 @@ const serveLedger = (status = 200, gate?: Deferred): SentRequest[] => {
     return sent;
 };
 
+// Every write runs on the signed-in user's persisted client, as the hooks send it.
 const run = <Variables>(
     options: MutationObserverOptions<void, Error, Variables>,
     variables: Variables,
-): Promise<void> => new MutationObserver(createTestQueryClient(), options).mutate(variables);
+): Promise<void> => new MutationObserver(mountAsUserClient(), options).mutate(variables);
 
 const create = (params: CreateExpenseParams): Promise<void> =>
     run(createExpenseMutationOptions(effects), {
@@ -243,40 +249,51 @@ describe('create an expense', () => {
 });
 
 describe('update an expense', () => {
-    const entry: UpdateLedgerExpenseParams = {
-        type: 'EXPENSE',
-        expense: {
-            description: 'Lunch',
-            category: null,
-            amount: 92,
-            participantIds: ['user-1', 'user-2'],
-            sharingMode: { type: 'EXACT', customShares: { 'user-1': 50.5, 'user-2': 41.5 } },
-        },
-    };
+    // Patches in the key order `buildExpenseUpdateParams` writes them: the split block last.
+    const split = { amount: 92, participantIds: ['user-1', 'user-2'] };
 
-    test('sends the patch as the legacy client did and reads its views again', async () => {
+    test.each<[string, UpdateLedgerExpenseParams['expense']]>([
+        ['only the changed fields', { description: 'Lunch' }],
+        [
+            'an equal split',
+            { description: null, currency: 'EUR', ...split, sharingMode: { type: 'AUTO' } },
+        ],
+        [
+            'exact amounts',
+            {
+                payerId: 'user-2',
+                category: null,
+                ...split,
+                sharingMode: { type: 'EXACT', customShares: { 'user-1': 50.5, 'user-2': 41.5 } },
+            },
+        ],
+        [
+            'percentages',
+            {
+                ...split,
+                sharingMode: {
+                    type: 'PERCENTAGE',
+                    percentageShares: { 'user-1': 33.5, 'user-2': 66.5 },
+                },
+            },
+        ],
+        [
+            'share weights',
+            { ...split, sharingMode: { type: 'SHARES', shares: { 'user-1': 1, 'user-2': 2 } } },
+        ],
+    ])('sends the same request text as the legacy client: %s', async (_name, expensePatch) => {
         const sent = serveLedger();
+        const entry: UpdateLedgerExpenseParams = { type: 'EXPENSE', expense: expensePatch };
 
         await update({ entryId: 'entry-1', entry, groupId: 'group-1', parentActivityId: 'a-1' });
 
-        expect(sent.map(({ method, path }) => ({ method, path }))).toEqual([
-            { method: 'PATCH', path: '/ledger/entries/entry-1' },
+        // The legacy client (`api/ledgerApi.updateExpense`) sent the patch as it was built.
+        expect(sent).toEqual([
+            { method: 'PATCH', path: '/ledger/entries/entry-1', text: JSON.stringify(entry) },
         ]);
-        expect(JSON.parse(sent[0]?.text ?? '')).toEqual(entry);
         expect(onEntryWritten.mock.calls).toEqual([
             [{ groupId: 'group-1', parentActivityId: 'a-1' }],
         ]);
-    });
-
-    test('a patch without a split change carries only the changed fields', async () => {
-        const sent = serveLedger();
-
-        await update({
-            entryId: 'entry-1',
-            entry: { type: 'EXPENSE', expense: { description: 'Lunch' } },
-        });
-
-        expect(sent[0]?.text).toBe('{"type":"EXPENSE","expense":{"description":"Lunch"}}');
     });
 });
 
@@ -293,46 +310,116 @@ describe('delete a ledger entry', () => {
     });
 });
 
-describe('a failed or outdated write', () => {
-    test('a rejected request fails with ApiError (status and code) and reloads nothing', async () => {
-        serveLedger(404);
+const patch: UpdateLedgerExpenseParams = { type: 'EXPENSE', expense: { description: 'Lunch' } };
 
-        const failures = await Promise.all(
-            [
-                create({ expense }),
-                update({ entryId: 'entry-1', entry: { type: 'EXPENSE', expense: {} } }),
-                remove({ entryId: 'entry-1' }),
-            ].map(write =>
-                write.then(
-                    () => null,
-                    (error: unknown) => error,
-                ),
-            ),
-        );
+// One write of each kind, in a group and from an open activity history.
+const writes: [string, () => Promise<void>][] = [
+    ['create', () => create({ expense, parentActivityId: 'activity-1' })],
+    [
+        'update',
+        () =>
+            update({
+                entryId: 'entry-1',
+                entry: patch,
+                groupId: 'group-1',
+                parentActivityId: 'activity-1',
+            }),
+    ],
+    [
+        'delete',
+        () => remove({ entryId: 'entry-1', groupId: 'group-1', parentActivityId: 'activity-1' }),
+    ],
+];
 
-        failures.forEach(error => {
-            expect(error).toBeInstanceOf(ApiError);
-            expect(error).toMatchObject({ status: 404, code: 'LEDGER.ENTRY_NOT_FOUND' });
+describe('a rejected or unanswered request', () => {
+    // Spec 03 §2.1: the refresh runs on settle. A 404/409 means the entry on screen is stale, and
+    // a write without an answer may be committed.
+    describe.each<[string, number | 'no-response']>([
+        ['a 4xx answer', 404],
+        ['a 5xx answer', 500],
+        ['no response', 'no-response'],
+    ])('%s', (_name, status) => {
+        test.each(writes)('a %s fails and its views are read again', async (_kind, send) => {
+            serveLedger(status);
+
+            const failure: unknown = await send().then(
+                () => null,
+                (error: unknown) => error,
+            );
+
+            if (status === 'no-response') {
+                expect(failure).toBeInstanceOf(Error);
+                expect(failure).not.toBeInstanceOf(ApiError);
+            } else {
+                expect(failure).toBeInstanceOf(ApiError);
+                expect(failure).toMatchObject({ status, code: 'LEDGER.ENTRY_NOT_FOUND' });
+            }
+            expect(onEntryWritten.mock.calls).toEqual([
+                [{ groupId: 'group-1', parentActivityId: 'activity-1' }],
+            ]);
         });
-        expect(onEntryWritten).not.toHaveBeenCalled();
     });
 
-    test('a sign-out or an account switch during the request reloads nothing for the next user', async () => {
-        const gate = deferred();
-        const sent = serveLedger(200, gate);
-        const writes = [
-            create({ expense }),
-            update({ entryId: 'entry-1', entry: { type: 'EXPENSE', expense: {} } }),
-            remove({ entryId: 'entry-2' }),
-        ];
+    test('the write fails only after its views have reloaded', async () => {
+        serveLedger(409);
+        const reload = deferred();
+        let isSettled = false;
+
+        onEntryWritten.mockReturnValueOnce(reload.promise);
+        const write = remove({ entryId: 'entry-1' }).catch(() => {
+            isSettled = true;
+        });
 
         await vi.waitFor(() => {
-            expect(sent).toHaveLength(3);
+            expect(onEntryWritten).toHaveBeenCalled();
         });
-        invalidateAuthSession();
-        gate.resolve();
-        await Promise.all(writes);
-
-        expect(onEntryWritten).not.toHaveBeenCalled();
+        expect(isSettled).toBe(false);
+        reload.resolve();
+        await write;
+        expect(isSettled).toBe(true);
     });
+});
+
+describe('a write whose session ended during the request', () => {
+    test.each(writes)(
+        'a %s answered after a sign-out reloads nothing for the next user',
+        async (_kind, send) => {
+            const gate = deferred();
+            const sent = serveLedger(200, gate);
+            const write = send();
+
+            await vi.waitFor(() => {
+                expect(sent).toHaveLength(1);
+            });
+            invalidateAuthSession();
+            gate.resolve();
+            await write;
+
+            expect(onEntryWritten).not.toHaveBeenCalled();
+        },
+    );
+
+    // Another tab switched the account and this tab's token refresh found it: the session version
+    // stays, the previous user's client is dropped (`clearUserData`).
+    test.each([200, 404])(
+        'a write answered %i after its user client was dropped reloads nothing for the next user',
+        async status => {
+            const gate = deferred();
+            const sent = serveLedger(status, gate);
+            const sessionVersion = getAuthSessionVersion();
+            const pending = writes.map(([, send]) => send().catch(() => undefined));
+
+            await vi.waitFor(() => {
+                expect(sent).toHaveLength(3);
+            });
+            [...cachesByUser.keys()].forEach(userId => {
+                void clearUserData(userId, () => undefined);
+            });
+            expect(getAuthSessionVersion()).toBe(sessionVersion);
+            gate.resolve();
+            await Promise.all(pending);
+
+            expect(onEntryWritten).not.toHaveBeenCalled();
+        },
+    );
 });

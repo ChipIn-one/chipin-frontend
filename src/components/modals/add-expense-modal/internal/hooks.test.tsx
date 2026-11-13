@@ -2,14 +2,16 @@ import { onlineManager } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { toast } from 'sonner';
-import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { SharingMode } from 'api/chipin.types';
+import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
 import { useActivityStore } from 'store/activity-store';
-import { useAuthStore } from 'store/authStore';
+import { onAccessTokenRefreshed, useAuthStore } from 'store/authStore';
 import type { ExpenseModalEditInitialization, ExpenseModalSource } from 'store/expenseModalStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
+import { fakeAccessToken } from 'test/fakeAccessToken';
 import { wireGroup } from 'test/groupFixtures';
 import { setupMswServer } from 'test/mswServer';
 import { mountAsUserClient } from 'test/userClient';
@@ -426,7 +428,8 @@ test('a failed request keeps the modal open with the form intact and shows the t
     expect(onClose).not.toHaveBeenCalled();
     expect(toast.success).not.toHaveBeenCalled();
     expect(useExpenseModalStore.getState()).toEqual(before);
-    expect(fetchSetActivity).not.toHaveBeenCalled();
+    // The rejected write settles after its views were read again (spec 03 §2.1).
+    expect(fetchSetActivity).toHaveBeenCalledWith(true);
 });
 
 test('a failed update keeps the edit open with the edited form', async () => {
@@ -468,16 +471,91 @@ test('an offline submit is refused with a toast: the modal stays open and nothin
     expect(useExpenseModalStore.getState().description).toBe('Dinner');
 });
 
-test('a signed-out submit is refused with a toast and sends nothing', async () => {
+test('a signed-out submit is refused: nothing is sent, the modal stays, no toast (the session is over)', async () => {
     const sent = serveLedger();
     const onClose = vi.fn();
 
     openCreate(sourceFor('dashboard'));
     submit(onClose);
+    await new Promise(resolve => setTimeout(resolve, 50));
 
-    await waitFor(() => {
-        expect(toast.error).toHaveBeenCalledWith('Something went wrong. Please try again.');
-    });
     expect(sent).toEqual([]);
     expect(onClose).not.toHaveBeenCalled();
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
+});
+
+// Another tab switched the account: this tab's token refresh returns the other user's token. The
+// auth session version stays, the previous user's data and client go (spec 03 §1.5).
+const switchAccountInAnotherTab = (): void => {
+    const sessionVersion = getAuthSessionVersion();
+
+    // The data of the next user, which the switch loads: none of it matters here.
+    server.use(
+        http.get('*/users/*', () => HttpResponse.json({}, { status: 500 })),
+        http.get('*/groups', () => HttpResponse.json({ items: [], nextCursor: null })),
+    );
+    act(() => {
+        onAccessTokenRefreshed(fakeAccessToken('user-2'));
+    });
+    expect(getAuthSessionVersion()).toBe(sessionVersion);
+};
+
+describe.each<[string, () => void]>([
+    ['a sign-out', invalidateAuthSession],
+    ['an account switch in another tab', switchAccountInAnotherTab],
+])('a submit answered after %s', (_name, endSession) => {
+    test.each<[string, number]>([
+        ['saved', 200],
+        ['rejected', 400],
+    ])(
+        'a %s expense shows no toast and does not close the modal of the next session',
+        async (_outcome, status) => {
+            signIn();
+            const gate = deferred();
+            const sent = serveLedger({ gate, status });
+            const onClose = vi.fn();
+
+            openCreate(sourceFor('dashboard'));
+            const { result } = submit(onClose);
+
+            await waitFor(() => {
+                expect(sent).toHaveLength(1);
+            });
+            endSession();
+            gate.resolve();
+            await waitFor(() => {
+                expect(result.current.isSubmitting).toBe(false);
+            });
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            expect(onClose).not.toHaveBeenCalled();
+            expect(toast.success).not.toHaveBeenCalled();
+            expect(toast.error).not.toHaveBeenCalled();
+            expect(fetchSetActivity).not.toHaveBeenCalled();
+        },
+    );
+
+    test('an edit answered then shows no toast and does not close the modal either', async () => {
+        signIn();
+        const gate = deferred();
+        const sent = serveLedger({ gate });
+        const onClose = vi.fn();
+
+        useExpenseModalStore.getState().initializeEdit(editInitialization);
+        useExpenseModalStore.getState().setDescription('Lunch');
+        submit(onClose);
+
+        await waitFor(() => {
+            expect(sent).toHaveLength(1);
+        });
+        endSession();
+        gate.resolve();
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        expect(onClose).not.toHaveBeenCalled();
+        expect(toast.success).not.toHaveBeenCalled();
+        expect(toast.error).not.toHaveBeenCalled();
+        expect(fetchSetActivitySubevents).not.toHaveBeenCalled();
+    });
 });

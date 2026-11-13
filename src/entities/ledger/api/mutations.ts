@@ -3,16 +3,19 @@
 // no retry, and the hooks refuse them offline before `mutate`. The keys are the online set of
 // spec 03 §2.1; the outbox set and `registerLedgerMutationDefaults` arrive with 03-15a.
 //
-// Nothing is written into a cache here (the server is the source of truth for finances): after a
-// successful write, what shows the entry is read again. Until the activity feed and the ledger
+// Nothing is written into a cache here (the server is the source of truth for finances): once a
+// sent write settles, what shows the entry is read again. Until the activity feed and the ledger
 // entry are queries, that refresh is passed in (`LedgerWriteEffects`): entities never import
 // `store`. A write whose auth session has ended (a sign-out, an account switch, an expired
 // session) refreshes nothing.
+import type { QueryClient } from '@tanstack/react-query';
 import { mutationOptions } from '@tanstack/react-query';
 
 import type { CreateLedgerEntryParams, UpdateLedgerExpenseParams } from 'api/chipin.types';
 import { isAuthSessionCurrent } from 'helpers/authSession';
-import { api } from 'shared/api/client';
+import { api, InvalidPathSegmentError } from 'shared/api/client';
+import { MoneyWireError } from 'shared/money';
+import { isUserCacheClient } from 'shared/offline/userCaches';
 
 import { legacyCreateExpenseBody, legacyUpdateExpenseBody } from './legacyExpenseWire';
 
@@ -58,20 +61,34 @@ export type DeleteLedgerEntryVariables = DeleteLedgerEntryParams & SessionBound;
 
 /** What the caller's stores and caches do after a ledger write, only while its session is current. */
 export interface LedgerWriteEffects {
-    /** Reads again what shows the entry; the write settles when it has. */
+    /** Reads again what shows the entry, after a sent write; the write settles when it has. */
     onEntryWritten: (context: LedgerWriteContext) => Promise<void>;
 }
 
 const ONLINE_WRITE = { networkMode: 'online', retry: false } as const;
 
-// The write is done on the server whatever the refresh does: a failed refresh does not fail it
-// (the feeds reload on their next focus or mount).
+// The write's session is over once the auth session changed (sign-out, sign-in, expiry) or its
+// client stopped being a user's cache: a refreshed token of another user (another tab switched the
+// account) keeps the session version, but the previous user's client is dropped.
+const isCurrent = (client: QueryClient, { sessionVersion }: SessionBound): boolean =>
+    isAuthSessionCurrent(sessionVersion) && isUserCacheClient(client);
+
+// A write that failed before its request existed (an amount that cannot be written, an invalid
+// path segment) changed nothing on the server.
+const wasNeverSent = (error: Error | null): boolean =>
+    error instanceof MoneyWireError || error instanceof InvalidPathSegmentError;
+
+// Runs on settle (spec 03 §2.1): after a success, and after a rejected or unanswered request too
+// (a 404/409 means the entry on screen is stale; a timed-out write may be committed). A failed
+// refresh does not change the write's outcome (the feeds reload on their next focus or mount).
 const refreshAfterWrite = (
     effects: LedgerWriteEffects,
-    { sessionVersion }: SessionBound,
+    client: QueryClient,
+    error: Error | null,
+    variables: SessionBound,
     context: LedgerWriteContext,
 ): Promise<void> | undefined =>
-    isAuthSessionCurrent(sessionVersion)
+    isCurrent(client, variables) && !wasNeverSent(error)
         ? effects.onEntryWritten(context).catch(() => undefined)
         : undefined;
 
@@ -84,8 +101,8 @@ export const createExpenseMutationOptions = (effects: LedgerWriteEffects) =>
             api('post', '/ledger/entries', { body: legacyCreateExpenseBody(expense) }).then(
                 () => undefined,
             ),
-        onSuccess: (_data, variables) =>
-            refreshAfterWrite(effects, variables, {
+        onSettled: (_data, error, variables, _context, { client }) =>
+            refreshAfterWrite(effects, client, error, variables, {
                 groupId: variables.expense.groupId,
                 parentActivityId: variables.parentActivityId,
             }),
@@ -101,8 +118,8 @@ export const updateExpenseMutationOptions = (effects: LedgerWriteEffects) =>
                 params: { id: entryId },
                 body: legacyUpdateExpenseBody(entry),
             }).then(() => undefined),
-        onSuccess: (_data, variables) =>
-            refreshAfterWrite(effects, variables, {
+        onSettled: (_data, error, variables, _context, { client }) =>
+            refreshAfterWrite(effects, client, error, variables, {
                 groupId: variables.groupId,
                 parentActivityId: variables.parentActivityId,
             }),
@@ -117,8 +134,8 @@ export const deleteLedgerEntryMutationOptions = (effects: LedgerWriteEffects) =>
             api('delete', '/ledger/entries/{id}', { params: { id: entryId } }).then(
                 () => undefined,
             ),
-        onSuccess: (_data, variables) =>
-            refreshAfterWrite(effects, variables, {
+        onSettled: (_data, error, variables, _context, { client }) =>
+            refreshAfterWrite(effects, client, error, variables, {
                 groupId: variables.groupId,
                 parentActivityId: variables.parentActivityId,
             }),

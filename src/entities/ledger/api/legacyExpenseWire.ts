@@ -84,14 +84,19 @@ export const legacyCreateExpenseBody = ({
     },
 });
 
-/** The body of `PATCH /ledger/entries/{id}` for an expense: only the fields the patch names. */
+/**
+ * The body of `PATCH /ledger/entries/{id}` for an expense: only the fields the patch names, the
+ * split block last (`amount`, `participantIds`, `sharingMode`), as `buildExpenseUpdateParams`
+ * writes them.
+ */
 export const legacyUpdateExpenseBody = ({
-    expense: { amount, sharingMode, ...rest },
+    expense: { amount, participantIds, sharingMode, ...rest },
 }: UpdateLedgerExpenseParams): UpdateExpenseBody => ({
     type: 'EXPENSE',
     expense: {
         ...rest,
         ...(amount !== undefined && { amount: legacyAmount(amount) }),
+        ...(participantIds && { participantIds }),
         ...(sharingMode && { sharingMode: legacySharingMode(sharingMode) }),
     },
 });
