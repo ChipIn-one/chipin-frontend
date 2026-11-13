@@ -10,6 +10,9 @@ import type { ApiGroupsResponse, Group as WireGroup } from 'api/chipin.types';
 import { usersKeys } from 'entities/users';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import { InvalidPathSegmentError } from 'shared/api/client';
+import { apiInstance } from 'shared/api/http';
+import { clearUserData } from 'shared/offline/clearUserData';
+import { cachesByUser } from 'shared/offline/userCaches';
 import { domainPreview, wirePreview } from 'test/activityFixtures';
 import { toTestGroup } from 'test/groupFixtures';
 import { cachedGroupsList, groupsListData } from 'test/groupsList';
@@ -146,6 +149,24 @@ const write = {
 };
 
 const coverFile = () => new File(['cover'], 'cover.webp', { type: 'image/webp' });
+
+// The cover upload as the transport gets it (its request config), answered with `group`; any
+// other request goes to the server.
+type RequestConfig = Parameters<typeof apiInstance.request>[0];
+
+const captureCoverUpload = () => {
+    const send = apiInstance.request.bind(apiInstance);
+    const uploads: RequestConfig[] = [];
+
+    vi.spyOn(apiInstance, 'request').mockImplementation((config: RequestConfig) => {
+        if (config.method !== 'put') {
+            return send(config);
+        }
+        uploads.push(config);
+        return Promise.resolve({ data: group });
+    });
+    return uploads;
+};
 
 // The tab user's cached groups list.
 const listGroups = () => cachedGroupsList(userCache.client);
@@ -363,6 +384,65 @@ describe('group mutations', () => {
         });
         expect(listGroups()).toEqual(cached([group]));
         expect(detailOf(group.id)).toEqual(toTestGroup(group));
+    });
+
+    test('a cover upload sends the file as multipart data and reports whole, bounded progress', async () => {
+        const file = coverFile();
+        const onProgress = vi.fn<(progress: number) => void>();
+        const uploads = captureCoverUpload();
+
+        const result = await write.cover({ groupId: group.id, file, onProgress });
+
+        expect(result).toEqual(toTestGroup(group));
+        expect(uploads).toHaveLength(1);
+        const config = uploads[0];
+        const body: unknown = config?.data;
+
+        expect(config).toMatchObject({
+            method: 'put',
+            url: `/groups/${group.id}/cover`,
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        expect(body).toBeInstanceOf(FormData);
+        expect(body instanceof FormData ? [...body.entries()] : []).toEqual([['file', file]]);
+
+        const report = (loaded: number, total?: number): void => {
+            config?.onUploadProgress?.({
+                loaded,
+                total,
+                bytes: loaded,
+                lengthComputable: total !== undefined,
+            });
+        };
+        // [loaded, total] → the whole percent, rounded down, never below 0 or above 100.
+        report(0, 4);
+        report(3, 4);
+        report(2, 3);
+        report(999, 1000);
+        report(4, 4);
+        report(5, 4);
+        report(-1, 4);
+        // No total (or an empty one): nothing to report.
+        report(1);
+        report(1, 0);
+
+        expect(onProgress.mock.calls).toEqual([[0], [75], [66], [99], [100], [100], [0]]);
+    });
+
+    test('a cover upload without a progress listener ignores the progress events', async () => {
+        const uploads = captureCoverUpload();
+
+        await write.cover({ groupId: group.id, file: coverFile() });
+
+        expect(uploads).toHaveLength(1);
+        expect(() =>
+            uploads[0]?.onUploadProgress?.({
+                loaded: 1,
+                total: 2,
+                bytes: 1,
+                lengthComputable: true,
+            }),
+        ).not.toThrow();
     });
 
     test('stores the canonical group returned after updating simplified debts', async () => {
@@ -589,6 +669,35 @@ describe('group mutations', () => {
         expect(detailOf(group.id)).toEqual(toTestGroup(updated));
     });
 
+    test('keeps a successful cover upload over an older in-flight group detail read', async () => {
+        let resolveDetail: ((value: WireGroup) => void) | undefined;
+        readGroup.mockImplementationOnce(
+            () =>
+                new Promise(resolve => {
+                    resolveDetail = resolve;
+                }),
+        );
+        const uploaded = {
+            ...group,
+            coverUrl: 'https://cdn.example.com/new.webp',
+        } satisfies WireGroup;
+        coverWrite.mockResolvedValue(uploaded);
+        readList.mockResolvedValue({ items: [uploaded], nextCursor: null });
+        seedList([group]);
+        seedDetail(group);
+
+        const oldDetail = readDetail(group.id);
+        await vi.waitFor(() => {
+            expect(resolveDetail).toBeDefined();
+        });
+        await write.cover({ groupId: group.id, file: coverFile() });
+        resolveDetail?.(group);
+        await oldDetail;
+
+        expect(listGroups()).toEqual(cached([uploaded]));
+        expect(detailOf(group.id)).toEqual(toTestGroup(uploaded));
+    });
+
     test('ignores a late detail 404 after a successful group edit', async () => {
         let rejectDetail: ((error: unknown) => void) | undefined;
         readGroup.mockImplementationOnce(
@@ -735,6 +844,121 @@ describe('group mutations', () => {
         expect(effects.onGroupGone).not.toHaveBeenCalled();
         expect(userCache.isDashboardInvalidated()).toBe(false);
     });
+
+    test('a leave answered after the session ended keeps the group and runs no effect', async () => {
+        let resolveLeave: (() => void) | undefined;
+        leaveWrite.mockImplementation(
+            () =>
+                new Promise(resolve => {
+                    resolveLeave = resolve;
+                }),
+        );
+        seedList([group]);
+        seedDetail(group);
+
+        const request = write.leave({ groupId: group.id });
+        await vi.waitFor(() => {
+            expect(resolveLeave).toBeDefined();
+        });
+        invalidateAuthSession();
+        resolveLeave?.();
+        await request;
+
+        expect(detailOf(group.id)).toEqual(toTestGroup(group));
+        expect(listGroups()).toEqual(cached([group]));
+        expect(readList).not.toHaveBeenCalled();
+        expect(effects.onGroupGone).not.toHaveBeenCalled();
+        expect(isKnownUsersInvalidated()).toBe(false);
+        expect(userCache.isDashboardInvalidated()).toBe(false);
+    });
+
+    test('a kick answered after the session ended reads nothing and runs no effect', async () => {
+        let resolveKick: (() => void) | undefined;
+        kickWrite.mockImplementation(
+            () =>
+                new Promise(resolve => {
+                    resolveKick = resolve;
+                }),
+        );
+        seedDetail(group);
+
+        const request = write.kick({ groupId: group.id, userId: 'user-2' });
+        await vi.waitFor(() => {
+            expect(resolveKick).toBeDefined();
+        });
+        invalidateAuthSession();
+        resolveKick?.();
+        await request;
+
+        expect(readGroup).not.toHaveBeenCalled();
+        expect(detailOf(group.id)).toEqual(toTestGroup(group));
+        expect(effects.onMembersChanged).not.toHaveBeenCalled();
+        expect(isKnownUsersInvalidated()).toBe(false);
+        expect(userCache.isDashboardInvalidated()).toBe(false);
+    });
+
+    test('a cover upload answered after the session ended writes nothing', async () => {
+        let resolveCover: ((value: WireGroup) => void) | undefined;
+        coverWrite.mockImplementation(
+            () =>
+                new Promise(resolve => {
+                    resolveCover = resolve;
+                }),
+        );
+        seedList([group]);
+        seedDetail(group);
+
+        const request = write.cover({ groupId: group.id, file: coverFile() });
+        await vi.waitFor(() => {
+            expect(resolveCover).toBeDefined();
+        });
+        invalidateAuthSession();
+        resolveCover?.({ ...group, coverUrl: 'https://cdn.example.com/new.webp' });
+        await request;
+
+        expect(detailOf(group.id)).toEqual(toTestGroup(group));
+        expect(listGroups()).toEqual(cached([group]));
+        expect(readList).not.toHaveBeenCalled();
+    });
+
+    // Another tab switched the account and this tab's token refresh found it: the session version
+    // stays, the previous user's client is dropped (`clearUserData`).
+    test.each([
+        ['leave', () => write.leave({ groupId: group.id })],
+        ['kick', () => write.kick({ groupId: group.id, userId: 'user-2' })],
+        ['removal', () => write.remove(group.id)],
+    ])(
+        'a %s answered after its user client was dropped reads nothing and runs no effect',
+        async (_name, send) => {
+            const gate: { open?: () => void } = {};
+            const held = () =>
+                new Promise<void>(resolve => {
+                    gate.open = resolve;
+                });
+            leaveWrite.mockImplementation(held);
+            kickWrite.mockImplementation(held);
+            removeWrite.mockImplementation(held);
+            const sessionVersion = getAuthSessionVersion();
+
+            const request = send();
+            await vi.waitFor(() => {
+                expect(gate.open).toBeDefined();
+            });
+            cachesByUser.forEach((entry, userId) => {
+                if (entry.client === userCache.client) {
+                    void clearUserData(userId, () => undefined);
+                }
+            });
+            expect(getAuthSessionVersion()).toBe(sessionVersion);
+            gate.open?.();
+            await request;
+
+            expect(readGroup).not.toHaveBeenCalled();
+            expect(readList).not.toHaveBeenCalled();
+            expect(effects.onGroupGone).not.toHaveBeenCalled();
+            expect(effects.onMembersChanged).not.toHaveBeenCalled();
+        },
+    );
 
     test('keeps a newer successful rejoin when an older leave response arrives late', async () => {
         let resolveLeave: (() => void) | undefined;

@@ -4,8 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import type { Group } from 'entities/groups';
-import { resolveApiErrorMessageFromError } from 'helpers/errors';
-import { useUpdateGroup, useUploadGroupCover } from 'hooks/useGroupMutations';
+import { toastGroupWriteError, useUpdateGroup, useUploadGroupCover } from 'hooks/useGroupMutations';
 
 import { OverlayBody, OverlayFooter } from '../../../components';
 import { useGroupCoverDraft } from '../../internal';
@@ -47,7 +46,7 @@ const UpdateGroupForm = ({ group: editedGroup, onClose }: Props) => {
             onProgress: setUploadProgress,
         }).catch((error: unknown) => {
             setUploadProgress(0);
-            toast.error(resolveApiErrorMessageFromError(error, t('toasts:group.coverUploadError')));
+            toastGroupWriteError(error, t('toasts:group.coverUploadError'));
             console.error('Error uploading group cover:', error);
             return Promise.reject(error);
         });
@@ -72,7 +71,7 @@ const UpdateGroupForm = ({ group: editedGroup, onClose }: Props) => {
             groupDescription: normalizedDescription,
         })
             .catch((error: unknown) => {
-                toast.error(resolveApiErrorMessageFromError(error, t('toasts:group.updateError')));
+                toastGroupWriteError(error, t('toasts:group.updateError'));
                 console.error('Error updating group:', error);
                 return Promise.reject(error);
             })

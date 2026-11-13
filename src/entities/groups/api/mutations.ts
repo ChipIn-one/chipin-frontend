@@ -11,6 +11,7 @@ import { dashboardKeys, trimDashboardFeed } from 'entities/dashboard';
 import { usersKeys } from 'entities/users';
 import { isAuthSessionCurrent } from 'helpers/authSession';
 import { api } from 'shared/api/client';
+import { isUserCacheClient } from 'shared/offline/userCaches';
 
 import { toGroup } from '../model/toGroup';
 import type { Group } from '../model/types';
@@ -88,8 +89,11 @@ export interface GroupWriteEffects {
 
 const ONLINE_WRITE = { networkMode: 'online', retry: false } as const;
 
-const isCurrent = ({ sessionVersion }: SessionBound): boolean =>
-    isAuthSessionCurrent(sessionVersion);
+// A write is current while its auth session is, and while its client is still a signed-in user's:
+// a refreshed token of another user (another tab switched the account) keeps the session version,
+// but the previous user's client is dropped (`clearUserData`), so its writes are stale too.
+const isCurrent = (client: QueryClient, { sessionVersion }: SessionBound): boolean =>
+    isAuthSessionCurrent(sessionVersion) && isUserCacheClient(client);
 
 // After a change of the friends or the balances: a running load may predate it, so the friends
 // list cancels it first; the dashboard feed is cut to one page (one request for its refetch).
@@ -141,7 +145,7 @@ const afterGroupWritten = (
     variables: SessionBound,
 ): Promise<void> => {
     void writeGroupDetail(client, group);
-    return putGroupAndReloadList(client, group, () => isCurrent(variables));
+    return putGroupAndReloadList(client, group, () => isCurrent(client, variables));
 };
 
 // Whole percent, 0–100 (a progress bar, not an amount).
@@ -161,7 +165,7 @@ export const createGroupMutationOptions = () =>
                 },
             }).then(toGroup),
         onSuccess: (group, variables, _context, { client }) => {
-            if (isCurrent(variables)) {
+            if (isCurrent(client, variables)) {
                 void writeGroupDetail(client, group);
                 void putGroupInCachedList(client, group);
             }
@@ -183,7 +187,7 @@ export const updateGroupMutationOptions = () =>
                 },
             }).then(toGroup),
         onSuccess: (group, variables, _context, { client }) =>
-            isCurrent(variables) ? afterGroupWritten(client, group, variables) : undefined,
+            isCurrent(client, variables) ? afterGroupWritten(client, group, variables) : undefined,
     });
 
 /** `PUT /groups/{id}/cover` (multipart, with upload progress); as an update. */
@@ -206,7 +210,7 @@ export const uploadGroupCoverMutationOptions = () =>
             }).then(toGroup);
         },
         onSuccess: (group, variables, _context, { client }) =>
-            isCurrent(variables) ? afterGroupWritten(client, group, variables) : undefined,
+            isCurrent(client, variables) ? afterGroupWritten(client, group, variables) : undefined,
     });
 
 /** `POST /groups/invite/{inviteToken}`; as an update, and a leave running meanwhile keeps it. */
@@ -217,7 +221,7 @@ export const joinGroupMutationOptions = () =>
         mutationFn: ({ inviteToken }) =>
             api('post', '/groups/invite/{inviteToken}', { params: { inviteToken } }).then(toGroup),
         onSuccess: (group, variables, _context, { client }) => {
-            if (!isCurrent(variables)) {
+            if (!isCurrent(client, variables)) {
                 return undefined;
             }
             countJoin(client, group.id);
@@ -246,7 +250,7 @@ export const leaveGroupMutationOptions = (effects: GroupWriteEffects) =>
             }).then(() => undefined),
         onSuccess: (_data, variables, context, { client }) => {
             if (
-                !isCurrent(variables) ||
+                !isCurrent(client, variables) ||
                 joinCountOf(client, variables.groupId) !== context.joinCount
             ) {
                 return undefined;
@@ -265,7 +269,7 @@ export const kickGroupMemberMutationOptions = (effects: GroupWriteEffects) =>
                 params: { id: groupId, userId },
             }).then(() => undefined),
         onSuccess: (_data, variables, _context, { client }) => {
-            if (!isCurrent(variables)) {
+            if (!isCurrent(client, variables)) {
                 return undefined;
             }
             return Promise.all([
@@ -285,5 +289,7 @@ export const removeGroupMutationOptions = (effects: GroupWriteEffects) =>
         mutationFn: ({ groupId }) =>
             api('delete', '/groups/{id}', { params: { id: groupId } }).then(() => undefined),
         onSuccess: (_data, variables, _context, { client }) =>
-            isCurrent(variables) ? afterGroupGone(client, variables.groupId, effects) : undefined,
+            isCurrent(client, variables)
+                ? afterGroupGone(client, variables.groupId, effects)
+                : undefined,
     });

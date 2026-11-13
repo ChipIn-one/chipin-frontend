@@ -7,8 +7,7 @@ import { toast } from 'sonner';
 
 import { ROUTES } from 'constants/routes';
 import type { Group } from 'entities/groups';
-import { resolveApiErrorMessageFromError } from 'helpers/errors';
-import { useRemoveGroup } from 'hooks/useGroupMutations';
+import { toastGroupWriteError, useRemoveGroup } from 'hooks/useGroupMutations';
 
 import { BaseAlertDialog } from '../base-alert-dialog';
 
@@ -34,9 +33,7 @@ const RemoveGroupAlertDialog = ({ children, group }: Props) => {
                 void navigate(ROUTES.DASHBOARD, { replace: true });
             })
             .catch(error => {
-                toast.error(
-                    resolveApiErrorMessageFromError(error, t('toasts:common.requestFailed')),
-                );
+                toastGroupWriteError(error, t('toasts:common.requestFailed'));
                 return Promise.reject(error);
             });
     };

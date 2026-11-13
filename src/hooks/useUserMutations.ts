@@ -41,12 +41,20 @@ export const useIsUserWriteEnabled = (): boolean => {
 const refuse = (reason: UserWriteRefusal): Promise<never> =>
     Promise.reject(new UserWriteRefusedError(reason));
 
-const offlineMessage = (): string => i18n.t('errors:network.offline');
+/**
+ * What a refused write shows, for the user and the group writes alike: offline says so; an ended
+ * session (signed out, the anonymous client) shows nothing.
+ */
+export const toastWriteRefusal = (reason: UserWriteRefusal): void => {
+    if (reason === 'offline') {
+        toast.error(i18n.t('errors:network.offline'));
+    }
+};
 
 // TODO(spec 03 §2.9): disable the controls offline with `useRequiresOnline()` / `<OnlineOnly>`
 // once they exist; until then an offline write is refused here with a toast.
 const refuseOffline = (): Promise<never> => {
-    toast.error(offlineMessage());
+    toastWriteRefusal('offline');
     return refuse('offline');
 };
 
@@ -66,9 +74,7 @@ const toastError =
     (error: unknown): Promise<never> => {
         if (isAuthSessionCurrent(sessionVersion)) {
             if (error instanceof UserWriteRefusedError) {
-                if (error.reason === 'offline') {
-                    toast.error(offlineMessage());
-                }
+                toastWriteRefusal(error.reason);
             } else {
                 toast.error(
                     error instanceof ApiError

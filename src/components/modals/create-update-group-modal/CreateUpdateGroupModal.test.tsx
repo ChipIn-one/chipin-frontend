@@ -1,7 +1,9 @@
+import { onlineManager } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter, useLocation } from 'react-router-dom';
+import { toast } from 'sonner';
 import { ThemeProvider } from 'styled-components';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
@@ -24,6 +26,10 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('sonner', () => ({
     toast: { error: vi.fn(), success: vi.fn() },
+}));
+
+vi.mock('i18next', () => ({
+    default: { t: (key: string) => key },
 }));
 
 const group = {
@@ -124,6 +130,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+    onlineManager.setOnline(true);
     useAuthStore.setState({ status: 'unknown' });
 });
 
@@ -494,4 +501,45 @@ test('locks created group details while retrying a failed cover upload', () => {
                 expect(screen.queryByRole('dialog')).toBeNull();
             }),
         );
+});
+
+// An update refused before it is sent (offline, or signed out meanwhile): saved in the modal.
+const saveRefusedUpdate = async (): Promise<void> => {
+    const interaction = userEvent.setup();
+
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    renderModal('update');
+    await interaction.click(screen.getByRole('button', { name: OPEN_MODAL_LABEL }));
+    await interaction.click(screen.getByRole('button', { name: 'common:buttons.saveGroup' }));
+    // The refusal settles: the error is logged after its toast.
+    await waitFor(() => {
+        expect(console.error).toHaveBeenCalledTimes(1);
+    });
+};
+
+test('an update refused offline keeps the modal open and says the network is offline', async () => {
+    onlineManager.setOnline(false);
+
+    await saveRefusedUpdate();
+
+    expect(toast.error).toHaveBeenCalledTimes(1);
+    expect(toast.error).toHaveBeenCalledWith('errors:network.offline');
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'common:buttons.saveGroup' })).toHaveProperty(
+        'disabled',
+        false,
+    );
+    expect(updateGroup).not.toHaveBeenCalled();
+});
+
+test('an update refused after a sign-out keeps the modal open and shows no toast', async () => {
+    useAuthStore.setState({ status: 'unauthenticated', unauthReason: 'signed_out' });
+
+    await saveRefusedUpdate();
+
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(updateGroup).not.toHaveBeenCalled();
 });

@@ -1,11 +1,12 @@
 // The group mutations for the UI (spec 03 §6 row 4). Like the users mutations, they run only while
 // signed in on the user's persisted client, and offline they are refused before `mutate` (spec 03
 // §2.9: group writes need the network), so nothing waits paused for a reconnect. A refusal or a
-// failure rejects: the caller shows its own toast. `isPending` is true while any write of that
-// kind runs on the user's client (a modal and the settings tab share it).
+// failure rejects: the caller shows it with `toastGroupWriteError`. `isPending` is true while any
+// write of that kind runs on the user's client (a modal and the settings tab share it).
 import { useCallback } from 'react';
 import type { QueryClient } from '@tanstack/react-query';
 import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 import {
     createGroupMutationOptions,
@@ -25,11 +26,12 @@ import {
     type UploadGroupCoverParams,
 } from 'entities/groups';
 import { getAuthSessionVersion, isAuthSessionCurrent } from 'helpers/authSession';
+import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { isNetworkUsable } from 'shared/offline/network';
 import { useActivityStore } from 'store/activity-store';
 import { useUiPrefsStore } from 'store/ui-prefs';
 
-import { useIsUserWriteEnabled } from './useUserMutations';
+import { toastWriteRefusal, useIsUserWriteEnabled } from './useUserMutations';
 
 /**
  * Why a group write was not sent: `session` — signed out or on the anonymous client; `offline` —
@@ -46,6 +48,19 @@ export class GroupWriteRefusedError extends Error {
         this.reason = reason;
     }
 }
+
+/**
+ * The toast of a group write that rejected. A refusal shows what a refused user write shows
+ * (`toastWriteRefusal`: offline says so, an ended session nothing); any other failure its backend
+ * message, or `fallbackMessage`.
+ */
+export const toastGroupWriteError = (error: unknown, fallbackMessage: string): void => {
+    if (error instanceof GroupWriteRefusedError) {
+        toastWriteRefusal(error.reason);
+        return;
+    }
+    toast.error(resolveApiErrorMessageFromError(error, fallbackMessage));
+};
 
 // TODO(spec 03 §2.9): disable the controls offline with `useRequiresOnline()` / `<OnlineOnly>`
 // once they exist; until then an offline write is refused here and the caller's toast shows it.

@@ -33,7 +33,7 @@ vi.mock('i18next', () => ({
 
 const server = setupMswServer();
 
-const statusOf = (error: unknown): number =>
+const statusOf = (error: unknown): number | undefined =>
     typeof error === 'object' &&
     error !== null &&
     'response' in error &&
@@ -42,10 +42,11 @@ const statusOf = (error: unknown): number =>
     'status' in error.response &&
     typeof error.response.status === 'number'
         ? error.response.status
-        : 500;
+        : undefined;
 
 // `POST /groups/invite/{inviteToken}` answered by `mocks.joinGroup`: its `{ id }` becomes that
-// group, its rejection (`{ response: { status } }`) that status.
+// group, its rejection with a `response.status` that status, any other rejection no response at
+// all (a network failure).
 const serveJoin = (): void => {
     server.use(
         http.post('*/groups/invite/:inviteToken', ({ params }) =>
@@ -53,7 +54,13 @@ const serveJoin = (): void => {
                 .then(() => mocks.joinGroup({ inviteToken: String(params.inviteToken) }))
                 .then(
                     ({ id }) => HttpResponse.json(wireGroup(id)),
-                    (error: unknown) => HttpResponse.json({}, { status: statusOf(error) }),
+                    (error: unknown) => {
+                        const status = statusOf(error);
+
+                        return status === undefined
+                            ? HttpResponse.error()
+                            : HttpResponse.json({}, { status });
+                    },
                 ),
         ),
         http.get('*/groups', () => HttpResponse.json({ items: [], nextCursor: null })),
@@ -107,3 +114,27 @@ test.each(['short', '..%2Fx', '../g/members/u/kick', 'a'.repeat(65)])(
         expect(mocks.joinGroup).not.toHaveBeenCalled();
     },
 );
+
+test('a join that gets no response shows the error and a retry joins', async () => {
+    mocks.joinGroup
+        .mockRejectedValueOnce(new Error('no response'))
+        .mockResolvedValueOnce({ id: 'group-1' });
+    const { result } = renderHook(() => useJoinInviteLink());
+
+    act(() => {
+        result.current.confirm();
+    });
+    await waitFor(() => {
+        expect(result.current.status).toBe('error');
+    });
+    expect(result.current.errorMessage).toBe('toasts:group.inviteJoinError');
+    expect(mocks.navigate).not.toHaveBeenCalled();
+
+    act(() => {
+        result.current.confirm();
+    });
+    await waitFor(() => {
+        expect(mocks.navigate).toHaveBeenCalledWith(`${ROUTES.GROUP}/group-1`, { replace: true });
+    });
+    expect(mocks.joinGroup).toHaveBeenCalledTimes(2);
+});

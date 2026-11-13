@@ -5,8 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import type { GroupUser } from 'api/chipin.types';
-import { resolveApiErrorMessageFromError } from 'helpers/errors';
-import { useKickGroupMember } from 'hooks/useGroupMutations';
+import { toastGroupWriteError, useKickGroupMember } from 'hooks/useGroupMutations';
 
 import { BaseAlertDialog } from '../base-alert-dialog';
 
@@ -31,9 +30,7 @@ const KickGroupMemberAlertDialog = ({ children, groupId, member }: Props) => {
                 );
             })
             .catch(error => {
-                toast.error(
-                    resolveApiErrorMessageFromError(error, t('toasts:common.requestFailed')),
-                );
+                toastGroupWriteError(error, t('toasts:common.requestFailed'));
                 return Promise.reject(error);
             });
     };

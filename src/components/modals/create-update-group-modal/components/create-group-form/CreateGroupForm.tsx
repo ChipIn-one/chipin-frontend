@@ -5,9 +5,8 @@ import { toast } from 'sonner';
 
 import { ROUTES } from 'constants/routes';
 import type { Group } from 'entities/groups';
-import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { useAppNavigate } from 'hooks/useAppNavigate';
-import { useCreateGroup, useUploadGroupCover } from 'hooks/useGroupMutations';
+import { toastGroupWriteError, useCreateGroup, useUploadGroupCover } from 'hooks/useGroupMutations';
 
 import { OverlayBody, OverlayFooter } from '../../../components';
 import { useGroupCoverDraft } from '../../internal';
@@ -49,7 +48,7 @@ const CreateGroupForm = ({ onClose }: Props) => {
             onProgress: setUploadProgress,
         }).catch((error: unknown) => {
             setUploadProgress(0);
-            toast.error(resolveApiErrorMessageFromError(error, t('toasts:group.coverUploadError')));
+            toastGroupWriteError(error, t('toasts:group.coverUploadError'));
             console.error('Error uploading group cover:', error);
             return Promise.reject(error);
         });
@@ -80,9 +79,7 @@ const CreateGroupForm = ({ onClose }: Props) => {
                       return group;
                   })
                   .catch((error: unknown) => {
-                      toast.error(
-                          resolveApiErrorMessageFromError(error, t('toasts:group.createError')),
-                      );
+                      toastGroupWriteError(error, t('toasts:group.createError'));
                       console.error('Error creating group:', error);
                       return Promise.reject(error);
                   });
