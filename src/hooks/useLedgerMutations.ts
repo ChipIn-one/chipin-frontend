@@ -93,10 +93,13 @@ const storeEffects: LedgerWriteEffects = {
         }
         return Promise.all(refreshes).then(() => undefined);
     },
-    // The queries pause offline and refetch on the reconnect. A forced reload of the legacy feed
-    // would fail without a network and replace what is on screen with its error, so it is skipped.
+    // The queries pause offline and refetch on the reconnect. The forced reload of the legacy feed
+    // is skipped offline because it would only fail. The expense history is not reloaded at all:
+    // its forced reload blanks the page (skeletons) and closes the open delete dialog.
     // TODO(03-12): the expense history becomes a query there and is invalidated on a failure too.
-    // Its legacy forced reload shows the page skeletons, which unmounts the open delete dialog.
+    // The `isNetworkUsable()` skip goes away when `fetchSetActivity` becomes the bridge to the
+    // `activity.self` query: an invalidation pauses offline and resumes on the reconnect, so a
+    // timed-out but committed write still shows after the reconnect.
     onWriteFailed: ({ groupId }) => {
         const refreshes = invalidateBalances(groupId);
 
