@@ -10,11 +10,7 @@ import {
     getActivityLedgerEntryId,
     getActivitySubeventsView,
 } from 'helpers/activityEvent';
-import {
-    isRepeatedLedgerWrite,
-    ledgerWriteErrorMessage,
-    useDeleteLedgerEntry,
-} from 'hooks/useLedgerMutations';
+import { toastLedgerWriteError, useDeleteLedgerEntry } from 'hooks/useLedgerMutations';
 
 import { RemoveLedgerEntryAlertDialog } from 'components/modals/remove-ledger-entry-alert-dialog';
 
@@ -76,9 +72,7 @@ const ActivitySubeventsButtons = ({
                 toast.success(t('toasts:ledger.entryDeleted'));
             })
             .catch((error: unknown) => {
-                if (!isRepeatedLedgerWrite(error)) {
-                    toast.error(ledgerWriteErrorMessage(error, t('toasts:common.requestFailed')));
-                }
+                toastLedgerWriteError(error, t('toasts:common.requestFailed'));
                 return Promise.reject(error);
             });
     };

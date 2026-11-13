@@ -2,13 +2,14 @@
 // ledger entry. Like the group mutations, they run only while signed in on the user's persisted
 // client, and offline they are refused before `mutate` (online only until the outbox, spec 03
 // §2.1), so nothing waits paused for a reconnect. A write of a kind that is already running is
-// refused as well (a double submit sends one request). A refusal or a failure rejects: the
-// caller shows `ledgerWriteErrorMessage`. `isPending` is true while a write of that kind runs on
+// refused as well (a double submit sends one request), and so is the answer of a write whose
+// session ended meanwhile. A refusal or a failure rejects: the caller shows it with
+// `toastLedgerWriteError`. `isPending` is true while a write of that kind runs on
 // the user's client, until what shows the entry has reloaded.
 import { useCallback } from 'react';
 import type { QueryClient } from '@tanstack/react-query';
 import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query';
-import i18n from 'i18next';
+import { toast } from 'sonner';
 
 import {
     createExpenseMutationOptions,
@@ -20,15 +21,16 @@ import {
     updateExpenseMutationOptions,
     type UpdateExpenseParams,
 } from 'entities/ledger';
-import { getAuthSessionVersion } from 'helpers/authSession';
+import { getAuthSessionVersion, isAuthSessionCurrent } from 'helpers/authSession';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { isNetworkUsable } from 'shared/offline/network';
+import { isUserCacheClient } from 'shared/offline/userCaches';
 import { useActivityStore } from 'store/activity-store';
 import { invalidateGroup } from 'store/groupsList';
 import { invalidateDashboard } from 'store/internal/dashboardQueryBridge';
 import { invalidateKnownUsers } from 'store/sessionUser';
 
-import { useIsUserWriteEnabled } from './useUserMutations';
+import { toastWriteRefusal, useIsUserWriteEnabled } from './useUserMutations';
 
 /**
  * Why a ledger write was not sent: `session` — signed out or on the anonymous client; `offline` —
@@ -46,18 +48,24 @@ export class LedgerWriteRefusedError extends Error {
     }
 }
 
-/** A repeated submit of a running write: the caller shows nothing, the first one answers. */
-export const isRepeatedLedgerWrite = (error: unknown): boolean =>
-    error instanceof LedgerWriteRefusedError && error.reason === 'busy';
+/**
+ * The toast of a ledger write that rejected. A refusal shows what a refused user write shows
+ * (`toastWriteRefusal`: offline says so, an ended session nothing), and a repeated submit of a
+ * running write nothing (the first one answers); any other failure its backend message, or
+ * `fallbackMessage`.
+ */
+export const toastLedgerWriteError = (error: unknown, fallbackMessage: string): void => {
+    if (error instanceof LedgerWriteRefusedError) {
+        if (error.reason !== 'busy') {
+            toastWriteRefusal(error.reason);
+        }
+        return;
+    }
+    toast.error(resolveApiErrorMessageFromError(error, fallbackMessage));
+};
 
-/** The toast text of a refused or failed ledger write; `fallback` when the error names no cause. */
-export const ledgerWriteErrorMessage = (error: unknown, fallback: string): string =>
-    error instanceof LedgerWriteRefusedError && error.reason === 'offline'
-        ? i18n.t('errors:network.offline')
-        : resolveApiErrorMessageFromError(error, fallback);
-
-// What reads the written entry again, until those views are queries of their own entities: the
-// same refresh functions the activity store calls after its ledger writes. One place, so the
+// What reads the written entry again once a sent write settles, until those views are queries of
+// their own entities: the same refresh functions the activity store calls after its ledger writes. One place, so the
 // activity-feed migration (03-12) replaces them here.
 const storeEffects: LedgerWriteEffects = {
     onEntryWritten: ({ groupId, parentActivityId }) => {
@@ -102,50 +110,82 @@ const refusalBeforeMutate = (
     return isNetworkUsable() ? null : Promise.reject(new LedgerWriteRefusedError('offline'));
 };
 
+// The answer of a write whose session ended meanwhile (a sign-out, an account switch here or in
+// another tab) belongs to nobody on screen: neither its success nor its failure is shown, the
+// caller gets a `session` refusal.
+const inItsSession = (
+    client: QueryClient,
+    sessionVersion: number,
+    write: Promise<void>,
+): Promise<void> => {
+    const refuseIfEnded = (): void => {
+        if (!isAuthSessionCurrent(sessionVersion) || !isUserCacheClient(client)) {
+            throw new LedgerWriteRefusedError('session');
+        }
+    };
+
+    return write.then(refuseIfEnded, (error: unknown) => {
+        refuseIfEnded();
+        throw error;
+    });
+};
+
 const useIsWriting = (mutationKey: LedgerMutationKey): boolean =>
     useIsMutating({ mutationKey }) > 0;
 
-/** Settles once the dashboard, the feeds and the group or friends of the new expense reloaded. */
-export const useCreateExpense = () => {
+// One write of a kind at a time on the user's client, bound to the session it was made in.
+const useLedgerWrite = <Params>(
+    mutationKey: LedgerMutationKey,
+    mutateAsync: (variables: Params & { sessionVersion: number }) => Promise<void>,
+) => {
     const client = useQueryClient();
     const isEnabled = useIsUserWriteEnabled();
-    const { mutateAsync } = useMutation(createExpenseMutationOptions(storeEffects));
-    const createExpense = useCallback(
-        (params: CreateExpenseParams): Promise<void> =>
-            refusalBeforeMutate(client, isEnabled, ledgerOnlineMutationKeys.createEntry) ??
-            mutateAsync({ ...params, sessionVersion: getAuthSessionVersion() }),
-        [client, isEnabled, mutateAsync],
+    const write = useCallback(
+        (params: Params): Promise<void> => {
+            const refusal = refusalBeforeMutate(client, isEnabled, mutationKey);
+
+            if (refusal) {
+                return refusal;
+            }
+            const sessionVersion = getAuthSessionVersion();
+
+            return inItsSession(client, sessionVersion, mutateAsync({ ...params, sessionVersion }));
+        },
+        [client, isEnabled, mutateAsync, mutationKey],
     );
 
-    return { createExpense, isPending: useIsWriting(ledgerOnlineMutationKeys.createEntry) };
+    return { write, isPending: useIsWriting(mutationKey) };
+};
+
+/** Settles once the dashboard, the feeds and the group or friends of the new expense reloaded. */
+export const useCreateExpense = () => {
+    const { mutateAsync } = useMutation(createExpenseMutationOptions(storeEffects));
+    const { write, isPending } = useLedgerWrite<CreateExpenseParams>(
+        ledgerOnlineMutationKeys.createEntry,
+        mutateAsync,
+    );
+
+    return { createExpense: write, isPending };
 };
 
 /** Settles once what shows the updated expense has reloaded. */
 export const useUpdateExpense = () => {
-    const client = useQueryClient();
-    const isEnabled = useIsUserWriteEnabled();
     const { mutateAsync } = useMutation(updateExpenseMutationOptions(storeEffects));
-    const updateExpense = useCallback(
-        (params: UpdateExpenseParams): Promise<void> =>
-            refusalBeforeMutate(client, isEnabled, ledgerOnlineMutationKeys.updateEntry) ??
-            mutateAsync({ ...params, sessionVersion: getAuthSessionVersion() }),
-        [client, isEnabled, mutateAsync],
+    const { write, isPending } = useLedgerWrite<UpdateExpenseParams>(
+        ledgerOnlineMutationKeys.updateEntry,
+        mutateAsync,
     );
 
-    return { updateExpense, isPending: useIsWriting(ledgerOnlineMutationKeys.updateEntry) };
+    return { updateExpense: write, isPending };
 };
 
 /** Deletes an expense or a settlement; settles once what showed it has reloaded. */
 export const useDeleteLedgerEntry = () => {
-    const client = useQueryClient();
-    const isEnabled = useIsUserWriteEnabled();
     const { mutateAsync } = useMutation(deleteLedgerEntryMutationOptions(storeEffects));
-    const deleteLedgerEntry = useCallback(
-        (params: DeleteLedgerEntryParams): Promise<void> =>
-            refusalBeforeMutate(client, isEnabled, ledgerOnlineMutationKeys.deleteEntry) ??
-            mutateAsync({ ...params, sessionVersion: getAuthSessionVersion() }),
-        [client, isEnabled, mutateAsync],
+    const { write, isPending } = useLedgerWrite<DeleteLedgerEntryParams>(
+        ledgerOnlineMutationKeys.deleteEntry,
+        mutateAsync,
     );
 
-    return { deleteLedgerEntry, isPending: useIsWriting(ledgerOnlineMutationKeys.deleteEntry) };
+    return { deleteLedgerEntry: write, isPending };
 };

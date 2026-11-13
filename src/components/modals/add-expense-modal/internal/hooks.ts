@@ -8,8 +8,7 @@ import { userCurrency, userDefaultCategory, userSkipCategory } from 'entities/us
 import { useGroups } from 'hooks/useGroupsList';
 import { useKnownUsers } from 'hooks/useKnownUsers';
 import {
-    isRepeatedLedgerWrite,
-    ledgerWriteErrorMessage,
+    toastLedgerWriteError,
     useCreateExpense,
     useUpdateExpense,
 } from 'hooks/useLedgerMutations';
@@ -119,12 +118,10 @@ export const useExpenseModalSubmit = (onClose: () => void): ExpenseModalSubmitRe
             return;
         }
 
-        // A refusal (signed out, offline) and a failed request alike: the modal stays open with
-        // the form as it is. A repeated submit of a running write shows nothing.
+        // A refusal (offline, an ended session) and a failed request alike: the modal stays open
+        // with the form as it is, and only this session's own outcome is shown.
         const onMutationError = (error: unknown) => {
-            if (!isRepeatedLedgerWrite(error)) {
-                toast.error(ledgerWriteErrorMessage(error, t('toasts:common.requestFailed')));
-            }
+            toastLedgerWriteError(error, t('toasts:common.requestFailed'));
         };
 
         if (state.mode === 'edit' && state.editContext) {
