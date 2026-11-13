@@ -30,9 +30,7 @@ import { mountAsUserClient } from 'test/userClient';
 import DashboardPage from './DashboardPage';
 
 const useInfiniteScrollMock = vi.hoisted(() =>
-    vi.fn<(params: { hasMore: boolean; isLoading: boolean; onLoadMore: () => void }) => () => void>(
-        () => vi.fn(),
-    ),
+    vi.fn<typeof import('hooks/useInfiniteScroll').useInfiniteScroll>(() => vi.fn()),
 );
 
 vi.mock('react-i18next', () => ({
@@ -624,6 +622,7 @@ test('ACT-023 connects dashboard infinite scroll to the next activity preview pa
         expect.objectContaining({
             hasMore: true,
             isLoading: false,
+            loadedKey: 1,
         }),
     );
 
@@ -642,9 +641,70 @@ test('ACT-023 connects dashboard infinite scroll to the next activity preview pa
     expect(activityRequests[0]?.searchParams.get('limit')).toBe('20');
     await waitFor(() => {
         expect(useInfiniteScrollMock).toHaveBeenLastCalledWith(
-            expect.objectContaining({ hasMore: false }),
+            expect.objectContaining({ hasMore: false, loadedKey: 2 }),
         );
     });
+});
+
+test('ACT-023 a next page paused offline is requested once while offline, then appended once on reconnect', async () => {
+    const { useInfiniteScroll } =
+        await vi.importActual<typeof import('hooks/useInfiniteScroll')>('hooks/useInfiniteScroll');
+    let isBack = false;
+
+    resolveDashboardOnboardingData();
+    seedGroups([singleMemberGroup]);
+    seedDashboard({ items: [activityItem], nextCursor: 40 });
+    // As in production (`createQueryClient`): the first attempt is sent offline, its retry pauses.
+    client.setQueryDefaults(activityKeys.all, {
+        networkMode: 'offlineFirst',
+        retry: 1,
+        retryDelay: 0,
+    });
+    const activityRequests = countRequests(ACTIVITY_URL, () =>
+        isBack ? HttpResponse.json({ items: [], nextCursor: null }) : HttpResponse.error(),
+    );
+    // The real scroll trigger, always in view.
+    useInfiniteScrollMock.mockImplementation(useInfiniteScroll);
+    vi.stubGlobal(
+        'IntersectionObserver',
+        class {
+            private readonly report: (entries: IntersectionObserverEntry[]) => void;
+
+            constructor(report: (entries: IntersectionObserverEntry[]) => void) {
+                this.report = report;
+            }
+
+            observe(target: Element): void {
+                this.report([{ isIntersecting: true, target } as IntersectionObserverEntry]);
+            }
+
+            disconnect(): void {
+                // Nothing to release.
+            }
+        },
+    );
+    onlineManager.setOnline(false);
+
+    try {
+        renderPage();
+
+        await waitFor(() => {
+            expect(client.getQueryState(FEED_KEY)?.fetchStatus).toBe('paused');
+        });
+        await new Promise(resolve => setTimeout(resolve, 150));
+        expect(activityRequests).toHaveLength(1);
+        expect(client.getQueryState(FEED_KEY)?.fetchStatus).toBe('paused');
+
+        isBack = true;
+        onlineManager.setOnline(true);
+
+        expect(await screen.findByText('activity:endOfFeed')).toBeTruthy();
+        expect(activityRequests.map(url => url.searchParams.get('cursor'))).toEqual(['40', '40']);
+    } finally {
+        onlineManager.setOnline(true);
+        useInfiniteScrollMock.mockReset();
+        vi.unstubAllGlobals();
+    }
 });
 
 test('DSH-007 an offline session shows the cached dashboard and feed without a load-failed notice', async () => {

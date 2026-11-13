@@ -334,16 +334,13 @@ test('the offline first-load state clears by itself on reconnect: the skeleton, 
     }
 });
 
+// On the test client (`networkMode: 'online'`) the load pauses before any request; the production
+// mode (`offlineFirst`, with the real scroll trigger) is covered in `ActivityList.scroll.test.tsx`.
 test('a next page paused offline resumes on reconnect and is appended once', async () => {
-    let isBack = false;
-
     seedFeed([expense('a')], 40);
-    client.setQueryDefaults(activityKeys.all, { retry: 1, retryDelay: 0 });
     onlineManager.setOnline(false);
     const cursors = serveFeed(() =>
-        isBack
-            ? HttpResponse.json({ items: [wireEvent('b')], nextCursor: null })
-            : HttpResponse.error(),
+        HttpResponse.json({ items: [wireEvent('b')], nextCursor: null }),
     );
 
     try {
@@ -357,7 +354,7 @@ test('a next page paused offline resumes on reconnect and is appended once', asy
         expect(shownEvents()).toEqual(['a']);
         expect(screen.queryByRole('button', { name: 'retryAction' })).toBeNull();
 
-        isBack = true;
+        expect(cursors).toEqual([]);
         act(() => {
             onlineManager.setOnline(true);
         });
@@ -365,8 +362,8 @@ test('a next page paused offline resumes on reconnect and is appended once', asy
         await waitFor(() => {
             expect(shownEvents()).toEqual(['a', 'b']);
         });
-        // One answered request: the page is appended once.
-        expect(cursors.filter(cursor => cursor === '40').length).toBeGreaterThan(0);
+        // One request: the page is appended once.
+        expect(cursors).toEqual(['40']);
         expect(client.getQueryData<SelfActivityEventsData>(FEED_KEY)?.pages).toHaveLength(2);
         expect(screen.getByText('endOfFeed')).toBeTruthy();
     } finally {

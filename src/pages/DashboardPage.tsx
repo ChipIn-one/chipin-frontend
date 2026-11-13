@@ -124,10 +124,11 @@ const DashboardPage = () => {
         void fetchNextPage();
     }, [fetchNextPage]);
 
-    // Any fetch of the feed holds the next page: a refetch replaces the pages it would extend.
+    // Any fetch of the feed holds the next page: a refetch replaces the pages it would extend, and
+    // a load paused offline resumes by itself (starting another would cancel it, again and again).
     const sentinelRef = useInfiniteScroll({
         hasMore: hasMoreActivity && !isNextPageError,
-        isLoading: activityQuery.isFetching,
+        isLoading: activityQuery.fetchStatus !== 'idle',
         onLoadMore,
         loadedKey: activityQuery.data?.pages.length ?? 0,
     });

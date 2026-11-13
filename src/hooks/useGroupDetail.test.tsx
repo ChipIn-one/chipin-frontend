@@ -1,7 +1,8 @@
 import { StrictMode } from 'react';
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { onlineManager } from '@tanstack/react-query';
+import { act, render, renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { beforeEach, expect, test } from 'vitest';
+import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group as LegacyGroup, SelfUser } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
@@ -16,6 +17,7 @@ import { seedSelfUser } from 'test/selfUserSeed';
 
 import { useAddExpenseAvailability } from './useAddExpenseAvailability';
 import { useGroupActivity, useGroupDetail } from './useGroupDetail';
+import { useInfiniteScroll } from './useInfiniteScroll';
 
 const server = setupMswServer();
 
@@ -343,4 +345,124 @@ test('the detail never replaces activity already cached', async () => {
     await waitFor(() => {
         expect(result.current.items).toEqual([domainPreview('cached')]);
     });
+});
+
+const seedActivity = (nextCursor: number | null = 5) => {
+    getDefaultTestQueryClient().setQueryData<GroupActivityData>(activityKey, {
+        pages: [{ items: [domainPreview('p1')], nextCursor }],
+        pageParams: [null],
+    });
+};
+
+test('a loaded page changes loadedKey even when it adds no visible item; a failed one does not', async () => {
+    let isFailing = false;
+    server.use(
+        http.get('*/groups/group-1/activity-previews', () =>
+            isFailing
+                ? HttpResponse.json({ code: 'SYSTEM.BAD_REQUEST' }, { status: 400 })
+                : // The page repeats the parent already listed: no new row.
+                  HttpResponse.json({ items: [wirePreview('p1')], nextCursor: 4 }),
+        ),
+    );
+    // A frozen clock: the key may not depend on the time of the load.
+    vi.useFakeTimers({ toFake: ['Date'] });
+
+    try {
+        seedActivity();
+        const { result } = renderHook(() => useGroupActivity(group.id, true));
+        const seededKey = result.current.loadedKey;
+
+        act(() => {
+            result.current.loadMore();
+        });
+        await waitFor(() => {
+            expect(result.current.loadedKey).not.toBe(seededKey);
+        });
+        expect(result.current.items).toEqual([domainPreview('p1')]);
+        const loadedKey = result.current.loadedKey;
+
+        isFailing = true;
+        act(() => {
+            result.current.loadMore();
+        });
+        await waitFor(() => {
+            expect(result.current.isNextPageError).toBe(true);
+        });
+        expect(result.current.loadedKey).toBe(loadedKey);
+    } finally {
+        vi.useRealTimers();
+    }
+});
+
+// The group feed's scroll trigger as `GroupTabsContent` wires it, always in view.
+const ScrolledActivity = () => {
+    const activity = useGroupActivity(group.id, true);
+    const sentinelRef = useInfiniteScroll({
+        hasMore: activity.hasMore && !activity.isNextPageError,
+        isLoading: activity.isFetching,
+        onLoadMore: activity.loadMore,
+        loadedKey: activity.loadedKey,
+    });
+
+    return <div ref={sentinelRef} />;
+};
+
+class VisibleSentinelObserver {
+    private readonly report: (entries: IntersectionObserverEntry[]) => void;
+
+    constructor(report: (entries: IntersectionObserverEntry[]) => void) {
+        this.report = report;
+    }
+
+    observe(target: Element): void {
+        this.report([{ isIntersecting: true, target } as IntersectionObserverEntry]);
+    }
+
+    disconnect(): void {
+        // Nothing to release.
+    }
+}
+
+test('a next page paused offline is requested once while offline, then appended once on reconnect', async () => {
+    const client = getDefaultTestQueryClient();
+    const cursors: (string | null)[] = [];
+    let isBack = false;
+
+    // As in production (`createQueryClient`): the first attempt is sent offline, its retry pauses.
+    client.setQueryDefaults(activityKey, { networkMode: 'offlineFirst', retry: 1, retryDelay: 0 });
+    server.use(
+        http.get('*/groups/group-1/activity-previews', ({ request }) => {
+            cursors.push(new URL(request.url).searchParams.get('cursor'));
+            return isBack
+                ? HttpResponse.json({ items: [wirePreview('p2')], nextCursor: null })
+                : HttpResponse.error();
+        }),
+    );
+    seedActivity();
+    vi.stubGlobal('IntersectionObserver', VisibleSentinelObserver);
+    onlineManager.setOnline(false);
+
+    try {
+        render(<ScrolledActivity />);
+
+        await waitFor(() => {
+            expect(client.getQueryState(activityKey)?.fetchStatus).toBe('paused');
+        });
+        await new Promise(resolve => setTimeout(resolve, 150));
+        expect(cursors).toEqual(['5']);
+        expect(client.getQueryState(activityKey)?.fetchStatus).toBe('paused');
+
+        isBack = true;
+        act(() => {
+            onlineManager.setOnline(true);
+        });
+
+        await waitFor(() => {
+            expect(client.getQueryData<GroupActivityData>(activityKey)?.pages).toHaveLength(2);
+        });
+        expect(cursors).toEqual(['5', '5']);
+    } finally {
+        onlineManager.setOnline(true);
+        vi.unstubAllGlobals();
+    }
 });

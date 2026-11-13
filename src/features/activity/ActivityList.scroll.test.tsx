@@ -1,13 +1,15 @@
 // The Activity page's filter with the real `useInfiniteScroll`: the trigger stays in view while a
 // filter matches few of the loaded events, so the feed keeps loading.
 import { Theme } from '@radix-ui/themes';
+import { onlineManager } from '@tanstack/react-query';
 import { act, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
-import type { ActivityEvent } from 'entities/activity';
+import type { ActivityEvent, SelfActivityEventsData } from 'entities/activity';
+import { activityKeys } from 'entities/activity';
 import { useAuthStore } from 'store/authStore';
-import { wirePreview } from 'test/activityFixtures';
+import { domainPreview, wirePreview } from 'test/activityFixtures';
 import { setupMswServer } from 'test/mswServer';
 import { createTestQueryClient, renderWithQueryClient } from 'test/renderWithQueryClient';
 import { mountAsUserClient } from 'test/userClient';
@@ -128,9 +130,13 @@ test('a filter matching few events keeps loading while the trigger is in view, t
 
     renderSettlements();
 
-    await waitFor(() => {
-        expect(screen.getByText('endOfFeed')).toBeTruthy();
-    });
+    // Four page loads in a row: more than the default 1 s on a loaded machine.
+    await waitFor(
+        () => {
+            expect(screen.getByText('endOfFeed')).toBeTruthy();
+        },
+        { timeout: 5000 },
+    );
     // One request per page, each cursor once.
     expect(cursors).toEqual([null, '40', '30', '20']);
     expect(shownEvents()).toEqual(['s1']);
@@ -159,4 +165,67 @@ test('the filter stops loading once the matching rows push the trigger out of vi
 
     expect(cursors).toEqual([null, '40', '30']);
     expect(screen.queryByText('endOfFeed')).toBeNull();
+});
+
+test('a next page paused offline is requested once while offline, then appended once on reconnect', async () => {
+    const FEED_KEY = activityKeys.self({ view: 'events' });
+    const client = createTestQueryClient();
+    let isBack = false;
+    const cursors: (string | null)[] = [];
+
+    // As in production (`createQueryClient`): the first attempt is sent offline, its retry pauses.
+    client.setQueryDefaults(activityKeys.all, {
+        networkMode: 'offlineFirst',
+        retry: 1,
+        retryDelay: 0,
+    });
+    client.setQueryData<SelfActivityEventsData>(FEED_KEY, {
+        pages: [{ items: [domainPreview('a').parent], nextCursor: 40 }],
+        pageParams: [null],
+    });
+    server.use(
+        http.get('*/users/self/activities', ({ request }) => {
+            cursors.push(new URL(request.url).searchParams.get('cursor'));
+            return isBack
+                ? HttpResponse.json({ items: [wireExpense('b')], nextCursor: null })
+                : HttpResponse.error();
+        }),
+    );
+    mountAsUserClient('user-1', client);
+    onlineManager.setOnline(false);
+
+    try {
+        renderWithQueryClient(
+            <Theme>
+                <ActivityList activeFilter="all" />
+            </Theme>,
+            client,
+        );
+
+        await waitFor(() => {
+            expect(client.getQueryState(FEED_KEY)?.fetchStatus).toBe('paused');
+        });
+        // The trigger stays in view: the paused load is left alone, not sent again and again.
+        await new Promise(resolve => setTimeout(resolve, 150));
+        expect(cursors).toEqual(['40']);
+        expect(client.getQueryState(FEED_KEY)?.fetchStatus).toBe('paused');
+        expect(shownEvents()).toEqual(['a']);
+        expect(screen.queryByRole('button', { name: 'retryAction' })).toBeNull();
+        // Waiting for the network shows no spinner.
+        expect(document.querySelector('.rt-Spinner')).toBeNull();
+
+        isBack = true;
+        act(() => {
+            onlineManager.setOnline(true);
+        });
+
+        await waitFor(() => {
+            expect(shownEvents()).toEqual(['a', 'b']);
+        });
+        expect(cursors).toEqual(['40', '40']);
+        expect(client.getQueryData<SelfActivityEventsData>(FEED_KEY)?.pages).toHaveLength(2);
+        expect(screen.getByText('endOfFeed')).toBeTruthy();
+    } finally {
+        onlineManager.setOnline(true);
+    }
 });

@@ -14,7 +14,7 @@ interface UseInfiniteScrollParams {
      * trigger by itself: the answer may arrive before any render saw `isLoading` (TanStack
      * notifies through a timer), and then no loading render is there to re-arm it.
      */
-    loadedKey?: string | number;
+    loadedKey: string | number;
 }
 
 type InfiniteScrollRef = IntersectionObserverRef;
@@ -48,7 +48,8 @@ const useInfiniteScroll = ({
             return;
         }
 
-        // A failed load changes neither: the trigger stays stopped until the caller's Retry.
+        // A failed load re-arms too once its loading render was seen. The callers keep the trigger
+        // stopped until their Retry by passing `hasMore: hasMore && !isNextPageError`.
         if (wasLoadingRef.current || hasLoadedPage) {
             wasLoadingRef.current = false;
             hasTriggeredRef.current = false;

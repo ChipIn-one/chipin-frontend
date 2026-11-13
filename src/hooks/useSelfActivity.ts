@@ -27,8 +27,12 @@ export interface SelfActivityLogResult {
     hasMore: boolean;
     /** How many pages are loaded: a change re-arms the scroll trigger (`useInfiniteScroll`). */
     loadedPages: number;
-    /** Any load runs (a refetch or the next page): a scroll trigger waits for it to end. */
+    /**
+     * A load runs or waits for the network (a refetch or the next page): a scroll trigger waits
+     * for it to end. A load paused offline resumes by itself on reconnect.
+     */
     isFetching: boolean;
+    /** The next page is being requested (not while it waits for the network). */
     isNextPageLoading: boolean;
     isNextPageError: boolean;
     /** Loads the next page; a fetch running (a refetch replaces the pages) holds it. */
@@ -41,7 +45,9 @@ export const useSelfActivityLog = (): SelfActivityLogResult => {
     const isSignedIn = useAuthStore(state => state.status === AUTH_STATUS.AUTHENTICATED);
     const isEnabled = isUserCacheClient(useQueryClient()) && isSignedIn;
     const query = useSelfActivityEventsQuery({ enabled: isEnabled });
-    const { fetchNextPage, refetch, isFetching } = query;
+    const { fetchNextPage, refetch } = query;
+    // A paused load counts: starting another would cancel it, again and again while offline.
+    const isFetching = query.fetchStatus !== 'idle';
     const data = isEnabled ? query.data : undefined;
     const events = useMemo(() => (data ? loadedActivityEvents(data) : NO_EVENTS), [data]);
     const isWaiting = isEnabled && data === undefined;

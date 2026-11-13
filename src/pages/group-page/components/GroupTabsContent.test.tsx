@@ -163,7 +163,7 @@ const activityOf = (
 ): GroupActivityResult => ({
     items: target.recentActivities.items.map(legacyActivityPreview),
     hasMore: target.recentActivities.nextCursor !== null,
-    loadedKey: '0:0',
+    loadedKey: 1,
     isFetching: false,
     isNextPageLoading: false,
     isNextPageError: false,
@@ -233,10 +233,10 @@ test('starts the existing invite flow from the member action button', () => {
 });
 
 test('triggers group activity pagination from the active Expenses tab', () => {
-    renderTabs(groupWithActivity);
+    renderTabs(groupWithActivity, { loadedKey: 3 });
 
     expect(useInfiniteScrollMock).toHaveBeenLastCalledWith(
-        expect.objectContaining({ hasMore: true, isLoading: false }),
+        expect.objectContaining({ hasMore: true, isLoading: false, loadedKey: 3 }),
     );
 
     const lastCall = useInfiniteScrollMock.mock.lastCall;

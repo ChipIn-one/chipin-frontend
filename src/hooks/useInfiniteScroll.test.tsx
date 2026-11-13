@@ -22,6 +22,7 @@ test('loads the next page when the sentinel enters the viewport', () => {
             hasMore: true,
             isLoading: false,
             onLoadMore,
+            loadedKey: 0,
         }),
     );
 
@@ -42,6 +43,7 @@ test('re-arms pagination after a completed load while the sentinel stays visible
             hasMore: true,
             isLoading,
             onLoadMore,
+            loadedKey: 0,
         }),
     );
 
@@ -67,6 +69,7 @@ test('does not re-arm pagination when the completed request removes eligibility'
             hasMore,
             isLoading,
             onLoadMore,
+            loadedKey: 0,
         }),
     );
 
@@ -102,6 +105,7 @@ test.each([
                 hasMore,
                 isLoading,
                 onLoadMore,
+                loadedKey: 0,
             }),
         );
 
@@ -119,6 +123,7 @@ test('does not retry a failed load on rerender while the sentinel stays visible'
             hasMore: true,
             isLoading: false,
             onLoadMore: () => onLoadMore(),
+            loadedKey: 0,
         }),
     );
 
