@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import type { SharingMode } from 'api/chipin.types';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
+import { LedgerWriteRefusedError, toastLedgerWriteError } from 'hooks/useLedgerMutations';
 import { useActivityStore } from 'store/activity-store';
 import { onAccessTokenRefreshed, useAuthStore } from 'store/authStore';
 import type { ExpenseModalEditInitialization, ExpenseModalSource } from 'store/expenseModalStore';
@@ -26,6 +27,14 @@ vi.mock('sonner', () => ({
         success: vi.fn(),
     },
 }));
+
+// The real module; `toastLedgerWriteError` is also recorded: its call is the moment the caller got
+// the outcome of a rejected write.
+vi.mock('hooks/useLedgerMutations', async importOriginal => {
+    const actual = await importOriginal<typeof import('hooks/useLedgerMutations')>();
+
+    return { ...actual, toastLedgerWriteError: vi.fn(actual.toastLedgerWriteError) };
+});
 
 const currentUser = {
     id: 'user-1',
@@ -428,7 +437,7 @@ test('a failed request keeps the modal open with the form intact and shows the t
     expect(onClose).not.toHaveBeenCalled();
     expect(toast.success).not.toHaveBeenCalled();
     expect(useExpenseModalStore.getState()).toEqual(before);
-    // The rejected write settles after its views were read again (spec 03 §2.1).
+    // The views of a rejected write are read again (spec 03 §2.1); the toast does not wait.
     expect(fetchSetActivity).toHaveBeenCalledWith(true);
 });
 
@@ -501,6 +510,15 @@ const switchAccountInAnotherTab = (): void => {
     expect(getAuthSessionVersion()).toBe(sessionVersion);
 };
 
+// The submit rejected as an ended session: the caller has its outcome, whatever the answer was.
+const waitForSessionRefusal = (): Promise<void> =>
+    waitFor(() => {
+        expect(toastLedgerWriteError).toHaveBeenCalledWith(
+            new LedgerWriteRefusedError('session'),
+            expect.any(String),
+        );
+    });
+
 describe.each<[string, () => void]>([
     ['a sign-out', invalidateAuthSession],
     ['an account switch in another tab', switchAccountInAnotherTab],
@@ -524,10 +542,8 @@ describe.each<[string, () => void]>([
             });
             endSession();
             gate.resolve();
-            await waitFor(() => {
-                expect(result.current.isSubmitting).toBe(false);
-            });
-            await new Promise(resolve => setTimeout(resolve, 50));
+            await waitForSessionRefusal();
+            expect(result.current.isSubmitting).toBe(false);
 
             expect(onClose).not.toHaveBeenCalled();
             expect(toast.success).not.toHaveBeenCalled();
@@ -551,7 +567,7 @@ describe.each<[string, () => void]>([
         });
         endSession();
         gate.resolve();
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await waitForSessionRefusal();
 
         expect(onClose).not.toHaveBeenCalled();
         expect(toast.success).not.toHaveBeenCalled();

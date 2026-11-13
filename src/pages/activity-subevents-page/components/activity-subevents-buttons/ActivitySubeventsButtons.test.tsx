@@ -11,6 +11,7 @@ import { dashboardKeys } from 'entities/dashboard';
 import { usersKeys } from 'entities/users';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
+import { LedgerWriteRefusedError, toastLedgerWriteError } from 'hooks/useLedgerMutations';
 import { useActivityStore } from 'store/activity-store';
 import { onAccessTokenRefreshed, useAuthStore } from 'store/authStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
@@ -30,6 +31,14 @@ vi.mock('sonner', () => ({
         success: vi.fn(),
     },
 }));
+
+// The real module; `toastLedgerWriteError` is also recorded: its call is the moment the caller got
+// the outcome of a rejected write.
+vi.mock('hooks/useLedgerMutations', async importOriginal => {
+    const actual = await importOriginal<typeof import('hooks/useLedgerMutations')>();
+
+    return { ...actual, toastLedgerWriteError: vi.fn(actual.toastLedgerWriteError) };
+});
 
 const parentEvent = {
     id: 'activity-id',
@@ -254,7 +263,7 @@ test('the delete button is disabled while the delete request runs (the mutation 
     expect(sent).toHaveLength(1);
 });
 
-test('a failed delete shows the translated API error and reads the history again (the entry on screen is stale)', async () => {
+test('a failed delete shows the translated API error and reads the feed again, not the open history', async () => {
     signIn();
     serveDelete({ status: 404 });
 
@@ -266,11 +275,7 @@ test('a failed delete shows the translated API error and reads the history again
     });
     expect(toast.success).not.toHaveBeenCalled();
     expect(fetchSetActivity).toHaveBeenCalledWith(true);
-    expect(fetchSetActivitySubevents).toHaveBeenCalledWith({
-        parentActivityId: parentEvent.id,
-        category: undefined,
-        force: true,
-    });
+    expect(fetchSetActivitySubevents).not.toHaveBeenCalled();
 });
 
 test('deleting a settlement in a group sends one DELETE and reads the group again, not the friends', async () => {
@@ -320,10 +325,23 @@ test('deleting a settlement between friends sends one DELETE and reloads the fri
     });
 });
 
+// With the store's own history reload and loading flag: a forced reload of the history shows the
+// skeletons, which unmounts the dialog.
 test('a settlement delete the server refuses (403) shows the translated error and keeps the dialog open', async () => {
     signIn();
     const sent = serveDelete({ status: 403, code: 'LEDGER.FORBIDDEN' });
+    const historyReads = vi.fn();
+    const event = settlementEvent(false);
 
+    server.use(
+        http.get('*/users/self/activities/:id/children', () => {
+            historyReads();
+            return HttpResponse.json({ parent: event, items: [], nextCursor: null });
+        }),
+    );
+    useActivityStore.setState({
+        fetchSetActivitySubevents: initialActivity.fetchSetActivitySubevents,
+    });
     render(<ActivitySubeventsButtons parentEvent={settlementEvent(false)} />);
     await confirmDelete();
 
@@ -340,6 +358,10 @@ test('a settlement delete the server refuses (403) shows the translated error an
             false,
         );
     });
+    // The feed reload has started, so a history reload would have started with it.
+    expect(fetchSetActivity).toHaveBeenCalledWith(true);
+    expect(historyReads).not.toHaveBeenCalled();
+    expect(useLoadingStore.getState().activity.subeventsData).toBe('initial');
 });
 
 // Another tab switched the account: this tab's token refresh returns the other user's token. The
@@ -379,10 +401,14 @@ describe.each<[string, () => void]>([
             });
             endSession();
             gate.resolve();
+            // The delete rejected as an ended session: the caller has its outcome.
             await waitFor(() => {
-                expect(deleteButton()).toHaveProperty('disabled', false);
+                expect(toastLedgerWriteError).toHaveBeenCalledWith(
+                    new LedgerWriteRefusedError('session'),
+                    expect.any(String),
+                );
             });
-            await new Promise(resolve => setTimeout(resolve, 50));
+            expect(deleteButton()).toHaveProperty('disabled', false);
 
             expect(toast.success).not.toHaveBeenCalled();
             expect(toast.error).not.toHaveBeenCalled();

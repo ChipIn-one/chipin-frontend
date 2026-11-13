@@ -5,7 +5,7 @@
 // refused as well (a double submit sends one request), and so is the answer of a write whose
 // session ended meanwhile. A refusal or a failure rejects: the caller shows it with
 // `toastLedgerWriteError`. `isPending` is true while a write of that kind runs on
-// the user's client, until what shows the entry has reloaded.
+// the user's client: until what shows the entry has reloaded, or until the write failed.
 import { useCallback } from 'react';
 import type { QueryClient } from '@tanstack/react-query';
 import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -33,12 +33,14 @@ import { invalidateKnownUsers } from 'store/sessionUser';
 import { toastWriteRefusal, useIsUserWriteEnabled } from './useUserMutations';
 
 /**
- * Why a ledger write was not sent: `session` — signed out or on the anonymous client; `offline` —
- * no network; `busy` — a write of the same kind is still running (a repeated submit).
+ * Why a ledger write was refused. `session` — signed out or on the anonymous client (not sent),
+ * or the session ended while the write ran: that write was sent and may have been applied, its
+ * answer is dropped. `offline` — no network, not sent. `busy` — a write of the same kind is still
+ * running (a repeated submit), not sent.
  */
 export type LedgerWriteRefusal = 'session' | 'offline' | 'busy';
 
-/** A ledger write refused before it was sent. */
+/** A ledger write refused before it was sent, or whose answer came after its session ended. */
 export class LedgerWriteRefusedError extends Error {
     readonly reason: LedgerWriteRefusal;
 
@@ -67,14 +69,15 @@ export const toastLedgerWriteError = (error: unknown, fallbackMessage: string): 
 // What reads the written entry again once a sent write settles, until those views are queries of
 // their own entities: the same refresh functions the activity store calls after its ledger writes. One place, so the
 // activity-feed migration (03-12) replaces them here.
+const invalidateBalances = (groupId: string | undefined): Promise<void>[] => [
+    invalidateDashboard(),
+    groupId ? invalidateGroup(groupId) : invalidateKnownUsers(),
+];
+
 const storeEffects: LedgerWriteEffects = {
     onEntryWritten: ({ groupId, parentActivityId }) => {
         const activity = useActivityStore.getState();
-        const refreshes: Promise<void>[] = [
-            invalidateDashboard(),
-            activity.fetchSetActivity(true),
-            groupId ? invalidateGroup(groupId) : invalidateKnownUsers(),
-        ];
+        const refreshes = [...invalidateBalances(groupId), activity.fetchSetActivity(true)];
 
         if (parentActivityId) {
             refreshes.push(
@@ -87,6 +90,18 @@ const storeEffects: LedgerWriteEffects = {
                     force: true,
                 }),
             );
+        }
+        return Promise.all(refreshes).then(() => undefined);
+    },
+    // The queries pause offline and refetch on the reconnect. A forced reload of the legacy feed
+    // would fail without a network and replace what is on screen with its error, so it is skipped.
+    // TODO(03-12): the expense history becomes a query there and is invalidated on a failure too.
+    // Its legacy forced reload shows the page skeletons, which unmounts the open delete dialog.
+    onWriteFailed: ({ groupId }) => {
+        const refreshes = invalidateBalances(groupId);
+
+        if (isNetworkUsable()) {
+            refreshes.push(useActivityStore.getState().fetchSetActivity(true));
         }
         return Promise.all(refreshes).then(() => undefined);
     },
@@ -157,7 +172,7 @@ const useLedgerWrite = <Params>(
     return { write, isPending: useIsWriting(mutationKey) };
 };
 
-/** Settles once the dashboard, the feeds and the group or friends of the new expense reloaded. */
+/** Resolves once the dashboard, the feeds and the group or friends of the new expense reloaded. */
 export const useCreateExpense = () => {
     const { mutateAsync } = useMutation(createExpenseMutationOptions(storeEffects));
     const { write, isPending } = useLedgerWrite<CreateExpenseParams>(
@@ -168,7 +183,7 @@ export const useCreateExpense = () => {
     return { createExpense: write, isPending };
 };
 
-/** Settles once what shows the updated expense has reloaded. */
+/** Resolves once what shows the updated expense has reloaded. */
 export const useUpdateExpense = () => {
     const { mutateAsync } = useMutation(updateExpenseMutationOptions(storeEffects));
     const { write, isPending } = useLedgerWrite<UpdateExpenseParams>(
@@ -179,7 +194,7 @@ export const useUpdateExpense = () => {
     return { updateExpense: write, isPending };
 };
 
-/** Deletes an expense or a settlement; settles once what showed it has reloaded. */
+/** Deletes an expense or a settlement; resolves once what showed it has reloaded. */
 export const useDeleteLedgerEntry = () => {
     const { mutateAsync } = useMutation(deleteLedgerEntryMutationOptions(storeEffects));
     const { write, isPending } = useLedgerWrite<DeleteLedgerEntryParams>(
