@@ -31,8 +31,9 @@ export const loadedActivityPreviews = (
 ): ActivityPreview[] => data?.pages.flatMap(page => page.items.filter(isPreview)) ?? [];
 
 /**
- * The events of all loaded pages in order, each event once (a page loaded after a new event
- * arrived repeats the last events of the page before it). An invalid item is left out.
+ * The events of all loaded pages in order, each event once: the backend pages by `seq < cursor`,
+ * so pages do not overlap, and a repeated id would only break the list's keys. An invalid item
+ * (an unreadable amount, reported when mapped) is left out.
  */
 export const loadedActivityEvents = (
     data: LoadedPages<SelfActivityEventsPage> | undefined,

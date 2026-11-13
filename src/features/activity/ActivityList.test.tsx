@@ -250,7 +250,7 @@ test('keeps pagination recovery available when the active filter has no loaded m
     });
 });
 
-test('a failed first load offers Retry, which loads the feed', async () => {
+test('a failed first load shows the load error, not "no activity", and Retry loads the feed', async () => {
     const user = userEvent.setup();
     let requests = 0;
 
@@ -263,11 +263,129 @@ test('a failed first load offers Retry, which loads the feed', async () => {
 
     renderList();
 
-    await user.click(await screen.findByRole('button', { name: 'retryAction' }));
+    expect(await screen.findByText('loadErrorTitle')).toBeTruthy();
+    expect(screen.queryByTestId('empty-state')).toBeNull();
+    expect(screen.queryByTestId('activity-skeleton')).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'retryAction' }));
     await waitFor(() => {
         expect(shownEvents()).toEqual(['a']);
     });
+    expect(screen.queryByText('loadErrorTitle')).toBeNull();
     expect(screen.queryByRole('button', { name: 'retryAction' })).toBeNull();
+});
+
+test('offline with nothing cached, the first load shows the no-connection state without Retry', async () => {
+    // The first attempt fails and its retry waits for the network (as `queryRetry` does).
+    client.setQueryDefaults(activityKeys.all, { retry: 1, retryDelay: 0 });
+    onlineManager.setOnline(false);
+    serveFeed(() => HttpResponse.error());
+
+    try {
+        renderList();
+
+        expect(await screen.findByText('errors:network.offline')).toBeTruthy();
+        expect(client.getQueryState(FEED_KEY)?.fetchStatus).toBe('paused');
+        expect(screen.queryByTestId('empty-state')).toBeNull();
+        expect(screen.queryByText('loadErrorTitle')).toBeNull();
+        expect(screen.queryByRole('button', { name: 'retryAction' })).toBeNull();
+    } finally {
+        onlineManager.setOnline(true);
+    }
+});
+
+test('a loaded feed without events shows "no activity", not an error', async () => {
+    serveFeed(() => HttpResponse.json({ items: [], nextCursor: null }));
+
+    renderList();
+
+    expect(await screen.findByTestId('empty-state')).toBeTruthy();
+    expect(screen.queryByText('loadErrorTitle')).toBeNull();
+    expect(screen.queryByText('errors:network.offline')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'retryAction' })).toBeNull();
+});
+
+test('a repeated scroll trigger while the next page loads sends one request and appends the page once', async () => {
+    let answer: (() => void) | undefined;
+    const answered = new Promise<void>(resolve => {
+        answer = resolve;
+    });
+
+    seedFeed([expense('a')], 40);
+    const cursors = serveFeed(async cursor => {
+        await answered;
+        return HttpResponse.json({
+            items: [wireEvent('b')],
+            nextCursor: cursor === '40' ? 30 : null,
+        });
+    });
+
+    renderList();
+    loadMore();
+    await waitFor(() => {
+        expect(cursors).toEqual(['40']);
+    });
+    // The trigger fires again (the latest callback, as a rerender leaves it) while the page loads.
+    loadMore();
+    loadMore();
+    answer?.();
+
+    await waitFor(() => {
+        expect(shownEvents()).toEqual(['a', 'b']);
+    });
+    expect(cursors).toEqual(['40']);
+    expect(client.getQueryData<SelfActivityEventsData>(FEED_KEY)?.pages).toHaveLength(2);
+});
+
+test('a scroll trigger while the feed refreshes waits: no next-page request until the refresh ends', async () => {
+    let answer: (() => void) | undefined;
+    const answered = new Promise<void>(resolve => {
+        answer = resolve;
+    });
+
+    // Stale: the mount refreshes the first page.
+    seedFeed([expense('cached')], 40, 0);
+    const cursors = serveFeed(async () => {
+        await answered;
+        return HttpResponse.json({ items: [wireEvent('fresh')], nextCursor: 40 });
+    });
+
+    renderList();
+    await waitFor(() => {
+        expect(cursors).toEqual([null]);
+    });
+    expect(useInfiniteScrollMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ isLoading: true }),
+    );
+    loadMore();
+    answer?.();
+
+    await waitFor(() => {
+        expect(shownEvents()).toEqual(['fresh']);
+    });
+    expect(cursors).toEqual([null]);
+    expect(client.getQueryData<SelfActivityEventsData>(FEED_KEY)?.pages).toHaveLength(1);
+});
+
+test('leaving the page cuts the loaded feed to its first page', () => {
+    client.setQueryData<SelfActivityEventsData>(FEED_KEY, {
+        pages: [
+            { items: [expense('a')], nextCursor: 40 },
+            { items: [expense('b')], nextCursor: 30 },
+            { items: [expense('c')], nextCursor: null },
+        ],
+        pageParams: [null, 40, 30],
+    });
+
+    const view = renderList();
+
+    expect(shownEvents()).toEqual(['a', 'b', 'c']);
+    view.unmount();
+
+    expect(client.getQueryData<SelfActivityEventsData>(FEED_KEY)).toEqual({
+        pages: [{ items: [expense('a')], nextCursor: 40 }],
+        pageParams: [null],
+    });
 });
 
 test('offline, the cached feed shows without a skeleton or an error', async () => {

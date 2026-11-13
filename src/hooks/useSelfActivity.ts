@@ -20,8 +20,10 @@ export interface SelfActivityLogResult {
     events: readonly ActivityEvent[];
     /** Nothing cached yet and the first load is pending. */
     isLoading: boolean;
-    /** The first load failed, or it waits for the network, with nothing cached. */
+    /** The first load failed with nothing cached. */
     isError: boolean;
+    /** The first load waits for the network (offline) with nothing cached. */
+    isOffline: boolean;
     hasMore: boolean;
     /** Any load runs (a refetch or the next page): a scroll trigger waits for it to end. */
     isFetching: boolean;
@@ -40,7 +42,10 @@ export const useSelfActivityLog = (): SelfActivityLogResult => {
     const { fetchNextPage, refetch, isFetching } = query;
     const data = isEnabled ? query.data : undefined;
     const events = useMemo(() => (data ? loadedActivityEvents(data) : NO_EVENTS), [data]);
-    const isError = isEnabled && data === undefined && (query.isError || query.isPaused);
+    const isWaiting = isEnabled && data === undefined;
+    // A load paused offline is not a failure: Retry could not send it either.
+    const isOffline = isWaiting && query.isPaused;
+    const isError = isWaiting && query.isError && !isOffline;
     const loadMore = useCallback(() => {
         if (isEnabled && !isFetching) {
             void fetchNextPage();
@@ -56,8 +61,9 @@ export const useSelfActivityLog = (): SelfActivityLogResult => {
         events,
         // Signed in on the anonymous client (before the remount onto the user's client) the feed
         // is still to come: loading, never read from that client.
-        isLoading: isSignedIn && data === undefined && !isError,
+        isLoading: isSignedIn && data === undefined && !isError && !isOffline,
         isError,
+        isOffline,
         hasMore: data !== undefined && query.hasNextPage,
         isFetching: isEnabled && isFetching,
         isNextPageLoading: query.isFetchingNextPage,

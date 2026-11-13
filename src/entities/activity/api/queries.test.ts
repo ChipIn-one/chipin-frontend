@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/react';
 import {
     dehydrate,
     focusManager,
@@ -14,6 +15,7 @@ import { domainPreview, wirePreview } from 'test/activityFixtures';
 import { setupMswServer } from 'test/mswServer';
 
 import type { SelfActivityEventsData, SelfActivityPreviewsData } from '../model/selfActivity';
+import { loadedActivityEvents, loadedActivityPreviews } from '../model/selfActivity';
 
 import {
     activityKeys,
@@ -21,6 +23,11 @@ import {
     selfActivityEventsQueryOptions,
     selfActivityPreviewsQueryOptions,
 } from './queries';
+
+vi.mock('@sentry/react', async importOriginal => ({
+    ...(await importOriginal<typeof import('@sentry/react')>()),
+    captureMessage: vi.fn(),
+}));
 
 const server = setupMswServer();
 
@@ -186,34 +193,104 @@ test("#669 a feed load writes its own cache entry only, no other query's", async
     ]);
 });
 
-test('a focus refetch of a stale feed reloads only its first page', async () => {
-    const cursors = servePages(EVENTS_URL, () => ({ items: [wireEvent('new')], nextCursor: 40 }));
-    const client = new QueryClient();
-    const options = selfActivityEventsQueryOptions();
-
-    // Older than the 30 s staleTime.
-    client.setQueryData<SelfActivityEventsData>(options.queryKey, threePages(eventsPage), {
-        updatedAt: Date.now() - 60_000,
-    });
-    const observer = new InfiniteQueryObserver(client, { ...options, refetchOnMount: false });
-    const unsubscribe = observer.subscribe(() => undefined);
+/** Hides and shows the tab while the feed is shown (`show` subscribes) on a mounted client. */
+const focusWhileShown = async (
+    client: QueryClient,
+    show: () => () => void,
+    check: () => void | Promise<void>,
+) => {
+    const unsubscribe = show();
 
     // Focus events reach the cache of a mounted client only.
     client.mount();
     try {
         focusManager.setFocused(false);
         focusManager.setFocused(true);
-
-        await vi.waitFor(() => {
-            expect(client.getQueryState(options.queryKey)?.fetchStatus).toBe('idle');
-            expect(cursors).toEqual([null]);
-        });
-        expect(client.getQueryData(options.queryKey)?.pages).toEqual([eventsPage('new', 40)]);
+        await check();
     } finally {
         unsubscribe();
         client.unmount();
         focusManager.setFocused(undefined);
     }
+};
+
+const STALE = { updatedAt: Date.now() - 60_000 };
+
+test('a focus refetch of the stale dashboard previews reloads only their first page', async () => {
+    const cursors = servePages(PREVIEWS_URL, () => ({
+        items: [wirePreview('new')],
+        nextCursor: 40,
+    }));
+    const client = new QueryClient();
+    const options = selfActivityPreviewsQueryOptions();
+
+    client.setQueryData<SelfActivityPreviewsData>(
+        options.queryKey,
+        threePages(previewsPage),
+        STALE,
+    );
+
+    const show = () =>
+        new InfiniteQueryObserver(client, { ...options, refetchOnMount: false }).subscribe(
+            () => undefined,
+        );
+
+    await focusWhileShown(client, show, async () => {
+        await vi.waitFor(() => {
+            expect(client.getQueryState(options.queryKey)?.fetchStatus).toBe('idle');
+            expect(cursors).toEqual([null]);
+        });
+        expect(client.getQueryData(options.queryKey)?.pages).toEqual([previewsPage('new', 40)]);
+    });
+});
+
+test('a focus refetches the stale Activity log while one page is loaded', async () => {
+    const cursors = servePages(EVENTS_URL, () => ({ items: [wireEvent('new')], nextCursor: 40 }));
+    const client = new QueryClient();
+    const options = selfActivityEventsQueryOptions();
+
+    client.setQueryData<SelfActivityEventsData>(
+        options.queryKey,
+        { pages: [eventsPage('a', 40)], pageParams: [null] },
+        STALE,
+    );
+
+    const show = () =>
+        new InfiniteQueryObserver(client, { ...options, refetchOnMount: false }).subscribe(
+            () => undefined,
+        );
+
+    await focusWhileShown(client, show, async () => {
+        await vi.waitFor(() => {
+            expect(client.getQueryData(options.queryKey)?.pages).toEqual([eventsPage('new', 40)]);
+        });
+        expect(cursors).toEqual([null]);
+    });
+});
+
+test('a focus or a reconnect keeps a stale Activity log of several pages: no request, every page stays', async () => {
+    const cursors = servePages(EVENTS_URL, () => ({ items: [wireEvent('new')], nextCursor: 40 }));
+    const client = new QueryClient();
+    const options = selfActivityEventsQueryOptions();
+    const loaded = threePages(eventsPage);
+
+    client.setQueryData<SelfActivityEventsData>(options.queryKey, loaded, STALE);
+
+    const show = () =>
+        new InfiniteQueryObserver(client, { ...options, refetchOnMount: false }).subscribe(
+            () => undefined,
+        );
+
+    await focusWhileShown(client, show, async () => {
+        onlineManager.setOnline(false);
+        onlineManager.setOnline(true);
+        // The client handles focus and online after resuming paused mutations (a microtask later).
+        await new Promise(resolve => setTimeout(resolve, 20));
+
+        expect(cursors).toEqual([]);
+        expect(client.getQueryState(options.queryKey)?.fetchStatus).toBe('idle');
+        expect(client.getQueryData(options.queryKey)).toEqual(loaded);
+    });
 });
 
 test('a focus while the feed is fresh keeps every loaded page', () => {
@@ -323,6 +400,137 @@ test('a first load running during a change is cancelled and sent again, so the f
 
         expect(requests).toBe(2);
         expect(client.getQueryData(options.queryKey)?.pages).toEqual([eventsPage('after', null)]);
+    } finally {
+        unsubscribe();
+    }
+});
+
+// The same item with a currency that is no ISO code: its amounts cannot be read.
+const unreadable = (item: object): unknown =>
+    JSON.parse(JSON.stringify(item).split('"currency":"USD"').join('"currency":"EURO"'));
+
+test('an item with an unreadable amount is left out of each feed and reported once by its id only', async () => {
+    vi.mocked(Sentry.captureMessage).mockClear();
+    servePages(PREVIEWS_URL, () => ({
+        items: [unreadable(wirePreview('bad-preview')), wirePreview('ok')],
+        nextCursor: null,
+    }));
+    servePages(EVENTS_URL, () => ({
+        items: [wireEvent('ok'), unreadable(wireEvent('bad-event'))],
+        nextCursor: null,
+    }));
+    const client = new QueryClient();
+
+    const previews = await client.fetchInfiniteQuery(selfActivityPreviewsQueryOptions());
+    const events = await client.fetchInfiniteQuery(selfActivityEventsQueryOptions());
+
+    expect(previews.pages[0]?.items).toEqual([
+        { kind: 'invalid', id: 'bad-preview' },
+        domainPreview('ok'),
+    ]);
+    expect(loadedActivityPreviews(previews)).toEqual([domainPreview('ok')]);
+    expect(events.pages[0]?.items).toEqual([
+        domainEvent('ok'),
+        { kind: 'invalid', id: 'bad-event' },
+    ]);
+    expect(loadedActivityEvents(events)).toEqual([domainEvent('ok')]);
+
+    // Reading the cached feed again reports nothing more.
+    loadedActivityPreviews(previews);
+    loadedActivityEvents(events);
+    // Only the reason and the item id: no amount, description or name.
+    expect(vi.mocked(Sentry.captureMessage).mock.calls).toEqual([
+        [
+            'money.wire_reject',
+            { level: 'error', tags: { 'money.reason': 'shape' }, extra: { itemId: 'bad-preview' } },
+        ],
+        [
+            'money.wire_reject',
+            { level: 'error', tags: { 'money.reason': 'shape' }, extra: { itemId: 'bad-event' } },
+        ],
+    ]);
+});
+
+test('a change while the next page loads ends with one first-page request and one page', async () => {
+    let releaseNextPage: (() => void) | undefined;
+    const nextPageHeld = new Promise<void>(resolve => {
+        releaseNextPage = resolve;
+    });
+    const cursors: (string | null)[] = [];
+
+    server.use(
+        http.get(EVENTS_URL, async ({ request }) => {
+            const cursor = new URL(request.url).searchParams.get('cursor');
+
+            cursors.push(cursor);
+            if (cursor !== null) {
+                // The next page that predates the change: answered only after it was cancelled.
+                await nextPageHeld;
+                return HttpResponse.json({ items: [wireEvent('old-page')], nextCursor: null });
+            }
+            return HttpResponse.json({ items: [wireEvent('after')], nextCursor: 40 });
+        }),
+    );
+    const client = new QueryClient();
+    const options = selfActivityEventsQueryOptions();
+
+    client.setQueryData<SelfActivityEventsData>(options.queryKey, {
+        pages: [eventsPage('a', 40)],
+        pageParams: [null],
+    });
+    const observer = new InfiniteQueryObserver(client, options);
+    const unsubscribe = observer.subscribe(() => undefined);
+
+    try {
+        const nextPage = observer.fetchNextPage();
+
+        await vi.waitFor(() => {
+            expect(cursors).toEqual(['40']);
+        });
+        await invalidateSelfActivity(client);
+        releaseNextPage?.();
+        await nextPage;
+
+        expect(cursors).toEqual(['40', null]);
+        expect(client.getQueryData(options.queryKey)).toEqual({
+            pages: [eventsPage('after', 40)],
+            pageParams: [null],
+        });
+        expect(client.getQueryState(options.queryKey)?.fetchStatus).toBe('idle');
+    } finally {
+        unsubscribe();
+    }
+});
+
+test('two overlapping changes leave one page from the newest reload and nothing running', async () => {
+    let requests = 0;
+
+    server.use(
+        http.get(EVENTS_URL, async () => {
+            requests += 1;
+            const id = `reload-${String(requests)}`;
+
+            await delay(20);
+            return HttpResponse.json({ items: [wireEvent(id)], nextCursor: 40 });
+        }),
+    );
+    const client = new QueryClient();
+    const options = selfActivityEventsQueryOptions();
+
+    client.setQueryData<SelfActivityEventsData>(options.queryKey, threePages(eventsPage));
+    const observer = new InfiniteQueryObserver(client, options);
+    const unsubscribe = observer.subscribe(() => undefined);
+
+    try {
+        await Promise.all([invalidateSelfActivity(client), invalidateSelfActivity(client)]);
+
+        const pages = client.getQueryData(options.queryKey)?.pages;
+
+        // The reload a second change overtook is cancelled; the newest answer is the one kept.
+        expect(pages).toEqual([eventsPage(`reload-${String(requests)}`, 40)]);
+        expect(requests).toBeLessThanOrEqual(2);
+        expect(client.getQueryState(options.queryKey)?.fetchStatus).toBe('idle');
+        expect(client.getQueryState(options.queryKey)?.isInvalidated).toBe(false);
     } finally {
         unsubscribe();
     }

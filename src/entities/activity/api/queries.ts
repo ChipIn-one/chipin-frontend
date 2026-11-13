@@ -90,11 +90,15 @@ const trimBeforeRefetch = <P>(query: FeedQuery<P>): boolean => {
     return true;
 };
 
-// Not generic where TanStack reads them: the page type of each feed is inferred from its own.
+// Not generic where TanStack reads it: the page type of the feed is inferred from its own.
 const trimPreviewsBeforeRefetch = (query: FeedQuery<SelfActivityPreviewsPage>): boolean =>
     trimBeforeRefetch(query);
-const trimEventsBeforeRefetch = (query: FeedQuery<SelfActivityEventsPage>): boolean =>
-    trimBeforeRefetch(query);
+
+// The Activity page is read pages deep: a focus or a reconnect refetches (when stale) only a feed
+// of at most one page. Deeper, the loaded pages and the scroll position stay as they are (the
+// legacy store never refetched on focus); a write still invalidates the feed.
+const refetchOnlyFirstPage = (query: FeedQuery<SelfActivityEventsPage>): boolean =>
+    (query.state.data?.pages.length ?? 0) <= 1;
 
 /** The user's activity previews, newest first: no cursor first, then by `nextCursor` until null. */
 export const selfActivityPreviewsQueryOptions = () =>
@@ -104,8 +108,9 @@ export const selfActivityPreviewsQueryOptions = () =>
         initialPageParam: firstPageParam(),
         queryFn: ({ pageParam, signal }) => fetchPreviewsPage(pageParam, signal),
         getNextPageParam: lastPage => lastPage.nextCursor,
-        // Pinned to TanStack Query 5.105: these callbacks run only in `onFocus`/`onOnline`, never
-        // during render, so they may cut the cache (re-check on a TanStack upgrade).
+        // Checked on TanStack Query 5.105 and 5.106: these callbacks run only in
+        // `onFocus`/`onOnline`, never during render, so they may cut the cache (re-check on a
+        // TanStack upgrade).
         refetchOnWindowFocus: trimPreviewsBeforeRefetch,
         refetchOnReconnect: trimPreviewsBeforeRefetch,
     });
@@ -118,8 +123,8 @@ export const selfActivityEventsQueryOptions = () =>
         initialPageParam: firstPageParam(),
         queryFn: ({ pageParam, signal }) => fetchEventsPage(pageParam, signal),
         getNextPageParam: lastPage => lastPage.nextCursor,
-        refetchOnWindowFocus: trimEventsBeforeRefetch,
-        refetchOnReconnect: trimEventsBeforeRefetch,
+        refetchOnWindowFocus: refetchOnlyFirstPage,
+        refetchOnReconnect: refetchOnlyFirstPage,
     });
 
 /** Cuts every cached feed of the user's activity to its first page, keeping its age. */

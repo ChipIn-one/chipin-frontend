@@ -1,12 +1,13 @@
 import { useMemo } from 'react';
 import { Button, Flex, Spinner, Text } from '@radix-ui/themes';
-import { ChevronsDownIcon, RefreshCwIcon } from 'lucide-react';
+import { ChevronsDownIcon, RefreshCwIcon, WifiOffIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
 import { useSelfActivityLog } from 'hooks/useSelfActivity';
 
+import { EmptyState } from 'basics/empty-states';
 import { ActivityFeedSkeleton } from 'components/skeletons';
 
 import type { ActivityFilter } from './ActivityHeader';
@@ -17,11 +18,12 @@ interface Props {
 }
 
 const ActivityList = ({ activeFilter }: Props) => {
-    const { t } = useTranslation('activity');
+    const { t } = useTranslation(['activity', 'errors']);
     const {
         events,
         isLoading,
         isError,
+        isOffline,
         hasMore,
         isFetching,
         isNextPageLoading,
@@ -58,11 +60,31 @@ const ActivityList = ({ activeFilter }: Props) => {
         isLoading: isFetching,
         onLoadMore: loadMore,
     });
-    // A failed first load (nothing to show) reloads the feed; a failed next page loads it again.
-    const onRetry = isError ? reload : loadMore;
 
     if (isLoading) {
         return <ActivityFeedSkeleton />;
+    }
+
+    // Nothing to show and the first load failed: an error with Retry, never "no activity".
+    if (isError) {
+        return (
+            <EmptyState
+                icon={<RefreshCwIcon size={20} />}
+                title={t('loadErrorTitle')}
+                description={t('loadErrorDescription')}
+                action={
+                    <Button type="button" variant="soft" onClick={reload}>
+                        <RefreshCwIcon size={14} />
+                        {t('retryAction')}
+                    </Button>
+                }
+            />
+        );
+    }
+
+    // Nothing cached and no network: the load resumes by itself on reconnect, so no Retry.
+    if (isOffline) {
+        return <EmptyState icon={<WifiOffIcon size={20} />} title={t('errors:network.offline')} />;
     }
 
     return (
@@ -75,9 +97,9 @@ const ActivityList = ({ activeFilter }: Props) => {
                 </Flex>
             )}
 
-            {(isNextPageError || isError) && (
+            {isNextPageError && (
                 <Flex justify="center" py="4">
-                    <Button type="button" size="1" variant="soft" onClick={onRetry}>
+                    <Button type="button" size="1" variant="soft" onClick={loadMore}>
                         <RefreshCwIcon size={14} />
                         {t('retryAction')}
                     </Button>
