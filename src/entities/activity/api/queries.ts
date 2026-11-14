@@ -69,7 +69,8 @@ const fetchEventsPage = (
 // A refetch of an infinite query reloads every loaded page in turn. A stale feed is cut back to
 // its first page before a focus/reconnect refetch, so the refetch is one request. The cut keeps
 // the data's age and invalidation, so whether it refetches does not change. Offline nothing is
-// cut: the loaded pages stay readable until the network is back.
+// cut: the loaded pages stay readable until the network is back (except after a ledger write
+// that failed on a network drop: `invalidateSelfActivity` cuts at once).
 type FeedQuery<P> = Query<P, Error, InfiniteData<P, number | null>, SelfFeedKey>;
 
 const trimBeforeRefetch = <P>(query: FeedQuery<P>): boolean => {
