@@ -1,5 +1,6 @@
 // The expense history page on the real `activity.children` query (spec 03 §6 row 5, 12c).
-import { render, screen, waitFor } from '@testing-library/react';
+import type { QueryClient } from '@tanstack/react-query';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -8,6 +9,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
+import { activityKeys } from 'entities/activity';
 import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
 import { setupMswServer } from 'test/mswServer';
@@ -26,6 +28,7 @@ vi.mock('components/nav-bars', () => ({
 }));
 
 const server = setupMswServer();
+let client: QueryClient;
 
 const parentEvent = {
     id: 'activity-1',
@@ -83,7 +86,7 @@ beforeEach(() => {
             sex: 'male',
         },
     });
-    mountAsUserClient();
+    client = mountAsUserClient();
 });
 
 afterEach(() => {
@@ -148,4 +151,53 @@ test('a failed delete reads the history again while it stays shown and the delet
     });
     expect(screen.getByRole('button', { name: 'Delete entry' })).toBeTruthy();
     expect(screen.getAllByText('Updated dinner')).not.toHaveLength(0);
+});
+
+// Spec 03 §6 row 5 (12c): removed from the group (or the group deleted), the reopened history must
+// not show the cached chain with working Edit and Delete.
+test('a history refetch denied with 403 shows the error and the unavailable header, no edit or delete', async () => {
+    serve(204);
+    renderPage();
+    await screen.findAllByRole('button', { name: 'Delete' });
+
+    server.use(
+        http.get('*/users/self/activities/:parentActivityId/children', () =>
+            HttpResponse.json({ code: 'ACTIVITY.FORBIDDEN' }, { status: 403 }),
+        ),
+    );
+    await act(() => client.invalidateQueries({ queryKey: activityKeys.children('activity-1') }));
+
+    expect(await screen.findByText("Couldn't load activity updates")).toBeTruthy();
+    expect(screen.getByText('Activity summary unavailable')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Delete' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Update' })).toBeNull();
+    expect(screen.queryByText('Updated dinner')).toBeNull();
+});
+
+test('an unreadable event in the history keeps the readable state shown with edit and delete disabled', async () => {
+    const broken = {
+        ...updatedEvent,
+        id: 'activity-3',
+        seq: 3,
+        metadata: { ...updatedEvent.metadata, currency: 'X' },
+    };
+
+    server.use(
+        http.get('*/users/self/activities/:parentActivityId/children', () =>
+            HttpResponse.json({
+                parent: parentEvent,
+                items: [broken, updatedEvent],
+                nextCursor: null,
+            }),
+        ),
+    );
+    renderPage();
+
+    const updateButtons = await screen.findAllByRole('button', { name: 'Update' });
+    const deleteButtons = screen.getAllByRole('button', { name: 'Delete' });
+
+    expect(screen.getAllByText('Updated dinner')).not.toHaveLength(0);
+    [...updateButtons, ...deleteButtons].forEach(button => {
+        expect(button).toHaveProperty('disabled', true);
+    });
 });

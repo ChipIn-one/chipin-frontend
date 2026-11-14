@@ -39,6 +39,9 @@ const ActivitySubeventsPage = () => {
                     <ActivitySubeventsDetails
                         view={activityView}
                         childEvents={history.events}
+                        parentActivityId={parentActivityId}
+                        // An unreadable later event: the current state may be newer than shown.
+                        canChange={!history.hasInvalidEvents}
                         isLoading={history.isLoading}
                     />
                 }

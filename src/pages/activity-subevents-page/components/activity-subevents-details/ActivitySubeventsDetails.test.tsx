@@ -124,6 +124,8 @@ test('ACT-004 shows current expense details from the latest snapshot', () => {
         <ActivitySubeventsDetails
             view={createView(expenseCreated, expenseUpdated)}
             childEvents={[]}
+            parentActivityId="activity-id"
+            canChange
             isLoading={false}
         />,
     );
@@ -145,6 +147,8 @@ test('shows settlement direction without an expense participant list', () => {
         <ActivitySubeventsDetails
             view={createView(settlementCreated)}
             childEvents={[]}
+            parentActivityId="activity-id"
+            canChange
             isLoading={false}
         />,
     );
@@ -162,6 +166,8 @@ test('uses a chevron while preserving the mobile details disclosure behavior', (
         <ActivitySubeventsDetails
             view={createView(expenseCreated)}
             childEvents={[]}
+            parentActivityId="activity-id"
+            canChange
             isLoading={false}
         />,
     );

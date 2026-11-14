@@ -10,6 +10,7 @@ import {
     loadedActivityChildren,
     useActivityChildrenQuery,
 } from 'entities/activity';
+import { isGroupDeniedError } from 'entities/groups';
 import { isUserCacheClient } from 'shared/offline/userCaches';
 import { AUTH_STATUS } from 'store/authConstants';
 import { useAuthStore } from 'store/authStore';
@@ -21,10 +22,15 @@ export interface ActivityHistoryResult {
     events: readonly ActivityEvent[];
     /** Nothing cached yet and the first load is pending. */
     isLoading: boolean;
-    /** The first load failed with nothing cached (a chain that does not exist, too). */
+    /**
+     * The first load failed with nothing cached (a chain that does not exist, too), or the last
+     * load was denied (403/404): then the cached events are not shown either.
+     */
     isError: boolean;
     /** The first load waits for the network (offline) with nothing cached. */
     isOffline: boolean;
+    /** A loaded later event is unreadable: the shown state may be stale, no edit or delete. */
+    hasInvalidEvents: boolean;
     hasMore: boolean;
     /** The loaded page count and the time the data landed: re-arms the scroll trigger. */
     loadedKey: string;
@@ -47,8 +53,14 @@ export const useActivityHistory = (parentActivityId: string | undefined): Activi
     const { fetchNextPage, refetch } = query;
     // A paused load counts: starting another would cancel it, again and again while offline.
     const isFetching = query.fetchStatus !== 'idle';
-    const data = isEnabled ? query.data : undefined;
-    const { parent, events } = useMemo(() => loadedActivityChildren(data), [data]);
+    // A 403/404 (removed from the group, the expense's group deleted) wins over cached data, as
+    // for `groups.detail`: stale events with working Edit/Delete must not be shown.
+    const isDenied = query.isError && isGroupDeniedError(query.error);
+    const data = isEnabled && !isDenied ? query.data : undefined;
+    const { parent, events, hasInvalidEvents } = useMemo(
+        () => loadedActivityChildren(data),
+        [data],
+    );
     const isWaiting = isEnabled && data === undefined;
     // A load paused offline is not a failure: Retry could not send it either.
     const isOffline = isWaiting && query.isPaused;
@@ -77,6 +89,7 @@ export const useActivityHistory = (parentActivityId: string | undefined): Activi
             !isOffline,
         isError,
         isOffline,
+        hasInvalidEvents,
         hasMore: data !== undefined && query.hasNextPage,
         loadedKey: `${data?.pages.length ?? 0}:${data ? query.dataUpdatedAt : 0}`,
         isFetching: isEnabled && isFetching,

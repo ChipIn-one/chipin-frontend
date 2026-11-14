@@ -42,6 +42,7 @@ const history = (state: Partial<ActivityHistoryResult> = {}): ActivityHistoryRes
     isLoading: false,
     isError: false,
     isOffline: false,
+    hasInvalidEvents: false,
     hasMore: false,
     loadedKey: '1:1',
     isFetching: false,

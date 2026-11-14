@@ -21,12 +21,18 @@ interface Props {
     currentEvent?: ActivityEvent;
     /** The chain's later events, as the history page loaded them. */
     childEvents: readonly ActivityEvent[];
+    /** The id the history query is keyed by (the route's): invalidated after a write. */
+    parentActivityId: string | undefined;
+    /** False when the shown state may be stale (an unreadable event): no edit or delete. */
+    canChange?: boolean;
 }
 
 const ActivitySubeventsButtons = ({
     parentEvent,
     currentEvent: currentEventProp,
     childEvents,
+    parentActivityId,
+    canChange = true,
 }: Props) => {
     const { t } = useTranslation(['activity', 'toasts']);
     const initializeEdit = useExpenseModalStore(state => state.initializeEdit);
@@ -36,21 +42,20 @@ const ActivitySubeventsButtons = ({
         getActivitySubeventsView(parentEvent, childEvents)?.currentEvent ??
         parentEvent;
     const parentEntryId = getActivityLedgerEntryId(parentEvent);
-    const rootActivityId = parentEvent.parentActivityId ?? parentEvent.id;
     const isEntryReversed =
         currentEvent.action === ACTIVITY_ACTIONS.EXPENSE_REVERSED ||
         currentEvent.action === ACTIVITY_ACTIONS.SETTLEMENT_REVERSED;
     const isExpense = getActivityCategory(parentEvent) === ACTIVITY_CATEGORIES.EXPENSE;
 
     const onEdit = (): void => {
-        if (!parentEntryId || !isExpense) {
+        if (!parentEntryId || !isExpense || !canChange) {
             return;
         }
 
         const initialization = prepareExpenseEdit({
             parentEvent,
             childEvents,
-            parentActivityId: rootActivityId,
+            parentActivityId,
         });
 
         if (initialization) {
@@ -59,14 +64,14 @@ const ActivitySubeventsButtons = ({
     };
 
     const onRemove = (): Promise<void> => {
-        if (!parentEntryId) {
+        if (!parentEntryId || !canChange) {
             return Promise.reject(new Error('No ledger entry found to remove'));
         }
 
         return deleteLedgerEntry({
             entryId: parentEntryId,
             groupId: parentEvent.groupId ?? undefined,
-            parentActivityId: rootActivityId,
+            parentActivityId,
         })
             .then(() => {
                 toast.success(t('toasts:ledger.entryDeleted'));
@@ -86,7 +91,7 @@ const ActivitySubeventsButtons = ({
             <Button
                 size="1"
                 variant="soft"
-                disabled={!parentEntryId || !isExpense}
+                disabled={!parentEntryId || !isExpense || !canChange}
                 onClick={onEdit}
             >
                 <PencilIcon size={14} />
@@ -94,7 +99,12 @@ const ActivitySubeventsButtons = ({
             </Button>
 
             <RemoveLedgerEntryAlertDialog isActionLoading={isRemoving} onAction={onRemove}>
-                <Button size="1" variant="soft" color="red" disabled={!parentEntryId || isRemoving}>
+                <Button
+                    size="1"
+                    variant="soft"
+                    color="red"
+                    disabled={!parentEntryId || isRemoving || !canChange}
+                >
                     <Trash2Icon size={14} />
                     {t('subeventsDeleteAction')}
                 </Button>

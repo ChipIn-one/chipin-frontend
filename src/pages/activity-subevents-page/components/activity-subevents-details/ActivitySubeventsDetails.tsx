@@ -31,6 +31,10 @@ interface Props {
     view?: ActivitySubeventsView<ActivityEvent>;
     /** The chain's later events (the expense editor starts from the latest). */
     childEvents: readonly ActivityEvent[];
+    /** The id the history query is keyed by (the route's). */
+    parentActivityId: string | undefined;
+    /** False when the shown state may be stale: Edit and Delete are disabled. */
+    canChange: boolean;
     isLoading: boolean;
 }
 
@@ -57,7 +61,13 @@ const getSharingModeLabel = (
     }
 };
 
-const ActivitySubeventsDetails = ({ view, childEvents, isLoading }: Props) => {
+const ActivitySubeventsDetails = ({
+    view,
+    childEvents,
+    parentActivityId,
+    canChange,
+    isLoading,
+}: Props) => {
     const { t, i18n } = useTranslation(['activity', 'group']);
 
     if (isLoading) {
@@ -180,6 +190,8 @@ const ActivitySubeventsDetails = ({ view, childEvents, isLoading }: Props) => {
                 parentEvent={originalEvent}
                 currentEvent={currentEvent}
                 childEvents={childEvents}
+                parentActivityId={parentActivityId}
+                canChange={canChange}
             />
         </Flex>
     ) : settlementEvent ? (
@@ -223,6 +235,8 @@ const ActivitySubeventsDetails = ({ view, childEvents, isLoading }: Props) => {
                 parentEvent={originalEvent}
                 currentEvent={currentEvent}
                 childEvents={childEvents}
+                parentActivityId={parentActivityId}
+                canChange={canChange}
             />
         </Flex>
     ) : null;

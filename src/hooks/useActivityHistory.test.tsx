@@ -3,6 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, expect, test } from 'vitest';
 
+import { activityKeys } from 'entities/activity';
 import { useAuthStore } from 'store/authStore';
 import { legacyPreview } from 'test/activityFixtures';
 import { setupMswServer } from 'test/mswServer';
@@ -40,7 +41,7 @@ const serveHistory = (status = 200): (string | null)[] => {
 
 const signIn = () => {
     useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
-    mountAsUserClient();
+    return mountAsUserClient();
 };
 
 beforeEach(() => {
@@ -126,4 +127,68 @@ test('offline with nothing cached the history waits for the network: offline, no
     await waitFor(() => {
         expect(result.current.parent?.id).toBe('activity-1');
     });
+});
+
+// Spec 03 §6 row 5 (12c), as `groups.detail`: a 403/404 wins over cached data, other errors do not.
+test.each([403, 404])(
+    'a refetch denied with %i over a cached chain is an error and the cached events are not shown',
+    async status => {
+        const client = signIn();
+        const cursors = serveHistory();
+        const { result } = renderHook(() => useActivityHistory('activity-1'));
+
+        await waitFor(() => {
+            expect(result.current.parent?.id).toBe('activity-1');
+        });
+        serveHistory(status);
+        await act(() =>
+            client.invalidateQueries({ queryKey: activityKeys.children('activity-1') }),
+        );
+
+        await waitFor(() => {
+            expect(result.current.isError).toBe(true);
+        });
+        expect(result.current).toMatchObject({
+            parent: undefined,
+            events: [],
+            hasMore: false,
+            isLoading: false,
+        });
+        expect(cursors).toEqual([null]);
+    },
+);
+
+test('a refetch failing with a 5xx over a cached chain keeps the cached events shown', async () => {
+    const client = signIn();
+    serveHistory();
+    const { result } = renderHook(() => useActivityHistory('activity-1'));
+
+    await waitFor(() => {
+        expect(result.current.parent?.id).toBe('activity-1');
+    });
+    const failed = serveHistory(500);
+    await act(() => client.invalidateQueries({ queryKey: activityKeys.children('activity-1') }));
+
+    expect(failed).toEqual([null]);
+    expect(result.current).toMatchObject({ isError: false, isLoading: false });
+    expect(result.current.parent?.id).toBe('activity-1');
+    expect(result.current.events.map(event => event.id)).toEqual(['activity-1-3']);
+});
+
+test('an unreadable later event is left out and flagged', async () => {
+    signIn();
+    const broken = { ...edit, metadata: { ...edit.metadata, currency: 'X' } };
+
+    server.use(
+        http.get('*/users/self/activities/:parentActivityId/children', () =>
+            HttpResponse.json({ parent, items: [olderEdit, broken], nextCursor: null }),
+        ),
+    );
+    const { result } = renderHook(() => useActivityHistory('activity-1'));
+
+    await waitFor(() => {
+        expect(result.current.parent?.id).toBe('activity-1');
+    });
+    expect(result.current.events.map(event => event.id)).toEqual(['activity-1-3']);
+    expect(result.current.hasInvalidEvents).toBe(true);
 });

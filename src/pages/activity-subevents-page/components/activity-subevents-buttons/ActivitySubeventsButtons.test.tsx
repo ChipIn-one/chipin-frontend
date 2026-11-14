@@ -217,7 +217,13 @@ afterEach(() => {
 test('ACT-004 opens the shared editor from the latest event of the loaded history', async () => {
     const user = userEvent.setup();
 
-    render(<ActivitySubeventsButtons parentEvent={parentEvent} childEvents={[updatedEvent]} />);
+    render(
+        <ActivitySubeventsButtons
+            parentEvent={parentEvent}
+            parentActivityId={parentEvent.id}
+            childEvents={[updatedEvent]}
+        />,
+    );
 
     await user.click(screen.getByRole('button', { name: 'Update' }));
 
@@ -235,6 +241,7 @@ test('hides edit and delete actions when the latest event is reversed', () => {
     render(
         <ActivitySubeventsButtons
             parentEvent={parentEvent}
+            parentActivityId={parentEvent.id}
             currentEvent={reversedEvent}
             childEvents={[reversedEvent]}
         />,
@@ -242,6 +249,24 @@ test('hides edit and delete actions when the latest event is reversed', () => {
 
     expect(screen.queryByText('Update')).toBeNull();
     expect(screen.queryByText('Delete')).toBeNull();
+});
+
+test('ACT-004 an unreadable event in the loaded history disables edit and delete', async () => {
+    const user = userEvent.setup();
+
+    render(
+        <ActivitySubeventsButtons
+            parentEvent={parentEvent}
+            parentActivityId={parentEvent.id}
+            childEvents={[updatedEvent]}
+            canChange={false}
+        />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Update' })).toHaveProperty('disabled', true);
+    expect(screen.getByRole('button', { name: 'Delete' })).toHaveProperty('disabled', true);
+    await user.click(screen.getByRole('button', { name: 'Update' }));
+    expect(useExpenseModalStore.getState().isOpened).toBe(false);
 });
 
 // The trigger, also while the open confirmation dialog hides it from the accessibility tree.
@@ -259,7 +284,13 @@ test('deletes the entry from the activity history: one DELETE, a toast, the hist
     const client = signIn();
     const sent = serveDelete();
 
-    render(<ActivitySubeventsButtons parentEvent={parentEvent} childEvents={[]} />);
+    render(
+        <ActivitySubeventsButtons
+            parentEvent={parentEvent}
+            parentActivityId={parentEvent.id}
+            childEvents={[]}
+        />,
+    );
     await confirmDelete();
 
     await waitFor(() => {
@@ -271,12 +302,40 @@ test('deletes the entry from the activity history: one DELETE, a toast, the hist
     expect(isHistoryStale(client)).toBe(true);
 });
 
+test('a delete invalidates the history under the route id it is keyed by', async () => {
+    const client = signIn();
+    const routeHistoryKey = activityKeys.children('route-activity-id');
+
+    client.setQueryData(routeHistoryKey, emptyHistory);
+    serveDelete();
+    render(
+        <ActivitySubeventsButtons
+            parentEvent={parentEvent}
+            parentActivityId="route-activity-id"
+            childEvents={[]}
+        />,
+    );
+    await confirmDelete();
+
+    await waitFor(() => {
+        expect(toast.success).toHaveBeenCalledWith('Entry deleted successfully.');
+    });
+    expect(isHistoryStale(client, routeHistoryKey)).toBe(true);
+    expect(isHistoryStale(client)).toBe(false);
+});
+
 test('the delete button is disabled while the delete request runs (the mutation state)', async () => {
     signIn();
     const gate = deferred();
     const sent = serveDelete({ gate });
 
-    render(<ActivitySubeventsButtons parentEvent={parentEvent} childEvents={[]} />);
+    render(
+        <ActivitySubeventsButtons
+            parentEvent={parentEvent}
+            parentActivityId={parentEvent.id}
+            childEvents={[]}
+        />,
+    );
     await confirmDelete();
 
     await waitFor(() => {
@@ -293,7 +352,13 @@ test('a failed delete shows the translated API error and marks the feed and the 
     const client = signIn();
     serveDelete({ status: 404 });
 
-    render(<ActivitySubeventsButtons parentEvent={parentEvent} childEvents={[]} />);
+    render(
+        <ActivitySubeventsButtons
+            parentEvent={parentEvent}
+            parentActivityId={parentEvent.id}
+            childEvents={[]}
+        />,
+    );
     await confirmDelete();
 
     await waitFor(() => {
@@ -322,7 +387,13 @@ test('deleting a settlement in a group sends one DELETE and reads the group agai
             return HttpResponse.json(wireGroup('group-1'));
         }),
     );
-    render(<ActivitySubeventsButtons parentEvent={settlementEvent(true)} childEvents={[]} />);
+    render(
+        <ActivitySubeventsButtons
+            parentEvent={settlementEvent(true)}
+            parentActivityId="settlement-activity-id"
+            childEvents={[]}
+        />,
+    );
     await confirmDelete();
 
     await waitFor(() => {
@@ -339,7 +410,13 @@ test('deleting a settlement between friends sends one DELETE and reloads the fri
     const client = signIn();
     const sent = serveDelete();
 
-    render(<ActivitySubeventsButtons parentEvent={settlementEvent(false)} childEvents={[]} />);
+    render(
+        <ActivitySubeventsButtons
+            parentEvent={settlementEvent(false)}
+            parentActivityId="settlement-activity-id"
+            childEvents={[]}
+        />,
+    );
     await confirmDelete();
 
     await waitFor(() => {
@@ -356,7 +433,13 @@ test('a settlement delete the server refuses (403) shows the translated error an
     const client = signIn();
     const sent = serveDelete({ status: 403, code: 'LEDGER.FORBIDDEN' });
 
-    render(<ActivitySubeventsButtons parentEvent={settlementEvent(false)} childEvents={[]} />);
+    render(
+        <ActivitySubeventsButtons
+            parentEvent={settlementEvent(false)}
+            parentActivityId="settlement-activity-id"
+            childEvents={[]}
+        />,
+    );
     await confirmDelete();
 
     await waitFor(() => {
@@ -411,7 +494,13 @@ describe.each<[string, () => void]>([
             const gate = deferred();
             const sent = serveDelete({ gate, status });
 
-            render(<ActivitySubeventsButtons parentEvent={parentEvent} childEvents={[]} />);
+            render(
+                <ActivitySubeventsButtons
+                    parentEvent={parentEvent}
+                    parentActivityId={parentEvent.id}
+                    childEvents={[]}
+                />,
+            );
             await confirmDelete();
             await waitFor(() => {
                 expect(sent).toHaveLength(1);
@@ -439,7 +528,13 @@ test('an offline delete is refused with a toast and nothing is sent after the re
     const sent = serveDelete();
 
     onlineManager.setOnline(false);
-    render(<ActivitySubeventsButtons parentEvent={parentEvent} childEvents={[]} />);
+    render(
+        <ActivitySubeventsButtons
+            parentEvent={parentEvent}
+            parentActivityId={parentEvent.id}
+            childEvents={[]}
+        />,
+    );
     await confirmDelete();
 
     await waitFor(() => {

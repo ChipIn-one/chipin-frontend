@@ -14,6 +14,11 @@ export interface LoadedActivityChildren {
     readonly parent: ActivityEvent | undefined;
     /** The later events of all loaded pages, newest first, each once; invalid items left out. */
     readonly events: ActivityEvent[];
+    /**
+     * A loaded later event is invalid (unreadable): the current state may be newer than the events
+     * shown, so nothing may be edited or deleted from them.
+     */
+    readonly hasInvalidEvents: boolean;
 }
 
 export const loadedActivityChildren = (
@@ -24,5 +29,7 @@ export const loadedActivityChildren = (
     return {
         parent: parent && !('kind' in parent) ? parent : undefined,
         events: loadedActivityEvents(data),
+        hasInvalidEvents:
+            data?.pages.some(page => page.items.some(item => 'kind' in item)) ?? false,
     };
 };
