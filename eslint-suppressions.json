@@ -245,11 +245,6 @@
       "count": 1
     }
   },
-  "src/pages/ActivityPage.tsx": {
-    "boundaries/dependencies": {
-      "count": 1
-    }
-  },
   "src/pages/DashboardPage.test.tsx": {
     "boundaries/dependencies": {
       "count": 1

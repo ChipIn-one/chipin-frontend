@@ -1,10 +1,7 @@
-// Public entry of entities/dashboard: the balance totals and the activity feed queries.
+// Public entry of entities/dashboard: the balance totals query.
 export {
-    dashboardActivityQueryOptions,
     dashboardBalancesQueryOptions,
     dashboardKeys,
-    trimDashboardFeed,
-    useDashboardActivityQuery,
     useDashboardBalancesQuery,
 } from './api/queries';
-export type { DashboardActivityPage, DashboardBalances } from './model/types';
+export type { DashboardBalances } from './model/types';

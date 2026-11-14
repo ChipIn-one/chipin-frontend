@@ -9,8 +9,6 @@ export interface LoadingStore {
         logoutOtherDevices: LoadingState;
     };
     activity: {
-        data: LoadingState;
-        nextPage: LoadingState;
         subeventsData: LoadingState;
         subeventsNextPage: LoadingState;
     };
@@ -39,8 +37,6 @@ type LoadingSlices = Omit<LoadingStore, 'setLoading' | 'setInitialLoadingStore'>
 const initialLoadingStore: LoadingSlices = {
     auth: { login: 'initial', signOut: 'initial', logoutOtherDevices: 'initial' },
     activity: {
-        data: 'initial',
-        nextPage: 'initial',
         subeventsData: 'initial',
         subeventsNextPage: 'initial',
     },

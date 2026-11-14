@@ -1,6 +1,6 @@
-// The rows of an activity list as domain events (amounts as `Money`), from domain previews (the
-// group feed) or from the legacy items of the not-yet-migrated feeds (the dashboard, the activity
-// store), which the legacy bridge of `entities/balance` carries into the domain at this boundary.
+// The rows of an activity list as domain events (amounts as `Money`): from domain previews (the
+// dashboard and group feeds), from domain events (the Activity page), or from the legacy items of
+// the expense history, which the legacy bridge of `entities/balance` carries into the domain here.
 import type { ActivityEvent, ActivityPreview } from 'entities/activity';
 import { legacyActivityEvent } from 'entities/balance';
 import { type ActivityListItem, isActivityPreview } from 'helpers/activityEvent';
@@ -20,7 +20,11 @@ export const previewRows = (previews: readonly ActivityPreview[]): ActivityRow[]
         isPreview: true,
     }));
 
-// LEGACY until 12b/12c migrate the dashboard feed and the activity store.
+/** A flat history: every event is its own row. */
+export const eventRows = (events: readonly ActivityEvent[]): ActivityRow[] =>
+    events.map(event => ({ original: event, event, isPreview: false }));
+
+// LEGACY until 12c migrates the expense history (the activity store's children).
 export const legacyActivityRows = (items: readonly ActivityListItem[]): ActivityRow[] =>
     items.map(item => {
         if (isActivityPreview(item)) {

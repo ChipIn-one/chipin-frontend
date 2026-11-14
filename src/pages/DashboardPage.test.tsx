@@ -7,16 +7,19 @@ import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 import { beforeEach, expect, test, vi } from 'vitest';
 
-import type { ActivityFeedItem, SelfUser } from 'api/chipin.types';
+import type { SelfUser } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
+import type { ActivityPreview } from 'entities/activity';
+import { activityKeys } from 'entities/activity';
 import { currencyRatesKeys, EMPTY_CURRENCY_RATES } from 'entities/currency-rates';
-import { dashboardActivityQueryOptions, dashboardKeys } from 'entities/dashboard';
+import { dashboardKeys } from 'entities/dashboard';
 import type { Group } from 'entities/groups';
 import { groupsKeys, groupsListQueryOptions } from 'entities/groups';
 import { type KnownUser, knownUsersQueryOptions, usersKeys } from 'entities/users';
 import { useAuthStore } from 'store/authStore';
 import { useErrorsStore } from 'store/errorsStore';
 import { useLoadingStore } from 'store/loadingStore';
+import { domainPreview, wirePreview } from 'test/activityFixtures';
 import { groupBalances } from 'test/groupFixtures';
 import { groupsListData } from 'test/groupsList';
 import { createKnownUser } from 'test/knownUsers';
@@ -27,9 +30,7 @@ import { mountAsUserClient } from 'test/userClient';
 import DashboardPage from './DashboardPage';
 
 const useInfiniteScrollMock = vi.hoisted(() =>
-    vi.fn<(params: { hasMore: boolean; isLoading: boolean; onLoadMore: () => void }) => () => void>(
-        () => vi.fn(),
-    ),
+    vi.fn<typeof import('hooks/useInfiniteScroll').useInfiniteScroll>(() => vi.fn()),
 );
 
 vi.mock('react-i18next', () => ({
@@ -176,14 +177,8 @@ const singleMemberGroup = {
     },
 } satisfies Group;
 
-const activityItem = {
-    parent: {
-        id: 'activity-1',
-    },
-    lastEvent: {
-        id: 'activity-1',
-    },
-} as ActivityFeedItem;
+const activityItem = domainPreview('activity-1');
+const FEED_KEY = activityKeys.self({ view: 'previews' });
 
 const server = setupMswServer();
 let client: QueryClient;
@@ -214,9 +209,9 @@ const countRequests = (url: string, respond: () => Response | Promise<Response>)
 const seedDashboard = ({
     items = [],
     nextCursor = null,
-}: { items?: ActivityFeedItem[]; nextCursor?: number | null } = {}) => {
+}: { items?: ActivityPreview[]; nextCursor?: number | null } = {}) => {
     client.setQueryData(dashboardKeys.balances(), []);
-    client.setQueryData(dashboardKeys.activity(), {
+    client.setQueryData(FEED_KEY, {
         pages: [{ items, nextCursor }],
         pageParams: [null],
     });
@@ -627,6 +622,7 @@ test('ACT-023 connects dashboard infinite scroll to the next activity preview pa
         expect.objectContaining({
             hasMore: true,
             isLoading: false,
+            loadedKey: expect.stringMatching(/^1:/),
         }),
     );
 
@@ -645,9 +641,78 @@ test('ACT-023 connects dashboard infinite scroll to the next activity preview pa
     expect(activityRequests[0]?.searchParams.get('limit')).toBe('20');
     await waitFor(() => {
         expect(useInfiniteScrollMock).toHaveBeenLastCalledWith(
-            expect.objectContaining({ hasMore: false }),
+            expect.objectContaining({
+                hasMore: false,
+                loadedKey: expect.stringMatching(/^2:/),
+            }),
         );
     });
+});
+
+test('ACT-023 a next page paused offline is requested once while offline, then appended once on reconnect', async () => {
+    const { useInfiniteScroll } =
+        await vi.importActual<typeof import('hooks/useInfiniteScroll')>('hooks/useInfiniteScroll');
+    let isBack = false;
+
+    resolveDashboardOnboardingData();
+    seedGroups([singleMemberGroup]);
+    seedDashboard({ items: [activityItem], nextCursor: 40 });
+    // As in production (`createQueryClient`): the first attempt is sent offline, its retry pauses.
+    client.setQueryDefaults(activityKeys.all, {
+        networkMode: 'offlineFirst',
+        retry: 1,
+        retryDelay: 0,
+    });
+    const activityRequests = countRequests(ACTIVITY_URL, () =>
+        isBack ? HttpResponse.json({ items: [], nextCursor: null }) : HttpResponse.error(),
+    );
+    // The real scroll trigger, always in view.
+    useInfiniteScrollMock.mockImplementation(useInfiniteScroll);
+    vi.stubGlobal(
+        'IntersectionObserver',
+        class {
+            private readonly report: (entries: IntersectionObserverEntry[]) => void;
+
+            constructor(report: (entries: IntersectionObserverEntry[]) => void) {
+                this.report = report;
+            }
+
+            observe(target: Element): void {
+                this.report([{ isIntersecting: true, target } as IntersectionObserverEntry]);
+            }
+
+            disconnect(): void {
+                // Nothing to release.
+            }
+        },
+    );
+    onlineManager.setOnline(false);
+
+    try {
+        renderPage();
+
+        await waitFor(
+            () => {
+                expect(client.getQueryState(FEED_KEY)?.fetchStatus).toBe('paused');
+            },
+            { timeout: 5000 },
+        );
+        await new Promise(resolve => setTimeout(resolve, 150));
+        expect(activityRequests).toHaveLength(1);
+        expect(client.getQueryState(FEED_KEY)?.fetchStatus).toBe('paused');
+
+        isBack = true;
+        onlineManager.setOnline(true);
+
+        expect(
+            await screen.findByText('activity:endOfFeed', undefined, { timeout: 5000 }),
+        ).toBeTruthy();
+        expect(activityRequests.map(url => url.searchParams.get('cursor'))).toEqual(['40', '40']);
+    } finally {
+        onlineManager.setOnline(true);
+        useInfiniteScrollMock.mockReset();
+        vi.unstubAllGlobals();
+    }
 });
 
 test('DSH-007 an offline session shows the cached dashboard and feed without a load-failed notice', async () => {
@@ -722,11 +787,13 @@ test('ACT-023 a remount after 30 s refetches a feed of five loaded pages with on
     resolveDashboardOnboardingData();
     seedGroups([singleMemberGroup]);
     const page = (nextCursor: number | null) => ({ items: [activityItem], nextCursor });
-    client.setQueryData(dashboardActivityQueryOptions().queryKey, {
+    client.setQueryData(FEED_KEY, {
         pages: [page(50), page(40), page(30), page(20), page(10)],
         pageParams: [null, 50, 40, 30, 20],
     });
-    const activityRequests = countRequests(ACTIVITY_URL, () => HttpResponse.json(page(50)));
+    const activityRequests = countRequests(ACTIVITY_URL, () =>
+        HttpResponse.json({ items: [wirePreview('activity-1')], nextCursor: 50 }),
+    );
     countRequests(BALANCES_URL, () => HttpResponse.json({ balances: {} }));
 
     vi.useFakeTimers({ toFake: ['Date'] });
@@ -741,7 +808,7 @@ test('ACT-023 a remount after 30 s refetches a feed of five loaded pages with on
         });
         expect(activityRequests[0]?.searchParams.get('cursor')).toBeNull();
         await waitFor(() => {
-            expect(client.getQueryState(dashboardKeys.activity())?.fetchStatus).toBe('idle');
+            expect(client.getQueryState(FEED_KEY)?.fetchStatus).toBe('idle');
         });
         expect(activityRequests).toHaveLength(1);
     } finally {

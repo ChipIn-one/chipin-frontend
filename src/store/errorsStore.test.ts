@@ -13,13 +13,13 @@ describe('errors store', () => {
             message: 'Activity is unavailable',
         };
 
-        useErrorsStore.getState().setError('activity', 'data', error);
+        useErrorsStore.getState().setError('activity', 'subeventsData', error);
 
-        expect(useErrorsStore.getState().errors.activity.data).toEqual(error);
+        expect(useErrorsStore.getState().errors.activity.subeventsData).toEqual(error);
 
-        useErrorsStore.getState().clearError('activity', 'data');
+        useErrorsStore.getState().clearError('activity', 'subeventsData');
 
-        expect(useErrorsStore.getState().errors.activity.data).toBeNull();
+        expect(useErrorsStore.getState().errors.activity.subeventsData).toBeNull();
     });
 
     test('resets all request errors', () => {

@@ -1,5 +1,4 @@
-import { selectActivityLoading } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
+import { useSelfActivityLog } from 'hooks/useSelfActivity';
 
 import ActivityHeader, { type ActivityFilter } from './ActivityHeader';
 
@@ -9,7 +8,7 @@ interface Props {
 }
 
 const ActivitySidebar = ({ activeFilter, onFilterChange }: Props) => {
-    const isLoading = useLoadingStore(selectActivityLoading);
+    const { isLoading } = useSelfActivityLog();
 
     return (
         <ActivityHeader

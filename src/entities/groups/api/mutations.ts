@@ -7,7 +7,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { mutationOptions } from '@tanstack/react-query';
 
-import { dashboardKeys, trimDashboardFeed } from 'entities/dashboard';
+import { dashboardKeys } from 'entities/dashboard';
 import { usersKeys } from 'entities/users';
 import { isAuthSessionCurrent } from 'helpers/authSession';
 import { api } from 'shared/api/client';
@@ -96,7 +96,7 @@ const isCurrent = (client: QueryClient, { sessionVersion }: SessionBound): boole
     isAuthSessionCurrent(sessionVersion) && isUserCacheClient(client);
 
 // After a change of the friends or the balances: a running load may predate it, so the friends
-// list cancels it first; the dashboard feed is cut to one page (one request for its refetch).
+// list cancels it first. The user's activity feeds reload through the effects (`GroupWriteEffects`).
 const reloadKnownUsers = (client: QueryClient): Promise<void> =>
     client
         .cancelQueries({ queryKey: usersKeys.known() })
@@ -104,10 +104,8 @@ const reloadKnownUsers = (client: QueryClient): Promise<void> =>
             client.invalidateQueries({ queryKey: usersKeys.known() }, { cancelRefetch: true }),
         );
 
-const reloadDashboard = (client: QueryClient): Promise<void> => {
-    trimDashboardFeed(client);
-    return client.invalidateQueries({ queryKey: dashboardKeys.all });
-};
+const reloadDashboard = (client: QueryClient): Promise<void> =>
+    client.invalidateQueries({ queryKey: dashboardKeys.all });
 
 // The successful joins of each group on each client: a leave that a rejoin overtook does not
 // forget the group (the join is newer).

@@ -146,3 +146,24 @@ export interface ActivityPreview {
 
 /** A preview, or `{ kind: 'invalid', id: parent id }` when one of its amounts cannot be read. */
 export type ActivityItem = ActivityPreview | InvalidItem;
+
+/** A flat event, or `{ kind: 'invalid', id: event id }` when one of its amounts cannot be read. */
+export type ActivityLogItem = ActivityEvent | InvalidItem;
+
+/**
+ * One page of the user's activity previews (`GET /users/self/activity-previews`, the dashboard
+ * feed), newest first: active ledger chains, a preview with an unreadable amount an invalid item.
+ */
+export interface SelfActivityPreviewsPage {
+    readonly items: readonly ActivityItem[];
+    readonly nextCursor: number | null;
+}
+
+/**
+ * One page of the user's flat activity log (`GET /users/self/activities`, the Activity page),
+ * newest first: every event on its own, an event with an unreadable amount an invalid item.
+ */
+export interface SelfActivityEventsPage {
+    readonly items: readonly ActivityLogItem[];
+    readonly nextCursor: number | null;
+}

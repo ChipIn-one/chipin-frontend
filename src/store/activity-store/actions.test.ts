@@ -26,7 +26,6 @@ vi.mock('../groupsList', async importOriginal => ({
 }));
 
 vi.mock('api/activityApi', () => ({
-    fetchActivities: vi.fn(),
     fetchActivityChildren: vi.fn(),
 }));
 
@@ -135,8 +134,6 @@ const editEntry: ApiExpenseLedgerEntry = {
 
 test('resets activity state', () => {
     useActivityStore.setState({
-        nextCursor: 25,
-        hasMore: false,
         subeventsNextCursor: 40,
         subeventsCategory: ACTIVITY_CATEGORIES.EXPENSE,
     });
@@ -315,75 +312,6 @@ test('aborts pending subevent pagination before replacing the selected history',
     });
 });
 
-test('settles feed pagination when a forced feed refresh aborts it', () => {
-    let pageSignal: AbortSignal | undefined;
-    let resolvePage: ((value: { items: AppEvent[]; nextCursor: null }) => void) | undefined;
-    useActivityStore.setState({ nextCursor: 40, hasMore: true });
-    vi.mocked(activityApi.fetchActivities)
-        .mockImplementationOnce(
-            (_params, signal) =>
-                new Promise(resolve => {
-                    pageSignal = signal;
-                    resolvePage = resolve;
-                }),
-        )
-        .mockResolvedValueOnce({ items: [], nextCursor: null });
-
-    const pageRequest = useActivityStore.getState().fetchMoreActivity();
-    const refreshRequest = useActivityStore.getState().fetchSetActivity(true);
-
-    resolvePage?.({ items: [], nextCursor: null });
-
-    return Promise.all([pageRequest, refreshRequest]).then(() => {
-        expect(pageSignal?.aborted).toBe(true);
-        expect(useLoadingStore.getState().activity.nextPage).toBe('fetched');
-    });
-});
-
-test('records the newest feed refresh failure for replaced requests', () => {
-    const refreshError = new Error('Fresh activity unavailable');
-    vi.mocked(activityApi.fetchActivities)
-        .mockImplementationOnce(() => new Promise(() => undefined))
-        .mockRejectedValueOnce(refreshError);
-
-    const firstRequest = useActivityStore.getState().fetchSetActivity();
-    const newestRequest = useActivityStore.getState().fetchSetActivity(true);
-
-    return Promise.all([firstRequest, newestRequest]).then(() => {
-        expect(useErrorsStore.getState().errors.activity.data).toEqual(
-            expect.objectContaining({ message: expect.any(String) }),
-        );
-    });
-});
-
-test('does not append the same activity page twice while pagination is loading', () => {
-    const firstEvent = createActivityEvent('activity-1', 1);
-    const nextEvent = createActivityEvent('activity-2', 2);
-    let resolvePage: ((value: { items: AppEvent[]; nextCursor: null }) => void) | undefined;
-
-    useActivityStore.setState({
-        items: [firstEvent],
-        nextCursor: 40,
-        hasMore: true,
-    });
-    vi.mocked(activityApi.fetchActivities).mockImplementationOnce(
-        () =>
-            new Promise(resolve => {
-                resolvePage = resolve;
-            }),
-    );
-
-    const firstRequest = useActivityStore.getState().fetchMoreActivity();
-    const secondRequest = useActivityStore.getState().fetchMoreActivity();
-
-    expect(activityApi.fetchActivities).toHaveBeenCalledOnce();
-    resolvePage?.({ items: [nextEvent], nextCursor: null });
-
-    return Promise.all([firstRequest, secondRequest]).then(() => {
-        expect(useActivityStore.getState().items).toEqual([firstEvent, nextEvent]);
-    });
-});
-
 test('accepts zero as a valid subevent pagination cursor', () => {
     useActivityStore.setState({
         subeventsNextCursor: 0,
@@ -502,13 +430,10 @@ test('does not reject a confirmed settlement when canonical refresh rejects', ()
         });
 });
 
-test('reverses a ledger entry without locally patching activity state', () => {
-    const confirmedItems = [createActivityEvent('activity-1', 1)];
+test('reverses a ledger entry and refreshes the activity feeds', () => {
+    const fetchSetActivity = vi.fn().mockResolvedValue(undefined);
     vi.mocked(ledgerApi.removeLedgerEntry).mockResolvedValue(undefined);
-    useActivityStore.setState({
-        items: confirmedItems,
-        fetchSetActivity: vi.fn().mockResolvedValue(undefined),
-    });
+    useActivityStore.setState({ fetchSetActivity });
     vi.mocked(invalidateKnownUsers).mockResolvedValue(undefined);
 
     return useActivityStore
@@ -518,7 +443,7 @@ test('reverses a ledger entry without locally patching activity state', () => {
         })
         .then(() => {
             expect(ledgerApi.removeLedgerEntry).toHaveBeenCalledWith({ entryId: 'expense-1' });
-            expect(useActivityStore.getState().items).toEqual(confirmedItems);
+            expect(fetchSetActivity).toHaveBeenCalledWith(true);
         });
 });
 
@@ -675,8 +600,6 @@ test('updates an expense and refreshes the original group scope', () => {
         type: 'EXPENSE' as const,
         expense: { description: 'Updated dinner' },
     };
-    const confirmedItems = [createActivityEvent('confirmed-item', 1)];
-    useActivityStore.setState({ items: confirmedItems });
 
     return useActivityStore
         .getState()
@@ -695,7 +618,6 @@ test('updates an expense and refreshes the original group scope', () => {
             expect(dashboardCache.isDashboardInvalidated()).toBe(true);
             expect(fetchSetActivity).toHaveBeenCalledWith(true);
             expect(useLoadingStore.getState().expense.update).toBe('fetched');
-            expect(useActivityStore.getState().items).toEqual(confirmedItems);
         });
 });
 
@@ -776,3 +698,71 @@ test('does not reject a confirmed expense update when canonical refresh rejects'
             expect(ledgerApi.updateExpense).toHaveBeenCalledOnce();
         });
 });
+
+test("the feed refresh marks the user's own activity feeds stale in the query cache", () => {
+    expect(dashboardCache.isSelfActivityInvalidated()).toBe(false);
+
+    return useActivityStore
+        .getState()
+        .fetchSetActivity(true)
+        .then(() => {
+            expect(dashboardCache.isSelfActivityInvalidated()).toBe(true);
+        });
+});
+
+test('the feed refresh without a signed-in user does nothing and resolves', () => {
+    dashboardCache.dispose();
+
+    return expect(useActivityStore.getState().fetchSetActivity(true)).resolves.toBeUndefined();
+});
+
+test.each([
+    [
+        'an added expense',
+        () => {
+            vi.mocked(ledgerApi.createExpense).mockResolvedValue({} as never);
+            return useActivityStore.getState().createExpense({
+                description: 'Dinner',
+                amount: 20,
+                date: 1,
+                payerId: 'user-1',
+                participantIds: ['user-2'],
+                currency: 'USD',
+            });
+        },
+    ],
+    [
+        'an edited expense',
+        () => {
+            vi.mocked(ledgerApi.updateExpense).mockResolvedValue(editEntry);
+            return useActivityStore.getState().updateExpense({
+                entryId: editEntry.id,
+                entry: { type: 'EXPENSE', expense: { description: 'Updated dinner' } },
+            });
+        },
+    ],
+    [
+        'an added settle-up',
+        () => {
+            vi.mocked(ledgerApi.createSettlement).mockResolvedValue({} as never);
+            return useActivityStore.getState().createSettlement({
+                fromUserId: 'user-1',
+                toUserId: 'user-2',
+                amount: 10,
+                currency: 'USD',
+            });
+        },
+    ],
+    [
+        'a deleted entry',
+        () => {
+            vi.mocked(ledgerApi.removeLedgerEntry).mockResolvedValue(undefined);
+            return useActivityStore.getState().reverseLedgerEntry({ entryId: 'expense-1' });
+        },
+    ],
+])("%s marks the user's own activity feeds and the dashboard balances stale", (_name, write) =>
+    write().then(() => {
+        expect(dashboardCache.isSelfActivityInvalidated()).toBe(true);
+        expect(dashboardCache.isDashboardInvalidated()).toBe(true);
+    }),
+);

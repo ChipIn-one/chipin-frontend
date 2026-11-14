@@ -46,6 +46,7 @@ const ActivitySubeventsFeed = ({ parentActivityId, activityCategory }: Props) =>
         hasMore: hasMoreSubevents && !isNextPageError,
         isLoading: isNextPageLoading,
         onLoadMore,
+        loadedKey: subevents.length,
     });
 
     useEffect(() => {

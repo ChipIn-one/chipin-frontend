@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import * as activityApi from 'api/activityApi';
 import * as ledgerApi from 'api/ledgerApi';
 import { ACTIVITY_API_LIMIT } from 'constants/activity';
+import { invalidateSelfActivity } from 'entities/activity';
 import { userCurrency, userDefaultCategory, userSkipCategory } from 'entities/users';
 import { normalizeApiError } from 'helpers/errors';
 import { getLocalUser } from 'helpers/localStorage';
@@ -14,7 +15,12 @@ import { getCachedGroups, invalidateGroup } from '../groupsList';
 import { invalidateDashboard } from '../internal/dashboardQueryBridge';
 import { createRequestChannel } from '../internal/resourceRequests';
 import { useLoadingStore } from '../loadingStore';
-import { getCachedKnownUsers, getCachedSelfUser, invalidateKnownUsers } from '../sessionUser';
+import {
+    getCachedKnownUsers,
+    getCachedSelfUser,
+    invalidateKnownUsers,
+    tabUserClient,
+} from '../sessionUser';
 import { useUiPrefsStore } from '../ui-prefs';
 
 import { initialState } from './initialState';
@@ -27,10 +33,18 @@ import type {
     UpdateExpenseParams,
 } from './types';
 
-const activityFeedChannel = createRequestChannel();
-const activityFeedPageChannel = createRequestChannel();
 const activityChildrenChannel = createRequestChannel();
 const activityChildrenPageChannel = createRequestChannel();
+
+// Bridge (spec 03 §6): the user's own activity feeds are the `activity.self` queries of
+// `entities/activity`; after a legacy write they are marked stale on this tab's user's client (a
+// shown feed reloads now, the rest on their next mount). Never rejects.
+// TODO(12c): goes with this store.
+const refreshSelfActivity = (): Promise<void> => {
+    const client = tabUserClient();
+
+    return client ? invalidateSelfActivity(client) : Promise.resolve();
+};
 
 interface FinancialRefreshContext {
     groupId?: string;
@@ -210,93 +224,9 @@ const useActivityStore = create<ActivityStore>((set, get) => ({
     createSettlement: params => createSettlement(get, params),
     reverseLedgerEntry: params => reverseLedgerEntry(get, params),
 
-    fetchSetActivity: (force = false) => {
-        const { setLoading } = useLoadingStore.getState();
-        const { clearError, setError } = useErrorsStore.getState();
-        clearError('activity', 'data');
-
-        if (force) {
-            activityFeedPageChannel.abort();
-            setLoading('activity', 'nextPage', 'fetched');
-        }
-
-        const request = activityFeedChannel.request(
-            signal => activityApi.fetchActivities({ limit: ACTIVITY_API_LIMIT }, signal),
-            { force },
-        );
-        setLoading('activity', 'data', 'loading');
-
-        return request.promise
-            .then(data => {
-                if (!request.isCurrent()) {
-                    return;
-                }
-
-                set({
-                    items: data.items,
-                    nextCursor: data.nextCursor,
-                    hasMore: data.nextCursor !== null,
-                });
-            })
-            .catch((error: unknown) => {
-                if (request.isCurrent()) {
-                    setError('activity', 'data', normalizeApiError(error));
-                }
-            })
-            .finally(() => {
-                if (request.isCurrent()) {
-                    setLoading('activity', 'data', 'fetched');
-                }
-            });
-    },
-
-    fetchMoreActivity: () => {
-        const { nextCursor } = get();
-        const { setLoading, activity } = useLoadingStore.getState();
-        const { clearError, setError } = useErrorsStore.getState();
-
-        if (nextCursor === null || activity.nextPage === 'loading') {
-            return Promise.resolve();
-        }
-
-        clearError('activity', 'nextPage');
-        setLoading('activity', 'nextPage', 'loading');
-
-        const request = activityFeedPageChannel.request(
-            signal =>
-                activityApi.fetchActivities(
-                    {
-                        limit: ACTIVITY_API_LIMIT,
-                        cursor: nextCursor,
-                    },
-                    signal,
-                ),
-            { identity: String(nextCursor) },
-        );
-
-        return request.promise
-            .then(data => {
-                if (!request.isCurrent()) {
-                    return;
-                }
-
-                set(state => ({
-                    items: [...state.items, ...data.items],
-                    nextCursor: data.nextCursor,
-                    hasMore: data.nextCursor !== null,
-                }));
-            })
-            .catch((error: unknown) => {
-                if (request.isCurrent()) {
-                    setError('activity', 'nextPage', normalizeApiError(error));
-                }
-            })
-            .finally(() => {
-                if (request.isCurrent()) {
-                    setLoading('activity', 'nextPage', 'fetched');
-                }
-            });
-    },
+    // TODO(12c): a bridge for the callers outside this store (the group writes); goes with the
+    // store, when the ledger writes invalidate `activity.self` themselves.
+    fetchSetActivity: refreshSelfActivity,
 
     fetchSetActivitySubevents: ({ parentActivityId, category, force = false }) => {
         const { setLoading } = useLoadingStore.getState();
@@ -426,8 +356,6 @@ const useActivityStore = create<ActivityStore>((set, get) => ({
 
     resetActivity: () => {
         const { setLoading } = useLoadingStore.getState();
-        activityFeedChannel.abort();
-        activityFeedPageChannel.abort();
         activityChildrenChannel.abort();
         activityChildrenPageChannel.abort();
         set(initialState);

@@ -1,6 +1,5 @@
 import type { ActivityStore } from './types';
 
-type ActivityFeedSlice = Pick<ActivityStore, 'items' | 'hasMore'>;
 type ActivitySubeventsFlowSlice = Pick<
     ActivityStore,
     | 'subevents'
@@ -10,11 +9,6 @@ type ActivitySubeventsFlowSlice = Pick<
     | 'fetchMoreActivitySubevents'
 >;
 
-const selectActivityFeed = (state: ActivityStore): ActivityFeedSlice => ({
-    items: state.items,
-    hasMore: state.hasMore,
-});
-
 const selectActivitySubeventsFlow = (state: ActivityStore): ActivitySubeventsFlowSlice => ({
     subevents: state.subevents,
     subeventsParent: state.subeventsParent,
@@ -23,4 +17,4 @@ const selectActivitySubeventsFlow = (state: ActivityStore): ActivitySubeventsFlo
     fetchMoreActivitySubevents: state.fetchMoreActivitySubevents,
 });
 
-export { selectActivityFeed, selectActivitySubeventsFlow };
+export { selectActivitySubeventsFlow };
