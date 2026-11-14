@@ -24,8 +24,9 @@ Sentry runtime reporting reads `VITE_SENTRY_DSN` from the deployment
 environment. Configure it independently for the Vercel environments that should
 send events. When the variable is absent or empty, runtime Sentry reporting is
 disabled even if the build would otherwise enable telemetry. Vercel Git
-integration builds use the normal Vercel environment configuration; only
-production builds upload Sentry source maps (see Build toolchain below).
+integration builds use the normal Vercel environment configuration; only a
+tagged production build (the automatic redeploy after the release tag) creates
+the Sentry release and uploads source maps (see Build toolchain below).
 
 There is no unconditional external API rewrite. Unknown hosts therefore cannot
 fall back to production.
@@ -66,6 +67,16 @@ Hook or Vercel token secrets
   created Deployment `Production` 7254813070 by `vercel[bot]` on `e6d2f2e`
   (2026-10-22T14:24:47Z). That record is the production evidence for Issue
   completion (strategy `deployment-receipt`).
+- After the release tag, `release-on-production.yml` (job `redeploy`,
+  `scripts/redeploy-tagged-production.mjs`) redeploys the promoted deployment
+  to Production once more, so the second build finds the tag on its commit and
+  carries the in-app version and the Sentry release. It needs the repository
+  secret `VERCEL_TOKEN` and the repository variables `VERCEL_TEAM_ID` and
+  `VERCEL_PROJECT_ID`. If Production has moved to another deployment since the
+  Promote (a newer Promote or a rollback), the redeploy is skipped with a
+  warning and that tag stays without an in-app version until it is promoted
+  again. If the job fails, redeploy by hand: Vercel → the Production deployment
+  → **Redeploy**.
 - The repository has no completion caller. The ChipIn-one/.github org sweep
   (`frontend-production-completion.yml`) runs `deployment-receipt` for the
   frontend (registry `capabilities.completion: automatic` since
@@ -123,9 +134,11 @@ No paid custom Vercel environment is required.
 - Sentry: the Rolldown runtime chunk (`assets/rolldown-runtime-*.js`) has no
   source map, so it is excluded from the Sentry upload via `sourcemaps.ignore`.
   Source maps stay `hidden` and are deleted from `dist` after upload.
-- Sentry source maps are uploaded only by Vercel production builds
-  (`VERCEL_ENV=production`, the Promote rebuild); preview, local and CI builds
-  skip the upload and emit no source maps (`scripts/sentry-sourcemaps.ts`).
+- The Sentry release and source maps are created only by a tagged Vercel
+  production build (`VERCEL_ENV=production` with a version tag on the commit:
+  the automatic redeploy after the release tag). The Promote build is untagged
+  and uploads nothing; preview, local and CI builds skip the upload and emit no
+  source maps (`scripts/sentry-sourcemaps.ts`).
 
 ### Rollback
 

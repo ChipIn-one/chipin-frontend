@@ -23,7 +23,7 @@ These invariants hold on `master` today (lint, `check:file-layout`, CI, or the e
 14. `npx eslint --fix <changed files>` fixes everything auto-fixable; do not fix style by hand. A lint error is about correctness or a boundary, and its message says how to fix it; `eslint-disable` only with a reason.
 15. All user-facing text, including `aria-*`, `placeholder`, `title` and toasts, goes through i18n in every locale. Interactive elements are native elements or Radix; icon buttons have a translated name (review).
 16. Import order is `simple-import-sort` (fixed by `--fix`); formatting is Prettier (`prettier.config.js`), enforced by `format:check` in CI. Run `prettier --write` only on the files you changed; do not reformat code the task does not change.
-17. Every task PR body has `## Version impact` (`none|patch|minor|major`); a task does not change `version` in `package.json`/`package-lock.json` and does not run `version:bump` (see Release).
+17. Every task PR body has `## Version impact` (`none|patch|minor|major`): the input of the release increment, read by the release engine at Promote to Production. A task never changes `version` in `package.json`/`package-lock.json` (see Release).
 18. A change to the domain, API or visible behavior starts in the KB (`chipin-knowledge-base/common/glossary.md`, `common/specs/<capability>.md`) through a linked PR; tests are named by requirement IDs. A conflict with an ADR in `common/adr/` means stop and ask the owner.
 19. Take the KB from `../chipin-knowledge-base`, otherwise `git clone` it there, otherwise read it through GitHub; if it is unavailable both locally and through GitHub, the task is BLOCKED.
 
@@ -41,11 +41,10 @@ Where the refactor goes: `docs/superpowers/specs/2026-10-28-frontend-refactor/00
 - `npm run test:task -- <test paths>` — targeted tests; refuses to run without a path.
 - `npx eslint --fix <files>` — ESLint auto-fixes in changed files only.
 - `npx prettier --write <files>` — format the files you changed; never `npm run format` in a task.
-- `npm run verify` — version check, format check, lint (`--max-warnings 0`: every rule is error or off), `check:file-layout`, typecheck.
+- `npm run verify` — format check, lint (`--max-warnings 0`: every rule is error or off), `check:file-layout`, typecheck.
 - `npm run baseline:update` — prune fixed entries from `eslint-suppressions.json`; the lint baseline only shrinks. Prune only through this script (it sets `CHIPIN_ESLINT_FULL=1`): a plain `eslint . --prune-suppressions` drops the `import-x/no-cycle` entries and CI `lint:full` goes red.
-- `npm run verify:full` — the full gate: version check, format check, `lint:full`, `check:file-layout`, all tests, build, ds-gallery; CI runs the same. Run before `IMPLEMENTATION_COMPLETE`.
+- `npm run verify:full` — the full gate: format check, `lint:full`, `check:file-layout`, all tests, build, ds-gallery; CI runs the same. Run before `IMPLEMENTATION_COMPLETE`.
 - `npm run typecheck` — `tsc -b`.
-- `npm run version:check` — the version in `package.json` and `package-lock.json` is valid and matches (read-only).
 - `npm run fix` — `eslint --fix`, then Prettier, over the whole repository (not in a task).
 - Husky `pre-commit` only auto-fixes staged files (`lint-staged`, FAST mode) and does not block on lint (only a syntax error, which Prettier cannot parse, blocks it); there is no `pre-push`, only CI blocks.
 
@@ -59,7 +58,7 @@ Where the refactor goes: `docs/superpowers/specs/2026-10-28-frontend-refactor/00
 
 ## Release
 
-The release process owns releases: the owner runs Promote to Production for a chosen `master` build in Vercel ([`DEPLOYMENT.md`](DEPLOYMENT.md#vercel-delivery-from-master)); version policy: [org release policy](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/release.md) (the version is a git tag derived from `## Version impact` of merged PRs; transition: ChipIn-one/.github#172). The Executor does not change the version in a feature PR.
+The release process owns releases: the owner runs Promote to Production for a chosen `master` build in Vercel ([`DEPLOYMENT.md`](DEPLOYMENT.md#vercel-delivery-from-master)); version policy: [org release policy](https://github.com/ChipIn-one/.github/blob/master/docs/workflow/release.md) (the version is a git tag that `.github/workflows/release-on-production.yml` creates at Promote to Production, incrementing by the highest `## Version impact` (`major|minor|patch`) of the PRs merged since the previous tag; ChipIn-one/.github#172). The `version` field in `package.json` is not the release version; no PR bumps it.
 
 ## Review
 

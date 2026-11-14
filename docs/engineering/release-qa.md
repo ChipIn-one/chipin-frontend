@@ -39,7 +39,7 @@ Build-affecting changes are maintained in the same module. They change the shipp
 
 - `tsconfig*.json` and `scripts/version-resolver.mjs`;
 - in `package.json`, any change in `dependencies`, or a `devDependencies` change of the build/PWA toolchain. The toolchain is every package `vite.config.ts` and `pwa-assets.config.ts` import (`vite`, `vite-plugin-*`, `vite-tsconfig-paths`, `@vitejs/*`, `@vite-pwa/*`, `@sentry/vite-plugin`) plus `workbox-*`. A test parses both config files, so a new plugin cannot be missed;
-- in `package-lock.json`, a changed package that ships in the production tree (no `dev` or `devOptional` flag), or one the toolchain pulls in through lockfile `dependencies`, `optionalDependencies` or non-optional `peerDependencies` (for example `rolldown`, `@swc/core`, `lightningcss`, `@svgr/*`). `@types/*` never counts. The project's own entry is ignored, so `npm run version:bump` alone changes nothing.
+- in `package-lock.json`, a changed package that ships in the production tree (no `dev` or `devOptional` flag), or one the toolchain pulls in through lockfile `dependencies`, `optionalDependencies` or non-optional `peerDependencies` (for example `rolldown`, `@swc/core`, `lightningcss`, `@svgr/*`). `@types/*` never counts. The project's own entry is ignored, so a change to its `version` alone changes nothing.
 
 Lint, test and types devDependency bumps are not build-affecting. If the two package files cannot be read at both SHAs, the change is treated as build-affecting.
 
