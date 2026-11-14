@@ -1,4 +1,4 @@
-import { onlineManager } from '@tanstack/react-query';
+import { onlineManager, type QueryClient } from '@tanstack/react-query';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
+import { activityKeys } from 'entities/activity';
 import { dashboardKeys } from 'entities/dashboard';
 import { usersKeys } from 'entities/users';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
@@ -116,11 +117,17 @@ const deferred = (): Deferred => {
     return { promise, resolve };
 };
 
-const fetchSetActivity = vi.fn(() => Promise.resolve());
 const fetchSetActivitySubevents = vi.fn(() => Promise.resolve());
 const initialActivity = useActivityStore.getState();
 
-// Signed in on the user's persisted client: the only place ledger writes run.
+const selfFeedKey = activityKeys.self({ view: 'previews' });
+
+// The user's activity feed (`activity.self`) was invalidated on this client.
+const isFeedStale = (client: QueryClient): boolean =>
+    client.getQueryState(selfFeedKey)?.isInvalidated === true;
+
+// Signed in on the user's persisted client (the only place ledger writes run), with the
+// dashboard, the friends and the user's activity feed cached.
 const signIn = () => {
     useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
     saveLocalUser({
@@ -142,6 +149,7 @@ const signIn = () => {
 
     client.setQueryData(dashboardKeys.balances(), []);
     client.setQueryData(usersKeys.known(), []);
+    client.setQueryData(selfFeedKey, { pages: [], pageParams: [] });
     return client;
 };
 
@@ -167,7 +175,7 @@ const serveDelete = ({
 
 beforeEach(() => {
     vi.clearAllMocks();
-    useActivityStore.setState({ subevents: [], fetchSetActivity, fetchSetActivitySubevents });
+    useActivityStore.setState({ subevents: [], fetchSetActivitySubevents });
     useLoadingStore.getState().setInitialLoadingStore();
 });
 
@@ -226,7 +234,7 @@ const confirmDelete = async (): Promise<void> => {
 };
 
 test('deletes the entry from the activity history: one DELETE, a toast, the history and the feeds reload', async () => {
-    signIn();
+    const client = signIn();
     const sent = serveDelete();
 
     render(<ActivitySubeventsButtons parentEvent={parentEvent} />);
@@ -237,7 +245,7 @@ test('deletes the entry from the activity history: one DELETE, a toast, the hist
     });
     expect(sent).toEqual(['DELETE /ledger/entries/expense-id']);
     expect(toast.error).not.toHaveBeenCalled();
-    expect(fetchSetActivity).toHaveBeenCalledWith(true);
+    expect(isFeedStale(client)).toBe(true);
     expect(fetchSetActivitySubevents).toHaveBeenCalledWith({
         parentActivityId: parentEvent.id,
         category: undefined,
@@ -264,7 +272,7 @@ test('the delete button is disabled while the delete request runs (the mutation 
 });
 
 test('a failed delete shows the translated API error and reads the feed again, not the open history', async () => {
-    signIn();
+    const client = signIn();
     serveDelete({ status: 404 });
 
     render(<ActivitySubeventsButtons parentEvent={parentEvent} />);
@@ -274,7 +282,9 @@ test('a failed delete shows the translated API error and reads the feed again, n
         expect(toast.error).toHaveBeenCalledWith('Ledger entry was not found');
     });
     expect(toast.success).not.toHaveBeenCalled();
-    expect(fetchSetActivity).toHaveBeenCalledWith(true);
+    await waitFor(() => {
+        expect(isFeedStale(client)).toBe(true);
+    });
     expect(fetchSetActivitySubevents).not.toHaveBeenCalled();
 });
 
@@ -302,7 +312,7 @@ test('deleting a settlement in a group sends one DELETE and reads the group agai
     expect(groupReads).toHaveBeenCalledOnce();
     expect(client.getQueryState(dashboardKeys.balances())?.isInvalidated).toBe(true);
     expect(client.getQueryState(usersKeys.known())?.isInvalidated).toBe(false);
-    expect(fetchSetActivity).toHaveBeenCalledWith(true);
+    expect(isFeedStale(client)).toBe(true);
 });
 
 test('deleting a settlement between friends sends one DELETE and reloads the friends balances', async () => {
@@ -328,7 +338,7 @@ test('deleting a settlement between friends sends one DELETE and reloads the fri
 // With the store's own history reload and loading flag: a forced reload of the history shows the
 // skeletons, which unmounts the dialog.
 test('a settlement delete the server refuses (403) shows the translated error and keeps the dialog open', async () => {
-    signIn();
+    const client = signIn();
     const sent = serveDelete({ status: 403, code: 'LEDGER.FORBIDDEN' });
     const historyReads = vi.fn();
     const event = settlementEvent(false);
@@ -358,8 +368,10 @@ test('a settlement delete the server refuses (403) shows the translated error an
             false,
         );
     });
-    // The feed reload has started, so a history reload would have started with it.
-    expect(fetchSetActivity).toHaveBeenCalledWith(true);
+    // The feed is invalidated, so a history reload would have started with it.
+    await waitFor(() => {
+        expect(isFeedStale(client)).toBe(true);
+    });
     expect(historyReads).not.toHaveBeenCalled();
     expect(useLoadingStore.getState().activity.subeventsData).toBe('initial');
 });
@@ -390,7 +402,7 @@ describe.each<[string, () => void]>([
     ])(
         'a %s delete shows no toast in the next session and reloads nothing',
         async (_outcome, status) => {
-            signIn();
+            const client = signIn();
             const gate = deferred();
             const sent = serveDelete({ gate, status });
 
@@ -412,7 +424,7 @@ describe.each<[string, () => void]>([
 
             expect(toast.success).not.toHaveBeenCalled();
             expect(toast.error).not.toHaveBeenCalled();
-            expect(fetchSetActivity).not.toHaveBeenCalled();
+            expect(isFeedStale(client)).toBe(false);
             expect(fetchSetActivitySubevents).not.toHaveBeenCalled();
         },
     );

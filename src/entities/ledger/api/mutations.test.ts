@@ -9,6 +9,7 @@ import { MoneyWireError } from 'shared/money';
 import { clearUserData } from 'shared/offline/clearUserData';
 import { cachesByUser } from 'shared/offline/userCaches';
 import { setupMswServer } from 'test/mswServer';
+import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
 import { mountAsUserClient } from 'test/userClient';
 
 import {
@@ -223,7 +224,7 @@ describe('create an expense', () => {
         await create({ expense, parentActivityId: 'activity-1' });
 
         expect(onEntryWritten.mock.calls).toEqual([
-            [{ groupId: 'group-1', parentActivityId: 'activity-1' }],
+            [{ groupId: 'group-1', parentActivityId: 'activity-1' }, getDefaultTestQueryClient()],
         ]);
     });
 
@@ -240,10 +241,10 @@ describe('create an expense', () => {
         });
 
         await vi.waitFor(() => {
-            expect(onEntryWritten).toHaveBeenCalledWith({
-                groupId: undefined,
-                parentActivityId: undefined,
-            });
+            expect(onEntryWritten).toHaveBeenCalledWith(
+                { groupId: undefined, parentActivityId: undefined },
+                getDefaultTestQueryClient(),
+            );
         });
         expect(isSettled).toBe(false);
         reload.resolve();
@@ -295,7 +296,7 @@ describe('update an expense', () => {
             { method: 'PATCH', path: '/ledger/entries/entry-1', text: JSON.stringify(entry) },
         ]);
         expect(onEntryWritten.mock.calls).toEqual([
-            [{ groupId: 'group-1', parentActivityId: 'a-1' }],
+            [{ groupId: 'group-1', parentActivityId: 'a-1' }, getDefaultTestQueryClient()],
         ]);
     });
 });
@@ -308,7 +309,7 @@ describe('delete a ledger entry', () => {
 
         expect(sent).toEqual([{ method: 'DELETE', path: '/ledger/entries/entry-1', text: '' }]);
         expect(onEntryWritten.mock.calls).toEqual([
-            [{ groupId: undefined, parentActivityId: 'activity-1' }],
+            [{ groupId: undefined, parentActivityId: 'activity-1' }, getDefaultTestQueryClient()],
         ]);
     });
 });
@@ -370,7 +371,10 @@ describe('a rejected or unanswered request', () => {
                 expect(failure).toMatchObject({ status, code: 'LEDGER.ENTRY_NOT_FOUND' });
             }
             expect(onWriteFailed.mock.calls).toEqual([
-                [{ groupId: 'group-1', parentActivityId: 'activity-1' }],
+                [
+                    { groupId: 'group-1', parentActivityId: 'activity-1' },
+                    getDefaultTestQueryClient(),
+                ],
             ]);
             expect(onEntryWritten).not.toHaveBeenCalled();
         });

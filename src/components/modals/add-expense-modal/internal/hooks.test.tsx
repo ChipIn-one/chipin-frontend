@@ -1,10 +1,11 @@
-import { onlineManager } from '@tanstack/react-query';
+import { onlineManager, type QueryClient } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { SharingMode } from 'api/chipin.types';
+import { activityKeys } from 'entities/activity';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
 import { LedgerWriteRefusedError, toastLedgerWriteError } from 'hooks/useLedgerMutations';
@@ -113,12 +114,18 @@ interface SentWrite {
     body: unknown;
 }
 
-const fetchSetActivity = vi.fn(() => Promise.resolve());
 const fetchSetActivitySubevents = vi.fn(() => Promise.resolve());
 const initialActivity = useActivityStore.getState();
 
-// Signed in as the current user on its persisted client: the only place ledger writes run.
-const signIn = (): void => {
+const selfFeedKey = activityKeys.self({ view: 'previews' });
+
+// The user's activity feed (`activity.self`) was invalidated on this client.
+const isFeedStale = (client: QueryClient): boolean =>
+    client.getQueryState(selfFeedKey)?.isInvalidated === true;
+
+// Signed in as the current user on its persisted client (the only place ledger writes run), with
+// the user's activity feed cached.
+const signIn = (): QueryClient => {
     useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
     saveLocalUser({
         id: currentUser.id,
@@ -135,7 +142,10 @@ const signIn = (): void => {
             sex: 'male',
         },
     });
-    mountAsUserClient(currentUser.id);
+    const client = mountAsUserClient(currentUser.id);
+
+    client.setQueryData(selfFeedKey, { pages: [], pageParams: [] });
+    return client;
 };
 
 // The ledger writes, recorded in order; `gate` holds the answer, `status` 400 rejects it. The
@@ -214,7 +224,7 @@ const submit = (onClose: () => void = vi.fn()) => {
 beforeEach(() => {
     useExpenseModalStore.getState().reset();
     vi.clearAllMocks();
-    useActivityStore.setState({ fetchSetActivity, fetchSetActivitySubevents });
+    useActivityStore.setState({ fetchSetActivitySubevents });
 });
 
 afterEach(() => {
@@ -262,7 +272,7 @@ test('does not rerun when only the callback identity changes', () => {
 });
 
 test('creates a group expense from the dashboard: one request, the modal closes with a toast, the feeds reload', async () => {
-    signIn();
+    const client = signIn();
     const sent = serveLedger();
     const onClose = vi.fn();
 
@@ -281,7 +291,7 @@ test('creates a group expense from the dashboard: one request, the modal closes 
     ]);
     expect(toast.success).toHaveBeenCalledWith('Expense added successfully!');
     expect(toast.error).not.toHaveBeenCalled();
-    expect(fetchSetActivity).toHaveBeenCalledWith(true);
+    expect(isFeedStale(client)).toBe(true);
 });
 
 test('creates an expense from a group page in that group', async () => {
@@ -421,7 +431,7 @@ test('the submitting flag is the mutation state: on while the request runs, off 
 });
 
 test('a failed request keeps the modal open with the form intact and shows the translated API error', async () => {
-    signIn();
+    const client = signIn();
     const sent = serveLedger({ status: 400 });
     const onClose = vi.fn();
 
@@ -438,7 +448,9 @@ test('a failed request keeps the modal open with the form intact and shows the t
     expect(toast.success).not.toHaveBeenCalled();
     expect(useExpenseModalStore.getState()).toEqual(before);
     // The views of a rejected write are read again (spec 03 §2.1); the toast does not wait.
-    expect(fetchSetActivity).toHaveBeenCalledWith(true);
+    await waitFor(() => {
+        expect(isFeedStale(client)).toBe(true);
+    });
 });
 
 test('a failed update keeps the edit open with the edited form', async () => {
@@ -529,7 +541,7 @@ describe.each<[string, () => void]>([
     ])(
         'a %s expense shows no toast and does not close the modal of the next session',
         async (_outcome, status) => {
-            signIn();
+            const client = signIn();
             const gate = deferred();
             const sent = serveLedger({ gate, status });
             const onClose = vi.fn();
@@ -548,7 +560,7 @@ describe.each<[string, () => void]>([
             expect(onClose).not.toHaveBeenCalled();
             expect(toast.success).not.toHaveBeenCalled();
             expect(toast.error).not.toHaveBeenCalled();
-            expect(fetchSetActivity).not.toHaveBeenCalled();
+            expect(isFeedStale(client)).toBe(false);
         },
     );
 

@@ -4,11 +4,11 @@
 // spec 03 §2.1; the outbox set and `registerLedgerMutationDefaults` arrive with 03-15a.
 //
 // Nothing is written into a cache here (the server is the source of truth for finances): once a
-// sent write settles, what shows the entry is read again. Until the activity feed and the ledger
-// entry are queries, that refresh is passed in (`LedgerWriteEffects`): entities never import
-// `store`. A successful write settles when the refresh has; a failed one rejects at once and its
-// refresh runs on its own. A write whose auth session has ended (a sign-out, an account switch,
-// an expired session) refreshes nothing.
+// sent write settles, what shows the entry is read again. Until every view of the entry is a
+// query (the expense history: 12c), that refresh is passed in (`LedgerWriteEffects`): entities
+// never import `store`. A successful write settles when the refresh has; a failed one rejects at
+// once and its refresh runs on its own. A write whose auth session has ended (a sign-out, an
+// account switch, an expired session) refreshes nothing.
 import type { QueryClient } from '@tanstack/react-query';
 import { mutationOptions } from '@tanstack/react-query';
 
@@ -60,15 +60,18 @@ export type CreateExpenseVariables = CreateExpenseParams & SessionBound;
 export type UpdateExpenseVariables = UpdateExpenseParams & SessionBound;
 export type DeleteLedgerEntryVariables = DeleteLedgerEntryParams & SessionBound;
 
-/** What the caller's stores and caches do after a ledger write, only while its session is current. */
+/**
+ * What the caller's stores and caches do after a ledger write, only while its session is current.
+ * `client` is the write's own client: the user's cache client that its session check passed.
+ */
 export interface LedgerWriteEffects {
     /** Reads again what shows the entry, after a successful write; the write settles when it has. */
-    onEntryWritten: (context: LedgerWriteContext) => Promise<void>;
+    onEntryWritten: (context: LedgerWriteContext, client: QueryClient) => Promise<void>;
     /**
      * Reads again what may be stale after a sent write failed. Not awaited: the failure reaches
      * the caller at once (offline this refresh waits for the reconnect).
      */
-    onWriteFailed: (context: LedgerWriteContext) => Promise<void>;
+    onWriteFailed: (context: LedgerWriteContext, client: QueryClient) => Promise<void>;
 }
 
 const ONLINE_WRITE = { networkMode: 'online', retry: false } as const;
@@ -100,10 +103,10 @@ const refreshAfterWrite = (
         return undefined;
     }
     if (error) {
-        void effects.onWriteFailed(context).catch(() => undefined);
+        void effects.onWriteFailed(context, client).catch(() => undefined);
         return undefined;
     }
-    return effects.onEntryWritten(context).catch(() => undefined);
+    return effects.onEntryWritten(context, client).catch(() => undefined);
 };
 
 /** `POST /ledger/entries` (an expense, no `id` in the body); a success settles once its views reloaded. */

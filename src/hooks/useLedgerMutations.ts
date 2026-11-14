@@ -11,6 +11,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+import { invalidateSelfActivity } from 'entities/activity';
 import {
     createExpenseMutationOptions,
     type CreateExpenseParams,
@@ -66,20 +67,24 @@ export const toastLedgerWriteError = (error: unknown, fallbackMessage: string): 
     toast.error(resolveApiErrorMessageFromError(error, fallbackMessage));
 };
 
-// What reads the written entry again once a sent write settles, until those views are queries of
-// their own entities: the same refresh functions the activity store calls after its ledger writes. One place, so the
-// activity-feed migration (03-12) replaces them here.
-const invalidateBalances = (groupId: string | undefined): Promise<void>[] => [
+// What reads the written entry again once a sent write settles, on the write's own client. The
+// user's own activity feeds are the `activity.self` queries; the dashboard, the group, the friends
+// and the expense history are refreshed by the functions the activity store calls after its ledger
+// writes, until they are queries of their own entities.
+// TODO(12c): the expense history becomes the `activity.children` query; the activity store goes.
+const invalidateViews = (groupId: string | undefined, client: QueryClient): Promise<void>[] => [
     invalidateDashboard(),
     groupId ? invalidateGroup(groupId) : invalidateKnownUsers(),
+    invalidateSelfActivity(client),
 ];
 
 const storeEffects: LedgerWriteEffects = {
-    onEntryWritten: ({ groupId, parentActivityId }) => {
-        const activity = useActivityStore.getState();
-        const refreshes = [...invalidateBalances(groupId), activity.fetchSetActivity(true)];
+    onEntryWritten: ({ groupId, parentActivityId }, client) => {
+        const refreshes = invalidateViews(groupId, client);
 
         if (parentActivityId) {
+            const activity = useActivityStore.getState();
+
             refreshes.push(
                 activity.fetchSetActivitySubevents({
                     parentActivityId,
@@ -93,21 +98,12 @@ const storeEffects: LedgerWriteEffects = {
         }
         return Promise.all(refreshes).then(() => undefined);
     },
-    // The queries pause offline and refetch on the reconnect. The forced reload of the legacy feed
-    // is skipped offline because it would only fail. The expense history is not reloaded at all:
-    // its forced reload blanks the page (skeletons) and closes the open delete dialog.
-    // TODO(03-12): the expense history becomes a query there and is invalidated on a failure too.
-    // The `isNetworkUsable()` skip goes away when `fetchSetActivity` becomes the bridge to the
-    // `activity.self` query: an invalidation pauses offline and resumes on the reconnect, so a
-    // timed-out but committed write still shows after the reconnect.
-    onWriteFailed: ({ groupId }) => {
-        const refreshes = invalidateBalances(groupId);
-
-        if (isNetworkUsable()) {
-            refreshes.push(useActivityStore.getState().fetchSetActivity(true));
-        }
-        return Promise.all(refreshes).then(() => undefined);
-    },
+    // The queries pause offline and refetch on the reconnect, so a timed-out but committed write
+    // still shows after it (the caller does not wait for this refresh). The expense history is
+    // not reloaded: its forced reload blanks the page (skeletons) and closes the delete dialog.
+    // TODO(12c): invalidate the `activity.children` query here too, once the history is one.
+    onWriteFailed: ({ groupId }, client) =>
+        Promise.all(invalidateViews(groupId, client)).then(() => undefined),
 };
 
 type LedgerMutationKey = (typeof ledgerOnlineMutationKeys)[keyof typeof ledgerOnlineMutationKeys];

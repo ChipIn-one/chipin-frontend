@@ -1,4 +1,9 @@
-import { onlineManager, type QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+    InfiniteQueryObserver,
+    onlineManager,
+    type QueryClient,
+    QueryClientProvider,
+} from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
@@ -6,6 +11,7 @@ import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { CreateLedgerEntryParams } from 'api/chipin.types';
+import { activityKeys, selfActivityPreviewsQueryOptions } from 'entities/activity';
 import { dashboardKeys } from 'entities/dashboard';
 import { usersKeys } from 'entities/users';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
@@ -53,7 +59,6 @@ const deferred = (): Deferred => {
     return { promise, resolve };
 };
 
-const fetchSetActivity = vi.fn(() => Promise.resolve());
 const fetchSetActivitySubevents = vi.fn(() => Promise.resolve());
 const initialActivity = useActivityStore.getState();
 
@@ -69,7 +74,7 @@ const expense: CreateLedgerEntryParams = {
 };
 
 // Signed in as `user-1` on its persisted client (`ownClient`, or the test client), with the
-// dashboard and the friends cached.
+// dashboard, the friends and the user's activity feed cached.
 const signIn = (ownClient?: QueryClient): QueryClient => {
     useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
     saveLocalUser({
@@ -91,11 +96,17 @@ const signIn = (ownClient?: QueryClient): QueryClient => {
 
     client.setQueryData(dashboardKeys.balances(), []);
     client.setQueryData(usersKeys.known(), []);
+    client.setQueryData(selfFeedKey, { pages: [], pageParams: [] });
     return client;
 };
 
+const selfFeedKey = activityKeys.self({ view: 'previews' });
+
 const isStale = (client: QueryClient, queryKey: readonly unknown[]): boolean =>
     client.getQueryState(queryKey)?.isInvalidated === true;
+
+// The user's activity feed (`activity.self`) was invalidated on this client.
+const isFeedStale = (client: QueryClient): boolean => isStale(client, selfFeedKey);
 
 // The ledger and the group endpoints; `sent` lists `METHOD path` of every request, in order.
 // `gate` holds the answer of a write, `groupGate` the answer of the group read.
@@ -137,7 +148,7 @@ const sentWrites = (sent: readonly string[]): string[] =>
 
 beforeEach(() => {
     vi.clearAllMocks();
-    useActivityStore.setState({ fetchSetActivity, fetchSetActivitySubevents });
+    useActivityStore.setState({ fetchSetActivitySubevents });
 });
 
 afterEach(() => {
@@ -167,7 +178,6 @@ test('a ledger write while signed out is refused before any request', async () =
         refused,
     );
     expect(sent).toEqual([]);
-    expect(fetchSetActivity).not.toHaveBeenCalled();
 });
 
 test('a ledger write offline is refused: no request, and nothing is sent after the reconnect', async () => {
@@ -224,12 +234,11 @@ test('a double submit sends one request: the repeated write is refused as busy w
 });
 
 test('the saving flag comes from the mutation: on from the submit until the views have reloaded', async () => {
-    signIn();
+    const client = signIn();
     const gate = deferred();
     const reload = deferred();
+    const sent = serve(gate, 200, reload);
 
-    serve(gate);
-    fetchSetActivity.mockReturnValueOnce(reload.promise);
     // Two hook instances (the modal and another control) share the flag of the user's client.
     const { result } = renderHook(() => ({
         writer: useCreateExpense(),
@@ -240,7 +249,9 @@ test('the saving flag comes from the mutation: on from the submit until the view
 
     expect(result.current.watcher.isPending).toBe(false);
     act(() => {
-        write = result.current.writer.createExpense({ expense });
+        write = result.current.writer.createExpense({
+            expense: { ...expense, groupId: 'group-1' },
+        });
     });
     await waitFor(() => {
         expect(result.current.watcher.isPending).toBe(true);
@@ -249,8 +260,9 @@ test('the saving flag comes from the mutation: on from the submit until the view
 
     gate.resolve();
     await waitFor(() => {
-        expect(fetchSetActivity).toHaveBeenCalledWith(true);
+        expect(sent).toContain('GET /groups/group-1');
     });
+    expect(isFeedStale(client)).toBe(true);
     expect(result.current.watcher.isPending).toBe(true);
 
     await act(async () => {
@@ -271,7 +283,7 @@ test('after an expense between friends the dashboard, the friends balances and t
 
     expect(isStale(client, dashboardKeys.balances())).toBe(true);
     expect(isStale(client, usersKeys.known())).toBe(true);
-    expect(fetchSetActivity).toHaveBeenCalledWith(true);
+    expect(isFeedStale(client)).toBe(true);
     expect(fetchSetActivitySubevents).not.toHaveBeenCalled();
     expect(sent).toEqual(['POST /ledger/entries']);
 });
@@ -293,7 +305,7 @@ test('after a group expense the group card, its page and its feed are read again
     expect(sent).toContain('GET /groups/group-1');
     expect(isStale(client, dashboardKeys.balances())).toBe(true);
     expect(isStale(client, usersKeys.known())).toBe(false);
-    expect(fetchSetActivity).toHaveBeenCalledWith(true);
+    expect(isFeedStale(client)).toBe(true);
 });
 
 test('a write made from the activity history reloads that history in its open category', async () => {
@@ -394,13 +406,13 @@ describe.each<[string, () => void]>([
 
             expect(sent).toEqual([request]);
             expect(isStale(client, dashboardKeys.balances())).toBe(false);
-            expect(fetchSetActivity).not.toHaveBeenCalled();
+            expect(isFeedStale(client)).toBe(false);
             expect(fetchSetActivitySubevents).not.toHaveBeenCalled();
         },
     );
 
     test("a failed write is refused as an ended session too: its error is not the next session's", async () => {
-        signIn();
+        const client = signIn();
         const gate = deferred();
         const sent = serve(gate, 400);
         const { result } = renderHook(useWrites);
@@ -420,7 +432,7 @@ describe.each<[string, () => void]>([
         await act(async () => {
             expect(await write).toEqual(new LedgerWriteRefusedError('session'));
         });
-        expect(fetchSetActivity).not.toHaveBeenCalled();
+        expect(isFeedStale(client)).toBe(false);
     });
 });
 
@@ -447,7 +459,9 @@ describe.each<[string, number]>([
         expect(failure instanceof ApiError).toBe(status !== 0);
         expect(isStale(client, dashboardKeys.balances())).toBe(true);
         expect(isStale(client, usersKeys.known())).toBe(true);
-        expect(fetchSetActivity).toHaveBeenCalledWith(true);
+        await waitFor(() => {
+            expect(isFeedStale(client)).toBe(true);
+        });
         await waitFor(() => {
             expect(result.current.isPending).toBe(false);
         });
@@ -479,7 +493,9 @@ test('a failed write rejects at once: its refresh starts but is not waited for',
     });
     expect(isStale(client, dashboardKeys.balances())).toBe(true);
     expect(isStale(client, usersKeys.known())).toBe(false);
-    expect(fetchSetActivity).toHaveBeenCalledWith(true);
+    await waitFor(() => {
+        expect(isFeedStale(client)).toBe(true);
+    });
     await waitFor(() => {
         expect(result.current.isPending).toBe(false);
     });
@@ -488,7 +504,7 @@ test('a failed write rejects at once: its refresh starts but is not waited for',
 
 // A forced reload of the history shows the page skeletons, which closes the open delete dialog.
 test('a failed write made from the activity history does not reload that history', async () => {
-    signIn();
+    const client = signIn();
     serve(undefined, 403);
     useActivityStore.setState({ subeventsParent: legacyPreview('activity-1').parent });
     const { result } = renderHook(useWrites);
@@ -509,15 +525,20 @@ test('a failed write made from the activity history does not reload that history
         ).rejects.toBeInstanceOf(ApiError);
     });
 
-    expect(fetchSetActivity).toHaveBeenCalledTimes(2);
+    await waitFor(() => {
+        expect(isFeedStale(client)).toBe(true);
+    });
     expect(fetchSetActivitySubevents).not.toHaveBeenCalled();
 });
 
 // The app's own client: `offlineFirst` queries with the app retry, which pause while offline. The
-// interceptor marks the network unusable before the write sees its error.
-test('a write cut off by a network drop rejects at once with its own error and is not left pending', async () => {
+// interceptor marks the network unusable before the write sees its error. A timed-out write may
+// be committed: the shown activity feed is invalidated anyway, its reload waits for the reconnect,
+// and the write neither waits for it nor stays pending.
+test('a write cut off by a network drop rejects at once with its own error, and the shown feed reloads on the reconnect', async () => {
     const client = signIn(createQueryClient());
     const sent: string[] = [];
+    const feedReads: string[] = [];
     const drop = ({ request }: { request: Request }): Response => {
         sent.push(request.method);
         onlineManager.setOnline(false);
@@ -526,9 +547,21 @@ test('a write cut off by a network drop rejects at once with its own error and i
 
     server.use(
         http.post('*/ledger/entries', drop),
+        // Offline the feed's request fails as it would without a network.
+        http.get('*/users/self/activity-previews', () => {
+            if (!onlineManager.isOnline()) {
+                return HttpResponse.error();
+            }
+            feedReads.push('GET');
+            return HttpResponse.json({ items: [], nextCursor: null });
+        }),
         http.get('*/groups/group-1/activity-previews', () => HttpResponse.error()),
         http.get('*/groups/group-1', () => HttpResponse.error()),
     );
+    // The dashboard feed is on screen, loaded and fresh.
+    client.removeQueries({ queryKey: selfFeedKey });
+    const feed = new InfiniteQueryObserver(client, selfActivityPreviewsQueryOptions());
+    const unsubscribe = feed.subscribe(() => undefined);
     const { result } = renderHook(() => useCreateExpense(), {
         wrapper: ({ children }: { children: ReactNode }) => (
             <QueryClientProvider client={client}>{children}</QueryClientProvider>
@@ -538,6 +571,11 @@ test('a write cut off by a network drop rejects at once with its own error and i
     let failure: unknown = null;
 
     try {
+        await waitFor(() => {
+            expect(feed.getCurrentResult().isSuccess).toBe(true);
+        });
+        expect(feedReads).toHaveLength(1);
+
         await act(async () => {
             failure = await result.current.createExpense(groupExpense).then(
                 () => null,
@@ -551,15 +589,33 @@ test('a write cut off by a network drop rejects at once with its own error and i
         await waitFor(() => {
             expect(result.current.isPending).toBe(false);
         });
-        // The queries are marked stale for the reconnect; the legacy feed is not force-reloaded.
+        // Every view is marked stale for the reconnect; the feed's reload fails offline and, after
+        // the retry delay (1 s), waits paused for it.
         expect(isStale(client, dashboardKeys.balances())).toBe(true);
-        expect(fetchSetActivity).not.toHaveBeenCalled();
+        await waitFor(
+            () => {
+                expect(client.getQueryState(selfFeedKey)?.fetchStatus).toBe('paused');
+            },
+            { timeout: 3000 },
+        );
+        expect(isFeedStale(client)).toBe(true);
+        expect(result.current.isPending).toBe(false);
+        expect(feedReads).toHaveLength(1);
         // The next submit is refused as offline, not as a write that is still running.
         await expect(result.current.createExpense(groupExpense)).rejects.toEqual(
             new LedgerWriteRefusedError('offline'),
         );
         expect(sent).toEqual(['POST']);
+
+        act(() => {
+            onlineManager.setOnline(true);
+        });
+        await waitFor(() => {
+            expect(feedReads).toHaveLength(2);
+        });
+        expect(sent).toEqual(['POST']);
     } finally {
+        unsubscribe();
         await client.cancelQueries();
         client.clear();
     }
@@ -577,7 +633,7 @@ test('a refused write was never sent and reloads nothing', async () => {
     }
     expect(sent).toEqual([]);
     expect(isStale(client, dashboardKeys.balances())).toBe(false);
-    expect(fetchSetActivity).not.toHaveBeenCalled();
+    expect(isFeedStale(client)).toBe(false);
 });
 
 test('deleting a settlement in a group reads the group again, not the friends', async () => {
@@ -593,7 +649,7 @@ test('deleting a settlement in a group reads the group again, not the friends', 
     expect(sent).toContain('GET /groups/group-1');
     expect(isStale(client, dashboardKeys.balances())).toBe(true);
     expect(isStale(client, usersKeys.known())).toBe(false);
-    expect(fetchSetActivity).toHaveBeenCalledWith(true);
+    expect(isFeedStale(client)).toBe(true);
 });
 
 test('deleting a settlement between friends reloads the friends balances and no group', async () => {
@@ -606,7 +662,7 @@ test('deleting a settlement between friends reloads the friends balances and no 
     expect(sent).toEqual(['DELETE /ledger/entries/settlement-1']);
     expect(isStale(client, dashboardKeys.balances())).toBe(true);
     expect(isStale(client, usersKeys.known())).toBe(true);
-    expect(fetchSetActivity).toHaveBeenCalledWith(true);
+    expect(isFeedStale(client)).toBe(true);
 });
 
 test('the toast of a rejected write: offline is named, an ended session and a repeated submit show nothing, an API code is translated, anything else is the fallback', () => {
