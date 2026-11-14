@@ -1,17 +1,13 @@
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Button, Flex, Spinner, Text } from '@radix-ui/themes';
-import { ChevronsDownIcon, RefreshCwIcon } from 'lucide-react';
+import { ChevronsDownIcon, RefreshCwIcon, WifiOffIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useShallow } from 'zustand/react/shallow';
 
 import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
-import { selectActivityFeed, useActivityStore } from 'store/activity-store';
-import { selectActivityNextPageError } from 'store/errorsSelectors';
-import { useErrorsStore } from 'store/errorsStore';
-import { selectActivityLoading, selectActivityNextPageLoading } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
+import { useSelfActivityLog } from 'hooks/useSelfActivity';
 
+import { EmptyState } from 'basics/empty-states';
 import { ActivityFeedSkeleton } from 'components/skeletons';
 
 import type { ActivityFilter } from './ActivityHeader';
@@ -22,54 +18,80 @@ interface Props {
 }
 
 const ActivityList = ({ activeFilter }: Props) => {
-    const { t } = useTranslation('activity');
-    const { items, hasMore } = useActivityStore(useShallow(selectActivityFeed));
-    const fetchMoreActivity = useActivityStore(state => state.fetchMoreActivity);
-    const isLoading = useLoadingStore(selectActivityLoading);
-    const isNextPageLoading = useLoadingStore(selectActivityNextPageLoading);
-    const isNextPageError = useErrorsStore(selectActivityNextPageError);
+    const { t } = useTranslation(['activity', 'errors']);
+    const {
+        events,
+        isLoading,
+        isError,
+        isOffline,
+        hasMore,
+        loadedKey,
+        isFetching,
+        isNextPageLoading,
+        isNextPageError,
+        loadMore,
+        reload,
+    } = useSelfActivityLog();
 
-    const filteredItems = useMemo(() => {
+    const filteredEvents = useMemo(() => {
         if (activeFilter === 'expenses') {
-            return items.filter(
-                item =>
-                    item.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ||
-                    item.action === ACTIVITY_ACTIONS.EXPENSE_UPDATED ||
-                    item.action === ACTIVITY_ACTIONS.EXPENSE_REVERSED,
+            return events.filter(
+                event =>
+                    event.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ||
+                    event.action === ACTIVITY_ACTIONS.EXPENSE_UPDATED ||
+                    event.action === ACTIVITY_ACTIONS.EXPENSE_REVERSED,
             );
         }
 
         if (activeFilter === 'settlements') {
-            return items.filter(
-                item =>
-                    item.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED ||
-                    item.action === ACTIVITY_ACTIONS.SETTLEMENT_REVERSED,
+            return events.filter(
+                event =>
+                    event.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED ||
+                    event.action === ACTIVITY_ACTIONS.SETTLEMENT_REVERSED,
             );
         }
 
-        return items;
-    }, [items, activeFilter]);
+        return events;
+    }, [events, activeFilter]);
 
-    const isEndOfFeed = !isNextPageLoading && !hasMore && items.length > 0;
-    const onLoadMore = useCallback(() => {
-        void fetchMoreActivity();
-    }, [fetchMoreActivity]);
+    const isEndOfFeed = !isNextPageLoading && !hasMore && events.length > 0;
+    // Any fetch of the feed holds the next page: a refetch replaces the pages it would extend.
     const sentinelRef = useInfiniteScroll({
         hasMore: hasMore && !isNextPageError,
-        isLoading: isNextPageLoading,
-        onLoadMore,
+        isLoading: isFetching,
+        onLoadMore: loadMore,
+        loadedKey,
     });
-    const onRetryNextPage = () => {
-        onLoadMore();
-    };
 
     if (isLoading) {
         return <ActivityFeedSkeleton />;
     }
 
+    // Nothing to show and the first load failed: an error with Retry, never "no activity".
+    if (isError) {
+        return (
+            <EmptyState
+                icon={<RefreshCwIcon size={20} />}
+                title={t('loadErrorTitle')}
+                description={t('loadErrorDescription')}
+                action={
+                    <Button type="button" variant="soft" onClick={reload}>
+                        <RefreshCwIcon size={14} />
+                        {t('retryAction')}
+                    </Button>
+                }
+            />
+        );
+    }
+
+    // Nothing cached and no network: the load resumes by itself on reconnect, so no Retry.
+    if (isOffline) {
+        return <EmptyState icon={<WifiOffIcon size={20} />} title={t('errors:network.offline')} />;
+    }
+
     return (
         <>
-            <ActivityEventsList events={filteredItems} isFullActivityFeed />
+            <ActivityEventsList log={filteredEvents} isFullActivityFeed />
 
             {isNextPageLoading && (
                 <Flex justify="center" py="4">
@@ -79,7 +101,7 @@ const ActivityList = ({ activeFilter }: Props) => {
 
             {isNextPageError && (
                 <Flex justify="center" py="4">
-                    <Button type="button" size="1" variant="soft" onClick={onRetryNextPage}>
+                    <Button type="button" size="1" variant="soft" onClick={loadMore}>
                         <RefreshCwIcon size={14} />
                         {t('retryAction')}
                     </Button>

@@ -22,6 +22,7 @@ test('loads the next page when the sentinel enters the viewport', () => {
             hasMore: true,
             isLoading: false,
             onLoadMore,
+            loadedKey: 0,
         }),
     );
 
@@ -42,6 +43,7 @@ test('re-arms pagination after a completed load while the sentinel stays visible
             hasMore: true,
             isLoading,
             onLoadMore,
+            loadedKey: 0,
         }),
     );
 
@@ -67,6 +69,7 @@ test('does not re-arm pagination when the completed request removes eligibility'
             hasMore,
             isLoading,
             onLoadMore,
+            loadedKey: 0,
         }),
     );
 
@@ -102,6 +105,7 @@ test.each([
                 hasMore,
                 isLoading,
                 onLoadMore,
+                loadedKey: 0,
             }),
         );
 
@@ -119,6 +123,7 @@ test('does not retry a failed load on rerender while the sentinel stays visible'
             hasMore: true,
             isLoading: false,
             onLoadMore: () => onLoadMore(),
+            loadedKey: 0,
         }),
     );
 
@@ -126,5 +131,53 @@ test('does not retry a failed load on rerender while the sentinel stays visible'
     rerender();
     rerender();
 
+    expect(onLoadMore).toHaveBeenCalledOnce();
+});
+
+test('re-arms when a page was loaded although the answer arrived before any loading render', () => {
+    const onLoadMore = vi.fn<() => void>();
+    let loadedKey = 1;
+    const { rerender } = renderHook(() =>
+        useInfiniteScroll({ hasMore: true, isLoading: false, onLoadMore, loadedKey }),
+    );
+
+    isIntersecting = true;
+    rerender();
+    expect(onLoadMore).toHaveBeenCalledOnce();
+
+    // The next render already has the new page: `isLoading` was never seen true.
+    loadedKey = 2;
+    rerender();
+    expect(onLoadMore).toHaveBeenCalledTimes(2);
+
+    // Nothing was loaded since: a plain rerender does not trigger again.
+    rerender();
+    expect(onLoadMore).toHaveBeenCalledTimes(2);
+});
+
+test('a loaded page that ends the feed, or a load still running, does not trigger', () => {
+    const onLoadMore = vi.fn<() => void>();
+    let loadedKey = 1;
+    let hasMore = true;
+    let isLoading = false;
+    const { rerender } = renderHook(() =>
+        useInfiniteScroll({ hasMore, isLoading, onLoadMore, loadedKey }),
+    );
+
+    isIntersecting = true;
+    rerender();
+    expect(onLoadMore).toHaveBeenCalledOnce();
+
+    // A page arrives while another fetch (a refetch) still runs: the trigger waits for it.
+    loadedKey = 2;
+    isLoading = true;
+    rerender();
+    expect(onLoadMore).toHaveBeenCalledOnce();
+
+    // The last page: nothing more to load.
+    loadedKey = 3;
+    isLoading = false;
+    hasMore = false;
+    rerender();
     expect(onLoadMore).toHaveBeenCalledOnce();
 });

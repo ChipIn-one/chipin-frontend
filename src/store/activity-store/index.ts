@@ -1,5 +1,5 @@
 import { useActivityStore } from './actions';
-import { selectActivityFeed, selectActivitySubeventsFlow } from './selectors';
+import { selectActivitySubeventsFlow } from './selectors';
 import type {
     ActivityStore,
     ActivityStoreActions,
@@ -15,7 +15,6 @@ export {
     type ActivityStoreState,
     type FetchActivitySubeventsParams,
     type PrepareExpenseEditParams,
-    selectActivityFeed,
     selectActivitySubeventsFlow,
     type UpdateExpenseParams,
     useActivityStore,

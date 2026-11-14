@@ -35,6 +35,14 @@ export const flattenGroupActivity = (data: GroupActivityData): ActivityPreview[]
     return items;
 };
 
+/** What the group feed shows: the previews and how many pages they come from. */
+export const selectGroupActivity = (
+    data: GroupActivityData,
+): { items: ActivityPreview[]; pageCount: number } => ({
+    items: flattenGroupActivity(data),
+    pageCount: data.pages.length,
+});
+
 /** The first page only (a refetch then sends one request, not one per loaded page). */
 export const firstGroupActivityPage = (data: GroupActivityData): GroupActivityData => ({
     pages: data.pages.slice(0, 1),

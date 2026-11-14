@@ -66,8 +66,18 @@ export const useGroupDetail = (groupId: string | undefined): GroupDetailResult =
 export interface GroupActivityResult {
     items: readonly ActivityPreview[];
     hasMore: boolean;
-    /** Any load runs (a refetch or the next page): a scroll trigger waits for it to end. */
+    /**
+     * The loaded page count and the time the data landed: a change re-arms the scroll trigger
+     * (`useInfiniteScroll`). The count covers a page load under a frozen clock, the time a
+     * refetch that keeps the count.
+     */
+    loadedKey: string;
+    /**
+     * A load runs or waits for the network (a refetch or the next page): a scroll trigger waits
+     * for it to end. A load paused offline resumes by itself on reconnect.
+     */
     isFetching: boolean;
+    /** The next page is being requested (not while it waits for the network). */
     isNextPageLoading: boolean;
     isNextPageError: boolean;
     /** Loads the next page; a fetch running (a refetch replaces the pages) holds it. */
@@ -92,17 +102,21 @@ export const useGroupActivity = (
     const isEnabled = useIsGroupQueryEnabled() && hasDetail;
     const embedded = useMemo(() => recent && embeddedPreviews(recent), [recent]);
     const query = useGroupActivityQuery(groupId, { enabled: isEnabled });
-    const { fetchNextPage, isFetching } = query;
+    const { fetchNextPage } = query;
+    // A paused load counts: starting another would cancel it, again and again while offline.
+    const isFetching = query.fetchStatus !== 'idle';
     const loadMore = useCallback(() => {
         if (isEnabled && !isFetching) {
             void fetchNextPage();
         }
     }, [fetchNextPage, isEnabled, isFetching]);
-    const items = isEnabled ? query.data : undefined;
+    const data = isEnabled ? query.data : undefined;
+    const items = data?.items;
 
     return {
         items: items ?? embedded ?? NO_ACTIVITY,
         hasMore: items !== undefined && query.hasNextPage,
+        loadedKey: `${data?.pageCount ?? 0}:${data ? query.dataUpdatedAt : 0}`,
         isFetching: isEnabled && isFetching,
         isNextPageLoading: query.isFetchingNextPage,
         isNextPageError: query.isFetchNextPageError,
