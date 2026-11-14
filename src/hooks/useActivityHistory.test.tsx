@@ -1,0 +1,129 @@
+import { onlineManager } from '@tanstack/react-query';
+import { act, renderHook, waitFor } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+import { afterEach, beforeEach, expect, test } from 'vitest';
+
+import { useAuthStore } from 'store/authStore';
+import { legacyPreview } from 'test/activityFixtures';
+import { setupMswServer } from 'test/mswServer';
+import { mountAsUserClient } from 'test/userClient';
+
+import { useActivityHistory } from './useActivityHistory';
+
+const server = setupMswServer();
+
+// The wire JSON of a chain: its creation event and a later edit (the legacy fixtures are the same JSON).
+const { parent, lastEvent: edit } = legacyPreview('activity-1', { seq: 2 });
+const { lastEvent: olderEdit } = legacyPreview('activity-1', { seq: 3 });
+
+// Answers the history of `activity-1` page by page (`nextCursor` 40, then null); records the cursors.
+const serveHistory = (status = 200): (string | null)[] => {
+    const cursors: (string | null)[] = [];
+
+    server.use(
+        http.get('*/users/self/activities/:parentActivityId/children', ({ request }) => {
+            const cursor = new URL(request.url).searchParams.get('cursor');
+
+            cursors.push(cursor);
+            if (status !== 200) {
+                return HttpResponse.json({ code: 'ACTIVITY.NOT_FOUND' }, { status });
+            }
+            return HttpResponse.json(
+                cursor === null
+                    ? { parent, items: [olderEdit], nextCursor: 40 }
+                    : { parent, items: [edit], nextCursor: null },
+            );
+        }),
+    );
+    return cursors;
+};
+
+const signIn = () => {
+    useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
+    mountAsUserClient();
+};
+
+beforeEach(() => {
+    onlineManager.setOnline(true);
+});
+
+afterEach(() => {
+    onlineManager.setOnline(true);
+    useAuthStore.setState({ status: 'unknown' });
+});
+
+test('reads the chain through api() as domain events and loads the next page by its cursor', async () => {
+    signIn();
+    const cursors = serveHistory();
+    const { result } = renderHook(() => useActivityHistory('activity-1'));
+
+    expect(result.current.isLoading).toBe(true);
+    await waitFor(() => {
+        expect(result.current.parent?.id).toBe('activity-1');
+    });
+    expect(result.current.parent?.metadata).toMatchObject({
+        amount: { minor: 100_000n, currency: 'USD' },
+    });
+    expect(result.current.events.map(event => event.id)).toEqual(['activity-1-3']);
+    expect(result.current.hasMore).toBe(true);
+
+    act(() => {
+        result.current.loadMore();
+    });
+    await waitFor(() => {
+        expect(result.current.events.map(event => event.id)).toEqual([
+            'activity-1-3',
+            'activity-1-2',
+        ]);
+    });
+    expect(result.current.hasMore).toBe(false);
+    expect(cursors).toEqual([null, '40']);
+});
+
+test('signed out nothing is requested and nothing is loading', async () => {
+    const cursors = serveHistory();
+    const { result } = renderHook(() => useActivityHistory('activity-1'));
+
+    await new Promise(resolve => setTimeout(resolve, 20));
+    expect(cursors).toEqual([]);
+    expect(result.current).toMatchObject({ isLoading: false, isError: false, isOffline: false });
+});
+
+test('a chain that does not exist (404) is an error with nothing loading, and Retry reads it again', async () => {
+    signIn();
+    const cursors = serveHistory(404);
+    const { result } = renderHook(() => useActivityHistory('activity-1'));
+
+    await waitFor(() => {
+        expect(result.current.isError).toBe(true);
+    });
+    expect(result.current).toMatchObject({ isLoading: false, isOffline: false, parent: undefined });
+
+    act(() => {
+        result.current.reload();
+    });
+    await waitFor(() => {
+        expect(cursors).toHaveLength(2);
+    });
+});
+
+test('offline with nothing cached the history waits for the network: offline, not an error', async () => {
+    signIn();
+    const cursors = serveHistory();
+
+    onlineManager.setOnline(false);
+    const { result } = renderHook(() => useActivityHistory('activity-1'));
+
+    await waitFor(() => {
+        expect(result.current.isOffline).toBe(true);
+    });
+    expect(result.current).toMatchObject({ isLoading: false, isError: false });
+    expect(cursors).toEqual([]);
+
+    act(() => {
+        onlineManager.setOnline(true);
+    });
+    await waitFor(() => {
+        expect(result.current.parent?.id).toBe('activity-1');
+    });
+});

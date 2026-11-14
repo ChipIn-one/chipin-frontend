@@ -13,10 +13,9 @@ import { usersKeys } from 'entities/users';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
 import { LedgerWriteRefusedError, toastLedgerWriteError } from 'hooks/useLedgerMutations';
-import { useActivityStore } from 'store/activity-store';
 import { onAccessTokenRefreshed, useAuthStore } from 'store/authStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
-import { useLoadingStore } from 'store/loadingStore';
+import { domainExpenseEvent, domainSettlementEvent } from 'test/activityFixtures';
 import { fakeAccessToken } from 'test/fakeAccessToken';
 import { wireGroup } from 'test/groupFixtures';
 import { setupMswServer } from 'test/mswServer';
@@ -41,7 +40,7 @@ vi.mock('hooks/useLedgerMutations', async importOriginal => {
     return { ...actual, toastLedgerWriteError: vi.fn(actual.toastLedgerWriteError) };
 });
 
-const parentEvent = {
+const legacyParentEvent = {
     id: 'activity-id',
     seq: 1,
     domain: 'LEDGER',
@@ -67,17 +66,28 @@ const parentEvent = {
     parentActivityId: null,
 } satisfies AppEvent;
 
-const reversedEvent = {
-    ...parentEvent,
+const parentEvent = domainExpenseEvent(legacyParentEvent);
+
+const reversedEvent = domainExpenseEvent({
+    ...legacyParentEvent,
     id: 'reversed-activity-id',
     seq: 2,
     action: ACTIVITY_ACTIONS.EXPENSE_REVERSED,
-    parentActivityId: parentEvent.id,
-} satisfies AppEvent;
+    parentActivityId: legacyParentEvent.id,
+});
+
+const updatedEvent = domainExpenseEvent({
+    ...legacyParentEvent,
+    id: 'updated-activity-id',
+    seq: 2,
+    action: ACTIVITY_ACTIONS.EXPENSE_UPDATED,
+    metadata: { ...legacyParentEvent.metadata, description: 'Updated dinner', amount: 40 },
+    parentActivityId: legacyParentEvent.id,
+});
 
 // A payment between two friends; `inGroup` makes it a payment inside `group-1`.
 const settlementEvent = (inGroup: boolean) =>
-    ({
+    domainSettlementEvent({
         id: 'settlement-activity-id',
         seq: 1,
         domain: 'LEDGER',
@@ -99,7 +109,7 @@ const settlementEvent = (inGroup: boolean) =>
         },
         createdAt: 1_785_328_628,
         parentActivityId: null,
-    }) satisfies AppEvent;
+    });
 
 const server = setupMswServer();
 
@@ -117,10 +127,14 @@ const deferred = (): Deferred => {
     return { promise, resolve };
 };
 
-const fetchSetActivitySubevents = vi.fn(() => Promise.resolve());
-const initialActivity = useActivityStore.getState();
-
 const selfFeedKey = activityKeys.self({ view: 'previews' });
+const historyKey = activityKeys.children(parentEvent.id);
+const settlementHistoryKey = activityKeys.children('settlement-activity-id');
+const emptyHistory = { pages: [], pageParams: [] };
+
+// The expense history (`activity.children`) under `queryKey` was invalidated on this client.
+const isHistoryStale = (client: QueryClient, queryKey = historyKey): boolean =>
+    client.getQueryState(queryKey)?.isInvalidated === true;
 
 // The user's activity feed (`activity.self`) was invalidated on this client.
 const isFeedStale = (client: QueryClient): boolean =>
@@ -141,7 +155,7 @@ const watchSelfFeedRefreshes = (client: QueryClient): (() => unknown[]) => {
 };
 
 // Signed in on the user's persisted client (the only place ledger writes run), with the
-// dashboard, the friends and the user's activity feed cached.
+// dashboard, the friends, the user's activity feed and the expense histories cached.
 const signIn = () => {
     useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
     saveLocalUser({
@@ -164,6 +178,8 @@ const signIn = () => {
     client.setQueryData(dashboardKeys.balances(), []);
     client.setQueryData(usersKeys.known(), []);
     client.setQueryData(selfFeedKey, { pages: [], pageParams: [] });
+    client.setQueryData(historyKey, emptyHistory);
+    client.setQueryData(settlementHistoryKey, emptyHistory);
     return client;
 };
 
@@ -189,38 +205,30 @@ const serveDelete = ({
 
 beforeEach(() => {
     vi.clearAllMocks();
-    useActivityStore.setState({ subevents: [], fetchSetActivitySubevents });
-    useLoadingStore.getState().setInitialLoadingStore();
 });
 
 afterEach(() => {
     onlineManager.setOnline(true);
-    useActivityStore.setState(initialActivity, true);
     useExpenseModalStore.getState().reset();
     clearLocalUserIdentity();
     useAuthStore.setState({ status: 'unknown' });
 });
 
-test('opens the shared editor from the current activity snapshot', async () => {
+test('ACT-004 opens the shared editor from the latest event of the loaded history', async () => {
     const user = userEvent.setup();
-    const initializeEdit = vi.fn();
-    const prepareExpenseEdit = vi.fn().mockReturnValue({ mode: 'edit' });
-    const originalInitializeEdit = useExpenseModalStore.getState().initializeEdit;
 
-    useActivityStore.setState({ prepareExpenseEdit });
-    useExpenseModalStore.setState({ initializeEdit });
-    render(<ActivitySubeventsButtons parentEvent={parentEvent} />);
+    render(<ActivitySubeventsButtons parentEvent={parentEvent} childEvents={[updatedEvent]} />);
 
     await user.click(screen.getByRole('button', { name: 'Update' }));
 
-    expect(prepareExpenseEdit).toHaveBeenCalledWith({
-        parentEvent,
-        childEvents: [],
-        parentActivityId: parentEvent.id,
+    expect(useExpenseModalStore.getState()).toMatchObject({
+        isOpened: true,
+        mode: 'edit',
+        description: 'Updated dinner',
+        amount: '40',
+        currency: 'USD',
+        editContext: { entryId: 'expense-id', parentActivityId: parentEvent.id },
     });
-    expect(initializeEdit).toHaveBeenCalledWith({ mode: 'edit' });
-
-    useExpenseModalStore.setState({ initializeEdit: originalInitializeEdit });
 });
 
 test('hides edit and delete actions when the latest event is reversed', () => {
@@ -251,7 +259,7 @@ test('deletes the entry from the activity history: one DELETE, a toast, the hist
     const client = signIn();
     const sent = serveDelete();
 
-    render(<ActivitySubeventsButtons parentEvent={parentEvent} />);
+    render(<ActivitySubeventsButtons parentEvent={parentEvent} childEvents={[]} />);
     await confirmDelete();
 
     await waitFor(() => {
@@ -260,11 +268,7 @@ test('deletes the entry from the activity history: one DELETE, a toast, the hist
     expect(sent).toEqual(['DELETE /ledger/entries/expense-id']);
     expect(toast.error).not.toHaveBeenCalled();
     expect(isFeedStale(client)).toBe(true);
-    expect(fetchSetActivitySubevents).toHaveBeenCalledWith({
-        parentActivityId: parentEvent.id,
-        category: undefined,
-        force: true,
-    });
+    expect(isHistoryStale(client)).toBe(true);
 });
 
 test('the delete button is disabled while the delete request runs (the mutation state)', async () => {
@@ -272,7 +276,7 @@ test('the delete button is disabled while the delete request runs (the mutation 
     const gate = deferred();
     const sent = serveDelete({ gate });
 
-    render(<ActivitySubeventsButtons parentEvent={parentEvent} />);
+    render(<ActivitySubeventsButtons parentEvent={parentEvent} childEvents={[]} />);
     await confirmDelete();
 
     await waitFor(() => {
@@ -285,11 +289,11 @@ test('the delete button is disabled while the delete request runs (the mutation 
     expect(sent).toHaveLength(1);
 });
 
-test('a failed delete shows the translated API error and reads the feed again, not the open history', async () => {
+test('a failed delete shows the translated API error and marks the feed and the open history stale', async () => {
     const client = signIn();
     serveDelete({ status: 404 });
 
-    render(<ActivitySubeventsButtons parentEvent={parentEvent} />);
+    render(<ActivitySubeventsButtons parentEvent={parentEvent} childEvents={[]} />);
     await confirmDelete();
 
     await waitFor(() => {
@@ -299,7 +303,9 @@ test('a failed delete shows the translated API error and reads the feed again, n
     await waitFor(() => {
         expect(isFeedStale(client)).toBe(true);
     });
-    expect(fetchSetActivitySubevents).not.toHaveBeenCalled();
+    await waitFor(() => {
+        expect(isHistoryStale(client)).toBe(true);
+    });
 });
 
 test('deleting a settlement in a group sends one DELETE and reads the group again, not the friends', async () => {
@@ -316,7 +322,7 @@ test('deleting a settlement in a group sends one DELETE and reads the group agai
             return HttpResponse.json(wireGroup('group-1'));
         }),
     );
-    render(<ActivitySubeventsButtons parentEvent={settlementEvent(true)} />);
+    render(<ActivitySubeventsButtons parentEvent={settlementEvent(true)} childEvents={[]} />);
     await confirmDelete();
 
     await waitFor(() => {
@@ -333,7 +339,7 @@ test('deleting a settlement between friends sends one DELETE and reloads the fri
     const client = signIn();
     const sent = serveDelete();
 
-    render(<ActivitySubeventsButtons parentEvent={settlementEvent(false)} />);
+    render(<ActivitySubeventsButtons parentEvent={settlementEvent(false)} childEvents={[]} />);
     await confirmDelete();
 
     await waitFor(() => {
@@ -342,31 +348,15 @@ test('deleting a settlement between friends sends one DELETE and reloads the fri
     expect(sent).toEqual(['DELETE /ledger/entries/settlement-id']);
     expect(client.getQueryState(dashboardKeys.balances())?.isInvalidated).toBe(true);
     expect(client.getQueryState(usersKeys.known())?.isInvalidated).toBe(true);
-    expect(fetchSetActivitySubevents).toHaveBeenCalledWith({
-        parentActivityId: 'settlement-activity-id',
-        category: undefined,
-        force: true,
-    });
+    expect(isHistoryStale(client, settlementHistoryKey)).toBe(true);
 });
 
-// With the store's own history reload and loading flag: a forced reload of the history shows the
-// skeletons, which unmounts the dialog.
+// The history page keeps the dialog mounted while its history refetches (the page test covers it).
 test('a settlement delete the server refuses (403) shows the translated error and keeps the dialog open', async () => {
     const client = signIn();
     const sent = serveDelete({ status: 403, code: 'LEDGER.FORBIDDEN' });
-    const historyReads = vi.fn();
-    const event = settlementEvent(false);
 
-    server.use(
-        http.get('*/users/self/activities/:id/children', () => {
-            historyReads();
-            return HttpResponse.json({ parent: event, items: [], nextCursor: null });
-        }),
-    );
-    useActivityStore.setState({
-        fetchSetActivitySubevents: initialActivity.fetchSetActivitySubevents,
-    });
-    render(<ActivitySubeventsButtons parentEvent={settlementEvent(false)} />);
+    render(<ActivitySubeventsButtons parentEvent={settlementEvent(false)} childEvents={[]} />);
     await confirmDelete();
 
     await waitFor(() => {
@@ -382,12 +372,13 @@ test('a settlement delete the server refuses (403) shows the translated error an
             false,
         );
     });
-    // The feed is invalidated, so a history reload would have started with it.
     await waitFor(() => {
         expect(isFeedStale(client)).toBe(true);
     });
-    expect(historyReads).not.toHaveBeenCalled();
-    expect(useLoadingStore.getState().activity.subeventsData).toBe('initial');
+    await waitFor(() => {
+        expect(isHistoryStale(client, settlementHistoryKey)).toBe(true);
+    });
+    expect(screen.getByRole('button', { name: 'Delete entry' })).toBeTruthy();
 });
 
 // Another tab switched the account: this tab's token refresh returns the other user's token. The
@@ -420,7 +411,7 @@ describe.each<[string, () => void]>([
             const gate = deferred();
             const sent = serveDelete({ gate, status });
 
-            render(<ActivitySubeventsButtons parentEvent={parentEvent} />);
+            render(<ActivitySubeventsButtons parentEvent={parentEvent} childEvents={[]} />);
             await confirmDelete();
             await waitFor(() => {
                 expect(sent).toHaveLength(1);
@@ -439,7 +430,6 @@ describe.each<[string, () => void]>([
             expect(toast.success).not.toHaveBeenCalled();
             expect(toast.error).not.toHaveBeenCalled();
             expect(selfFeedRefreshes()).toEqual([]);
-            expect(fetchSetActivitySubevents).not.toHaveBeenCalled();
         },
     );
 });
@@ -449,7 +439,7 @@ test('an offline delete is refused with a toast and nothing is sent after the re
     const sent = serveDelete();
 
     onlineManager.setOnline(false);
-    render(<ActivitySubeventsButtons parentEvent={parentEvent} />);
+    render(<ActivitySubeventsButtons parentEvent={parentEvent} childEvents={[]} />);
     await confirmDelete();
 
     await waitFor(() => {

@@ -24,7 +24,8 @@ export const previewRows = (previews: readonly ActivityPreview[]): ActivityRow[]
 export const eventRows = (events: readonly ActivityEvent[]): ActivityRow[] =>
     events.map(event => ({ original: event, event, isPreview: false }));
 
-// LEGACY until 12c migrates the expense history (the activity store's children).
+// LEGACY: no production caller since 12c (the expense history reads domain events); only the
+// tests of the list still use it. TODO: move those tests to domain events and delete it.
 export const legacyActivityRows = (items: readonly ActivityListItem[]): ActivityRow[] =>
     items.map(item => {
         if (isActivityPreview(item)) {

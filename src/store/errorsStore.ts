@@ -8,21 +8,6 @@ interface RequestErrors {
         signOut: RequestError | null;
         logoutOtherDevices: RequestError | null;
     };
-    activity: {
-        subeventsData: RequestError | null;
-        subeventsNextPage: RequestError | null;
-    };
-    expense: {
-        add: RequestError | null;
-        edit: RequestError | null;
-        update: RequestError | null;
-    };
-    ledger: {
-        remove: RequestError | null;
-    };
-    settlement: {
-        add: RequestError | null;
-    };
 }
 
 type ErrorSection = keyof RequestErrors;
@@ -41,13 +26,6 @@ export interface ErrorsStore {
 
 const initialErrors: RequestErrors = {
     auth: { login: null, signOut: null, logoutOtherDevices: null },
-    activity: {
-        subeventsData: null,
-        subeventsNextPage: null,
-    },
-    expense: { add: null, edit: null, update: null },
-    ledger: { remove: null },
-    settlement: { add: null },
 };
 
 export const useErrorsStore = create<ErrorsStore>((set, get) => ({

@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group } from 'api/chipin.types';
-import { useActivityStore } from 'store/activity-store';
 import { useAuthStore } from 'store/authStore';
 import { toTestGroup, wireGroup } from 'test/groupFixtures';
 import { setupMswServer } from 'test/mswServer';
@@ -35,7 +34,6 @@ beforeEach(() => {
     vi.clearAllMocks();
     useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
     mountAsUserClient();
-    useActivityStore.setState({ fetchSetActivity: vi.fn(() => Promise.resolve()) });
     server.use(http.get('*/groups', () => HttpResponse.json({ items: [], nextCursor: null })));
 });
 

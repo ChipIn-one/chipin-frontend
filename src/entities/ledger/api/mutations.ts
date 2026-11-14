@@ -1,24 +1,33 @@
-// The ledger entity mutations (spec 03 §2.1, §6 row 6): create and update an expense, delete a
-// ledger entry (an expense or a settlement: one endpoint, spec 03 §2.9). Online only: no outbox,
-// no retry, and the hooks refuse them offline before `mutate`. The keys are the online set of
-// spec 03 §2.1; the outbox set and `registerLedgerMutationDefaults` arrive with 03-15a.
+// The ledger entity mutations (spec 03 §2.1, §6 row 6): create and update an expense, create a
+// settlement (settle-up), delete a ledger entry (an expense or a settlement: one endpoint, spec 03
+// §2.9). Online only: no outbox, no retry, and the hooks refuse them offline before `mutate`. The
+// keys are the online set of spec 03 §2.1; the outbox set and `registerLedgerMutationDefaults`
+// arrive with 03-15a.
 //
 // Nothing is written into a cache here (the server is the source of truth for finances): once a
 // sent write settles, what shows the entry is read again. Until every view of the entry is a
-// query (the expense history: 12c), that refresh is passed in (`LedgerWriteEffects`): entities
-// never import `store`. A successful write settles when the refresh has; a failed one rejects at
-// once and its refresh runs on its own. A write whose auth session has ended (a sign-out, an
-// account switch, an expired session) refreshes nothing.
+// query (the dashboard, the groups, the friends), that refresh is passed in
+// (`LedgerWriteEffects`): entities never import `store`. A successful write settles when the
+// refresh has; a failed one rejects at once and its refresh runs on its own. A write whose auth
+// session has ended (a sign-out, an account switch, an expired session) refreshes nothing.
 import type { QueryClient } from '@tanstack/react-query';
 import { mutationOptions } from '@tanstack/react-query';
 
-import type { CreateLedgerEntryParams, UpdateLedgerExpenseParams } from 'api/chipin.types';
+import type {
+    CreateLedgerEntryParams,
+    CreateSettlementParams as CreateSettlementRequest,
+    UpdateLedgerExpenseParams,
+} from 'api/chipin.types';
 import { isAuthSessionCurrent } from 'helpers/authSession';
 import { api, InvalidPathSegmentError } from 'shared/api/client';
 import { MoneyWireError } from 'shared/money';
 import { isUserCacheClient } from 'shared/offline/userCaches';
 
-import { legacyCreateExpenseBody, legacyUpdateExpenseBody } from './legacyExpenseWire';
+import {
+    legacyCreateExpenseBody,
+    legacyCreateSettlementBody,
+    legacyUpdateExpenseBody,
+} from './legacyExpenseWire';
 
 export const ledgerOnlineMutationKeys = {
     createEntry: ['ledger', 'online', 'createEntry'],
@@ -46,6 +55,11 @@ export interface CreateExpenseParams {
     parentActivityId?: string;
 }
 
+export interface CreateSettlementParams {
+    // TODO(03-14b): the amount as `Money` instead of the legacy number payload.
+    settlement: CreateSettlementRequest;
+}
+
 export interface UpdateExpenseParams extends LedgerWriteContext {
     entryId: string;
     // TODO(03-14b): the patch on `Money` instead of the legacy number payload.
@@ -57,6 +71,7 @@ export interface DeleteLedgerEntryParams extends LedgerWriteContext {
 }
 
 export type CreateExpenseVariables = CreateExpenseParams & SessionBound;
+export type CreateSettlementVariables = CreateSettlementParams & SessionBound;
 export type UpdateExpenseVariables = UpdateExpenseParams & SessionBound;
 export type DeleteLedgerEntryVariables = DeleteLedgerEntryParams & SessionBound;
 
@@ -122,6 +137,21 @@ export const createExpenseMutationOptions = (effects: LedgerWriteEffects) =>
             refreshAfterWrite(effects, client, error, variables, {
                 groupId: variables.expense.groupId,
                 parentActivityId: variables.parentActivityId,
+            }),
+    });
+
+/** `POST /ledger/entries` (a settlement, no `id`); a success settles once its views reloaded. */
+export const createSettlementMutationOptions = (effects: LedgerWriteEffects) =>
+    mutationOptions<void, Error, CreateSettlementVariables>({
+        ...ONLINE_WRITE,
+        mutationKey: ledgerOnlineMutationKeys.createEntry,
+        mutationFn: ({ settlement }) =>
+            api('post', '/ledger/entries', { body: legacyCreateSettlementBody(settlement) }).then(
+                () => undefined,
+            ),
+        onSettled: (_data, error, variables, _context, { client }) =>
+            refreshAfterWrite(effects, client, error, variables, {
+                groupId: variables.settlement.groupId,
             }),
     });
 

@@ -10,6 +10,7 @@ export {
     legacyBalanceFromEntry,
     legacyCurrencyOrDefault,
     legacyEntryFromMoney,
+    legacyExpenseEvent,
     legacyPartitionEntries,
     legacyRateLookup,
     legacyRatesFromDecimals,

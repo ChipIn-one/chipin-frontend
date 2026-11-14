@@ -1,10 +1,9 @@
+import { useIsLedgerEntryCreating } from 'hooks/useLedgerMutations';
 import { useSelfUser } from 'hooks/useSelfUser';
-import { selectSettlementAdding } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
 
 const useConnect = () => {
     const user = useSelfUser();
-    const isSubmitting = useLoadingStore(selectSettlementAdding);
+    const isSubmitting = useIsLedgerEntryCreating();
 
     return { user, isSubmitting };
 };

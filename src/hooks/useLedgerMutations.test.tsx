@@ -18,9 +18,7 @@ import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSessio
 import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
 import { ApiError } from 'shared/api/client';
 import { createQueryClient } from 'shared/api/queryClient';
-import { useActivityStore } from 'store/activity-store';
 import { onAccessTokenRefreshed, useAuthStore } from 'store/authStore';
-import { legacyPreview } from 'test/activityFixtures';
 import { fakeAccessToken } from 'test/fakeAccessToken';
 import { wireGroup } from 'test/groupFixtures';
 import { setupMswServer } from 'test/mswServer';
@@ -30,6 +28,7 @@ import {
     LedgerWriteRefusedError,
     toastLedgerWriteError,
     useCreateExpense,
+    useCreateSettlement,
     useDeleteLedgerEntry,
     useUpdateExpense,
 } from './useLedgerMutations';
@@ -59,9 +58,6 @@ const deferred = (): Deferred => {
     return { promise, resolve };
 };
 
-const fetchSetActivitySubevents = vi.fn(() => Promise.resolve());
-const initialActivity = useActivityStore.getState();
-
 const expense: CreateLedgerEntryParams = {
     description: 'Dinner',
     amount: 20,
@@ -74,7 +70,7 @@ const expense: CreateLedgerEntryParams = {
 };
 
 // Signed in as `user-1` on its persisted client (`ownClient`, or the test client), with the
-// dashboard, the friends and the user's activity feed cached.
+// dashboard, the friends, the user's activity feed and the history of `activity-1` cached.
 const signIn = (ownClient?: QueryClient): QueryClient => {
     useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
     saveLocalUser({
@@ -97,10 +93,16 @@ const signIn = (ownClient?: QueryClient): QueryClient => {
     client.setQueryData(dashboardKeys.balances(), []);
     client.setQueryData(usersKeys.known(), []);
     client.setQueryData(selfFeedKey, { pages: [], pageParams: [] });
+    client.setQueryData(historyKey, historyData);
     return client;
 };
 
 const selfFeedKey = activityKeys.self({ view: 'previews' });
+const historyKey = activityKeys.children('activity-1');
+const historyData = {
+    pages: [{ parent: { kind: 'invalid', id: 'activity-1' }, items: [], nextCursor: null }],
+    pageParams: [null],
+};
 
 const isStale = (client: QueryClient, queryKey: readonly unknown[]): boolean =>
     client.getQueryState(queryKey)?.isInvalidated === true;
@@ -162,12 +164,10 @@ const sentWrites = (sent: readonly string[]): string[] =>
 
 beforeEach(() => {
     vi.clearAllMocks();
-    useActivityStore.setState({ fetchSetActivitySubevents });
 });
 
 afterEach(() => {
     onlineManager.setOnline(true);
-    useActivityStore.setState(initialActivity, true);
     clearLocalUserIdentity();
     useAuthStore.setState({ status: 'unknown' });
 });
@@ -358,7 +358,7 @@ test('after an expense between friends the dashboard, the friends balances and t
     expect(isStale(client, dashboardKeys.balances())).toBe(true);
     expect(isStale(client, usersKeys.known())).toBe(true);
     expect(isFeedStale(client)).toBe(true);
-    expect(fetchSetActivitySubevents).not.toHaveBeenCalled();
+    expect(isStale(client, historyKey)).toBe(false);
     expect(sent).toEqual(['POST /ledger/entries']);
 });
 
@@ -382,14 +382,9 @@ test('after a group expense the group card, its page and its feed are read again
     expect(isFeedStale(client)).toBe(true);
 });
 
-test('a write made from the activity history reloads that history in its open category', async () => {
-    signIn();
+test('a write made from the activity history marks that history (activity.children) stale on its client', async () => {
+    const client = signIn();
     const sent = serve();
-
-    useActivityStore.setState({
-        subeventsParent: legacyPreview('activity-1').parent,
-        subeventsCategory: 'expense',
-    });
     const { result } = renderHook(() => useDeleteLedgerEntry());
 
     await act(() =>
@@ -397,20 +392,25 @@ test('a write made from the activity history reloads that history in its open ca
     );
 
     expect(sent).toEqual(['DELETE /ledger/entries/entry-1']);
-    expect(fetchSetActivitySubevents).toHaveBeenCalledWith({
-        parentActivityId: 'activity-1',
-        category: 'expense',
-        force: true,
-    });
+    expect(isStale(client, historyKey)).toBe(true);
+    expect(isStale(client, activityKeys.children('activity-2'))).toBe(false);
 });
 
 const patch = { type: 'EXPENSE' as const, expense: { description: 'Lunch' } };
+const settlement = {
+    fromUserId: 'user-1',
+    toUserId: 'user-2',
+    amount: 12.5,
+    currency: 'USD',
+    groupId: 'group-1',
+};
 
 // One write of each kind in a group, sent through its hook.
 const useWrites = () => ({
     create: useCreateExpense(),
     update: useUpdateExpense(),
     remove: useDeleteLedgerEntry(),
+    settle: useCreateSettlement(),
 });
 
 type Writes = ReturnType<typeof useWrites>;
@@ -431,6 +431,11 @@ const groupWrites: [string, string, (writes: Writes) => Promise<void>][] = [
         'delete',
         'DELETE /ledger/entries/entry-1',
         writes => writes.remove.deleteLedgerEntry({ entryId: 'entry-1', groupId: 'group-1' }),
+    ],
+    [
+        'settlement',
+        'POST /ledger/entries',
+        writes => writes.settle.createSettlement({ settlement }),
     ],
 ];
 
@@ -482,7 +487,6 @@ describe.each<[string, () => void]>([
             expect(sent).toEqual([request]);
             expect(isStale(client, dashboardKeys.balances())).toBe(false);
             expect(selfFeedRefreshes()).toEqual([]);
-            expect(fetchSetActivitySubevents).not.toHaveBeenCalled();
         },
     );
 
@@ -577,11 +581,11 @@ test('a failed write rejects at once: its refresh starts but is not waited for',
     groupGate.resolve();
 });
 
-// A forced reload of the history shows the page skeletons, which closes the open delete dialog.
-test('a failed write made from the activity history does not reload that history', async () => {
+// The history is a query: its refetch keeps the events it shows (and the open delete dialog), so a
+// failed write, which may have been applied, marks it stale too (spec 03 §6 row 6, 12c).
+test('a failed write made from the activity history marks that history stale and keeps what it shows', async () => {
     const client = signIn();
     serve(undefined, 403);
-    useActivityStore.setState({ subeventsParent: legacyPreview('activity-1').parent });
     const { result } = renderHook(useWrites);
 
     await act(async () => {
@@ -603,7 +607,10 @@ test('a failed write made from the activity history does not reload that history
     await waitFor(() => {
         expect(isFeedStale(client)).toBe(true);
     });
-    expect(fetchSetActivitySubevents).not.toHaveBeenCalled();
+    await waitFor(() => {
+        expect(isStale(client, historyKey)).toBe(true);
+    });
+    expect(client.getQueryData(historyKey)).toEqual(historyData);
 });
 
 // The app's own client: `offlineFirst` queries with the app retry, which pause while offline. The
@@ -756,4 +763,53 @@ test('the toast of a rejected write: offline is named, an ended session and a re
         ['You do not have permission to access this ledger entry'],
         ['Request failed'],
     ]);
+});
+
+test('a settlement is sent as the legacy client sent it and reloads the group, the dashboard and the feeds', async () => {
+    const client = signIn();
+    const sent = serve();
+    const bodies: string[] = [];
+
+    server.use(
+        http.post('*/ledger/entries', async ({ request }) => {
+            bodies.push(await request.text());
+            return HttpResponse.json({ id: 'settlement-1' });
+        }),
+    );
+    const { result } = renderHook(() => useCreateSettlement());
+
+    await act(() => result.current.createSettlement({ settlement }));
+
+    expect(bodies).toEqual([
+        JSON.stringify({
+            type: 'SETTLEMENT',
+            groupId: 'group-1',
+            settlement: { fromUserId: 'user-1', toUserId: 'user-2', amount: 12.5, currency: 'USD' },
+        }),
+    ]);
+    expect(sent).toContain('GET /groups/group-1');
+    expect(isStale(client, dashboardKeys.balances())).toBe(true);
+    expect(isStale(client, usersKeys.known())).toBe(false);
+    expect(isFeedStale(client)).toBe(true);
+});
+
+test('a settlement while an expense is being created is refused as busy: one ledger create at a time', async () => {
+    signIn();
+    const gate = deferred();
+    const sent = serve(gate);
+    const { result } = renderHook(useWrites);
+    let first: Promise<void> = Promise.resolve();
+
+    act(() => {
+        first = result.current.create.createExpense({ expense });
+    });
+    await waitFor(() => {
+        expect(result.current.create.isPending).toBe(true);
+    });
+    await expect(result.current.settle.createSettlement({ settlement })).rejects.toEqual(
+        new LedgerWriteRefusedError('busy'),
+    );
+    gate.resolve();
+    await act(() => first);
+    expect(sentWrites(sent)).toEqual(['POST /ledger/entries']);
 });

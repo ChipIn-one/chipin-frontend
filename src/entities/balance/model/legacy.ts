@@ -17,9 +17,15 @@ import * as Sentry from '@sentry/react';
 
 import type { AppEvent } from 'api/activity.types';
 import type { BalanceEntry, CurrenciesRates } from 'api/chipin.raw.types';
-import type { ActivityFeedItem } from 'api/chipin.types';
+import type { ActivityFeedItem, SharingMode } from 'api/chipin.types';
 import { DEFAULT_CURRENCY_CODE } from 'constants/currencies';
-import type { ActivityEvent, ActivityPreview, MoneyReader } from 'entities/activity';
+import type {
+    ActivityEvent,
+    ActivityPreview,
+    ExpenseActivityEvent,
+    ExpenseSharingMode,
+    MoneyReader,
+} from 'entities/activity';
 import { toActivityEventWith } from 'entities/activity';
 import type { CurrencyCode, Money } from 'shared/money';
 import { abs, currencyCode, fromUnits, LEDGER_SCALE, MoneyWireError, sign } from 'shared/money';
@@ -174,6 +180,76 @@ export const legacyActivityPreview = (item: ActivityFeedItem): ActivityPreview =
     parent: legacyActivityEvent(item.parent),
     lastEvent: legacyActivityEvent(item.lastEvent),
 });
+
+const legacyValues = <V>(
+    values: Readonly<Record<string, V>>,
+    toLegacy: (value: V) => number,
+): Record<string, number> =>
+    Object.fromEntries(Object.entries(values).map(([key, value]) => [key, toLegacy(value)]));
+
+// Percents and weights are decimal text, not money: `Number` gives the double the legacy layer
+// read.
+const legacySharingMode = (mode: ExpenseSharingMode): SharingMode => {
+    switch (mode.type) {
+        case 'AUTO':
+            return { type: 'AUTO' };
+        case 'EXACT':
+            return {
+                type: 'EXACT',
+                customShares: legacyValues(mode.customShares, legacyAmountFromMoney),
+            };
+        case 'PERCENTAGE':
+            return {
+                type: 'PERCENTAGE',
+                percentageShares: legacyValues(mode.percentageShares, Number),
+            };
+        case 'SHARES':
+            return { type: 'SHARES', shares: legacyValues(mode.shares, Number) };
+    }
+};
+
+/**
+ * A domain expense event as the legacy event the expense editor still starts from
+ * (`mapActivityExpenseToModalState`). TODO(03-14b): goes when the editor starts from `Money`.
+ */
+export const legacyExpenseEvent = (event: ExpenseActivityEvent): AppEvent => {
+    const { metadata } = event;
+
+    return {
+        id: event.id,
+        seq: event.seq,
+        domain: 'LEDGER',
+        action: event.action,
+        actorUserId: event.actorUserId,
+        actorSnapshot: { ...event.actorSnapshot },
+        subjectType: 'expense',
+        subjectId: event.subjectId,
+        groupId: event.groupId,
+        createdAt: event.createdAt,
+        parentActivityId: event.parentActivityId,
+        metadata: {
+            type: 'expense',
+            entryId: metadata.entryId,
+            groupId: metadata.groupId,
+            groupName: metadata.groupName,
+            description: metadata.description,
+            amount: legacyAmountFromMoney(metadata.amount),
+            currency: metadata.amount.currency,
+            category: metadata.category,
+            subcategory: metadata.subcategory,
+            date: metadata.date,
+            payerId: metadata.payerId,
+            payerDisplayName: metadata.payerDisplayName,
+            shares: metadata.shares?.map(share => ({
+                userId: share.userId,
+                displayName: share.displayName,
+                shareAmount: legacyAmountFromMoney(share.shareAmount),
+                currency: share.shareAmount.currency,
+            })),
+            sharingMode: metadata.sharingMode && legacySharingMode(metadata.sharingMode),
+        },
+    };
+};
 
 const legacyRate = (value: unknown): string | null =>
     typeof value === 'number' && Number.isFinite(value) && value > 0 ? String(value) : null;

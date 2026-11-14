@@ -12,9 +12,9 @@ import { eventRows, legacyActivityRows, previewRows, selectors } from '../../int
 import { ActivityEvent, FullActivityFeedContext } from '../activity-event';
 import ActivityDateDivider from '../ActivityDateDivider';
 
-// One source: the domain previews of the dashboard and group feeds, the domain events of the flat
-// log (the Activity page), or the legacy items of the expense history (carried into the domain
-// here until 12c migrates it).
+// One source: the domain previews of the dashboard and group feeds, or the domain events of a flat
+// log (the Activity page, the expense history). The legacy `events` source has no production
+// caller since 12c (see `legacyActivityRows`).
 type Source =
     | { previews: readonly ActivityPreview[]; log?: never; events?: never }
     | { log: readonly DomainActivityEvent[]; previews?: never; events?: never }

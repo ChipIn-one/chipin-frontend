@@ -5,11 +5,13 @@ import type { CurrencyCode, Money, WireAmount } from 'shared/money';
 import { currencyCode, mapItems, moneyFromWire, MoneyWireError } from 'shared/money';
 
 import type {
+    ActivityChildrenPage,
     ActivityEvent,
     ActivityItem,
     ActivityLogItem,
     ActivityPreview,
     ExpenseActivityDetails,
+    ExpenseSharingMode,
     ExpenseTransferActivityDetails,
     GroupActivityDetails,
     SettlementActivityDetails,
@@ -17,6 +19,7 @@ import type {
 
 type LedgerActivityPreview = components['schemas']['LedgerActivityPreview'];
 type ActivityEventResponse = components['schemas']['ActivityEventResponse'];
+type ActivityChildrenFeedResponse = components['schemas']['ActivityChildrenFeedResponse'];
 
 /** Reads one amount of the source shape as `Money`; throws `MoneyWireError` when it cannot. */
 export type MoneyReader<A> = (amount: A, currency: string) => Money;
@@ -28,10 +31,22 @@ interface SourceShare<A> {
     readonly currency: string;
 }
 
-interface SourceExpense<A> extends Omit<ExpenseActivityDetails, 'amount' | 'shares'> {
+// Percents and weights come as decimal text (wire) or as numbers (legacy); neither is money.
+interface SourceSharingMode<A> {
+    readonly type: string;
+    readonly customShares?: Readonly<Record<string, A>>;
+    readonly percentageShares?: Readonly<Record<string, string | number>>;
+    readonly shares?: Readonly<Record<string, string | number>>;
+}
+
+interface SourceExpense<A> extends Omit<
+    ExpenseActivityDetails,
+    'amount' | 'shares' | 'sharingMode'
+> {
     readonly amount: A;
     readonly currency: string;
     readonly shares?: readonly SourceShare<A>[];
+    readonly sharingMode?: SourceSharingMode<A> | null;
 }
 
 interface SourceTransfer<A> {
@@ -88,8 +103,42 @@ const GROUP_ACTIONS = [
 const isOneOf = <T extends string>(actions: readonly T[], action: string): action is T =>
     actions.some(known => known === action);
 
+const mapValues = <V, X>(
+    values: Readonly<Record<string, V>> | undefined,
+    toX: (value: V) => X,
+): Record<string, X> =>
+    Object.fromEntries(Object.entries(values ?? {}).map(([key, value]) => [key, toX(value)]));
+
+// An unknown mode is no snapshot (`null`): the expense is shown and edited as split exactly.
+const toSharingMode = <A>(
+    source: SourceSharingMode<A>,
+    currency: string,
+    read: MoneyReader<A>,
+): ExpenseSharingMode | null => {
+    switch (source.type) {
+        case 'AUTO':
+            return { type: 'AUTO' };
+        case 'EXACT':
+            return {
+                type: 'EXACT',
+                customShares: mapValues(source.customShares, value => read(value, currency)),
+            };
+        case 'PERCENTAGE':
+            return {
+                type: 'PERCENTAGE',
+                percentageShares: mapValues(source.percentageShares, String),
+            };
+        case 'SHARES':
+            return { type: 'SHARES', shares: mapValues(source.shares, String) };
+        default:
+            return null;
+    }
+};
+
 const toExpense = <A>(source: SourceExpense<A>, read: MoneyReader<A>): ExpenseActivityDetails => {
     const amount = read(source.amount, source.currency);
+    const sharingMode =
+        source.sharingMode && toSharingMode(source.sharingMode, source.currency, read);
 
     return {
         type: 'expense',
@@ -112,6 +161,8 @@ const toExpense = <A>(source: SourceExpense<A>, read: MoneyReader<A>): ExpenseAc
             }
             return { userId: share.userId, displayName: share.displayName, shareAmount };
         }),
+        // Only with a snapshot of a known mode: older events have none.
+        ...(sharingMode && { sharingMode }),
     };
 };
 
@@ -228,3 +279,17 @@ export const toActivityLogItems = (events: readonly ActivityEventResponse[]): Ac
         event => toActivityEventWith<WireAmount>(event, readWire),
         event => event.id,
     );
+
+/**
+ * A page of an activity chain's history (wire) → domain: its creation event and later events,
+ * each an invalid item when one of its amounts is unreadable.
+ */
+export const toActivityChildrenPage = ({
+    parent,
+    items,
+    nextCursor,
+}: ActivityChildrenFeedResponse): ActivityChildrenPage => {
+    const [parentItem = { kind: 'invalid', id: parent.id }] = toActivityLogItems([parent]);
+
+    return { parent: parentItem, items: toActivityLogItems(items), nextCursor };
+};

@@ -2,15 +2,13 @@ import { Card, Flex, Heading, Skeleton, Text } from '@radix-ui/themes';
 import { ArrowRightIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { AppEvent, ExpenseActivityMetadata } from 'api/activity.types';
-import {
-    ACTIVITY_ACTIONS,
-    type ExpenseCreatedAction,
-    type ExpenseReversedAction,
-    type ExpenseUpdatedAction,
-    type SettlementCreatedAction,
-    type SettlementReversedAction,
-} from 'constants/activity';
+import type {
+    ActivityEvent,
+    ExpenseActivityDetails,
+    ExpenseActivityEvent,
+    SettlementActivityEvent,
+} from 'entities/activity';
+import { legacyAmountFromMoney } from 'entities/balance';
 import type { ActivitySubeventsView } from 'helpers/activityEvent';
 import { formatActivityAbsoluteDate } from 'helpers/time';
 
@@ -30,35 +28,20 @@ import {
 } from './styled';
 
 interface Props {
-    view?: ActivitySubeventsView;
+    view?: ActivitySubeventsView<ActivityEvent>;
+    /** The chain's later events (the expense editor starts from the latest). */
+    childEvents: readonly ActivityEvent[];
     isLoading: boolean;
 }
 
-type ExpenseActivityEvent = Extract<
-    AppEvent,
-    {
-        action: ExpenseCreatedAction | ExpenseUpdatedAction | ExpenseReversedAction;
-    }
->;
+const isExpenseEvent = (event: ActivityEvent): event is ExpenseActivityEvent =>
+    event.metadata?.type === 'expense';
 
-type SettlementActivityEvent = Extract<
-    AppEvent,
-    { action: SettlementCreatedAction | SettlementReversedAction }
->;
-
-const isExpenseEvent = (event: AppEvent): event is ExpenseActivityEvent =>
-    event.subjectType === 'expense' &&
-    (event.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ||
-        event.action === ACTIVITY_ACTIONS.EXPENSE_UPDATED ||
-        event.action === ACTIVITY_ACTIONS.EXPENSE_REVERSED);
-
-const isSettlementEvent = (event: AppEvent): event is SettlementActivityEvent =>
-    event.subjectType === 'settlement' &&
-    (event.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED ||
-        event.action === ACTIVITY_ACTIONS.SETTLEMENT_REVERSED);
+const isSettlementEvent = (event: ActivityEvent): event is SettlementActivityEvent =>
+    event.metadata?.type === 'settlement';
 
 const getSharingModeLabel = (
-    metadata: ExpenseActivityMetadata,
+    metadata: ExpenseActivityDetails,
 ): 'auto' | 'exact' | 'percentage' | 'shares' => {
     const sharingMode = metadata.sharingMode?.type ?? 'EXACT';
 
@@ -74,7 +57,7 @@ const getSharingModeLabel = (
     }
 };
 
-const ActivitySubeventsDetails = ({ view, isLoading }: Props) => {
+const ActivitySubeventsDetails = ({ view, childEvents, isLoading }: Props) => {
     const { t, i18n } = useTranslation(['activity', 'group']);
 
     if (isLoading) {
@@ -120,8 +103,8 @@ const ActivitySubeventsDetails = ({ view, isLoading }: Props) => {
 
             <Text size="6" weight="bold">
                 <Amount
-                    value={expenseEvent.metadata.amount}
-                    tokenCode={expenseEvent.metadata.currency}
+                    value={legacyAmountFromMoney(expenseEvent.metadata.amount)}
+                    tokenCode={expenseEvent.metadata.amount.currency}
                     type="summary"
                 />
             </Text>
@@ -185,23 +168,27 @@ const ActivitySubeventsDetails = ({ view, isLoading }: Props) => {
                     <ParticipantRow key={share.userId} justify="between" gap="3" py="2">
                         <Text size="2">{share.displayName}</Text>
                         <Amount
-                            value={share.shareAmount}
-                            tokenCode={share.currency}
+                            value={legacyAmountFromMoney(share.shareAmount)}
+                            tokenCode={share.shareAmount.currency}
                             type="summary"
                         />
                     </ParticipantRow>
                 ))}
             </Flex>
 
-            <ActivitySubeventsButtons parentEvent={originalEvent} currentEvent={currentEvent} />
+            <ActivitySubeventsButtons
+                parentEvent={originalEvent}
+                currentEvent={currentEvent}
+                childEvents={childEvents}
+            />
         </Flex>
     ) : settlementEvent ? (
         <Flex direction="column" gap="3">
             <Heading size="4">{t('subeventsCurrentStateTitle')}</Heading>
             <Text size="6" weight="bold">
                 <Amount
-                    value={settlementEvent.metadata.amount}
-                    tokenCode={settlementEvent.metadata.currency}
+                    value={legacyAmountFromMoney(settlementEvent.metadata.amount)}
+                    tokenCode={settlementEvent.metadata.amount.currency}
                     type="summary"
                 />
             </Text>
@@ -232,7 +219,11 @@ const ActivitySubeventsDetails = ({ view, isLoading }: Props) => {
                 </DetailRow>
             </Flex>
 
-            <ActivitySubeventsButtons parentEvent={originalEvent} currentEvent={currentEvent} />
+            <ActivitySubeventsButtons
+                parentEvent={originalEvent}
+                currentEvent={currentEvent}
+                childEvents={childEvents}
+            />
         </Flex>
     ) : null;
 
@@ -248,8 +239,8 @@ const ActivitySubeventsDetails = ({ view, isLoading }: Props) => {
                 </Text>
                 <Text size="3" weight="bold">
                     <Amount
-                        value={expenseEvent.metadata.amount}
-                        tokenCode={expenseEvent.metadata.currency}
+                        value={legacyAmountFromMoney(expenseEvent.metadata.amount)}
+                        tokenCode={expenseEvent.metadata.amount.currency}
                         type="summary"
                     />
                 </Text>
@@ -273,8 +264,12 @@ const ActivitySubeventsDetails = ({ view, isLoading }: Props) => {
                 </Text>
                 <Text size="3" weight="bold">
                     <Amount
-                        value={settlementEvent?.metadata.amount ?? 0}
-                        tokenCode={settlementEvent?.metadata.currency ?? ''}
+                        value={
+                            settlementEvent
+                                ? legacyAmountFromMoney(settlementEvent.metadata.amount)
+                                : 0
+                        }
+                        tokenCode={settlementEvent?.metadata.amount.currency ?? ''}
                         type="summary"
                     />
                 </Text>

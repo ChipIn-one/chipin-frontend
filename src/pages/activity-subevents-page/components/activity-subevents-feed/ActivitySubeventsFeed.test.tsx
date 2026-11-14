@@ -1,13 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { expect, test, vi } from 'vitest';
 
-import type { AppEvent } from 'api/activity.types';
-import { ACTIVITY_CATEGORIES } from 'constants/activity';
-import { useActivityStore } from 'store/activity-store';
-import { useErrorsStore } from 'store/errorsStore';
-import { useLoadingStore } from 'store/loadingStore';
+import type { ActivityHistoryResult } from 'hooks/useActivityHistory';
 
 import { ActivitySubeventsFeed } from './ActivitySubeventsFeed';
 
@@ -17,14 +13,12 @@ vi.mock('react-i18next', () => ({
     }),
 }));
 
-let onLoadMore: (() => Promise<void>) | undefined;
-const parentEvent = { id: 'activity-1' } as AppEvent;
-
 vi.mock('hooks/useInfiniteScroll', () => ({
-    useInfiniteScroll: ({ onLoadMore: nextOnLoadMore }: { onLoadMore: () => Promise<void> }) => {
-        onLoadMore = nextOnLoadMore;
-        return vi.fn();
-    },
+    useInfiniteScroll: () => vi.fn(),
+}));
+
+vi.mock('components/skeletons', () => ({
+    ActivityFeedSkeleton: () => <div data-testid="feed-skeleton" />,
 }));
 
 vi.mock('features/activity', () => ({
@@ -42,100 +36,59 @@ vi.mock('features/activity', () => ({
     ),
 }));
 
-beforeEach(() => {
-    onLoadMore = undefined;
-    useErrorsStore.getState().resetErrors();
+const history = (state: Partial<ActivityHistoryResult> = {}): ActivityHistoryResult => ({
+    parent: undefined,
+    events: [],
+    isLoading: false,
+    isError: false,
+    isOffline: false,
+    hasMore: false,
+    loadedKey: '1:1',
+    isFetching: false,
+    isNextPageLoading: false,
+    isNextPageError: false,
+    loadMore: vi.fn(),
+    reload: vi.fn(),
+    ...state,
 });
 
-test('ACT-025 fetches subevents without a category on a direct visit', () => {
-    const fetchSetActivitySubevents = vi.fn().mockResolvedValue(undefined);
-    useActivityStore.setState({
-        subevents: [],
-        subeventsParent: null,
-        fetchSetActivitySubevents,
-    });
-    useLoadingStore.getState().setInitialLoadingStore();
+test('shows the skeleton while the first load of the history runs', () => {
+    render(<ActivitySubeventsFeed history={history({ isLoading: true })} />);
 
-    render(<ActivitySubeventsFeed parentActivityId="activity-1" />);
-
-    return waitFor(() => {
-        expect(fetchSetActivitySubevents).toHaveBeenCalledWith({
-            parentActivityId: 'activity-1',
-            category: undefined,
-        });
-    });
+    expect(screen.getByTestId('feed-skeleton')).toBeTruthy();
 });
 
-test('offers retry after the initial subevents request fails', () => {
+test('offers retry after the first load of the history fails', async () => {
     const user = userEvent.setup();
-    const fetchSetActivitySubevents = vi.fn().mockImplementation(() => {
-        useErrorsStore.getState().setError('activity', 'subeventsData', {
-            message: 'Subevents unavailable',
-        });
-        return Promise.resolve();
-    });
-    useActivityStore.setState({
-        subevents: [],
-        hasMoreSubevents: false,
-        subeventsParent: null,
-        fetchSetActivitySubevents,
-    });
-    useLoadingStore.getState().setInitialLoadingStore();
+    const failed = history({ isError: true });
 
-    render(
-        <ActivitySubeventsFeed
-            parentActivityId="activity-1"
-            activityCategory={ACTIVITY_CATEGORIES.EXPENSE}
-        />,
-    );
+    render(<ActivitySubeventsFeed history={failed} />);
 
-    return waitFor(() => {
-        expect(screen.getByText('subeventsLoadErrorTitle')).toBeTruthy();
-    })
-        .then(() => user.click(screen.getByRole('button', { name: 'retryAction' })))
-        .then(() => {
-            expect(fetchSetActivitySubevents).toHaveBeenCalledTimes(2);
-        });
+    expect(screen.getByText('subeventsLoadErrorTitle')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'retryAction' }));
+    expect(failed.reload).toHaveBeenCalledOnce();
 });
 
-test('offers retry after loading the next page fails', () => {
+test('offline with nothing cached says so, without a retry: the load resumes on reconnect', () => {
+    render(<ActivitySubeventsFeed history={history({ isOffline: true })} />);
+
+    expect(screen.getByText('errors:network.offline')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'retryAction' })).toBeNull();
+    expect(screen.queryByText('subeventsLoadErrorTitle')).toBeNull();
+});
+
+test('offers retry after loading the next page fails', async () => {
     const user = userEvent.setup();
-    const fetchMoreActivitySubevents = vi
-        .fn()
-        .mockImplementationOnce(() => {
-            useErrorsStore.getState().setError('activity', 'subeventsNextPage', {
-                message: 'Next page unavailable',
-            });
-            return Promise.resolve();
-        })
-        .mockResolvedValue(undefined);
-    useActivityStore.setState({
-        subevents: [],
-        hasMoreSubevents: true,
-        subeventsParent: parentEvent,
-        fetchMoreActivitySubevents,
-    });
-    useLoadingStore.getState().setInitialLoadingStore();
+    const failed = history({ hasMore: true, isNextPageError: true });
 
-    render(
-        <ActivitySubeventsFeed
-            parentActivityId="activity-1"
-            activityCategory={ACTIVITY_CATEGORIES.EXPENSE}
-        />,
-    );
+    render(<ActivitySubeventsFeed history={failed} />);
 
-    if (!onLoadMore) {
-        return Promise.reject(new Error('Infinite scroll callback is unavailable'));
-    }
+    await user.click(screen.getByRole('button', { name: 'retryAction' }));
+    expect(failed.loadMore).toHaveBeenCalledOnce();
+});
 
-    return Promise.resolve(onLoadMore())
-        .then(() =>
-            waitFor(() => {
-                expect(screen.getByRole('button', { name: 'retryAction' })).toBeTruthy();
-            }),
-        )
-        .then(() => user.click(screen.getByRole('button', { name: 'retryAction' })))
-        .then(() => {
-            expect(fetchMoreActivitySubevents).toHaveBeenCalledTimes(2);
-        });
+test('a loaded history without later events shows the empty state', () => {
+    render(<ActivitySubeventsFeed history={history()} />);
+
+    expect(screen.getByText('subeventsEmptyTitle')).toBeTruthy();
 });

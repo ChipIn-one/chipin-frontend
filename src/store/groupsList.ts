@@ -1,5 +1,5 @@
 // The group queries seen from the legacy stores (spec 03 §6 row 4): the session start loads the
-// list on the tab user's QueryClient, the legacy ledger actions keep a group's detail and its
+// list on the tab user's QueryClient, the ledger write hooks keep a group's detail and its
 // activity correct after their writes, and the expense editor reads the cached groups. Never the
 // reverse direction. The group writes are `entities/groups` mutations (03-11).
 import {
@@ -39,7 +39,8 @@ export const getCachedGroups = (): Group[] | undefined => {
  * After a legacy change of a group (an expense, a settlement), on any page: its detail is read
  * again and its activity loads again (`refreshGroup`). Never rejects.
  */
-// TODO(03-12): goes with the activity store moving to entities/activity.
+// TODO: the ledger write hooks (`hooks/useLedgerMutations.ts`) call `refreshGroup` on the write's
+// own client instead (the activity store that also used it went with 03-12).
 export const invalidateGroup = (groupId: string): Promise<void> => {
     const client = tabUserClient();
 

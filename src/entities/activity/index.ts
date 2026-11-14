@@ -1,15 +1,21 @@
 // Public entry of entities/activity: the domain activity events and previews (amounts as `Money`),
-// their wire mappers and the queries of the user's own activity feeds. The group activity feed
+// their wire mappers, the queries of the user's own activity feeds and of an activity chain's
+// history. The group activity feed
 // query lives in entities/groups.
 export type { SelfActivityFilters } from './api/queries';
 export {
+    activityChildrenQueryOptions,
     activityKeys,
+    invalidateActivityChildren,
     invalidateSelfActivity,
     selfActivityEventsQueryOptions,
     selfActivityPreviewsQueryOptions,
+    useActivityChildrenQuery,
     useSelfActivityEventsQuery,
     useSelfActivityPreviewsQuery,
 } from './api/queries';
+export type { ActivityChildrenData, LoadedActivityChildren } from './model/activityChildren';
+export { loadedActivityChildren } from './model/activityChildren';
 export { expenseBalanceChange } from './model/expenseBalanceChange';
 export type { SelfActivityEventsData, SelfActivityPreviewsData } from './model/selfActivity';
 export { loadedActivityEvents, loadedActivityPreviews } from './model/selfActivity';
@@ -22,6 +28,7 @@ export {
 } from './model/toActivityItem';
 export type {
     ActivityActor,
+    ActivityChildrenPage,
     ActivityEvent,
     ActivityItem,
     ActivityLogItem,
@@ -31,6 +38,7 @@ export type {
     ExpenseActivityDetails,
     ExpenseActivityEvent,
     ExpenseActivityShare,
+    ExpenseSharingMode,
     ExpenseTransfer,
     ExpenseTransferActivityAction,
     ExpenseTransferActivityDetails,

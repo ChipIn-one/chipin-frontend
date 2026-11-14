@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/react';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { components } from 'shared/api/generated/schema';
+import type { WireDecimal } from 'shared/money';
 import { createWireAmount, currencyCode, fromUnits } from 'shared/money';
 
 import { expenseBalanceChange } from './expenseBalanceChange';
@@ -11,6 +12,7 @@ vi.mock('@sentry/react', () => ({ captureMessage: vi.fn() }));
 
 type WireEvent = components['schemas']['ActivityEventResponse'];
 type WireMetadata = NonNullable<WireEvent['metadata']>;
+type WireSharingMode = components['schemas']['SharingMode'];
 
 beforeEach(() => {
     vi.mocked(Sentry.captureMessage).mockClear();
@@ -226,4 +228,39 @@ test('expenseBalanceChange: the payer funded amount − own share, a participant
     );
     expect(expenseBalanceChange({ ...event.metadata, payerId: 'u9' }, 'u5')).toEqual(money(0n));
     expect(expenseBalanceChange({ ...event.metadata, shares: undefined }, 'u1')).toBeUndefined();
+});
+
+// A decimal literal as the transport gives it (percents, weights).
+const decimal = (text: string) => text as WireDecimal;
+
+test('ACT-004 an expense keeps its sharing mode: exact shares as Money, percents and weights as decimal text', () => {
+    const details = (sharingMode: WireSharingMode | null) =>
+        toActivityItem(
+            preview(wireEvent('p1', 'EXPENSE_CREATED', { ...expense('10', 'EUR'), sharingMode })),
+        ).parent.metadata;
+
+    expect(
+        details({
+            type: 'EXACT',
+            customShares: { u1: createWireAmount('6.6667'), u2: createWireAmount('3.3333') },
+        }),
+    ).toMatchObject({
+        sharingMode: {
+            type: 'EXACT',
+            customShares: { u1: money(66_667n, 'EUR'), u2: money(33_333n, 'EUR') },
+        },
+    });
+    expect(
+        details({
+            type: 'PERCENTAGE',
+            percentageShares: { u1: decimal('33.33'), u2: decimal('66.67') },
+        }),
+    ).toMatchObject({
+        sharingMode: { type: 'PERCENTAGE', percentageShares: { u1: '33.33', u2: '66.67' } },
+    });
+    expect(
+        details({ type: 'SHARES', shares: { u1: decimal('1'), u2: decimal('2') } }),
+    ).toMatchObject({ sharingMode: { type: 'SHARES', shares: { u1: '1', u2: '2' } } });
+    expect(details({ type: 'AUTO' })).toMatchObject({ sharingMode: { type: 'AUTO' } });
+    expect(details(null)).not.toHaveProperty('sharingMode');
 });

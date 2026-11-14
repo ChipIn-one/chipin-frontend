@@ -5,7 +5,6 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group, SelfUser } from 'api/chipin.types';
-import { useActivityStore } from 'store/activity-store';
 import { useAuthStore } from 'store/authStore';
 import { setupMswServer } from 'test/mswServer';
 import { mountAsUserClient } from 'test/userClient';
@@ -72,7 +71,6 @@ beforeEach(() => {
     vi.clearAllMocks();
     useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
     mountAsUserClient();
-    useActivityStore.setState({ fetchSetActivity: vi.fn(() => Promise.resolve()) });
     server.use(http.get('*/groups', () => HttpResponse.json({ items: [], nextCursor: null })));
 });
 

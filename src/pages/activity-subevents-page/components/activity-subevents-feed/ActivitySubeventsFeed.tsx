@@ -1,81 +1,50 @@
-import { useCallback, useEffect } from 'react';
 import { Button, Flex, Spinner, Text } from '@radix-ui/themes';
-import { ChevronsDownIcon, CircleAlertIcon, ListTreeIcon, RefreshCwIcon } from 'lucide-react';
+import {
+    ChevronsDownIcon,
+    CircleAlertIcon,
+    ListTreeIcon,
+    RefreshCwIcon,
+    WifiOffIcon,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { ActivityCategory } from 'constants/activity';
 import { ActivityEventsList } from 'features/activity';
+import type { ActivityHistoryResult } from 'hooks/useActivityHistory';
 import { useInfiniteScroll } from 'hooks/useInfiniteScroll';
-import {
-    selectActivitySubeventsError,
-    selectActivitySubeventsNextPageError,
-} from 'store/errorsSelectors';
-import { useErrorsStore } from 'store/errorsStore';
 
 import { EmptyState } from 'basics/empty-states';
 import { ActivityFeedSkeleton } from 'components/skeletons';
 
-import { useConnect } from './internal';
-
 interface Props {
-    parentActivityId?: string;
-    activityCategory?: ActivityCategory;
+    history: ActivityHistoryResult;
 }
 
-const ActivitySubeventsFeed = ({ parentActivityId, activityCategory }: Props) => {
-    const { t } = useTranslation('activity');
+const ActivitySubeventsFeed = ({ history }: Props) => {
+    const { t } = useTranslation(['activity', 'errors']);
     const {
-        subevents,
-        hasMoreSubevents,
-        subeventsParent,
-        fetchSetActivitySubevents,
-        fetchMoreActivitySubevents,
+        events,
+        hasMore,
+        loadedKey,
+        isFetching,
         isLoading,
+        isError,
+        isOffline,
         isNextPageLoading,
-    } = useConnect();
-    const subeventsError = useErrorsStore(selectActivitySubeventsError);
-    const isNextPageError = useErrorsStore(selectActivitySubeventsNextPageError) !== null;
-    const isCurrentParentLoaded = subeventsParent?.id === parentActivityId;
-    const isLoadError = subeventsError !== null;
-    const shouldShowSkeleton = isLoading || !isCurrentParentLoaded;
-    const isEndOfFeed = !isNextPageLoading && !hasMoreSubevents && subevents.length > 0;
-    const onLoadMore = useCallback(() => {
-        void fetchMoreActivitySubevents();
-    }, [fetchMoreActivitySubevents]);
+        isNextPageError,
+        loadMore,
+        reload,
+    } = history;
+    const isEndOfFeed = !isNextPageLoading && !hasMore && events.length > 0;
+    // Any fetch of the history holds the next page: a refetch replaces the pages it would extend.
     const sentinelRef = useInfiniteScroll({
-        hasMore: hasMoreSubevents && !isNextPageError,
-        isLoading: isNextPageLoading,
-        onLoadMore,
-        loadedKey: subevents.length,
+        hasMore: hasMore && !isNextPageError,
+        isLoading: isFetching,
+        onLoadMore: loadMore,
+        loadedKey,
     });
 
-    useEffect(() => {
-        if (!parentActivityId || isCurrentParentLoaded) {
-            return;
-        }
-
-        void fetchSetActivitySubevents({
-            parentActivityId,
-            category: activityCategory,
-        });
-    }, [parentActivityId, activityCategory, isCurrentParentLoaded, fetchSetActivitySubevents]);
-
-    const onRetry = () => {
-        if (!parentActivityId) {
-            return;
-        }
-
-        void fetchSetActivitySubevents({
-            parentActivityId,
-            category: activityCategory,
-        });
-    };
-
-    const onRetryNextPage = () => {
-        onLoadMore();
-    };
-
-    if (isLoadError) {
+    // Nothing to show and the first load failed: an error with Retry, never "no history".
+    if (isError) {
         return (
             <EmptyState
                 icon={<CircleAlertIcon size={20} />}
@@ -83,7 +52,7 @@ const ActivitySubeventsFeed = ({ parentActivityId, activityCategory }: Props) =>
                 title={t('subeventsLoadErrorTitle')}
                 description={t('subeventsLoadErrorDescription')}
                 action={
-                    <Button type="button" size="1" variant="soft" onClick={onRetry}>
+                    <Button type="button" size="1" variant="soft" onClick={reload}>
                         <RefreshCwIcon size={14} />
                         {t('retryAction')}
                     </Button>
@@ -92,13 +61,18 @@ const ActivitySubeventsFeed = ({ parentActivityId, activityCategory }: Props) =>
         );
     }
 
-    if (shouldShowSkeleton) {
+    // Nothing cached and no network: the load resumes by itself on reconnect, so no Retry.
+    if (isOffline) {
+        return <EmptyState icon={<WifiOffIcon size={20} />} title={t('errors:network.offline')} />;
+    }
+
+    if (isLoading) {
         return <ActivityFeedSkeleton />;
     }
 
     return (
         <ActivityEventsList
-            events={subevents}
+            log={events}
             emptyState={
                 <EmptyState
                     icon={<ListTreeIcon size={20} />}
@@ -117,7 +91,7 @@ const ActivitySubeventsFeed = ({ parentActivityId, activityCategory }: Props) =>
 
                 {isNextPageError && (
                     <Flex justify="center" py="4">
-                        <Button type="button" size="1" variant="soft" onClick={onRetryNextPage}>
+                        <Button type="button" size="1" variant="soft" onClick={loadMore}>
                             <RefreshCwIcon size={14} />
                             {t('retryAction')}
                         </Button>

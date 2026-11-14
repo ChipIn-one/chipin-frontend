@@ -8,21 +8,6 @@ export interface LoadingStore {
         signOut: LoadingState;
         logoutOtherDevices: LoadingState;
     };
-    activity: {
-        subeventsData: LoadingState;
-        subeventsNextPage: LoadingState;
-    };
-    expense: {
-        add: LoadingState;
-        edit: LoadingState;
-        update: LoadingState;
-    };
-    ledger: {
-        remove: LoadingState;
-    };
-    settlement: {
-        add: LoadingState;
-    };
 
     setLoading: <S extends keyof LoadingStore, F extends keyof LoadingStore[S]>(
         section: S,
@@ -36,13 +21,6 @@ type LoadingSlices = Omit<LoadingStore, 'setLoading' | 'setInitialLoadingStore'>
 
 const initialLoadingStore: LoadingSlices = {
     auth: { login: 'initial', signOut: 'initial', logoutOtherDevices: 'initial' },
-    activity: {
-        subeventsData: 'initial',
-        subeventsNextPage: 'initial',
-    },
-    expense: { add: 'initial', edit: 'initial', update: 'initial' },
-    ledger: { remove: 'initial' },
-    settlement: { add: 'initial' },
 };
 
 export const useLoadingStore = create<LoadingStore>((set, get) => ({

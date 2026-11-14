@@ -1,11 +1,13 @@
 import { render, screen } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { expect, test, vi } from 'vitest';
+import { afterEach, expect, test, vi } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
-import { useActivityStore } from 'store/activity-store';
-import { useLoadingStore } from 'store/loadingStore';
+import { useAuthStore } from 'store/authStore';
+import { setupMswServer } from 'test/mswServer';
+import { mountAsUserClient } from 'test/userClient';
 
 import ActivitySubeventsPage from './ActivitySubeventsPage';
 
@@ -93,35 +95,59 @@ const settlementParentEvent = {
     parentActivityId: null,
 } satisfies AppEvent;
 
-const renderPage = (parentEvent: AppEvent | null) => {
-    useActivityStore.setState({
-        subevents: [],
-        subeventsParent: parentEvent,
-    });
-    useLoadingStore.getState().setInitialLoadingStore();
+const server = setupMswServer();
 
-    return render(
+afterEach(() => {
+    useAuthStore.setState({ status: 'unknown' });
+});
+
+// Signed in on the user's client; the history of `activity-1` answers with `parentEvent`, or 404
+// (`ACTIVITY.NOT_FOUND`) without one. `requests` lists the query of every history read.
+const renderPage = (parentEvent: AppEvent | null) => {
+    const requests: string[] = [];
+
+    useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
+    mountAsUserClient();
+    server.use(
+        http.get('*/users/self/activities/:parentActivityId/children', ({ request, params }) => {
+            requests.push(`${String(params.parentActivityId)}${new URL(request.url).search}`);
+            return parentEvent
+                ? HttpResponse.json({ parent: parentEvent, items: [], nextCursor: null })
+                : HttpResponse.json({ code: 'ACTIVITY.NOT_FOUND' }, { status: 404 });
+        }),
+    );
+
+    const view = render(
         <MemoryRouter initialEntries={['/activity/activity-1']}>
             <Routes>
                 <Route path="/activity/:parentActivityId" element={<ActivitySubeventsPage />} />
             </Routes>
         </MemoryRouter>,
     );
+
+    return { ...view, requests };
 };
 
-test('shows a parent fallback and still loads children on a direct visit', () => {
+test('ACT-025 a direct visit reads the history once, without a category filter', async () => {
+    const { requests } = renderPage(expenseParentEvent);
+
+    await screen.findByTestId('page-breadcrumb');
+    expect(requests).toEqual(['activity-1?limit=20']);
+});
+
+test('shows a parent fallback when the chain is not found, and still shows the feed', async () => {
     renderPage(null);
 
-    expect(screen.getByTestId('parent-unavailable')).toBeTruthy();
+    expect(await screen.findByTestId('parent-unavailable')).toBeTruthy();
     expect(screen.queryByTestId('subevents-details')).toBeTruthy();
     expect(screen.getByTestId('subevents-feed')).toBeTruthy();
     expect(screen.queryByTestId('page-breadcrumb')).toBeNull();
 });
 
-test('renders the expense breadcrumb before the details column', () => {
+test('renders the expense breadcrumb before the details column', async () => {
     renderPage(expenseParentEvent);
 
-    const breadcrumb = screen.getByTestId('page-breadcrumb');
+    const breadcrumb = await screen.findByTestId('page-breadcrumb');
     const details = screen.getByTestId('subevents-details');
 
     expect(breadcrumb.textContent).toBe('subeventsExpenseHistoryTitle');
@@ -130,10 +156,10 @@ test('renders the expense breadcrumb before the details column', () => {
     );
 });
 
-test('preserves the settlement breadcrumb title', () => {
+test('preserves the settlement breadcrumb title', async () => {
     renderPage(settlementParentEvent);
 
-    expect(screen.getByTestId('page-breadcrumb').textContent).toBe(
+    expect((await screen.findByTestId('page-breadcrumb')).textContent).toBe(
         'subeventsSettlementHistoryTitle',
     );
 });

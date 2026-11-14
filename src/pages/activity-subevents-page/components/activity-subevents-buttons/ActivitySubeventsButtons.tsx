@@ -1,36 +1,36 @@
-import { Button, Flex, Skeleton } from '@radix-ui/themes';
+import { Button, Flex } from '@radix-ui/themes';
 import { PencilIcon, Trash2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
-import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS, ACTIVITY_CATEGORIES } from 'constants/activity';
+import type { ActivityEvent } from 'entities/activity';
 import {
     getActivityCategory,
     getActivityLedgerEntryId,
     getActivitySubeventsView,
 } from 'helpers/activityEvent';
 import { toastLedgerWriteError, useDeleteLedgerEntry } from 'hooks/useLedgerMutations';
+import { prepareExpenseEdit } from 'store/activityExpenseEdit';
+import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import { RemoveLedgerEntryAlertDialog } from 'components/modals/remove-ledger-entry-alert-dialog';
 
-import { useConnect } from './internal';
-
 interface Props {
-    parentEvent: AppEvent;
-    currentEvent?: AppEvent;
-    childEvents?: readonly AppEvent[];
+    parentEvent: ActivityEvent;
+    currentEvent?: ActivityEvent;
+    /** The chain's later events, as the history page loaded them. */
+    childEvents: readonly ActivityEvent[];
 }
 
 const ActivitySubeventsButtons = ({
     parentEvent,
     currentEvent: currentEventProp,
-    childEvents: childEventsProp,
+    childEvents,
 }: Props) => {
     const { t } = useTranslation(['activity', 'toasts']);
-    const { prepareExpenseEdit, initializeEdit, subevents, isLoading } = useConnect();
+    const initializeEdit = useExpenseModalStore(state => state.initializeEdit);
     const { deleteLedgerEntry, isPending: isRemoving } = useDeleteLedgerEntry();
-    const childEvents = childEventsProp ?? subevents;
     const currentEvent =
         currentEventProp ??
         getActivitySubeventsView(parentEvent, childEvents)?.currentEvent ??
@@ -76,26 +76,6 @@ const ActivitySubeventsButtons = ({
                 return Promise.reject(error);
             });
     };
-
-    if (isLoading) {
-        return (
-            <Flex align="center" gap="2" wrap="wrap">
-                <Skeleton>
-                    <Button size="1" variant="soft">
-                        <PencilIcon size={14} />
-                        {t('subeventsUpdateAction')}
-                    </Button>
-                </Skeleton>
-
-                <Skeleton>
-                    <Button size="1" variant="soft" color="red">
-                        <Trash2Icon size={14} />
-                        {t('subeventsDeleteAction')}
-                    </Button>
-                </Skeleton>
-            </Flex>
-        );
-    }
 
     if (isEntryReversed) {
         return null;

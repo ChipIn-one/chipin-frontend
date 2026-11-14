@@ -1,23 +1,26 @@
-// The ledger mutations for the UI (spec 03 §6 row 6): create and update an expense, delete a
-// ledger entry. Like the group mutations, they run only while signed in on the user's persisted
-// client, and offline they are refused before `mutate` (online only until the outbox, spec 03
-// §2.1), so nothing waits paused for a reconnect. A write of a kind that is already running is
-// refused as well (a double submit sends one request), and so is the answer of a write whose
-// session ended meanwhile. A refusal or a failure rejects: the caller shows it with
-// `toastLedgerWriteError`. `isPending` is true while a write of that kind runs on
+// The ledger mutations for the UI (spec 03 §6 row 6): create and update an expense, record a
+// settlement (settle-up), delete a ledger entry. Like the group mutations, they run only while
+// signed in on the user's persisted client, and offline they are refused before `mutate` (online
+// only until the outbox, spec 03 §2.1), so nothing waits paused for a reconnect. A write of a kind
+// that is already running is refused as well (a double submit sends one request), and so is the
+// answer of a write whose session ended meanwhile. A refusal or a failure rejects: the caller
+// shows it with `toastLedgerWriteError`. `isPending` is true while a write of that kind runs on
 // the user's client: until what shows the entry has reloaded, or until the write failed.
 import { useCallback } from 'react';
 import type { QueryClient } from '@tanstack/react-query';
 import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { invalidateSelfActivity } from 'entities/activity';
+import { invalidateActivityChildren, invalidateSelfActivity } from 'entities/activity';
 import {
     createExpenseMutationOptions,
     type CreateExpenseParams,
+    createSettlementMutationOptions,
+    type CreateSettlementParams,
     deleteLedgerEntryMutationOptions,
     type DeleteLedgerEntryParams,
     ledgerOnlineMutationKeys,
+    type LedgerWriteContext,
     type LedgerWriteEffects,
     updateExpenseMutationOptions,
     type UpdateExpenseParams,
@@ -26,7 +29,6 @@ import { getAuthSessionVersion, isAuthSessionCurrent } from 'helpers/authSession
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { isNetworkUsable } from 'shared/offline/network';
 import { isUserCacheClient } from 'shared/offline/userCaches';
-import { useActivityStore } from 'store/activity-store';
 import { invalidateGroup } from 'store/groupsList';
 import { invalidateDashboard } from 'store/internal/dashboardQueryBridge';
 import { invalidateKnownUsers } from 'store/sessionUser';
@@ -68,45 +70,30 @@ export const toastLedgerWriteError = (error: unknown, fallbackMessage: string): 
 };
 
 // What reads the written entry again once a sent write settles, on the write's own client. The
-// user's own activity feeds are the `activity.self` queries; the dashboard, the group, the friends
-// and the expense history are refreshed by the functions the activity store calls after its ledger
-// writes, until they are queries of their own entities.
-// TODO(12c): the expense history becomes the `activity.children` query; the activity store goes.
-const invalidateViews = (groupId: string | undefined, client: QueryClient): Promise<void>[] => [
+// user's own activity feeds and the open expense history are queries of `entities/activity`; the
+// dashboard, the group and the friends are refreshed by the functions the legacy stores use, until
+// they are queries of their own entities.
+const invalidateViews = (
+    { groupId, parentActivityId }: LedgerWriteContext,
+    client: QueryClient,
+): Promise<void>[] => [
     invalidateDashboard(),
     groupId ? invalidateGroup(groupId) : invalidateKnownUsers(),
     invalidateSelfActivity(client),
+    ...(parentActivityId ? [invalidateActivityChildren(client, parentActivityId)] : []),
 ];
 
 const storeEffects: LedgerWriteEffects = {
-    onEntryWritten: ({ groupId, parentActivityId }, client) => {
-        const refreshes = invalidateViews(groupId, client);
-
-        if (parentActivityId) {
-            const activity = useActivityStore.getState();
-
-            refreshes.push(
-                activity.fetchSetActivitySubevents({
-                    parentActivityId,
-                    category:
-                        activity.subeventsParent?.id === parentActivityId
-                            ? (activity.subeventsCategory ?? undefined)
-                            : undefined,
-                    force: true,
-                }),
-            );
-        }
-        return Promise.all(refreshes).then(() => undefined);
-    },
+    onEntryWritten: (context, client) =>
+        Promise.all(invalidateViews(context, client)).then(() => undefined),
     // The queries pause offline and refetch on the reconnect, so a timed-out but committed write
     // still shows after it (the caller does not wait for this refresh). After a network drop the
     // self feeds are cut to their first page at once; after the reconnect the first page reloads
     // and further pages load again on demand (the group feed already behaves this way). The
-    // expense history is not reloaded: its forced reload blanks the page (skeletons) and closes the
-    // delete dialog.
-    // TODO(12c): invalidate the `activity.children` query here too, once the history is one.
-    onWriteFailed: ({ groupId }, client) =>
-        Promise.all(invalidateViews(groupId, client)).then(() => undefined),
+    // expense history refetches in the background: it keeps showing its events (and an open
+    // delete dialog) meanwhile.
+    onWriteFailed: (context, client) =>
+        Promise.all(invalidateViews(context, client)).then(() => undefined),
 };
 
 type LedgerMutationKey = (typeof ledgerOnlineMutationKeys)[keyof typeof ledgerOnlineMutationKeys];
@@ -194,6 +181,21 @@ export const useUpdateExpense = () => {
     );
 
     return { updateExpense: write, isPending };
+};
+
+/** Whether an expense or a settlement is being created (one write of that kind at a time). */
+export const useIsLedgerEntryCreating = (): boolean =>
+    useIsWriting(ledgerOnlineMutationKeys.createEntry);
+
+/** Records a settlement (settle-up); resolves once what shows it has reloaded. */
+export const useCreateSettlement = () => {
+    const { mutateAsync } = useMutation(createSettlementMutationOptions(storeEffects));
+    const { write, isPending } = useLedgerWrite<CreateSettlementParams>(
+        ledgerOnlineMutationKeys.createEntry,
+        mutateAsync,
+    );
+
+    return { createSettlement: write, isPending };
 };
 
 /** Deletes an expense or a settlement; resolves once what showed it has reloaded. */

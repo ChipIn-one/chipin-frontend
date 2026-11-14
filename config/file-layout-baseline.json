@@ -64,10 +64,8 @@
         "src/i18n/index.ts",
         "src/pages/404-page/components/index.ts",
         "src/pages/activity-subevents-page/components/activity-subevents-buttons/index.ts",
-        "src/pages/activity-subevents-page/components/activity-subevents-buttons/internal/index.ts",
         "src/pages/activity-subevents-page/components/activity-subevents-details/index.ts",
         "src/pages/activity-subevents-page/components/activity-subevents-feed/index.ts",
-        "src/pages/activity-subevents-page/components/activity-subevents-feed/internal/index.ts",
         "src/pages/activity-subevents-page/components/activity-subevents-header/index.ts",
         "src/pages/activity-subevents-page/components/index.ts",
         "src/pages/activity-subevents-page/internal/index.ts",
@@ -84,8 +82,6 @@
         "src/components/modals/leave-group-alert-dialog/internal/useConnect.ts",
         "src/components/modals/settle-up-modal/internal/useConnect.ts",
         "src/features/routing/internal/useConnect.ts",
-        "src/pages/activity-subevents-page/components/activity-subevents-buttons/internal/useConnect.ts",
-        "src/pages/activity-subevents-page/components/activity-subevents-feed/internal/useConnect.ts",
         "src/pages/group-page/components/internal/group-settings/useConnect.ts"
     ]
 }

@@ -810,7 +810,7 @@ describe('group mutations', () => {
         expect(listGroups()).toEqual(cached([other]));
         expect(isKnownUsersInvalidated()).toBe(true);
         expect(userCache.isDashboardInvalidated()).toBe(true);
-        expect(effects.onGroupGone).toHaveBeenCalledWith(group.id);
+        expect(effects.onGroupGone).toHaveBeenCalledWith(group.id, userCache.client);
     });
 
     test('a failed removal keeps the group and runs no effect', async () => {
@@ -1010,7 +1010,7 @@ describe('group mutations', () => {
 
         expect(detailOf(group.id)).toBeUndefined();
         expect(detailOf(otherGroup.id)).toEqual(toTestGroup(otherGroup));
-        expect(effects.onGroupGone).toHaveBeenCalledWith(group.id);
+        expect(effects.onGroupGone).toHaveBeenCalledWith(group.id, userCache.client);
     });
 
     test('a leave sends the new owner only when there is one', async () => {
@@ -1049,6 +1049,6 @@ describe('group mutations', () => {
         expect(detailOf(group.id)).toEqual(toTestGroup(afterKick));
         expect(isKnownUsersInvalidated()).toBe(true);
         expect(userCache.isDashboardInvalidated()).toBe(true);
-        expect(effects.onMembersChanged).toHaveBeenCalledWith(group.id);
+        expect(effects.onMembersChanged).toHaveBeenCalledWith(group.id, userCache.client);
     });
 });
