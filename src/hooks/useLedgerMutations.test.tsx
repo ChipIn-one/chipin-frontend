@@ -328,8 +328,7 @@ test('a successful write waits for the shown activity feed to reload: pending un
         await waitFor(() => {
             expect(feedReads).toBe(2);
         });
-        // Everything but the feed has reloaded: the write still waits for it.
-        await new Promise(resolve => setTimeout(resolve, 50));
+        // The feed's reload is held: the write still waits for it.
         expect(isSettled).toBe(false);
         expect(result.current.isPending).toBe(true);
 

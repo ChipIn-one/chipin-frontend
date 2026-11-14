@@ -100,10 +100,10 @@ const storeEffects: LedgerWriteEffects = {
     },
     // The queries pause offline and refetch on the reconnect, so a timed-out but committed write
     // still shows after it (the caller does not wait for this refresh). After a network drop the
-    // self feeds are cut to their first page at once and get their further pages back after the
-    // reconnect (the same cosmetic effect the dashboard and group feeds already have). The expense
-    // history is not reloaded: its forced reload blanks the page (skeletons) and closes the delete
-    // dialog.
+    // self feeds are cut to their first page at once; after the reconnect the first page reloads
+    // and further pages load again on demand (the group feed already behaves this way). The
+    // expense history is not reloaded: its forced reload blanks the page (skeletons) and closes the
+    // delete dialog.
     // TODO(12c): invalidate the `activity.children` query here too, once the history is one.
     onWriteFailed: ({ groupId }, client) =>
         Promise.all(invalidateViews(groupId, client)).then(() => undefined),
