@@ -1,10 +1,13 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { http, HttpResponse } from 'msw';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group, GroupUser } from 'api/chipin.types';
-import { useGroupsStore } from 'store/groupsStore';
-import { useLoadingStore } from 'store/loadingStore';
+import { useActivityStore } from 'store/activity-store';
+import { useAuthStore } from 'store/authStore';
+import { setupMswServer } from 'test/mswServer';
+import { mountAsUserClient } from 'test/userClient';
 
 import KickGroupMemberAlertDialog from './KickGroupMemberAlertDialog';
 
@@ -32,13 +35,21 @@ const member = {
     updatedAt: 1,
 } satisfies GroupUser;
 
+const server = setupMswServer();
+
 beforeEach(() => {
     vi.clearAllMocks();
-    useLoadingStore.getState().setInitialLoadingStore();
+    useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
+    mountAsUserClient();
+    useActivityStore.setState({ fetchSetActivity: vi.fn(() => Promise.resolve()) });
+});
+
+afterEach(() => {
+    useAuthStore.setState({ status: 'unknown' });
 });
 
 test('waits for confirmation before kicking a group member', () => {
-    const kickGroupMember = vi.fn().mockResolvedValue(true);
+    const kickGroupMember = vi.fn();
     const user = userEvent.setup();
     const group = {
         id: 'group-1',
@@ -57,7 +68,13 @@ test('waits for confirmation before kicking a group member', () => {
         recentActivities: { items: [], nextCursor: null },
     } satisfies Group;
 
-    useGroupsStore.setState({ kickGroupMember });
+    server.use(
+        http.post('*/groups/:groupId/members/:userId/kick', ({ params }) => {
+            kickGroupMember({ groupId: params.groupId, userId: params.userId });
+            return new HttpResponse(null, { status: 204 });
+        }),
+        http.get('*/groups/:groupId', () => HttpResponse.json(group)),
+    );
 
     render(
         <KickGroupMemberAlertDialog groupId={group.id} member={member}>

@@ -1,15 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Link, MemoryRouter } from 'react-router-dom';
-import { afterEach, expect, test, vi } from 'vitest';
+import { afterEach, expect, test } from 'vitest';
 
 import { useRoutesMeta } from './useRoutesMeta';
 
 import 'i18n/index';
-
-vi.mock('store/groupsStore', () => ({
-    useGroupsStore: () => undefined,
-}));
 
 const HOME_LABEL = 'Home';
 const DASHBOARD_LABEL = 'Dashboard';

@@ -1,18 +1,8 @@
-import { apiPath } from './apiPath';
 import { AUTH_API_PATH, AUTH_CSRF_HEADERS } from './auth.constants';
 import { apiInstance } from './chipin.instance';
-import type {
-    ApiOAuthTokenPairResponse,
-    ApiRefreshTokenPairResponse,
-    CreateGroupParams,
-    Group,
-    InviteToGroupParams,
-    KickGroupMemberParams,
-    LeaveGroupParams,
-    RemoveGroupParams,
-} from './chipin.types';
+import type { ApiOAuthTokenPairResponse, ApiRefreshTokenPairResponse } from './chipin.types';
 
-// =============== GROUPS AND USERS ===============
+// =============== AUTH ===============
 
 export const refreshApiAuthTokens = (): Promise<ApiRefreshTokenPairResponse> => {
     return apiInstance
@@ -33,45 +23,5 @@ export const logoutApiAuthTokens = (): Promise<void> => {
 export const exchangeApiGoogleOAuthCode = (code: string): Promise<ApiOAuthTokenPairResponse> => {
     return apiInstance
         .post<ApiOAuthTokenPairResponse>(AUTH_API_PATH.GOOGLE_OAUTH_EXCHANGE, { code })
-        .then(response => response.data);
-};
-
-export const createApiGroup = ({
-    groupName,
-    groupDescription,
-}: CreateGroupParams): Promise<Group> => {
-    return apiInstance
-        .post<Group>('/groups', {
-            name: groupName,
-            ...(groupDescription && { description: groupDescription }),
-        })
-        .then(response => response.data);
-};
-
-export const removeApiGroup = ({ groupId }: RemoveGroupParams): Promise<void> => {
-    return Promise.resolve()
-        .then(() => apiInstance.delete<void>(apiPath`/groups/${groupId}`))
-        .then(() => undefined);
-};
-
-export const leaveApiGroup = ({ groupId, newOwnerId }: LeaveGroupParams): Promise<void> => {
-    return Promise.resolve()
-        .then(() =>
-            apiInstance.post<void>(apiPath`/groups/${groupId}/leave`, {
-                ...(newOwnerId && { newOwnerId }),
-            }),
-        )
-        .then(() => undefined);
-};
-
-export const kickApiGroupMember = ({ groupId, userId }: KickGroupMemberParams): Promise<void> => {
-    return Promise.resolve()
-        .then(() => apiInstance.post<void>(apiPath`/groups/${groupId}/members/${userId}/kick`))
-        .then(() => undefined);
-};
-
-export const inviteApiUserToGroup = ({ inviteToken }: InviteToGroupParams): Promise<Group> => {
-    return Promise.resolve()
-        .then(() => apiInstance.post<Group>(apiPath`/groups/invite/${inviteToken}`))
         .then(response => response.data);
 };

@@ -5,7 +5,6 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import type { SelfUser } from 'api/chipin.types';
 import type { Group } from 'entities/groups';
 import { useActivityStore } from 'store/activity-store';
-import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
 import { groupBalances } from 'test/groupFixtures';
 import { seedSelfUser } from 'test/selfUserSeed';
@@ -103,7 +102,6 @@ const group: Group = {
 
 beforeEach(() => {
     vi.clearAllMocks();
-    useGroupsStore.getState().setInitialGroupsStore();
     seedSelfUser(currentUser);
     useLoadingStore.getState().setInitialLoadingStore();
 });

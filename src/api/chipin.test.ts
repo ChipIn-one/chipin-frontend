@@ -1,153 +1,13 @@
 import { describe, expect, test, vi } from 'vitest';
 
-import { InvalidPathSegmentError } from './apiPath';
-import {
-    createApiGroup,
-    inviteApiUserToGroup,
-    kickApiGroupMember,
-    leaveApiGroup,
-    logoutApiAuthTokens,
-    refreshApiAuthTokens,
-    removeApiGroup,
-} from './chipin';
+import { logoutApiAuthTokens, refreshApiAuthTokens } from './chipin';
 import { apiInstance } from './chipin.instance';
 
 vi.mock('./chipin.instance', () => ({
     apiInstance: {
-        delete: vi.fn(),
-        get: vi.fn(),
-        patch: vi.fn(),
         post: vi.fn(),
     },
 }));
-
-const parentEvent = {
-    id: 'activity-parent',
-    seq: 1,
-    domain: 'GROUP',
-    action: 'GROUP_CREATED',
-    actorUserId: 'user-1',
-    actorSnapshot: {
-        displayName: 'Owner',
-        picture: null,
-    },
-    subjectType: 'group',
-    subjectId: 'group-1',
-    groupId: 'group-1',
-    metadata: {
-        type: 'group',
-        groupId: 'group-1',
-        groupName: 'Vietnam',
-        targetUserDisplayName: null,
-    },
-    createdAt: 1,
-    parentActivityId: null,
-};
-
-const lastEvent = {
-    ...parentEvent,
-    id: 'activity-child',
-    seq: 2,
-    action: 'GROUP_UPDATED',
-    createdAt: 2,
-    parentActivityId: parentEvent.id,
-};
-
-const creator = {
-    id: 'user-1',
-    email: 'owner@example.com',
-    displayName: 'Owner',
-    firstName: 'Owner',
-    lastName: null,
-    picture: null,
-    createdAt: 1,
-    updatedAt: 1,
-};
-
-const groupResponse = {
-    id: 'group-1',
-    name: 'Vietnam',
-    inviteToken: 'invite-token',
-    description: null,
-    creator,
-    members: [{ user: creator, balancesByCurrency: {} }],
-    createdAt: 1,
-    updatedAt: 1,
-    coverUrl: null,
-    simplifyDebts: true,
-    role: 'OWNER',
-    status: 'ACTIVE',
-    lastUsedCurrency: null,
-    recentActivities: {
-        items: [{ parent: parentEvent, lastEvent }],
-        nextCursor: 1,
-    },
-};
-
-describe('embedded activity feed responses', () => {
-    test('returns activity feed items from a created group response', () => {
-        vi.mocked(apiInstance.post).mockResolvedValue({ data: groupResponse });
-
-        return createApiGroup({ groupName: groupResponse.name }).then(result => {
-            expect(result.recentActivities).toEqual(groupResponse.recentActivities);
-        });
-    });
-});
-
-describe('removeApiGroup', () => {
-    test('returns no domain object for the 204 response', () => {
-        vi.mocked(apiInstance.delete).mockResolvedValue({ data: undefined });
-
-        return removeApiGroup({ groupId: 'group-1' }).then(result => {
-            expect(apiInstance.delete).toHaveBeenCalledWith('/groups/group-1');
-            expect(result).toBeUndefined();
-        });
-    });
-});
-
-describe('inviteApiUserToGroup', () => {
-    test('returns activity feed items from the joined group response', () => {
-        const joinedUser = {
-            ...creator,
-            id: 'user-2',
-            email: 'member@example.com',
-            displayName: 'Member',
-        };
-        const group = {
-            id: 'group-1',
-            name: 'Vietnam',
-            inviteToken: 'invite-token',
-            description: null,
-            creator,
-            members: [
-                { user: creator, balancesByCurrency: {} },
-                {
-                    user: joinedUser,
-                    balancesByCurrency: {
-                        USD: { currency: 'USD', netBalance: -25 },
-                    },
-                },
-            ],
-            createdAt: 1,
-            updatedAt: 1,
-            coverUrl: null,
-            simplifyDebts: true,
-            role: 'MEMBER' as const,
-            status: 'ACTIVE' as const,
-            lastUsedCurrency: null,
-            recentActivities: {
-                items: [{ parent: parentEvent, lastEvent }],
-                nextCursor: null,
-            },
-        };
-
-        vi.mocked(apiInstance.post).mockResolvedValue({ data: group });
-
-        return inviteApiUserToGroup({ inviteToken: group.inviteToken }).then(result => {
-            expect(result.recentActivities).toEqual(group.recentActivities);
-        });
-    });
-});
 
 describe('cookie-backed auth transport', () => {
     test('refreshes through the HttpOnly cookie with the CSRF header', () => {
@@ -176,32 +36,5 @@ describe('cookie-backed auth transport', () => {
             });
             expect(result).toBeUndefined();
         });
-    });
-});
-
-describe('chipin path segment guard', () => {
-    test.each([
-        ['removeApiGroup', () => removeApiGroup({ groupId: 'a/b' })],
-        ['leaveApiGroup', () => leaveApiGroup({ groupId: 'a/b' })],
-        [
-            'kickApiGroupMember groupId',
-            () => kickApiGroupMember({ groupId: 'a/b', userId: 'user-1' }),
-        ],
-        [
-            'kickApiGroupMember userId',
-            () => kickApiGroupMember({ groupId: 'group-1', userId: 'a/b' }),
-        ],
-        [
-            'inviteApiUserToGroup',
-            () => inviteApiUserToGroup({ inviteToken: '../g/members/u/kick' }),
-        ],
-    ])('%s rejects a "/" in a path parameter without calling the API', (_name, onCall) => {
-        return expect(onCall())
-            .rejects.toBeInstanceOf(InvalidPathSegmentError)
-            .then(() => {
-                expect(apiInstance.delete).not.toHaveBeenCalled();
-                expect(apiInstance.get).not.toHaveBeenCalled();
-                expect(apiInstance.post).not.toHaveBeenCalled();
-            });
     });
 });

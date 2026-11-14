@@ -2,15 +2,11 @@ import { useState } from 'react';
 import { Button, Dialog, Flex } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { useShallow } from 'zustand/react/shallow';
 
-import type { Group } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
-import { resolveApiErrorMessageFromError } from 'helpers/errors';
+import type { Group } from 'entities/groups';
 import { useAppNavigate } from 'hooks/useAppNavigate';
-import { useGroupsStore } from 'store/groupsStore';
-import { selectGroupAdding, selectGroupCoverUploading } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
+import { toastGroupWriteError, useCreateGroup, useUploadGroupCover } from 'hooks/useGroupMutations';
 
 import { OverlayBody, OverlayFooter } from '../../../components';
 import { useGroupCoverDraft } from '../../internal';
@@ -24,14 +20,8 @@ interface Props {
 const CreateGroupForm = ({ onClose }: Props) => {
     const { t } = useTranslation('group');
     const navigate = useAppNavigate();
-    const { createGroup, uploadGroupCover } = useGroupsStore(
-        useShallow(state => ({
-            createGroup: state.createGroup,
-            uploadGroupCover: state.uploadGroupCover,
-        })),
-    );
-    const isCreatingGroup = useLoadingStore(selectGroupAdding);
-    const isUploadingCover = useLoadingStore(selectGroupCoverUploading);
+    const { createGroup, isPending: isCreatingGroup } = useCreateGroup();
+    const { uploadGroupCover, isPending: isUploadingCover } = useUploadGroupCover();
     const isSaving = isCreatingGroup || isUploadingCover;
     const [inputName, setInputName] = useState('');
     const [inputDescription, setInputDescription] = useState('');
@@ -58,7 +48,7 @@ const CreateGroupForm = ({ onClose }: Props) => {
             onProgress: setUploadProgress,
         }).catch((error: unknown) => {
             setUploadProgress(0);
-            toast.error(resolveApiErrorMessageFromError(error, t('toasts:group.coverUploadError')));
+            toastGroupWriteError(error, t('toasts:group.coverUploadError'));
             console.error('Error uploading group cover:', error);
             return Promise.reject(error);
         });
@@ -89,9 +79,7 @@ const CreateGroupForm = ({ onClose }: Props) => {
                       return group;
                   })
                   .catch((error: unknown) => {
-                      toast.error(
-                          resolveApiErrorMessageFromError(error, t('toasts:group.createError')),
-                      );
+                      toastGroupWriteError(error, t('toasts:group.createError'));
                       console.error('Error creating group:', error);
                       return Promise.reject(error);
                   });

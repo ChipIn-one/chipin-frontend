@@ -1,11 +1,14 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group, SelfUser } from 'api/chipin.types';
-import { useGroupsStore } from 'store/groupsStore';
-import { useLoadingStore } from 'store/loadingStore';
+import { useActivityStore } from 'store/activity-store';
+import { useAuthStore } from 'store/authStore';
+import { setupMswServer } from 'test/mswServer';
+import { mountAsUserClient } from 'test/userClient';
 
 import LeaveGroupAlertDialog from './LeaveGroupAlertDialog';
 
@@ -63,16 +66,30 @@ const group = {
     },
 } satisfies Group;
 
+const server = setupMswServer();
+
 beforeEach(() => {
     vi.clearAllMocks();
-    useLoadingStore.getState().setInitialLoadingStore();
+    useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
+    mountAsUserClient();
+    useActivityStore.setState({ fetchSetActivity: vi.fn(() => Promise.resolve()) });
+    server.use(http.get('*/groups', () => HttpResponse.json({ items: [], nextCursor: null })));
+});
+
+afterEach(() => {
+    useAuthStore.setState({ status: 'unknown' });
 });
 
 test('waits for confirmation before leaving a group', () => {
-    const leaveGroup = vi.fn().mockResolvedValue(true);
+    const leaveGroup = vi.fn();
     const user = userEvent.setup();
 
-    useGroupsStore.setState({ leaveGroup });
+    server.use(
+        http.post('*/groups/:groupId/leave', ({ params }) => {
+            leaveGroup({ groupId: params.groupId });
+            return new HttpResponse(null, { status: 204 });
+        }),
+    );
 
     render(
         <MemoryRouter>

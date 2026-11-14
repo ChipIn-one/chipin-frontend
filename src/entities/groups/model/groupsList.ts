@@ -1,5 +1,5 @@
 // Reading and editing the cached pages of the groups list: the readers see one list without
-// duplicates, and the legacy group writes (03-11) replace, add or drop one group in place.
+// duplicates, and the group writes replace, add or drop one group in place.
 import type { InfiniteData } from '@tanstack/react-query';
 
 import type { Group, GroupsListPage } from './types';

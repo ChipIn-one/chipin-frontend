@@ -2,12 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { Group } from 'entities/groups';
-import {
-    selectGroupAdding,
-    selectGroupCoverUploading,
-    selectGroupUpdating,
-} from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
+import { useIsGroupFormSaving } from 'hooks/useGroupMutations';
 
 import { BaseModal, MODAL_SIZES } from '../base-modal';
 
@@ -20,10 +15,7 @@ type Props = { children: React.ReactNode } & (
 const CreateUpdateGroupModal = ({ children, ...target }: Props) => {
     const { t } = useTranslation('group');
     const isCreateMode = target.type === 'create';
-    const isCreatingGroup = useLoadingStore(selectGroupAdding);
-    const isUpdatingGroup = useLoadingStore(selectGroupUpdating);
-    const isUploadingCover = useLoadingStore(selectGroupCoverUploading);
-    const isSaving = isCreatingGroup || isUpdatingGroup || isUploadingCover;
+    const isSaving = useIsGroupFormSaving();
     const [isModalOpened, setIsModalOpened] = useState(false);
 
     const formKey = isModalOpened ? (target.type === 'create' ? 'create' : target.group.id) : null;

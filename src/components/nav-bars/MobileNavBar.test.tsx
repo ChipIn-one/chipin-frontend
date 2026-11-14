@@ -8,7 +8,6 @@ import { beforeEach, expect, test } from 'vitest';
 import type { Group, SelfUser, UserSettings } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
-import { useGroupsStore } from 'store/groupsStore';
 import { useLoadingStore } from 'store/loadingStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { seedGroupsList } from 'test/groupsList';
@@ -78,7 +77,6 @@ const resolveGlobalTargets = () => {
 beforeEach(() => {
     useAuthStore.setState({ status: 'authenticated' });
     useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
-    useGroupsStore.getState().setInitialGroupsStore();
     useLoadingStore.getState().setInitialLoadingStore();
 });
 

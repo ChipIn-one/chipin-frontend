@@ -1,6 +1,6 @@
 // Bridge (spec 03 §6): a legacy store action that changes balances or the activity feed marks the
 // dashboard queries stale on the signed-in user's QueryClient; active ones refetch now, the rest on
-// their next mount. Never the reverse direction. Goes with the last legacy caller (03-11, 03-12).
+// their next mount. Never the reverse direction. Goes with the last legacy caller (03-12).
 import { dashboardKeys, trimDashboardFeed } from 'entities/dashboard';
 
 import { tabUserClient } from '../sessionUser';

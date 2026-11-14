@@ -33,7 +33,6 @@ import {
 import { useErrorsStore } from './errorsStore';
 import { useExpenseModalStore } from './expenseModalStore';
 import { loadGroupsListForSession } from './groupsList';
-import { useGroupsStore } from './groupsStore';
 import { useLoadingStore } from './loadingStore';
 import {
     cachedUserId,
@@ -70,7 +69,6 @@ let lastOAuthExchange: { code: string; promise: Promise<void> } | null = null;
 const resetAuthScopedStores = () => {
     useActivityStore.getState().resetActivity();
     useUiPrefsStore.getState().resetUiPrefs();
-    useGroupsStore.getState().setInitialGroupsStore();
     useErrorsStore.getState().resetErrors();
     resetSessionSelfLoad();
     useLoadingStore.getState().setInitialLoadingStore();
@@ -110,11 +108,13 @@ const dropSignedOutUser = (): void => {
 };
 
 // The session now belongs to `nextUserId` (null: the token has no readable `sub`, treated as
-// another user). Runs right after the new session is established, so the requests of the previous
-// user are stale (`authSessionVersion`) and the store reset aborts them: the previous user's data
-// goes (§1.5 account switch) and `LS_KEY_USER` = `{ id: Y, settings }`; a draft of another user is
-// reset. Returns whether it switched. No dialog until 03-16a: it only asks about unsent outbox
-// operations.
+// another user). After a sign-in it runs right after the new session is established, so the
+// requests of the previous user are stale (`authSessionVersion`). A refreshed token of another user
+// (`onAccessTokenRefreshed`) does not change `authSessionVersion`, and no store reset aborts a
+// request: a write still in flight tells that it is stale by its client, which `clearUserData`
+// drops (`isUserCacheClient`). The previous user's data goes (§1.5 account switch) and
+// `LS_KEY_USER` = `{ id: Y, settings }`; a draft of another user is reset. Returns whether it
+// switched. No dialog until 03-16a: it only asks about unsent outbox operations.
 const dropOtherUserData = (nextUserId: string | null): boolean => {
     const previousUserId = cachedUserId();
     const switched = previousUserId !== undefined && previousUserId !== nextUserId;

@@ -12,10 +12,9 @@ import {
 } from '@radix-ui/themes';
 import { LogOutIcon, Trash2Icon, UserMinusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { toast } from 'sonner';
 
 import type { Group } from 'entities/groups';
-import { resolveApiErrorMessageFromError } from 'helpers/errors';
+import { toastGroupWriteError } from 'hooks/useGroupMutations';
 
 import GroupRoleBadge from 'basics/GroupRoleBadge';
 import { KickGroupMemberAlertDialog } from 'components/modals/kick-group-member-alert-dialog';
@@ -44,7 +43,7 @@ const GroupSettingsTab = ({ group }: Props) => {
         }
 
         updateGroup({ groupId: group.id, simplifyDebts: nextValue }).catch((error: unknown) => {
-            toast.error(resolveApiErrorMessageFromError(error, t('toasts:group.updateError')));
+            toastGroupWriteError(error, t('toasts:group.updateError'));
         });
     };
 

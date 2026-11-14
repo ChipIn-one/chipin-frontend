@@ -1,12 +1,24 @@
 // Public entry of entities/groups: the domain group, the groups list, group detail and group
-// activity queries, and the edits of their cached data.
-export type { ListDebt } from './api/listCache';
+// activity queries, the group mutations, and the edits of their cached data.
+export { refreshGroup } from './api/groupCache';
+export type {
+    CreateGroupParams,
+    GroupWriteEffects,
+    KickGroupMemberParams,
+    LeaveGroupParams,
+    UpdateGroupParams,
+    UploadGroupCoverParams,
+} from './api/mutations';
 export {
-    dropGroupFromCachedList,
-    editGroupsList,
-    putGroupInCachedList,
-    settleListDebt,
-} from './api/listCache';
+    createGroupMutationOptions,
+    groupsMutationKeys,
+    joinGroupMutationOptions,
+    kickGroupMemberMutationOptions,
+    leaveGroupMutationOptions,
+    removeGroupMutationOptions,
+    updateGroupMutationOptions,
+    uploadGroupCoverMutationOptions,
+} from './api/mutations';
 export {
     GROUP_DETAIL_STALE_TIME,
     groupActivityQueryOptions,
@@ -15,15 +27,14 @@ export {
     groupsKeys,
     groupsListQueryOptions,
     isGroupDeniedError,
-    seedGroupActivity,
     useGroupActivityQuery,
     useGroupDetailQuery,
     useGroupsListQuery,
 } from './api/queries';
 export type { GroupActivityData } from './model/groupActivity';
-export { firstGroupActivityPage, flattenGroupActivity } from './model/groupActivity';
+export { flattenGroupActivity } from './model/groupActivity';
 export type { GroupsListData } from './model/groupsList';
-export { flattenGroupsList, removeGroupFromList, upsertGroupInList } from './model/groupsList';
+export { flattenGroupsList } from './model/groupsList';
 export { toGroup } from './model/toGroup';
 export type {
     Group,

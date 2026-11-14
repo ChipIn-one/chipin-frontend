@@ -8,15 +8,6 @@ export interface LoadingStore {
         signOut: LoadingState;
         logoutOtherDevices: LoadingState;
     };
-    group: {
-        add: LoadingState;
-        update: LoadingState;
-        remove: LoadingState;
-        join: LoadingState;
-        leave: LoadingState;
-        kick: LoadingState;
-        cover: LoadingState;
-    };
     activity: {
         data: LoadingState;
         nextPage: LoadingState;
@@ -56,15 +47,6 @@ const initialLoadingStore: LoadingSlices = {
     expense: { add: 'initial', edit: 'initial', update: 'initial' },
     ledger: { remove: 'initial' },
     settlement: { add: 'initial' },
-    group: {
-        add: 'initial',
-        join: 'initial',
-        remove: 'initial',
-        update: 'initial',
-        leave: 'initial',
-        kick: 'initial',
-        cover: 'initial',
-    },
 };
 
 export const useLoadingStore = create<LoadingStore>((set, get) => ({

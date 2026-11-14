@@ -2,15 +2,12 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group } from 'api/chipin.types';
-import { groupDetailQueryOptions, groupsKeys } from 'entities/groups';
 import { toTestGroup } from 'test/groupFixtures';
 import { cachedGroupsList, groupsListData } from 'test/groupsList';
 import { setupMswServer } from 'test/mswServer';
 import { mountUserDashboardCache, type UserDashboardCache } from 'test/userDashboardCache';
 
-import { useErrorsStore } from './errorsStore';
-import { useGroupsStore } from './groupsStore';
-import { useLoadingStore } from './loadingStore';
+import { groupDetailQueryOptions, groupsKeys } from './queries';
 
 const server = setupMswServer();
 
@@ -50,9 +47,6 @@ let userCache: UserDashboardCache;
 beforeEach(() => {
     vi.clearAllMocks();
     userCache = mountUserDashboardCache();
-    useErrorsStore.getState().resetErrors();
-    useGroupsStore.getState().setInitialGroupsStore();
-    useLoadingStore.getState().setInitialLoadingStore();
 });
 
 afterEach(() => {
