@@ -328,6 +328,8 @@ const stepAmount = (amount: Money, delta: number): string => {
     return digits > 0 ? `${units / LEDGER_UNIT}.${fraction}` : `${units / LEDGER_UNIT}`;
 };
 
+// TODO(04-2d): save the open draft to `sessionStorage` in an `onBeforeAppReload` callback of
+// `ServiceWorkerManager` and restore it at startup (spec 04 §2.11 item 4).
 export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
     ...INITIAL_EXPENSE_MODAL_STATE,
     open: options => {

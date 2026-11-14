@@ -2,20 +2,20 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
-import { useShallow } from 'zustand/react/shallow';
 
 import { ROUTES } from 'constants/routes';
 import { userCurrency, userDefaultCategory, userSkipCategory } from 'entities/users';
-import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { useGroups } from 'hooks/useGroupsList';
 import { useKnownUsers } from 'hooks/useKnownUsers';
+import {
+    toastLedgerWriteError,
+    useCreateExpense,
+    useUpdateExpense,
+} from 'hooks/useLedgerMutations';
 import { useSelfUser, useUserSetting } from 'hooks/useSelfUser';
-import { useActivityStore } from 'store/activity-store';
 import { selectExpensePayload, selectIsSubmitDisabled } from 'store/expenseModalSelectors';
 import { type ExpenseModalSource, useExpenseModalStore } from 'store/expenseModalStore';
 import { buildExpenseUpdateParams } from 'store/expenseModalUpdate';
-import { selectExpenseAdding, selectExpenseUpdating } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
 import { selectLastGroupId, useUiPrefsStore } from 'store/ui-prefs';
 
 export const useExpenseModalOpenChange = (isOpened: boolean, onOpenChange: () => void): void => {
@@ -105,15 +105,9 @@ export const useExpenseModalSource = ({
 
 export const useExpenseModalSubmit = (onClose: () => void): ExpenseModalSubmitResult => {
     const { t } = useTranslation('group');
-    const { createExpense, updateExpense } = useActivityStore(
-        useShallow(state => ({
-            createExpense: state.createExpense,
-            updateExpense: state.updateExpense,
-        })),
-    );
-    const isSubmitting = useLoadingStore(
-        useShallow(state => selectExpenseAdding(state) || selectExpenseUpdating(state)),
-    );
+    const { createExpense, isPending: isCreating } = useCreateExpense();
+    const { updateExpense, isPending: isUpdating } = useUpdateExpense();
+    const isSubmitting = isCreating || isUpdating;
     const isSubmitDisabled = useExpenseModalStore(selectIsSubmitDisabled);
 
     const onSubmit = useCallback(() => {
@@ -124,8 +118,10 @@ export const useExpenseModalSubmit = (onClose: () => void): ExpenseModalSubmitRe
             return;
         }
 
+        // A refusal (offline, an ended session) and a failed request alike: the modal stays open
+        // with the form as it is, and only this session's own outcome is shown.
         const onMutationError = (error: unknown) => {
-            toast.error(resolveApiErrorMessageFromError(error, t('toasts:common.requestFailed')));
+            toastLedgerWriteError(error, t('toasts:common.requestFailed'));
         };
 
         if (state.mode === 'edit' && state.editContext) {
@@ -149,7 +145,7 @@ export const useExpenseModalSubmit = (onClose: () => void): ExpenseModalSubmitRe
             return;
         }
 
-        createExpense(params)
+        createExpense({ expense: params })
             .then(() => {
                 onClose();
                 toast.success(t('toasts:expense.created'));
