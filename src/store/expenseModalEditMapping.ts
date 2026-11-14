@@ -9,7 +9,7 @@ import type {
     ExpenseModalGroup,
     ExpenseModalSource,
     ExpenseParticipant,
-} from './expenseModalStore';
+} from './expenseModalTypes';
 import type { ExpenseModalOriginalState } from './expenseModalUpdate';
 
 interface ActivityExpenseEditMappingParams {
