@@ -126,6 +126,20 @@ const selfFeedKey = activityKeys.self({ view: 'previews' });
 const isFeedStale = (client: QueryClient): boolean =>
     client.getQueryState(selfFeedKey)?.isInvalidated === true;
 
+// Records every cancel or invalidation on `client` that targets the user's activity feeds
+// (`['activity','self']`), whether or not the client is cleared afterwards.
+const watchSelfFeedRefreshes = (client: QueryClient): (() => unknown[]) => {
+    const invalidations = vi.spyOn(client, 'invalidateQueries');
+    const cancels = vi.spyOn(client, 'cancelQueries');
+
+    return () =>
+        [...invalidations.mock.calls, ...cancels.mock.calls].filter(([filters]) => {
+            const key = filters?.queryKey;
+
+            return key?.[0] === 'activity' && key[1] === 'self';
+        });
+};
+
 // Signed in on the user's persisted client (the only place ledger writes run), with the
 // dashboard, the friends and the user's activity feed cached.
 const signIn = () => {
@@ -402,7 +416,7 @@ describe.each<[string, () => void]>([
     ])(
         'a %s delete shows no toast in the next session and reloads nothing',
         async (_outcome, status) => {
-            const client = signIn();
+            const selfFeedRefreshes = watchSelfFeedRefreshes(signIn());
             const gate = deferred();
             const sent = serveDelete({ gate, status });
 
@@ -424,7 +438,7 @@ describe.each<[string, () => void]>([
 
             expect(toast.success).not.toHaveBeenCalled();
             expect(toast.error).not.toHaveBeenCalled();
-            expect(isFeedStale(client)).toBe(false);
+            expect(selfFeedRefreshes()).toEqual([]);
             expect(fetchSetActivitySubevents).not.toHaveBeenCalled();
         },
     );

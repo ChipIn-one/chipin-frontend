@@ -108,6 +108,20 @@ const isStale = (client: QueryClient, queryKey: readonly unknown[]): boolean =>
 // The user's activity feed (`activity.self`) was invalidated on this client.
 const isFeedStale = (client: QueryClient): boolean => isStale(client, selfFeedKey);
 
+// Records every cancel or invalidation on `client` that targets the user's activity feeds
+// (`['activity','self']`), whether or not the client is cleared afterwards.
+const watchSelfFeedRefreshes = (client: QueryClient): (() => unknown[]) => {
+    const invalidations = vi.spyOn(client, 'invalidateQueries');
+    const cancels = vi.spyOn(client, 'cancelQueries');
+
+    return () =>
+        [...invalidations.mock.calls, ...cancels.mock.calls].filter(([filters]) => {
+            const key = filters?.queryKey;
+
+            return key?.[0] === 'activity' && key[1] === 'self';
+        });
+};
+
 // The ledger and the group endpoints; `sent` lists `METHOD path` of every request, in order.
 // `gate` holds the answer of a write, `groupGate` the answer of the group read.
 const serve = (gate?: Deferred, status = 200, groupGate?: Deferred): string[] => {
@@ -274,6 +288,67 @@ test('the saving flag comes from the mutation: on from the submit until the view
     });
 });
 
+// The dashboard feed is on screen: a successful write settles only once that feed has refetched.
+test('a successful write waits for the shown activity feed to reload: pending until it has', async () => {
+    const client = signIn(createQueryClient());
+    const feedGate = deferred();
+    let feedReads = 0;
+
+    serve();
+    server.use(
+        http.get('*/users/self/activity-previews', async () => {
+            feedReads += 1;
+            // The first read loads the feed; the reload after the write is held.
+            if (feedReads > 1) {
+                await feedGate.promise;
+            }
+            return HttpResponse.json({ items: [], nextCursor: null });
+        }),
+    );
+    client.removeQueries({ queryKey: selfFeedKey });
+    const feed = new InfiniteQueryObserver(client, selfActivityPreviewsQueryOptions());
+    const unsubscribe = feed.subscribe(() => undefined);
+    const { result } = renderHook(() => useCreateExpense(), {
+        wrapper: ({ children }: { children: ReactNode }) => (
+            <QueryClientProvider client={client}>{children}</QueryClientProvider>
+        ),
+    });
+    let isSettled = false;
+    let write: Promise<void> = Promise.resolve();
+
+    try {
+        await waitFor(() => {
+            expect(feed.getCurrentResult().isSuccess).toBe(true);
+        });
+        act(() => {
+            write = result.current.createExpense({ expense }).then(() => {
+                isSettled = true;
+            });
+        });
+        await waitFor(() => {
+            expect(feedReads).toBe(2);
+        });
+        // Everything but the feed has reloaded: the write still waits for it.
+        await new Promise(resolve => setTimeout(resolve, 50));
+        expect(isSettled).toBe(false);
+        expect(result.current.isPending).toBe(true);
+
+        await act(async () => {
+            feedGate.resolve();
+            await write;
+        });
+        expect(isSettled).toBe(true);
+        await waitFor(() => {
+            expect(result.current.isPending).toBe(false);
+        });
+    } finally {
+        feedGate.resolve();
+        unsubscribe();
+        await client.cancelQueries();
+        client.clear();
+    }
+});
+
 test('after an expense between friends the dashboard, the friends balances and the feed reload', async () => {
     const client = signIn();
     const sent = serve();
@@ -384,6 +459,7 @@ describe.each<[string, () => void]>([
         'a %s is refused as an ended session and reloads nothing in the next session',
         async (_kind, request, send) => {
             const client = signIn();
+            const selfFeedRefreshes = watchSelfFeedRefreshes(client);
             const gate = deferred();
             const sent = serve(gate);
             const { result } = renderHook(useWrites);
@@ -406,13 +482,13 @@ describe.each<[string, () => void]>([
 
             expect(sent).toEqual([request]);
             expect(isStale(client, dashboardKeys.balances())).toBe(false);
-            expect(isFeedStale(client)).toBe(false);
+            expect(selfFeedRefreshes()).toEqual([]);
             expect(fetchSetActivitySubevents).not.toHaveBeenCalled();
         },
     );
 
     test("a failed write is refused as an ended session too: its error is not the next session's", async () => {
-        const client = signIn();
+        const selfFeedRefreshes = watchSelfFeedRefreshes(signIn());
         const gate = deferred();
         const sent = serve(gate, 400);
         const { result } = renderHook(useWrites);
@@ -432,7 +508,7 @@ describe.each<[string, () => void]>([
         await act(async () => {
             expect(await write).toEqual(new LedgerWriteRefusedError('session'));
         });
-        expect(isFeedStale(client)).toBe(false);
+        expect(selfFeedRefreshes()).toEqual([]);
     });
 });
 

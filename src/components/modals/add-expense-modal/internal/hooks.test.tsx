@@ -123,6 +123,20 @@ const selfFeedKey = activityKeys.self({ view: 'previews' });
 const isFeedStale = (client: QueryClient): boolean =>
     client.getQueryState(selfFeedKey)?.isInvalidated === true;
 
+// Records every cancel or invalidation on `client` that targets the user's activity feeds
+// (`['activity','self']`), whether or not the client is cleared afterwards.
+const watchSelfFeedRefreshes = (client: QueryClient): (() => unknown[]) => {
+    const invalidations = vi.spyOn(client, 'invalidateQueries');
+    const cancels = vi.spyOn(client, 'cancelQueries');
+
+    return () =>
+        [...invalidations.mock.calls, ...cancels.mock.calls].filter(([filters]) => {
+            const key = filters?.queryKey;
+
+            return key?.[0] === 'activity' && key[1] === 'self';
+        });
+};
+
 // Signed in as the current user on its persisted client (the only place ledger writes run), with
 // the user's activity feed cached.
 const signIn = (): QueryClient => {
@@ -541,7 +555,7 @@ describe.each<[string, () => void]>([
     ])(
         'a %s expense shows no toast and does not close the modal of the next session',
         async (_outcome, status) => {
-            const client = signIn();
+            const selfFeedRefreshes = watchSelfFeedRefreshes(signIn());
             const gate = deferred();
             const sent = serveLedger({ gate, status });
             const onClose = vi.fn();
@@ -560,7 +574,7 @@ describe.each<[string, () => void]>([
             expect(onClose).not.toHaveBeenCalled();
             expect(toast.success).not.toHaveBeenCalled();
             expect(toast.error).not.toHaveBeenCalled();
-            expect(isFeedStale(client)).toBe(false);
+            expect(selfFeedRefreshes()).toEqual([]);
         },
     );
 
