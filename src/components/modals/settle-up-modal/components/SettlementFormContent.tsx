@@ -4,7 +4,7 @@ import { InfoIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
-import { resolveApiErrorMessageFromError } from 'helpers/errors';
+import { toastLedgerWriteError } from 'hooks/useLedgerMutations';
 
 import type { SelectItem } from 'components/Select';
 
@@ -76,10 +76,8 @@ const SettlementFormContent = ({ friend, balances, initialCurrency, onSubmit, on
                 onClose();
                 toast.success(t('toasts:settlement.created'));
             })
-            .catch(error => {
-                toast.error(
-                    resolveApiErrorMessageFromError(error, t('toasts:common.requestFailed')),
-                );
+            .catch((error: unknown) => {
+                toastLedgerWriteError(error, t('toasts:common.requestFailed'));
             })
             .finally(() => {
                 isSubmitInFlight.current = false;

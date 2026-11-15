@@ -21,7 +21,6 @@ import {
 } from 'helpers/localStorage';
 import { clearUserData } from 'shared/offline/clearUserData';
 
-import { useActivityStore } from './activity-store';
 import {
     AUTH_STATUS,
     type AuthStatus,
@@ -67,7 +66,6 @@ let lastOAuthExchange: { code: string; promise: Promise<void> } | null = null;
 // after sign-in. Each store-migration PR removes its own line (spec 03 §1.5). It re-reads the
 // cached user from localStorage, so a caller changes `LS_KEY_USER` before it.
 const resetAuthScopedStores = () => {
-    useActivityStore.getState().resetActivity();
     useUiPrefsStore.getState().resetUiPrefs();
     useErrorsStore.getState().resetErrors();
     resetSessionSelfLoad();

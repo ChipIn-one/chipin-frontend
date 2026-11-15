@@ -9,26 +9,26 @@ afterEach(() => {
 describe('errors store', () => {
     test('stores and clears a request error by operation', () => {
         const error = {
-            code: 'ACTIVITY.UNAVAILABLE',
-            message: 'Activity is unavailable',
+            code: 'AUTH.UNAVAILABLE',
+            message: 'Sign-in is unavailable',
         };
 
-        useErrorsStore.getState().setError('activity', 'subeventsData', error);
+        useErrorsStore.getState().setError('auth', 'login', error);
 
-        expect(useErrorsStore.getState().errors.activity.subeventsData).toEqual(error);
+        expect(useErrorsStore.getState().errors.auth.login).toEqual(error);
 
-        useErrorsStore.getState().clearError('activity', 'subeventsData');
+        useErrorsStore.getState().clearError('auth', 'login');
 
-        expect(useErrorsStore.getState().errors.activity.subeventsData).toBeNull();
+        expect(useErrorsStore.getState().errors.auth.login).toBeNull();
     });
 
     test('resets all request errors', () => {
-        useErrorsStore.getState().setError('expense', 'update', {
-            message: 'Expense unavailable',
+        useErrorsStore.getState().setError('auth', 'signOut', {
+            message: 'Sign-out unavailable',
         });
 
         useErrorsStore.getState().resetErrors();
 
-        expect(useErrorsStore.getState().errors.expense.update).toBeNull();
+        expect(useErrorsStore.getState().errors.auth.signOut).toBeNull();
     });
 });

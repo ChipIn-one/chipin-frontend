@@ -8,6 +8,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import { useIsMutating, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
+import { invalidateSelfActivity } from 'entities/activity';
 import {
     createGroupMutationOptions,
     type CreateGroupParams,
@@ -28,7 +29,6 @@ import {
 import { getAuthSessionVersion, isAuthSessionCurrent } from 'helpers/authSession';
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { isNetworkUsable } from 'shared/offline/network';
-import { useActivityStore } from 'store/activity-store';
 import { useUiPrefsStore } from 'store/ui-prefs';
 
 import { toastWriteRefusal, useIsUserWriteEnabled } from './useUserMutations';
@@ -71,19 +71,18 @@ const refusalBeforeMutate = (isEnabled: boolean): Promise<never> | null => {
     return isNetworkUsable() ? null : Promise.reject(new GroupWriteRefusedError('offline'));
 };
 
-// The legacy stores after a group write (spec 02 D5: the entity does not import them): the
-// last-group default of a lost group, and the user's activity feeds (the activity store's bridge to
-// the `activity.self` queries, TODO(12c)).
+// After a group write (spec 02 D5: the entity does not import the stores): the last-group default
+// of a lost group, and the user's own activity feeds (`activity.self`) on the write's client.
 const storeEffects: GroupWriteEffects = {
-    onGroupGone: groupId => {
+    onGroupGone: (groupId, client) => {
         const { lastGroupId, setLastGroupId } = useUiPrefsStore.getState();
 
         if (lastGroupId === groupId) {
             setLastGroupId(null);
         }
-        return useActivityStore.getState().fetchSetActivity(true);
+        return invalidateSelfActivity(client);
     },
-    onMembersChanged: () => useActivityStore.getState().fetchSetActivity(true),
+    onMembersChanged: (_groupId, client) => invalidateSelfActivity(client),
 };
 
 const useIsWriting = (mutationKey: readonly string[]): boolean =>

@@ -1,7 +1,8 @@
-// Public entry of entities/ledger: the online ledger mutations (an expense create and update, an
-// entry delete) and the backend capabilities query.
+// Public entry of entities/ledger: the online ledger mutations (an expense create and update, a
+// settlement create, an entry delete) and the backend capabilities query.
 export type {
     CreateExpenseParams,
+    CreateSettlementParams,
     DeleteLedgerEntryParams,
     LedgerWriteContext,
     LedgerWriteEffects,
@@ -9,6 +10,7 @@ export type {
 } from './api/mutations';
 export {
     createExpenseMutationOptions,
+    createSettlementMutationOptions,
     deleteLedgerEntryMutationOptions,
     ledgerOnlineMutationKeys,
     updateExpenseMutationOptions,

@@ -1,7 +1,8 @@
 // The user's own activity (spec 03 §1.2, §6 row 5) under `['activity','self',filters]`: the
 // previews of the dashboard feed and the flat log of the Activity page, 30 s fresh, infinite,
 // persisted as their first page only (`trimmingPersister`). Both come through `api()` as domain
-// items (amounts as `Money`). `activityKeys.self()` invalidates every feed of the user.
+// items (amounts as `Money`). `activityKeys.self()` invalidates every feed of the user. The history
+// of one activity chain (the expense history page) is `['activity','children',parentId]`, 60 s.
 import { useEffect } from 'react';
 import type { InfiniteData, Query, QueryClient } from '@tanstack/react-query';
 import { infiniteQueryOptions, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
@@ -11,10 +12,19 @@ import { api } from 'shared/api/client';
 import { isNetworkUsable } from 'shared/offline/network';
 
 import { firstPageOnly } from '../model/selfActivity';
-import { toActivityItems, toActivityLogItems } from '../model/toActivityItem';
-import type { SelfActivityEventsPage, SelfActivityPreviewsPage } from '../model/types';
+import {
+    toActivityChildrenPage,
+    toActivityItems,
+    toActivityLogItems,
+} from '../model/toActivityItem';
+import type {
+    ActivityChildrenPage,
+    SelfActivityEventsPage,
+    SelfActivityPreviewsPage,
+} from '../model/types';
 
 const SELF_ACTIVITY_STALE_TIME = 30_000;
+const ACTIVITY_CHILDREN_STALE_TIME = 60_000;
 
 /**
  * What a feed of the user's activity shows: `previews` are the active ledger chains (the
@@ -38,6 +48,8 @@ export const activityKeys = {
     all: ['activity'] as const,
     /** One feed of the user's own activity; without filters, the root of all of them. */
     self: selfKey,
+    /** The history of one activity chain, by the id of its creation event. */
+    children: (parentActivityId: string) => ['activity', 'children', parentActivityId] as const,
 };
 
 // The first page has no cursor (a function: a typed constant would narrow to `null`).
@@ -65,6 +77,17 @@ const fetchEventsPage = (
     api('get', '/users/self/activities', { query: pageQuery(cursor), signal }).then(
         ({ items, nextCursor }) => ({ items: toActivityLogItems(items), nextCursor }),
     );
+
+const fetchChildrenPage = (
+    parentActivityId: string,
+    cursor: number | null,
+    signal: AbortSignal,
+): Promise<ActivityChildrenPage> =>
+    api('get', '/users/self/activities/{parentActivityId}/children', {
+        params: { parentActivityId },
+        query: pageQuery(cursor),
+        signal,
+    }).then(toActivityChildrenPage);
 
 // A refetch of an infinite query reloads every loaded page in turn. A stale feed is cut back to
 // its first page before a focus/reconnect refetch, so the refetch is one request. The cut keeps
@@ -158,6 +181,35 @@ export const invalidateSelfActivity = (client: QueryClient): Promise<void> => {
         .then(() => client.invalidateQueries({ queryKey }, { cancelRefetch: true }));
 };
 
+/**
+ * The history of one activity chain, newest first: no cursor first, then by `nextCursor` until
+ * null. A chain is short (an entry's edits), so a refetch reloading every loaded page is cheap.
+ */
+export const activityChildrenQueryOptions = (parentActivityId: string) =>
+    infiniteQueryOptions({
+        queryKey: activityKeys.children(parentActivityId),
+        staleTime: ACTIVITY_CHILDREN_STALE_TIME,
+        initialPageParam: firstPageParam(),
+        queryFn: ({ pageParam, signal }) => fetchChildrenPage(parentActivityId, pageParam, signal),
+        getNextPageParam: lastPage => lastPage.nextCursor,
+    });
+
+/**
+ * After a write to the chain's entry (or a failed one, which may have been applied): its history
+ * is marked stale and reloads now if shown, keeping what it shows meanwhile. A running load may
+ * predate the write, so it is cancelled first. Never rejects.
+ */
+export const invalidateActivityChildren = (
+    client: QueryClient,
+    parentActivityId: string,
+): Promise<void> => {
+    const queryKey = activityKeys.children(parentActivityId);
+
+    return client
+        .cancelQueries({ queryKey })
+        .then(() => client.invalidateQueries({ queryKey }, { cancelRefetch: true }));
+};
+
 // When a feed's page unmounts, the feed is cut to its first page: the stale refetch of the next
 // mount (`refetchOnMount` runs during render, it cannot cut) is then one request, not one per page
 // loaded before.
@@ -188,3 +240,7 @@ export const useSelfActivityEventsQuery = ({ enabled }: EnabledParams) => {
     useTrimOnUnmount();
     return useInfiniteQuery({ ...selfActivityEventsQueryOptions(), enabled });
 };
+
+/** The history of one activity chain (the expense history page). */
+export const useActivityChildrenQuery = (parentActivityId: string, { enabled }: EnabledParams) =>
+    useInfiniteQuery({ ...activityChildrenQueryOptions(parentActivityId), enabled });

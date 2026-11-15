@@ -4,7 +4,9 @@ import { expect, test, vi } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
+import type { ActivityEvent } from 'entities/activity';
 import type { ActivitySubeventsView } from 'helpers/activityEvent';
+import { domainExpenseEvent, domainSettlementEvent } from 'test/activityFixtures';
 
 import { ActivitySubeventsDetails } from './ActivitySubeventsDetails';
 
@@ -104,15 +106,26 @@ const settlementCreated = {
     parentActivityId: null,
 } satisfies AppEvent;
 
+const toDomain = (event: AppEvent): ActivityEvent =>
+    event.metadata?.type === 'settlement'
+        ? domainSettlementEvent(event)
+        : domainExpenseEvent(event);
+
 const createView = (
     originalEvent: AppEvent,
     currentEvent: AppEvent = originalEvent,
-): ActivitySubeventsView => ({ originalEvent, currentEvent });
+): ActivitySubeventsView<ActivityEvent> => ({
+    originalEvent: toDomain(originalEvent),
+    currentEvent: toDomain(currentEvent),
+});
 
 test('ACT-004 shows current expense details from the latest snapshot', () => {
     render(
         <ActivitySubeventsDetails
             view={createView(expenseCreated, expenseUpdated)}
+            childEvents={[]}
+            parentActivityId="activity-id"
+            canChange
             isLoading={false}
         />,
     );
@@ -130,7 +143,15 @@ test('ACT-004 shows current expense details from the latest snapshot', () => {
 });
 
 test('shows settlement direction without an expense participant list', () => {
-    render(<ActivitySubeventsDetails view={createView(settlementCreated)} isLoading={false} />);
+    render(
+        <ActivitySubeventsDetails
+            view={createView(settlementCreated)}
+            childEvents={[]}
+            parentActivityId="activity-id"
+            canChange
+            isLoading={false}
+        />,
+    );
 
     expect(screen.getAllByText('subeventsFrom')).not.toHaveLength(0);
     expect(screen.getAllByText('subeventsTo')).not.toHaveLength(0);
@@ -142,7 +163,13 @@ test('shows settlement direction without an expense participant list', () => {
 test('uses a chevron while preserving the mobile details disclosure behavior', () => {
     const user = userEvent.setup();
     const view = render(
-        <ActivitySubeventsDetails view={createView(expenseCreated)} isLoading={false} />,
+        <ActivitySubeventsDetails
+            view={createView(expenseCreated)}
+            childEvents={[]}
+            parentActivityId="activity-id"
+            canChange
+            isLoading={false}
+        />,
     );
     const details = view.container.querySelector('details');
     const summary = view.container.querySelector('summary');

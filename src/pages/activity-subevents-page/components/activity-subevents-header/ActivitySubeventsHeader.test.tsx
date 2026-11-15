@@ -3,6 +3,7 @@ import { expect, test, vi } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS } from 'constants/activity';
+import { domainExpenseEvent } from 'test/activityFixtures';
 
 import { ActivitySubeventsHeader } from './ActivitySubeventsHeader';
 
@@ -52,7 +53,7 @@ const parentEvent = {
 const renderHeader = (event: AppEvent | undefined, isLoading = false, isUnavailable = false) => {
     render(
         <ActivitySubeventsHeader
-            parentEvent={event}
+            parentEvent={event && domainExpenseEvent(event)}
             isLoading={isLoading}
             isUnavailable={isUnavailable}
         />,

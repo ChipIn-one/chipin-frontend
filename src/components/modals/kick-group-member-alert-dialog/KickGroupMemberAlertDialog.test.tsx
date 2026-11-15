@@ -4,7 +4,6 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group, GroupUser } from 'api/chipin.types';
-import { useActivityStore } from 'store/activity-store';
 import { useAuthStore } from 'store/authStore';
 import { setupMswServer } from 'test/mswServer';
 import { mountAsUserClient } from 'test/userClient';
@@ -41,7 +40,6 @@ beforeEach(() => {
     vi.clearAllMocks();
     useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
     mountAsUserClient();
-    useActivityStore.setState({ fetchSetActivity: vi.fn(() => Promise.resolve()) });
 });
 
 afterEach(() => {

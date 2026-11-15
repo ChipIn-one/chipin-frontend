@@ -5,11 +5,11 @@ import { toast } from 'sonner';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group as WireGroup } from 'api/chipin.types';
+import { invalidateSelfActivity } from 'entities/activity';
 import { groupsKeys } from 'entities/groups';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
 import { ApiError } from 'shared/lib/apiError';
-import { useActivityStore } from 'store/activity-store';
 import { onAccessTokenRefreshed, useAuthStore } from 'store/authStore';
 import { useUiPrefsStore } from 'store/ui-prefs';
 import { fakeAccessToken } from 'test/fakeAccessToken';
@@ -33,6 +33,11 @@ vi.mock('sonner', () => ({
     toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
 }));
 
+vi.mock('entities/activity', async importOriginal => ({
+    ...(await importOriginal<typeof import('entities/activity')>()),
+    invalidateSelfActivity: vi.fn(() => Promise.resolve()),
+}));
+
 vi.mock('i18next', () => ({
     default: { t: (key: string) => key },
 }));
@@ -54,8 +59,6 @@ const deferred = (): Deferred => {
 };
 
 const group = wireGroup('group-1');
-
-const fetchSetActivity = vi.fn(() => Promise.resolve());
 
 const signIn = () => {
     useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
@@ -84,7 +87,6 @@ const servePatch = (gate?: Deferred) => {
 
 beforeEach(() => {
     vi.clearAllMocks();
-    useActivityStore.setState({ fetchSetActivity });
     useUiPrefsStore.getState().resetUiPrefs();
 });
 
@@ -242,8 +244,8 @@ test('an update after the session changed sends its own request and stays the ru
     expect(bodies).toEqual([{ name: 'First' }, { name: 'Second' }]);
 });
 
-test('a removed group resets the last-group default and refreshes the activity store', async () => {
-    signIn();
+test("a removed group resets the last-group default and marks the user's activity feeds stale on its client", async () => {
+    const client = signIn();
     server.use(
         http.delete('*/groups/:groupId', () => new HttpResponse(null, { status: 204 })),
         http.get('*/groups', () => HttpResponse.json({ items: [], nextCursor: null })),
@@ -254,11 +256,11 @@ test('a removed group resets the last-group default and refreshes the activity s
     await act(() => result.current.removeGroup(group.id));
 
     expect(useUiPrefsStore.getState().lastGroupId).toBeNull();
-    expect(fetchSetActivity).toHaveBeenCalledWith(true);
+    expect(invalidateSelfActivity).toHaveBeenCalledWith(client);
 });
 
 test('leaving another group keeps the last-group default', async () => {
-    signIn();
+    const client = signIn();
     server.use(
         http.post('*/groups/:groupId/leave', () => new HttpResponse(null, { status: 204 })),
         http.get('*/groups', () => HttpResponse.json({ items: [], nextCursor: null })),
@@ -269,11 +271,11 @@ test('leaving another group keeps the last-group default', async () => {
     await act(() => result.current.leaveGroup({ groupId: group.id }));
 
     expect(useUiPrefsStore.getState().lastGroupId).toBe('group-2');
-    expect(fetchSetActivity).toHaveBeenCalledWith(true);
+    expect(invalidateSelfActivity).toHaveBeenCalledWith(client);
 });
 
-test('a kick shows its pending state and refreshes the activity store', async () => {
-    signIn();
+test("a kick shows its pending state and marks the user's activity feeds stale on its client", async () => {
+    const client = signIn();
     const gate = deferred();
     server.use(
         http.post('*/groups/:groupId/members/:userId/kick', async () => {
@@ -294,7 +296,7 @@ test('a kick shows its pending state and refreshes the activity store', async ()
     gate.resolve();
     await act(() => done);
 
-    expect(fetchSetActivity).toHaveBeenCalledWith(true);
+    expect(invalidateSelfActivity).toHaveBeenCalledWith(client);
     await waitFor(() => {
         expect(result.current.isPending).toBe(false);
     });
@@ -367,7 +369,7 @@ test('a kick answered after another tab switched the account runs nothing in the
     await act(() => done);
     await new Promise(resolve => setTimeout(resolve, 50));
 
-    expect(fetchSetActivity).not.toHaveBeenCalled();
+    expect(invalidateSelfActivity).not.toHaveBeenCalled();
     expect(detailReads).not.toHaveBeenCalled();
 });
 
@@ -397,5 +399,5 @@ test('a removal answered after another tab switched the account runs nothing in 
     await act(() => done);
     await new Promise(resolve => setTimeout(resolve, 50));
 
-    expect(fetchSetActivity).not.toHaveBeenCalled();
+    expect(invalidateSelfActivity).not.toHaveBeenCalled();
 });

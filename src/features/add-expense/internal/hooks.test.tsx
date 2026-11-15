@@ -9,7 +9,6 @@ import { activityKeys } from 'entities/activity';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
 import { LedgerWriteRefusedError, toastLedgerWriteError } from 'hooks/useLedgerMutations';
-import { useActivityStore } from 'store/activity-store';
 import { onAccessTokenRefreshed, useAuthStore } from 'store/authStore';
 import type { ExpenseModalEditInitialization, ExpenseModalSource } from 'store/expenseModalStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
@@ -114,10 +113,12 @@ interface SentWrite {
     body: unknown;
 }
 
-const fetchSetActivitySubevents = vi.fn(() => Promise.resolve());
-const initialActivity = useActivityStore.getState();
-
 const selfFeedKey = activityKeys.self({ view: 'previews' });
+const historyKey = activityKeys.children('activity-1');
+
+// The expense history of `activity-1` (`activity.children`) was invalidated on this client.
+const isHistoryStale = (client: QueryClient): boolean =>
+    client.getQueryState(historyKey)?.isInvalidated === true;
 
 // The user's activity feed (`activity.self`) was invalidated on this client.
 const isFeedStale = (client: QueryClient): boolean =>
@@ -138,7 +139,7 @@ const watchSelfFeedRefreshes = (client: QueryClient): (() => unknown[]) => {
 };
 
 // Signed in as the current user on its persisted client (the only place ledger writes run), with
-// the user's activity feed cached.
+// the user's activity feed and the expense history of `activity-1` cached.
 const signIn = (): QueryClient => {
     useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
     saveLocalUser({
@@ -159,6 +160,7 @@ const signIn = (): QueryClient => {
     const client = mountAsUserClient(currentUser.id);
 
     client.setQueryData(selfFeedKey, { pages: [], pageParams: [] });
+    client.setQueryData(historyKey, { pages: [], pageParams: [] });
     return client;
 };
 
@@ -238,12 +240,10 @@ const submit = (onClose: () => void = vi.fn()) => {
 beforeEach(() => {
     useExpenseModalStore.getState().reset();
     vi.clearAllMocks();
-    useActivityStore.setState({ fetchSetActivitySubevents });
 });
 
 afterEach(() => {
     onlineManager.setOnline(true);
-    useActivityStore.setState(initialActivity, true);
     useExpenseModalStore.getState().reset();
     clearLocalUserIdentity();
     useAuthStore.setState({ status: 'unknown' });
@@ -349,7 +349,7 @@ test('creates an expense with a friend from the friends page: no group in the re
 });
 
 test('edits an expense from the activity history: a patch of the changed fields, the modal closes with a toast, the history reloads', async () => {
-    signIn();
+    const client = signIn();
     const sent = serveLedger();
     const onClose = vi.fn();
 
@@ -368,11 +368,7 @@ test('edits an expense from the activity history: a patch of the changed fields,
         },
     ]);
     expect(toast.success).toHaveBeenCalledWith('Expense updated successfully!');
-    expect(fetchSetActivitySubevents).toHaveBeenCalledWith({
-        parentActivityId: 'activity-1',
-        category: undefined,
-        force: true,
-    });
+    expect(isHistoryStale(client)).toBe(true);
 });
 
 test('an unchanged edit and an invalid form send nothing', () => {
@@ -579,7 +575,7 @@ describe.each<[string, () => void]>([
     );
 
     test('an edit answered then shows no toast and does not close the modal either', async () => {
-        signIn();
+        const client = signIn();
         const gate = deferred();
         const sent = serveLedger({ gate });
         const onClose = vi.fn();
@@ -598,6 +594,6 @@ describe.each<[string, () => void]>([
         expect(onClose).not.toHaveBeenCalled();
         expect(toast.success).not.toHaveBeenCalled();
         expect(toast.error).not.toHaveBeenCalled();
-        expect(fetchSetActivitySubevents).not.toHaveBeenCalled();
+        expect(isHistoryStale(client)).toBe(false);
     });
 });

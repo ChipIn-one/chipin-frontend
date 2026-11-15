@@ -18,7 +18,9 @@ import type { SelfActivityEventsData, SelfActivityPreviewsData } from '../model/
 import { loadedActivityEvents, loadedActivityPreviews } from '../model/selfActivity';
 
 import {
+    activityChildrenQueryOptions,
     activityKeys,
+    invalidateActivityChildren,
     invalidateSelfActivity,
     selfActivityEventsQueryOptions,
     selfActivityPreviewsQueryOptions,
@@ -534,4 +536,88 @@ test('two overlapping changes leave one page from the newest reload and nothing 
     } finally {
         unsubscribe();
     }
+});
+
+const CHILDREN_URL = '*/users/self/activities/:parentActivityId/children';
+
+test("an activity chain's history is ['activity','children',parentId], fresh for 60 s", () => {
+    expect(activityKeys.children('p1')).toEqual(['activity', 'children', 'p1']);
+    expect(activityChildrenQueryOptions('p1').queryKey).toEqual(['activity', 'children', 'p1']);
+    expect(activityChildrenQueryOptions('p1').staleTime).toBe(60_000);
+});
+
+test('ACT-025 pages the history of a chain by cursor as domain events and persists only the first page', async () => {
+    const requests: string[] = [];
+
+    server.use(
+        http.get(CHILDREN_URL, ({ request, params }) => {
+            const url = new URL(request.url);
+
+            requests.push(`${String(params.parentActivityId)}${url.search}`);
+            return HttpResponse.json(
+                url.searchParams.get('cursor') === null
+                    ? { parent: wireEvent('p1'), items: [wireEvent('a')], nextCursor: 40 }
+                    : { parent: wireEvent('p1'), items: [wireEvent('b')], nextCursor: null },
+            );
+        }),
+    );
+    const client = new QueryClient();
+    const options = activityChildrenQueryOptions('p1');
+    const observer = new InfiniteQueryObserver(client, options);
+
+    await observer.refetch();
+    await observer.fetchNextPage();
+
+    expect(requests).toEqual(['p1?limit=20', 'p1?limit=20&cursor=40']);
+    const firstPage = { parent: domainEvent('p1'), items: [domainEvent('a')], nextCursor: 40 };
+
+    expect(client.getQueryData(options.queryKey)?.pages).toEqual([
+        firstPage,
+        { parent: domainEvent('p1'), items: [domainEvent('b')], nextCursor: null },
+    ]);
+    expect(observer.getCurrentResult().hasNextPage).toBe(false);
+
+    const persisted = trimInfinitePages({
+        timestamp: 0,
+        buster: '',
+        clientState: dehydrate(client, dehydrateOptions),
+    });
+
+    expect(persisted.clientState.queries[0]?.state.data).toEqual({
+        pages: [firstPage],
+        pageParams: [null],
+    });
+});
+
+test('a chain whose creation event has an unreadable amount keeps it as an invalid item, the rest shows', async () => {
+    const broken = { ...wireEvent('p1'), metadata: { ...wireEvent('p1').metadata, currency: 'X' } };
+
+    server.use(
+        http.get(CHILDREN_URL, () =>
+            HttpResponse.json({ parent: broken, items: [wireEvent('a')], nextCursor: null }),
+        ),
+    );
+    const client = new QueryClient();
+    const observer = new InfiniteQueryObserver(client, activityChildrenQueryOptions('p1'));
+
+    await observer.refetch();
+
+    expect(observer.getCurrentResult().data?.pages).toEqual([
+        { parent: { kind: 'invalid', id: 'p1' }, items: [domainEvent('a')], nextCursor: null },
+    ]);
+});
+
+test('invalidating a history marks only that chain stale and keeps what it shows', async () => {
+    const client = new QueryClient();
+    const page = { parent: domainEvent('p1'), items: [], nextCursor: null };
+    const data = { pages: [page], pageParams: [null] };
+
+    client.setQueryData(activityKeys.children('p1'), data);
+    client.setQueryData(activityKeys.children('p2'), data);
+
+    await invalidateActivityChildren(client, 'p1');
+
+    expect(client.getQueryState(activityKeys.children('p1'))?.isInvalidated).toBe(true);
+    expect(client.getQueryState(activityKeys.children('p2'))?.isInvalidated).toBe(false);
+    expect(client.getQueryData(activityKeys.children('p1'))).toEqual(data);
 });

@@ -3,8 +3,8 @@ import { Button, Text } from '@radix-ui/themes';
 import { ArrowLeftRightIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { useCreateSettlement } from 'hooks/useLedgerMutations';
 import { useSelfUser } from 'hooks/useSelfUser';
-import { useActivityStore } from 'store/activity-store';
 import { selectGroupSettlementOptions } from 'store/groupsSelectors';
 
 import { MODAL_SIZES } from '../../base-modal';
@@ -26,6 +26,7 @@ type SettlementRouteId = (typeof SETTLEMENT_ROUTES)[keyof typeof SETTLEMENT_ROUT
 const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
     const { t } = useTranslation(['group', 'common', 'friends']);
     const currentUser = useSelfUser();
+    const { createSettlement } = useCreateSettlement();
     const [isOpened, setIsOpened] = useState(false);
     const [selectedDebt, setSelectedDebt] = useState<DebtOption | null>(null);
     const [isSettlementPending, setIsSettlementPending] = useState(false);
@@ -118,10 +119,9 @@ const GroupSettleUpFlow = ({ group, memberId }: GroupSettleUpProps) => {
                         onSubmit={params => {
                             setIsSettlementPending(true);
 
-                            return useActivityStore
-                                .getState()
-                                .createSettlement({ ...params, groupId: group.id })
-                                .finally(() => setIsSettlementPending(false));
+                            return createSettlement({
+                                settlement: { ...params, groupId: group.id },
+                            }).finally(() => setIsSettlementPending(false));
                         }}
                         onClose={navigation.close}
                     />

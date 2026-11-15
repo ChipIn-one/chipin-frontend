@@ -6,6 +6,7 @@
 // TODO(03-14b): replace with `toXWire()` mappers over `Money` (`moneyToWire`) and delete this file.
 import type {
     CreateLedgerEntryParams,
+    CreateSettlementParams,
     SharingMode,
     UpdateLedgerExpenseParams,
 } from 'api/chipin.types';
@@ -16,6 +17,7 @@ import { createWireAmount, MoneyWireError } from 'shared/money';
 type Schemas = components['schemas'];
 export type CreateExpenseBody = Schemas['CreateLedgerExpenseRequest'];
 export type UpdateExpenseBody = Schemas['UpdateLedgerExpenseRequest'];
+export type CreateSettlementBody = Schemas['CreateLedgerSettlementRequest'];
 
 // A plain JSON decimal literal (no exponent): the only form the transport writes.
 const PLAIN_DECIMAL = /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/;
@@ -99,4 +101,17 @@ export const legacyUpdateExpenseBody = ({
         ...(participantIds && { participantIds }),
         ...(sharingMode && { sharingMode: legacySharingMode(sharingMode) }),
     },
+});
+
+/** The body of `POST /ledger/entries` for a settlement; never with an `id` (spec 03 §2.7). */
+export const legacyCreateSettlementBody = ({
+    groupId,
+    fromUserId,
+    toUserId,
+    amount,
+    currency,
+}: CreateSettlementParams): CreateSettlementBody => ({
+    type: 'SETTLEMENT',
+    ...(groupId && { groupId }),
+    settlement: { fromUserId, toUserId, amount: legacyAmount(amount), currency },
 });

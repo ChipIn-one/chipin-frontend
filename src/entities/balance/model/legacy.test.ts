@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { AppEvent } from 'api/activity.types';
 import type { BalanceEntry } from 'api/chipin.raw.types';
+import type { SharingMode } from 'api/chipin.types';
 import { normalizeApiMoneyAmount } from 'helpers/numbers';
 import { currencyCode } from 'shared/money';
 
@@ -12,6 +13,7 @@ import {
     legacyAmountFromMoney,
     legacyBalanceFromEntry,
     legacyCurrencyOrDefault,
+    legacyExpenseEvent,
     legacyPartitionEntries,
     legacyRateLookup,
     legacyRatesFromDecimals,
@@ -260,4 +262,82 @@ test('legacyCurrencyOrDefault falls back to the default currency', () => {
     expect(legacyCurrencyOrDefault('')).toBe('USD');
     expect(legacyCurrencyOrDefault(null)).toBe('USD');
     expect(legacyCurrencyOrDefault('EURO')).toBe('USD');
+});
+
+test('ACT-004 legacyExpenseEvent carries a domain expense event back to the legacy event the editor reads', () => {
+    const legacy: AppEvent = {
+        id: 'e1',
+        seq: 4,
+        domain: 'LEDGER',
+        action: 'EXPENSE_UPDATED',
+        actorUserId: 'me',
+        actorSnapshot: { displayName: 'Me' },
+        subjectType: 'expense',
+        subjectId: 'entry',
+        createdAt: 1_700_000_000,
+        parentActivityId: 'p1',
+        metadata: {
+            type: 'expense',
+            entryId: 'entry',
+            groupId: 'g1',
+            groupName: 'Trip',
+            description: 'Dinner',
+            amount: 10,
+            currency: 'USD',
+            category: 'food',
+            subcategory: null,
+            date: 1_700_000_000,
+            payerId: 'me',
+            payerDisplayName: 'Me',
+            shares: [
+                { userId: 'me', displayName: 'Me', shareAmount: 6.6667, currency: 'USD' },
+                { userId: 'u2', displayName: 'Sam', shareAmount: 3.3333, currency: 'USD' },
+            ],
+            sharingMode: { type: 'EXACT', customShares: { me: 6.6667, u2: 3.3333 } },
+        },
+    };
+    const domain = legacyActivityEvent(legacy);
+
+    if (domain.metadata?.type !== 'expense') {
+        throw new Error('not an expense event');
+    }
+    expect(
+        legacyExpenseEvent({ ...domain, action: 'EXPENSE_UPDATED', metadata: domain.metadata }),
+    ).toEqual(legacy);
+});
+
+test.each<[SharingMode]>([
+    [{ type: 'PERCENTAGE', percentageShares: { me: 33.33, u2: 66.67 } }],
+    [{ type: 'SHARES', shares: { me: 1, u2: 2.5 } }],
+    [{ type: 'AUTO' }],
+])('legacyExpenseEvent keeps the %o split', sharingMode => {
+    const domain = legacyActivityEvent({
+        id: 'e1',
+        seq: 4,
+        domain: 'LEDGER',
+        action: 'EXPENSE_UPDATED',
+        actorSnapshot: { displayName: 'Me' },
+        subjectType: 'expense',
+        subjectId: 'entry',
+        createdAt: 1_700_000_000,
+        metadata: {
+            type: 'expense',
+            entryId: 'entry',
+            amount: 10,
+            currency: 'USD',
+            payerDisplayName: 'Me',
+            sharingMode,
+        },
+    });
+
+    if (domain.metadata?.type !== 'expense') {
+        throw new Error('not an expense event');
+    }
+    const back = legacyExpenseEvent({
+        ...domain,
+        action: 'EXPENSE_UPDATED',
+        metadata: domain.metadata,
+    });
+
+    expect(back.metadata).toMatchObject({ sharingMode });
 });

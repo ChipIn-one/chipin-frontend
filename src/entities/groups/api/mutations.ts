@@ -3,7 +3,7 @@
 // before `mutate`. A returned group maps through `toGroup`. The cache writes live here, on the
 // mutation's own client; a write whose auth session has ended (a sign-out, an account switch, an
 // expired session) writes nothing. What the stores do after a write (the last-group default, the
-// legacy activity store) is passed in (`GroupWriteEffects`): entities never import `store`.
+// user's activity feeds) is passed in (`GroupWriteEffects`): entities never import `store`.
 import type { QueryClient } from '@tanstack/react-query';
 import { mutationOptions } from '@tanstack/react-query';
 
@@ -79,12 +79,15 @@ export type LeaveGroupVariables = LeaveGroupParams & SessionBound;
 export type KickGroupMemberVariables = KickGroupMemberParams & SessionBound;
 export type RemoveGroupVariables = { groupId: string } & SessionBound;
 
-/** What the caller's stores do after a group write, only while its session is current. */
+/**
+ * What the caller's stores and caches do after a group write, only while its session is current.
+ * `client` is the write's own client.
+ */
 export interface GroupWriteEffects {
     /** The user lost the group (removed it, or left it without rejoining meanwhile). */
-    onGroupGone: (groupId: string) => Promise<void>;
+    onGroupGone: (groupId: string, client: QueryClient) => Promise<void>;
     /** The members of the group changed (a member was kicked). */
-    onMembersChanged: (groupId: string) => Promise<void>;
+    onMembersChanged: (groupId: string, client: QueryClient) => Promise<void>;
 }
 
 const ONLINE_WRITE = { networkMode: 'online', retry: false } as const;
@@ -132,7 +135,7 @@ const afterGroupGone = (
         reloadGroupsList(client),
         reloadKnownUsers(client),
         reloadDashboard(client),
-        effects.onGroupGone(groupId),
+        effects.onGroupGone(groupId, client),
     ]).then(() => undefined);
 };
 
@@ -274,7 +277,7 @@ export const kickGroupMemberMutationOptions = (effects: GroupWriteEffects) =>
                 refreshGroup(client, variables.groupId),
                 reloadKnownUsers(client),
                 reloadDashboard(client),
-                effects.onMembersChanged(variables.groupId),
+                effects.onMembersChanged(variables.groupId, client),
             ]).then(() => undefined);
         },
     });
