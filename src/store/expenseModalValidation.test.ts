@@ -1,6 +1,9 @@
 import { beforeEach, expect, test } from 'vitest';
 
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
+import { toCreateLedgerEntryWire } from 'entities/ledger';
+import { stringifyWireJson } from 'shared/api/wireJson';
+import { currencyCode, fromUnits } from 'shared/money';
 
 import {
     selectExpensePayload,
@@ -389,7 +392,7 @@ test('EXP-064 / EXP-044 distinguishes unchanged edits from invalid input and cle
             entryId: 'entry-1',
             original: {
                 description: null,
-                amount: 100,
+                amount: fromUnits(1_000_000n, currencyCode('USD')),
                 payerId: currentUser.id,
                 participantIds: [currentUser.id, friend.id, other.id],
                 currency: 'USD',
@@ -402,7 +405,9 @@ test('EXP-064 / EXP-044 distinguishes unchanged edits from invalid input and cle
 
     expect(selectExpenseSubmitFeedback(editState)).toEqual({ reason: 'unchanged' });
     expect(selectIsSubmitDisabled(editState)).toBe(true);
-    expect(selectExpensePayload(editState)?.amount).toBe(100);
+    expect(selectExpensePayload(editState)?.amount).toEqual(
+        fromUnits(1_000_000n, currencyCode('USD')),
+    );
     expect(selectExpenseSubmitFeedback({ ...editState, amount: '' })).toEqual({ reason: 'amount' });
     expect(selectExpenseSubmitFeedback({ ...editState, description: 'Dinner' })).toBeNull();
     expect(selectIsSubmitDisabled({ ...editState, description: 'Dinner' })).toBe(false);
@@ -427,6 +432,16 @@ test.each([
     },
 );
 
+// The request text of a payload, as `api()` writes it.
+const requestText = (state: ReturnType<typeof useExpenseModalStore.getState>): string => {
+    const payload = selectExpensePayload(state);
+
+    if (!payload) {
+        throw new Error('The form cannot be submitted');
+    }
+    return String(stringifyWireJson(toCreateLedgerEntryWire(payload)));
+};
+
 test('EXP-064 counts a cleared split field as zero and sends numbers only', () => {
     initialize();
     const store = useExpenseModalStore.getState();
@@ -437,14 +452,24 @@ test('EXP-064 counts a cleared split field as zero and sends numbers only', () =
 
     expect(payload?.sharingMode).toEqual({
         type: 'EXACT',
-        customShares: { [currentUser.id]: 100, [friend.id]: 0, [other.id]: 0 },
+        customShares: {
+            [currentUser.id]: fromUnits(1_000_000n, currencyCode('USD')),
+            [friend.id]: fromUnits(0n, currencyCode('USD')),
+            [other.id]: fromUnits(0n, currencyCode('USD')),
+        },
     });
-    expect(JSON.stringify(payload)).not.toMatch(/null|NaN/);
+    expect(requestText(useExpenseModalStore.getState())).toContain(
+        `"customShares":{"${currentUser.id}":100.0000,"${friend.id}":0.0000,"${other.id}":0.0000}`,
+    );
+    expect(requestText(useExpenseModalStore.getState())).not.toMatch(/NaN|"\d/);
 });
 
-test.each(['48566857961384.45', '999999999999.9999'])(
-    'EXP-064 writes the payload amount %s as the typed decimal (one rounding)',
-    text => {
+test.each([
+    ['48566857961384.45', '48566857961384.4500'],
+    ['999999999999.9999', '999999999999.9999'],
+])(
+    'EXP-064 writes the payload amount %s as the typed decimal, never through a double',
+    (text, literal) => {
         initialize();
         const store = useExpenseModalStore.getState();
         store.setAmount(text);
@@ -455,11 +480,11 @@ test.each(['48566857961384.45', '999999999999.9999'])(
             ...loaded,
             amountShares: { [currentUser.id]: text, [friend.id]: '0', [other.id]: '0' },
         };
-        const body = JSON.stringify(selectExpensePayload(state));
+        const body = requestText(state);
 
-        // The literal `Number(text)` gives, never `Number(units) / 1e4` (…384.445, 1000000000000).
-        expect(body).toContain(`"amount":${JSON.stringify(Number(text))}`);
-        expect(body).toContain(`"${currentUser.id}":${JSON.stringify(Number(text))}`);
+        // The typed digits at scale 4, never a double (…384.445, 1000000000000).
+        expect(body).toContain(`"amount":${literal},`);
+        expect(body).toContain(`"${currentUser.id}":${literal},`);
     },
 );
 
@@ -472,7 +497,7 @@ test('EXP-064 writes decimal percentages from the parsed digits', () => {
         percentShares: { [currentUser.id]: '33.335', [friend.id]: '33.335', [other.id]: '33.33' },
     };
 
-    expect(JSON.stringify(selectExpensePayload(state)?.sharingMode)).toBe(
-        `{"type":"PERCENTAGE","percentageShares":{"${currentUser.id}":33.335,"${friend.id}":33.335,"${other.id}":33.33}}`,
+    expect(requestText(state)).toContain(
+        `"sharingMode":{"type":"PERCENTAGE","percentageShares":{"${currentUser.id}":33.335,"${friend.id}":33.335,"${other.id}":33.33}}`,
     );
 });

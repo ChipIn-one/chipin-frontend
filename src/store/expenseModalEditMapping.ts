@@ -1,8 +1,13 @@
-import type { AppEvent, ExpenseActivityMetadata, ExpenseActivityShare } from 'api/activity.types';
-import type { SharingMode } from 'api/chipin.types';
-import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { EXPENSE_SPLIT_MODES, type ExpenseSplitMode } from 'constants/chipin';
+import type {
+    ExpenseActivityDetails,
+    ExpenseActivityEvent,
+    ExpenseActivityShare,
+} from 'entities/activity';
+import type { ExpenseDraftSharingMode } from 'entities/ledger';
+import { canonicalDecimal } from 'entities/ledger';
 import { getActivitySubeventsView } from 'helpers/activityEvent';
+import { type Money, moneyInputText } from 'shared/money';
 
 import type {
     ExpenseModalEditInitialization,
@@ -12,28 +17,14 @@ import type {
 } from './expenseModalTypes';
 import type { ExpenseModalOriginalState } from './expenseModalUpdate';
 
+// The editor starts from the domain expense events of an activity history (amounts as `Money`,
+// percents and weights as decimal text): its form texts, and the original the edit is compared with.
 interface ActivityExpenseEditMappingParams {
-    parentEvent: AppEvent;
-    childEvents: readonly AppEvent[];
+    parentEvent: ExpenseActivityEvent;
+    childEvents: readonly ExpenseActivityEvent[];
     source: ExpenseModalSource;
     parentActivityId?: string;
 }
-
-type ExpenseActivityEvent = Extract<
-    AppEvent,
-    {
-        action:
-            | typeof ACTIVITY_ACTIONS.EXPENSE_CREATED
-            | typeof ACTIVITY_ACTIONS.EXPENSE_UPDATED
-            | typeof ACTIVITY_ACTIONS.EXPENSE_REVERSED;
-    }
->;
-
-const isExpenseActivityEvent = (event: AppEvent): event is ExpenseActivityEvent =>
-    (event.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ||
-        event.action === ACTIVITY_ACTIONS.EXPENSE_UPDATED ||
-        event.action === ACTIVITY_ACTIONS.EXPENSE_REVERSED) &&
-    event.metadata?.type === 'expense';
 
 const mergeUsers = (
     initialUsers: ExpenseParticipant[],
@@ -66,7 +57,7 @@ const toExpenseParticipant = (
     displayName: share.displayName,
 });
 
-const getPayerParticipant = (metadata: ExpenseActivityMetadata): ExpenseParticipant[] => {
+const getPayerParticipant = (metadata: ExpenseActivityDetails): ExpenseParticipant[] => {
     if (!metadata.payerId) {
         return [];
     }
@@ -79,7 +70,7 @@ const getPayerParticipant = (metadata: ExpenseActivityMetadata): ExpenseParticip
     ];
 };
 
-const getSnapshotParticipants = (metadata: ExpenseActivityMetadata): ExpenseParticipant[] => {
+const getSnapshotParticipants = (metadata: ExpenseActivityDetails): ExpenseParticipant[] => {
     const participants: ExpenseParticipant[] = [];
 
     for (const share of metadata.shares ?? []) {
@@ -89,8 +80,8 @@ const getSnapshotParticipants = (metadata: ExpenseActivityMetadata): ExpensePart
     return participants;
 };
 
-const getShareAmounts = (shares: readonly ExpenseActivityShare[]): Record<string, number> => {
-    const amounts: Record<string, number> = {};
+const getShareAmounts = (shares: readonly ExpenseActivityShare[]): Record<string, Money> => {
+    const amounts: Record<string, Money> = {};
 
     for (const share of shares) {
         amounts[share.userId] = share.shareAmount;
@@ -99,32 +90,52 @@ const getShareAmounts = (shares: readonly ExpenseActivityShare[]): Record<string
     return amounts;
 };
 
-const getActivitySharingMode = (metadata: ExpenseActivityMetadata): SharingMode =>
-    metadata.sharingMode ?? {
-        type: 'EXACT',
-        customShares: getShareAmounts(metadata.shares ?? []),
-    };
+const decimalValues = (values: Readonly<Record<string, string>>): Record<string, string> =>
+    Object.fromEntries(
+        Object.entries(values).map(([key, text]) => [key, canonicalDecimal(text) ?? text]),
+    );
 
-const getModeValues = (
-    sharingMode: SharingMode,
-    fallbackExactValues: Record<string, number>,
-): Record<string, number> => {
-    if (sharingMode.type === 'EXACT') {
-        return sharingMode.customShares ?? fallbackExactValues;
+// Without a snapshot of the mode the expense is edited as split exactly. Percents and weights are
+// kept in their shortest text ("50.0000" → "50"), as the form and the payload write them.
+const getActivitySharingMode = (metadata: ExpenseActivityDetails): ExpenseDraftSharingMode => {
+    const sharingMode = metadata.sharingMode;
+
+    switch (sharingMode?.type) {
+        case undefined:
+            return { type: 'EXACT', customShares: getShareAmounts(metadata.shares ?? []) };
+        case 'PERCENTAGE':
+            return {
+                type: 'PERCENTAGE',
+                percentageShares: decimalValues(sharingMode.percentageShares),
+            };
+        case 'SHARES':
+            return { type: 'SHARES', shares: decimalValues(sharingMode.shares) };
+        case 'AUTO':
+        case 'EXACT':
+            return sharingMode;
     }
-
-    if (sharingMode.type === 'PERCENTAGE') {
-        return sharingMode.percentageShares ?? {};
-    }
-
-    if (sharingMode.type === 'SHARES') {
-        return sharingMode.shares ?? {};
-    }
-
-    return {};
 };
 
-const getSplitMode = (sharingMode: SharingMode): ExpenseSplitMode => {
+/** The form text of each share value: amounts as plain decimals, percents and weights as given. */
+const getModeTexts = (sharingMode: ExpenseDraftSharingMode): Record<string, string> => {
+    switch (sharingMode.type) {
+        case 'EXACT':
+            return Object.fromEntries(
+                Object.entries(sharingMode.customShares).map(([key, money]) => [
+                    key,
+                    moneyInputText(money),
+                ]),
+            );
+        case 'PERCENTAGE':
+            return sharingMode.percentageShares;
+        case 'SHARES':
+            return sharingMode.shares;
+        case 'AUTO':
+            return {};
+    }
+};
+
+const getSplitMode = (sharingMode: ExpenseDraftSharingMode): ExpenseSplitMode => {
     switch (sharingMode.type) {
         case 'AUTO':
             return EXPENSE_SPLIT_MODES.EQUAL;
@@ -140,7 +151,7 @@ const getSplitMode = (sharingMode: SharingMode): ExpenseSplitMode => {
 const getGroupName = (
     source: ExpenseModalSource,
     groupId: string,
-    metadata: ExpenseActivityMetadata,
+    metadata: ExpenseActivityDetails,
 ): string | null => {
     if (metadata.groupName) {
         return metadata.groupName;
@@ -157,7 +168,7 @@ const getGroupName = (
 
 const mergeEditSource = (
     source: ExpenseModalSource,
-    metadata: ExpenseActivityMetadata,
+    metadata: ExpenseActivityDetails,
     targetMode: 'group' | 'friends',
     groupId: string | null,
     snapshotUsers: ExpenseParticipant[],
@@ -202,7 +213,7 @@ const mergeEditSource = (
         context: targetMode === 'group' ? 'group' : 'friends',
         groups,
         knownFriends: directUsers,
-        defaultCurrency: metadata.currency,
+        defaultCurrency: metadata.amount.currency,
         defaultGroupId: groupId ?? undefined,
         preferredFriendId: undefined,
     };
@@ -249,27 +260,27 @@ const getAvailableUsers = (
 
 const toStringRecord = (
     users: ExpenseParticipant[],
-    values: Record<string, number>,
+    values: Record<string, string>,
 ): Record<string, string> => {
     const result: Record<string, string> = {};
 
     for (const user of users) {
-        result[user.id] = String(values[user.id] ?? 0);
+        result[user.id] = values[user.id] ?? '0';
     }
 
     return result;
 };
 
 const toOriginalState = (
-    metadata: ExpenseActivityMetadata,
+    metadata: ExpenseActivityDetails,
     participantIds: string[],
-    sharingMode: SharingMode,
+    sharingMode: ExpenseDraftSharingMode,
 ): ExpenseModalOriginalState => ({
     description: metadata.description ?? null,
     amount: metadata.amount,
     payerId: metadata.payerId ?? '',
     participantIds,
-    currency: metadata.currency,
+    currency: metadata.amount.currency,
     category: metadata.category ?? null,
     subcategory: metadata.subcategory ?? null,
     sharingMode,
@@ -284,7 +295,7 @@ export const mapActivityExpenseToModalState = ({
     const activityView = getActivitySubeventsView(parentEvent, childEvents);
     const currentEvent = activityView?.currentEvent;
 
-    if (!currentEvent || !isExpenseActivityEvent(currentEvent)) {
+    if (!currentEvent) {
         return null;
     }
 
@@ -300,8 +311,7 @@ export const mapActivityExpenseToModalState = ({
     const includedParticipantIds = Object.fromEntries(
         availableUsers.map(user => [user.id, participantIds.has(user.id)]),
     );
-    const fallbackExactValues = getShareAmounts(metadata.shares ?? []);
-    const modeValues = getModeValues(sharingMode, fallbackExactValues);
+    const modeValues = getModeTexts(sharingMode);
     const splitMode = getSplitMode(sharingMode);
     const percentShares =
         splitMode === EXPENSE_SPLIT_MODES.PERCENT
@@ -327,8 +337,8 @@ export const mapActivityExpenseToModalState = ({
         groupId: groupId ?? '',
         selectedFriendId,
         description: metadata.description ?? '',
-        amount: String(metadata.amount),
-        currency: metadata.currency,
+        amount: moneyInputText(metadata.amount),
+        currency: metadata.amount.currency,
         category: metadata.category ?? '',
         paidById: metadata.payerId ?? '',
         splitMode,

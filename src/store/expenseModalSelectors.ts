@@ -1,4 +1,3 @@
-import type { CreateLedgerEntryParams, SharingMode } from 'api/chipin.types';
 import {
     EXPENSE_SPLIT_MODES,
     EXPENSE_SPLIT_STATUSES,
@@ -7,6 +6,8 @@ import {
     type ExpenseSubmitBlocker,
     MIN_GROUP_EXPENSE_PARTICIPANTS,
 } from 'constants/chipin';
+import type { ExpenseDraft, ExpenseDraftSharingMode } from 'entities/ledger';
+import { canonicalDecimal } from 'entities/ledger';
 import {
     abs,
     compare,
@@ -155,8 +156,9 @@ const scaledToText = (value: bigint, scale: number): string => {
 };
 
 /**
- * A plain number from the decimal text: one rounding, the same double `Number(text)` gives, so a
- * payload literal is unchanged (never `Number(units) / 10 ** scale`, which rounds twice).
+ * A display number from the decimal text (the legacy `Amount`, the step size, the validation
+ * feedback): one rounding to a double. Never on the write path: the payload is `Money` and decimal
+ * text (`selectExpensePayload`).
  */
 const scaledToNumber = (value: bigint, scale: number = LEDGER_SCALE): number =>
     Number(scaledToText(value, scale));
@@ -568,6 +570,14 @@ const getDirectNonPayerShare = (
     return split.shares.get(payerId === first.id ? second.id : first.id) ?? null;
 };
 
+const toPayloadCurrency = (state: ExpenseModalState): CurrencyCode | null => {
+    try {
+        return currencyCode(state.currency);
+    } catch {
+        return null;
+    }
+};
+
 const getSubmitState = (state: ExpenseModalState) => {
     const split = getSplit(state);
     const payerId = getPayerId(
@@ -577,7 +587,9 @@ const getSubmitState = (state: ExpenseModalState) => {
     const nonPayerShare = getDirectNonPayerShare(state, split, payerId);
     const hasNoDebt = nonPayerShare !== null && isZero(nonPayerShare);
     const isDirectValid = isDirectExpenseValid(state, split, payerId);
+    const hasValidCurrency = toPayloadCurrency(state) !== null;
     const isDisabled =
+        !hasValidCurrency ||
         hasNoDebt ||
         sign(split.total) <= 0 ||
         !payerId ||
@@ -587,7 +599,7 @@ const getSubmitState = (state: ExpenseModalState) => {
         split.includedUsers.length === 0 ||
         !split.isValid;
 
-    return { isDisabled, hasNoDebt, isDirectValid, payerId, split };
+    return { isDisabled, hasNoDebt, hasValidCurrency, isDirectValid, payerId, split };
 };
 
 export const selectShouldShowSelfOnlyCallout = (state: ExpenseModalState): boolean => {
@@ -621,7 +633,7 @@ export const selectIsSubmitDisabled = (state: ExpenseModalState) => {
 export const selectExpenseSubmitFeedback = (
     state: ExpenseModalState,
 ): ExpenseSubmitFeedback | null => {
-    const { split, payerId, hasNoDebt, isDirectValid } = getSubmitState(state);
+    const { split, payerId, hasNoDebt, hasValidCurrency, isDirectValid } = getSubmitState(state);
 
     if (sign(split.total) <= 0) {
         return { reason: EXPENSE_SUBMIT_BLOCKERS.AMOUNT };
@@ -679,6 +691,10 @@ export const selectExpenseSubmitFeedback = (
         return { reason: EXPENSE_SUBMIT_BLOCKERS.SHARES, current: scaledToNumber(total) };
     }
 
+    if (!hasValidCurrency) {
+        return { reason: EXPENSE_SUBMIT_BLOCKERS.CURRENCY };
+    }
+
     if (hasNoDebt) {
         return { reason: EXPENSE_SUBMIT_BLOCKERS.NO_DEBT };
     }
@@ -686,54 +702,74 @@ export const selectExpenseSubmitFeedback = (
     return selectIsSubmitDisabled(state) ? { reason: EXPENSE_SUBMIT_BLOCKERS.UNCHANGED } : null;
 };
 
+// The payload carries the same parsed values the preview split, never a double: EXACT
+// amounts as `Money`, percents and weights as their shortest decimal text.
 const getPayloadParticipants = (
     state: ExpenseModalState,
     split: ReturnType<typeof getSplit>,
-): { participantIds: string[]; sharingMode: SharingMode } => {
+    currency: CurrencyCode,
+): { participantIds: string[]; sharingMode: ExpenseDraftSharingMode } => {
     const participantIds = split.includedUsers.map(user => user.id);
-    // The same parsed integers the preview split, as decimal-text numbers (no `Number(text)`).
-    const values = Object.fromEntries(
-        participantIds.map(userId => [
-            userId,
-            scaledToNumber(split.values.byUserId.get(userId) ?? 0n, split.values.scale),
-        ]),
-    );
+    const valueOf = (userId: string) => split.values.byUserId.get(userId) ?? 0n;
+    const decimals = () =>
+        Object.fromEntries(
+            participantIds.map(userId => {
+                const text = scaledToText(valueOf(userId), split.values.scale);
+
+                return [userId, canonicalDecimal(text) ?? text];
+            }),
+        );
 
     switch (state.splitMode) {
         case EXPENSE_SPLIT_MODES.PERCENT:
             return {
                 participantIds,
-                sharingMode: { type: 'PERCENTAGE', percentageShares: values },
+                sharingMode: { type: 'PERCENTAGE', percentageShares: decimals() },
             };
         case EXPENSE_SPLIT_MODES.AMOUNTS:
-            return { participantIds, sharingMode: { type: 'EXACT', customShares: values } };
+            return {
+                participantIds,
+                sharingMode: {
+                    type: 'EXACT',
+                    customShares: Object.fromEntries(
+                        participantIds.map(userId => [
+                            userId,
+                            fromUnits(valueOf(userId), currency),
+                        ]),
+                    ),
+                },
+            };
         case EXPENSE_SPLIT_MODES.SHARES:
-            return { participantIds, sharingMode: { type: 'SHARES', shares: values } };
+            return { participantIds, sharingMode: { type: 'SHARES', shares: decimals() } };
         case EXPENSE_SPLIT_MODES.EQUAL:
             return { participantIds, sharingMode: { type: 'AUTO' } };
     }
 };
 
+/**
+ * The expense the form submits, built from `Money` (the amount and EXACT shares are the ledger
+ * units the preview split); null while the form cannot be submitted or has no valid currency.
+ */
 export const selectExpensePayload = (
     state: ExpenseModalState,
     date = state.date,
-): CreateLedgerEntryParams | null => {
+): ExpenseDraft | null => {
     const { isDisabled, payerId, split } = getSubmitState(state);
+    const currency = toPayloadCurrency(state);
 
-    if (isDisabled) {
+    if (isDisabled || !currency) {
         return null;
     }
 
-    const { participantIds, sharingMode } = getPayloadParticipants(state, split);
+    const { participantIds, sharingMode } = getPayloadParticipants(state, split, currency);
 
     return {
         ...(state.targetMode === 'group' ? { groupId: state.groupId } : {}),
         description: state.description,
-        amount: getTotalAmount(state),
+        amount: fromUnits(toUnits(split.total), currency),
         date,
         payerId,
         participantIds,
-        currency: state.currency,
         category: state.category || null,
         sharingMode,
     };

@@ -1,8 +1,14 @@
 import { beforeEach, expect, test } from 'vitest';
 
-import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
+import { EXPENSE_SPLIT_MODES, EXPENSE_SUBMIT_BLOCKERS } from 'constants/chipin';
 
-import { selectSplitSummary, selectUserAmount } from './expenseModalSelectors';
+import {
+    selectExpensePayload,
+    selectExpenseSubmitFeedback,
+    selectIsSubmitDisabled,
+    selectSplitSummary,
+    selectUserAmount,
+} from './expenseModalSelectors';
 import { type ExpenseParticipant, useExpenseModalStore } from './expenseModalStore';
 
 const user = {
@@ -125,4 +131,26 @@ test('erases an edit-loaded scale-4 AMOUNTS value digit by digit', () => {
     useExpenseModalStore.getState().setSplitValue(user.id, '0.99');
     useExpenseModalStore.getState().setSplitValue(user.id, '0.999');
     expect(useExpenseModalStore.getState().amountShares[user.id]).toBe('0.99');
+});
+
+test.each(['', 'US', 'U$D'])('an invalid currency "%s" disables a new expense', currency => {
+    initializeGroup('10');
+    useExpenseModalStore.getState().setCurrency(currency);
+
+    const state = useExpenseModalStore.getState();
+
+    expect(selectIsSubmitDisabled(state)).toBe(true);
+    expect(selectExpensePayload(state)).toBeNull();
+    expect(selectExpenseSubmitFeedback(state)).toEqual({
+        reason: EXPENSE_SUBMIT_BLOCKERS.CURRENCY,
+    });
+});
+
+test('a valid currency keeps a new expense submittable', () => {
+    initializeGroup('10');
+
+    const state = useExpenseModalStore.getState();
+
+    expect(selectIsSubmitDisabled(state)).toBe(false);
+    expect(selectExpenseSubmitFeedback(state)).toBeNull();
 });

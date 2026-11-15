@@ -29,11 +29,11 @@ Until the spec 03 PRs land, new endpoints here are mutations; a new server read 
 ```ts
 import * as ledgerApi from 'api/ledgerApi';
 
-ledgerApi.createExpense(input);
+ledgerApi.removeLedgerEntry({ entryId });
 ```
 
-- Do not use bare runtime imports such as `import { createExpense } from 'api/ledgerApi'`.
-- UI receives resource commands from a Zustand selector; `ledgerApi.createExpense` remains
+- Do not use bare runtime imports such as `import { removeLedgerEntry } from 'api/ledgerApi'`.
+- UI receives resource commands from a Zustand selector; `ledgerApi.removeLedgerEntry` remains
   unambiguous below that boundary.
 
 ## Naming

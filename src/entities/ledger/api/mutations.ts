@@ -13,21 +13,16 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { mutationOptions } from '@tanstack/react-query';
 
-import type {
-    CreateLedgerEntryParams,
-    CreateSettlementParams as CreateSettlementRequest,
-    UpdateLedgerExpenseParams,
-} from 'api/chipin.types';
+import type { CreateSettlementParams as CreateSettlementRequest } from 'api/chipin.types';
 import { isAuthSessionCurrent } from 'helpers/authSession';
 import { api, InvalidPathSegmentError } from 'shared/api/client';
 import { MoneyWireError } from 'shared/money';
 import { isUserCacheClient } from 'shared/offline/userCaches';
 
-import {
-    legacyCreateExpenseBody,
-    legacyCreateSettlementBody,
-    legacyUpdateExpenseBody,
-} from './legacyExpenseWire';
+import { toCreateLedgerEntryWire, toExpensePatchWire } from '../model/toExpenseWire';
+import type { ExpenseDraft, ExpensePatch } from '../model/types';
+
+import { legacyCreateSettlementBody } from './legacySettlementWire';
 
 export const ledgerOnlineMutationKeys = {
     createEntry: ['ledger', 'online', 'createEntry'],
@@ -50,20 +45,18 @@ export interface LedgerWriteContext {
 }
 
 export interface CreateExpenseParams {
-    // TODO(03-14b): the draft on `Money` instead of the legacy number payload.
-    expense: CreateLedgerEntryParams;
+    expense: ExpenseDraft;
     parentActivityId?: string;
 }
 
 export interface CreateSettlementParams {
-    // TODO(03-14b): the amount as `Money` instead of the legacy number payload.
+    // TODO(03-21): the amount as `Money` instead of the legacy number.
     settlement: CreateSettlementRequest;
 }
 
 export interface UpdateExpenseParams extends LedgerWriteContext {
     entryId: string;
-    // TODO(03-14b): the patch on `Money` instead of the legacy number payload.
-    entry: UpdateLedgerExpenseParams;
+    entry: ExpensePatch;
 }
 
 export interface DeleteLedgerEntryParams extends LedgerWriteContext {
@@ -124,13 +117,13 @@ const refreshAfterWrite = (
     return effects.onEntryWritten(context, client).catch(() => undefined);
 };
 
-/** `POST /ledger/entries` (an expense, no `id` in the body); a success settles once its views reloaded. */
+/** `POST /ledger/entries` (an expense, no `id` in the body, spec 03 §2.7); a success settles once its views reloaded. */
 export const createExpenseMutationOptions = (effects: LedgerWriteEffects) =>
     mutationOptions<void, Error, CreateExpenseVariables>({
         ...ONLINE_WRITE,
         mutationKey: ledgerOnlineMutationKeys.createEntry,
         mutationFn: ({ expense }) =>
-            api('post', '/ledger/entries', { body: legacyCreateExpenseBody(expense) }).then(
+            api('post', '/ledger/entries', { body: toCreateLedgerEntryWire(expense) }).then(
                 () => undefined,
             ),
         onSettled: (_data, error, variables, _context, { client }) =>
@@ -163,7 +156,7 @@ export const updateExpenseMutationOptions = (effects: LedgerWriteEffects) =>
         mutationFn: ({ entryId, entry }) =>
             api('patch', '/ledger/entries/{id}', {
                 params: { id: entryId },
-                body: legacyUpdateExpenseBody(entry),
+                body: { type: 'EXPENSE', expense: toExpensePatchWire(entry) },
             }).then(() => undefined),
         onSettled: (_data, error, variables, _context, { client }) =>
             refreshAfterWrite(effects, client, error, variables, {

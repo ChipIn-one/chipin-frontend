@@ -240,6 +240,8 @@ const stepAmount = (amount: Money, delta: number): string => {
 
 // TODO(04-2d): save the open draft to `sessionStorage` in an `onBeforeAppReload` callback of
 // `ServiceWorkerManager` and restore it at startup (spec 04 §2.11 item 4).
+// `editContext.original` holds `Money` (`bigint` units), so a plain `JSON.stringify` of the state
+// throws; the draft save and restore need a bigint-safe codec.
 export const useExpenseModalStore = create<ExpenseModalStore>((set, get) => ({
     ...INITIAL_EXPENSE_MODAL_STATE,
     open: options => {

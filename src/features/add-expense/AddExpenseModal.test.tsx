@@ -93,3 +93,24 @@ test('uses the edit title and Save action in edit mode', () => {
     expect(screen.getByText('Edit expense')).not.toBeNull();
     expect(screen.getByRole('button', { name: 'Save' })).toHaveProperty('disabled', true);
 });
+
+// Spec 03 §4.3 (03-14b): the form has no date field (removed in #327), so an edit never changes
+// the date and the update patch has no `date`.
+test('EXP-064 the edit form shows no date field: the date of an expense is read-only', () => {
+    useExpenseModalStore.setState({ mode: 'edit', isOpened: true, date: 1_717_200_000 });
+
+    renderWithQueryClient(
+        <MemoryRouter initialEntries={['/activity']}>
+            <ThemeProvider theme={lightThemeStyled}>
+                <AddExpenseModal />
+            </ThemeProvider>
+        </MemoryRouter>,
+        ratesClient(),
+    );
+
+    const dialog = screen.getByRole('dialog');
+
+    expect(screen.getByText('Edit expense')).not.toBeNull();
+    expect(screen.queryByLabelText('Date')).toBeNull();
+    expect(dialog.querySelector('input[type="datetime-local"], input[type="date"]')).toBeNull();
+});

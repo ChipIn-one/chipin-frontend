@@ -5,6 +5,7 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
 import { lightThemeStyled } from 'constants/styled-themes';
 import i18n from 'i18n/index';
+import { currencyCode, fromUnits } from 'shared/money';
 import type { ExpenseModalEditInitialization, ExpenseParticipant } from 'store/expenseModalStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
@@ -72,7 +73,7 @@ const getEditInitialization = (
         groupName: targetMode === 'group' ? 'Weekend Trip' : null,
         original: {
             description: 'Dinner',
-            amount: 30,
+            amount: fromUnits(300_000n, currencyCode('USD')),
             payerId: currentUser.id,
             participantIds:
                 targetMode === 'group'

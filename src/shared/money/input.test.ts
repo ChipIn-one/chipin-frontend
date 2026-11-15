@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
-import { parseMoneyInput } from './input';
-import { currencyCode } from './money';
+import { moneyInputText, parseMoneyInput } from './input';
+import { currencyCode, fromUnits } from './money';
 
 describe('parseMoneyInput', () => {
     test.each([
@@ -54,5 +54,20 @@ describe('parseMoneyInput', () => {
     test('a trailing separator without digits is accepted', () => {
         expect(parseMoneyInput('10.', currencyCode('USD'))?.minor).toBe(100000n);
         expect(parseMoneyInput('10.', currencyCode('JPY'))?.minor).toBe(100000n);
+    });
+});
+
+describe('moneyInputText', () => {
+    test.each([
+        [855_000n, '85.5'],
+        [1_000_000n, '100'],
+        [34n, '0.0034'],
+        [101_234n, '10.1234'],
+        [0n, '0'],
+        [1_000n, '0.1'],
+    ])('%s ledger units → %j (no trailing fraction zeros)', (units, text) => {
+        const money = fromUnits(units, currencyCode('KWD'));
+
+        expect(moneyInputText(money)).toBe(text);
     });
 });
