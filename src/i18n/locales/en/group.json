@@ -145,6 +145,7 @@
             "currentUser": "You",
             "submitFeedback": {
                 "amount": "Enter an amount greater than zero.",
+                "currency": "Select a valid currency for this expense.",
                 "target": "Select an available group or a friend for this expense.",
                 "participants": "Select eligible participants for this expense. For a direct expense, select a friend whose invitation has been accepted.",
                 "payer": "Select an eligible payer for this expense.",

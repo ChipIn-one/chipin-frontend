@@ -570,6 +570,14 @@ const getDirectNonPayerShare = (
     return split.shares.get(payerId === first.id ? second.id : first.id) ?? null;
 };
 
+const toPayloadCurrency = (state: ExpenseModalState): CurrencyCode | null => {
+    try {
+        return currencyCode(state.currency);
+    } catch {
+        return null;
+    }
+};
+
 const getSubmitState = (state: ExpenseModalState) => {
     const split = getSplit(state);
     const payerId = getPayerId(
@@ -579,7 +587,9 @@ const getSubmitState = (state: ExpenseModalState) => {
     const nonPayerShare = getDirectNonPayerShare(state, split, payerId);
     const hasNoDebt = nonPayerShare !== null && isZero(nonPayerShare);
     const isDirectValid = isDirectExpenseValid(state, split, payerId);
+    const hasValidCurrency = toPayloadCurrency(state) !== null;
     const isDisabled =
+        !hasValidCurrency ||
         hasNoDebt ||
         sign(split.total) <= 0 ||
         !payerId ||
@@ -589,7 +599,7 @@ const getSubmitState = (state: ExpenseModalState) => {
         split.includedUsers.length === 0 ||
         !split.isValid;
 
-    return { isDisabled, hasNoDebt, isDirectValid, payerId, split };
+    return { isDisabled, hasNoDebt, hasValidCurrency, isDirectValid, payerId, split };
 };
 
 export const selectShouldShowSelfOnlyCallout = (state: ExpenseModalState): boolean => {
@@ -623,7 +633,7 @@ export const selectIsSubmitDisabled = (state: ExpenseModalState) => {
 export const selectExpenseSubmitFeedback = (
     state: ExpenseModalState,
 ): ExpenseSubmitFeedback | null => {
-    const { split, payerId, hasNoDebt, isDirectValid } = getSubmitState(state);
+    const { split, payerId, hasNoDebt, hasValidCurrency, isDirectValid } = getSubmitState(state);
 
     if (sign(split.total) <= 0) {
         return { reason: EXPENSE_SUBMIT_BLOCKERS.AMOUNT };
@@ -681,6 +691,10 @@ export const selectExpenseSubmitFeedback = (
         return { reason: EXPENSE_SUBMIT_BLOCKERS.SHARES, current: scaledToNumber(total) };
     }
 
+    if (!hasValidCurrency) {
+        return { reason: EXPENSE_SUBMIT_BLOCKERS.CURRENCY };
+    }
+
     if (hasNoDebt) {
         return { reason: EXPENSE_SUBMIT_BLOCKERS.NO_DEBT };
     }
@@ -729,14 +743,6 @@ const getPayloadParticipants = (
             return { participantIds, sharingMode: { type: 'SHARES', shares: decimals() } };
         case EXPENSE_SPLIT_MODES.EQUAL:
             return { participantIds, sharingMode: { type: 'AUTO' } };
-    }
-};
-
-const toPayloadCurrency = (state: ExpenseModalState): CurrencyCode | null => {
-    try {
-        return currencyCode(state.currency);
-    } catch {
-        return null;
     }
 };
 

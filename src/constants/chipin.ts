@@ -22,6 +22,7 @@ export type ExpenseSplitStatus =
 
 export const EXPENSE_SUBMIT_BLOCKERS = {
     AMOUNT: 'amount',
+    CURRENCY: 'currency',
     TARGET: 'target',
     PARTICIPANTS: 'participants',
     PAYER: 'payer',

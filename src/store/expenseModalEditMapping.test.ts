@@ -1,6 +1,6 @@
-import { expect, test } from 'vitest';
+import { beforeEach, expect, test } from 'vitest';
 
-import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
+import { EXPENSE_SPLIT_MODES, EXPENSE_SUBMIT_BLOCKERS } from 'constants/chipin';
 import type {
     ExpenseActivityAction,
     ExpenseActivityEvent,
@@ -10,9 +10,16 @@ import { currencyCode, fromUnits, type Money } from 'shared/money';
 import { getOrThrow } from 'test/getOrThrow';
 
 import { mapActivityExpenseToModalState } from './expenseModalEditMapping';
-import type { ExpenseModalSource } from './expenseModalStore';
+import {
+    selectExpensePayload,
+    selectExpenseSubmitFeedback,
+    selectIsSubmitDisabled,
+} from './expenseModalSelectors';
+import { type ExpenseModalSource, useExpenseModalStore } from './expenseModalStore';
+import { buildExpenseUpdateParams } from './expenseModalUpdate';
 
 const usd = (units: bigint): Money => fromUnits(units, currencyCode('USD'));
+const jpy = (units: bigint): Money => fromUnits(units, currencyCode('JPY'));
 
 const currentUser = {
     id: 'user-1',
@@ -102,6 +109,27 @@ const parentEvent = createExpenseEvent({
     seq: 1,
     action: 'EXPENSE_CREATED',
 });
+
+beforeEach(() => {
+    useExpenseModalStore.getState().reset();
+});
+
+/** Loads the latest event into the editor the way the Activity edit action does. */
+const openEdit = (event: ExpenseActivityEvent) => {
+    const initialization = mapActivityExpenseToModalState({
+        parentEvent,
+        childEvents: [event],
+        source,
+        parentActivityId: parentEvent.id,
+    });
+
+    if (!initialization) {
+        throw new Error('expected an edit initialization');
+    }
+    useExpenseModalStore.getState().initializeEdit(initialization);
+
+    return useExpenseModalStore.getState();
+};
 
 test('maps the latest Activity Expense snapshot without a canonical ledger entry', () => {
     const latestEvent = createExpenseEvent({
@@ -272,4 +300,76 @@ test('maps a direct expense former participant into known friends', () => {
         expect.arrayContaining([{ id: 'former-user', displayName: 'Former participant' }]),
     );
     expect(result?.paidById).toBe('former-user');
+});
+
+test.each<[string, Partial<Parameters<typeof createExpenseEvent>[0]>]>([
+    [
+        'JPY with EXACT shares',
+        {
+            amount: jpy(12_000_000n),
+            sharingMode: {
+                type: 'EXACT',
+                customShares: { 'user-1': jpy(4_000_000n), 'user-2': jpy(8_000_000n) },
+            },
+            shares: [
+                { userId: 'user-1', displayName: 'You', shareAmount: jpy(4_000_000n) },
+                { userId: 'user-2', displayName: 'Friend', shareAmount: jpy(8_000_000n) },
+            ],
+        },
+    ],
+    [
+        'USD with EXACT shares of 4 fraction digits',
+        {
+            amount: usd(1_000_000n),
+            sharingMode: {
+                type: 'EXACT',
+                customShares: { 'user-1': usd(101_234n), 'user-2': usd(898_766n) },
+            },
+            shares: [
+                { userId: 'user-1', displayName: 'You', shareAmount: usd(101_234n) },
+                { userId: 'user-2', displayName: 'Friend', shareAmount: usd(898_766n) },
+            ],
+        },
+    ],
+    [
+        'USD with PERCENTAGE "25.00" / "75.00"',
+        {
+            amount: usd(1_000_000n),
+            sharingMode: {
+                type: 'PERCENTAGE',
+                percentageShares: { 'user-1': '25.00', 'user-2': '75.00' },
+            },
+            shares: [
+                { userId: 'user-1', displayName: 'You', shareAmount: usd(250_000n) },
+                { userId: 'user-2', displayName: 'Friend', shareAmount: usd(750_000n) },
+            ],
+        },
+    ],
+])('round-trips an unchanged %s edit to no update', (_name, overrides) => {
+    const state = openEdit(createExpenseEvent({ id: 'activity-2', seq: 2, ...overrides }));
+    const payload = selectExpensePayload(state);
+
+    expect(payload).not.toBeNull();
+    expect(
+        payload &&
+            state.editContext &&
+            buildExpenseUpdateParams(state.editContext.original, payload),
+    ).toBeNull();
+    expect(selectIsSubmitDisabled(state)).toBe(true);
+    expect(selectExpenseSubmitFeedback(state)).toEqual({
+        reason: EXPENSE_SUBMIT_BLOCKERS.UNCHANGED,
+    });
+});
+
+test('an invalid currency disables an edit with the currency reason, not "unchanged"', () => {
+    openEdit(createExpenseEvent({ id: 'activity-2', seq: 2, description: 'Lunch' }));
+    useExpenseModalStore.getState().setCurrency('U$D');
+
+    const state = useExpenseModalStore.getState();
+
+    expect(selectIsSubmitDisabled(state)).toBe(true);
+    expect(selectExpensePayload(state)).toBeNull();
+    expect(selectExpenseSubmitFeedback(state)).toEqual({
+        reason: EXPENSE_SUBMIT_BLOCKERS.CURRENCY,
+    });
 });
