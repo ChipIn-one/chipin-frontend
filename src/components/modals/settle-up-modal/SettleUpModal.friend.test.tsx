@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { CreateSettlementParams, SelfUser } from 'api/chipin.types';
-import { useLoadingStore } from 'store/loadingStore';
 import { getOrThrow } from 'test/getOrThrow';
 import { seedSelfUser } from 'test/selfUserSeed';
 
@@ -59,7 +58,6 @@ const friend = {
 beforeEach(() => {
     vi.clearAllMocks();
     seedSelfUser(currentUser);
-    useLoadingStore.getState().setInitialLoadingStore();
 });
 
 test('provides an accessible dialog description', () => {

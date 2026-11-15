@@ -1,21 +1,20 @@
+import { useState } from 'react';
 import { Button, Flex } from '@radix-ui/themes';
 import { useTranslation } from 'react-i18next';
 
 import { getSocialAuthUrl } from 'helpers/url';
-import { selectAuthLoginLoading } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
 
 import GoogleIconSvg from 'assets/google-icon.svg?react';
 
 const AuthButtons = () => {
     const { t } = useTranslation('auth');
-    const isGoogleLoginLoading = useLoadingStore(selectAuthLoginLoading);
-    const setLoading = useLoadingStore(s => s.setLoading);
+    // Set while the browser leaves for the provider; the page unloads, nothing resets it.
+    const [isGoogleLoginLoading, setIsGoogleLoginLoading] = useState(false);
 
     const handleGoogleSignIn = () => {
         const authUrl = getSocialAuthUrl('google');
 
-        setLoading('auth', 'login', 'loading');
+        setIsGoogleLoginLoading(true);
         window.location.assign(authUrl);
     };
 

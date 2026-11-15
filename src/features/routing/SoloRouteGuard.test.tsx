@@ -4,7 +4,6 @@ import { beforeEach, expect, test } from 'vitest';
 
 import type { UserSettings } from 'api/chipin.types';
 import { useAuthStore } from 'store/authStore';
-import { useLoadingStore } from 'store/loadingStore';
 import { signInWithSelf } from 'test/selfUser';
 
 import SoloRouteGuard from './SoloRouteGuard';
@@ -62,7 +61,6 @@ const renderGuard = (role: 'USER' | 'ADMIN' | null) => {
 
 beforeEach(() => {
     useAuthStore.setState({ status: 'authenticated' });
-    useLoadingStore.getState().setInitialLoadingStore();
 });
 
 test.each(['USER', 'ADMIN'] as const)(

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Avatar, Box, Button, Card, Flex, Grid, Separator, Skeleton, Text } from '@radix-ui/themes';
 import { LogOutIcon, ShieldIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -5,11 +6,6 @@ import { toast } from 'sonner';
 
 import { resolveApiErrorMessageFromError } from 'helpers/errors';
 import { useAuthStore } from 'store/authStore';
-import {
-    selectAuthLogoutOtherDevicesLoading,
-    selectAuthSignOutLoading,
-} from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
 
 interface Props {
     isLoading: boolean;
@@ -19,13 +15,13 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
     const { t } = useTranslation('settings');
     const logoutOtherDevices = useAuthStore(s => s.logoutOtherDevices);
     const signOut = useAuthStore(s => s.signOut);
-    const isSigningOut = useLoadingStore(selectAuthSignOutLoading);
-    const isLoggingOutOtherDevices = useLoadingStore(selectAuthLogoutOtherDevicesLoading);
+    const [isLoggingOutOtherDevices, setIsLoggingOutOtherDevices] = useState(false);
 
     const onLogoutOtherDevices = () => {
         if (isLoggingOutOtherDevices) {
             return;
         }
+        setIsLoggingOutOtherDevices(true);
 
         logoutOtherDevices()
             .then(() => {
@@ -35,6 +31,9 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                 toast.error(
                     resolveApiErrorMessageFromError(error, t('toasts:common.requestFailed')),
                 );
+            })
+            .finally(() => {
+                setIsLoggingOutOtherDevices(false);
             });
     };
 
@@ -104,12 +103,7 @@ const PrivacySecuritySection = ({ isLoading }: Props) => {
                         </Text>
                     </Flex>
                     <Skeleton loading={isLoading}>
-                        <Button
-                            onClick={() => void signOut()}
-                            variant="soft"
-                            color="gray"
-                            loading={isSigningOut}
-                        >
+                        <Button onClick={() => void signOut()} variant="soft" color="gray">
                             <LogOutIcon size={16} />
                             {t('common:buttons.signOut')}
                         </Button>

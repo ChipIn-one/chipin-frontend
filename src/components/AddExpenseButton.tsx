@@ -5,8 +5,8 @@ import { useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 
 import { themeColor } from 'helpers/colors';
-
-import { useConnect } from './add-expense-button/internal/useConnect';
+import { useAddExpenseAvailability } from 'hooks/useAddExpenseAvailability';
+import { useExpenseModalStore } from 'store/expenseModalStore';
 
 const ButtonMobile = styled(Button)<{ $isSoloMode: boolean }>`
     width: var(--space-9);
@@ -22,7 +22,8 @@ interface Props {
 const AddExpenseButton = ({ type = 'desktop' }: Props) => {
     const { t } = useTranslation('common');
     const location = useLocation();
-    const { isSoloMode, isVisible, openExpenseModal } = useConnect(location.pathname);
+    const { isSoloMode, isVisible } = useAddExpenseAvailability(location.pathname);
+    const openExpenseModal = useExpenseModalStore(state => state.open);
 
     if (!isVisible) {
         return null;

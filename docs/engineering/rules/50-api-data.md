@@ -73,9 +73,9 @@ Do not add `Api`, `Store`, `Effect`, or `Action` suffixes merely to distinguish 
 ## Errors And Interceptors
 
 - API functions reject; they do not show toast or write stores.
-- Store read actions catch `unknown`, ignore stale/cancelled requests, normalize other errors, write
-  `errorsStore`, and resolve with the confirmed/current state. Mutation actions write `errorsStore`
-  and re-reject when the caller must react to a backend failure.
+- Store read actions catch `unknown`, ignore stale/cancelled requests, handle other errors, and resolve
+  with the confirmed/current state. Mutation actions re-reject when the caller must react to a backend
+  failure.
 - Response interceptors handle auth/session transport concerns only. They never show generic domain toasts,
   because they cannot distinguish a foreground user action from a background refresh.
 - Foreground mutation UI catches the rejected action, resolves known backend `code`/`details`, and uses

@@ -29,7 +29,7 @@ The mode is **incremental**: no feature freeze, every PR is released independent
 
 | Topic | Owner | Others |
 |---|---|---|
-| Removal of `useConnect` (D12) | 03 (store migration PRs, leftovers 03-18) | 02-C12 — only the ban on new ones (`check-file-layout`) |
+| Removal of `useConnect` (D12) | 03 (store migration PRs, leftovers 03-18 — done) | 02-C12 — only the ban on new ones (`check-file-layout`) |
 | Lazy-loading of locales | 04-2c | 05, 02 reference it |
 | Vendor-regex `vendor-react` | 02-B1 | 04 §2.8, 05 §5 reference it |
 | Removal of Dexie/`workbox-window` | 02-B1 | 03 §1.1, 04 §2.11 reference it |
@@ -129,7 +129,7 @@ An honest estimate of parallelism (C2-14): tracks run in parallel only between f
 - styles: `05-2b` → `05-3`, `05-5`, `05-6`.
 The end of the site work — `04-3d` in prod of the site → `04-4b` cutover step 2 (runbook part 2 in `DEPLOYMENT.md`; the owner moves `dev.chipin.one`, then `chipin.one` to the site project; rollback — moving back, the step-1 redirects stay in the app project, 04 §4.5). Step 2 does not gate 03-17 (item 44).
 
-**Phase 4 — retiring styled, cleanup.** `05-7`; the design phase (DS v1 tasks) migrates `themeColor()` → `var(--cp-*)` file by file and removes `styled-themes.ts` with the last caller (D31; each such PR carries its own screenshots); `04-5a/b` (after 7 days without rollback; 04-5a switches the site's step-2 redirects from 302 to 301, deletes the step-1 redirects, `sw-kill.js` and the `/sw.js` host rewrites from the app project, and renames `app.html`); `03-18`; `03-21` — per spec 03; `03-20` — as soon as BE-03-5 is ready (before `03-17`).
+**Phase 4 — retiring styled, cleanup.** `05-7`; the design phase (DS v1 tasks) migrates `themeColor()` → `var(--cp-*)` file by file and removes `styled-themes.ts` with the last caller (D31; each such PR carries its own screenshots); `04-5a/b` (after 7 days without rollback; 04-5a switches the site's step-2 redirects from 302 to 301, deletes the step-1 redirects, `sw-kill.js` and the `/sw.js` host rewrites from the app project, and renames `app.html`); `03-18` (done); `03-21` — per spec 03; `03-20` — as soon as BE-03-5 is ready (before `03-17`).
 
 ## Backend issues (`chipin-backend`; when creating, set Type, Priority, assignee, Project 5)
 
