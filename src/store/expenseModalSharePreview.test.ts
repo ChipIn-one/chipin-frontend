@@ -4,15 +4,16 @@
 // weights or PERCENTAGE percentages in `participantIds` order, or the EXACT amounts as given.
 // Inputs go only through public store actions (`initialize` + `set*`, or `initializeEdit` from an
 // activity snapshot for values the form cannot type, such as decimal percentages).
-// FROZEN through 03-13/03-14 (spec 03 §6, row 6): the `shares` and `feedback` expectations. Only
-// the imports, the setup helper and the display block may change there.
+// FROZEN through 03-13/03-14/03-14b (spec 03 §6, row 6): the `shares` and `feedback` expectations.
+// Only the imports, the setup helper and the display block may change there (03-14b: the edit
+// snapshot is the domain event the editor now starts from).
 import { beforeEach, expect, test } from 'vitest';
 
-import type { AppEvent } from 'api/activity.types';
-import type { SharingMode } from 'api/chipin.types';
-import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { EXPENSE_SPLIT_MODES, type ExpenseSplitMode } from 'constants/chipin';
-import { type Money, toUnits } from 'shared/money';
+import type { ExpenseActivityEvent, ExpenseSharingMode } from 'entities/activity';
+import { canonicalDecimal, toCreateLedgerEntryWire } from 'entities/ledger';
+import { stringifyWireJson } from 'shared/api/wireJson';
+import { currencyCode, fromUnits, type Money, toUnits, wireAmountText } from 'shared/money';
 
 import { mapActivityExpenseToModalState } from './expenseModalEditMapping';
 import {
@@ -515,26 +516,39 @@ const CASES: PreviewCase[] = [
     },
 ];
 
-type ExpenseActivityEvent = Extract<AppEvent, { subjectType: 'expense' }>;
+// A test-only reading of a case's decimal text as ledger units (scale 4).
+const toMoney = (text: string, currency: string): Money => {
+    const [integer = '0', fraction = ''] = text.split('.');
 
-const toSharingMode = (item: PreviewCase, members: ExpenseParticipant[]): SharingMode => {
-    const values = Object.fromEntries(
-        members.map((user, index) => [user.id, Number(item.values?.[index] ?? '0')]),
+    return fromUnits(BigInt(`${integer}${fraction.padEnd(4, '0')}`), currencyCode(currency));
+};
+
+const toSharingMode = (item: PreviewCase, members: ExpenseParticipant[]): ExpenseSharingMode => {
+    const texts = Object.fromEntries(
+        members.map((user, index) => [user.id, item.values?.[index] ?? '0']),
     );
 
     switch (item.mode) {
         case E.PERCENT:
-            return { type: 'PERCENTAGE', percentageShares: values };
+            return { type: 'PERCENTAGE', percentageShares: texts };
         case E.AMOUNTS:
-            return { type: 'EXACT', customShares: values };
+            return {
+                type: 'EXACT',
+                customShares: Object.fromEntries(
+                    Object.entries(texts).map(([userId, text]) => [
+                        userId,
+                        toMoney(text, item.currency ?? 'USD'),
+                    ]),
+                ),
+            };
         case E.SHARES:
-            return { type: 'SHARES', shares: values };
+            return { type: 'SHARES', shares: texts };
         case E.EQUAL:
             return { type: 'AUTO' };
     }
 };
 
-/** An activity snapshot of the expense, as the edit flow receives it. */
+/** An activity snapshot of the expense, as the edit flow receives it (a domain event). */
 const toExpenseEvent = (
     item: PreviewCase,
     members: ExpenseParticipant[],
@@ -542,7 +556,7 @@ const toExpenseEvent = (
     id: 'activity-1',
     seq: 1,
     domain: 'LEDGER',
-    action: ACTIVITY_ACTIONS.EXPENSE_CREATED,
+    action: 'EXPENSE_CREATED',
     actorUserId: A.id,
     actorSnapshot: { displayName: A.displayName, picture: null },
     subjectType: 'expense',
@@ -554,8 +568,7 @@ const toExpenseEvent = (
         groupId: 'group-1',
         groupName: 'Group',
         description: 'Dinner',
-        amount: Number(item.amount),
-        currency: item.currency ?? 'USD',
+        amount: toMoney(item.amount, item.currency ?? 'USD'),
         category: 'food',
         payerId: A.id,
         payerDisplayName: A.displayName,
@@ -563,8 +576,7 @@ const toExpenseEvent = (
         shares: members.map(user => ({
             userId: user.id,
             displayName: user.displayName,
-            shareAmount: 0,
-            currency: item.currency ?? 'USD',
+            shareAmount: toMoney('0', item.currency ?? 'USD'),
         })),
     },
     createdAt: 1_700_000_000,
@@ -704,4 +716,55 @@ test('the preview follows the payload participant order', () => {
         }
         useExpenseModalStore.getState().reset();
     }
+});
+
+// 03-14b: the request body is built from `Money` and decimal text. For every case it carries the
+// amount and the shares the form holds (the values the legacy number payload carried), each a
+// plain decimal literal of scale ≤ 4: no exponent, no float artefact.
+test('EXP-064 the request body carries the typed amount and shares as decimal literals', () => {
+    const plainLiteral = /^\d+(?:\.\d{1,4})?$/;
+    let checked = 0;
+
+    for (const item of CASES) {
+        const members = setUp(item);
+        const payload = selectExpensePayload(useExpenseModalStore.getState());
+
+        if (payload) {
+            const text = String(stringifyWireJson(toCreateLedgerEntryWire(payload)));
+            const literals = text.match(/(?<=[:[,])-?[\d.eE+-]+(?=[,}\]])/g) ?? [];
+
+            expect(literals.length, text).toBeGreaterThan(1);
+            expect(
+                literals.every(literal => plainLiteral.test(literal)),
+                text,
+            ).toBe(true);
+
+            const sent = toCreateLedgerEntryWire(payload).expense;
+            const values = Object.fromEntries(
+                members.map((user, index) => [user.id, item.values?.[index] ?? '0']),
+            );
+            const sharing = sent.sharingMode;
+            const sentShares =
+                sharing?.type === 'EXACT'
+                    ? Object.entries(sharing.customShares).map(([id, v]) => [id, wireAmountText(v)])
+                    : sharing?.type === 'PERCENTAGE'
+                      ? Object.entries(sharing.percentageShares)
+                      : sharing?.type === 'SHARES'
+                        ? Object.entries(sharing.shares)
+                        : [];
+
+            expect(canonicalDecimal(wireAmountText(sent.amount)), item.name).toBe(
+                canonicalDecimal(item.amount),
+            );
+            for (const [userId, literal] of sentShares) {
+                expect(canonicalDecimal(String(literal)), `${item.name} ${userId}`).toBe(
+                    canonicalDecimal(values[String(userId)] ?? ''),
+                );
+            }
+            checked += 1;
+        }
+        useExpenseModalStore.getState().reset();
+    }
+
+    expect(checked).toBe(34);
 });

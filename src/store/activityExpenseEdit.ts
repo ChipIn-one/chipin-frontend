@@ -1,9 +1,6 @@
 // The expense editor opened from an expense history (ACT-004): its state is built from the latest
-// event of the history the page shows, without a ledger read. The editor still starts from the
-// legacy event shape, so the domain events are carried back by `legacyExpenseEvent`.
-// TODO(03-14b): the editor starts from the domain events.
+// domain event of the history the page shows, without a ledger read.
 import type { ActivityEvent, ExpenseActivityEvent } from 'entities/activity';
-import { legacyExpenseEvent } from 'entities/balance';
 import { userCurrency, userDefaultCategory, userSkipCategory } from 'entities/users';
 import { getLocalUser } from 'helpers/localStorage';
 
@@ -55,8 +52,8 @@ export const prepareExpenseEdit = ({
     }
 
     return mapActivityExpenseToModalState({
-        parentEvent: legacyExpenseEvent(parentEvent),
-        childEvents: childEvents.filter(isExpenseEvent).map(legacyExpenseEvent),
+        parentEvent,
+        childEvents: childEvents.filter(isExpenseEvent),
         source: getExpenseEditSource(),
         parentActivityId,
     });

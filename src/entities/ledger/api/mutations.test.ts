@@ -2,15 +2,16 @@ import { MutationObserver, type MutationObserverOptions } from '@tanstack/react-
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
-import type { CreateLedgerEntryParams, UpdateLedgerExpenseParams } from 'api/chipin.types';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import { ApiError, InvalidPathSegmentError } from 'shared/api/client';
-import { MoneyWireError } from 'shared/money';
+import { currencyCode, fromUnits, type Money, MoneyWireError } from 'shared/money';
 import { clearUserData } from 'shared/offline/clearUserData';
 import { cachesByUser } from 'shared/offline/userCaches';
 import { setupMswServer } from 'test/mswServer';
 import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
 import { mountAsUserClient } from 'test/userClient';
+
+import type { ExpenseDraft, ExpensePatch } from '../model/types';
 
 import {
     createExpenseMutationOptions,
@@ -102,29 +103,25 @@ const remove = (params: DeleteLedgerEntryParams): Promise<void> =>
         sessionVersion: getAuthSessionVersion(),
     });
 
-const expense: CreateLedgerEntryParams = {
+const usd = (units: bigint): Money => fromUnits(units, currencyCode('USD'));
+const jpy = (units: bigint): Money => fromUnits(units, currencyCode('JPY'));
+
+const expense: ExpenseDraft = {
     groupId: 'group-1',
     description: 'Dinner',
-    amount: 85.5,
+    amount: usd(855_000n),
     date: 1_717_200_000,
     payerId: 'user-1',
     participantIds: ['user-1', 'user-2'],
-    currency: 'USD',
     category: 'food',
     sharingMode: { type: 'AUTO' },
 };
 
-// The body the legacy client (`api/ledgerApi.createExpense`, `JSON.stringify`) sent for a payload.
-const legacyCreateText = ({ groupId, sharingMode, category, ...rest }: CreateLedgerEntryParams) =>
-    JSON.stringify({
-        type: 'EXPENSE',
-        ...(groupId && { groupId }),
-        expense: {
-            ...rest,
-            category: category ?? null,
-            sharingMode: sharingMode ?? { type: 'AUTO' },
-        },
-    });
+// The create body text: every amount a decimal literal of scale 4 (`moneyToWire`), percents and
+// weights their shortest decimal literal. The legacy client wrote the same values as doubles
+// (`85.5`, `100.25`), so the server reads the same numbers.
+const createText = (fields: string, groupId: string | null = 'group-1'): string =>
+    `{"type":"EXPENSE",${groupId ? `"groupId":"${groupId}",` : ''}"expense":{${fields}}}`;
 
 beforeEach(() => {
     vi.clearAllMocks();
@@ -154,62 +151,121 @@ test('the online ledger keys are the set of spec 03 §2.1; every mutation is onl
 });
 
 describe('create an expense', () => {
-    test.each<[string, CreateLedgerEntryParams]>([
-        ['an equal split in a group', expense],
+    const fields = (amount: string, currency: string, category: string, sharingMode: string) =>
+        `"description":"Dinner","amount":${amount},"date":1717200000,"payerId":"user-1",` +
+        `"participantIds":["user-1","user-2"],"currency":"${currency}","category":${category},` +
+        `"sharingMode":${sharingMode}`;
+
+    test.each<[string, ExpenseDraft, string]>([
         [
-            'exact amounts between friends',
+            'an equal split in a group, 2 fraction digits',
+            expense,
+            createText(fields('85.5000', 'USD', '"food"', '{"type":"AUTO"}')),
+        ],
+        [
+            'uneven exact amounts between friends',
             {
                 ...expense,
                 groupId: undefined,
-                amount: 100.25,
+                amount: usd(1_002_500n),
                 category: null,
-                sharingMode: { type: 'EXACT', customShares: { 'user-1': 60.2, 'user-2': 40.05 } },
-            },
-        ],
-        [
-            'percentages',
-            {
-                ...expense,
-                amount: 0.1,
                 sharingMode: {
-                    type: 'PERCENTAGE',
-                    percentageShares: { 'user-1': 33.5, 'user-2': 66.5 },
+                    type: 'EXACT',
+                    customShares: { 'user-1': usd(602_000n), 'user-2': usd(400_500n) },
                 },
             },
+            createText(
+                fields(
+                    '100.2500',
+                    'USD',
+                    'null',
+                    '{"type":"EXACT","customShares":{"user-1":60.2000,"user-2":40.0500}}',
+                ),
+                null,
+            ),
+        ],
+        [
+            'uneven exact amounts in a currency of 0 fraction digits',
+            {
+                ...expense,
+                amount: jpy(10_000_000n),
+                sharingMode: {
+                    type: 'EXACT',
+                    customShares: { 'user-1': jpy(3_340_000n), 'user-2': jpy(6_660_000n) },
+                },
+            },
+            createText(
+                fields(
+                    '1000.0000',
+                    'JPY',
+                    '"food"',
+                    '{"type":"EXACT","customShares":{"user-1":334.0000,"user-2":666.0000}}',
+                ),
+            ),
+        ],
+        [
+            'percentages: their shortest literal',
+            {
+                ...expense,
+                amount: usd(1_000n),
+                sharingMode: {
+                    type: 'PERCENTAGE',
+                    percentageShares: { 'user-1': '33.50', 'user-2': '66.5' },
+                },
+            },
+            createText(
+                fields(
+                    '0.1000',
+                    'USD',
+                    '"food"',
+                    '{"type":"PERCENTAGE","percentageShares":{"user-1":33.5,"user-2":66.5}}',
+                ),
+            ),
         ],
         [
             'share weights',
             {
                 ...expense,
-                amount: 1200,
-                sharingMode: { type: 'SHARES', shares: { 'user-1': 1, 'user-2': 2 } },
+                amount: usd(12_000_000n),
+                sharingMode: { type: 'SHARES', shares: { 'user-1': '1', 'user-2': '2' } },
             },
+            createText(
+                fields(
+                    '1200.0000',
+                    'USD',
+                    '"food"',
+                    '{"type":"SHARES","shares":{"user-1":1,"user-2":2}}',
+                ),
+            ),
         ],
     ])(
-        'sends the same request text as the legacy client, without an id: %s',
-        async (_name, payload) => {
+        'sends the amounts as decimal literals of scale 4, without an id: %s',
+        async (_name, draft, text) => {
             const sent = serveLedger();
 
-            await create({ expense: payload });
+            await create({ expense: draft });
 
-            expect(sent).toEqual([
-                { method: 'POST', path: '/ledger/entries', text: legacyCreateText(payload) },
-            ]);
+            expect(sent).toEqual([{ method: 'POST', path: '/ledger/entries', text }]);
             expect(sent[0]?.text).not.toContain('"id"');
         },
     );
 
-    test('an amount that is not a plain decimal is rejected before any request', async () => {
+    test('a percent or weight that is not a plain decimal is rejected before any request', async () => {
         const sent = serveLedger();
 
-        await expect(create({ expense: { ...expense, amount: 1e-7 } })).rejects.toBeInstanceOf(
-            MoneyWireError,
-        );
         await expect(
             create({
                 expense: {
                     ...expense,
-                    sharingMode: { type: 'SHARES', shares: { 'user-1': Number.NaN } },
+                    sharingMode: { type: 'SHARES', shares: { 'user-1': '1e3' } },
+                },
+            }),
+        ).rejects.toBeInstanceOf(MoneyWireError);
+        await expect(
+            create({
+                expense: {
+                    ...expense,
+                    sharingMode: { type: 'PERCENTAGE', percentageShares: { 'user-1': 'NaN' } },
                 },
             }),
         ).rejects.toBeInstanceOf(MoneyWireError);
@@ -254,22 +310,34 @@ describe('create an expense', () => {
 
 describe('update an expense', () => {
     // Patches in the key order `buildExpenseUpdateParams` writes them: the split block last.
-    const split = { amount: 92, participantIds: ['user-1', 'user-2'] };
+    const split = { amount: usd(920_000n), participantIds: ['user-1', 'user-2'] };
+    const splitText = '"amount":92.0000,"participantIds":["user-1","user-2"]';
 
-    test.each<[string, UpdateLedgerExpenseParams['expense']]>([
-        ['only the changed fields', { description: 'Lunch' }],
+    test.each<[string, ExpensePatch, string]>([
+        ['only the changed fields', { description: 'Lunch' }, '"description":"Lunch"'],
         [
             'an equal split',
             { description: null, currency: 'EUR', ...split, sharingMode: { type: 'AUTO' } },
+            `"description":null,"currency":"EUR",${splitText},"sharingMode":{"type":"AUTO"}`,
         ],
         [
-            'exact amounts',
+            'uneven exact amounts',
             {
                 payerId: 'user-2',
                 category: null,
                 ...split,
-                sharingMode: { type: 'EXACT', customShares: { 'user-1': 50.5, 'user-2': 41.5 } },
+                sharingMode: {
+                    type: 'EXACT',
+                    customShares: { 'user-1': usd(505_000n), 'user-2': usd(415_000n) },
+                },
             },
+            `"payerId":"user-2","category":null,${splitText},` +
+                '"sharingMode":{"type":"EXACT","customShares":{"user-1":50.5000,"user-2":41.5000}}',
+        ],
+        [
+            'an amount of 0 fraction digits',
+            { amount: jpy(1_230_000n), participantIds: ['user-1'], sharingMode: { type: 'AUTO' } },
+            '"amount":123.0000,"participantIds":["user-1"],"sharingMode":{"type":"AUTO"}',
         ],
         [
             'percentages',
@@ -277,24 +345,29 @@ describe('update an expense', () => {
                 ...split,
                 sharingMode: {
                     type: 'PERCENTAGE',
-                    percentageShares: { 'user-1': 33.5, 'user-2': 66.5 },
+                    percentageShares: { 'user-1': '33.5', 'user-2': '66.5' },
                 },
             },
+            `${splitText},"sharingMode":{"type":"PERCENTAGE","percentageShares":{"user-1":33.5,"user-2":66.5}}`,
         ],
         [
             'share weights',
-            { ...split, sharingMode: { type: 'SHARES', shares: { 'user-1': 1, 'user-2': 2 } } },
+            { ...split, sharingMode: { type: 'SHARES', shares: { 'user-1': '1', 'user-2': '2' } } },
+            `${splitText},"sharingMode":{"type":"SHARES","shares":{"user-1":1,"user-2":2}}`,
         ],
-    ])('sends the same request text as the legacy client: %s', async (_name, expensePatch) => {
+    ])('sends the named fields, amounts of scale 4: %s', async (_name, entry, fields) => {
         const sent = serveLedger();
-        const entry: UpdateLedgerExpenseParams = { type: 'EXPENSE', expense: expensePatch };
 
         await update({ entryId: 'entry-1', entry, groupId: 'group-1', parentActivityId: 'a-1' });
 
-        // The legacy client (`api/ledgerApi.updateExpense`) sent the patch as it was built.
         expect(sent).toEqual([
-            { method: 'PATCH', path: '/ledger/entries/entry-1', text: JSON.stringify(entry) },
+            {
+                method: 'PATCH',
+                path: '/ledger/entries/entry-1',
+                text: `{"type":"EXPENSE","expense":{${fields}}}`,
+            },
         ]);
+        expect(sent[0]?.text).not.toContain('"date"');
         expect(onEntryWritten.mock.calls).toEqual([
             [{ groupId: 'group-1', parentActivityId: 'a-1' }, getDefaultTestQueryClient()],
         ]);
@@ -315,7 +388,7 @@ describe('delete a ledger entry', () => {
 });
 
 test.each<[string, () => Promise<void>]>([
-    ['an update', () => update({ entryId: '', entry: { type: 'EXPENSE', expense: {} } })],
+    ['an update', () => update({ entryId: '', entry: {} })],
     ['a delete', () => remove({ entryId: '', groupId: 'group-1' })],
 ])('%s of an entry without a valid id is never sent and refreshes nothing', async (_name, send) => {
     const sent = serveLedger();
@@ -326,7 +399,7 @@ test.each<[string, () => Promise<void>]>([
     expect(onWriteFailed).not.toHaveBeenCalled();
 });
 
-const patch: UpdateLedgerExpenseParams = { type: 'EXPENSE', expense: { description: 'Lunch' } };
+const patch: ExpensePatch = { description: 'Lunch' };
 
 // One write of each kind, in a group and from an open activity history.
 const writes: [string, () => Promise<void>][] = [

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
+import { currencyCode, fromUnits } from 'shared/money';
 
 import {
     selectExpensePayload,
@@ -343,17 +344,16 @@ test('builds shares payload and validation from store state', () => {
     expect(selectIsSubmitDisabled(state)).toBe(false);
     expect(payload).toEqual({
         description: 'Dinner',
-        amount: 120,
+        amount: fromUnits(1_200_000n, currencyCode('USD')),
         date: 1_717_200_000,
         payerId: currentUser.id,
         participantIds: [currentUser.id, friend.id],
-        currency: 'USD',
         category: state.category,
         sharingMode: {
             type: 'SHARES',
             shares: {
-                [currentUser.id]: 1,
-                [friend.id]: 2,
+                [currentUser.id]: '1',
+                [friend.id]: '2',
             },
         },
     });
@@ -389,7 +389,7 @@ test('disables Save for an unchanged valid edit', () => {
             entryId: 'entry-1',
             original: {
                 description: 'Dinner',
-                amount: 120,
+                amount: fromUnits(1_200_000n, currencyCode('USD')),
                 payerId: currentUser.id,
                 participantIds: [currentUser.id, friend.id],
                 currency: 'USD',
@@ -397,7 +397,7 @@ test('disables Save for an unchanged valid edit', () => {
                 subcategory: 'restaurants',
                 sharingMode: {
                     type: 'PERCENTAGE',
-                    percentageShares: { [currentUser.id]: 25, [friend.id]: 75 },
+                    percentageShares: { [currentUser.id]: '25', [friend.id]: '75' },
                 },
             },
         },

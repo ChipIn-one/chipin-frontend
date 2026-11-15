@@ -32,7 +32,6 @@ export type {
 
 // ─── Re-exports: call param types ─────────────────────────────────────────
 export type {
-    CreateLedgerEntryParams,
     CreateSettlementParams,
     FetchActivitiesParams,
     FetchActivityChildrenParams,
@@ -41,8 +40,6 @@ export type {
     RemoveLedgerEntryParams,
     SharingMode,
     SharingModeType,
-    UpdateLedgerEntryParams,
-    UpdateLedgerExpenseParams,
 } from './chipin.params';
 
 // ─── Frontend types (used in components, store, hooks) ────────────────────

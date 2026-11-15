@@ -1,15 +1,18 @@
 import { expect, test } from 'vitest';
 
-import type { AppEvent } from 'api/activity.types';
-import type { SharingMode } from 'api/chipin.types';
-import { ACTIVITY_ACTIONS } from 'constants/activity';
 import { EXPENSE_SPLIT_MODES } from 'constants/chipin';
+import type {
+    ExpenseActivityAction,
+    ExpenseActivityEvent,
+    ExpenseSharingMode,
+} from 'entities/activity';
+import { currencyCode, fromUnits, type Money } from 'shared/money';
 import { getOrThrow } from 'test/getOrThrow';
 
 import { mapActivityExpenseToModalState } from './expenseModalEditMapping';
 import type { ExpenseModalSource } from './expenseModalStore';
 
-type ExpenseActivityEvent = Extract<AppEvent, { subjectType: 'expense' }>;
+const usd = (units: bigint): Money => fromUnits(units, currencyCode('USD'));
 
 const currentUser = {
     id: 'user-1',
@@ -42,48 +45,30 @@ const source: ExpenseModalSource = {
 const createExpenseEvent = ({
     id,
     seq,
-    action = ACTIVITY_ACTIONS.EXPENSE_UPDATED,
+    action = 'EXPENSE_UPDATED',
     description = 'Dinner',
-    amount = 120,
+    amount = usd(1_200_000n),
     category = 'food',
     subcategory = 'restaurants',
     payerId = 'user-1',
     payerDisplayName = 'You',
-    sharingMode = null,
+    sharingMode,
     shares = [
-        {
-            userId: 'user-1',
-            displayName: 'You',
-            shareAmount: 60,
-            currency: 'USD',
-        },
-        {
-            userId: 'user-2',
-            displayName: 'Friend',
-            shareAmount: 60,
-            currency: 'USD',
-        },
+        { userId: 'user-1', displayName: 'You', shareAmount: usd(600_000n) },
+        { userId: 'user-2', displayName: 'Friend', shareAmount: usd(600_000n) },
     ],
 }: {
     id: string;
     seq: number;
-    action?:
-        | typeof ACTIVITY_ACTIONS.EXPENSE_CREATED
-        | typeof ACTIVITY_ACTIONS.EXPENSE_UPDATED
-        | typeof ACTIVITY_ACTIONS.EXPENSE_REVERSED;
+    action?: ExpenseActivityAction;
     description?: string;
-    amount?: number;
+    amount?: Money;
     category?: string;
     subcategory?: string;
     payerId?: string;
     payerDisplayName?: string;
-    sharingMode?: SharingMode | null;
-    shares?: Array<{
-        userId: string;
-        displayName: string;
-        shareAmount: number;
-        currency: string;
-    }>;
+    sharingMode?: ExpenseSharingMode;
+    shares?: { userId: string; displayName: string; shareAmount: Money }[];
 }): ExpenseActivityEvent => ({
     id,
     seq,
@@ -101,22 +86,21 @@ const createExpenseEvent = ({
         groupName: 'Weekend trip',
         description,
         amount,
-        currency: 'USD',
         category,
         subcategory,
         payerId,
         payerDisplayName,
-        sharingMode,
         shares,
+        ...(sharingMode && { sharingMode }),
     },
     createdAt: 1_700_000_000 + seq,
-    parentActivityId: action === ACTIVITY_ACTIONS.EXPENSE_CREATED ? null : 'activity-1',
+    parentActivityId: action === 'EXPENSE_CREATED' ? null : 'activity-1',
 });
 
 const parentEvent = createExpenseEvent({
     id: 'activity-1',
     seq: 1,
-    action: ACTIVITY_ACTIONS.EXPENSE_CREATED,
+    action: 'EXPENSE_CREATED',
 });
 
 test('maps the latest Activity Expense snapshot without a canonical ledger entry', () => {
@@ -124,21 +108,15 @@ test('maps the latest Activity Expense snapshot without a canonical ledger entry
         id: 'activity-7',
         seq: 7,
         description: 'Updated dinner',
-        amount: 150,
+        amount: usd(1_500_000n),
         payerId: 'former-user',
         payerDisplayName: 'Former participant',
         shares: [
-            {
-                userId: 'user-1',
-                displayName: 'You',
-                shareAmount: 75,
-                currency: 'USD',
-            },
+            { userId: 'user-1', displayName: 'You', shareAmount: usd(750_000n) },
             {
                 userId: 'former-user',
                 displayName: 'Former participant',
-                shareAmount: 75,
-                currency: 'USD',
+                shareAmount: usd(750_000n),
             },
         ],
     });
@@ -181,37 +159,72 @@ test('maps the latest Activity Expense snapshot without a canonical ledger entry
     expect(getOrThrow(result?.source.groups ?? [], 0).members[2]).not.toHaveProperty('email');
 });
 
-test.each([
-    ['AUTO', { type: 'AUTO' }, EXPENSE_SPLIT_MODES.EQUAL],
+test.each<[string, ExpenseSharingMode, string, Record<string, unknown>]>([
+    ['AUTO', { type: 'AUTO' }, EXPENSE_SPLIT_MODES.EQUAL, {}],
     [
         'PERCENTAGE',
-        { type: 'PERCENTAGE', percentageShares: { 'user-1': 25, 'user-2': 75 } },
+        { type: 'PERCENTAGE', percentageShares: { 'user-1': '25.0000', 'user-2': '75' } },
         EXPENSE_SPLIT_MODES.PERCENT,
+        { percentShares: { 'user-1': '25', 'user-2': '75' } },
     ],
     [
         'EXACT',
-        { type: 'EXACT', customShares: { 'user-1': 30, 'user-2': 90 } },
+        { type: 'EXACT', customShares: { 'user-1': usd(300_000n), 'user-2': usd(901_234n) } },
         EXPENSE_SPLIT_MODES.AMOUNTS,
+        { amountShares: { 'user-1': '30', 'user-2': '90.1234' } },
     ],
     [
         'SHARES',
-        { type: 'SHARES', shares: { 'user-1': 1, 'user-2': 2 } },
+        { type: 'SHARES', shares: { 'user-1': '1', 'user-2': '2.5000' } },
         EXPENSE_SPLIT_MODES.SHARES,
+        { shareWeights: { 'user-1': '1', 'user-2': '2.5' } },
     ],
-] as const)('reconstructs %s sharing mode', (_name, sharingMode, splitMode) => {
+])(
+    'ACT-004 reconstructs the %s sharing mode and its form texts',
+    (_name, sharingMode, splitMode, texts) => {
+        const result = mapActivityExpenseToModalState({
+            parentEvent,
+            childEvents: [createExpenseEvent({ id: 'activity-2', seq: 2, sharingMode })],
+            source,
+        });
+
+        expect(result?.splitMode).toBe(splitMode);
+        expect(result).toMatchObject(texts);
+    },
+);
+
+test('ACT-004 the original keeps Money and the shortest decimal text, so an unchanged edit is unchanged', () => {
     const result = mapActivityExpenseToModalState({
         parentEvent,
-        childEvents: [createExpenseEvent({ id: 'activity-2', seq: 2, sharingMode })],
+        childEvents: [
+            createExpenseEvent({
+                id: 'activity-2',
+                seq: 2,
+                amount: usd(1_000_500n),
+                sharingMode: {
+                    type: 'PERCENTAGE',
+                    percentageShares: { 'user-1': '33.3300', 'user-2': '66.67' },
+                },
+            }),
+        ],
         source,
     });
 
-    expect(result?.splitMode).toBe(splitMode);
+    expect(result?.amount).toBe('100.05');
+    expect(result?.editContext.original).toMatchObject({
+        amount: usd(1_000_500n),
+        currency: 'USD',
+        sharingMode: {
+            type: 'PERCENTAGE',
+            percentageShares: { 'user-1': '33.33', 'user-2': '66.67' },
+        },
+    });
 });
 
 test('falls back to financially faithful exact amounts when sharing mode is missing', () => {
     const result = mapActivityExpenseToModalState({
         parentEvent,
-        childEvents: [createExpenseEvent({ id: 'activity-2', seq: 2, sharingMode: null })],
+        childEvents: [createExpenseEvent({ id: 'activity-2', seq: 2 })],
         source,
     });
 
@@ -223,62 +236,30 @@ test('falls back to financially faithful exact amounts when sharing mode is miss
 });
 
 test('maps a direct expense former participant into known friends', () => {
-    const directParentEvent = {
+    const directParentEvent: ExpenseActivityEvent = {
         ...parentEvent,
         groupId: null,
-        metadata: {
-            ...parentEvent.metadata,
-            groupId: null,
-            groupName: null,
-        },
-    } satisfies AppEvent;
-    const directChildEvent = {
-        ...createExpenseEvent({
-            id: 'activity-2',
-            seq: 2,
-            payerId: 'former-user',
-            payerDisplayName: 'Former participant',
-            shares: [
-                {
-                    userId: 'user-1',
-                    displayName: 'You',
-                    shareAmount: 60,
-                    currency: 'USD',
-                },
-                {
-                    userId: 'former-user',
-                    displayName: 'Former participant',
-                    shareAmount: 60,
-                    currency: 'USD',
-                },
-            ],
-        }),
+        metadata: { ...parentEvent.metadata, groupId: null, groupName: null },
+    };
+    const childEvent = createExpenseEvent({
+        id: 'activity-2',
+        seq: 2,
+        payerId: 'former-user',
+        payerDisplayName: 'Former participant',
+        shares: [
+            { userId: 'user-1', displayName: 'You', shareAmount: usd(600_000n) },
+            {
+                userId: 'former-user',
+                displayName: 'Former participant',
+                shareAmount: usd(600_000n),
+            },
+        ],
+    });
+    const directChildEvent: ExpenseActivityEvent = {
+        ...childEvent,
         groupId: null,
-        metadata: {
-            ...createExpenseEvent({
-                id: 'activity-2',
-                seq: 2,
-                payerId: 'former-user',
-                payerDisplayName: 'Former participant',
-                shares: [
-                    {
-                        userId: 'user-1',
-                        displayName: 'You',
-                        shareAmount: 60,
-                        currency: 'USD',
-                    },
-                    {
-                        userId: 'former-user',
-                        displayName: 'Former participant',
-                        shareAmount: 60,
-                        currency: 'USD',
-                    },
-                ],
-            }).metadata,
-            groupId: null,
-            groupName: null,
-        },
-    } satisfies AppEvent;
+        metadata: { ...childEvent.metadata, groupId: null, groupName: null },
+    };
 
     const result = mapActivityExpenseToModalState({
         parentEvent: directParentEvent,

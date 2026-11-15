@@ -10,14 +10,15 @@ import type { ReactNode } from 'react';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import type { CreateLedgerEntryParams } from 'api/chipin.types';
 import { activityKeys, selfActivityPreviewsQueryOptions } from 'entities/activity';
 import { dashboardKeys } from 'entities/dashboard';
+import type { ExpenseDraft, ExpensePatch } from 'entities/ledger';
 import { usersKeys } from 'entities/users';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
 import { ApiError } from 'shared/api/client';
 import { createQueryClient } from 'shared/api/queryClient';
+import { currencyCode, fromUnits } from 'shared/money';
 import { onAccessTokenRefreshed, useAuthStore } from 'store/authStore';
 import { fakeAccessToken } from 'test/fakeAccessToken';
 import { wireGroup } from 'test/groupFixtures';
@@ -58,13 +59,12 @@ const deferred = (): Deferred => {
     return { promise, resolve };
 };
 
-const expense: CreateLedgerEntryParams = {
+const expense: ExpenseDraft = {
     description: 'Dinner',
-    amount: 20,
+    amount: fromUnits(200_000n, currencyCode('USD')),
     date: 1_717_200_000,
     payerId: 'user-1',
     participantIds: ['user-1', 'user-2'],
-    currency: 'USD',
     category: 'food',
     sharingMode: { type: 'AUTO' },
 };
@@ -185,7 +185,7 @@ test('a ledger write while signed out is refused before any request', async () =
     await expect(
         result.current.update.updateExpense({
             entryId: 'entry-1',
-            entry: { type: 'EXPENSE', expense: { description: 'Lunch' } },
+            entry: { description: 'Lunch' },
         }),
     ).rejects.toEqual(refused);
     await expect(result.current.remove.deleteLedgerEntry({ entryId: 'entry-1' })).rejects.toEqual(
@@ -370,7 +370,7 @@ test('after a group expense the group card, its page and its feed are read again
     await act(() =>
         result.current.updateExpense({
             entryId: 'entry-1',
-            entry: { type: 'EXPENSE', expense: { description: 'Lunch' } },
+            entry: { description: 'Lunch' },
             groupId: 'group-1',
         }),
     );
@@ -396,7 +396,7 @@ test('a write made from the activity history marks that history (activity.childr
     expect(isStale(client, activityKeys.children('activity-2'))).toBe(false);
 });
 
-const patch = { type: 'EXPENSE' as const, expense: { description: 'Lunch' } };
+const patch: ExpensePatch = { description: 'Lunch' };
 const settlement = {
     fromUserId: 'user-1',
     toUserId: 'user-2',

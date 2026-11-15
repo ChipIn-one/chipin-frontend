@@ -3,7 +3,7 @@
 export { convert } from './convert';
 export type { FormatMoneyOptions } from './format';
 export { BELOW_MINOR_PREFIX, formatMoney, formatMoneyParts } from './format';
-export { parseMoneyInput } from './input';
+export { moneyInputText, parseMoneyInput } from './input';
 export type { ApproxMoney, CurrencyCode, MinorUnits, Money, Sign } from './money';
 export {
     abs,

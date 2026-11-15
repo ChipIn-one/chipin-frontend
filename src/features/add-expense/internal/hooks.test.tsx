@@ -4,11 +4,12 @@ import { http, HttpResponse } from 'msw';
 import { toast } from 'sonner';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
-import type { SharingMode } from 'api/chipin.types';
 import { activityKeys } from 'entities/activity';
+import type { ExpenseDraftSharingMode } from 'entities/ledger';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
 import { LedgerWriteRefusedError, toastLedgerWriteError } from 'hooks/useLedgerMutations';
+import { currencyCode, fromUnits } from 'shared/money';
 import { onAccessTokenRefreshed, useAuthStore } from 'store/authStore';
 import type { ExpenseModalEditInitialization, ExpenseModalSource } from 'store/expenseModalStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
@@ -48,7 +49,7 @@ const friend = {
     picture: null,
 };
 
-const originalSharingMode: SharingMode = { type: 'AUTO' };
+const originalSharingMode: ExpenseDraftSharingMode = { type: 'AUTO' };
 
 const editInitialization: ExpenseModalEditInitialization = {
     mode: 'edit',
@@ -80,7 +81,7 @@ const editInitialization: ExpenseModalEditInitialization = {
         parentActivityId: 'activity-1',
         original: {
             description: 'Dinner',
-            amount: 20,
+            amount: fromUnits(200_000n, currencyCode('USD')),
             payerId: currentUser.id,
             participantIds: [currentUser.id, friend.id],
             currency: 'USD',

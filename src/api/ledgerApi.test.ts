@@ -2,19 +2,12 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { InvalidPathSegmentError } from './apiPath';
 import { apiInstance } from './chipin.instance';
-import {
-    createExpense,
-    createSettlement,
-    fetchLedgerEntry,
-    removeLedgerEntry,
-    updateExpense,
-} from './ledgerApi';
+import { createSettlement, fetchLedgerEntry, removeLedgerEntry } from './ledgerApi';
 
 vi.mock('./chipin.instance', () => ({
     apiInstance: {
         delete: vi.fn(),
         get: vi.fn(),
-        patch: vi.fn(),
         post: vi.fn(),
     },
 }));
@@ -22,36 +15,6 @@ vi.mock('./chipin.instance', () => ({
 describe('ledgerApi', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-    });
-
-    test('creates an expense ledger entry', () => {
-        vi.mocked(apiInstance.post).mockResolvedValue({ data: { id: 'entry-1' } });
-
-        return createExpense({
-            groupId: 'group-1',
-            description: 'Dinner',
-            amount: 30,
-            date: 1_785_328_628,
-            payerId: 'user-1',
-            participantIds: ['user-1', 'user-2'],
-            currency: 'USD',
-        }).then(result => {
-            expect(apiInstance.post).toHaveBeenCalledWith('/ledger/entries', {
-                type: 'EXPENSE',
-                groupId: 'group-1',
-                expense: {
-                    description: 'Dinner',
-                    amount: 30,
-                    date: 1_785_328_628,
-                    payerId: 'user-1',
-                    participantIds: ['user-1', 'user-2'],
-                    currency: 'USD',
-                    category: null,
-                    sharingMode: { type: 'AUTO' },
-                },
-            });
-            expect(result).toEqual({ id: 'entry-1' });
-        });
     });
 
     test('creates a settlement ledger entry', () => {
@@ -93,47 +56,18 @@ describe('ledgerApi', () => {
             expect(result).toEqual({ id: 'entry-1' });
         });
     });
-
-    test('patches an expense ledger entry with the update envelope', () => {
-        vi.mocked(apiInstance.patch).mockResolvedValue({ data: { id: 'entry-1' } });
-
-        return updateExpense({
-            entryId: 'entry-1',
-            entry: {
-                type: 'EXPENSE',
-                expense: {
-                    description: 'Updated dinner',
-                },
-            },
-        }).then(result => {
-            expect(apiInstance.patch).toHaveBeenCalledWith('/ledger/entries/entry-1', {
-                type: 'EXPENSE',
-                expense: { description: 'Updated dinner' },
-            });
-            expect(result).toEqual({ id: 'entry-1' });
-        });
-    });
 });
 
 describe('ledgerApi path segment guard', () => {
     test.each([
         ['removeLedgerEntry', () => removeLedgerEntry({ entryId: 'a/b' })],
         ['fetchLedgerEntry', () => fetchLedgerEntry({ entryId: 'a/b' })],
-        [
-            'updateExpense',
-            () =>
-                updateExpense({
-                    entryId: 'a/b',
-                    entry: { type: 'EXPENSE', expense: { description: 'x' } },
-                }),
-        ],
     ])('%s rejects a "/" in a path parameter without calling the API', (_name, onCall) => {
         return expect(onCall())
             .rejects.toBeInstanceOf(InvalidPathSegmentError)
             .then(() => {
                 expect(apiInstance.delete).not.toHaveBeenCalled();
                 expect(apiInstance.get).not.toHaveBeenCalled();
-                expect(apiInstance.patch).not.toHaveBeenCalled();
             });
     });
 });

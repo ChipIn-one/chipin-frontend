@@ -1,18 +1,17 @@
-import type {
-    CreateLedgerEntryParams,
-    SharingMode,
-    UpdateLedgerExpenseParams,
-} from 'api/chipin.types';
+import type { ExpenseDraft, ExpenseDraftSharingMode, ExpensePatch } from 'entities/ledger';
+import { canonicalDecimal } from 'entities/ledger';
+import { type Money, toUnits } from 'shared/money';
 
+/** The edited expense as it was: what an edit is compared with to find the changed fields. */
 export interface ExpenseModalOriginalState {
     description: string | null;
-    amount: number;
+    amount: Money;
     payerId: string;
-    participantIds: string[];
+    participantIds: readonly string[];
     currency: string;
     category: string | null;
     subcategory: string | null;
-    sharingMode: SharingMode;
+    sharingMode: ExpenseDraftSharingMode;
 }
 
 const normalizeDescription = (description: string | null): string | null =>
@@ -20,43 +19,44 @@ const normalizeDescription = (description: string | null): string | null =>
 
 const normalizeCategory = (category: string | null): string | null => category || null;
 
-const getSharingModeValues = (sharingMode: SharingMode): Record<string, number> | undefined => {
+const decimalValues = (values: Readonly<Record<string, string>>): Record<string, string> =>
+    Object.fromEntries(
+        Object.entries(values).map(([key, text]) => [key, canonicalDecimal(text) ?? text]),
+    );
+
+// A share value as comparable text: EXACT amounts by their ledger units, percents and weights by
+// their shortest decimal text, so "50" and "50.0000" are the same value.
+const getSharingModeValues = (
+    sharingMode: ExpenseDraftSharingMode,
+): Record<string, string> | undefined => {
     switch (sharingMode.type) {
         case 'PERCENTAGE':
-            return sharingMode.percentageShares;
+            return decimalValues(sharingMode.percentageShares);
         case 'EXACT':
-            return sharingMode.customShares;
+            return Object.fromEntries(
+                Object.entries(sharingMode.customShares).map(([key, money]) => [
+                    key,
+                    toUnits(money).toString(),
+                ]),
+            );
         case 'SHARES':
-            return sharingMode.shares;
+            return decimalValues(sharingMode.shares);
         case 'AUTO':
             return undefined;
     }
 };
 
-const areNumberMapsEqual = (
-    left: Record<string, number> | undefined,
-    right: Record<string, number> | undefined,
+// A missing value counts as zero, as it did when the values were numbers.
+const ZERO = '0';
+
+const areValueMapsEqual = (
+    left: Record<string, string> | undefined,
+    right: Record<string, string> | undefined,
 ): boolean => {
-    const keys = new Set<string>();
-
-    if (left) {
-        for (const key in left) {
-            if (Object.prototype.hasOwnProperty.call(left, key)) {
-                keys.add(key);
-            }
-        }
-    }
-
-    if (right) {
-        for (const key in right) {
-            if (Object.prototype.hasOwnProperty.call(right, key)) {
-                keys.add(key);
-            }
-        }
-    }
+    const keys = new Set([...Object.keys(left ?? {}), ...Object.keys(right ?? {})]);
 
     for (const key of keys) {
-        if ((left?.[key] ?? 0) !== (right?.[key] ?? 0)) {
+        if ((left?.[key] ?? ZERO) !== (right?.[key] ?? ZERO)) {
             return false;
         }
     }
@@ -64,11 +64,14 @@ const areNumberMapsEqual = (
     return true;
 };
 
-const areSharingModesEqual = (left: SharingMode, right: SharingMode): boolean =>
+const areSharingModesEqual = (
+    left: ExpenseDraftSharingMode,
+    right: ExpenseDraftSharingMode,
+): boolean =>
     left.type === right.type &&
-    areNumberMapsEqual(getSharingModeValues(left), getSharingModeValues(right));
+    areValueMapsEqual(getSharingModeValues(left), getSharingModeValues(right));
 
-const areParticipantIdsEqual = (left: string[], right: string[]): boolean => {
+const areParticipantIdsEqual = (left: readonly string[], right: readonly string[]): boolean => {
     if (left.length !== right.length) {
         return false;
     }
@@ -84,47 +87,45 @@ const areParticipantIdsEqual = (left: string[], right: string[]): boolean => {
     return true;
 };
 
-const hasSplitChanged = (
-    original: ExpenseModalOriginalState,
-    draft: CreateLedgerEntryParams,
-): boolean =>
-    original.amount !== draft.amount ||
+// The amount is compared by its ledger units: a currency change alone is the `currency` field.
+const hasSplitChanged = (original: ExpenseModalOriginalState, draft: ExpenseDraft): boolean =>
+    toUnits(original.amount) !== toUnits(draft.amount) ||
     !areParticipantIdsEqual(original.participantIds, draft.participantIds) ||
-    !areSharingModesEqual(original.sharingMode, draft.sharingMode ?? { type: 'AUTO' });
+    !areSharingModesEqual(original.sharingMode, draft.sharingMode);
 
+type MutablePatch = { -readonly [Key in keyof ExpensePatch]: ExpensePatch[Key] };
+
+/**
+ * The fields of `draft` that differ from `original`, or null when nothing changed. The date is not
+ * one of them: the form has no date field, so an edit never changes it.
+ */
 export const buildExpenseUpdateParams = (
     original: ExpenseModalOriginalState,
-    draft: CreateLedgerEntryParams,
-): UpdateLedgerExpenseParams | null => {
-    const expense: UpdateLedgerExpenseParams['expense'] = {};
-    let hasChanges = false;
+    draft: ExpenseDraft,
+): ExpensePatch | null => {
+    const patch: MutablePatch = {};
 
     if (normalizeDescription(draft.description) !== original.description) {
-        expense.description = normalizeDescription(draft.description);
-        hasChanges = true;
+        patch.description = normalizeDescription(draft.description);
     }
 
-    if (draft.currency !== original.currency) {
-        expense.currency = draft.currency;
-        hasChanges = true;
+    if (draft.amount.currency !== original.currency) {
+        patch.currency = draft.amount.currency;
     }
 
     if (draft.payerId !== original.payerId) {
-        expense.payerId = draft.payerId;
-        hasChanges = true;
+        patch.payerId = draft.payerId;
     }
 
-    if (normalizeCategory(draft.category ?? null) !== original.category) {
-        expense.category = normalizeCategory(draft.category ?? null);
-        hasChanges = true;
+    if (normalizeCategory(draft.category) !== original.category) {
+        patch.category = normalizeCategory(draft.category);
     }
 
     if (hasSplitChanged(original, draft)) {
-        expense.amount = draft.amount;
-        expense.participantIds = draft.participantIds;
-        expense.sharingMode = draft.sharingMode ?? { type: 'AUTO' };
-        hasChanges = true;
+        patch.amount = draft.amount;
+        patch.participantIds = draft.participantIds;
+        patch.sharingMode = draft.sharingMode;
     }
 
-    return hasChanges ? { type: 'EXPENSE', expense } : null;
+    return Object.keys(patch).length > 0 ? patch : null;
 };
