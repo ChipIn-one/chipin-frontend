@@ -25,7 +25,7 @@ import {
     toUnits,
 } from 'shared/money';
 
-import type { ExpenseModalState, ExpenseModalStore, ExpenseParticipant } from './expenseModalStore';
+import type { ExpenseModalState, ExpenseParticipant } from './expenseModalTypes';
 import { buildExpenseUpdateParams } from './expenseModalUpdate';
 
 type ShareColor = 'gray' | 'jade' | 'red';
@@ -89,10 +89,10 @@ export const selectIncludedUsers = (state: ExpenseModalState) => {
     return users.filter(user => state.includedParticipantIds[user.id] !== false);
 };
 
-export const selectPayerUsers = (state: ExpenseModalStore) =>
+export const selectPayerUsers = (state: ExpenseModalState) =>
     state.targetMode === 'friends' ? selectIncludedUsers(state) : selectUsers(state);
 
-const getPayerId = (state: ExpenseModalStore, users: ExpenseParticipant[]) => {
+const getPayerId = (state: ExpenseModalState, users: ExpenseParticipant[]) => {
     if (users.some(user => user.id === state.paidById)) {
         return state.paidById;
     }
@@ -104,7 +104,7 @@ const getPayerId = (state: ExpenseModalStore, users: ExpenseParticipant[]) => {
     return users[0]?.id ?? '';
 };
 
-export const selectPayerId = (state: ExpenseModalStore) =>
+export const selectPayerId = (state: ExpenseModalState) =>
     getPayerId(state, selectPayerUsers(state));
 
 // The share preview runs on `shared/money` (spec 03 §4.1, §4.4): ledger units of scale 4 and the
@@ -204,10 +204,10 @@ export const selectInputFractionDigits = (
 export const selectAmountShare = (state: ExpenseModalState, userId: string): Money =>
     fromUnits(scaledOrZero(state.amountShares[userId], LEDGER_SCALE), selectCurrencyCode(state));
 
-const getTotalMoney = (state: ExpenseModalStore): Money =>
+const getTotalMoney = (state: ExpenseModalState): Money =>
     fromUnits(scaledOrZero(state.amount, LEDGER_SCALE), selectCurrencyCode(state));
 
-const getTotalAmount = (state: ExpenseModalStore) => scaledToNumber(toUnits(getTotalMoney(state)));
+const getTotalAmount = (state: ExpenseModalState) => scaledToNumber(toUnits(getTotalMoney(state)));
 
 /** The per-user values of the split mode as integers at one `scale`, and their sum. */
 interface SplitValues {
@@ -219,7 +219,7 @@ interface SplitValues {
 }
 
 const getSplitValues = (
-    state: ExpenseModalStore,
+    state: ExpenseModalState,
     includedUsers: readonly ExpenseParticipant[],
 ): SplitValues => {
     let texts: Record<string, string> = {};
@@ -270,7 +270,7 @@ const percentOf = (money: Money, percent: bigint, scale: number): Money =>
  * positive weight, `total × p / 100` per user when the percentages do not total 100.
  */
 const getShares = (
-    state: ExpenseModalStore,
+    state: ExpenseModalState,
     total: Money,
     includedUsers: readonly ExpenseParticipant[],
     values: SplitValues,
@@ -326,7 +326,7 @@ const getSplitStatus = (assigned: Money, total: Money): ExpenseSplitStatus => {
 };
 
 const getAssigned = (
-    state: ExpenseModalStore,
+    state: ExpenseModalState,
     total: Money,
     includedUserCount: number,
     values: SplitValues,
@@ -351,7 +351,7 @@ const getAssigned = (
     }
 };
 
-const isSplitValid = (state: ExpenseModalStore, total: Money, values: SplitValues): boolean => {
+const isSplitValid = (state: ExpenseModalState, total: Money, values: SplitValues): boolean => {
     if (values.hasInvalid) {
         return false;
     }
@@ -369,7 +369,7 @@ const isSplitValid = (state: ExpenseModalStore, total: Money, values: SplitValue
     }
 };
 
-const calculateSplit = (state: ExpenseModalStore) => {
+const calculateSplit = (state: ExpenseModalState) => {
     const users = selectUsers(state);
     const includedUsers: ExpenseParticipant[] = [];
     const total = getTotalMoney(state);
@@ -429,10 +429,10 @@ const calculateSplit = (state: ExpenseModalStore) => {
     };
 };
 
-let cachedSplitState: ExpenseModalStore | undefined;
+let cachedSplitState: ExpenseModalState | undefined;
 let cachedSplit: ReturnType<typeof calculateSplit> | undefined;
 
-const getSplit = (state: ExpenseModalStore) => {
+const getSplit = (state: ExpenseModalState) => {
     if (cachedSplitState === state && cachedSplit) {
         return cachedSplit;
     }
@@ -443,18 +443,18 @@ const getSplit = (state: ExpenseModalStore) => {
     return cachedSplit;
 };
 
-export const selectUserIds = (state: ExpenseModalStore) => getSplit(state).userIds;
+export const selectUserIds = (state: ExpenseModalState) => getSplit(state).userIds;
 
-export const selectExpenseParticipant = (state: ExpenseModalStore, userId: string) =>
+export const selectExpenseParticipant = (state: ExpenseModalState, userId: string) =>
     getSplit(state).usersById.get(userId);
 
-export const selectAllUsersSelected = (state: ExpenseModalStore) => {
+export const selectAllUsersSelected = (state: ExpenseModalState) => {
     const users = selectUsers(state);
 
     return users.length > 0 && users.every(user => state.includedParticipantIds[user.id] !== false);
 };
 
-export const selectUserAmount = (state: ExpenseModalStore, userId: string) => {
+export const selectUserAmount = (state: ExpenseModalState, userId: string) => {
     const split = getSplit(state);
     const share = split.shares.get(userId);
 
@@ -480,7 +480,7 @@ export interface SharePreview {
     readonly shares: readonly PreviewShare[];
 }
 
-export const selectSharePreview = (state: ExpenseModalStore): SharePreview => {
+export const selectSharePreview = (state: ExpenseModalState): SharePreview => {
     const split = getSplit(state);
     const zero = fromUnits(0n, split.total.currency);
 
@@ -497,17 +497,17 @@ export const selectSharePreview = (state: ExpenseModalStore): SharePreview => {
     };
 };
 
-export const selectIsUserLocked = (state: ExpenseModalStore, userId: string) =>
+export const selectIsUserLocked = (state: ExpenseModalState, userId: string) =>
     state.targetMode === 'friends' &&
     (Boolean(state.source.preferredFriendId) || userId === state.source.currentUser?.id);
 
-export const selectIsDirectExpense = (state: ExpenseModalStore) =>
+export const selectIsDirectExpense = (state: ExpenseModalState) =>
     state.targetMode === 'friends' && getSplit(state).users.length === 2;
 
-export const selectAmountStep = (state: ExpenseModalStore) =>
+export const selectAmountStep = (state: ExpenseModalState) =>
     Math.max(1, Math.round(getTotalAmount(state) / 100));
 
-export const selectYourShareColor = (state: ExpenseModalStore): ShareColor => {
+export const selectYourShareColor = (state: ExpenseModalState): ShareColor => {
     const currentUserId = state.source.currentUser?.id;
     const payerId = selectPayerId(state);
 
@@ -519,7 +519,7 @@ export const selectYourShareColor = (state: ExpenseModalStore): ShareColor => {
 };
 
 const isDirectExpenseValid = (
-    state: ExpenseModalStore,
+    state: ExpenseModalState,
     split: ReturnType<typeof getSplit>,
     payerId: string,
 ) => {
@@ -546,7 +546,7 @@ const isDirectExpenseValid = (
 
 /** The previewed share of the non-payer of a valid direct expense (what they will owe), or null. */
 const getDirectNonPayerShare = (
-    state: ExpenseModalStore,
+    state: ExpenseModalState,
     split: ReturnType<typeof getSplit>,
     payerId: string,
 ): Money | null => {
@@ -568,7 +568,7 @@ const getDirectNonPayerShare = (
     return split.shares.get(payerId === first.id ? second.id : first.id) ?? null;
 };
 
-const getSubmitState = (state: ExpenseModalStore) => {
+const getSubmitState = (state: ExpenseModalState) => {
     const split = getSplit(state);
     const payerId = getPayerId(
         state,
@@ -590,17 +590,17 @@ const getSubmitState = (state: ExpenseModalStore) => {
     return { isDisabled, hasNoDebt, isDirectValid, payerId, split };
 };
 
-export const selectShouldShowSelfOnlyCallout = (state: ExpenseModalStore): boolean => {
+export const selectShouldShowSelfOnlyCallout = (state: ExpenseModalState): boolean => {
     const { hasNoDebt, payerId } = getSubmitState(state);
     return hasNoDebt && payerId === state.source.currentUser?.id;
 };
 
-export const selectShouldShowOtherDirectZeroDebtWarning = (state: ExpenseModalStore): boolean => {
+export const selectShouldShowOtherDirectZeroDebtWarning = (state: ExpenseModalState): boolean => {
     const { hasNoDebt, payerId } = getSubmitState(state);
     return hasNoDebt && payerId !== state.source.currentUser?.id;
 };
 
-export const selectIsSubmitDisabled = (state: ExpenseModalStore) => {
+export const selectIsSubmitDisabled = (state: ExpenseModalState) => {
     const { isDisabled } = getSubmitState(state);
 
     if (isDisabled) {
@@ -619,7 +619,7 @@ export const selectIsSubmitDisabled = (state: ExpenseModalStore) => {
 };
 
 export const selectExpenseSubmitFeedback = (
-    state: ExpenseModalStore,
+    state: ExpenseModalState,
 ): ExpenseSubmitFeedback | null => {
     const { split, payerId, hasNoDebt, isDirectValid } = getSubmitState(state);
 
@@ -687,7 +687,7 @@ export const selectExpenseSubmitFeedback = (
 };
 
 const getPayloadParticipants = (
-    state: ExpenseModalStore,
+    state: ExpenseModalState,
     split: ReturnType<typeof getSplit>,
 ): { participantIds: string[]; sharingMode: SharingMode } => {
     const participantIds = split.includedUsers.map(user => user.id);
@@ -715,7 +715,7 @@ const getPayloadParticipants = (
 };
 
 export const selectExpensePayload = (
-    state: ExpenseModalStore,
+    state: ExpenseModalState,
     date = state.date,
 ): CreateLedgerEntryParams | null => {
     const { isDisabled, payerId, split } = getSubmitState(state);
@@ -739,7 +739,7 @@ export const selectExpensePayload = (
     };
 };
 
-export const selectSplitSummary = (state: ExpenseModalStore) => {
+export const selectSplitSummary = (state: ExpenseModalState) => {
     const split = getSplit(state);
 
     return {

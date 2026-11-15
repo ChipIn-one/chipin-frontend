@@ -9,6 +9,7 @@ import { usePersistedUserId } from 'app/providers/persistedUserId';
 import { RestoreGate } from 'app/providers/RestoreGate';
 import { UserQueryProvider } from 'app/providers/UserQueryProvider';
 import { darkThemeStyled, lightThemeStyled } from 'constants/styled-themes';
+import { AddExpenseModal } from 'features/add-expense';
 import AppRouter from 'features/routing';
 import { isThemeDark } from 'helpers/theme';
 import { useIsMobile } from 'hooks/common';
@@ -19,7 +20,6 @@ import PWABadge from 'basics/PWABadge';
 import AddExpenseButton from 'components/AddExpenseButton';
 import { BackendUnavailableGate } from 'components/backend-unavailable-page';
 import Header from 'components/Header';
-import { AddExpenseModal } from 'components/modals/add-expense-modal';
 import { ModalOverlayGlobalStyles } from 'components/modals/components';
 import { EarlySupporterPromoModal } from 'components/modals/early-supporter-promo-modal';
 
