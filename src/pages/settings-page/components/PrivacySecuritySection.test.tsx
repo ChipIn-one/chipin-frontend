@@ -129,6 +129,7 @@ test('does not show success and keeps the card retryable after an error', () => 
         .then(() =>
             waitFor(() => {
                 expect(logoutOtherDevices).toHaveBeenCalledOnce();
+                expect(toast.error).toHaveBeenCalledOnce();
                 expect(toast.success).not.toHaveBeenCalled();
             }),
         )

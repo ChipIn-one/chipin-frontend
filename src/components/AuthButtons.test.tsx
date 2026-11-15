@@ -40,8 +40,15 @@ test('leaves for Google sign-in once and keeps the button busy while the page un
 
     expect(button.disabled).toBe(false);
 
-    return user.click(button).then(() => {
-        expect(assign).toHaveBeenCalledOnce();
-        expect(button.disabled).toBe(true);
-    });
+    return user
+        .click(button)
+        .then(() => {
+            expect(assign).toHaveBeenCalledOnce();
+            expect(button.disabled).toBe(true);
+
+            return user.click(button);
+        })
+        .then(() => {
+            expect(assign).toHaveBeenCalledOnce();
+        });
 });

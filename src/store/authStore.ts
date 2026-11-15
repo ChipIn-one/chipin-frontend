@@ -60,9 +60,9 @@ export interface AuthStore {
 let signOutPromise: Promise<void> | null = null;
 let lastOAuthExchange: { code: string; promise: Promise<void> } | null = null;
 
-// The legacy stores hold data in memory: reset on any transition to unauthenticated and reloaded
-// after sign-in. Each store-migration PR removes its own line (spec 03 §1.5). It re-reads the
-// cached user from localStorage, so a caller changes `LS_KEY_USER` before it.
+// Runs on any transition to unauthenticated: resets the UI preferences (re-read from the cached
+// user in localStorage, so a caller changes `LS_KEY_USER` before it) and the self-user load of this
+// session.
 const resetAuthScopedStores = () => {
     useUiPrefsStore.getState().resetUiPrefs();
     resetSessionSelfLoad();
