@@ -31,7 +31,9 @@
         "youOwe": "Вы должны {{name}}",
         "owedToYou": "{{name}} должен вам",
         "remainingDebt": "Остаток долга:",
-        "debtWillBeSettled": "Долг будет погашен"
+        "debtWillBeSettled": "Долг будет погашен",
+        "fullSettlementHint": "Будет погашено полностью: {{amount}} {{currency}}",
+        "amountAboveDebt": "Сумма больше долга"
     },
     "invite": {
         "shareTitle": "Добавь меня в друзья в ChipIn",

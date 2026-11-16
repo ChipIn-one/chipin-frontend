@@ -25,9 +25,10 @@ import type { Group, GroupMember, GroupUser } from 'entities/groups';
 import { sortBalancesByCurrency } from 'helpers/currencies';
 import { displaySign, type Money } from 'shared/money';
 
+/** A member the signed-in user can settle with, and the exact balances in that direction. */
 export interface GroupSettlementOption {
     user: GroupUser;
-    balances: BalanceEntry[];
+    balances: Balance[];
 }
 
 export interface GroupSettlementOptions {
@@ -65,8 +66,10 @@ export const selectGroupSettlementOptions = (
             return;
         }
 
-        const { owe: balancesYouOwe, owed: balancesOwedToYou } =
-            selectMemberBalancePartition(member);
+        const { owe: balancesYouOwe, owed: balancesOwedToYou } = partitionBalances(
+            memberBalances(member),
+            netOf,
+        );
 
         if (balancesYouOwe.length > 0) {
             settlementOptions.youOwe.push({

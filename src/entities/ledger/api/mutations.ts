@@ -13,16 +13,14 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { mutationOptions } from '@tanstack/react-query';
 
-import type { CreateSettlementParams as CreateSettlementRequest } from 'api/chipin.types';
 import { isAuthSessionCurrent } from 'helpers/authSession';
 import { api, InvalidPathSegmentError } from 'shared/api/client';
 import { MoneyWireError } from 'shared/money';
 import { isUserCacheClient } from 'shared/offline/userCaches';
 
 import { toCreateLedgerEntryWire, toExpensePatchWire } from '../model/toExpenseWire';
+import { type SettlementDraft, toSettleUpWire } from '../model/toSettleUpWire';
 import type { ExpenseDraft, ExpensePatch } from '../model/types';
-
-import { legacyCreateSettlementBody } from './legacySettlementWire';
 
 export const ledgerOnlineMutationKeys = {
     createEntry: ['ledger', 'online', 'createEntry'],
@@ -50,8 +48,7 @@ export interface CreateExpenseParams {
 }
 
 export interface CreateSettlementParams {
-    // TODO(03-21): the amount as `Money` instead of the legacy number.
-    settlement: CreateSettlementRequest;
+    settlement: SettlementDraft;
 }
 
 export interface UpdateExpenseParams extends LedgerWriteContext {
@@ -139,7 +136,7 @@ export const createSettlementMutationOptions = (effects: LedgerWriteEffects) =>
         ...ONLINE_WRITE,
         mutationKey: ledgerOnlineMutationKeys.createEntry,
         mutationFn: ({ settlement }) =>
-            api('post', '/ledger/entries', { body: legacyCreateSettlementBody(settlement) }).then(
+            api('post', '/ledger/entries', { body: toSettleUpWire(settlement) }).then(
                 () => undefined,
             ),
         onSettled: (_data, error, variables, _context, { client }) =>

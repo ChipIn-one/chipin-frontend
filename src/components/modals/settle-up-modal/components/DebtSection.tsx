@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { legacyAmountFromMoney } from 'entities/balance';
+
 import { Amount, UserAvatar } from 'basics';
 
 import type { DebtOption } from '../internal';
@@ -53,7 +55,7 @@ const DebtSection = ({ debts, isExpanded, isUserOwing, onToggle, onSelect }: Pro
 
             {visibleDebts.map(debt => (
                 <DebtButton
-                    key={`${debt.user.id}-${debt.balance.currency}`}
+                    key={`${debt.user.id}-${debt.balance.net.currency}`}
                     type="button"
                     size="3"
                     variant="soft"
@@ -71,8 +73,8 @@ const DebtSection = ({ debts, isExpanded, isUserOwing, onToggle, onSelect }: Pro
                         <Flex align="center" gap="2" flexShrink="0">
                             <Text weight="bold" size="3" color={color}>
                                 <Amount
-                                    value={Math.abs(debt.balance.netAmount)}
-                                    tokenCode={debt.balance.currency}
+                                    value={legacyAmountFromMoney(debt.balance.net)}
+                                    tokenCode={debt.balance.net.currency}
                                     precision={2}
                                     type="summary"
                                 />

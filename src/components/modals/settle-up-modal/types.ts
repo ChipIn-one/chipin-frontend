@@ -1,10 +1,7 @@
-import type {
-    CreateSettlementParams,
-    FriendBalance,
-    FriendUser,
-    UserSummary,
-} from 'api/chipin.types';
+import type { FriendUser, UserSummary } from 'api/chipin.types';
+import type { Balance } from 'entities/balance';
 import type { Group } from 'entities/groups';
+import type { SettlementDraft } from 'entities/ledger';
 
 export type SettlementUser = Pick<UserSummary, 'id' | 'displayName' | 'picture'>;
 
@@ -13,9 +10,10 @@ export interface FriendSettleUpProps {
     isOpened: boolean;
     onOpenChange: (isOpen: boolean) => void;
     friend: FriendUser;
-    balances: FriendBalance[];
+    /** The exact balances with the friend, one per currency (`net < 0`: you owe). */
+    balances: readonly Balance[];
     initialCurrency: string;
-    onSubmit: (params: CreateSettlementParams) => Promise<void>;
+    onSubmit: (settlement: SettlementDraft) => Promise<void>;
 }
 
 export interface GroupSettleUpProps {

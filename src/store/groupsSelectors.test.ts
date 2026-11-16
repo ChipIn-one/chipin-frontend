@@ -1,10 +1,17 @@
 import { expect, test } from 'vitest';
 
+import type { Balance } from 'entities/balance';
 import type { Group } from 'entities/groups';
+import { currencyCode, fromUnits } from 'shared/money';
 import { getOrThrow } from 'test/getOrThrow';
 import { groupBalances } from 'test/groupFixtures';
 
 import { selectGroupBalances, selectGroupSettlementOptions } from './groupsSelectors';
+
+// The exact balance of `units` ledger units (scale 4) in `currency`.
+const balance = (units: bigint, currency: string): Balance => ({
+    net: fromUnits(units, currencyCode(currency)),
+});
 
 test('aggregates group member balances by currency and direction', () => {
     const user = {
@@ -151,17 +158,17 @@ test('groups settlement options by direction and splits mixed member balances', 
         youOwe: [
             {
                 user: expect.objectContaining({ id: 'user-4' }),
-                balances: [{ currency: 'USD', netBalance: -12 }],
+                balances: [balance(-120_000n, 'USD')],
             },
         ],
         owedToYou: [
             {
                 user: expect.objectContaining({ id: 'user-2' }),
-                balances: [{ currency: 'EUR', netBalance: 25 }],
+                balances: [balance(250_000n, 'EUR')],
             },
             {
                 user: expect.objectContaining({ id: 'user-4' }),
-                balances: [{ currency: 'EUR', netBalance: 8 }],
+                balances: [balance(80_000n, 'EUR')],
             },
         ],
     });
@@ -219,17 +226,17 @@ test('groups settlement options by direction and splits mixed member balances', 
         youOwe: [
             {
                 user: expect.objectContaining({ id: 'user-4' }),
-                balances: [{ currency: 'USD', netBalance: -12 }],
+                balances: [balance(-120_000n, 'USD')],
             },
         ],
         owedToYou: [
             {
                 user: expect.objectContaining({ id: 'user-2' }),
-                balances: [{ currency: 'EUR', netBalance: 25 }],
+                balances: [balance(250_000n, 'EUR')],
             },
             {
                 user: expect.objectContaining({ id: 'user-4' }),
-                balances: [{ currency: 'EUR', netBalance: 8 }],
+                balances: [balance(80_000n, 'EUR')],
             },
         ],
     });
@@ -285,13 +292,13 @@ test('keeps non-zero group balances and skips float-noise zero balances', () => 
     expect(settlementOptions.owedToYou).toEqual([
         {
             user: getOrThrow(group.members, 1).user,
-            balances: [{ currency: 'USD', netBalance: 0.2 }],
+            balances: [balance(2_000n, 'USD')],
         },
     ]);
     expect(settlementOptions.youOwe).toEqual([
         {
             user: getOrThrow(group.members, 1).user,
-            balances: [{ currency: 'EUR', netBalance: -10 }],
+            balances: [balance(-100_000n, 'EUR')],
         },
     ]);
 });

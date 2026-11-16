@@ -3,7 +3,7 @@
 export { convert } from './convert';
 export type { FormatMoneyOptions } from './format';
 export { BELOW_MINOR_PREFIX, formatMoney, formatMoneyParts } from './format';
-export { moneyInputText, parseMoneyInput } from './input';
+export { moneyInputText, moneyLedgerText, parseMoneyInput } from './input';
 export type { ApproxMoney, CurrencyCode, MinorUnits, Money, Sign } from './money';
 export {
     abs,
@@ -12,10 +12,12 @@ export {
     currencyCode,
     CurrencyMismatchError,
     displaySign,
+    divideHalfUp,
     fromUnits,
     isApprox,
     isZero,
     LEDGER_SCALE,
+    ledgerUnitsPerMinor,
     minorUnits,
     negate,
     roundToMinor,

@@ -1,6 +1,6 @@
 // Public entry of entities/ledger: the online ledger mutations (an expense create and update, a
-// settlement create, an entry delete), the expense draft and patch with their wire mappers, and the
-// backend capabilities query.
+// settlement create, an entry delete), the expense draft and patch and the settlement draft with
+// their wire mappers, and the backend capabilities query.
 export type {
     CreateExpenseParams,
     CreateSettlementParams,
@@ -30,4 +30,6 @@ export {
     toCreateLedgerEntryWire,
     toExpensePatchWire,
 } from './model/toExpenseWire';
+export type { CreateSettlementWire, SettlementDraft } from './model/toSettleUpWire';
+export { toSettleUpWire } from './model/toSettleUpWire';
 export type { ExpenseDraft, ExpenseDraftSharingMode, ExpensePatch } from './model/types';
