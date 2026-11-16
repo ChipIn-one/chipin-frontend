@@ -16,7 +16,7 @@ These invariants hold on `master` today (lint, `check:file-layout`, CI, or the e
 7. Promises are never lost: return, await, or mark them `void`; do not swallow errors. `await` and `.then` are both fine. A JSX attribute never returns a promise: `onClick={() => void action()}`.
 8. The server is the source of truth for finances: do not patch balances or debts locally, and a stale response never overwrites newer state. Every TanStack mutation has `retry: false`.
 9. There are no offline financial writes: `shared/offline/outboxGate.ts` and `pendingOps.ts` are stubs, and a task does not build an outbox unless it asks for one. Settle-up and payments, including editing or deleting a settlement, are online-only.
-10. An `index.ts` exists only at `src/<layer>/<slice>/index.ts`, and no new `useConnect.ts` file or `useConnect` hook is added: `check:file-layout` fails both (existing files are baselined). No `export *`; named exports in new code (review). Do not rewrite existing files incidentally.
+10. An `index.ts` exists only at `src/<layer>/<slice>/index.ts`, and no new `useConnect.ts` file or `useConnect` hook is added: `check:file-layout` fails both (existing files are baselined). `export *` (`no-restricted-syntax` `#export-all`) and default exports (`import-x/no-default-export`) are lint errors; existing default exports are suppressions that only shrink, and a touched file switches to `export { X }` with its importers and `vi.mock` calls. Do not rewrite existing files incidentally.
 11. Server state is TanStack Query; Zustand is UI state. Legacy server stores remain until migrated: do not create new ones or add server-data fields. Read one value with a selector, several with one object selector in `useShallow`; `useStore()` without a selector is forbidden.
 12. `localStorage` and `sessionStorage` go only through `helpers/localStorage.ts` (lint checks `localStorage`; known exception `src/helpers/publicLocaleSuggestion.ts`, #675). Logout clears all user data (cache, user `id`/`role`); only the language and theme settings survive.
 13. Tokens, invite tokens and personal data never reach logs, Sentry or URLs.
@@ -33,7 +33,6 @@ Where the refactor goes: `docs/superpowers/specs/2026-10-28-frontend-refactor/00
 
 - All server state moves to TanStack Query in `entities/*`; Zustand keeps UI state only and the legacy server stores go away.
 - Expense create/edit/delete goes through an outbox (spec 03 §2): offline writes with a client UUID, sent in order; a failed op blocks only its own expense, and tabs coordinate only through `navigator.locks`. Settle-up and payments stay online-only.
-- Named exports are enforced by `import-x/no-default-export`; existing default exports become lint suppressions that only shrink, with no codemods.
 - Legacy money helpers in `helpers/numbers.ts` go away as the code moves to `src/shared/money/`; route composition moves from `features/routing` into the `app` layer (spec 04).
 
 ## Commands

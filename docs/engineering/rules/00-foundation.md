@@ -34,10 +34,15 @@ export const fetchGroup = (groupId: string): Promise<Group> => {
 
 ## Modules
 
-- Prefer named exports. Default exports are limited to established framework boundaries or existing local patterns.
+- Named exports only (`import-x/no-default-export`). Exceptions: tool config files (`*.config.*`,
+  `ds-gallery/vite.config.ts`) and `*.d.ts`. Existing default exports are lint suppressions that only
+  shrink: a touched file switches to `export { X }`, and its importers and `vi.mock(..., () => ({ default }))`
+  calls switch to the named export in the same PR. A lazy route uses
+  `lazy(() => import('pages/X').then(m => ({ default: m.X })))`.
 - Every `index.ts` imports its public values and types first, then ends with exactly one explicit named
   `export { ... }` block. Do not use inline re-exports such as `export { Component } from './component'`,
-  wildcard exports, multiple export statements, or a default export from an index file.
+  wildcard exports (`export *`, lint `#export-all`), multiple export statements, or a default export
+  from an index file.
 - Which directories have an `index.ts` and how imports cross a slice boundary: `10-architecture.md`
   §Index Files And Import Boundaries.
 

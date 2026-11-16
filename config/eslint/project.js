@@ -1,4 +1,5 @@
 import pluginQuery from '@tanstack/eslint-plugin-query';
+import importX from 'eslint-plugin-import-x';
 
 import { appGlob, LINT_FILES } from './base.js';
 
@@ -269,6 +270,13 @@ const RETURN_CONTAINERS = [
  */
 export const projectRules = ({ appDir }) => [
     {
+        // D11 (02-C13): one barrel per slice that names what it re-exports; no star re-exports.
+        id: 'export-all',
+        selector: 'ExportAllDeclaration',
+        message:
+            "Re-export by name: `export { X } from './X'` (or `export type { T }`), not `export *`.",
+    },
+    {
         id: 'img-element',
         // `<img>`, `styled.img`, `styled('img')`, `createElement('img')`, `React.createElement('img')`.
         selector: [
@@ -332,8 +340,36 @@ export const projectRules = ({ appDir }) => [
     },
 ];
 
-/** Storage boundary: localStorage only through helpers/localStorage.ts; `navigator.onLine` below. */
+/**
+ * Spec 02 §D5 "default export exceptions": tool configs that their tool loads by its default
+ * export, and declaration files. Route modules need no exception (D6 `lazy` takes a named
+ * `Component`; until D6, `import('pages/X').then(m => ({ default: m.X }))`).
+ */
+export const DEFAULT_EXPORT_EXCEPTIONS = [
+    '*.config.{js,ts,mjs}',
+    'eslint.config.js',
+    'vite.config.ts',
+    'vitest*.config.ts',
+    'ds-gallery/vite.config.ts',
+    'pwa-assets.config.ts',
+    '**/*.d.ts',
+];
+
+/**
+ * Storage boundary: localStorage only through helpers/localStorage.ts; `navigator.onLine` below;
+ * named exports only (D11, 02-C13: the existing default exports are suppressions that only shrink,
+ * D31; a touched file switches to `export { X }` with its importers and `vi.mock` in the same PR).
+ */
 export const projectConfig = ({ appDir }) => [
+    {
+        name: 'chipin/no-default-export',
+        files: [LINT_FILES],
+        ignores: DEFAULT_EXPORT_EXCEPTIONS.map(glob => appGlob(appDir, glob)),
+        plugins: { 'import-x': importX },
+        rules: {
+            'import-x/no-default-export': 'error',
+        },
+    },
     {
         files: [LINT_FILES],
         rules: {
