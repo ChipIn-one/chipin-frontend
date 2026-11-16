@@ -93,7 +93,6 @@ test('builds a partial payment that sends the input and leaves the rest of the e
         owed: usd('100'),
         remaining: usd('60'),
         isFriendPayer: false,
-        isSubmitDisabled: false,
         isDebtSettled: false,
         fullSettlementAmount: null,
         debtColor: 'red',
@@ -109,7 +108,6 @@ test('builds a full settlement when the friend owes', () => {
     ).toMatchObject({
         settlement: { fromUserId: friend.id, toUserId: currentUser.id, amount: owed.net },
         isFriendPayer: true,
-        isSubmitDisabled: false,
         isDebtSettled: true,
         fullSettlementAmount: null,
         debtColor: 'green',
@@ -143,7 +141,6 @@ test.each(['', '0', '-1', '100.01', 'invalid', '0.0000001', '1.234'])(
             amount,
         });
 
-        expect(model.isSubmitDisabled).toBe(true);
         expect(model.settlement).toBeNull();
         expect(model.remaining).toEqual(usd('100'));
     },

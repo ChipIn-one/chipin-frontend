@@ -978,7 +978,7 @@ Shares are computed at scale 4 (10/3 → 3.3334/3.3333/3.3333), input is in curr
   not a payment); an amount above the debt by a minor unit or more is `aria-invalid` with the line
   `friends:settleUp.amountAboveDebt` "The amount is more than the debt"; if the selected currency leaves the
   balances after a refetch, the form sends nothing instead of the typed amount in the fallback currency. The draft is
-  (declared next to its mapper in `entities/ledger/model/toSettleUpWire.ts`, not in `types.ts`: a write-only
+  declared next to its mapper in `entities/ledger/model/toSettleUpWire.ts`, not in `types.ts` (a write-only
   shape must not change `MODEL_SHAPE_HASH` and bust the persisted cache); `entities/ledger/api/legacySettlementWire.ts`, the unused legacy
   `api/ledgerApi.ts` `createSettlement` and the number `CreateSettlementParams`/`FriendBalance` are gone.
   Deviation (03-21): (1) the mapper is `toSettleUpWire(settlement: SettlementDraft)` in

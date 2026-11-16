@@ -39,7 +39,6 @@ export interface SettlementViewModel {
     /** The debt left after this settlement: zero or at least one minor unit. */
     remaining: Money;
     isFriendPayer: boolean;
-    isSubmitDisabled: boolean;
     isDebtSettled: boolean;
     /** The field holds text that is not an amount of the currency (too many fraction digits). */
     isAmountInvalid: boolean;
@@ -101,7 +100,6 @@ export const getSettlementViewModel = ({
         owed,
         remaining,
         isFriendPayer,
-        isSubmitDisabled: resolved === null,
         isDebtSettled,
         isAmountInvalid: amount.trim() !== '' && input === null,
         isAboveDebt: input !== null && resolved === null && compare(input, owed) > 0,
