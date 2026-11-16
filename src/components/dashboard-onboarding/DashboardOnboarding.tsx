@@ -1,4 +1,4 @@
-import { Box, Button, Card, Flex, Heading, Text } from '@radix-ui/themes';
+import { Button, Card, Flex, Heading, Text } from '@radix-ui/themes';
 import { UserPlusIcon, UsersRoundIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
@@ -6,9 +6,10 @@ import styled from 'styled-components';
 import { useFriendInvite } from 'hooks/pwaHooks';
 import { useSelfUser } from 'hooks/useSelfUser';
 
+import Image from 'basics/Image';
 import { CreateUpdateGroupModal } from 'components/modals/create-update-group-modal';
 
-import DashboardOnboardingIllustration from 'assets/dashboard-onboarding.png';
+import DashboardOnboardingIllustration from 'assets/dashboard-onboarding.webp';
 
 const ActionButton = styled(Button)`
     height: auto;
@@ -45,15 +46,14 @@ const DashboardOnboarding = () => {
                     flexShrink="1"
                     minWidth="0"
                 >
-                    <Box asChild width="100%">
-                        <img
-                            src={DashboardOnboardingIllustration}
-                            alt=""
-                            aria-hidden="true"
-                            decoding="async"
-                            data-testid="onboarding-illustration"
-                        />
-                    </Box>
+                    <Image
+                        src={DashboardOnboardingIllustration}
+                        width="100%"
+                        alt=""
+                        aria-hidden="true"
+                        decoding="async"
+                        data-testid="onboarding-illustration"
+                    />
                 </Flex>
 
                 <Flex

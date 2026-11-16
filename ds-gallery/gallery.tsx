@@ -63,8 +63,7 @@ import UsersRow from 'components/UsersRow';
 
 import { GALLERY_NS, galleryResources } from './locales';
 
-import '@radix-ui/themes/styles.css';
-import 'styles/radixStylesOverwrite.css';
+import 'styles/index.css';
 
 SUPPORTED_LOCALES.forEach(locale =>
     i18n.addResourceBundle(locale, GALLERY_NS, galleryResources[locale], true, true),

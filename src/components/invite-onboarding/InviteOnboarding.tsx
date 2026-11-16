@@ -7,7 +7,7 @@ import type { UseInviteResult } from 'hooks/pwaHooks';
 
 import { InviteActionRows } from 'components/invite';
 
-import InviteIllustrationAsset from 'assets/group-invite-empty-state.png';
+import InviteIllustrationAsset from 'assets/group-invite-empty-state.webp';
 
 const InviteCard = styled(Card)`
     overflow: hidden;

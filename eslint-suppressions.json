@@ -49,11 +49,6 @@
       "count": 1
     }
   },
-  "src/components/dashboard-onboarding/DashboardOnboarding.tsx": {
-    "no-restricted-syntax": {
-      "count": 1
-    }
-  },
   "src/components/invite-onboarding/InviteOnboarding.tsx": {
     "no-restricted-syntax": {
       "count": 1

@@ -198,7 +198,7 @@ export default defineConfig(({ mode }) => {
                 includeManifestIcons: true,
 
                 workbox: {
-                    globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+                    globPatterns: ['**/*.{js,css,html,svg,png,webp,ico}'],
                     // Canonical public URLs omit index.html and often the slash.
                     // Precache both URL variants so offline navigation resolves.
                     manifestTransforms: [addPublicDirectoryAliases],

@@ -69,7 +69,10 @@ test('DSH-008 shows the single welcome with two actions', () => {
     expect(screen.getByRole('heading', { name: 'onboarding.welcome.title' })).toBeTruthy();
     const card = screen.getByTestId('dashboard-onboarding-card');
     expect(card.className).toContain('rt-Card');
-    expect(card.contains(screen.getByTestId('onboarding-illustration'))).toBe(true);
+    const illustration = screen.getByTestId('onboarding-illustration');
+    expect(card.contains(illustration)).toBe(true);
+    expect(illustration.getAttribute('alt')).toBe('');
+    expect(illustration.getAttribute('aria-hidden')).toBe('true');
     expect(card.contains(screen.getByRole('heading', { name: 'onboarding.welcome.title' }))).toBe(
         true,
     );
