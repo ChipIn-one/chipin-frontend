@@ -188,6 +188,7 @@ describe('project entries (02-C12) merged with the money and i18n entries', () =
         ]),
     ];
     const source = [
+        "export * from './x';",
         'export const C = () => {',
         '    const all = useAuthStore();',
         '    const arrow = useAuthStore(state => ({ user: state.user }));',
@@ -228,6 +229,7 @@ describe('project entries (02-C12) merged with the money and i18n entries', () =
         'export { Avatar, Created, Div, Picture, ReactCreated };',
     ].join('\n');
     const PROJECT = [
+        'export-all',
         'store-without-selector',
         'store-object-without-shallow',
         'store-object-without-shallow',
