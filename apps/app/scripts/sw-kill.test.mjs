@@ -1,11 +1,15 @@
 // Kill-switch public/sw-kill.js (spec 04 §2.11, §3.6; 04-4a1): evaluated as a classic worker
 // script against fake `caches`, `registration` and `clients`.
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { runInNewContext } from 'node:vm';
 
 import { expect, test, vi } from 'vitest';
 
-const KILL_SWITCH_SOURCE = readFileSync('public/sw-kill.js', 'utf8');
+const KILL_SWITCH_SOURCE = readFileSync(
+    resolve(import.meta.dirname, '../public/sw-kill.js'),
+    'utf8',
+);
 
 const DASHBOARD_WINDOWS = ['https://chipin.one/dashboard?tab=0', 'https://chipin.one/group/1'];
 

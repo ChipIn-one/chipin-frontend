@@ -1,12 +1,13 @@
 // Isolate React SSR from the active Vite client build before Workbox scans dist.
 import { execFile } from 'node:child_process';
+import { resolve } from 'node:path';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
 
 const runPrerenderPublic = () =>
-    execFileAsync(process.execPath, ['scripts/prerender-public.mjs'], {
-        cwd: process.cwd(),
+    execFileAsync(process.execPath, [resolve(import.meta.dirname, 'prerender-public.mjs')], {
+        cwd: resolve(import.meta.dirname, '..'),
         // Vite's client build sets NODE_ENV=production, but this separate
         // Vite SSR server transforms its React tree with the dev JSX runtime.
         // Keep the client/Workbox build production; only isolate this child.

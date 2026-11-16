@@ -77,7 +77,7 @@ jobs:
         run: node scripts/check-file-layout.mjs --base "$BASE_SHA"
       - name: Check generated API types
         if: steps.gate.outputs.mode == 'full'
-        # Offline: regenerates from the committed openapi/chipin.yaml and fails on any diff (spec 03 §5.5).
+        # Offline: regenerates from the committed apps/app/openapi/chipin.yaml and fails on any diff (spec 03 §5.5).
         run: npm run api:check
       - name: Verify frontend
         if: steps.gate.outputs.mode == 'full'

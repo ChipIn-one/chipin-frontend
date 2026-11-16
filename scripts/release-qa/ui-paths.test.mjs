@@ -10,26 +10,26 @@ import {
 
 test('application code, static assets, entry HTML, locales, Vercel, PWA and Vite config are UI-affecting', () => {
     for (const path of [
-        'src/App.tsx',
-        'src/i18n/locales/en/common.json',
-        'src/helpers/serviceWorkerRecovery.ts',
-        'public/favicon.svg',
-        'index.html',
-        'app.html',
-        'vercel.json',
-        'vite.config.ts',
-        'pwa-assets.config.ts',
-        'scripts/prerender-before-workbox.mjs',
-        'scripts/private-spa-navigation.ts',
+        'apps/app/src/App.tsx',
+        'apps/app/src/i18n/locales/en/common.json',
+        'apps/app/src/helpers/serviceWorkerRecovery.ts',
+        'apps/app/public/favicon.svg',
+        'apps/app/index.html',
+        'apps/app/app.html',
+        'apps/app/vercel.json',
+        'apps/app/vite.config.ts',
+        'apps/app/pwa-assets.config.ts',
+        'apps/app/scripts/prerender-before-workbox.mjs',
+        'apps/app/scripts/private-spa-navigation.ts',
     ])
         expect(isUiAffecting(path), path).toBe(true);
 });
 
 test('tests, test setup, CI, workflows, tooling, packages and docs are not UI-affecting', () => {
     for (const path of [
-        'src/App.test.tsx',
-        'src/helpers/theme.test.ts',
-        'src/test/setup.ts',
+        'apps/app/src/App.test.tsx',
+        'apps/app/src/helpers/theme.test.ts',
+        'apps/app/src/test/setup.ts',
         '.github/workflows/frontend-ci.yml',
         '.github/dependabot.yml',
         'scripts/release-qa/core.mjs',
@@ -38,7 +38,7 @@ test('tests, test setup, CI, workflows, tooling, packages and docs are not UI-af
         'docs/engineering/release-qa.md',
         'README.md',
         'AGENTS.md',
-        'vitest.config.ts',
+        'apps/app/vitest.config.ts',
         'eslint.config.js',
     ])
         expect(isUiAffecting(path), path).toBe(false);
@@ -46,8 +46,13 @@ test('tests, test setup, CI, workflows, tooling, packages and docs are not UI-af
 
 test('uiAffectingFiles keeps only UI-affecting paths in order', () => {
     expect(
-        uiAffectingFiles(['docs/a.md', 'src/App.tsx', 'src/App.test.tsx', 'vercel.json']),
-    ).toEqual(['src/App.tsx', 'vercel.json']);
+        uiAffectingFiles([
+            'docs/a.md',
+            'apps/app/src/App.tsx',
+            'apps/app/src/App.test.tsx',
+            'apps/app/vercel.json',
+        ]),
+    ).toEqual(['apps/app/src/App.tsx', 'apps/app/vercel.json']);
 });
 
 describe('build-affecting changes', () => {
@@ -74,21 +79,21 @@ describe('build-affecting changes', () => {
     test('tsconfig files, the version resolver and the Sentry upload gate are build-affecting by path', () => {
         expect(
             buildAffectingFiles([
-                'tsconfig.app.json',
-                'tsconfig.json',
-                'tsconfig.node.json',
+                'apps/app/tsconfig.app.json',
+                'apps/app/tsconfig.json',
+                'apps/app/tsconfig.node.json',
                 'scripts/version-resolver.mjs',
-                'scripts/sentry-sourcemaps.ts',
+                'apps/app/scripts/sentry-sourcemaps.ts',
                 'scripts/sentry-sourcemaps.test.ts',
                 'docs/a.md',
                 'scripts/version-check.mjs',
             ]),
         ).toEqual([
-            'tsconfig.app.json',
-            'tsconfig.json',
-            'tsconfig.node.json',
+            'apps/app/tsconfig.app.json',
+            'apps/app/tsconfig.json',
+            'apps/app/tsconfig.node.json',
             'scripts/version-resolver.mjs',
-            'scripts/sentry-sourcemaps.ts',
+            'apps/app/scripts/sentry-sourcemaps.ts',
         ]);
     });
 
@@ -210,7 +215,7 @@ describe('build-affecting changes', () => {
         const head = { pkg: pkg({ i18next: '^27.0.0' }), lock: baseLock };
         expect(
             packageBuildChanges({
-                files: ['src/App.tsx'],
+                files: ['apps/app/src/App.tsx'],
                 base: { pkg: basePkg, lock: baseLock },
                 head,
             }),
@@ -219,7 +224,7 @@ describe('build-affecting changes', () => {
 
     test('every package imported by vite.config.ts and pwa-assets.config.ts is part of the build toolchain', () => {
         const imported = new Set();
-        for (const file of ['vite.config.ts', 'pwa-assets.config.ts']) {
+        for (const file of ['apps/app/vite.config.ts', 'apps/app/pwa-assets.config.ts']) {
             for (const match of readFileSync(file, 'utf8').matchAll(/\bfrom\s+['"]([^'"]+)['"]/g)) {
                 const specifier = match[1];
                 if (specifier.startsWith('.') || specifier.startsWith('node:')) continue;

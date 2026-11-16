@@ -2,19 +2,19 @@
 // A Production-to-candidate compare with none of these paths needs no manual QA.
 // Keep it in sync with the real tree: entry HTML, PWA/service-worker build inputs and Vercel routing.
 export const UI_PATH_PREFIXES = Object.freeze([
-    'src/', // application code, styles and src/i18n/locales/** translations
-    'public/', // static assets, icons, robots.txt and sitemap.xml
+    'apps/app/src/', // application code, styles and src/i18n/locales/** translations
+    'apps/app/public/', // static assets, icons, robots.txt and sitemap.xml
 ]);
 
 export const UI_PATH_FILES = new Set([
-    'index.html', // public entry HTML
-    'app.html', // private SPA shell and service-worker navigate fallback
-    'vercel.json', // routing, headers and rewrites
-    'vite.config.ts', // build, VitePWA and workbox configuration
-    'pwa-assets.config.ts', // PWA icon generation
-    'scripts/prerender-before-workbox.mjs', // prerender step that runs before workbox precache
-    'scripts/prerender-public.mjs', // public page prerender
-    'scripts/private-spa-navigation.ts', // service-worker navigate fallback allowlist
+    'apps/app/index.html', // public entry HTML
+    'apps/app/app.html', // private SPA shell and service-worker navigate fallback
+    'apps/app/vercel.json', // routing, headers and rewrites
+    'apps/app/vite.config.ts', // build, VitePWA and workbox configuration
+    'apps/app/pwa-assets.config.ts', // PWA icon generation
+    'apps/app/scripts/prerender-before-workbox.mjs', // prerender step that runs before workbox precache
+    'apps/app/scripts/prerender-public.mjs', // public page prerender
+    'apps/app/scripts/private-spa-navigation.ts', // service-worker navigate fallback allowlist
 ]);
 
 const TEST_FILE = /\.test\.[^/]+$/;
@@ -23,7 +23,10 @@ export function isUiAffecting(path) {
     if (typeof path !== 'string' || path.length === 0) return false;
     if (UI_PATH_FILES.has(path)) return true;
     if (!UI_PATH_PREFIXES.some(prefix => path.startsWith(prefix))) return false;
-    if (path.startsWith('src/') && (path.startsWith('src/test/') || TEST_FILE.test(path)))
+    if (
+        path.startsWith('apps/app/src/') &&
+        (path.startsWith('apps/app/src/test/') || TEST_FILE.test(path))
+    )
         return false;
     return true;
 }
@@ -40,9 +43,9 @@ export function uiAffectingFiles(files) {
 // candidate; it only forces a QA Issue with SMOKE-SHORT. Lint/test/types devDependencies stay out.
 const BUILD_PATH_FILES = new Set([
     'scripts/version-resolver.mjs', // imported by vite.config.ts
-    'scripts/sentry-sourcemaps.ts', // imported by vite.config.ts: Sentry source map upload gate
+    'apps/app/scripts/sentry-sourcemaps.ts', // imported by vite.config.ts: Sentry source map upload gate
 ]);
-const TSCONFIG = /^tsconfig[^/]*\.json$/; // module resolution and compile targets
+const TSCONFIG = /^(?:apps\/app\/)?tsconfig[^/]*\.json$/; // module resolution and compile targets
 // Every package vite.config.ts and pwa-assets.config.ts import (ui-paths.test.mjs parses both files to
 // keep this complete), plus workbox-* which vite-plugin-pwa uses to build the service worker.
 const TOOLCHAIN =

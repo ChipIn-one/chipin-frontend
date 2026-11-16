@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 import { afterAll, describe, expect, test } from 'vitest';
 import { parse, stringify } from 'yaml';
@@ -9,6 +9,7 @@ import { parse, stringify } from 'yaml';
 import { generate } from './gen-types.mjs';
 import { checkGeneratedTypes, checkWireFields, REGISTRY } from './wire-fields.mjs';
 
+const APP_ROOT = resolve(import.meta.dirname, '../..');
 const scaled = { type: 'number', multipleOf: 0.0001 };
 const map = values => ({ type: 'object', additionalProperties: values });
 
@@ -238,7 +239,7 @@ describe('gen-types', () => {
         const out = join(directory, 'bad-out');
         const result = spawnSync(
             process.execPath,
-            ['scripts/api/gen-types.mjs', '--spec', specPath, '--out', out],
+            [resolve(import.meta.dirname, 'gen-types.mjs'), '--spec', specPath, '--out', out],
             {
                 encoding: 'utf8',
             },
@@ -280,9 +281,11 @@ describe('gen-types', () => {
     });
 
     test('the committed snapshot passes and percentageShares is Record<string, WireDecimal>', () => {
-        expect(checkWireFields(parse(readFileSync('openapi/chipin.yaml', 'utf8')))).toEqual([]);
-        expect(readFileSync('src/shared/api/generated/schema.d.ts', 'utf8')).toMatch(
-            /percentageShares: Record<string, WireDecimal>;/,
-        );
+        expect(
+            checkWireFields(parse(readFileSync(resolve(APP_ROOT, 'openapi/chipin.yaml'), 'utf8'))),
+        ).toEqual([]);
+        expect(
+            readFileSync(resolve(APP_ROOT, 'src/shared/api/generated/schema.d.ts'), 'utf8'),
+        ).toMatch(/percentageShares: Record<string, WireDecimal>;/);
     });
 });

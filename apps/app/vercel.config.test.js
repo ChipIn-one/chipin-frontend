@@ -1,4 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import { getTransformedRoutes } from '@vercel/routing-utils';
 import { describe, expect, test } from 'vitest';
@@ -6,7 +7,8 @@ import { describe, expect, test } from 'vitest';
 import { LEGACY_SERVICE_WORKER_HOSTNAMES } from './src/helpers/serviceWorkerHost.ts';
 
 const API_SOURCE = '/api/:path*';
-const config = JSON.parse(readFileSync('vercel.json', 'utf8'));
+const config = JSON.parse(readFileSync(resolve(import.meta.dirname, 'vercel.json'), 'utf8'));
+const DIST = resolve(import.meta.dirname, 'dist');
 
 const apiRewrites = config.rewrites.filter(rewrite => rewrite.source === API_SOURCE);
 
@@ -327,10 +329,16 @@ describe('Vercel /sw.js by host (04-4a1)', () => {
 
 // Runs against a built `dist` only (`npm run build` runs `verify:public-precache`, which checks
 // the same files on every build, including Vercel's).
-describe.runIf(existsSync('dist/index.html'))('built dist worker files (04-4a1)', () => {
+describe.runIf(existsSync(resolve(DIST, 'index.html')))('built dist worker files (04-4a1)', () => {
     test('has sw-app.js and sw-kill.js and no sw.js', () => {
-        expect(existsSync('dist/sw-app.js')).toBe(true);
-        expect(existsSync('dist/sw-kill.js')).toBe(true);
-        expect(existsSync('dist/sw.js')).toBe(false);
+        expect(existsSync(resolve(DIST, 'sw-app.js'))).toBe(true);
+        expect(existsSync(resolve(DIST, 'sw-kill.js'))).toBe(true);
+        expect(existsSync(resolve(DIST, 'sw.js'))).toBe(false);
     });
+});
+
+// 04-0a: Vercel builds with Root Directory apps/app; the install runs at the workspace root from
+// the root lockfile, like CI (a workspace-scoped install misses the root tooling, husky fails).
+test('installs from the workspace root lockfile', () => {
+    expect(config.installCommand).toBe('cd ../.. && npm ci');
 });

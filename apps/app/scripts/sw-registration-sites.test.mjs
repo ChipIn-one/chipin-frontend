@@ -6,12 +6,13 @@ import path from 'node:path';
 
 import { describe, expect, test } from 'vitest';
 
+const APP_ROOT = path.resolve(import.meta.dirname, '..');
 const SOURCE_ROOT = 'src';
 const IS_SOURCE = /\.(?:ts|tsx|js|jsx|mjs)$/;
 const IS_TEST = /\.test\.[cm]?[jt]sx?$/;
 
 const listSourceFiles = directory =>
-    readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
+    readdirSync(path.join(APP_ROOT, directory), { withFileTypes: true }).flatMap(entry => {
         const entryPath = path.posix.join(directory, entry.name);
 
         if (entry.isDirectory()) {
@@ -70,7 +71,10 @@ const EXPECTED_CALL_SITES = {
 };
 
 const sources = Object.fromEntries(
-    listSourceFiles(SOURCE_ROOT).map(file => [file, readFileSync(file, 'utf8')]),
+    listSourceFiles(SOURCE_ROOT).map(file => [
+        file,
+        readFileSync(path.join(APP_ROOT, file), 'utf8'),
+    ]),
 );
 
 const callSites = Object.keys(sources).filter(
@@ -119,7 +123,7 @@ describe('service worker registration call sites', () => {
     });
 
     test('virtual:pwa-register resolves to /sw.js with scope / (VitePWA defaults)', () => {
-        const viteConfig = readFileSync('vite.config.ts', 'utf8');
+        const viteConfig = readFileSync(path.join(APP_ROOT, 'vite.config.ts'), 'utf8');
         const pwaIndex = viteConfig.indexOf('VitePWA({');
         const renameIndex = viteConfig.indexOf('swAppPlugin()');
 
