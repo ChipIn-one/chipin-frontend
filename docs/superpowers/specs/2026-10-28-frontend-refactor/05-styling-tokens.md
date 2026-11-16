@@ -94,13 +94,15 @@ Rules for `tokens.css`:
 **Wiring into the app** (`apps/app/src/styles/index.css`, the only CSS entry, imported from `root.tsx` instead of `@radix-ui/themes/styles.css`):
 
 ```css
-@import '@radix-ui/themes/tokens/base.css';
 @import '@chipin/tokens/radix-colors.css';
+@import '@radix-ui/themes/tokens/base.css';
 @import '@radix-ui/themes/components.css';
 @import '@radix-ui/themes/utilities.css';
 @import '@chipin/tokens/tokens.css';
 @import './radixStylesOverwrite.css';
 ```
+
+The scales come before `base.css`, as in Radix's own `tokens/index.css`: the olive gray mapping in `base.css` (`.radix-themes:where([data-gray-color=olive])`) has the same specificity as the `.light`/`.dark` rules of the scale files, so it must come later to win.
 
 `<Theme>` is configured in exactly one place: `apps/app/src/design-system/AppTheme.tsx`. It is `<Theme {...RADIX_THEME} appearance={appearance} hasBackground>`; `appearance` comes as a prop (the caller reads the store), so `design-system/` is a `basics` level in the layer graph (spec 02 D5). It is used by `main.tsx` and ds-gallery. `PublicApp.tsx` uses `RADIX_THEME` until its removal in spec 04.
 
@@ -264,7 +266,9 @@ In PR 05-6, the 3 unchecked buttons from the audit are checked against these ite
 - `@radix-ui/themes/styles.css` is replaced by the 4 imports from item 1.
 - `packages/tokens/src/radix-colors.css` imports 22 scales — all that occur in the code, including the category colors from `constants/category-ui.ts`:
   `amber blue brown crimson cyan gold grass gray green indigo jade mint olive orange pink purple red sky teal tomato violet yellow` (`@import '@radix-ui/themes/tokens/colors/<name>.css';`).
-- 9 are not imported: `bronze iris lime mauve plum ruby sage sand slate`. The saving is about 44 KB raw.
+- 9 are not imported: `bronze iris lime mauve plum ruby sage sand slate`. Measured in the 05-1 production build: total CSS 686,324 → 661,558 B, −24.8 KB raw (minified), about −9 KB gzip. The earlier "about 44 KB" was the unminified source size.
+- Radix CSS is inlined into the root CSS through the single entry, so the `vendor-radix` CSS chunk no longer exists (owner decision 2026-11-16). Trade-off: any app CSS change re-hashes the whole file; revisit with 05-2b (`tokens.css` joins the file) / 02-B1 (owner of the vendor regex).
+- CSS reached statically from `root.tsx` now precedes Radix in the production file, so app CSS (05-5 CSS Modules) must win by specificity, not by order.
 - A correction to the audit. The estimate of 120–140 KB was based on 8 palettes and did not account for the categories, which use 17 palettes. `base.css` (47 KB) contains the accent mapping for all 31 colors, and it can be trimmed only by a fork — we do not do this.
 - `components.css`/`utilities.css` are needed in full: the responsive props depend on them.
 - Protection: `tokens.test.ts` looks in `apps/app/src/**` for literals of Radix palette names in JSX/TS (`color="x"`, `color: 'x'`) and fails if the palette is not in `RADIX_PALETTES`. Without this check a missing scale would silently render transparent.
@@ -415,7 +419,7 @@ Gate PR (commands) — items 2–8; item 1 — owner QA, not a PR gate (C2-18, C
    - For a design-phase PR that migrates files off `themeColor()`: differences are acceptable only in the areas drawn by the migrated files, and only as a shift of the gray shade. The owner confirms the pairs in the PR.
 2. After 05-3 a reload in dark (saved and system) does not show a light frame. Check: a performance recording or a screenshot under Slow 4G throttling. In addition, `document.documentElement.className` contains `dark` before `root.tsx` executes.
 3. `grep -rn "next-themes" apps` after 05-3 gives 0 lines; `grep -rn "styled-themes\|themeColor\|@radix-ui/colors" apps` gives 0 lines after the design-phase PR that removes `styled-themes.ts` (ds-gallery lives in `apps/app/ds-gallery`, C2-31).
-4. `vendor-radix.css` after 05-1 is smaller than the current 683 KB by at least 40 KB raw. The `sw.js` precache includes `dashboard-onboarding.webp`.
+4. After 05-1 the 9 unused palettes are not in the built CSS, and the total app CSS is smaller by at least 24 KB raw versus `22ad7eea` (there is no separate `vendor-radix.css`; owner decision 2026-11-16, §5). The `sw.js` precache includes `dashboard-onboarding.webp`.
 5. `dashboard-onboarding.webp` ≤ 40 KB.
 6. Lint fixtures:
    - a new file with `import styled from 'styled-components'` — an error;

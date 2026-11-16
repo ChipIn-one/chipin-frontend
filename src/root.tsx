@@ -19,8 +19,7 @@ import { PublicTelemetry } from 'public-routes/PublicTelemetry';
 import PWABadge from 'basics/PWABadge';
 import { GlobalErrorBoundary } from 'components/global-error-boundary';
 
-import '@radix-ui/themes/styles.css';
-import 'styles/radixStylesOverwrite.css';
+import 'styles/index.css';
 
 initializeSentry();
 initializeApi();
