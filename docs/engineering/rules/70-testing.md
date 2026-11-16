@@ -81,10 +81,10 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
   modes and checks their union, so a full-only rule must be registered and is not reported as
   dead in `lint`. Extra arguments go to ESLint: `npm run lint -- <args>`.
 - `npm run baseline:update` prunes fixed entries from `eslint-suppressions.json`; it never adds entries.
-- `npm run verify` is the fast local check: version check, format check, lint, `check:file-layout`, and
+- `npm run verify` is the fast local check: format check, lint, `check:file-layout`, and
   typecheck; it does not run
   Vitest or build.
-- `npm run verify:full` is the full gate and the same command CI runs: version check, format check, `lint:full`,
+- `npm run verify:full` is the full gate and the same command CI runs: format check, `lint:full`,
   `check:file-layout`, the complete Vitest suite, the production build, and the ds-gallery build. CI also runs
   `scripts/check-baseline.mjs` on pull requests. Husky `pre-commit` runs `lint-staged` with `CHIPIN_ESLINT_FAST=1`
   (no type-aware rules): `eslint --fix`, then Prettier, on staged files; remaining errors are printed
@@ -92,7 +92,6 @@ Cover empty/zero/negative/non-finite amounts, decimal normalization, precision b
 - `npm run build` runs `tsc -b`, the Vite production build, and the public precache check; it does not run tests.
 - `npm run vercel-build` (wired through `vercel.json`) is the Vercel deployment build: Vite production
   build and public precache check, no tests and no icon generation.
-- `npm run version:check` validates matching versions in `package.json` and `package-lock.json` without writing.
 
 ## Legacy Baseline
 

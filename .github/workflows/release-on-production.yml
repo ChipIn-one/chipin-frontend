@@ -12,7 +12,16 @@
 #   a higher one).
 # A skip is a green run with a warning. A deployment_status run uses the workflow file at the deployment's SHA, so the
 # first automatic release is the Promote of a master build that contains this file.
-# Event fields reach `run:` only through env. In-app version, Sentry and version:bump removal: ChipIn-one/.github#172.
+# After a fresh tag (engine outcome RELEASED) the redeploy job redeploys the same Vercel deployment to Production
+# (scripts/redeploy-tagged-production.mjs): the Promote build ran before the tag existed and labelled itself untagged;
+# the rebuild finds the tag on its commit. Loop-safe: the redeploy's own Production status reaches the engine as
+# ALREADY_RELEASED, so no second redeploy. Needs secret VERCEL_TOKEN and variables VERCEL_TEAM_ID, VERCEL_PROJECT_ID;
+# missing config or a Vercel error is a red job (tag and Release already exist; redeploy by hand). If Production moved
+# to another deployment since the Promote (a newer Promote or a rollback), the redeploy is skipped with a warning.
+# Remaining window: a Promote or rollback made while the redeploy builds (a few minutes) is overwritten when the
+# redeploy finishes; Promote that deployment again. A RELEASE_MISSING repaired by the engine also reports RELEASED and
+# triggers one extra, harmless redeploy of the already tagged deployment.
+# Event fields reach `run:` only through env. Version from the tag and the redeploy: ChipIn-one/.github#172, #680.
 name: Release on Production deployment
 
 on:
@@ -24,7 +33,8 @@ permissions: {}
 # its tag (a job-level group would let both guards pass before either tag exists, and the engine could then create a
 # lower version after a higher one). Only statuses that pass the guard condition share the group; every other status
 # gets its own. GitHub keeps one pending run per group: a third Production success (a quick Promote, or Vercel
-# re-posting success on an older deployment) cancels the pending run; re-run the cancelled run to tag its SHA.
+# re-posting success on an older deployment) cancels the pending run; re-run the cancelled run to tag its SHA. The
+# redeploy job's own Production status also joins this group, so it can cancel a pending Promote run the same way.
 concurrency:
   group: ${{ (github.repository_owner == 'ChipIn-one' && github.event.deployment.environment == 'Production' && github.event.deployment_status.state == 'success' && github.event.deployment.creator.login == 'vercel[bot]' && github.event.deployment_status.creator.login == 'vercel[bot]') && format('release-{0}', github.repository) || format('no-release-{0}', github.run_id) }}
   cancel-in-progress: false
@@ -82,3 +92,32 @@ jobs:
       apply: true
     secrets:
       token: ${{ secrets.GITHUB_TOKEN }}
+
+  redeploy:
+    needs: [guard, release]
+    if: needs.release.outputs.outcome == 'RELEASED'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read            # actions/checkout of this workflow's commit for the script; nothing is written
+    steps:
+      - name: Checkout the workflow commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 24.21.0
+          package-manager-cache: false
+      - name: Redeploy the tagged Production deployment in Vercel
+        env:
+          DEPLOYED_SHA: ${{ needs.guard.outputs.sha }}
+          RELEASE_TAG: ${{ needs.release.outputs.tag }}
+          DEPLOYMENT_TARGET_URL: ${{ github.event.deployment_status.target_url }}
+          DEPLOYMENT_ENVIRONMENT_URL: ${{ github.event.deployment_status.environment_url }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ vars.VERCEL_TEAM_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+        run: node scripts/redeploy-tagged-production.mjs

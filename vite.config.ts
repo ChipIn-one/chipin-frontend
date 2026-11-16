@@ -12,7 +12,7 @@ import {
 import { PRIVATE_SPA_NAVIGATION_ALLOWLIST } from './scripts/private-spa-navigation.ts';
 import { shouldUploadSourcemaps } from './scripts/sentry-sourcemaps.ts';
 import { swAppPlugin } from './scripts/sw-app-plugin.ts';
-import { resolveAppVersion } from './scripts/version-resolver.mjs';
+import { resolveAppVersionInfo } from './scripts/version-resolver.mjs';
 
 // https://vite.dev/config/
 
@@ -78,9 +78,12 @@ const resolveSentryBuildConfig = (env: Record<string, string>): SentryBuildConfi
 const resolveSentryUploadConfig = (
     env: Record<string, string>,
     sentryBuildConfig: SentryBuildConfig,
+    isRelease: boolean,
 ): SentryUploadConfig | null => {
     // Only Vercel production builds upload; preview builds skip it even when SENTRY_AUTH_TOKEN is set (#575).
-    if (!shouldUploadSourcemaps(env) || !sentryBuildConfig.enabled) {
+    // Only a build of a commit with a release tag vX.Y.Z creates a Sentry release and uploads source maps;
+    // the first, pre-tag Production build stays untagged and uploads nothing (ChipIn-one/.github#172).
+    if (!shouldUploadSourcemaps(env) || !sentryBuildConfig.enabled || !isRelease) {
         return null;
     }
 
@@ -101,13 +104,18 @@ const resolveSentryUploadConfig = (
     };
 };
 
-const appVersion = resolveAppVersion();
+const appVersionInfo = resolveAppVersionInfo();
+const appVersion = appVersionInfo.version;
 
 export default defineConfig(({ mode }) => {
     const buildEnvironment = loadEnv(mode, '.', '');
     const pwaAppName = buildEnvironment.VITE_CHIPIN_ENV === 'dev' ? 'ChipIn DEV' : 'ChipIn';
     const sentryBuildConfig = resolveSentryBuildConfig(buildEnvironment);
-    const sentryUploadConfig = resolveSentryUploadConfig(buildEnvironment, sentryBuildConfig);
+    const sentryUploadConfig = resolveSentryUploadConfig(
+        buildEnvironment,
+        sentryBuildConfig,
+        appVersionInfo.isRelease,
+    );
     const apiProxy = {
         '/api': {
             target: 'https://api-dev.chipin.one',
