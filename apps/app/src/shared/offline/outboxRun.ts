@@ -33,6 +33,7 @@ import {
     outboxOwner,
     pendingOutboxOps,
     recordFailedOp,
+    releaseOutboxClaim,
     removeOutboxOp,
     setOutboxStatus,
     trackFailureWrite,
@@ -239,12 +240,12 @@ const onSent = <Op extends OutboxOpBase>(
     isRetry: boolean,
 ): OutboxResult => {
     if (isStale(op)) {
-        claimOutboxOp(null);
+        releaseOutboxClaim(op.opId);
         return STOPPED;
     }
     noteOutboxVersion(op, sent.version);
     markPendingRemoval(op.opId);
-    claimOutboxOp(null);
+    releaseOutboxClaim(op.opId);
     outboxGate.releaseTurn(op.opId);
     void retryWrite(
         op,
@@ -268,7 +269,7 @@ const onSendError = async <Op extends OutboxOpBase>(
     { attempt, isRetry }: { attempt: number; isRetry: boolean },
 ): Promise<OutboxResult> => {
     if (isStale(op)) {
-        claimOutboxOp(null);
+        releaseOutboxClaim(op.opId);
         return STOPPED;
     }
     const errorClass = classifyOutboxError(error, op.kind);
@@ -277,7 +278,7 @@ const onSendError = async <Op extends OutboxOpBase>(
         return onSent(op, deps, NO_OP, isRetry);
     }
     if (errorClass.kind !== 'final') {
-        claimOutboxOp(null);
+        releaseOutboxClaim(op.opId);
     }
     switch (errorClass.kind) {
         case 'network':
@@ -309,7 +310,7 @@ const onSendError = async <Op extends OutboxOpBase>(
                 ),
             );
 
-            claimOutboxOp(null);
+            releaseOutboxClaim(op.opId);
             if (!landed) {
                 return STOPPED;
             }

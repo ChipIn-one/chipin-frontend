@@ -236,8 +236,15 @@ export const setOutboxStatus = (opId: string, status: OutboxStatus): void => {
 export const outboxStatus = (opId: string): OutboxStatus | undefined => statusByOpId.get(opId);
 
 /** The op whose request is going out (the `sending` claim of §2.3, one tab). */
-export const claimOutboxOp = (opId: string | null): void => {
+export const claimOutboxOp = (opId: string): void => {
     sendingOpId = opId;
+};
+
+/** Clears the claim only while it is this op's: a stale run never clears a newer run's claim. */
+export const releaseOutboxClaim = (opId: string): void => {
+    if (sendingOpId === opId) {
+        sendingOpId = null;
+    }
 };
 
 export interface DiscardResult {

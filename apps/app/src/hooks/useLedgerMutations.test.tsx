@@ -867,7 +867,7 @@ describe('C1-10 two create paths', () => {
         expect(sentWrites(sent)).toEqual([]);
     });
 
-    test('M2: a double submit on the outbox path queues one op; the repeat is refused as busy', async () => {
+    test('M2: a second submit in the same tick, while the first is being queued, is refused as busy: one op', async () => {
         vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
         const client = signIn();
 

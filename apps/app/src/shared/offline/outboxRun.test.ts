@@ -639,6 +639,51 @@ describe('03 §2.3 owner check (C3-07)', () => {
         await expect(results).resolves.toMatchObject([{ kind: 'sent' }, { kind: 'sent' }]);
     });
 
+    test("R2-L1 §2.3: a stale run's late answer does not clear the new owner's claim; its in-flight op cannot be discarded", async () => {
+        let session: string | null = OWNER;
+        const answers = new Map<string, Deferred>();
+        const deps: OutboxDeps<OutboxOpBase> = {
+            sessionUserId: () => session,
+            send: op => {
+                const answer = deferred();
+
+                answers.set(op.opId, answer);
+                return answer.promise.then(() => ({ version: 'v', entry: null }));
+            },
+        };
+        const stale = await queue('entry-x');
+        const staleRun = runOutboxOp(stale, deps);
+
+        await tick(1);
+        expect([...answers.keys()]).toEqual([stale.opId]);
+
+        session = 'user-2';
+        startOutbox('user-2');
+        const own = await appendOutboxOp(seq => ({
+            opId: 'op-of-user-2',
+            seq,
+            owner: 'user-2',
+            entryKind: 'expense',
+            createdAt: 1_000,
+            schema: 1,
+            kind: 'createExpense',
+            entryId: 'entry-y',
+        }));
+        const ownRun = runOutboxOp(own, deps);
+
+        await tick(1);
+        expect([...answers.keys()]).toEqual([stale.opId, own.opId]);
+        answers.get(stale.opId)?.resolve();
+        await expect(staleRun).resolves.toEqual({ kind: 'stopped' });
+
+        await expect(discardOps([own.opId])).resolves.toEqual({
+            discarded: [],
+            refused: [own.opId],
+        });
+        answers.get(own.opId)?.resolve();
+        await expect(ownRun).resolves.toMatchObject({ kind: 'sent' });
+    });
+
     test("adoption moves an op of another owner to failed 'unreadable' and never sends it", async () => {
         const client = new QueryClient();
         const { deps, sent } = harness();
