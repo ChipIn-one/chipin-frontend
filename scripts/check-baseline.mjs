@@ -18,6 +18,20 @@ const repoRoot = resolve(import.meta.dirname, '..');
 export const BASELINE_FILES = ['eslint-suppressions.json', 'config/tsc-baseline.json'];
 export const REGISTRY_PATH = 'config/eslint/rule-classes.json';
 
+// 04-0a moved these folders into the app workspace. A base commit from before the move keys their
+// suppressions without the prefix; read them under the new path so the move is not growth.
+const MOVED_TO_APP = /^(?:src|ds-gallery|contract-tests)\//;
+const APP_DIR = 'apps/app';
+
+/** Base-commit baseline with the keys of pre-move paths rewritten to their apps/app path. */
+export const movedBaseline = baseline =>
+    Object.fromEntries(
+        Object.entries(baseline).map(([path, rules]) => [
+            MOVED_TO_APP.test(path) ? `${APP_DIR}/${path}` : path,
+            rules,
+        ]),
+    );
+
 const SHA = /^(?!0{40}$)[0-9a-f]{40}$/i;
 
 const ruleOf = key => key.split('#')[0];
@@ -228,7 +242,7 @@ export const main = async (argv = process.argv.slice(2), env = process.env) => {
     for (const file of BASELINE_FILES) {
         errors.push(
             ...(await findBaselineGrowth({
-                base: readAtBase(base, file),
+                base: movedBaseline(readAtBase(base, file)),
                 head: readHead(file),
                 baseRegistry,
                 headRegistry,

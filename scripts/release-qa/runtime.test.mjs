@@ -1078,8 +1078,34 @@ function packageRaw({
         [contentsPath('package-lock.json', BASE)]: lockText(basePackages),
         [contentsPath('package.json', SHA)]: pkgText(deps, dev),
         [contentsPath('package-lock.json', SHA)]: lockText(lockPackages),
+        // No app workspace manifest at either commit (the GitHub contents API: absent = null).
+        [contentsPath('apps/app/package.json', BASE)]: null,
+        [contentsPath('apps/app/package.json', SHA)]: null,
     };
 }
+
+test('dependencies moved from the root package.json into apps/app/package.json are not a change (04-0a)', () => {
+    const files = ['package.json', 'apps/app/package.json', 'package-lock.json'];
+    const moved = raw => ({
+        ...packageRaw(),
+        [contentsPath('package.json', SHA)]: pkgText({}, { eslint: '^9.0.0' }),
+        [contentsPath('apps/app/package.json', SHA)]: JSON.stringify({
+            name: '@chipin/app',
+            dependencies: { i18next: raw },
+        }),
+    });
+    return readPackageBuildChanges(evidenceApi({ raw: moved('^26.4.2') }), files, BASE, SHA)
+        .then(changes => {
+            expect(changes).toEqual([]);
+            return readPackageBuildChanges(
+                evidenceApi({ raw: moved('^26.5.0') }),
+                files,
+                BASE,
+                SHA,
+            );
+        })
+        .then(changes => expect(changes).toEqual(['package.json dependencies: i18next']));
+});
 
 test('package evidence is read at the Production baseline and the candidate', () => {
     const files = ['package.json', 'package-lock.json'];

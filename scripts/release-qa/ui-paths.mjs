@@ -51,6 +51,8 @@ const TSCONFIG = /^(?:apps\/app\/)?tsconfig[^/]*\.json$/; // module resolution a
 const TOOLCHAIN =
     /^(?:vite|vite-plugin-.+|vite-tsconfig-paths|workbox-.+|@vitejs\/.+|@vite-pwa\/.+|@sentry\/vite-plugin)$/;
 const PACKAGE_JSON = 'package.json';
+// The app workspace manifest (04-0a): its dependencies are read together with the root ones.
+export const APP_PACKAGE_JSON = 'apps/app/package.json';
 const PACKAGE_LOCK = 'package-lock.json';
 
 export function isBuildToolchainPackage(name) {
@@ -66,7 +68,11 @@ export function buildAffectingFiles(files) {
 }
 
 export function hasPackageFiles(files) {
-    return files.includes(PACKAGE_JSON) || files.includes(PACKAGE_LOCK);
+    return (
+        files.includes(PACKAGE_JSON) ||
+        files.includes(APP_PACKAGE_JSON) ||
+        files.includes(PACKAGE_LOCK)
+    );
 }
 
 function changedKeys(before = {}, after = {}) {
@@ -180,11 +186,21 @@ function lockChanges(beforeLock, afterLock) {
     return [...names];
 }
 
+// One manifest view of the root and the app package.json (04-0a): moving a dependency between the
+// two is not a change. Either may be null (absent at that commit).
+export function mergePackageManifests(root, app) {
+    if (!root && !app) return null;
+    return {
+        dependencies: { ...root?.dependencies, ...app?.dependencies },
+        devDependencies: { ...root?.devDependencies, ...app?.devDependencies },
+    };
+}
+
 // base/head hold the parsed package.json and package-lock.json at the Production baseline and the
 // candidate (null when the file is absent). Only files present in the compare are inspected.
 export function packageBuildChanges({ files, base, head }) {
     const reasons = [];
-    if (files.includes(PACKAGE_JSON)) {
+    if (files.includes(PACKAGE_JSON) || files.includes(APP_PACKAGE_JSON)) {
         for (const name of changedKeys(base.pkg?.dependencies, head.pkg?.dependencies))
             reasons.push(`package.json dependencies: ${name}`);
         for (const name of changedKeys(base.pkg?.devDependencies, head.pkg?.devDependencies)) {

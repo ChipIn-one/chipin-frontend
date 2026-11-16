@@ -1,3 +1,7 @@
+import { tmpdir } from 'node:os';
+import { resolve } from 'node:path';
+import process from 'node:process';
+
 import { describe, expect, test, vi } from 'vitest';
 
 import {
@@ -215,4 +219,36 @@ test('parseRemoteTagRefs prefers the peeled commit regardless of line order', ()
     );
 
     expect([...refs]).toEqual([['v1.0.0', SHA]]);
+});
+
+// 04-0a: Vite runs with cwd = apps/app; the repository root comes from the module file, not cwd.
+describe('the working directory does not change the version', () => {
+    const resolveFresh = async directory => {
+        const cwd = process.cwd();
+
+        process.chdir(directory);
+        try {
+            vi.resetModules();
+            const module = await import('./version-resolver.mjs');
+
+            return module.resolveAppVersionInfo({ env: {} });
+        } finally {
+            process.chdir(cwd);
+        }
+    };
+
+    // Smoke check only: git walks up from apps/app, so a cwd-based root passes here too.
+    test('smoke: apps/app (the Vite cwd) resolves the same version as the root', async () => {
+        const fromRoot = await resolveFresh(resolve(import.meta.dirname, '..'));
+
+        expect(fromRoot.version).toMatch(/^\d+\.\d+\.\d+(?:-dev-[0-9a-f]{7})?$/u);
+        expect(await resolveFresh(resolve(import.meta.dirname, '../apps/app'))).toEqual(fromRoot);
+    });
+
+    // The regression guard: a cwd-based root fails here (no git repository in the tmp directory).
+    test('a working directory outside the repository resolves the same version', async () => {
+        const fromRoot = await resolveFresh(resolve(import.meta.dirname, '..'));
+
+        expect(await resolveFresh(tmpdir())).toEqual(fromRoot);
+    });
 });
