@@ -7,11 +7,16 @@ import { expect, test, vi } from 'vitest';
 
 const KILL_SWITCH_SOURCE = readFileSync('public/sw-kill.js', 'utf8');
 
-const loadKillSwitch = ({ cacheNames = ['workbox-precache-v2', 'runtime'], windows = 2 } = {}) => {
+const DASHBOARD_WINDOWS = ['https://chipin.one/dashboard?tab=0', 'https://chipin.one/group/1'];
+
+const loadKillSwitch = ({
+    cacheNames = ['workbox-precache-v2', 'runtime'],
+    windowUrls = DASHBOARD_WINDOWS,
+} = {}) => {
     const cacheStore = new Map(cacheNames.map(name => [name, {}]));
     const listeners = new Map();
-    const windowClients = Array.from({ length: windows }, (_, index) => ({
-        url: `https://chipin.one/dashboard?tab=${index}`,
+    const windowClients = windowUrls.map(url => ({
+        url,
         navigate: vi.fn(() => Promise.resolve(null)),
     }));
     const indexedDB = { open: vi.fn(), deleteDatabase: vi.fn() };
@@ -35,7 +40,7 @@ const loadKillSwitch = ({ cacheNames = ['workbox-precache-v2', 'runtime'], windo
         skipWaiting: vi.fn(() => Promise.resolve()),
     };
 
-    runInNewContext(KILL_SWITCH_SOURCE, { self, indexedDB, localStorage });
+    runInNewContext(KILL_SWITCH_SOURCE, { self, indexedDB, localStorage, URL });
 
     const dispatch = type => {
         let pending = Promise.resolve();
@@ -96,7 +101,7 @@ test('on activate empties every cache, unregisters, then reloads each window onc
 });
 
 test('unregisters even when the origin has no caches', async () => {
-    const { dispatch, self } = loadKillSwitch({ cacheNames: [], windows: 0 });
+    const { dispatch, self } = loadKillSwitch({ cacheNames: [], windowUrls: [] });
 
     await dispatch('activate').done;
 
@@ -114,4 +119,34 @@ test('never touches IndexedDB or localStorage', async () => {
     expect(localStorage.clear).not.toHaveBeenCalled();
     expect(localStorage.removeItem).not.toHaveBeenCalled();
     expect(KILL_SWITCH_SOURCE.replace(/^\s*\/\/.*$/gm, '')).not.toMatch(/indexedDB|localStorage/i);
+});
+
+test('one rejected navigate does not stop the other windows from reloading', async () => {
+    const { dispatch, windowClients } = loadKillSwitch({
+        windowUrls: [
+            'https://chipin.one/dashboard',
+            'https://chipin.one/group/1',
+            'https://chipin.one/settings',
+        ],
+    });
+    windowClients[0].navigate.mockRejectedValueOnce(new TypeError('not controlled'));
+
+    await dispatch('activate').done;
+
+    for (const client of windowClients) {
+        expect(client.navigate).toHaveBeenCalledExactlyOnceWith(client.url);
+    }
+});
+
+test('does not reload an OAuth callback window (its one-time code is spent)', async () => {
+    const { cacheStore, dispatch, self, windowClients } = loadKillSwitch({
+        windowUrls: ['https://chipin.one/oauth/callback?code=x', 'https://chipin.one/dashboard'],
+    });
+
+    await dispatch('activate').done;
+
+    expect(windowClients[0].navigate).not.toHaveBeenCalled();
+    expect(windowClients[1].navigate).toHaveBeenCalledExactlyOnceWith(windowClients[1].url);
+    expect(cacheStore.size).toBe(0);
+    expect(self.registration.unregister).toHaveBeenCalledTimes(1);
 });

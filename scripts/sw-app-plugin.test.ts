@@ -50,3 +50,22 @@ test('runs last in closeBundle, after the VitePWA worker is written', () => {
     expect(plugin.closeBundle).toMatchObject({ sequential: true, order: 'post' });
     expect(plugin.configurePreviewServer).toBeTypeOf('function');
 });
+
+const runCloseBundle = (error?: Error): Promise<void> => {
+    const hook = swAppPlugin().closeBundle;
+
+    if (typeof hook !== 'object' || hook === null) {
+        throw new Error('closeBundle must be an object hook');
+    }
+
+    // The handler never reads the plugin context, so an empty one stands in for Rollup's.
+    const context = {} as ThisParameterType<typeof hook.handler>;
+
+    return Promise.resolve(hook.handler.call(context, error));
+};
+
+test('returns without the rename check when the build already failed', async () => {
+    // No configResolved and no dist: without the build error the hook would throw on sw.js.
+    await expect(runCloseBundle(new Error('rolldown failed'))).resolves.toBeUndefined();
+    await expect(runCloseBundle()).rejects.toThrow(/sw\.js/);
+});

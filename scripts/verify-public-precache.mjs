@@ -29,7 +29,7 @@ const verifyWorkerFiles = serviceWorker =>
 const QUOTE = '["\'`]';
 const SW_ARGUMENTS = `${QUOTE}/sw\\.js${QUOTE},\\{scope:${QUOTE}/${QUOTE}`;
 const REQUIRED_REGISTRATIONS = [
-    ['virtual:pwa-register', new RegExp(`new \\w+\\(${SW_ARGUMENTS}`)],
+    ['virtual:pwa-register', new RegExp(`new [\\w$]+\\(${SW_ARGUMENTS}`)],
     ['the manual registration', new RegExp(`serviceWorker\\.register\\(${SW_ARGUMENTS}\\}\\)`)],
 ];
 

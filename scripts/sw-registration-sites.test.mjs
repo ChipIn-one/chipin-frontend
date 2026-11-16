@@ -21,15 +21,47 @@ const listSourceFiles = directory =>
         return IS_SOURCE.test(entry.name) && !IS_TEST.test(entry.name) ? [entryPath] : [];
     });
 
-// A registration API: the manual `navigator.serviceWorker.register(` (any receiver named
-// `serviceWorker`, also optional-chained) and the vite-plugin-pwa entry points.
-const REGISTRATION_PATTERNS = [
-    /serviceWorker\s*\??\.\s*register\s*\(/,
-    /\buseRegisterSW\b/,
-    /\bregisterSW\b/,
-    /virtual:pwa-register/,
-    /\bnew\s+Workbox\s*\(/,
-];
+// Registration calls: the vite-plugin-pwa entry points anywhere, and any `.register(` in a file that
+// mentions `serviceWorker` (catches `navigator.serviceWorker.register(`, optional chaining and a
+// `serviceWorker` reference kept in a variable). Import lines are not calls.
+const PWA_CALL_PATTERNS = [/\buseRegisterSW\s*\(/g, /\bregisterSW\s*\(/g, /\bnew\s+Workbox\s*\(/g];
+const ANY_REGISTER_CALL = /\.\s*register\s*\(/g;
+const MENTIONS_SERVICE_WORKER = /serviceWorker|virtual:pwa-register|workbox-window/;
+const GATE =
+    /if\s*\(\s*!shouldRegisterServiceWorker\(\s*window\.location\.hostname\s*\)\s*\)\s*\{\s*return;?\s*\}/g;
+const CONTROL_KEYWORDS = new Set(['if', 'for', 'while', 'switch', 'catch', 'return']);
+
+const isImportLine = (source, index) =>
+    /^\s*import\b/.test(source.slice(source.lastIndexOf('\n', index) + 1));
+
+const findRegistrationCalls = source => {
+    const patterns = MENTIONS_SERVICE_WORKER.test(source)
+        ? [...PWA_CALL_PATTERNS, ANY_REGISTER_CALL]
+        : PWA_CALL_PATTERNS;
+
+    return [
+        ...new Set(
+            patterns.flatMap(pattern => Array.from(source.matchAll(pattern), match => match.index)),
+        ),
+    ]
+        .filter(index => !isImportLine(source, index))
+        .sort((left, right) => left - right);
+};
+
+// Start of the innermost function body before `index`: an arrow body `=> {`, a `function … {`, or a
+// method shorthand `name(…) {` (control statements such as `if (…) {` are not functions).
+const enclosingFunctionStart = (source, index) => {
+    const head = source.slice(0, index);
+    const starts = [
+        ...Array.from(head.matchAll(/=>\s*\{/g), match => match.index),
+        ...Array.from(head.matchAll(/\bfunction\b[^{]*\{/g), match => match.index),
+        ...Array.from(head.matchAll(/\b(\w+)\s*\([^()]*\)\s*\{/g))
+            .filter(match => !CONTROL_KEYWORDS.has(match[1]))
+            .map(match => match.index),
+    ];
+
+    return Math.max(-1, ...starts);
+};
 
 const EXPECTED_CALL_SITES = {
     // `virtual:pwa-register`: the URL is VitePWA buildBase + filename, checked below via vite.config.ts.
@@ -41,8 +73,8 @@ const sources = Object.fromEntries(
     listSourceFiles(SOURCE_ROOT).map(file => [file, readFileSync(file, 'utf8')]),
 );
 
-const callSites = Object.keys(sources).filter(file =>
-    REGISTRATION_PATTERNS.some(pattern => pattern.test(sources[file])),
+const callSites = Object.keys(sources).filter(
+    file => findRegistrationCalls(sources[file]).length > 0,
 );
 
 describe('service worker registration call sites', () => {
@@ -50,25 +82,28 @@ describe('service worker registration call sites', () => {
         expect(callSites.sort()).toEqual(Object.keys(EXPECTED_CALL_SITES).sort());
     });
 
-    test.each(Object.keys(EXPECTED_CALL_SITES))('%s is gated by the legacy-host check', file => {
-        const source = sources[file];
+    test.each(Object.keys(EXPECTED_CALL_SITES))(
+        '%s has one registration call, gated inside the same function',
+        file => {
+            const source = sources[file];
 
-        expect(source).toMatch(
-            /import\s*\{[^}]*\bshouldRegisterServiceWorker\b[^}]*\}\s*from\s*'helpers\/serviceWorkerHost'/,
-        );
-        expect(source).toMatch(
-            /if\s*\(\s*!shouldRegisterServiceWorker\(\s*window\.location\.hostname\s*\)\s*\)\s*\{\s*return;?\s*\}/,
-        );
+            expect(source).toMatch(
+                /import\s*\{[^}]*\bshouldRegisterServiceWorker\b[^}]*\}\s*from\s*'helpers\/serviceWorkerHost'/,
+            );
 
-        const gateIndex = source.search(/!shouldRegisterServiceWorker\(/);
-        // Registration calls, not the import lines that name them.
-        const calls = REGISTRATION_PATTERNS.flatMap(pattern =>
-            Array.from(source.matchAll(new RegExp(pattern.source, 'g')), match => match.index),
-        ).filter(index => !/^\s*import\b/.test(source.slice(source.lastIndexOf('\n', index) + 1)));
+            const calls = findRegistrationCalls(source);
 
-        expect(calls.length).toBeGreaterThan(0);
-        expect(calls.every(index => index > gateIndex)).toBe(true);
-    });
+            expect(calls).toHaveLength(1);
+
+            for (const callIndex of calls) {
+                const functionStart = enclosingFunctionStart(source, callIndex);
+                const gates = Array.from(source.matchAll(GATE), match => match.index);
+
+                expect(functionStart).toBeGreaterThanOrEqual(0);
+                expect(gates.some(gate => gate > functionStart && gate < callIndex)).toBe(true);
+            }
+        },
+    );
 
     test('the manual registration uses /sw.js with scope /', () => {
         const manualCalls = Object.entries(EXPECTED_CALL_SITES)

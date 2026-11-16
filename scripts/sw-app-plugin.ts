@@ -73,8 +73,9 @@ export const swAppPlugin = (): Plugin => {
         closeBundle: {
             sequential: true,
             order: 'post',
-            async handler() {
-                if (isSsrBuild) {
+            async handler(error?: Error) {
+                // A failed build already reports its own error; a missing sw.js must not mask it.
+                if (error || isSsrBuild) {
                     return;
                 }
 

@@ -3,6 +3,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { getTransformedRoutes } from '@vercel/routing-utils';
 import { describe, expect, test } from 'vitest';
 
+import { LEGACY_SERVICE_WORKER_HOSTNAMES } from './src/helpers/serviceWorkerHost.ts';
+
 const API_SOURCE = '/api/:path*';
 const config = JSON.parse(readFileSync('vercel.json', 'utf8'));
 
@@ -291,6 +293,18 @@ describe('Vercel /sw.js by host (04-4a1)', () => {
             expect(resolveRoute(host, '/sw-kill.js')).toBeUndefined();
         },
     );
+
+    test('serves the kill-switch on exactly the hosts the registration gate denies', () => {
+        const killSwitchHosts = [...LEGACY_HOSTS, ...APP_WORKER_HOSTS].filter(
+            host => resolveRoute(host, '/sw.js')?.rewrite === '/sw-kill.js',
+        );
+        const hostConditions = config.rewrites
+            .filter(rewrite => rewrite.destination === '/sw-kill.js')
+            .flatMap(rewrite => rewrite.has.map(condition => condition.value));
+
+        expect(killSwitchHosts.sort()).toEqual([...LEGACY_SERVICE_WORKER_HOSTNAMES].sort());
+        expect(hostConditions.sort()).toEqual([...LEGACY_SERVICE_WORKER_HOSTNAMES].sort());
+    });
 
     test('places the /sw.js rewrites after the last /api rewrite and before the SPA rewrites', () => {
         const indexes = config.rewrites.map((rewrite, index) => ({ ...rewrite, index }));
