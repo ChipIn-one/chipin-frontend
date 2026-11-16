@@ -618,6 +618,29 @@ A single retry policy (replaces the former `outboxRetry`/`retry: outboxRetry`):
 
 TanStack **queries** use their own `queryRetry` policy (§1.2); outbox mutations have `retry: false`.
 
+Deviation (03-15a): the core is in memory and wired only behind `VITE_FEATURE_OFFLINE_WRITES` (default off); files
+`shared/offline/outboxGate.ts`, `outboxStore.ts` (queue, `seq`, `discardOps`, `cancelledOpIds`, `outboxVersions`,
+`pendingRemovals`; every change through `writeOutbox`, the future write-locked IDB write), `outboxRegistry.ts`,
+`outboxRun.ts` (`runOutboxOp`, `retryWrite`, `classifyOutboxError`, `adoptOutboxOps`, `recheckOutboxOwner`) and
+`entities/ledger/api/outbox.ts` (keys, op types, send, defaults, path choice). (1) The outbox defaults are registered on
+a client at its first outbox write (`registerLedgerOutboxDefaults`, once per client), not in `createQueryClient()`: there
+is no hydrate yet, and with the flag off nothing of the outbox runs; 03-15b registers them before hydrate. (2) The hooks
+keep their signatures and stay in `hooks/useLedgerMutations.ts`: the path choice (`chooseLedgerWritePath`, the
+`*ViaOutbox` functions) reads the entry type from the cached `ledger.entry(id)` instead of an `entry` argument (§2.9
+C2-33 needs that cache entry anyway); a settlement is never cached as `EXPENSE`, so it always takes the online key.
+(3) `offlineWritesAvailable` is the flag and the three capabilities (read from the cache, fetched when absent); the
+restore, Web Locks, `BroadcastChannel` and storage conditions arrive with 03-15b/c. (4) Until 03-16b a 409
+`LEDGER.VERSION_CONFLICT` (and an unknown version with GET 200) is a final error `conflict`: the op is failed and its
+entry blocked, no draft. (5) `UpdateExpenseOp`/`DeleteExpenseOp` carry `groupId` too (what is read again on settle);
+the entry id of a create is made at enqueue time (the form keeps no id yet); a 404 on a create is failed `rejected`.
+(6) No optimistic `setQueryData` and no `setQueryData` of the 2xx entry: there is no `ledger.entry` query or mapper
+yet, the settle invalidates through the hooks' `LedgerWriteEffects`. (7) `retryWrite(op, write, shouldStop)` takes the
+stop predicate instead of `{ ignoreStop }`; adoption continues each mutation it builds instead of calling
+`resumePausedMutations()` (no unrelated paused mutation is resumed). (8) The gate also has `adopt` (an adopted op
+keeps its place in the turn before its run reaches the gate), `releaseTurn`, `wake` (a discard), `reset` (a stop) and
+the `whenTurn` option `isSkipped`; a wait for the network or a backoff ends early on a discard or a stop.
+(9) `recheckOutboxOwner(sub)` opens the `auth` gate; calling it on a token refresh is the 03-15b `auth` gate wiring.
+
 #### 2.5 Error handling
 
 409 is distinguished **by `code`**, not by status: `SYSTEM.CONFLICT` — transient (retry), `LEDGER.VERSION_CONFLICT` —

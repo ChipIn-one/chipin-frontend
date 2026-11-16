@@ -28,6 +28,10 @@ integration builds use the normal Vercel environment configuration; only a
 tagged production build (the automatic redeploy after the release tag) creates
 the Sentry release and uploads source maps (see Build toolchain below).
 
+`VITE_FEATURE_OFFLINE_WRITES` turns on offline expense writes through the
+outbox (spec 03 §2.7) only when it is exactly `true`; it is unset (off) in every
+environment until PR 03-17 enables it.
+
 There is no unconditional external API rewrite. Unknown hosts therefore cannot
 fall back to production.
 

@@ -12,13 +12,21 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import { activityKeys, selfActivityPreviewsQueryOptions } from 'entities/activity';
 import { dashboardKeys } from 'entities/dashboard';
-import type { ExpenseDraft, ExpensePatch, SettlementDraft } from 'entities/ledger';
+import {
+    capabilitiesQueryOptions,
+    type ExpenseDraft,
+    type ExpensePatch,
+    ledgerOnlineMutationKeys,
+    ledgerOutboxMutationKeys,
+    type SettlementDraft,
+} from 'entities/ledger';
 import { usersKeys } from 'entities/users';
 import { getAuthSessionVersion, invalidateAuthSession } from 'helpers/authSession';
 import { clearLocalUserIdentity, saveLocalUser } from 'helpers/localStorage';
 import { ApiError } from 'shared/api/client';
 import { createQueryClient } from 'shared/api/queryClient';
 import { currencyCode, fromUnits } from 'shared/money';
+import { resetOutbox } from 'shared/offline/outboxStore';
 import { onAccessTokenRefreshed, useAuthStore } from 'store/authStore';
 import { fakeAccessToken } from 'test/fakeAccessToken';
 import { wireGroup } from 'test/groupFixtures';
@@ -808,4 +816,54 @@ test('a settlement while an expense is being created is refused as busy: one led
     gate.resolve();
     await act(() => first);
     expect(sentWrites(sent)).toEqual(['POST /ledger/entries']);
+});
+
+describe('C1-10 two create paths', () => {
+    afterEach(() => {
+        resetOutbox();
+        vi.unstubAllEnvs();
+    });
+
+    const mutationKeys = (client: QueryClient): unknown[] =>
+        client
+            .getMutationCache()
+            .getAll()
+            .map(mutation => mutation.options.mutationKey);
+
+    test('without offline writes useCreateExpense creates a mutation with the online key', async () => {
+        const client = signIn();
+        const sent = serve();
+        const { result } = renderHook(useCreateExpense);
+
+        await act(() => result.current.createExpense({ expense }));
+        expect(mutationKeys(client)).toEqual([ledgerOnlineMutationKeys.createEntry]);
+        expect(client.getMutationCache().getAll()[0]?.options).toMatchObject({
+            networkMode: 'online',
+            retry: false,
+        });
+        expect(sentWrites(sent)).toEqual(['POST /ledger/entries']);
+    });
+
+    test('with offline writes it queues the expense: offline too, one outbox mutation, no online one', async () => {
+        vi.stubEnv('VITE_FEATURE_OFFLINE_WRITES', 'true');
+        const client = signIn();
+
+        client.setQueryData(capabilitiesQueryOptions().queryKey, [
+            'ledger.clientEntryId',
+            'ledger.entryVersion',
+            'client.minVersion',
+        ]);
+        const sent = serve();
+
+        onlineManager.setOnline(false);
+        const { result } = renderHook(useCreateExpense);
+
+        await act(() => result.current.createExpense({ expense }));
+        expect(mutationKeys(client)).toEqual([ledgerOutboxMutationKeys.createExpense]);
+        expect(client.getMutationCache().getAll()[0]?.options).toMatchObject({
+            networkMode: 'always',
+            retry: false,
+        });
+        expect(sentWrites(sent)).toEqual([]);
+    });
 });
