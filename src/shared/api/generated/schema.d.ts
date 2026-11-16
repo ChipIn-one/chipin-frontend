@@ -23,6 +23,11 @@ export interface paths {
                      * @example https://app.chipin.one/oauth/callback
                      */
                     redirect_to: string;
+                    /**
+                     * @description Registration language for a user this login creates: en or ru (case-insensitive). Anything else, or nothing, means en and never rejects the login. Ignored for an existing user.
+                     * @example ru
+                     */
+                    locale?: string;
                 };
                 header?: never;
                 path?: never;
@@ -33,6 +38,11 @@ export interface paths {
                 /** @description Redirect to Google OAuth consent page */
                 302: {
                     headers: {
+                        /**
+                         * @description AUTH-015: the browser binding of this login, set only when `redirect_to` is accepted. `Max-Age` equals the login state lifetime (`redis.ttlForOauthState`, 10 minutes by default). A new login in the same browser replaces it.
+                         * @example __Host-chipin_oauth_tx=q3Z8yJvH1c2Wm0bT9XrLkP4sNfA7eD6gU5hRiOoYw0E; Max-Age=600; Path=/; Secure; HttpOnly; SameSite=Lax
+                         */
+                        "Set-Cookie"?: string;
                         [name: string]: unknown;
                     };
                     content?: never;
@@ -235,7 +245,13 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path?: never;
-                cookie?: never;
+                cookie: {
+                    /**
+                     * @description AUTH-016: the browser binding set by `GET /auth/login/google` of the same login. The browser sends it on its own on the same-origin POST. Without it the exchange answers 400 `AUTH.OAUTH_BROWSER_BINDING_REQUIRED` and the code stays usable; with another login's value it answers 401 and the code is spent.
+                     * @example q3Z8yJvH1c2Wm0bT9XrLkP4sNfA7eD6gU5hRiOoYw0E
+                     */
+                    "__Host-chipin_oauth_tx": string;
+                };
             };
             requestBody: {
                 content: {
@@ -247,7 +263,7 @@ export interface paths {
                 200: {
                     headers: {
                         /**
-                         * @description Refresh token of the new session. `Max-Age` equals the refresh-token lifetime (`jwt.refreshTokenTtlSeconds`, 30 days by default), so the browser forgets the cookie when the session expires.
+                         * @description Refresh token of the new session. `__Host-chipin_oauth_tx` is left as it is (AUTH-017): it expires with its `Max-Age`. `Max-Age` equals the refresh-token lifetime (`jwt.refreshTokenTtlSeconds`, 30 days by default), so the browser forgets the cookie when the session expires.
                          * @example __Host-chipin_refresh=d290f1ee-6c54-4b01-90e6-d701748f0851; Max-Age=2592000; Path=/; Secure; HttpOnly; SameSite=Strict
                          */
                         "Set-Cookie"?: string;
@@ -257,7 +273,7 @@ export interface paths {
                         "application/json": components["schemas"]["OAuthCodeExchangeResponse"];
                     };
                 };
-                /** @description Validation failed */
+                /** @description Validation failed, or the browser that started this login did not present its binding cookie */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -673,6 +689,7 @@ export interface paths {
         /**
          * Get latest currency rates
          * @description Returns the latest cached OpenExchangeRates snapshot for authenticated clients.
+         *     `rates` lists only the currencies ChipIn supports; the provider quotes more.
          *     The backend refreshes the configured base currency in the background.
          *     Other requested base currencies are refreshed on demand and cached under their own base.
          *     The endpoint can return a stale cached snapshot when the external provider is unavailable.
@@ -887,7 +904,77 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Preview group by invite token
+         * @description Shows what the caller is about to join: group id, name, cover, number of active
+         *     members, whether the caller is already an active member, and who invited (the
+         *     group creator's display name and avatar while the creator is an active member,
+         *     otherwise null). Does not join and does not return members, emails or the token.
+         *     A token of a deleted (`INACTIVE`) group answers 404, like an unknown one.
+         *     Rate-limited per user, shared with `GET /users/invite/{inviteToken}`.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /**
+                     * @description Group invite token
+                     * @example xK9mNp2qRs4tUv6wXy8zAb0cDe2fGh4j
+                     */
+                    inviteToken: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Group preview */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GroupInvitePreviewResponse"];
+                    };
+                };
+                /** @description `VALIDATION.INVALID_INVITE_TOKEN` — the token is not 16-64 characters of `A-Z a-z 0-9 _ -`; rejected before any lookup */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Missing or invalid JWT token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Group not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests from this user; retry after the number of seconds in `Retry-After` */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
         put?: never;
         /**
          * Join group by invite token
@@ -902,7 +989,7 @@ export interface paths {
                 path: {
                     /**
                      * @description Unique invite token shared by the group creator
-                     * @example xK9mNp2qR
+                     * @example xK9mNp2qRs4tUv6wXy8zAb0cDe2fGh4j
                      */
                     inviteToken: string;
                 };
@@ -919,7 +1006,7 @@ export interface paths {
                         "application/json": components["schemas"]["GroupResponse"];
                     };
                 };
-                /** @description `GROUP.GROUP_INACTIVE` — group is inactive */
+                /** @description `VALIDATION.INVALID_INVITE_TOKEN` — malformed token, rejected before any lookup; `GROUP.GROUP_INACTIVE` — group is inactive */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1035,8 +1122,8 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Authenticated user is not allowed to access this resource */
-                403: {
+                /** @description The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1138,16 +1225,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Authenticated user is not allowed to access this resource */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Activity not found */
+                /** @description The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable; or the activity is not visible in this group (`ACTIVITY.NOT_FOUND`) */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -1237,8 +1315,8 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Authenticated user is not allowed to access this resource */
-                403: {
+                /** @description The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1309,16 +1387,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Authenticated user is not allowed to access this resource */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Group not found */
+                /** @description The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -1379,7 +1448,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Authenticated user is not allowed to access this resource */
+                /** @description Caller is an active member of the group but lacks the required role */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1388,7 +1457,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Group not found */
+                /** @description The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -1468,7 +1537,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Authenticated user is not allowed to access this resource */
+                /** @description Caller is an active member of the group but lacks the required role */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -1477,7 +1546,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Group not found */
+                /** @description The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -1509,11 +1578,11 @@ export interface paths {
         get?: never;
         /**
          * Upload or replace group cover image
-         * @description Uploads a jpeg, png, or webp image through the backend. Any active group
-         *     member can update the group cover. The backend validates the file, stores it
-         *     in S3-compatible storage, saves the resulting public URL in `groups.cover_url`,
-         *     and returns the same canonical requester-relative projection as
-         *     `GET /groups/{id}`.
+         * @description Uploads a jpeg, png, or webp image (max 5 MB, 16384 px per side, 50 megapixels;
+         *     truncated or unreadable images are rejected) through the backend. Any active group
+         *     member can update the group cover. The image is stored in S3-compatible storage,
+         *     its public URL saved in `groups.cover_url`, and the response is the same canonical
+         *     requester-relative projection as `GET /groups/{id}`.
          */
         put: {
             parameters: {
@@ -1567,16 +1636,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description Authenticated user is not allowed to access this resource */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description Group not found */
+                /** @description The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -1644,8 +1704,20 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Add a connected user to the group
-         * @description Adds a user to the group immediately. Any active group member may call this. The target user must have an existing connection (known-user relation) with the caller and must never have been a member of this group.
+         * Add connected users to the group
+         * @description Adds one or more users to the group immediately; the targets do not confirm. Any active
+         *     group member may call this. Send `userIds` (1 to 50 ids, repeats count once) or, for
+         *     existing clients, a single `userId` — exactly one of the two.
+         *
+         *     Every target must be an existing user, a known user of the caller, not the caller, and
+         *     never a member of this group (a former member rejoins by invite link). The batch is all
+         *     or nothing: if any target fails, nobody is added. Checks run in this order and the
+         *     first failing one answers, listing all of its ids in `details.userIds`: caller's
+         *     membership (404 `GROUP.NOT_FOUND`), group is active, caller's own id (`VALIDATION.INVALID`),
+         *     unknown users (`USER.NOT_FOUND`), users who are not known users
+         *     (`GROUP.USER_NOT_CONNECTED`), active members (`GROUP.ALREADY_MEMBER`), former members
+         *     (`GROUP.FORMER_MEMBER`). A success records one `MEMBERS_ADDED` activity listing every
+         *     added user. No known-user relation is created.
          */
         post: {
             parameters: {
@@ -1666,7 +1738,7 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Member added; returns the updated group */
+                /** @description Members added; returns the updated group */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -1675,7 +1747,7 @@ export interface paths {
                         "application/json": components["schemas"]["GroupResponse"];
                     };
                 };
-                /** @description `VALIDATION.INVALID` (malformed userId), `GROUP.GROUP_INACTIVE`, `GROUP.USER_NOT_CONNECTED`, `GROUP.ALREADY_MEMBER`, `GROUP.FORMER_MEMBER` */
+                /** @description `VALIDATION.INVALID` (malformed body, both or neither of userId/userIds, caller's own id), `GROUP.GROUP_INACTIVE`, `GROUP.USER_NOT_CONNECTED`, `GROUP.ALREADY_MEMBER`, `GROUP.FORMER_MEMBER` */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1693,16 +1765,7 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description `GROUP.FORBIDDEN` — caller is not an active group member */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
-                    };
-                };
-                /** @description `GROUP.NOT_FOUND` or `USER.NOT_FOUND` */
+                /** @description The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable; or `USER.NOT_FOUND` listing every unknown id in `details.userIds` */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -1753,7 +1816,7 @@ export interface paths {
         };
         /**
          * Health check
-         * @description Returns liveness status for the running API process.
+         * @description Returns liveness status, the version of the running API process and the optional contract features this deployment supports (`capabilities`, API-010). Reachable by an outdated client: the version gate never answers 426 here (API-002).
          */
         get: {
             parameters: {
@@ -1879,17 +1942,32 @@ export interface paths {
          *     - `participantIds` must be unique and contain at least one user other than the payer
          *     - The payer may be omitted from the list; if omitted, the participants owe the whole amount
          *     - user-scoped expense (`groupId` omitted) must involve exactly 2 users counting the payer, and the authenticated user must be one of them
+         *     - user-scoped expense: the user other than the payer must get a positive share after rounding (EXP-009);
+         *       a zero share is rejected with `VALIDATION.INVALID` on `expense.sharingMode`, in every sharing mode.
+         *       Group expenses may give a member 0
          *     - group expense requires the group to still have at least 2 active members,
          *       otherwise the request is rejected with `GROUP.INSUFFICIENT_MEMBERS`
          *     - `amount` must be positive with at most 4 decimal places
-         *     - `currency` must be a valid ISO 4217 code (e.g. USD, EUR, GBP)
+         *     - `currency` must be a supported ISO 4217 code (e.g. USD, EUR, GBP); codes withdrawn from circulation are rejected
          *     - Sharing modes: AUTO (equal split), EXACT (custom amounts that must sum to total), PERCENTAGE (must sum to 100)
          *
          *     **Settlement rules:**
          *     - `fromUserId` is the debtor making the payment
          *     - `toUserId` is the creditor receiving the payment
-         *     - For group settlements, the authenticated user, debtor, and creditor must be group members
+         *     - For group settlements, the debtor and creditor must be active group members, otherwise
+         *       403 `LEDGER.FORBIDDEN`
          *     - For user-scoped settlements, the authenticated user must be either the debtor or creditor
+         *     - `note` is optional plain text, at most 500 characters after trimming; it never affects balances
+         *
+         *     **Group membership (GRP-010):** a caller who is not an active member of `groupId` gets 404
+         *     `GROUP.NOT_FOUND`, the same as for a group that does not exist.
+         *
+         *     **Idempotent create (EXP-008):** an optional client-generated `id` is looked up before the
+         *     body is validated. A repeat by the same author answers 200 with the stored entry and
+         *     changes nothing, even when the body differs; another author's id answers 409
+         *     `LEDGER.ID_CONFLICT`; an entry in a group the author has left answers 404
+         *     `LEDGER.NOT_FOUND`, deleted or not; any other entry deleted since answers 410
+         *     `LEDGER.ENTRY_DELETED`.
          */
         post: {
             parameters: {
@@ -1904,6 +1982,15 @@ export interface paths {
                 };
             };
             responses: {
+                /** @description The client-generated `id` was already used by the caller; the stored entry, unchanged */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["LedgerEntryInfo"];
+                    };
+                };
                 /** @description Created ledger entry */
                 201: {
                     headers: {
@@ -1940,8 +2027,26 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description The request lost a race with a concurrent write; repeat it */
+                /** @description The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable; or the client-generated `id` repeats a create in a group the caller is no longer an active member of (`LEDGER.NOT_FOUND`) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The request lost a race with a concurrent write (`SYSTEM.CONFLICT`, repeat it), or the client-generated `id` belongs to an entry another user created (`LEDGER.ID_CONFLICT`) */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The client-generated `id` repeats a create whose entry has been deleted since */
+                410: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1966,7 +2071,9 @@ export interface paths {
         };
         /**
          * Get entry by ID
-         * @description Returns a single ledger entry (expense or settlement) by its UUID.
+         * @description Returns a single ledger entry (expense or settlement) by its UUID. A group entry
+         *     answers a caller who is not an active member of its group with the same 404 as an
+         *     unknown id (EXP-033); 403 applies to a direct entry only.
          */
         get: {
             parameters: {
@@ -2037,12 +2144,27 @@ export interface paths {
          * @description Soft-deletes (reverses) a ledger entry. The entry is marked as reversed in the
          *     event log and excluded from balance calculations.
          *     Deleting an entry that does not exist or is already reversed is an idempotent
-         *     no-op and still returns `204`.
+         *     no-op and still returns `204`, whatever `If-Match` and `X-Client-Op-Id` say (EXP-053).
+         *     The same goes for a group entry when the caller is not an active member of its group
+         *     (EXP-033): nothing is recorded and the answer does not reveal that the entry exists.
+         *     Otherwise a repeated `X-Client-Op-Id` answers 204 without a new event, and a stale
+         *     `If-Match` answers 409 `LedgerConflictResponse`.
          */
         delete: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    /**
+                     * @description EXP-047: the entry `version` the client last saw, quoted (`"1042"`). A stale version answers 409 `LEDGER.VERSION_CONFLICT` with the current entry. Omitted or `*`: no check.
+                     * @example "1042"
+                     */
+                    "If-Match"?: string;
+                    /**
+                     * @description EXP-047 / EXP-053: client-generated id of this operation, stored on the event it appends. A repeat of an applied operation answers like the original (200 / 204), whatever If-Match and the body say, and appends nothing.
+                     * @example 7d1c2b3a-4e5f-4a6b-8c7d-9e0f1a2b3c4d
+                     */
+                    "X-Client-Op-Id"?: string;
+                };
                 path: {
                     /**
                      * @description Ledger entry UUID
@@ -2088,13 +2210,13 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description The request lost a race with a concurrent write; repeat it */
+                /** @description The request lost a race with a concurrent write (`SYSTEM.CONFLICT`, an `ErrorResponse`; repeat it), or `If-Match` is stale (`LEDGER.VERSION_CONFLICT`, a `LedgerConflictResponse` carrying the current entry) */
                 409: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ErrorResponse"];
+                        "application/json": components["schemas"]["ErrorResponse"] | components["schemas"]["LedgerConflictResponse"];
                     };
                 };
             };
@@ -2115,6 +2237,10 @@ export interface paths {
          *       previous category. Sending `subcategory` alone validates it against the stored category.
          *     - An `expense` object with no keys is rejected: there is nothing to apply.
          *
+         *     A group entry answers a caller who is not an active member of its group with the same
+         *     404 as an unknown id, before any other check (EXP-033); 403 applies to a direct entry
+         *     and to a system entry the caller can see.
+         *
          *     Membership and known-user rules apply to whoever a patch *adds* to an expense. Someone
          *     the entry already names stays valid even after leaving the group or dropping the
          *     known-user link, so such an expense is still editable; adding them to a different
@@ -2124,15 +2250,40 @@ export interface paths {
          *     returns the entry, but records no edit: no correction event, no activity, and
          *     `updatedAt` stays where it was.
          *
+         *     A user-scoped expense must still give the user other than the payer a positive share
+         *     (EXP-009), checked on the state after the patch, even when the patch leaves the split
+         *     block untouched; a patch that resolves to the stored state is not re-checked.
+         *
          *     A settlement patch works the same way for `toUserId`, `amount` and `currency`: send only
          *     the keys to change. None of them can be cleared, so an explicit `null` is rejected, and a
          *     `settlement` object with no keys is rejected too. Entry type, groupId and the settlement
          *     debtor are immutable, and `type` must match the entry's original type.
+         *
+         *     `note` is the settlement's one clearable field (SET-052): absent keeps it, a nonblank
+         *     string sets or replaces it, and `null`, an empty string or a whitespace-only string clears
+         *     it. A patch that changes only the note appends one correction and changes `version`, and
+         *     it does not re-check the debt or the other side (SET-054).
+         *
+         *     **Optimistic locking (EXP-047):** after access is checked, a repeated `X-Client-Op-Id`
+         *     answers 200 with the entry as it is now and appends nothing; a deleted entry answers 404;
+         *     a stale `If-Match` answers 409 `LedgerConflictResponse`; otherwise the patch is applied
+         *     and the operation id is stored with it. Without `If-Match` the patch is last-write-wins.
          */
         patch: {
             parameters: {
                 query?: never;
-                header?: never;
+                header?: {
+                    /**
+                     * @description EXP-047: the entry `version` the client last saw, quoted (`"1042"`). A stale version answers 409 `LEDGER.VERSION_CONFLICT` with the current entry. Omitted or `*`: no check.
+                     * @example "1042"
+                     */
+                    "If-Match"?: string;
+                    /**
+                     * @description EXP-047 / EXP-053: client-generated id of this operation, stored on the event it appends. A repeat of an applied operation answers like the original (200 / 204), whatever If-Match and the body say, and appends nothing.
+                     * @example 7d1c2b3a-4e5f-4a6b-8c7d-9e0f1a2b3c4d
+                     */
+                    "X-Client-Op-Id"?: string;
+                };
                 path: {
                     /**
                      * @description Ledger entry UUID
@@ -2193,7 +2344,381 @@ export interface paths {
                         "application/json": components["schemas"]["ErrorResponse"];
                     };
                 };
-                /** @description The request lost a race with a concurrent write; repeat it */
+                /** @description The request lost a race with a concurrent write (`SYSTEM.CONFLICT`, an `ErrorResponse`; repeat it), or `If-Match` is stale (`LEDGER.VERSION_CONFLICT`, a `LedgerConflictResponse` carrying the current entry) */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"] | components["schemas"]["LedgerConflictResponse"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/ledger/recurring-expenses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List recurring expenses
+         * @description Newest first, at most 100. With `groupId`, the recurring expenses of the group, for its active members
+         *     only: anyone else gets 404. Without it, the direct recurring expenses of the caller.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Group UUID; absent to list direct recurring expenses */
+                    groupId?: string;
+                    /** @description `ACTIVE` (default) or `STOPPED` */
+                    status?: "ACTIVE" | "STOPPED";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Recurring expenses */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RecurringExpenseInfo"][];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Missing or invalid JWT token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Create a recurring expense
+         * @description Defines a template from which the backend books an ordinary expense on its own. No money moves.
+         *
+         *     With `groupId`, any active member of an active group may create one, with the rules of an expense
+         *     create, and its payer and participants must be active members. Without `groupId` it is direct: exactly
+         *     two users counting the payer, one of them the caller, both mutual known users, and the other user gets
+         *     a positive share. Either of the two may change or stop it.
+         *
+         *     `frequency` is `MONTHLY` by default and takes `dayOfMonth`; `WEEKLY` takes `dayOfWeek`; `YEARLY` takes
+         *     `monthOfYear` and `dayOfMonth`. A value in a field of another frequency answers 400. Creating books nothing: the
+         *     first booking is on the nearest such date strictly after today (UTC), due at 12:00 UTC. A shorter month
+         *     books on its last day.
+         *
+         *     `endDate` or `occurrenceLimit`, not both, ends it: the last booking stops it with `COMPLETED`.
+         *
+         *     A group, or a pair of users, may have at most 10 active recurring expenses. One stops for good when its
+         *     payer or a participant leaves the group or is kicked, or when the two users stop being known users.
+         *
+         *     An optional client-generated `id` makes a repeat safe. If the caller already created a recurring
+         *     expense under it, the answer is 200 with the stored one, also when it is stopped, whatever the body
+         *     says now: nothing changes and no activity is recorded. An `id` another user created answers 409
+         *     `RECURRING_EXPENSE.ID_CONFLICT`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CreateRecurringExpenseRequest"];
+                };
+            };
+            responses: {
+                /** @description The client-generated `id` repeats a create of the caller: the stored recurring expense */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RecurringExpenseInfo"];
+                    };
+                };
+                /** @description Created recurring expense */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RecurringExpenseInfo"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Missing or invalid JWT token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Access to the requested ledger resource is forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable; or the client-generated `id` repeats a create in a group the caller is no longer an active member of (`RECURRING_EXPENSE.NOT_FOUND`) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The group or the pair of users already has its maximum of active recurring expenses, the client-generated `id` belongs to a recurring expense another user created, or the request lost a race with a concurrent write */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ledger/recurring-expenses/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a recurring expense
+         * @description Stays readable after it stops. Only active members of its group, or the two users of a direct one, may read it; anyone else gets 404.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Recurring expense UUID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Recurring expense details */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RecurringExpenseInfo"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Missing or invalid JWT token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Recurring expense not found, or the user may not read it */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /**
+         * Stop a recurring expense
+         * @description Any active member, or either user of a direct one, may stop it. Stopping is final and books nothing further; expenses already
+         *     booked stay. The record stays readable with status `STOPPED`, and stopping it again succeeds
+         *     and changes nothing.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Recurring expense UUID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Stopped */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Missing or invalid JWT token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Recurring expense not found, or the user may not read it */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Change a recurring expense
+         * @description Any active member, or either user of a direct one, may change it, with no consent from the others.
+         *     Only future bookings change; expenses already booked are edited one by one. An absent key keeps its
+         *     value, and `null` clears an optional one. `payerId` and `groupId` cannot be changed, and naming them
+         *     answers 400. The two users of a direct one cannot be changed either.
+         *
+         *     A different `frequency` needs the fields of the new one, as on a create, and starts over: the next
+         *     booking is the first such date strictly after today, and occurrences overdue at that moment are not
+         *     booked. `occurrencesBooked` goes on and `occurrenceLimit` stays the total. The activity event records
+         *     the old and the new values.
+         *
+         *     The result must pass the rules of a create, so `amount` alone on an `EXACT` split answers 400.
+         *     Changing the day or the month keeps the period of the next booking, so a period is neither booked
+         *     twice nor skipped. A yearly date moved into the past goes to its nearest date from today on. An `endDate` before the next booking, or an `occurrenceLimit` not above
+         *     `occurrencesBooked`, answers 400.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Recurring expense UUID */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UpdateRecurringExpenseRequest"];
+                };
+            };
+            responses: {
+                /** @description Changed recurring expense */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RecurringExpenseInfo"];
+                    };
+                };
+                /** @description Validation failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Missing or invalid JWT token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Recurring expense not found, or the user may not read it */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description The recurring expense is stopped and cannot be changed, or the request lost a race with a concurrent write */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -2215,7 +2740,7 @@ export interface paths {
         };
         /**
          * Get public platform statistics
-         * @description Returns cached, aggregate platform counters for the public landing page. The response is shared by every caller and carries no personal data, so it is safe for browsers and CDNs to reuse for the advertised freshness window.
+         * @description Returns the four public landing metrics: expenses split, debts tracked in USD, active groups in the last 60 days and people sharing. All four come from one consistent read and are cached for up to 300 seconds. The response is shared by every caller and carries no personal data, so it is safe for browsers and CDNs to reuse for the advertised freshness window. When current exchange rates are unavailable the last complete result calculated by the server is returned; without one the endpoint answers 503 rather than a partial USD total.
          */
         get: {
             parameters: {
@@ -2226,7 +2751,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Current public platform counters */
+                /** @description Current public landing metrics */
                 200: {
                     headers: {
                         /**
@@ -2242,6 +2767,15 @@ export interface paths {
                 };
                 /** @description Unexpected server-side failure */
                 500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Required upstream dependency is unavailable */
+                503: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2325,7 +2859,74 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Preview user invite by token
+         * @description Shows who owns the invite token (display name and avatar, no email) and whether the
+         *     caller and the owner are already known users. Does not accept the invite. Rate-limited
+         *     per user, shared with `GET /groups/invite/{inviteToken}`.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /**
+                     * @description User invite token
+                     * @example AbCdEfGhIjKlMnOpQrStUvWxYz012345
+                     */
+                    inviteToken: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Invite preview */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UserInvitePreviewResponse"];
+                    };
+                };
+                /** @description `VALIDATION.INVALID_INVITE_TOKEN` — malformed token, rejected before any lookup; `USER.CANNOT_JOIN_SELF_INVITE` — own invite token */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Missing or invalid JWT token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description User not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+                /** @description Too many requests from this user; retry after the number of seconds in `Retry-After` */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ErrorResponse"];
+                    };
+                };
+            };
+        };
         put?: never;
         /**
          * Join known user by invite token
@@ -2356,7 +2957,7 @@ export interface paths {
                         "application/json": components["schemas"]["User"];
                     };
                 };
-                /** @description Cannot use own invite token */
+                /** @description `VALIDATION.INVALID_INVITE_TOKEN` — malformed token, rejected before any lookup; `USER.CANNOT_JOIN_SELF_INVITE` — own invite token */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -2403,7 +3004,9 @@ export interface paths {
          * @description Returns known users with their direct user-to-user balances and latest active manual
          *     direct-ledger currency grouped under each user. Known users with no outstanding direct
          *     balance are returned with an empty balances array; lastUsedCurrency is null when no
-         *     active manual direct entry exists.
+         *     active manual direct entry exists. lastSelectedCurrency is the requester's own value,
+         *     the currency of the latest direct entry the requester created with that user, null
+         *     until the first one; the other side's entries never change it.
          */
         get: {
             parameters: {
@@ -2875,7 +3478,7 @@ export interface paths {
         };
         /**
          * List activity comments
-         * @description Returns comments for a visible expense or settlement root activity, newest first.
+         * @description Returns comments for a visible expense, settlement or recurring expense root activity, newest first.
          *     The thread is available only while the authenticated user can view the activity chain.
          *     Pass `nextCursor` as `cursor` to continue keyset pagination. Missing, inaccessible, and
          *     unsupported parent activities all return the same masked `ACTIVITY.NOT_FOUND` response.
@@ -2894,7 +3497,7 @@ export interface paths {
                 header?: never;
                 path: {
                     /**
-                     * @description Root expense or settlement activity UUID that owns the comment thread
+                     * @description Root expense, settlement or recurring expense activity UUID that owns the comment thread
                      * @example c9d0e1f2-a3b4-5678-cdef-012345678901
                      */
                     parentActivityId: string;
@@ -2944,7 +3547,7 @@ export interface paths {
         put?: never;
         /**
          * Create an activity comment
-         * @description Adds a comment to a visible expense or settlement root activity. Text is trimmed and
+         * @description Adds a comment to a visible expense, settlement or recurring expense root activity. Text is trimmed and
          *     must contain 1–2000 characters after normalization. The authenticated user's profile
          *     is captured as an immutable author snapshot for display after account deletion.
          */
@@ -2954,7 +3557,7 @@ export interface paths {
                 header?: never;
                 path: {
                     /**
-                     * @description Root expense or settlement activity UUID that owns the comment thread
+                     * @description Root expense, settlement or recurring expense activity UUID that owns the comment thread
                      * @example c9d0e1f2-a3b4-5678-cdef-012345678901
                      */
                     parentActivityId: string;
@@ -3023,8 +3626,8 @@ export interface paths {
         post?: never;
         /**
          * Delete an activity comment
-         * @description Permanently removes the authenticated author's comment from a visible expense or
-         *     settlement thread. Only the current author may delete it. Parent/comment mismatches
+         * @description Permanently removes the authenticated author's comment from a visible expense,
+         *     settlement or recurring expense thread. Only the current author may delete it. Parent/comment mismatches
          *     return `COMMENT.NOT_FOUND` without exposing comments from another thread.
          */
         delete: {
@@ -3033,7 +3636,7 @@ export interface paths {
                 header?: never;
                 path: {
                     /**
-                     * @description Root expense or settlement activity UUID that owns the comment thread
+                     * @description Root expense, settlement or recurring expense activity UUID that owns the comment thread
                      * @example c9d0e1f2-a3b4-5678-cdef-012345678901
                      */
                     parentActivityId: string;
@@ -3096,7 +3699,7 @@ export interface paths {
         head?: never;
         /**
          * Update an activity comment
-         * @description Replaces the normalized text of a comment in a visible expense or settlement thread.
+         * @description Replaces the normalized text of a comment in a visible expense, settlement or recurring expense thread.
          *     Only the current author may update it. A comment from another thread is treated as
          *     missing; a deleted author can no longer mutate the preserved comment.
          */
@@ -3106,7 +3709,7 @@ export interface paths {
                 header?: never;
                 path: {
                     /**
-                     * @description Root expense or settlement activity UUID that owns the comment thread
+                     * @description Root expense, settlement or recurring expense activity UUID that owns the comment thread
                      * @example c9d0e1f2-a3b4-5678-cdef-012345678901
                      */
                     parentActivityId: string;
@@ -3266,9 +3869,10 @@ export interface paths {
         get?: never;
         /**
          * Upload or replace current user avatar
-         * @description Uploads a jpeg, png, or webp image through the backend. The backend validates
-         *     the file, stores it in S3-compatible storage, saves the resulting public URL
-         *     in `users.picture`, and returns the updated current user profile.
+         * @description Uploads a jpeg, png, or webp image (max 5 MB, 16384 px per side, 50 megapixels;
+         *     truncated or unreadable images are rejected) through the backend, stores it in
+         *     S3-compatible storage, saves the resulting public URL in `users.picture`, and
+         *     returns the updated current user profile.
          */
         put: {
             parameters: {
@@ -3460,6 +4064,7 @@ export interface components {
         };
         /** ActivityCommentResponse */
         ActivityCommentResponse: {
+            /** @description Author profile captured when the comment was created */
             authorSnapshot: components["schemas"]["ActorSnapshot"];
             /**
              * Format: uuid
@@ -3503,9 +4108,10 @@ export interface components {
              *     - EXPENSE_CREATED/UPDATED/REVERSED: expense lifecycle
              *     - EXPENSE_TRANSFERRED_TO/FROM: aggregate debt transfer activity
              *     - SETTLEMENT_CREATED/UPDATED/REVERSED: settlement lifecycle
+             *     - RECURRING_EXPENSE_CREATED/UPDATED/STOPPED: recurring expense lifecycle
              * @enum {string}
              */
-            action: "GROUP_CREATED" | "GROUP_UPDATED" | "GROUP_DELETED" | "GROUP_DEACTIVATED" | "OWNERSHIP_TRANSFERRED" | "MEMBER_JOINED" | "MEMBER_LEFT" | "MEMBER_KICKED" | "MEMBERS_ADDED" | "EXPENSE_CREATED" | "EXPENSE_UPDATED" | "EXPENSE_REVERSED" | "EXPENSE_TRANSFERRED_TO" | "EXPENSE_TRANSFERRED_FROM" | "SETTLEMENT_CREATED" | "SETTLEMENT_UPDATED" | "SETTLEMENT_REVERSED";
+            action: "GROUP_CREATED" | "GROUP_UPDATED" | "GROUP_DELETED" | "GROUP_DEACTIVATED" | "OWNERSHIP_TRANSFERRED" | "MEMBER_JOINED" | "MEMBER_LEFT" | "MEMBER_KICKED" | "MEMBERS_ADDED" | "EXPENSE_CREATED" | "EXPENSE_UPDATED" | "EXPENSE_REVERSED" | "EXPENSE_TRANSFERRED_TO" | "EXPENSE_TRANSFERRED_FROM" | "SETTLEMENT_CREATED" | "SETTLEMENT_UPDATED" | "SETTLEMENT_REVERSED" | "RECURRING_EXPENSE_CREATED" | "RECURRING_EXPENSE_UPDATED" | "RECURRING_EXPENSE_STOPPED";
             actorSnapshot: components["schemas"]["ActorSnapshot"];
             /**
              * Format: uuid
@@ -3536,7 +4142,7 @@ export interface components {
              * @example a7b8c9d0-e1f2-3456-abcd-890123456789
              */
             id: string;
-            metadata?: (components["schemas"]["ExpenseActivityMetadata"] | components["schemas"]["SettlementActivityMetadata"] | components["schemas"]["ExpenseTransferActivityMetadata"] | components["schemas"]["GroupActivityMetadata"]) | null;
+            metadata?: (components["schemas"]["ExpenseActivityMetadata"] | components["schemas"]["SettlementActivityMetadata"] | components["schemas"]["ExpenseTransferActivityMetadata"] | components["schemas"]["RecurringExpenseActivityMetadata"] | components["schemas"]["GroupActivityMetadata"]) | null;
             /**
              * Format: uuid
              * @description Root creation activities have null; later mutation activities point at their parent creation activity.
@@ -3602,10 +4208,7 @@ export interface components {
              */
             userId: string;
         };
-        /**
-         * ActorSnapshot
-         * @description Author profile captured when the comment was created
-         */
+        /** ActorSnapshot */
         ActorSnapshot: {
             /**
              * @description Display name of the actor at the time of the event
@@ -3623,9 +4226,11 @@ export interface components {
         AddGroupMemberRequest: {
             /**
              * Format: uuid
-             * @description Id of the user to add; must be a known user of the caller
+             * @description Single-user form, kept for existing clients: id of one user to add. Send either userId or userIds.
              */
-            userId: string;
+            userId?: string | null;
+            /** @description Ids of 1 to 50 users to add, each a known user of the caller. Repeated ids count once. Send either userId or userIds. */
+            userIds?: string[] | null;
         };
         /** CategoriesResponse */
         CategoriesResponse: {
@@ -3741,6 +4346,12 @@ export interface components {
              */
             groupId?: string | null;
             /**
+             * Format: uuid
+             * @description Optional client-generated entry id (EXP-008), making the create idempotent. Looked up before the body is validated: unknown → the entry is created with this id (201); already created by the caller → 200 with the stored entry, whatever the body says now; created by another user → 409 LEDGER.ID_CONFLICT; deleted since → 410 LEDGER.ENTRY_DELETED.
+             * @example 9b2f6c1e-3d4a-4f8b-a1c2-7e5d9f0b1a23
+             */
+            id?: string | null;
+            /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
@@ -3765,6 +4376,11 @@ export interface components {
              */
             fromUserId: string;
             /**
+             * @description Optional plain-text note on what the repayment was for (SET-051). Surrounding whitespace is trimmed; at most 500 characters after that. Omitted, null, empty or whitespace-only means no note.
+             * @example Partial repayment for accommodation
+             */
+            note?: string | null;
+            /**
              * Format: uuid
              * @description UUID of the creditor receiving the payment
              * @example a1b2c3d4-e5f6-7890-abcd-ef1234567890
@@ -3779,12 +4395,68 @@ export interface components {
              * @example c3d4e5f6-a7b8-9012-cdef-123456789012
              */
             groupId?: string | null;
+            /**
+             * Format: uuid
+             * @description Optional client-generated entry id (EXP-008), making the create idempotent. Looked up before the body is validated: unknown → the entry is created with this id (201); already created by the caller → 200 with the stored entry, whatever the body says now; created by another user → 409 LEDGER.ID_CONFLICT; deleted since → 410 LEDGER.ENTRY_DELETED.
+             * @example 9b2f6c1e-3d4a-4f8b-a1c2-7e5d9f0b1a23
+             */
+            id?: string | null;
             settlement: components["schemas"]["CreateLedgerSettlementPayload"];
             /**
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
             type: "SETTLEMENT";
+        };
+        /** CreateRecurringExpenseRequest */
+        CreateRecurringExpenseRequest: {
+            /** @description Amount of every booking as a JSON number, with at most 4 decimal places */
+            amount: WireAmount;
+            /** @description Expense category key, as GET /categories lists them */
+            category?: string | null;
+            /** @description ISO 4217 currency code of every booking */
+            currency: string | null;
+            /** @description Required for MONTHLY and YEARLY; not allowed for WEEKLY */
+            dayOfMonth?: number | null;
+            /** @description Required for WEEKLY, 1 (Monday) to 7 (Sunday); not allowed otherwise */
+            dayOfWeek?: number | null;
+            /** @description Description copied to every booked expense */
+            description?: string | null;
+            /**
+             * Format: date
+             * @description Last day a booking may fall on. Not together with occurrenceLimit
+             */
+            endDate?: string | null;
+            /**
+             * @description MONTHLY when absent
+             * @enum {string|null}
+             */
+            frequency?: "MONTHLY" | "WEEKLY" | "YEARLY" | null;
+            /**
+             * Format: uuid
+             * @description Group of the recurring expense; absent for a direct one between two known users
+             */
+            groupId?: string | null;
+            /**
+             * Format: uuid
+             * @description Optional client-generated id, so a repeated create returns the stored recurring expense (REC-008)
+             */
+            id?: string | null;
+            /** @description Required for YEARLY; not allowed otherwise */
+            monthOfYear?: number | null;
+            /** @description How many occurrences to book in total. Not together with endDate */
+            occurrenceLimit?: number | null;
+            /** @description Users who share the cost, unique, at most 50, in the order that breaks rounding ties */
+            participantIds: string[] | null;
+            /**
+             * Format: uuid
+             * @description User who pays the bill; the author of every booked expense. Cannot be changed later
+             */
+            payerId: string | null;
+            /** @description How the amount is split among the participants. AUTO (equally) when absent */
+            sharingMode?: components["schemas"]["SharingMode"] | null;
+            /** @description Expense subcategory key; it must belong to the category */
+            subcategory?: string | null;
         };
         /** CurrencyBalance */
         CurrencyBalance: {
@@ -3858,14 +4530,14 @@ export interface components {
             /**
              * @description Structured error code. Format: DOMAIN.ERROR_NAME.
              *     Known codes: AUTH.UNAUTHORIZED, AUTH.FORBIDDEN, AUTH.INVALID_TOKEN,
-             *     AUTH.EXPIRED_TOKEN, AUTH.INVALID_REFRESH_TOKEN, AUTH.INVALID_OAUTH_EXCHANGE_CODE, VALIDATION.INVALID,
-             *     VALIDATION.REQUIRED, VALIDATION.ALREADY_EXISTS, USER.NOT_FOUND,
+             *     AUTH.EXPIRED_TOKEN, AUTH.INVALID_REFRESH_TOKEN, AUTH.INVALID_OAUTH_EXCHANGE_CODE, AUTH.OAUTH_BROWSER_BINDING_REQUIRED, VALIDATION.INVALID,
+             *     VALIDATION.REQUIRED, VALIDATION.ALREADY_EXISTS, VALIDATION.INVALID_INVITE_TOKEN, USER.NOT_FOUND,
              *     USER.FORBIDDEN, USER.CANNOT_JOIN_SELF_INVITE, USER.CANNOT_REMOVE_SELF_FRIEND, USER.OUTSTANDING_DEBT, GROUP.NOT_FOUND, GROUP.FORBIDDEN, GROUP.MEMBER_NOT_FOUND,
              *     GROUP.CANNOT_KICK_SELF, GROUP.OWNER_MUST_TRANSFER, GROUP.INVALID_NEW_OWNER,
              *     GROUP.GROUP_INACTIVE, GROUP.INSUFFICIENT_MEMBERS, GROUP.OUTSTANDING_DEBT, GROUP.USER_NOT_CONNECTED, GROUP.ALREADY_MEMBER,
-             *     GROUP.FORMER_MEMBER, GROUP.SIMPLIFY_DEBTS_LOCKED, LEDGER.NOT_FOUND, LEDGER.FORBIDDEN, ACTIVITY.NOT_FOUND,
+             *     GROUP.FORMER_MEMBER, GROUP.SIMPLIFY_DEBTS_LOCKED, LEDGER.NOT_FOUND, LEDGER.FORBIDDEN, LEDGER.ID_CONFLICT, LEDGER.ENTRY_DELETED, LEDGER.VERSION_CONFLICT, RECURRING_EXPENSE.NOT_FOUND, RECURRING_EXPENSE.LIMIT_REACHED, RECURRING_EXPENSE.STOPPED, RECURRING_EXPENSE.ID_CONFLICT, ACTIVITY.NOT_FOUND,
              *     COMMENT.NOT_FOUND, COMMENT.FORBIDDEN,
-             *     SYSTEM.INTERNAL, SYSTEM.SERVICE_UNAVAILABLE, SYSTEM.CONFLICT, TEST_RUN.FOREIGN_DATA
+             *     SYSTEM.INTERNAL, SYSTEM.SERVICE_UNAVAILABLE, SYSTEM.CONFLICT, SYSTEM.RATE_LIMITED, TEST_RUN.FOREIGN_DATA, CLIENT.OUTDATED
              * @example VALIDATION.INVALID
              */
             code: string;
@@ -3938,6 +4610,11 @@ export interface components {
              * @example a1b2c3d4-e5f6-7890-abcd-ef1234567890
              */
             payerId?: string | null;
+            /**
+             * Format: uuid
+             * @description Recurring expense this expense was booked from; null for one a user entered
+             */
+            recurringExpenseId?: string | null;
             /** @description Snapshot of per-user expense shares at the time the activity was recorded */
             shares?: components["schemas"]["ExpenseActivityShareMetadata"][];
             /** @description Original validated sharing mode and mode-specific values. Null on activities recorded before this field existed and on EXPENSE_REVERSED. */
@@ -4092,6 +4769,33 @@ export interface components {
             /** @description Opaque Base64URL cursor for the next page; null when no next page exists. A string, not a number like activity `nextCursor`: it encodes the keyset pair (createdAt, id). */
             nextCursor: string | null;
         };
+        /**
+         * GroupInvitePreviewInviter
+         * @description Creator of the group invite while still an active member; null when the creator has left
+         */
+        GroupInvitePreviewInviter: {
+            /** @description Avatar image URL of the inviter, or null when there is none */
+            avatarUrl: string | null;
+            /** @description Display name of the inviter */
+            displayName: string;
+        } | null;
+        /** GroupInvitePreviewResponse */
+        GroupInvitePreviewResponse: {
+            /** @description Group cover image URL, or null when the group has no cover */
+            coverUrl: string | null;
+            /**
+             * Format: uuid
+             * @description Id of the group behind the invite token
+             */
+            groupId: string;
+            inviter: components["schemas"]["GroupInvitePreviewInviter"];
+            /** @description Whether the caller is already an active member; the client can open the group instead of joining */
+            isAlreadyMember: boolean;
+            /** @description Number of active members */
+            memberCount: number;
+            /** @description Group name */
+            name: string;
+        };
         /** GroupMemberInfo */
         GroupMemberInfo: {
             /** @description Requester-relative balances with this active member, keyed by currency. Empty for the requester and members with no outstanding mutual balance. */
@@ -4115,7 +4819,12 @@ export interface components {
             id: string;
             inviteToken: string;
             /**
-             * @description Currency of the latest active manual ledger entry in this group; null when none exists.
+             * @description Currency of the latest ledger entry the requester created in this group; null until the first one. Owned by the requester; other members' entries never change it, and other members see their own value here, not this one.
+             * @example VND
+             */
+            lastSelectedCurrency: string | null;
+            /**
+             * @description Currency of the latest active manual ledger entry in this group, created by any member; null when none exists. The same for every member. Compare `lastSelectedCurrency`.
              * @example USD
              */
             lastUsedCurrency: string | null;
@@ -4144,8 +4853,22 @@ export interface components {
         };
         /** HealthResponse */
         HealthResponse: {
+            /**
+             * @description API-010/API-011: optional contract features switched on in this deployment. Always present, possibly empty; a flag disappears again when its feature is rolled back. Known values: client.minVersion, ledger.clientEntryId, ledger.entryVersion
+             * @example [
+             *       "ledger.clientEntryId",
+             *       "ledger.entryVersion",
+             *       "client.minVersion"
+             *     ]
+             */
+            capabilities: string[];
             /** @enum {string} */
             status: "UP";
+            /**
+             * @description Version of the running backend build; the same value as OpenAPI `info.version`. `X.Y.Z` on a release-tagged commit, `X.Y.Z-N-g<sha>` N commits after release `vX.Y.Z`, `0.0.0-<sha>` for a build before any release tag, `0.0.0-local` for a local build.
+             * @example 1.0.0-12-gabc1234
+             */
+            version: string;
         };
         /** KnownUserBalanceResponse */
         KnownUserBalanceResponse: {
@@ -4165,7 +4888,12 @@ export interface components {
             /** @description Direct non-zero balances with this user. Empty when no direct balance is outstanding. */
             balances: components["schemas"]["KnownUserBalanceResponse"][];
             /**
-             * @description Currency of the latest active manual direct ledger entry with this user; null when none exists.
+             * @description Currency of the latest direct ledger entry the requesting user created with this user; null until the first one. Owned by the requester; the other side's entries never change it and the other side never sees it. Removing the known user clears it.
+             * @example VND
+             */
+            lastSelectedCurrency: string | null;
+            /**
+             * @description Currency of the latest active manual direct ledger entry with this user, created by either side; null when none exists. Shared by both sides. Compare `lastSelectedCurrency`.
              * @example USD
              */
             lastUsedCurrency: string | null;
@@ -4208,6 +4936,12 @@ export interface components {
              * @example 40
              */
             nextCursor: number | null;
+        };
+        /** LedgerConflictResponse */
+        LedgerConflictResponse: {
+            /** @enum {string} */
+            code: "LEDGER.VERSION_CONFLICT";
+            current: components["schemas"]["LedgerEntryInfo"];
         };
         /**
          * LedgerEntryInfo
@@ -4261,6 +4995,11 @@ export interface components {
              * @example 1717200000
              */
             updatedAt: number;
+            /**
+             * @description Opaque entry version (EXP-046): changes with every event of the entry, corrections and deletion included. Compare for equality only; send it back quoted in If-Match on PATCH and DELETE.
+             * @example 1042
+             */
+            version: string;
         } & ({
             expense: components["schemas"]["LedgerExpenseInfo"];
             settlement?: null;
@@ -4325,6 +5064,12 @@ export interface components {
             participants: components["schemas"]["User"][];
             payer: components["schemas"]["User"];
             /**
+             * Format: uuid
+             * @description Recurring expense this expense was booked from; null for one a user entered
+             * @example d4e5f6a7-b8c9-0123-efab-456789012345
+             */
+            recurringExpenseId?: string | null;
+            /**
              * @description Expense subcategory
              * @example restaurants
              */
@@ -4342,6 +5087,11 @@ export interface components {
              * @example 1717200000
              */
             updatedAt: number;
+            /**
+             * @description Opaque entry version (EXP-046): changes with every event of the entry, corrections and deletion included. Compare for equality only; send it back quoted in If-Match on PATCH and DELETE.
+             * @example 1042
+             */
+            version: string;
         };
         /** LedgerExpenseShare */
         LedgerExpenseShare: {
@@ -4389,6 +5139,11 @@ export interface components {
              */
             id: string;
             /**
+             * @description What the repayment was for, as plain text (SET-050). Null when there is none, also on settlements recorded before notes existed. Render it as text: the API does not interpret or escape markup.
+             * @example Partial repayment for accommodation
+             */
+            note?: string | null;
+            /**
              * @description Scope of the entry:
              *     - GROUP: entry belongs to a specific group
              *     - USER: entry is a direct user-to-user transaction (no group)
@@ -4410,6 +5165,11 @@ export interface components {
             systemAction?: "EXPENSE_TRANSFERRED_TO" | "EXPENSE_TRANSFERRED_FROM" | null;
             /** @description The creditor who received the payment */
             toUser: components["schemas"]["User"];
+            /**
+             * @description Opaque entry version (EXP-046): changes with every event of the entry, corrections and deletion included. Compare for equality only; send it back quoted in If-Match on PATCH and DELETE.
+             * @example 1042
+             */
+            version: string;
         };
         /** OAuthCodeExchangeRequest */
         OAuthCodeExchangeRequest: {
@@ -4439,6 +5199,204 @@ export interface components {
              * @example 417
              */
             premiumPromoRemaining: number;
+        };
+        /** RecurringExpenseActivityMetadata */
+        RecurringExpenseActivityMetadata: {
+            /**
+             * @description Amount of future bookings at the time of the event
+             * @example 15
+             */
+            amount: WireAmount;
+            /** @example EUR */
+            currency: string;
+            /**
+             * @description MONTHLY and YEARLY: day of the month of the bookings
+             * @example 5
+             */
+            dayOfMonth?: number | null;
+            /** @description WEEKLY: day of the week, 1 (Monday) to 7 (Sunday) */
+            dayOfWeek?: number | null;
+            /**
+             * @description Description of the recurring expense
+             * @example Netflix
+             */
+            description?: string | null;
+            /** @description Display name of the member whose leave or kick stopped it */
+            exitedUserDisplayName?: string | null;
+            /** @description Field-level changes for RECURRING_EXPENSE_UPDATED; empty for other actions */
+            fieldDiffs?: components["schemas"]["ActivityFieldDiff"][];
+            /**
+             * @description How often a recurring expense books an expense (REC-012)
+             * @enum {string}
+             */
+            frequency: "MONTHLY" | "WEEKLY" | "YEARLY";
+            /**
+             * Format: uuid
+             * @description Group UUID; absent for a direct recurring expense
+             */
+            groupId?: string | null;
+            /** @description Group name at the time of the event */
+            groupName?: string | null;
+            /** @description YEARLY: month, 1 to 12 */
+            monthOfYear?: number | null;
+            /**
+             * @description Display name of the payer at the time of the event
+             * @example Alice Johnson
+             */
+            payerDisplayName: string;
+            /** Format: uuid */
+            payerId: string;
+            /**
+             * Format: uuid
+             * @description Related recurring expense UUID
+             */
+            recurringExpenseId: string;
+            /**
+             * @description Why a recurring expense stopped:
+             *     - USER_STOPPED: a member stopped it
+             *     - MEMBER_LEFT: its payer or a participant left the group
+             *     - MEMBER_KICKED: its payer or a participant was kicked
+             *     - GROUP_DELETED: the group was deleted
+             *     - GENERATION_FAILED: an occurrence no longer passed the rules of an expense create
+             *     - COMPLETED: it reached its end date or occurrence limit
+             *     - KNOWN_USER_REMOVED: the two users of a direct recurring expense stopped being known users
+             * @enum {string|null}
+             */
+            stopReason?: "USER_STOPPED" | "MEMBER_LEFT" | "MEMBER_KICKED" | "GROUP_DELETED" | "GENERATION_FAILED" | "COMPLETED" | "KNOWN_USER_REMOVED" | null;
+            /**
+             * @description Discriminator value for recurring expense metadata (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            type: "recurring_expense";
+        };
+        /**
+         * RecurringExpenseInfo
+         * @description A template from which the backend books an ordinary expense every period (REC-001)
+         */
+        RecurringExpenseInfo: {
+            /**
+             * @description Amount of every future booking as a JSON number
+             * @example 15
+             */
+            amount: WireAmount;
+            /**
+             * @description Expense category key
+             * @example digital
+             */
+            category?: string | null;
+            /**
+             * Format: int64
+             * @description Creation timestamp (Unix seconds)
+             * @example 1796472000
+             */
+            createdAt: number;
+            /**
+             * Format: uuid
+             * @description User who created the recurring expense
+             * @example a1b2c3d4-e5f6-7890-abcd-ef1234567890
+             */
+            createdBy: string;
+            /**
+             * @description ISO 4217 currency code
+             * @example EUR
+             */
+            currency: string;
+            /**
+             * @description MONTHLY and YEARLY: day of the month, 1 to 31. A shorter month books on its last day
+             * @example 5
+             */
+            dayOfMonth?: number | null;
+            /**
+             * @description WEEKLY: day of the week, 1 (Monday) to 7 (Sunday)
+             * @example 1
+             */
+            dayOfWeek?: number | null;
+            /**
+             * @description Description copied to every booked expense
+             * @example Netflix
+             */
+            description?: string | null;
+            /**
+             * Format: date
+             * @description Last day a booking may fall on; absent without an end date
+             * @example 2027-12-31
+             */
+            endDate?: string | null;
+            /**
+             * @description How often a recurring expense books an expense (REC-012)
+             * @enum {string}
+             */
+            frequency: "MONTHLY" | "WEEKLY" | "YEARLY";
+            /**
+             * Format: uuid
+             * @description Group the recurring expense belongs to; null for a direct one between two known users
+             * @example c3d4e5f6-a7b8-9012-cdef-123456789012
+             */
+            groupId?: string | null;
+            /**
+             * Format: uuid
+             * @description Recurring expense UUID
+             * @example 7c9e6679-7425-40de-944b-e07fc1f90ae7
+             */
+            id: string;
+            /**
+             * @description YEARLY: month, 1 to 12
+             * @example 3
+             */
+            monthOfYear?: number | null;
+            /**
+             * Format: date
+             * @description Date of the next booking in UTC; due at 12:00 UTC of that day
+             * @example 2026-12-05
+             */
+            nextOccurrenceDate: string;
+            /**
+             * @description How many occurrences it books in total; absent without a limit
+             * @example 12
+             */
+            occurrenceLimit?: number | null;
+            /**
+             * @description Expenses booked so far. One deleted later still counts
+             * @example 3
+             */
+            occurrencesBooked: number;
+            /** @description Users who share the cost, in the order that breaks rounding ties */
+            participantIds: string[];
+            /**
+             * Format: uuid
+             * @description User who pays the bill. Author of every booked expense; cannot be changed
+             * @example a1b2c3d4-e5f6-7890-abcd-ef1234567890
+             */
+            payerId: string;
+            sharingMode: components["schemas"]["SharingMode"];
+            /**
+             * @description ACTIVE books an expense every period; STOPPED is final and books nothing further (REC-040)
+             * @enum {string}
+             */
+            status: "ACTIVE" | "STOPPED";
+            /**
+             * @description Why a recurring expense stopped:
+             *     - USER_STOPPED: a member stopped it
+             *     - MEMBER_LEFT: its payer or a participant left the group
+             *     - MEMBER_KICKED: its payer or a participant was kicked
+             *     - GROUP_DELETED: the group was deleted
+             *     - GENERATION_FAILED: an occurrence no longer passed the rules of an expense create
+             *     - COMPLETED: it reached its end date or occurrence limit
+             *     - KNOWN_USER_REMOVED: the two users of a direct recurring expense stopped being known users
+             * @enum {string|null}
+             */
+            stopReason?: "USER_STOPPED" | "MEMBER_LEFT" | "MEMBER_KICKED" | "GROUP_DELETED" | "GENERATION_FAILED" | "COMPLETED" | "KNOWN_USER_REMOVED" | null;
+            /**
+             * @description Expense subcategory key
+             * @example subscriptions
+             */
+            subcategory?: string | null;
+            /**
+             * Format: int64
+             * @description Last change timestamp (Unix seconds)
+             * @example 1796472000
+             */
+            updatedAt: number;
         };
         /** SelfUser */
         SelfUser: {
@@ -4475,6 +5433,11 @@ export interface components {
              * @example false
              */
             isPremium: boolean;
+            /**
+             * @description Read-only. Currency of the latest ledger entry this user created themselves, in any group or with any known user; null until the first one. Not a setting, so it is outside `settings` and not accepted by profile update. Unlike `settings.defaultCurrency` the user does not edit it, and unlike group or known-user `lastUsedCurrency` another user's entry never changes it.
+             * @example VND
+             */
+            lastSelectedCurrency: string | null;
             /**
              * Format: uri
              * @description URL to user's profile picture
@@ -4542,6 +5505,11 @@ export interface components {
             groupId?: string | null;
             /** @example Weekend Trip */
             groupName?: string | null;
+            /**
+             * @description Settlement note in force at event time, plain text (ACT-009). Null when there was none and on activities recorded before notes existed.
+             * @example Partial repayment for accommodation
+             */
+            note?: string | null;
             /**
              * Format: uuid
              * @description User UUID of the debtor (payer)
@@ -4630,28 +5598,27 @@ export interface components {
         StatsResponse: {
             /**
              * Format: int64
-             * @description Cumulative number of expenses ever created by users. Entries later edited or deleted stay counted, and system debt-transfer entries are excluded, so this is a historical total rather than the size of the current ledger.
+             * @description Active groups: groups that are active, have at least two active members, and have at least one counted expense created in the last 60 days
+             * @example 1800
+             */
+            activeGroupsCount: number;
+            /**
+             * @description Debts tracked, in USD, as a JSON number with exactly 4 decimals: the shares participants owe the payer in the current version of every counted expense (the payer's own share excluded), converted at current exchange rates. Not netted and not reduced by settlements, so it is neither money moved nor debt currently outstanding.
+             * @example 1250000.5
+             */
+            debtsTrackedUsd: WireAmount;
+            /**
+             * Format: int64
+             * @description Expenses split: user-created expenses in groups and between friends that are currently valid. A corrected expense counts once; deleted expenses, system debt-transfer entries and settlements do not count.
              * @example 25300000
              */
             expensesCount: number;
             /**
              * Format: int64
-             * @description Number of groups that are currently active; deleted groups are excluded
-             * @example 15000
+             * @description People sharing: distinct users who hold a share in at least one counted expense. Payers without a share, invited users and group members alone do not count.
+             * @example 42000
              */
-            groupsCount: number;
-            /**
-             * Format: int64
-             * @description Cumulative number of settlements ever created by users. Entries later edited or deleted stay counted, and system debt-transfer entries are excluded, so this is a historical total rather than the size of the current ledger.
-             * @example 320000
-             */
-            settlementsCount: number;
-            /**
-             * Format: int64
-             * @description Total number of registered users
-             * @example 50000
-             */
-            usersCount: number;
+            peopleSharingCount: number;
         };
         /** TestLoginResponse */
         TestLoginResponse: {
@@ -4918,6 +5885,11 @@ export interface components {
              */
             currency?: string;
             /**
+             * @description Plain-text note (SET-052). Absent keeps the stored note, a nonblank string sets or replaces it, and null, an empty string or a whitespace-only string clears it. At most 500 characters after trimming.
+             * @example Partial repayment for accommodation
+             */
+            note?: string | null;
+            /**
              * Format: uuid
              * @description Corrected creditor receiving the payment. The original debtor remains immutable.
              * @example a1b2c3d4-e5f6-7890-abcd-ef1234567890
@@ -4932,6 +5904,41 @@ export interface components {
              * @enum {string}
              */
             type: "SETTLEMENT";
+        };
+        /** UpdateRecurringExpenseRequest */
+        UpdateRecurringExpenseRequest: {
+            /** @description New amount of every future booking, with at most 4 decimal places */
+            amount?: WireAmount;
+            /** @description New expense category key. Null clears it */
+            category?: string | null;
+            /** @description New ISO 4217 currency code of every future booking */
+            currency?: string | null;
+            /** @description New day of the month for MONTHLY and YEARLY; not allowed for WEEKLY */
+            dayOfMonth?: number | null;
+            /** @description New day of the week for WEEKLY, 1 (Monday) to 7 (Sunday); not allowed otherwise */
+            dayOfWeek?: number | null;
+            /** @description New description of every future booking. Null clears it */
+            description?: string | null;
+            /**
+             * Format: date
+             * @description Null clears it
+             */
+            endDate?: string | null;
+            /**
+             * @description A different frequency needs the fields of the new one, as on a create
+             * @enum {string|null}
+             */
+            frequency?: "MONTHLY" | "WEEKLY" | "YEARLY" | null;
+            /** @description New month for YEARLY; not allowed otherwise */
+            monthOfYear?: number | null;
+            /** @description Null clears it */
+            occurrenceLimit?: number | null;
+            /** @description Replaces the users who share the cost */
+            participantIds?: string[] | null;
+            /** @description Replaces the split. Null sets AUTO (equally) */
+            sharingMode?: components["schemas"]["SharingMode"] | null;
+            /** @description New expense subcategory key; it must belong to the category. Null clears it */
+            subcategory?: string | null;
         };
         /** UpdateSelfUserRequest */
         UpdateSelfUserRequest: {
@@ -5074,6 +6081,22 @@ export interface components {
              */
             inviteToken: string;
         };
+        /**
+         * UserInvitePreviewInviter
+         * @description Owner of the invite token
+         */
+        UserInvitePreviewInviter: {
+            /** @description Avatar image URL of the inviter, or null when there is none */
+            avatarUrl: string | null;
+            /** @description Display name of the inviter */
+            displayName: string;
+        };
+        /** UserInvitePreviewResponse */
+        UserInvitePreviewResponse: {
+            inviter: components["schemas"]["UserInvitePreviewInviter"];
+            /** @description Whether the caller and the inviter are already known users; accepting would change nothing */
+            isAlreadyFriend: boolean;
+        };
         /** UserSettings */
         UserSettings: {
             /**
@@ -5143,12 +6166,12 @@ export interface operations {
         parameters: {
             query?: {
                 /**
-                 * @description Optional ISO 4217 base currency code; accepted case-insensitively. Defaults to the backend configured base currency.
+                 * @description Optional supported base currency code; accepted case-insensitively. Defaults to the backend configured base currency.
                  * @example EUR
                  */
                 base?: string;
                 /**
-                 * @description Optional comma-separated ISO 4217 currency codes to include in the response
+                 * @description Optional comma-separated supported currency codes to include in the response
                  * @example EUR,GEL
                  */
                 currencies?: string;
@@ -5301,8 +6324,8 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Caller is not an active member of the group, including already-left or inactive groups */
-            403: {
+            /** @description The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5375,7 +6398,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Caller is not the group owner */
+            /** @description Caller is an active member of the group but not its owner */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5384,7 +6407,7 @@ export interface operations {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Target user is not an active member of the group */
+            /** @description The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable; or the target user is not an active member of the group (`GROUP.MEMBER_NOT_FOUND`) */
             404: {
                 headers: {
                     [name: string]: unknown;

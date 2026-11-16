@@ -42,8 +42,8 @@ const toGroupUser = (user: UserResponse): GroupUser => ({
 
 const toGroupMember = (member: GroupMemberInfo): GroupMember => ({
     user: toGroupUser(member.user),
-    // Keyed by the normalized currency of each balance (as `domainGroupFromLegacy`). Reported once
-    // per currency: never a user id or an amount.
+    // Keyed by the normalized currency of each balance. Reported once per currency: never a user
+    // id or an amount.
     balancesByCurrency: Object.fromEntries(
         mapItems(
             Object.values(member.balancesByCurrency),

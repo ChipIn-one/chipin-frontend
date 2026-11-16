@@ -59,11 +59,6 @@ vi.mock('hooks/useSelfUser', () => ({
     useSelfUser: () => ({ id: 'current-user' }),
 }));
 
-vi.mock('store/groupsStore', () => ({
-    useGroupsStore: (selector: (state: { groups: []; selectedGroup: null }) => unknown) =>
-        selector({ groups: [], selectedGroup: null }),
-}));
-
 const createSettlementEvent = ({
     groupId,
     groupName,

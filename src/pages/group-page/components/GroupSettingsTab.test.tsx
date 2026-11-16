@@ -1,14 +1,15 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { toast } from 'sonner';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group, SelfUser } from 'api/chipin.types';
-import type { GroupsStore } from 'store/groupsStore';
-import { useGroupsStore } from 'store/groupsStore';
-import { useLoadingStore } from 'store/loadingStore';
+import { useAuthStore } from 'store/authStore';
 import { toTestGroup } from 'test/groupFixtures';
+import { setupMswServer } from 'test/mswServer';
+import { mountAsUserClient } from 'test/userClient';
 
 import GroupSettingsTab from './GroupSettingsTab';
 
@@ -128,25 +129,45 @@ const group: Group = {
     recentActivities: { items: [], nextCursor: null },
 };
 
+const server = setupMswServer();
+
+// The server's `PATCH /groups/{id}`, as the test answers it (a rejection fails the request).
+const updateGroup = vi.fn<(groupId: string, body: unknown) => Promise<Group>>();
+
 beforeEach(() => {
     vi.clearAllMocks();
-    useGroupsStore.getState().setInitialGroupsStore();
-    useLoadingStore.getState().setInitialLoadingStore();
+    updateGroup.mockReset();
+    useAuthStore.setState({ status: 'authenticated', sessionMode: 'online' });
+    mountAsUserClient();
+    server.use(
+        http.patch('*/groups/:groupId', ({ params, request }) =>
+            request
+                .json()
+                .then(body => updateGroup(String(params.groupId), body))
+                .then(
+                    updated => HttpResponse.json(updated),
+                    () => HttpResponse.json({ code: 'SYSTEM.INTERNAL' }, { status: 500 }),
+                ),
+        ),
+        http.get('*/groups', () => HttpResponse.json({ items: [], nextCursor: null })),
+    );
 });
 
-test('lets the owner toggle simplify debts through the store action', () => {
+afterEach(() => {
+    useAuthStore.setState({ status: 'unknown' });
+});
+
+test('lets the owner toggle simplify debts through the group update', () => {
     const user = userEvent.setup();
-    const updateGroup = vi.fn<GroupsStore['updateGroup']>().mockResolvedValue({
-        ...group,
-        simplifyDebts: false,
-    });
-    useGroupsStore.setState({ updateGroup });
+    updateGroup.mockResolvedValue({ ...group, simplifyDebts: false });
 
     render(<GroupSettingsTab group={toTestGroup(group)} />);
 
-    return user.click(screen.getByRole('switch', { name: 'Simplify group debts' })).then(() => {
-        expect(updateGroup).toHaveBeenCalledWith({ groupId: 'group-1', simplifyDebts: false });
-    });
+    return user.click(screen.getByRole('switch', { name: 'Simplify group debts' })).then(() =>
+        waitFor(() => {
+            expect(updateGroup).toHaveBeenCalledWith('group-1', { simplifyDebts: false });
+        }),
+    );
 });
 
 test('shows the setting as disabled for a group member', () => {
@@ -161,15 +182,19 @@ test('shows the setting as disabled for a group member', () => {
     expect(screen.getByText('Only the group owner can change this setting.')).toBeTruthy();
 });
 
-test('disables the setting and exposes loading feedback while the update is pending', () => {
-    useLoadingStore.getState().setLoading('group', 'update', 'loading');
+test('disables the setting and exposes loading feedback while the update is pending', async () => {
+    const user = userEvent.setup();
+    updateGroup.mockReturnValue(new Promise(() => undefined));
 
     render(<GroupSettingsTab group={toTestGroup(group)} />);
+    await user.click(screen.getByRole('switch', { name: 'Simplify group debts' }));
 
-    expect(screen.getByRole('switch', { name: 'Simplify group debts' })).toHaveProperty(
-        'disabled',
-        true,
-    );
+    await waitFor(() => {
+        expect(screen.getByRole('switch', { name: 'Simplify group debts' })).toHaveProperty(
+            'disabled',
+            true,
+        );
+    });
     expect(screen.getByText('Updating debt simplification...')).toBeTruthy();
 });
 
@@ -190,10 +215,7 @@ test('disables the setting and explains an unsupported runtime response', () => 
 
 test('shows one localized toast and keeps the confirmed value after update failure', () => {
     const user = userEvent.setup();
-    const updateGroup = vi
-        .fn<GroupsStore['updateGroup']>()
-        .mockRejectedValue(new Error('Update failed'));
-    useGroupsStore.setState({ updateGroup });
+    updateGroup.mockRejectedValue(new Error('Update failed'));
 
     render(<GroupSettingsTab group={toTestGroup(group)} />);
 

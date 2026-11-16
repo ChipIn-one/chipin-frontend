@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 import type { FriendBalance } from 'api/chipin.types';
 import { type Balance, legacyAmountFromMoney } from 'entities/balance';
 import { hasOutstandingDebt, type KnownUser } from 'entities/users';
-import { useActivityStore } from 'store/activity-store';
+import { useCreateSettlement } from 'hooks/useLedgerMutations';
 import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import Dropdown from 'components/Dropdown';
@@ -35,6 +35,7 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
     const [isSettleUpOpened, setIsSettleUpOpened] = useState(false);
     const [isRemoveFriendOpened, setIsRemoveFriendOpened] = useState(false);
     const openAddExpenseModal = useExpenseModalStore(state => state.open);
+    const { createSettlement } = useCreateSettlement();
     const isRemoveDisabled = hasOutstandingDebt(friend);
 
     const actions = useMemo(
@@ -105,7 +106,7 @@ const FriendActionsDropdown = ({ friend, balance }: Props) => {
                     friend={friend.user}
                     balances={friend.balances.map(toSettleUpBalance)}
                     initialCurrency={balance.net.currency}
-                    onSubmit={params => useActivityStore.getState().createSettlement(params)}
+                    onSubmit={settlement => createSettlement({ settlement })}
                 />
             )}
             {isRemoveFriendOpened && (

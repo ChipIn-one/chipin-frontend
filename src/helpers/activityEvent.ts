@@ -2,12 +2,22 @@ import type { AppEvent } from 'api/activity.types';
 import type { ActivityFeedItem } from 'api/chipin.types';
 import { ACTIVITY_ACTIONS, ACTIVITY_CATEGORIES, type ActivityCategory } from 'constants/activity';
 
-export interface ActivitySubeventsView {
-    originalEvent: AppEvent;
-    currentEvent: AppEvent;
+// The helpers read only these fields, so they serve the legacy events and the domain events
+// (`entities/activity`) alike.
+interface ActionLike {
+    readonly action: string;
 }
 
-export const getActivityCategory = (event?: AppEvent): ActivityCategory | undefined => {
+interface LedgerEventLike extends ActionLike {
+    readonly metadata?: object | null;
+}
+
+export interface ActivitySubeventsView<E = AppEvent> {
+    originalEvent: E;
+    currentEvent: E;
+}
+
+export const getActivityCategory = (event?: ActionLike): ActivityCategory | undefined => {
     if (
         event?.action === ACTIVITY_ACTIONS.EXPENSE_CREATED ||
         event?.action === ACTIVITY_ACTIONS.EXPENSE_UPDATED
@@ -22,8 +32,10 @@ export const getActivityCategory = (event?: AppEvent): ActivityCategory | undefi
     return undefined;
 };
 
-export const getActivityLedgerEntryId = (event?: AppEvent): string | undefined => {
-    if (!event?.metadata) {
+export const getActivityLedgerEntryId = (event?: LedgerEventLike): string | undefined => {
+    const metadata = event?.metadata;
+
+    if (!metadata || !('entryId' in metadata) || typeof metadata.entryId !== 'string') {
         return undefined;
     }
 
@@ -32,7 +44,7 @@ export const getActivityLedgerEntryId = (event?: AppEvent): string | undefined =
         event.action === ACTIVITY_ACTIONS.EXPENSE_UPDATED ||
         event.action === ACTIVITY_ACTIONS.SETTLEMENT_CREATED
     ) {
-        return event.metadata.entryId;
+        return metadata.entryId;
     }
 
     return undefined;
@@ -76,15 +88,18 @@ export const getActivityPreviewEvents = <T extends PreviewLike>(items: readonly 
     return previews;
 };
 
-export const getActivitySubeventsView = (
-    parentEvent: AppEvent | null | undefined,
-    childEvents: readonly AppEvent[],
-): ActivitySubeventsView | undefined => {
+export const getActivitySubeventsView = <
+    P extends { readonly seq: number },
+    C extends { readonly seq: number },
+>(
+    parentEvent: P | null | undefined,
+    childEvents: readonly C[],
+): ActivitySubeventsView<P | C> | undefined => {
     if (!parentEvent) {
         return undefined;
     }
 
-    let currentEvent = parentEvent;
+    let currentEvent: P | C = parentEvent;
 
     for (const childEvent of childEvents) {
         if (childEvent.seq > currentEvent.seq) {

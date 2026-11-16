@@ -24,6 +24,15 @@ Manual QA checks one exact Vercel Preview built from `master` before the owner *
    - **UI-affecting or build-affecting changes** → it creates (or reuses) one QA Issue, assigns `syllik` plus the tester (or `syllik` alone when `qa_login=syllik`) and posts the handoff in `#chipin-ci`.
 6. A run is blocked only when a commit without a linked Issue touches UI-affecting files, or when GitHub/Vercel evidence is missing or inconsistent. Build-affecting changes never block. Fix the record and run it again.
 
+### Large releases
+
+GitHub's compare lists at most 300 changed files. When the Production-to-candidate compare reports 300 or more, the run rebuilds the file list from the files of every commit in the compare (`total_commits`, read page by page), and each commit's files are read page by page too. The rebuilt list is the union of what each commit touched, so a file changed and later reverted still counts; UI impact is never decided from a cut list. The rest of the run is unchanged.
+
+A large release still blocks when:
+
+- the number of distinct commits read differs from the compare's `total_commits`;
+- one commit's files are unreadable, or that commit reaches GitHub's own 3000-file bound for a single commit.
+
 UI-affecting paths are maintained in `scripts/release-qa/ui-paths.mjs`: `src/**` except `*.test.*` and `src/test/**` (this includes the `src/i18n/locales/**` translations), `public/**`, `index.html`, `app.html`, `vercel.json`, `vite.config.ts`, `pwa-assets.config.ts`, and the service-worker build inputs `scripts/prerender-before-workbox.mjs`, `scripts/prerender-public.mjs` and `scripts/private-spa-navigation.ts`.
 
 Build-affecting changes are maintained in the same module. They change the shipped bundle or service worker without a UI path:

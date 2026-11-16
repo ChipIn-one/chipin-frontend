@@ -44,6 +44,7 @@ const response = (overrides: Partial<GroupResponse> = {}): GroupResponse => ({
     role: 'OWNER',
     status: 'ACTIVE',
     lastUsedCurrency: 'USD',
+    lastSelectedCurrency: null,
     recentActivities: { items: [], nextCursor: null },
     ...overrides,
 });

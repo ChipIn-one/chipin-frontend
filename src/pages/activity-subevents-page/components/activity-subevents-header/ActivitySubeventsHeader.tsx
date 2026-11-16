@@ -2,15 +2,14 @@ import { Box } from '@radix-ui/themes';
 import { InfoIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { AppEvent } from 'api/activity.types';
-import { legacyActivityEvent } from 'entities/balance';
+import type { ActivityEvent as ActivityEventModel } from 'entities/activity';
 import { ActivityEvent } from 'features/activity';
 
 import { EmptyState } from 'basics/empty-states';
 import { ActivityEventSkeleton } from 'components/skeletons/activity-event-skeleton';
 
 interface Props {
-    parentEvent?: AppEvent;
+    parentEvent?: ActivityEventModel;
     isLoading: boolean;
     isUnavailable?: boolean;
 }
@@ -45,7 +44,7 @@ const ActivitySubeventsHeader = ({ parentEvent, isLoading, isUnavailable = false
 
     return (
         <Box mb="4">
-            <ActivityEvent event={legacyActivityEvent(parentEvent)} isNavigable={false} />
+            <ActivityEvent event={parentEvent} isNavigable={false} />
         </Box>
     );
 };

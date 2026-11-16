@@ -1,13 +1,16 @@
 import type { components } from 'shared/api/generated/schema';
+import { currencyCode, moneyFromWire } from 'shared/money';
 
 import type { Stats } from './types';
 
 type StatsResponse = components['schemas']['StatsResponse'];
 
-/** `StatsResponse` (wire) → `Stats` (domain). */
+const USD = currencyCode('USD');
+
+/** `StatsResponse` (wire) → `Stats` (domain); `debtsTrackedUsd` becomes USD `Money`. */
 export const toStats = (response: StatsResponse): Stats => ({
-    usersCount: response.usersCount,
-    groupsCount: response.groupsCount,
     expensesCount: response.expensesCount,
-    settlementsCount: response.settlementsCount,
+    debtsTracked: moneyFromWire(response.debtsTrackedUsd, USD),
+    activeGroupsCount: response.activeGroupsCount,
+    peopleSharingCount: response.peopleSharingCount,
 });

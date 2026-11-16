@@ -4,9 +4,6 @@ import { beforeEach, expect, test, vi } from 'vitest';
 
 import type { SelfUser } from 'api/chipin.types';
 import type { Group } from 'entities/groups';
-import { useActivityStore } from 'store/activity-store';
-import { useGroupsStore } from 'store/groupsStore';
-import { useLoadingStore } from 'store/loadingStore';
 import { groupBalances } from 'test/groupFixtures';
 import { seedSelfUser } from 'test/selfUserSeed';
 
@@ -17,6 +14,16 @@ vi.mock('react-i18next', () => ({
         t: (key: string, options?: { name?: string }) =>
             options?.name ? `${key}:${options.name}` : key,
     }),
+}));
+
+// The settlement write (`useCreateSettlement`) is covered in `hooks/useLedgerMutations.test.tsx`.
+const { createSettlement } = vi.hoisted(() => ({
+    createSettlement: vi.fn<(params: { settlement: unknown }) => Promise<void>>(),
+}));
+
+vi.mock('hooks/useLedgerMutations', async importOriginal => ({
+    ...(await importOriginal<typeof import('hooks/useLedgerMutations')>()),
+    useCreateSettlement: () => ({ createSettlement, isPending: false }),
 }));
 
 vi.mock('sonner', () => ({
@@ -103,9 +110,7 @@ const group: Group = {
 
 beforeEach(() => {
     vi.clearAllMocks();
-    useGroupsStore.getState().setInitialGroupsStore();
     seedSelfUser(currentUser);
-    useLoadingStore.getState().setInitialLoadingStore();
 });
 
 test('disables the group settle-up trigger when every member is settled', () => {
@@ -259,10 +264,8 @@ test('closes the group debt selection dialog from its cancel footer action', () 
 });
 
 test('uses the selected group debt currency as the initial payment currency', () => {
-    const createSettlement = vi.fn().mockResolvedValue(true);
+    createSettlement.mockResolvedValue(undefined);
     const user = userEvent.setup();
-
-    useActivityStore.setState({ createSettlement });
 
     render(<SettleUpModal source="group" group={group} />);
 
@@ -283,11 +286,13 @@ test('uses the selected group debt currency as the initial payment currency', ()
         })
         .then(() => {
             expect(createSettlement).toHaveBeenCalledWith({
-                fromUserId: currentUser.id,
-                toUserId: 'user-3',
-                amount: 30.1234,
-                currency: 'EUR',
-                groupId: group.id,
+                settlement: {
+                    fromUserId: currentUser.id,
+                    toUserId: 'user-3',
+                    amount: 30.1234,
+                    currency: 'EUR',
+                    groupId: group.id,
+                },
             });
         });
 });
@@ -387,10 +392,8 @@ test('sets the selected group debt with the Full debt and Half quick picks', () 
 });
 
 test('submits half of the selected group debt', () => {
-    const createSettlement = vi.fn().mockResolvedValue(true);
+    createSettlement.mockResolvedValue(undefined);
     const user = userEvent.setup();
-
-    useActivityStore.setState({ createSettlement });
 
     render(<SettleUpModal source="group" group={group} />);
 
@@ -413,11 +416,13 @@ test('submits half of the selected group debt', () => {
         )
         .then(() => {
             expect(createSettlement).toHaveBeenCalledWith({
-                fromUserId: currentUser.id,
-                toUserId: 'user-3',
-                amount: 45,
-                currency: 'BDT',
-                groupId: group.id,
+                settlement: {
+                    fromUserId: currentUser.id,
+                    toUserId: 'user-3',
+                    amount: 45,
+                    currency: 'BDT',
+                    groupId: group.id,
+                },
             });
         });
 });
@@ -427,10 +432,8 @@ test('keeps payment content while its already-started settlement request refresh
     const pendingRequest = new Promise<void>(resolve => {
         onResolve = resolve;
     });
-    const createSettlement = vi.fn().mockReturnValue(pendingRequest);
+    createSettlement.mockReturnValue(pendingRequest);
     const user = userEvent.setup();
-
-    useActivityStore.setState({ createSettlement });
 
     const view = render(<SettleUpModal source="group" group={group} />);
 

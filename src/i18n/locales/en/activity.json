@@ -45,6 +45,8 @@
         "shares": "Shares"
     },
     "retryAction": "Retry",
+    "loadErrorTitle": "Couldn't load your activity",
+    "loadErrorDescription": "Try loading your activity again.",
     "dateDivider": {
         "today": "Today",
         "yesterday": "Yesterday"

@@ -45,6 +45,8 @@
         "shares": "Доли"
     },
     "retryAction": "Повторить",
+    "loadErrorTitle": "Не удалось загрузить активность",
+    "loadErrorDescription": "Попробуйте загрузить активность ещё раз.",
     "dateDivider": {
         "today": "Сегодня",
         "yesterday": "Вчера"

@@ -53,7 +53,9 @@ components:
     ActivityCommentResponse:
       properties:
         authorSnapshot:
-          $ref: "#/components/schemas/ActorSnapshot"
+          allOf:
+            - $ref: "#/components/schemas/ActorSnapshot"
+          description: Author profile captured when the comment was created
         authorUserId:
           description: Author UUID; null after the author account is deleted
           format: uuid
@@ -106,6 +108,7 @@ components:
             - EXPENSE_CREATED/UPDATED/REVERSED: expense lifecycle
             - EXPENSE_TRANSFERRED_TO/FROM: aggregate debt transfer activity
             - SETTLEMENT_CREATED/UPDATED/REVERSED: settlement lifecycle
+            - RECURRING_EXPENSE_CREATED/UPDATED/STOPPED: recurring expense lifecycle
           enum:
             - GROUP_CREATED
             - GROUP_UPDATED
@@ -124,6 +127,9 @@ components:
             - SETTLEMENT_CREATED
             - SETTLEMENT_UPDATED
             - SETTLEMENT_REVERSED
+            - RECURRING_EXPENSE_CREATED
+            - RECURRING_EXPENSE_UPDATED
+            - RECURRING_EXPENSE_STOPPED
           type: string
         actorSnapshot:
           $ref: "#/components/schemas/ActorSnapshot"
@@ -164,12 +170,14 @@ components:
                   expense: "#/components/schemas/ExpenseActivityMetadata"
                   expense_transfer: "#/components/schemas/ExpenseTransferActivityMetadata"
                   group: "#/components/schemas/GroupActivityMetadata"
+                  recurring_expense: "#/components/schemas/RecurringExpenseActivityMetadata"
                   settlement: "#/components/schemas/SettlementActivityMetadata"
                 propertyName: type
               oneOf:
                 - $ref: "#/components/schemas/ExpenseActivityMetadata"
                 - $ref: "#/components/schemas/SettlementActivityMetadata"
                 - $ref: "#/components/schemas/ExpenseTransferActivityMetadata"
+                - $ref: "#/components/schemas/RecurringExpenseActivityMetadata"
                 - $ref: "#/components/schemas/GroupActivityMetadata"
             - type: "null"
         parentActivityId:
@@ -260,7 +268,6 @@ components:
       title: ActivityTargetUser
       type: object
     ActorSnapshot:
-      description: Author profile captured when the comment was created
       properties:
         displayName:
           description: Display name of the actor at the time of the event
@@ -280,11 +287,18 @@ components:
     AddGroupMemberRequest:
       properties:
         userId:
-          description: Id of the user to add; must be a known user of the caller
+          description: "Single-user form, kept for existing clients: id of one user to add. Send either userId or userIds."
           format: uuid
-          type: string
-      required:
-        - userId
+          type:
+            - string
+            - "null"
+        userIds:
+          description: Ids of 1 to 50 users to add, each a known user of the caller. Repeated ids count once. Send either userId or userIds.
+          items:
+            type: string
+          type:
+            - array
+            - "null"
       title: AddGroupMemberRequest
       type: object
     CategoriesResponse:
@@ -551,6 +565,13 @@ components:
           type:
             - string
             - "null"
+        id:
+          description: "Optional client-generated entry id (EXP-008), making the create idempotent. Looked up before the body is validated: unknown → the entry is created with this id (201); already created by the caller → 200 with the stored entry, whatever the body says now; created by another user → 409 LEDGER.ID_CONFLICT; deleted since → 410 LEDGER.ENTRY_DELETED."
+          example: 9b2f6c1e-3d4a-4f8b-a1c2-7e5d9f0b1a23
+          format: uuid
+          type:
+            - string
+            - "null"
         type:
           enum:
             - EXPENSE
@@ -581,6 +602,13 @@ components:
           example: b2c3d4e5-f6a7-8901-bcde-f12345678901
           format: uuid
           type: string
+        note:
+          description: Optional plain-text note on what the repayment was for (SET-051). Surrounding whitespace is trimmed; at most 500 characters after that. Omitted, null, empty or whitespace-only means no note.
+          example: Partial repayment for accommodation
+          maxLength: 500
+          type:
+            - string
+            - "null"
         toUserId:
           description: UUID of the creditor receiving the payment
           example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
@@ -603,6 +631,13 @@ components:
           type:
             - string
             - "null"
+        id:
+          description: "Optional client-generated entry id (EXP-008), making the create idempotent. Looked up before the body is validated: unknown → the entry is created with this id (201); already created by the caller → 200 with the stored entry, whatever the body says now; created by another user → 409 LEDGER.ID_CONFLICT; deleted since → 410 LEDGER.ENTRY_DELETED."
+          example: 9b2f6c1e-3d4a-4f8b-a1c2-7e5d9f0b1a23
+          format: uuid
+          type:
+            - string
+            - "null"
         settlement:
           $ref: "#/components/schemas/CreateLedgerSettlementPayload"
         type:
@@ -613,6 +648,115 @@ components:
         - type
         - settlement
       title: CreateLedgerSettlementRequest
+      type: object
+    CreateRecurringExpenseRequest:
+      properties:
+        amount:
+          description: Amount of every booking as a JSON number, with at most 4 decimal places
+          exclusiveMinimum: 0
+          multipleOf: 0.0001
+          type: number
+        category:
+          description: Expense category key, as GET /categories lists them
+          type:
+            - string
+            - "null"
+        currency:
+          description: ISO 4217 currency code of every booking
+          maxLength: 3
+          minLength: 3
+          type:
+            - string
+            - "null"
+        dayOfMonth:
+          description: Required for MONTHLY and YEARLY; not allowed for WEEKLY
+          maximum: 31
+          minimum: 1
+          type:
+            - integer
+            - "null"
+        dayOfWeek:
+          description: Required for WEEKLY, 1 (Monday) to 7 (Sunday); not allowed otherwise
+          maximum: 7
+          minimum: 1
+          type:
+            - integer
+            - "null"
+        description:
+          description: Description copied to every booked expense
+          maxLength: 500
+          type:
+            - string
+            - "null"
+        endDate:
+          description: Last day a booking may fall on. Not together with occurrenceLimit
+          format: date
+          type:
+            - string
+            - "null"
+        frequency:
+          description: MONTHLY when absent
+          enum:
+            - MONTHLY
+            - WEEKLY
+            - YEARLY
+          type:
+            - string
+            - "null"
+        groupId:
+          description: Group of the recurring expense; absent for a direct one between two known users
+          format: uuid
+          type:
+            - string
+            - "null"
+        id:
+          description: Optional client-generated id, so a repeated create returns the stored recurring expense (REC-008)
+          format: uuid
+          type:
+            - string
+            - "null"
+        monthOfYear:
+          description: Required for YEARLY; not allowed otherwise
+          maximum: 12
+          minimum: 1
+          type:
+            - integer
+            - "null"
+        occurrenceLimit:
+          description: How many occurrences to book in total. Not together with endDate
+          minimum: 1
+          type:
+            - integer
+            - "null"
+        participantIds:
+          description: Users who share the cost, unique, at most 50, in the order that breaks rounding ties
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+        payerId:
+          description: User who pays the bill; the author of every booked expense. Cannot be changed later
+          format: uuid
+          type:
+            - string
+            - "null"
+        sharingMode:
+          description: How the amount is split among the participants. AUTO (equally) when absent
+          oneOf:
+            - $ref: "#/components/schemas/SharingMode"
+            - type: "null"
+        subcategory:
+          description: Expense subcategory key; it must belong to the category
+          type:
+            - string
+            - "null"
+      required:
+        - payerId
+        - participantIds
+        - amount
+        - currency
+      title: CreateRecurringExpenseRequest
       type: object
     CurrencyBalance:
       properties:
@@ -709,14 +853,14 @@ components:
           description: |-
             Structured error code. Format: DOMAIN.ERROR_NAME.
             Known codes: AUTH.UNAUTHORIZED, AUTH.FORBIDDEN, AUTH.INVALID_TOKEN,
-            AUTH.EXPIRED_TOKEN, AUTH.INVALID_REFRESH_TOKEN, AUTH.INVALID_OAUTH_EXCHANGE_CODE, VALIDATION.INVALID,
-            VALIDATION.REQUIRED, VALIDATION.ALREADY_EXISTS, USER.NOT_FOUND,
+            AUTH.EXPIRED_TOKEN, AUTH.INVALID_REFRESH_TOKEN, AUTH.INVALID_OAUTH_EXCHANGE_CODE, AUTH.OAUTH_BROWSER_BINDING_REQUIRED, VALIDATION.INVALID,
+            VALIDATION.REQUIRED, VALIDATION.ALREADY_EXISTS, VALIDATION.INVALID_INVITE_TOKEN, USER.NOT_FOUND,
             USER.FORBIDDEN, USER.CANNOT_JOIN_SELF_INVITE, USER.CANNOT_REMOVE_SELF_FRIEND, USER.OUTSTANDING_DEBT, GROUP.NOT_FOUND, GROUP.FORBIDDEN, GROUP.MEMBER_NOT_FOUND,
             GROUP.CANNOT_KICK_SELF, GROUP.OWNER_MUST_TRANSFER, GROUP.INVALID_NEW_OWNER,
             GROUP.GROUP_INACTIVE, GROUP.INSUFFICIENT_MEMBERS, GROUP.OUTSTANDING_DEBT, GROUP.USER_NOT_CONNECTED, GROUP.ALREADY_MEMBER,
-            GROUP.FORMER_MEMBER, GROUP.SIMPLIFY_DEBTS_LOCKED, LEDGER.NOT_FOUND, LEDGER.FORBIDDEN, ACTIVITY.NOT_FOUND,
+            GROUP.FORMER_MEMBER, GROUP.SIMPLIFY_DEBTS_LOCKED, LEDGER.NOT_FOUND, LEDGER.FORBIDDEN, LEDGER.ID_CONFLICT, LEDGER.ENTRY_DELETED, LEDGER.VERSION_CONFLICT, RECURRING_EXPENSE.NOT_FOUND, RECURRING_EXPENSE.LIMIT_REACHED, RECURRING_EXPENSE.STOPPED, RECURRING_EXPENSE.ID_CONFLICT, ACTIVITY.NOT_FOUND,
             COMMENT.NOT_FOUND, COMMENT.FORBIDDEN,
-            SYSTEM.INTERNAL, SYSTEM.SERVICE_UNAVAILABLE, SYSTEM.CONFLICT, TEST_RUN.FOREIGN_DATA
+            SYSTEM.INTERNAL, SYSTEM.SERVICE_UNAVAILABLE, SYSTEM.CONFLICT, SYSTEM.RATE_LIMITED, TEST_RUN.FOREIGN_DATA, CLIENT.OUTDATED
           example: VALIDATION.INVALID
           type: string
         details:
@@ -791,6 +935,12 @@ components:
         payerId:
           description: User UUID of the payer
           example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+          format: uuid
+          type:
+            - string
+            - "null"
+        recurringExpenseId:
+          description: Recurring expense this expense was booked from; null for one a user entered
           format: uuid
           type:
             - string
@@ -1001,6 +1151,55 @@ components:
         - nextCursor
       title: GroupFeedResponse
       type: object
+    GroupInvitePreviewInviter:
+      description: Creator of the group invite while still an active member; null when the creator has left
+      properties:
+        avatarUrl:
+          description: Avatar image URL of the inviter, or null when there is none
+          type:
+            - string
+            - "null"
+        displayName:
+          description: Display name of the inviter
+          type: string
+      required:
+        - displayName
+        - avatarUrl
+      title: GroupInvitePreviewInviter
+      type:
+        - object
+        - "null"
+    GroupInvitePreviewResponse:
+      properties:
+        coverUrl:
+          description: Group cover image URL, or null when the group has no cover
+          type:
+            - string
+            - "null"
+        groupId:
+          description: Id of the group behind the invite token
+          format: uuid
+          type: string
+        inviter:
+          $ref: "#/components/schemas/GroupInvitePreviewInviter"
+        isAlreadyMember:
+          description: Whether the caller is already an active member; the client can open the group instead of joining
+          type: boolean
+        memberCount:
+          description: Number of active members
+          type: integer
+        name:
+          description: Group name
+          type: string
+      required:
+        - groupId
+        - name
+        - coverUrl
+        - memberCount
+        - isAlreadyMember
+        - inviter
+      title: GroupInvitePreviewResponse
+      type: object
     GroupMemberInfo:
       properties:
         balancesByCurrency:
@@ -1037,8 +1236,17 @@ components:
           type: string
         inviteToken:
           type: string
+        lastSelectedCurrency:
+          description: Currency of the latest ledger entry the requester created in this group; null until the first one. Owned by the requester; other members' entries never change it, and other members see their own value here, not this one.
+          example: VND
+          maxLength: 3
+          minLength: 3
+          pattern: ^[A-Z]{3}$
+          type:
+            - string
+            - "null"
         lastUsedCurrency:
-          description: Currency of the latest active manual ledger entry in this group; null when none exists.
+          description: Currency of the latest active manual ledger entry in this group, created by any member; null when none exists. The same for every member. Compare `lastSelectedCurrency`.
           example: USD
           maxLength: 3
           minLength: 3
@@ -1087,17 +1295,33 @@ components:
         - role
         - status
         - lastUsedCurrency
+        - lastSelectedCurrency
         - recentActivities
       title: GroupResponse
       type: object
     HealthResponse:
       properties:
+        capabilities:
+          description: "API-010/API-011: optional contract features switched on in this deployment. Always present, possibly empty; a flag disappears again when its feature is rolled back. Known values: client.minVersion, ledger.clientEntryId, ledger.entryVersion"
+          example:
+            - ledger.clientEntryId
+            - ledger.entryVersion
+            - client.minVersion
+          items:
+            type: string
+          type: array
         status:
           enum:
             - UP
           type: string
+        version:
+          description: Version of the running backend build; the same value as OpenAPI `info.version`. `X.Y.Z` on a release-tagged commit, `X.Y.Z-N-g<sha>` N commits after release `vX.Y.Z`, `0.0.0-<sha>` for a build before any release tag, `0.0.0-local` for a local build.
+          example: 1.0.0-12-gabc1234
+          type: string
       required:
         - status
+        - version
+        - capabilities
       title: HealthResponse
       type: object
     KnownUserBalanceResponse:
@@ -1123,8 +1347,17 @@ components:
           items:
             $ref: "#/components/schemas/KnownUserBalanceResponse"
           type: array
+        lastSelectedCurrency:
+          description: Currency of the latest direct ledger entry the requesting user created with this user; null until the first one. Owned by the requester; the other side's entries never change it and the other side never sees it. Removing the known user clears it.
+          example: VND
+          maxLength: 3
+          minLength: 3
+          pattern: ^[A-Z]{3}$
+          type:
+            - string
+            - "null"
         lastUsedCurrency:
-          description: Currency of the latest active manual direct ledger entry with this user; null when none exists.
+          description: Currency of the latest active manual direct ledger entry with this user, created by either side; null when none exists. Shared by both sides. Compare `lastSelectedCurrency`.
           example: USD
           maxLength: 3
           minLength: 3
@@ -1138,6 +1371,7 @@ components:
         - user
         - balances
         - lastUsedCurrency
+        - lastSelectedCurrency
       title: KnownUserResponse
       type: object
     KnownUsersResponse:
@@ -1206,6 +1440,19 @@ components:
         - items
         - nextCursor
       title: LedgerActivityPreviewFeedResponse
+      type: object
+    LedgerConflictResponse:
+      properties:
+        code:
+          enum:
+            - LEDGER.VERSION_CONFLICT
+          type: string
+        current:
+          $ref: "#/components/schemas/LedgerEntryInfo"
+      required:
+        - code
+        - current
+      title: LedgerConflictResponse
       type: object
     LedgerEntryInfo:
       description: Unified ledger entry. Exactly one of expense or settlement is populated, and it matches type.
@@ -1296,12 +1543,17 @@ components:
           example: 1717200000
           format: int64
           type: integer
+        version:
+          description: "Opaque entry version (EXP-046): changes with every event of the entry, corrections and deletion included. Compare for equality only; send it back quoted in If-Match on PATCH and DELETE."
+          example: "1042"
+          type: string
       required:
         - id
         - type
         - scope
         - createdAt
         - updatedAt
+        - version
       title: LedgerEntryInfo
       type: object
     LedgerExpenseInfo:
@@ -1367,6 +1619,13 @@ components:
           type: array
         payer:
           $ref: "#/components/schemas/User"
+        recurringExpenseId:
+          description: Recurring expense this expense was booked from; null for one a user entered
+          example: d4e5f6a7-b8c9-0123-efab-456789012345
+          format: uuid
+          type:
+            - string
+            - "null"
         subcategory:
           description: Expense subcategory
           example: restaurants
@@ -1390,6 +1649,10 @@ components:
           example: 1717200000
           format: int64
           type: integer
+        version:
+          description: "Opaque entry version (EXP-046): changes with every event of the entry, corrections and deletion included. Compare for equality only; send it back quoted in If-Match on PATCH and DELETE."
+          example: "1042"
+          type: string
       required:
         - id
         - amount
@@ -1401,6 +1664,7 @@ components:
         - creator
         - createdAt
         - updatedAt
+        - version
       title: LedgerExpenseInfo
       type: object
     LedgerExpenseShare:
@@ -1459,6 +1723,13 @@ components:
           example: f6a7b8c9-d0e1-2345-bcde-678901234567
           format: uuid
           type: string
+        note:
+          description: "What the repayment was for, as plain text (SET-050). Null when there is none, also on settlements recorded before notes existed. Render it as text: the API does not interpret or escape markup."
+          example: Partial repayment for accommodation
+          maxLength: 500
+          type:
+            - string
+            - "null"
         scope:
           description: |-
             Scope of the entry:
@@ -1489,6 +1760,10 @@ components:
           allOf:
             - $ref: "#/components/schemas/User"
           description: The creditor who received the payment
+        version:
+          description: "Opaque entry version (EXP-046): changes with every event of the entry, corrections and deletion included. Compare for equality only; send it back quoted in If-Match on PATCH and DELETE."
+          example: "1042"
+          type: string
       required:
         - id
         - fromUser
@@ -1497,6 +1772,7 @@ components:
         - currency
         - settledAt
         - scope
+        - version
       title: LedgerSettlement
       type: object
     OAuthCodeExchangeRequest:
@@ -1534,6 +1810,272 @@ components:
         - premiumPromoRemaining
       title: PremiumPromoRemainingResponse
       type: object
+    RecurringExpenseActivityMetadata:
+      properties:
+        amount:
+          description: Amount of future bookings at the time of the event
+          example: 15
+          multipleOf: 0.0001
+          type: number
+        currency:
+          example: EUR
+          type: string
+        dayOfMonth:
+          description: "MONTHLY and YEARLY: day of the month of the bookings"
+          example: 5
+          type:
+            - integer
+            - "null"
+        dayOfWeek:
+          description: "WEEKLY: day of the week, 1 (Monday) to 7 (Sunday)"
+          type:
+            - integer
+            - "null"
+        description:
+          description: Description of the recurring expense
+          example: Netflix
+          type:
+            - string
+            - "null"
+        exitedUserDisplayName:
+          description: Display name of the member whose leave or kick stopped it
+          type:
+            - string
+            - "null"
+        fieldDiffs:
+          description: Field-level changes for RECURRING_EXPENSE_UPDATED; empty for other actions
+          items:
+            $ref: "#/components/schemas/ActivityFieldDiff"
+          type: array
+        frequency:
+          description: How often a recurring expense books an expense (REC-012)
+          enum:
+            - MONTHLY
+            - WEEKLY
+            - YEARLY
+          type: string
+        groupId:
+          description: Group UUID; absent for a direct recurring expense
+          format: uuid
+          type:
+            - string
+            - "null"
+        groupName:
+          description: Group name at the time of the event
+          type:
+            - string
+            - "null"
+        monthOfYear:
+          description: "YEARLY: month, 1 to 12"
+          type:
+            - integer
+            - "null"
+        payerDisplayName:
+          description: Display name of the payer at the time of the event
+          example: Alice Johnson
+          type: string
+        payerId:
+          format: uuid
+          type: string
+        recurringExpenseId:
+          description: Related recurring expense UUID
+          format: uuid
+          type: string
+        stopReason:
+          description: |-
+            Why a recurring expense stopped:
+            - USER_STOPPED: a member stopped it
+            - MEMBER_LEFT: its payer or a participant left the group
+            - MEMBER_KICKED: its payer or a participant was kicked
+            - GROUP_DELETED: the group was deleted
+            - GENERATION_FAILED: an occurrence no longer passed the rules of an expense create
+            - COMPLETED: it reached its end date or occurrence limit
+            - KNOWN_USER_REMOVED: the two users of a direct recurring expense stopped being known users
+          enum:
+            - USER_STOPPED
+            - MEMBER_LEFT
+            - MEMBER_KICKED
+            - GROUP_DELETED
+            - GENERATION_FAILED
+            - COMPLETED
+            - KNOWN_USER_REMOVED
+          type:
+            - string
+            - "null"
+        type:
+          description: Discriminator value for recurring expense metadata
+          enum:
+            - recurring_expense
+          type: string
+      required:
+        - type
+        - recurringExpenseId
+        - amount
+        - currency
+        - frequency
+        - payerId
+        - payerDisplayName
+      title: RecurringExpenseActivityMetadata
+      type: object
+    RecurringExpenseInfo:
+      description: A template from which the backend books an ordinary expense every period (REC-001)
+      properties:
+        amount:
+          description: Amount of every future booking as a JSON number
+          example: 15
+          multipleOf: 0.0001
+          type: number
+        category:
+          description: Expense category key
+          example: digital
+          type:
+            - string
+            - "null"
+        createdAt:
+          description: Creation timestamp (Unix seconds)
+          example: 1796472000
+          format: int64
+          type: integer
+        createdBy:
+          description: User who created the recurring expense
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+          format: uuid
+          type: string
+        currency:
+          description: ISO 4217 currency code
+          example: EUR
+          type: string
+        dayOfMonth:
+          description: "MONTHLY and YEARLY: day of the month, 1 to 31. A shorter month books on its last day"
+          example: 5
+          type:
+            - integer
+            - "null"
+        dayOfWeek:
+          description: "WEEKLY: day of the week, 1 (Monday) to 7 (Sunday)"
+          example: 1
+          type:
+            - integer
+            - "null"
+        description:
+          description: Description copied to every booked expense
+          example: Netflix
+          type:
+            - string
+            - "null"
+        endDate:
+          description: Last day a booking may fall on; absent without an end date
+          example: 2027-12-31
+          format: date
+          type:
+            - string
+            - "null"
+        frequency:
+          description: How often a recurring expense books an expense (REC-012)
+          enum:
+            - MONTHLY
+            - WEEKLY
+            - YEARLY
+          type: string
+        groupId:
+          description: Group the recurring expense belongs to; null for a direct one between two known users
+          example: c3d4e5f6-a7b8-9012-cdef-123456789012
+          format: uuid
+          type:
+            - string
+            - "null"
+        id:
+          description: Recurring expense UUID
+          example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+          format: uuid
+          type: string
+        monthOfYear:
+          description: "YEARLY: month, 1 to 12"
+          example: 3
+          type:
+            - integer
+            - "null"
+        nextOccurrenceDate:
+          description: Date of the next booking in UTC; due at 12:00 UTC of that day
+          example: 2026-12-05
+          format: date
+          type: string
+        occurrenceLimit:
+          description: How many occurrences it books in total; absent without a limit
+          example: 12
+          type:
+            - integer
+            - "null"
+        occurrencesBooked:
+          description: Expenses booked so far. One deleted later still counts
+          example: 3
+          type: integer
+        participantIds:
+          description: Users who share the cost, in the order that breaks rounding ties
+          items:
+            type: string
+          type: array
+        payerId:
+          description: User who pays the bill. Author of every booked expense; cannot be changed
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+          format: uuid
+          type: string
+        sharingMode:
+          $ref: "#/components/schemas/SharingMode"
+        status:
+          description: ACTIVE books an expense every period; STOPPED is final and books nothing further (REC-040)
+          enum:
+            - ACTIVE
+            - STOPPED
+          type: string
+        stopReason:
+          description: |-
+            Why a recurring expense stopped:
+            - USER_STOPPED: a member stopped it
+            - MEMBER_LEFT: its payer or a participant left the group
+            - MEMBER_KICKED: its payer or a participant was kicked
+            - GROUP_DELETED: the group was deleted
+            - GENERATION_FAILED: an occurrence no longer passed the rules of an expense create
+            - COMPLETED: it reached its end date or occurrence limit
+            - KNOWN_USER_REMOVED: the two users of a direct recurring expense stopped being known users
+          enum:
+            - USER_STOPPED
+            - MEMBER_LEFT
+            - MEMBER_KICKED
+            - GROUP_DELETED
+            - GENERATION_FAILED
+            - COMPLETED
+            - KNOWN_USER_REMOVED
+          type:
+            - string
+            - "null"
+        subcategory:
+          description: Expense subcategory key
+          example: subscriptions
+          type:
+            - string
+            - "null"
+        updatedAt:
+          description: Last change timestamp (Unix seconds)
+          example: 1796472000
+          format: int64
+          type: integer
+      required:
+        - id
+        - payerId
+        - participantIds
+        - sharingMode
+        - amount
+        - currency
+        - frequency
+        - nextOccurrenceDate
+        - occurrencesBooked
+        - status
+        - createdBy
+        - createdAt
+        - updatedAt
+      title: RecurringExpenseInfo
+      type: object
     SelfUser:
       properties:
         createdAt:
@@ -1568,6 +2110,15 @@ components:
           description: Whether user has premium access. Read-only for self updates.
           example: false
           type: boolean
+        lastSelectedCurrency:
+          description: Read-only. Currency of the latest ledger entry this user created themselves, in any group or with any known user; null until the first one. Not a setting, so it is outside `settings` and not accepted by profile update. Unlike `settings.defaultCurrency` the user does not edit it, and unlike group or known-user `lastUsedCurrency` another user's entry never changes it.
+          example: VND
+          maxLength: 3
+          minLength: 3
+          pattern: ^[A-Z]{3}$
+          type:
+            - string
+            - "null"
         picture:
           description: URL to user's profile picture
           example: https://lh3.googleusercontent.com/a/photo-hash
@@ -1614,6 +2165,7 @@ components:
         - settings
         - createdAt
         - updatedAt
+        - lastSelectedCurrency
       title: SelfUser
       type: object
     SettlementActivityMetadata:
@@ -1655,6 +2207,13 @@ components:
             - "null"
         groupName:
           example: Weekend Trip
+          type:
+            - string
+            - "null"
+        note:
+          description: Settlement note in force at event time, plain text (ACT-009). Null when there was none and on activities recorded before notes existed.
+          example: Partial repayment for accommodation
+          maxLength: 500
           type:
             - string
             - "null"
@@ -1790,31 +2349,32 @@ components:
       title: SharingMode
     StatsResponse:
       properties:
+        activeGroupsCount:
+          description: "Active groups: groups that are active, have at least two active members, and have at least one counted expense created in the last 60 days"
+          example: 1800
+          format: int64
+          type: integer
+        debtsTrackedUsd:
+          description: "Debts tracked, in USD, as a JSON number with exactly 4 decimals: the shares participants owe the payer in the current version of every counted expense (the payer's own share excluded), converted at current exchange rates. Not netted and not reduced by settlements, so it is neither money moved nor debt currently outstanding."
+          example: 1250000.5
+          minimum: 0
+          multipleOf: 0.0001
+          type: number
         expensesCount:
-          description: Cumulative number of expenses ever created by users. Entries later edited or deleted stay counted, and system debt-transfer entries are excluded, so this is a historical total rather than the size of the current ledger.
+          description: "Expenses split: user-created expenses in groups and between friends that are currently valid. A corrected expense counts once; deleted expenses, system debt-transfer entries and settlements do not count."
           example: 25300000
           format: int64
           type: integer
-        groupsCount:
-          description: Number of groups that are currently active; deleted groups are excluded
-          example: 15000
-          format: int64
-          type: integer
-        settlementsCount:
-          description: Cumulative number of settlements ever created by users. Entries later edited or deleted stay counted, and system debt-transfer entries are excluded, so this is a historical total rather than the size of the current ledger.
-          example: 320000
-          format: int64
-          type: integer
-        usersCount:
-          description: Total number of registered users
-          example: 50000
+        peopleSharingCount:
+          description: "People sharing: distinct users who hold a share in at least one counted expense. Payers without a share, invited users and group members alone do not count."
+          example: 42000
           format: int64
           type: integer
       required:
-        - usersCount
-        - groupsCount
         - expensesCount
-        - settlementsCount
+        - debtsTrackedUsd
+        - activeGroupsCount
+        - peopleSharingCount
       title: StatsResponse
       type: object
     TestLoginResponse:
@@ -2147,6 +2707,13 @@ components:
           minLength: 3
           pattern: ^[A-Za-z]{3}$
           type: string
+        note:
+          description: Plain-text note (SET-052). Absent keeps the stored note, a nonblank string sets or replaces it, and null, an empty string or a whitespace-only string clears it. At most 500 characters after trimming.
+          example: Partial repayment for accommodation
+          maxLength: 500
+          type:
+            - string
+            - "null"
         toUserId:
           description: Corrected creditor receiving the payment. The original debtor remains immutable.
           example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
@@ -2167,6 +2734,92 @@ components:
         - type
         - settlement
       title: UpdateLedgerSettlementRequest
+      type: object
+    UpdateRecurringExpenseRequest:
+      properties:
+        amount:
+          description: New amount of every future booking, with at most 4 decimal places
+          exclusiveMinimum: 0
+          multipleOf: 0.0001
+          type: number
+        category:
+          description: New expense category key. Null clears it
+          type:
+            - string
+            - "null"
+        currency:
+          description: New ISO 4217 currency code of every future booking
+          maxLength: 3
+          minLength: 3
+          type:
+            - string
+            - "null"
+        dayOfMonth:
+          description: New day of the month for MONTHLY and YEARLY; not allowed for WEEKLY
+          maximum: 31
+          minimum: 1
+          type:
+            - integer
+            - "null"
+        dayOfWeek:
+          description: New day of the week for WEEKLY, 1 (Monday) to 7 (Sunday); not allowed otherwise
+          maximum: 7
+          minimum: 1
+          type:
+            - integer
+            - "null"
+        description:
+          description: New description of every future booking. Null clears it
+          maxLength: 500
+          type:
+            - string
+            - "null"
+        endDate:
+          description: Null clears it
+          format: date
+          type:
+            - string
+            - "null"
+        frequency:
+          description: A different frequency needs the fields of the new one, as on a create
+          enum:
+            - MONTHLY
+            - WEEKLY
+            - YEARLY
+          type:
+            - string
+            - "null"
+        monthOfYear:
+          description: New month for YEARLY; not allowed otherwise
+          maximum: 12
+          minimum: 1
+          type:
+            - integer
+            - "null"
+        occurrenceLimit:
+          description: Null clears it
+          minimum: 1
+          type:
+            - integer
+            - "null"
+        participantIds:
+          description: Replaces the users who share the cost
+          items:
+            type: string
+          type:
+            - array
+            - "null"
+        sharingMode:
+          description: Replaces the split. Null sets AUTO (equally)
+          oneOf:
+            - $ref: "#/components/schemas/SharingMode"
+            - type: "null"
+        subcategory:
+          description: New expense subcategory key; it must belong to the category. Null clears it
+          type:
+            - string
+            - "null"
+      title: UpdateRecurringExpenseRequest
       type: object
     UpdateSelfUserRequest:
       properties:
@@ -2338,6 +2991,34 @@ components:
         - inviteToken
       title: UserInviteLinkResponse
       type: object
+    UserInvitePreviewInviter:
+      description: Owner of the invite token
+      properties:
+        avatarUrl:
+          description: Avatar image URL of the inviter, or null when there is none
+          type:
+            - string
+            - "null"
+        displayName:
+          description: Display name of the inviter
+          type: string
+      required:
+        - displayName
+        - avatarUrl
+      title: UserInvitePreviewInviter
+      type: object
+    UserInvitePreviewResponse:
+      properties:
+        inviter:
+          $ref: "#/components/schemas/UserInvitePreviewInviter"
+        isAlreadyFriend:
+          description: Whether the caller and the inviter are already known users; accepting would change nothing
+          type: boolean
+      required:
+        - inviter
+        - isAlreadyFriend
+      title: UserInvitePreviewResponse
+      type: object
     UserSettings:
       properties:
         defaultCategory:
@@ -2434,7 +3115,7 @@ info:
     All monetary amounts are represented as JSON numbers with up to 4 decimal places (e.g. 85.5000).
     All timestamps are Unix timestamps in seconds unless otherwise noted.
   title: Chipin API
-  version: 1.0.0
+  version: 1.0.0-30-ga308a90
 openapi: 3.1.1
 paths:
   /auth/login/google:
@@ -2454,9 +3135,25 @@ paths:
           schema:
             format: uri
             type: string
+        - deprecated: false
+          description: "Registration language for a user this login creates: en or ru (case-insensitive). Anything else, or nothing, means en and never rejects the login. Ignored for an existing user."
+          example: ru
+          in: query
+          name: locale
+          required: false
+          schema:
+            type: string
       responses:
         "302":
           description: Redirect to Google OAuth consent page
+          headers:
+            Set-Cookie:
+              deprecated: false
+              description: "AUTH-015: the browser binding of this login, set only when `redirect_to` is accepted. `Max-Age` equals the login state lifetime (`redis.ttlForOauthState`, 10 minutes by default). A new login in the same browser replaces it."
+              example: __Host-chipin_oauth_tx=q3Z8yJvH1c2Wm0bT9XrLkP4sNfA7eD6gU5hRiOoYw0E; Max-Age=600; Path=/; Secure; HttpOnly; SameSite=Lax
+              required: false
+              schema:
+                type: string
         "400":
           content:
             application/json:
@@ -2644,6 +3341,15 @@ paths:
         Exchanges a short-lived backend OAuth login code for an access token and a flag indicating
         whether this OAuth flow created a new user account. The refresh token is set in the
         `__Host-chipin_refresh` HttpOnly cookie and never appears in the body.
+      parameters:
+        - deprecated: false
+          description: "AUTH-016: the browser binding set by `GET /auth/login/google` of the same login. The browser sends it on its own on the same-origin POST. Without it the exchange answers 400 `AUTH.OAUTH_BROWSER_BINDING_REQUIRED` and the code stays usable; with another login's value it answers 401 and the code is spent."
+          example: q3Z8yJvH1c2Wm0bT9XrLkP4sNfA7eD6gU5hRiOoYw0E
+          in: cookie
+          name: __Host-chipin_oauth_tx
+          required: true
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
@@ -2669,7 +3375,7 @@ paths:
           headers:
             Set-Cookie:
               deprecated: false
-              description: Refresh token of the new session. `Max-Age` equals the refresh-token lifetime (`jwt.refreshTokenTtlSeconds`, 30 days by default), so the browser forgets the cookie when the session expires.
+              description: "Refresh token of the new session. `__Host-chipin_oauth_tx` is left as it is (AUTH-017): it expires with its `Max-Age`. `Max-Age` equals the refresh-token lifetime (`jwt.refreshTokenTtlSeconds`, 30 days by default), so the browser forgets the cookie when the session expires."
               example: __Host-chipin_refresh=d290f1ee-6c54-4b01-90e6-d701748f0851; Max-Age=2592000; Path=/; Secure; HttpOnly; SameSite=Strict
               required: false
               schema:
@@ -2685,6 +3391,10 @@ paths:
                     details:
                       amount: must be positive
                       expense.participantIds: must contain at least one user other than the payer
+                oauth_browser_binding_required:
+                  summary: "AUTH-016: no __Host-chipin_oauth_tx cookie; the code was not consumed"
+                  value:
+                    code: AUTH.OAUTH_BROWSER_BINDING_REQUIRED
                 uuid_validation:
                   summary: Invalid UUID format
                   value:
@@ -2693,7 +3403,7 @@ paths:
                       groupId: must be a valid UUID
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: Validation failed
+          description: Validation failed, or the browser that started this login did not present its binding cookie
         "401":
           content:
             application/json:
@@ -3113,13 +3823,14 @@ paths:
     get:
       description: |
         Returns the latest cached OpenExchangeRates snapshot for authenticated clients.
+        `rates` lists only the currencies ChipIn supports; the provider quotes more.
         The backend refreshes the configured base currency in the background.
         Other requested base currencies are refreshed on demand and cached under their own base.
         The endpoint can return a stale cached snapshot when the external provider is unavailable.
       operationId: getCurrencyRates
       parameters:
         - deprecated: false
-          description: Optional ISO 4217 base currency code; accepted case-insensitively. Defaults to the backend configured base currency.
+          description: Optional supported base currency code; accepted case-insensitively. Defaults to the backend configured base currency.
           example: EUR
           in: query
           name: base
@@ -3129,7 +3840,7 @@ paths:
             pattern: ^[A-Za-z]{3}$
             type: string
         - deprecated: false
-          description: Optional comma-separated ISO 4217 currency codes to include in the response
+          description: Optional comma-separated supported currency codes to include in the response
           example: EUR,GEL
           in: query
           name: currencies
@@ -3267,6 +3978,7 @@ paths:
                               groupName: Weekend Trip
                               payerDisplayName: Alice Johnson
                               payerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                              recurringExpenseId: null
                               shares:
                                 - currency: USD
                                   displayName: Alice Johnson
@@ -3309,6 +4021,7 @@ paths:
                               groupName: Weekend Trip
                               payerDisplayName: Alice Johnson
                               payerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                              recurringExpenseId: null
                               shares:
                                 - currency: USD
                                   displayName: Alice Johnson
@@ -3444,7 +4157,8 @@ paths:
                           updatedAt: 1717200000
                         description: Berlin trip expenses
                         id: c3d4e5f6-a7b8-9012-cdef-123456789012
-                        inviteToken: xK9mNp2qR
+                        inviteToken: xK9mNp2qRs4tUv6wXy8zAb0cDe2fGh4j
+                        lastSelectedCurrency: USD
                         lastUsedCurrency: USD
                         members:
                           - balancesByCurrency: {}
@@ -3495,6 +4209,7 @@ paths:
                                   groupName: Weekend Trip
                                   payerDisplayName: Alice Johnson
                                   payerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                                  recurringExpenseId: null
                                   shares:
                                     - currency: USD
                                       displayName: Alice Johnson
@@ -3537,6 +4252,7 @@ paths:
                                   groupName: Weekend Trip
                                   payerDisplayName: Alice Johnson
                                   payerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                                  recurringExpenseId: null
                                   shares:
                                     - currency: USD
                                       displayName: Alice Johnson
@@ -3644,7 +4360,8 @@ paths:
                       updatedAt: 1717200000
                     description: Berlin trip expenses
                     id: c3d4e5f6-a7b8-9012-cdef-123456789012
-                    inviteToken: xK9mNp2qR
+                    inviteToken: xK9mNp2qRs4tUv6wXy8zAb0cDe2fGh4j
+                    lastSelectedCurrency: null
                     lastUsedCurrency: null
                     members:
                       - balancesByCurrency: {}
@@ -3696,6 +4413,91 @@ paths:
       tags:
         - Groups
   /groups/invite/{inviteToken}:
+    get:
+      description: |-
+        Shows what the caller is about to join: group id, name, cover, number of active
+        members, whether the caller is already an active member, and who invited (the
+        group creator's display name and avatar while the creator is an active member,
+        otherwise null). Does not join and does not return members, emails or the token.
+        A token of a deleted (`INACTIVE`) group answers 404, like an unknown one.
+        Rate-limited per user, shared with `GET /users/invite/{inviteToken}`.
+      parameters:
+        - deprecated: false
+          description: Group invite token
+          example: xK9mNp2qRs4tUv6wXy8zAb0cDe2fGh4j
+          in: path
+          name: inviteToken
+          required: true
+          schema:
+            maxLength: 64
+            minLength: 16
+            pattern: ^[A-Za-z0-9_-]{16,64}$
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                default:
+                  value:
+                    coverUrl: https://cdn.chipin.one/group-covers/paris.webp
+                    groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
+                    inviter:
+                      avatarUrl: https://cdn.chipin.one/avatars/alice.webp
+                      displayName: Alice
+                    isAlreadyMember: false
+                    memberCount: 4
+                    name: Trip to Paris
+              schema:
+                $ref: "#/components/schemas/GroupInvitePreviewResponse"
+          description: Group preview
+        "400":
+          content:
+            application/json:
+              examples:
+                invalid_invite_token:
+                  value:
+                    code: VALIDATION.INVALID_INVITE_TOKEN
+                    details:
+                      inviteToken: must be 16-64 characters of A-Z, a-z, 0-9, '_' or '-'
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "`VALIDATION.INVALID_INVITE_TOKEN` — the token is not 16-64 characters of `A-Z a-z 0-9 _ -`; rejected before any lookup"
+        "401":
+          content:
+            application/json:
+              examples:
+                default:
+                  value:
+                    code: AUTH.UNAUTHORIZED
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Missing or invalid JWT token
+        "404":
+          content:
+            application/json:
+              examples:
+                default:
+                  value:
+                    code: GROUP.NOT_FOUND
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Group not found
+        "429":
+          content:
+            application/json:
+              examples:
+                default:
+                  value:
+                    code: SYSTEM.RATE_LIMITED
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Too many requests from this user; retry after the number of seconds in `Retry-After`
+      security:
+        - bearerAuth: []
+      summary: Preview group by invite token
+      tags:
+        - Groups
     post:
       description: |-
         Adds the authenticated user to a group using the group's invite token.
@@ -3704,11 +4506,14 @@ paths:
       parameters:
         - deprecated: false
           description: Unique invite token shared by the group creator
-          example: xK9mNp2qR
+          example: xK9mNp2qRs4tUv6wXy8zAb0cDe2fGh4j
           in: path
           name: inviteToken
           required: true
           schema:
+            maxLength: 64
+            minLength: 16
+            pattern: ^[A-Za-z0-9_-]{16,64}$
             type: string
       responses:
         "200":
@@ -3721,12 +4526,17 @@ paths:
           content:
             application/json:
               examples:
-                default:
+                group_inactive:
                   value:
                     code: GROUP.GROUP_INACTIVE
+                invalid_invite_token:
+                  value:
+                    code: VALIDATION.INVALID_INVITE_TOKEN
+                    details:
+                      inviteToken: must be 16-64 characters of A-Z, a-z, 0-9, '_' or '-'
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "`GROUP.GROUP_INACTIVE` — group is inactive"
+          description: "`VALIDATION.INVALID_INVITE_TOKEN` — malformed token, rejected before any lookup; `GROUP.GROUP_INACTIVE` — group is inactive"
         "401":
           content:
             application/json:
@@ -3857,6 +4667,7 @@ paths:
                           groupName: Weekend Trip
                           payerDisplayName: Alice Johnson
                           payerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                          recurringExpenseId: null
                           shares:
                             - currency: USD
                               displayName: Alice Johnson
@@ -3932,16 +4743,16 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: Missing or invalid JWT token
-        "403":
+        "404":
           content:
             application/json:
               examples:
                 default:
                   value:
-                    code: GROUP.FORBIDDEN
+                    code: GROUP.NOT_FOUND
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: Authenticated user is not allowed to access this resource
+          description: The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable
       security:
         - bearerAuth: []
       summary: Group activity feed
@@ -4054,6 +4865,7 @@ paths:
                           groupName: Weekend Trip
                           payerDisplayName: Alice Johnson
                           payerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                          recurringExpenseId: null
                           shares:
                             - currency: USD
                               displayName: Alice Johnson
@@ -4097,6 +4909,7 @@ paths:
                         groupName: Weekend Trip
                         payerDisplayName: Alice Johnson
                         payerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                        recurringExpenseId: null
                         shares:
                           - currency: USD
                             displayName: Alice Johnson
@@ -4150,26 +4963,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: Missing or invalid JWT token
-        "403":
-          content:
-            application/json:
-              examples:
-                default:
-                  value:
-                    code: GROUP.FORBIDDEN
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: Authenticated user is not allowed to access this resource
         "404":
           content:
             application/json:
               examples:
-                default:
+                activity_not_found:
                   value:
                     code: ACTIVITY.NOT_FOUND
+                group_not_found:
+                  value:
+                    code: GROUP.NOT_FOUND
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: Activity not found
+          description: The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable; or the activity is not visible in this group (`ACTIVITY.NOT_FOUND`)
       security:
         - bearerAuth: []
       summary: Group child activity feed
@@ -4256,16 +5062,16 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: Missing or invalid JWT token
-        "403":
+        "404":
           content:
             application/json:
               examples:
                 default:
                   value:
-                    code: GROUP.FORBIDDEN
+                    code: GROUP.NOT_FOUND
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: Authenticated user is not allowed to access this resource
+          description: The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable
       security:
         - bearerAuth: []
       summary: Group ledger activity previews
@@ -4331,7 +5137,7 @@ paths:
                     code: GROUP.FORBIDDEN
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: Authenticated user is not allowed to access this resource
+          description: Caller is an active member of the group but lacks the required role
         "404":
           content:
             application/json:
@@ -4341,7 +5147,7 @@ paths:
                     code: GROUP.NOT_FOUND
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: Group not found
+          description: The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable
         "409":
           content:
             application/json:
@@ -4406,16 +5212,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: Missing or invalid JWT token
-        "403":
-          content:
-            application/json:
-              examples:
-                default:
-                  value:
-                    code: GROUP.FORBIDDEN
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: Authenticated user is not allowed to access this resource
         "404":
           content:
             application/json:
@@ -4425,7 +5221,7 @@ paths:
                     code: GROUP.NOT_FOUND
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: Group not found
+          description: The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable
       security:
         - bearerAuth: []
       summary: Get group by ID
@@ -4515,7 +5311,7 @@ paths:
                     code: GROUP.FORBIDDEN
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: Authenticated user is not allowed to access this resource
+          description: Caller is an active member of the group but lacks the required role
         "404":
           content:
             application/json:
@@ -4525,7 +5321,7 @@ paths:
                     code: GROUP.NOT_FOUND
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: Group not found
+          description: The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable
         "409":
           content:
             application/json:
@@ -4544,11 +5340,11 @@ paths:
   /groups/{id}/cover:
     put:
       description: |-
-        Uploads a jpeg, png, or webp image through the backend. Any active group
-        member can update the group cover. The backend validates the file, stores it
-        in S3-compatible storage, saves the resulting public URL in `groups.cover_url`,
-        and returns the same canonical requester-relative projection as
-        `GET /groups/{id}`.
+        Uploads a jpeg, png, or webp image (max 5 MB, 16384 px per side, 50 megapixels;
+        truncated or unreadable images are rejected) through the backend. Any active group
+        member can update the group cover. The image is stored in S3-compatible storage,
+        its public URL saved in `groups.cover_url`, and the response is the same canonical
+        requester-relative projection as `GET /groups/{id}`.
       parameters:
         - deprecated: false
           description: Group UUID
@@ -4609,16 +5405,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: Missing or invalid JWT token
-        "403":
-          content:
-            application/json:
-              examples:
-                default:
-                  value:
-                    code: GROUP.FORBIDDEN
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: Authenticated user is not allowed to access this resource
         "404":
           content:
             application/json:
@@ -4628,7 +5414,7 @@ paths:
                     code: GROUP.NOT_FOUND
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: Group not found
+          description: The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable
         "415":
           content:
             application/json:
@@ -4725,16 +5511,16 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: Missing or invalid JWT token
-        "403":
+        "404":
           content:
             application/json:
               examples:
                 default:
                   value:
-                    code: GROUP.FORBIDDEN
+                    code: GROUP.NOT_FOUND
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: Caller is not an active member of the group, including already-left or inactive groups
+          description: The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable
         "409":
           content:
             application/json:
@@ -4764,7 +5550,20 @@ paths:
         - Groups
   /groups/{id}/members:
     post:
-      description: Adds a user to the group immediately. Any active group member may call this. The target user must have an existing connection (known-user relation) with the caller and must never have been a member of this group.
+      description: |-
+        Adds one or more users to the group immediately; the targets do not confirm. Any active
+        group member may call this. Send `userIds` (1 to 50 ids, repeats count once) or, for
+        existing clients, a single `userId` — exactly one of the two.
+
+        Every target must be an existing user, a known user of the caller, not the caller, and
+        never a member of this group (a former member rejoins by invite link). The batch is all
+        or nothing: if any target fails, nobody is added. Checks run in this order and the
+        first failing one answers, listing all of its ids in `details.userIds`: caller's
+        membership (404 `GROUP.NOT_FOUND`), group is active, caller's own id (`VALIDATION.INVALID`),
+        unknown users (`USER.NOT_FOUND`), users who are not known users
+        (`GROUP.USER_NOT_CONNECTED`), active members (`GROUP.ALREADY_MEMBER`), former members
+        (`GROUP.FORMER_MEMBER`). A success records one `MEMBERS_ADDED` activity listing every
+        added user. No known-user relation is created.
       parameters:
         - deprecated: false
           description: Group UUID
@@ -4778,6 +5577,17 @@ paths:
       requestBody:
         content:
           application/json:
+            examples:
+              batch:
+                value:
+                  userId: null
+                  userIds:
+                    - b2c3d4e5-f6a7-8901-bcde-f12345678901
+                    - d4e5f6a7-b8c9-0123-def0-234567890123
+              single:
+                value:
+                  userId: b2c3d4e5-f6a7-8901-bcde-f12345678901
+                  userIds: null
             schema:
               $ref: "#/components/schemas/AddGroupMemberRequest"
         required: true
@@ -4787,13 +5597,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/GroupResponse"
-          description: Member added; returns the updated group
+          description: Members added; returns the updated group
         "400":
           content:
             application/json:
+              examples:
+                already_member:
+                  value:
+                    code: GROUP.ALREADY_MEMBER
+                    details:
+                      userIds: b2c3d4e5-f6a7-8901-bcde-f12345678901
+                not_connected:
+                  value:
+                    code: GROUP.USER_NOT_CONNECTED
+                    details:
+                      userIds: d4e5f6a7-b8c9-0123-def0-234567890123
+                requester_in_batch:
+                  value:
+                    code: VALIDATION.INVALID
+                    details:
+                      userIds: must not contain the requester
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "`VALIDATION.INVALID` (malformed userId), `GROUP.GROUP_INACTIVE`, `GROUP.USER_NOT_CONNECTED`, `GROUP.ALREADY_MEMBER`, `GROUP.FORMER_MEMBER`"
+          description: "`VALIDATION.INVALID` (malformed body, both or neither of userId/userIds, caller's own id), `GROUP.GROUP_INACTIVE`, `GROUP.USER_NOT_CONNECTED`, `GROUP.ALREADY_MEMBER`, `GROUP.FORMER_MEMBER`"
         "401":
           content:
             application/json:
@@ -4804,21 +5630,22 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: Missing or invalid JWT token
-        "403":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: "`GROUP.FORBIDDEN` — caller is not an active group member"
         "404":
           content:
             application/json:
+              examples:
+                group_not_found:
+                  value:
+                    code: GROUP.NOT_FOUND
+                user_not_found:
+                  value:
+                    code: USER.NOT_FOUND
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: "`GROUP.NOT_FOUND` or `USER.NOT_FOUND`"
+          description: The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable; or `USER.NOT_FOUND` listing every unknown id in `details.userIds`
       security:
         - bearerAuth: []
-      summary: Add a connected user to the group
+      summary: Add connected users to the group
       tags:
         - Groups
   /groups/{id}/members/{userId}/kick:
@@ -4889,17 +5716,20 @@ paths:
                     code: GROUP.FORBIDDEN
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: Caller is not the group owner
+          description: Caller is an active member of the group but not its owner
         "404":
           content:
             application/json:
               examples:
-                default:
+                group_not_found:
+                  value:
+                    code: GROUP.NOT_FOUND
+                member_not_found:
                   value:
                     code: GROUP.MEMBER_NOT_FOUND
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: Target user is not an active member of the group
+          description: The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable; or the target user is not an active member of the group (`GROUP.MEMBER_NOT_FOUND`)
         "409":
           content:
             application/json:
@@ -4917,7 +5747,7 @@ paths:
         - Groups
   /health:
     get:
-      description: Returns liveness status for the running API process.
+      description: "Returns liveness status, the version of the running API process and the optional contract features this deployment supports (`capabilities`, API-010). Reachable by an outdated client: the version gate never answers 426 here (API-002)."
       responses:
         "200":
           content:
@@ -4925,7 +5755,12 @@ paths:
               examples:
                 default:
                   value:
+                    capabilities:
+                      - ledger.clientEntryId
+                      - ledger.entryVersion
+                      - client.minVersion
                     status: UP
+                    version: 1.0.0-12-gabc1234
               schema:
                 $ref: "#/components/schemas/HealthResponse"
           description: API process is running
@@ -5053,17 +5888,32 @@ paths:
         - `participantIds` must be unique and contain at least one user other than the payer
         - The payer may be omitted from the list; if omitted, the participants owe the whole amount
         - user-scoped expense (`groupId` omitted) must involve exactly 2 users counting the payer, and the authenticated user must be one of them
+        - user-scoped expense: the user other than the payer must get a positive share after rounding (EXP-009);
+          a zero share is rejected with `VALIDATION.INVALID` on `expense.sharingMode`, in every sharing mode.
+          Group expenses may give a member 0
         - group expense requires the group to still have at least 2 active members,
           otherwise the request is rejected with `GROUP.INSUFFICIENT_MEMBERS`
         - `amount` must be positive with at most 4 decimal places
-        - `currency` must be a valid ISO 4217 code (e.g. USD, EUR, GBP)
+        - `currency` must be a supported ISO 4217 code (e.g. USD, EUR, GBP); codes withdrawn from circulation are rejected
         - Sharing modes: AUTO (equal split), EXACT (custom amounts that must sum to total), PERCENTAGE (must sum to 100)
 
         **Settlement rules:**
         - `fromUserId` is the debtor making the payment
         - `toUserId` is the creditor receiving the payment
-        - For group settlements, the authenticated user, debtor, and creditor must be group members
+        - For group settlements, the debtor and creditor must be active group members, otherwise
+          403 `LEDGER.FORBIDDEN`
         - For user-scoped settlements, the authenticated user must be either the debtor or creditor
+        - `note` is optional plain text, at most 500 characters after trimming; it never affects balances
+
+        **Group membership (GRP-010):** a caller who is not an active member of `groupId` gets 404
+        `GROUP.NOT_FOUND`, the same as for a group that does not exist.
+
+        **Idempotent create (EXP-008):** an optional client-generated `id` is looked up before the
+        body is validated. A repeat by the same author answers 200 with the stored entry and
+        changes nothing, even when the body differs; another author's id answers 409
+        `LEDGER.ID_CONFLICT`; an entry in a group the author has left answers 404
+        `LEDGER.NOT_FOUND`, deleted or not; any other entry deleted since answers 410
+        `LEDGER.ENTRY_DELETED`.
       requestBody:
         content:
           application/json:
@@ -5195,12 +6045,139 @@ paths:
                     amount: 42.75
                     currency: USD
                     fromUserId: b2c3d4e5-f6a7-8901-bcde-f12345678901
+                    note: Partial repayment for accommodation
                     toUserId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
                   type: SETTLEMENT
             schema:
               $ref: "#/components/schemas/CreateLedgerEntryRequest"
         required: true
       responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                expense_response:
+                  summary: Expense entry response
+                  value:
+                    createdAt: 1717200000
+                    expense:
+                      amount: 85.5
+                      category: food
+                      createdAt: 1717200000
+                      creator:
+                        createdAt: 1717200000
+                        displayName: Alice Johnson
+                        email: alice@example.com
+                        firstName: Alice
+                        id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                        lastName: Johnson
+                        picture: https://lh3.googleusercontent.com/a/photo-hash
+                        updatedAt: 1717200000
+                      currency: USD
+                      date: 1717200000
+                      description: Dinner at Luigi's
+                      groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
+                      id: e5f6a7b8-c9d0-1234-abcd-567890123456
+                      participantShares:
+                        - currency: USD
+                          shareAmount: 28.5
+                          userId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                        - currency: USD
+                          shareAmount: 28.5
+                          userId: b2c3d4e5-f6a7-8901-bcde-f12345678901
+                        - currency: USD
+                          shareAmount: 28.5
+                          userId: d4e5f6a7-b8c9-0123-efab-456789012345
+                      participants:
+                        - createdAt: 1717200000
+                          displayName: Alice Johnson
+                          email: alice@example.com
+                          firstName: Alice
+                          id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                          lastName: Johnson
+                          picture: https://lh3.googleusercontent.com/a/photo-hash
+                          updatedAt: 1717200000
+                        - createdAt: 1717200000
+                          displayName: Bob Smith
+                          email: bob@example.com
+                          firstName: Bob
+                          id: b2c3d4e5-f6a7-8901-bcde-f12345678901
+                          lastName: Smith
+                          picture: null
+                          updatedAt: 1717200000
+                        - createdAt: 1717200000
+                          displayName: Carol Davis
+                          email: carol@example.com
+                          firstName: Carol
+                          id: d4e5f6a7-b8c9-0123-efab-456789012345
+                          lastName: Davis
+                          picture: null
+                          updatedAt: 1717200000
+                      payer:
+                        createdAt: 1717200000
+                        displayName: Alice Johnson
+                        email: alice@example.com
+                        firstName: Alice
+                        id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                        lastName: Johnson
+                        picture: https://lh3.googleusercontent.com/a/photo-hash
+                        updatedAt: 1717200000
+                      recurringExpenseId: null
+                      subcategory: null
+                      systemAction: null
+                      updatedAt: 1717200000
+                      version: "1042"
+                    groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
+                    id: e5f6a7b8-c9d0-1234-abcd-567890123456
+                    scope: GROUP
+                    settlement: null
+                    systemAction: null
+                    type: EXPENSE
+                    updatedAt: 1717200000
+                    version: "1042"
+                settlement_response:
+                  summary: Settlement entry response
+                  value:
+                    createdAt: 1717200000
+                    expense: null
+                    groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
+                    id: f6a7b8c9-d0e1-2345-bcde-678901234567
+                    scope: GROUP
+                    settlement:
+                      amount: 42.75
+                      currency: USD
+                      fromUser:
+                        createdAt: 1717200000
+                        displayName: Bob Smith
+                        email: bob@example.com
+                        firstName: Bob
+                        id: b2c3d4e5-f6a7-8901-bcde-f12345678901
+                        lastName: Smith
+                        picture: null
+                        updatedAt: 1717200000
+                      groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
+                      id: f6a7b8c9-d0e1-2345-bcde-678901234567
+                      note: Partial repayment for accommodation
+                      scope: GROUP
+                      settledAt: 1717200000
+                      systemAction: null
+                      toUser:
+                        createdAt: 1717200000
+                        displayName: Alice Johnson
+                        email: alice@example.com
+                        firstName: Alice
+                        id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                        lastName: Johnson
+                        picture: https://lh3.googleusercontent.com/a/photo-hash
+                        updatedAt: 1717200000
+                      version: "1043"
+                    systemAction: null
+                    type: SETTLEMENT
+                    updatedAt: 1717200000
+                    version: "1043"
+              schema:
+                $ref: "#/components/schemas/LedgerEntryInfo"
+          description: The client-generated `id` was already used by the caller; the stored entry, unchanged
         "201":
           content:
             application/json:
@@ -5271,9 +6248,11 @@ paths:
                         lastName: Johnson
                         picture: https://lh3.googleusercontent.com/a/photo-hash
                         updatedAt: 1717200000
+                      recurringExpenseId: null
                       subcategory: null
                       systemAction: null
                       updatedAt: 1717200000
+                      version: "1042"
                     groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
                     id: e5f6a7b8-c9d0-1234-abcd-567890123456
                     scope: GROUP
@@ -5281,6 +6260,7 @@ paths:
                     systemAction: null
                     type: EXPENSE
                     updatedAt: 1717200000
+                    version: "1042"
                 settlement_response:
                   summary: Settlement entry response
                   value:
@@ -5303,6 +6283,7 @@ paths:
                         updatedAt: 1717200000
                       groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
                       id: f6a7b8c9-d0e1-2345-bcde-678901234567
+                      note: Partial repayment for accommodation
                       scope: GROUP
                       settledAt: 1717200000
                       systemAction: null
@@ -5315,9 +6296,11 @@ paths:
                         lastName: Johnson
                         picture: https://lh3.googleusercontent.com/a/photo-hash
                         updatedAt: 1717200000
+                      version: "1043"
                     systemAction: null
                     type: SETTLEMENT
                     updatedAt: 1717200000
+                    version: "1043"
               schema:
                 $ref: "#/components/schemas/LedgerEntryInfo"
           description: Created ledger entry
@@ -5361,6 +6344,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: Access to the requested ledger resource is forbidden
+        "404":
+          content:
+            application/json:
+              examples:
+                group_not_found:
+                  value:
+                    code: GROUP.NOT_FOUND
+                ledger_not_found:
+                  value:
+                    code: LEDGER.NOT_FOUND
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable; or the client-generated `id` repeats a create in a group the caller is no longer an active member of (`LEDGER.NOT_FOUND`)
         "409":
           content:
             application/json:
@@ -5368,9 +6364,25 @@ paths:
                 default:
                   value:
                     code: SYSTEM.CONFLICT
+                ledger_id_conflict:
+                  summary: The client-generated id is already taken by another user's entry
+                  value:
+                    code: LEDGER.ID_CONFLICT
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: The request lost a race with a concurrent write; repeat it
+          description: The request lost a race with a concurrent write (`SYSTEM.CONFLICT`, repeat it), or the client-generated `id` belongs to an entry another user created (`LEDGER.ID_CONFLICT`)
+        "410":
+          content:
+            application/json:
+              examples:
+                default:
+                  value:
+                    code: LEDGER.ENTRY_DELETED
+                    details:
+                      entryId: 9b2f6c1e-3d4a-4f8b-a1c2-7e5d9f0b1a23
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: The client-generated `id` repeats a create whose entry has been deleted since
       security:
         - bearerAuth: []
       summary: Create ledger entry (expense or settlement)
@@ -5382,7 +6394,11 @@ paths:
         Soft-deletes (reverses) a ledger entry. The entry is marked as reversed in the
         event log and excluded from balance calculations.
         Deleting an entry that does not exist or is already reversed is an idempotent
-        no-op and still returns `204`.
+        no-op and still returns `204`, whatever `If-Match` and `X-Client-Op-Id` say (EXP-053).
+        The same goes for a group entry when the caller is not an active member of its group
+        (EXP-033): nothing is recorded and the answer does not reveal that the entry exists.
+        Otherwise a repeated `X-Client-Op-Id` answers 204 without a new event, and a stale
+        `If-Match` answers 409 `LedgerConflictResponse`.
       parameters:
         - deprecated: false
           description: Ledger entry UUID
@@ -5390,6 +6406,23 @@ paths:
           in: path
           name: id
           required: true
+          schema:
+            format: uuid
+            type: string
+        - deprecated: false
+          description: 'EXP-047: the entry `version` the client last saw, quoted (`"1042"`). A stale version answers 409 `LEDGER.VERSION_CONFLICT` with the current entry. Omitted or `*`: no check.'
+          example: '"1042"'
+          in: header
+          name: If-Match
+          required: false
+          schema:
+            type: string
+        - deprecated: false
+          description: "EXP-047 / EXP-053: client-generated id of this operation, stored on the event it appends. A repeat of an applied operation answers like the original (200 / 204), whatever If-Match and the body say, and appends nothing."
+          example: 7d1c2b3a-4e5f-4a6b-8c7d-9e0f1a2b3c4d
+          in: header
+          name: X-Client-Op-Id
+          required: false
           schema:
             format: uuid
             type: string
@@ -5443,16 +6476,102 @@ paths:
                 default:
                   value:
                     code: SYSTEM.CONFLICT
+                version_conflict:
+                  summary: If-Match named a version the entry no longer has
+                  value:
+                    code: LEDGER.VERSION_CONFLICT
+                    current:
+                      createdAt: 1717200000
+                      expense:
+                        amount: 85.5
+                        category: food
+                        createdAt: 1717200000
+                        creator:
+                          createdAt: 1717200000
+                          displayName: Alice Johnson
+                          email: alice@example.com
+                          firstName: Alice
+                          id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                          lastName: Johnson
+                          picture: https://lh3.googleusercontent.com/a/photo-hash
+                          updatedAt: 1717200000
+                        currency: USD
+                        date: 1717200000
+                        description: Dinner at Luigi's (with tip)
+                        groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
+                        id: e5f6a7b8-c9d0-1234-abcd-567890123456
+                        participantShares:
+                          - currency: USD
+                            shareAmount: 28.5
+                            userId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                          - currency: USD
+                            shareAmount: 28.5
+                            userId: b2c3d4e5-f6a7-8901-bcde-f12345678901
+                          - currency: USD
+                            shareAmount: 28.5
+                            userId: d4e5f6a7-b8c9-0123-efab-456789012345
+                        participants:
+                          - createdAt: 1717200000
+                            displayName: Alice Johnson
+                            email: alice@example.com
+                            firstName: Alice
+                            id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                            lastName: Johnson
+                            picture: https://lh3.googleusercontent.com/a/photo-hash
+                            updatedAt: 1717200000
+                          - createdAt: 1717200000
+                            displayName: Bob Smith
+                            email: bob@example.com
+                            firstName: Bob
+                            id: b2c3d4e5-f6a7-8901-bcde-f12345678901
+                            lastName: Smith
+                            picture: null
+                            updatedAt: 1717200000
+                          - createdAt: 1717200000
+                            displayName: Carol Davis
+                            email: carol@example.com
+                            firstName: Carol
+                            id: d4e5f6a7-b8c9-0123-efab-456789012345
+                            lastName: Davis
+                            picture: null
+                            updatedAt: 1717200000
+                        payer:
+                          createdAt: 1717200000
+                          displayName: Alice Johnson
+                          email: alice@example.com
+                          firstName: Alice
+                          id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                          lastName: Johnson
+                          picture: https://lh3.googleusercontent.com/a/photo-hash
+                          updatedAt: 1717200000
+                        recurringExpenseId: null
+                        subcategory: null
+                        systemAction: null
+                        updatedAt: 1717203600
+                        version: "1057"
+                      groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
+                      id: e5f6a7b8-c9d0-1234-abcd-567890123456
+                      scope: GROUP
+                      settlement: null
+                      systemAction: null
+                      type: EXPENSE
+                      updatedAt: 1717203600
+                      version: "1057"
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: The request lost a race with a concurrent write; repeat it
+                oneOf:
+                  - $ref: "#/components/schemas/ErrorResponse"
+                  - $ref: "#/components/schemas/LedgerConflictResponse"
+          description: The request lost a race with a concurrent write (`SYSTEM.CONFLICT`, an `ErrorResponse`; repeat it), or `If-Match` is stale (`LEDGER.VERSION_CONFLICT`, a `LedgerConflictResponse` carrying the current entry)
       security:
         - bearerAuth: []
       summary: Delete entry
       tags:
         - Ledger
     get:
-      description: Returns a single ledger entry (expense or settlement) by its UUID.
+      description: |-
+        Returns a single ledger entry (expense or settlement) by its UUID. A group entry
+        answers a caller who is not an active member of its group with the same 404 as an
+        unknown id (EXP-033); 403 applies to a direct entry only.
       parameters:
         - deprecated: false
           description: Ledger entry UUID
@@ -5539,6 +6658,10 @@ paths:
           previous category. Sending `subcategory` alone validates it against the stored category.
         - An `expense` object with no keys is rejected: there is nothing to apply.
 
+        A group entry answers a caller who is not an active member of its group with the same
+        404 as an unknown id, before any other check (EXP-033); 403 applies to a direct entry
+        and to a system entry the caller can see.
+
         Membership and known-user rules apply to whoever a patch *adds* to an expense. Someone
         the entry already names stays valid even after leaving the group or dropping the
         known-user link, so such an expense is still editable; adding them to a different
@@ -5548,10 +6671,24 @@ paths:
         returns the entry, but records no edit: no correction event, no activity, and
         `updatedAt` stays where it was.
 
+        A user-scoped expense must still give the user other than the payer a positive share
+        (EXP-009), checked on the state after the patch, even when the patch leaves the split
+        block untouched; a patch that resolves to the stored state is not re-checked.
+
         A settlement patch works the same way for `toUserId`, `amount` and `currency`: send only
         the keys to change. None of them can be cleared, so an explicit `null` is rejected, and a
         `settlement` object with no keys is rejected too. Entry type, groupId and the settlement
         debtor are immutable, and `type` must match the entry's original type.
+
+        `note` is the settlement's one clearable field (SET-052): absent keeps it, a nonblank
+        string sets or replaces it, and `null`, an empty string or a whitespace-only string clears
+        it. A patch that changes only the note appends one correction and changes `version`, and
+        it does not re-check the debt or the other side (SET-054).
+
+        **Optimistic locking (EXP-047):** after access is checked, a repeated `X-Client-Op-Id`
+        answers 200 with the entry as it is now and appends nothing; a deleted entry answers 404;
+        a stale `If-Match` answers 409 `LedgerConflictResponse`; otherwise the patch is applied
+        and the operation id is stored with it. Without `If-Match` the patch is last-write-wins.
       parameters:
         - deprecated: false
           description: Ledger entry UUID
@@ -5562,10 +6699,33 @@ paths:
           schema:
             format: uuid
             type: string
+        - deprecated: false
+          description: 'EXP-047: the entry `version` the client last saw, quoted (`"1042"`). A stale version answers 409 `LEDGER.VERSION_CONFLICT` with the current entry. Omitted or `*`: no check.'
+          example: '"1042"'
+          in: header
+          name: If-Match
+          required: false
+          schema:
+            type: string
+        - deprecated: false
+          description: "EXP-047 / EXP-053: client-generated id of this operation, stored on the event it appends. A repeat of an applied operation answers like the original (200 / 204), whatever If-Match and the body say, and appends nothing."
+          example: 7d1c2b3a-4e5f-4a6b-8c7d-9e0f1a2b3c4d
+          in: header
+          name: X-Client-Op-Id
+          required: false
+          schema:
+            format: uuid
+            type: string
       requestBody:
         content:
           application/json:
             examples:
+              clear_settlement_note:
+                summary: Clear the settlement note
+                value:
+                  settlement:
+                    note: null
+                  type: SETTLEMENT
               patch_expense_description:
                 summary: Edit only the description
                 value:
@@ -5591,6 +6751,12 @@ paths:
                 value:
                   settlement:
                     amount: 45
+                  type: SETTLEMENT
+              patch_settlement_note:
+                summary: Set or replace only the settlement note
+                value:
+                  settlement:
+                    note: Partial repayment for accommodation
                   type: SETTLEMENT
               update_expense:
                 summary: Replace every expense field
@@ -5694,9 +6860,11 @@ paths:
                         lastName: Johnson
                         picture: https://lh3.googleusercontent.com/a/photo-hash
                         updatedAt: 1717200000
+                      recurringExpenseId: null
                       subcategory: null
                       systemAction: null
                       updatedAt: 1717200000
+                      version: "1042"
                     groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
                     id: e5f6a7b8-c9d0-1234-abcd-567890123456
                     scope: GROUP
@@ -5704,6 +6872,7 @@ paths:
                     systemAction: null
                     type: EXPENSE
                     updatedAt: 1717200000
+                    version: "1042"
                 settlement_response:
                   summary: Settlement entry response
                   value:
@@ -5726,6 +6895,7 @@ paths:
                         updatedAt: 1717200000
                       groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
                       id: f6a7b8c9-d0e1-2345-bcde-678901234567
+                      note: Partial repayment for accommodation
                       scope: GROUP
                       settledAt: 1717200000
                       systemAction: null
@@ -5738,9 +6908,11 @@ paths:
                         lastName: Johnson
                         picture: https://lh3.googleusercontent.com/a/photo-hash
                         updatedAt: 1717200000
+                      version: "1043"
                     systemAction: null
                     type: SETTLEMENT
                     updatedAt: 1717200000
+                    version: "1043"
               schema:
                 $ref: "#/components/schemas/LedgerEntryInfo"
           description: Updated ledger entry
@@ -5801,17 +6973,867 @@ paths:
                 default:
                   value:
                     code: SYSTEM.CONFLICT
+                version_conflict:
+                  summary: If-Match named a version the entry no longer has
+                  value:
+                    code: LEDGER.VERSION_CONFLICT
+                    current:
+                      createdAt: 1717200000
+                      expense:
+                        amount: 85.5
+                        category: food
+                        createdAt: 1717200000
+                        creator:
+                          createdAt: 1717200000
+                          displayName: Alice Johnson
+                          email: alice@example.com
+                          firstName: Alice
+                          id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                          lastName: Johnson
+                          picture: https://lh3.googleusercontent.com/a/photo-hash
+                          updatedAt: 1717200000
+                        currency: USD
+                        date: 1717200000
+                        description: Dinner at Luigi's (with tip)
+                        groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
+                        id: e5f6a7b8-c9d0-1234-abcd-567890123456
+                        participantShares:
+                          - currency: USD
+                            shareAmount: 28.5
+                            userId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                          - currency: USD
+                            shareAmount: 28.5
+                            userId: b2c3d4e5-f6a7-8901-bcde-f12345678901
+                          - currency: USD
+                            shareAmount: 28.5
+                            userId: d4e5f6a7-b8c9-0123-efab-456789012345
+                        participants:
+                          - createdAt: 1717200000
+                            displayName: Alice Johnson
+                            email: alice@example.com
+                            firstName: Alice
+                            id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                            lastName: Johnson
+                            picture: https://lh3.googleusercontent.com/a/photo-hash
+                            updatedAt: 1717200000
+                          - createdAt: 1717200000
+                            displayName: Bob Smith
+                            email: bob@example.com
+                            firstName: Bob
+                            id: b2c3d4e5-f6a7-8901-bcde-f12345678901
+                            lastName: Smith
+                            picture: null
+                            updatedAt: 1717200000
+                          - createdAt: 1717200000
+                            displayName: Carol Davis
+                            email: carol@example.com
+                            firstName: Carol
+                            id: d4e5f6a7-b8c9-0123-efab-456789012345
+                            lastName: Davis
+                            picture: null
+                            updatedAt: 1717200000
+                        payer:
+                          createdAt: 1717200000
+                          displayName: Alice Johnson
+                          email: alice@example.com
+                          firstName: Alice
+                          id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                          lastName: Johnson
+                          picture: https://lh3.googleusercontent.com/a/photo-hash
+                          updatedAt: 1717200000
+                        recurringExpenseId: null
+                        subcategory: null
+                        systemAction: null
+                        updatedAt: 1717203600
+                        version: "1057"
+                      groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
+                      id: e5f6a7b8-c9d0-1234-abcd-567890123456
+                      scope: GROUP
+                      settlement: null
+                      systemAction: null
+                      type: EXPENSE
+                      updatedAt: 1717203600
+                      version: "1057"
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
-          description: The request lost a race with a concurrent write; repeat it
+                oneOf:
+                  - $ref: "#/components/schemas/ErrorResponse"
+                  - $ref: "#/components/schemas/LedgerConflictResponse"
+          description: The request lost a race with a concurrent write (`SYSTEM.CONFLICT`, an `ErrorResponse`; repeat it), or `If-Match` is stale (`LEDGER.VERSION_CONFLICT`, a `LedgerConflictResponse` carrying the current entry)
       security:
         - bearerAuth: []
       summary: Update entry
       tags:
         - Ledger
+  /ledger/recurring-expenses:
+    get:
+      description: |-
+        Newest first, at most 100. With `groupId`, the recurring expenses of the group, for its active members
+        only: anyone else gets 404. Without it, the direct recurring expenses of the caller.
+      parameters:
+        - deprecated: false
+          description: Group UUID; absent to list direct recurring expenses
+          in: query
+          name: groupId
+          required: false
+          schema:
+            format: uuid
+            type: string
+        - deprecated: false
+          description: "`ACTIVE` (default) or `STOPPED`"
+          in: query
+          name: status
+          required: false
+          schema:
+            description: ACTIVE books an expense every period; STOPPED is final and books nothing further (REC-040)
+            enum:
+              - ACTIVE
+              - STOPPED
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                group:
+                  summary: Active recurring expenses of a group, newest first
+                  value:
+                    - amount: 15
+                      category: digital
+                      createdAt: 1788256800
+                      createdBy: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                      currency: EUR
+                      dayOfMonth: 5
+                      dayOfWeek: null
+                      description: Netflix
+                      endDate: null
+                      frequency: MONTHLY
+                      groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
+                      id: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                      monthOfYear: null
+                      nextOccurrenceDate: 2026-12-05
+                      occurrenceLimit: null
+                      occurrencesBooked: 3
+                      participantIds:
+                        - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                        - b2c3d4e5-f6a7-8901-bcde-f12345678901
+                        - d4e5f6a7-b8c9-0123-efab-456789012345
+                      payerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                      sharingMode:
+                        type: AUTO
+                      status: ACTIVE
+                      stopReason: null
+                      subcategory: subscriptions
+                      updatedAt: 1788256800
+                    - amount: 30
+                      category: digital
+                      createdAt: 1774015200
+                      createdBy: b2c3d4e5-f6a7-8901-bcde-f12345678901
+                      currency: EUR
+                      dayOfMonth: 1
+                      dayOfWeek: null
+                      description: Domain and hosting
+                      endDate: null
+                      frequency: YEARLY
+                      groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
+                      id: 9b2d7f5a-1c3e-4a6b-8d0f-2e4c6a8b0d1f
+                      monthOfYear: 3
+                      nextOccurrenceDate: 2027-03-01
+                      occurrenceLimit: 3
+                      occurrencesBooked: 0
+                      participantIds:
+                        - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                        - b2c3d4e5-f6a7-8901-bcde-f12345678901
+                      payerId: b2c3d4e5-f6a7-8901-bcde-f12345678901
+                      sharingMode:
+                        customShares:
+                          a1b2c3d4-e5f6-7890-abcd-ef1234567890: 20
+                          b2c3d4e5-f6a7-8901-bcde-f12345678901: 10
+                        type: EXACT
+                      status: ACTIVE
+                      stopReason: null
+                      subcategory: software
+                      updatedAt: 1774015200
+              schema:
+                items:
+                  $ref: "#/components/schemas/RecurringExpenseInfo"
+                type: array
+          description: Recurring expenses
+        "400":
+          content:
+            application/json:
+              examples:
+                field_validation:
+                  summary: Field-level validation error
+                  value:
+                    code: VALIDATION.INVALID
+                    details:
+                      amount: must be positive
+                      expense.participantIds: must contain at least one user other than the payer
+                uuid_validation:
+                  summary: Invalid UUID format
+                  value:
+                    code: VALIDATION.INVALID
+                    details:
+                      groupId: must be a valid UUID
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Validation failed
+        "401":
+          content:
+            application/json:
+              examples:
+                default:
+                  value:
+                    code: AUTH.UNAUTHORIZED
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Missing or invalid JWT token
+        "404":
+          content:
+            application/json:
+              examples:
+                default:
+                  value:
+                    code: GROUP.NOT_FOUND
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable
+      security:
+        - bearerAuth: []
+      summary: List recurring expenses
+      tags:
+        - Ledger
+    post:
+      description: |-
+        Defines a template from which the backend books an ordinary expense on its own. No money moves.
+
+        With `groupId`, any active member of an active group may create one, with the rules of an expense
+        create, and its payer and participants must be active members. Without `groupId` it is direct: exactly
+        two users counting the payer, one of them the caller, both mutual known users, and the other user gets
+        a positive share. Either of the two may change or stop it.
+
+        `frequency` is `MONTHLY` by default and takes `dayOfMonth`; `WEEKLY` takes `dayOfWeek`; `YEARLY` takes
+        `monthOfYear` and `dayOfMonth`. A value in a field of another frequency answers 400. Creating books nothing: the
+        first booking is on the nearest such date strictly after today (UTC), due at 12:00 UTC. A shorter month
+        books on its last day.
+
+        `endDate` or `occurrenceLimit`, not both, ends it: the last booking stops it with `COMPLETED`.
+
+        A group, or a pair of users, may have at most 10 active recurring expenses. One stops for good when its
+        payer or a participant leaves the group or is kicked, or when the two users stop being known users.
+
+        An optional client-generated `id` makes a repeat safe. If the caller already created a recurring
+        expense under it, the answer is 200 with the stored one, also when it is stopped, whatever the body
+        says now: nothing changes and no activity is recorded. An `id` another user created answers 409
+        `RECURRING_EXPENSE.ID_CONFLICT`.
+      requestBody:
+        content:
+          application/json:
+            examples:
+              client_id_and_end_date:
+                summary: Client-generated id, so the create can be repeated; ends on a date
+                value:
+                  amount: 15
+                  category: digital
+                  currency: EUR
+                  dayOfMonth: 5
+                  description: Netflix
+                  endDate: 2027-12-31
+                  groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
+                  id: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                  participantIds:
+                    - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    - b2c3d4e5-f6a7-8901-bcde-f12345678901
+                    - d4e5f6a7-b8c9-0123-efab-456789012345
+                  payerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                  subcategory: subscriptions
+              monthly_in_group:
+                summary: Monthly, in a group, split equally
+                value:
+                  amount: 15
+                  category: digital
+                  currency: EUR
+                  dayOfMonth: 5
+                  description: Netflix
+                  groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
+                  participantIds:
+                    - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    - b2c3d4e5-f6a7-8901-bcde-f12345678901
+                    - d4e5f6a7-b8c9-0123-efab-456789012345
+                  payerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                  subcategory: subscriptions
+              weekly_direct:
+                summary: Weekly, direct between two known users (no groupId)
+                value:
+                  amount: 40
+                  category: housing
+                  currency: USD
+                  dayOfWeek: 1
+                  description: Cleaning
+                  frequency: WEEKLY
+                  participantIds:
+                    - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    - b2c3d4e5-f6a7-8901-bcde-f12345678901
+                  payerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                  subcategory: home_maintenance
+              yearly_exact_split_with_limit:
+                summary: Yearly, exact shares, ends after three occurrences
+                value:
+                  amount: 30
+                  category: digital
+                  currency: EUR
+                  dayOfMonth: 1
+                  description: Domain and hosting
+                  frequency: YEARLY
+                  groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
+                  monthOfYear: 3
+                  occurrenceLimit: 3
+                  participantIds:
+                    - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    - b2c3d4e5-f6a7-8901-bcde-f12345678901
+                  payerId: b2c3d4e5-f6a7-8901-bcde-f12345678901
+                  sharingMode:
+                    customShares:
+                      a1b2c3d4-e5f6-7890-abcd-ef1234567890: 20
+                      b2c3d4e5-f6a7-8901-bcde-f12345678901: 10
+                    type: EXACT
+                  subcategory: software
+            schema:
+              $ref: "#/components/schemas/CreateRecurringExpenseRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                active:
+                  summary: Active, in a group, three expenses booked
+                  value:
+                    amount: 15
+                    category: digital
+                    createdAt: 1788256800
+                    createdBy: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    currency: EUR
+                    dayOfMonth: 5
+                    dayOfWeek: null
+                    description: Netflix
+                    endDate: null
+                    frequency: MONTHLY
+                    groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
+                    id: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                    monthOfYear: null
+                    nextOccurrenceDate: 2026-12-05
+                    occurrenceLimit: null
+                    occurrencesBooked: 3
+                    participantIds:
+                      - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                      - b2c3d4e5-f6a7-8901-bcde-f12345678901
+                      - d4e5f6a7-b8c9-0123-efab-456789012345
+                    payerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    sharingMode:
+                      type: AUTO
+                    status: ACTIVE
+                    stopReason: null
+                    subcategory: subscriptions
+                    updatedAt: 1788256800
+                stopped:
+                  summary: Stopped, direct between two known users
+                  value:
+                    amount: 40
+                    category: housing
+                    createdAt: 1791829800
+                    createdBy: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    currency: USD
+                    dayOfMonth: null
+                    dayOfWeek: 1
+                    description: Cleaning
+                    endDate: null
+                    frequency: WEEKLY
+                    groupId: null
+                    id: 3f2504e0-4f89-41d3-9a0c-0305e82c3301
+                    monthOfYear: null
+                    nextOccurrenceDate: 2026-11-16
+                    occurrenceLimit: null
+                    occurrencesBooked: 4
+                    participantIds:
+                      - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                      - b2c3d4e5-f6a7-8901-bcde-f12345678901
+                    payerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    sharingMode:
+                      type: AUTO
+                    status: STOPPED
+                    stopReason: USER_STOPPED
+                    subcategory: home_maintenance
+                    updatedAt: 1794297600
+              schema:
+                $ref: "#/components/schemas/RecurringExpenseInfo"
+          description: "The client-generated `id` repeats a create of the caller: the stored recurring expense"
+        "201":
+          content:
+            application/json:
+              examples:
+                created:
+                  summary: Nothing is booked yet
+                  value:
+                    amount: 15
+                    category: digital
+                    createdAt: 1788256800
+                    createdBy: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    currency: EUR
+                    dayOfMonth: 5
+                    dayOfWeek: null
+                    description: Netflix
+                    endDate: null
+                    frequency: MONTHLY
+                    groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
+                    id: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                    monthOfYear: null
+                    nextOccurrenceDate: 2026-09-05
+                    occurrenceLimit: null
+                    occurrencesBooked: 0
+                    participantIds:
+                      - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                      - b2c3d4e5-f6a7-8901-bcde-f12345678901
+                      - d4e5f6a7-b8c9-0123-efab-456789012345
+                    payerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    sharingMode:
+                      type: AUTO
+                    status: ACTIVE
+                    stopReason: null
+                    subcategory: subscriptions
+                    updatedAt: 1788256800
+              schema:
+                $ref: "#/components/schemas/RecurringExpenseInfo"
+          description: Created recurring expense
+        "400":
+          content:
+            application/json:
+              examples:
+                field_validation:
+                  summary: Field-level validation error
+                  value:
+                    code: VALIDATION.INVALID
+                    details:
+                      amount: must be positive
+                      expense.participantIds: must contain at least one user other than the payer
+                uuid_validation:
+                  summary: Invalid UUID format
+                  value:
+                    code: VALIDATION.INVALID
+                    details:
+                      groupId: must be a valid UUID
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Validation failed
+        "401":
+          content:
+            application/json:
+              examples:
+                default:
+                  value:
+                    code: AUTH.UNAUTHORIZED
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Missing or invalid JWT token
+        "403":
+          content:
+            application/json:
+              examples:
+                default:
+                  value:
+                    code: LEDGER.FORBIDDEN
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Access to the requested ledger resource is forbidden
+        "404":
+          content:
+            application/json:
+              examples:
+                group_not_found:
+                  value:
+                    code: GROUP.NOT_FOUND
+                recurring_expense_not_found:
+                  value:
+                    code: RECURRING_EXPENSE.NOT_FOUND
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: The group does not exist, was deleted, or the caller is not its active member (`GROUP.NOT_FOUND`); these cases are indistinguishable; or the client-generated `id` repeats a create in a group the caller is no longer an active member of (`RECURRING_EXPENSE.NOT_FOUND`)
+        "409":
+          content:
+            application/json:
+              examples:
+                conflict:
+                  summary: Lost a race with a concurrent write; repeat the request
+                  value:
+                    code: SYSTEM.CONFLICT
+                id_conflict:
+                  summary: The client-generated id is already taken by another user's recurring expense
+                  value:
+                    code: RECURRING_EXPENSE.ID_CONFLICT
+                limit_reached:
+                  summary: The group or the pair of users already has 10 active recurring expenses
+                  value:
+                    code: RECURRING_EXPENSE.LIMIT_REACHED
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: The group or the pair of users already has its maximum of active recurring expenses, the client-generated `id` belongs to a recurring expense another user created, or the request lost a race with a concurrent write
+      security:
+        - bearerAuth: []
+      summary: Create a recurring expense
+      tags:
+        - Ledger
+  /ledger/recurring-expenses/{id}:
+    delete:
+      description: |-
+        Any active member, or either user of a direct one, may stop it. Stopping is final and books nothing further; expenses already
+        booked stay. The record stays readable with status `STOPPED`, and stopping it again succeeds
+        and changes nothing.
+      parameters:
+        - deprecated: false
+          description: Recurring expense UUID
+          in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "204":
+          description: Stopped
+        "400":
+          content:
+            application/json:
+              examples:
+                field_validation:
+                  summary: Field-level validation error
+                  value:
+                    code: VALIDATION.INVALID
+                    details:
+                      amount: must be positive
+                      expense.participantIds: must contain at least one user other than the payer
+                uuid_validation:
+                  summary: Invalid UUID format
+                  value:
+                    code: VALIDATION.INVALID
+                    details:
+                      groupId: must be a valid UUID
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Validation failed
+        "401":
+          content:
+            application/json:
+              examples:
+                default:
+                  value:
+                    code: AUTH.UNAUTHORIZED
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Missing or invalid JWT token
+        "404":
+          content:
+            application/json:
+              examples:
+                default:
+                  value:
+                    code: RECURRING_EXPENSE.NOT_FOUND
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Recurring expense not found, or the user may not read it
+      security:
+        - bearerAuth: []
+      summary: Stop a recurring expense
+      tags:
+        - Ledger
+    get:
+      description: Stays readable after it stops. Only active members of its group, or the two users of a direct one, may read it; anyone else gets 404.
+      parameters:
+        - deprecated: false
+          description: Recurring expense UUID
+          in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                active:
+                  summary: Active, in a group, three expenses booked
+                  value:
+                    amount: 15
+                    category: digital
+                    createdAt: 1788256800
+                    createdBy: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    currency: EUR
+                    dayOfMonth: 5
+                    dayOfWeek: null
+                    description: Netflix
+                    endDate: null
+                    frequency: MONTHLY
+                    groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
+                    id: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                    monthOfYear: null
+                    nextOccurrenceDate: 2026-12-05
+                    occurrenceLimit: null
+                    occurrencesBooked: 3
+                    participantIds:
+                      - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                      - b2c3d4e5-f6a7-8901-bcde-f12345678901
+                      - d4e5f6a7-b8c9-0123-efab-456789012345
+                    payerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    sharingMode:
+                      type: AUTO
+                    status: ACTIVE
+                    stopReason: null
+                    subcategory: subscriptions
+                    updatedAt: 1788256800
+                stopped:
+                  summary: Stopped, direct between two known users
+                  value:
+                    amount: 40
+                    category: housing
+                    createdAt: 1791829800
+                    createdBy: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    currency: USD
+                    dayOfMonth: null
+                    dayOfWeek: 1
+                    description: Cleaning
+                    endDate: null
+                    frequency: WEEKLY
+                    groupId: null
+                    id: 3f2504e0-4f89-41d3-9a0c-0305e82c3301
+                    monthOfYear: null
+                    nextOccurrenceDate: 2026-11-16
+                    occurrenceLimit: null
+                    occurrencesBooked: 4
+                    participantIds:
+                      - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                      - b2c3d4e5-f6a7-8901-bcde-f12345678901
+                    payerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    sharingMode:
+                      type: AUTO
+                    status: STOPPED
+                    stopReason: USER_STOPPED
+                    subcategory: home_maintenance
+                    updatedAt: 1794297600
+              schema:
+                $ref: "#/components/schemas/RecurringExpenseInfo"
+          description: Recurring expense details
+        "400":
+          content:
+            application/json:
+              examples:
+                field_validation:
+                  summary: Field-level validation error
+                  value:
+                    code: VALIDATION.INVALID
+                    details:
+                      amount: must be positive
+                      expense.participantIds: must contain at least one user other than the payer
+                uuid_validation:
+                  summary: Invalid UUID format
+                  value:
+                    code: VALIDATION.INVALID
+                    details:
+                      groupId: must be a valid UUID
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Validation failed
+        "401":
+          content:
+            application/json:
+              examples:
+                default:
+                  value:
+                    code: AUTH.UNAUTHORIZED
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Missing or invalid JWT token
+        "404":
+          content:
+            application/json:
+              examples:
+                default:
+                  value:
+                    code: RECURRING_EXPENSE.NOT_FOUND
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Recurring expense not found, or the user may not read it
+      security:
+        - bearerAuth: []
+      summary: Get a recurring expense
+      tags:
+        - Ledger
+    patch:
+      description: |-
+        Any active member, or either user of a direct one, may change it, with no consent from the others.
+        Only future bookings change; expenses already booked are edited one by one. An absent key keeps its
+        value, and `null` clears an optional one. `payerId` and `groupId` cannot be changed, and naming them
+        answers 400. The two users of a direct one cannot be changed either.
+
+        A different `frequency` needs the fields of the new one, as on a create, and starts over: the next
+        booking is the first such date strictly after today, and occurrences overdue at that moment are not
+        booked. `occurrencesBooked` goes on and `occurrenceLimit` stays the total. The activity event records
+        the old and the new values.
+
+        The result must pass the rules of a create, so `amount` alone on an `EXACT` split answers 400.
+        Changing the day or the month keeps the period of the next booking, so a period is neither booked
+        twice nor skipped. A yearly date moved into the past goes to its nearest date from today on. An `endDate` before the next booking, or an `occurrenceLimit` not above
+        `occurrencesBooked`, answers 400.
+      parameters:
+        - deprecated: false
+          description: Recurring expense UUID
+          in: path
+          name: id
+          required: true
+          schema:
+            format: uuid
+            type: string
+      requestBody:
+        content:
+          application/json:
+            examples:
+              change_amount:
+                summary: Change only the amount
+                value:
+                  amount: 17.99
+              change_day:
+                summary: Move the day of the month
+                value:
+                  dayOfMonth: 28
+              change_frequency:
+                summary: Another frequency, with the field it needs
+                value:
+                  dayOfWeek: 5
+                  frequency: WEEKLY
+              change_split:
+                summary: "Change the split: participants, shares and the amount they sum to"
+                value:
+                  amount: 18
+                  participantIds:
+                    - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    - b2c3d4e5-f6a7-8901-bcde-f12345678901
+                  sharingMode:
+                    customShares:
+                      a1b2c3d4-e5f6-7890-abcd-ef1234567890: 12
+                      b2c3d4e5-f6a7-8901-bcde-f12345678901: 6
+                    type: EXACT
+              clear_end_date:
+                summary: Remove the end date
+                value:
+                  endDate: null
+              set_occurrence_limit:
+                summary: End after 12 occurrences in total
+                value:
+                  occurrenceLimit: 12
+            schema:
+              $ref: "#/components/schemas/UpdateRecurringExpenseRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                changed:
+                  summary: "After a change of the amount: bookings so far are kept"
+                  value:
+                    amount: 17.99
+                    category: digital
+                    createdAt: 1788256800
+                    createdBy: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    currency: EUR
+                    dayOfMonth: 5
+                    dayOfWeek: null
+                    description: Netflix
+                    endDate: null
+                    frequency: MONTHLY
+                    groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
+                    id: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+                    monthOfYear: null
+                    nextOccurrenceDate: 2026-12-05
+                    occurrenceLimit: null
+                    occurrencesBooked: 3
+                    participantIds:
+                      - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                      - b2c3d4e5-f6a7-8901-bcde-f12345678901
+                      - d4e5f6a7-b8c9-0123-efab-456789012345
+                    payerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    sharingMode:
+                      type: AUTO
+                    status: ACTIVE
+                    stopReason: null
+                    subcategory: subscriptions
+                    updatedAt: 1794129300
+              schema:
+                $ref: "#/components/schemas/RecurringExpenseInfo"
+          description: Changed recurring expense
+        "400":
+          content:
+            application/json:
+              examples:
+                field_validation:
+                  summary: Field-level validation error
+                  value:
+                    code: VALIDATION.INVALID
+                    details:
+                      amount: must be positive
+                      expense.participantIds: must contain at least one user other than the payer
+                uuid_validation:
+                  summary: Invalid UUID format
+                  value:
+                    code: VALIDATION.INVALID
+                    details:
+                      groupId: must be a valid UUID
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Validation failed
+        "401":
+          content:
+            application/json:
+              examples:
+                default:
+                  value:
+                    code: AUTH.UNAUTHORIZED
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Missing or invalid JWT token
+        "404":
+          content:
+            application/json:
+              examples:
+                default:
+                  value:
+                    code: RECURRING_EXPENSE.NOT_FOUND
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Recurring expense not found, or the user may not read it
+        "409":
+          content:
+            application/json:
+              examples:
+                conflict:
+                  summary: Lost a race with a concurrent write; repeat the request
+                  value:
+                    code: SYSTEM.CONFLICT
+                stopped:
+                  summary: A stopped recurring expense cannot be changed
+                  value:
+                    code: RECURRING_EXPENSE.STOPPED
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: The recurring expense is stopped and cannot be changed, or the request lost a race with a concurrent write
+      security:
+        - bearerAuth: []
+      summary: Change a recurring expense
+      tags:
+        - Ledger
   /stats:
     get:
-      description: Returns cached, aggregate platform counters for the public landing page. The response is shared by every caller and carries no personal data, so it is safe for browsers and CDNs to reuse for the advertised freshness window.
+      description: "Returns the four public landing metrics: expenses split, debts tracked in USD, active groups in the last 60 days and people sharing. All four come from one consistent read and are cached for up to 300 seconds. The response is shared by every caller and carries no personal data, so it is safe for browsers and CDNs to reuse for the advertised freshness window. When current exchange rates are unavailable the last complete result calculated by the server is returned; without one the endpoint answers 503 rather than a partial USD total."
       responses:
         "200":
           content:
@@ -5819,13 +7841,13 @@ paths:
               examples:
                 default:
                   value:
+                    activeGroupsCount: 1800
+                    debtsTrackedUsd: 1250000.5
                     expensesCount: 25300000
-                    groupsCount: 15000
-                    settlementsCount: 320000
-                    usersCount: 50000
+                    peopleSharingCount: 42000
               schema:
                 $ref: "#/components/schemas/StatsResponse"
-          description: Current public platform counters
+          description: Current public landing metrics
           headers:
             Cache-Control:
               deprecated: false
@@ -5844,6 +7866,18 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
           description: Unexpected server-side failure
+        "503":
+          content:
+            application/json:
+              examples:
+                default:
+                  value:
+                    code: SYSTEM.SERVICE_UNAVAILABLE
+                    details:
+                      provider: currency rates provider is unavailable
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Required upstream dependency is unavailable
       security: []
       summary: Get public platform statistics
       tags:
@@ -5891,6 +7925,87 @@ paths:
       tags:
         - Users
   /users/invite/{inviteToken}:
+    get:
+      description: |-
+        Shows who owns the invite token (display name and avatar, no email) and whether the
+        caller and the owner are already known users. Does not accept the invite. Rate-limited
+        per user, shared with `GET /groups/invite/{inviteToken}`.
+      parameters:
+        - deprecated: false
+          description: User invite token
+          example: AbCdEfGhIjKlMnOpQrStUvWxYz012345
+          in: path
+          name: inviteToken
+          required: true
+          schema:
+            maxLength: 64
+            minLength: 16
+            pattern: ^[A-Za-z0-9_-]{16,64}$
+            type: string
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                default:
+                  value:
+                    inviter:
+                      avatarUrl: https://cdn.chipin.one/avatars/bob.webp
+                      displayName: Bob Smith
+                    isAlreadyFriend: false
+              schema:
+                $ref: "#/components/schemas/UserInvitePreviewResponse"
+          description: Invite preview
+        "400":
+          content:
+            application/json:
+              examples:
+                cannot_join_self_invite:
+                  value:
+                    code: USER.CANNOT_JOIN_SELF_INVITE
+                invalid_invite_token:
+                  value:
+                    code: VALIDATION.INVALID_INVITE_TOKEN
+                    details:
+                      inviteToken: must be 16-64 characters of A-Z, a-z, 0-9, '_' or '-'
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: "`VALIDATION.INVALID_INVITE_TOKEN` — malformed token, rejected before any lookup; `USER.CANNOT_JOIN_SELF_INVITE` — own invite token"
+        "401":
+          content:
+            application/json:
+              examples:
+                default:
+                  value:
+                    code: AUTH.UNAUTHORIZED
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Missing or invalid JWT token
+        "404":
+          content:
+            application/json:
+              examples:
+                default:
+                  value:
+                    code: USER.NOT_FOUND
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: User not found
+        "429":
+          content:
+            application/json:
+              examples:
+                default:
+                  value:
+                    code: SYSTEM.RATE_LIMITED
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+          description: Too many requests from this user; retry after the number of seconds in `Retry-After`
+      security:
+        - bearerAuth: []
+      summary: Preview user invite by token
+      tags:
+        - Users
     post:
       description: |-
         Establishes a bidirectional known-user relationship between the authenticated user
@@ -5903,9 +8018,9 @@ paths:
           name: inviteToken
           required: true
           schema:
-            maxLength: 32
-            minLength: 32
-            pattern: ^[A-Za-z0-9_-]{32}$
+            maxLength: 64
+            minLength: 16
+            pattern: ^[A-Za-z0-9_-]{16,64}$
             type: string
       responses:
         "200":
@@ -5929,12 +8044,17 @@ paths:
           content:
             application/json:
               examples:
-                default:
+                cannot_join_self_invite:
                   value:
                     code: USER.CANNOT_JOIN_SELF_INVITE
+                invalid_invite_token:
+                  value:
+                    code: VALIDATION.INVALID_INVITE_TOKEN
+                    details:
+                      inviteToken: must be 16-64 characters of A-Z, a-z, 0-9, '_' or '-'
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-          description: Cannot use own invite token
+          description: "`VALIDATION.INVALID_INVITE_TOKEN` — malformed token, rejected before any lookup; `USER.CANNOT_JOIN_SELF_INVITE` — own invite token"
         "401":
           content:
             application/json:
@@ -5966,7 +8086,9 @@ paths:
         Returns known users with their direct user-to-user balances and latest active manual
         direct-ledger currency grouped under each user. Known users with no outstanding direct
         balance are returned with an empty balances array; lastUsedCurrency is null when no
-        active manual direct entry exists.
+        active manual direct entry exists. lastSelectedCurrency is the requester's own value,
+        the currency of the latest direct entry the requester created with that user, null
+        until the first one; the other side's entries never change it.
       responses:
         "200":
           content:
@@ -5980,6 +8102,7 @@ paths:
                             netAmount: -10
                           - currency: USD
                             netAmount: 25.5
+                        lastSelectedCurrency: EUR
                         lastUsedCurrency: USD
                         user:
                           createdAt: 1717200000
@@ -5989,6 +8112,7 @@ paths:
                           picture: https://lh3.googleusercontent.com/a/photo-hash
                           updatedAt: 1717200000
                       - balances: []
+                        lastSelectedCurrency: null
                         lastUsedCurrency: null
                         user:
                           createdAt: 1717200000
@@ -6129,6 +8253,7 @@ paths:
                     id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
                     inviteToken: AbCdEfGhIjKlMnOpQrStUvWxYz012345
                     isPremium: true
+                    lastSelectedCurrency: EUR
                     picture: https://lh3.googleusercontent.com/a/photo-hash
                     premiumExpiresAt: 1779011959
                     role: USER
@@ -6213,6 +8338,7 @@ paths:
                     id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
                     inviteToken: AbCdEfGhIjKlMnOpQrStUvWxYz012345
                     isPremium: true
+                    lastSelectedCurrency: EUR
                     picture: https://lh3.googleusercontent.com/a/photo-hash
                     premiumExpiresAt: 1779011959
                     role: USER
@@ -6373,6 +8499,7 @@ paths:
                           fromDisplayName: Bob Smith
                           groupId: c3d4e5f6-a7b8-9012-cdef-123456789012
                           groupName: Weekend Trip
+                          note: Partial repayment for accommodation
                           payerId: b2c3d4e5-f6a7-8901-bcde-f12345678901
                           toDisplayName: Alice Johnson
                           type: settlement
@@ -6517,6 +8644,7 @@ paths:
                           groupName: Weekend Trip
                           payerDisplayName: Alice Johnson
                           payerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                          recurringExpenseId: null
                           shares:
                             - currency: USD
                               displayName: Alice Johnson
@@ -6560,6 +8688,7 @@ paths:
                         groupName: Weekend Trip
                         payerDisplayName: Alice Johnson
                         payerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                        recurringExpenseId: null
                         shares:
                           - currency: USD
                             displayName: Alice Johnson
@@ -6634,13 +8763,13 @@ paths:
   /users/self/activities/{parentActivityId}/comments:
     get:
       description: |-
-        Returns comments for a visible expense or settlement root activity, newest first.
+        Returns comments for a visible expense, settlement or recurring expense root activity, newest first.
         The thread is available only while the authenticated user can view the activity chain.
         Pass `nextCursor` as `cursor` to continue keyset pagination. Missing, inaccessible, and
         unsupported parent activities all return the same masked `ACTIVITY.NOT_FOUND` response.
       parameters:
         - deprecated: false
-          description: Root expense or settlement activity UUID that owns the comment thread
+          description: Root expense, settlement or recurring expense activity UUID that owns the comment thread
           example: c9d0e1f2-a3b4-5678-cdef-012345678901
           in: path
           name: parentActivityId
@@ -6740,12 +8869,12 @@ paths:
         - Activity
     post:
       description: |-
-        Adds a comment to a visible expense or settlement root activity. Text is trimmed and
+        Adds a comment to a visible expense, settlement or recurring expense root activity. Text is trimmed and
         must contain 1–2000 characters after normalization. The authenticated user's profile
         is captured as an immutable author snapshot for display after account deletion.
       parameters:
         - deprecated: false
-          description: Root expense or settlement activity UUID that owns the comment thread
+          description: Root expense, settlement or recurring expense activity UUID that owns the comment thread
           example: c9d0e1f2-a3b4-5678-cdef-012345678901
           in: path
           name: parentActivityId
@@ -6834,12 +8963,12 @@ paths:
   /users/self/activities/{parentActivityId}/comments/{commentId}:
     delete:
       description: |-
-        Permanently removes the authenticated author's comment from a visible expense or
-        settlement thread. Only the current author may delete it. Parent/comment mismatches
+        Permanently removes the authenticated author's comment from a visible expense,
+        settlement or recurring expense thread. Only the current author may delete it. Parent/comment mismatches
         return `COMMENT.NOT_FOUND` without exposing comments from another thread.
       parameters:
         - deprecated: false
-          description: Root expense or settlement activity UUID that owns the comment thread
+          description: Root expense, settlement or recurring expense activity UUID that owns the comment thread
           example: c9d0e1f2-a3b4-5678-cdef-012345678901
           in: path
           name: parentActivityId
@@ -6922,12 +9051,12 @@ paths:
         - Activity
     patch:
       description: |-
-        Replaces the normalized text of a comment in a visible expense or settlement thread.
+        Replaces the normalized text of a comment in a visible expense, settlement or recurring expense thread.
         Only the current author may update it. A comment from another thread is treated as
         missing; a deleted author can no longer mutate the preserved comment.
       parameters:
         - deprecated: false
-          description: Root expense or settlement activity UUID that owns the comment thread
+          description: Root expense, settlement or recurring expense activity UUID that owns the comment thread
           example: c9d0e1f2-a3b4-5678-cdef-012345678901
           in: path
           name: parentActivityId
@@ -7111,6 +9240,7 @@ paths:
                             groupName: Weekend Trip
                             payerDisplayName: Alice Johnson
                             payerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                            recurringExpenseId: null
                             shares:
                               - currency: USD
                                 displayName: Alice Johnson
@@ -7153,6 +9283,7 @@ paths:
                             groupName: Weekend Trip
                             payerDisplayName: Alice Johnson
                             payerId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                            recurringExpenseId: null
                             shares:
                               - currency: USD
                                 displayName: Alice Johnson
@@ -7215,9 +9346,10 @@ paths:
   /users/self/avatar:
     put:
       description: |-
-        Uploads a jpeg, png, or webp image through the backend. The backend validates
-        the file, stores it in S3-compatible storage, saves the resulting public URL
-        in `users.picture`, and returns the updated current user profile.
+        Uploads a jpeg, png, or webp image (max 5 MB, 16384 px per side, 50 megapixels;
+        truncated or unreadable images are rejected) through the backend, stores it in
+        S3-compatible storage, saves the resulting public URL in `users.picture`, and
+        returns the updated current user profile.
       requestBody:
         content:
           multipart/form-data:

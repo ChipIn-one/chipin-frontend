@@ -8,10 +8,7 @@ import type { Group, SelfUser } from 'api/chipin.types';
 import { ROUTES } from 'constants/routes';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
-import { useErrorsStore } from 'store/errorsStore';
 import { useExpenseModalStore } from 'store/expenseModalStore';
-import { useGroupsStore } from 'store/groupsStore';
-import { useLoadingStore } from 'store/loadingStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { seedGroupsList } from 'test/groupsList';
 import { createKnownUser, seedKnownUsers } from 'test/knownUsers';
@@ -117,10 +114,7 @@ beforeEach(() => {
     useAuthStore.setState({ status: 'authenticated' });
     useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
     useExpenseModalStore.getState().reset();
-    useGroupsStore.getState().setInitialGroupsStore();
-    useErrorsStore.getState().resetErrors();
     seedSelfUser(selfUser);
-    useLoadingStore.getState().setInitialLoadingStore();
 });
 
 test.each(['mobile', 'desktop', 'sidebar'] as const)(

@@ -8,7 +8,6 @@ import type { SelfUser, UserSettings } from 'api/chipin.types';
 import { saveLocalUser } from 'helpers/localStorage';
 import { useAuthStore } from 'store/authStore';
 import { useConnectivityStore } from 'store/connectivityStore';
-import { useLoadingStore } from 'store/loadingStore';
 import { loadSelfUserForSession, resetSessionSelfLoad } from 'store/sessionUser';
 import { setupMswServer } from 'test/mswServer';
 import { signInWithSelf } from 'test/selfUser';
@@ -85,7 +84,6 @@ const serveSelf = (respond?: () => Response): { count: number } => {
 beforeEach(() => {
     resetSessionSelfLoad();
     useAuthStore.setState({ status: 'unknown', sessionMode: 'online' });
-    useLoadingStore.getState().setInitialLoadingStore();
     saveLocalUser({ id: 'user-1', role: 'ADMIN', settings });
 });
 

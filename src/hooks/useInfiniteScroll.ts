@@ -9,6 +9,13 @@ interface UseInfiniteScrollParams {
     hasMore: boolean;
     isLoading: boolean;
     onLoadMore: () => void;
+    /**
+     * Changes whenever data landed: a loaded page or a refetch (the loaded page count with the
+     * time the data was updated). Landed data re-arms the trigger by itself: the answer may
+     * arrive before any render saw `isLoading` (TanStack notifies through a timer), and then no
+     * loading render is there to re-arm it.
+     */
+    loadedKey: string | number;
 }
 
 type InfiniteScrollRef = IntersectionObserverRef;
@@ -17,14 +24,20 @@ const useInfiniteScroll = ({
     hasMore,
     isLoading,
     onLoadMore,
+    loadedKey,
 }: UseInfiniteScrollParams): InfiniteScrollRef => {
     const [sentinelRef, sentinelEntry] = useIntersectionObserver({
         threshold: 0,
     });
     const hasTriggeredRef = useRef(false);
     const wasLoadingRef = useRef(false);
+    const loadedKeyRef = useRef(loadedKey);
 
     useEffect(() => {
+        const hasLoadedPage = loadedKeyRef.current !== loadedKey;
+
+        loadedKeyRef.current = loadedKey;
+
         if (!sentinelEntry?.isIntersecting) {
             hasTriggeredRef.current = false;
             wasLoadingRef.current = false;
@@ -36,7 +49,9 @@ const useInfiniteScroll = ({
             return;
         }
 
-        if (wasLoadingRef.current) {
+        // A failed load re-arms too once its loading render was seen. The callers keep the trigger
+        // stopped until their Retry by passing `hasMore: hasMore && !isNextPageError`.
+        if (wasLoadingRef.current || hasLoadedPage) {
             wasLoadingRef.current = false;
             hasTriggeredRef.current = false;
         }
@@ -47,7 +62,7 @@ const useInfiniteScroll = ({
 
         hasTriggeredRef.current = true;
         onLoadMore();
-    }, [sentinelEntry?.isIntersecting, hasMore, isLoading, onLoadMore]);
+    }, [sentinelEntry?.isIntersecting, hasMore, isLoading, onLoadMore, loadedKey]);
 
     return sentinelRef;
 };

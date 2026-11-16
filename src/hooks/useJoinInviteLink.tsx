@@ -3,16 +3,16 @@ import i18n from 'i18next';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { ROUTES } from 'constants/routes';
-import { useGroupsStore } from 'store/groupsStore';
 
+import { useJoinGroup } from './useGroupMutations';
 import { type InviteConfirmationState, useInviteConfirmation } from './useInviteConfirmation';
 
 export const useJoinInviteLink = (): InviteConfirmationState => {
     const navigate = useNavigate();
-    const joinGroup = useGroupsStore(state => state.joinGroup);
+    const joinGroup = useJoinGroup();
     const { inviteToken } = useParams<{ inviteToken: string }>();
 
-    const onAccept = useCallback((token: string) => joinGroup({ inviteToken: token }), [joinGroup]);
+    const onAccept = useCallback((token: string) => joinGroup(token), [joinGroup]);
     const onAccepted = useCallback(
         ({ id }: { id: string }) => {
             void navigate(`${ROUTES.GROUP}/${id}`, { replace: true });

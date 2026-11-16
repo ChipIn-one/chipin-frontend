@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { beforeEach, expect, test, vi } from 'vitest';
 
 import { useAuthStore } from 'store/authStore';
-import { useLoadingStore } from 'store/loadingStore';
 
 import PrivacySecuritySection from './PrivacySecuritySection';
 
@@ -44,7 +43,6 @@ vi.mock('sonner', () => ({
 
 beforeEach(() => {
     vi.clearAllMocks();
-    useLoadingStore.getState().setInitialLoadingStore();
     useAuthStore.setState({
         isNewUser: null,
         status: 'authenticated',
@@ -80,13 +78,7 @@ test('blocks repeated clicks, shows pending copy, and reports success after reso
     const request = new Promise<void>(resolve => {
         resolveRequest = resolve;
     });
-    const logoutOtherDevices = vi.fn(() => {
-        useLoadingStore.getState().setLoading('auth', 'logoutOtherDevices', 'loading');
-
-        return request.finally(() => {
-            useLoadingStore.getState().setLoading('auth', 'logoutOtherDevices', 'fetched');
-        });
-    });
+    const logoutOtherDevices = vi.fn(() => request);
     useAuthStore.setState({ logoutOtherDevices });
 
     render(<PrivacySecuritySection isLoading={false} />);
@@ -112,6 +104,13 @@ test('blocks repeated clicks, shows pending copy, and reports success after reso
                     'Signed out on all other devices. You’re still signed in here.',
                 );
             });
+        })
+        .then(() => {
+            expect(
+                screen.getByRole<HTMLButtonElement>('button', {
+                    name: /sign out on other devices/i,
+                }).disabled,
+            ).toBe(false);
         });
 });
 
@@ -130,6 +129,7 @@ test('does not show success and keeps the card retryable after an error', () => 
         .then(() =>
             waitFor(() => {
                 expect(logoutOtherDevices).toHaveBeenCalledOnce();
+                expect(toast.error).toHaveBeenCalledOnce();
                 expect(toast.success).not.toHaveBeenCalled();
             }),
         )

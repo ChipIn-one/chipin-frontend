@@ -23,6 +23,7 @@ const spec = (extra = {}) => ({
                 required: ['amount'],
                 properties: {
                     amount: scaled,
+                    debtsTrackedUsd: scaled,
                     netAmount: scaled,
                     netBalance: scaled,
                     shareAmount: scaled,

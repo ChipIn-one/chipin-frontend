@@ -6,14 +6,13 @@ import { toast } from 'sonner';
 
 import { ROUTES } from 'constants/routes';
 import type { Group } from 'entities/groups';
-import { resolveApiErrorMessageFromError } from 'helpers/errors';
+import { toastGroupWriteError, useLeaveGroup } from 'hooks/useGroupMutations';
+import { useSelfUser } from 'hooks/useSelfUser';
 
 import { UserAvatar } from 'basics';
 import Select, { type SelectItem } from 'components/Select';
 
 import { BaseAlertDialog } from '../base-alert-dialog';
-
-import { useConnect } from './internal';
 
 interface Props {
     children: ReactNode;
@@ -23,7 +22,8 @@ interface Props {
 const LeaveGroupAlertDialog = ({ children, group }: Props) => {
     const { t } = useTranslation(['common', 'group', 'toasts']);
     const navigate = useNavigate();
-    const { leaveGroup, user, isLeavingGroup } = useConnect();
+    const { leaveGroup, isPending: isLeavingGroup } = useLeaveGroup();
+    const user = useSelfUser();
     const [isOpened, setIsOpened] = useState(false);
     const [newOwnerId, setNewOwnerId] = useState('');
     const isOwner = Boolean(user && group.creator.id === user.id);
@@ -59,9 +59,7 @@ const LeaveGroupAlertDialog = ({ children, group }: Props) => {
                 void navigate(ROUTES.DASHBOARD, { replace: true });
             })
             .catch(error => {
-                toast.error(
-                    resolveApiErrorMessageFromError(error, t('toasts:common.requestFailed')),
-                );
+                toastGroupWriteError(error, t('toasts:common.requestFailed'));
                 return Promise.reject(error);
             });
     };

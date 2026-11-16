@@ -1,31 +1,15 @@
-import { InfiniteQueryObserver, onlineManager, QueryObserver } from '@tanstack/react-query';
+import { InfiniteQueryObserver, onlineManager } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import type { Group as LegacyGroup } from 'api/chipin.types';
-import {
-    dropGroupFromCachedList,
-    type Group,
-    groupDetailQueryOptions,
-    groupsKeys,
-    groupsListQueryOptions,
-    putGroupInCachedList,
-} from 'entities/groups';
+import { type Group, groupsKeys, groupsListQueryOptions } from 'entities/groups';
 import { testGroup, wireGroup } from 'test/groupFixtures';
 import { cachedGroupsList, groupsListData } from 'test/groupsList';
 import { setupMswServer } from 'test/mswServer';
 import { mountUserDashboardCache, type UserDashboardCache } from 'test/userDashboardCache';
 
-import {
-    forgetGroup,
-    getCachedGroups,
-    invalidateGroup,
-    invalidateGroupsList,
-    loadGroupsListForSession,
-    putGroupDetail,
-    putGroupInList,
-    reloadGroupsListWith,
-} from './groupsList';
+import { getCachedGroups, invalidateGroup, loadGroupsListForSession } from './groupsList';
 
 const server = setupMswServer();
 
@@ -94,7 +78,6 @@ const watchList = (options: { refetchOnReconnect?: boolean } = {}): void => {
 
     stopWatching = observer.subscribe(() => undefined);
 };
-const startListLoad = () => userCache.client.refetchQueries({ queryKey: listKey });
 const listSettled = () =>
     vi.waitFor(() => {
         expect(listState()?.fetchStatus).toBe('idle');
@@ -155,143 +138,6 @@ test('a session start joins a list load already running: one request', async () 
     expect(listed()).toEqual([group('a')]);
 });
 
-test('a change cancels a running list load and reloads: the older answer is never applied', async () => {
-    const listServer = serveGroupsByHand();
-    seed([]);
-    watchList();
-    void startListLoad();
-    await requestsReach(listServer, 1);
-
-    const invalidation = invalidateGroupsList();
-    await requestsReach(listServer, 2);
-    listServer.answer(0, [wire('old')]);
-    listServer.answer(1, [wire('new')]);
-    await invalidation;
-    await listSettled();
-
-    expect(listed()).toEqual([group('new')]);
-});
-
-test('a group read by a legacy action replaces its list entry without a request, keeping the age', async () => {
-    const requests = serveGroups([]);
-    const updatedAt = Date.now() - 10_000;
-    seed([group('a'), group('b')], updatedAt);
-    watchList();
-
-    await putGroupInCachedList(userCache.client, group('a', 'Renamed'), updatedAt + 1);
-
-    expect(requests.count).toBe(0);
-    expect(listed()).toEqual([group('a', 'Renamed'), group('b')]);
-    expect(listState()?.dataUpdatedAt).toBe(updatedAt);
-});
-
-test('a group read sent before the last list load loads the list again instead of writing', async () => {
-    const requests = serveGroups([wire('a', 'Server copy'), wire('b')]);
-    const readStartedAt = Date.now() - 5_000;
-    seed([group('a', 'From the list'), group('b')]);
-    watchList();
-
-    await putGroupInCachedList(userCache.client, group('a', 'Detail answer'), readStartedAt);
-
-    // Neither copy is trusted: the server decides with one more list load.
-    expect(requests.count).toBe(1);
-    expect(listed()).toEqual([group('a', 'Server copy'), group('b')]);
-});
-
-test('a denied group leaves the list even when the list loaded after the read was sent', async () => {
-    const requests = serveGroups([]);
-    seed([group('a'), group('b')]);
-    watchList();
-
-    await dropGroupFromCachedList(userCache.client, 'a');
-
-    expect(requests.count).toBe(0);
-    expect(listed()).toEqual([group('b')]);
-});
-
-test('a group written during a list load cancels that load and loads the list again', async () => {
-    const listServer = serveGroupsByHand();
-    seed([group('a')]);
-    watchList();
-    void startListLoad();
-    await requestsReach(listServer, 1);
-
-    // It settles once the restarted load has its answer.
-    const put = putGroupInList(wire('a', 'Written'));
-    expect(listed()).toEqual([group('a', 'Written')]);
-    await requestsReach(listServer, 2);
-    listServer.answer(0, [wire('a', 'Before the write')]);
-    listServer.answer(1, [wire('a', 'Server copy'), wire('b')]);
-    await put;
-    await listSettled();
-
-    expect(listed()).toEqual([group('a', 'Server copy'), group('b')]);
-});
-
-test('a group written while a list load waits offline puts the load back in line', async () => {
-    const requests = serveGroups([wire('a', 'Server copy')]);
-    seed([group('a')]);
-    // No reconnect refetch: only the restarted load can reach the server.
-    watchList({ refetchOnReconnect: false });
-    // Network events reach the cache of a mounted client only.
-    userCache.client.mount();
-    onlineManager.setOnline(false);
-    void startListLoad();
-    expect(listState()?.fetchStatus).toBe('paused');
-
-    const put = putGroupInList(wire('a', 'Written'));
-
-    expect(listed()).toEqual([group('a', 'Written')]);
-    expect(listState()?.fetchStatus).toBe('paused');
-    onlineManager.setOnline(true);
-    await put;
-    await listSettled();
-    userCache.client.unmount();
-    expect(requests.count).toBe(1);
-    expect(listed()).toEqual([group('a', 'Server copy')]);
-});
-
-test('a group the user can no longer read leaves the list without a request', async () => {
-    const requests = serveGroups([]);
-    seed([group('a'), group('b')], Date.now() - 1_000);
-    watchList();
-
-    await dropGroupFromCachedList(userCache.client, 'a');
-
-    expect(requests.count).toBe(0);
-    expect(listed()).toEqual([group('b')]);
-});
-
-test('an edit of a list never loaded writes nothing', async () => {
-    await putGroupInList(wire('a'));
-
-    expect(listed()).toBeUndefined();
-    expect(getCachedGroups()).toBeUndefined();
-});
-
-test('a legacy group write shows at once, reloads the list and stays in it', async () => {
-    const requests = serveGroups([wire('a', 'Server copy'), wire('b')]);
-    seed([group('a')]);
-    watchList();
-
-    const reload = reloadGroupsListWith(wire('a', 'Written'), () => true);
-
-    expect(listed()).toEqual([group('a', 'Written')]);
-    await reload;
-    expect(requests.count).toBe(1);
-    expect(listed()).toEqual([group('a', 'Written'), group('b')]);
-});
-
-test('a legacy group write that is no longer current keeps what the reload read', async () => {
-    serveGroups([wire('b')]);
-    seed([]);
-    watchList();
-
-    await reloadGroupsListWith(wire('a'), () => false);
-
-    expect(listed()).toEqual([group('b')]);
-});
-
 test("the legacy actions read the tab user's cached groups", () => {
     seed([group('a'), group('b')]);
 
@@ -318,35 +164,6 @@ const seedActivity = (pages: number) => {
         { updatedAt: Date.now() - 1_000 },
     );
 };
-
-test('a written group becomes its detail and its activity, cut to one page, is marked stale', async () => {
-    seedActivity(3);
-
-    await putGroupDetail(wire('a', 'Written'));
-
-    expect(userCache.client.getQueryData(detailKey)).toEqual(group('a', 'Written'));
-    expect(userCache.client.getQueryState(activityKey)?.isInvalidated).toBe(true);
-    expect(userCache.client.getQueryData<{ pages: unknown[] }>(activityKey)?.pages).toHaveLength(1);
-});
-
-test('a written group cancels a running detail read: its older answer is never applied', async () => {
-    let answerRead: ((value: Group) => void) | undefined;
-    const read = userCache.client
-        .fetchQuery({
-            queryKey: detailKey,
-            queryFn: () =>
-                new Promise<Group>(resolve => {
-                    answerRead = resolve;
-                }),
-        })
-        .catch(() => undefined);
-
-    await putGroupDetail(wire('a', 'Written'));
-    answerRead?.(group('a', 'Older read'));
-    await read;
-
-    expect(userCache.client.getQueryData(detailKey)).toEqual(group('a', 'Written'));
-});
 
 test('a changed group is read again on any page: no group page needed, its list entry updates', async () => {
     let detailReads = 0;
@@ -375,34 +192,4 @@ test('a failed read after a change keeps the list and never rejects', async () =
 
     await expect(invalidateGroup('a')).resolves.toBeUndefined();
     expect(listed()).toEqual([group('a')]);
-});
-
-test('a removed or left group loses its cached detail and activity', () => {
-    userCache.client.setQueryData(detailKey, group('a'));
-    seedActivity(1);
-
-    forgetGroup('a');
-
-    expect(userCache.client.getQueryState(detailKey)).toBeUndefined();
-    expect(userCache.client.getQueryState(activityKey)).toBeUndefined();
-});
-
-test('a group page still showing a removed group keeps it, unread, until it unmounts', () => {
-    let detailReads = 0;
-    server.use(
-        http.get('*/groups/a', () => {
-            detailReads += 1;
-            return HttpResponse.json({}, { status: 404 });
-        }),
-    );
-    userCache.client.setQueryData(detailKey, group('a'));
-    const page = new QueryObserver(userCache.client, { ...groupDetailQueryOptions('a') });
-    const unmount = page.subscribe(() => undefined);
-
-    forgetGroup('a');
-
-    expect(userCache.client.getQueryData(detailKey)).toEqual(group('a'));
-    unmount();
-    expect(userCache.client.getQueryState(detailKey)).toBeUndefined();
-    expect(detailReads).toBe(0);
 });

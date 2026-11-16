@@ -32,24 +32,14 @@ export type {
 
 // ─── Re-exports: call param types ─────────────────────────────────────────
 export type {
-    CreateGroupParams,
-    CreateLedgerEntryParams,
     CreateSettlementParams,
     FetchActivitiesParams,
     FetchActivityChildrenParams,
     FetchGroupActivityPreviewsParams,
     FetchLedgerEntryParams,
-    InviteToGroupParams,
-    KickGroupMemberParams,
-    LeaveGroupParams,
-    RemoveGroupParams,
     RemoveLedgerEntryParams,
     SharingMode,
     SharingModeType,
-    UpdateGroupParams,
-    UpdateLedgerEntryParams,
-    UpdateLedgerExpenseParams,
-    UploadGroupCoverParams,
 } from './chipin.params';
 
 // ─── Frontend types (used in components, store, hooks) ────────────────────

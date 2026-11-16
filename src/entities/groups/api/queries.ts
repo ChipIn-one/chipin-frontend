@@ -17,8 +17,8 @@ import { isNetworkUsable } from 'shared/offline/network';
 
 import {
     firstGroupActivityPage,
-    flattenGroupActivity,
     type GroupActivityData,
+    selectGroupActivity,
 } from '../model/groupActivity';
 import { flattenGroupsList, type GroupsListData } from '../model/groupsList';
 import { toGroup, toGroupsListPage } from '../model/toGroup';
@@ -220,12 +220,12 @@ export const groupActivityQueryOptions = (groupId: string) =>
     });
 
 /**
- * The previews of all loaded pages, each parent once. Enable it once the detail is loaded: the
+ * The previews of all loaded pages, each parent once, with the page count. Enable it once the detail is loaded: the
  * detail then has seeded the first page, and no second request is sent for it.
  */
 export const useGroupActivityQuery = (groupId: string, { enabled }: EnabledParams) =>
     useInfiniteQuery({
         ...groupActivityQueryOptions(groupId),
-        select: flattenGroupActivity,
+        select: selectGroupActivity,
         enabled,
     });

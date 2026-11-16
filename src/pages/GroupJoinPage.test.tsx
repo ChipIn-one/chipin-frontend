@@ -1,6 +1,8 @@
 import { Theme } from '@radix-ui/themes';
-import { act, render, screen } from '@testing-library/react';
+import type { QueryClient } from '@tanstack/react-query';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { http, HttpResponse } from 'msw';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { beforeEach, expect, test, vi } from 'vitest';
@@ -10,17 +12,15 @@ import { ProtectedRoute } from 'features/routing/ProtectedRoute';
 import i18n from 'i18n';
 import { useAuthStore } from 'store/authStore';
 import { TEST_INVITE_TOKEN } from 'test/fixtures/inviteToken';
+import { wireGroup } from 'test/groupFixtures';
+import { setupMswServer } from 'test/mswServer';
+import { mountAsUserClient } from 'test/userClient';
 
 import GroupJoinPage from './GroupJoinPage';
 
 const mocks = vi.hoisted(() => ({
     authSessionVersion: 1,
-    joinGroup: vi.fn(),
-}));
-
-vi.mock('store/groupsStore', () => ({
-    useGroupsStore: (selector: (state: { joinGroup: typeof mocks.joinGroup }) => unknown) =>
-        selector({ joinGroup: mocks.joinGroup }),
+    joinGroup: vi.fn<(params: { inviteToken: string }) => Promise<{ id: string }>>(),
 }));
 
 vi.mock('helpers/authSession', () => ({
@@ -58,6 +58,19 @@ const OpenOtherInvite = () => {
     );
 };
 
+const LEAVE_PAGE_LABEL = 'Leave page';
+const ELSEWHERE_ROUTE = '/elsewhere';
+
+const LeavePage = () => {
+    const navigate = useNavigate();
+
+    return (
+        <button type="button" onClick={() => void navigate(ELSEWHERE_ROUTE)}>
+            {LEAVE_PAGE_LABEL}
+        </button>
+    );
+};
+
 const renderPage = (inviteToken = TEST_INVITE_TOKEN, isProtected = false) =>
     render(
         <MemoryRouter initialEntries={[`${ROUTES.GROUP_JOIN}/${inviteToken}`]}>
@@ -79,6 +92,7 @@ const renderPage = (inviteToken = TEST_INVITE_TOKEN, isProtected = false) =>
                 </Routes>
                 <CurrentRoute />
                 <OpenOtherInvite />
+                <LeavePage />
             </Theme>
         </MemoryRouter>,
     );
@@ -88,10 +102,50 @@ const currentRoute = () => screen.getByLabelText('Current route').textContent;
 
 const apiError = (status: number) => ({ isAxiosError: true, response: { status, data: {} } });
 
+const server = setupMswServer();
+// The signed-in user's client of the running test (the join mutation runs on it).
+let client: QueryClient;
+
+const statusOf = (error: unknown): number | undefined =>
+    typeof error === 'object' &&
+    error !== null &&
+    'response' in error &&
+    typeof error.response === 'object' &&
+    error.response !== null &&
+    'status' in error.response &&
+    typeof error.response.status === 'number'
+        ? error.response.status
+        : undefined;
+
+// `POST /groups/invite/{inviteToken}` answered by `mocks.joinGroup`: its `{ id }` becomes that
+// group, its rejection with a `response.status` that status, any other rejection no response at
+// all (a network failure).
+const serveJoin = (): void => {
+    server.use(
+        http.post('*/groups/invite/:inviteToken', ({ params }) =>
+            Promise.resolve()
+                .then(() => mocks.joinGroup({ inviteToken: String(params.inviteToken) }))
+                .then(
+                    ({ id }) => HttpResponse.json(wireGroup(id)),
+                    (error: unknown) => {
+                        const status = statusOf(error);
+
+                        return status === undefined
+                            ? HttpResponse.error()
+                            : HttpResponse.json({}, { status });
+                    },
+                ),
+        ),
+        http.get('*/groups', () => HttpResponse.json({ items: [], nextCursor: null })),
+    );
+};
+
 beforeEach(() => {
     vi.clearAllMocks();
     mocks.authSessionVersion = 1;
     useAuthStore.setState({ status: 'authenticated', unauthReason: undefined });
+    client = mountAsUserClient();
+    serveJoin();
     return i18n.changeLanguage('en');
 });
 
@@ -124,6 +178,11 @@ test('joins exactly once and opens the group', () => {
     return user
         .click(joinButton())
         .then(() => user.click(joinButton()))
+        .then(() =>
+            waitFor(() => {
+                expect(resolveJoin).toBeDefined();
+            }),
+        )
         .then(() => {
             expect(mocks.joinGroup).toHaveBeenCalledTimes(1);
             expect(mocks.joinGroup).toHaveBeenCalledWith({ inviteToken: TEST_INVITE_TOKEN });
@@ -133,8 +192,13 @@ test('joins exactly once and opens the group', () => {
                 return Promise.resolve();
             });
         })
+        .then(() =>
+            waitFor(() => {
+                expect(currentRoute()).toBe(`${ROUTES.GROUP}/group-1`);
+            }),
+        )
         .then(() => {
-            expect(currentRoute()).toBe(`${ROUTES.GROUP}/group-1`);
+            expect(mocks.joinGroup).toHaveBeenCalledTimes(1);
         });
 });
 
@@ -173,16 +237,23 @@ test('shows the invalid screen when the backend does not know the token', () => 
 
     renderPage();
 
-    return user.click(joinButton()).then(() => {
-        expect(
-            screen.getByRole('heading', { name: i18n.t('group:join.invalidTitle') }),
-        ).toBeTruthy();
-        expect(toast.error).not.toHaveBeenCalled();
-    });
+    return user
+        .click(joinButton())
+        .then(() =>
+            waitFor(() => {
+                expect(
+                    screen.getByRole('heading', { name: i18n.t('group:join.invalidTitle') }),
+                ).toBeTruthy();
+            }),
+        )
+        .then(() => {
+            expect(toast.error).not.toHaveBeenCalled();
+        });
 });
 
 test.each([
     ['409', apiError(409)],
+    // No `response.status`: the request gets no response.
     ['network', { isAxiosError: true }],
 ])('shows the error screen on a %s failure and retries exactly once', (_name, error) => {
     const user = userEvent.setup();
@@ -192,17 +263,25 @@ test.each([
 
     return user
         .click(joinButton())
+        .then(() =>
+            waitFor(() => {
+                expect(screen.getByRole('alert').textContent).toBe(
+                    i18n.t('toasts:group.inviteJoinError'),
+                );
+            }),
+        )
         .then(() => {
-            expect(screen.getByRole('alert').textContent).toBe(
-                i18n.t('toasts:group.inviteJoinError'),
-            );
             expect(toast.error).not.toHaveBeenCalled();
 
             return user.click(screen.getByRole('button', { name: i18n.t('group:join.retry') }));
         })
+        .then(() =>
+            waitFor(() => {
+                expect(currentRoute()).toBe(`${ROUTES.GROUP}/group-1`);
+            }),
+        )
         .then(() => {
             expect(mocks.joinGroup).toHaveBeenCalledTimes(2);
-            expect(currentRoute()).toBe(`${ROUTES.GROUP}/group-1`);
         });
 });
 
@@ -220,6 +299,11 @@ test('releases the loading state but does not navigate after the auth session ch
 
     return user
         .click(joinButton())
+        .then(() =>
+            waitFor(() => {
+                expect(resolveJoin).toBeDefined();
+            }),
+        )
         .then(() => {
             mocks.authSessionVersion += 1;
 
@@ -228,9 +312,13 @@ test('releases the loading state but does not navigate after the auth session ch
                 return Promise.resolve();
             });
         })
+        .then(() =>
+            waitFor(() => {
+                expect(joinButton().hasAttribute('disabled')).toBe(false);
+            }),
+        )
         .then(() => {
             expect(currentRoute()).toBe(`${ROUTES.GROUP_JOIN}/${TEST_INVITE_TOKEN}`);
-            expect(joinButton().hasAttribute('disabled')).toBe(false);
         });
 });
 
@@ -242,11 +330,14 @@ test('opening another invite on the same page starts from the ready screen', () 
 
     return user
         .click(joinButton())
+        .then(() =>
+            waitFor(() => {
+                expect(
+                    screen.getByRole('heading', { name: i18n.t('group:join.invalidTitle') }),
+                ).toBeTruthy();
+            }),
+        )
         .then(() => {
-            expect(
-                screen.getByRole('heading', { name: i18n.t('group:join.invalidTitle') }),
-            ).toBeTruthy();
-
             return user.click(screen.getByRole('button', { name: OPEN_OTHER_INVITE_LABEL }));
         })
         .then(() => {
@@ -256,7 +347,7 @@ test('opening another invite on the same page starts from the ready screen', () 
         });
 });
 
-test('ignores a join response after the page unmounts', () => {
+test('ignores a join response after the page unmounts', async () => {
     const user = userEvent.setup();
     let resolveJoin: ((group: { id: string }) => void) | undefined;
     mocks.joinGroup.mockImplementation(
@@ -265,23 +356,32 @@ test('ignores a join response after the page unmounts', () => {
                 resolveJoin = resolve;
             }),
     );
+    const joins = () => client.getMutationCache().getAll();
 
-    const { unmount } = renderPage();
+    renderPage();
+    await user.click(joinButton());
+    await waitFor(() => {
+        expect(resolveJoin).toBeDefined();
+    });
+    // Only the page unmounts: the router and the route probe stay.
+    await user.click(screen.getByRole('button', { name: LEAVE_PAGE_LABEL }));
+    expect(currentRoute()).toBe(ELSEWHERE_ROUTE);
+    expect(screen.queryByRole('button', { name: i18n.t('group:join.confirm') })).toBeNull();
 
-    return user
-        .click(joinButton())
-        .then(() => {
-            unmount();
+    await act(() => {
+        resolveJoin?.({ id: 'group-1' });
+        return Promise.resolve();
+    });
+    // The late answer has crossed the network and the join has settled.
+    await waitFor(() => {
+        expect(joins().map(join => join.state.status)).toEqual(['success']);
+    });
+    await act(() => new Promise(resolve => setTimeout(resolve, 50)));
 
-            return act(() => {
-                resolveJoin?.({ id: 'group-1' });
-                return Promise.resolve();
-            });
-        })
-        .then(() => {
-            expect(mocks.joinGroup).toHaveBeenCalledTimes(1);
-            expect(screen.queryByLabelText('Current route')).toBeNull();
-        });
+    expect(mocks.joinGroup).toHaveBeenCalledTimes(1);
+    expect(currentRoute()).toBe(ELSEWHERE_ROUTE);
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
 });
 
 // Known hotfix behaviour, changed deliberately by PR 04-2f (`/login?returnTo`).

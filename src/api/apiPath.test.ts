@@ -3,12 +3,12 @@ import { describe, expect, test, vi } from 'vitest';
 import { TEST_INVITE_TOKEN } from 'test/fixtures/inviteToken';
 
 import { apiPath, encodePathSegment, InvalidPathSegmentError } from './apiPath';
-import { inviteApiUserToGroup } from './chipin';
 import { apiInstance } from './chipin.instance';
+import { removeLedgerEntry } from './ledgerApi';
 
 vi.mock('./chipin.instance', () => ({
     apiInstance: {
-        post: vi.fn(),
+        delete: vi.fn(),
     },
 }));
 
@@ -59,13 +59,13 @@ describe('apiPath', () => {
         let result: Promise<unknown> | undefined;
 
         expect(() => {
-            result = inviteApiUserToGroup({ inviteToken: '..' });
+            result = removeLedgerEntry({ entryId: '..' });
         }).not.toThrow();
 
         return expect(result)
             .rejects.toBeInstanceOf(InvalidPathSegmentError)
             .then(() => {
-                expect(apiInstance.post).not.toHaveBeenCalled();
+                expect(apiInstance.delete).not.toHaveBeenCalled();
             });
     });
 });

@@ -18,26 +18,13 @@ as described in the legacy notes below, without new server-data fields (`10-arch
   narrow stable selectors, and does not perform API requests.
 - Store location: `10-architecture.md` §Store Location.
 
-## Central Loading And Errors
+## Request Loading And Errors
 
-Applies to stores that still fetch server data; a store drops these rules when it migrates to TanStack Query.
-
-- `loadingStore` owns operation lifecycle.
-- `errorsStore` owns normalized, serializable errors.
-- Their section/operation keys match, for example `group.data`, `group.add`, and `dashboard.data`.
-- Domain stores such as groups/dashboard do not add their own duplicate `status` or `error` fields.
-- Clear only the operation error before retry; reset all errors on logout or full app reset.
-- A request finishing with failure must leave `loading`; in the current lifecycle model `fetched` means settled, while `errorsStore` distinguishes failure.
+- There is no central loading or errors store (`loadingStore`/`errorsStore` were removed in 03-18).
+- A request's lifecycle and error come from TanStack Query (`isPending`, `error`); a one-off action that is not
+  a query or mutation keeps a local flag in the component that starts it.
 - Raw `AxiosError`, `Response`, and non-serializable objects are not stored.
-- Form validation errors remain local; API/domain errors use `errorsStore`.
-
-```ts
-type RequestError = {
-    code?: string;
-    message: string;
-    details?: Record<string, unknown>;
-};
-```
+- Form validation errors remain local.
 
 ## Subscriptions And Selectors
 

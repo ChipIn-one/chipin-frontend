@@ -20,20 +20,20 @@ UI → store action → resource API module → Axios instance → backend
 
 ## Resource Modules And Namespace Calls
 
-New endpoints belong in focused modules such as `groupsApi.ts`, `usersApi.ts`, `activityApi.ts`, and `ledgerApi.ts`, not the growing legacy `chipin.ts`.
+New endpoints belong in focused modules such as `activityApi.ts` and `ledgerApi.ts`, not the growing legacy `chipin.ts`.
 Until the spec 03 PRs land, new endpoints here are mutations; a new server read that would need the spec 03 layer is BLOCKED (see the top of this file).
 
 - When a task touches an existing endpoint, move only its related resource block when safe; do not migrate the whole API incidentally.
 - Import API modules as namespaces so the transport layer is visible:
 
 ```ts
-import * as groupsApi from 'api/groupsApi';
+import * as ledgerApi from 'api/ledgerApi';
 
-groupsApi.createGroup(input);
+ledgerApi.removeLedgerEntry({ entryId });
 ```
 
-- Do not use bare runtime imports such as `import { createGroup } from 'api/groupsApi'`.
-- UI receives resource commands from a Zustand selector; `groupsApi.createGroup` remains
+- Do not use bare runtime imports such as `import { removeLedgerEntry } from 'api/ledgerApi'`.
+- UI receives resource commands from a Zustand selector; `ledgerApi.removeLedgerEntry` remains
   unambiguous below that boundary.
 
 ## Naming
@@ -73,9 +73,9 @@ Do not add `Api`, `Store`, `Effect`, or `Action` suffixes merely to distinguish 
 ## Errors And Interceptors
 
 - API functions reject; they do not show toast or write stores.
-- Store read actions catch `unknown`, ignore stale/cancelled requests, normalize other errors, write
-  `errorsStore`, and resolve with the confirmed/current state. Mutation actions write `errorsStore`
-  and re-reject when the caller must react to a backend failure.
+- Store read actions catch `unknown`, ignore stale/cancelled requests, handle other errors, and resolve
+  with the confirmed/current state. Mutation actions re-reject when the caller must react to a backend
+  failure.
 - Response interceptors handle auth/session transport concerns only. They never show generic domain toasts,
   because they cannot distinguish a foreground user action from a background refresh.
 - Foreground mutation UI catches the rejected action, resolves known backend `code`/`details`, and uses

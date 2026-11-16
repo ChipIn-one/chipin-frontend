@@ -8,10 +8,10 @@ import { ThemeProvider } from 'styled-components';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 import { InvalidPathSegmentError } from 'api/apiPath';
-import { inviteApiUserToGroup } from 'api/chipin';
 import { apiInstance } from 'api/chipin.instance';
 import { lightThemeStyled } from 'constants/styled-themes';
 import i18n from 'i18n';
+import { api } from 'shared/api/client';
 import { useAuthStore } from 'store/authStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 
@@ -78,7 +78,11 @@ test('a crafted group invite link never reaches the API and never hits /kick', (
 });
 
 test('a direct API call with a traversal token is rejected before the adapter', () => {
-    return expect(inviteApiUserToGroup({ inviteToken: '../g/members/u/kick' }))
+    return expect(
+        api('post', '/groups/invite/{inviteToken}', {
+            params: { inviteToken: '../g/members/u/kick' },
+        }),
+    )
         .rejects.toBeInstanceOf(InvalidPathSegmentError)
         .then(() => {
             expect(recordingAdapter).not.toHaveBeenCalled();

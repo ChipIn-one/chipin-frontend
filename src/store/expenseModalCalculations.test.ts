@@ -108,8 +108,8 @@ test('builds shares payload from included users only', () => {
         sharingMode: {
             type: 'SHARES',
             shares: {
-                [user.id]: 1,
-                [friend.id]: 2,
+                [user.id]: '1',
+                [friend.id]: '2',
             },
         },
     });

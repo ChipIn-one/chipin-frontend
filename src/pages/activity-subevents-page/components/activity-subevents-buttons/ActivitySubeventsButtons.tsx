@@ -1,62 +1,61 @@
-import { Button, Flex, Skeleton } from '@radix-ui/themes';
+import { Button, Flex } from '@radix-ui/themes';
 import { PencilIcon, Trash2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
-import type { AppEvent } from 'api/activity.types';
 import { ACTIVITY_ACTIONS, ACTIVITY_CATEGORIES } from 'constants/activity';
+import type { ActivityEvent } from 'entities/activity';
 import {
     getActivityCategory,
     getActivityLedgerEntryId,
     getActivitySubeventsView,
 } from 'helpers/activityEvent';
-import { resolveApiErrorMessageFromError } from 'helpers/errors';
+import { toastLedgerWriteError, useDeleteLedgerEntry } from 'hooks/useLedgerMutations';
+import { prepareExpenseEdit } from 'store/activityExpenseEdit';
+import { useExpenseModalStore } from 'store/expenseModalStore';
 
 import { RemoveLedgerEntryAlertDialog } from 'components/modals/remove-ledger-entry-alert-dialog';
 
-import { useConnect } from './internal';
-
 interface Props {
-    parentEvent: AppEvent;
-    currentEvent?: AppEvent;
-    childEvents?: readonly AppEvent[];
+    parentEvent: ActivityEvent;
+    currentEvent?: ActivityEvent;
+    /** The chain's later events, as the history page loaded them. */
+    childEvents: readonly ActivityEvent[];
+    /** The id the history query is keyed by (the route's): invalidated after a write. */
+    parentActivityId: string | undefined;
+    /** False when the shown state may be stale (an unreadable event): no edit or delete. */
+    canChange?: boolean;
 }
 
 const ActivitySubeventsButtons = ({
     parentEvent,
     currentEvent: currentEventProp,
-    childEvents: childEventsProp,
+    childEvents,
+    parentActivityId,
+    canChange = true,
 }: Props) => {
     const { t } = useTranslation(['activity', 'toasts']);
-    const {
-        reverseLedgerEntry,
-        prepareExpenseEdit,
-        initializeEdit,
-        subevents,
-        isLoading,
-        isRemoving,
-    } = useConnect();
-    const childEvents = childEventsProp ?? subevents;
+    const initializeEdit = useExpenseModalStore(state => state.initializeEdit);
+    const { deleteLedgerEntry, isPending: isRemoving } = useDeleteLedgerEntry();
     const currentEvent =
         currentEventProp ??
         getActivitySubeventsView(parentEvent, childEvents)?.currentEvent ??
         parentEvent;
     const parentEntryId = getActivityLedgerEntryId(parentEvent);
-    const rootActivityId = parentEvent.parentActivityId ?? parentEvent.id;
     const isEntryReversed =
         currentEvent.action === ACTIVITY_ACTIONS.EXPENSE_REVERSED ||
         currentEvent.action === ACTIVITY_ACTIONS.SETTLEMENT_REVERSED;
     const isExpense = getActivityCategory(parentEvent) === ACTIVITY_CATEGORIES.EXPENSE;
 
     const onEdit = (): void => {
-        if (!parentEntryId || !isExpense) {
+        if (!parentEntryId || !isExpense || !canChange) {
             return;
         }
 
         const initialization = prepareExpenseEdit({
             parentEvent,
             childEvents,
-            parentActivityId: rootActivityId,
+            parentActivityId,
         });
 
         if (initialization) {
@@ -65,45 +64,23 @@ const ActivitySubeventsButtons = ({
     };
 
     const onRemove = (): Promise<void> => {
-        if (!parentEntryId) {
+        if (!parentEntryId || !canChange) {
             return Promise.reject(new Error('No ledger entry found to remove'));
         }
 
-        return reverseLedgerEntry({
+        return deleteLedgerEntry({
             entryId: parentEntryId,
             groupId: parentEvent.groupId ?? undefined,
-            parentActivityId: rootActivityId,
+            parentActivityId,
         })
             .then(() => {
                 toast.success(t('toasts:ledger.entryDeleted'));
             })
-            .catch(error => {
-                toast.error(
-                    resolveApiErrorMessageFromError(error, t('toasts:common.requestFailed')),
-                );
+            .catch((error: unknown) => {
+                toastLedgerWriteError(error, t('toasts:common.requestFailed'));
                 return Promise.reject(error);
             });
     };
-
-    if (isLoading) {
-        return (
-            <Flex align="center" gap="2" wrap="wrap">
-                <Skeleton>
-                    <Button size="1" variant="soft">
-                        <PencilIcon size={14} />
-                        {t('subeventsUpdateAction')}
-                    </Button>
-                </Skeleton>
-
-                <Skeleton>
-                    <Button size="1" variant="soft" color="red">
-                        <Trash2Icon size={14} />
-                        {t('subeventsDeleteAction')}
-                    </Button>
-                </Skeleton>
-            </Flex>
-        );
-    }
 
     if (isEntryReversed) {
         return null;
@@ -114,7 +91,7 @@ const ActivitySubeventsButtons = ({
             <Button
                 size="1"
                 variant="soft"
-                disabled={!parentEntryId || !isExpense}
+                disabled={!parentEntryId || !isExpense || !canChange}
                 onClick={onEdit}
             >
                 <PencilIcon size={14} />
@@ -122,7 +99,12 @@ const ActivitySubeventsButtons = ({
             </Button>
 
             <RemoveLedgerEntryAlertDialog isActionLoading={isRemoving} onAction={onRemove}>
-                <Button size="1" variant="soft" color="red" disabled={!parentEntryId || isRemoving}>
+                <Button
+                    size="1"
+                    variant="soft"
+                    color="red"
+                    disabled={!parentEntryId || isRemoving || !canChange}
+                >
                     <Trash2Icon size={14} />
                     {t('subeventsDeleteAction')}
                 </Button>

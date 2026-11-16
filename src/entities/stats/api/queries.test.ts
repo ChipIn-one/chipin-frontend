@@ -1,13 +1,19 @@
 import { dehydrate, QueryClient } from '@tanstack/react-query';
 import { expect, test } from 'vitest';
 
+import { currencyCode, fromUnits } from 'shared/money';
 import { dehydrateOptions } from 'shared/offline/queryPersister';
 
 import type { Stats } from '../model/types';
 
 import { statsKeys, statsQueryOptions } from './queries';
 
-const stats: Stats = { usersCount: 1, groupsCount: 2, expensesCount: 3, settlementsCount: 4 };
+const stats: Stats = {
+    expensesCount: 1,
+    debtsTracked: fromUnits(20_000n, currencyCode('USD')),
+    activeGroupsCount: 3,
+    peopleSharingCount: 4,
+};
 
 test("statsQueryOptions: key ['stats'], staleTime 10 min, a query function", () => {
     const options = statsQueryOptions();

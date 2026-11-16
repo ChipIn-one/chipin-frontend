@@ -8,7 +8,6 @@ import { getLocalUser, getTabUserId, saveLocalUser } from 'helpers/localStorage'
 
 import { useAuthStore } from './authStore';
 import { useExpenseModalStore } from './expenseModalStore';
-import { useLoadingStore } from './loadingStore';
 import { loadKnownUsersForSession, loadSelfUserForSession } from './sessionUser';
 import { APP_MODES, useUiPrefsStore } from './ui-prefs';
 
@@ -86,7 +85,6 @@ describe('authStore', () => {
         authSessionMocks.getAccessTokenSubject.mockReturnValue(user.id);
         authSessionMocks.startAuthLogout.mockResolvedValue(undefined);
         useExpenseModalStore.getState().reset();
-        useLoadingStore.getState().setInitialLoadingStore();
         useAuthStore.setState({
             isNewUser: null,
             status: 'authenticated',
@@ -97,17 +95,15 @@ describe('authStore', () => {
     test('keeps the current device authenticated after logout-other-devices succeeds', () => {
         vi.mocked(authSession.logoutOtherDevicesSession).mockResolvedValue();
 
-        const request = useAuthStore.getState().logoutOtherDevices();
-
-        expect(useLoadingStore.getState().auth.logoutOtherDevices).toBe('loading');
-
-        return request.then(() => {
-            expect(useLoadingStore.getState().auth.logoutOtherDevices).toBe('fetched');
-            expect(useAuthStore.getState()).toMatchObject({
-                status: 'authenticated',
-                unauthReason: undefined,
+        return useAuthStore
+            .getState()
+            .logoutOtherDevices()
+            .then(() => {
+                expect(useAuthStore.getState()).toMatchObject({
+                    status: 'authenticated',
+                    unauthReason: undefined,
+                });
             });
-        });
     });
 
     test('establishes OAuth with an access token only', () => {

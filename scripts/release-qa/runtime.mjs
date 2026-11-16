@@ -245,35 +245,89 @@ export function probePublicPreview(url, fetchImpl = fetch) {
         });
 }
 
-function compare(api, base, head, full = false) {
-    return api
-        .request(`${REPO_PATH}/compare/${base}...${head}?per_page=${full ? 100 : 1}&page=1`)
-        .then(first => {
-            if (!full) return first;
-            if (
-                !Array.isArray(first.commits) ||
-                !Array.isArray(first.files) ||
-                first.files.length >= 300 ||
-                !Number.isInteger(first.total_commits)
-            ) {
-                throw new Error(
-                    'Compare files/commits exceed complete GitHub evidence bounds; manual scope review required.',
-                );
-            }
-            const commits = [...first.commits];
-            const next = page => {
-                if (commits.length >= first.total_commits) return { ...first, commits };
-                return api
-                    .request(`${REPO_PATH}/compare/${base}...${head}?per_page=100&page=${page}`)
-                    .then(data => {
-                        if (!Array.isArray(data.commits) || data.commits.length === 0)
-                            throw new Error('Compare commit pagination incomplete.');
-                        commits.push(...data.commits);
-                        return next(page + 1);
-                    });
-            };
-            return next(2);
+// GitHub lists at most 300 files for a compare and at most 3000 (paginated) for one commit.
+export const COMPARE_FILE_BOUND = 300;
+export const COMMIT_FILE_BOUND = 3000;
+const COMMIT_FILE_PAGE = 100;
+
+function compare(api, base, head) {
+    return api.request(`${REPO_PATH}/compare/${base}...${head}?per_page=1&page=1`);
+}
+
+// Reads every commit of the compare (paginated) and checks that the count equals total_commits.
+function readCompareCommits(api, base, head, first) {
+    const commits = [...first.commits];
+    const next = page => {
+        if (commits.length >= first.total_commits) return Promise.resolve(commits);
+        return api
+            .request(`${REPO_PATH}/compare/${base}...${head}?per_page=100&page=${page}`)
+            .then(data => {
+                if (!Array.isArray(data.commits) || data.commits.length === 0)
+                    throw new Error('Compare commit pagination incomplete.');
+                commits.push(...data.commits);
+                return next(page + 1);
+            });
+    };
+    return next(2).then(all => {
+        const unique = new Set(all.map(item => item?.sha));
+        if (all.length !== first.total_commits || unique.size !== first.total_commits)
+            throw new Error(
+                `Compare lists ${first.total_commits} commits but ${unique.size} distinct commits were read.`,
+            );
+        return all;
+    });
+}
+
+// The release scope Production...candidate with a complete file list. Below the GitHub bound the compare
+// file list is used as is. At or above it the list is rebuilt from each commit's own files, which is a
+// superset of the net diff (a file changed and reverted still counts), so UI impact is never missed.
+export function readReleaseScope(api, base, head) {
+    return api.request(`${REPO_PATH}/compare/${base}...${head}?per_page=100&page=1`).then(first => {
+        if (
+            !Array.isArray(first?.commits) ||
+            !Array.isArray(first.files) ||
+            !Number.isInteger(first.total_commits)
+        ) {
+            throw new Error('Compare files/commits are unreadable; manual scope review required.');
+        }
+        return readCompareCommits(api, base, head, first).then(commits => {
+            if (first.files.length < COMPARE_FILE_BOUND)
+                return { ...first, commits, fileSource: 'compare' };
+            return rebuildFilesFromCommits(api, commits).then(({ files, commitPaths }) => {
+                if (commitPaths.size !== first.total_commits)
+                    throw new Error(
+                        `Compare lists ${first.total_commits} commits but files were read for ${commitPaths.size}.`,
+                    );
+                return { ...first, commits, files, commitPaths, fileSource: 'commits' };
+            });
         });
+    });
+}
+
+function rebuildFilesFromCommits(api, commits) {
+    const byPath = new Map();
+    const commitPaths = new Map();
+    const next = index => {
+        if (index === commits.length)
+            return Promise.resolve({ files: [...byPath.values()], commitPaths });
+        const { sha } = commits[index];
+        return readCommitFileList(api, sha).then(files => {
+            const paths = [];
+            for (const item of files) {
+                paths.push(item.filename);
+                if (!byPath.has(item.filename))
+                    byPath.set(item.filename, { filename: item.filename });
+                if (item.previous_filename) {
+                    paths.push(item.previous_filename);
+                    if (!byPath.has(item.previous_filename))
+                        byPath.set(item.previous_filename, { filename: item.previous_filename });
+                }
+            }
+            commitPaths.set(sha, paths);
+            return next(index + 1);
+        });
+    };
+    return next(0);
 }
 
 function changedPaths(files) {
@@ -296,15 +350,33 @@ function pullIssues(api, pull) {
     });
 }
 
+// Reads one commit's files page by page. A page shorter than the page size ends the list; reaching
+// GitHub's per-commit bound means the list may be cut, so the run blocks.
+function readCommitFileList(api, sha) {
+    const files = [];
+    const unreadable = () =>
+        new Error(`Commit ${sha} files are unreadable or exceed complete evidence bounds.`);
+    const next = page =>
+        api
+            .request(`${REPO_PATH}/commits/${sha}?per_page=${COMMIT_FILE_PAGE}&page=${page}`)
+            .then(commit => {
+                const chunk = commit?.files;
+                if (
+                    commit?.sha !== sha ||
+                    !Array.isArray(chunk) ||
+                    chunk.length > COMMIT_FILE_PAGE ||
+                    chunk.some(item => typeof item?.filename !== 'string')
+                )
+                    throw unreadable();
+                files.push(...chunk);
+                if (files.length >= COMMIT_FILE_BOUND) throw unreadable();
+                return chunk.length < COMMIT_FILE_PAGE ? files : next(page + 1);
+            });
+    return next(1);
+}
+
 function readCommitFiles(api, sha) {
-    return api.request(`${REPO_PATH}/commits/${sha}`).then(commit => {
-        if (!Array.isArray(commit?.files) || commit.files.length >= 300) {
-            throw new Error(
-                `Commit ${sha} files are unreadable or exceed complete evidence bounds.`,
-            );
-        }
-        return changedPaths(commit.files);
-    });
+    return readCommitFileList(api, sha).then(changedPaths);
 }
 
 const UNREADABLE_PACKAGES =
@@ -354,7 +426,9 @@ function readIncludedWork(api, compared, baseSha, headSha) {
                     pull => pull.node_id && pull.merged_at && pull.base?.ref === 'master',
                 );
                 if (merged.length !== 1) {
-                    return readCommitFiles(api, sha).then(paths => {
+                    const known = compared.commitPaths?.get(sha);
+                    const read = known ? Promise.resolve(known) : readCommitFiles(api, sha);
+                    return read.then(paths => {
                         commitFiles[sha] = paths;
                     });
                 }
@@ -764,7 +838,7 @@ export function prepareReleaseQa({
             preview = selected;
             baseline = production;
             candidate = { ...candidate, url: preview.url };
-            return compare(readApi, baseline.sha, sha, true).then(scope => {
+            return readReleaseScope(readApi, baseline.sha, sha).then(scope => {
                 assertAncestry(candidateToMaster, scope, sha, baseline.sha);
                 return readIncludedWork(readApi, scope, baseline.sha, sha);
             });

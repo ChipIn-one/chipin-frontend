@@ -8,7 +8,6 @@ import type { SelfUser } from 'api/chipin.types';
 import { PROJECT_NAME } from 'constants/chipin';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
-import { useLoadingStore } from 'store/loadingStore';
 import { APP_MODES, useUiPrefsStore } from 'store/ui-prefs';
 import { createKnownUser, seedKnownUsers } from 'test/knownUsers';
 import { seedSelfUser } from 'test/selfUserSeed';
@@ -52,7 +51,6 @@ const friend = createKnownUser('friend-1');
 beforeEach(() => {
     useAuthStore.setState({ status: 'authenticated' });
     useUiPrefsStore.setState({ appMode: APP_MODES.GROUP });
-    useLoadingStore.getState().setInitialLoadingStore();
     seedSelfUser(user);
 });
 

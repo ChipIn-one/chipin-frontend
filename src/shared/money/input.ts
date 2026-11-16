@@ -1,6 +1,6 @@
 // User amount input (spec 03 §4.2): replaces `parseAmountInput` of helpers/numbers.ts.
 import type { CurrencyCode, Money } from './money';
-import { fromUnits, LEDGER_SCALE, minorUnits } from './money';
+import { fromUnits, LEDGER_SCALE, minorUnits, unitsToDecimal } from './money';
 
 // Integer digits are bounded like the wire (§4.1, `decimal(19,4)`); `\s` covers NBSP and the
 // narrow NBSP that locales use as a group separator.
@@ -34,3 +34,10 @@ export const parseMoneyInput = (raw: string, currency: CurrencyCode): Money | nu
 
     return fromUnits(BigInt(`${integer || '0'}${fraction.padEnd(LEDGER_SCALE, '0')}`), currency);
 };
+
+/**
+ * An amount as the text of an amount field: a plain decimal with no trailing fraction zeros
+ * ("85.5", "100", "0.0034"), so a scale-4 amount loaded for editing keeps every digit it has.
+ */
+export const moneyInputText = (money: Money): string =>
+    unitsToDecimal(money.minor, LEDGER_SCALE).replace(/\.?0+$/, '');
