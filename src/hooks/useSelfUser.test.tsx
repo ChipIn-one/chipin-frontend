@@ -7,7 +7,6 @@ import { type SelfUser, userLanguage, usersKeys } from 'entities/users';
 import { clearLocalUserIdentity, getTabUserId, saveLocalUser } from 'helpers/localStorage';
 import { cachesByUser, takePendingSeed } from 'shared/offline/userCaches';
 import { useAuthStore } from 'store/authStore';
-import { useLoadingStore } from 'store/loadingStore';
 import { loadSelfUserForSession, resetSessionSelfLoad } from 'store/sessionUser';
 import { setupMswServer } from 'test/mswServer';
 import { getDefaultTestQueryClient } from 'test/renderWithQueryClient';
@@ -74,7 +73,6 @@ beforeEach(() => {
     resetSessionSelfLoad();
     clearLocalUserIdentity();
     saveLocalUser({ id: 'user-1', role: 'USER', settings });
-    useLoadingStore.getState().setInitialLoadingStore();
     useAuthStore.setState({ status: 'unauthenticated', sessionMode: 'online' });
 });
 

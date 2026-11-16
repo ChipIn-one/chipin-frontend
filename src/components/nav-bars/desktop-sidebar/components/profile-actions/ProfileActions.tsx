@@ -5,8 +5,6 @@ import { useTranslation } from 'react-i18next';
 
 import { useSelfUserState } from 'hooks/useSelfUser';
 import { useAuthStore } from 'store/authStore';
-import { selectAuthSignOutLoading } from 'store/loadingSelectors';
-import { useLoadingStore } from 'store/loadingStore';
 
 import { UserProfileSummary } from 'components/user-profile-summary';
 
@@ -19,7 +17,6 @@ interface Props {
 const ProfileActions = ({ isSoloMode }: Props) => {
     const { t } = useTranslation('common');
     const [isExpanded, setIsExpanded] = useState(false);
-    const isSigningOut = useLoadingStore(selectAuthSignOutLoading);
     const signOut = useAuthStore(state => state.signOut);
     const { user, isLoading: isUserLoading } = useSelfUserState();
     const activeColor = isSoloMode ? 'violet' : 'green';
@@ -54,9 +51,8 @@ const ProfileActions = ({ isSoloMode }: Props) => {
                 <ProfileSignOutContent>
                     <Button
                         onClick={() => void signOut()}
-                        disabled={!isExpanded || isSigningOut}
+                        disabled={!isExpanded}
                         tabIndex={isExpanded ? 0 : -1}
-                        loading={isSigningOut}
                         variant="soft"
                         color="gray"
                         size="3"

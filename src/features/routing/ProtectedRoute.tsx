@@ -1,13 +1,16 @@
 import { Box } from '@radix-ui/themes';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { useShallow } from 'zustand/react/shallow';
 
 import { ROUTES } from 'constants/routes';
 import { getLastAccountLandingPath } from 'helpers/publicRoutes';
 import { UNAUTH_REASON } from 'store/authConstants';
+import { selectIsAuthResolved, selectIsLoggedIn } from 'store/authSelectors';
+import { useAuthStore } from 'store/authStore';
 
 import { AuthModal } from 'components/modals/auth-modal';
 
-import { GuardLoader, useConnect } from './internal';
+import { GuardLoader } from './internal';
 
 interface Props {
     children: React.ReactNode;
@@ -15,7 +18,13 @@ interface Props {
 
 export const ProtectedRoute = ({ children }: Props) => {
     const navigate = useNavigate();
-    const { isAuthResolved, isLoggedIn, unauthReason } = useConnect();
+    const { isAuthResolved, isLoggedIn, unauthReason } = useAuthStore(
+        useShallow(state => ({
+            isAuthResolved: selectIsAuthResolved(state),
+            isLoggedIn: selectIsLoggedIn(state),
+            unauthReason: state.unauthReason,
+        })),
+    );
 
     if (!isAuthResolved) {
         return <GuardLoader />;

@@ -7,7 +7,6 @@ import { beforeEach, expect, test, vi } from 'vitest';
 import type { SelfUser } from 'api/chipin.types';
 import { lightThemeStyled } from 'constants/styled-themes';
 import { useAuthStore } from 'store/authStore';
-import { useLoadingStore } from 'store/loadingStore';
 import { seedSelfUser } from 'test/selfUserSeed';
 
 import ProfileActions from './ProfileActions';
@@ -52,7 +51,6 @@ const renderProfileActions = (isSoloMode = false) => {
 
 beforeEach(() => {
     useAuthStore.setState({ signOut, status: 'authenticated' });
-    useLoadingStore.getState().setInitialLoadingStore();
     seedSelfUser(user);
 });
 
@@ -104,19 +102,5 @@ test('signs out directly from the expanded profile actions', () => {
         .then(() => interaction.click(screen.getByRole('button', { name: 'Sign Out' })))
         .then(() => {
             expect(onSignOut).toHaveBeenCalledOnce();
-        });
-});
-
-test('disables sign out while the request is loading', () => {
-    const interaction = userEvent.setup();
-    useLoadingStore.getState().setLoading('auth', 'signOut', 'loading');
-    renderProfileActions();
-
-    return interaction
-        .click(screen.getByRole('button', { name: /Alex.*user@example\.com/i }))
-        .then(() => {
-            expect(
-                screen.getByRole<HTMLButtonElement>('button', { name: 'Sign Out' }).disabled,
-            ).toBe(true);
         });
 });

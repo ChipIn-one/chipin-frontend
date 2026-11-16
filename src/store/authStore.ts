@@ -12,7 +12,7 @@ import {
     startAuthLogout,
     validateAuthSession,
 } from 'helpers/authSession';
-import { isUnauthorizedApiError, normalizeApiError } from 'helpers/errors';
+import { isUnauthorizedApiError } from 'helpers/errors';
 import {
     clearLocalUserIdentity,
     clearLocalUserRole,
@@ -29,10 +29,8 @@ import {
     UNAUTH_REASON,
     type UnauthReason,
 } from './authConstants';
-import { useErrorsStore } from './errorsStore';
 import { useExpenseModalStore } from './expenseModalStore';
 import { loadGroupsListForSession } from './groupsList';
-import { useLoadingStore } from './loadingStore';
 import {
     cachedUserId,
     loadKnownUsersForSession,
@@ -62,14 +60,12 @@ export interface AuthStore {
 let signOutPromise: Promise<void> | null = null;
 let lastOAuthExchange: { code: string; promise: Promise<void> } | null = null;
 
-// The legacy stores hold data in memory: reset on any transition to unauthenticated and reloaded
-// after sign-in. Each store-migration PR removes its own line (spec 03 §1.5). It re-reads the
-// cached user from localStorage, so a caller changes `LS_KEY_USER` before it.
+// Runs on any transition to unauthenticated: resets the UI preferences (re-read from the cached
+// user in localStorage, so a caller changes `LS_KEY_USER` before it) and the self-user load of this
+// session.
 const resetAuthScopedStores = () => {
     useUiPrefsStore.getState().resetUiPrefs();
-    useErrorsStore.getState().resetErrors();
     resetSessionSelfLoad();
-    useLoadingStore.getState().setInitialLoadingStore();
 };
 
 // Step (2a) of `clearUserData`: the legacy stores and the expense draft.
@@ -204,7 +200,6 @@ export const useAuthStore = create<AuthStore>(set => ({
         if (lastOAuthExchange?.code === code) {
             return lastOAuthExchange.promise;
         }
-        useErrorsStore.getState().clearError('auth', 'login');
         const promise = exchangeApiGoogleOAuthCode(code)
             .then(({ token, is_new_user: isNewUser }) => {
                 // A persistence error throws here: the previous user's data is kept (§1.5 table).
@@ -236,7 +231,6 @@ export const useAuthStore = create<AuthStore>(set => ({
                         isNewUser: null,
                         sessionMode: SESSION_MODE.ONLINE,
                     });
-                    useErrorsStore.getState().setError('auth', 'login', normalizeApiError(error));
                     return Promise.reject(error);
                 });
             });
@@ -269,27 +263,16 @@ export const useAuthStore = create<AuthStore>(set => ({
     },
 
     logoutOtherDevices: () => {
-        const { setLoading } = useLoadingStore.getState();
-        const { clearError, setError } = useErrorsStore.getState();
+        return logoutOtherDevicesSession().catch((error: unknown) => {
+            if (!isUnauthorizedApiError(error) && !(error instanceof AuthSessionExpiredError)) {
+                return Promise.reject(error);
+            }
 
-        clearError('auth', 'logoutOtherDevices');
-        setLoading('auth', 'logoutOtherDevices', 'loading');
-
-        return logoutOtherDevicesSession()
-            .catch((error: unknown) => {
-                setError('auth', 'logoutOtherDevices', normalizeApiError(error));
-                if (!isUnauthorizedApiError(error) && !(error instanceof AuthSessionExpiredError)) {
-                    return Promise.reject(error);
-                }
-
-                return clearExpiredAuthSession().then(() => {
-                    useAuthStore.getState().setUnauthenticated(UNAUTH_REASON.EXPIRED);
-                    return Promise.reject(error);
-                });
-            })
-            .finally(() => {
-                setLoading('auth', 'logoutOtherDevices', 'fetched');
+            return clearExpiredAuthSession().then(() => {
+                useAuthStore.getState().setUnauthenticated(UNAUTH_REASON.EXPIRED);
+                return Promise.reject(error);
             });
+        });
     },
 
     signOut: () => {

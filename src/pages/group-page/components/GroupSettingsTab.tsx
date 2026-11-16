@@ -14,7 +14,8 @@ import { LogOutIcon, Trash2Icon, UserMinusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import type { Group } from 'entities/groups';
-import { toastGroupWriteError } from 'hooks/useGroupMutations';
+import { toastGroupWriteError, useUpdateGroup } from 'hooks/useGroupMutations';
+import { useSelfUser } from 'hooks/useSelfUser';
 
 import GroupRoleBadge from 'basics/GroupRoleBadge';
 import { KickGroupMemberAlertDialog } from 'components/modals/kick-group-member-alert-dialog';
@@ -22,7 +23,6 @@ import { LeaveGroupAlertDialog } from 'components/modals/leave-group-alert-dialo
 import { RemoveGroupAlertDialog } from 'components/modals/remove-group-alert-dialog';
 
 import GroupInviteActionRows from './GroupInviteActionRows';
-import { useConnect } from './internal/group-settings';
 
 interface Props {
     group: Group;
@@ -30,7 +30,8 @@ interface Props {
 
 const GroupSettingsTab = ({ group }: Props) => {
     const { t } = useTranslation(['group', 'common', 'toasts']);
-    const { user, updateGroup, isGroupUpdatePending } = useConnect();
+    const user = useSelfUser();
+    const { updateGroup, isPending: isGroupUpdatePending } = useUpdateGroup();
     const isUserOwner = user?.id === group.creator.id;
     const isGroupOwner = group.role === 'OWNER';
     const simplifyDebtsValue: unknown = group.simplifyDebts;

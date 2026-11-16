@@ -17,8 +17,6 @@ import type { Group } from 'entities/groups';
 import { groupsKeys, groupsListQueryOptions } from 'entities/groups';
 import { type KnownUser, knownUsersQueryOptions, usersKeys } from 'entities/users';
 import { useAuthStore } from 'store/authStore';
-import { useErrorsStore } from 'store/errorsStore';
-import { useLoadingStore } from 'store/loadingStore';
 import { domainPreview, wirePreview } from 'test/activityFixtures';
 import { groupBalances } from 'test/groupFixtures';
 import { groupsListData } from 'test/groupsList';
@@ -261,8 +259,6 @@ beforeEach(() => {
     mountAsUserClient('user-1', client);
     useAuthStore.setState({ status: 'authenticated' });
     client.setQueryData(usersKeys.self(), currentUser);
-    useLoadingStore.getState().setInitialLoadingStore();
-    useErrorsStore.getState().resetErrors();
 });
 
 test('DSH-007 renders welcome only for no friends and no groups', () => {

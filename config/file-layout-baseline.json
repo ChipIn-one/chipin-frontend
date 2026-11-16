@@ -17,7 +17,6 @@
         "src/components/modals/early-supporter-promo-modal/index.ts",
         "src/components/modals/kick-group-member-alert-dialog/index.ts",
         "src/components/modals/leave-group-alert-dialog/index.ts",
-        "src/components/modals/leave-group-alert-dialog/internal/index.ts",
         "src/components/modals/modal-router/index.ts",
         "src/components/modals/remove-friend-alert-dialog/index.ts",
         "src/components/modals/remove-group-alert-dialog/index.ts",
@@ -71,17 +70,10 @@
         "src/pages/activity-subevents-page/internal/index.ts",
         "src/pages/friends-page/components/index.ts",
         "src/pages/group-page/components/index.ts",
-        "src/pages/group-page/components/internal/group-settings/index.ts",
         "src/pages/settings-page/components/expense-preferences-section/index.ts",
         "src/pages/settings-page/components/index.ts",
         "src/pages/settings-page/components/solo-preferences-section/index.ts",
         "src/public-routes/index.ts"
     ],
-    "use-connect": [
-        "src/components/add-expense-button/internal/useConnect.ts",
-        "src/components/modals/leave-group-alert-dialog/internal/useConnect.ts",
-        "src/components/modals/settle-up-modal/internal/useConnect.ts",
-        "src/features/routing/internal/useConnect.ts",
-        "src/pages/group-page/components/internal/group-settings/useConnect.ts"
-    ]
+    "use-connect": []
 }

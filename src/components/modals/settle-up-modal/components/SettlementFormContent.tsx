@@ -4,7 +4,8 @@ import { InfoIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
-import { toastLedgerWriteError } from 'hooks/useLedgerMutations';
+import { toastLedgerWriteError, useIsLedgerEntryCreating } from 'hooks/useLedgerMutations';
+import { useSelfUser } from 'hooks/useSelfUser';
 
 import type { SelectItem } from 'components/Select';
 
@@ -14,7 +15,6 @@ import {
     getSettlementAmount,
     getSettlementViewModel,
     selectSettlementBalance,
-    useConnect,
 } from '../internal';
 import { ModalSurface } from '../styled';
 import type { FriendSettleUpProps } from '../types';
@@ -32,7 +32,8 @@ interface Props extends Pick<
 
 const SettlementFormContent = ({ friend, balances, initialCurrency, onSubmit, onClose }: Props) => {
     const { t } = useTranslation(['common', 'friends', 'toasts']);
-    const { user, isSubmitting } = useConnect();
+    const user = useSelfUser();
+    const isSubmitting = useIsLedgerEntryCreating();
     const amountInputId = useId();
     const [currency, setCurrency] = useState(initialCurrency);
     const isSubmitInFlight = useRef(false);
