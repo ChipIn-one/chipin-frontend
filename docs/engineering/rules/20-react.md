@@ -5,7 +5,9 @@
 - Components and hooks stay pure; render does not mutate stores, props, browser state, or external objects.
 - Component `Props` types stay in the component file immediately above the component. A separate
   `types.ts` holds only types with two or more real consumers.
-- Prefer named exports; default exports remain only where an existing boundary requires them.
+- Components are named exports (`export { X }`; `import-x/no-default-export`, `00-foundation.md` §Modules).
+  A touched file with a baselined default export switches to the named export, with its importers and
+  `vi.mock` calls, in the same PR.
 - Do not define components inside another component's render.
 - Optional boolean feature and display props default to `false`. Static callers omit the prop for
   `false` and use JSX shorthand for `true` (`<ActivityFeedSkeleton isShowSummary />`). Forward

@@ -4,6 +4,7 @@ import { describe, expect, test } from 'vitest';
 
 import {
     PENDING_IDS,
+    projectConfig,
     projectImports,
     projectRules,
     projectSyntax,
@@ -187,6 +188,7 @@ describe('project entries (02-C12) merged with the money and i18n entries', () =
         ]),
     ];
     const source = [
+        "export * from './x';",
         'export const C = () => {',
         '    const all = useAuthStore();',
         '    const arrow = useAuthStore(state => ({ user: state.user }));',
@@ -227,6 +229,7 @@ describe('project entries (02-C12) merged with the money and i18n entries', () =
         'export { Avatar, Created, Div, Picture, ReactCreated };',
     ].join('\n');
     const PROJECT = [
+        'export-all',
         'store-without-selector',
         'store-object-without-shallow',
         'store-object-without-shallow',
@@ -407,5 +410,30 @@ describe('store-object-without-shallow: fallbacks, nested conditionals, returns 
         });
 
         expect(result.messages).toEqual([]);
+    });
+});
+
+describe('import-x/no-default-export (02-C13): on everywhere except the spec 02 §D5 exceptions', () => {
+    const config = projectConfig({ appDir: '.' });
+
+    test.each([
+        ['src/components/A.tsx', 2],
+        ['src/basics/numbers/amount/index.ts', 2],
+        ['scripts/sentry-sourcemaps.ts', 2],
+        ['ds-gallery/gallery.tsx', 2],
+        ['vite.config.ts', undefined],
+        ['vitest.contract.config.ts', undefined],
+        ['eslint.config.js', undefined],
+        ['prettier.config.js', undefined],
+        ['pwa-assets.config.ts', undefined],
+        ['ds-gallery/vite.config.ts', undefined],
+        ['src/types/global.d.ts', undefined],
+    ])('%s resolves the rule to %s', async (file, severity) => {
+        const eslint = new ESLint({ overrideConfigFile: true, overrideConfig: config });
+        const rule = (await eslint.calculateConfigForFile(file)).rules[
+            'import-x/no-default-export'
+        ];
+
+        expect(rule?.[0]).toBe(severity);
     });
 });
